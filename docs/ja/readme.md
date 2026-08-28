@@ -4,6 +4,8 @@
 
 最初に読む文書:
 
+- [getting-started.md](./getting-started.md): `life.txt` の Beginner /
+  Minimal Profile への5分間の導入（full specification の前に）
 - [philosophy.md](./philosophy.md): lifetxt がなぜ存在するのか、その背後にある原則
 - [life_txt_format_spec.md](./life_txt_format_spec.md): file format
 - [cli.md](./cli.md): command usage と compatibility
@@ -36,6 +38,7 @@
 | Configuration | [config.md](./config.md) |
 | Delegated mutations, remote attachments, recovery | [delegated-remote-attachments-and-recovery.md](./delegated-remote-attachments-and-recovery.md) |
 | Editor setup and safe edit flow | [editor.md](./editor.md) |
+| Getting started (Beginner / Minimal Profile) | [getting-started.md](./getting-started.md) |
 | Inbox workflows | [inbox.md](./inbox.md) |
 | Format specification | [life_txt_format_spec.md](./life_txt_format_spec.md) |
 | Daily hub, areas, backlinks | [life-hub.md](./life-hub.md) |
@@ -72,6 +75,7 @@
 sample files は [../../examples/](../../examples/) にあります。
 
 - [minimal_life.txt](../../examples/minimal_life.txt)
+- [getting_started_life.txt](../../examples/getting_started_life.txt)
 - [tasks_life.txt](../../examples/tasks_life.txt)
 - [events_life.txt](../../examples/events_life.txt)
 - [habits_reminders_life.txt](../../examples/habits_reminders_life.txt)

@@ -6,6 +6,8 @@ work, and remote-safe workflows.
 
 Start with:
 
+- [getting-started.md](./getting-started.md) for a 5-minute introduction to
+  `life.txt`'s Beginner / Minimal Profile before the full specification.
 - [philosophy.md](./philosophy.md) for why lifetxt exists and the
   principles behind it.
 - [life_txt_format_spec.md](./life_txt_format_spec.md) for the file format.
@@ -39,6 +41,7 @@ Every Markdown file under `docs/en/` is listed here.
 | Configuration | [config.md](./config.md) |
 | Delegated mutations, remote attachments, recovery | [delegated-remote-attachments-and-recovery.md](./delegated-remote-attachments-and-recovery.md) |
 | Editor setup and safe edit flow | [editor.md](./editor.md) |
+| Getting started (Beginner / Minimal Profile) | [getting-started.md](./getting-started.md) |
 | Inbox workflows | [inbox.md](./inbox.md) |
 | Format specification | [life_txt_format_spec.md](./life_txt_format_spec.md) |
 | Daily hub, areas, backlinks | [life-hub.md](./life-hub.md) |
@@ -75,6 +78,7 @@ Every Markdown file under `docs/en/` is listed here.
 Sample files are available in [../../examples/](../../examples/), including:
 
 - [minimal_life.txt](../../examples/minimal_life.txt)
+- [getting_started_life.txt](../../examples/getting_started_life.txt)
 - [tasks_life.txt](../../examples/tasks_life.txt)
 - [events_life.txt](../../examples/events_life.txt)
 - [habits_reminders_life.txt](../../examples/habits_reminders_life.txt)

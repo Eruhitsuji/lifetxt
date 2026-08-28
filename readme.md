@@ -18,6 +18,8 @@ and long-term vision.
 
 - [English documentation](./docs/en/readme.md)
 - [Japanese documentation](./docs/ja/readme.md)
+- [English getting-started guide (Beginner / Minimal Profile)](./docs/en/getting-started.md)
+- [Japanese getting-started guide (Beginner / Minimal Profile)](./docs/ja/getting-started.md)
 - [English philosophy and vision](./docs/en/philosophy.md)
 - [Japanese philosophy and vision](./docs/ja/philosophy.md)
 - [English CLI guide](./docs/en/cli.md)
@@ -59,6 +61,11 @@ and config/life.txt file health, so you know what to install next. See
 section 16 ("`init` and `doctor`") of the [CLI guide](./docs/en/cli.md) for
 the full flag reference.
 
+For the fastest introduction to what actually goes *inside* `life.txt`, see
+[docs/en/getting-started.md](./docs/en/getting-started.md): a five-minute
+Beginner / Minimal Profile that is a strict subset of the full format, so
+nothing you write there needs to change when you learn the rest.
+
 ## Minimal life.txt
 
 ```txt
@@ -75,6 +82,9 @@ the full flag reference.
 More sample files are available in [examples/](./examples/):
 
 - [minimal_life.txt](./examples/minimal_life.txt): a compact starter file
+- [getting_started_life.txt](./examples/getting_started_life.txt): the
+  Beginner / Minimal Profile example from
+  [docs/en/getting-started.md](./docs/en/getting-started.md)
 - [tasks_life.txt](./examples/tasks_life.txt): tasks, deadlines, and notes
 - [events_life.txt](./examples/events_life.txt): calendar-style event records
 - [habits_reminders_life.txt](./examples/habits_reminders_life.txt): habits and reminders

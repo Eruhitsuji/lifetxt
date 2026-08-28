@@ -66,7 +66,7 @@ tools.
 | `PUT` | `/api/items/id/{id}` | Replace an item by exact `id:` in the writable file |
 | `DELETE` | `/api/items/id/{id}` | Delete an item by exact `id:` in the writable file |
 | `GET` | `/api/links` | List ID-based links such as `parent:`, `ref:`, `depends_on:`, `blocks:`, `related:`, `duplicate_of:`, and `replaced_by:` |
-| `GET` | `/api/graph` | Return `nodes` and `edges` for ID references used by the graph UI; nodes referenced but not found carry `missing: true` |
+| `GET` | `/api/graph` | Return `nodes` and `edges` for ID references used by the graph UI; nodes referenced but not found carry `missing: true`. Optional `relations` (comma-separated relation keys) narrows edges the same way `/api/links?relation=` does. When `root` is set, optional `include_temporal=true` overlays that root's bounded `same_day`/`before`/`after` temporal neighbors as additional edges (`temporal_window`, default 7 days); every edge then carries a `kind` of `structural` or `temporal` -- omitting `include_temporal` leaves the response unchanged. |
 | `GET` | `/api/blockers` | Return the transitive blocker chain for `?id=ID` (levels 1..N, `depth` caps traversal, default 5) |
 | `GET` | `/api/messages` | List type `M` message items with message filters |
 | `GET` | `/api/messages/id/{id}` | Get a message by exact `id:` |
@@ -181,6 +181,8 @@ curl -X POST "http://127.0.0.1:8000/api/items/parse" \
 curl "http://127.0.0.1:8000/api/items/id/task_001"
 curl "http://127.0.0.1:8000/api/links?id=task_001&direction=incoming"
 curl "http://127.0.0.1:8000/api/graph?root=task_001&depth=2"
+curl "http://127.0.0.1:8000/api/graph?relations=depends_on,blocks"
+curl "http://127.0.0.1:8000/api/graph?root=task_001&include_temporal=true"
 curl "http://127.0.0.1:8000/api/links?relation=depends_on,blocks"
 curl "http://127.0.0.1:8000/api/items?team=research&tag_all=urgent,review"
 curl "http://127.0.0.1:8000/api/messages?recipient=alice&open_only=true"
@@ -629,6 +631,11 @@ graph without external dependencies. Click a node to open that record in the
 record detail modal. The modal also shows a smaller graph for the selected item
 when it has ID references; the modal graph loads a depth-2 subgraph so indirect
 blockers and related records are visible without leaving the modal.
+
+`/api/graph`'s `relations` and `include_temporal` query parameters (see the
+route table above) are not yet exposed as panel controls; a client can still
+call the endpoint directly with either parameter to narrow edges by relation
+type or overlay a root's temporal neighbors.
 
 Message items (`type:M`) with an `id:` show a thread section in the detail
 modal. The modal also includes a reply form. Replies are records whose `parent:`

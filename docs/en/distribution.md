@@ -342,6 +342,85 @@ These binaries are the canonical artifact winget (#571), Homebrew Tap
 (#572), and the standalone Tauri desktop bundle (#574) build on, per the
 distribution architecture at the top of this document.
 
+## 4. winget and Scoop (Windows package managers)
+
+Tracks [#571](https://github.com/Eruhitsuji/lifetxt/issues/571). Both are
+thin adapters around the standalone Windows binary from #570 — neither
+introduces a separate build.
+
+### winget (primary)
+
+```powershell
+winget install Eruhitsuji.lifetxt
+```
+
+winget is preferred because it ships with current Windows and needs no
+separate install. The package uses `InstallerType: portable` (a plain
+standalone executable, not a `setup.exe` with silent-install switches) —
+winget symlinks the downloaded binary onto PATH under the `lifetxt` command
+name declared in the manifest's `Commands` field.
+
+**This repository does not submit to `microsoft/winget-pkgs`
+automatically.** `scripts/generate_winget_manifest.py` produces the three
+required manifest files (version, installer, default-locale — manifest
+schema 1.6.0) for one release, and
+`.github/workflows/package-manifests.yml` runs it automatically whenever a
+GitHub Release is published, uploading the result as a downloadable
+workflow artifact. Submitting is a manual, one-time-per-release step:
+
+```sh
+# Locally, from a release's published SHA256SUMS:
+python scripts/generate_winget_manifest.py \
+  --version 1.0.0 \
+  --installer-url https://github.com/Eruhitsuji/lifetxt/releases/download/v1.0.0/lifetxt-windows-x86_64.exe \
+  --sha256 <sha256 from that release's SHA256SUMS>
+
+# Or use Microsoft's own submission tool against the same release asset:
+winget install wingetcreate
+wingetcreate submit --token <a GitHub token with public_repo scope> \
+  packaging/winget/generated/Eruhitsuji/lifetxt/1.0.0/
+```
+
+`wingetcreate submit` opens the PR against `microsoft/winget-pkgs` under
+your own GitHub identity; there is no way to do this non-interactively
+without your credentials, matching the boundary set for this issue.
+
+After a submission is accepted (winget-pkgs' own CI validates the manifest
+and a moderator merges it, typically within a few days):
+
+```powershell
+winget install Eruhitsuji.lifetxt
+winget upgrade Eruhitsuji.lifetxt
+winget uninstall Eruhitsuji.lifetxt
+lifetxt --version
+```
+
+winget updates PATH for new shells automatically; an already-open terminal
+needs restarting to pick up a first-time install.
+
+### Scoop (secondary)
+
+```powershell
+scoop bucket add <bucket-name> <bucket-url>   # once a tap/bucket is published
+scoop install lifetxt
+```
+
+`scripts/generate_scoop_manifest.py` produces `lifetxt.json` the same way,
+also generated automatically by `package-manifests.yml`. Scoop manifests
+live in a "bucket" repository (a plain Git repo of `.json` files); this
+project does not yet maintain its own bucket, matching the issue's own
+"Scoop is secondary" scope guidance — the generated manifest is ready to
+publish into either a project-owned bucket (once one exists) or
+[`ScoopInstaller/Extras`](https://github.com/ScoopInstaller/Extras)-style
+community bucket submission, both of which are external, human-identity
+actions this repository does not perform automatically.
+
+```powershell
+scoop install ./packaging/scoop/generated/lifetxt.json   # local file, for testing the manifest itself
+lifetxt --version
+scoop uninstall lifetxt
+```
+
 ### Contributor vs. end-user installs
 
 Contributors changing lifetxt's own source still use an editable install

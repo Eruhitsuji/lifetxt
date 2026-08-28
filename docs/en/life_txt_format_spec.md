@@ -14,6 +14,10 @@ Blank lines are ignored. Lines beginning with `#` are comments. Most items fit
 on one line; optional continuation lines beginning with `|` attach multiline
 body text to the previous item.
 
+New to `life.txt`? [`getting-started.md`](./getting-started.md) teaches a
+small subset of this specification -- a strict subset, not a second format --
+in about five minutes before you need the rest of this document.
+
 ### 1.1 CLI-Compatible Profile
 
 The reference CLI (`python -m lifetxt`) implements a strict, round-trippable

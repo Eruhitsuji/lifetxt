@@ -8010,6 +8010,53 @@ traceability:
         instruction to open the pull request.
       status: implemented
 
+    - requirement_id: req-lifetxt-vm-opt-in-turing-complete
+      capability_id: cap-lifetxt-vm
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/560
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/561
+      changed_files_or_scope:
+        - Add lifetxt vm run, an opt-in Turing-complete 2-counter Minsky
+          machine interpretation layer over already-legal life.txt custom
+          keys (value:/op:/var:/next:/zero:/nonzero:), with no other
+          command ever executing VM records
+        - lifetxt/vm.py
+        - lifetxt/cli.py
+        - tests/test_vm.py
+        - tests/test_vm_cli.py
+        - docs/en/vm.md
+        - docs/ja/vm.md
+        - docs/en/cli.md
+        - docs/ja/cli.md
+        - docs/en/readme.md
+        - docs/ja/readme.md
+      tests_or_evidence:
+        - "tests/test_vm.py BuildProgramTests, RunProgramTests (35 tests): counter/instruction recognition, non-VM items ignored, custom id_key honored, every validation rejection the issue lists, the canonical X=3,Y=0 -> X=0,Y=3 example halting after exactly 7 steps, zero/nonzero branch execution, entry validation, step-limit boundary behavior, --max-steps 0 meaning unlimited, and runtime state never mutating the parsed source items"
+        - "tests/test_vm_cli.py VmRunCliTests (11 tests): text/--json output shape, unknown entry, --max-steps enforcement at and below the boundary, --max-steps 0, negative --max-steps, an invalid program failing loudly with no stdout, VM records never executing under plain check, mixed VM/ordinary records executing only the VM records, vm --help/vm run --help"
+        - python -m unittest tests.test_vm tests.test_vm_cli -> Ran 46 tests, OK
+        - python -m unittest tests.test_completion_surfaces tests.test_surface_runtime -> Ran 61 tests, OK
+        - python -m unittest tests.test_release_policy tests.test_web_i18n -> Ran 53 tests, OK
+        - python -m unittest tests.test_traceability_gate tests.test_change_package_closeout -> Ran 17 tests, OK
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2805 tests, OK (skipped=5)'
+        - "live: python -m lifetxt vm run program.life.txt --entry s1 against the issue's own worked example (X=3, Y=0) produced HALT after 7 steps / x=0 / y=3 in both text and --json form"
+        - "live: every listed validation rejection (dangling next:/zero:/nonzero:, unknown var: counter reference, negative/non-integer value:, unknown op:, duplicate id:, both value:+op:, missing required detail) reproduced against real disposable fixture files with the exact designed error text"
+        - "live: --max-steps boundary confirmed on the real 7-step example -- max-steps 6 fails naming the in-flight state, max-steps 7 succeeds, max-steps 0 succeeds (unlimited), negative max-steps is rejected before any execution"
+        - "live: python -m lifetxt check against the same VM program file emits only non-blocking W106 custom-key warnings (exit 0) and performs no execution; a file mixing an ordinary Task with VM records only executes the VM records under vm run"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - 'scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> {"errors": 0, "ok": true}'
+        - ruff format --check / ruff check lifetxt/vm.py lifetxt/cli.py tests/test_vm.py tests/test_vm_cli.py -> clean
+      release_or_deployment: null
+      notes: >-
+        Distilled directly from the issue's own detailed instruction-set,
+        validation, safety-boundary, and non-goals specification (below the
+        `.ai/project/changes/README.md` change-package threshold: Standard
+        assurance -- the VM has no filesystem/network/shell/`eval`/`exec`/
+        environment-variable/MCP/Web-API/plugin access and never mutates
+        `life.txt`, so no security-impact escalation applies per
+        `ASSURANCE_LEVELS.md`'s escalation rules). See `cap-lifetxt-vm`'s
+        own notes for the full design rationale.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

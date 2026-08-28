@@ -12,11 +12,13 @@ distribution architecture.
 - `winget/` — generated winget manifest templates and generator output (#571).
 - `scoop/` — generated Scoop manifest and generator output (#571).
 - `homebrew/` — generated Homebrew Formula output (#572).
+- `conda-forge/` — generated conda-forge recipe output (#573).
 
-`winget/generated/`, `scoop/generated/`, and `homebrew/generated/` are
-per-release output, not templates — they are gitignored and regenerated for
-each release rather than committed. `homebrew/generated/lifetxt.rb` is the
-same file `.github/workflows/homebrew-tap.yml` pushes to
+`winget/generated/`, `scoop/generated/`, `homebrew/generated/`, and
+`conda-forge/generated/` are per-release output, not templates — they are
+gitignored and regenerated for each release rather than committed.
+`homebrew/generated/lifetxt.rb` is the same file
+`.github/workflows/homebrew-tap.yml` pushes to
 [`Eruhitsuji/homebrew-tap`](https://github.com/Eruhitsuji/homebrew-tap);
-running the generator locally only writes here, it does not publish
-anything.
+running any of these generators locally only writes here, none of them
+publish or submit anything by themselves.

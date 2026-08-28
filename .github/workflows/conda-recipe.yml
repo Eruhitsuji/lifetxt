@@ -1,0 +1,83 @@
+name: conda-forge recipe
+
+# Generates the conda-forge staged-recipes meta.yaml for a release and
+# uploads it as a workflow artifact for the maintainer to review and submit
+# by hand. Does not open a PR against conda-forge/staged-recipes -- that
+# requires the maintainer's own GitHub identity and, per the issue's own
+# scope guidance, should wait until the package has real PyPI usage to
+# reference. See docs/en/distribution.md for the manual submission steps.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to generate a recipe for, e.g. v1.0.0"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    name: Generate the conda-forge recipe
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve release tag
+        id: resolve-tag
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check out repository at the release tag
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ steps.resolve-tag.outputs.tag }}
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Confirm tag matches the declared package version
+        run: python scripts/check_release_tag_version.py "${{ steps.resolve-tag.outputs.tag }}"
+
+      - name: Download the release's SHA256SUMS (built by release.yml)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.resolve-tag.outputs.tag }}
+        run: gh release download "$TAG" --pattern SHA256SUMS
+
+      - name: Extract the sdist checksum
+        id: values
+        shell: bash
+        env:
+          TAG: ${{ steps.resolve-tag.outputs.tag }}
+        run: |
+          set -e
+          sha256="$(grep '\.tar\.gz$' SHA256SUMS | cut -d' ' -f1)"
+          if [ -z "$sha256" ]; then
+            echo "No sdist (*.tar.gz) checksum found in this release's SHA256SUMS -- has release.yml run for this tag yet?" >&2
+            exit 1
+          fi
+          echo "sha256=$sha256" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate the recipe
+        run: >-
+          python scripts/generate_conda_recipe.py
+          --version "${{ steps.values.outputs.version }}"
+          --sha256 "${{ steps.values.outputs.sha256 }}"
+          --output-dir packaging/conda-forge/generated/recipe
+
+      - name: Upload the generated recipe
+        uses: actions/upload-artifact@v6
+        with:
+          name: conda-forge-recipe-${{ steps.resolve-tag.outputs.tag }}
+          if-no-files-found: error
+          path: packaging/conda-forge/generated/

@@ -4833,6 +4833,73 @@ class LifeTxtWebApiTests(unittest.TestCase):
                 "task_other", {node["id"] for node in invalid_depth.json()["nodes"]}
             )
 
+    def test_graph_api_relations_filter_narrows_edges(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                "[ ] T Alpha id:task_a depends_on:task_b related:task_c\n"
+                "[ ] T Beta id:task_b\n"
+                "[ ] T Gamma id:task_c\n",
+                encoding="utf-8",
+            )
+            client = self._client([path], writable_path=path)
+
+            unfiltered = client.get("/api/graph").json()
+            filtered = client.get("/api/graph?relations=depends_on").json()
+
+            self.assertEqual(
+                {"depends_on", "related"},
+                {e["relation"] for e in unfiltered["edges"]},
+            )
+            self.assertEqual({"depends_on"}, {e["relation"] for e in filtered["edges"]})
+            self.assertEqual({"task_a", "task_b"}, {n["id"] for n in filtered["nodes"]})
+
+    def test_graph_api_default_response_shape_is_unchanged(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                "[ ] T Alpha id:task_a depends_on:task_b\n[ ] T Beta id:task_b\n",
+                encoding="utf-8",
+            )
+            client = self._client([path], writable_path=path)
+
+            response = client.get("/api/graph").json()
+
+            self.assertEqual(1, len(response["edges"]))
+            self.assertNotIn("kind", response["edges"][0])
+
+    def test_graph_api_include_temporal_overlays_edges_tagged_by_kind(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                "[ ] T Alpha id:task_a depends_on:task_b due:2026-06-10\n"
+                "[ ] T Beta id:task_b\n"
+                "[ ] T Nearby id:task_near due:2026-06-11\n",
+                encoding="utf-8",
+            )
+            client = self._client([path], writable_path=path)
+
+            response = client.get("/api/graph?root=task_a&include_temporal=true").json()
+
+            kinds = {e["kind"] for e in response["edges"]}
+            self.assertEqual({"structural", "temporal"}, kinds)
+            temporal_edges = [e for e in response["edges"] if e["kind"] == "temporal"]
+            self.assertTrue(any(e["target"] == "task_near" for e in temporal_edges))
+            self.assertIn("task_near", {n["id"] for n in response["nodes"]})
+
+    def test_graph_api_include_temporal_without_root_has_no_effect(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                "[ ] T Alpha id:task_a depends_on:task_b\n[ ] T Beta id:task_b\n",
+                encoding="utf-8",
+            )
+            client = self._client([path], writable_path=path)
+
+            response = client.get("/api/graph?include_temporal=true").json()
+
+            self.assertNotIn("kind", response["edges"][0])
+
 
 class LifeTxtMcpTests(unittest.TestCase):
     def test_mcp_jsonrpc_lists_tools_and_resources(self):
@@ -4908,6 +4975,52 @@ class LifeTxtMcpTests(unittest.TestCase):
             )
             self.assertEqual("self", status["records"][0]["person"])
             self.assertTrue(parsed["ok"])
+
+    def test_mcp_get_graph_relations_filter_matches_the_web_api(self):
+        from lifetxt.mcp import McpContext, call_tool
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                "[ ] T Alpha id:task_a depends_on:task_b related:task_c\n"
+                "[ ] T Beta id:task_b\n"
+                "[ ] T Gamma id:task_c\n",
+                encoding="utf-8",
+            )
+            context = McpContext(paths=[path], writable_path=path)
+
+            unfiltered = call_tool("get_graph", {}, context)
+            filtered = call_tool("get_graph", {"relations": "depends_on"}, context)
+
+            self.assertEqual(
+                {"depends_on", "related"},
+                {e["relation"] for e in unfiltered["edges"]},
+            )
+            self.assertEqual({"depends_on"}, {e["relation"] for e in filtered["edges"]})
+
+    def test_mcp_get_graph_include_temporal_overlays_edges_tagged_by_kind(self):
+        from lifetxt.mcp import McpContext, call_tool
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                "[ ] T Alpha id:task_a depends_on:task_b due:2026-06-10\n"
+                "[ ] T Beta id:task_b\n"
+                "[ ] T Nearby id:task_near due:2026-06-11\n",
+                encoding="utf-8",
+            )
+            context = McpContext(paths=[path], writable_path=path)
+
+            plain = call_tool("get_graph", {"root": "task_a"}, context)
+            overlaid = call_tool(
+                "get_graph", {"root": "task_a", "include_temporal": True}, context
+            )
+
+            self.assertNotIn("kind", plain["edges"][0])
+            self.assertEqual(
+                {"structural", "temporal"}, {e["kind"] for e in overlaid["edges"]}
+            )
+            self.assertIn("task_near", {n["id"] for n in overlaid["nodes"]})
 
     def test_mcp_get_review_matches_api_report_shape(self):
         from lifetxt.mcp import McpContext, call_tool
@@ -8744,6 +8857,134 @@ class LifeTxtLinksDotTests(unittest.TestCase):
         out = normalize_newlines(stdout)
         self.assertIn("digraph links", out)
         self.assertNotIn("->", out)
+
+
+class LifeTxtLinksAnalyticsTests(unittest.TestCase):
+    """lifetxt links --topo / --critical-path / --path (#564)."""
+
+    TEXT = (
+        "[ ] T A id:a depends_on:b\n"
+        "[ ] T B id:b depends_on:c\n"
+        "[ ] T C id:c\n"
+        "[ ] T D id:d depends_on:c related:a\n"
+    )
+    CYCLE_TEXT = "[ ] T X id:x depends_on:y\n[ ] T Y id:y depends_on:x\n"
+
+    def test_topo_text_output(self):
+        stdout, stderr, code = run_cli("links", "--topo", input_text=self.TEXT)
+        self.assertEqual(0, code, stderr)
+        self.assertEqual(
+            ["c", "b", "a", "d"], normalize_newlines(stdout).strip().split("\n")
+        )
+
+    def test_topo_json_output(self):
+        stdout, stderr, code = run_cli(
+            "links", "--topo", "--format", "json", input_text=self.TEXT
+        )
+        self.assertEqual(0, code, stderr)
+        self.assertEqual(["c", "b", "a", "d"], json.loads(stdout)["order"])
+
+    def test_topo_jsonl_output(self):
+        stdout, stderr, code = run_cli(
+            "links", "--topo", "--format", "jsonl", input_text=self.TEXT
+        )
+        self.assertEqual(0, code, stderr)
+        lines = normalize_newlines(stdout).strip().split("\n")
+        self.assertEqual(
+            ["c", "b", "a", "d"], [json.loads(line)["id"] for line in lines]
+        )
+
+    def test_topo_refuses_a_cycle(self):
+        stdout, stderr, code = run_cli("links", "--topo", input_text=self.CYCLE_TEXT)
+        self.assertNotEqual(0, code)
+        self.assertIn("dependency cycle", stderr)
+        self.assertEqual("", stdout)
+
+    def test_topo_conflicts_with_id(self):
+        stdout, stderr, code = run_cli(
+            "links", "--topo", "--id", "a", input_text=self.TEXT
+        )
+        self.assertNotEqual(0, code)
+        self.assertIn("--topo", stderr)
+
+    def test_critical_path_text_output(self):
+        stdout, stderr, code = run_cli("links", "--critical-path", input_text=self.TEXT)
+        self.assertEqual(0, code, stderr)
+        self.assertIn("Critical path (3 steps): c -> b -> a", stdout)
+
+    def test_critical_path_rooted_at_chain_id(self):
+        stdout, stderr, code = run_cli(
+            "links", "--critical-path", "--chain", "d", input_text=self.TEXT
+        )
+        self.assertEqual(0, code, stderr)
+        self.assertIn("Critical path (2 steps): c -> d", stdout)
+
+    def test_critical_path_json_output(self):
+        stdout, stderr, code = run_cli(
+            "links", "--critical-path", "--format", "json", input_text=self.TEXT
+        )
+        self.assertEqual(0, code, stderr)
+        data = json.loads(stdout)
+        self.assertEqual(3, data["length"])
+        self.assertEqual(["c", "b", "a"], data["path"])
+
+    def test_critical_path_refuses_a_cycle(self):
+        stdout, stderr, code = run_cli(
+            "links", "--critical-path", input_text=self.CYCLE_TEXT
+        )
+        self.assertNotEqual(0, code)
+        self.assertIn("dependency cycle", stderr)
+
+    def test_critical_path_unknown_chain_id_fails_loudly(self):
+        stdout, stderr, code = run_cli(
+            "links", "--critical-path", "--chain", "nope", input_text=self.TEXT
+        )
+        self.assertNotEqual(0, code)
+        self.assertIn("nope", stderr)
+
+    def test_path_text_output(self):
+        stdout, stderr, code = run_cli(
+            "links", "--path", "a", "d", input_text=self.TEXT
+        )
+        self.assertEqual(0, code, stderr)
+        out = normalize_newlines(stdout)
+        self.assertIn("a\n", out)
+        self.assertIn("-> d (related, incoming)", out)
+
+    def test_path_json_output(self):
+        stdout, stderr, code = run_cli(
+            "links", "--path", "a", "d", "--format", "json", input_text=self.TEXT
+        )
+        self.assertEqual(0, code, stderr)
+        data = json.loads(stdout)
+        self.assertEqual("a", data["from"])
+        self.assertEqual("d", data["to"])
+        self.assertEqual(["a", "d"], [hop["id"] for hop in data["path"]])
+
+    def test_path_not_found(self):
+        text = "[ ] T A id:a\n[ ] T B id:b\n"
+        stdout, stderr, code = run_cli("links", "--path", "a", "b", input_text=text)
+        self.assertEqual(0, code, stderr)
+        self.assertIn("No path found", stdout)
+
+    def test_path_conflicts_with_critical_path(self):
+        stdout, stderr, code = run_cli(
+            "links",
+            "--path",
+            "a",
+            "d",
+            "--critical-path",
+            input_text=self.TEXT,
+        )
+        self.assertNotEqual(0, code)
+        self.assertIn("--path", stderr)
+
+    def test_links_help_shows_new_flags(self):
+        stdout, stderr, code = run_cli("links", "--help")
+        self.assertEqual(0, code, stderr)
+        self.assertIn("--topo", stdout)
+        self.assertIn("--critical-path", stdout)
+        self.assertIn("--path", stdout)
 
 
 class LifeTxtW219Tests(unittest.TestCase):

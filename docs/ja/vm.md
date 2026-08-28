@@ -118,6 +118,53 @@ else:
 既に理解している既存の `id:` 参照機構を、そのまま control-flow graph の
 辺として再利用する。
 
+## program の可視化: `lifetxt vm graph`
+
+`lifetxt vm graph` は、検証済みの program の counter/instruction を
+directed graph として出力する。node id の正規化・quote 処理は
+`lifetxt links --format mermaid|dot` と同じ共有 helper をそのまま
+再利用している。
+
+```console
+$ lifetxt vm graph program.life.txt --entry s1
+graph LR
+    x(["x=3"])
+    y(["y=0"])
+    s1["s1: dec_jz x"]:::entry
+    s2["s2: inc y"]
+    halt["halt: halt"]
+
+    s1 -. var .-> x
+    s1 -- nonzero --> s2
+    s1 -- zero --> halt
+    s2 -. var .-> y
+    s2 -- next --> s1
+
+    classDef entry stroke-width:3px
+
+$ lifetxt vm graph program.life.txt --format dot
+digraph vm {
+    x [shape=ellipse, label="x=3"];
+    ...
+}
+```
+
+| Option | 意味 |
+|---|---|
+| `path ...` | 1つ以上の life.txt file、または stdin 用の `-`。入力の扱いは `vm run` と同じ。 |
+| `--entry ID` | 省略可。指定した場合、該当 instruction node が強調表示され（mermaid では `:::entry`、dot では `peripheries=2`）、`vm run --entry` と同じ方法で検証される -- 存在しない id や counter を指す id はエラーで失敗する。 |
+| `--format {mermaid,dot}` | 出力形式。既定は `mermaid`。 |
+
+`--entry` から到達可能かどうかに関わらず、宣言された全ての counter と
+instruction が描画される -- これは検証済み program に対する静的な export
+であり、`vm run` の実行結果ではない。counter は stadium 形状の node
+（mermaid では `(["..."])`、dot では `shape=ellipse`）、instruction は
+矩形（`["..."]` / `shape=box`）で描画され、視覚的に区別できる。辺は 2 種類
+描画される: instruction 間の実線でラベル付きの `next:`/`zero:`/`nonzero:`
+control-flow 遷移と、各 instruction からそれが読み書きする counter への
+破線の `var:` 辺。`vm run` 自身の検証に失敗する program は、ここでも
+何も描画されずに同様に失敗する。
+
 ## 例: X の値を Y に移す
 
 ```life.txt

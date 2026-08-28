@@ -61,6 +61,7 @@ from .webapp import (
     update_item_by_id_in_file,
     write_text,
     _subgraph,
+    _temporal_overlay_edges,
 )
 from .web_read_service import assert_unique_workspace_ids
 from .mcp_resources import resource_list as _resource_list
@@ -582,6 +583,20 @@ def _tool_schemas():
             {
                 "root": _string("Optional root ID."),
                 "depth": _integer("Optional traversal depth."),
+                "relations": _string(
+                    "Optional comma-separated relation keys to limit edges "
+                    "to (e.g. depends_on,blocks)."
+                ),
+                "include_temporal": _bool(
+                    "When true and root is given, overlay root's bounded "
+                    "same_day/before/after temporal neighbors as additional "
+                    "edges. Every edge gains a kind field (structural or "
+                    "temporal) only when this is used."
+                ),
+                "temporal_window": _integer(
+                    "Days on either side of root's own date to consider "
+                    "for the temporal overlay. Default 7."
+                ),
             },
         ),
         _tool(
@@ -1945,11 +1960,17 @@ def _tool_get_review(args, context):
 
 def _tool_get_graph(args, context):
     items, _diagnostics = _read_items(context)
-    nodes, edges = _graph_nodes_edges(items, _id_key(context))
+    key = _id_key(context)
+    relations = _csv_values(args.get("relations") or args.get("relation"))
+    nodes, edges = _graph_nodes_edges(items, key, relations=relations)
     root = args.get("root")
     if root:
         nodes, edges = _subgraph(
             nodes, edges, str(root), _safe_depth(args.get("depth"), default=None)
+        )
+    if root and _truthy(args.get("include_temporal")):
+        nodes, edges = _temporal_overlay_edges(
+            nodes, edges, items, str(root), key, args.get("temporal_window")
         )
     return {"nodes": nodes, "edges": edges}
 
@@ -3378,8 +3399,8 @@ TOOL_HANDLERS = OrderedDict(
 )
 
 
-def _graph_nodes_edges(items, key):
-    records = link_records(items, key=key)
+def _graph_nodes_edges(items, key, relations=None):
+    records = link_records(items, key=key, relations=relations)
     nodes_map = OrderedDict()
     edges = []
     for rec in records:

@@ -8,7 +8,9 @@ import unittest
 from lifetxt import entrypoint
 from lifetxt.parser import parse_text
 from lifetxt.links import (
+    LinksCycleError,
     backlink_records,
+    critical_path,
     dependency_blocker_records,
     dependency_blockers_by_item,
     dependency_chain_records,
@@ -22,6 +24,8 @@ from lifetxt.links import (
     links_to_jsonl,
     links_to_mermaid,
     reference_diagnostics,
+    shortest_path,
+    topological_order,
 )
 
 
@@ -498,6 +502,177 @@ class TicketEventCrossFileResolutionTests(unittest.TestCase):
         self.assertEqual("TK-1", record["target_id"])
         self.assertTrue(record["source_location"].endswith("history.life.txt:1"))
         self.assertTrue(record["target_location"].endswith("tickets.life.txt:1"))
+
+
+class TopologicalOrderTests(unittest.TestCase):
+    """topological_order (#564)."""
+
+    def test_linear_chain_orders_prerequisites_first(self):
+        text = "[ ] T A id:a depends_on:b\n[ ] T B id:b depends_on:c\n[ ] T C id:c\n"
+        items, _diagnostics = parse_text(text)
+        self.assertEqual(["c", "b", "a"], topological_order(items))
+
+    def test_blocks_is_treated_as_the_inverse_of_depends_on(self):
+        text = "[ ] T Gate id:gate blocks:work\n[ ] T Work id:work\n"
+        items, _diagnostics = parse_text(text)
+        self.assertEqual(["gate", "work"], topological_order(items))
+
+    def test_disconnected_nodes_all_appear_exactly_once(self):
+        text = "[ ] T A id:a\n[ ] T B id:b\n[ ] T C id:c depends_on:a\n"
+        items, _diagnostics = parse_text(text)
+        order = topological_order(items)
+        self.assertEqual({"a", "b", "c"}, set(order))
+        self.assertLess(order.index("a"), order.index("c"))
+
+    def test_ties_are_broken_deterministically_by_id(self):
+        text = "[ ] T Zed id:zed\n[ ] T Alpha id:alpha\n[ ] T Beta id:beta\n"
+        items, _diagnostics = parse_text(text)
+        self.assertEqual(["alpha", "beta", "zed"], topological_order(items))
+
+    def test_relation_subset_limits_the_graph(self):
+        text = "[ ] T A id:a depends_on:b related:c\n[ ] T B id:b\n[ ] T C id:c\n"
+        items, _diagnostics = parse_text(text)
+        order = topological_order(items, relations=["related"])
+        self.assertLess(order.index("c"), order.index("a"))
+
+    def test_cycle_is_rejected_naming_the_involved_ids(self):
+        text = "[ ] T X id:x depends_on:y\n[ ] T Y id:y depends_on:x\n"
+        items, _diagnostics = parse_text(text)
+        with self.assertRaises(LinksCycleError) as ctx:
+            topological_order(items)
+        message = str(ctx.exception)
+        self.assertIn("x", message)
+        self.assertIn("y", message)
+
+    def test_ambiguous_ids_do_not_participate(self):
+        text = (
+            "[ ] T Dup id:dup\n[ ] T Dup2 id:dup\n[ ] T Other id:other depends_on:dup\n"
+        )
+        items, _diagnostics = parse_text(text)
+        self.assertEqual(["other"], topological_order(items))
+
+
+class CriticalPathTests(unittest.TestCase):
+    """critical_path (#564)."""
+
+    def test_longest_chain_is_reported_with_its_length(self):
+        text = (
+            "[ ] T A id:a depends_on:b\n"
+            "[ ] T B id:b depends_on:c\n"
+            "[ ] T C id:c\n"
+            "[ ] T D id:d depends_on:c\n"
+        )
+        items, _diagnostics = parse_text(text)
+        result = critical_path(items)
+        self.assertEqual(3, result["length"])
+        self.assertEqual(["c", "b", "a"], result["path"])
+
+    def test_rooted_at_a_specific_item(self):
+        text = (
+            "[ ] T A id:a depends_on:b\n"
+            "[ ] T B id:b depends_on:c\n"
+            "[ ] T C id:c\n"
+            "[ ] T D id:d depends_on:c\n"
+        )
+        items, _diagnostics = parse_text(text)
+        result = critical_path(items, root_id="d")
+        self.assertEqual(2, result["length"])
+        self.assertEqual(["c", "d"], result["path"])
+
+    def test_unknown_root_id_is_rejected(self):
+        text = "[ ] T A id:a\n"
+        items, _diagnostics = parse_text(text)
+        with self.assertRaises(ValueError) as ctx:
+            critical_path(items, root_id="nope")
+        self.assertIn("nope", str(ctx.exception))
+
+    def test_cycle_is_rejected(self):
+        text = "[ ] T X id:x depends_on:y\n[ ] T Y id:y depends_on:x\n"
+        items, _diagnostics = parse_text(text)
+        with self.assertRaises(LinksCycleError):
+            critical_path(items)
+
+    def test_isolated_item_with_no_dependency_edges_is_a_trivial_chain_of_one(self):
+        text = "[ ] T A id:a\n"
+        items, _diagnostics = parse_text(text)
+        result = critical_path(items)
+        self.assertEqual(1, result["length"])
+        self.assertEqual(["a"], result["path"])
+
+    def test_no_participating_items_returns_zero_length(self):
+        text = "[ ] T No_id\n"
+        items, _diagnostics = parse_text(text)
+        result = critical_path(items)
+        self.assertEqual(0, result["length"])
+        self.assertEqual([], result["path"])
+
+    def test_estimate_sum_when_every_node_on_the_path_has_one(self):
+        text = "[ ] T A id:a depends_on:b estimate:2\n[ ] T B id:b estimate:3\n"
+        items, _diagnostics = parse_text(text)
+        result = critical_path(items)
+        self.assertEqual(5.0, result["estimate_sum"])
+
+    def test_estimate_sum_is_none_when_any_node_lacks_one(self):
+        text = "[ ] T A id:a depends_on:b estimate:2\n[ ] T B id:b\n"
+        items, _diagnostics = parse_text(text)
+        result = critical_path(items)
+        self.assertIsNone(result["estimate_sum"])
+
+    def test_ties_are_broken_deterministically(self):
+        # Two equal-length chains (a->c, b->c); global critical path picks
+        # the lexicographically smallest winning target.
+        text = "[ ] T A id:a depends_on:c\n[ ] T B id:b depends_on:c\n[ ] T C id:c\n"
+        items, _diagnostics = parse_text(text)
+        result = critical_path(items)
+        self.assertEqual(["c", "a"], result["path"])
+
+
+class ShortestPathTests(unittest.TestCase):
+    """shortest_path (#564)."""
+
+    def test_direct_relation_is_a_single_hop(self):
+        text = "[ ] T A id:a depends_on:b\n[ ] T B id:b\n"
+        items, _diagnostics = parse_text(text)
+        hops = shortest_path(items, from_id="a", to_id="b")
+        self.assertEqual(["a", "b"], [h["id"] for h in hops])
+        self.assertEqual("depends_on", hops[1]["relation"])
+        self.assertEqual("outgoing", hops[1]["direction"])
+
+    def test_traversal_is_bidirectional(self):
+        text = "[ ] T A id:a depends_on:b\n[ ] T B id:b\n"
+        items, _diagnostics = parse_text(text)
+        hops = shortest_path(items, from_id="b", to_id="a")
+        self.assertEqual(["b", "a"], [h["id"] for h in hops])
+        self.assertEqual("incoming", hops[1]["direction"])
+
+    def test_multi_hop_path_through_an_intermediate_item(self):
+        text = "[ ] T A id:a depends_on:b\n[ ] T B id:b related:c\n[ ] T C id:c\n"
+        items, _diagnostics = parse_text(text)
+        hops = shortest_path(items, from_id="a", to_id="c")
+        self.assertEqual(["a", "b", "c"], [h["id"] for h in hops])
+
+    def test_disconnected_pair_returns_none(self):
+        text = "[ ] T A id:a\n[ ] T B id:b\n"
+        items, _diagnostics = parse_text(text)
+        self.assertIsNone(shortest_path(items, from_id="a", to_id="b"))
+
+    def test_same_start_and_end_returns_a_single_hop(self):
+        text = "[ ] T A id:a\n"
+        items, _diagnostics = parse_text(text)
+        hops = shortest_path(items, from_id="a", to_id="a")
+        self.assertEqual(["a"], [h["id"] for h in hops])
+        self.assertIsNone(hops[0]["relation"])
+
+    def test_unknown_id_returns_none(self):
+        text = "[ ] T A id:a\n"
+        items, _diagnostics = parse_text(text)
+        self.assertIsNone(shortest_path(items, from_id="a", to_id="nope"))
+
+    def test_relation_subset_limits_traversal(self):
+        text = "[ ] T A id:a depends_on:b\n[ ] T B id:b\n[ ] T C id:c related:a\n"
+        items, _diagnostics = parse_text(text)
+        hops = shortest_path(items, from_id="c", to_id="b", relations=["related"])
+        self.assertIsNone(hops)
 
 
 if __name__ == "__main__":

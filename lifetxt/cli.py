@@ -73,6 +73,8 @@ from .ids import (
     id_prefix_for_item,
 )
 from .links import (
+    LinksCycleError,
+    critical_path,
     dependency_blocker_records,
     dependency_chain_records,
     dependency_chains_to_dot,
@@ -85,6 +87,8 @@ from .links import (
     links_to_jsonl,
     links_to_mermaid,
     reference_diagnostics,
+    shortest_path,
+    topological_order,
 )
 from .markdown import markdown_to_html, markdown_to_plain
 from .model import Diagnostic, Item
@@ -287,6 +291,13 @@ def build_parser():
         help="Also run read-only AI-safe workspace and Personal AI Memory checks.",
     )
     integrity.add_argument(
+        "--graph",
+        action="store_true",
+        help="Also run read-only relation-graph health checks: orphan "
+        "items, most-referenced hubs, connected components, and the "
+        "longest depends_on/blocks chain.",
+    )
+    integrity.add_argument(
         "--profile",
         choices=("default", "strict"),
         default="default",
@@ -377,6 +388,24 @@ def build_parser():
         "--relation",
         action="append",
         help="Limit links to a relation key such as depends_on, blocks, parent, ref, or related. Can be repeated or comma-separated.",
+    )
+    links_command.add_argument(
+        "--topo",
+        action="store_true",
+        help="Print a topological order over the depends_on/blocks graph "
+        "(or the --relation subset). Refuses loudly on a cycle.",
+    )
+    links_command.add_argument(
+        "--critical-path",
+        action="store_true",
+        help="Print the longest depends_on/blocks chain (or the --relation "
+        "subset), optionally rooted at --chain ID.",
+    )
+    links_command.add_argument(
+        "--path",
+        nargs=2,
+        metavar=("FROM", "TO"),
+        help="Print the shortest chain of relations connecting two item IDs.",
     )
     links_command.add_argument(
         "--key",
@@ -1346,6 +1375,27 @@ def build_parser():
     )
     vm_run_command.add_argument("--json", action="store_true", help="Emit JSON.")
     vm_run_command.set_defaults(func=command_vm_run)
+
+    vm_graph_command = vm_subparsers.add_parser(
+        "graph",
+        help="Render a lifetxt VM program's counters and instructions as a "
+        "directed control-flow graph (mermaid or dot). Static only; never "
+        "executes the program.",
+    )
+    _add_input_paths(vm_graph_command)
+    vm_graph_command.add_argument(
+        "--entry",
+        metavar="ID",
+        default=None,
+        help="Optional id: of an instruction to highlight as the entry point.",
+    )
+    vm_graph_command.add_argument(
+        "--format",
+        choices=("mermaid", "dot"),
+        default="mermaid",
+        help="Output format. Defaults to mermaid.",
+    )
+    vm_graph_command.set_defaults(func=command_vm_graph)
 
     query_command = subparsers.add_parser(
         "query", help="Filter items with the shared query language."
@@ -4025,6 +4075,7 @@ def command_integrity(args):
             verify_files=getattr(args, "verify_files", False),
             profile=getattr(args, "profile", "default"),
             ai_context=getattr(args, "ai_context", False),
+            graph=getattr(args, "graph", False),
         )
         write_text(None, integrity_plan_to_json(plan))
         return 0
@@ -4061,6 +4112,7 @@ def command_integrity(args):
         verify_files=getattr(args, "verify_files", False),
         profile=getattr(args, "profile", "default"),
         ai_context=getattr(args, "ai_context", False),
+        graph=getattr(args, "graph", False),
     )
     if getattr(args, "json", False):
         write_text(None, integrity_report_to_json(report))
@@ -4104,6 +4156,154 @@ def command_ids(args):
 def command_links(args):
     items, diagnostics = _parse_or_exit(args.paths, _config(args))
     key = args.key or id_key_from_config(_config(args))
+    topo = getattr(args, "topo", False)
+    crit = getattr(args, "critical_path", False)
+    path_ids = getattr(args, "path", None)
+
+    if topo:
+        if args.item_id or args.chain or crit or path_ids:
+            raise ValueError(
+                "--topo cannot be combined with --id, --chain, "
+                "--critical-path, or --path."
+            )
+        if args.direction != "both":
+            raise ValueError("--direction is only valid with --id, not --topo.")
+        if args.format in ("mermaid", "dot"):
+            raise ValueError("--topo supports text, json, or jsonl output.")
+        try:
+            order = topological_order(
+                items, key=key, relations=_split_csv_args(args.relation)
+            )
+        except ValueError as exc:
+            sys.stderr.write("ERROR: %s\n" % exc)
+            return 1
+        if args.format == "json":
+            write_text(
+                None,
+                json.dumps(
+                    {"order": order},
+                    ensure_ascii=False,
+                    indent=2 if args.pretty else None,
+                    separators=None if args.pretty else (",", ":"),
+                )
+                + "\n",
+            )
+        elif args.format == "jsonl":
+            output = "\n".join(
+                json.dumps({"id": node_id}, ensure_ascii=False, separators=(",", ":"))
+                for node_id in order
+            )
+            if output:
+                output += "\n"
+            write_text(None, output)
+        elif order:
+            write_text(None, "\n".join(order) + "\n")
+        else:
+            write_text(None, "(no items participate in the dependency graph)\n")
+        _print_warnings(diagnostics)
+        return 0
+
+    if crit:
+        if args.item_id or topo or path_ids:
+            raise ValueError(
+                "--critical-path cannot be combined with --id, --topo, or --path."
+            )
+        if args.direction != "both":
+            raise ValueError(
+                "--direction is only valid with --id, not --critical-path."
+            )
+        if args.format in ("mermaid", "dot"):
+            raise ValueError("--critical-path supports text, json, or jsonl output.")
+        try:
+            result = critical_path(
+                items,
+                key=key,
+                root_id=args.chain,
+                relations=_split_csv_args(args.relation),
+            )
+        except ValueError as exc:
+            sys.stderr.write("ERROR: %s\n" % exc)
+            return 1
+        if args.format == "json":
+            write_text(
+                None,
+                json.dumps(
+                    result,
+                    ensure_ascii=False,
+                    indent=2 if args.pretty else None,
+                    separators=None if args.pretty else (",", ":"),
+                )
+                + "\n",
+            )
+        elif args.format == "jsonl":
+            write_text(
+                None,
+                json.dumps(result, ensure_ascii=False, separators=(",", ":")) + "\n",
+            )
+        elif result["path"]:
+            step_word = "step" if result["length"] == 1 else "steps"
+            write_text(
+                None,
+                "Critical path (%d %s): %s\n"
+                % (result["length"], step_word, " -> ".join(result["path"])),
+            )
+            if result["estimate_sum"] is not None:
+                write_text(None, "estimate_sum=%s\n" % result["estimate_sum"])
+        else:
+            write_text(None, "(no items participate in the dependency graph)\n")
+        _print_warnings(diagnostics)
+        return 0
+
+    if path_ids:
+        if args.item_id or args.chain or topo or crit:
+            raise ValueError(
+                "--path cannot be combined with --id, --chain, --topo, or "
+                "--critical-path."
+            )
+        if args.direction != "both":
+            raise ValueError("--direction is only valid with --id, not --path.")
+        if args.format in ("mermaid", "dot"):
+            raise ValueError("--path supports text, json, or jsonl output.")
+        from_id, to_id = path_ids
+        hops = shortest_path(
+            items,
+            key=key,
+            from_id=from_id,
+            to_id=to_id,
+            relations=_split_csv_args(args.relation),
+        )
+        if args.format == "json":
+            write_text(
+                None,
+                json.dumps(
+                    {"from": from_id, "to": to_id, "path": hops},
+                    ensure_ascii=False,
+                    indent=2 if args.pretty else None,
+                    separators=None if args.pretty else (",", ":"),
+                )
+                + "\n",
+            )
+        elif args.format == "jsonl":
+            output = "\n".join(
+                json.dumps(hop, ensure_ascii=False, separators=(",", ":"))
+                for hop in (hops or [])
+            )
+            if output:
+                output += "\n"
+            write_text(None, output)
+        elif hops is None:
+            write_text(None, "No path found between %s and %s.\n" % (from_id, to_id))
+        else:
+            write_text(None, "%s\n" % hops[0]["id"])
+            for hop in hops[1:]:
+                write_text(
+                    None,
+                    "  -> %s (%s, %s)\n"
+                    % (hop["id"], hop["relation"], hop["direction"]),
+                )
+        _print_warnings(diagnostics)
+        return 0
+
     if getattr(args, "chain", None):
         if args.item_id:
             raise ValueError("Use either --chain or --id, not both.")
@@ -11984,6 +12184,29 @@ def command_vm_run(args):
     )
     for counter_id, value in result.state.items():
         write_text(None, "%s=%s\n" % (counter_id, value))
+    return 0
+
+
+def command_vm_graph(args):
+    from .vm import VMProgramError, build_program, program_to_dot, program_to_mermaid
+
+    config = _config(args)
+    paths = _normalize_paths(
+        getattr(args, "paths", None), config, stdin_when_empty=False
+    ) or ["life.txt"]
+    items, _diagnostics = _parse_or_exit(paths, config)
+    key = id_key_from_config(config)
+    try:
+        program = build_program(items, id_key=key)
+        if args.format == "dot":
+            output = program_to_dot(program, entry=args.entry)
+        else:
+            output = program_to_mermaid(program, entry=args.entry)
+    except VMProgramError as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
+
+    write_text(None, output)
     return 0
 
 

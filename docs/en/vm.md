@@ -119,6 +119,53 @@ in the same program. There is no separate address space: the existing
 `id:`/reference mechanism `lifetxt links` already understands is reused
 directly as the VM's control-flow graph.
 
+## Visualizing a program: `lifetxt vm graph`
+
+`lifetxt vm graph` renders a validated program's counters and instructions
+as a directed graph, reusing the same node-id sanitization and quoting
+primitives `lifetxt links --format mermaid|dot` already uses:
+
+```console
+$ lifetxt vm graph program.life.txt --entry s1
+graph LR
+    x(["x=3"])
+    y(["y=0"])
+    s1["s1: dec_jz x"]:::entry
+    s2["s2: inc y"]
+    halt["halt: halt"]
+
+    s1 -. var .-> x
+    s1 -- nonzero --> s2
+    s1 -- zero --> halt
+    s2 -. var .-> y
+    s2 -- next --> s1
+
+    classDef entry stroke-width:3px
+
+$ lifetxt vm graph program.life.txt --format dot
+digraph vm {
+    x [shape=ellipse, label="x=3"];
+    ...
+}
+```
+
+| Option | Meaning |
+|---|---|
+| `path ...` | One or more life.txt files, or `-` for stdin. Same input handling as `vm run`. |
+| `--entry ID` | Optional. When given, the matching instruction node is highlighted (`:::entry` in mermaid, `peripheries=2` in dot) and validated the same way `vm run --entry` is -- an unknown or counter-typed id fails loudly. |
+| `--format {mermaid,dot}` | Output format. Defaults to `mermaid`. |
+
+Every declared counter and instruction is rendered, whether or not it is
+reachable from `--entry` -- this is a static export over the validated
+program, never `vm run`'s execution. Counters use a stadium node shape
+(`(["..."])` in mermaid, `shape=ellipse` in dot) and instructions use a
+rectangle (`["..."]` / `shape=box`), so the two kinds stay visually
+distinct. Two edge kinds are drawn: solid, labeled `next:`/`zero:`/
+`nonzero:` control-flow transitions between instructions, and a separate
+dashed `var:` edge from each instruction to the counter it reads or writes.
+A program that fails `vm run`'s own validation fails identically here,
+before anything is rendered.
+
 ## Worked example: move X into Y
 
 ```life.txt

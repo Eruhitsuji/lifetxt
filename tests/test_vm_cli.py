@@ -129,5 +129,73 @@ class VmRunCliTests(unittest.TestCase):
         self.assertIn("--max-steps", stdout)
 
 
+class VmGraphCliTests(unittest.TestCase):
+    def _write_source(self, temp_dir, text=MOVE_X_TO_Y, name="program.life.txt"):
+        path = os.path.join(temp_dir, name)
+        with open(path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(text)
+        return path
+
+    def test_default_format_is_mermaid(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            src = self._write_source(temp_dir)
+            stdout, stderr, code = run_cli("vm", "graph", src)
+            self.assertEqual(0, code, stderr)
+            self.assertIn("graph LR", stdout)
+            self.assertIn("s1", stdout)
+            self.assertIn("x=3", stdout)
+
+    def test_dot_format(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            src = self._write_source(temp_dir)
+            stdout, stderr, code = run_cli("vm", "graph", src, "--format", "dot")
+            self.assertEqual(0, code, stderr)
+            self.assertIn("digraph vm {", stdout)
+            self.assertIn("shape=box", stdout)
+            self.assertIn("shape=ellipse", stdout)
+
+    def test_entry_highlight_marks_the_node(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            src = self._write_source(temp_dir)
+            stdout, stderr, code = run_cli(
+                "vm", "graph", src, "--entry", "s1", "--format", "dot"
+            )
+            self.assertEqual(0, code, stderr)
+            self.assertIn("peripheries=2", stdout)
+
+    def test_unknown_entry_fails_loudly(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            src = self._write_source(temp_dir)
+            stdout, stderr, code = run_cli("vm", "graph", src, "--entry", "nope")
+            self.assertNotEqual(0, code)
+            self.assertIn("does not exist", stderr)
+            self.assertEqual("", stdout)
+
+    def test_invalid_program_fails_loudly_before_rendering(self):
+        text = "[N] N S1 id:s1 op:dec_jz var:missing nonzero:s1 zero:s1\n"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            src = self._write_source(temp_dir, text=text)
+            stdout, stderr, code = run_cli("vm", "graph", src)
+            self.assertNotEqual(0, code)
+            self.assertIn("unknown counter", stderr)
+            self.assertEqual("", stdout)
+
+    def test_graph_never_executes_the_program(self):
+        # A program that would loop forever if executed must still render
+        # instantly, since vm graph is a static export, never run_program.
+        text = "[N] N X id:x value:0\n[N] N S1 id:s1 op:inc var:x next:s1\n"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            src = self._write_source(temp_dir, text=text)
+            stdout, stderr, code = run_cli("vm", "graph", src)
+            self.assertEqual(0, code, stderr)
+            self.assertIn("s1 -- next --> s1", stdout)
+
+    def test_vm_graph_help_succeeds(self):
+        stdout, stderr, code = run_cli("vm", "graph", "--help")
+        self.assertEqual(0, code, stderr)
+        self.assertIn("--entry", stdout)
+        self.assertIn("--format", stdout)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -65,7 +65,7 @@ MCP tool は `list_items`、`get_item`、`create_item`、`update_item`、
 | `PUT` | `/api/items/id/{id}` | writable file 内の exact `id:` 一致 item を更新 |
 | `DELETE` | `/api/items/id/{id}` | writable file 内の exact `id:` 一致 item を削除 |
 | `GET` | `/api/links` | `parent:` / `ref:` / `depends_on:` / `blocks:` / `related:` / `duplicate_of:` / `replaced_by:` の ID link を表示 |
-| `GET` | `/api/graph` | Graph UI 用の `nodes` / `edges` を返す。参照先が見つからない node は `missing: true` |
+| `GET` | `/api/graph` | Graph UI 用の `nodes` / `edges` を返す。参照先が見つからない node は `missing: true`。任意の `relations`（comma 区切りの relation key）は `/api/links?relation=` と同じ方法で edge を絞り込む。`root` 指定時は任意の `include_temporal=true` で root の `same_day`/`before`/`after` temporal neighbor（境界付き）を追加 edge として重ねられる（`temporal_window`、既定 7 日）。この場合すべての edge に `kind`（`structural` または `temporal`）が付与される -- `include_temporal` を指定しなければ応答は変わらない。 |
 | `GET` | `/api/blockers` | `?id=ID` の推移的 blocker chain を返す(level 1..N、`depth` で深さ制限、既定 5) |
 | `GET` | `/api/messages` | type `M` message item を一覧表示。message filter 指定可能 |
 | `GET` | `/api/messages/id/{id}` | exact `id:` で Message を取得 |
@@ -170,6 +170,8 @@ curl -X POST "http://127.0.0.1:8000/api/items/parse" \
   -H "Content-Type: application/json" \
   -d '{"line":"[N] J \"Research day\" on:2026-06-23\n| Wrote notes"}'
 curl "http://127.0.0.1:8000/api/graph?root=task_001&depth=2"
+curl "http://127.0.0.1:8000/api/graph?relations=depends_on,blocks"
+curl "http://127.0.0.1:8000/api/graph?root=task_001&include_temporal=true"
 curl "http://127.0.0.1:8000/api/messages/thread/msg_001"
 curl "http://127.0.0.1:8000/api/agenda?around=now&window=1d"
 curl "http://127.0.0.1:8000/api/status?active=true"
@@ -537,6 +539,10 @@ Graph workspace panel は `/api/graph` を読み、外部ライブラリなし�
 node をクリックすると該当 record を detail modal で開けます。modal 内にも選択 item の
 小さな依存 graph を表示します。modal graph は depth 2 の subgraph を読み込むため、
 間接的な blocker や related record も modal 内で確認できます。
+
+`/api/graph` の `relations` / `include_temporal` query parameter（上の route 表を参照）は、
+まだ panel の UI control としては未提供です。endpoint を直接呼び出せば、relation 種別での
+絞り込みや root の temporal neighbor 重ね合わせを利用できます。
 
 Message item (`type:M`) で `id:` がある場合、detail modal に thread section を表示します。
 modal には返信 form も表示されます。返信は root message の `id:` を `parent:` に

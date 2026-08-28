@@ -11,6 +11,8 @@ from lifetxt.vm import (
     VMProgramError,
     VMStepLimitExceeded,
     build_program,
+    program_to_dot,
+    program_to_mermaid,
     run_program,
 )
 
@@ -284,6 +286,70 @@ class RunProgramTests(unittest.TestCase):
         # changed.
         x_item = next(i for i in items if "x" in i.details.get("id", []))
         self.assertEqual(["3"], x_item.details["value"])
+
+
+class ProgramToMermaidTests(unittest.TestCase):
+    def test_every_counter_and_instruction_becomes_a_node(self):
+        program = build_program(_items(MOVE_X_TO_Y))
+        text = program_to_mermaid(program)
+        for node_id in ("x", "y", "s1", "s2", "halt"):
+            self.assertIn(node_id, text)
+
+    def test_counters_use_a_stadium_shape_and_instructions_a_rectangle(self):
+        program = build_program(_items(MOVE_X_TO_Y))
+        text = program_to_mermaid(program)
+        self.assertIn('x(["x=3"])', text)
+        self.assertIn('s1["s1: dec_jz x"]', text)
+
+    def test_control_flow_and_var_edges_are_distinct(self):
+        program = build_program(_items(MOVE_X_TO_Y))
+        text = program_to_mermaid(program)
+        self.assertIn("s1 -. var .-> x", text)
+        self.assertIn("s1 -- nonzero --> s2", text)
+        self.assertIn("s1 -- zero --> halt", text)
+        self.assertIn("s2 -- next --> s1", text)
+
+    def test_entry_is_marked_and_validated(self):
+        program = build_program(_items(MOVE_X_TO_Y))
+        text = program_to_mermaid(program, entry="s1")
+        self.assertIn(":::entry", text)
+        self.assertIn("classDef entry", text)
+        with self.assertRaises(VMProgramError):
+            program_to_mermaid(program, entry="nope")
+
+    def test_omitting_entry_renders_the_whole_program_unmarked(self):
+        program = build_program(_items(MOVE_X_TO_Y))
+        text = program_to_mermaid(program)
+        self.assertNotIn(":::entry", text)
+
+
+class ProgramToDotTests(unittest.TestCase):
+    def test_counters_are_ellipses_and_instructions_are_boxes(self):
+        program = build_program(_items(MOVE_X_TO_Y))
+        text = program_to_dot(program)
+        self.assertIn('x [shape=ellipse, label="x=3"];', text)
+        self.assertIn('s1 [shape=box, label="s1: dec_jz x"];', text)
+
+    def test_control_flow_and_var_edges_are_distinct(self):
+        program = build_program(_items(MOVE_X_TO_Y))
+        text = program_to_dot(program)
+        self.assertIn("s1 -> x [style=dashed, label=var];", text)
+        self.assertIn("s1 -> s2 [label=nonzero];", text)
+        self.assertIn("s1 -> halt [label=zero];", text)
+        self.assertIn("s2 -> s1 [label=next];", text)
+
+    def test_entry_gets_double_border_and_is_validated(self):
+        program = build_program(_items(MOVE_X_TO_Y))
+        text = program_to_dot(program, entry="s1")
+        self.assertIn("peripheries=2", text)
+        with self.assertRaises(VMProgramError):
+            program_to_dot(program, entry="nope")
+
+    def test_entry_that_is_a_counter_is_rejected(self):
+        program = build_program(_items(MOVE_X_TO_Y))
+        with self.assertRaises(VMProgramError) as ctx:
+            program_to_dot(program, entry="x")
+        self.assertIn("refers to a counter, not an instruction", str(ctx.exception))
 
 
 if __name__ == "__main__":

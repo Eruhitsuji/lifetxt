@@ -7978,7 +7978,7 @@ traceability:
       capability_id: cap-beginner-minimal-profile
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/558
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/559
       changed_files_or_scope:
         - Document a Beginner / Minimal Profile as a strict subset of Format 1.0 with an explicit Minimum -> Daily Use -> Full Format progression
         - docs/en/getting-started.md
@@ -8005,11 +8005,9 @@ traceability:
         syntax. `readme.md`, `docs/en/readme.md`, `docs/ja/readme.md`, and
         both `life_txt_format_spec.md` files gained a pointer to the new
         guide; the format spec files and `readme.md` were otherwise
-        unmodified. `pull_request` is filled in once a pull request
-        implementing this entry is opened; per this repository's own
-        instruction not to commit or push without explicit direction, the
-        changes for this entry are recorded in the working tree pending the
-        repository owner's decision on branch/PR creation.
+        unmodified. Landed on its own dedicated branch
+        (`issue-558-beginner-minimal-profile`) per explicit repository owner
+        instruction to open the pull request.
       status: implemented
 
 required_chain:

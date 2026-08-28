@@ -1,0 +1,173 @@
+name: Release
+
+# Publishes a tagged lifetxt release from one immutable source revision:
+# build wheel/sdist -> release-policy verification -> PyPI (Trusted
+# Publishing) -> attach the same artifacts to the matching GitHub Release.
+#
+# Pushing a `v*.*.*` tag is the release action. The `publish-pypi` job needs
+# a PyPI Trusted Publisher linked from https://pypi.org/manage/project/lifetxt/settings/publishing/
+# (environment name `pypi`, workflow `release.yml`) before it can succeed;
+# until that is configured on PyPI's side, this job fails at the OIDC
+# exchange step without publishing anything malformed. See
+# docs/en/pypi-distribution.md for the one-time setup this workflow assumes.
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to (re-)build and verify, e.g. v1.0.0"
+        required: true
+      publish_pypi:
+        description: "Also publish to PyPI (requires PyPI Trusted Publishing to be linked)"
+        type: boolean
+        default: false
+      publish_github_release:
+        description: "Attach built artifacts to the matching GitHub Release"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and verify release artifacts
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.resolve-tag.outputs.tag }}
+    steps:
+      - name: Resolve release tag
+        id: resolve-tag
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check out repository at the release tag
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ steps.resolve-tag.outputs.tag }}
+          fetch-depth: 0
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install build tooling
+        run: python -m pip install --upgrade build twine
+
+      - name: Confirm tag matches the declared package version
+        run: python scripts/check_release_tag_version.py "${{ steps.resolve-tag.outputs.tag }}"
+
+      - name: Run the release policy profile
+        shell: bash
+        run: |
+          set -o pipefail
+          python -m pip install -e ".[web,tui,dev]"
+          python scripts/run_ci_like.py --profile release --python python3.12 2>&1 | tee release-verify.log
+
+      - name: Build wheel, sdist, checksums, SBOM, and provenance
+        run: python scripts/release_evidence.py --output dist-evidence
+
+      - name: Validate package metadata with twine
+        run: python -m twine check dist-evidence/*.whl dist-evidence/*.tar.gz
+
+      - name: Install the built wheel into a clean environment and smoke test
+        shell: bash
+        run: |
+          python -m venv .wheel-venv
+          .wheel-venv/bin/pip install --upgrade pip
+          .wheel-venv/bin/pip install dist-evidence/*.whl
+          .wheel-venv/bin/lifetxt --version
+          .wheel-venv/bin/lifetxt check examples/minimal_life.txt
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: release-dist-${{ steps.resolve-tag.outputs.tag }}
+          if-no-files-found: error
+          path: |
+            dist-evidence/*.whl
+            dist-evidence/*.tar.gz
+            dist-evidence/SHA256SUMS
+            dist-evidence/sbom.cdx.json
+            dist-evidence/provenance.json
+
+      - name: Upload release verification log
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: release-verify-log-${{ steps.resolve-tag.outputs.tag }}
+          if-no-files-found: warn
+          path: release-verify.log
+
+  publish-pypi:
+    name: Publish to PyPI (Trusted Publishing)
+    needs: build
+    if: >-
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
+      (github.event_name == 'workflow_dispatch' && inputs.publish_pypi == true)
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/lifetxt/${{ needs.build.outputs.tag }}
+    permissions:
+      id-token: write
+    steps:
+      - name: Download built artifacts
+        uses: actions/download-artifact@v6
+        with:
+          name: release-dist-${{ needs.build.outputs.tag }}
+          path: dist-evidence
+
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist-evidence
+          skip-existing: true
+
+  github-release:
+    name: Attach artifacts to the GitHub Release
+    needs: build
+    if: >-
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
+      (github.event_name == 'workflow_dispatch' && inputs.publish_github_release == true)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Download built artifacts
+        uses: actions/download-artifact@v6
+        with:
+          name: release-dist-${{ needs.build.outputs.tag }}
+          path: dist-evidence
+
+      - name: Create or update the GitHub Release with build artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          set -e
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" \
+              dist-evidence/*.whl dist-evidence/*.tar.gz \
+              dist-evidence/SHA256SUMS dist-evidence/sbom.cdx.json dist-evidence/provenance.json \
+              --clobber
+          else
+            gh release create "$TAG" \
+              dist-evidence/*.whl dist-evidence/*.tar.gz \
+              dist-evidence/SHA256SUMS dist-evidence/sbom.cdx.json dist-evidence/provenance.json \
+              --title "$TAG" \
+              --generate-notes \
+              --prerelease="$(echo "$TAG" | grep -qE 'rc[0-9]+$|a[0-9]+$|b[0-9]+$' && echo true || echo false)"
+          fi

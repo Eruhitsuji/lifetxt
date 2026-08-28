@@ -95,8 +95,10 @@ sample files は [../../examples/](../../examples/) にあります。
 ## Verification
 
 install と minimal smoke check。`python -m pip install .`（`-e .`ではない）
-は、lifetxtにはまだPyPI packageがないため、release artifactのinstallに
-近い形です。`-e .`はlifetxt自体のsourceを編集する開発者向けで、
+は、source checkoutからのrelease artifact installに近い形です。version公開後
+（[distribution.md](./distribution.md)参照）は `pip install lifetxt` が
+end-user向けの主経路になります。`-e .`はlifetxt自体のsourceを編集する開発者
+向けで、
 [readme.mdのDevelopment environmentセクション](../../readme.md#development-environment)
 を参照してください:
 

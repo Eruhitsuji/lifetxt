@@ -516,10 +516,13 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
     def get_graph(
         root=Query(None),
         depth=Query(None),
+        relations=Query(None),
+        include_temporal=Query(None),
+        temporal_window=Query(None),
     ):
         items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
         id_key = id_key_from_config(app.state.config)
-        records = link_records(items, key=id_key)
+        records = link_records(items, key=id_key, relations=_csv_values(relations))
         nodes_map = {}
         edges = []
         for rec in records:
@@ -549,6 +552,10 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         nodes = list(nodes_map.values())
         if root:
             nodes, edges = _subgraph(nodes, edges, root, depth)
+        if root and _bool_query(include_temporal):
+            nodes, edges = _temporal_overlay_edges(
+                nodes, edges, items, root, id_key, temporal_window
+            )
         return {"nodes": nodes, "edges": edges}
 
     @app.get("/api/blockers")
@@ -2690,6 +2697,71 @@ def _subgraph(nodes, edges, root, depth):
         e for e in edges if e["source"] in reachable and e["target"] in reachable
     ]
     return filtered_nodes, filtered_edges
+
+
+def _temporal_overlay_edges(nodes, edges, items, root, id_key, window_days):
+    """Overlay ``root``'s bounded temporal-context neighbors onto a graph.
+
+    Reuses :func:`lifetxt.temporal_context.temporal_context` unmodified,
+    the same engine CLI ``lifetxt temporal`` and MCP ``get_temporal_context``
+    already use; no due/staleness/same_day/before/after rule is duplicated
+    here. Deliberately bounded to ``root``'s own neighborhood (never an
+    all-pairs scan of the whole graph), matching that engine's own design.
+    Every returned edge -- both the pre-existing structural ones and the
+    newly added temporal ones -- gains a ``kind`` field so a client can tell
+    them apart; omitting ``include_temporal`` never adds this field, so the
+    default graph response is unaffected.
+    """
+    from .temporal_context import DEFAULT_WINDOW_DAYS, temporal_context
+
+    for edge in edges:
+        edge["kind"] = "structural"
+
+    try:
+        root_item = find_item_by_id(items, root, key=id_key)
+    except ValueError:
+        root_item = None
+    if root_item is None:
+        return nodes, edges
+
+    try:
+        window = (
+            int(window_days) if window_days not in (None, "") else DEFAULT_WINDOW_DAYS
+        )
+    except (TypeError, ValueError):
+        window = DEFAULT_WINDOW_DAYS
+
+    context = temporal_context(
+        items,
+        root_item,
+        timezone_today(),
+        key=id_key,
+        window_days=window,
+    )
+    node_ids = {n["id"] for n in nodes}
+    for entry in context["related"]:
+        target_ref = entry["target"]
+        target_id = entry["target_id"] or target_ref["title"]
+        if target_id not in node_ids:
+            nodes.append(
+                {
+                    "id": target_id,
+                    "title": target_ref["title"],
+                    "status": target_ref["status"],
+                    "type": target_ref["kind"],
+                    "missing": False,
+                }
+            )
+            node_ids.add(target_id)
+        edges.append(
+            {
+                "source": root,
+                "target": target_id,
+                "relation": entry["relation"],
+                "kind": "temporal",
+            }
+        )
+    return nodes, edges
 
 
 def _elapsed_to_minutes(value):

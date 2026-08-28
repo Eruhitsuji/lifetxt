@@ -292,6 +292,23 @@ def _validate_transitions(program):
             _check_transition(program, instr.zero, "zero", instr, where)
 
 
+def _check_entry(program, entry):
+    """Validate that ``entry`` names a declared instruction in ``program``.
+
+    Shared between :func:`run_program` (which requires a valid entry to
+    execute from) and the optional ``entry`` highlight accepted by
+    :func:`program_to_mermaid`/:func:`program_to_dot`, so both paths raise
+    the identical, already-tested message for an unknown or counter-typed
+    entry id.
+    """
+    if entry not in program.instructions:
+        if entry in program.counters:
+            raise VMProgramError(
+                "Entry id %r refers to a counter, not an instruction." % entry
+            )
+        raise VMProgramError("Entry id %r does not exist." % entry)
+
+
 def run_program(program, entry, max_steps=DEFAULT_MAX_STEPS):
     """Execute ``program`` starting at instruction ``entry``.
 
@@ -306,12 +323,7 @@ def run_program(program, entry, max_steps=DEFAULT_MAX_STEPS):
         raise VMProgramError(
             "max_steps must be >= 0 (0 means unlimited); got %r." % (max_steps,)
         )
-    if entry not in program.instructions:
-        if entry in program.counters:
-            raise VMProgramError(
-                "Entry id %r refers to a counter, not an instruction." % entry
-            )
-        raise VMProgramError("Entry id %r does not exist." % entry)
+    _check_entry(program, entry)
 
     state = OrderedDict((cid, c.initial_value) for cid, c in program.counters.items())
     pc = entry
@@ -332,3 +344,119 @@ def run_program(program, entry, max_steps=DEFAULT_MAX_STEPS):
             else:
                 state[instr.var] -= 1
                 pc = instr.nonzero
+
+
+def _instruction_label(instr):
+    if isinstance(instr, IncInstruction):
+        return "%s: inc %s" % (instr.id, instr.var)
+    if isinstance(instr, DecJzInstruction):
+        return "%s: dec_jz %s" % (instr.id, instr.var)
+    return "%s: halt" % instr.id
+
+
+def program_to_mermaid(program, entry=None):
+    """Render ``program`` as a Mermaid ``graph LR`` control-flow diagram.
+
+    One node is emitted per counter (stadium shape) and per instruction
+    (rectangle), covering every declared counter/instruction regardless of
+    reachability. Control-flow transitions (``next:``/``zero:``/``nonzero:``)
+    are solid, labeled edges between instructions; each instruction's
+    ``var:`` reference to the counter it reads/writes is a separate, dashed
+    edge, so the two relations stay visually distinct. When ``entry`` is
+    given, it is validated the same way :func:`run_program` validates it
+    (raising :class:`VMProgramError` identically) and the matching node is
+    marked with the ``entry`` CSS class.
+    """
+    from .links import _mermaid_node_id
+
+    if entry is not None:
+        _check_entry(program, entry)
+
+    lines = ["graph LR"]
+    if not program.counters and not program.instructions:
+        lines.append("")
+        return "\n".join(lines)
+
+    for counter_id, counter in program.counters.items():
+        node = _mermaid_node_id(counter_id)
+        label = ("%s=%s" % (counter_id, counter.initial_value)).replace('"', "'")
+        lines.append('    %s(["%s"])' % (node, label))
+    for instr_id, instr in program.instructions.items():
+        node = _mermaid_node_id(instr_id)
+        label = _instruction_label(instr).replace('"', "'")
+        entry_cls = ":::entry" if instr_id == entry else ""
+        lines.append('    %s["%s"]%s' % (node, label, entry_cls))
+
+    lines.append("")
+    for instr_id, instr in program.instructions.items():
+        node = _mermaid_node_id(instr_id)
+        var_id = getattr(instr, "var", None)
+        if var_id is not None:
+            lines.append("    %s -. var .-> %s" % (node, _mermaid_node_id(var_id)))
+        if isinstance(instr, IncInstruction):
+            lines.append("    %s -- next --> %s" % (node, _mermaid_node_id(instr.next)))
+        elif isinstance(instr, DecJzInstruction):
+            lines.append(
+                "    %s -- nonzero --> %s" % (node, _mermaid_node_id(instr.nonzero))
+            )
+            lines.append("    %s -- zero --> %s" % (node, _mermaid_node_id(instr.zero)))
+
+    if entry is not None:
+        lines.append("")
+        lines.append("    classDef entry stroke-width:3px")
+
+    lines.append("")
+    return "\n".join(lines)
+
+
+def program_to_dot(program, entry=None):
+    """Render ``program`` as a Graphviz DOT digraph.
+
+    Mirrors :func:`program_to_mermaid`'s node/edge model: counters are
+    ``shape=ellipse``, instructions are ``shape=box``, control-flow
+    transitions are solid labeled edges, and each instruction's ``var:``
+    reference is a separate dashed edge. ``entry`` is validated identically
+    to :func:`run_program` and rendered with ``peripheries=2``.
+    """
+    from .links import _dot_quote
+
+    if entry is not None:
+        _check_entry(program, entry)
+
+    lines = ["digraph vm {"]
+    for counter_id, counter in program.counters.items():
+        attrs = "shape=ellipse, label=%s" % _dot_quote(
+            "%s=%s" % (counter_id, counter.initial_value)
+        )
+        lines.append("    %s [%s];" % (_dot_quote(counter_id), attrs))
+    for instr_id, instr in program.instructions.items():
+        attrs = "shape=box, label=%s" % _dot_quote(_instruction_label(instr))
+        if instr_id == entry:
+            attrs += ", peripheries=2"
+        lines.append("    %s [%s];" % (_dot_quote(instr_id), attrs))
+
+    for instr_id, instr in program.instructions.items():
+        var_id = getattr(instr, "var", None)
+        if var_id is not None:
+            lines.append(
+                "    %s -> %s [style=dashed, label=var];"
+                % (_dot_quote(instr_id), _dot_quote(var_id))
+            )
+        if isinstance(instr, IncInstruction):
+            lines.append(
+                "    %s -> %s [label=next];"
+                % (_dot_quote(instr_id), _dot_quote(instr.next))
+            )
+        elif isinstance(instr, DecJzInstruction):
+            lines.append(
+                "    %s -> %s [label=nonzero];"
+                % (_dot_quote(instr_id), _dot_quote(instr.nonzero))
+            )
+            lines.append(
+                "    %s -> %s [label=zero];"
+                % (_dot_quote(instr_id), _dot_quote(instr.zero))
+            )
+
+    lines.append("}")
+    lines.append("")
+    return "\n".join(lines)

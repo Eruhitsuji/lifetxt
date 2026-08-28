@@ -622,18 +622,34 @@ python -m lifetxt links life.txt --id task_report --direction outgoing --format 
 python -m lifetxt links life.txt --relation depends_on --relation blocks
 python -m lifetxt links life.txt --chain task_report
 python -m lifetxt links life.txt --chain task_report --format json --pretty
+python -m lifetxt links life.txt --topo
+python -m lifetxt links life.txt --critical-path
+python -m lifetxt links life.txt --critical-path --chain task_report
+python -m lifetxt links life.txt --path task_a task_b
 ```
 
 | Option | 意味 |
 |---|---|
 | `path ...` | 入力 life.txt。`-` なら標準入力 |
 | `--id ID` | この ID に接続する link だけ表示 |
-| `--chain ID` | この ID の dependency blocker chain を表示 |
+| `--chain ID` | この ID の dependency blocker chain を表示。`--critical-path` の root としても使える |
 | `--direction incoming|outgoing|both` | `--id` 使用時の向き。既定値は `both` |
 | `--relation RELATION` | `depends_on` などの relation key で絞り込み。複数回指定または comma-separated |
+| `--topo` | `depends_on`/`blocks` graph（または `--relation` の subset）の topological order を表示。cycle があれば拒否 |
+| `--critical-path` | `depends_on`/`blocks` graph（または `--relation` の subset）の最長 chain を表示。任意で `--chain ID` を root にできる |
+| `--path FROM TO` | 2 つの item ID を結ぶ最短の relation chain を表示。全 relation graph（または `--relation` の subset）を双方向に探索 |
 | `--key KEY` | ID として扱う detail key。省略時は config の `ids.key`、`api.id_key`、または `id` |
-| `--format text|json|jsonl|mermaid|dot` | 出力形式。`--chain` は `text`、`json`、`jsonl` に対応 |
+| `--format text|json|jsonl|mermaid|dot` | 出力形式。`--chain`、`--topo`、`--critical-path`、`--path` は `text`、`json`、`jsonl` のみ対応 |
 | `--pretty` | JSON を整形して出力 |
+
+`--topo` / `--critical-path` / `--path` は互いに排他であり、`--id`/`--chain`
+とも排他です。ただし `--critical-path` だけは `--chain ID` を任意の root
+として受け付けます。`--critical-path` の JSON/jsonl 出力には `estimate_sum`
+field があり、勝った chain 上の全 item が単純な数値の `estimate:` detail
+（`elapsed:` の `Xh`/`Ym` duration 構文ではない）を持つ場合のみ値が入り、
+それ以外は `null` です。`--path` の出力は hop の list で、各 hop は直前の
+hop との `relation` と `direction`（`incoming`/`outgoing`）を持ちます
+（先頭 hop のみどちらも持ちません）。
 
 `check` は存在しない参照 (`W215`)、自己参照 (`W216`)、`parent:` cycle (`W217`)、曖昧な参照 (`W218`)、完了済み item の `depends_on:` prerequisite がまだ open な場合 (`W224`)、`depends_on:`/`blocks:` の複合 cycle (`W227`)、`duplicate_of:` cycle (`W228`)、`replaced_by:` cycle (`W229`) も報告します。
 
@@ -681,6 +697,7 @@ python -m lifetxt integrity life.txt --json
 python -m lifetxt integrity life.txt --profile strict --json
 python -m lifetxt integrity life.txt --verify-files
 python -m lifetxt integrity life.txt --ai-context --json
+python -m lifetxt integrity life.txt --graph --json
 python -m lifetxt integrity plan life.txt
 python -m lifetxt integrity apply life.txt --expected-revision HASH --confirm --json
 ```
@@ -692,6 +709,7 @@ python -m lifetxt integrity apply life.txt --expected-revision HASH --confirm --
 | `--profile default\|strict` | default の effective severity を保つか、integrity report 上だけ warning を error に昇格 |
 | `--verify-files` | 安価な attachment 検査に加えて `file:` / `dir:` hash も検証 |
 | `--ai-context` | AI-safe workspace と Personal AI Memory convention の読み取り専用診断を追加 |
+| `--graph` | relation graph の健全性診断（孤立 item、被参照数上位の hub、connected component、`depends_on`/`blocks` の最長 chain）を追加 |
 
 JSON diagnostic には `severity`、`effective_severity`、`code`、
 `category`、`message`、`hint`、`source_file`、`line`、`column`、
@@ -706,6 +724,17 @@ writable inbox/proposal target）に近いか、Personal AI Memory candidate が
 #503 の convention（`person:` と `tag:preference` / `tag:goal` /
 `tag:decision` を持つ `N` record）に沿っているかを報告します。この flag は
 MCP、proposal、query、write の挙動を変更しません。
+
+`--graph` は `category: graph` の診断を追加します。第二の graph 実装を
+持たず、`lifetxt links` 自身の engine（`link_records`、`critical_path`）を
+そのまま再利用します: `G002` は relation を1つも持たない、一意な `id:`
+を持つ item を列挙します（上限 20 件、それ以上は `details.truncated` が
+true になります）。`G003` は relation 数の多い item id 上位 10 件を
+列挙します。`G004` は relation graph 全体での connected component 数と
+最大 component の size を報告します。`G005` は `depends_on`/`blocks`
+の最長 chain の長さと path を報告し、graph に cycle がある場合は
+（`check` の `W227` を参照）`warning` severity の `blocked` として報告します。
+この flag はどの file も repair・rewrite しません。
 
 `python -m lifetxt integrity plan ...` は `integrity-plan-v1` JSON plan を出力します。
 plan は決定的で非変更です。missing ID assignment のような安全な候補は

@@ -64,6 +64,7 @@ capabilities:
       - lifetxt integrity --verify-files
       - lifetxt integrity --profile strict
       - lifetxt integrity --ai-context
+      - lifetxt integrity --graph
       - lifetxt integrity plan
       - lifetxt integrity apply
       - integrity-v1 JSON report
@@ -79,15 +80,22 @@ capabilities:
       - ".venv\\Scripts\\python.exe -m unittest tests.test_integrity -> Ran 11 tests, OK"
       - ".venv\\Scripts\\python.exe -m unittest tests.test_integrity -> Ran 15 tests, OK"
       - ".venv\\Scripts\\python.exe -m unittest tests.test_integrity -> Ran 19 tests, OK"
+      - "#565: tests/test_integrity.py graph tests (7 tests): --graph omitted by default (no category:graph rows), orphan/hub/component/longest-chain reporting against a real fixture, no-orphans-passed state, no-ids-skipped state, longest-chain check reported blocked with warning severity on a cycle, --graph works with the plan subcommand, every fixture file byte-unchanged"
+      - "#565: python -m unittest tests.test_integrity -> Ran 25 tests, OK"
+      - "#565: live: lifetxt integrity --graph against a real fixture (chain a<-b<-c plus two orphans) reported 2 orphans, correct hub ranking, 3 connected components (largest 3), and a 3-item longest chain; omitting --graph left output unchanged"
+      - "#565: scripts/validate_release_docs.py -> {\"errors\": 0, \"ok\": true}"
+      - "#565: ruff format --check / ruff check lifetxt/integrity.py lifetxt/cli.py tests/test_integrity.py -> clean"
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/517
       - https://github.com/Eruhitsuji/lifetxt/issues/520
       - https://github.com/Eruhitsuji/lifetxt/issues/522
       - https://github.com/Eruhitsuji/lifetxt/issues/524
+      - https://github.com/Eruhitsuji/lifetxt/issues/565
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/518
       - https://github.com/Eruhitsuji/lifetxt/pull/521
       - https://github.com/Eruhitsuji/lifetxt/pull/523
+      - https://github.com/Eruhitsuji/lifetxt/pull/566
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       cc-sdd data-integrity-suite working spec implementation. The suite remains
@@ -100,6 +108,21 @@ capabilities:
       named workspace shape evidence and Personal AI Memory convention checks.
       Recovery actions, sync reconciliation, archive cleanup, migration, and
       general repair application remain out of scope.
+      #565 adds opt-in `category: graph` diagnostics (`G001`-`G005`) reusing
+      `lifetxt.links.link_records`/`critical_path` unmodified rather than a
+      second graph implementation: orphan items (a unique `id:` with no
+      relation of any kind, bounded to 20 ids with a `truncated` flag),
+      the top-10 most-referenced hub ids, connected-component count and
+      largest-component size over the full relation graph, and the longest
+      `depends_on`/`blocks` chain (reusing `cap-graph-link-foundation`'s
+      #564 `critical_path()` directly). A dependency cycle reports `G005` as
+      `blocked` with `warning` severity rather than raising, matching this
+      module's existing graceful-degradation design; every other graph row
+      is `info` severity, so `--graph` never adds a spurious "manual review"
+      entry to `integrity plan`'s output via the existing generic
+      `_plan_action` logic. `integrity-v1` has no published JSON Schema (only
+      `backup-integrity-v1.schema.json` is unrelated and pre-existing), so no
+      schema generator needed updating.
     replacement:
       replaces: []
       replaced_by: null
@@ -2277,8 +2300,12 @@ capabilities:
       - lifetxt/links.py
       - lifetxt/diagnostic_contract.py
       - lifetxt/validator.py
+      - lifetxt/webapp.py
+      - lifetxt/mcp.py
+      - lifetxt/cli.py
       - tests/test_links.py
       - tests/test_paths.py
+      - tests/test_lifetxt.py
       - docs/en/ai-integration.md
       - docs/en/cli.md
       - docs/en/life-hub.md
@@ -2296,6 +2323,16 @@ capabilities:
       - "diagnostic code: W227 (depends_on/blocks cycle)"
       - "diagnostic code: W228 (duplicate_of cycle)"
       - "diagnostic code: W229 (replaced_by cycle)"
+      - "GET /api/graph?relations=... (relation-type filter)"
+      - "GET /api/graph?root=...&include_temporal=true&temporal_window=N (bounded temporal overlay)"
+      - MCP get_graph (relations, include_temporal, temporal_window arguments)
+      - lifetxt links --topo
+      - lifetxt links --critical-path [--chain ID]
+      - lifetxt links --path FROM TO
+      - lifetxt.links.topological_order
+      - lifetxt.links.critical_path
+      - lifetxt.links.shortest_path
+      - lifetxt.links.LinksCycleError
     tests_or_evidence:
       - tests/test_links.py ReferenceKeysCoverageTests (8 tests)
       - tests/test_links.py ExtendedCycleDetectionTests (9 tests)
@@ -2319,17 +2356,32 @@ capabilities:
       - 'docs/ja/cli.md translation: scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
       - git diff --check docs/ja/cli.md -> no whitespace errors
       - python -m unittest tests.test_release_policy tests.test_surface_runtime.TuiDocumentationDriftTests -> pass
+      - "#563: tests/test_lifetxt.py LifeTxtWebApiTests graph-relations/temporal tests (4 tests): relations filter narrows edges, default response shape is unchanged when the new parameters are omitted (regression), include_temporal overlays edges tagged kind: structural/temporal when root is given, include_temporal without root has no effect"
+      - "#563: tests/test_lifetxt.py LifeTxtMcpTests.test_mcp_get_graph_relations_filter_matches_the_web_api, test_mcp_get_graph_include_temporal_overlays_edges_tagged_by_kind (2 tests)"
+      - "#563: python -m unittest tests.test_lifetxt.LifeTxtWebApiTests tests.test_lifetxt.LifeTxtMcpTests -> Ran 48 tests, OK"
+      - "#563: python -m unittest tests.test_surface_runtime tests.test_mcp_expansion -> Ran 159 tests, OK (no capability/tool-schema drift)"
+      - "#564: tests/test_links.py TopologicalOrderTests, CriticalPathTests, ShortestPathTests (24 tests): linear-chain ordering, blocks-as-inverse-of-depends_on, disconnected nodes, deterministic tie-breaking, relation-subset filtering, cycle rejection naming the involved ids, ambiguous-id exclusion, rooted/global critical path, unknown-root rejection, estimate_sum only when every path node has one, bidirectional BFS shortest path, same-start-end, disconnected/unknown-id None results"
+      - "#564: tests/test_lifetxt.py LifeTxtLinksAnalyticsTests (15 tests): --topo/--critical-path/--path text/json/jsonl output, cycle refusal, --chain-as-root, unknown --chain id, argument-conflict validation, --help"
+      - "#564: python -m unittest tests.test_links tests.test_lifetxt.LifeTxtLinksAnalyticsTests -> Ran 87 tests, OK"
+      - "#564: live: lifetxt links --topo/--critical-path/--critical-path --chain ID/--path FROM TO against a real disposable fixture matched the exact designed output, including cycle refusal and argument-conflict messages"
+      - "full suite: python -m unittest tests.test_lifetxt tests.test_links tests.test_completion_surfaces tests.test_surface_runtime -> Ran 815 tests, OK (skipped=1)"
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      - ruff format --check / ruff check on all #563/#564 changed files -> clean
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/161
       - https://github.com/Eruhitsuji/lifetxt/issues/162
       - https://github.com/Eruhitsuji/lifetxt/issues/163
       - https://github.com/Eruhitsuji/lifetxt/issues/421
       - https://github.com/Eruhitsuji/lifetxt/issues/422
+      - https://github.com/Eruhitsuji/lifetxt/issues/563
+      - https://github.com/Eruhitsuji/lifetxt/issues/564
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/164
       - https://github.com/Eruhitsuji/lifetxt/pull/165
       - https://github.com/Eruhitsuji/lifetxt/pull/166
       - https://github.com/Eruhitsuji/lifetxt/pull/423
+      - https://github.com/Eruhitsuji/lifetxt/pull/566
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       No existing capability entry covered lifetxt/links.py before this change. Reciprocal-
@@ -2367,6 +2419,45 @@ capabilities:
       input policy). No English content changed, and per #422's own scope a
       broader audit of the rest of docs/ja/cli.md against docs/en/cli.md was
       not attempted.
+      #563 closes a concrete Web/MCP parity gap found by reading
+      `lifetxt/webapp.py`'s `get_graph` route and `lifetxt/mcp.py`'s
+      `_tool_get_graph` directly: neither accepted a relation-type filter,
+      unlike `list_links`/CLI `links`, which already do via
+      `link_records(..., relations=...)`. Both now accept a `relations`
+      parameter reusing that same filtering, with no new engine code. It
+      also closes a gap `cap-temporal-context`'s own notes had already
+      recorded as an explicit, unimplemented follow-up ("any change to
+      `/api/graph`... remain explicit, unimplemented follow-ups"): an opt-in
+      `include_temporal` parameter (bounded to when `root` is given, matching
+      `temporal_context()`'s own single-target design -- it is never an
+      all-pairs scan) overlays that root's `same_day`/`before`/`after`
+      neighbors as additional edges via a new shared
+      `webapp._temporal_overlay_edges` helper (imported into `mcp.py` the
+      same way `_subgraph` already is). Every edge gains a `kind` field
+      (`structural`/`temporal`) only when `include_temporal` is actually
+      used, so the default `/api/graph`/`get_graph` response stays
+      byte-for-byte unchanged -- confirmed by a dedicated regression test.
+      #564 adds `--topo`/`--critical-path`/`--path` to `lifetxt links`,
+      three query modes over the graph's existing DAG rather than a second
+      graph representation. `topological_order`/`critical_path` share a new
+      `_dependency_ordering_edges` builder that generalizes
+      `_dependency_cycle_diagnostics`'s own combined depends_on/inverse-blocks
+      model (an edge `A -> B` means "A is waiting on B") to an explicit
+      relation subset; both raise a new `LinksCycleError` (a `ValueError`
+      subclass) naming the involved ids on a cycle, reusing the same
+      fail-loudly convention `lifetxt.vm.VMProgramError` established.
+      `critical_path`'s optional `estimate_sum` field is populated only when
+      every item on the winning chain carries a plain numeric `estimate:`
+      detail (not `elapsed:`'s duration syntax), and is `None` otherwise --
+      deliberately not a new required schema field, matching the issue's own
+      out-of-scope note. `shortest_path` BFS-traverses `link_records`'s edges
+      bidirectionally (mirroring `webapp._subgraph`'s reachability model),
+      since "how are these two items connected" does not depend on which
+      direction a relation happens to be asserted in. All three CLI flags are
+      mutually exclusive with each other and with `--id`, except that
+      `--critical-path` accepts the existing `--chain ID` as its optional
+      root. Web/MCP exposure of these three new queries is an explicit,
+      unimplemented follow-up per #564's own scope.
     replacement:
       replaces: []
       replaced_by: null
@@ -4152,11 +4243,14 @@ capabilities:
       reusing the existing ticket staleness rule generalized beyond
       tickets) plus `same_day`/`before`/`after` edges to nearby dated items
       within a bounded window -- never an all-pairs scan of the workspace.
-      Deliberately kept separate from the authoritative relation graph
-      (`lifetxt/links.py`, `GET /api/graph`) and from `command-center-v1`;
+      Deliberately kept as a separate contract from the authoritative
+      relation graph (`lifetxt/links.py`) and from `command-center-v1`;
       every fact/edge carries `rule`/`source_field`/`reference_time` so a
       consumer can explain "why" without re-deriving it. First exposed
-      through the CLI, and now through a read-only MCP tool.
+      through the CLI, then a read-only MCP tool, and now an opt-in
+      (never default) overlay onto `GET /api/graph`/MCP `get_graph` bounded
+      to one root item, distinct from every edge merged into the
+      authoritative graph by default.
     status: active
     owner: Eruhitsuji
     source_requirements:
@@ -4193,11 +4287,13 @@ capabilities:
       - ruff format --check / ruff check on changed files -> clean
       - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
       - "full suite: MPLBACKEND=Agg python -W ignore::ResourceWarning -m unittest discover -> Ran 2549 tests, OK (skipped=5)"
+      - "#563: tests/test_lifetxt.py LifeTxtWebApiTests.test_graph_api_include_temporal_overlays_edges_tagged_by_kind, test_graph_api_include_temporal_without_root_has_no_effect; LifeTxtMcpTests.test_mcp_get_graph_include_temporal_overlays_edges_tagged_by_kind -- both confirm temporal_context() is reused unmodified via the new webapp._temporal_overlay_edges/mcp _tool_get_graph wiring, bounded to root's own neighborhood only"
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/472
       - https://github.com/Eruhitsuji/lifetxt/issues/481
       - https://github.com/Eruhitsuji/lifetxt/issues/485
       - https://github.com/Eruhitsuji/lifetxt/issues/489
+      - https://github.com/Eruhitsuji/lifetxt/issues/563
     related_pull_requests: []
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
@@ -4226,9 +4322,12 @@ capabilities:
       one target item's neighborhood (sorted candidates within
       `window_days`, capped at `limit`), never an all-pairs scan of the
       whole workspace, addressing #481's own "avoid O(n^2) near-every-item
-      behavior" investigation question. TUI/Web exposure, `overlap`/
-      near-window relations, and any change to `/api/graph` or
-      `command-center-v1` remain explicit, unimplemented follow-ups.
+      behavior" investigation question. TUI exposure, `overlap`/near-window
+      relations, and any change to `command-center-v1` remain explicit,
+      unimplemented follow-ups; `/api/graph`/MCP `get_graph` gained a bounded,
+      opt-in overlay in #563 (see that requirement's own notes under
+      `cap-graph-link-foundation`), which reuses `temporal_context()`
+      unmodified rather than merging it into the graph's default edge list.
       #489 adds `get_temporal_context`, a read-only MCP tool delegating
       entirely to the existing `temporal_context()` engine -- no
       due/staleness/same_day/before/after rule is duplicated in
@@ -5466,8 +5565,11 @@ capabilities:
       - docs/ja/readme.md
     public_interfaces:
       - lifetxt vm run PATH --entry ID [--max-steps N] [--json]
+      - lifetxt vm graph PATH [--entry ID] [--format mermaid|dot]
       - lifetxt.vm.build_program
       - lifetxt.vm.run_program
+      - lifetxt.vm.program_to_mermaid
+      - lifetxt.vm.program_to_dot
       - lifetxt.vm.VMProgramError
       - lifetxt.vm.VMStepLimitExceeded
     tests_or_evidence:
@@ -5483,12 +5585,37 @@ capabilities:
       - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
       - 'scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> {"errors": 0, "ok": true} (docs/en/cli.md is in the checked-document set; `python -m lifetxt vm --help` runs cleanly as part of that check)'
       - ruff format --check / ruff check lifetxt/vm.py lifetxt/cli.py tests/test_vm.py tests/test_vm_cli.py -> clean
+      - "#562: tests/test_vm.py ProgramToMermaidTests, ProgramToDotTests (9 tests): every counter/instruction becomes a node, counters/instructions use distinct shapes, control-flow and var: edges are visually distinct, --entry is highlighted and validated identically to run_program (including entry-is-a-counter rejection), omitting --entry renders the whole program unmarked"
+      - "#562: tests/test_vm_cli.py VmGraphCliTests (7 tests): default mermaid format, dot format, --entry highlight, unknown-entry refusal, invalid-program refusal before rendering, a naturally-non-terminating program still renders instantly (never executes), vm graph --help"
+      - "#562: python -m unittest tests.test_vm tests.test_vm_cli -> Ran 62 tests, OK"
+      - "#562: live: python -m lifetxt vm graph program.life.txt --entry s1 (mermaid) and --format dot against the canonical worked example rendered the exact documented output, reusing lifetxt.links._mermaid_node_id/_dot_quote unmodified"
+      - "#562: scripts/validate_release_docs.py -> {\"errors\": 0, \"ok\": true}"
+      - "#562: ruff format --check / ruff check lifetxt/vm.py lifetxt/cli.py tests/test_vm.py tests/test_vm_cli.py -> clean"
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/560
+      - https://github.com/Eruhitsuji/lifetxt/issues/562
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/561
+      - https://github.com/Eruhitsuji/lifetxt/pull/566
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
+      #562 adds `lifetxt vm graph`, a static mermaid/dot control-flow export
+      over a validated `VMProgram`: one node per counter (stadium shape) and
+      per instruction (rectangle), solid labeled edges for
+      `next:`/`zero:`/`nonzero:` control flow, and a separate dashed edge for
+      each instruction's `var:` reference. Reuses
+      `lifetxt.links._mermaid_node_id`/`_dot_quote` unmodified rather than
+      duplicating node-id sanitization, matching this project's established
+      cross-module private-helper reuse precedent (`lifetxt.mcp` already
+      imports `webapp._subgraph` the same way). `run_program`'s own
+      entry-validation logic was factored into a shared `_check_entry`
+      helper so `program_to_mermaid`/`program_to_dot`'s optional `--entry`
+      highlight raises the identical, already-tested `VMProgramError`
+      message rather than a second implementation of the same check. No VM
+      semantics, opcode, or validation behavior changed; this is a read-only
+      static export, never `run_program`'s execution path. Runtime/state-trace
+      visualization remains an explicit, unimplemented follow-up per the
+      issue's own scope.
       Distilled directly from the issue's own detailed instruction-set,
       validation, safety-boundary, and non-goals specification (below the
       `.ai/project/changes/README.md` change-package threshold: Standard

@@ -21,6 +21,11 @@ __pycache__/
 # only tracked content anywhere under dist/.
 /dist/standalone/
 
+# Generated per-release package-manager manifests (#571). The scripts and
+# templates that produce these are tracked; their per-release output is not.
+/packaging/winget/generated/
+/packaging/scoop/generated/
+
 # AI Development Standard
 !.ai/
 !.ai/**

@@ -349,6 +349,88 @@ HTML を serve できることも確認しています。
 Tauri desktop bundle（#574）が build の元にする canonical artifact です。
 本 document 冒頭の distribution architecture を参照してください。
 
+## 4. winget と Scoop（Windows package manager）
+
+[#571](https://github.com/Eruhitsuji/lifetxt/issues/571) に対応します。
+どちらも #570 の standalone Windows binary への薄い adapter であり、
+別の build を導入するものではありません。
+
+### winget（主経路）
+
+```powershell
+winget install Eruhitsuji.lifetxt
+```
+
+winget は現行の Windows に標準搭載されており別途 install が不要なため、
+主経路として推奨します。package は `InstallerType: portable`（silent
+install switch を持つ `setup.exe` ではなく、そのままの standalone
+executable）を使います。winget は manifest の `Commands` field に宣言した
+`lifetxt` という command name で、download した binary を PATH へ symlink
+します。
+
+**この repository は `microsoft/winget-pkgs` へ自動 submit しません。**
+`scripts/generate_winget_manifest.py` は 1 つの release に対して必要な 3 つの
+manifest file（version・installer・default-locale。manifest schema
+1.6.0）を生成し、`.github/workflows/package-manifests.yml` が GitHub
+Release が published されるたびに自動実行して、結果を download 可能な
+workflow artifact として upload します。submit 自体は release ごとに手動で
+行う 1 回限りの step です：
+
+```sh
+# local で、あるrelease の published SHA256SUMS から：
+python scripts/generate_winget_manifest.py \
+  --version 1.0.0 \
+  --installer-url https://github.com/Eruhitsuji/lifetxt/releases/download/v1.0.0/lifetxt-windows-x86_64.exe \
+  --sha256 <その release の SHA256SUMS にある sha256>
+
+# または Microsoft 自身の submission tool を同じ release asset に対して使う：
+winget install wingetcreate
+wingetcreate submit --token <public_repo scope を持つ GitHub token> \
+  packaging/winget/generated/Eruhitsuji/lifetxt/1.0.0/
+```
+
+`wingetcreate submit` はあなた自身の GitHub identity で
+`microsoft/winget-pkgs` へ PR を開きます。あなたの credential なしに
+non-interactive に行う方法はなく、これはこの issue で設定した境界と
+一致します。
+
+submission が受理された後（winget-pkgs 自体の CI が manifest を検証し、
+moderator が merge します。通常数日以内）：
+
+```powershell
+winget install Eruhitsuji.lifetxt
+winget upgrade Eruhitsuji.lifetxt
+winget uninstall Eruhitsuji.lifetxt
+lifetxt --version
+```
+
+winget は新しい shell の PATH を自動更新します。すでに開いている
+terminal では、初回 install を反映するために再起動が必要です。
+
+### Scoop（副経路）
+
+```powershell
+scoop bucket add <bucket-name> <bucket-url>   # tap/bucket が公開された後
+scoop install lifetxt
+```
+
+`scripts/generate_scoop_manifest.py` が同様に `lifetxt.json` を生成し、
+こちらも `package-manifests.yml` によって自動生成されます。Scoop の
+manifest は「bucket」repository（`.json` file だけの普通の Git repo）に
+置かれます。この project はまだ自前の bucket を持っておらず、これは
+issue 自体の「Scoop は副経路」という scope guidance と一致します —
+生成された manifest は、project 所有の bucket（作成され次第）か、
+[`ScoopInstaller/Extras`](https://github.com/ScoopInstaller/Extras) の
+ような community bucket への submission、いずれにもそのまま publish
+できる状態です。どちらも、この repository が自動では行わない外部の
+human identity による操作です。
+
+```powershell
+scoop install ./packaging/scoop/generated/lifetxt.json   # local file。manifest 自体の動作確認用
+lifetxt --version
+scoop uninstall lifetxt
+```
+
 ### contributor 向け install と end-user 向け install の違い
 
 lifetxt 自体の source を変更する contributor は、引き続き editable install

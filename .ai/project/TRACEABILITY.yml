@@ -8014,7 +8014,7 @@ traceability:
       capability_id: cap-lifetxt-vm
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/560
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/561
       changed_files_or_scope:
         - Add lifetxt vm run, an opt-in Turing-complete 2-counter Minsky
           machine interpretation layer over already-legal life.txt custom
@@ -8054,8 +8054,7 @@ traceability:
         environment-variable/MCP/Web-API/plugin access and never mutates
         `life.txt`, so no security-impact escalation applies per
         `ASSURANCE_LEVELS.md`'s escalation rules). See `cap-lifetxt-vm`'s
-        own notes for the full design rationale. `pull_request` is filled
-        in once the pull request implementing this entry is opened.
+        own notes for the full design rationale.
       status: implemented
 
 required_chain:

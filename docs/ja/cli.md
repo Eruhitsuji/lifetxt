@@ -2609,3 +2609,4 @@ python -m lifetxt template apply weekly_review --append life.txt --dry-run
 - `project archive --dry-run --emit-plan` は移動計画だけを出力し、`project archive --apply-plan` は同じ計画を検証して適用します。workspace 外への移動、重複 destination、古い計画は拒否されます。
 - `--version` は CLI の実行版確認に使います。release gate や baseline 記録では、この値と `doctor --check-update` の結果を併記します。
 - 共通オプションのうち、入力ファイル、workspace、設定ファイル、出力形式に関わる指定は、設定解決順序と同じ優先順位で評価されます。詳細は `config.md` と `release-baselines.md` を参照してください。
+- `vm run PATH --entry ID` は、`value:` / `op:` / `var:` / `next:` / `zero:` / `nonzero:` という既存の custom key を 2-counter Minsky machine として解釈する、opt-in のチューリング完全実行モデルです。`check` を含む他のどのコマンドも VM record を実行しません。詳細は [vm.md](vm.md) を参照してください。

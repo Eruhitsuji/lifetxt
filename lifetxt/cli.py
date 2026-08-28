@@ -115,6 +115,7 @@ from .status_summary import (
     status_records_to_jsonl,
 )
 from .validator import validate_item
+from .vm import DEFAULT_MAX_STEPS as VM_DEFAULT_MAX_STEPS
 
 
 def main(argv=None):
@@ -1315,6 +1316,36 @@ def build_parser():
     )
     temporal_command.add_argument("--json", action="store_true", help="Emit JSON.")
     temporal_command.set_defaults(func=command_temporal)
+
+    vm_command = subparsers.add_parser(
+        "vm",
+        help="Opt-in, isolated lifetxt VM: run a Turing-complete 2-counter "
+        "machine encoded in valid life.txt records. Never runs from any "
+        "other command.",
+    )
+    vm_subparsers = vm_command.add_subparsers(dest="vm_command")
+    vm_run_command = vm_subparsers.add_parser(
+        "run",
+        help="Execute a lifetxt VM program from an explicit entry instruction.",
+    )
+    _add_input_paths(vm_run_command)
+    vm_run_command.add_argument(
+        "--entry",
+        required=True,
+        metavar="ID",
+        help="id: of the instruction to start execution at.",
+    )
+    vm_run_command.add_argument(
+        "--max-steps",
+        type=int,
+        default=VM_DEFAULT_MAX_STEPS,
+        metavar="N",
+        help="Maximum instructions to execute before failing loudly instead "
+        "of looping forever. 0 means unlimited execution (explicit "
+        "opt-in). Default %d." % VM_DEFAULT_MAX_STEPS,
+    )
+    vm_run_command.add_argument("--json", action="store_true", help="Emit JSON.")
+    vm_run_command.set_defaults(func=command_vm_run)
 
     query_command = subparsers.add_parser(
         "query", help="Filter items with the shared query language."
@@ -11905,6 +11936,54 @@ def command_temporal(args):
                     edge["target"]["title"],
                 ),
             )
+    return 0
+
+
+def command_vm_run(args):
+    from .vm import (
+        VMProgramError,
+        VMStepLimitExceeded,
+        build_program,
+        run_program,
+    )
+
+    config = _config(args)
+    paths = _normalize_paths(
+        getattr(args, "paths", None), config, stdin_when_empty=False
+    ) or ["life.txt"]
+    items, _diagnostics = _parse_or_exit(paths, config)
+    key = id_key_from_config(config)
+    try:
+        program = build_program(items, id_key=key)
+        result = run_program(program, args.entry, max_steps=args.max_steps)
+    except VMProgramError as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
+    except VMStepLimitExceeded as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
+    except KeyboardInterrupt:
+        sys.stderr.write("Interrupted.\n")
+        return 130
+
+    if getattr(args, "json", False):
+        payload = OrderedDict(
+            (
+                ("halted", True),
+                ("entry", args.entry),
+                ("steps", result.steps),
+                ("state", OrderedDict(result.state.items())),
+            )
+        )
+        write_text(None, json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+        return 0
+
+    write_text(
+        None,
+        "HALT after %d step%s\n" % (result.steps, "" if result.steps == 1 else "s"),
+    )
+    for counter_id, value in result.state.items():
+        write_text(None, "%s=%s\n" % (counter_id, value))
     return 0
 
 

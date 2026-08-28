@@ -71,6 +71,7 @@ Every Markdown file under `docs/en/` is listed here.
 | Timezone, revisions, workspace safety | [timezone-revision-workspace-safety.md](./timezone-revision-workspace-safety.md) |
 | Transaction recovery and strict timers | [transaction-recovery-and-strict-timers.md](./transaction-recovery-and-strict-timers.md) |
 | Use-case guide | [use-cases.md](./use-cases.md) |
+| VM (opt-in Turing-complete execution model) | [vm.md](./vm.md) |
 | Web API and UI | [web.md](./web.md) |
 
 ## Examples

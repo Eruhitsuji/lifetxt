@@ -8061,7 +8061,7 @@ traceability:
       capability_id: cap-lifetxt-vm
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/562
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/566
       changed_files_or_scope:
         - Add lifetxt vm graph, a static mermaid/dot control-flow export
           over a validated VMProgram, reusing lifetxt.links's existing
@@ -8095,7 +8095,7 @@ traceability:
       capability_id: cap-graph-link-foundation
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/563
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/566
       changed_files_or_scope:
         - Add a relations filter and an opt-in, root-bounded include_temporal
           overlay to GET /api/graph and MCP get_graph
@@ -8128,7 +8128,7 @@ traceability:
       capability_id: cap-graph-link-foundation
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/564
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/566
       changed_files_or_scope:
         - Add lifetxt links --topo/--critical-path/--path, plus the
           underlying topological_order/critical_path/shortest_path engines
@@ -8161,7 +8161,7 @@ traceability:
       capability_id: cap-data-integrity-readonly-report
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/565
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/566
       changed_files_or_scope:
         - Add an opt-in --graph flag to lifetxt integrity reporting orphan
           items, most-referenced hubs, connected components, and the longest

@@ -95,6 +95,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/pull/518
       - https://github.com/Eruhitsuji/lifetxt/pull/521
       - https://github.com/Eruhitsuji/lifetxt/pull/523
+      - https://github.com/Eruhitsuji/lifetxt/pull/566
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       cc-sdd data-integrity-suite working spec implementation. The suite remains
@@ -2380,6 +2381,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/pull/165
       - https://github.com/Eruhitsuji/lifetxt/pull/166
       - https://github.com/Eruhitsuji/lifetxt/pull/423
+      - https://github.com/Eruhitsuji/lifetxt/pull/566
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       No existing capability entry covered lifetxt/links.py before this change. Reciprocal-
@@ -5594,6 +5596,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/562
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/561
+      - https://github.com/Eruhitsuji/lifetxt/pull/566
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       #562 adds `lifetxt vm graph`, a static mermaid/dot control-flow export

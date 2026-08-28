@@ -100,6 +100,7 @@ python -m lifetxt update
 python -m lifetxt server-init --server-config server-init.json
 python -m lifetxt server-update --server-config server-update.json
 python -m lifetxt remote profile-list
+python -m lifetxt vm run program.life.txt --entry s1
 ```
 
 | Command | Purpose |
@@ -191,6 +192,7 @@ python -m lifetxt remote profile-list
 | `server-init` | Plan-first Ubuntu Server production bootstrap (see [22](#22-server-init)) |
 | `server-update` | Guarded production update for a systemd-managed install (see [23](#23-server-update)) |
 | `remote` | Use authenticated Remote Safe Mode from the CLI: profiles, reads, and ticket writes (see [§20](#20-remote-safe-mode-client-remote)) |
+| `vm` | Opt-in, isolated Turing-complete VM: execute valid life.txt records as a 2-counter machine (see [vm.md](vm.md)) |
 
 lifetxt also has a small set of workflow and format-1.0 commands not detailed
 in this file; see [§21](#21-commands-documented-elsewhere) for pointers.
@@ -3085,6 +3087,7 @@ warrant a dedicated guide:
 | `today`, `area`, `backlinks`, `temporal` | [life-hub.md](life-hub.md) |
 | `ticket`, `version`, `sprint` | [§19](#19-development-tickets-ticket), [tickets.md](tickets.md) |
 | `remote` | [§20](#20-remote-safe-mode-client-remote), [remote.md](remote.md), [remote-client-writes.md](remote-client-writes.md) |
+| `vm` (opt-in Turing-complete VM) | [vm.md](vm.md) |
 
 `python -m lifetxt --help` lists every command; each subcommand's own
 `--help` is always authoritative for its exact flags.

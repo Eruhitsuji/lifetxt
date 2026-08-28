@@ -5378,3 +5378,62 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-beginner-minimal-profile
+    name: Beginner / Minimal Profile onboarding documentation
+    summary: >-
+      A documented strict subset of Format 1.0 (three types, three statuses,
+      four time keys, and `|` body continuation) as a five-minute first
+      tutorial, with an explicit Minimum -> Daily Use -> Full Format
+      progression, so a new user does not have to learn the whole grammar
+      before writing a useful `life.txt`. Every Beginner Profile example is
+      already valid Full Format syntax; no parser mode, conversion, or
+      migration is introduced.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-beginner-minimal-profile-docs
+    implementation_locations:
+      - docs/en/getting-started.md
+      - docs/ja/getting-started.md
+      - docs/en/readme.md
+      - docs/ja/readme.md
+      - docs/en/life_txt_format_spec.md
+      - docs/ja/life_txt_format_spec.md
+      - readme.md
+      - examples/getting_started_life.txt
+    public_interfaces:
+      - docs/en/getting-started.md
+      - docs/ja/getting-started.md
+      - examples/getting_started_life.txt
+    tests_or_evidence:
+      - "python -m lifetxt check examples/getting_started_life.txt -> OK: 4 item(s)"
+      - "every Level 1 example line (T/E/N types, [ ]/[x]/[N] statuses, due/on/from/to, | body continuation) combined into one fixture and checked with python -m lifetxt check --format json -> zero diagnostics"
+      - "every Level 2 example line (D/R/H/J types, [/] status, do/at/repeat/project/priority keys) combined into one fixture and checked with python -m lifetxt check --format json -> zero diagnostics"
+      - "every #4/#9 section anchor referenced from both getting-started.md files verified against scripts/validate_release_docs.py's own slug() algorithm run directly against the real headings in life_txt_format_spec.md, since getting-started.md is outside that script's checked-document set"
+      - "python scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> {\"errors\": 0, \"ok\": true} (docs/en/life_txt_format_spec.md and docs/en/cli.md, both edited or referenced by this change, are inside the checked-document set and pass)"
+      - python -m unittest tests.test_release_policy tests.test_surface_runtime.TuiDocumentationDriftTests -> Ran 13 tests, OK
+      - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      - git diff --check -> clean
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/558
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/559
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Documentation-only capability; no parser, grammar, schema, CLI, Web, or
+      MCP behavior change. Deliberately reuses the existing `T`/`E`/`N` type
+      vocabulary, `[ ]`/`[x]`/`[N]` status vocabulary, `due`/`on`/`from`/`to`
+      time keys, and `|` body-continuation syntax exactly as documented in
+      `life_txt_format_spec.md`; no alias, second parser mode, or beginner-only
+      serialization is introduced, matching the issue's own out-of-scope list.
+      `priority:`'s effect on sort order is documented for `next` only (not
+      `agenda`, which does not reference `priority` in its own sort), confirmed
+      by reading `lifetxt/extra_common.py`/`lifetxt/extra_core.py` and
+      `lifetxt/agenda.py` before writing that claim. English/Japanese content
+      is parallel but not a literal translation, matching this repository's
+      established documentation-parity style (e.g. `cap-life-philosophy-documentation`).
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

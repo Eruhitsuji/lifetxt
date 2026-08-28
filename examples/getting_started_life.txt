@@ -1,0 +1,10 @@
+# Tasks
+[ ] T "Buy milk"
+[ ] T "Write report" due:2026-09-10
+
+# Events
+[ ] E "Lab meeting" from:2026-09-10T13:00 to:2026-09-10T14:00
+
+# Notes
+[N] N "Research idea"
+| Temporal context may reduce false positives.

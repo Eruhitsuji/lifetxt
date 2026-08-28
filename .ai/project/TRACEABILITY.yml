@@ -7974,6 +7974,42 @@ traceability:
         ordered fragments; assembly is deterministic through importlib.resources.
       status: implemented
 
+    - requirement_id: req-beginner-minimal-profile-docs
+      capability_id: cap-beginner-minimal-profile
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/558
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/559
+      changed_files_or_scope:
+        - Document a Beginner / Minimal Profile as a strict subset of Format 1.0 with an explicit Minimum -> Daily Use -> Full Format progression
+        - docs/en/getting-started.md
+        - docs/ja/getting-started.md
+        - docs/en/readme.md
+        - docs/ja/readme.md
+        - docs/en/life_txt_format_spec.md
+        - docs/ja/life_txt_format_spec.md
+        - readme.md
+        - examples/getting_started_life.txt
+      tests_or_evidence:
+        - "python -m lifetxt check examples/getting_started_life.txt -> OK: 4 item(s)"
+        - "combined Level 1 fixture (T/E/N, [ ]/[x]/[N], due/on/from/to, | body) and combined Level 2 fixture (D/R/H/J, [/], do/at/repeat/project/priority) each checked with python -m lifetxt check --format json -> zero diagnostics"
+        - "anchors referenced from both getting-started.md files (life_txt_format_spec.md sections 4 and 9) verified against scripts/validate_release_docs.py's own slug() algorithm run directly, since getting-started.md is outside that script's checked-document set"
+        - "python scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> {\"errors\": 0, \"ok\": true}"
+        - python -m unittest tests.test_release_policy tests.test_surface_runtime.TuiDocumentationDriftTests -> Ran 13 tests, OK
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - git diff --check -> clean
+      release_or_deployment: null
+      notes: >-
+        Quick/Standard assurance, documentation-only per the issue's own
+        scope: no `life_txt_format_spec.md` grammar change, no second parser
+        mode, no new alias, and no change to any currently-valid Full Format
+        syntax. `readme.md`, `docs/en/readme.md`, `docs/ja/readme.md`, and
+        both `life_txt_format_spec.md` files gained a pointer to the new
+        guide; the format spec files and `readme.md` were otherwise
+        unmodified. Landed on its own dedicated branch
+        (`issue-558-beginner-minimal-profile`) per explicit repository owner
+        instruction to open the pull request.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

@@ -1,0 +1,38 @@
+# Example persistent Web deployment. See docs/en/distribution.md#2-ghcr-oci-image
+# for the full contract (CLI mode, MCP mode, image tags) — this file covers
+# only the long-running Web/API service, since MCP is a stdio protocol and
+# does not fit a detached compose service (see the docs for the correct
+# `docker run -i` invocation instead).
+#
+# Usage:
+#   cp .env.example .env   # then edit LIFETXT_API_TOKEN
+#   mkdir -p data && cp examples/minimal_life.txt data/life.txt
+#   docker compose up -d
+#   curl http://127.0.0.1:8000/api/health
+
+services:
+  lifetxt-web:
+    image: ghcr.io/eruhitsuji/lifetxt:${LIFETXT_VERSION:-latest}
+    container_name: lifetxt-web
+    restart: unless-stopped
+    ports:
+      - "${LIFETXT_HOST_PORT:-8000}:8000"
+    volumes:
+      - ./data:/data
+    environment:
+      LIFETXT_API_TOKEN: ${LIFETXT_API_TOKEN:?set LIFETXT_API_TOKEN in .env before starting}
+    command:
+      - serve
+      - /data/life.txt
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8000"
+      - --token-env
+      - LIFETXT_API_TOKEN
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

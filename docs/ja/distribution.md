@@ -431,6 +431,73 @@ lifetxt --version
 scoop uninstall lifetxt
 ```
 
+## 5. Homebrew Tap
+
+[#572](https://github.com/Eruhitsuji/lifetxt/issues/572) に対応します。
+
+```sh
+brew install Eruhitsuji/tap/lifetxt
+```
+
+### winget/conda-forge と異なり自動 publish される理由
+
+winget と conda-forge は、この project が所有していない repository
+（`microsoft/winget-pkgs`、`conda-forge/staged-recipes`）への PR が必要な
+ため、submit は意図的に手動の human identity による操作としています
+（section 4・6 参照）。Homebrew Tap は違います：
+`brew install Eruhitsuji/tap/lifetxt` は
+[`Eruhitsuji/homebrew-tap`](https://github.com/Eruhitsuji/homebrew-tap) ——
+この project の maintainer 自身が所有する repository —— に対して動作しま
+す。自分自身の release workflow から自分自身の repository へ publish する
+ことは、他人の repository へ PR を開くこととは種類が異なる操作であるため、
+`.github/workflows/homebrew-tap.yml` は GitHub Release が published される
+たびに生成した Formula を自動的に push します。
+
+### Formula の設計
+
+`Formula/lifetxt.rb`（
+[`scripts/generate_homebrew_formula.py`](../../scripts/generate_homebrew_formula.py)
+が生成）は薄い adapter です：実行中の platform（macOS arm64/x86_64、
+Linux arm64/x86_64）に対応する #570 の standalone binary を download し、
+そのまま install します —— source からの build も、application logic の
+重複もありません。これは issue 自体が挙げている「#570 の canonical で
+immutable な release artifact を消費することを優先する」選択肢であり、
+Python package ベースの Formula ではありません。
+
+### 一回限りの設定（maintainer 自身の作業）
+
+workflow 実行が受け取る default の `GITHUB_TOKEN` は、それが実行される
+repository にしか scope されないため、*別の* repository
+（`Eruhitsuji/homebrew-tap`）へ push するには、その repository への
+access 権を持つ token が必要です：
+
+1. [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new)
+   を、`Eruhitsuji/homebrew-tap` repository のみを対象に、**Contents:
+   Read and write** 権限で作成する。
+2. それを `Eruhitsuji/lifetxt` の repository secret として
+   `HOMEBREW_TAP_TOKEN` という名前で追加する（Settings → Secrets and
+   variables → Actions）。
+
+この secret が存在しない間は、`homebrew-tap.yml` の tap checkout step が
+cleanly に失敗します（`Eruhitsuji/homebrew-tap` の checkout で
+authentication error）—— 部分的に publish されることはありません。
+
+### install 済み Formula の検証
+
+```sh
+brew install Eruhitsuji/tap/lifetxt
+lifetxt --version
+brew upgrade lifetxt
+brew uninstall lifetxt
+```
+
+### Homebrew Core
+
+最初の slice では追求しません。issue 自体の指針と一致します —— Homebrew
+Core にはこの project の release cadence とは独立した独自の
+acceptance/notability 要件があります。将来 Core への適格性を見直す issue
+が立たない限り、Tap が引き続きサポートされる経路です。
+
 ### contributor 向け install と end-user 向け install の違い
 
 lifetxt 自体の source を変更する contributor は、引き続き editable install

@@ -498,6 +498,76 @@ Core にはこの project の release cadence とは独立した独自の
 acceptance/notability 要件があります。将来 Core への適格性を見直す issue
 が立たない限り、Tap が引き続きサポートされる経路です。
 
+## 6. conda-forge
+
+[#573](https://github.com/Eruhitsuji/lifetxt/issues/573) に対応します。
+まず実際の PyPI release が存在する必要があります（section 1）——
+issue 自体の scope guidance に従い、recipe は独立した第二の release
+origin になるのではなく、PyPI の sdist から build します。
+
+```sh
+conda install -c conda-forge lifetxt
+```
+
+### recipe の設計
+
+`meta.yaml`（
+[`scripts/generate_conda_recipe.py`](../../scripts/generate_conda_recipe.py)
+が生成）は `noarch: python` です —— lifetxt の core には compiled
+extension も、Windows のみの `tzdata` を除く third-party runtime
+dependency もありません（conda の `# [win]` selector で宣言しており、
+`pyproject.toml` 自体の `sys_platform == 'win32'` marker と対応します）。
+公開された PyPI sdist から `pip install . --no-deps` で install します
+（vendored な build step も packaging logic の重複もありません）。
+install 後に `lifetxt --version` と `lifetxt check --help` を test します。
+
+### この repository は conda-forge へ自動 submit しません
+
+`conda-forge/staged-recipes` は community 運営の repository です。そこへ
+recipe を submit することは、あなた自身の GitHub identity での PR に
+なり、winget（section 4）で設定した境界と一致します。
+`.github/workflows/conda-recipe.yml` は GitHub Release が published
+されるたびに `meta.yaml` を自動生成し、download 可能な workflow
+artifact として upload します。submit 自体は手動 step です：
+
+```sh
+# 実際の PyPI release が存在した後、その public な sdist から：
+python scripts/generate_conda_recipe.py \
+  --version 1.0.0 \
+  --sha256 <lifetxt-1.0.0.tar.gz の sha256。例えば `pip download --no-deps --no-binary :all:` や release 自体の SHA256SUMS から>
+
+# conda-forge/staged-recipes を fork し：
+mkdir -p recipes/lifetxt
+cp packaging/conda-forge/generated/recipe/meta.yaml recipes/lifetxt/
+# commit・push し、conda-forge/staged-recipes へ PR を開く
+```
+
+conda-forge 自身の CI（`linter`・`build`）が PR 上で recipe を検証します。
+merge されると、conda-forge の bot が `lifetxt-feedstock` repository を
+作成・維持し、以降の version bump の多くを自動的に扱います
+（conda-forge maintainer —— つまりあなた —— は、それでも各 bump PR を
+review・merge します。この継続的な workflow は feedstock repository 側
+で行われるものであり、ここでの話ではありません。詳細は conda-forge 自身
+の [maintainer documentation](https://conda-forge.org/docs/maintainer/updating_pkgs.html)
+を参照してください）。
+
+### install 済み package の検証
+
+```sh
+conda create -n lifetxt-smoke -c conda-forge lifetxt
+conda run -n lifetxt-smoke lifetxt --version
+conda run -n lifetxt-smoke lifetxt check examples/minimal_life.txt
+```
+
+### scope
+
+最初の submission では core package のみを対象とします。issue 自体の
+「conda の optional feature/extras 方針を確認する。core package support
+が最低要件」という guidance と一致します —— `web`/`tui` extra は最初の
+conda-forge recipe には含まれません。将来の recipe 改訂（あるいは別の
+`lifetxt-web`/`lifetxt-tui` output）は候補となる follow-up であり、この
+slice には含まれません。
+
 ### contributor 向け install と end-user 向け install の違い
 
 lifetxt 自体の source を変更する contributor は、引き続き editable install

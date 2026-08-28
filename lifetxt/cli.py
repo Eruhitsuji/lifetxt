@@ -1347,6 +1347,27 @@ def build_parser():
     vm_run_command.add_argument("--json", action="store_true", help="Emit JSON.")
     vm_run_command.set_defaults(func=command_vm_run)
 
+    vm_graph_command = vm_subparsers.add_parser(
+        "graph",
+        help="Render a lifetxt VM program's counters and instructions as a "
+        "directed control-flow graph (mermaid or dot). Static only; never "
+        "executes the program.",
+    )
+    _add_input_paths(vm_graph_command)
+    vm_graph_command.add_argument(
+        "--entry",
+        metavar="ID",
+        default=None,
+        help="Optional id: of an instruction to highlight as the entry point.",
+    )
+    vm_graph_command.add_argument(
+        "--format",
+        choices=("mermaid", "dot"),
+        default="mermaid",
+        help="Output format. Defaults to mermaid.",
+    )
+    vm_graph_command.set_defaults(func=command_vm_graph)
+
     query_command = subparsers.add_parser(
         "query", help="Filter items with the shared query language."
     )
@@ -11984,6 +12005,29 @@ def command_vm_run(args):
     )
     for counter_id, value in result.state.items():
         write_text(None, "%s=%s\n" % (counter_id, value))
+    return 0
+
+
+def command_vm_graph(args):
+    from .vm import VMProgramError, build_program, program_to_dot, program_to_mermaid
+
+    config = _config(args)
+    paths = _normalize_paths(
+        getattr(args, "paths", None), config, stdin_when_empty=False
+    ) or ["life.txt"]
+    items, _diagnostics = _parse_or_exit(paths, config)
+    key = id_key_from_config(config)
+    try:
+        program = build_program(items, id_key=key)
+        if args.format == "dot":
+            output = program_to_dot(program, entry=args.entry)
+        else:
+            output = program_to_mermaid(program, entry=args.entry)
+    except VMProgramError as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
+
+    write_text(None, output)
     return 0
 
 

@@ -114,6 +114,132 @@ pipx install lifetxt && lifetxt --version
 uvx lifetxt --help
 ```
 
+## 2. GHCR (OCI container image)
+
+Tracks [#569](https://github.com/Eruhitsuji/lifetxt/issues/569).
+
+Docker is primarily the Web/MCP/server/NAS/VPS/home-server/CI installation
+path, not a replacement for the normal local CLI installation covered above.
+
+### Image contract
+
+- `ENTRYPOINT ["lifetxt"]`, no default `CMD` beyond `--help` — the image
+  behaves like the CLI binary itself: `docker run ghcr.io/eruhitsuji/lifetxt:<version> check life.txt`
+  runs the same thing `lifetxt check life.txt` would.
+- Runs as a non-root user (uid 1000) with `/data` as its working directory
+  and declared volume; mount your `life.txt`/configuration there.
+- Built with the `[web]` extra installed, so the same image can serve the
+  Web API/UI with no separate build.
+- Supported architectures: `linux/amd64` and `linux/arm64`.
+- No development files, build tooling, `.git`, or mutable local state are
+  shipped — the image is built in two stages (build a wheel, then install
+  only that wheel into a fresh runtime layer).
+
+### Tags
+
+| Tag | Meaning |
+| --- | --- |
+| `ghcr.io/eruhitsuji/lifetxt:<version>` (e.g. `1.0.0`) | Immutable, matches a Git tag/GitHub Release/PyPI release exactly. Prefer this in production. |
+| `ghcr.io/eruhitsuji/lifetxt:<major>.<minor>` | Convenience tag, moves to the newest patch release in that line. |
+| `ghcr.io/eruhitsuji/lifetxt:<major>` | Convenience tag, moves to the newest release in that major line. |
+| `ghcr.io/eruhitsuji/lifetxt:latest` | Convenience tag, moves to the newest stable (non-prerelease) release. Never published for prerelease tags (`rc`/`a`/`b` suffixes). |
+
+Pin the immutable version tag for production; use a convenience tag only
+where you deliberately want automatic upgrades.
+
+### CLI mode
+
+```sh
+docker pull ghcr.io/eruhitsuji/lifetxt:<version>
+
+docker run --rm \
+  -v "$PWD:/data" \
+  ghcr.io/eruhitsuji/lifetxt:<version> \
+  check /data/life.txt
+```
+
+### Web mode
+
+```sh
+docker run --rm \
+  -p 8000:8000 \
+  -v "$PWD:/data" \
+  ghcr.io/eruhitsuji/lifetxt:<version> \
+  serve /data/life.txt --host 0.0.0.0 --port 8000 --token-env LIFETXT_API_TOKEN \
+  -e LIFETXT_API_TOKEN=change-me
+```
+
+(Put `-e LIFETXT_API_TOKEN=...` before the image name like any other
+`docker run` flag; it is shown last above only for readability.)
+
+### MCP mode
+
+MCP is a stdio protocol — an MCP client spawns the process and talks to its
+stdin/stdout directly, so it does not fit a detached, networked
+`docker compose up -d` service. Run it attached instead:
+
+```sh
+docker run -i --rm -v "$PWD:/data" ghcr.io/eruhitsuji/lifetxt:<version> mcp /data/life.txt
+```
+
+Configure your MCP client's `command`/`args` to invoke `docker` with this
+exact argument list (see
+[ai-integration.md](./ai-integration.md) for the generic MCP client-setup
+pattern this substitutes into).
+
+### Docker Compose (persistent Web deployment)
+
+[`docker-compose.yml`](../../docker-compose.yml) at the repository root is a
+checked-in, ready-to-copy example:
+
+```sh
+cp docker-compose.env.example .env   # then edit LIFETXT_API_TOKEN
+mkdir -p data && cp examples/minimal_life.txt data/life.txt
+docker compose up -d
+curl http://127.0.0.1:8000/api/health
+```
+
+It pins nothing by default (`LIFETXT_VERSION` defaults to the `latest`
+convenience tag); set `LIFETXT_VERSION=1.0.0` in `.env` to pin an immutable
+release for production use.
+
+### Read-only vs. writable usage
+
+Add `--read-only` to the `serve` command for a demo/browse-only deployment
+(matches the CLI's own `--read-only` flag — nothing Docker-specific).
+Without it, the mounted `life.txt` is writable by the container's uid-1000
+user; make sure the host-side file/directory permissions allow that.
+
+### Update/pinning guidance
+
+- Immutable version tags never change once published — safe to pin
+  indefinitely.
+- `latest` and the `<major>`/`<major>.<minor>` convenience tags are
+  re-pointed by `docker-publish.yml` on every matching release; re-pull
+  (`docker pull` / `docker compose pull`) to pick up a new version, they are
+  not pushed automatically to a running container.
+- The base image (`python:3.12-slim`) receives periodic OS-level security
+  patches independent of lifetxt's own releases; rebuilding/re-pulling a
+  convenience tag periodically is recommended even between lifetxt releases.
+
+### How images reach GHCR
+
+`.github/workflows/docker-publish.yml` runs on every `v*.*.*` tag push (the
+same trigger as `release.yml`):
+
+1. Confirm the tag matches `pyproject.toml`'s version.
+2. Build a local single-architecture image and smoke test it: a `check`
+   command against a mounted example, confirmation the process runs as
+   uid 1000, and a `serve` invocation polled until `/api/health` responds.
+3. Build the real multi-arch (`linux/amd64`, `linux/arm64`) image with
+   Buildx/QEMU and push it to `ghcr.io/eruhitsuji/lifetxt` with the tag
+   policy above, using GHCR's own `GITHUB_TOKEN` authentication — no
+   separate account or credential setup is required.
+
+`workflow_dispatch` supports building and smoke-testing without pushing
+(`push: false`, the default), for verifying a change to the Dockerfile
+itself before it reaches a real tag.
+
 ### Contributor vs. end-user installs
 
 Contributors changing lifetxt's own source still use an editable install

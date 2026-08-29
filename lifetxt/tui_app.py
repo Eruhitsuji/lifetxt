@@ -373,6 +373,9 @@ class WorkspaceState(object):
         )
         self.glyphs = glyphs or glyph_set(self.options.get("glyphs", "auto"))
         self.keymap = self.options.get("keymap", "prompt")
+        self.action_by_key, self.key_bindings = _resolve_bindings_or_fallback(
+            self.keymap, self.options.get("bindings")
+        )
         self.mode = "input" if self.keymap == "prompt" else "nav"
         self.view = "all"
         self.sort = "natural"
@@ -447,6 +450,18 @@ class WorkspaceState(object):
         """Re-read and re-parse every input file. This is the expensive step."""
         self.options = tui_options(self.args)
         self.keymap = self.options.get("keymap", self.keymap)
+        bindings_error = None
+        try:
+            from .tui_bindings import resolve_bindings
+
+            self.action_by_key, self.key_bindings = resolve_bindings(
+                self.keymap, self.options.get("bindings")
+            )
+        except ValueError as exc:
+            # A bad edit mid-session keeps the last-known-good bindings
+            # rather than becoming unusable; the message still surfaces via
+            # self.error below.
+            bindings_error = str(exc)
         try:
             # Load unfiltered: the project filter is a cheap in-memory pass in
             # refresh(), so changing it must not force another parse.
@@ -460,6 +475,10 @@ class WorkspaceState(object):
         except Exception as exc:
             self.error = str(exc)
             self._model = None
+        if bindings_error:
+            self.error = (
+                self.error + "; " if self.error else ""
+            ) + "tui.bindings: %s" % bindings_error
         self._today = None
         if self.saved_view is not None:
             self._saved_view_keys = frozenset()
@@ -2839,17 +2858,27 @@ def _key_reference(state):
     ]
     if state.keymap == "prompt":
         return shared
-    return [
-        ("j / k", "move the selection"),
-        ("g / G", "jump to the first or last row"),
-        ("space", "mark or unmark the selected row"),
-        ("enter", "toggle the inspector"),
-        ("d / e / u", "done, edit, undo"),
-        ("/", "filter rows"),
-        (":", "type a command"),
-        ("?", "toggle help"),
-        ("q", "quit"),
-    ] + shared
+    return _effective_binding_rows(state) + shared
+
+
+def _effective_binding_rows(state):
+    """Render the resolved nav-mode bindings (#595): help text generated
+    from `state.key_bindings` can never lie after a `tui.bindings`
+    customization, because it is not a second, separately maintained copy
+    of the default key list.
+    """
+    from .tui_bindings import ACTION_LABELS, display_key
+
+    def keys_for(action):
+        keys = (getattr(state, "key_bindings", None) or {}).get(action) or ()
+        return " / ".join(display_key(key) for key in keys) or "(unbound)"
+
+    rows = [(keys_for(action), label) for action, label in ACTION_LABELS.items()]
+    # e (edit) and u (undo) stay outside the configurable registry (#595
+    # scope: RESERVED_KEYS), so they are documented here directly rather
+    # than through the dynamic action-label loop above.
+    rows.append(("e / u", "edit, undo"))
+    return rows
 
 
 # ---------------------------------------------------------------------------
@@ -2932,48 +2961,118 @@ def handle_key(state, key, page=5):
     return _handle_input_key(state, key, page)
 
 
+def _action_move_up(state, page):
+    _move(state, -1)
+    return True
+
+
+def _action_move_down(state, page):
+    _move(state, 1)
+    return True
+
+
+def _action_first(state, page):
+    state.selected = 0
+    state.scroll = 0
+    return True
+
+
+def _action_last(state, page):
+    state.selected = max(0, len(state.rows) - 1)
+    return True
+
+
+def _action_open(state, page):
+    state.show_detail = not state.show_detail
+    return True
+
+
+def _action_toggle_mark(state, page):
+    _safe_command(state, "/mark toggle")
+    return True
+
+
+def _action_done(state, page):
+    _safe_command(state, "/done")
+    return True
+
+
+def _action_search(state, page):
+    state.mode = "input"
+    state.input = ""
+    state.cursor = 0
+    return True
+
+
+def _action_command(state, page):
+    state.mode = "input"
+    state.input = "/"
+    state.cursor = 1
+    state.palette_index = 0
+    return True
+
+
+def _action_reload(state, page):
+    _safe_command(state, "/reload")
+    return True
+
+
+def _action_help(state, page):
+    state.show_help = not state.show_help
+    return True
+
+
+def _action_quit(state, page):
+    state.running = False
+    return True
+
+
+#: Action id -> handler(state, page) -> bool. Each handler reproduces
+#: exactly the behavior `_handle_nav_key` hard-coded before #595; the
+#: registry only decides which physical key reaches which handler, it does
+#: not change what any action does. Handlers themselves are not part of
+#: `lifetxt.tui_bindings`, which stays protocol-neutral (key/action names
+#: only) and has no dependency on curses or WorkspaceState.
+_ACTION_HANDLERS = {
+    "move_up": _action_move_up,
+    "move_down": _action_move_down,
+    "first": _action_first,
+    "last": _action_last,
+    "open": _action_open,
+    "toggle_mark": _action_toggle_mark,
+    "done": _action_done,
+    "search": _action_search,
+    "command": _action_command,
+    "reload": _action_reload,
+    "help": _action_help,
+    "quit": _action_quit,
+}
+
+
+def _resolve_bindings_or_fallback(keymap, overrides):
+    from .tui_bindings import resolve_bindings
+
+    try:
+        return resolve_bindings(keymap, overrides)
+    except ValueError:
+        return resolve_bindings(keymap, None)
+
+
 def _handle_nav_key(state, key, page):
-    if key in ("q",):
-        state.running = False
-        return True
-    if key == "?":
-        state.show_help = not state.show_help
-        return True
-    if key == "/":
-        state.mode = "input"
-        state.input = ""
-        state.cursor = 0
-        return True
-    if key == ":":
-        state.mode = "input"
-        state.input = "/"
-        state.cursor = 1
-        state.palette_index = 0
-        return True
-    if key == " ":
-        _safe_command(state, "/mark toggle")
-        return True
-    if key in ("j", "down", "ctrl-n"):
-        _move(state, 1)
-        return True
-    if key in ("k", "up", "ctrl-p"):
-        _move(state, -1)
-        return True
+    action = (getattr(state, "action_by_key", None) or {}).get(key)
+    if action is not None:
+        handler = _ACTION_HANDLERS.get(action)
+        if handler is not None:
+            return handler(state, page)
+
+    # Keys outside the configurable action registry (lifetxt/tui_bindings.py
+    # RESERVED_KEYS) stay exactly as before: page moves, edit/undo, the
+    # view-cycle key, and the required cancel path are never remappable.
     if key in ("pgdn", "ctrl-d"):
         _move(state, page)
         return True
     if key in ("pgup", "ctrl-u"):
         _move(state, -page)
-        return True
-    if key in ("g", "home"):
-        state.selected = 0
-        state.scroll = 0
-        return True
-    if key in ("G", "end"):
-        state.selected = max(0, len(state.rows) - 1)
-        return True
-    if key == "enter":
-        state.show_detail = not state.show_detail
         return True
     if key == "tab":
         index = (
@@ -2983,10 +3082,8 @@ def _handle_nav_key(state, key, page):
             state, "/view " + WORKSPACE_VIEWS[(index + 1) % len(WORKSPACE_VIEWS)]
         )
         return True
-    if key in ("d", "e", "u", "r"):
-        _safe_command(
-            state, {"d": "/done", "e": "/edit", "u": "/undo", "r": "/reload"}[key]
-        )
+    if key in ("e", "u"):
+        _safe_command(state, {"e": "/edit", "u": "/undo"}[key])
         return True
     if key == "escape":
         if state.query or state.project or state.marked:

@@ -1693,7 +1693,7 @@ python -m lifetxt --config .lifetxt.json config show
 | `message.default_sender` | type `M` 作成時の default `sender:` |
 | `timer.state_file` | `timer` の常駐状態を保存する JSON ファイル |
 | `attachments.*` | `file:` / `dir:` の設定。`ignore`、`max_files`、`max_bytes` |
-| `tui.*` | TUI の既定値。`theme`、`keymap`、`glyphs`、`limit`、`agenda_window`、`session`、`session_file` |
+| `tui.*` | TUI の既定値。`theme`、`keymap`、`glyphs`、`limit`、`agenda_window`、`session`、`session_file`、`bindings` |
 | `notifications.*` | `notify` と Web 通知の既定値 |
 | `ids.auto`, `ids.key`, `ids.prefixes` | 自動IDと ID key の設定 |
 | `api.id_key` | Web API / id-based operation が使う ID key |
@@ -1936,6 +1936,42 @@ PageUp/PageDown で半ページ移動、Home/End で先頭・末尾へ移動、`
 
 help 表示中は `j` / `k` と PageUp/PageDown で 1 画面に収まらない一覧を scroll できます。
 
+##### key binding のカスタマイズ
+
+上記の `vim`/`arrows` navigation action（`move_up`、`move_down`、`first`、
+`last`、`open`、`toggle_mark`、`done`、`search`、`command`、`reload`、
+`help`、`quit`）は、選択中の keymap の上に重ねる形で `tui.bindings` から
+それぞれ再割り当てできます：
+
+```json
+{
+  "tui": {
+    "keymap": "vim",
+    "bindings": {
+      "move_up": ["k"],
+      "move_down": ["j"],
+      "open": ["enter", "l"],
+      "done": ["x"],
+      "search": ["/"],
+      "help": ["?"],
+      "quit": ["q"]
+    }
+  }
+}
+```
+
+値は 1 つの key 名、または複数の別名の配列で指定できます。指定しなかった
+action は組み込み preset の key のままです。`?`（help 表示が閉じている
+とき）は *実効* bindings を表示するため、customize した内容がドキュメントと
+食い違うことはありません。`Ctrl-C`、page 移動、`e`/`u`（edit/undo）、
+`Tab`（view 循環）、`Esc`/cancel はこの registry の対象外で常に動作するため、
+custom map によって TUI が終了できなくなることはありません。同じ key が
+2 つの action に割り当てられている場合、未知の action id、未対応の key 名は
+TUI 起動前に明示的に拒否され、問題の内容が示されます。完全な契約と
+`prompt` keymap（常に input bar に留まるため `tui.bindings` の overlay を
+持ちません）の既定 key については
+[config.md](config.md#設定可能な-tui-key-binding) を参照してください。
+
 #### 表示
 
 端末幅が 118 列以上ある場合、inspector は下部ではなく右側の pane として list の横に表示され、
@@ -1947,8 +1983,8 @@ Windows の code page でも例外にならず安全に劣化します。
 列幅は East Asian Width を考慮するため日本語 title でも整列が崩れず、
 meta 列 (project、due、priority) は端末幅が狭くなると折り返さずに 1 列ずつ省略されます。
 
-既定値は config の `tui.theme`、`tui.keymap`、`tui.glyphs`、`tui.limit`、`tui.agenda_window`
-で設定できます。
+既定値は config の `tui.theme`、`tui.keymap`、`tui.glyphs`、`tui.limit`、`tui.agenda_window`、
+`tui.bindings`（上記参照）で設定できます。
 
 filter と並び替えは cache された parse 結果に対して行われるため、
 input bar への入力で file を読み直すことはありません。

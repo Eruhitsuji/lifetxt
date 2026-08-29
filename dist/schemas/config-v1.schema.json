@@ -139,6 +139,31 @@
       },
       "type": "object"
     },
+    "tui": {
+      "additionalProperties": true,
+      "properties": {
+        "bindings": {
+          "additionalProperties": {
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "items": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array"
+              }
+            ]
+          },
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
     "update": {
       "additionalProperties": true,
       "properties": {

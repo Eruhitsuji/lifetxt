@@ -8916,7 +8916,7 @@ traceability:
       capability_id: cap-distribution-channels
       epic: https://github.com/Eruhitsuji/lifetxt/issues/567
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/583
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/598
       changed_files_or_scope:
         - Add scripts/merge_sha256sums.py, merging one or more
           SHA256SUMS-format files into one de-duplicated, filename-sorted

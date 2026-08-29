@@ -9,20 +9,24 @@ avoids tying lifetxt to one category such as tasks, calendars, databases, or AI.
 
 ## Geometry contract
 
-All icon variants use one base geometry (`data-lifetxt-geometry="v2"`). They are
+All icon variants use one base geometry (`data-lifetxt-geometry="v3"`). They are
 not independently redrawn.
 
 - Design grid: **512 × 512**.
-- Combined notebook + sprout bounds: **x=122..390, y=84..420**. The horizontal
+- Combined notebook + sprout bounds: **x=118..394, y=84..420**. The horizontal
   center is exactly **256**; the vertical visual center is **252**, within 4 units
   of the canvas center.
-- Notebook bounds: **196 × 312** (`x=122..318`, `y=84..396`), giving a portrait
-  height/width ratio of about **1.59**.
+- Notebook bounds: **221 × 312** (`x=118..339`, `y=84..396`), giving a portrait
+  height/width ratio of about **1.412**, within 0.2% of the A4 ratio
+  (`297 / 210 ≈ 1.414`).
 - The base symbol leaves at least **84 design units** of safety margin to every
   canvas edge. The app tile adds a further launcher background around it.
+- The sprout intentionally overlaps the notebook at the lower-right. A small
+  negative-space separator is cut from the notebook underneath the overlapping
+  stem/leaf so the relationship remains readable in both color and monochrome.
 - Notebook, fold, list marks, stem, and leaves are **filled vector shapes**.
-  Canonical geometry does not depend on thin strokes, which keeps rasterization
-  stable at favicon/launcher sizes.
+  Canonical visible geometry does not depend on thin strokes, which keeps
+  rasterization stable at favicon/launcher sizes.
 - Favicon, Web header mark, transparent symbol, monochrome symbol, horizontal
   logo, Desktop icon, and PWA variants keep the same notebook/sprout path and
   primitive geometry. Color, background, and whole-symbol scale may change for
@@ -60,6 +64,7 @@ must not be edited independently.
 | Graphite | `#27343D` | Durable text/document structure; primary dark neutral |
 | Teal | `#2E9F8F` | Growth/continuity accent |
 | Teal Light | `#7ADCC8` | Accent used on dark app surfaces |
+| Fold Mist | `#C8D7D9` | Fold face on dark app surfaces; intentionally distinct from both Graphite and White |
 | White | `#FFFFFF` | High-contrast notebook on dark app surfaces |
 
 The product Web UI may use its own semantic/theme tokens. Do not replace status,
@@ -85,8 +90,8 @@ warning, or other semantic colors with brand colors merely to match the logo.
 The primary transparent symbol is intended for light/neutral backgrounds. On a
 dark background, prefer the app icon or the monochrome asset with a sufficiently
 contrasting foreground color. The monochrome SVG uses `currentColor` with
-knockout details, so the embedding surface owns the foreground/background
-contrast while the silhouette remains canonical.
+knockout details and the same overlap separator, so the embedding surface owns
+the foreground/background contrast without merging the sprout into the notebook.
 
 ## Wordmark
 
@@ -116,6 +121,9 @@ product name and not required next to the symbol.
   scale the whole canonical geometry around its center instead;
 - do not recolor individual document/list elements with semantic task/calendar
   colors;
+- do not make the app-tile fold the same color as the surrounding tile; preserve
+  Fold Mist contrast so the folded corner remains visible;
+- do not remove the sprout/notebook separator from monochrome derivatives;
 - do not add a checkmark, calendar, database cylinder, AI sparkle, or provider
   logo to the canonical mark;
 - do not edit raster derivatives as independent masters.
@@ -136,22 +144,27 @@ product name and not required next to the symbol.
 Webヘッダー用などを個別に描き直しません。
 
 - 基準キャンバス: **512 × 512**
-- ノート＋芽の外接範囲: **x=122..390, y=84..420**
+- ノート＋芽の外接範囲: **x=118..394, y=84..420**
 - 横方向の中心: **256**（キャンバス中央と一致）
 - 縦方向の視覚中心: **252**（中央256との差4）
-- ノート: **196 × 312**、縦/横比 約 **1.59** の明確な縦長
+- ノート: **221 × 312**、縦/横比 約 **1.412**。A4の `297:210 ≈ 1.414` とほぼ同じ比率
 - 最小安全余白: **84**
+- 芽はノート右下へ意図的に重ねる。重なり部分ではノート側に小さな負の余白を設け、
+  カラー・モノクロの双方で葉/茎がノートと一体化して見えないようにする
 - ノート、折り返し、リスト、茎、葉はすべて塗り形状を基本とし、小サイズで不安定
   になりやすい細い線だけの構成を使用しない
+- App/favicon系では、折り返しを背景と同じGraphiteにせず **Fold Mist (`#C8D7D9`)**
+  とし、白いノート面と暗い背景の双方から判別できるようにする
 - maskable PWAのみ、同一形状全体を中央基準で **88%** に縮小する
 
 これにより、以下を明示的なデザイン要件とします。
 
 1. 中央配置を維持する
-2. 縦横比を維持し、ノートを縦長にする
+2. ノートはA4相当の縦横比を維持する
 3. どの派生サイズでも見切れない安全余白を維持する
 4. 塗りつぶし形状を主体として小サイズの描画を安定させる
-5. ベースから各パターンを大きく崩さない
+5. 葉/茎をノート右下へ重ねつつ、モノクロでも形を判別可能にする
+6. ベースから各パターンを大きく崩さない
 
 用途の基本は次のとおりです。
 

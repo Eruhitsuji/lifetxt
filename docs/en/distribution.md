@@ -210,6 +210,18 @@ Add `--read-only` to the `serve` command for a demo/browse-only deployment
 Without it, the mounted `life.txt` is writable by the container's uid-1000
 user; make sure the host-side file/directory permissions allow that.
 
+A `--read-only` deployment does not need write access to the mounted
+`/data` volume at all — including a genuinely read-only bind mount
+(`docker run -v host/path:/data:ro ...`) or a mounted directory owned by a
+different host uid, both realistic deployment shapes on Linux hosts. This
+was not always true: lifetxt writes a small internal revision-telemetry
+file next to the served `life.txt` by default (unrelated to the
+`--read-only` API contract), which crashed the container immediately
+against either shape until the image routed that file into the
+container's own home directory (`LIFETXT_REVISION_METRICS_PATH`) instead
+— found and fixed via this image's own first real CI verification, with a
+regression test reproducing the exact `-v ...:/data:ro` failure.
+
 ### Update/pinning guidance
 
 - Immutable version tags never change once published — safe to pin

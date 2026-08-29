@@ -63,6 +63,14 @@ class DockerfileStaticContractTests(unittest.TestCase):
         self.assertIn('VOLUME ["/data"]', self.text)
         self.assertIn("EXPOSE 8000", self.text)
 
+    def test_revision_metrics_are_routed_away_from_the_mounted_data_volume(self):
+        # A container serving against a genuinely read-only or wrong-uid
+        # mounted /data must not depend on writing into it for anything --
+        # see test_serve_mode_starts_against_a_read_only_mount for the real
+        # reproduction this guards.
+        self.assertIn("ENV LIFETXT_REVISION_METRICS_PATH=", self.text)
+        self.assertNotIn("LIFETXT_REVISION_METRICS_PATH=/data", self.text)
+
     def test_wheel_extras_are_resolved_through_a_shell_variable(self):
         # Regression guard: `pip install /tmp/*.whl[web]` is silently
         # misparsed by the shell (the `[web]` glob character class matches
@@ -232,6 +240,80 @@ class DockerImageBuildAndRunTests(unittest.TestCase):
                     text=True,
                 ).stdout
                 self.fail("container never answered /api/health; logs:\n%s" % logs)
+            self.assertIn(b'"ok":true', body)
+        finally:
+            subprocess.run(
+                ["docker", "rm", "-f", container],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+
+    def test_serve_mode_starts_against_a_read_only_mount(self):
+        # Regression guard: lifetxt writes an internal revision-telemetry
+        # file next to the served life.txt by default
+        # (lifetxt/revision_telemetry.py), independent of --read-only
+        # (which governs the API's life.txt content contract, not this
+        # operational file). A genuinely read-only bind mount -- a real,
+        # common Docker deployment shape, and also what a mounted directory
+        # owned by a different host uid effectively is on Linux -- crashed
+        # the container immediately on first real GitHub Actions CI
+        # verification of this image, before the Dockerfile routed this
+        # file into the container's own home directory via
+        # LIFETXT_REVISION_METRICS_PATH.
+        container = "lifetxt-test-docker-image-suite-readonly-mount"
+        subprocess.run(
+            ["docker", "rm", "-f", container],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        try:
+            run = subprocess.run(
+                [
+                    "docker",
+                    "run",
+                    "-d",
+                    "--name",
+                    container,
+                    "-p",
+                    "18325:8000",
+                    "-v",
+                    "%s/examples:/data:ro" % REPO_ROOT,
+                    self.IMAGE_TAG,
+                    "serve",
+                    "/data/minimal_life.txt",
+                    "--host",
+                    "0.0.0.0",
+                    "--port",
+                    "8000",
+                    "--read-only",
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            self.assertEqual(run.returncode, 0, run.stderr)
+
+            body = None
+            for _ in range(60):
+                try:
+                    with urllib.request.urlopen(
+                        "http://127.0.0.1:18325/api/health", timeout=1
+                    ) as response:
+                        body = response.read()
+                        break
+                except (urllib.error.URLError, ConnectionError):
+                    time.sleep(0.5)
+            if body is None:
+                logs = subprocess.run(
+                    ["docker", "logs", container],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                ).stdout
+                self.fail(
+                    "container never answered /api/health against a "
+                    "read-only mount; logs:\n%s" % logs
+                )
             self.assertIn(b'"ok":true', body)
         finally:
             subprocess.run(

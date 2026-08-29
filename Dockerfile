@@ -49,6 +49,20 @@ RUN useradd --create-home --uid 1000 --shell /usr/sbin/nologin lifetxt \
     && mkdir -p /data \
     && chown lifetxt:lifetxt /data
 
+# lifetxt writes a small internal revision-telemetry file next to the
+# life.txt it serves by default (lifetxt/revision_telemetry.py), regardless
+# of --read-only (that flag governs the API's life.txt content contract,
+# not this operational metrics file). A bind-mounted /data is frequently
+# either genuinely read-only (a real deployment reproduction: `docker run
+# -v ...:/data:ro` fails immediately with "Read-only file system") or
+# simply not writable by this image's uid 1000 on Linux hosts where the
+# mounted directory belongs to a different host user -- neither case
+# should be required just to serve. Routing this file into the container's
+# own home directory keeps it independent of whatever gets mounted at
+# /data; override with LIFETXT_REVISION_METRICS_PATH if a deployment wants
+# it persisted elsewhere.
+ENV LIFETXT_REVISION_METRICS_PATH=/home/lifetxt/.cache/lifetxt/revision-metrics.json
+
 USER lifetxt
 WORKDIR /data
 VOLUME ["/data"]

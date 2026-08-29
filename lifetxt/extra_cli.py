@@ -25,6 +25,7 @@ from .extra_safety import (
     command_safety,
 )
 from .extra_attachment import command_attachment
+from .tour import command_tour
 from .safety_foundation import read_text_exact
 from .timezone_policy import resolve_timezone_name, timezone_context
 
@@ -64,7 +65,9 @@ def _require_subcommand(command, parser, args):
 
 def _build_parser(command):
     parser = argparse.ArgumentParser(prog="python -m lifetxt %s" % command)
-    if command == "next":
+    if command == "tour":
+        _add_output(parser, choices=("text", "json"), default="text")
+    elif command == "next":
         parser.add_argument("paths", nargs="*")
         parser.add_argument("--user")
         parser.add_argument("--project")
@@ -509,6 +512,8 @@ def main(argv=None, config_path=None, workspace_name=None):
 
 
 def _dispatch(command, args, config_data, config_path):
+    if command == "tour":
+        return command_tour(args, config_data)
     if command == "next":
         return command_next(args, config_data)
     if command == "show":

@@ -19,6 +19,14 @@ life.txt Format 1.0
 └── Full Format                  <- life_txt_format_spec.md, level 3
 ```
 
+Want to see it work before reading further? `lifetxt tour` shows a tiny
+Beginner Profile sample and one real derived view over it -- no config, no
+`life.txt`, and no setup required:
+
+```sh
+lifetxt tour
+```
+
 ## Level 1 -- Minimum (5 minutes)
 
 Learn four things and you can write a useful `life.txt`:
@@ -130,7 +138,8 @@ UI. `priority:` (`low`/`normal`/`high`, or a number) affects sort order in
 [section 9](./life_txt_format_spec.md#9-type-specific-recommended-keys) of
 the format specification for the recommended keys per type, and
 [`cli.md`](./cli.md) for command-level filtering and shorthand capture
-(`quick "Buy milk @home #errand !high ^tomorrow"`).
+(`lifetxt add "Buy milk @home #errand !high ^tomorrow"` -- `add` is the
+beginner-facing spelling of `quick`/`q`).
 
 ## Level 3 -- Full Format
 
@@ -154,6 +163,11 @@ first -- it is already valid input to the full grammar.
 
 ## Where to go next
 
+- `lifetxt tour` -- a 30-second, zero-config demonstration; a good place to
+  start before writing anything.
+- `lifetxt init` -- create your own starter `life.txt` and config.
+- `lifetxt add "Buy milk ^tomorrow"` -- capture your first real record.
+- `lifetxt web` -- open the browser UI against it.
 - [`life_txt_format_spec.md`](./life_txt_format_spec.md) -- the complete
   grammar.
 - [`cli.md`](./cli.md) -- every command, filter, and output format.

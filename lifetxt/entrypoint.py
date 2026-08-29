@@ -29,6 +29,7 @@ _EXTRA_COMMANDS = frozenset(
         "format",
         "capabilities",
         "attachment",
+        "tour",
     )
 )
 
@@ -176,7 +177,7 @@ def _print_help():
     build_parser().print_help()
     sys.stdout.write(
         "\nAdditional workflow commands:\n"
-        "  next, show, edit, path, count, invoice, standup, to-ics, from-todo, from-markdown\n"
+        "  tour, next, show, edit, path, count, invoice, standup, to-ics, from-todo, from-markdown\n"
         "Periodic report commands:\n"
         "  report list|preview|run\n"
         "Personal Context commands:\n"

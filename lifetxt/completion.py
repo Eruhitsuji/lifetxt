@@ -23,6 +23,7 @@ from .presence import COMMON_STATES
 
 
 COMMANDS = (
+    "tour",
     "check",
     "ids",
     "links",

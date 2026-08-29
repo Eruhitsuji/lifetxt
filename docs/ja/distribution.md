@@ -213,6 +213,20 @@ demo・閲覧専用の deployment には `serve` command に `--read-only` を�
 uid-1000 user から書き込み可能です。host 側の file/directory permission が
 それを許可していることを確認してください。
 
+`--read-only` の deployment では、mounted された `/data` volume への
+書き込み権限は一切不要です —— genuinely read-only な bind mount
+（`docker run -v host/path:/data:ro ...`）や、host 側で別 uid が所有する
+mounted directory も含みます。どちらも Linux host では現実的な
+deployment 形態です。以前は必ずしもそうではありませんでした：lifetxt は
+default で、serve している `life.txt` の隣に小さな internal な
+revision-telemetry file を書き込みます（`--read-only` の API 契約とは
+無関係です）。これが原因で、上記どちらの形態に対しても container が
+即座に crash していましたが、この file を container 自身の home
+directory（`LIFETXT_REVISION_METRICS_PATH`）へ ルーティングすることで
+解決しました —— この image 自体の最初の実際の CI 検証で発見・修正し、
+`-v ...:/data:ro` での失敗を正確に再現する regression test を追加して
+います。
+
 ### update / pin の指針
 
 - immutable な version tag は publish 後変わりません — 無期限に pin して

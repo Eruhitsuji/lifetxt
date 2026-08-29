@@ -8444,6 +8444,52 @@ traceability:
         non-overridable direct-push prohibition.
       status: implemented
 
+    - requirement_id: req-distribution-v1-0-1-release-workflow-fixes
+      capability_id: cap-distribution-channels
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/567
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/579
+      pull_request: null
+      changed_files_or_scope:
+        - Fix two real bugs found by the first real v1.0.1 tag-triggered
+          run of release.yml and docker-publish.yml, and stop
+          scripts/release_evidence.py from silently discarding subprocess
+          error output before raising
+        - .github/workflows/release.yml
+        - .github/workflows/docker-publish.yml
+        - scripts/release_evidence.py
+        - tests/test_release_evidence.py
+      tests_or_evidence:
+        - "gh run view (Release, v1.0.1 tag push): failed at 'Build wheel, sdist, checksums, SBOM, and provenance' with a bare CalledProcessError; local repro with a fresh venv (build+twine only, matching release.yml's exact pip install) reproduced pyproject_hooks._impl.BackendUnavailable: Cannot import 'setuptools.build_meta'"
+        - "gh run view (Docker image, v1.0.1 tag push): failed at 'Smoke test — non-root user' with docker: 'docker run' requires at least 1 argument, caused by -u preceding the image name"
+        - "live: local docker build + docker run --rm --entrypoint id lifetxt:smoke-test -u -> 1000, confirming the fixed argument order"
+        - "live: local venv reproduction confirms adding setuptools>=61 to the pip install resolves the BackendUnavailable failure"
+        - tests/test_release_evidence.py RunErrorSurfacingTests (2 tests, new)
+        - .venv/Scripts/python.exe -m unittest tests.test_release_evidence tests.test_check_release_tag_version tests.test_docker_image -> Ran 24 tests, OK (docker tests include the real, non-mocked build+run tier)
+        - python -c "import yaml; yaml.safe_load(open('.github/workflows/release.yml')); yaml.safe_load(open('.github/workflows/docker-publish.yml'))" -> both parse
+        - .venv/Scripts/ruff.exe format --check scripts/release_evidence.py tests/test_release_evidence.py -> 2 files already formatted
+        - .venv/Scripts/ruff.exe check scripts/release_evidence.py tests/test_release_evidence.py -> All checks passed
+        - .venv/Scripts/python.exe -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      release_or_deployment: >-
+        CI/release-automation-only fix, no product/runtime behavior change.
+        Once merged to main, the fixed release.yml/docker-publish.yml must
+        be re-run against the existing v1.0.1 tag via each workflow's
+        workflow_dispatch trigger (tag input) rather than moving or
+        recreating the git tag, since the tag itself already correctly
+        points at the intended commit's product code.
+      notes: >-
+        Both bugs were found only by the very first real tag-triggered
+        execution of infrastructure added under cap-distribution-channels
+        (#567/#568-#574); neither was caught by local testing or CI on the
+        PRs that introduced them, since both require either a genuinely
+        fresh (non-editable, no pre-existing setuptools) build environment
+        or the exact shell argument order used in the workflow file itself
+        rather than in the Python test suite's own subprocess invocations.
+        scripts/release_evidence.py's error-surfacing fix is a
+        diagnosability improvement with no change to its success-path
+        output shape, confirmed unchanged by
+        test_a_successful_command_still_returns_its_result.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

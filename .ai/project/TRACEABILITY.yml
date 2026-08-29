@@ -8542,7 +8542,7 @@ traceability:
       capability_id: cap-distribution-channels
       epic: https://github.com/Eruhitsuji/lifetxt/issues/567
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/584
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/585
       changed_files_or_scope:
         - "Fix a sixth real bug found by the v1.0.1 release: standalone-binaries.yml's macos-x86_64 build requested the plain macos-13 GitHub-hosted runner label, which GitHub fully retired on 2025-12-04, so the job queued forever with no runner ever assigned"
         - .github/workflows/standalone-binaries.yml

@@ -351,6 +351,22 @@ lifetxt q "Buy milk @home #errand !high ^tomorrow"
 記号だけのタイトルはタイトルなしの record を作らずに拒否され、
 未知の `^date` は解釈不能な値を書き込まずに明示的に失敗します。
 
+### 名前付き capture preset
+
+`--preset NAME` は、設定した `capture.presets.<name>` オブジェクトの
+`type`/`status`/`project`/`tags`/`priority` の既定値を、shorthand と
+明示的な flag が実行される前に適用します。そのため、同じ field については
+shorthand と明示的な flag のどちらも preset より優先されます：
+
+```sh
+lifetxt quick --preset work-task "Prepare proposal"
+lifetxt quick --preset work-task "Fix bug !high"    # 明示的な !high が preset の priority を上書き
+lifetxt add --preset idea "Try local-first sync"    # add/q も同じ --preset を共有
+```
+
+設定契約、優先順位、tag の merge 挙動は
+[config.md](config.md#名前付き-capture-preset) を参照してください。
+
 ### 相対日付トークン
 
 日付を受け取るすべての箇所（`--due`、`--do`、`--until`、`^` 記号、TUI の `/due`）で

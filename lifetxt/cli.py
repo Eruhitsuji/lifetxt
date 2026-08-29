@@ -2450,6 +2450,16 @@ def build_parser():
         help="Skip validation before writing.",
     )
     quick.add_argument("--status", default=None, help=argparse.SUPPRESS)
+    quick.add_argument(
+        "--preset",
+        default=None,
+        help=(
+            "Apply capture.presets.NAME's type/status/project/tags/priority "
+            "defaults before capture shorthand and explicit flags, which "
+            "still win over the preset for the same field. See `lifetxt "
+            "config explain capture.presets`."
+        ),
+    )
     for key in DETAIL_FLAGS:
         dest = "from_" if key == "from" else key
         quick.add_argument(
@@ -6499,6 +6509,27 @@ def _merge_capture_shorthand(item, args):
             item.details[key] = list(values)
 
 
+def _apply_capture_preset_defaults(item, preset):
+    """Fill fields the preset defines that explicit args/shorthand left
+    unset (#594).
+
+    Precedence: config defaults < preset < explicit CLI flags/capture
+    shorthand. This runs after `_merge_capture_shorthand` -- so anything an
+    explicit flag or a `@`/`#`/`!`/`^` sigil already set is left untouched
+    -- and before `apply_config_defaults_to_item`, so a preset value still
+    outranks a bare `defaults.project`-style config default.
+    """
+    for field in ("project", "priority"):
+        if field in preset and field not in item.details:
+            item.details[field] = [preset[field]]
+    tags = preset.get("tags")
+    if tags:
+        existing = item.details.setdefault("tag", [])
+        for tag in tags:
+            if tag not in existing:
+                existing.append(tag)
+
+
 def command_quick(args):
     config = _config(args)
     today = timezone_today()
@@ -6508,6 +6539,16 @@ def command_quick(args):
         if not stdin_title:
             raise ValueError("quick - requires a non-empty title on stdin.")
         args.title = stdin_title
+
+    preset = None
+    if getattr(args, "preset", None):
+        from .capture_presets import resolve_capture_preset
+
+        preset = resolve_capture_preset(config, args.preset)
+        if args.kind is None and "type" in preset:
+            args.kind = preset["type"]
+        if args.status is None and "status" in preset:
+            args.status = preset["status"]
 
     if args.due:
         args.due = [_resolve_relative_date(v, today) for v in args.due]
@@ -6523,6 +6564,8 @@ def command_quick(args):
 
     item = build_item_from_args(args)
     _merge_capture_shorthand(item, args)
+    if preset is not None:
+        _apply_capture_preset_defaults(item, preset)
     dest = args.append or config_write_file(config)
     file_directives = _load_file_directives(dest)
     apply_config_defaults_to_item(item, args, file_directives)

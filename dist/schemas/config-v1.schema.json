@@ -3,6 +3,44 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": true,
   "properties": {
+    "capture": {
+      "additionalProperties": true,
+      "properties": {
+        "presets": {
+          "additionalProperties": {
+            "additionalProperties": false,
+            "properties": {
+              "priority": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "project": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "status": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "tags": {
+                "items": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "type": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
     "config": {
       "additionalProperties": true,
       "properties": {

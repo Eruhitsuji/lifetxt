@@ -383,6 +383,7 @@ re-explained.
 | Core | `config_version`, `default_workspace`, `paths`, `write_file` |
 | Config writes | `config.write.require_revision`, `config.write.audit_log`, `config.write.audit_max_bytes` |
 | Update checks | `update.repository` |
+| Capture presets | `capture.presets`, `capture.presets.*.type`, `capture.presets.*.status`, `capture.presets.*.project`, `capture.presets.*.tags`, `capture.presets.*.priority` |
 | Workspaces | `workspaces`, `workspaces.*.sources`, `workspaces.*.write_file`, `workspace.max_total_source_bytes` |
 | Profiles | `profiles` |
 | Defaults | `defaults.timezone`, `defaults.person` |
@@ -443,3 +444,252 @@ This is an additive configuration-v1 extension. Existing configurations without
 `reports` keep their previous behavior and require no migration. Removing the
 optional `reports` section is the downgrade path and restores the pre-feature
 configuration behavior.
+
+## Named capture presets
+
+Named `quick`/`q`/`add` capture defaults live under the optional top-level
+`capture.presets` object:
+
+```json
+{
+  "capture": {
+    "presets": {
+      "work-task": {
+        "type": "T",
+        "project": "work",
+        "tags": ["work"],
+        "priority": "normal"
+      },
+      "idea": {
+        "type": "N",
+        "tags": ["idea"]
+      }
+    }
+  }
+}
+```
+
+```sh
+lifetxt quick --preset work-task "Prepare proposal"
+lifetxt add --preset idea "Try local-first sync"
+```
+
+A preset may set `type`, `status`, `project`, `tags`, and `priority` --
+exactly the fields `quick` already accepts as `--type`/`--status`/
+`--project`/`--tag`/`--priority`. It is a defaults layer, never an invisible
+override:
+
+```text
+existing config defaults < selected capture preset < explicit shorthand / explicit CLI arguments
+```
+
+An explicit `--project`/`--priority`/`--status`/`--type` flag or a capture
+shorthand sigil (`@`/`!`/`^`) for the same field always wins over the preset.
+`#tag` sigils and `--tag` values are merged with the preset's `tags` and
+deduplicated rather than replaced. `q` and `add` accept `--preset` too,
+since both are aliases of the same `quick` command contract. An unknown
+preset name fails loudly and lists every configured preset name; a malformed
+preset definition (an unsupported field, an empty value, or `tags` that is
+not a non-empty array of strings) is rejected by configuration validation
+rather than silently ignored.
+
+Use `lifetxt config explain capture.presets` (or
+`capture.presets.<name>.<field>` for one field's registered metadata) to
+inspect the contract.
+
+`lifetxt config init` intentionally does not add an empty `capture.presets`
+object, for the same reason `reports` above does not: there is no meaningful
+default preset to write. This is an additive configuration-v1 extension.
+Existing configurations without `capture` keep their previous behavior and
+require no migration; removing the optional `capture.presets` section is the
+downgrade path. This does not replace the existing `template` command, which
+remains the tool for fixed/multi-line record generation; capture presets are
+for variable-title, same-metadata `quick`/`add` captures.
+
+## Configurable TUI key bindings
+
+`tui.bindings` is a small, explicit overlay on top of the selected
+`tui.keymap` preset (`prompt`, `vim`, or `arrows`) for the interactive
+`lifetxt tui` workspace:
+
+```text
+selected built-in tui.keymap preset  <  tui.bindings overrides
+```
+
+```json
+{
+  "tui": {
+    "keymap": "vim",
+    "bindings": {
+      "move_up": ["k"],
+      "move_down": ["j"],
+      "open": ["enter", "l"],
+      "done": ["x"],
+      "search": ["/"],
+      "help": ["?"],
+      "quit": ["q"]
+    }
+  }
+}
+```
+
+Each key in `tui.bindings` must be one of a fixed set of action ids: `move_up`,
+`move_down`, `first`, `last`, `open`, `toggle_mark`, `done`, `search`,
+`command`, `reload`, `help`, `quit`. The value is one key name or an array of
+key names using the same deterministic symbolic spellings the TUI's own key
+normalization already produces -- `j`, `k`, `g`, `G`, `enter`, `space`, `esc`,
+`ctrl-p`, `up`, `down`, `home`, `end`, and so on. Unmentioned actions keep the
+selected keymap's built-in key(s); a preset applies no `tui.bindings` overlay
+of its own for actions the configuration does not mention.
+
+This creates no new input or command engine: every action still invokes the
+exact same existing TUI handler it always did (`quick`/`add`'s capture path is
+unrelated). Only which physical key reaches which handler is configurable.
+
+Safety and validation:
+
+- A key already bound to two different actions in the same mode is rejected
+  before the TUI starts, naming both actions.
+- An unknown action id or an unsupported key name is rejected rather than
+  silently ignored.
+- Duplicate key aliases for the same action are deduplicated.
+- `edit` (`e`), `undo` (`u`), the page-move keys, the view-cycle key (`Tab`),
+  and the required cancel/exit path (`Esc`, and `Ctrl-C`, which is never
+  routed through this registry at all) stay hard-coded and cannot be
+  reassigned through `tui.bindings` in this first slice -- a custom map can
+  never make the TUI impossible to exit or cancel.
+- The `prompt` keymap has no nav-mode bindings of its own (it never leaves
+  the input bar), so `tui.bindings` has no effect there.
+- The non-interactive/plain dashboard (`lifetxt tui --plain`, or any
+  non-TTY invocation) has no keyboard interaction and is unaffected by
+  `tui.bindings`.
+
+`?` (when the help reference is not already open) shows the *effective*
+bindings, generated from the resolved configuration rather than a second,
+separately maintained copy of the default key list -- so help can never
+describe a key that no longer does what it says.
+
+See [cli.md](cli.md#custom-key-bindings) for the full action list and a
+worked example, and use `lifetxt config explain tui.bindings.*` to inspect
+the registered metadata for one action's contract.
+
+This is an additive configuration-v1 extension. Existing configurations
+without `tui.bindings` behave exactly as before; the existing `tui.keymap`
+values remain the authoritative base preset and are not renamed or
+deprecated. Removing the optional `tui.bindings` section is the downgrade
+path.
+
+## Generic custom fields
+
+The optional top-level `custom_fields` object declares typed, validated
+metadata for ordinary (non-ticket) life.txt records -- a Journal rating, a
+Note's energy level, a household or research classification -- without
+changing the life.txt grammar or turning its open custom-key model into a
+closed schema:
+
+```json
+{
+  "custom_fields": {
+    "energy": {
+      "type": "enum",
+      "values": ["low", "medium", "high"],
+      "kinds": ["J", "N"],
+      "filterable": true
+    },
+    "rating": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 5,
+      "kinds": ["J"],
+      "filterable": true
+    }
+  }
+}
+```
+
+```text
+[N] N "Afternoon energy" energy:high
+[N] J "Daily review" rating:4.5
+```
+
+Each field name maps to a definition object (or a bare type string, e.g.
+`"energy": "string"`, as shorthand for `{"type": "string"}`). Supported
+metadata:
+
+| Key | Meaning |
+| --- | --- |
+| `type` | One of `string`, `integer`, `number`, `boolean`, `date`, `datetime`, `duration`, `enum`. |
+| `label` | Optional user-facing label; defaults to the field name. |
+| `description` | Optional explanation. |
+| `repeatable` | Boolean; whether the field may appear more than once on one item. |
+| `required` | Boolean; whether an applicable item must include the field. |
+| `enum` / `values` | Allowed values, for `type: enum` (`values` is an accepted alias). |
+| `minimum`, `maximum` | Numeric bounds, for `integer`/`number` types. |
+| `min_length`, `max_length` | Length bounds on the normalized value. |
+| `pattern` | A regular expression the normalized value must match. |
+| `kinds` | Life.txt record kinds (`T`/`E`/`D`/`R`/`H`/`N`/`S`/`M`/`J`) the field applies to. Omitted means every ordinary kind. |
+| `projects` | Projects the field applies to. Omitted means every project. |
+| `filterable` | Boolean, default `false`; see Query behavior below. |
+
+This is deliberately the smallest generic counterpart to the much richer
+`ticketing.custom_fields` registry (below); both share one typed-value
+implementation, so an equivalent `type`/`minimum`/`pattern`/... input is
+parsed and validated identically in either registry. Privacy levels,
+tracker/role scoping, and other ticket-workflow-specific metadata are
+intentionally not part of the generic registry -- those stay ticket-specific.
+
+`record:ticket` items are never governed by `custom_fields`; they remain
+governed by `ticketing.custom_fields` only, and a generic definition never
+reinterprets or overrides a ticket-specific one.
+
+### Validation behavior
+
+A field definition applies to an ordinary item when the item's kind matches
+`kinds` (if given) and its `project:` matches `projects` (if given). For an
+applicable item:
+
+- a declared field's key no longer produces the generic "custom key, it will
+  be preserved" warning -- it is recognized, not merely tolerated;
+- its value(s) are normalized and validated against `type` and every
+  constraint (`enum`/`minimum`/`maximum`/`min_length`/`max_length`/`pattern`);
+- `repeatable: false` (the default) rejects more than one value;
+- `required: true` reports an error when the item lacks the field.
+
+An **undeclared** custom key is unaffected: it keeps today's exact
+preservation and warning behavior. A **declared** field used on an item
+outside its own `kinds`/`projects` scope is also left untouched -- it does
+not silently gain stronger semantics just because the same key name is
+declared somewhere else in the registry.
+
+### Query behavior
+
+Only definitions with `filterable: true` become dynamic Query fields,
+recognized automatically by the shared query language (`field:value` /
+`field=value` equality/membership matching) and therefore by every surface
+built on it -- CLI `query`, Saved Views, MCP `run_query`, and Web/TUI Saved
+Views -- with no separate implementation on any of those surfaces:
+
+```sh
+lifetxt query 'energy:high'
+lifetxt view run energetic-notes
+```
+
+A configured field left `filterable: false` (the default) remains validated
+metadata but is **not** accepted as a Query field name; querying it still
+reports Q001 (unknown field), the same as any undeclared key. Numeric/date
+comparison operators (`<`, `>`, and so on) for custom fields are out of
+scope for this first slice; only equality/membership matching is supported.
+
+Use `lifetxt config explain custom_fields.*.type` (or any other definition
+key) to inspect the registered metadata contract.
+
+This is an additive configuration-v1 extension. Existing configurations
+without `custom_fields` behave exactly as today, and existing arbitrary
+custom detail keys remain legal and preserved. Adding an entry intentionally
+opts that field into stronger validation for applicable ordinary items; it
+does not change the meaning of any existing `ticketing.custom_fields`
+configuration. No life.txt file migration is required, since the stored
+syntax remains ordinary `key:value` detail metadata -- an older lifetxt
+version will preserve the custom detail text but will not know the new
+configuration semantics. Removing the optional `custom_fields` section is
+the downgrade path.

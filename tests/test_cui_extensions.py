@@ -1402,6 +1402,156 @@ class WorkspaceKeymapRegressionTests(unittest.TestCase):
         self.assertEqual(0, state.help_scroll)
 
 
+class WorkspaceKeyBindingsTests(unittest.TestCase):
+    """`tui.bindings` (#595): a configurable overlay on the vim/arrows
+    action registry. Ctrl-C and Esc/cancel are never part of the registry
+    and are covered separately by WorkspaceInterruptTests /
+    WorkspaceKeymapRegressionTests, which this feature must not affect."""
+
+    def _state(self, keymap="vim", bindings=None, text=None):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        path = os.path.join(tmp.name, "life.txt")
+        with open(path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(text or "[ ] T A id:t1\n[ ] T B id:t2\n")
+        tui_config = {"keymap": keymap}
+        if bindings is not None:
+            tui_config["bindings"] = bindings
+        args = argparse.Namespace(paths=[path], config_data={"tui": tui_config})
+        state = tui_app.WorkspaceState(args, glyphs=tui_app.ASCII_GLYPHS)
+        state.reload()
+        return state
+
+    # -- no-config regression, for every built-in keymap --------------------
+
+    def test_vim_keymap_default_navigation_is_unchanged_with_no_bindings_config(self):
+        state = self._state("vim")
+        tui_app.handle_key(state, "j")
+        self.assertEqual(1, state.selected)
+        tui_app.handle_key(state, "k")
+        self.assertEqual(0, state.selected)
+
+    def test_arrows_keymap_default_navigation_is_unchanged_with_no_bindings_config(
+        self,
+    ):
+        state = self._state("arrows")
+        tui_app.handle_key(state, "down")
+        self.assertEqual(1, state.selected)
+        tui_app.handle_key(state, "up")
+        self.assertEqual(0, state.selected)
+
+    def test_prompt_keymap_is_unaffected_by_the_bindings_registry(self):
+        state = self._state("prompt", bindings={"quit": ["z"]})
+        self.assertEqual("input", state.mode)
+        tui_app.handle_key(state, "z")
+        # "quit" was never wired for the prompt keymap (no nav-mode
+        # bindings exist there at all), so a "z" override has no effect.
+        self.assertTrue(state.running)
+
+    # -- custom navigation key ------------------------------------------
+
+    def test_custom_navigation_key_moves_the_selection(self):
+        state = self._state("vim", bindings={"move_down": ["n"]})
+        tui_app.handle_key(state, "n")
+        self.assertEqual(1, state.selected)
+        # The replaced default key no longer does anything.
+        tui_app.handle_key(state, "j")
+        self.assertEqual(1, state.selected)
+
+    # -- custom mutation/action key ---------------------------------------
+
+    def test_custom_mutation_key_invokes_the_same_existing_action(self):
+        state = self._state("vim", bindings={"done": ["x"]})
+        path = state.args.paths[0]
+        tui_app.handle_key(state, "x")
+        with open(path, encoding="utf-8") as handle:
+            content = handle.read()
+        self.assertIn("[x] T A id:t1", content)
+
+    # -- multiple aliases ---------------------------------------------------
+
+    def test_multiple_keys_may_be_bound_to_one_action(self):
+        state = self._state("vim", bindings={"open": ["enter", "l"]})
+        self.assertTrue(state.show_detail)
+        tui_app.handle_key(state, "l")
+        self.assertFalse(state.show_detail)
+        tui_app.handle_key(state, "enter")
+        self.assertTrue(state.show_detail)
+
+    # -- required cancel/exit safety ---------------------------------------
+
+    def test_edit_undo_and_escape_remain_available_under_a_custom_map(self):
+        # Reserved keys cannot even be assigned to a registry action (see
+        # tests.test_tui_bindings), so a fully-customized map still leaves
+        # e/u/escape untouched -- confirmed end to end here.
+        state = self._state(
+            "vim",
+            bindings={
+                "move_up": ["w"],
+                "move_down": ["s"],
+                "quit": ["z"],
+                "help": ["h"],
+            },
+        )
+        state.query = "something"
+        tui_app.handle_key(state, "escape")
+        self.assertEqual("", state.query)
+
+    # -- help/hints reflect the effective bindings --------------------------
+
+    def test_help_reference_reflects_a_custom_binding(self):
+        state = self._state("vim", bindings={"done": ["x"]})
+        rows = tui_app._key_reference(state)
+        labels = dict(rows)
+        self.assertIn("x", labels)
+        self.assertEqual("mark the selected item done", labels["x"])
+        self.assertNotIn("d", labels)
+
+    def test_help_reference_matches_the_unmodified_preset_with_no_config(self):
+        state = self._state("vim")
+        rows = tui_app._key_reference(state)
+        labels = dict(rows)
+        self.assertEqual("mark the selected item done", labels.get("d"))
+        self.assertEqual("quit", labels.get("q"))
+
+    # -- conflict / malformed configuration ----------------------------------
+
+    def test_a_conflicting_bindings_config_falls_back_to_the_preset_and_reports_it(
+        self,
+    ):
+        state = self._state("vim", bindings={"quit": ["j"]})
+        # __init__-time resolution is defensive (falls back silently); the
+        # first load() call is where the failure becomes visible.
+        state.load()
+        self.assertIn("tui.bindings", state.error)
+        # The preset default is still in effect: "j" still moves down.
+        tui_app.handle_key(state, "j")
+        self.assertEqual(1, state.selected)
+
+    def test_cmd_tui_refuses_to_start_with_a_conflicting_bindings_config(self):
+        from unittest import mock
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T A id:t1\n")
+            args = argparse.Namespace(
+                paths=[path],
+                config_data={"tui": {"keymap": "vim", "bindings": {"quit": ["j"]}}},
+                plain=False,
+            )
+            with mock.patch.object(tui, "_stdout_is_tty", return_value=True):
+                with redirect_stderr(io.StringIO()) as captured:
+                    code = tui.cmd_tui(args)
+        self.assertEqual(1, code)
+        self.assertIn("tui.bindings", captured.getvalue())
+
+    def test_unknown_action_id_in_config_falls_back_and_reports_it(self):
+        state = self._state("vim", bindings={"not_a_real_action": ["x"]})
+        state.load()
+        self.assertIn("tui.bindings", state.error)
+
+
 class WorkspaceInterruptTests(unittest.TestCase):
     """Ctrl-C must leave the TUI quietly rather than raising KeyboardInterrupt.
 

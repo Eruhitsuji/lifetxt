@@ -89,7 +89,7 @@ def validate_saved_views(config):
                 )
             )
             continue
-        _plan, query_diags = parse_query(view["query"])
+        _plan, query_diags = parse_query(view["query"], config)
         for diag in query_diags:
             if diag["severity"] == "error":
                 rows.append(

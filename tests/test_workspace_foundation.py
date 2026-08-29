@@ -672,6 +672,7 @@ class ExampleConfigTests(unittest.TestCase):
         "remote.lifetxt.json",
         "integration-references.lifetxt.json",
         "software-ticket-workspace.lifetxt.json",
+        "personal-custom-fields.lifetxt.json",
     )
 
     def test_examples_resolve_default_workspace(self):

@@ -253,3 +253,251 @@ lifetxt には組み込みのレポートプロファイルや出力先がなく
 これは config version 1 に対する追加的な拡張です。`reports` を持たない既存設定は
 従来どおり動作し、migration は不要です。downgrade 時は任意の `reports` セクションを
 削除すれば、この機能追加前の設定動作に戻ります。
+
+## 名前付き capture preset
+
+`quick`/`q`/`add` の capture 既定値は、任意のトップレベル `capture.presets`
+オブジェクトに定義します：
+
+```json
+{
+  "capture": {
+    "presets": {
+      "work-task": {
+        "type": "T",
+        "project": "work",
+        "tags": ["work"],
+        "priority": "normal"
+      },
+      "idea": {
+        "type": "N",
+        "tags": ["idea"]
+      }
+    }
+  }
+}
+```
+
+```sh
+lifetxt quick --preset work-task "Prepare proposal"
+lifetxt add --preset idea "Try local-first sync"
+```
+
+preset は `type`、`status`、`project`、`tags`、`priority` を設定できます。
+これは `quick` がすでに受け付けている `--type`/`--status`/`--project`/
+`--tag`/`--priority` と同じ field です。preset はあくまで既定値の layer で
+あり、見えない override にはなりません：
+
+```text
+既存 config 既定値 < 選択した capture preset < 明示的な shorthand / 明示的な CLI 引数
+```
+
+同じ field に対する明示的な `--project`/`--priority`/`--status`/`--type`
+flag や capture shorthand の sigil（`@`/`!`/`^`）は、常に preset より優先されます。
+`#tag` sigil と `--tag` の値は、preset の `tags` と merge され重複排除されます
+（置き換えではありません）。`q` と `add` も同じ `quick` command contract の
+alias であるため `--preset` を受け付けます。未知の preset 名は明示的に失敗し、
+設定済みの preset 名を一覧表示します。不正な preset 定義（未対応 field、
+空の値、非配列または非文字列の `tags` など）は configuration validation で
+拒否され、黙って無視されることはありません。
+
+`lifetxt config explain capture.presets`（または個々の field について
+`capture.presets.<name>.<field>`）で登録済みのメタデータを確認できます。
+
+`lifetxt config init` は上記の `reports` と同じ理由で、空の
+`capture.presets` オブジェクトを意図的に追加しません: 意味のある既定 preset
+が存在しないためです。これは config version 1 に対する追加的な拡張です。
+`capture` を持たない既存設定は従来どおり動作し、migration は不要です。
+downgrade 時は任意の `capture.presets` セクションを削除すれば元に戻ります。
+これは既存の `template` command を置き換えるものではありません。`template`
+は固定・複数行の record 生成に引き続き使用し、capture preset は
+タイトルが可変で metadata が共通する `quick`/`add` capture 向けです。
+
+## 設定可能な TUI key binding
+
+`tui.bindings` は、interactive な `lifetxt tui` workspace について、選択中の
+`tui.keymap` preset（`prompt`、`vim`、`arrows`）の上に重ねる小さく明示的な
+overlay です：
+
+```text
+選択中の組み込み tui.keymap preset  <  tui.bindings による override
+```
+
+```json
+{
+  "tui": {
+    "keymap": "vim",
+    "bindings": {
+      "move_up": ["k"],
+      "move_down": ["j"],
+      "open": ["enter", "l"],
+      "done": ["x"],
+      "search": ["/"],
+      "help": ["?"],
+      "quit": ["q"]
+    }
+  }
+}
+```
+
+`tui.bindings` の各 key は、固定された action id の集合（`move_up`、
+`move_down`、`first`、`last`、`open`、`toggle_mark`、`done`、`search`、
+`command`、`reload`、`help`、`quit`）のいずれかである必要があります。
+値は、TUI 自身の key normalization がすでに生成している決定的な symbolic な
+綴り（`j`、`k`、`g`、`G`、`enter`、`space`、`esc`、`ctrl-p`、`up`、`down`、
+`home`、`end` など）を使った 1 つの key 名、またはその配列です。指定しなかった
+action は選択中の keymap の組み込み key のままです。設定で言及されなかった
+action には preset 独自の `tui.bindings` overlay は適用されません。
+
+これにより新しい入力/command エンジンは作られません。どの action も
+これまでと全く同じ既存の TUI handler を呼び出します（`quick`/`add` の
+capture path とは無関係です）。設定できるのは、どの物理 key がどの
+handler に届くかだけです。
+
+安全性と validation：
+
+- 同じ key が同一 mode 内で 2 つの異なる action に割り当てられている場合、
+  TUI 起動前に両方の action 名を明示して拒否されます。
+- 未知の action id や未対応の key 名は、黙って無視されず拒否されます。
+- 同一 action に対する重複した key の別名は重複排除されます。
+- `edit`（`e`）、`undo`（`u`）、page 移動 key、view 循環 key（`Tab`）、
+  必須の cancel/exit 経路（`Esc`、および、この registry を一切経由しない
+  `Ctrl-C`）は、この最初の slice では hard-code されたままで
+  `tui.bindings` から再割り当てできません -- custom map によって TUI が
+  終了・cancel できなくなることはありません。
+- `prompt` keymap には独自の nav-mode binding が存在しない（常に input bar
+  に留まる）ため、`tui.bindings` はそこでは効果を持ちません。
+- 非 interactive/plain dashboard（`lifetxt tui --plain`、または非 TTY での
+  実行）にはキー操作がなく、`tui.bindings` の影響を受けません。
+
+`?`（help reference がまだ開いていないとき）は、既定 key 一覧の
+別途管理された 2 つ目のコピーではなく、解決済みの設定から生成された
+*実効* bindings を表示します。そのため help が実際とは異なる key を
+説明することはありません。
+
+完全な action 一覧と実例は
+[cli.md](cli.md#key-binding-のカスタマイズ) を、1 つの action の
+契約についての登録済みメタデータは
+`lifetxt config explain tui.bindings.*` を参照してください。
+
+これは config version 1 に対する追加的な拡張です。`tui.bindings` を持たない
+既存設定は従来どおり動作します。既存の `tui.keymap` の値は引き続き
+authoritative な base preset であり、rename も deprecate もされません。
+downgrade 時は任意の `tui.bindings` セクションを削除すれば元に戻ります。
+
+## 汎用 custom field
+
+任意の top-level `custom_fields` object は、通常の（ticket ではない）
+life.txt record に対して、型付きで validation される metadata を宣言します
+-- Journal の rating、Note の energy level、家庭や研究の分類など -- life.txt
+の grammar を変更したり、その open な custom key model を閉じた schema に
+してしまったりすることなく利用できます：
+
+```json
+{
+  "custom_fields": {
+    "energy": {
+      "type": "enum",
+      "values": ["low", "medium", "high"],
+      "kinds": ["J", "N"],
+      "filterable": true
+    },
+    "rating": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 5,
+      "kinds": ["J"],
+      "filterable": true
+    }
+  }
+}
+```
+
+```text
+[N] N "Afternoon energy" energy:high
+[N] J "Daily review" rating:4.5
+```
+
+各 field 名は definition object（または `"energy": "string"` のような
+`{"type": "string"}` の省略形としての bare な type 文字列）に対応します。
+対応する metadata：
+
+| Key | 意味 |
+| --- | --- |
+| `type` | `string`、`integer`、`number`、`boolean`、`date`、`datetime`、`duration`、`enum` のいずれか。 |
+| `label` | 任意の user-facing label。既定は field 名。 |
+| `description` | 任意の説明。 |
+| `repeatable` | boolean。1 つの item に複数回出現してよいか。 |
+| `required` | boolean。適用対象の item がこの field を必ず含む必要があるか。 |
+| `enum` / `values` | `type: enum` のときの許可値リスト（`values` は許可された別名）。 |
+| `minimum`、`maximum` | `integer`/`number` 型の数値範囲。 |
+| `min_length`、`max_length` | 正規化後の値の長さ制約。 |
+| `pattern` | 正規化後の値が満たすべき正規表現。 |
+| `kinds` | この field が適用される life.txt record kind（`T`/`E`/`D`/`R`/`H`/`N`/`S`/`M`/`J`）。省略時はすべての通常 kind に適用。 |
+| `projects` | この field が適用される project。省略時はすべての project に適用。 |
+| `filterable` | boolean、既定 `false`。下記の Query 動作を参照。 |
+
+これは、はるかに豊富な `ticketing.custom_fields` registry（下記参照）の
+意図的に最小限の汎用対応版です。両者は 1 つの typed-value 実装を共有して
+おり、同じ `type`/`minimum`/`pattern`/... の入力はどちらの registry でも
+同一に parse・validation されます。privacy level や tracker/role による
+scoping などの ticket workflow 固有の metadata は、意図的に汎用 registry
+には含まれません -- それらは ticket 固有のまま残ります。
+
+`record:ticket` item は `custom_fields` の対象には決してなりません。
+引き続き `ticketing.custom_fields` のみが対象であり、汎用 definition が
+ticket 固有の definition を再解釈したり上書きしたりすることはありません。
+
+### Validation の動作
+
+field definition は、item の kind が `kinds`（指定されていれば）に一致し、
+`project:` が `projects`（指定されていれば）に一致するとき、通常の item に
+適用されます。適用対象の item については：
+
+- 宣言済みの field の key は、汎用の「custom key であり保持される」という
+  警告をもう発生させません -- 単に許容されるのではなく、認識されます；
+- その値は `type` および全ての制約
+  （`enum`/`minimum`/`maximum`/`min_length`/`max_length`/`pattern`）に対して
+  正規化・validation されます；
+- `repeatable: false`（既定）は複数値を拒否します；
+- `required: true` は、item にその field がない場合 error を報告します。
+
+**未宣言**の custom key は影響を受けません -- 従来どおりの保持・警告動作を
+そのまま維持します。**宣言済み**の field であっても、その `kinds`/`projects`
+の適用範囲外の item で使われた場合は同様に手を加えません -- registry の
+どこかで同じ key 名が宣言されているというだけで、黙って強い意味論を
+獲得することはありません。
+
+### Query の動作
+
+`filterable: true` の definition のみが動的な Query field になり、shared
+query language（`field:value` / `field=value` の equality/membership
+matching）によって自動的に認識されます。したがって、それを基盤とする
+すべての surface -- CLI `query`、Saved View、MCP `run_query`、Web/TUI の
+Saved View -- がそれぞれ独自の実装を持つことなくこの機能を利用できます：
+
+```sh
+lifetxt query 'energy:high'
+lifetxt view run energetic-notes
+```
+
+`filterable: false`（既定）のまま設定された field は validation される
+metadata としては残りますが、Query field 名としては **受理されません**。
+そのような field を query すると、未宣言の key と同様に Q001（unknown
+field）が報告されます。custom field に対する数値/日付の比較演算子
+（`<`、`>` など）は、この最初の slice では対象外です -- サポートされるのは
+equality/membership matching のみです。
+
+登録済みの metadata contract を確認するには
+`lifetxt config explain custom_fields.*.type`（または他の任意の
+definition key）を使用してください。
+
+これは config version 1 に対する追加的な拡張です。`custom_fields` を持たない
+既存設定は今までどおり動作し、既存の任意の custom detail key も引き続き
+有効で保持されます。エントリを追加すると、その field は意図的により強い
+validation の対象になりますが、既存の `ticketing.custom_fields` 設定の
+意味は変更されません。保存される syntax は通常の `key:value` detail
+metadata のままであるため、life.txt file の migration は不要です --
+古い lifetxt version は custom detail のテキストを保持しますが、新しい
+設定の意味論は認識しません。downgrade 時は任意の `custom_fields`
+セクションを削除すれば元に戻ります。

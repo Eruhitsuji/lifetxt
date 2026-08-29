@@ -13,6 +13,7 @@ path を省略すると標準入力から読み込みます。
 ## 1. コマンド一覧
 
 ```sh
+python -m lifetxt tour
 python -m lifetxt check [path ...]
 python -m lifetxt integrity [path ...]
 python -m lifetxt ids [path ...]
@@ -24,6 +25,7 @@ python -m lifetxt to-csv [path ...]
 python -m lifetxt demo [options]
 python -m lifetxt markdown [path ...]
 python -m lifetxt import-ics [path ...]
+python -m lifetxt import [path ...]
 python -m lifetxt sync-ics --url-env ENVVAR
 python -m lifetxt filter [path ...]
 python -m lifetxt from-json [path ...]
@@ -44,12 +46,14 @@ python -m lifetxt stats [path ...]
 python -m lifetxt git-hook install
 python -m lifetxt completion bash
 python -m lifetxt serve [path ...]
+python -m lifetxt web [path ...]
 python -m lifetxt mcp [path ...]
 python -m lifetxt config init
 python -m lifetxt config show
 python -m lifetxt init
 python -m lifetxt doctor
 python -m lifetxt quick "Title"
+python -m lifetxt add "Title"
 python -m lifetxt done [path ...]
 python -m lifetxt complete [path ...]
 python -m lifetxt assign [path ...]
@@ -347,6 +351,22 @@ lifetxt q "Buy milk @home #errand !high ^tomorrow"
 記号だけのタイトルはタイトルなしの record を作らずに拒否され、
 未知の `^date` は解釈不能な値を書き込まずに明示的に失敗します。
 
+### 名前付き capture preset
+
+`--preset NAME` は、設定した `capture.presets.<name>` オブジェクトの
+`type`/`status`/`project`/`tags`/`priority` の既定値を、shorthand と
+明示的な flag が実行される前に適用します。そのため、同じ field については
+shorthand と明示的な flag のどちらも preset より優先されます：
+
+```sh
+lifetxt quick --preset work-task "Prepare proposal"
+lifetxt quick --preset work-task "Fix bug !high"    # 明示的な !high が preset の priority を上書き
+lifetxt add --preset idea "Try local-first sync"    # add/q も同じ --preset を共有
+```
+
+設定契約、優先順位、tag の merge 挙動は
+[config.md](config.md#名前付き-capture-preset) を参照してください。
+
 ### 相対日付トークン
 
 日付を受け取るすべての箇所（`--due`、`--do`、`--until`、`^` 記号、TUI の `/due`）で
@@ -368,11 +388,17 @@ lifetxt q "Buy milk @home #errand !high ^tomorrow"
 
 | 短縮名 | コマンド |
 | --- | --- |
+| `add` | `quick` |
 | `q` | `quick` |
 | `d` | `done` |
 | `s` | `state` |
 | `a` | `agenda` |
 | `f` | `filter` |
+
+`add` は初心者向けの綴りです。`lifetxt add "Buy milk ^tomorrow"` は
+`lifetxt quick "Buy milk ^tomorrow"` と完全に同じ動作をします
+（同じパーサー、同じハンドラー、同じ書き込み経路）。
+既存のワークフローやスクリプト向けに `quick`/`q` も引き続き使用できます。
 
 TUI の command palette にも 1 文字の別名があります: `/d` `/s` `/a` `/f` `/t` `/e`
 `/u` `/n` `/q`。別名の完全一致は fuzzy 順位より優先されるため、
@@ -927,6 +953,35 @@ python -m lifetxt to-csv life.txt --occurrences --after 2026-06-01 --before 2026
 
 ## 5. iCalendar import / sync
 
+### 5.0 `import`: 統一エントリポイント
+
+`lifetxt import` は下記の `import-ics` に対するルーティング専用の
+dispatcher です。第二の ICS/Markdown/Todoist/GitHub 変換実装はなく、
+安全に判定できる場合は入力ファイルの拡張子から `--preset` を推測する、
+より発見しやすいコマンド名を提供するだけです。
+
+```sh
+python -m lifetxt import calendar.ics                       # --preset ics を推測
+python -m lifetxt import tasks.md                            # --preset markdown を推測
+python -m lifetxt import todoist_export.csv --preset todoist # 明示的な preset が必要
+python -m lifetxt import github_issues.json --preset github  # 明示的な preset が必要
+```
+
+| 入力 | Preset |
+|---|---|
+| `*.ics` | `ics`（推測） |
+| `*.md`、`*.markdown` | `markdown`（推測） |
+| それ以外（`*.csv`、`*.json` を含む） | `--preset ics\|markdown\|todoist\|github` の明示指定が必要 |
+| 標準入力からの読み込み（path を指定しない） | 常に `--preset` の明示指定が必要 |
+
+`import` は下記 `import-ics` のすべての option（`-o`/`--output`、`--append`、
+`--project`、`--tag`、`--expand-rrule`、`--expand-until`、`--expand-count`、
+`--preset`）を受け取り（2 つの subcommand は同じ引数定義を共有します）、
+実際の変換・validation・書き込み先の解決・書き込み安全性はそのまま
+委譲します。preset をすでに明示しているスクリプトは `import-ics` を
+直接使い続けて構いません。`import` は最初の移行を発見しやすくするための
+ものであり、`import-ics` を置き換えるものではありません。
+
 ### 5.1 `import-ics`
 
 Google Calendar の export などで得られる iCalendar `.ics` ファイルを、
@@ -1461,6 +1516,25 @@ LIFETXT_API_TOKEN=change-me python -m lifetxt serve life.txt --host 0.0.0.0 --to
 
 ブラウザで `http://127.0.0.1:8000/` を開きます。
 
+### 11.0 `web`: ブラウザを一発で開くコマンド
+
+`lifetxt web` は `serve` と全く同じ server を起動し、そのままデフォルトの
+ブラウザで開きます。第二の Web 実装ではなく、同じランタイムの上に乗った
+薄いランチャーです。
+
+```sh
+python -m lifetxt web life.txt
+python -m lifetxt web life.txt --no-open   # ブラウザを開かずに server だけ起動
+```
+
+`web` は `serve` と同じ `path ...`、`--write-file`、`--host`、`--port`、
+`--read-only`、`--token-env`、`--insecure-public` を受け取り（2 つの
+subcommand は同じ引数定義を共有します）、既定では loopback に bind し、
+下記の安全性に関する挙動もすべて共有します。server 自身の `/api/health`
+route が応答するのを待ってからブラウザを開くため、まだ準備できていない
+タブが開かれることはありません。`--mcp` など server/deployment 向けの
+起動には `serve` を直接使ってください（`web` には `--mcp` はありません）。
+
 | Option | 意味 |
 |---|---|
 | `path ...` | 読み込む life.txt ファイル。省略時は `life.txt` |
@@ -1619,7 +1693,7 @@ python -m lifetxt --config .lifetxt.json config show
 | `message.default_sender` | type `M` 作成時の default `sender:` |
 | `timer.state_file` | `timer` の常駐状態を保存する JSON ファイル |
 | `attachments.*` | `file:` / `dir:` の設定。`ignore`、`max_files`、`max_bytes` |
-| `tui.*` | TUI の既定値。`theme`、`keymap`、`glyphs`、`limit`、`agenda_window`、`session`、`session_file` |
+| `tui.*` | TUI の既定値。`theme`、`keymap`、`glyphs`、`limit`、`agenda_window`、`session`、`session_file`、`bindings` |
 | `notifications.*` | `notify` と Web 通知の既定値 |
 | `ids.auto`, `ids.key`, `ids.prefixes` | 自動IDと ID key の設定 |
 | `api.id_key` | Web API / id-based operation が使う ID key |
@@ -1862,6 +1936,42 @@ PageUp/PageDown で半ページ移動、Home/End で先頭・末尾へ移動、`
 
 help 表示中は `j` / `k` と PageUp/PageDown で 1 画面に収まらない一覧を scroll できます。
 
+##### key binding のカスタマイズ
+
+上記の `vim`/`arrows` navigation action（`move_up`、`move_down`、`first`、
+`last`、`open`、`toggle_mark`、`done`、`search`、`command`、`reload`、
+`help`、`quit`）は、選択中の keymap の上に重ねる形で `tui.bindings` から
+それぞれ再割り当てできます：
+
+```json
+{
+  "tui": {
+    "keymap": "vim",
+    "bindings": {
+      "move_up": ["k"],
+      "move_down": ["j"],
+      "open": ["enter", "l"],
+      "done": ["x"],
+      "search": ["/"],
+      "help": ["?"],
+      "quit": ["q"]
+    }
+  }
+}
+```
+
+値は 1 つの key 名、または複数の別名の配列で指定できます。指定しなかった
+action は組み込み preset の key のままです。`?`（help 表示が閉じている
+とき）は *実効* bindings を表示するため、customize した内容がドキュメントと
+食い違うことはありません。`Ctrl-C`、page 移動、`e`/`u`（edit/undo）、
+`Tab`（view 循環）、`Esc`/cancel はこの registry の対象外で常に動作するため、
+custom map によって TUI が終了できなくなることはありません。同じ key が
+2 つの action に割り当てられている場合、未知の action id、未対応の key 名は
+TUI 起動前に明示的に拒否され、問題の内容が示されます。完全な契約と
+`prompt` keymap（常に input bar に留まるため `tui.bindings` の overlay を
+持ちません）の既定 key については
+[config.md](config.md#設定可能な-tui-key-binding) を参照してください。
+
 #### 表示
 
 端末幅が 118 列以上ある場合、inspector は下部ではなく右側の pane として list の横に表示され、
@@ -1873,8 +1983,8 @@ Windows の code page でも例外にならず安全に劣化します。
 列幅は East Asian Width を考慮するため日本語 title でも整列が崩れず、
 meta 列 (project、due、priority) は端末幅が狭くなると折り返さずに 1 列ずつ省略されます。
 
-既定値は config の `tui.theme`、`tui.keymap`、`tui.glyphs`、`tui.limit`、`tui.agenda_window`
-で設定できます。
+既定値は config の `tui.theme`、`tui.keymap`、`tui.glyphs`、`tui.limit`、`tui.agenda_window`、
+`tui.bindings`（上記参照）で設定できます。
 
 filter と並び替えは cache された parse 結果に対して行われるため、
 input bar への入力で file を読み直すことはありません。
@@ -2342,9 +2452,35 @@ pip install -r requirements-web.txt
 python -m lifetxt serve life.txt
 ```
 
-## 16. `init` と `doctor`
+## 16. `tour`、`init`、`doctor`
 
-この2つの command は新規ユーザー向けの推奨エントリーポイントです。
+これらは新規ユーザー向けの推奨エントリーポイントです。`tour` は
+何も必要とせず、`init` は自分の workspace を作成し、`doctor` は
+それを確認します。
+
+### 16.0 `tour`
+
+config 不要、依存 package 不要の zero-config な first-run デモです。
+`T`、`E`、`N` をカバーする小さな組み込み Beginner Profile サンプルを
+完全にメモリ上で構築し、`lifetxt today` と同じ `command_center`
+（"today"）エンジンに通してから両方を表示します。`life.txt`、config、
+ネットワークアクセス、既存の workspace のいずれも不要で、
+ディスクへの書き込みは一切行いません。
+
+```sh
+python -m lifetxt tour
+python -m lifetxt tour --format json
+```
+
+| Option | 意味 |
+|---|---|
+| `--format {text,json}` | 出力 format。既定値は `text` |
+| `-o`, `--output FILE` | 標準出力ではなくファイルに書き込む |
+
+サンプルの日付は今日の日付を基準にしているため、derive されたセクションには
+実際に今日が期限のタスクが表示されます。翌日に再実行すると、同じサンプルで
+異なる日が表示されます。最後のセクションには具体的な次のステップ
+（`init`、`add`、`today`）が示されます。
 
 ```sh
 python -m lifetxt init

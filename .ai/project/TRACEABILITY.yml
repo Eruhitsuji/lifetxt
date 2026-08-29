@@ -8653,6 +8653,265 @@ traceability:
         than being eagerly imported into every session.
       status: implemented
 
+    - requirement_id: req-cli-first-run-tour
+      capability_id: cap-adoption-onboarding-commands
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/590
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/597
+      changed_files_or_scope:
+        - Add lifetxt tour, a zero-config, dependency-free first-run demonstration
+        - lifetxt/tour.py
+        - lifetxt/entrypoint.py
+        - lifetxt/extra_cli.py
+        - lifetxt/completion.py
+        - tests/test_tour.py
+        - tests/test_lifetxt.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+        - docs/en/getting-started.md
+        - docs/ja/getting-started.md
+        - readme.md
+      tests_or_evidence:
+        - tests/test_tour.py (11 tests) covering sample vocabulary, command_center() reuse, no-write guarantee, and deterministic rendering
+        - tests/test_lifetxt.py LifeTxtTourCliTests (7 tests, real subprocess, clean temp cwd)
+        - "live: python -m lifetxt tour in a genuinely empty scratch directory produced a real 'Due today (1): Buy milk' derived section and left the directory with zero files afterward"
+        - python -m unittest tests.test_tour tests.test_lifetxt.LifeTxtTourCliTests tests.test_completion_surfaces tests.test_surface_runtime -> Ran 98 tests, OK
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: null
+      notes: >-
+        Registered via the existing extended-entrypoint pattern
+        (entrypoint.py's _EXTRA_COMMANDS / extra_cli.py), per the issue's
+        own explicit steer, rather than growing cli.py's already very large
+        argparse tree. See cap-adoption-onboarding-commands's own notes for
+        the full account of why command_center() reuse rather than a
+        reimplemented today/agenda rule was chosen, and why a dedicated
+        installed-wheel smoke addition was judged out of proportion given
+        the command's zero repository-relative file access by construction.
+      status: implemented
+
+    - requirement_id: req-cli-add-alias
+      capability_id: cap-adoption-onboarding-commands
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/591
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/597
+      changed_files_or_scope:
+        - Register `add` as an additional argparse alias on the existing `quick` subparser, alongside `q`
+        - lifetxt/cli.py
+        - lifetxt/completion.py
+        - tests/test_lifetxt.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - tests/test_lifetxt.py LifeTxtAddAliasCliTests (7 tests): plain capture, shorthand expansion, explicit-flag-over-shorthand precedence, stdin, empty-stdin refusal, --help, quick/q unaffected
+        - python -m unittest tests.test_lifetxt.LifeTxtAddAliasCliTests tests.test_lifetxt.LifeTxtQuickCliTests tests.test_completion_surfaces tests.test_completion_values tests.test_surface_runtime -> Ran 96 tests, OK
+        - "live: python -m lifetxt add \"Buy_milk\" --append ... and python -m lifetxt quick \"Buy_milk\" --append ... produced the identical [ ] T Buy_milk line"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+      release_or_deployment: null
+      notes: >-
+        Zero duplicated argument or capture-shorthand logic: `add`, `quick`,
+        and `q` share one argparse subparser and one handler
+        (command_quick), reusing argparse's own multi-name subparser
+        support (aliases=["q", "add"]) rather than a second parser
+        definition. See cap-adoption-onboarding-commands's own notes.
+      status: implemented
+
+    - requirement_id: req-cli-web-launcher
+      capability_id: cap-adoption-onboarding-commands
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/592
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/597
+      changed_files_or_scope:
+        - Extract command_serve's config/workspace/host/port resolution and app construction into a shared _prepare_serve helper, reused unmodified by the new `web` command
+        - Add a browser-readiness poll against the server's own existing, unauthenticated /api/health route
+        - lifetxt/cli.py
+        - lifetxt/completion.py
+        - tests/test_serve_cli.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - tests/test_serve_cli.py WebCliTests (4 tests) and OpenBrowserWhenReadyTests (5 tests)
+        - python -m unittest tests.test_serve_cli tests.test_completion_surfaces tests.test_completion_values tests.test_surface_runtime -> Ran 90 tests, OK
+        - "live: a real python -m lifetxt web --no-open run answered a real GET /api/health over an actual bound socket; a second real run without --no-open genuinely launched this sandbox's default browser, which then loaded the served page and drove a full round of real API calls against the running server"
+        - "live: python -m lifetxt serve life.txt --read-only unaffected after the _prepare_serve extraction"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+      release_or_deployment: null
+      notes: >-
+        One authoritative Web runtime: `serve` and `web` share one
+        _prepare_serve()/_add_serve_core_arguments() implementation:
+        --mcp remains serve-only. See cap-adoption-onboarding-commands's
+        own notes for the full account, including why the existing
+        /api/health route (already exempt from bearer auth) was reused as
+        the readiness signal instead of a fixed delay.
+      status: implemented
+
+    - requirement_id: req-cli-unified-import
+      capability_id: cap-adoption-onboarding-commands
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/593
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/597
+      changed_files_or_scope:
+        - Extract import-ics's flag registration into a shared _add_import_core_arguments helper and add a new `import` routing-only dispatcher inferring --preset from the input extension
+        - lifetxt/cli.py
+        - lifetxt/completion.py
+        - tests/test_lifetxt.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - tests/test_lifetxt.py LifeTxtImportCliTests (10 tests): extension-based ics/markdown inference with byte-for-byte parity against import-ics --preset ..., explicit todoist/github delegation with the same parity check, ambiguous .csv/.json refusal naming --preset and the file, stdin refusal, --help, import-ics unaffected
+        - python -m unittest tests.test_lifetxt.LifeTxtImportCliTests tests.test_lifetxt.LifeTxtIcsImportCliTests tests.test_completion_surfaces tests.test_completion_values tests.test_surface_runtime -> Ran 98 tests, OK
+        - "live: python -m lifetxt import calendar.ics / tasks.md / todoist.csv --preset todoist / github_issues.json --preset github each produced output byte-for-byte identical to the equivalent import-ics --preset ... invocation"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+      release_or_deployment: null
+      notes: >-
+        Routing-only dispatcher: no second ICS/Markdown/Todoist/GitHub
+        conversion implementation. command_import() resolves --preset (from
+        a small closed extension map, or explicitly required otherwise)
+        then delegates unchanged to the existing command_import_ics(). See
+        cap-adoption-onboarding-commands's own notes.
+      status: implemented
+
+    - requirement_id: req-cli-capture-presets
+      capability_id: cap-capture-presets
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/594
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/597
+      changed_files_or_scope:
+        - Add capture.presets.<name> (type/status/project/tags/priority) as a
+          defaults layer over the existing quick/q/add capture command, with
+          config defaults < selected preset < explicit shorthand/CLI flags
+        - lifetxt/capture_presets.py
+        - lifetxt/cli.py
+        - lifetxt/entrypoint.py
+        - lifetxt/schema_extensions_v5.py
+        - dist/schemas/config-v1.schema.json
+        - tests/test_capture_presets.py
+        - tests/test_lifetxt.py
+        - docs/en/config.md
+        - docs/ja/config.md
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - tests/test_capture_presets.py (18 tests)
+        - tests/test_lifetxt.py LifeTxtCapturePresetCliTests (10 tests)
+        - python -m unittest tests.test_lifetxt.LifeTxtCapturePresetCliTests tests.test_capture_presets tests.test_schema_extensions_v2 tests.test_config_validation -> Ran 84 tests, OK
+        - "live: real python -m lifetxt --config config.json quick --preset work-task \"Fix bug\" --append against a real disposable workspace produced [ ] T \"Fix bug\" project:work priority:normal tag:work"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: null
+      notes: >-
+        Landed on its own child branch (issue-594-capture-presets) merged
+        into feature/adoption-cli-commands, the same workflow as
+        cap-adoption-onboarding-commands. See cap-capture-presets's own
+        notes for the precedence and reuse rationale.
+      status: implemented
+
+    - requirement_id: req-tui-configurable-key-bindings
+      capability_id: cap-tui-key-bindings
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/595
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/597
+      changed_files_or_scope:
+        - Add tui.bindings, a per-action key overlay on the selected
+          tui.keymap preset, dispatched through the existing TUI action
+          handlers with no new input/command engine
+        - lifetxt/tui_bindings.py
+        - lifetxt/tui.py
+        - lifetxt/tui_app.py
+        - lifetxt/entrypoint.py
+        - lifetxt/schema_extensions_v5.py
+        - dist/schemas/config-v1.schema.json
+        - tests/test_tui_bindings.py
+        - tests/test_cui_extensions.py
+        - docs/en/config.md
+        - docs/ja/config.md
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - tests/test_tui_bindings.py (24 tests)
+        - tests/test_cui_extensions.py WorkspaceKeyBindingsTests (12 tests)
+        - python -m unittest tests.test_tui_bindings tests.test_cui_extensions.WorkspaceKeyBindingsTests tests.test_schema_extensions_v2 tests.test_config_validation tests.test_surface_runtime -> Ran 112 tests, OK
+        - "live: real python -m lifetxt --config config.json tui --plain life.txt with a deliberately conflicting tui.bindings config rendered the plain dashboard successfully, confirming the conflict preflight applies only to the interactive curses path"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: null
+      notes: >-
+        Landed on its own child branch (issue-595-tui-key-bindings) merged
+        into feature/adoption-cli-commands, same workflow as
+        cap-capture-presets. See cap-tui-key-bindings's own notes for the
+        dispatch-table and conflict-policy rationale.
+      status: implemented
+
+    - requirement_id: req-generic-custom-field-registry
+      capability_id: cap-generic-custom-fields
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/596
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/597
+      changed_files_or_scope:
+        - Extract protocol-neutral typed-value primitives from
+          ticket_custom_fields.py into custom_field_primitives.py, reused by
+          both ticketing.custom_fields and the new generic custom_fields
+          registry
+        - Add the top-level custom_fields registry (custom_fields.py) --
+          normalization/diagnostics, kinds/projects applicability, and
+          record:ticket isolation
+        - Integrate into lifetxt.cli._parse_life_inputs, suppressing a
+          declared applicable field's own W106 and appending CF0xx
+          constraint diagnostics
+        - Extend lifetxt.query.parse_query/query_fields and
+          lifetxt.saved_views.validate_saved_views with an optional config
+          parameter so filterable:true fields become dynamic Query fields
+          across CLI query, Saved Views, and MCP run_query with no
+          surface-specific change
+        - Register custom_fields.*.KEY config metadata and a config-v1
+          schema fragment
+        - lifetxt/custom_field_primitives.py
+        - lifetxt/custom_fields.py
+        - lifetxt/ticket_custom_fields.py
+        - lifetxt/cli.py
+        - lifetxt/query.py
+        - lifetxt/saved_views.py
+        - lifetxt/entrypoint.py
+        - lifetxt/schema_extensions_v5.py
+        - dist/schemas/config-v1.schema.json
+        - tests/test_custom_field_primitives.py
+        - tests/test_custom_fields.py
+        - tests/test_lifetxt.py
+        - tests/test_workspace_foundation.py
+        - examples/config/personal-custom-fields.lifetxt.json
+        - docs/en/config.md
+        - docs/ja/config.md
+        - docs/en/query.md
+        - docs/ja/query.md
+      tests_or_evidence:
+        - tests/test_custom_field_primitives.py (35 tests, shared-helper layer)
+        - tests/test_custom_fields.py (42 tests: registry validation, applicability, ordinary-validator integration, undeclared-key/ticket-isolation regression, Query/Saved-View integration, config-registry/schema parity)
+        - tests/test_lifetxt.py LifeTxtGenericCustomFieldCliTests (4 tests, real subprocess check --format json end to end)
+        - tests/test_workspace_foundation.py ExampleConfigTests (personal-custom-fields.lifetxt.json registered in EXAMPLE_NAMES)
+        - python -m unittest tests.test_custom_field_primitives tests.test_custom_fields tests.test_lifetxt.LifeTxtGenericCustomFieldCliTests tests.test_workspace_foundation tests.test_schema_extensions_v2 tests.test_config_validation tests.test_query -> Ran 215 tests, OK
+        - full existing ticket regression suite re-run unmodified after the shared-primitive extraction -> python -m unittest tests.test_tickets tests.test_ticket_custom_fields tests.test_ticket_custom_field_public_contract tests.test_ticket_workflow_surfaces tests.test_ticket_workflow_history tests.test_ticket_project_surfaces tests.test_ticket_revision_writes tests.test_ticket_creation_event -> Ran 65 tests, OK
+        - "live: a mood_score:not-a-number value on an item outside the field's own declared kinds was left completely untouched (no CF006, its W106 unaffected), while an in-scope out-of-range value on the same field correctly reported CF006 and exit 1"
+        - "live: lifetxt query \"energy:high\" against a real fixture correctly filtered to only the matching item; lifetxt config explain custom_fields.energy.filterable renders the registered metadata"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on every changed file -> clean
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true} (docs/en+ja/query.md are outside its checked-document set; both new cross-reference anchors were independently verified against the validator''s own slug() algorithm)'
+      release_or_deployment: null
+      notes: >-
+        Landed on its own child branch (issue-596-generic-custom-fields)
+        merged into feature/adoption-cli-commands, same workflow as
+        cap-capture-presets/cap-tui-key-bindings. See
+        cap-generic-custom-fields's own notes for the integration-seam
+        design decision (lifetxt/cli.py's _parse_life_inputs, not a
+        cross-surface ContextVar rollout) and the shared-primitive
+        extraction rationale.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

@@ -23,6 +23,7 @@ from .presence import COMMON_STATES
 
 
 COMMANDS = (
+    "tour",
     "check",
     "ids",
     "links",
@@ -33,6 +34,7 @@ COMMANDS = (
     "demo",
     "markdown",
     "import-ics",
+    "import",
     "sync-ics",
     "filter",
     "from-json",
@@ -44,6 +46,7 @@ COMMANDS = (
     "assist",
     "archive",
     "quick",
+    "add",
     "done",
     "files",
     "batch",
@@ -80,6 +83,7 @@ COMMANDS = (
     "git-hook",
     "completion",
     "serve",
+    "web",
     "config",
 )
 

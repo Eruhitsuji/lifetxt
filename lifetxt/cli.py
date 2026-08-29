@@ -553,37 +553,7 @@ def build_parser():
         "import-ics",
         help="Convert iCalendar .ics VEVENT entries to life.txt event items.",
     )
-    _add_input_paths(import_ics)
-    import_ics.add_argument("-o", "--output", help="Output file. Defaults to stdout.")
-    import_ics.add_argument(
-        "--append",
-        action="store_true",
-        help="Append to --output instead of overwriting it.",
-    )
-    import_ics.add_argument(
-        "--project",
-        help="Add this project: detail to every imported event.",
-    )
-    import_ics.add_argument(
-        "--tag",
-        action="append",
-        default=[],
-        help="Add this tag: detail to every imported event. Can be repeated.",
-    )
-    import_ics.add_argument(
-        "--expand-rrule",
-        action="store_true",
-        help="Write one record per occurrence instead of a single record with repeat:RRULE:.",
-    )
-    import_ics.add_argument(
-        "--expand-until",
-        help="Expand occurrences up to this date. Defaults to one year out.",
-    )
-    import_ics.add_argument(
-        "--expand-count",
-        type=int,
-        help="Maximum occurrences per recurring event. Capped at 500.",
-    )
+    _add_import_core_arguments(import_ics)
     import_ics.add_argument(
         "--preset",
         choices=("ics", "markdown", "todoist", "github"),
@@ -595,6 +565,29 @@ def build_parser():
         ),
     )
     import_ics.set_defaults(func=command_import_ics)
+
+    import_command = subparsers.add_parser(
+        "import",
+        help="Unified entry point for import-ics's ics/markdown/todoist/github presets.",
+        description=(
+            "Routing-only dispatcher over the existing import-ics implementation: "
+            "no second ICS/Markdown/Todoist/GitHub conversion. A .ics input infers "
+            "--preset ics and a .md/.markdown input infers --preset markdown; every "
+            "other input (including .csv and .json) requires an explicit --preset."
+        ),
+    )
+    _add_import_core_arguments(import_command)
+    import_command.add_argument(
+        "--preset",
+        choices=("ics", "markdown", "todoist", "github"),
+        default=None,
+        help=(
+            "Source preset. Inferred from the input file extension when omitted: "
+            "'ics' for .ics, 'markdown' for .md/.markdown. Required for every "
+            "other input, including .csv (todoist) and .json (github)."
+        ),
+    )
+    import_command.set_defaults(func=command_import)
 
     sync_ics = subparsers.add_parser(
         "sync-ics",
@@ -674,39 +667,31 @@ def build_parser():
         help="Run the optional FastAPI REST API and browser GUI.",
         description="Run the optional FastAPI REST API and browser GUI.",
     )
-    serve.add_argument(
-        "paths",
-        nargs="*",
-        metavar="path",
-        help="life.txt file(s) to read. Defaults to life.txt.",
-    )
-    serve.add_argument(
-        "--write-file",
-        help="File used for create, update, and delete operations. Defaults to the first path.",
-    )
-    serve.add_argument("--host", help="Bind host.")
-    serve.add_argument("--port", type=int, help="Bind port.")
-    serve.add_argument(
-        "--read-only",
-        action="store_true",
-        help="Disable all write endpoints (POST/PUT/DELETE) except /api/check-line. Safe for public deployments.",
-    )
-    serve.add_argument(
-        "--token-env",
-        metavar="ENVVAR",
-        help="Read the API bearer token from ENVVAR instead of storing it in config.",
-    )
-    serve.add_argument(
-        "--insecure-public",
-        action="store_true",
-        help="Allow a non-loopback writable Web server without a bearer token. Not recommended.",
-    )
+    _add_serve_core_arguments(serve)
     serve.add_argument(
         "--mcp",
         action="store_true",
         help="Run the stdio MCP server instead of the FastAPI HTTP server.",
     )
     serve.set_defaults(func=command_serve)
+
+    web_command = subparsers.add_parser(
+        "web",
+        help="Start the local lifetxt Web UI and open it in your browser.",
+        description=(
+            "Convenience launcher for the existing Web UI: starts the same "
+            "server as `serve` and opens your default browser to it. Use "
+            "`serve` directly for server/deployment-oriented options such "
+            "as --mcp."
+        ),
+    )
+    _add_serve_core_arguments(web_command)
+    web_command.add_argument(
+        "--no-open",
+        action="store_true",
+        help="Start the server without opening a browser.",
+    )
+    web_command.set_defaults(func=command_web)
 
     mcp = subparsers.add_parser(
         "mcp",
@@ -2429,7 +2414,7 @@ def build_parser():
 
     quick = subparsers.add_parser(
         "quick",
-        aliases=["q"],
+        aliases=["q", "add"],
         help="Quickly capture a new item and append it to a file.",
     )
     quick.add_argument(
@@ -2465,6 +2450,16 @@ def build_parser():
         help="Skip validation before writing.",
     )
     quick.add_argument("--status", default=None, help=argparse.SUPPRESS)
+    quick.add_argument(
+        "--preset",
+        default=None,
+        help=(
+            "Apply capture.presets.NAME's type/status/project/tags/priority "
+            "defaults before capture shorthand and explicit flags, which "
+            "still win over the preset for the same field. See `lifetxt "
+            "config explain capture.presets`."
+        ),
+    )
     for key in DETAIL_FLAGS:
         dest = "from_" if key == "from" else key
         quick.add_argument(
@@ -3896,6 +3891,84 @@ def _add_input_paths(parser):
     )
 
 
+def _add_import_core_arguments(parser):
+    """Arguments shared by `import-ics` and `import`.
+
+    `import` is a thin routing dispatcher over the same `command_import_ics`
+    implementation (see `command_import`), so both subparsers register the
+    exact same flags here rather than each defining its own copy. Only the
+    `--preset` default differs between the two and stays defined separately
+    on each subparser.
+    """
+    _add_input_paths(parser)
+    parser.add_argument("-o", "--output", help="Output file. Defaults to stdout.")
+    parser.add_argument(
+        "--append",
+        action="store_true",
+        help="Append to --output instead of overwriting it.",
+    )
+    parser.add_argument(
+        "--project",
+        help="Add this project: detail to every imported event.",
+    )
+    parser.add_argument(
+        "--tag",
+        action="append",
+        default=[],
+        help="Add this tag: detail to every imported event. Can be repeated.",
+    )
+    parser.add_argument(
+        "--expand-rrule",
+        action="store_true",
+        help="Write one record per occurrence instead of a single record with repeat:RRULE:.",
+    )
+    parser.add_argument(
+        "--expand-until",
+        help="Expand occurrences up to this date. Defaults to one year out.",
+    )
+    parser.add_argument(
+        "--expand-count",
+        type=int,
+        help="Maximum occurrences per recurring event. Capped at 500.",
+    )
+
+
+def _add_serve_core_arguments(parser):
+    """Arguments shared by `serve` and `web`: one authoritative Web runtime.
+
+    `web` is a convenience launcher over `serve`'s own resolution/safety
+    behavior (see `_prepare_serve`), so both subparsers register the exact
+    same flags here rather than each defining its own copy.
+    """
+    parser.add_argument(
+        "paths",
+        nargs="*",
+        metavar="path",
+        help="life.txt file(s) to read. Defaults to life.txt.",
+    )
+    parser.add_argument(
+        "--write-file",
+        help="File used for create, update, and delete operations. Defaults to the first path.",
+    )
+    parser.add_argument("--host", help="Bind host.")
+    parser.add_argument("--port", type=int, help="Bind port.")
+    parser.add_argument(
+        "--read-only",
+        action="store_true",
+        help="Disable all write endpoints (POST/PUT/DELETE) except /api/check-line. Safe for public deployments.",
+    )
+    parser.add_argument(
+        "--token-env",
+        metavar="ENVVAR",
+        help="Read the API bearer token from ENVVAR instead of storing it in config.",
+    )
+    parser.add_argument(
+        "--insecure-public",
+        action="store_true",
+        help="Allow a non-loopback writable Web server without a bearer token. Not recommended.",
+    )
+
+
 def _add_item_filter_arguments(parser):
     parser.add_argument(
         "--open",
@@ -4826,6 +4899,43 @@ def _expand_horizon(args):
     return datetime.datetime(parsed.year, parsed.month, parsed.day, 23, 59, 59)
 
 
+_IMPORT_EXTENSION_PRESETS = {
+    ".ics": "ics",
+    ".md": "markdown",
+    ".markdown": "markdown",
+}
+
+
+def command_import(args):
+    """Routing-only dispatcher: infer --preset from the input extension when
+    omitted, then delegate entirely to the existing command_import_ics
+    implementation. No ICS/Markdown/Todoist/GitHub conversion logic lives
+    here -- see the module docstring convention `import-ics` already
+    established.
+    """
+    preset = getattr(args, "preset", None)
+    if not preset:
+        candidate = next(
+            (p for p in (args.paths or []) if p and p != "-"),
+            None,
+        )
+        if candidate is None:
+            raise ValueError(
+                "Cannot determine the import format without --preset. Reading "
+                "from stdin requires an explicit --preset: ics, markdown, "
+                "todoist, or github."
+            )
+        ext = os.path.splitext(candidate)[1].lower()
+        preset = _IMPORT_EXTENSION_PRESETS.get(ext)
+        if preset is None:
+            raise ValueError(
+                "Cannot determine the import format for '%s'. Pass --preset "
+                "explicitly: ics, markdown, todoist, or github." % candidate
+            )
+        args.preset = preset
+    return command_import_ics(args)
+
+
 def command_import_ics(args):
     if args.append and not args.output:
         raise ValueError("--append requires --output.")
@@ -5322,9 +5432,13 @@ def _merge_generated_items_into_text(
     return "".join(merged)
 
 
-def command_serve(args):
-    if getattr(args, "mcp", False):
-        return command_mcp(args)
+def _prepare_serve(args):
+    """Resolve config/workspace/host/port and build the app for `serve`/`web`.
+
+    Both commands run the exact same authoritative Web server; this is the
+    one place that decides what to bind and how to build it, so neither
+    caller can drift from the other's safety/resolution behavior.
+    """
     try:
         import uvicorn
 
@@ -5373,6 +5487,13 @@ def command_serve(args):
     app = create_app(
         paths=paths, writable_path=writable_path, config=config, read_only=read_only
     )
+    return uvicorn, app, host, port
+
+
+def command_serve(args):
+    if getattr(args, "mcp", False):
+        return command_mcp(args)
+    uvicorn, app, host, port = _prepare_serve(args)
     # uvicorn.Config independently reads WEB_CONCURRENCY from the environment
     # and sets its own workers count from it, regardless of caller intent
     # (uvicorn/config.py). serve has no --workers flag and passes an
@@ -5383,6 +5504,74 @@ def command_serve(args):
     # neither lifetxt nor WEB_CONCURRENCY as the cause. serve is
     # single-process by design, so pin workers=1 explicitly rather than
     # let the environment decide.
+    uvicorn.run(app, host=host, port=port, workers=1)
+    return 0
+
+
+def _browser_reachable_host(host):
+    """A loopback host a browser can actually connect to.
+
+    `0.0.0.0`/`::` are valid bind addresses (listen on every interface) but
+    not addresses a client can connect *to*; substitute the loopback address
+    that reaches the same process.
+    """
+    if host in ("0.0.0.0", "", None):
+        return "127.0.0.1"
+    if host == "::":
+        return "::1"
+    return host
+
+
+def _web_ui_url(host, port):
+    connect_host = _browser_reachable_host(host)
+    if ":" in connect_host and not connect_host.startswith("["):
+        connect_host = "[%s]" % connect_host
+    return "http://%s:%s/" % (connect_host, port)
+
+
+def _open_browser_when_ready(url, host, port, timeout=15.0, interval=0.2):
+    """Poll the existing, unauthenticated `/api/health` route, then open `url`.
+
+    Reuses the server's own readiness signal instead of guessing a fixed
+    delay or duplicating a socket-level readiness check: `/api/health` is
+    already exempt from bearer auth (lifetxt/webapp.py), so this succeeds
+    the moment the ASGI app is actually accepting and answering requests,
+    not merely the moment the TCP listener is open.
+    """
+    import time
+    import webbrowser
+
+    connect_host = _browser_reachable_host(host)
+    health_url = "http://%s:%s/api/health" % (
+        ("[%s]" % connect_host if ":" in connect_host else connect_host),
+        port,
+    )
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            with urlopen(health_url, timeout=interval):
+                break
+        except (URLError, HTTPError, OSError):
+            time.sleep(interval)
+    else:
+        return
+    webbrowser.open(url)
+
+
+def command_web(args):
+    uvicorn, app, host, port = _prepare_serve(args)
+    if not getattr(args, "no_open", False):
+        import threading
+
+        url = _web_ui_url(host, port)
+        write_text(None, "Starting lifetxt Web UI at %s ...\n" % url)
+        threading.Thread(
+            target=_open_browser_when_ready,
+            args=(url, host, port),
+            daemon=True,
+        ).start()
+    # See command_serve's own comment: single-process by design, so workers
+    # is always pinned to 1 regardless of a stray WEB_CONCURRENCY value.
     uvicorn.run(app, host=host, port=port, workers=1)
     return 0
 
@@ -6320,6 +6509,27 @@ def _merge_capture_shorthand(item, args):
             item.details[key] = list(values)
 
 
+def _apply_capture_preset_defaults(item, preset):
+    """Fill fields the preset defines that explicit args/shorthand left
+    unset (#594).
+
+    Precedence: config defaults < preset < explicit CLI flags/capture
+    shorthand. This runs after `_merge_capture_shorthand` -- so anything an
+    explicit flag or a `@`/`#`/`!`/`^` sigil already set is left untouched
+    -- and before `apply_config_defaults_to_item`, so a preset value still
+    outranks a bare `defaults.project`-style config default.
+    """
+    for field in ("project", "priority"):
+        if field in preset and field not in item.details:
+            item.details[field] = [preset[field]]
+    tags = preset.get("tags")
+    if tags:
+        existing = item.details.setdefault("tag", [])
+        for tag in tags:
+            if tag not in existing:
+                existing.append(tag)
+
+
 def command_quick(args):
     config = _config(args)
     today = timezone_today()
@@ -6329,6 +6539,16 @@ def command_quick(args):
         if not stdin_title:
             raise ValueError("quick - requires a non-empty title on stdin.")
         args.title = stdin_title
+
+    preset = None
+    if getattr(args, "preset", None):
+        from .capture_presets import resolve_capture_preset
+
+        preset = resolve_capture_preset(config, args.preset)
+        if args.kind is None and "type" in preset:
+            args.kind = preset["type"]
+        if args.status is None and "status" in preset:
+            args.status = preset["status"]
 
     if args.due:
         args.due = [_resolve_relative_date(v, today) for v in args.due]
@@ -6344,6 +6564,8 @@ def command_quick(args):
 
     item = build_item_from_args(args)
     _merge_capture_shorthand(item, args)
+    if preset is not None:
+        _apply_capture_preset_defaults(item, preset)
     dest = args.append or config_write_file(config)
     file_directives = _load_file_directives(dest)
     apply_config_defaults_to_item(item, args, file_directives)
@@ -14051,6 +14273,10 @@ def _parse_life_inputs(paths, config=None):
     diagnostics.extend(duplicate_id_diagnostics(items, key=id_key))
     diagnostics.extend(reference_diagnostics(items, key=id_key))
     diagnostics.extend(_completed_parent_diagnostics(items, key=id_key))
+    if config and config.get("custom_fields"):
+        from .custom_fields import generic_custom_field_diagnostics
+
+        diagnostics = generic_custom_field_diagnostics(items, diagnostics, config)
     return items, diagnostics
 
 

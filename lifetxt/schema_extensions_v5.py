@@ -40,6 +40,62 @@ def _source_manifest_entry():
     }
 
 
+def _capture_preset():
+    non_empty_string = {"type": "string", "minLength": 1}
+    return {
+        "type": "object",
+        "properties": {
+            "type": non_empty_string,
+            "status": non_empty_string,
+            "project": non_empty_string,
+            "tags": {"type": "array", "items": non_empty_string},
+            "priority": non_empty_string,
+        },
+        "additionalProperties": False,
+    }
+
+
+def _custom_field_definition():
+    non_empty_string = {"type": "string", "minLength": 1}
+    return {
+        "oneOf": [
+            non_empty_string,
+            {
+                "type": "object",
+                "properties": {
+                    "type": {
+                        "enum": [
+                            "string",
+                            "integer",
+                            "number",
+                            "boolean",
+                            "date",
+                            "datetime",
+                            "duration",
+                            "enum",
+                        ]
+                    },
+                    "label": non_empty_string,
+                    "description": {"type": "string"},
+                    "repeatable": {"type": "boolean"},
+                    "required": {"type": "boolean"},
+                    "enum": {"type": "array", "items": non_empty_string},
+                    "values": {"type": "array", "items": non_empty_string},
+                    "minimum": {"type": "number"},
+                    "maximum": {"type": "number"},
+                    "min_length": {"type": "integer", "minimum": 0},
+                    "max_length": {"type": "integer", "minimum": 0},
+                    "pattern": {"type": "string"},
+                    "kinds": {"type": "array", "items": non_empty_string},
+                    "projects": {"type": "array", "items": non_empty_string},
+                    "filterable": {"type": "boolean"},
+                },
+                "additionalProperties": False,
+            },
+        ]
+    }
+
+
 def _report_profile():
     non_empty_string = {"type": "string", "minLength": 1}
     return {
@@ -163,6 +219,42 @@ def schema_bundle_v5():
                             "type": "object",
                             "additionalProperties": _report_profile(),
                         },
+                        "tui": {
+                            "type": "object",
+                            "properties": {
+                                "bindings": {
+                                    "type": "object",
+                                    "additionalProperties": {
+                                        "oneOf": [
+                                            {"type": "string", "minLength": 1},
+                                            {
+                                                "type": "array",
+                                                "minItems": 1,
+                                                "items": {
+                                                    "type": "string",
+                                                    "minLength": 1,
+                                                },
+                                            },
+                                        ]
+                                    },
+                                },
+                            },
+                            "additionalProperties": True,
+                        },
+                        "capture": {
+                            "type": "object",
+                            "properties": {
+                                "presets": {
+                                    "type": "object",
+                                    "additionalProperties": _capture_preset(),
+                                },
+                            },
+                            "additionalProperties": True,
+                        },
+                        "custom_fields": {
+                            "type": "object",
+                            "additionalProperties": _custom_field_definition(),
+                        },
                         "defaults": {
                             "type": "object",
                             "properties": {
@@ -228,6 +320,14 @@ def schema_samples_v5():
                         }
                     },
                     "defaults": {"person": "self", "timezone": "Asia/Tokyo"},
+                    "custom_fields": {
+                        "energy": {
+                            "type": "enum",
+                            "values": ["low", "medium", "high"],
+                            "kinds": ["J", "N"],
+                            "filterable": True,
+                        }
+                    },
                 },
             ),
         )

@@ -92,7 +92,12 @@ jobs:
 
       - name: Smoke test — non-root user
         run: |
-          uid="$(docker run --rm --entrypoint id -u lifetxt:smoke-test)"
+          # -u must follow the image name: docker run [OPTIONS] IMAGE
+          # [COMMAND] [ARG...], so `-u` before the image name is parsed as a
+          # docker option expecting a value (consuming the image name),
+          # leaving no IMAGE argument at all -- reproduced live in the very
+          # first real tag-triggered run of this workflow.
+          uid="$(docker run --rm --entrypoint id lifetxt:smoke-test -u)"
           test "$uid" = "1000"
 
       - name: Smoke test — Web serve mode

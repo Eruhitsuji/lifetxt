@@ -21,14 +21,24 @@ except ImportError:  # Python 3.10 compatibility
 
 
 def _run(command, cwd):
-    return subprocess.run(
+    result = subprocess.run(
         command,
         cwd=str(cwd),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
-        check=True,
     )
+    if result.returncode != 0:
+        # Captured output must be surfaced before raising: check=True alone
+        # discards it, leaving a bare CalledProcessError with no indication
+        # of what the subprocess actually reported -- reproduced live when
+        # a fresh CI runner's build failed with no diagnostic beyond "exit
+        # status 1" until this output was printed by hand from a local
+        # reproduction.
+        sys.stderr.write(result.stdout)
+        sys.stderr.write(result.stderr)
+        result.check_returncode()
+    return result
 
 
 def _tool_version(name):

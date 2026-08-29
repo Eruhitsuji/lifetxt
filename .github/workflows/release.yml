@@ -61,7 +61,13 @@ jobs:
           python-version: "3.12"
 
       - name: Install build tooling
-        run: python -m pip install --upgrade build twine
+        # setuptools must be explicit: release_evidence.py's --no-isolation
+        # build skips creating an isolated build env and instead needs
+        # pyproject.toml's [build-system] requires (setuptools>=61) already
+        # present in this environment -- a fresh actions/setup-python venv
+        # does not bundle it by default, reproduced live in the very first
+        # real tag-triggered run of this workflow.
+        run: python -m pip install --upgrade build twine "setuptools>=61"
 
       - name: Confirm tag matches the declared package version
         run: python scripts/check_release_tag_version.py "${{ steps.resolve-tag.outputs.tag }}"

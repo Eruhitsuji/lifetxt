@@ -8450,17 +8450,20 @@ traceability:
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/579
       pull_request: https://github.com/Eruhitsuji/lifetxt/pull/580
       changed_files_or_scope:
-        - Fix two real bugs found by the first real v1.0.1 tag-triggered
-          run of release.yml and docker-publish.yml, and stop
-          scripts/release_evidence.py from silently discarding subprocess
-          error output before raising
+        - Fix three real bugs found by the first real v1.0.1 tag-triggered
+          run of release.yml, docker-publish.yml, and desktop-installers.yml,
+          and stop scripts/release_evidence.py from silently discarding
+          subprocess error output before raising
         - .github/workflows/release.yml
         - .github/workflows/docker-publish.yml
+        - .github/workflows/desktop-installers.yml
+        - .github/workflows/standalone-binaries.yml
         - scripts/release_evidence.py
         - tests/test_release_evidence.py
       tests_or_evidence:
         - "gh run view (Release, v1.0.1 tag push): failed at 'Build wheel, sdist, checksums, SBOM, and provenance' with a bare CalledProcessError; local repro with a fresh venv (build+twine only, matching release.yml's exact pip install) reproduced pyproject_hooks._impl.BackendUnavailable: Cannot import 'setuptools.build_meta'"
         - "gh run view (Docker image, v1.0.1 tag push): failed at 'Smoke test — non-root user' with docker: 'docker run' requires at least 1 argument, caused by -u preceding the image name"
+        - "gh run view (Desktop installers, v1.0.1 tag push): the github-release job failed with 'failed to run git: fatal: not a git repository (or any of the parent directories): .git' because that job never ran actions/checkout before invoking gh release; standalone-binaries.yml's github-release job has the byte-identical unchecked-out structure and was fixed proactively for the same reason before it could fail the same way"
         - "live: local docker build + docker run --rm --entrypoint id lifetxt:smoke-test -u -> 1000, confirming the fixed argument order"
         - "live: local venv reproduction confirms adding setuptools>=61 to the pip install resolves the BackendUnavailable failure"
         - tests/test_release_evidence.py RunErrorSurfacingTests (2 tests, new)
@@ -8477,15 +8480,21 @@ traceability:
         recreating the git tag, since the tag itself already correctly
         points at the intended commit's product code.
       notes: >-
-        Both bugs were found only by the very first real tag-triggered
+        All three bugs were found only by the very first real tag-triggered
         execution of infrastructure added under cap-distribution-channels
-        (#567/#568-#574); neither was caught by local testing or CI on the
-        PRs that introduced them, since both require either a genuinely
-        fresh (non-editable, no pre-existing setuptools) build environment
-        or the exact shell argument order used in the workflow file itself
-        rather than in the Python test suite's own subprocess invocations.
-        scripts/release_evidence.py's error-surfacing fix is a
-        diagnosability improvement with no change to its success-path
+        (#567/#568-#574); none was caught by local testing or CI on the PRs
+        that introduced them, since each requires either a genuinely fresh
+        (non-editable, no pre-existing setuptools) build environment, the
+        exact shell argument order used in the workflow file itself rather
+        than in the Python test suite's own subprocess invocations, or a
+        job-level omission (missing checkout) that only manifests when `gh
+        release` actually runs against a real tag. The
+        standalone-binaries.yml fix was applied proactively from reading
+        the identical job structure, not from an independently observed
+        failure of that specific workflow, since its github-release job had
+        not yet run at the time the desktop-installers.yml failure was
+        found and fixed. scripts/release_evidence.py's error-surfacing fix
+        is a diagnosability improvement with no change to its success-path
         output shape, confirmed unchanged by
         test_a_successful_command_still_returns_its_result.
       status: implemented

@@ -135,6 +135,13 @@ jobs:
             echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Check out repository
+        # gh release view/create/upload require repository context (a .git
+        # directory to infer the repo from), which this job otherwise never
+        # has -- reproduced live in the very first real tag-triggered run of
+        # this workflow: "failed to run git: fatal: not a git repository".
+        uses: actions/checkout@v5
+
       - name: Download every platform's installers
         uses: actions/download-artifact@v6
         with:

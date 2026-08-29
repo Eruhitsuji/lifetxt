@@ -133,10 +133,22 @@ jobs:
           name: release-dist-${{ needs.build.outputs.tag }}
           path: dist-evidence
 
+      - name: Stage only the wheel and sdist for PyPI
+        # gh-action-pypi-publish validates every file in packages-dir, not
+        # only wheels/sdists -- passing the combined evidence directory
+        # (which also holds SHA256SUMS/sbom.cdx.json/provenance.json)
+        # reproduced live in the very first real tag-triggered run of this
+        # workflow: "InvalidDistribution: Unknown distribution format:
+        # 'SHA256SUMS'". No file was ever actually uploaded to PyPI before
+        # that check-and-abort failure.
+        run: |
+          mkdir -p dist-pypi
+          cp dist-evidence/*.whl dist-evidence/*.tar.gz dist-pypi/
+
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages-dir: dist-evidence
+          packages-dir: dist-pypi
           skip-existing: true
 
   github-release:

@@ -178,3 +178,20 @@ rules:
     required_action: collect_locally_analyze_safely_and_report_sanitized_findings
     human_interaction_type: Decision Request
     overridable: false
+
+  - id: CTX-RELEASE-001
+    title: Release distribution runbook
+    documents:
+      - .ai/project/skills/release-distribution-runbook/SKILL.md
+      - .ai/project/CAPABILITIES.yml
+    load_when:
+      - cutting_a_release
+      - release_workflow_failure
+      - distribution_channel_verification
+    applies_to:
+      - Release
+      - Operations
+    severity: required
+    required_action: follow_the_release_distribution_runbook_and_verify_each_channel_independently
+    human_interaction_type: Recommendation
+    overridable: false

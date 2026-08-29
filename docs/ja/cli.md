@@ -50,6 +50,7 @@ python -m lifetxt config show
 python -m lifetxt init
 python -m lifetxt doctor
 python -m lifetxt quick "Title"
+python -m lifetxt add "Title"
 python -m lifetxt done [path ...]
 python -m lifetxt complete [path ...]
 python -m lifetxt assign [path ...]
@@ -368,11 +369,17 @@ lifetxt q "Buy milk @home #errand !high ^tomorrow"
 
 | 短縮名 | コマンド |
 | --- | --- |
+| `add` | `quick` |
 | `q` | `quick` |
 | `d` | `done` |
 | `s` | `state` |
 | `a` | `agenda` |
 | `f` | `filter` |
+
+`add` は初心者向けの綴りです。`lifetxt add "Buy milk ^tomorrow"` は
+`lifetxt quick "Buy milk ^tomorrow"` と完全に同じ動作をします
+（同じパーサー、同じハンドラー、同じ書き込み経路）。
+既存のワークフローやスクリプト向けに `quick`/`q` も引き続き使用できます。
 
 TUI の command palette にも 1 文字の別名があります: `/d` `/s` `/a` `/f` `/t` `/e`
 `/u` `/n` `/q`。別名の完全一致は fuzzy 順位より優先されるため、

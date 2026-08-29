@@ -8499,6 +8499,45 @@ traceability:
         test_a_successful_command_still_returns_its_result.
       status: implemented
 
+    - requirement_id: req-distribution-v1-0-1-pypi-packaging-fix
+      capability_id: cap-distribution-channels
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/567
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/581
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/582
+      changed_files_or_scope:
+        - Fix a fourth real bug found by the re-triggered v1.0.1 release
+          workflow -- release.yml's publish-pypi job passed the combined
+          evidence directory (wheel/sdist plus SHA256SUMS/sbom.cdx.json/
+          provenance.json) to gh-action-pypi-publish, which validates every
+          file in packages-dir and rejected SHA256SUMS as an unknown
+          distribution format before uploading anything
+        - .github/workflows/release.yml
+        - tests/test_release_pypi_packaging.py
+      tests_or_evidence:
+        - "gh run view (Release, re-triggered v1.0.1 workflow_dispatch, run 33238156001): publish-pypi failed with 'Checking dist-evidence/SHA256SUMS: ERROR InvalidDistribution: Unknown distribution format: 'SHA256SUMS''"
+        - "confirmed via curl https://pypi.org/pypi/lifetxt/json that releases is empty -- the action checks every file before uploading any, so this failed safely with no partial publish"
+        - "local: a shell reproduction of the staging cp logic in isolation confirms it copies only *.whl/*.tar.gz into dist-pypi/, excluding SHA256SUMS/sbom.cdx.json/provenance.json"
+        - tests/test_release_pypi_packaging.py ReleasePyPIPackagingContractTests (2 tests, new)
+        - .venv/Scripts/python.exe -m unittest tests.test_release_pypi_packaging tests.test_release_evidence tests.test_check_release_tag_version -> Ran 10 tests, OK
+        - python -c "import yaml; yaml.safe_load(open('.github/workflows/release.yml'))" -> parses
+        - .venv/Scripts/ruff.exe format --check / ruff check tests/test_release_pypi_packaging.py -> clean
+        - .venv/Scripts/python.exe -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      release_or_deployment: >-
+        CI/release-automation-only fix, no product/runtime behavior change.
+        Once merged to main, release.yml must be re-run against the
+        existing v1.0.1 tag via workflow_dispatch (publish_pypi=true) to
+        actually get the package onto PyPI.
+      notes: >-
+        Found by the actual re-triggered v1.0.1 run of the workflow fixed
+        under req-distribution-v1-0-1-release-workflow-fixes (#579/PR #580)
+        -- this is the fourth bug in that same class, only reachable once
+        the first three were fixed and the workflow actually reached the
+        publish-pypi job for the first time. The Attach-artifacts-to-the-
+        GitHub-Release job in the same run succeeded independently and
+        already attached the wheel/sdist/evidence files to the v1.0.1
+        GitHub Release, confirmed via gh release view v1.0.1.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

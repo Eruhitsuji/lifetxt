@@ -45,11 +45,11 @@ class WebAssetExtractionTests(unittest.TestCase):
         assembled = template.replace(web_assets._STYLE_MARKER, styles).replace(
             web_assets._SCRIPT_MARKER, script
         )
-        self.assertEqual(web_assets.HTML_PAGE, assembled)
         self.assertEqual(
             _git_blob_sha(assembled.encode("utf-8")),
             LEGACY_PRISTINE_GIT_BLOB_SHA,
         )
+        self.assertEqual(web_assets.HTML_PAGE, web_assets._apply_brand_assets(assembled))
 
     def test_packaged_fragment_resources_exist(self):
         package = resources.files("lifetxt")

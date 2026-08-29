@@ -253,3 +253,62 @@ lifetxt には組み込みのレポートプロファイルや出力先がなく
 これは config version 1 に対する追加的な拡張です。`reports` を持たない既存設定は
 従来どおり動作し、migration は不要です。downgrade 時は任意の `reports` セクションを
 削除すれば、この機能追加前の設定動作に戻ります。
+
+## 名前付き capture preset
+
+`quick`/`q`/`add` の capture 既定値は、任意のトップレベル `capture.presets`
+オブジェクトに定義します：
+
+```json
+{
+  "capture": {
+    "presets": {
+      "work-task": {
+        "type": "T",
+        "project": "work",
+        "tags": ["work"],
+        "priority": "normal"
+      },
+      "idea": {
+        "type": "N",
+        "tags": ["idea"]
+      }
+    }
+  }
+}
+```
+
+```sh
+lifetxt quick --preset work-task "Prepare proposal"
+lifetxt add --preset idea "Try local-first sync"
+```
+
+preset は `type`、`status`、`project`、`tags`、`priority` を設定できます。
+これは `quick` がすでに受け付けている `--type`/`--status`/`--project`/
+`--tag`/`--priority` と同じ field です。preset はあくまで既定値の layer で
+あり、見えない override にはなりません：
+
+```text
+既存 config 既定値 < 選択した capture preset < 明示的な shorthand / 明示的な CLI 引数
+```
+
+同じ field に対する明示的な `--project`/`--priority`/`--status`/`--type`
+flag や capture shorthand の sigil（`@`/`!`/`^`）は、常に preset より優先されます。
+`#tag` sigil と `--tag` の値は、preset の `tags` と merge され重複排除されます
+（置き換えではありません）。`q` と `add` も同じ `quick` command contract の
+alias であるため `--preset` を受け付けます。未知の preset 名は明示的に失敗し、
+設定済みの preset 名を一覧表示します。不正な preset 定義（未対応 field、
+空の値、非配列または非文字列の `tags` など）は configuration validation で
+拒否され、黙って無視されることはありません。
+
+`lifetxt config explain capture.presets`（または個々の field について
+`capture.presets.<name>.<field>`）で登録済みのメタデータを確認できます。
+
+`lifetxt config init` は上記の `reports` と同じ理由で、空の
+`capture.presets` オブジェクトを意図的に追加しません: 意味のある既定 preset
+が存在しないためです。これは config version 1 に対する追加的な拡張です。
+`capture` を持たない既存設定は従来どおり動作し、migration は不要です。
+downgrade 時は任意の `capture.presets` セクションを削除すれば元に戻ります。
+これは既存の `template` command を置き換えるものではありません。`template`
+は固定・複数行の record 生成に引き続き使用し、capture preset は
+タイトルが可変で metadata が共通する `quick`/`add` capture 向けです。

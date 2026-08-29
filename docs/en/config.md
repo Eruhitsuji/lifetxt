@@ -383,6 +383,7 @@ re-explained.
 | Core | `config_version`, `default_workspace`, `paths`, `write_file` |
 | Config writes | `config.write.require_revision`, `config.write.audit_log`, `config.write.audit_max_bytes` |
 | Update checks | `update.repository` |
+| Capture presets | `capture.presets`, `capture.presets.*.type`, `capture.presets.*.status`, `capture.presets.*.project`, `capture.presets.*.tags`, `capture.presets.*.priority` |
 | Workspaces | `workspaces`, `workspaces.*.sources`, `workspaces.*.write_file`, `workspace.max_total_source_bytes` |
 | Profiles | `profiles` |
 | Defaults | `defaults.timezone`, `defaults.person` |
@@ -443,3 +444,64 @@ This is an additive configuration-v1 extension. Existing configurations without
 `reports` keep their previous behavior and require no migration. Removing the
 optional `reports` section is the downgrade path and restores the pre-feature
 configuration behavior.
+
+## Named capture presets
+
+Named `quick`/`q`/`add` capture defaults live under the optional top-level
+`capture.presets` object:
+
+```json
+{
+  "capture": {
+    "presets": {
+      "work-task": {
+        "type": "T",
+        "project": "work",
+        "tags": ["work"],
+        "priority": "normal"
+      },
+      "idea": {
+        "type": "N",
+        "tags": ["idea"]
+      }
+    }
+  }
+}
+```
+
+```sh
+lifetxt quick --preset work-task "Prepare proposal"
+lifetxt add --preset idea "Try local-first sync"
+```
+
+A preset may set `type`, `status`, `project`, `tags`, and `priority` --
+exactly the fields `quick` already accepts as `--type`/`--status`/
+`--project`/`--tag`/`--priority`. It is a defaults layer, never an invisible
+override:
+
+```text
+existing config defaults < selected capture preset < explicit shorthand / explicit CLI arguments
+```
+
+An explicit `--project`/`--priority`/`--status`/`--type` flag or a capture
+shorthand sigil (`@`/`!`/`^`) for the same field always wins over the preset.
+`#tag` sigils and `--tag` values are merged with the preset's `tags` and
+deduplicated rather than replaced. `q` and `add` accept `--preset` too,
+since both are aliases of the same `quick` command contract. An unknown
+preset name fails loudly and lists every configured preset name; a malformed
+preset definition (an unsupported field, an empty value, or `tags` that is
+not a non-empty array of strings) is rejected by configuration validation
+rather than silently ignored.
+
+Use `lifetxt config explain capture.presets` (or
+`capture.presets.<name>.<field>` for one field's registered metadata) to
+inspect the contract.
+
+`lifetxt config init` intentionally does not add an empty `capture.presets`
+object, for the same reason `reports` above does not: there is no meaningful
+default preset to write. This is an additive configuration-v1 extension.
+Existing configurations without `capture` keep their previous behavior and
+require no migration; removing the optional `capture.presets` section is the
+downgrade path. This does not replace the existing `template` command, which
+remains the tool for fixed/multi-line record generation; capture presets are
+for variable-title, same-metadata `quick`/`add` captures.

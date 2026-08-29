@@ -142,7 +142,16 @@ jobs:
           import hashlib, sys
           name = sys.argv[1]
           digest = hashlib.sha256(open(name, 'rb').read()).hexdigest()
-          open(name + '.sha256', 'w').write('%s  %s\n' % (digest, name))
+          # newline='' disables the platform newline translation that a
+          # plain text-mode open() applies on Windows -- without it, the
+          # windows-x86_64 job's own .sha256 file alone ends up CRLF while
+          # every other platform's is LF-only, and downstream grep '...$'
+          # anchored matches against the combined SHA256SUMS silently miss
+          # only the Windows entry. Reproduced live: package-manifests.yml
+          # failed twice on 'lifetxt-windows-x86_64.exe not found' against
+          # a SHA256SUMS that cat -A showed ending '...exe^M\$' (CRLF) only
+          # on that one line.
+          open(name + '.sha256', 'w', newline='\n').write('%s  %s\n' % (digest, name))
           " "${{ matrix.output_name }}"
 
       - name: Upload build artifact

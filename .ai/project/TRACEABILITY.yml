@@ -8576,6 +8576,45 @@ traceability:
         claim rather than dropping x86_64 macOS support outright.
       status: implemented
 
+    - requirement_id: req-distribution-v1-0-1-windows-checksum-crlf-fix
+      capability_id: cap-distribution-channels
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/567
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/586
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/587
+      changed_files_or_scope:
+        - "Fix a seventh real bug found by the v1.0.1 release: standalone-binaries.yml's windows-x86_64 checksum entry was written with a plain text-mode open(), which translates \\n to \\r\\n on a Windows runner, breaking a downstream end-of-line-anchored grep match in package-manifests.yml against the combined SHA256SUMS"
+        - .github/workflows/standalone-binaries.yml
+        - tests/test_standalone_binaries_checksum_newline.py
+      tests_or_evidence:
+        - "gh run view (Package manager manifests, v1.0.1 re-trigger, runs 33240493701 and 33240590449): both failed with 'lifetxt-windows-x86_64.exe not found in this release's SHA256SUMS' despite the entry being genuinely present"
+        - "live: gh release download v1.0.1 --pattern SHA256SUMS followed by cat -A showed every line ending in a bare $ (LF) except the windows-x86_64 line, which ended ^M$ (CRLF)"
+        - "live on this real Windows Python interpreter: the original open(name + '.sha256', 'w') call reproduces the exact CRLF output (od -c shows \\r  \\n at the end); the fixed open(..., newline='\\n') call produces clean \\n-only output"
+        - tests/test_standalone_binaries_checksum_newline.py StandaloneBinariesChecksumNewlineTests (2 tests, new)
+        - .venv/Scripts/python.exe -W error::ResourceWarning -m unittest tests.test_standalone_binaries_checksum_newline -> Ran 2 tests, OK
+        - python -c "import yaml; yaml.safe_load(open('.github/workflows/standalone-binaries.yml'))" -> parses
+        - .venv/Scripts/ruff.exe format --check / ruff check tests/test_standalone_binaries_checksum_newline.py -> clean
+      release_or_deployment: >-
+        CI/release-automation-only fix, no product/runtime behavior change.
+        Once merged to main, standalone-binaries.yml must be re-run against
+        the existing v1.0.1 tag via workflow_dispatch (publish_github_release=true)
+        so the corrected, LF-only SHA256SUMS is uploaded, which in turn
+        unblocks package-manifests.yml's Windows checksum extraction.
+      notes: >-
+        Found while investigating a second, unexpected package-manifests.yml
+        failure that occurred even after manually confirming (via a direct
+        gh release download) that the SHA256SUMS asset already contained a
+        Windows entry -- ruling out the initially-suspected GitHub asset-
+        propagation-delay explanation and pointing at the file's actual byte
+        content instead. Only the windows-x86_64 matrix job in
+        standalone-binaries.yml runs Python's checksum-writing script on a
+        Windows runner; the other four platforms (linux-x86_64,
+        linux-arm64, macos-arm64, macos-x86_64) are unaffected since their
+        native platform newline is already LF. scripts/release_evidence.py's
+        own wheel/sdist SHA256SUMS generation (used by release.yml) runs
+        exclusively on ubuntu-latest and was independently confirmed
+        unaffected by this defect class.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

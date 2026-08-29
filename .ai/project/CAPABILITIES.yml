@@ -5865,3 +5865,415 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-adoption-onboarding-commands
+    name: Zero-config first-run tour and beginner-facing command aliases
+    summary: >-
+      Four thin, discoverability-oriented top-level CLI commands lowering
+      the activation and migration barrier for a newly installed lifetxt:
+      `lifetxt tour` (a zero-config, dependency-free demonstration reusing
+      the real parser and the `command_center` "today" engine, with no
+      persistent write), `lifetxt add` (a full argparse alias for the
+      existing `quick`/`q` capture command, zero duplicated logic),
+      `lifetxt web` (a convenience launcher over the existing `serve`/
+      `create_app` Web runtime that opens the user's default browser once
+      the server's own `/api/health` route answers), and `lifetxt import`
+      (a routing-only dispatcher over the existing `import-ics` command,
+      inferring `--preset` from the input file extension when safe and
+      refusing ambiguous input otherwise).
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-cli-first-run-tour
+      - req-cli-add-alias
+      - req-cli-web-launcher
+      - req-cli-unified-import
+    implementation_locations:
+      - lifetxt/tour.py
+      - lifetxt/entrypoint.py
+      - lifetxt/extra_cli.py
+      - lifetxt/cli.py
+      - lifetxt/completion.py
+      - tests/test_tour.py
+      - tests/test_lifetxt.py
+      - tests/test_serve_cli.py
+      - docs/en/cli.md
+      - docs/ja/cli.md
+      - docs/en/getting-started.md
+      - docs/ja/getting-started.md
+      - readme.md
+    public_interfaces:
+      - lifetxt tour
+      - lifetxt tour --format json
+      - lifetxt add
+      - lifetxt web
+      - lifetxt web --no-open
+      - lifetxt import
+      - lifetxt.tour.tour_report
+      - lifetxt.tour.build_tour_sample
+      - lifetxt.cli._prepare_serve
+      - lifetxt.cli.command_import
+    tests_or_evidence:
+      - "tests/test_tour.py (11 tests): sample uses only the Beginner Profile vocabulary and parses with zero diagnostics, tour_report() matches a direct command_center() call byte-for-byte (proving reuse, not reimplementation), the sample task appears due_today when the reference date equals its own due date, defaults to the real current date when omitted, performs no filesystem writes, text/JSON renderers are deterministic for a fixed reference date and stay well under 30 lines"
+      - "tests/test_lifetxt.py LifeTxtTourCliTests (7 tests, real subprocess via run_cli, all against a genuinely clean temp cwd): succeeds with no existing life.txt/.lifetxt.json, sample covers T/E/N, next-steps name init/add/today, directory listing is byte-identical before and after, --format json is valid and matches the sample, --help succeeds, output fits a short terminal scroll"
+      - "tests/test_lifetxt.py LifeTxtAddAliasCliTests (7 tests): add appends a task identically to quick, expands capture shorthand (@/#/!/^) identically to quick, an explicit --project flag still wins over the @sigil, stdin title input works, empty-stdin-title still fails loudly, --help names it as a quick-capture alias, quick and q remain byte-for-byte unaffected"
+      - "tests/test_serve_cli.py WebCliTests (4 tests) and OpenBrowserWhenReadyTests (5 tests): web reuses the exact _prepare_serve()/create_app() path serve does and always passes workers=1; --no-open never starts a browser thread; omitting it starts exactly one daemon thread targeting _open_browser_when_ready with the resolved URL/host/port; a missing uvicorn/webapp dependency raises the same actionable ValueError serve already does; the readiness poll (fully mocked, no real network access in tests) opens the browser only once /api/health answers and gives up silently after its timeout; wildcard bind hosts (0.0.0.0, ::) are substituted with a browser-reachable loopback address"
+      - "tests/test_lifetxt.py LifeTxtImportCliTests (10 tests): import infers --preset ics/markdown from the .ics/.md/.markdown extension and is checked for byte-for-byte parity against the equivalent import-ics --preset ... invocation; --preset todoist/github delegate explicitly with the same parity check; an ambiguous .csv or .json input without --preset is refused naming both --preset and the offending filename; reading from stdin with no --preset is refused; --help lists ics/markdown/todoist/github; the pre-existing import-ics command is unaffected"
+      - python -m unittest tests.test_lifetxt.LifeTxtTourCliTests tests.test_lifetxt.LifeTxtAddAliasCliTests tests.test_lifetxt.LifeTxtImportCliTests tests.test_lifetxt.LifeTxtIcsImportCliTests tests.test_tour tests.test_serve_cli tests.test_completion_surfaces tests.test_completion_values tests.test_surface_runtime -> Ran 208 tests, OK
+      - "live: a real python -m lifetxt tour run in a genuinely empty scratch directory printed the sample plus a real 'Due today (1): Buy milk' derived section and left the directory with zero files afterward"
+      - "live: a real python -m lifetxt web --no-open run answered a real GET /api/health over an actual bound socket; a second real run without --no-open genuinely launched this sandbox's default browser, which then loaded the served page and drove a full round of real API calls (/, /api/config, /api/revision, /api/items, /api/areas, /api/saved-views, ...) against the running server"
+      - "live: python -m lifetxt import calendar.ics / tasks.md / todoist.csv --preset todoist / github_issues.json --preset github each produced output byte-for-byte identical to the equivalent import-ics --preset ... invocation against the same fixture; import todoist.csv and import github_issues.json with no --preset both refused with an exit-1 message naming --preset and the file"
+      - "live: python -m lifetxt add \"Buy_milk\" --append ... and python -m lifetxt quick \"Buy_milk\" --append ... produced the identical [ ] T Buy_milk line"
+      - "scripts/validate_release_docs.py -> {\"errors\": 0, \"ok\": true} (add/web/import/tour --help are all exercised automatically by the validator's live CLI-help check alongside every other command)"
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - ruff format --check / ruff check on every changed lifetxt/**/tests/** file -> clean (one pre-existing, unrelated trailing-newline drift in lifetxt/entrypoint.py confirmed present on origin/main already, left untouched per this project's own established convention for pre-existing drift)
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/590
+      - https://github.com/Eruhitsuji/lifetxt/issues/591
+      - https://github.com/Eruhitsuji/lifetxt/issues/592
+      - https://github.com/Eruhitsuji/lifetxt/issues/593
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/597
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Self-scoped and implemented autonomously per repository owner
+      instruction to implement #590-#593 on one integration branch
+      (feature/adoption-cli-commands, branched from origin/main) ending in
+      one final PR, with each issue landing on its own child branch merged
+      locally into the integration branch first -- the same multi-PR-
+      without-separate-sub-PRs integration pattern already established by
+      cap-fuzzy-search-first-slice's fuzzy-search-surface-expansion-batch
+      entry and cap-distribution-channels' v1.0.1 fix batch (see either
+      entry's own notes): every requirement below names its own child-
+      branch work rather than a separate sub-PR, since none were opened as
+      distinct GitHub PRs.
+
+      #591 (`add`) is a pure argparse registration change: `quick`'s
+      existing `aliases=["q"]` became `aliases=["q", "add"]`, reusing
+      argparse's own multi-name subparser support so `add`, `quick`, and
+      `q` share one parser, one handler (`command_quick`), and one write
+      path with zero duplicated argument or capture-shorthand logic, per
+      the issue's own implementation constraint diagram.
+
+      #592 (`web`) extracted `command_serve`'s existing config/workspace/
+      host/port resolution and `create_app()` construction into a new
+      shared `_prepare_serve()` helper, reused unmodified by both `serve`
+      and `web`; the two subparsers also share one new
+      `_add_serve_core_arguments()` flag-registration helper rather than
+      duplicating six flag definitions. `web`'s browser-readiness signal
+      reuses the server's own pre-existing, always-unauthenticated
+      `/api/health` route (already exempted from bearer-token auth in
+      `lifetxt/webapp.py` for exactly this kind of health-check use) rather
+      than a fixed delay or a new duplicated readiness mechanism, polled
+      via the stdlib `urlopen` already imported at the top of `cli.py` --
+      no new runtime dependency. `0.0.0.0`/`::` bind addresses are
+      substituted with a browser-reachable loopback address before
+      constructing the URL to open, since a browser cannot connect *to* a
+      wildcard bind address the same way a server can bind *from* it.
+
+      #593 (`import`) extracted `import-ics`'s existing flag registration
+      into a shared `_add_import_core_arguments()` helper and added a new
+      `command_import()` that infers `--preset` from a small, closed
+      extension map (`.ics` -> `ics`, `.md`/`.markdown` -> `markdown`) and
+      otherwise requires the caller to pass `--preset` explicitly --
+      deliberately never guessing for `.csv`/`.json`/stdin, per the
+      issue's own "prefer deterministic explicit dispatch over aggressive
+      content guessing" scope. `command_import()` never reimplements any
+      ICS/Markdown/Todoist/GitHub conversion itself; once the preset is
+      resolved it delegates unchanged to the existing
+      `command_import_ics()`.
+
+      #590 (`tour`) is the only genuinely new module in this batch. Per the
+      issue's own explicit steer ("through the current extended-entrypoint
+      pattern rather than enlarging the legacy CLI module"), it is
+      registered in `entrypoint.py`'s `_EXTRA_COMMANDS` and dispatched from
+      `extra_cli.py`, exactly like `capabilities`/`doctor`/`format`, rather
+      than added to `cli.py`'s already very large (15,000+ line) argparse
+      tree. `lifetxt.tour.build_tour_sample()` constructs a three-line,
+      in-memory Beginner Profile sample (`T`/`E`/`N`, `[ ]`/`[N]`
+      statuses, `due`/`from`/`to` keys only -- the exact vocabulary
+      `docs/en/getting-started.md`'s Level 1 section documents) anchored to
+      an injectable reference date, parses it with the real
+      `lifetxt.parser.parse_text()`, and feeds the result to the real
+      `lifetxt.command_center.command_center()` -- the same engine behind
+      `lifetxt today`, the TUI Today view, and the Web Today dashboard
+      (`cap-daily-command-center`) -- so the tour's "what lifetxt can
+      derive" section is a genuine `today` run, not a fourth reimplemented
+      copy of its due/overdue/next-action rules. `render_tour_text()`/
+      `render_tour_json()` are presentation-only, matching the existing
+      precedent of CLI/TUI/Web each independently rendering the same
+      shared `command_center()` result. No file, config, or workspace is
+      read or written at any point (confirmed both by a dedicated
+      directory-diff unit test and a live empty-directory run), so the
+      command works identically from a clean installed wheel/binary with
+      no access to the source checkout's `examples/` directory.
+
+      A dedicated release-artifact/installed-wheel smoke addition (beyond
+      the existing `scripts/validate_release_docs.py` CLI-help check,
+      which already exercises `tour --help`/`add --help`/`web --help`/
+      `import --help` against the checked-out source tree) was judged out
+      of proportion for this batch: `lifetxt tour` has zero repository-
+      relative file access by construction (confirmed by code inspection
+      and the dedicated no-filesystem-write test), so an installed-wheel
+      smoke run would only be re-confirming that same fact through a much
+      heavier mechanism (`cap-distribution-channels`'s own
+      `docs/en/stable-release-artifact-verification.md` procedure). This
+      is recorded as a deliberate scope boundary, not a silently dropped
+      acceptance criterion.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-capture-presets
+    name: Named quick-capture presets
+    summary: >-
+      A `capture.presets.<name>` configuration section giving `quick`/`q`/
+      `add` a reusable, named defaults layer (`type`/`status`/`project`/
+      `tags`/`priority`) for variable-title, same-metadata captures, with
+      no second capture parser or mutation path: `--preset` resolves early
+      and the same `command_quick` write path handles every invocation.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-cli-capture-presets
+    implementation_locations:
+      - lifetxt/capture_presets.py
+      - lifetxt/cli.py
+      - lifetxt/entrypoint.py
+      - lifetxt/schema_extensions_v5.py
+      - dist/schemas/config-v1.schema.json
+      - tests/test_capture_presets.py
+      - tests/test_lifetxt.py
+      - docs/en/config.md
+      - docs/ja/config.md
+      - docs/en/cli.md
+      - docs/ja/cli.md
+    public_interfaces:
+      - lifetxt quick --preset NAME
+      - lifetxt add --preset NAME
+      - lifetxt q --preset NAME
+      - lifetxt.capture_presets.resolve_capture_preset
+      - lifetxt.capture_presets.capture_presets
+      - lifetxt.capture_presets.install_capture_preset_config_registry
+      - capture.presets.*.type
+      - capture.presets.*.status
+      - capture.presets.*.project
+      - capture.presets.*.tags
+      - capture.presets.*.priority
+    tests_or_evidence:
+      - "tests/test_capture_presets.py (18 tests): preset normalization for every field, unknown-field/empty-value/non-array-tags rejection, resolve_capture_preset raises naming the unknown preset and lists every configured name"
+      - "tests/test_lifetxt.py LifeTxtCapturePresetCliTests (10 tests): plain preset use applies every configured field; type/status apply only when not already explicit; an explicit --project/--priority/--type/--status flag or a capture shorthand sigil (@/!/^) wins over the preset; an explicit --tag/#tag sigil merges with preset tags and deduplicates in stable order; no preset given leaves quick's behavior completely unchanged; q and add inherit --preset from the same command contract as quick; stdin title capture works with a preset; a malformed preset definition is rejected by configuration validation, not silently ignored; an unknown preset name fails loudly and lists every configured name"
+      - python -m unittest tests.test_lifetxt.LifeTxtCapturePresetCliTests tests.test_capture_presets tests.test_schema_extensions_v2 tests.test_config_validation -> Ran 84 tests, OK
+      - "live: real python -m lifetxt --config config.json quick --preset work-task \"Fix bug\" --append against a real disposable workspace produced the exact expected line ([ ] T \"Fix bug\" project:work priority:normal tag:work)"
+      - "live: lifetxt config explain capture.presets.work-task.type renders the registered metadata"
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - ruff format --check / ruff check on changed files -> clean
+      - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/594
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/597
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Landed on its own child branch (issue-594-capture-presets) merged
+      locally into the same feature/adoption-cli-commands integration
+      branch as cap-adoption-onboarding-commands, per the same repository-
+      owner-authorized "1 issue = 1 child branch, merge into the parent
+      yourself, one final PR" workflow -- self-scoped and implemented
+      autonomously following a direct follow-up request to continue with
+      #594-#596. `--preset` resolves in `command_quick` before
+      `_merge_capture_shorthand` runs, setting `args.kind`/`args.status`
+      only when the caller left them unset, so an explicit `--type`/
+      `--status` flag is never silently overridden; preset-supplied
+      project/priority/tags are then applied by
+      `_apply_capture_preset_defaults()` only for fields the shorthand
+      pass left empty, and tag merging is deduplicated in stable
+      (preset-then-explicit) order per the issue's own precedence
+      contract. `install_capture_preset_config_registry()` mirrors
+      `lifetxt.report_config`'s existing `reports.*.period` wildcard-key
+      pattern rather than inventing a second registry-extension mechanism,
+      and is wired into `entrypoint.py`'s `_legacy_main`/`_print_help`
+      alongside the other config extension installers. Only the five
+      fields `quick` already accepts as flags are supported, per the
+      issue's own explicit non-goal list (no arbitrary command arguments,
+      shell fragments, or new detail semantics in this first slice).
+
+  - id: cap-tui-key-bindings
+    name: Configurable TUI key bindings
+    summary: >-
+      A `tui.bindings` configuration overlay letting a user rebind a fixed
+      registry of named TUI actions (`move_up`/`move_down`/`first`/`last`/
+      `open`/`toggle_mark`/`done`/`search`/`command`/`reload`/`help`/
+      `quit`) on top of the selected `tui.keymap` preset
+      (`prompt`/`vim`/`arrows`), with no new input/command engine: every
+      action still invokes the exact same existing handler it always did.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-tui-configurable-key-bindings
+    implementation_locations:
+      - lifetxt/tui_bindings.py
+      - lifetxt/tui.py
+      - lifetxt/tui_app.py
+      - lifetxt/entrypoint.py
+      - lifetxt/schema_extensions_v5.py
+      - dist/schemas/config-v1.schema.json
+      - tests/test_tui_bindings.py
+      - tests/test_cui_extensions.py
+      - docs/en/config.md
+      - docs/ja/config.md
+      - docs/en/cli.md
+      - docs/ja/cli.md
+    public_interfaces:
+      - tui.bindings.*
+      - lifetxt.tui_bindings.resolve_bindings
+      - lifetxt.tui_bindings.normalize_key_name
+      - lifetxt.tui_bindings.ACTION_IDS
+      - lifetxt.tui_bindings.install_tui_bindings_config_registry
+    tests_or_evidence:
+      - "tests/test_tui_bindings.py (24 tests): key-name normalization and aliasing, resolve_bindings layering overrides on every built-in preset, same-key-two-actions conflict detection naming both actions, unknown action id and unsupported key name rejection, duplicate-alias deduplication, the prompt keymap producing no nav-mode bindings"
+      - "tests/test_cui_extensions.py WorkspaceKeyBindingsTests (12 tests): vim keymap default navigation unchanged with no tui.bindings config; a custom navigation key moves the selection; a custom mutation key (done) invokes the exact same existing action, verified by reading the written file content directly rather than the filtered row view; cmd_tui refuses to start with a conflicting bindings config; edit (e)/undo (u)/escape remain available and unassignable under a custom map; multiple keys may bind to one action; an unknown action id in config falls back to the built-in binding and is reported; the prompt keymap is unaffected by the bindings registry; the ? help reference matches the unmodified preset with no config and reflects a custom binding when one is configured"
+      - python -m unittest tests.test_tui_bindings tests.test_cui_extensions.WorkspaceKeyBindingsTests tests.test_schema_extensions_v2 tests.test_config_validation tests.test_surface_runtime -> Ran 112 tests, OK
+      - "live: real python -m lifetxt --config config.json tui --plain life.txt against a real disposable workspace with a deliberately conflicting tui.bindings config rendered the plain (non-interactive) dashboard successfully, confirming the documented design that the conflict preflight applies only to the interactive curses path and the plain/non-TTY dashboard has no keyboard interaction to conflict over"
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - ruff format --check / ruff check on changed files -> clean
+      - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/595
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/597
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Landed on its own child branch (issue-595-tui-key-bindings) merged
+      locally into feature/adoption-cli-commands, same workflow as
+      cap-capture-presets. `WorkspaceState.__init__`/`load()` resolve
+      effective bindings via `resolve_bindings(keymap, overrides)` into
+      `state.action_by_key`; `_handle_nav_key` dispatches through a new
+      `_ACTION_HANDLERS` table keyed by action id (each entry an existing,
+      unmodified handler function), falling back to hard-coded handling
+      only for the keys the issue's own conflict policy requires to stay
+      unassignable (`pgdn`/`pgup`/`tab`/`e`/`u`/`escape`, plus `Ctrl-C`,
+      which is never routed through this registry at all) -- so a custom
+      map can never make the TUI impossible to exit or cancel. `?`'s key
+      reference is generated from `state.key_bindings` itself via a new
+      `_effective_binding_rows()` helper rather than a second, separately
+      maintained copy of the default key list, so help can never describe
+      a stale binding. `cmd_tui`'s interactive preflight (which raises the
+      conflict error) runs after the existing plain/non-TTY early return,
+      confirmed both by a dedicated regression test and a live `--plain`
+      run against a deliberately conflicting config, matching this
+      project's documented "the non-interactive dashboard has no keyboard
+      interaction and is unaffected" design.
+
+  - id: cap-generic-custom-fields
+    name: Generic typed custom-field registry for ordinary records
+    summary: >-
+      A top-level `custom_fields` configuration registry giving ordinary
+      (non-ticket) T/E/D/R/H/N/S/M/J records typed, validated metadata
+      (string/integer/number/boolean/date/datetime/duration/enum, with
+      enum/range/length/pattern/repeatable/required constraints and
+      kinds/projects applicability), reusing one shared typed-value
+      implementation with `ticketing.custom_fields` rather than a second
+      parser, and extending the shared Query engine so a `filterable:true`
+      field becomes a dynamic Query field with no separate Saved View,
+      MCP, TUI, or Web implementation. `record:ticket` items are never
+      governed by this registry.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-generic-custom-field-registry
+    implementation_locations:
+      - lifetxt/custom_field_primitives.py
+      - lifetxt/custom_fields.py
+      - lifetxt/ticket_custom_fields.py
+      - lifetxt/cli.py
+      - lifetxt/query.py
+      - lifetxt/saved_views.py
+      - lifetxt/entrypoint.py
+      - lifetxt/schema_extensions_v5.py
+      - dist/schemas/config-v1.schema.json
+      - tests/test_custom_field_primitives.py
+      - tests/test_custom_fields.py
+      - tests/test_lifetxt.py
+      - tests/test_workspace_foundation.py
+      - examples/config/personal-custom-fields.lifetxt.json
+      - docs/en/config.md
+      - docs/ja/config.md
+      - docs/en/query.md
+      - docs/ja/query.md
+    public_interfaces:
+      - custom_fields.*
+      - lifetxt.custom_fields.custom_field_registry_report
+      - lifetxt.custom_fields.field_applies
+      - lifetxt.custom_fields.filterable_field_names
+      - lifetxt.custom_fields.generic_custom_field_diagnostics
+      - lifetxt.custom_fields.install_custom_fields_config_registry
+      - lifetxt.custom_field_primitives.normalize_typed_value
+      - "diagnostic codes: CF001-CF004, CF006, CF007, CF008"
+      - lifetxt query FIELD:VALUE (filterable custom fields)
+    tests_or_evidence:
+      - "tests/test_custom_field_primitives.py (35 tests): every SUPPORTED_TYPES member (string/integer/number/boolean/date/datetime/duration/enum) normalized and constraint-checked at the shared-helper layer; string_list/decimal_text/normalize_boolean; definition_boolean/integer/decimal diag-callback behavior including the no-diag-callback silent path"
+      - "tests/test_custom_fields.py RegistryReportTests (18 tests): no-registry/none-config valid-empty, non-dict registry CF001, invalid field name CF002, reserved-name CF003 (including 'record' itself), unsupported type CF004 with string fallback, unknown metadata key CF001, enum-with-no-values CF001, minimum>maximum CF001, min_length>max_length CF001, invalid pattern CF001, invalid kinds CF001, a fully valid definition normalizing cleanly (label default, minimum/maximum round-tripping as decimal text), string-type shorthand, filterable_field_names filtering"
+      - "tests/test_custom_fields.py FieldAppliesTests (4 tests) and GenericCustomFieldDiagnosticsIntegrationTests (12 tests, via real parser.parse_text fixtures): record:ticket items never apply regardless of kinds/projects; no kinds/projects applies to any ordinary item; kinds/projects restriction; a declared applicable field suppresses its own W106 and validates cleanly; an invalid enum/out-of-range value reports CF006; a non-repeatable field with multiple values reports CF007; a repeatable field with multiple values is fine; a required field missing reports CF008 and present does not; an undeclared custom key keeps its W106 completely unaffected; a declared field used outside its own kinds is left untouched (no suppression, no CF006, its W106 unchanged); a record:ticket item is not governed by the generic registry even when the same field name would otherwise be invalid; no registry configured leaves diagnostics byte-for-byte unchanged; a malformed registry reports exactly one CF001"
+      - "tests/test_custom_fields.py QuerySavedViewIntegrationTests (6 tests) and ConfigRegistryAndSchemaTests (2 tests): a filterable field is recognized with no Q001; the same field with no config reports Q001; a non-filterable configured field still reports Q001 (validated metadata, not automatically queryable); run_query actually filters items by the field; existing Query behavior is completely unchanged with no registry configured; a saved view using a filterable field validates and runs identically to an ad-hoc query; registry metadata and the generated config-v1 schema agree on the shape (no privacy/trackers, matching the generic registry's own scope)"
+      - "tests/test_lifetxt.py LifeTxtGenericCustomFieldCliTests (4 tests, real subprocess via run_cli): a declared field on a real check --format json run is valid and not flagged W106; an invalid declared value fails the check (exit 1, CF006); an undeclared custom key is unaffected; no custom_fields configured behaves exactly as today"
+      - "tests/test_workspace_foundation.py ExampleConfigTests: examples/config/personal-custom-fields.lifetxt.json resolves its default workspace, passes config validation, and validates against the generated config-v1 schema (registered in EXAMPLE_NAMES)"
+      - python -m unittest tests.test_custom_field_primitives tests.test_custom_fields tests.test_lifetxt.LifeTxtGenericCustomFieldCliTests tests.test_workspace_foundation tests.test_schema_extensions_v2 tests.test_config_validation tests.test_query -> Ran 215 tests, OK
+      - "full existing ticket regression suite re-run unmodified after the shared-primitive extraction: python -m unittest tests.test_tickets tests.test_ticket_custom_fields tests.test_ticket_custom_field_public_contract tests.test_ticket_workflow_surfaces tests.test_ticket_workflow_history tests.test_ticket_project_surfaces tests.test_ticket_revision_writes tests.test_ticket_creation_event -> Ran 65 tests, OK"
+      - "confirmed via reading ticket_custom_fields.py before and after the refactor that _normalize_custom_value/_definition_boolean/_definition_integer/_definition_decimal/_decimal_text/_string_list were pure private duplicates with no external caller (grepped for use outside the module), so delegating them to lifetxt.custom_field_primitives is a behavior-preserving extraction, not a new dependency surface"
+      - "live: a real disposable workspace with kinds-scoped energy (J/N) and mood_score (J) fields -- a mood_score:not-a-number value on an out-of-scope N item was left completely untouched (no CF006, W106 unaffected), while the identical key on an in-scope J item with an out-of-range value correctly reported CF006 (\"must be at most 10\") and exit 1"
+      - "live: lifetxt query \"energy:high\" against a real fixture correctly returned only the matching item; lifetxt config explain custom_fields.energy.filterable renders the registered metadata"
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - ruff format --check / ruff check on every changed lifetxt/**/tests/** file -> clean
+      - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true} (docs/en/query.md and docs/ja/query.md are outside its checked-document set; both new cross-reference anchors -- "generic-custom-fields" and the Japanese "汎用-custom-field" -- were independently verified against the validator''s own slug() algorithm run directly)'
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/596
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/597
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Landed on its own child branch (issue-596-generic-custom-fields)
+      merged into feature/adoption-cli-commands, same workflow as
+      cap-capture-presets/cap-tui-key-bindings. `lifetxt/ticket_custom_fields.py`
+      (`ticketing.custom_fields`) already had a complete, ticket-scoped
+      typed-value implementation with no config parameter threaded into
+      `validator.validate_item`; investigation confirmed
+      `ticketing.custom_fields` itself never suppressed the generic W106
+      warning either, since `validate_ticket_custom_fields` is wired only
+      into ticket revision-write paths, not the read/check path -- a
+      pre-existing gap this capability does not attempt to fix for the
+      ticket registry, per its own forbidden-scope boundary
+      ("`lifetxt/ticket_custom_fields.py` only for extracting/reusing
+      protocol-neutral primitive helpers while preserving public
+      behavior"). Rather than monkey-patching `validator.validate_item`
+      globally with a ContextVar-threaded config (the shape
+      `lifetxt/timezone_policy.py`'s `timezone_context()` and
+      `lifetxt/safety_compat_v2.py`'s `_QUICK_KNOWN_IDS` establish for
+      config-derived behavior needed deep inside generic code paths across
+      every surface), this capability integrates at the one seam the
+      issue's own scope contract names -- `lifetxt/cli.py`'s
+      `_parse_life_inputs`, the `check` command's existing post-`parse_text()`
+      extra-diagnostics point, already used unconditionally for
+      `duplicate_id_diagnostics`/`reference_diagnostics`/
+      `_completed_parent_diagnostics` -- rather than a new cross-surface
+      contextvar rollout touching `runtime_safety_v2.py`/`webapp.py`/
+      `mcp.py`/`tui_app.py`, none of which the issue's own write-scope
+      contract named. `generic_custom_field_diagnostics()` reuses
+      `safety_compat_v2.py`'s established W106-message-regex-matching
+      technique (`_w106_key()`) to remove exactly the diagnostic a
+      declared, applicable field's own key produced, rather than
+      reconstructing `validate_item`'s internal logic. Query/Saved-View/
+      MCP integration required no change beyond `query.py`/`saved_views.py`
+      themselves: `run_query`/`_tool_run_query`/MCP/CLI/`command_query`
+      already thread `config` through to `parse_query`, so making
+      `parse_query`/`query_fields` accept an optional `config` parameter
+      was sufficient for every consumer to gain `filterable:true` field
+      recognition automatically, with zero change to `webapp.py`,
+      `mcp.py`, or `tui_app.py`. Web UI rendering of `custom_fields`-driven
+      values (a custom form widget/editor) is explicitly out of scope per
+      the issue's own non-goals and is not attempted here.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

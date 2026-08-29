@@ -41,7 +41,14 @@ guide for command compatibility, filters, output formats, and conversion rules.
 
 lifetxt supports Python 3.10 or newer.
 
-New to lifetxt? Start with `init` and `doctor`:
+Want to see it work before installing anything of your own? `lifetxt tour`
+needs no config, no `life.txt`, and no setup:
+
+```sh
+python -m lifetxt tour
+```
+
+New to lifetxt for real? Start with `init` and `doctor`:
 
 ```sh
 python -m lifetxt init                 # interactive: creates life.txt + .lifetxt.json
@@ -49,6 +56,8 @@ python -m lifetxt init --yes           # non-interactive: accepts all defaults
 python -m lifetxt doctor               # checks your environment and files are set up correctly
 python -m lifetxt check life.txt       # validate syntax after your first edits
 python -m lifetxt summary life.txt     # see what init created
+python -m lifetxt add "Buy milk ^tomorrow"  # capture your first real record
+python -m lifetxt web                  # open the browser UI against it
 ```
 
 `init` writes a starter `life.txt` (with `#! self:`, `#! timezone:`, and
@@ -57,9 +66,10 @@ for your name, timezone, and default project. Pass `--yes` to skip every
 prompt and accept the defaults (`self`, `UTC`, no project) — useful in
 scripts and CI. `doctor` then reports pass/warn/fail checks for your Python
 version, optional dependencies (`textual`, `watchdog`, `matplotlib`, `fzf`),
-and config/life.txt file health, so you know what to install next. See
-section 16 ("`init` and `doctor`") of the [CLI guide](./docs/en/cli.md) for
-the full flag reference.
+and config/life.txt file health, so you know what to install next. `add` is
+the beginner-facing spelling of `quick`/`q`; `web` starts the same server as
+`serve` and opens your browser to it. See section 16 ("`tour`, `init`, and
+`doctor`") of the [CLI guide](./docs/en/cli.md) for the full flag reference.
 
 For the fastest introduction to what actually goes *inside* `life.txt`, see
 [docs/en/getting-started.md](./docs/en/getting-started.md): a five-minute
@@ -145,10 +155,14 @@ python -m lifetxt from-jsonl life.jsonl -o life.txt
 python -m lifetxt from-csv journal.csv -o journal.life.txt
 python -m lifetxt serve life.txt --host 127.0.0.1 --port 8000
 LIFETXT_API_TOKEN=change-me python -m lifetxt serve life.txt --host 0.0.0.0 --token-env LIFETXT_API_TOKEN
+python -m lifetxt web life.txt                          # same server as `serve`, opens your browser
 python -m lifetxt mcp life.txt
 python -m lifetxt serve life.txt .generated/google_calendar.life.txt --write-file life.txt --read-only
 python -m lifetxt config init -o .lifetxt.json
 echo "Buy milk" | python -m lifetxt quick - --append life.txt
+python -m lifetxt add "Buy milk @home #errand !high ^tomorrow" --append life.txt  # `add` is quick's beginner-facing alias
+python -m lifetxt import google_calendar.ics -o life.txt --append --tag google  # infers --preset ics from the extension
+python -m lifetxt import todoist_export.csv --preset todoist -o life.txt --append
 python -m lifetxt done life.txt habit_exercise
 python -m lifetxt complete life.txt task_water_plants
 ```

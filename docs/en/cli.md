@@ -13,6 +13,7 @@ read from standard input.
 ## 1. Command Overview
 
 ```sh
+python -m lifetxt tour
 python -m lifetxt check [path ...]
 python -m lifetxt integrity [path ...]
 python -m lifetxt ids [path ...]
@@ -24,6 +25,7 @@ python -m lifetxt to-csv [path ...]
 python -m lifetxt demo [options]
 python -m lifetxt markdown [path ...]
 python -m lifetxt import-ics [path ...]
+python -m lifetxt import [path ...]
 python -m lifetxt sync-ics --url-env ENVVAR
 python -m lifetxt filter [path ...]
 python -m lifetxt from-json [path ...]
@@ -44,11 +46,13 @@ python -m lifetxt stats [path ...]
 python -m lifetxt git-hook install
 python -m lifetxt completion bash
 python -m lifetxt serve [path ...]
+python -m lifetxt web [path ...]
 python -m lifetxt config init
 python -m lifetxt config show
 python -m lifetxt init
 python -m lifetxt doctor
 python -m lifetxt quick "Title"
+python -m lifetxt add "Title"
 python -m lifetxt done [path ...]
 python -m lifetxt complete [path ...]
 python -m lifetxt assign [path ...]
@@ -187,8 +191,8 @@ python -m lifetxt vm run program.life.txt --entry s1
 | `version` | Manage ticket release versions (see [tickets.md](tickets.md)) |
 | `sprint` | Manage ticket sprints (see [tickets.md](tickets.md)) |
 | `rrule` | Expand a recurrence rule into concrete occurrences (see [13.10](#1310-rrule-expanding-a-recurrence)) |
-| `update-check` | Check GitHub for a newer lifetxt release or tag, read-only (see [16](#16-init-and-doctor)) |
-| `update` | Fast-forward the running lifetxt git install to a newer release, tag, or ref (see [16](#16-init-and-doctor)) |
+| `update-check` | Check GitHub for a newer lifetxt release or tag, read-only (see [16](#16-tour-init-and-doctor)) |
+| `update` | Fast-forward the running lifetxt git install to a newer release, tag, or ref (see [16](#16-tour-init-and-doctor)) |
 | `server-init` | Plan-first Ubuntu Server production bootstrap (see [22](#22-server-init)) |
 | `server-update` | Guarded production update for a systemd-managed install (see [23](#23-server-update)) |
 | `remote` | Use authenticated Remote Safe Mode from the CLI: profiles, reads, and ticket writes (see [§20](#20-remote-safe-mode-client-remote)) |
@@ -426,6 +430,21 @@ A title made only of sigils is rejected rather than creating an untitled record,
 and an unrecognized `^date` fails loudly instead of writing an unparseable
 value.
 
+### Named capture presets
+
+`--preset NAME` applies a configured `capture.presets.<name>` object's
+`type`/`status`/`project`/`tags`/`priority` defaults before shorthand and
+explicit flags run, so both still win over the preset for the same field:
+
+```sh
+lifetxt quick --preset work-task "Prepare proposal"
+lifetxt quick --preset work-task "Fix bug !high"    # explicit !high overrides preset priority
+lifetxt add --preset idea "Try local-first sync"    # add/q share the same --preset
+```
+
+See [config.md](config.md#named-capture-presets) for the configuration
+contract, precedence rules, and tag-merge behavior.
+
 ### Relative date tokens
 
 Anywhere a date is accepted — `--due`, `--do`, `--until`, `^` sigils, and the
@@ -447,11 +466,17 @@ rejected where a real date is required.
 
 | Alias | Command |
 | --- | --- |
+| `add` | `quick` |
 | `q` | `quick` |
 | `d` | `done` |
 | `s` | `state` |
 | `a` | `agenda` |
 | `f` | `filter` |
+
+`add` is the beginner-facing spelling: `lifetxt add "Buy milk ^tomorrow"` is
+exactly `lifetxt quick "Buy milk ^tomorrow"` -- same parser, same handler, same
+write path. `quick`/`q` remain fully supported for existing workflows and
+scripts.
 
 The TUI has its own one-letter aliases in the command palette: `/d` `/s` `/a`
 `/f` `/t` `/e` `/u` `/n` `/q`. An exact alias always wins over fuzzy ranking, so
@@ -1064,6 +1089,35 @@ python -m lifetxt to-csv life.txt --occurrences --after 2026-06-01 --before 2026
 
 ## 5. iCalendar Import And Sync
 
+### 5.0 `import`: the unified entry point
+
+`lifetxt import` is a routing-only dispatcher over `import-ics` below -- there
+is no second ICS/Markdown/Todoist/GitHub conversion implementation, only a
+smaller, more discoverable command name that infers `--preset` from the input
+file extension when it can be determined safely:
+
+```sh
+python -m lifetxt import calendar.ics                       # infers --preset ics
+python -m lifetxt import tasks.md                            # infers --preset markdown
+python -m lifetxt import todoist_export.csv --preset todoist # explicit preset required
+python -m lifetxt import github_issues.json --preset github  # explicit preset required
+```
+
+| Input | Preset |
+|---|---|
+| `*.ics` | `ics` (inferred) |
+| `*.md`, `*.markdown` | `markdown` (inferred) |
+| anything else, including `*.csv` and `*.json` | requires an explicit `--preset ics\|markdown\|todoist\|github` |
+| reading from stdin (no path given) | always requires an explicit `--preset` |
+
+`import` accepts every `import-ics` option below (`-o`/`--output`, `--append`,
+`--project`, `--tag`, `--expand-rrule`, `--expand-until`, `--expand-count`,
+`--preset`) -- the two subcommands share one argument definition -- and
+delegates the actual conversion, validation, write-target resolution, and
+write safety unchanged. Use `import-ics` directly for scripts that already
+name a preset explicitly; `import` exists to make first migration easier to
+discover, not to replace it.
+
 ### 5.1 `import-ics`
 
 Convert iCalendar `.ics` files, such as Google Calendar exports, to life.txt
@@ -1628,6 +1682,26 @@ LIFETXT_API_TOKEN=change-me python -m lifetxt serve life.txt --host 0.0.0.0 --to
 ```
 
 Open `http://127.0.0.1:8000/` in a browser.
+
+### 11.0 `web`: the one-command browser entry point
+
+`lifetxt web` starts the exact same server `serve` does and then opens your
+default browser to it -- there is no second Web implementation, only a thinner
+launcher over the same runtime:
+
+```sh
+python -m lifetxt web life.txt
+python -m lifetxt web life.txt --no-open   # start the server without opening a browser
+```
+
+`web` accepts the same `path ...`, `--write-file`, `--host`, `--port`,
+`--read-only`, `--token-env`, and `--insecure-public` options `serve` does
+(the two subcommands share one argument definition), binds loopback by
+default, and shares every safety behavior described below. It waits for the
+server's own `/api/health` route to answer before opening the browser, so the
+tab never loads before the app is ready. Use `serve` directly for
+server/deployment-oriented invocations, including `--mcp`, which `web` does
+not expose.
 
 Options:
 
@@ -2201,6 +2275,42 @@ control back to navigation mode, so `j` and `k` move again immediately.
 While help is open, `j` / `k` and PageUp/PageDown scroll the reference, which is
 longer than one screen.
 
+##### Custom key bindings
+
+The `vim`/`arrows` navigation actions above (`move_up`, `move_down`, `first`,
+`last`, `open`, `toggle_mark`, `done`, `search`, `command`, `reload`, `help`,
+`quit`) can each be remapped to different keys through `tui.bindings`, layered
+on top of the selected keymap:
+
+```json
+{
+  "tui": {
+    "keymap": "vim",
+    "bindings": {
+      "move_up": ["k"],
+      "move_down": ["j"],
+      "open": ["enter", "l"],
+      "done": ["x"],
+      "search": ["/"],
+      "help": ["?"],
+      "quit": ["q"]
+    }
+  }
+}
+```
+
+A value may be a single key name or an array of aliases; unmentioned actions
+keep the built-in preset's key. `?` (toggle help, when the reference is
+closed) shows the *effective* bindings, so a customization is never
+documented incorrectly. `Ctrl-C`, page moves, `e`/`u` (edit/undo), `Tab`
+(cycle views), and `Esc`/cancel are never part of this registry and always
+work, so a custom map can never make the TUI impossible to exit. A key
+already mapped to two different actions, an unknown action id, or an
+unsupported key name is rejected before the TUI starts, naming the problem.
+See [config.md](config.md#configurable-tui-key-bindings) for the full
+contract, including the `prompt` keymap's own default keys, which have no
+`tui.bindings` overlay since `prompt` never leaves the input bar.
+
 #### Appearance
 
 On terminals at least 118 columns wide the inspector moves beside the list as a
@@ -2216,7 +2326,7 @@ columns (project, due, priority) drop out one at a time as the terminal narrows
 rather than wrapping.
 
 Defaults can be set in config under `tui.theme`, `tui.keymap`, `tui.glyphs`,
-`tui.limit`, and `tui.agenda_window`.
+`tui.limit`, `tui.agenda_window`, and `tui.bindings` (see above).
 
 Filtering and sorting run against a cached parse, so typing in the input bar
 does not re-read the files. A re-parse happens only when a file changes on disk,
@@ -2734,9 +2844,33 @@ pip install -r requirements-web.txt
 python -m lifetxt serve life.txt
 ```
 
-## 16. `init` and `doctor`
+## 16. `tour`, `init`, and `doctor`
 
-These two commands are the recommended entry points for new users.
+These are the recommended entry points for new users: `tour` needs nothing
+at all, `init` creates your own workspace, and `doctor` checks it.
+
+### 16.0 `tour`
+
+A zero-config, dependency-free first-run demonstration. It builds a tiny,
+built-in Beginner Profile sample -- covering `T`, `E`, and `N` -- entirely in
+memory, runs it through the same `command_center`/"today" engine `lifetxt
+today` uses, and prints both. No `life.txt`, config, network access, or
+existing workspace is required, and nothing is written to disk:
+
+```sh
+python -m lifetxt tour
+python -m lifetxt tour --format json
+```
+
+| Option | Meaning |
+|---|---|
+| `--format {text,json}` | Output format; defaults to `text` |
+| `-o`, `--output FILE` | Write to a file instead of stdout |
+
+The sample's dates are anchored to today's date, so the derived section shows
+a task genuinely due today; run it again tomorrow and the same sample shows a
+different day. The final section names concrete next steps: `init`, `add`,
+and `today`.
 
 ```sh
 python -m lifetxt init
@@ -3198,7 +3332,7 @@ contract.
 ## 23. `server-update`
 
 Guarded production update for a systemd-managed install, wrapping
-`update`'s git fast-forward logic (see [§16](#16-init-and-doctor)) with
+`update`'s git fast-forward logic (see [§16](#16-tour-init-and-doctor)) with
 backup, service stop/start, dependency reinstall, and verification. See
 [docs/deployment/ubuntu-server.md](../deployment/ubuntu-server.md) for the
 full operator-facing runbook this command is designed for.

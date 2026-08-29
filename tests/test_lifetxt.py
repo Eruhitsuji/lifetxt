@@ -2409,6 +2409,331 @@ class LifeTxtQuickCliTests(unittest.TestCase):
         self.assertIn("requires a non-empty title", stderr)
 
 
+class LifeTxtCapturePresetCliTests(unittest.TestCase):
+    """`--preset NAME` on quick/q/add (#594): a defaults layer, never an
+    invisible override -- explicit shorthand/CLI flags always win, and
+    tags merge rather than replace."""
+
+    def _config_with_presets(self, temp_dir, presets):
+        cfg_path = os.path.join(temp_dir, ".lifetxt.json")
+        with open(cfg_path, "w", encoding="utf-8") as f:
+            json.dump({"capture": {"presets": presets}}, f)
+        return cfg_path
+
+    WORK_TASK_PRESET = {
+        "work-task": {
+            "type": "T",
+            "project": "work",
+            "tags": ["work"],
+            "priority": "normal",
+        }
+    }
+
+    def test_plain_preset_use_applies_every_configured_field(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            cfg = self._config_with_presets(temp_dir, self.WORK_TASK_PRESET)
+            life = os.path.join(temp_dir, "life.txt")
+            stdout, stderr, code = run_cli(
+                "--config",
+                cfg,
+                "quick",
+                "--preset",
+                "work-task",
+                "Prepare proposal",
+                "--append",
+                life,
+            )
+            self.assertEqual(0, code, stderr)
+            with open(life, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("project:work", content)
+            self.assertIn("priority:normal", content)
+            self.assertIn("tag:work", content)
+
+    def test_explicit_shorthand_overrides_preset_scalar(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            cfg = self._config_with_presets(temp_dir, self.WORK_TASK_PRESET)
+            life = os.path.join(temp_dir, "life.txt")
+            stdout, stderr, code = run_cli(
+                "--config",
+                cfg,
+                "quick",
+                "--preset",
+                "work-task",
+                "Fix bug !high",
+                "--append",
+                life,
+            )
+            self.assertEqual(0, code, stderr)
+            with open(life, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("priority:high", content)
+            self.assertNotIn("priority:normal", content)
+            self.assertIn("project:work", content)
+
+    def test_explicit_cli_flag_overrides_preset_scalar(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            cfg = self._config_with_presets(temp_dir, self.WORK_TASK_PRESET)
+            life = os.path.join(temp_dir, "life.txt")
+            stdout, stderr, code = run_cli(
+                "--config",
+                cfg,
+                "quick",
+                "--preset",
+                "work-task",
+                "Errand",
+                "--project",
+                "errands",
+                "--append",
+                life,
+            )
+            self.assertEqual(0, code, stderr)
+            with open(life, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("project:errands", content)
+            self.assertNotIn("project:work", content)
+            self.assertIn("priority:normal", content)
+
+    def test_explicit_tag_merges_with_preset_tags_deduplicated(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            cfg = self._config_with_presets(temp_dir, self.WORK_TASK_PRESET)
+            life = os.path.join(temp_dir, "life.txt")
+            stdout, stderr, code = run_cli(
+                "--config",
+                cfg,
+                "quick",
+                "--preset",
+                "work-task",
+                "Buy adapter #hardware",
+                "--append",
+                life,
+            )
+            self.assertEqual(0, code, stderr)
+            with open(life, encoding="utf-8") as f:
+                content = f.read()
+            self.assertEqual(1, content.count("tag:hardware"))
+            self.assertEqual(1, content.count("tag:work"))
+
+    def test_preset_type_and_status_apply_when_not_explicit(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            cfg = self._config_with_presets(
+                temp_dir, {"idea": {"type": "N", "tags": ["idea"]}}
+            )
+            life = os.path.join(temp_dir, "life.txt")
+            stdout, stderr, code = run_cli(
+                "--config",
+                cfg,
+                "quick",
+                "--preset",
+                "idea",
+                "Try local-first sync",
+                "--append",
+                life,
+            )
+            self.assertEqual(0, code, stderr)
+            with open(life, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("[N] N", content)
+            self.assertIn("tag:idea", content)
+
+    def test_stdin_title_capture_works_with_preset(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            cfg = self._config_with_presets(temp_dir, self.WORK_TASK_PRESET)
+            life = os.path.join(temp_dir, "life.txt")
+            stdout, stderr, code = run_cli(
+                "--config",
+                cfg,
+                "quick",
+                "--preset",
+                "work-task",
+                "-",
+                "--append",
+                life,
+                input_text="From stdin\n",
+            )
+            self.assertEqual(0, code, stderr)
+            with open(life, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn('"From stdin"', content)
+            self.assertIn("project:work", content)
+
+    def test_q_and_add_inherit_preset_from_the_same_command_contract(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            cfg = self._config_with_presets(temp_dir, self.WORK_TASK_PRESET)
+            q_life = os.path.join(temp_dir, "q.txt")
+            add_life = os.path.join(temp_dir, "add.txt")
+            _out, q_err, q_code = run_cli(
+                "--config",
+                cfg,
+                "q",
+                "--preset",
+                "work-task",
+                "Via_q",
+                "--append",
+                q_life,
+            )
+            _out, add_err, add_code = run_cli(
+                "--config",
+                cfg,
+                "add",
+                "--preset",
+                "work-task",
+                "Via_add",
+                "--append",
+                add_life,
+            )
+            self.assertEqual(0, q_code, q_err)
+            self.assertEqual(0, add_code, add_err)
+            with open(q_life, encoding="utf-8") as f:
+                self.assertIn("project:work", f.read())
+            with open(add_life, encoding="utf-8") as f:
+                self.assertIn("project:work", f.read())
+
+    def test_unknown_preset_fails_loudly_and_lists_available_names(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            cfg = self._config_with_presets(temp_dir, self.WORK_TASK_PRESET)
+            life = os.path.join(temp_dir, "life.txt")
+            stdout, stderr, code = run_cli(
+                "--config",
+                cfg,
+                "quick",
+                "--preset",
+                "nope",
+                "Should fail",
+                "--append",
+                life,
+            )
+            self.assertEqual(1, code)
+            self.assertIn("nope", stderr)
+            self.assertIn("work-task", stderr)
+            self.assertFalse(os.path.exists(life))
+
+    def test_malformed_preset_definition_is_rejected_not_silently_ignored(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            cfg = self._config_with_presets(
+                temp_dir, {"broken": {"type": "T", "shell": "rm -rf /"}}
+            )
+            life = os.path.join(temp_dir, "life.txt")
+            stdout, stderr, code = run_cli(
+                "--config",
+                cfg,
+                "quick",
+                "--preset",
+                "broken",
+                "Should fail",
+                "--append",
+                life,
+            )
+            self.assertEqual(1, code)
+            self.assertIn("shell", stderr)
+            self.assertFalse(os.path.exists(life))
+
+    def test_no_preset_given_leaves_quick_behavior_unchanged(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            cfg = self._config_with_presets(temp_dir, self.WORK_TASK_PRESET)
+            life = os.path.join(temp_dir, "life.txt")
+            stdout, stderr, code = run_cli(
+                "--config", cfg, "quick", "Plain_capture", "--append", life
+            )
+            self.assertEqual(0, code, stderr)
+            with open(life, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("[ ] T Plain_capture", content)
+            self.assertNotIn("project:", content)
+            self.assertNotIn("priority:", content)
+
+
+class LifeTxtAddAliasCliTests(unittest.TestCase):
+    """`add` is a top-level alias for `quick`/`q` (#591): same parser, same
+    handler, same mutation path -- these mirror LifeTxtQuickCliTests's own
+    cases through the `add` spelling rather than re-testing quick's behavior
+    a second time."""
+
+    def test_add_appends_task_to_file(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            stdout, stderr, code = run_cli("add", "Buy_milk", "--append", path)
+            self.assertEqual(0, code, stderr)
+            self.assertIn("Buy_milk", stdout)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("[ ] T Buy_milk", content)
+
+    def test_add_expands_capture_shorthand_like_quick(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            stdout, stderr, code = run_cli(
+                "add",
+                "Buy milk @home #errand !high ^tomorrow",
+                "--append",
+                path,
+            )
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn('"Buy milk"', content)
+            self.assertIn("project:home", content)
+            self.assertIn("tag:errand", content)
+            self.assertIn("priority:high", content)
+            import datetime as dt
+
+            tomorrow_iso = (dt.date.today() + dt.timedelta(days=1)).isoformat()
+            self.assertIn("due:%s" % tomorrow_iso, content)
+
+    def test_add_explicit_flag_overrides_shorthand(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            stdout, stderr, code = run_cli(
+                "add",
+                "Buy milk @home",
+                "--project",
+                "errands",
+                "--append",
+                path,
+            )
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("project:errands", content)
+            self.assertNotIn("project:home", content)
+
+    def test_add_reads_title_from_stdin(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            stdout, stderr, code = run_cli(
+                "add", "-", "--append", path, input_text="Captured_from_stdin\n"
+            )
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("Captured_from_stdin", content)
+
+    def test_add_stdin_empty_title_fails_loud(self):
+        stdout, stderr, code = run_cli(
+            "add", "-", "--append", "unused.life.txt", input_text="\n"
+        )
+        self.assertEqual(1, code)
+        self.assertIn("requires a non-empty title", stderr)
+
+    def test_add_help_names_it_as_a_quick_capture_alias(self):
+        stdout, stderr, code = run_cli("add", "--help")
+        self.assertEqual(0, code, stderr)
+        self.assertIn("quick", stdout.lower())
+
+    def test_quick_and_q_remain_unaffected_by_the_add_alias(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            quick_path = os.path.join(temp_dir, "quick.txt")
+            q_path = os.path.join(temp_dir, "q.txt")
+            _, quick_err, quick_code = run_cli("quick", "Task", "--append", quick_path)
+            _, q_err, q_code = run_cli("q", "Task", "--append", q_path)
+            self.assertEqual(0, quick_code, quick_err)
+            self.assertEqual(0, q_code, q_err)
+            with open(quick_path, encoding="utf-8") as f:
+                self.assertIn("[ ] T Task", f.read())
+            with open(q_path, encoding="utf-8") as f:
+                self.assertIn("[ ] T Task", f.read())
+
+
 class LifeTxtDoneCliTests(unittest.TestCase):
     SOURCE_TEXT = "[ ] T Buy_milk id:t001\n[ ] T Clean_house id:t002\n[ ] T Walk_dog\n"
 
@@ -3097,6 +3422,124 @@ class LifeTxtIcsImportCliTests(unittest.TestCase):
             "created:2026-06-01T10:20 updated:2026-06-02T11:00 done:2026-06-03T12:00\n",
             normalize_newlines(stdout),
         )
+
+
+class LifeTxtImportCliTests(unittest.TestCase):
+    """`import` is a routing-only dispatcher over `import-ics` (#593): every
+    case here is checked for byte-for-byte parity against the equivalent
+    `import-ics --preset ...` invocation, the actual authoritative
+    implementation, rather than asserting a second copy of the expected
+    conversion output."""
+
+    ICS_TEXT = (
+        "BEGIN:VCALENDAR\n"
+        "BEGIN:VEVENT\n"
+        "UID:event-1@example.com\n"
+        "SUMMARY:Research Meeting\n"
+        "DTSTART:20260608T130000\n"
+        "DTEND:20260608T143000\n"
+        "END:VEVENT\n"
+        "END:VCALENDAR\n"
+    )
+    MARKDOWN_TEXT = "- [ ] Review docs\n"
+    TODOIST_CSV_TEXT = (
+        "ID,Content,Project,Description,Date,Priority,Labels,Completed\n"
+        '123,Write docs,Docs,Use spec,2026-06-12,4,"writing,docs",\n'
+    )
+    GITHUB_JSON_TEXT = json.dumps(
+        [{"number": 42, "title": "Fix import", "state": "open"}]
+    )
+
+    def _write(self, temp_dir, name, text):
+        path = os.path.join(temp_dir, name)
+        with open(path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(text)
+        return path
+
+    def test_import_infers_ics_preset_from_extension(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "calendar.ics", self.ICS_TEXT)
+            expected_stdout, _stderr, expected_code = run_cli(
+                "import-ics", path, "--preset", "ics"
+            )
+            stdout, stderr, code = run_cli("import", path)
+            self.assertEqual(0, code, stderr)
+            self.assertEqual(expected_code, code)
+            self.assertEqual(expected_stdout, stdout)
+            self.assertIn("Research Meeting", stdout)
+
+    def test_import_infers_markdown_preset_from_extension(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "tasks.md", self.MARKDOWN_TEXT)
+            expected_stdout, _stderr, _code = run_cli(
+                "import-ics", path, "--preset", "markdown"
+            )
+            stdout, stderr, code = run_cli("import", path)
+            self.assertEqual(0, code, stderr)
+            self.assertEqual(expected_stdout, stdout)
+            self.assertIn("Review_docs", stdout)
+
+    def test_import_infers_markdown_preset_for_the_markdown_extension_variant(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "tasks.markdown", self.MARKDOWN_TEXT)
+            stdout, stderr, code = run_cli("import", path)
+            self.assertEqual(0, code, stderr)
+            self.assertIn("Review_docs", stdout)
+
+    def test_import_delegates_to_the_todoist_preset_explicitly(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "todoist_export.csv", self.TODOIST_CSV_TEXT)
+            expected_stdout, _stderr, _code = run_cli(
+                "import-ics", path, "--preset", "todoist"
+            )
+            stdout, stderr, code = run_cli("import", path, "--preset", "todoist")
+            self.assertEqual(0, code, stderr)
+            self.assertEqual(expected_stdout, stdout)
+            self.assertIn("Write_docs", stdout)
+
+    def test_import_delegates_to_the_github_preset_explicitly(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "github_issues.json", self.GITHUB_JSON_TEXT)
+            expected_stdout, _stderr, _code = run_cli(
+                "import-ics", path, "--preset", "github"
+            )
+            stdout, stderr, code = run_cli("import", path, "--preset", "github")
+            self.assertEqual(0, code, stderr)
+            self.assertEqual(expected_stdout, stdout)
+            self.assertIn("Fix_import", stdout)
+
+    def test_import_refuses_an_ambiguous_csv_input_without_a_preset(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "todoist_export.csv", self.TODOIST_CSV_TEXT)
+            stdout, stderr, code = run_cli("import", path)
+            self.assertEqual(1, code)
+            self.assertIn("--preset", stderr)
+            self.assertIn("todoist_export.csv", stderr)
+
+    def test_import_refuses_an_ambiguous_json_input_without_a_preset(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "github_issues.json", self.GITHUB_JSON_TEXT)
+            stdout, stderr, code = run_cli("import", path)
+            self.assertEqual(1, code)
+            self.assertIn("--preset", stderr)
+
+    def test_import_from_stdin_requires_an_explicit_preset(self):
+        stdout, stderr, code = run_cli("import", input_text=self.ICS_TEXT)
+        self.assertEqual(1, code)
+        self.assertIn("--preset", stderr)
+
+    def test_import_help_lists_the_supported_presets(self):
+        stdout, stderr, code = run_cli("import", "--help")
+        self.assertEqual(0, code, stderr)
+        self.assertIn("ics", stdout)
+        self.assertIn("markdown", stdout)
+        self.assertIn("todoist", stdout)
+        self.assertIn("github", stdout)
+
+    def test_existing_import_ics_command_is_unaffected(self):
+        stdout, stderr, code = run_cli("import-ics", input_text=self.ICS_TEXT)
+        self.assertEqual(0, code, stderr)
+        self.assertIn("Research Meeting", stdout)
 
 
 class LifeTxtIcsSyncCliTests(unittest.TestCase):
@@ -6453,6 +6896,62 @@ class LifeTxtInitCliTests(unittest.TestCase):
             )
             self.assertEqual(0, code, stderr)
             self.assertIn("Aborted", stdout)
+
+
+class LifeTxtTourCliTests(unittest.TestCase):
+    """`lifetxt tour` (#590): a zero-config, dependency-free first-run tour.
+    Every case runs from a genuinely clean directory (no life.txt,
+    .lifetxt.json, or prior state) to match the command's own no-setup
+    contract."""
+
+    def test_tour_succeeds_in_a_clean_directory_with_no_existing_data(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            stdout, stderr, code = run_cli("tour", cwd=temp_dir)
+            self.assertEqual(0, code, stderr)
+            self.assertIn("lifetxt in 30 seconds", stdout)
+
+    def test_tour_sample_covers_task_event_and_note(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            stdout, stderr, code = run_cli("tour", cwd=temp_dir)
+            self.assertEqual(0, code, stderr)
+            self.assertIn('T "Buy milk"', stdout)
+            self.assertIn('E "Team meeting"', stdout)
+            self.assertIn('N "Idea"', stdout)
+
+    def test_tour_names_concrete_next_steps(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            stdout, stderr, code = run_cli("tour", cwd=temp_dir)
+            self.assertEqual(0, code, stderr)
+            self.assertIn("lifetxt init", stdout)
+            self.assertIn("lifetxt today", stdout)
+            self.assertIn("add", stdout)
+
+    def test_tour_makes_no_persistent_writes(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            before = sorted(os.listdir(temp_dir))
+            stdout, stderr, code = run_cli("tour", cwd=temp_dir)
+            self.assertEqual(0, code, stderr)
+            after = sorted(os.listdir(temp_dir))
+            self.assertEqual(before, after)
+
+    def test_tour_json_format_is_valid_and_matches_the_sample(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            stdout, stderr, code = run_cli("tour", "--format", "json", cwd=temp_dir)
+            self.assertEqual(0, code, stderr)
+            payload = json.loads(stdout)
+            self.assertIn("reference_date", payload)
+            self.assertIn("Buy milk", payload["sample"])
+            self.assertIn("due_today", payload["today"])
+
+    def test_tour_help_succeeds(self):
+        stdout, stderr, code = run_cli("tour", "--help")
+        self.assertEqual(0, code, stderr)
+
+    def test_tour_output_fits_a_short_terminal_scroll(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            stdout, stderr, code = run_cli("tour", cwd=temp_dir)
+            self.assertEqual(0, code, stderr)
+            self.assertLess(len(stdout.splitlines()), 30)
 
 
 class LifeTxtDoctorCliTests(unittest.TestCase):
@@ -10082,6 +10581,73 @@ class LifeTxtCheckLineTests(unittest.TestCase):
         result = self._check_line("[x] T Completed_task  done:2026-01-01")
         self.assertTrue(result["ok"])
         self.assertEqual(result["item_count"], 1)
+
+
+class LifeTxtGenericCustomFieldCliTests(unittest.TestCase):
+    """CLI-level integration for the generic custom_fields registry (#596),
+    exercised through the real ``lifetxt check`` entry point end to end."""
+
+    def _run_check(self, life_text, config_data):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            life_path = os.path.join(temp_dir, "life.txt")
+            config_path = os.path.join(temp_dir, "config.json")
+            with open(life_path, "w", encoding="utf-8") as handle:
+                handle.write(life_text)
+            with open(config_path, "w", encoding="utf-8") as handle:
+                json.dump(config_data, handle)
+            return run_cli(
+                "--config", config_path, "check", life_path, "--format", "json"
+            )
+
+    def test_declared_field_is_valid_and_not_flagged_as_custom(self):
+        config = {
+            "custom_fields": {
+                "energy": {
+                    "type": "enum",
+                    "values": ["low", "medium", "high"],
+                    "kinds": ["N"],
+                }
+            }
+        }
+        out, err, rc = self._run_check('[N] N "Afternoon energy" energy:high\n', config)
+        self.assertEqual(rc, 0, err)
+        diagnostics = json.loads(out)
+        codes = [d["code"] for d in diagnostics]
+        self.assertNotIn("W106", codes)
+
+    def test_invalid_declared_value_fails_the_check(self):
+        config = {
+            "custom_fields": {
+                "energy": {
+                    "type": "enum",
+                    "values": ["low", "medium", "high"],
+                    "kinds": ["N"],
+                }
+            }
+        }
+        out, err, rc = self._run_check(
+            '[N] N "Afternoon energy" energy:extreme\n', config
+        )
+        self.assertEqual(rc, 1, err)
+        diagnostics = json.loads(out)
+        codes = [d["code"] for d in diagnostics]
+        self.assertIn("CF006", codes)
+
+    def test_undeclared_custom_key_is_unaffected(self):
+        out, err, rc = self._run_check(
+            '[N] N "Note" mystery_key:1\n', {"custom_fields": {}}
+        )
+        self.assertEqual(rc, 0, err)
+        diagnostics = json.loads(out)
+        codes = [d["code"] for d in diagnostics]
+        self.assertIn("W106", codes)
+
+    def test_no_custom_fields_configured_behaves_as_today(self):
+        out, err, rc = self._run_check('[N] N "Note" mystery_key:1\n', {})
+        self.assertEqual(rc, 0, err)
+        diagnostics = json.loads(out)
+        codes = [d["code"] for d in diagnostics]
+        self.assertIn("W106", codes)
 
 
 class LifeTxtSummaryCommandTests(unittest.TestCase):

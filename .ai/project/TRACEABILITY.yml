@@ -8199,3 +8199,12 @@ required_chain:
 
 gap_policy:
   missing_link_action: create_follow_up_issue_or_approved_exception
+
+exceptions:
+  - exception_type: traceability_not_applicable
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/575
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/576
+    scope: assets/brand plus existing Web favicon/header branding, Tauri Desktop icon derivatives, and focused validation
+    reason: Presentation-only brand integration; no runtime behavior, data model, public interface, or independently callable capability changed
+    approved_by: Eruhitsuji
+    status: accepted

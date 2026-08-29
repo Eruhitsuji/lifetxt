@@ -317,6 +317,173 @@ def custom_field_registry_report(config=None):
     )
 
 
+def install_custom_fields_config_registry():
+    """Extend the authoritative registry with generic ``custom_fields``
+    metadata once. Mirrors the wildcard-key pattern
+    ``lifetxt.report_config`` established for ``reports.*.period``."""
+    from . import config_registry
+
+    if getattr(config_registry, "_lifetxt_custom_fields_config_installed", False):
+        return
+
+    entry = config_registry._entry
+    entries = (
+        (
+            "custom_fields",
+            entry(
+                "object",
+                None,
+                "Generic, configuration-backed typed custom fields for ordinary "
+                "(non-ticket) life.txt records. See `lifetxt config explain "
+                "custom_fields.*.type` for one field's contract.",
+                since="unreleased",
+            ),
+        ),
+        (
+            "custom_fields.*.type",
+            entry(
+                "string",
+                "string",
+                "Primitive value type for this field.",
+                allowed=list(SUPPORTED_TYPES),
+                since="unreleased",
+            ),
+        ),
+        (
+            "custom_fields.*.label",
+            entry(
+                "string",
+                None,
+                "Optional user-facing label; defaults to the field name.",
+                since="unreleased",
+            ),
+        ),
+        (
+            "custom_fields.*.description",
+            entry(
+                "string",
+                None,
+                "Optional explanation of what the field records.",
+                since="unreleased",
+            ),
+        ),
+        (
+            "custom_fields.*.repeatable",
+            entry(
+                "boolean",
+                False,
+                "Whether the field may appear more than once on one item.",
+                since="unreleased",
+            ),
+        ),
+        (
+            "custom_fields.*.required",
+            entry(
+                "boolean",
+                False,
+                "Whether an applicable item must include this field.",
+                since="unreleased",
+            ),
+        ),
+        (
+            "custom_fields.*.enum",
+            entry(
+                "array<string>",
+                None,
+                "Allowed values when type is enum. `values` is an accepted alias.",
+                since="unreleased",
+            ),
+        ),
+        (
+            "custom_fields.*.values",
+            entry(
+                "array<string>",
+                None,
+                "Alias for `enum`.",
+                since="unreleased",
+            ),
+        ),
+        (
+            "custom_fields.*.minimum",
+            entry(
+                "number",
+                None,
+                "Minimum numeric value, for integer/number types.",
+                since="unreleased",
+            ),
+        ),
+        (
+            "custom_fields.*.maximum",
+            entry(
+                "number",
+                None,
+                "Maximum numeric value, for integer/number types.",
+                since="unreleased",
+            ),
+        ),
+        (
+            "custom_fields.*.min_length",
+            entry(
+                "integer",
+                None,
+                "Minimum normalized value length, for string-shaped types.",
+                since="unreleased",
+            ),
+        ),
+        (
+            "custom_fields.*.max_length",
+            entry(
+                "integer",
+                None,
+                "Maximum normalized value length, for string-shaped types.",
+                since="unreleased",
+            ),
+        ),
+        (
+            "custom_fields.*.pattern",
+            entry(
+                "string",
+                None,
+                "Regular expression the normalized value must match.",
+                since="unreleased",
+            ),
+        ),
+        (
+            "custom_fields.*.kinds",
+            entry(
+                "array<string>",
+                None,
+                "Life.txt record kinds (T/E/D/R/H/N/S/M/J) this field applies to. "
+                "Omitted means every ordinary kind.",
+                since="unreleased",
+            ),
+        ),
+        (
+            "custom_fields.*.projects",
+            entry(
+                "array<string>",
+                None,
+                "Projects this field applies to. Omitted means every project.",
+                since="unreleased",
+            ),
+        ),
+        (
+            "custom_fields.*.filterable",
+            entry(
+                "boolean",
+                False,
+                "Whether the field becomes a dynamic Query field "
+                "(field:value / field=value equality), recognized by CLI query, "
+                "Saved Views, MCP run_query, and Web/TUI Saved Views.",
+                since="unreleased",
+            ),
+        ),
+    )
+    for key, metadata in entries:
+        config_registry.CONFIG_REGISTRY[key] = metadata
+    config_registry._lifetxt_custom_fields_config_installed = True
+
+
 def custom_field_definitions(config=None, strict=False):
     report = custom_field_registry_report(config)
     if strict and not report["valid"]:

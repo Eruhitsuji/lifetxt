@@ -6664,6 +6664,62 @@ class LifeTxtInitCliTests(unittest.TestCase):
             self.assertIn("Aborted", stdout)
 
 
+class LifeTxtTourCliTests(unittest.TestCase):
+    """`lifetxt tour` (#590): a zero-config, dependency-free first-run tour.
+    Every case runs from a genuinely clean directory (no life.txt,
+    .lifetxt.json, or prior state) to match the command's own no-setup
+    contract."""
+
+    def test_tour_succeeds_in_a_clean_directory_with_no_existing_data(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            stdout, stderr, code = run_cli("tour", cwd=temp_dir)
+            self.assertEqual(0, code, stderr)
+            self.assertIn("lifetxt in 30 seconds", stdout)
+
+    def test_tour_sample_covers_task_event_and_note(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            stdout, stderr, code = run_cli("tour", cwd=temp_dir)
+            self.assertEqual(0, code, stderr)
+            self.assertIn('T "Buy milk"', stdout)
+            self.assertIn('E "Team meeting"', stdout)
+            self.assertIn('N "Idea"', stdout)
+
+    def test_tour_names_concrete_next_steps(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            stdout, stderr, code = run_cli("tour", cwd=temp_dir)
+            self.assertEqual(0, code, stderr)
+            self.assertIn("lifetxt init", stdout)
+            self.assertIn("lifetxt today", stdout)
+            self.assertIn("add", stdout)
+
+    def test_tour_makes_no_persistent_writes(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            before = sorted(os.listdir(temp_dir))
+            stdout, stderr, code = run_cli("tour", cwd=temp_dir)
+            self.assertEqual(0, code, stderr)
+            after = sorted(os.listdir(temp_dir))
+            self.assertEqual(before, after)
+
+    def test_tour_json_format_is_valid_and_matches_the_sample(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            stdout, stderr, code = run_cli("tour", "--format", "json", cwd=temp_dir)
+            self.assertEqual(0, code, stderr)
+            payload = json.loads(stdout)
+            self.assertIn("reference_date", payload)
+            self.assertIn("Buy milk", payload["sample"])
+            self.assertIn("due_today", payload["today"])
+
+    def test_tour_help_succeeds(self):
+        stdout, stderr, code = run_cli("tour", "--help")
+        self.assertEqual(0, code, stderr)
+
+    def test_tour_output_fits_a_short_terminal_scroll(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            stdout, stderr, code = run_cli("tour", cwd=temp_dir)
+            self.assertEqual(0, code, stderr)
+            self.assertLess(len(stdout.splitlines()), 30)
+
+
 class LifeTxtDoctorCliTests(unittest.TestCase):
     def test_doctor_ok_with_valid_file(self):
         with tempfile.TemporaryDirectory() as tmp:

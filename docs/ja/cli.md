@@ -13,6 +13,7 @@ path を省略すると標準入力から読み込みます。
 ## 1. コマンド一覧
 
 ```sh
+python -m lifetxt tour
 python -m lifetxt check [path ...]
 python -m lifetxt integrity [path ...]
 python -m lifetxt ids [path ...]
@@ -2399,9 +2400,35 @@ pip install -r requirements-web.txt
 python -m lifetxt serve life.txt
 ```
 
-## 16. `init` と `doctor`
+## 16. `tour`、`init`、`doctor`
 
-この2つの command は新規ユーザー向けの推奨エントリーポイントです。
+これらは新規ユーザー向けの推奨エントリーポイントです。`tour` は
+何も必要とせず、`init` は自分の workspace を作成し、`doctor` は
+それを確認します。
+
+### 16.0 `tour`
+
+config 不要、依存 package 不要の zero-config な first-run デモです。
+`T`、`E`、`N` をカバーする小さな組み込み Beginner Profile サンプルを
+完全にメモリ上で構築し、`lifetxt today` と同じ `command_center`
+（"today"）エンジンに通してから両方を表示します。`life.txt`、config、
+ネットワークアクセス、既存の workspace のいずれも不要で、
+ディスクへの書き込みは一切行いません。
+
+```sh
+python -m lifetxt tour
+python -m lifetxt tour --format json
+```
+
+| Option | 意味 |
+|---|---|
+| `--format {text,json}` | 出力 format。既定値は `text` |
+| `-o`, `--output FILE` | 標準出力ではなくファイルに書き込む |
+
+サンプルの日付は今日の日付を基準にしているため、derive されたセクションには
+実際に今日が期限のタスクが表示されます。翌日に再実行すると、同じサンプルで
+異なる日が表示されます。最後のセクションには具体的な次のステップ
+（`init`、`add`、`today`）が示されます。
 
 ```sh
 python -m lifetxt init

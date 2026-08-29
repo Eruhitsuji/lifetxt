@@ -19,6 +19,14 @@ life.txt Format 1.0
 └── Full Format                  <- life_txt_format_spec.md、level 3
 ```
 
+読む前に動くところを見たい場合は、`lifetxt tour` が小さな Beginner
+Profile のサンプルと、それに対する実際の derive された view を 1 つ
+表示します。config も `life.txt` もセットアップも不要です:
+
+```sh
+lifetxt tour
+```
+
 ## Level 1 -- Minimum（5分）
 
 以下の4つを覚えれば、実用的な `life.txt` を書けます:
@@ -132,7 +140,8 @@ command と同じ parser を使うので、この vocabulary だけで書ける�
 type ごとの recommended key は format specification の
 [section 9](./life_txt_format_spec.md#9-type-別-recommended-keys) を、
 command level の filtering と shorthand capture
-（`quick "Buy milk @home #errand !high ^tomorrow"`）は
+（`lifetxt add "Buy milk @home #errand !high ^tomorrow"` -- `add` は
+`quick`/`q` の初心者向けの綴りです）は
 [`cli.md`](./cli.md) を参照してください。
 
 ## Level 3 -- Full Format
@@ -158,6 +167,11 @@ Level 1 や Level 2 で書いたものを先に変更する必要はありませ
 
 ## 次に読むもの
 
+- `lifetxt tour` -- config 不要の 30 秒デモ。何かを書く前にまず試すと
+  よいです。
+- `lifetxt init` -- 自分用の `life.txt` と config を作成します。
+- `lifetxt add "Buy milk ^tomorrow"` -- 最初の実データを capture します。
+- `lifetxt web` -- それに対してブラウザ UI を開きます。
 - [`life_txt_format_spec.md`](./life_txt_format_spec.md) -- 完全な grammar
 - [`cli.md`](./cli.md) -- すべての command、filter、output format
 - [`use-cases.md`](./use-cases.md) -- 実践的な setup（task tracking、

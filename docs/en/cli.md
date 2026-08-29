@@ -13,6 +13,7 @@ read from standard input.
 ## 1. Command Overview
 
 ```sh
+python -m lifetxt tour
 python -m lifetxt check [path ...]
 python -m lifetxt integrity [path ...]
 python -m lifetxt ids [path ...]
@@ -190,8 +191,8 @@ python -m lifetxt vm run program.life.txt --entry s1
 | `version` | Manage ticket release versions (see [tickets.md](tickets.md)) |
 | `sprint` | Manage ticket sprints (see [tickets.md](tickets.md)) |
 | `rrule` | Expand a recurrence rule into concrete occurrences (see [13.10](#1310-rrule-expanding-a-recurrence)) |
-| `update-check` | Check GitHub for a newer lifetxt release or tag, read-only (see [16](#16-init-and-doctor)) |
-| `update` | Fast-forward the running lifetxt git install to a newer release, tag, or ref (see [16](#16-init-and-doctor)) |
+| `update-check` | Check GitHub for a newer lifetxt release or tag, read-only (see [16](#16-tour-init-and-doctor)) |
+| `update` | Fast-forward the running lifetxt git install to a newer release, tag, or ref (see [16](#16-tour-init-and-doctor)) |
 | `server-init` | Plan-first Ubuntu Server production bootstrap (see [22](#22-server-init)) |
 | `server-update` | Guarded production update for a systemd-managed install (see [23](#23-server-update)) |
 | `remote` | Use authenticated Remote Safe Mode from the CLI: profiles, reads, and ticket writes (see [§20](#20-remote-safe-mode-client-remote)) |
@@ -2792,9 +2793,33 @@ pip install -r requirements-web.txt
 python -m lifetxt serve life.txt
 ```
 
-## 16. `init` and `doctor`
+## 16. `tour`, `init`, and `doctor`
 
-These two commands are the recommended entry points for new users.
+These are the recommended entry points for new users: `tour` needs nothing
+at all, `init` creates your own workspace, and `doctor` checks it.
+
+### 16.0 `tour`
+
+A zero-config, dependency-free first-run demonstration. It builds a tiny,
+built-in Beginner Profile sample -- covering `T`, `E`, and `N` -- entirely in
+memory, runs it through the same `command_center`/"today" engine `lifetxt
+today` uses, and prints both. No `life.txt`, config, network access, or
+existing workspace is required, and nothing is written to disk:
+
+```sh
+python -m lifetxt tour
+python -m lifetxt tour --format json
+```
+
+| Option | Meaning |
+|---|---|
+| `--format {text,json}` | Output format; defaults to `text` |
+| `-o`, `--output FILE` | Write to a file instead of stdout |
+
+The sample's dates are anchored to today's date, so the derived section shows
+a task genuinely due today; run it again tomorrow and the same sample shows a
+different day. The final section names concrete next steps: `init`, `add`,
+and `today`.
 
 ```sh
 python -m lifetxt init
@@ -3256,7 +3281,7 @@ contract.
 ## 23. `server-update`
 
 Guarded production update for a systemd-managed install, wrapping
-`update`'s git fast-forward logic (see [§16](#16-init-and-doctor)) with
+`update`'s git fast-forward logic (see [§16](#16-tour-init-and-doctor)) with
 backup, service stop/start, dependency reinstall, and verification. See
 [docs/deployment/ubuntu-server.md](../deployment/ubuntu-server.md) for the
 full operator-facing runbook this command is designed for.

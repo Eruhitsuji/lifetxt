@@ -50,6 +50,14 @@ def cmd_tui(args):
     if getattr(args, "plain", False) or not _stdout_is_tty():
         sys.stdout.write(render_dashboard_safe(args))
         return 0
+    options = tui_options(args)
+    try:
+        from .tui_bindings import resolve_bindings
+
+        resolve_bindings(options["keymap"], options.get("bindings"))
+    except ValueError as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
     try:
         import curses  # noqa: F401
     except ImportError:
@@ -106,6 +114,10 @@ def tui_options(args):
         "limit": limit,
         "agenda_window": str(agenda_window),
         "id_key": id_key_from_config(config),
+        # Raw, unvalidated tui.bindings overlay -- lifetxt/tui_bindings.py
+        # (used only by the primary curses lifetxt/tui_app.py workspace)
+        # resolves and validates it against the selected keymap.
+        "bindings": tui_config.get("bindings"),
     }
 
 

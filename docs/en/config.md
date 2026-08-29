@@ -505,3 +505,76 @@ require no migration; removing the optional `capture.presets` section is the
 downgrade path. This does not replace the existing `template` command, which
 remains the tool for fixed/multi-line record generation; capture presets are
 for variable-title, same-metadata `quick`/`add` captures.
+
+## Configurable TUI key bindings
+
+`tui.bindings` is a small, explicit overlay on top of the selected
+`tui.keymap` preset (`prompt`, `vim`, or `arrows`) for the interactive
+`lifetxt tui` workspace:
+
+```text
+selected built-in tui.keymap preset  <  tui.bindings overrides
+```
+
+```json
+{
+  "tui": {
+    "keymap": "vim",
+    "bindings": {
+      "move_up": ["k"],
+      "move_down": ["j"],
+      "open": ["enter", "l"],
+      "done": ["x"],
+      "search": ["/"],
+      "help": ["?"],
+      "quit": ["q"]
+    }
+  }
+}
+```
+
+Each key in `tui.bindings` must be one of a fixed set of action ids: `move_up`,
+`move_down`, `first`, `last`, `open`, `toggle_mark`, `done`, `search`,
+`command`, `reload`, `help`, `quit`. The value is one key name or an array of
+key names using the same deterministic symbolic spellings the TUI's own key
+normalization already produces -- `j`, `k`, `g`, `G`, `enter`, `space`, `esc`,
+`ctrl-p`, `up`, `down`, `home`, `end`, and so on. Unmentioned actions keep the
+selected keymap's built-in key(s); a preset applies no `tui.bindings` overlay
+of its own for actions the configuration does not mention.
+
+This creates no new input or command engine: every action still invokes the
+exact same existing TUI handler it always did (`quick`/`add`'s capture path is
+unrelated). Only which physical key reaches which handler is configurable.
+
+Safety and validation:
+
+- A key already bound to two different actions in the same mode is rejected
+  before the TUI starts, naming both actions.
+- An unknown action id or an unsupported key name is rejected rather than
+  silently ignored.
+- Duplicate key aliases for the same action are deduplicated.
+- `edit` (`e`), `undo` (`u`), the page-move keys, the view-cycle key (`Tab`),
+  and the required cancel/exit path (`Esc`, and `Ctrl-C`, which is never
+  routed through this registry at all) stay hard-coded and cannot be
+  reassigned through `tui.bindings` in this first slice -- a custom map can
+  never make the TUI impossible to exit or cancel.
+- The `prompt` keymap has no nav-mode bindings of its own (it never leaves
+  the input bar), so `tui.bindings` has no effect there.
+- The non-interactive/plain dashboard (`lifetxt tui --plain`, or any
+  non-TTY invocation) has no keyboard interaction and is unaffected by
+  `tui.bindings`.
+
+`?` (when the help reference is not already open) shows the *effective*
+bindings, generated from the resolved configuration rather than a second,
+separately maintained copy of the default key list -- so help can never
+describe a key that no longer does what it says.
+
+See [cli.md](cli.md#custom-key-bindings) for the full action list and a
+worked example, and use `lifetxt config explain tui.bindings.*` to inspect
+the registered metadata for one action's contract.
+
+This is an additive configuration-v1 extension. Existing configurations
+without `tui.bindings` behave exactly as before; the existing `tui.keymap`
+values remain the authoritative base preset and are not renamed or
+deprecated. Removing the optional `tui.bindings` section is the downgrade
+path.

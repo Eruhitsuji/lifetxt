@@ -312,3 +312,75 @@ downgrade 時は任意の `capture.presets` セクションを削除すれば元
 これは既存の `template` command を置き換えるものではありません。`template`
 は固定・複数行の record 生成に引き続き使用し、capture preset は
 タイトルが可変で metadata が共通する `quick`/`add` capture 向けです。
+
+## 設定可能な TUI key binding
+
+`tui.bindings` は、interactive な `lifetxt tui` workspace について、選択中の
+`tui.keymap` preset（`prompt`、`vim`、`arrows`）の上に重ねる小さく明示的な
+overlay です：
+
+```text
+選択中の組み込み tui.keymap preset  <  tui.bindings による override
+```
+
+```json
+{
+  "tui": {
+    "keymap": "vim",
+    "bindings": {
+      "move_up": ["k"],
+      "move_down": ["j"],
+      "open": ["enter", "l"],
+      "done": ["x"],
+      "search": ["/"],
+      "help": ["?"],
+      "quit": ["q"]
+    }
+  }
+}
+```
+
+`tui.bindings` の各 key は、固定された action id の集合（`move_up`、
+`move_down`、`first`、`last`、`open`、`toggle_mark`、`done`、`search`、
+`command`、`reload`、`help`、`quit`）のいずれかである必要があります。
+値は、TUI 自身の key normalization がすでに生成している決定的な symbolic な
+綴り（`j`、`k`、`g`、`G`、`enter`、`space`、`esc`、`ctrl-p`、`up`、`down`、
+`home`、`end` など）を使った 1 つの key 名、またはその配列です。指定しなかった
+action は選択中の keymap の組み込み key のままです。設定で言及されなかった
+action には preset 独自の `tui.bindings` overlay は適用されません。
+
+これにより新しい入力/command エンジンは作られません。どの action も
+これまでと全く同じ既存の TUI handler を呼び出します（`quick`/`add` の
+capture path とは無関係です）。設定できるのは、どの物理 key がどの
+handler に届くかだけです。
+
+安全性と validation：
+
+- 同じ key が同一 mode 内で 2 つの異なる action に割り当てられている場合、
+  TUI 起動前に両方の action 名を明示して拒否されます。
+- 未知の action id や未対応の key 名は、黙って無視されず拒否されます。
+- 同一 action に対する重複した key の別名は重複排除されます。
+- `edit`（`e`）、`undo`（`u`）、page 移動 key、view 循環 key（`Tab`）、
+  必須の cancel/exit 経路（`Esc`、および、この registry を一切経由しない
+  `Ctrl-C`）は、この最初の slice では hard-code されたままで
+  `tui.bindings` から再割り当てできません -- custom map によって TUI が
+  終了・cancel できなくなることはありません。
+- `prompt` keymap には独自の nav-mode binding が存在しない（常に input bar
+  に留まる）ため、`tui.bindings` はそこでは効果を持ちません。
+- 非 interactive/plain dashboard（`lifetxt tui --plain`、または非 TTY での
+  実行）にはキー操作がなく、`tui.bindings` の影響を受けません。
+
+`?`（help reference がまだ開いていないとき）は、既定 key 一覧の
+別途管理された 2 つ目のコピーではなく、解決済みの設定から生成された
+*実効* bindings を表示します。そのため help が実際とは異なる key を
+説明することはありません。
+
+完全な action 一覧と実例は
+[cli.md](cli.md#key-binding-のカスタマイズ) を、1 つの action の
+契約についての登録済みメタデータは
+`lifetxt config explain tui.bindings.*` を参照してください。
+
+これは config version 1 に対する追加的な拡張です。`tui.bindings` を持たない
+既存設定は従来どおり動作します。既存の `tui.keymap` の値は引き続き
+authoritative な base preset であり、rename も deprecate もされません。
+downgrade 時は任意の `tui.bindings` セクションを削除すれば元に戻ります。

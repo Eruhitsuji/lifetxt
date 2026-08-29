@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">lifetxt symbol</title>
+  <desc id="desc">A structured text document with a growing sprout, representing a durable life record in plain text.</desc>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M126 64h194l74 74v202c0 54-38 92-92 92H126c-50 0-88-38-88-88V152c0-50 38-88 88-88Z" stroke="#27343D" stroke-width="28"/>
+    <path d="M320 66v64c0 16 12 28 28 28h44" stroke="#27343D" stroke-width="28"/>
+    <circle cx="128" cy="206" r="13" fill="#2E9F8F" stroke="none"/>
+    <path d="M174 206h116" stroke="#27343D" stroke-width="24"/>
+    <circle cx="128" cy="274" r="13" fill="#2E9F8F" stroke="none"/>
+    <path d="M174 274h94" stroke="#27343D" stroke-width="24"/>
+    <circle cx="128" cy="342" r="13" fill="#2E9F8F" stroke="none"/>
+    <path d="M174 342h66" stroke="#27343D" stroke-width="24"/>
+    <path d="M322 430c4-65 24-112 62-144" stroke="#2E9F8F" stroke-width="24"/>
+    <path d="M371 325c-38 4-66-18-72-57 40-4 70 16 78 52" stroke="#2E9F8F" stroke-width="24"/>
+    <path d="M374 321c8-42 40-68 82-64-2 42-28 70-74 72" stroke="#2E9F8F" stroke-width="24"/>
+  </g>
+</svg>

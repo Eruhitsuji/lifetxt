@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 240" role="img" aria-labelledby="title desc">
+  <title id="title">lifetxt logo</title>
+  <desc id="desc">lifetxt symbol with the lifetxt wordmark and tagline Your life. In text. Connected.</desc>
+  <g transform="translate(24 16) scale(.39)">
+    <path d="M126 64h194l74 74v202c0 54-38 92-92 92H126c-50 0-88-38-88-88V152c0-50 38-88 88-88Z" fill="none" stroke="#27343D" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M320 66v64c0 16 12 28 28 28h44" fill="none" stroke="#27343D" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="128" cy="206" r="13" fill="#2E9F8F"/>
+    <path d="M174 206h116M174 274h94M174 342h66" fill="none" stroke="#27343D" stroke-width="24" stroke-linecap="round"/>
+    <circle cx="128" cy="274" r="13" fill="#2E9F8F"/><circle cx="128" cy="342" r="13" fill="#2E9F8F"/>
+    <path d="M322 430c4-65 24-112 62-144M371 325c-38 4-66-18-72-57 40-4 70 16 78 52M374 321c8-42 40-68 82-64-2 42-28 70-74 72" fill="none" stroke="#2E9F8F" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="245" y="130" fill="#27343D" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="112" font-weight="650" letter-spacing="-4">life<tspan fill="#2E9F8F">txt</tspan></text>
+  <text x="250" y="184" fill="#66737A" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="28" font-weight="400" letter-spacing="1">Your life. In text. Connected.</text>
+</svg>

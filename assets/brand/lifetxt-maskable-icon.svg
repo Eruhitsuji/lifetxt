@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc" data-lifetxt-geometry="v2">
+  <title id="title">lifetxt maskable app icon</title>
+  <desc id="desc">Maskable graphite app tile using the same centered notebook and sprout geometry at a safe-zone scale.</desc>
+  <rect width="512" height="512" fill="#27343D"/>
+  <g transform="translate(30.72 30.72) scale(.88)">
+    <g data-lifetxt-base="v2" shape-rendering="geometricPrecision">
+      <path data-lifetxt-part="notebook" d="M154 84H270L318 132V364C318 384 306 396 286 396H154C134 396 122 384 122 364V116C122 96 134 84 154 84Z" fill="#FFFFFF"/>
+      <path data-lifetxt-part="fold" d="M270 84V116C270 126 276 132 286 132H318Z" fill="#27343D"/>
+      <circle data-lifetxt-part="row-1-dot" cx="162" cy="184" r="8" fill="#27343D"/>
+      <rect data-lifetxt-part="row-1-line" x="190" y="176" width="78" height="16" rx="8" fill="#27343D"/>
+      <circle data-lifetxt-part="row-2-dot" cx="162" cy="242" r="8" fill="#27343D"/>
+      <rect data-lifetxt-part="row-2-line" x="190" y="234" width="64" height="16" rx="8" fill="#27343D"/>
+      <circle data-lifetxt-part="row-3-dot" cx="162" cy="300" r="8" fill="#27343D"/>
+      <rect data-lifetxt-part="row-3-line" x="190" y="292" width="50" height="16" rx="8" fill="#27343D"/>
+      <path data-lifetxt-part="stem" d="M314 420C317 384 325 352 346 326C350 321 359 324 356 331C338 354 331 384 330 420Z" fill="#7ADCC8"/>
+      <path data-lifetxt-part="leaf-left" d="M344 347C317 349 299 333 296 307C321 305 341 320 347 342C348 345 347 346 344 347Z" fill="#7ADCC8"/>
+      <path data-lifetxt-part="leaf-right" d="M351 344C356 320 370 306 390 304C389 325 376 340 355 347C352 347 350 346 351 344Z" fill="#7ADCC8"/>
+    </g>
+  </g>
+</svg>

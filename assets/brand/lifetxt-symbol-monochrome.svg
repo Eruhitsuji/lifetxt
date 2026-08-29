@@ -1,17 +1,23 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc" data-lifetxt-geometry="v2">
   <title id="title">lifetxt monochrome symbol</title>
-  <desc id="desc">Monochrome structured text document and sprout symbol.</desc>
-  <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M126 64h194l74 74v202c0 54-38 92-92 92H126c-50 0-88-38-88-88V152c0-50 38-88 88-88Z" stroke-width="28"/>
-    <path d="M320 66v64c0 16 12 28 28 28h44" stroke-width="28"/>
-    <circle cx="128" cy="206" r="13" fill="currentColor" stroke="none"/>
-    <path d="M174 206h116" stroke-width="24"/>
-    <circle cx="128" cy="274" r="13" fill="currentColor" stroke="none"/>
-    <path d="M174 274h94" stroke-width="24"/>
-    <circle cx="128" cy="342" r="13" fill="currentColor" stroke="none"/>
-    <path d="M174 342h66" stroke-width="24"/>
-    <path d="M322 430c4-65 24-112 62-144" stroke-width="24"/>
-    <path d="M371 325c-38 4-66-18-72-57 40-4 70 16 78 52" stroke-width="24"/>
-    <path d="M374 321c8-42 40-68 82-64-2 42-28 70-74 72" stroke-width="24"/>
+  <desc id="desc">Monochrome centered portrait notebook and sprout symbol.</desc>
+  <defs>
+    <mask id="notebook-cutouts" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
+      <rect width="512" height="512" fill="black"/>
+      <path data-lifetxt-part="notebook" d="M154 84H270L318 132V364C318 384 306 396 286 396H154C134 396 122 384 122 364V116C122 96 134 84 154 84Z" fill="white"/>
+      <path data-lifetxt-part="fold" d="M270 84V116C270 126 276 132 286 132H318Z" fill="black"/>
+      <circle data-lifetxt-part="row-1-dot" cx="162" cy="184" r="8" fill="black"/>
+      <rect data-lifetxt-part="row-1-line" x="190" y="176" width="78" height="16" rx="8" fill="black"/>
+      <circle data-lifetxt-part="row-2-dot" cx="162" cy="242" r="8" fill="black"/>
+      <rect data-lifetxt-part="row-2-line" x="190" y="234" width="64" height="16" rx="8" fill="black"/>
+      <circle data-lifetxt-part="row-3-dot" cx="162" cy="300" r="8" fill="black"/>
+      <rect data-lifetxt-part="row-3-line" x="190" y="292" width="50" height="16" rx="8" fill="black"/>
+    </mask>
+  </defs>
+  <rect x="0" y="0" width="512" height="512" fill="currentColor" mask="url(#notebook-cutouts)"/>
+  <g data-lifetxt-base="v2">
+    <path data-lifetxt-part="stem" d="M314 420C317 384 325 352 346 326C350 321 359 324 356 331C338 354 331 384 330 420Z" fill="currentColor"/>
+    <path data-lifetxt-part="leaf-left" d="M344 347C317 349 299 333 296 307C321 305 341 320 347 342C348 345 347 346 344 347Z" fill="currentColor"/>
+    <path data-lifetxt-part="leaf-right" d="M351 344C356 320 370 306 390 304C389 325 376 340 355 347C352 347 350 346 351 344Z" fill="currentColor"/>
   </g>
 </svg>

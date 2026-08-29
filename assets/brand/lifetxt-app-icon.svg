@@ -1,16 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc" data-lifetxt-geometry="v2">
   <title id="title">lifetxt app icon</title>
-  <desc id="desc">Rounded graphite app tile containing a white text document and teal sprout.</desc>
+  <desc id="desc">Rounded graphite app tile with the centered portrait notebook and sprout symbol.</desc>
   <rect x="24" y="24" width="464" height="464" rx="108" fill="#27343D"/>
-  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M150 110h142l62 62v134c0 42-28 70-70 70H150c-40 0-68-28-68-68V178c0-40 28-68 68-68Z" stroke="#FFFFFF" stroke-width="24"/>
-    <path d="M292 112v48c0 14 10 24 24 24h36" stroke="#FFFFFF" stroke-width="24"/>
-    <circle cx="154" cy="220" r="10" fill="#7ADCC8" stroke="none"/>
-    <path d="M190 220h76" stroke="#FFFFFF" stroke-width="20"/>
-    <circle cx="154" cy="276" r="10" fill="#7ADCC8" stroke="none"/>
-    <path d="M190 276h60" stroke="#FFFFFF" stroke-width="20"/>
-    <path d="M287 400c5-50 21-88 52-114" stroke="#7ADCC8" stroke-width="22"/>
-    <path d="M329 320c-31 3-54-15-58-46 32-3 57 13 63 42" stroke="#7ADCC8" stroke-width="22"/>
-    <path d="M334 316c7-34 32-55 66-52-2 34-23 56-60 58" stroke="#7ADCC8" stroke-width="22"/>
+  <g data-lifetxt-base="v2" shape-rendering="geometricPrecision">
+    <path data-lifetxt-part="notebook" d="M154 84H270L318 132V364C318 384 306 396 286 396H154C134 396 122 384 122 364V116C122 96 134 84 154 84Z" fill="#FFFFFF"/>
+    <path data-lifetxt-part="fold" d="M270 84V116C270 126 276 132 286 132H318Z" fill="#27343D"/>
+    <circle data-lifetxt-part="row-1-dot" cx="162" cy="184" r="8" fill="#27343D"/>
+    <rect data-lifetxt-part="row-1-line" x="190" y="176" width="78" height="16" rx="8" fill="#27343D"/>
+    <circle data-lifetxt-part="row-2-dot" cx="162" cy="242" r="8" fill="#27343D"/>
+    <rect data-lifetxt-part="row-2-line" x="190" y="234" width="64" height="16" rx="8" fill="#27343D"/>
+    <circle data-lifetxt-part="row-3-dot" cx="162" cy="300" r="8" fill="#27343D"/>
+    <rect data-lifetxt-part="row-3-line" x="190" y="292" width="50" height="16" rx="8" fill="#27343D"/>
+    <path data-lifetxt-part="stem" d="M314 420C317 384 325 352 346 326C350 321 359 324 356 331C338 354 331 384 330 420Z" fill="#7ADCC8"/>
+    <path data-lifetxt-part="leaf-left" d="M344 347C317 349 299 333 296 307C321 305 341 320 347 342C348 345 347 346 344 347Z" fill="#7ADCC8"/>
+    <path data-lifetxt-part="leaf-right" d="M351 344C356 320 370 306 390 304C389 325 376 340 355 347C352 347 350 346 351 344Z" fill="#7ADCC8"/>
   </g>
 </svg>

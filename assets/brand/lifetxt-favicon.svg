@@ -1,10 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect x="2" y="2" width="60" height="60" rx="14" fill="#27343D"/>
-  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M18 13h18l9 9v17c0 6-4 10-10 10H18c-6 0-10-4-10-10V23c0-6 4-10 10-10Z" stroke="#FFFFFF" stroke-width="4"/>
-    <path d="M36 14v6c0 2 2 4 4 4h4" stroke="#FFFFFF" stroke-width="4"/>
-    <path d="M18 29h14M18 36h10" stroke="#FFFFFF" stroke-width="3.5"/>
-    <path d="M37 51c1-8 4-14 9-18" stroke="#7ADCC8" stroke-width="4"/>
-    <path d="M45 38c-5 1-9-2-10-7 6-1 10 2 11 6M46 37c1-6 5-9 11-9 0 6-4 10-10 10" stroke="#7ADCC8" stroke-width="4"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="lifetxt" data-lifetxt-geometry="v2">
+  <rect x="24" y="24" width="464" height="464" rx="108" fill="#27343D"/>
+  <g data-lifetxt-base="v2" shape-rendering="geometricPrecision">
+    <path data-lifetxt-part="notebook" d="M154 84H270L318 132V364C318 384 306 396 286 396H154C134 396 122 384 122 364V116C122 96 134 84 154 84Z" fill="#FFFFFF"/>
+    <path data-lifetxt-part="fold" d="M270 84V116C270 126 276 132 286 132H318Z" fill="#27343D"/>
+    <circle data-lifetxt-part="row-1-dot" cx="162" cy="184" r="8" fill="#27343D"/>
+    <rect data-lifetxt-part="row-1-line" x="190" y="176" width="78" height="16" rx="8" fill="#27343D"/>
+    <circle data-lifetxt-part="row-2-dot" cx="162" cy="242" r="8" fill="#27343D"/>
+    <rect data-lifetxt-part="row-2-line" x="190" y="234" width="64" height="16" rx="8" fill="#27343D"/>
+    <circle data-lifetxt-part="row-3-dot" cx="162" cy="300" r="8" fill="#27343D"/>
+    <rect data-lifetxt-part="row-3-line" x="190" y="292" width="50" height="16" rx="8" fill="#27343D"/>
+    <path data-lifetxt-part="stem" d="M314 420C317 384 325 352 346 326C350 321 359 324 356 331C338 354 331 384 330 420Z" fill="#7ADCC8"/>
+    <path data-lifetxt-part="leaf-left" d="M344 347C317 349 299 333 296 307C321 305 341 320 347 342C348 345 347 346 344 347Z" fill="#7ADCC8"/>
+    <path data-lifetxt-part="leaf-right" d="M351 344C356 320 370 306 390 304C389 325 376 340 355 347C352 347 350 346 351 344Z" fill="#7ADCC8"/>
   </g>
 </svg>

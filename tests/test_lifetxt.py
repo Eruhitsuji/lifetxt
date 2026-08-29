@@ -2409,6 +2409,97 @@ class LifeTxtQuickCliTests(unittest.TestCase):
         self.assertIn("requires a non-empty title", stderr)
 
 
+class LifeTxtAddAliasCliTests(unittest.TestCase):
+    """`add` is a top-level alias for `quick`/`q` (#591): same parser, same
+    handler, same mutation path -- these mirror LifeTxtQuickCliTests's own
+    cases through the `add` spelling rather than re-testing quick's behavior
+    a second time."""
+
+    def test_add_appends_task_to_file(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            stdout, stderr, code = run_cli("add", "Buy_milk", "--append", path)
+            self.assertEqual(0, code, stderr)
+            self.assertIn("Buy_milk", stdout)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("[ ] T Buy_milk", content)
+
+    def test_add_expands_capture_shorthand_like_quick(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            stdout, stderr, code = run_cli(
+                "add",
+                "Buy milk @home #errand !high ^tomorrow",
+                "--append",
+                path,
+            )
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn('"Buy milk"', content)
+            self.assertIn("project:home", content)
+            self.assertIn("tag:errand", content)
+            self.assertIn("priority:high", content)
+            import datetime as dt
+
+            tomorrow_iso = (dt.date.today() + dt.timedelta(days=1)).isoformat()
+            self.assertIn("due:%s" % tomorrow_iso, content)
+
+    def test_add_explicit_flag_overrides_shorthand(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            stdout, stderr, code = run_cli(
+                "add",
+                "Buy milk @home",
+                "--project",
+                "errands",
+                "--append",
+                path,
+            )
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("project:errands", content)
+            self.assertNotIn("project:home", content)
+
+    def test_add_reads_title_from_stdin(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            stdout, stderr, code = run_cli(
+                "add", "-", "--append", path, input_text="Captured_from_stdin\n"
+            )
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("Captured_from_stdin", content)
+
+    def test_add_stdin_empty_title_fails_loud(self):
+        stdout, stderr, code = run_cli(
+            "add", "-", "--append", "unused.life.txt", input_text="\n"
+        )
+        self.assertEqual(1, code)
+        self.assertIn("requires a non-empty title", stderr)
+
+    def test_add_help_names_it_as_a_quick_capture_alias(self):
+        stdout, stderr, code = run_cli("add", "--help")
+        self.assertEqual(0, code, stderr)
+        self.assertIn("quick", stdout.lower())
+
+    def test_quick_and_q_remain_unaffected_by_the_add_alias(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            quick_path = os.path.join(temp_dir, "quick.txt")
+            q_path = os.path.join(temp_dir, "q.txt")
+            _, quick_err, quick_code = run_cli("quick", "Task", "--append", quick_path)
+            _, q_err, q_code = run_cli("q", "Task", "--append", q_path)
+            self.assertEqual(0, quick_code, quick_err)
+            self.assertEqual(0, q_code, q_err)
+            with open(quick_path, encoding="utf-8") as f:
+                self.assertIn("[ ] T Task", f.read())
+            with open(q_path, encoding="utf-8") as f:
+                self.assertIn("[ ] T Task", f.read())
+
+
 class LifeTxtDoneCliTests(unittest.TestCase):
     SOURCE_TEXT = "[ ] T Buy_milk id:t001\n[ ] T Clean_house id:t002\n[ ] T Walk_dog\n"
 

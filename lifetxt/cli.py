@@ -2429,7 +2429,7 @@ def build_parser():
 
     quick = subparsers.add_parser(
         "quick",
-        aliases=["q"],
+        aliases=["q", "add"],
         help="Quickly capture a new item and append it to a file.",
     )
     quick.add_argument(

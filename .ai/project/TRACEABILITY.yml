@@ -8653,6 +8653,128 @@ traceability:
         than being eagerly imported into every session.
       status: implemented
 
+    - requirement_id: req-cli-first-run-tour
+      capability_id: cap-adoption-onboarding-commands
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/590
+      pull_request: null
+      changed_files_or_scope:
+        - Add lifetxt tour, a zero-config, dependency-free first-run demonstration
+        - lifetxt/tour.py
+        - lifetxt/entrypoint.py
+        - lifetxt/extra_cli.py
+        - lifetxt/completion.py
+        - tests/test_tour.py
+        - tests/test_lifetxt.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+        - docs/en/getting-started.md
+        - docs/ja/getting-started.md
+        - readme.md
+      tests_or_evidence:
+        - tests/test_tour.py (11 tests) covering sample vocabulary, command_center() reuse, no-write guarantee, and deterministic rendering
+        - tests/test_lifetxt.py LifeTxtTourCliTests (7 tests, real subprocess, clean temp cwd)
+        - "live: python -m lifetxt tour in a genuinely empty scratch directory produced a real 'Due today (1): Buy milk' derived section and left the directory with zero files afterward"
+        - python -m unittest tests.test_tour tests.test_lifetxt.LifeTxtTourCliTests tests.test_completion_surfaces tests.test_surface_runtime -> Ran 98 tests, OK
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: null
+      notes: >-
+        Registered via the existing extended-entrypoint pattern
+        (entrypoint.py's _EXTRA_COMMANDS / extra_cli.py), per the issue's
+        own explicit steer, rather than growing cli.py's already very large
+        argparse tree. See cap-adoption-onboarding-commands's own notes for
+        the full account of why command_center() reuse rather than a
+        reimplemented today/agenda rule was chosen, and why a dedicated
+        installed-wheel smoke addition was judged out of proportion given
+        the command's zero repository-relative file access by construction.
+      status: implemented
+
+    - requirement_id: req-cli-add-alias
+      capability_id: cap-adoption-onboarding-commands
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/591
+      pull_request: null
+      changed_files_or_scope:
+        - Register `add` as an additional argparse alias on the existing `quick` subparser, alongside `q`
+        - lifetxt/cli.py
+        - lifetxt/completion.py
+        - tests/test_lifetxt.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - tests/test_lifetxt.py LifeTxtAddAliasCliTests (7 tests): plain capture, shorthand expansion, explicit-flag-over-shorthand precedence, stdin, empty-stdin refusal, --help, quick/q unaffected
+        - python -m unittest tests.test_lifetxt.LifeTxtAddAliasCliTests tests.test_lifetxt.LifeTxtQuickCliTests tests.test_completion_surfaces tests.test_completion_values tests.test_surface_runtime -> Ran 96 tests, OK
+        - "live: python -m lifetxt add \"Buy_milk\" --append ... and python -m lifetxt quick \"Buy_milk\" --append ... produced the identical [ ] T Buy_milk line"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+      release_or_deployment: null
+      notes: >-
+        Zero duplicated argument or capture-shorthand logic: `add`, `quick`,
+        and `q` share one argparse subparser and one handler
+        (command_quick), reusing argparse's own multi-name subparser
+        support (aliases=["q", "add"]) rather than a second parser
+        definition. See cap-adoption-onboarding-commands's own notes.
+      status: implemented
+
+    - requirement_id: req-cli-web-launcher
+      capability_id: cap-adoption-onboarding-commands
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/592
+      pull_request: null
+      changed_files_or_scope:
+        - Extract command_serve's config/workspace/host/port resolution and app construction into a shared _prepare_serve helper, reused unmodified by the new `web` command
+        - Add a browser-readiness poll against the server's own existing, unauthenticated /api/health route
+        - lifetxt/cli.py
+        - lifetxt/completion.py
+        - tests/test_serve_cli.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - tests/test_serve_cli.py WebCliTests (4 tests) and OpenBrowserWhenReadyTests (5 tests)
+        - python -m unittest tests.test_serve_cli tests.test_completion_surfaces tests.test_completion_values tests.test_surface_runtime -> Ran 90 tests, OK
+        - "live: a real python -m lifetxt web --no-open run answered a real GET /api/health over an actual bound socket; a second real run without --no-open genuinely launched this sandbox's default browser, which then loaded the served page and drove a full round of real API calls against the running server"
+        - "live: python -m lifetxt serve life.txt --read-only unaffected after the _prepare_serve extraction"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+      release_or_deployment: null
+      notes: >-
+        One authoritative Web runtime: `serve` and `web` share one
+        _prepare_serve()/_add_serve_core_arguments() implementation:
+        --mcp remains serve-only. See cap-adoption-onboarding-commands's
+        own notes for the full account, including why the existing
+        /api/health route (already exempt from bearer auth) was reused as
+        the readiness signal instead of a fixed delay.
+      status: implemented
+
+    - requirement_id: req-cli-unified-import
+      capability_id: cap-adoption-onboarding-commands
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/593
+      pull_request: null
+      changed_files_or_scope:
+        - Extract import-ics's flag registration into a shared _add_import_core_arguments helper and add a new `import` routing-only dispatcher inferring --preset from the input extension
+        - lifetxt/cli.py
+        - lifetxt/completion.py
+        - tests/test_lifetxt.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - tests/test_lifetxt.py LifeTxtImportCliTests (10 tests): extension-based ics/markdown inference with byte-for-byte parity against import-ics --preset ..., explicit todoist/github delegation with the same parity check, ambiguous .csv/.json refusal naming --preset and the file, stdin refusal, --help, import-ics unaffected
+        - python -m unittest tests.test_lifetxt.LifeTxtImportCliTests tests.test_lifetxt.LifeTxtIcsImportCliTests tests.test_completion_surfaces tests.test_completion_values tests.test_surface_runtime -> Ran 98 tests, OK
+        - "live: python -m lifetxt import calendar.ics / tasks.md / todoist.csv --preset todoist / github_issues.json --preset github each produced output byte-for-byte identical to the equivalent import-ics --preset ... invocation"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+      release_or_deployment: null
+      notes: >-
+        Routing-only dispatcher: no second ICS/Markdown/Todoist/GitHub
+        conversion implementation. command_import() resolves --preset (from
+        a small closed extension map, or explicitly required otherwise)
+        then delegates unchanged to the existing command_import_ics(). See
+        cap-adoption-onboarding-commands's own notes.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

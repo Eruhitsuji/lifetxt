@@ -40,3 +40,9 @@ __pycache__/
 # tauri-build on every `cargo build` (ACL/capability schema files).
 desktop/src-tauri/target/
 desktop/src-tauri/gen/
+
+# Bundled standalone lifetxt runtime staged by
+# packaging/tauri-desktop/prepare_bundled_runtime.py (#574). Per-platform
+# build output; .gitkeep documents the directory's purpose.
+desktop/src-tauri/resources/bin/*
+!desktop/src-tauri/resources/bin/.gitkeep

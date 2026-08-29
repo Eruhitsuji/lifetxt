@@ -1,0 +1,4 @@
+The standalone lifetxt binary bundled into lifetxt Desktop installers
+(#574) is copied here by packaging/tauri-desktop/prepare_bundled_runtime.py
+before `cargo tauri build` runs. It is a per-platform build artifact and is
+gitignored -- see that script and docs/en/distribution.md#7-standalone-lifetxt-desktop.

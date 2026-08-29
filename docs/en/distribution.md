@@ -554,6 +554,117 @@ part of the initial conda-forge recipe. A future recipe revision (or a
 separate `lifetxt-web`/`lifetxt-tui` output) is a candidate follow-up, not
 part of this slice.
 
+## 7. Standalone lifetxt Desktop
+
+Tracks [#574](https://github.com/Eruhitsuji/lifetxt/issues/574).
+
+### Target UX for the desktop app
+
+```text
+download installer -> install lifetxt Desktop -> launch -> the app appears
+```
+
+No prior Python, pip, uv, Rust, or lifetxt CLI install required.
+
+### Architecture: still a companion process, now with a bundled runtime
+
+lifetxt Desktop ([`desktop/`](../../desktop/), issue #233's original design)
+is a thin Tauri window that spawns `lifetxt serve` as a child process and
+displays the resulting Web UI — it has never contained life.txt logic of
+its own, and #574 does not change that. What changes is *which* `lifetxt`
+it spawns: the app's own installer now bundles the exact standalone binary
+from section 3 under its resource directory, and the shell prefers that
+bundled copy over anything found on `PATH`:
+
+```text
+resolve backend:
+  1. <app resource dir>/bin/lifetxt(.exe)   <- bundled by this app's own installer (#574)
+  2. lifetxt                                 <- PATH, unchanged from #233
+  3. python -m lifetxt                       <- PATH, unchanged from #233
+  4. python3 -m lifetxt                      <- PATH, unchanged from #233
+  5. py -m lifetxt                           <- PATH, unchanged from #233
+```
+
+A source build (`cargo build`/`cargo run` with nothing copied into
+`resources/bin/`) finds no bundled candidate and falls straight through to
+step 2 — pre-#574 developer workflow is unchanged. No lifetxt application
+logic is reimplemented in Rust/Tauri; the bundled artifact *is* the same
+PyInstaller binary from section 3, not a second build.
+
+### Building an installer
+
+```sh
+pip install ".[web,tui]" pyinstaller
+python packaging/tauri-desktop/prepare_bundled_runtime.py   # builds #570's binary, stages it into resources/bin/
+python scripts/set_tauri_desktop_version.py --version 1.0.0  # ties the installer's own version to the release
+cargo install tauri-cli --version "^2" --locked
+cd desktop/src-tauri && cargo tauri build
+```
+
+`.github/workflows/desktop-installers.yml` runs this same sequence
+natively on `windows-latest`, `macos-latest` (arm64), and `ubuntu-latest`
+for every `v*.*.*` tag, producing MSI/NSIS, dmg, and deb/AppImage
+artifacts respectively (Tauri's own per-platform default bundle targets),
+and attaches them to the matching GitHub Release.
+
+### Version traceability
+
+The installer's own version (`tauri.conf.json`) is set to the exact same
+version as the bundled lifetxt runtime for every release —
+`scripts/set_tauri_desktop_version.py` ties them 1:1 rather than
+versioning the desktop shell independently, satisfying the issue's
+"Desktop and bundled-runtime versions are reproducible and tied to an
+immutable lifetxt release" requirement in the simplest way that is still
+correct.
+
+### Data storage
+
+Unchanged from #233: `life.txt` and configuration remain fully external,
+user-owned files — the app has no application-specific database and locks
+nothing inside itself. This slice does not add a first-run file
+picker/"create or open life.txt" affordance to the Tauri shell itself
+(that flow already lives in the served Web UI, which this shell displays
+unmodified); adding a native equivalent is an explicit, unimplemented
+follow-up rather than something silently missing.
+
+### Error surfacing
+
+If no usable runtime is found — bundled or on PATH — or the bundled/found
+runtime fails to become healthy within 15 seconds, the window shows a
+plain-language explanation of what was tried (bundled runtime, then the
+PATH candidates) instead of staying blank or frozen. A bundled runtime
+that exists but fails its own `--version` probe (a corrupted install, or
+the wrong architecture) falls through to PATH discovery rather than
+failing outright, so a broken bundle does not necessarily strand a user
+who happens to also have lifetxt installed separately.
+
+### Verification performed for the bundled runtime
+
+On this project's own Windows sandbox: built the section-3 standalone
+binary, confirmed a source `cargo run` correctly finds nothing at its
+resolved (dev-mode) resource path and falls through to PATH — proving that
+issue #233's original behavior is unaffected — then staged the binary at
+that same resolved location to reproduce what Tauri's installer bundler
+places in a real install, launched the app, and confirmed via the real
+Windows process tree that `lifetxt_desktop.exe` spawned exactly
+`resources\bin\lifetxt.exe serve --host 127.0.0.1 --port <port>` as its
+child process. A full `cargo tauri build` producing a real installer was
+not completed in this sandbox — installing `tauri-cli` hit a pre-existing,
+environment-specific toolchain conflict unrelated to this change (see
+[`desktop/README.md`](../../desktop/README.md#verification-performed-for-the-bundled-runtime-path-574)
+for the exact failure and why it is believed not to affect GitHub's
+clean-runner CI). This is recorded honestly as an open verification gap,
+not claimed as tested.
+
+### Known limitations for the desktop installer
+
+- Code signing / notarization are not implemented, matching section 3's
+  own recorded limitation for the underlying standalone binaries.
+- macOS/Linux desktop-installer builds are wired in CI but have not been
+  verified on this project's own (Windows-only) development sandbox.
+- Auto-update, a system tray icon, and native menu bar remain explicit,
+  unimplemented follow-ups per the issue's own scope.
+
 ### Contributor vs. end-user installs
 
 Contributors changing lifetxt's own source still use an editable install

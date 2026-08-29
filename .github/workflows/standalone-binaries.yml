@@ -192,6 +192,11 @@ jobs:
         # and this job has the same unchecked-out structure.
         uses: actions/checkout@v5
 
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
       - name: Download every platform artifact
         uses: actions/download-artifact@v6
         with:
@@ -214,6 +219,15 @@ jobs:
         run: |
           set -e
           if gh release view "$TAG" >/dev/null 2>&1; then
+            # release.yml may have already published its own SHA256SUMS
+            # (covering the wheel and sdist) for this tag; merge with it
+            # instead of --clobber-ing it away, so the published manifest
+            # keeps covering every previously uploaded artifact regardless
+            # of which workflow runs first. See #583.
+            gh release download "$TAG" --pattern SHA256SUMS --output existing-SHA256SUMS --clobber || true
+            python scripts/merge_sha256sums.py \
+              existing-SHA256SUMS dist/release/SHA256SUMS \
+              --output dist/release/SHA256SUMS
             gh release upload "$TAG" dist/release/* --clobber
           else
             gh release create "$TAG" dist/release/* \

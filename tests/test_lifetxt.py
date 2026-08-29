@@ -10583,6 +10583,73 @@ class LifeTxtCheckLineTests(unittest.TestCase):
         self.assertEqual(result["item_count"], 1)
 
 
+class LifeTxtGenericCustomFieldCliTests(unittest.TestCase):
+    """CLI-level integration for the generic custom_fields registry (#596),
+    exercised through the real ``lifetxt check`` entry point end to end."""
+
+    def _run_check(self, life_text, config_data):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            life_path = os.path.join(temp_dir, "life.txt")
+            config_path = os.path.join(temp_dir, "config.json")
+            with open(life_path, "w", encoding="utf-8") as handle:
+                handle.write(life_text)
+            with open(config_path, "w", encoding="utf-8") as handle:
+                json.dump(config_data, handle)
+            return run_cli(
+                "--config", config_path, "check", life_path, "--format", "json"
+            )
+
+    def test_declared_field_is_valid_and_not_flagged_as_custom(self):
+        config = {
+            "custom_fields": {
+                "energy": {
+                    "type": "enum",
+                    "values": ["low", "medium", "high"],
+                    "kinds": ["N"],
+                }
+            }
+        }
+        out, err, rc = self._run_check('[N] N "Afternoon energy" energy:high\n', config)
+        self.assertEqual(rc, 0, err)
+        diagnostics = json.loads(out)
+        codes = [d["code"] for d in diagnostics]
+        self.assertNotIn("W106", codes)
+
+    def test_invalid_declared_value_fails_the_check(self):
+        config = {
+            "custom_fields": {
+                "energy": {
+                    "type": "enum",
+                    "values": ["low", "medium", "high"],
+                    "kinds": ["N"],
+                }
+            }
+        }
+        out, err, rc = self._run_check(
+            '[N] N "Afternoon energy" energy:extreme\n', config
+        )
+        self.assertEqual(rc, 1, err)
+        diagnostics = json.loads(out)
+        codes = [d["code"] for d in diagnostics]
+        self.assertIn("CF006", codes)
+
+    def test_undeclared_custom_key_is_unaffected(self):
+        out, err, rc = self._run_check(
+            '[N] N "Note" mystery_key:1\n', {"custom_fields": {}}
+        )
+        self.assertEqual(rc, 0, err)
+        diagnostics = json.loads(out)
+        codes = [d["code"] for d in diagnostics]
+        self.assertIn("W106", codes)
+
+    def test_no_custom_fields_configured_behaves_as_today(self):
+        out, err, rc = self._run_check('[N] N "Note" mystery_key:1\n', {})
+        self.assertEqual(rc, 0, err)
+        diagnostics = json.loads(out)
+        codes = [d["code"] for d in diagnostics]
+        self.assertIn("W106", codes)
+
+
 class LifeTxtSummaryCommandTests(unittest.TestCase):
     """Tests for the summary command output."""
 

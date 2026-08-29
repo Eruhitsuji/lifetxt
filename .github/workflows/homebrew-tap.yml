@@ -1,0 +1,100 @@
+name: Homebrew tap
+
+# Generates Formula/lifetxt.rb from a release's standalone macOS/Linux
+# binaries (#570) and pushes it to the Eruhitsuji/homebrew-tap repository,
+# so `brew install Eruhitsuji/tap/lifetxt` installs the matching version.
+#
+# Unlike winget/conda-forge (external, community-owned repos this project
+# does not push to automatically), the tap is this project's own repository
+# -- see docs/en/distribution.md#5-homebrew-tap for why that distinction
+# means this workflow is allowed to publish directly.
+#
+# Requires a one-time maintainer setup: a repository secret named
+# HOMEBREW_TAP_TOKEN holding a fine-grained GitHub PAT with contents:write
+# on Eruhitsuji/homebrew-tap (the default GITHUB_TOKEN is scoped only to
+# this repository and cannot push elsewhere). Until that secret exists,
+# this job fails cleanly at the tap checkout step without touching the tap
+# repository.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to publish a Formula for, e.g. v1.0.0"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish-formula:
+    name: Generate and push Formula/lifetxt.rb to the tap
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve release tag
+        id: resolve-tag
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check out lifetxt at the release tag
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ steps.resolve-tag.outputs.tag }}
+          path: lifetxt
+
+      - name: Check out the tap repository
+        uses: actions/checkout@v5
+        with:
+          repository: Eruhitsuji/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: tap
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Confirm tag matches the declared package version
+        working-directory: lifetxt
+        run: python scripts/check_release_tag_version.py "${{ steps.resolve-tag.outputs.tag }}"
+
+      - name: Download the release's SHA256SUMS
+        working-directory: lifetxt
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.resolve-tag.outputs.tag }}
+        run: gh release download "$TAG" --pattern SHA256SUMS
+
+      - name: Generate the Formula into the tap checkout
+        working-directory: lifetxt
+        env:
+          TAG: ${{ steps.resolve-tag.outputs.tag }}
+        run: |
+          version="${TAG#v}"
+          python scripts/generate_homebrew_formula.py \
+            --version "$version" \
+            --sha256sums SHA256SUMS \
+            --output ../tap/Formula/lifetxt.rb
+
+      - name: Commit and push the generated Formula
+        working-directory: tap
+        env:
+          TAG: ${{ steps.resolve-tag.outputs.tag }}
+        run: |
+          set -e
+          git config user.name "lifetxt-release-bot"
+          git config user.email "actions@github.com"
+          git add Formula/lifetxt.rb
+          if git diff --cached --quiet; then
+            echo "Formula unchanged for $TAG; nothing to push."
+            exit 0
+          fi
+          git commit -m "lifetxt $TAG"
+          git push origin HEAD:main

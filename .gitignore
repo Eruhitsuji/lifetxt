@@ -5,6 +5,7 @@
 !.github/workflows/*.yml
 !.vscode/
 !.vscode/settings.json
+!.dockerignore
 __pycache__/
 *.py[cod]
 
@@ -15,6 +16,18 @@ __pycache__/
 # directory, which has no tracked content.
 *.egg-info/
 /build/
+
+# PyInstaller standalone binary output (#570). dist/schemas/ above is the
+# only tracked content anywhere under dist/.
+/dist/standalone/
+
+# Generated per-release package-manager manifests (#571, #572, #573). The
+# scripts and templates that produce these are tracked; their per-release
+# output is not.
+/packaging/winget/generated/
+/packaging/scoop/generated/
+/packaging/homebrew/generated/
+/packaging/conda-forge/generated/
 
 # AI Development Standard
 !.ai/
@@ -27,3 +40,9 @@ __pycache__/
 # tauri-build on every `cargo build` (ACL/capability schema files).
 desktop/src-tauri/target/
 desktop/src-tauri/gen/
+
+# Bundled standalone lifetxt runtime staged by
+# packaging/tauri-desktop/prepare_bundled_runtime.py (#574). Per-platform
+# build output; .gitkeep documents the directory's purpose.
+desktop/src-tauri/resources/bin/*
+!desktop/src-tauri/resources/bin/.gitkeep

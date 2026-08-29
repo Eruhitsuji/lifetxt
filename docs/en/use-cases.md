@@ -13,9 +13,12 @@ python -m lifetxt doctor
 python -m lifetxt check life.txt
 ```
 
-`pip install .` matches how a release artifact installs (lifetxt has no
-PyPI package yet). Use `pip install -e .` only if you are editing lifetxt's
-own source; see [readme.md's Development environment section](../../readme.md#development-environment).
+`pip install .` matches how a release artifact installs from a source
+checkout; once a version is published, `pip install lifetxt` (no clone
+required) is the primary end-user path — see
+[distribution.md](./distribution.md) for every supported install channel.
+Use `pip install -e .` only if you are editing lifetxt's own source; see
+[readme.md's Development environment section](../../readme.md#development-environment).
 
 For the browser UI:
 

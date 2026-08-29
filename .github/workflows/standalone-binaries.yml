@@ -1,0 +1,200 @@
+name: Standalone binaries
+
+# Builds standalone lifetxt CLI executables (core + web + tui bundled into
+# one artifact, see packaging/pyinstaller/lifetxt.spec) that do not require
+# a separately installed Python. PyInstaller must run natively per target
+# platform, hence the runner matrix below rather than cross-compiling from
+# one host. See docs/en/distribution.md for the artifact naming convention
+# and known limitations.
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to (re-)build, e.g. v1.0.0"
+        required: true
+      publish_github_release:
+        description: "Attach built binaries to the matching GitHub Release"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build (${{ matrix.artifact_name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifact_name: windows-x86_64
+            binary_name: lifetxt.exe
+            output_name: lifetxt-windows-x86_64.exe
+          - os: ubuntu-latest
+            artifact_name: linux-x86_64
+            binary_name: lifetxt
+            output_name: lifetxt-linux-x86_64
+          - os: ubuntu-24.04-arm
+            artifact_name: linux-arm64
+            binary_name: lifetxt
+            output_name: lifetxt-linux-arm64
+          - os: macos-latest
+            artifact_name: macos-arm64
+            binary_name: lifetxt
+            output_name: lifetxt-macos-arm64
+          - os: macos-13
+            artifact_name: macos-x86_64
+            binary_name: lifetxt
+            output_name: lifetxt-macos-x86_64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Resolve release tag
+        id: resolve-tag
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check out repository at the release tag
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ steps.resolve-tag.outputs.tag }}
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Confirm tag matches the declared package version
+        shell: bash
+        run: python scripts/check_release_tag_version.py "${{ steps.resolve-tag.outputs.tag }}"
+
+      - name: Install lifetxt with bundled extras, plus PyInstaller
+        run: python -m pip install ".[web,tui]" pyinstaller
+
+      - name: Build the standalone binary
+        run: >-
+          pyinstaller packaging/pyinstaller/lifetxt.spec
+          --distpath dist/standalone --workpath build/pyinstaller
+          --clean --noconfirm
+
+      - name: Rename artifact to its platform-qualified name
+        shell: bash
+        run: |
+          mkdir -p dist/release
+          cp "dist/standalone/${{ matrix.binary_name }}" "dist/release/${{ matrix.output_name }}"
+
+      - name: Smoke test — version and syntax check
+        shell: bash
+        run: |
+          chmod +x "dist/release/${{ matrix.output_name }}" || true
+          "./dist/release/${{ matrix.output_name }}" --version
+          "./dist/release/${{ matrix.output_name }}" check examples/minimal_life.txt
+
+      - name: Smoke test — init/doctor in a clean scratch directory
+        shell: bash
+        run: |
+          bin="$PWD/dist/release/${{ matrix.output_name }}"
+          scratch="$(mktemp -d)"
+          cd "$scratch"
+          "$bin" init --yes
+          "$bin" doctor
+          "$bin" check life.txt
+
+      - name: Smoke test — a directory path containing spaces and non-ASCII characters
+        shell: bash
+        run: |
+          bin="$PWD/dist/release/${{ matrix.output_name }}"
+          scratch="$(mktemp -d)/space dir 日本語"
+          mkdir -p "$scratch"
+          cd "$scratch"
+          "$bin" init --yes
+          "$bin" check life.txt
+
+      - name: Smoke test — timezone resolution
+        shell: bash
+        run: |
+          bin="$PWD/dist/release/${{ matrix.output_name }}"
+          scratch="$(mktemp -d)"
+          cd "$scratch"
+          printf '#!timezone: Asia/Tokyo\n[ ] T Sample_Task due:2026-09-01\n' > life.txt
+          "$bin" check life.txt
+          "$bin" today life.txt
+
+      - name: Compute checksum
+        shell: bash
+        run: |
+          cd dist/release
+          python -c "
+          import hashlib, sys
+          name = sys.argv[1]
+          digest = hashlib.sha256(open(name, 'rb').read()).hexdigest()
+          open(name + '.sha256', 'w').write('%s  %s\n' % (digest, name))
+          " "${{ matrix.output_name }}"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: lifetxt-${{ matrix.artifact_name }}
+          if-no-files-found: error
+          path: |
+            dist/release/${{ matrix.output_name }}
+            dist/release/${{ matrix.output_name }}.sha256
+
+  github-release:
+    name: Attach binaries to the GitHub Release
+    needs: build
+    if: >-
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
+      (github.event_name == 'workflow_dispatch' && inputs.publish_github_release == true)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Resolve release tag
+        id: resolve-tag
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download every platform artifact
+        uses: actions/download-artifact@v6
+        with:
+          pattern: lifetxt-*
+          path: dist/release
+          merge-multiple: true
+
+      - name: Combine per-artifact checksums into one SHA256SUMS file
+        shell: bash
+        run: |
+          cd dist/release
+          cat *.sha256 > SHA256SUMS
+          rm -f *.sha256
+          cat SHA256SUMS
+
+      - name: Create or update the GitHub Release with standalone binaries
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.resolve-tag.outputs.tag }}
+        run: |
+          set -e
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/release/* --clobber
+          else
+            gh release create "$TAG" dist/release/* \
+              --title "$TAG" \
+              --generate-notes \
+              --prerelease="$(echo "$TAG" | grep -qE 'rc[0-9]+$|a[0-9]+$|b[0-9]+$' && echo true || echo false)"
+          fi

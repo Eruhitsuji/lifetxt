@@ -13,9 +13,11 @@ python -m lifetxt doctor
 python -m lifetxt check life.txt
 ```
 
-`pip install .` は release artifact の install に近い形です（lifetxt には
-まだ PyPI package がありません）。`pip install -e .` は lifetxt 自体の
-source を編集する場合にのみ使ってください。
+`pip install .` は source checkout からの release artifact install に近い
+形です。version 公開後は `pip install lifetxt`（clone 不要）が end-user 向け
+の主経路になります — 対応する全ての install channel は
+[distribution.md](./distribution.md) を参照してください。`pip install -e .`
+は lifetxt 自体の source を編集する場合にのみ使ってください。
 [readme.md の Development environment セクション](../../readme.md#development-environment)
 を参照してください。
 

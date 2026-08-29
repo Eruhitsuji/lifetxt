@@ -674,39 +674,31 @@ def build_parser():
         help="Run the optional FastAPI REST API and browser GUI.",
         description="Run the optional FastAPI REST API and browser GUI.",
     )
-    serve.add_argument(
-        "paths",
-        nargs="*",
-        metavar="path",
-        help="life.txt file(s) to read. Defaults to life.txt.",
-    )
-    serve.add_argument(
-        "--write-file",
-        help="File used for create, update, and delete operations. Defaults to the first path.",
-    )
-    serve.add_argument("--host", help="Bind host.")
-    serve.add_argument("--port", type=int, help="Bind port.")
-    serve.add_argument(
-        "--read-only",
-        action="store_true",
-        help="Disable all write endpoints (POST/PUT/DELETE) except /api/check-line. Safe for public deployments.",
-    )
-    serve.add_argument(
-        "--token-env",
-        metavar="ENVVAR",
-        help="Read the API bearer token from ENVVAR instead of storing it in config.",
-    )
-    serve.add_argument(
-        "--insecure-public",
-        action="store_true",
-        help="Allow a non-loopback writable Web server without a bearer token. Not recommended.",
-    )
+    _add_serve_core_arguments(serve)
     serve.add_argument(
         "--mcp",
         action="store_true",
         help="Run the stdio MCP server instead of the FastAPI HTTP server.",
     )
     serve.set_defaults(func=command_serve)
+
+    web_command = subparsers.add_parser(
+        "web",
+        help="Start the local lifetxt Web UI and open it in your browser.",
+        description=(
+            "Convenience launcher for the existing Web UI: starts the same "
+            "server as `serve` and opens your default browser to it. Use "
+            "`serve` directly for server/deployment-oriented options such "
+            "as --mcp."
+        ),
+    )
+    _add_serve_core_arguments(web_command)
+    web_command.add_argument(
+        "--no-open",
+        action="store_true",
+        help="Start the server without opening a browser.",
+    )
+    web_command.set_defaults(func=command_web)
 
     mcp = subparsers.add_parser(
         "mcp",
@@ -3896,6 +3888,42 @@ def _add_input_paths(parser):
     )
 
 
+def _add_serve_core_arguments(parser):
+    """Arguments shared by `serve` and `web`: one authoritative Web runtime.
+
+    `web` is a convenience launcher over `serve`'s own resolution/safety
+    behavior (see `_prepare_serve`), so both subparsers register the exact
+    same flags here rather than each defining its own copy.
+    """
+    parser.add_argument(
+        "paths",
+        nargs="*",
+        metavar="path",
+        help="life.txt file(s) to read. Defaults to life.txt.",
+    )
+    parser.add_argument(
+        "--write-file",
+        help="File used for create, update, and delete operations. Defaults to the first path.",
+    )
+    parser.add_argument("--host", help="Bind host.")
+    parser.add_argument("--port", type=int, help="Bind port.")
+    parser.add_argument(
+        "--read-only",
+        action="store_true",
+        help="Disable all write endpoints (POST/PUT/DELETE) except /api/check-line. Safe for public deployments.",
+    )
+    parser.add_argument(
+        "--token-env",
+        metavar="ENVVAR",
+        help="Read the API bearer token from ENVVAR instead of storing it in config.",
+    )
+    parser.add_argument(
+        "--insecure-public",
+        action="store_true",
+        help="Allow a non-loopback writable Web server without a bearer token. Not recommended.",
+    )
+
+
 def _add_item_filter_arguments(parser):
     parser.add_argument(
         "--open",
@@ -5322,9 +5350,13 @@ def _merge_generated_items_into_text(
     return "".join(merged)
 
 
-def command_serve(args):
-    if getattr(args, "mcp", False):
-        return command_mcp(args)
+def _prepare_serve(args):
+    """Resolve config/workspace/host/port and build the app for `serve`/`web`.
+
+    Both commands run the exact same authoritative Web server; this is the
+    one place that decides what to bind and how to build it, so neither
+    caller can drift from the other's safety/resolution behavior.
+    """
     try:
         import uvicorn
 
@@ -5373,6 +5405,13 @@ def command_serve(args):
     app = create_app(
         paths=paths, writable_path=writable_path, config=config, read_only=read_only
     )
+    return uvicorn, app, host, port
+
+
+def command_serve(args):
+    if getattr(args, "mcp", False):
+        return command_mcp(args)
+    uvicorn, app, host, port = _prepare_serve(args)
     # uvicorn.Config independently reads WEB_CONCURRENCY from the environment
     # and sets its own workers count from it, regardless of caller intent
     # (uvicorn/config.py). serve has no --workers flag and passes an
@@ -5383,6 +5422,74 @@ def command_serve(args):
     # neither lifetxt nor WEB_CONCURRENCY as the cause. serve is
     # single-process by design, so pin workers=1 explicitly rather than
     # let the environment decide.
+    uvicorn.run(app, host=host, port=port, workers=1)
+    return 0
+
+
+def _browser_reachable_host(host):
+    """A loopback host a browser can actually connect to.
+
+    `0.0.0.0`/`::` are valid bind addresses (listen on every interface) but
+    not addresses a client can connect *to*; substitute the loopback address
+    that reaches the same process.
+    """
+    if host in ("0.0.0.0", "", None):
+        return "127.0.0.1"
+    if host == "::":
+        return "::1"
+    return host
+
+
+def _web_ui_url(host, port):
+    connect_host = _browser_reachable_host(host)
+    if ":" in connect_host and not connect_host.startswith("["):
+        connect_host = "[%s]" % connect_host
+    return "http://%s:%s/" % (connect_host, port)
+
+
+def _open_browser_when_ready(url, host, port, timeout=15.0, interval=0.2):
+    """Poll the existing, unauthenticated `/api/health` route, then open `url`.
+
+    Reuses the server's own readiness signal instead of guessing a fixed
+    delay or duplicating a socket-level readiness check: `/api/health` is
+    already exempt from bearer auth (lifetxt/webapp.py), so this succeeds
+    the moment the ASGI app is actually accepting and answering requests,
+    not merely the moment the TCP listener is open.
+    """
+    import time
+    import webbrowser
+
+    connect_host = _browser_reachable_host(host)
+    health_url = "http://%s:%s/api/health" % (
+        ("[%s]" % connect_host if ":" in connect_host else connect_host),
+        port,
+    )
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            with urlopen(health_url, timeout=interval):
+                break
+        except (URLError, HTTPError, OSError):
+            time.sleep(interval)
+    else:
+        return
+    webbrowser.open(url)
+
+
+def command_web(args):
+    uvicorn, app, host, port = _prepare_serve(args)
+    if not getattr(args, "no_open", False):
+        import threading
+
+        url = _web_ui_url(host, port)
+        write_text(None, "Starting lifetxt Web UI at %s ...\n" % url)
+        threading.Thread(
+            target=_open_browser_when_ready,
+            args=(url, host, port),
+            daemon=True,
+        ).start()
+    # See command_serve's own comment: single-process by design, so workers
+    # is always pinned to 1 regardless of a stray WEB_CONCURRENCY value.
     uvicorn.run(app, host=host, port=port, workers=1)
     return 0
 

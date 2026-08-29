@@ -44,6 +44,7 @@ python -m lifetxt stats [path ...]
 python -m lifetxt git-hook install
 python -m lifetxt completion bash
 python -m lifetxt serve [path ...]
+python -m lifetxt web [path ...]
 python -m lifetxt config init
 python -m lifetxt config show
 python -m lifetxt init
@@ -1635,6 +1636,26 @@ LIFETXT_API_TOKEN=change-me python -m lifetxt serve life.txt --host 0.0.0.0 --to
 ```
 
 Open `http://127.0.0.1:8000/` in a browser.
+
+### 11.0 `web`: the one-command browser entry point
+
+`lifetxt web` starts the exact same server `serve` does and then opens your
+default browser to it -- there is no second Web implementation, only a thinner
+launcher over the same runtime:
+
+```sh
+python -m lifetxt web life.txt
+python -m lifetxt web life.txt --no-open   # start the server without opening a browser
+```
+
+`web` accepts the same `path ...`, `--write-file`, `--host`, `--port`,
+`--read-only`, `--token-env`, and `--insecure-public` options `serve` does
+(the two subcommands share one argument definition), binds loopback by
+default, and shares every safety behavior described below. It waits for the
+server's own `/api/health` route to answer before opening the browser, so the
+tab never loads before the app is ready. Use `serve` directly for
+server/deployment-oriented invocations, including `--mcp`, which `web` does
+not expose.
 
 Options:
 

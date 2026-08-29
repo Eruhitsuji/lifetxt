@@ -81,6 +81,7 @@ COMMANDS = (
     "git-hook",
     "completion",
     "serve",
+    "web",
     "config",
 )
 

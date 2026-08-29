@@ -44,6 +44,7 @@ python -m lifetxt stats [path ...]
 python -m lifetxt git-hook install
 python -m lifetxt completion bash
 python -m lifetxt serve [path ...]
+python -m lifetxt web [path ...]
 python -m lifetxt mcp [path ...]
 python -m lifetxt config init
 python -m lifetxt config show
@@ -1467,6 +1468,25 @@ LIFETXT_API_TOKEN=change-me python -m lifetxt serve life.txt --host 0.0.0.0 --to
 ```
 
 ブラウザで `http://127.0.0.1:8000/` を開きます。
+
+### 11.0 `web`: ブラウザを一発で開くコマンド
+
+`lifetxt web` は `serve` と全く同じ server を起動し、そのままデフォルトの
+ブラウザで開きます。第二の Web 実装ではなく、同じランタイムの上に乗った
+薄いランチャーです。
+
+```sh
+python -m lifetxt web life.txt
+python -m lifetxt web life.txt --no-open   # ブラウザを開かずに server だけ起動
+```
+
+`web` は `serve` と同じ `path ...`、`--write-file`、`--host`、`--port`、
+`--read-only`、`--token-env`、`--insecure-public` を受け取り（2 つの
+subcommand は同じ引数定義を共有します）、既定では loopback に bind し、
+下記の安全性に関する挙動もすべて共有します。server 自身の `/api/health`
+route が応答するのを待ってからブラウザを開くため、まだ準備できていない
+タブが開かれることはありません。`--mcp` など server/deployment 向けの
+起動には `serve` を直接使ってください（`web` には `--mcp` はありません）。
 
 | Option | 意味 |
 |---|---|

@@ -178,6 +178,28 @@ def schema_bundle_v5():
                             "type": "object",
                             "additionalProperties": _report_profile(),
                         },
+                        "tui": {
+                            "type": "object",
+                            "properties": {
+                                "bindings": {
+                                    "type": "object",
+                                    "additionalProperties": {
+                                        "oneOf": [
+                                            {"type": "string", "minLength": 1},
+                                            {
+                                                "type": "array",
+                                                "minItems": 1,
+                                                "items": {
+                                                    "type": "string",
+                                                    "minLength": 1,
+                                                },
+                                            },
+                                        ]
+                                    },
+                                },
+                            },
+                            "additionalProperties": True,
+                        },
                         "capture": {
                             "type": "object",
                             "properties": {

@@ -2275,6 +2275,42 @@ control back to navigation mode, so `j` and `k` move again immediately.
 While help is open, `j` / `k` and PageUp/PageDown scroll the reference, which is
 longer than one screen.
 
+##### Custom key bindings
+
+The `vim`/`arrows` navigation actions above (`move_up`, `move_down`, `first`,
+`last`, `open`, `toggle_mark`, `done`, `search`, `command`, `reload`, `help`,
+`quit`) can each be remapped to different keys through `tui.bindings`, layered
+on top of the selected keymap:
+
+```json
+{
+  "tui": {
+    "keymap": "vim",
+    "bindings": {
+      "move_up": ["k"],
+      "move_down": ["j"],
+      "open": ["enter", "l"],
+      "done": ["x"],
+      "search": ["/"],
+      "help": ["?"],
+      "quit": ["q"]
+    }
+  }
+}
+```
+
+A value may be a single key name or an array of aliases; unmentioned actions
+keep the built-in preset's key. `?` (toggle help, when the reference is
+closed) shows the *effective* bindings, so a customization is never
+documented incorrectly. `Ctrl-C`, page moves, `e`/`u` (edit/undo), `Tab`
+(cycle views), and `Esc`/cancel are never part of this registry and always
+work, so a custom map can never make the TUI impossible to exit. A key
+already mapped to two different actions, an unknown action id, or an
+unsupported key name is rejected before the TUI starts, naming the problem.
+See [config.md](config.md#configurable-tui-key-bindings) for the full
+contract, including the `prompt` keymap's own default keys, which have no
+`tui.bindings` overlay since `prompt` never leaves the input bar.
+
 #### Appearance
 
 On terminals at least 118 columns wide the inspector moves beside the list as a
@@ -2290,7 +2326,7 @@ columns (project, due, priority) drop out one at a time as the terminal narrows
 rather than wrapping.
 
 Defaults can be set in config under `tui.theme`, `tui.keymap`, `tui.glyphs`,
-`tui.limit`, and `tui.agenda_window`.
+`tui.limit`, `tui.agenda_window`, and `tui.bindings` (see above).
 
 Filtering and sorting run against a cached parse, so typing in the input bar
 does not re-read the files. A re-parse happens only when a file changes on disk,

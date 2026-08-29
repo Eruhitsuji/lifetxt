@@ -28,6 +28,8 @@ ORed.
   `person`, `owner`, `assignee`, `attendee`, `sender`, `recipient`, `team`
 - **Dates**: `due`, `do`, `from`, `to`, `on`, `at`, `done`, `created`, `updated`
 - **Details** (equality): `area`, `context`, `loc`, `priority`, and any known key
+- **Custom** (equality, opt-in): any [generic `custom_fields`](config.md#generic-custom-fields)
+  definition with `filterable: true`
 - **Text**: `text` / `q`, or bare words
 
 Unknown fields produce a `Q001` warning and are ignored; invalid dates produce a
@@ -35,6 +37,26 @@ Unknown fields produce a `Q001` warning and are ignored; invalid dates produce a
 Warnings are returned with the result set; errors stop the query. This is why a
 misspelled field does not silently narrow your result to zero, while a malformed
 date comparison cannot pretend to be valid.
+
+### Custom fields
+
+A field declared under the top-level [`custom_fields`](config.md#generic-custom-fields)
+configuration becomes a recognized `field:value` / `field=value` equality
+query field, but only when its definition sets `filterable: true`:
+
+```console
+$ lifetxt query "energy:high"
+$ lifetxt view run energetic-notes
+```
+
+A field left `filterable: false` (the default) is still validated metadata
+on matching items, but querying it reports `Q001` exactly like an
+undeclared key -- declaring a field for validation does not silently make
+it queryable too. Numeric/date comparison operators (`<`, `>`, and so on)
+are not supported for custom fields yet; only equality/membership matching
+is. Saved views built on a filterable custom field run through this same
+grammar with no separate implementation, so `view validate`/`view run`
+behave identically to an ad-hoc query.
 
 ## CLI
 

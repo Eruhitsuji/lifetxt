@@ -1,0 +1,40 @@
+{
+  "config_version": 1,
+  "default_workspace": "personal",
+  "config": {
+    "write": {
+      "require_revision": false
+    }
+  },
+  "workspaces": {
+    "personal": {
+      "sources": ["life.txt"],
+      "write_file": "life.txt"
+    }
+  },
+  "defaults": {
+    "person": "self",
+    "timezone": "Asia/Tokyo"
+  },
+  "custom_fields": {
+    "energy": {
+      "type": "enum",
+      "values": ["low", "medium", "high"],
+      "kinds": ["J", "N"],
+      "filterable": true
+    },
+    "mood_score": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10,
+      "kinds": ["J"],
+      "filterable": true
+    },
+    "topic": {
+      "type": "string",
+      "repeatable": true,
+      "kinds": ["N"],
+      "filterable": true
+    }
+  }
+}

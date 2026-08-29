@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc" data-lifetxt-geometry="v3">
+  <title id="title">lifetxt maskable app icon</title>
+  <desc id="desc">Maskable graphite app tile using the same centered A4-proportioned notebook and overlapping sprout geometry at a safe-zone scale.</desc>
+  <defs>
+    <mask id="notebook-sprout-separator" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
+      <rect width="512" height="512" fill="white"/>
+      <path d="M302 420C305 380 315 348 338 323C343 318 352 322 348 329C328 352 320 383 319 420Z" fill="black" stroke="black" stroke-width="12" stroke-linejoin="round"/>
+      <path d="M335 348C306 352 284 334 281 305C310 303 333 320 339 342C340 346 339 347 335 348Z" fill="black" stroke="black" stroke-width="12" stroke-linejoin="round"/>
+      <path d="M338 346C343 321 364 304 394 304C392 330 375 345 344 350C340 350 337 349 338 346Z" fill="black" stroke="black" stroke-width="12" stroke-linejoin="round"/>
+    </mask>
+  </defs>
+  <rect width="512" height="512" fill="#27343D"/>
+  <g transform="translate(30.72 30.72) scale(.88)">
+    <g data-lifetxt-base="v3" shape-rendering="geometricPrecision">
+      <path data-lifetxt-part="notebook" d="M150 84H291L339 132V364C339 384 327 396 307 396H150C130 396 118 384 118 364V116C118 96 130 84 150 84Z" fill="#FFFFFF" mask="url(#notebook-sprout-separator)"/>
+      <path data-lifetxt-part="fold" d="M291 84V116C291 126 297 132 307 132H339Z" fill="#C8D7D9"/>
+      <circle data-lifetxt-part="row-1-dot" cx="162" cy="184" r="8" fill="#27343D"/>
+      <rect data-lifetxt-part="row-1-line" x="190" y="176" width="94" height="16" rx="8" fill="#27343D"/>
+      <circle data-lifetxt-part="row-2-dot" cx="162" cy="242" r="8" fill="#27343D"/>
+      <rect data-lifetxt-part="row-2-line" x="190" y="234" width="80" height="16" rx="8" fill="#27343D"/>
+      <circle data-lifetxt-part="row-3-dot" cx="162" cy="300" r="8" fill="#27343D"/>
+      <rect data-lifetxt-part="row-3-line" x="190" y="292" width="66" height="16" rx="8" fill="#27343D"/>
+      <path data-lifetxt-part="stem" d="M302 420C305 380 315 348 338 323C343 318 352 322 348 329C328 352 320 383 319 420Z" fill="#7ADCC8"/>
+      <path data-lifetxt-part="leaf-left" d="M335 348C306 352 284 334 281 305C310 303 333 320 339 342C340 346 339 347 335 348Z" fill="#7ADCC8"/>
+      <path data-lifetxt-part="leaf-right" d="M338 346C343 321 364 304 394 304C392 330 375 345 344 350C340 350 337 349 338 346Z" fill="#7ADCC8"/>
+    </g>
+  </g>
+</svg>

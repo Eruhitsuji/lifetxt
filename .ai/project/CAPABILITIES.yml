@@ -5753,7 +5753,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/573
       - https://github.com/Eruhitsuji/lifetxt/issues/574
     related_pull_requests:
-      - https://github.com/Eruhitsuji/lifetxt/pull/PLACEHOLDER_PR_NUMBER
+      - https://github.com/Eruhitsuji/lifetxt/pull/577
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       Self-scoped and implemented autonomously per repository owner

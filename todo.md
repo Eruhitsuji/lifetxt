@@ -323,10 +323,10 @@ Reference pointers:
 - [ ] Raise the supported Python baseline only after clean environment, wheel, dependency, and downstream compatibility verification.
 - [ ] Expand required CI to Ubuntu, Windows, and macOS with coverage and the dependency-free job. Keep the local ticket core and counter-machine runtime dependency-free; provider adapters and rich UI extras must remain optional.
 - [ ] Add `doctor --ci` only after legacy doctor and workspace-safety report schemas have a stable unified registry entry.
-- [ ] Add release automation for changelog, semantic versioning, signed/attested artifacts, tag, PyPI publication, and post-release smoke checks. Release automation may consume ticket release-note proposals but must not close or rewrite tickets implicitly.
+- [x] Add release automation for tag, PyPI publication, and post-release smoke checks: `.github/workflows/release.yml` (#568) builds wheel/sdist with checksums/SBOM/provenance from an immutable tag, verifies the tag matches `pyproject.toml`'s version, installs the built wheel into a clean venv and smoke tests it, then publishes via PyPI Trusted Publishing and attaches the same artifacts to the GitHub Release. Not yet done: changelog automation and cryptographic artifact signing/attestation beyond the existing SBOM/provenance metadata; the actual PyPI Trusted Publisher linkage is a one-time maintainer action, documented in `docs/en/distribution.md`, not yet performed. See `cap-distribution-channels`.
 - [ ] Add release smoke checks for `run --help`, the two-counter sample, JSON-schema validation, finite step-limit failure, and installed-console behavior outside the repository.
 - [ ] Add `CONTRIBUTING.md`, issue templates, pre-commit, `SECURITY.md`, supported-version policy, and private vulnerability reporting.
-- [ ] Consider zipapp or another single-file distribution only after wheel and supported-Python behavior are stable.
+- [x] Standalone single-file distribution: `packaging/pyinstaller/lifetxt.spec` (#570) bundles core+web+tui into one PyInstaller-built executable for Windows/Linux/macOS, verified to run `--version`/`check`/`init`/`doctor`/`serve` with no separate Python install. Supersedes the zipapp idea (a full standalone binary needs no Python at all, which zipapp cannot provide). See `cap-distribution-channels` and `docs/en/distribution.md`.
 
 ---
 

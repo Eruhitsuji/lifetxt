@@ -1,0 +1,687 @@
+# lifetxt distribution channels
+
+This document tracks the canonical distribution architecture from
+[#567](https://github.com/Eruhitsuji/lifetxt/issues/567): one release
+tag/version, built into a small set of canonical artifacts (Python
+wheel/sdist, an OCI image, and standalone platform binaries), then exposed
+through the package managers appropriate to each audience. Package-manager
+metadata (winget, Homebrew, conda-forge) stays a thin adapter around those
+canonical artifacts rather than a second, independent build.
+
+```text
+                         lifetxt source
+                               |
+                         version / tag
+                               |
+              +----------------+----------------+
+              |                                 |
+       Python artifacts                    Native artifacts
+       wheel / sdist                  Win / Linux / macOS
+              |                                 |
+            PyPI                         GitHub Release
+              |                                 |
+       pip / uv / pipx          winget / Scoop / Homebrew
+              |
+         conda-forge
+
+                     OCI container image
+                              |
+                             GHCR
+                              |
+                     Docker / Compose
+```
+
+Every channel below identifies the same source revision for a given version:
+the Git tag, the `pyproject.toml` `project.version`, and every published
+artifact's own embedded version must agree. `scripts/check_release_tag_version.py`
+enforces the tag/version half of that guarantee before any workflow proceeds.
+
+## 1. PyPI (Python package)
+
+Tracks [#568](https://github.com/Eruhitsuji/lifetxt/issues/568).
+
+### End-user installation
+
+```sh
+pip install lifetxt
+uv tool install lifetxt
+pipx install lifetxt
+uvx lifetxt --help
+
+# optional extras
+pip install "lifetxt[web]"
+pip install "lifetxt[tui]"
+```
+
+`lifetxt --version` reports the installed release version once published.
+
+### How releases reach PyPI
+
+`.github/workflows/release.yml` runs on every `v*.*.*` tag push:
+
+1. Check out the repository at the exact tag.
+2. Confirm the tag matches `pyproject.toml`'s `project.version`
+   (`scripts/check_release_tag_version.py`) — a moving `main` tree can never
+   be published under a version that already identifies an earlier release.
+3. Run the existing release-policy profile (`scripts/run_ci_like.py --profile release`).
+4. Build wheel and sdist with checksums, an SBOM, and provenance metadata
+   (`scripts/release_evidence.py`, already used for release evidence records).
+5. Validate package metadata with `twine check`.
+6. Install the built wheel into a clean virtual environment and smoke test
+   `lifetxt --version` / `lifetxt check`.
+7. Publish to PyPI via [PyPI Trusted Publishing](https://docs.pypi.org/trusted-publishers/)
+   (OIDC — no long-lived upload token stored in this repository).
+8. Attach the same wheel/sdist/checksums/SBOM/provenance to the matching
+   GitHub Release.
+
+### One-time PyPI-side setup (maintainer action, not automatable from here)
+
+PyPI Trusted Publishing must be linked from the PyPI project itself before
+step 7 can succeed — this cannot be done from inside this repository or by
+an AI agent, since it requires the `lifetxt` PyPI project owner's own PyPI
+account:
+
+1. Reserve the `lifetxt` project name on PyPI (first publish must currently
+   be a manual `twine upload` of one build, *or* PyPI's "pending publisher"
+   flow, which lets you register a Trusted Publisher before the project
+   exists yet — see PyPI's own documentation for the current option).
+2. On <https://pypi.org/manage/project/lifetxt/settings/publishing/>, add a
+   GitHub Trusted Publisher:
+   - Owner: `Eruhitsuji`
+   - Repository: `lifetxt`
+   - Workflow: `release.yml`
+   - Environment: `pypi`
+3. In this repository's Settings → Environments, create an environment named
+   `pypi` (GitHub creates it automatically on first workflow run that
+   references it, but creating it ahead of time lets you add required
+   reviewers or a deployment branch rule if you want extra release-review
+   friction).
+
+Until step 2 is done, `release.yml`'s `publish-pypi` job runs and fails
+cleanly at the PyPI OIDC exchange — it does not publish a partial or
+malformed release.
+
+### Verifying a release once published
+
+```sh
+python -m venv /tmp/lifetxt-pypi-smoke
+/tmp/lifetxt-pypi-smoke/bin/pip install lifetxt
+/tmp/lifetxt-pypi-smoke/bin/lifetxt --version
+/tmp/lifetxt-pypi-smoke/bin/lifetxt check examples/minimal_life.txt
+
+uv tool install lifetxt && lifetxt --version
+pipx install lifetxt && lifetxt --version
+uvx lifetxt --help
+```
+
+## 2. GHCR (OCI container image)
+
+Tracks [#569](https://github.com/Eruhitsuji/lifetxt/issues/569).
+
+Docker is primarily the Web/MCP/server/NAS/VPS/home-server/CI installation
+path, not a replacement for the normal local CLI installation covered above.
+
+### Image contract
+
+- `ENTRYPOINT ["lifetxt"]`, no default `CMD` beyond `--help` — the image
+  behaves like the CLI binary itself: `docker run ghcr.io/eruhitsuji/lifetxt:<version> check life.txt`
+  runs the same thing `lifetxt check life.txt` would.
+- Runs as a non-root user (uid 1000) with `/data` as its working directory
+  and declared volume; mount your `life.txt`/configuration there.
+- Built with the `[web]` extra installed, so the same image can serve the
+  Web API/UI with no separate build.
+- Supported architectures: `linux/amd64` and `linux/arm64`.
+- No development files, build tooling, `.git`, or mutable local state are
+  shipped — the image is built in two stages (build a wheel, then install
+  only that wheel into a fresh runtime layer).
+
+### Tags
+
+| Tag | Meaning |
+| --- | --- |
+| `ghcr.io/eruhitsuji/lifetxt:<version>` (e.g. `1.0.0`) | Immutable, matches a Git tag/GitHub Release/PyPI release exactly. Prefer this in production. |
+| `ghcr.io/eruhitsuji/lifetxt:<major>.<minor>` | Convenience tag, moves to the newest patch release in that line. |
+| `ghcr.io/eruhitsuji/lifetxt:<major>` | Convenience tag, moves to the newest release in that major line. |
+| `ghcr.io/eruhitsuji/lifetxt:latest` | Convenience tag, moves to the newest stable (non-prerelease) release. Never published for prerelease tags (`rc`/`a`/`b` suffixes). |
+
+Pin the immutable version tag for production; use a convenience tag only
+where you deliberately want automatic upgrades.
+
+### CLI mode
+
+```sh
+docker pull ghcr.io/eruhitsuji/lifetxt:<version>
+
+docker run --rm \
+  -v "$PWD:/data" \
+  ghcr.io/eruhitsuji/lifetxt:<version> \
+  check /data/life.txt
+```
+
+### Web mode
+
+```sh
+docker run --rm \
+  -p 8000:8000 \
+  -v "$PWD:/data" \
+  ghcr.io/eruhitsuji/lifetxt:<version> \
+  serve /data/life.txt --host 0.0.0.0 --port 8000 --token-env LIFETXT_API_TOKEN \
+  -e LIFETXT_API_TOKEN=change-me
+```
+
+(Put `-e LIFETXT_API_TOKEN=...` before the image name like any other
+`docker run` flag; it is shown last above only for readability.)
+
+### MCP mode
+
+MCP is a stdio protocol — an MCP client spawns the process and talks to its
+stdin/stdout directly, so it does not fit a detached, networked
+`docker compose up -d` service. Run it attached instead:
+
+```sh
+docker run -i --rm -v "$PWD:/data" ghcr.io/eruhitsuji/lifetxt:<version> mcp /data/life.txt
+```
+
+Configure your MCP client's `command`/`args` to invoke `docker` with this
+exact argument list (see
+[ai-integration.md](./ai-integration.md) for the generic MCP client-setup
+pattern this substitutes into).
+
+### Docker Compose (persistent Web deployment)
+
+[`docker-compose.yml`](../../docker-compose.yml) at the repository root is a
+checked-in, ready-to-copy example:
+
+```sh
+cp docker-compose.env.example .env   # then edit LIFETXT_API_TOKEN
+mkdir -p data && cp examples/minimal_life.txt data/life.txt
+docker compose up -d
+curl http://127.0.0.1:8000/api/health
+```
+
+It pins nothing by default (`LIFETXT_VERSION` defaults to the `latest`
+convenience tag); set `LIFETXT_VERSION=1.0.0` in `.env` to pin an immutable
+release for production use.
+
+### Read-only vs. writable usage
+
+Add `--read-only` to the `serve` command for a demo/browse-only deployment
+(matches the CLI's own `--read-only` flag — nothing Docker-specific).
+Without it, the mounted `life.txt` is writable by the container's uid-1000
+user; make sure the host-side file/directory permissions allow that.
+
+A `--read-only` deployment does not need write access to the mounted
+`/data` volume at all — including a genuinely read-only bind mount
+(`docker run -v host/path:/data:ro ...`) or a mounted directory owned by a
+different host uid, both realistic deployment shapes on Linux hosts. This
+was not always true: lifetxt writes a small internal revision-telemetry
+file next to the served `life.txt` by default (unrelated to the
+`--read-only` API contract), which crashed the container immediately
+against either shape until the image routed that file into the
+container's own home directory (`LIFETXT_REVISION_METRICS_PATH`) instead
+— found and fixed via this image's own first real CI verification, with a
+regression test reproducing the exact `-v ...:/data:ro` failure.
+
+### Update/pinning guidance
+
+- Immutable version tags never change once published — safe to pin
+  indefinitely.
+- `latest` and the `<major>`/`<major>.<minor>` convenience tags are
+  re-pointed by `docker-publish.yml` on every matching release; re-pull
+  (`docker pull` / `docker compose pull`) to pick up a new version, they are
+  not pushed automatically to a running container.
+- The base image (`python:3.12-slim`) receives periodic OS-level security
+  patches independent of lifetxt's own releases; rebuilding/re-pulling a
+  convenience tag periodically is recommended even between lifetxt releases.
+
+### How images reach GHCR
+
+`.github/workflows/docker-publish.yml` runs on every `v*.*.*` tag push (the
+same trigger as `release.yml`):
+
+1. Confirm the tag matches `pyproject.toml`'s version.
+2. Build a local single-architecture image and smoke test it: a `check`
+   command against a mounted example, confirmation the process runs as
+   uid 1000, and a `serve` invocation polled until `/api/health` responds.
+3. Build the real multi-arch (`linux/amd64`, `linux/arm64`) image with
+   Buildx/QEMU and push it to `ghcr.io/eruhitsuji/lifetxt` with the tag
+   policy above, using GHCR's own `GITHUB_TOKEN` authentication — no
+   separate account or credential setup is required.
+
+`workflow_dispatch` supports building and smoke-testing without pushing
+(`push: false`, the default), for verifying a change to the Dockerfile
+itself before it reaches a real tag.
+
+## 3. Standalone CLI binaries
+
+Tracks [#570](https://github.com/Eruhitsuji/lifetxt/issues/570).
+
+Standalone binaries let a user run `lifetxt` without installing Python at
+all — the preferred path for non-Python users, and the canonical upstream
+artifact winget/Scoop/Homebrew (below) build on.
+
+### Target UX
+
+Download the matching artifact from a GitHub Release and run it directly:
+
+```sh
+lifetxt --version
+lifetxt init
+lifetxt doctor
+lifetxt check life.txt
+```
+
+### Supported targets
+
+| Artifact | Platform |
+| --- | --- |
+| `lifetxt-windows-x86_64.exe` | Windows x86_64 |
+| `lifetxt-linux-x86_64` | Linux x86_64 |
+| `lifetxt-linux-arm64` | Linux arm64 |
+| `lifetxt-macos-arm64` | macOS arm64 (Apple Silicon) |
+| `lifetxt-macos-x86_64` | macOS x86_64 (Intel) |
+
+Each release also publishes a `SHA256SUMS` file covering every artifact.
+
+### Bundling approach
+
+[PyInstaller](https://pyinstaller.org/) via
+[`packaging/pyinstaller/lifetxt.spec`](../../packaging/pyinstaller/lifetxt.spec),
+producing one `--onefile` executable per platform (PyInstaller must run
+natively on each target platform, so `.github/workflows/standalone-binaries.yml`
+builds each artifact on a matching GitHub-hosted runner rather than
+cross-compiling from one host).
+
+**One complete artifact, not several partial ones.** The bundle includes
+core, `web`, and `tui`: `lifetxt serve` and `lifetxt tui` both work out of
+the box from the standalone binary, matching this project's own
+one-canonical-artifact design principle — a user who reaches for a
+standalone binary specifically to avoid Python packaging should not then
+have to pick between a "CLI-only" and a "full" download.
+
+The frozen binary bundles:
+
+- lifetxt's own package data (the split Web UI HTML/CSS/JS resources).
+- `uvicorn`'s dynamically-imported protocol/loop/lifespan submodules (these
+  are selected by string at runtime, which PyInstaller's static import
+  analysis cannot see on its own — the spec explicitly collects them).
+- `tzdata` on the Windows build only, mirroring `pyproject.toml`'s own
+  platform-marked runtime dependency (Windows has no IANA timezone database
+  for `zoneinfo` to read otherwise — see [RULES.md's Runtime Dependencies
+  section](../../.ai/project/RULES.md#runtime-dependencies) for the
+  background incident this addresses).
+
+### Building locally
+
+```sh
+pip install ".[web,tui]" pyinstaller
+pyinstaller packaging/pyinstaller/lifetxt.spec --distpath dist/standalone --clean --noconfirm
+dist/standalone/lifetxt --version   # dist/standalone/lifetxt.exe on Windows
+```
+
+### Verification performed
+
+Every target in `standalone-binaries.yml`'s matrix runs, on its own native
+runner: `--version`, `check` against a real example, `init`/`doctor` in a
+clean scratch directory, `init`/`check` inside a directory path containing
+spaces and non-ASCII characters, and a `check`/`today` pair against a
+`#!timezone: Asia/Tokyo` fixture to confirm timezone resolution. This
+project's own local Windows build additionally verified `serve` mode answers
+`/api/health` and serves the bundled Web UI HTML from the frozen binary.
+
+### Known limitations (first slice)
+
+- **Code signing / notarization are not yet implemented.** Unsigned Windows
+  binaries trigger SmartScreen warnings, and unsigned/unnotarized macOS
+  binaries are blocked by Gatekeeper without an explicit user override
+  (right-click → Open, or `xattr -d com.apple.quarantine`). Tracked as an
+  explicit follow-up per the issue's own guidance to treat signing as a
+  related follow-up rather than a blocker for the first slice.
+- **Startup time and binary size are not optimized.** A `--onefile` build
+  self-extracts to a temporary directory on first run each invocation,
+  which is slower than a `--onedir` layout; this trades a few hundred
+  milliseconds of startup latency for the simplicity of one downloadable
+  file, matching the issue's own "prioritize reliable behavior over minimum
+  size" guidance.
+- **UPX compression is disabled** (`upx=False` in the spec) — UPX-compressed
+  executables are flagged by some antivirus heuristics more often than
+  uncompressed ones; this can be revisited if artifact size becomes a real
+  problem.
+
+### Downstream use
+
+These binaries are the canonical artifact winget (#571), Homebrew Tap
+(#572), and the standalone Tauri desktop bundle (#574) build on, per the
+distribution architecture at the top of this document.
+
+## 4. winget and Scoop (Windows package managers)
+
+Tracks [#571](https://github.com/Eruhitsuji/lifetxt/issues/571). Both are
+thin adapters around the standalone Windows binary from #570 — neither
+introduces a separate build.
+
+### winget (primary)
+
+```powershell
+winget install Eruhitsuji.lifetxt
+```
+
+winget is preferred because it ships with current Windows and needs no
+separate install. The package uses `InstallerType: portable` (a plain
+standalone executable, not a `setup.exe` with silent-install switches) —
+winget symlinks the downloaded binary onto PATH under the `lifetxt` command
+name declared in the manifest's `Commands` field.
+
+**This repository does not submit to `microsoft/winget-pkgs`
+automatically.** `scripts/generate_winget_manifest.py` produces the three
+required manifest files (version, installer, default-locale — manifest
+schema 1.6.0) for one release, and
+`.github/workflows/package-manifests.yml` runs it automatically whenever a
+GitHub Release is published, uploading the result as a downloadable
+workflow artifact. Submitting is a manual, one-time-per-release step:
+
+```sh
+# Locally, from a release's published SHA256SUMS:
+python scripts/generate_winget_manifest.py \
+  --version 1.0.0 \
+  --installer-url https://github.com/Eruhitsuji/lifetxt/releases/download/v1.0.0/lifetxt-windows-x86_64.exe \
+  --sha256 <sha256 from that release's SHA256SUMS>
+
+# Or use Microsoft's own submission tool against the same release asset:
+winget install wingetcreate
+wingetcreate submit --token <a GitHub token with public_repo scope> \
+  packaging/winget/generated/Eruhitsuji/lifetxt/1.0.0/
+```
+
+`wingetcreate submit` opens the PR against `microsoft/winget-pkgs` under
+your own GitHub identity; there is no way to do this non-interactively
+without your credentials, matching the boundary set for this issue.
+
+After a submission is accepted (winget-pkgs' own CI validates the manifest
+and a moderator merges it, typically within a few days):
+
+```powershell
+winget install Eruhitsuji.lifetxt
+winget upgrade Eruhitsuji.lifetxt
+winget uninstall Eruhitsuji.lifetxt
+lifetxt --version
+```
+
+winget updates PATH for new shells automatically; an already-open terminal
+needs restarting to pick up a first-time install.
+
+### Scoop (secondary)
+
+```powershell
+scoop bucket add <bucket-name> <bucket-url>   # once a tap/bucket is published
+scoop install lifetxt
+```
+
+`scripts/generate_scoop_manifest.py` produces `lifetxt.json` the same way,
+also generated automatically by `package-manifests.yml`. Scoop manifests
+live in a "bucket" repository (a plain Git repo of `.json` files); this
+project does not yet maintain its own bucket, matching the issue's own
+"Scoop is secondary" scope guidance — the generated manifest is ready to
+publish into either a project-owned bucket (once one exists) or
+[`ScoopInstaller/Extras`](https://github.com/ScoopInstaller/Extras)-style
+community bucket submission, both of which are external, human-identity
+actions this repository does not perform automatically.
+
+```powershell
+scoop install ./packaging/scoop/generated/lifetxt.json   # local file, for testing the manifest itself
+lifetxt --version
+scoop uninstall lifetxt
+```
+
+## 5. Homebrew Tap
+
+Tracks [#572](https://github.com/Eruhitsuji/lifetxt/issues/572).
+
+```sh
+brew install Eruhitsuji/tap/lifetxt
+```
+
+### Why this one publishes automatically (unlike winget/conda-forge)
+
+winget and conda-forge require a PR against a repository this project does
+not own (`microsoft/winget-pkgs`, `conda-forge/staged-recipes`), so
+submitting there is deliberately a manual, human-identity action (see
+sections 4 and 6). A Homebrew Tap is different: `brew install
+Eruhitsuji/tap/lifetxt` works against
+[`Eruhitsuji/homebrew-tap`](https://github.com/Eruhitsuji/homebrew-tap) — a
+repository this project's own maintainer owns. Publishing to your own
+repository from your own release workflow is not the same kind of action as
+opening a PR against someone else's, so
+`.github/workflows/homebrew-tap.yml` pushes the generated Formula
+automatically whenever a GitHub Release is published.
+
+### Formula design
+
+`Formula/lifetxt.rb` (generated by
+[`scripts/generate_homebrew_formula.py`](../../scripts/generate_homebrew_formula.py))
+is a thin adapter: it downloads the matching standalone binary from #570 for
+the running platform (macOS arm64/x86_64, Linux arm64/x86_64) and installs
+it directly — no build-from-source step, no duplicated application logic.
+This is the "prefer consuming canonical immutable release artifacts" option
+the issue itself names, rather than a Python-package-based Formula.
+
+### One-time setup (maintainer action)
+
+The default `GITHUB_TOKEN` a workflow run gets is scoped only to the
+repository it runs in, so pushing to a *different* repository
+(`Eruhitsuji/homebrew-tap`) needs a token with access to that repository:
+
+1. Create a [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new)
+   scoped to only the `Eruhitsuji/homebrew-tap` repository, with
+   **Contents: Read and write** permission.
+2. Add it as a repository secret named `HOMEBREW_TAP_TOKEN` on
+   `Eruhitsuji/lifetxt` (Settings → Secrets and variables → Actions).
+
+Until this secret exists, `homebrew-tap.yml`'s tap-checkout step fails
+cleanly (an authentication error checking out
+`Eruhitsuji/homebrew-tap`) — it never partially publishes.
+
+### Verifying an installed Formula
+
+```sh
+brew install Eruhitsuji/tap/lifetxt
+lifetxt --version
+brew upgrade lifetxt
+brew uninstall lifetxt
+```
+
+### Homebrew Core
+
+Not pursued in this first slice, matching the issue's own guidance —
+Homebrew Core has its own acceptance/notability requirements independent of
+this project's release cadence. The Tap remains the supported path unless a
+future issue revisits Core eligibility.
+
+## 6. conda-forge
+
+Tracks [#573](https://github.com/Eruhitsuji/lifetxt/issues/573). Depends on
+a real PyPI release existing first (section 1) — the recipe builds from the
+PyPI sdist rather than becoming a second, independent release origin, per
+the issue's own scope guidance.
+
+```sh
+conda install -c conda-forge lifetxt
+```
+
+### Recipe design
+
+`meta.yaml` (generated by
+[`scripts/generate_conda_recipe.py`](../../scripts/generate_conda_recipe.py))
+is `noarch: python` — lifetxt's core has no compiled extension and no
+third-party runtime dependency beyond the Windows-only `tzdata` (declared
+with conda's `# [win]` selector, mirroring `pyproject.toml`'s own
+`sys_platform == 'win32'` marker). It installs from the published PyPI
+sdist with `pip install . --no-deps` (no vendored build step, no
+duplicated packaging logic) and tests `lifetxt --version` and `lifetxt
+check --help` after install.
+
+### This repository does not submit to conda-forge automatically
+
+`conda-forge/staged-recipes` is a community-owned repository; submitting a
+recipe there is a PR under your own GitHub identity, matching the boundary
+already set for winget (section 4). `.github/workflows/conda-recipe.yml`
+generates `meta.yaml` automatically whenever a GitHub Release is published
+and uploads it as a downloadable workflow artifact; submitting it is a
+manual step:
+
+```sh
+# Once a real PyPI release exists, from its published sdist:
+python scripts/generate_conda_recipe.py \
+  --version 1.0.0 \
+  --sha256 <sha256 of lifetxt-1.0.0.tar.gz, e.g. from `pip download --no-deps --no-binary :all:` or the release's own SHA256SUMS>
+
+# Fork conda-forge/staged-recipes, then:
+mkdir -p recipes/lifetxt
+cp packaging/conda-forge/generated/recipe/meta.yaml recipes/lifetxt/
+# commit, push, and open a PR against conda-forge/staged-recipes
+```
+
+conda-forge's own CI (`linter`, `build`) validates the recipe on the PR;
+once merged, conda-forge's bots create and maintain a `lifetxt-feedstock`
+repository that handles future version bumps largely automatically (a
+conda-forge maintainer — you — still reviews and merges each bump PR; see
+conda-forge's own [maintainer documentation](https://conda-forge.org/docs/maintainer/updating_pkgs.html)
+for that ongoing workflow, which happens in the feedstock repository, not
+here).
+
+### Verifying an installed package
+
+```sh
+conda create -n lifetxt-smoke -c conda-forge lifetxt
+conda run -n lifetxt-smoke lifetxt --version
+conda run -n lifetxt-smoke lifetxt check examples/minimal_life.txt
+```
+
+### Scope
+
+Core package support only for this first submission, matching the issue's
+own "confirm optional features/extras policy for conda; core package
+support is the minimum requirement" guidance — `web`/`tui` extras are not
+part of the initial conda-forge recipe. A future recipe revision (or a
+separate `lifetxt-web`/`lifetxt-tui` output) is a candidate follow-up, not
+part of this slice.
+
+## 7. Standalone lifetxt Desktop
+
+Tracks [#574](https://github.com/Eruhitsuji/lifetxt/issues/574).
+
+### Target UX for the desktop app
+
+```text
+download installer -> install lifetxt Desktop -> launch -> the app appears
+```
+
+No prior Python, pip, uv, Rust, or lifetxt CLI install required.
+
+### Architecture: still a companion process, now with a bundled runtime
+
+lifetxt Desktop ([`desktop/`](../../desktop/), issue #233's original design)
+is a thin Tauri window that spawns `lifetxt serve` as a child process and
+displays the resulting Web UI — it has never contained life.txt logic of
+its own, and #574 does not change that. What changes is *which* `lifetxt`
+it spawns: the app's own installer now bundles the exact standalone binary
+from section 3 under its resource directory, and the shell prefers that
+bundled copy over anything found on `PATH`:
+
+```text
+resolve backend:
+  1. <app resource dir>/bin/lifetxt(.exe)   <- bundled by this app's own installer (#574)
+  2. lifetxt                                 <- PATH, unchanged from #233
+  3. python -m lifetxt                       <- PATH, unchanged from #233
+  4. python3 -m lifetxt                      <- PATH, unchanged from #233
+  5. py -m lifetxt                           <- PATH, unchanged from #233
+```
+
+A source build (`cargo build`/`cargo run` with nothing copied into
+`resources/bin/`) finds no bundled candidate and falls straight through to
+step 2 — pre-#574 developer workflow is unchanged. No lifetxt application
+logic is reimplemented in Rust/Tauri; the bundled artifact *is* the same
+PyInstaller binary from section 3, not a second build.
+
+### Building an installer
+
+```sh
+pip install ".[web,tui]" pyinstaller
+python packaging/tauri-desktop/prepare_bundled_runtime.py   # builds #570's binary, stages it into resources/bin/
+python scripts/set_tauri_desktop_version.py --version 1.0.0  # ties the installer's own version to the release
+cargo install tauri-cli --version "^2" --locked
+cd desktop/src-tauri && cargo tauri build
+```
+
+`.github/workflows/desktop-installers.yml` runs this same sequence
+natively on `windows-latest`, `macos-latest` (arm64), and `ubuntu-latest`
+for every `v*.*.*` tag, producing MSI/NSIS, dmg, and deb/AppImage
+artifacts respectively (Tauri's own per-platform default bundle targets),
+and attaches them to the matching GitHub Release.
+
+### Version traceability
+
+The installer's own version (`tauri.conf.json`) is set to the exact same
+version as the bundled lifetxt runtime for every release —
+`scripts/set_tauri_desktop_version.py` ties them 1:1 rather than
+versioning the desktop shell independently, satisfying the issue's
+"Desktop and bundled-runtime versions are reproducible and tied to an
+immutable lifetxt release" requirement in the simplest way that is still
+correct.
+
+### Data storage
+
+Unchanged from #233: `life.txt` and configuration remain fully external,
+user-owned files — the app has no application-specific database and locks
+nothing inside itself. This slice does not add a first-run file
+picker/"create or open life.txt" affordance to the Tauri shell itself
+(that flow already lives in the served Web UI, which this shell displays
+unmodified); adding a native equivalent is an explicit, unimplemented
+follow-up rather than something silently missing.
+
+### Error surfacing
+
+If no usable runtime is found — bundled or on PATH — or the bundled/found
+runtime fails to become healthy within 15 seconds, the window shows a
+plain-language explanation of what was tried (bundled runtime, then the
+PATH candidates) instead of staying blank or frozen. A bundled runtime
+that exists but fails its own `--version` probe (a corrupted install, or
+the wrong architecture) falls through to PATH discovery rather than
+failing outright, so a broken bundle does not necessarily strand a user
+who happens to also have lifetxt installed separately.
+
+### Verification performed for the bundled runtime
+
+On this project's own Windows sandbox: built the section-3 standalone
+binary, confirmed a source `cargo run` correctly finds nothing at its
+resolved (dev-mode) resource path and falls through to PATH — proving that
+issue #233's original behavior is unaffected — then staged the binary at
+that same resolved location to reproduce what Tauri's installer bundler
+places in a real install, launched the app, and confirmed via the real
+Windows process tree that `lifetxt_desktop.exe` spawned exactly
+`resources\bin\lifetxt.exe serve --host 127.0.0.1 --port <port>` as its
+child process. A full `cargo tauri build` producing a real installer was
+not completed in this sandbox — installing `tauri-cli` hit a pre-existing,
+environment-specific toolchain conflict unrelated to this change (see
+[`desktop/README.md`](../../desktop/README.md#verification-performed-for-the-bundled-runtime-path-574)
+for the exact failure and why it is believed not to affect GitHub's
+clean-runner CI). This is recorded honestly as an open verification gap,
+not claimed as tested.
+
+### Known limitations for the desktop installer
+
+- Code signing / notarization are not implemented, matching section 3's
+  own recorded limitation for the underlying standalone binaries.
+- macOS/Linux desktop-installer builds are wired in CI but have not been
+  verified on this project's own (Windows-only) development sandbox.
+- Auto-update, a system tray icon, and native menu bar remain explicit,
+  unimplemented follow-ups per the issue's own scope.
+
+### Contributor vs. end-user installs
+
+Contributors changing lifetxt's own source still use an editable install
+(`pip install -e ".[dev]"`, see
+[Development environment](../../readme.md#development-environment)); `lifetxt
+update`/`lifetxt server-update` specifically depend on that editable, git-backed
+install to fast-forward the checkout. `pip install lifetxt` (this document) is
+the separate, ordinary end-user path and never assumes a git checkout exists.

@@ -1,0 +1,27 @@
+# Only pyproject.toml, readme.md, LICENSE, and lifetxt/ are ever COPYed into
+# the image (see Dockerfile), but Docker still sends the whole build context
+# to the daemon unless it is excluded here.
+.git
+.github
+.venv
+.venv-*
+.wheel-venv
+.cache
+.kiro
+.ai
+desktop
+docs
+examples
+tests
+scripts
+node_modules
+build
+dist
+dist-evidence
+*.egg-info
+__pycache__
+*.pyc
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.test-output.log

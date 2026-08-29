@@ -1,0 +1,99 @@
+name: Package manager manifests
+
+# Generates the winget and Scoop manifests for a release and uploads them as
+# a workflow artifact for the maintainer to review and submit by hand.
+#
+# This deliberately does not open a PR against microsoft/winget-pkgs or push
+# to a Scoop bucket: both require the maintainer's own identity/account, and
+# a manifest for a release that has not finished its own verification would
+# likely be submitted prematurely. See docs/en/distribution.md for the
+# manual submission steps this workflow prepares for.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to generate manifests for, e.g. v1.0.0"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    name: Generate winget and Scoop manifests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve release tag
+        id: resolve-tag
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check out repository at the release tag
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ steps.resolve-tag.outputs.tag }}
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Confirm tag matches the declared package version
+        run: python scripts/check_release_tag_version.py "${{ steps.resolve-tag.outputs.tag }}"
+
+      - name: Download the release's SHA256SUMS
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.resolve-tag.outputs.tag }}
+        run: gh release download "$TAG" --pattern SHA256SUMS
+
+      - name: Extract the Windows x86_64 checksum and derive the version/URL
+        id: values
+        shell: bash
+        env:
+          TAG: ${{ steps.resolve-tag.outputs.tag }}
+        run: |
+          set -e
+          sha256="$(grep 'lifetxt-windows-x86_64.exe$' SHA256SUMS | cut -d' ' -f1)"
+          if [ -z "$sha256" ]; then
+            echo "lifetxt-windows-x86_64.exe not found in this release's SHA256SUMS -- has standalone-binaries.yml run for this tag yet?" >&2
+            exit 1
+          fi
+          version="${TAG#v}"
+          url="https://github.com/${{ github.repository }}/releases/download/${TAG}/lifetxt-windows-x86_64.exe"
+          echo "sha256=$sha256" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Generate the winget manifest
+        run: >-
+          python scripts/generate_winget_manifest.py
+          --version "${{ steps.values.outputs.version }}"
+          --installer-url "${{ steps.values.outputs.url }}"
+          --sha256 "${{ steps.values.outputs.sha256 }}"
+          --output-dir packaging/winget/generated
+
+      - name: Generate the Scoop manifest
+        run: >-
+          python scripts/generate_scoop_manifest.py
+          --version "${{ steps.values.outputs.version }}"
+          --installer-url "${{ steps.values.outputs.url }}"
+          --sha256 "${{ steps.values.outputs.sha256 }}"
+          --output packaging/scoop/generated/lifetxt.json
+
+      - name: Upload generated manifests
+        uses: actions/upload-artifact@v6
+        with:
+          name: package-manifests-${{ steps.resolve-tag.outputs.tag }}
+          if-no-files-found: error
+          path: |
+            packaging/winget/generated/
+            packaging/scoop/generated/

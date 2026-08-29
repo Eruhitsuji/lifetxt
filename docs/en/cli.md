@@ -430,6 +430,21 @@ A title made only of sigils is rejected rather than creating an untitled record,
 and an unrecognized `^date` fails loudly instead of writing an unparseable
 value.
 
+### Named capture presets
+
+`--preset NAME` applies a configured `capture.presets.<name>` object's
+`type`/`status`/`project`/`tags`/`priority` defaults before shorthand and
+explicit flags run, so both still win over the preset for the same field:
+
+```sh
+lifetxt quick --preset work-task "Prepare proposal"
+lifetxt quick --preset work-task "Fix bug !high"    # explicit !high overrides preset priority
+lifetxt add --preset idea "Try local-first sync"    # add/q share the same --preset
+```
+
+See [config.md](config.md#named-capture-presets) for the configuration
+contract, precedence rules, and tag-merge behavior.
+
 ### Relative date tokens
 
 Anywhere a date is accepted — `--due`, `--do`, `--until`, `^` sigils, and the

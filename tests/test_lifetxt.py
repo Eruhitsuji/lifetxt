@@ -2409,6 +2409,240 @@ class LifeTxtQuickCliTests(unittest.TestCase):
         self.assertIn("requires a non-empty title", stderr)
 
 
+class LifeTxtCapturePresetCliTests(unittest.TestCase):
+    """`--preset NAME` on quick/q/add (#594): a defaults layer, never an
+    invisible override -- explicit shorthand/CLI flags always win, and
+    tags merge rather than replace."""
+
+    def _config_with_presets(self, temp_dir, presets):
+        cfg_path = os.path.join(temp_dir, ".lifetxt.json")
+        with open(cfg_path, "w", encoding="utf-8") as f:
+            json.dump({"capture": {"presets": presets}}, f)
+        return cfg_path
+
+    WORK_TASK_PRESET = {
+        "work-task": {
+            "type": "T",
+            "project": "work",
+            "tags": ["work"],
+            "priority": "normal",
+        }
+    }
+
+    def test_plain_preset_use_applies_every_configured_field(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            cfg = self._config_with_presets(temp_dir, self.WORK_TASK_PRESET)
+            life = os.path.join(temp_dir, "life.txt")
+            stdout, stderr, code = run_cli(
+                "--config",
+                cfg,
+                "quick",
+                "--preset",
+                "work-task",
+                "Prepare proposal",
+                "--append",
+                life,
+            )
+            self.assertEqual(0, code, stderr)
+            with open(life, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("project:work", content)
+            self.assertIn("priority:normal", content)
+            self.assertIn("tag:work", content)
+
+    def test_explicit_shorthand_overrides_preset_scalar(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            cfg = self._config_with_presets(temp_dir, self.WORK_TASK_PRESET)
+            life = os.path.join(temp_dir, "life.txt")
+            stdout, stderr, code = run_cli(
+                "--config",
+                cfg,
+                "quick",
+                "--preset",
+                "work-task",
+                "Fix bug !high",
+                "--append",
+                life,
+            )
+            self.assertEqual(0, code, stderr)
+            with open(life, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("priority:high", content)
+            self.assertNotIn("priority:normal", content)
+            self.assertIn("project:work", content)
+
+    def test_explicit_cli_flag_overrides_preset_scalar(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            cfg = self._config_with_presets(temp_dir, self.WORK_TASK_PRESET)
+            life = os.path.join(temp_dir, "life.txt")
+            stdout, stderr, code = run_cli(
+                "--config",
+                cfg,
+                "quick",
+                "--preset",
+                "work-task",
+                "Errand",
+                "--project",
+                "errands",
+                "--append",
+                life,
+            )
+            self.assertEqual(0, code, stderr)
+            with open(life, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("project:errands", content)
+            self.assertNotIn("project:work", content)
+            self.assertIn("priority:normal", content)
+
+    def test_explicit_tag_merges_with_preset_tags_deduplicated(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            cfg = self._config_with_presets(temp_dir, self.WORK_TASK_PRESET)
+            life = os.path.join(temp_dir, "life.txt")
+            stdout, stderr, code = run_cli(
+                "--config",
+                cfg,
+                "quick",
+                "--preset",
+                "work-task",
+                "Buy adapter #hardware",
+                "--append",
+                life,
+            )
+            self.assertEqual(0, code, stderr)
+            with open(life, encoding="utf-8") as f:
+                content = f.read()
+            self.assertEqual(1, content.count("tag:hardware"))
+            self.assertEqual(1, content.count("tag:work"))
+
+    def test_preset_type_and_status_apply_when_not_explicit(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            cfg = self._config_with_presets(
+                temp_dir, {"idea": {"type": "N", "tags": ["idea"]}}
+            )
+            life = os.path.join(temp_dir, "life.txt")
+            stdout, stderr, code = run_cli(
+                "--config",
+                cfg,
+                "quick",
+                "--preset",
+                "idea",
+                "Try local-first sync",
+                "--append",
+                life,
+            )
+            self.assertEqual(0, code, stderr)
+            with open(life, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("[N] N", content)
+            self.assertIn("tag:idea", content)
+
+    def test_stdin_title_capture_works_with_preset(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            cfg = self._config_with_presets(temp_dir, self.WORK_TASK_PRESET)
+            life = os.path.join(temp_dir, "life.txt")
+            stdout, stderr, code = run_cli(
+                "--config",
+                cfg,
+                "quick",
+                "--preset",
+                "work-task",
+                "-",
+                "--append",
+                life,
+                input_text="From stdin\n",
+            )
+            self.assertEqual(0, code, stderr)
+            with open(life, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn('"From stdin"', content)
+            self.assertIn("project:work", content)
+
+    def test_q_and_add_inherit_preset_from_the_same_command_contract(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            cfg = self._config_with_presets(temp_dir, self.WORK_TASK_PRESET)
+            q_life = os.path.join(temp_dir, "q.txt")
+            add_life = os.path.join(temp_dir, "add.txt")
+            _out, q_err, q_code = run_cli(
+                "--config",
+                cfg,
+                "q",
+                "--preset",
+                "work-task",
+                "Via_q",
+                "--append",
+                q_life,
+            )
+            _out, add_err, add_code = run_cli(
+                "--config",
+                cfg,
+                "add",
+                "--preset",
+                "work-task",
+                "Via_add",
+                "--append",
+                add_life,
+            )
+            self.assertEqual(0, q_code, q_err)
+            self.assertEqual(0, add_code, add_err)
+            with open(q_life, encoding="utf-8") as f:
+                self.assertIn("project:work", f.read())
+            with open(add_life, encoding="utf-8") as f:
+                self.assertIn("project:work", f.read())
+
+    def test_unknown_preset_fails_loudly_and_lists_available_names(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            cfg = self._config_with_presets(temp_dir, self.WORK_TASK_PRESET)
+            life = os.path.join(temp_dir, "life.txt")
+            stdout, stderr, code = run_cli(
+                "--config",
+                cfg,
+                "quick",
+                "--preset",
+                "nope",
+                "Should fail",
+                "--append",
+                life,
+            )
+            self.assertEqual(1, code)
+            self.assertIn("nope", stderr)
+            self.assertIn("work-task", stderr)
+            self.assertFalse(os.path.exists(life))
+
+    def test_malformed_preset_definition_is_rejected_not_silently_ignored(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            cfg = self._config_with_presets(
+                temp_dir, {"broken": {"type": "T", "shell": "rm -rf /"}}
+            )
+            life = os.path.join(temp_dir, "life.txt")
+            stdout, stderr, code = run_cli(
+                "--config",
+                cfg,
+                "quick",
+                "--preset",
+                "broken",
+                "Should fail",
+                "--append",
+                life,
+            )
+            self.assertEqual(1, code)
+            self.assertIn("shell", stderr)
+            self.assertFalse(os.path.exists(life))
+
+    def test_no_preset_given_leaves_quick_behavior_unchanged(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            cfg = self._config_with_presets(temp_dir, self.WORK_TASK_PRESET)
+            life = os.path.join(temp_dir, "life.txt")
+            stdout, stderr, code = run_cli(
+                "--config", cfg, "quick", "Plain_capture", "--append", life
+            )
+            self.assertEqual(0, code, stderr)
+            with open(life, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("[ ] T Plain_capture", content)
+            self.assertNotIn("project:", content)
+            self.assertNotIn("priority:", content)
+
+
 class LifeTxtAddAliasCliTests(unittest.TestCase):
     """`add` is a top-level alias for `quick`/`q` (#591): same parser, same
     handler, same mutation path -- these mirror LifeTxtQuickCliTests's own

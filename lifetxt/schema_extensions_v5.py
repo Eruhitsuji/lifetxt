@@ -40,6 +40,21 @@ def _source_manifest_entry():
     }
 
 
+def _capture_preset():
+    non_empty_string = {"type": "string", "minLength": 1}
+    return {
+        "type": "object",
+        "properties": {
+            "type": non_empty_string,
+            "status": non_empty_string,
+            "project": non_empty_string,
+            "tags": {"type": "array", "items": non_empty_string},
+            "priority": non_empty_string,
+        },
+        "additionalProperties": False,
+    }
+
+
 def _report_profile():
     non_empty_string = {"type": "string", "minLength": 1}
     return {
@@ -162,6 +177,16 @@ def schema_bundle_v5():
                         "reports": {
                             "type": "object",
                             "additionalProperties": _report_profile(),
+                        },
+                        "capture": {
+                            "type": "object",
+                            "properties": {
+                                "presets": {
+                                    "type": "object",
+                                    "additionalProperties": _capture_preset(),
+                                },
+                            },
+                            "additionalProperties": True,
                         },
                         "defaults": {
                             "type": "object",

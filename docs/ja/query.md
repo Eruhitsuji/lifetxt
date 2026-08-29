@@ -23,9 +23,31 @@ query は whitespace-separated terms です。values は quoted にできます�
 - **Membership**: `status`, `type`/`kind`, `project`, `tag`, `tag_all`, `user`, `person`, `owner`, `assignee`, `attendee`, `sender`, `recipient`, `team`
 - **Dates**: `due`, `do`, `from`, `to`, `on`, `at`, `done`, `created`, `updated`
 - **Details** (equality): `area`, `context`, `loc`, `priority`, and any known key
+- **Custom**（equality、opt-in）: [汎用 `custom_fields`](config.md#汎用-custom-field) の
+  definition のうち `filterable: true` のもの
 - **Text**: `text` / `q`, or bare words
 
 unknown fields は `Q001` warning になり ignored されます。invalid dates は `Q002` error です。warnings は result set と一緒に返りますが、errors は query を止めます。field typo が silently zero results にならず、malformed date comparison が valid のふりをしないようにするためです。
+
+### Custom field
+
+top-level の [`custom_fields`](config.md#汎用-custom-field) 設定で宣言された field は、
+その definition が `filterable: true` を設定している場合に限り、認識される
+`field:value` / `field=value` equality query field になります：
+
+```console
+$ lifetxt query "energy:high"
+$ lifetxt view run energetic-notes
+```
+
+`filterable: false`（既定）のまま残された field は、一致する item 上では
+引き続き validation される metadata ですが、それを query すると未宣言の key
+と全く同様に `Q001` が報告されます -- validation のために field を宣言する
+ことは、それを黙って queryable にはしません。custom field に対する数値/日付の
+比較演算子（`<`、`>` など）はまだ対応していません -- equality/membership
+matching のみが対応しています。filterable な custom field を使う saved view
+もこの同じ grammar を通じて実行されるため、別実装はなく、`view
+validate`/`view run` は ad-hoc な query と全く同じように動作します。
 
 ## CLI
 

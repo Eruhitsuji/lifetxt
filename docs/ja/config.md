@@ -384,3 +384,120 @@ handler に届くかだけです。
 既存設定は従来どおり動作します。既存の `tui.keymap` の値は引き続き
 authoritative な base preset であり、rename も deprecate もされません。
 downgrade 時は任意の `tui.bindings` セクションを削除すれば元に戻ります。
+
+## 汎用 custom field
+
+任意の top-level `custom_fields` object は、通常の（ticket ではない）
+life.txt record に対して、型付きで validation される metadata を宣言します
+-- Journal の rating、Note の energy level、家庭や研究の分類など -- life.txt
+の grammar を変更したり、その open な custom key model を閉じた schema に
+してしまったりすることなく利用できます：
+
+```json
+{
+  "custom_fields": {
+    "energy": {
+      "type": "enum",
+      "values": ["low", "medium", "high"],
+      "kinds": ["J", "N"],
+      "filterable": true
+    },
+    "rating": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 5,
+      "kinds": ["J"],
+      "filterable": true
+    }
+  }
+}
+```
+
+```text
+[N] N "Afternoon energy" energy:high
+[N] J "Daily review" rating:4.5
+```
+
+各 field 名は definition object（または `"energy": "string"` のような
+`{"type": "string"}` の省略形としての bare な type 文字列）に対応します。
+対応する metadata：
+
+| Key | 意味 |
+| --- | --- |
+| `type` | `string`、`integer`、`number`、`boolean`、`date`、`datetime`、`duration`、`enum` のいずれか。 |
+| `label` | 任意の user-facing label。既定は field 名。 |
+| `description` | 任意の説明。 |
+| `repeatable` | boolean。1 つの item に複数回出現してよいか。 |
+| `required` | boolean。適用対象の item がこの field を必ず含む必要があるか。 |
+| `enum` / `values` | `type: enum` のときの許可値リスト（`values` は許可された別名）。 |
+| `minimum`、`maximum` | `integer`/`number` 型の数値範囲。 |
+| `min_length`、`max_length` | 正規化後の値の長さ制約。 |
+| `pattern` | 正規化後の値が満たすべき正規表現。 |
+| `kinds` | この field が適用される life.txt record kind（`T`/`E`/`D`/`R`/`H`/`N`/`S`/`M`/`J`）。省略時はすべての通常 kind に適用。 |
+| `projects` | この field が適用される project。省略時はすべての project に適用。 |
+| `filterable` | boolean、既定 `false`。下記の Query 動作を参照。 |
+
+これは、はるかに豊富な `ticketing.custom_fields` registry（下記参照）の
+意図的に最小限の汎用対応版です。両者は 1 つの typed-value 実装を共有して
+おり、同じ `type`/`minimum`/`pattern`/... の入力はどちらの registry でも
+同一に parse・validation されます。privacy level や tracker/role による
+scoping などの ticket workflow 固有の metadata は、意図的に汎用 registry
+には含まれません -- それらは ticket 固有のまま残ります。
+
+`record:ticket` item は `custom_fields` の対象には決してなりません。
+引き続き `ticketing.custom_fields` のみが対象であり、汎用 definition が
+ticket 固有の definition を再解釈したり上書きしたりすることはありません。
+
+### Validation の動作
+
+field definition は、item の kind が `kinds`（指定されていれば）に一致し、
+`project:` が `projects`（指定されていれば）に一致するとき、通常の item に
+適用されます。適用対象の item については：
+
+- 宣言済みの field の key は、汎用の「custom key であり保持される」という
+  警告をもう発生させません -- 単に許容されるのではなく、認識されます；
+- その値は `type` および全ての制約
+  （`enum`/`minimum`/`maximum`/`min_length`/`max_length`/`pattern`）に対して
+  正規化・validation されます；
+- `repeatable: false`（既定）は複数値を拒否します；
+- `required: true` は、item にその field がない場合 error を報告します。
+
+**未宣言**の custom key は影響を受けません -- 従来どおりの保持・警告動作を
+そのまま維持します。**宣言済み**の field であっても、その `kinds`/`projects`
+の適用範囲外の item で使われた場合は同様に手を加えません -- registry の
+どこかで同じ key 名が宣言されているというだけで、黙って強い意味論を
+獲得することはありません。
+
+### Query の動作
+
+`filterable: true` の definition のみが動的な Query field になり、shared
+query language（`field:value` / `field=value` の equality/membership
+matching）によって自動的に認識されます。したがって、それを基盤とする
+すべての surface -- CLI `query`、Saved View、MCP `run_query`、Web/TUI の
+Saved View -- がそれぞれ独自の実装を持つことなくこの機能を利用できます：
+
+```sh
+lifetxt query 'energy:high'
+lifetxt view run energetic-notes
+```
+
+`filterable: false`（既定）のまま設定された field は validation される
+metadata としては残りますが、Query field 名としては **受理されません**。
+そのような field を query すると、未宣言の key と同様に Q001（unknown
+field）が報告されます。custom field に対する数値/日付の比較演算子
+（`<`、`>` など）は、この最初の slice では対象外です -- サポートされるのは
+equality/membership matching のみです。
+
+登録済みの metadata contract を確認するには
+`lifetxt config explain custom_fields.*.type`（または他の任意の
+definition key）を使用してください。
+
+これは config version 1 に対する追加的な拡張です。`custom_fields` を持たない
+既存設定は今までどおり動作し、既存の任意の custom detail key も引き続き
+有効で保持されます。エントリを追加すると、その field は意図的により強い
+validation の対象になりますが、既存の `ticketing.custom_fields` 設定の
+意味は変更されません。保存される syntax は通常の `key:value` detail
+metadata のままであるため、life.txt file の migration は不要です --
+古い lifetxt version は custom detail のテキストを保持しますが、新しい
+設定の意味論は認識しません。downgrade 時は任意の `custom_fields`
+セクションを削除すれば元に戻ります。

@@ -13,21 +13,15 @@ import json
 import re
 from collections import OrderedDict
 from contextvars import ContextVar
-from decimal import Decimal, InvalidOperation
 
-from .timeutil import parse_iso_date, parse_iso_datetime
+from .custom_field_primitives import SUPPORTED_TYPES
+from .custom_field_primitives import decimal_text as _decimal_text
+from .custom_field_primitives import definition_boolean as _shared_definition_boolean
+from .custom_field_primitives import definition_decimal as _shared_definition_decimal
+from .custom_field_primitives import definition_integer as _shared_definition_integer
+from .custom_field_primitives import normalize_typed_value as _normalize_custom_value
+from .custom_field_primitives import string_list as _string_list
 
-
-SUPPORTED_TYPES = (
-    "string",
-    "integer",
-    "number",
-    "boolean",
-    "date",
-    "datetime",
-    "duration",
-    "enum",
-)
 PRIVACY_LEVELS = ("public", "internal", "private", "secret")
 _FIELD_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_.-]*$")
 _ACTIVE_CONFIG = ContextVar("lifetxt_ticket_custom_field_config", default=None)
@@ -78,81 +72,42 @@ def _diag(code, message, field=None, hint=None, item=None):
     return row
 
 
-def _string_list(value):
-    if value in (None, ""):
-        return []
-    source = value if isinstance(value, (list, tuple, set, frozenset)) else [value]
-    result = []
-    for entry in source:
-        text = str(entry).strip()
-        if text and text not in result:
-            result.append(text)
-    return result
-
-
 def _definition_boolean(raw, key, field, diagnostics, default=False):
-    if raw is None:
-        return bool(default)
-    if isinstance(raw, bool):
-        return raw
-    diagnostics.append(
-        _diag(
-            "TK006",
-            "Custom field %r metadata %s must be a boolean." % (field, key),
-            field,
-        )
+    return _shared_definition_boolean(
+        raw,
+        key,
+        field,
+        diagnostics,
+        default=default,
+        diag=lambda message, fld: _diag("TK006", "Custom field " + message, fld),
     )
-    return bool(default)
 
 
 def _definition_integer(raw, key, field, diagnostics):
-    if raw is None:
-        return None
-    if isinstance(raw, bool):
-        diagnostics.append(
-            _diag(
-                "TK006",
-                "Custom field %r metadata %s must be an integer." % (field, key),
-                field,
-            )
-        )
-        return None
-    try:
-        value = int(raw)
-    except (TypeError, ValueError):
-        diagnostics.append(
-            _diag(
-                "TK006",
-                "Custom field %r metadata %s must be an integer." % (field, key),
-                field,
-            )
-        )
-        return None
-    if value < 0:
-        diagnostics.append(
-            _diag(
-                "TK006",
-                "Custom field %r metadata %s must be zero or greater." % (field, key),
-                field,
-            )
-        )
-        return None
-    return value
+    return _shared_definition_integer(
+        raw,
+        key,
+        field,
+        diagnostics,
+        diag=lambda message, fld: _diag("TK006", "Custom field " + message, fld),
+    )
 
 
 def _definition_decimal(raw, key, field, diagnostics):
     if raw is None:
         return None
-    try:
-        value = Decimal(str(raw))
-    except (InvalidOperation, ValueError, TypeError):
-        diagnostics.append(
-            _diag(
-                "TK006",
-                "Custom field %r metadata %s must be numeric." % (field, key),
-                field,
-            )
-        )
+    value = _shared_definition_decimal(
+        raw,
+        key,
+        field,
+        diagnostics,
+        diag=lambda _message, fld: _diag(
+            "TK006",
+            "Custom field %r metadata %s must be numeric." % (fld, key),
+            fld,
+        ),
+    )
+    if value is None:
         return None
     if not value.is_finite():
         diagnostics.append(
@@ -420,100 +375,6 @@ def custom_field_definitions(config=None, strict=False):
     if strict and not report["valid"]:
         raise ValueError(report["diagnostics"])
     return report["definitions"]
-
-
-def _decimal_text(value):
-    text = format(value, "f")
-    if "." in text:
-        text = text.rstrip("0").rstrip(".")
-    return text or "0"
-
-
-def _normalize_boolean(value):
-    text = str(value).strip().lower()
-    if text in ("1", "true", "yes", "on"):
-        return "true", Decimal(1)
-    if text in ("0", "false", "no", "off"):
-        return "false", Decimal(0)
-    raise ValueError("must be true/false, yes/no, on/off, or 1/0")
-
-
-def _normalize_custom_value(value, definition):
-    field_type = definition["type"]
-    text = str(value)
-    comparable = None
-    if field_type in ("string", "enum"):
-        normalized = text
-    elif field_type == "integer":
-        if not re.match(r"^[+-]?\d+$", text.strip()):
-            raise ValueError("must be an integer")
-        number = int(text.strip())
-        normalized = str(number)
-        comparable = Decimal(number)
-    elif field_type == "number":
-        try:
-            number = Decimal(text.strip())
-        except (InvalidOperation, ValueError):
-            raise ValueError("must be a number")
-        if not number.is_finite():
-            raise ValueError("must be a finite number")
-        normalized = _decimal_text(number)
-        comparable = number
-    elif field_type == "boolean":
-        normalized, comparable = _normalize_boolean(text)
-    elif field_type == "date":
-        if "T" in text or " " in text:
-            raise ValueError("must be an ISO date without a time")
-        parsed = parse_iso_date(text)
-        if parsed is None:
-            raise ValueError("must be an ISO date (YYYY-MM-DD)")
-        normalized = parsed.isoformat()
-    elif field_type == "datetime":
-        if "T" not in text and " " not in text:
-            raise ValueError("must include a date and time")
-        parsed = parse_iso_datetime(text)
-        if parsed is None:
-            raise ValueError("must be an ISO date-time")
-        normalized = parsed.isoformat()
-    elif field_type == "duration":
-        from .agenda import parse_duration
-
-        try:
-            parsed = parse_duration(text)
-        except (TypeError, ValueError):
-            raise ValueError("must be a lifetxt duration such as 30m, 2h, or 1d")
-        normalized = text.strip()
-        comparable = Decimal(str(parsed.total_seconds()))
-    else:
-        raise ValueError("uses unsupported type %r" % field_type)
-
-    allowed = definition.get("enum") or []
-    if allowed and normalized not in allowed:
-        raise ValueError("must be one of: %s" % ", ".join(allowed))
-    minimum = definition.get("minimum")
-    maximum = definition.get("maximum")
-    if (
-        comparable is not None
-        and minimum is not None
-        and comparable < Decimal(str(minimum))
-    ):
-        raise ValueError("must be at least %s" % minimum)
-    if (
-        comparable is not None
-        and maximum is not None
-        and comparable > Decimal(str(maximum))
-    ):
-        raise ValueError("must be at most %s" % maximum)
-    min_length = definition.get("min_length")
-    max_length = definition.get("max_length")
-    if min_length is not None and len(normalized) < int(min_length):
-        raise ValueError("must contain at least %s characters" % min_length)
-    if max_length is not None and len(normalized) > int(max_length):
-        raise ValueError("must contain at most %s characters" % max_length)
-    pattern = definition.get("pattern")
-    if pattern and re.search(pattern, normalized) is None:
-        raise ValueError("does not match pattern %s" % pattern)
-    return normalized
 
 
 def _definition_default_values(name, definition, diagnostics):

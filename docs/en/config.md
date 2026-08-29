@@ -578,3 +578,118 @@ without `tui.bindings` behave exactly as before; the existing `tui.keymap`
 values remain the authoritative base preset and are not renamed or
 deprecated. Removing the optional `tui.bindings` section is the downgrade
 path.
+
+## Generic custom fields
+
+The optional top-level `custom_fields` object declares typed, validated
+metadata for ordinary (non-ticket) life.txt records -- a Journal rating, a
+Note's energy level, a household or research classification -- without
+changing the life.txt grammar or turning its open custom-key model into a
+closed schema:
+
+```json
+{
+  "custom_fields": {
+    "energy": {
+      "type": "enum",
+      "values": ["low", "medium", "high"],
+      "kinds": ["J", "N"],
+      "filterable": true
+    },
+    "rating": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 5,
+      "kinds": ["J"],
+      "filterable": true
+    }
+  }
+}
+```
+
+```text
+[N] N "Afternoon energy" energy:high
+[N] J "Daily review" rating:4.5
+```
+
+Each field name maps to a definition object (or a bare type string, e.g.
+`"energy": "string"`, as shorthand for `{"type": "string"}`). Supported
+metadata:
+
+| Key | Meaning |
+| --- | --- |
+| `type` | One of `string`, `integer`, `number`, `boolean`, `date`, `datetime`, `duration`, `enum`. |
+| `label` | Optional user-facing label; defaults to the field name. |
+| `description` | Optional explanation. |
+| `repeatable` | Boolean; whether the field may appear more than once on one item. |
+| `required` | Boolean; whether an applicable item must include the field. |
+| `enum` / `values` | Allowed values, for `type: enum` (`values` is an accepted alias). |
+| `minimum`, `maximum` | Numeric bounds, for `integer`/`number` types. |
+| `min_length`, `max_length` | Length bounds on the normalized value. |
+| `pattern` | A regular expression the normalized value must match. |
+| `kinds` | Life.txt record kinds (`T`/`E`/`D`/`R`/`H`/`N`/`S`/`M`/`J`) the field applies to. Omitted means every ordinary kind. |
+| `projects` | Projects the field applies to. Omitted means every project. |
+| `filterable` | Boolean, default `false`; see Query behavior below. |
+
+This is deliberately the smallest generic counterpart to the much richer
+`ticketing.custom_fields` registry (below); both share one typed-value
+implementation, so an equivalent `type`/`minimum`/`pattern`/... input is
+parsed and validated identically in either registry. Privacy levels,
+tracker/role scoping, and other ticket-workflow-specific metadata are
+intentionally not part of the generic registry -- those stay ticket-specific.
+
+`record:ticket` items are never governed by `custom_fields`; they remain
+governed by `ticketing.custom_fields` only, and a generic definition never
+reinterprets or overrides a ticket-specific one.
+
+### Validation behavior
+
+A field definition applies to an ordinary item when the item's kind matches
+`kinds` (if given) and its `project:` matches `projects` (if given). For an
+applicable item:
+
+- a declared field's key no longer produces the generic "custom key, it will
+  be preserved" warning -- it is recognized, not merely tolerated;
+- its value(s) are normalized and validated against `type` and every
+  constraint (`enum`/`minimum`/`maximum`/`min_length`/`max_length`/`pattern`);
+- `repeatable: false` (the default) rejects more than one value;
+- `required: true` reports an error when the item lacks the field.
+
+An **undeclared** custom key is unaffected: it keeps today's exact
+preservation and warning behavior. A **declared** field used on an item
+outside its own `kinds`/`projects` scope is also left untouched -- it does
+not silently gain stronger semantics just because the same key name is
+declared somewhere else in the registry.
+
+### Query behavior
+
+Only definitions with `filterable: true` become dynamic Query fields,
+recognized automatically by the shared query language (`field:value` /
+`field=value` equality/membership matching) and therefore by every surface
+built on it -- CLI `query`, Saved Views, MCP `run_query`, and Web/TUI Saved
+Views -- with no separate implementation on any of those surfaces:
+
+```sh
+lifetxt query 'energy:high'
+lifetxt view run energetic-notes
+```
+
+A configured field left `filterable: false` (the default) remains validated
+metadata but is **not** accepted as a Query field name; querying it still
+reports Q001 (unknown field), the same as any undeclared key. Numeric/date
+comparison operators (`<`, `>`, and so on) for custom fields are out of
+scope for this first slice; only equality/membership matching is supported.
+
+Use `lifetxt config explain custom_fields.*.type` (or any other definition
+key) to inspect the registered metadata contract.
+
+This is an additive configuration-v1 extension. Existing configurations
+without `custom_fields` behave exactly as today, and existing arbitrary
+custom detail keys remain legal and preserved. Adding an entry intentionally
+opts that field into stronger validation for applicable ordinary items; it
+does not change the meaning of any existing `ticketing.custom_fields`
+configuration. No life.txt file migration is required, since the stored
+syntax remains ordinary `key:value` detail metadata -- an older lifetxt
+version will preserve the custom detail text but will not know the new
+configuration semantics. Removing the optional `custom_fields` section is
+the downgrade path.

@@ -14273,6 +14273,10 @@ def _parse_life_inputs(paths, config=None):
     diagnostics.extend(duplicate_id_diagnostics(items, key=id_key))
     diagnostics.extend(reference_diagnostics(items, key=id_key))
     diagnostics.extend(_completed_parent_diagnostics(items, key=id_key))
+    if config and config.get("custom_fields"):
+        from .custom_fields import generic_custom_field_diagnostics
+
+        diagnostics = generic_custom_field_diagnostics(items, diagnostics, config)
     return items, diagnostics
 
 

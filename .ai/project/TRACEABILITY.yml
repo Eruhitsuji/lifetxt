@@ -8657,7 +8657,7 @@ traceability:
       capability_id: cap-adoption-onboarding-commands
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/590
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/597
       changed_files_or_scope:
         - Add lifetxt tour, a zero-config, dependency-free first-run demonstration
         - lifetxt/tour.py
@@ -8695,7 +8695,7 @@ traceability:
       capability_id: cap-adoption-onboarding-commands
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/591
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/597
       changed_files_or_scope:
         - Register `add` as an additional argparse alias on the existing `quick` subparser, alongside `q`
         - lifetxt/cli.py
@@ -8722,7 +8722,7 @@ traceability:
       capability_id: cap-adoption-onboarding-commands
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/592
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/597
       changed_files_or_scope:
         - Extract command_serve's config/workspace/host/port resolution and app construction into a shared _prepare_serve helper, reused unmodified by the new `web` command
         - Add a browser-readiness poll against the server's own existing, unauthenticated /api/health route
@@ -8752,7 +8752,7 @@ traceability:
       capability_id: cap-adoption-onboarding-commands
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/593
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/597
       changed_files_or_scope:
         - Extract import-ics's flag registration into a shared _add_import_core_arguments helper and add a new `import` routing-only dispatcher inferring --preset from the input extension
         - lifetxt/cli.py

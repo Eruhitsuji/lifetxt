@@ -44,6 +44,7 @@ COMMANDS = (
     "assist",
     "archive",
     "quick",
+    "add",
     "done",
     "files",
     "batch",

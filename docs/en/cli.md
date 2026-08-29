@@ -49,6 +49,7 @@ python -m lifetxt config show
 python -m lifetxt init
 python -m lifetxt doctor
 python -m lifetxt quick "Title"
+python -m lifetxt add "Title"
 python -m lifetxt done [path ...]
 python -m lifetxt complete [path ...]
 python -m lifetxt assign [path ...]
@@ -447,11 +448,17 @@ rejected where a real date is required.
 
 | Alias | Command |
 | --- | --- |
+| `add` | `quick` |
 | `q` | `quick` |
 | `d` | `done` |
 | `s` | `state` |
 | `a` | `agenda` |
 | `f` | `filter` |
+
+`add` is the beginner-facing spelling: `lifetxt add "Buy milk ^tomorrow"` is
+exactly `lifetxt quick "Buy milk ^tomorrow"` -- same parser, same handler, same
+write path. `quick`/`q` remain fully supported for existing workflows and
+scripts.
 
 The TUI has its own one-letter aliases in the command palette: `/d` `/s` `/a`
 `/f` `/t` `/e` `/u` `/n` `/q`. An exact alias always wins over fuzzy ranking, so

@@ -553,37 +553,7 @@ def build_parser():
         "import-ics",
         help="Convert iCalendar .ics VEVENT entries to life.txt event items.",
     )
-    _add_input_paths(import_ics)
-    import_ics.add_argument("-o", "--output", help="Output file. Defaults to stdout.")
-    import_ics.add_argument(
-        "--append",
-        action="store_true",
-        help="Append to --output instead of overwriting it.",
-    )
-    import_ics.add_argument(
-        "--project",
-        help="Add this project: detail to every imported event.",
-    )
-    import_ics.add_argument(
-        "--tag",
-        action="append",
-        default=[],
-        help="Add this tag: detail to every imported event. Can be repeated.",
-    )
-    import_ics.add_argument(
-        "--expand-rrule",
-        action="store_true",
-        help="Write one record per occurrence instead of a single record with repeat:RRULE:.",
-    )
-    import_ics.add_argument(
-        "--expand-until",
-        help="Expand occurrences up to this date. Defaults to one year out.",
-    )
-    import_ics.add_argument(
-        "--expand-count",
-        type=int,
-        help="Maximum occurrences per recurring event. Capped at 500.",
-    )
+    _add_import_core_arguments(import_ics)
     import_ics.add_argument(
         "--preset",
         choices=("ics", "markdown", "todoist", "github"),
@@ -595,6 +565,29 @@ def build_parser():
         ),
     )
     import_ics.set_defaults(func=command_import_ics)
+
+    import_command = subparsers.add_parser(
+        "import",
+        help="Unified entry point for import-ics's ics/markdown/todoist/github presets.",
+        description=(
+            "Routing-only dispatcher over the existing import-ics implementation: "
+            "no second ICS/Markdown/Todoist/GitHub conversion. A .ics input infers "
+            "--preset ics and a .md/.markdown input infers --preset markdown; every "
+            "other input (including .csv and .json) requires an explicit --preset."
+        ),
+    )
+    _add_import_core_arguments(import_command)
+    import_command.add_argument(
+        "--preset",
+        choices=("ics", "markdown", "todoist", "github"),
+        default=None,
+        help=(
+            "Source preset. Inferred from the input file extension when omitted: "
+            "'ics' for .ics, 'markdown' for .md/.markdown. Required for every "
+            "other input, including .csv (todoist) and .json (github)."
+        ),
+    )
+    import_command.set_defaults(func=command_import)
 
     sync_ics = subparsers.add_parser(
         "sync-ics",
@@ -3888,6 +3881,48 @@ def _add_input_paths(parser):
     )
 
 
+def _add_import_core_arguments(parser):
+    """Arguments shared by `import-ics` and `import`.
+
+    `import` is a thin routing dispatcher over the same `command_import_ics`
+    implementation (see `command_import`), so both subparsers register the
+    exact same flags here rather than each defining its own copy. Only the
+    `--preset` default differs between the two and stays defined separately
+    on each subparser.
+    """
+    _add_input_paths(parser)
+    parser.add_argument("-o", "--output", help="Output file. Defaults to stdout.")
+    parser.add_argument(
+        "--append",
+        action="store_true",
+        help="Append to --output instead of overwriting it.",
+    )
+    parser.add_argument(
+        "--project",
+        help="Add this project: detail to every imported event.",
+    )
+    parser.add_argument(
+        "--tag",
+        action="append",
+        default=[],
+        help="Add this tag: detail to every imported event. Can be repeated.",
+    )
+    parser.add_argument(
+        "--expand-rrule",
+        action="store_true",
+        help="Write one record per occurrence instead of a single record with repeat:RRULE:.",
+    )
+    parser.add_argument(
+        "--expand-until",
+        help="Expand occurrences up to this date. Defaults to one year out.",
+    )
+    parser.add_argument(
+        "--expand-count",
+        type=int,
+        help="Maximum occurrences per recurring event. Capped at 500.",
+    )
+
+
 def _add_serve_core_arguments(parser):
     """Arguments shared by `serve` and `web`: one authoritative Web runtime.
 
@@ -4852,6 +4887,43 @@ def _expand_horizon(args):
     if isinstance(parsed, datetime.datetime):
         return parsed
     return datetime.datetime(parsed.year, parsed.month, parsed.day, 23, 59, 59)
+
+
+_IMPORT_EXTENSION_PRESETS = {
+    ".ics": "ics",
+    ".md": "markdown",
+    ".markdown": "markdown",
+}
+
+
+def command_import(args):
+    """Routing-only dispatcher: infer --preset from the input extension when
+    omitted, then delegate entirely to the existing command_import_ics
+    implementation. No ICS/Markdown/Todoist/GitHub conversion logic lives
+    here -- see the module docstring convention `import-ics` already
+    established.
+    """
+    preset = getattr(args, "preset", None)
+    if not preset:
+        candidate = next(
+            (p for p in (args.paths or []) if p and p != "-"),
+            None,
+        )
+        if candidate is None:
+            raise ValueError(
+                "Cannot determine the import format without --preset. Reading "
+                "from stdin requires an explicit --preset: ics, markdown, "
+                "todoist, or github."
+            )
+        ext = os.path.splitext(candidate)[1].lower()
+        preset = _IMPORT_EXTENSION_PRESETS.get(ext)
+        if preset is None:
+            raise ValueError(
+                "Cannot determine the import format for '%s'. Pass --preset "
+                "explicitly: ics, markdown, todoist, or github." % candidate
+            )
+        args.preset = preset
+    return command_import_ics(args)
 
 
 def command_import_ics(args):

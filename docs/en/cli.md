@@ -24,6 +24,7 @@ python -m lifetxt to-csv [path ...]
 python -m lifetxt demo [options]
 python -m lifetxt markdown [path ...]
 python -m lifetxt import-ics [path ...]
+python -m lifetxt import [path ...]
 python -m lifetxt sync-ics --url-env ENVVAR
 python -m lifetxt filter [path ...]
 python -m lifetxt from-json [path ...]
@@ -1071,6 +1072,35 @@ python -m lifetxt to-csv life.txt --occurrences --after 2026-06-01 --before 2026
 ```
 
 ## 5. iCalendar Import And Sync
+
+### 5.0 `import`: the unified entry point
+
+`lifetxt import` is a routing-only dispatcher over `import-ics` below -- there
+is no second ICS/Markdown/Todoist/GitHub conversion implementation, only a
+smaller, more discoverable command name that infers `--preset` from the input
+file extension when it can be determined safely:
+
+```sh
+python -m lifetxt import calendar.ics                       # infers --preset ics
+python -m lifetxt import tasks.md                            # infers --preset markdown
+python -m lifetxt import todoist_export.csv --preset todoist # explicit preset required
+python -m lifetxt import github_issues.json --preset github  # explicit preset required
+```
+
+| Input | Preset |
+|---|---|
+| `*.ics` | `ics` (inferred) |
+| `*.md`, `*.markdown` | `markdown` (inferred) |
+| anything else, including `*.csv` and `*.json` | requires an explicit `--preset ics\|markdown\|todoist\|github` |
+| reading from stdin (no path given) | always requires an explicit `--preset` |
+
+`import` accepts every `import-ics` option below (`-o`/`--output`, `--append`,
+`--project`, `--tag`, `--expand-rrule`, `--expand-until`, `--expand-count`,
+`--preset`) -- the two subcommands share one argument definition -- and
+delegates the actual conversion, validation, write-target resolution, and
+write safety unchanged. Use `import-ics` directly for scripts that already
+name a preset explicitly; `import` exists to make first migration easier to
+discover, not to replace it.
 
 ### 5.1 `import-ics`
 

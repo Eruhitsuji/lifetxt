@@ -8615,6 +8615,44 @@ traceability:
         unaffected by this defect class.
       status: implemented
 
+    - requirement_id: req-release-distribution-runbook-skill
+      capability_id: cap-distribution-channels
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/567
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/588
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/589
+      changed_files_or_scope:
+        - Package the v1.0.1 release effort's operational sequence and
+          diagnostic habits as a tool-neutral skill, per
+          .ai/managed/core/SKILLS.md's minimal skill contract
+        - .ai/project/skills/release-distribution-runbook/SKILL.md
+        - .ai/project/CONTEXT_INDEX.yml
+        - .ai/project/CAPABILITIES.yml
+      tests_or_evidence:
+        - .venv/Scripts/python.exe -c "import yaml; yaml.safe_load(open('.ai/project/CONTEXT_INDEX.yml'))" -> parses
+        - .venv/Scripts/python.exe -c "import yaml; yaml.safe_load(open('.ai/project/CAPABILITIES.yml'))" -> parses
+        - manual review against .ai/managed/core/SKILLS.md's Minimal Skill Contract (stable kebab-case name, one-line description, directly-followable instructional content) and existing starter skills' SKILL.md format (next-action, review-viewpoints, runtime-evidence)
+      release_or_deployment: null
+      notes: >-
+        Documentation/skill-only change; no lifetxt/** or tests/** file
+        touched, so the traceability gate does not require this entry, but
+        one is added anyway per this project's established documentation
+        practice. The skill deliberately encodes only the repeatable
+        procedure and diagnostic habits (the channel dependency graph, the
+        release: published trigger trap, failure-classification triage,
+        and the retired-runner-label / cross-platform-CRLF diagnostic
+        habits) discovered during the v1.0.1 release (#579/#581/#583/#584/#586,
+        merged as PRs #580/#582/#585/#587) -- not the specific bugs
+        themselves, which are already fixed in the workflow files and
+        would become stale, misleading content if re-encoded as
+        workarounds inside the skill. Placed under .ai/project/skills/
+        (project-specific, tool-neutral) rather than a Claude-Code-only
+        location, per the user's explicit request and matching
+        AI_TOOL_COMPATIBILITY.md's prohibition on tool-specific skill
+        files with no tool-neutral equivalent. Registered as
+        CTX-RELEASE-001 in CONTEXT_INDEX.yml so it loads on demand rather
+        than being eagerly imported into every session.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

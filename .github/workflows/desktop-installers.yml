@@ -1,0 +1,158 @@
+name: Desktop installers
+
+# Builds lifetxt Desktop installers that bundle a real standalone lifetxt
+# runtime (#570), so a fresh install needs no separate Python/lifetxt setup
+# (#574). Each platform runs natively (Tauri bundling, like PyInstaller in
+# standalone-binaries.yml, must run on its target OS).
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to (re-)build, e.g. v1.0.0"
+        required: true
+      publish_github_release:
+        description: "Attach built installers to the matching GitHub Release"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build (${{ matrix.platform }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows-x86_64
+          - os: macos-latest
+            platform: macos-arm64
+          - os: ubuntu-latest
+            platform: linux-x86_64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Resolve release tag
+        id: resolve-tag
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check out repository at the release tag
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ steps.resolve-tag.outputs.tag }}
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux Tauri build dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Confirm tag matches the declared package version
+        shell: bash
+        run: python scripts/check_release_tag_version.py "${{ steps.resolve-tag.outputs.tag }}"
+
+      - name: Tie the desktop installer version to this release
+        shell: bash
+        env:
+          TAG: ${{ steps.resolve-tag.outputs.tag }}
+        run: python scripts/set_tauri_desktop_version.py --version "${TAG#v}"
+
+      - name: Install lifetxt with bundled extras, plus PyInstaller
+        run: python -m pip install ".[web,tui]" pyinstaller
+
+      - name: Build and stage the bundled lifetxt runtime
+        run: python packaging/tauri-desktop/prepare_bundled_runtime.py
+
+      - name: Install tauri-cli
+        run: cargo install tauri-cli --version "^2" --locked
+
+      - name: Build the desktop installer
+        working-directory: desktop/src-tauri
+        run: cargo tauri build
+
+      - name: Collect installer artifacts
+        shell: bash
+        run: |
+          mkdir -p dist/desktop
+          find desktop/src-tauri/target/release/bundle -maxdepth 2 -type f \
+            \( -name "*.msi" -o -name "*.exe" -o -name "*.dmg" -o -name "*.app.tar.gz" \
+               -o -name "*.deb" -o -name "*.AppImage" -o -name "*.rpm" \) \
+            -exec cp {} dist/desktop/ \;
+          ls -la dist/desktop
+
+      - name: Smoke test — installer artifacts were actually produced
+        shell: bash
+        run: |
+          count=$(find dist/desktop -type f | wc -l)
+          if [ "$count" -eq 0 ]; then
+            echo "No installer artifacts found under desktop/src-tauri/target/release/bundle" >&2
+            exit 1
+          fi
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: lifetxt-desktop-${{ matrix.platform }}
+          if-no-files-found: error
+          path: dist/desktop/*
+
+  github-release:
+    name: Attach installers to the GitHub Release
+    needs: build
+    if: >-
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
+      (github.event_name == 'workflow_dispatch' && inputs.publish_github_release == true)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Resolve release tag
+        id: resolve-tag
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download every platform's installers
+        uses: actions/download-artifact@v6
+        with:
+          pattern: lifetxt-desktop-*
+          path: dist/desktop
+          merge-multiple: true
+
+      - name: Create or update the GitHub Release with desktop installers
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.resolve-tag.outputs.tag }}
+        run: |
+          set -e
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/desktop/* --clobber
+          else
+            gh release create "$TAG" dist/desktop/* \
+              --title "$TAG" \
+              --generate-notes \
+              --prerelease="$(echo "$TAG" | grep -qE 'rc[0-9]+$|a[0-9]+$|b[0-9]+$' && echo true || echo false)"
+          fi

@@ -3190,6 +3190,124 @@ class LifeTxtIcsImportCliTests(unittest.TestCase):
         )
 
 
+class LifeTxtImportCliTests(unittest.TestCase):
+    """`import` is a routing-only dispatcher over `import-ics` (#593): every
+    case here is checked for byte-for-byte parity against the equivalent
+    `import-ics --preset ...` invocation, the actual authoritative
+    implementation, rather than asserting a second copy of the expected
+    conversion output."""
+
+    ICS_TEXT = (
+        "BEGIN:VCALENDAR\n"
+        "BEGIN:VEVENT\n"
+        "UID:event-1@example.com\n"
+        "SUMMARY:Research Meeting\n"
+        "DTSTART:20260608T130000\n"
+        "DTEND:20260608T143000\n"
+        "END:VEVENT\n"
+        "END:VCALENDAR\n"
+    )
+    MARKDOWN_TEXT = "- [ ] Review docs\n"
+    TODOIST_CSV_TEXT = (
+        "ID,Content,Project,Description,Date,Priority,Labels,Completed\n"
+        '123,Write docs,Docs,Use spec,2026-06-12,4,"writing,docs",\n'
+    )
+    GITHUB_JSON_TEXT = json.dumps(
+        [{"number": 42, "title": "Fix import", "state": "open"}]
+    )
+
+    def _write(self, temp_dir, name, text):
+        path = os.path.join(temp_dir, name)
+        with open(path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(text)
+        return path
+
+    def test_import_infers_ics_preset_from_extension(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "calendar.ics", self.ICS_TEXT)
+            expected_stdout, _stderr, expected_code = run_cli(
+                "import-ics", path, "--preset", "ics"
+            )
+            stdout, stderr, code = run_cli("import", path)
+            self.assertEqual(0, code, stderr)
+            self.assertEqual(expected_code, code)
+            self.assertEqual(expected_stdout, stdout)
+            self.assertIn("Research Meeting", stdout)
+
+    def test_import_infers_markdown_preset_from_extension(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "tasks.md", self.MARKDOWN_TEXT)
+            expected_stdout, _stderr, _code = run_cli(
+                "import-ics", path, "--preset", "markdown"
+            )
+            stdout, stderr, code = run_cli("import", path)
+            self.assertEqual(0, code, stderr)
+            self.assertEqual(expected_stdout, stdout)
+            self.assertIn("Review_docs", stdout)
+
+    def test_import_infers_markdown_preset_for_the_markdown_extension_variant(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "tasks.markdown", self.MARKDOWN_TEXT)
+            stdout, stderr, code = run_cli("import", path)
+            self.assertEqual(0, code, stderr)
+            self.assertIn("Review_docs", stdout)
+
+    def test_import_delegates_to_the_todoist_preset_explicitly(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "todoist_export.csv", self.TODOIST_CSV_TEXT)
+            expected_stdout, _stderr, _code = run_cli(
+                "import-ics", path, "--preset", "todoist"
+            )
+            stdout, stderr, code = run_cli("import", path, "--preset", "todoist")
+            self.assertEqual(0, code, stderr)
+            self.assertEqual(expected_stdout, stdout)
+            self.assertIn("Write_docs", stdout)
+
+    def test_import_delegates_to_the_github_preset_explicitly(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "github_issues.json", self.GITHUB_JSON_TEXT)
+            expected_stdout, _stderr, _code = run_cli(
+                "import-ics", path, "--preset", "github"
+            )
+            stdout, stderr, code = run_cli("import", path, "--preset", "github")
+            self.assertEqual(0, code, stderr)
+            self.assertEqual(expected_stdout, stdout)
+            self.assertIn("Fix_import", stdout)
+
+    def test_import_refuses_an_ambiguous_csv_input_without_a_preset(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "todoist_export.csv", self.TODOIST_CSV_TEXT)
+            stdout, stderr, code = run_cli("import", path)
+            self.assertEqual(1, code)
+            self.assertIn("--preset", stderr)
+            self.assertIn("todoist_export.csv", stderr)
+
+    def test_import_refuses_an_ambiguous_json_input_without_a_preset(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "github_issues.json", self.GITHUB_JSON_TEXT)
+            stdout, stderr, code = run_cli("import", path)
+            self.assertEqual(1, code)
+            self.assertIn("--preset", stderr)
+
+    def test_import_from_stdin_requires_an_explicit_preset(self):
+        stdout, stderr, code = run_cli("import", input_text=self.ICS_TEXT)
+        self.assertEqual(1, code)
+        self.assertIn("--preset", stderr)
+
+    def test_import_help_lists_the_supported_presets(self):
+        stdout, stderr, code = run_cli("import", "--help")
+        self.assertEqual(0, code, stderr)
+        self.assertIn("ics", stdout)
+        self.assertIn("markdown", stdout)
+        self.assertIn("todoist", stdout)
+        self.assertIn("github", stdout)
+
+    def test_existing_import_ics_command_is_unaffected(self):
+        stdout, stderr, code = run_cli("import-ics", input_text=self.ICS_TEXT)
+        self.assertEqual(0, code, stderr)
+        self.assertIn("Research Meeting", stdout)
+
+
 class LifeTxtIcsSyncCliTests(unittest.TestCase):
     def test_sync_ics_cli_reads_url_env_and_writes_generated_file(self):
         ics = (

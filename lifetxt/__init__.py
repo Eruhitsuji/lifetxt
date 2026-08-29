@@ -1,6 +1,6 @@
 """Parser and CLI utilities for the life.txt format."""
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 from .model import Diagnostic, Item
 from .parser import parse_line, parse_text

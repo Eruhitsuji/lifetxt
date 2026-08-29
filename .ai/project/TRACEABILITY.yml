@@ -8415,6 +8415,35 @@ traceability:
         cap-distribution-channels's own notes for the full batch context.
       status: implemented
 
+    - requirement_id: req-distribution-v1-0-1-version-bump
+      capability_id: cap-distribution-channels
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/567
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/568
+      pull_request: PLACEHOLDER_PR_URL
+      changed_files_or_scope:
+        - Bump the package version 1.0.0 -> 1.0.1 so a v1.0.1 release tag matches pyproject.toml/lifetxt.__version__, per the repository owner's explicit request to cut this release
+        - pyproject.toml
+        - lifetxt/__init__.py
+      tests_or_evidence:
+        - "python -m lifetxt --version -> lifetxt 1.0.1"
+        - "python -c \"import lifetxt.mcp as m; print(m.SERVER_VERSION)\" -> 1.0.1 (mcp.py/webapp.py both import __version__ from lifetxt, so no separate edit was needed there)"
+        - python scripts/check_release_tag_version.py v1.0.1 -> OK: tag v1.0.1 matches pyproject.toml version 1.0.1
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      release_or_deployment: >-
+        Release-metadata-only change preparing the v1.0.1 tag the repository
+        owner explicitly requested (real PyPI Trusted Publisher and
+        HOMEBREW_TAP_TOKEN setup already confirmed done on their side); the
+        tag push itself and the resulting PyPI/GHCR/binary/Homebrew
+        publication remain the owner's own release action, performed after
+        this version-bump PR merges.
+      notes: >-
+        Release-metadata-only bump; no other file changed, matching this
+        project's own precedent for a version-only release step
+        (req-stable-v1-0-0-promotion-version-bump). Goes through a normal
+        PR rather than a direct push to main, per MERGE_GOVERNANCE.md's
+        non-overridable direct-push prohibition.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

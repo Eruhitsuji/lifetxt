@@ -568,6 +568,118 @@ conda-forge recipe には含まれません。将来の recipe 改訂（ある�
 `lifetxt-web`/`lifetxt-tui` output）は候補となる follow-up であり、この
 slice には含まれません。
 
+## 7. standalone な lifetxt Desktop
+
+[#574](https://github.com/Eruhitsuji/lifetxt/issues/574) に対応します。
+
+### desktop app の対象 UX
+
+```text
+installer を download -> lifetxt Desktop を install -> 起動 -> app が表示される
+```
+
+事前の Python・pip・uv・Rust・lifetxt CLI の install は不要です。
+
+### 構成：引き続き companion process、bundle された runtime を追加
+
+lifetxt Desktop（[`desktop/`](../../desktop/)、issue #233 の元の design）は、
+`lifetxt serve` を child process として spawn し、結果の Web UI を表示する
+薄い Tauri window です —— 自身の life.txt logic を持ったことは一度もなく、
+本 #574 もそれを変更しません。変わるのは *どの* `lifetxt` を spawn するかです：
+app 自身の installer は、section 3 の standalone binary をそのまま自身の
+resource directory 配下に bundle するようになり、shell は `PATH` 上の何かより
+その bundle された copy を優先します：
+
+```text
+backend の解決順序：
+  1. <app resource dir>/bin/lifetxt(.exe)   <- この app 自身の installer が bundle（#574）
+  2. lifetxt                                 <- PATH。#233 から変更なし
+  3. python -m lifetxt                       <- PATH。#233 から変更なし
+  4. python3 -m lifetxt                      <- PATH。#233 から変更なし
+  5. py -m lifetxt                           <- PATH。#233 から変更なし
+```
+
+source build（`resources/bin/` に何も copy していない状態での
+`cargo build`/`cargo run`）は bundle された candidate を見つけられず、
+そのまま手順 2 へ通過します —— #574 以前の開発者向け workflow は変わりません。
+Rust/Tauri 側に lifetxt の application logic は再実装されておらず、bundle
+された artifact は section 3 と *同じ* PyInstaller binary であり、第二の
+build ではありません。
+
+### installer の build
+
+```sh
+pip install ".[web,tui]" pyinstaller
+python packaging/tauri-desktop/prepare_bundled_runtime.py   # #570 の binary を build し resources/bin/ へ配置
+python scripts/set_tauri_desktop_version.py --version 1.0.0  # installer 自身の version を release と一致させる
+cargo install tauri-cli --version "^2" --locked
+cd desktop/src-tauri && cargo tauri build
+```
+
+`.github/workflows/desktop-installers.yml` は `v*.*.*` の tag ごとに同じ
+手順を `windows-latest`・`macos-latest`（arm64）・`ubuntu-latest` 上で native
+に実行し、それぞれ MSI/NSIS・dmg・deb/AppImage の artifact（Tauri 自身の
+platform ごとの default bundle target）を作成して、対応する GitHub Release
+に添付します。
+
+### version の traceability
+
+installer 自身の version（`tauri.conf.json`）は、各 release で bundle される
+lifetxt runtime と全く同じ version に設定されます ——
+`scripts/set_tauri_desktop_version.py` が両者を 1:1 で結び付け、desktop
+shell を独立した version 体系にはしていません。これは issue 自体の
+「Desktop と bundle された runtime の version が再現可能で、immutable な
+lifetxt release と紐付いている」という要件を、正しさを保ったまま最も単純な
+形で満たします。
+
+### data の保存
+
+issue #233 から変更ありません：`life.txt` と configuration は引き続き完全に
+外部の、user 所有の file のままです —— app には application 固有の
+database がなく、何も自身の内部に閉じ込めません。この slice では、Tauri
+shell 自体に初回起動時の file picker・「life.txt を作成/開く」UI は
+追加していません（その flow はすでに served される Web UI 側にあり、この
+shell はそれをそのまま表示します）。native な同等機能の追加は、暗黙に
+欠落しているのではなく、明示的な未実装の follow-up として扱います。
+
+### error の可視化
+
+bundle された runtime・PATH 上の runtime のいずれも見つからない場合、または
+見つかった runtime が 15 秒以内に健全にならない場合、window は何を試したか
+（bundle された runtime、その後 PATH の候補）を平易な言葉で説明し、空白や
+frozen のまま止まることはありません。存在はするが動作しない bundle
+（壊れた install、あるいは architecture の不一致）は、そのまま失敗させる
+のではなく PATH での discovery へ通過します。そのため、壊れた bundle が
+別途 lifetxt を install 済みの user を必ずしも詰ませることにはなりません。
+
+### bundle された runtime について実施した検証
+
+この project 自身の Windows sandbox で：section 3 の standalone binary を
+build し、source の `cargo run` がその解決された（dev mode の）resource
+path に何も見つけられず正しく PATH へ通過することを確認（#233 の元の
+挙動が影響を受けていないことの証明）した上で、Tauri の installer bundler
+が実際の install で配置する内容を再現するため、同じ解決済み location へ
+binary を配置し、app を起動して、実際の Windows process tree から
+`lifetxt_desktop.exe` が child process として
+`resources\bin\lifetxt.exe serve --host 127.0.0.1 --port <port>` を
+正確に spawn したことを確認しました。実際の installer を生成する完全な
+`cargo tauri build` は、この sandbox では完了していません ——
+`tauri-cli` の install が、この変更とは無関係な、この sandbox 固有の
+既存 toolchain 競合に当たったためです（正確な失敗内容と、GitHub の
+clean な runner 上の CI には影響しないと考えられる理由については
+[`desktop/README.md`](../../desktop/README.md#verification-performed-for-the-bundled-runtime-path-574)
+を参照してください）。これは検証済みと主張せず、未検証の gap として
+正直に記録します。
+
+### desktop installer の既知の制限
+
+- code signing / notarization は未実装です。section 3 自体が記録している
+  standalone binary についての制限と同じです。
+- macOS/Linux の desktop installer build は CI 上に組み込まれていますが、
+  この project 自身の（Windows のみの）開発 sandbox では検証していません。
+- auto-update・system tray icon・native menu bar は、issue 自体の scope
+  に従い、明示的な未実装の follow-up のままです。
+
 ### contributor 向け install と end-user 向け install の違い
 
 lifetxt 自体の source を変更する contributor は、引き続き editable install

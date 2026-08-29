@@ -1,10 +1,16 @@
-// Companion-process desktop shell for lifetxt (issue #233, first slice).
+// Companion-process desktop shell for lifetxt (issue #233 first slice,
+// standalone bundling added in #574).
 //
-// This binary owns no life.txt logic of its own. It locates an already
-// installed `lifetxt`, spawns `lifetxt serve` as a child process on a
-// freshly reserved local port, waits for it to answer /api/health, then
-// points the window at it. Closing the window or exiting the app kills
-// the spawned server so no orphaned process or bound port survives.
+// This binary owns no life.txt logic of its own. It locates a lifetxt
+// runtime -- preferring one bundled directly into this app's own resource
+// directory (see #570's standalone binary and this crate's
+// bundle.resources config) so a fresh install needs no separate Python/
+// lifetxt setup, falling back to an already-installed `lifetxt` on PATH
+// for developer/source builds that do not bundle one -- spawns
+// `lifetxt serve` as a child process on a freshly reserved local port,
+// waits for it to answer /api/health, then points the window at it.
+// Closing the window or exiting the app kills the spawned server so no
+// orphaned process or bound port survives.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::net::TcpListener;
@@ -75,23 +81,56 @@ fn command_with_no_window(program: impl AsRef<std::ffi::OsStr>) -> Command {
     command
 }
 
-fn find_backend() -> Option<Vec<String>> {
+/// The bundled standalone lifetxt binary this app's own installer packages
+/// under `resources/bin/` (see tauri.conf.json's `bundle.resources` and
+/// `packaging/tauri-desktop/prepare_bundled_runtime.py`), if present. A
+/// source build run via `cargo build`/`cargo run` with nothing copied into
+/// `resources/bin/` simply has no resource directory entry here and falls
+/// through to the PATH-based candidates below, matching this crate's
+/// pre-#574 developer workflow unchanged.
+fn bundled_backend_path(app_handle: &tauri::AppHandle) -> Option<PathBuf> {
+    let resource_dir = app_handle.path().resource_dir().ok()?;
+    let binary_name = if cfg!(windows) {
+        "lifetxt.exe"
+    } else {
+        "lifetxt"
+    };
+    let candidate = resource_dir.join("bin").join(binary_name);
+    candidate.is_file().then_some(candidate)
+}
+
+/// Probe one resolved backend candidate the same way regardless of source
+/// (bundled resource vs. PATH lookup): a `--version` invocation must exit
+/// successfully before it is trusted.
+fn probe_backend(program: &std::path::Path, args: &[&str]) -> bool {
+    let mut cmd = command_with_no_window(program);
+    cmd.args(args)
+        .arg("--version")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    matches!(cmd.status(), Ok(status) if status.success())
+}
+
+fn find_backend(app_handle: &tauri::AppHandle) -> Option<Vec<String>> {
+    if let Some(bundled) = bundled_backend_path(app_handle) {
+        if probe_backend(&bundled, &[]) {
+            return Some(vec![bundled.to_string_lossy().into_owned()]);
+        }
+        // A bundle that exists but fails to run (corrupted install, wrong
+        // architecture) falls through to PATH discovery rather than
+        // failing outright -- see show_error's bundled-aware message for
+        // how this case is still surfaced to the user if PATH has nothing
+        // usable either.
+    }
     for candidate in backend_candidates() {
         let (program, args) = candidate.split_first().expect("candidate is non-empty");
         let Some(resolved) = resolve_on_path(program) else {
             continue;
         };
-        let mut cmd = command_with_no_window(&resolved);
-        cmd.args(args)
-            .arg("--version")
-            .stdout(Stdio::null())
-            .stderr(Stdio::null());
-        if let Ok(status) = cmd.status() {
-            if status.success() {
-                let mut resolved_candidate = vec![resolved.to_string_lossy().into_owned()];
-                resolved_candidate.extend(args.iter().map(|s| s.to_string()));
-                return Some(resolved_candidate);
-            }
+        if probe_backend(&resolved, args) {
+            let mut resolved_candidate = vec![resolved.to_string_lossy().into_owned()];
+            resolved_candidate.extend(args.iter().map(|s| s.to_string()));
+            return Some(resolved_candidate);
         }
     }
     None
@@ -166,13 +205,17 @@ fn main() {
                     return;
                 };
 
-                let Some(backend) = find_backend() else {
+                let Some(backend) = find_backend(&app_handle) else {
                     show_error(
                         &window,
-                        "Could not find an installed lifetxt.\n\n\
-                         Tried: lifetxt, python -m lifetxt, python3 -m lifetxt, py -m lifetxt.\n\n\
-                         Install lifetxt (pip install -e .) and confirm `lifetxt --version` \
-                         works from a terminal, then restart this app.",
+                        "Could not find a usable lifetxt runtime.\n\n\
+                         Tried the bundled runtime (if this build packages one) and: \
+                         lifetxt, python -m lifetxt, python3 -m lifetxt, py -m lifetxt.\n\n\
+                         If this is a standalone install, the app's bundled lifetxt may be \
+                         missing or corrupted -- try reinstalling. If you built this app \
+                         yourself without bundling a runtime, install lifetxt \
+                         (pip install -e .) and confirm `lifetxt --version` works from a \
+                         terminal, then restart this app.",
                     );
                     return;
                 };

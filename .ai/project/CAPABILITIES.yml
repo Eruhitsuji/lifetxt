@@ -5649,3 +5649,167 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-distribution-channels
+    name: Multi-channel release distribution
+    summary: >-
+      A coherent, low-friction distribution architecture built on a small
+      set of canonical release artifacts (PyPI wheel/sdist, a GHCR OCI
+      image, and standalone platform binaries) exposed through
+      package-manager-appropriate thin adapters: automated PyPI Trusted
+      Publishing, a versioned GHCR image with Docker Compose examples, a
+      PyInstaller-built one-file standalone CLI binary for five platforms,
+      generated (not auto-submitted) winget/Scoop manifests, an
+      automatically-published Homebrew Tap, a generated (not auto-submitted)
+      conda-forge recipe, and a standalone lifetxt Desktop installer
+      bundling the same standalone binary.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-distribution-pypi-trusted-publishing
+      - req-distribution-ghcr-oci-images
+      - req-distribution-standalone-binaries
+      - req-distribution-winget-scoop
+      - req-distribution-homebrew-tap
+      - req-distribution-conda-forge
+      - req-distribution-desktop-standalone
+    implementation_locations:
+      - .github/workflows/release.yml
+      - .github/workflows/docker-publish.yml
+      - .github/workflows/standalone-binaries.yml
+      - .github/workflows/package-manifests.yml
+      - .github/workflows/homebrew-tap.yml
+      - .github/workflows/conda-recipe.yml
+      - .github/workflows/desktop-installers.yml
+      - scripts/check_release_tag_version.py
+      - scripts/generate_winget_manifest.py
+      - scripts/generate_scoop_manifest.py
+      - scripts/generate_homebrew_formula.py
+      - scripts/generate_conda_recipe.py
+      - scripts/set_tauri_desktop_version.py
+      - packaging/pyinstaller/lifetxt.spec
+      - packaging/pyinstaller/lifetxt_launcher.py
+      - packaging/tauri-desktop/prepare_bundled_runtime.py
+      - packaging/README.md
+      - Dockerfile
+      - .dockerignore
+      - docker-compose.yml
+      - docker-compose.env.example
+      - desktop/src-tauri/src/main.rs
+      - desktop/src-tauri/tauri.conf.json
+      - desktop/src-tauri/resources/bin/
+      - desktop/README.md
+      - tests/test_check_release_tag_version.py
+      - tests/test_docker_image.py
+      - tests/test_standalone_binary.py
+      - tests/test_generate_winget_manifest.py
+      - tests/test_generate_scoop_manifest.py
+      - tests/test_generate_homebrew_formula.py
+      - tests/test_generate_conda_recipe.py
+      - tests/test_set_tauri_desktop_version.py
+      - docs/en/distribution.md
+      - docs/ja/distribution.md
+      - readme.md
+      - docs/en/readme.md
+      - docs/ja/readme.md
+      - docs/en/use-cases.md
+      - docs/ja/use-cases.md
+      - https://github.com/Eruhitsuji/homebrew-tap
+    public_interfaces:
+      - pip install lifetxt (once published)
+      - docker pull ghcr.io/eruhitsuji/lifetxt:<version>
+      - GitHub Release standalone binaries (lifetxt-<platform>.exe|lifetxt-<platform>)
+      - winget install Eruhitsuji.lifetxt (manifest generated, not yet submitted)
+      - scoop install lifetxt (manifest generated, not yet submitted)
+      - brew install Eruhitsuji/tap/lifetxt
+      - conda install -c conda-forge lifetxt (recipe generated, not yet submitted)
+      - lifetxt Desktop standalone installer (MSI/NSIS, dmg, deb/AppImage)
+      - scripts/check_release_tag_version.py
+      - scripts/generate_winget_manifest.py
+      - scripts/generate_scoop_manifest.py
+      - scripts/generate_homebrew_formula.py
+      - scripts/generate_conda_recipe.py
+      - scripts/set_tauri_desktop_version.py
+      - packaging/tauri-desktop/prepare_bundled_runtime.py
+    tests_or_evidence:
+      - "#568: tests.test_check_release_tag_version -> 6 tests, OK; local scripts/release_evidence.py build -> wheel+sdist produced; twine check -> PASSED for both; scripts/check_release_tag_version.py v1.0.0 -> OK: tag matches pyproject.toml version"
+      - "#569: tests.test_docker_image -> 14 tests, OK, including a real (non-mocked) docker build + run tier: docker build succeeded; docker run --version/check/id (uid=1000(lifetxt)) all passed; a real `docker compose up -d` against the checked-in docker-compose.yml served /api/health with a bearer token end to end; found and fixed a real bug during this verification -- `pip install /tmp/*.whl[web]` is misparsed by the shell (`[web]` read as a glob character class matching no file), fixed by resolving the wheel path into a variable first, with a regression test"
+      - "#570: tests.test_standalone_binary -> 10 tests, OK, including a real PyInstaller build tier: the frozen lifetxt.exe passed --version, check, init, doctor, a #!timezone: Asia/Tokyo fixture (confirming bundled tzdata), and `serve` mode answering /api/health while serving the bundled Web UI HTML"
+      - "#571: tests.test_generate_winget_manifest -> 4 tests, OK; tests.test_generate_scoop_manifest -> 4 tests, OK; generated winget manifests parsed as valid YAML with the expected InstallerType: portable shape"
+      - "#572: tests.test_generate_homebrew_formula -> 4 tests, OK, including a real `ruby -c` syntax check of the generated Formula (not just template assembly); the Eruhitsuji/homebrew-tap repository was created and pushed with initial scaffolding (README.md, LICENSE, empty Formula/ directory)"
+      - "#573: tests.test_generate_conda_recipe -> 5 tests, OK, including a real Jinja2 render of the generated meta.yaml producing valid, expected-shape YAML (not just template assembly)"
+      - "#574: tests.test_set_tauri_desktop_version -> 4 tests, OK; `cargo build` in desktop/src-tauri succeeded after the main.rs backend-resolution change; live verification on this Windows sandbox: a source `cargo run` correctly found nothing at its resolved dev-mode resource path and fell through to PATH-based discovery (pre-#574 behavior unaffected), then staging the #570 binary at that same resolved location and launching the app showed via the real Windows process tree that lifetxt_desktop.exe spawned exactly resources\\bin\\lifetxt.exe as its child -- confirming the bundled-runtime resolution logic is correct"
+      - python -m unittest discover -> full suite passing on the merged feature/distribution-foundation branch
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - ruff format --check / ruff check lifetxt tests scripts -> clean
+      - scripts/validate_release_docs.py -> {"errors":0,"ok":true}
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/567
+      - https://github.com/Eruhitsuji/lifetxt/issues/568
+      - https://github.com/Eruhitsuji/lifetxt/issues/569
+      - https://github.com/Eruhitsuji/lifetxt/issues/570
+      - https://github.com/Eruhitsuji/lifetxt/issues/571
+      - https://github.com/Eruhitsuji/lifetxt/issues/572
+      - https://github.com/Eruhitsuji/lifetxt/issues/573
+      - https://github.com/Eruhitsuji/lifetxt/issues/574
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/PLACEHOLDER_PR_NUMBER
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Self-scoped and implemented autonomously per repository owner
+      instruction to implement #567's full tracking list (#568-#574) on one
+      integration branch (feature/distribution-foundation, branched from
+      origin/main) ending in one final PR, with each issue landing on its
+      own child branch merged locally into the integration branch first --
+      following the same multi-PR-without-separate-sub-PRs integration
+      pattern already established by
+      cap-fuzzy-search-first-slice's fuzzy-search-surface-expansion-batch
+      entry (see that capability's own notes): every requirement below
+      names the same final integration PR rather than a separate sub-PR,
+      since none were opened.
+
+      Three genuine human-judgment questions were batched and answered by
+      the repository owner before implementation began, per
+      `AI_HUMAN_INTERACTION.md`'s Supervised Autonomous Batch Execution
+      pattern: (1) PyPI/GHCR publishing scope -- build and locally verify
+      the automation, but do not actually publish anything from this
+      session (PyPI requires the maintainer's own Trusted Publisher
+      linkage; GHCR could technically be pushed with the workflow's own
+      GITHUB_TOKEN but was deliberately not exercised as a real publish);
+      (2) whether to create the Eruhitsuji/homebrew-tap repository now --
+      approved, since (unlike winget-pkgs/staged-recipes) it is the
+      maintainer's own repository, not a third-party one, so automating
+      pushes to it from lifetxt's own release workflow is a materially
+      different kind of action than opening a PR against someone else's
+      repository; (3) winget/conda-forge submission scope -- prepare and
+      locally verify the generated manifests/recipe, but do not open PRs
+      against microsoft/winget-pkgs or conda-forge/staged-recipes, since
+      both require the maintainer's own GitHub identity and neither has a
+      real, published release to reference yet.
+
+      No real package/image/binary was actually published to any external
+      registry or package manager during this session -- see each
+      requirement entry below and docs/en+ja/distribution.md for the exact
+      boundary of what was built/verified vs. what remains an explicit,
+      documented manual step for the maintainer (PyPI Trusted Publisher
+      linkage, a HOMEBREW_TAP_TOKEN secret, and the winget/conda-forge PR
+      submissions). The Eruhitsuji/homebrew-tap repository itself was
+      created and seeded with scaffolding only (README.md, LICENSE, an
+      empty Formula/ directory) -- it has no installable Formula yet, since
+      none of #568/#570's artifacts have actually been published for a real
+      release to generate one from.
+
+      A real `cargo tauri build` producing an actual desktop installer was
+      not completed in this sandbox: installing `tauri-cli` failed on a
+      pre-existing, environment-specific toolchain conflict (multiple
+      competing gcc/dlltool installs -- FPC, MSYS2, Anaconda -- unrelated to
+      this change, confirmed by reproducing the identical failure against
+      an unmodified copy of main.rs). This is recorded as an open,
+      unverified gap in desktop/README.md and docs/en+ja/distribution.md
+      rather than claimed complete; the GitHub Actions workflow runs on
+      clean, single-toolchain runners and is expected to be unaffected, but
+      that has not been confirmed by an actual CI run.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

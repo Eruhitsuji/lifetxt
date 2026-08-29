@@ -160,9 +160,18 @@ class PyInstallerBuildAndRunTests(unittest.TestCase):
                 "--read-only",
             ],
             cwd=str(scratch),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
+            # DEVNULL, not PIPE: a PyInstaller onefile bootloader forks a
+            # worker child on Windows that inherits the pipe's write end,
+            # so killing only the direct (bootloader) Popen handle still
+            # leaves that worker holding the pipe open -- an unbounded
+            # process.communicate() call afterward then hangs forever
+            # waiting for EOF that never comes. Reproduced live: this
+            # class's own PyInstaller build hung for over an hour before
+            # this fix, confirmed via the real orphaned lifetxt.exe still
+            # listening on this test's port after the Popen handle it came
+            # from had already been killed.
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
         )
         try:
             body = None
@@ -177,12 +186,22 @@ class PyInstallerBuildAndRunTests(unittest.TestCase):
                     time.sleep(0.5)
             self.assertIsNotNone(body, "server never answered /api/health")
         finally:
-            process.terminate()
+            if sys.platform == "win32":
+                # Kills the whole process tree (/T), not just the direct
+                # Popen handle, so the onefile bootloader's forked worker
+                # does not survive as an orphan holding the port.
+                subprocess.run(
+                    ["taskkill", "/F", "/T", "/PID", str(process.pid)],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+            else:
+                process.terminate()
             try:
-                process.communicate(timeout=5)
+                process.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 process.kill()
-                process.communicate()
+                process.wait(timeout=5)
 
 
 if __name__ == "__main__":

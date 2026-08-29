@@ -13,6 +13,21 @@ from lifetxt.web_assets import HTML_PAGE
 ROOT = Path(__file__).resolve().parents[1]
 BRAND = ROOT / "assets" / "brand"
 
+BASE_SVG_NAMES = {
+    "lifetxt-symbol.svg",
+    "lifetxt-symbol-monochrome.svg",
+    "lifetxt-logo-horizontal.svg",
+    "lifetxt-app-icon.svg",
+    "lifetxt-favicon.svg",
+    "lifetxt-maskable-icon.svg",
+}
+EXPECTED_NOTEBOOK_PATH = (
+    "M154 84H270L318 132V364C318 384 306 396 286 396H154"
+    "C134 396 122 384 122 364V116C122 96 134 84 154 84Z"
+)
+EXPECTED_SYMBOL_BOUNDS = (122, 84, 390, 420)
+EXPECTED_NOTEBOOK_BOUNDS = (122, 84, 318, 396)
+
 
 def _png_size(path: Path) -> tuple[int, int]:
     data = path.read_bytes()
@@ -34,20 +49,61 @@ def _ico_sizes(path: Path) -> set[tuple[int, int]]:
     return sizes
 
 
+def _geometry_parts(path: Path) -> dict[str, tuple[str, tuple[tuple[str, str], ...]]]:
+    root = ET.parse(path).getroot()
+    parts: dict[str, tuple[str, tuple[tuple[str, str], ...]]] = {}
+    for element in root.iter():
+        name = element.attrib.get("data-lifetxt-part")
+        if not name:
+            continue
+        geometry = tuple(
+            sorted(
+                (key, value)
+                for key, value in element.attrib.items()
+                if key not in {"data-lifetxt-part", "fill", "color", "opacity"}
+            )
+        )
+        parts[name] = (element.tag.rsplit("}", 1)[-1], geometry)
+    return parts
+
+
 class BrandAssetTests(unittest.TestCase):
     def test_canonical_svg_assets_are_valid(self) -> None:
-        names = {
-            "lifetxt-symbol.svg",
-            "lifetxt-symbol-monochrome.svg",
-            "lifetxt-logo-horizontal.svg",
-            "lifetxt-app-icon.svg",
-            "lifetxt-favicon.svg",
-        }
-        for name in names:
+        for name in BASE_SVG_NAMES:
             with self.subTest(name=name):
                 root = ET.parse(BRAND / name).getroot()
                 self.assertTrue(root.tag.endswith("svg"))
-                self.assertIn("viewBox", root.attrib)
+                expected_viewbox = (
+                    "0 0 920 240"
+                    if name == "lifetxt-logo-horizontal.svg"
+                    else "0 0 512 512"
+                )
+                self.assertEqual(root.attrib.get("viewBox"), expected_viewbox)
+                self.assertEqual(root.attrib.get("data-lifetxt-geometry"), "v2")
+
+    def test_all_variants_reuse_the_same_base_geometry(self) -> None:
+        reference = _geometry_parts(BRAND / "lifetxt-symbol.svg")
+        self.assertEqual(reference["notebook"][1], (("d", EXPECTED_NOTEBOOK_PATH),))
+        for name in BASE_SVG_NAMES - {"lifetxt-symbol.svg"}:
+            with self.subTest(name=name):
+                self.assertEqual(_geometry_parts(BRAND / name), reference)
+
+    def test_geometry_contract_is_centered_portrait_and_safe(self) -> None:
+        sx0, sy0, sx1, sy1 = EXPECTED_SYMBOL_BOUNDS
+        nx0, ny0, nx1, ny1 = EXPECTED_NOTEBOOK_BOUNDS
+        self.assertEqual((sx0 + sx1) / 2, 256)
+        self.assertLess(abs((sy0 + sy1) / 2 - 256), 8)
+        self.assertGreater((ny1 - ny0) / (nx1 - nx0), 1.5)
+        self.assertGreaterEqual(min(sx0, sy0, 512 - sx1, 512 - sy1), 84)
+
+    def test_base_geometry_uses_fills_not_fragile_strokes(self) -> None:
+        for name in BASE_SVG_NAMES:
+            with self.subTest(name=name):
+                root = ET.parse(BRAND / name).getroot()
+                for element in root.iter():
+                    if element.attrib.get("data-lifetxt-part"):
+                        self.assertNotIn("stroke", element.attrib)
+                        self.assertNotIn("stroke-width", element.attrib)
 
     def test_raster_derivatives_have_expected_dimensions(self) -> None:
         expected = {
@@ -72,9 +128,10 @@ class BrandAssetTests(unittest.TestCase):
         desktop = ROOT / "desktop" / "src-tauri" / "icons" / "icon.png"
         self.assertEqual(desktop.read_bytes(), (BRAND / "pwa-icon-512.png").read_bytes())
 
-    def test_web_embeds_canonical_favicon_and_brand_mark(self) -> None:
+    def test_web_embeds_canonical_favicon_and_base_geometry(self) -> None:
         self.assertIn('data-lifetxt-brand="favicon"', HTML_PAGE)
         self.assertIn('data-lifetxt-brand="mark"', HTML_PAGE)
+        self.assertIn('data-lifetxt-geometry="v2"', HTML_PAGE)
         match = re.search(
             r'data-lifetxt-brand="favicon"[^>]+href="data:image/svg\+xml;base64,([^"]+)"',
             HTML_PAGE,

@@ -8192,7 +8192,7 @@ traceability:
       capability_id: cap-distribution-channels
       epic: https://github.com/Eruhitsuji/lifetxt/issues/567
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/568
-      pull_request: PLACEHOLDER_PR_URL
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/577
       changed_files_or_scope:
         - Add a tag-triggered PyPI Trusted Publishing release workflow and a tag/version consistency check
         - .github/workflows/release.yml
@@ -8226,7 +8226,7 @@ traceability:
       capability_id: cap-distribution-channels
       epic: https://github.com/Eruhitsuji/lifetxt/issues/567
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/569
-      pull_request: PLACEHOLDER_PR_URL
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/577
       changed_files_or_scope:
         - Rewrite the Dockerfile as a two-stage, non-root build with ENTRYPOINT ["lifetxt"], add Compose examples, and a GHCR publish workflow
         - Dockerfile
@@ -8259,7 +8259,7 @@ traceability:
       capability_id: cap-distribution-channels
       epic: https://github.com/Eruhitsuji/lifetxt/issues/567
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/570
-      pull_request: PLACEHOLDER_PR_URL
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/577
       changed_files_or_scope:
         - Add a PyInstaller spec bundling core+web+tui into one standalone binary, and a 5-platform CI build/smoke-test/release-attach workflow
         - packaging/pyinstaller/lifetxt.spec
@@ -8286,7 +8286,7 @@ traceability:
       capability_id: cap-distribution-channels
       epic: https://github.com/Eruhitsuji/lifetxt/issues/567
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/571
-      pull_request: PLACEHOLDER_PR_URL
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/577
       changed_files_or_scope:
         - Add winget (portable InstallerType) and Scoop manifest generators, plus a workflow that generates both on every published release
         - scripts/generate_winget_manifest.py
@@ -8317,7 +8317,7 @@ traceability:
       capability_id: cap-distribution-channels
       epic: https://github.com/Eruhitsuji/lifetxt/issues/567
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/572
-      pull_request: PLACEHOLDER_PR_URL
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/577
       changed_files_or_scope:
         - Create the Eruhitsuji/homebrew-tap repository; add a Formula generator and a workflow pushing it there on every published release
         - https://github.com/Eruhitsuji/homebrew-tap
@@ -8353,7 +8353,7 @@ traceability:
       capability_id: cap-distribution-channels
       epic: https://github.com/Eruhitsuji/lifetxt/issues/567
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/573
-      pull_request: PLACEHOLDER_PR_URL
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/577
       changed_files_or_scope:
         - Add a conda-forge meta.yaml recipe generator (noarch: python, builds from the PyPI sdist) and a workflow that generates it on every published release
         - scripts/generate_conda_recipe.py
@@ -8381,7 +8381,7 @@ traceability:
       capability_id: cap-distribution-channels
       epic: https://github.com/Eruhitsuji/lifetxt/issues/567
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/574
-      pull_request: PLACEHOLDER_PR_URL
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/577
       changed_files_or_scope:
         - Bundle the #570 standalone binary into lifetxt Desktop's own installer; prefer it over PATH-based discovery, falling back unchanged for source builds
         - desktop/src-tauri/src/main.rs

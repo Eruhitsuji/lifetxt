@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">lifetxt app icon</title>
+  <desc id="desc">Rounded graphite app tile containing a white text document and teal sprout.</desc>
+  <rect x="24" y="24" width="464" height="464" rx="108" fill="#27343D"/>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M150 110h142l62 62v134c0 42-28 70-70 70H150c-40 0-68-28-68-68V178c0-40 28-68 68-68Z" stroke="#FFFFFF" stroke-width="24"/>
+    <path d="M292 112v48c0 14 10 24 24 24h36" stroke="#FFFFFF" stroke-width="24"/>
+    <circle cx="154" cy="220" r="10" fill="#7ADCC8" stroke="none"/>
+    <path d="M190 220h76" stroke="#FFFFFF" stroke-width="20"/>
+    <circle cx="154" cy="276" r="10" fill="#7ADCC8" stroke="none"/>
+    <path d="M190 276h60" stroke="#FFFFFF" stroke-width="20"/>
+    <path d="M287 400c5-50 21-88 52-114" stroke="#7ADCC8" stroke-width="22"/>
+    <path d="M329 320c-31 3-54-15-58-46 32-3 57 13 63 42" stroke="#7ADCC8" stroke-width="22"/>
+    <path d="M334 316c7-34 32-55 66-52-2 34-23 56-60 58" stroke="#7ADCC8" stroke-width="22"/>
+  </g>
+</svg>

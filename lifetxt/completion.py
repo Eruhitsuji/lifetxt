@@ -33,6 +33,7 @@ COMMANDS = (
     "demo",
     "markdown",
     "import-ics",
+    "import",
     "sync-ics",
     "filter",
     "from-json",

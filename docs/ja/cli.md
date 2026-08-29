@@ -24,6 +24,7 @@ python -m lifetxt to-csv [path ...]
 python -m lifetxt demo [options]
 python -m lifetxt markdown [path ...]
 python -m lifetxt import-ics [path ...]
+python -m lifetxt import [path ...]
 python -m lifetxt sync-ics --url-env ENVVAR
 python -m lifetxt filter [path ...]
 python -m lifetxt from-json [path ...]
@@ -934,6 +935,35 @@ python -m lifetxt to-csv life.txt --occurrences --after 2026-06-01 --before 2026
 ```
 
 ## 5. iCalendar import / sync
+
+### 5.0 `import`: 統一エントリポイント
+
+`lifetxt import` は下記の `import-ics` に対するルーティング専用の
+dispatcher です。第二の ICS/Markdown/Todoist/GitHub 変換実装はなく、
+安全に判定できる場合は入力ファイルの拡張子から `--preset` を推測する、
+より発見しやすいコマンド名を提供するだけです。
+
+```sh
+python -m lifetxt import calendar.ics                       # --preset ics を推測
+python -m lifetxt import tasks.md                            # --preset markdown を推測
+python -m lifetxt import todoist_export.csv --preset todoist # 明示的な preset が必要
+python -m lifetxt import github_issues.json --preset github  # 明示的な preset が必要
+```
+
+| 入力 | Preset |
+|---|---|
+| `*.ics` | `ics`（推測） |
+| `*.md`、`*.markdown` | `markdown`（推測） |
+| それ以外（`*.csv`、`*.json` を含む） | `--preset ics\|markdown\|todoist\|github` の明示指定が必要 |
+| 標準入力からの読み込み（path を指定しない） | 常に `--preset` の明示指定が必要 |
+
+`import` は下記 `import-ics` のすべての option（`-o`/`--output`、`--append`、
+`--project`、`--tag`、`--expand-rrule`、`--expand-until`、`--expand-count`、
+`--preset`）を受け取り（2 つの subcommand は同じ引数定義を共有します）、
+実際の変換・validation・書き込み先の解決・書き込み安全性はそのまま
+委譲します。preset をすでに明示しているスクリプトは `import-ics` を
+直接使い続けて構いません。`import` は最初の移行を発見しやすくするための
+ものであり、`import-ics` を置き換えるものではありません。
 
 ### 5.1 `import-ics`
 

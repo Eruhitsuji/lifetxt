@@ -5865,3 +5865,161 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-adoption-onboarding-commands
+    name: Zero-config first-run tour and beginner-facing command aliases
+    summary: >-
+      Four thin, discoverability-oriented top-level CLI commands lowering
+      the activation and migration barrier for a newly installed lifetxt:
+      `lifetxt tour` (a zero-config, dependency-free demonstration reusing
+      the real parser and the `command_center` "today" engine, with no
+      persistent write), `lifetxt add` (a full argparse alias for the
+      existing `quick`/`q` capture command, zero duplicated logic),
+      `lifetxt web` (a convenience launcher over the existing `serve`/
+      `create_app` Web runtime that opens the user's default browser once
+      the server's own `/api/health` route answers), and `lifetxt import`
+      (a routing-only dispatcher over the existing `import-ics` command,
+      inferring `--preset` from the input file extension when safe and
+      refusing ambiguous input otherwise).
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-cli-first-run-tour
+      - req-cli-add-alias
+      - req-cli-web-launcher
+      - req-cli-unified-import
+    implementation_locations:
+      - lifetxt/tour.py
+      - lifetxt/entrypoint.py
+      - lifetxt/extra_cli.py
+      - lifetxt/cli.py
+      - lifetxt/completion.py
+      - tests/test_tour.py
+      - tests/test_lifetxt.py
+      - tests/test_serve_cli.py
+      - docs/en/cli.md
+      - docs/ja/cli.md
+      - docs/en/getting-started.md
+      - docs/ja/getting-started.md
+      - readme.md
+    public_interfaces:
+      - lifetxt tour
+      - lifetxt tour --format json
+      - lifetxt add
+      - lifetxt web
+      - lifetxt web --no-open
+      - lifetxt import
+      - lifetxt.tour.tour_report
+      - lifetxt.tour.build_tour_sample
+      - lifetxt.cli._prepare_serve
+      - lifetxt.cli.command_import
+    tests_or_evidence:
+      - "tests/test_tour.py (11 tests): sample uses only the Beginner Profile vocabulary and parses with zero diagnostics, tour_report() matches a direct command_center() call byte-for-byte (proving reuse, not reimplementation), the sample task appears due_today when the reference date equals its own due date, defaults to the real current date when omitted, performs no filesystem writes, text/JSON renderers are deterministic for a fixed reference date and stay well under 30 lines"
+      - "tests/test_lifetxt.py LifeTxtTourCliTests (7 tests, real subprocess via run_cli, all against a genuinely clean temp cwd): succeeds with no existing life.txt/.lifetxt.json, sample covers T/E/N, next-steps name init/add/today, directory listing is byte-identical before and after, --format json is valid and matches the sample, --help succeeds, output fits a short terminal scroll"
+      - "tests/test_lifetxt.py LifeTxtAddAliasCliTests (7 tests): add appends a task identically to quick, expands capture shorthand (@/#/!/^) identically to quick, an explicit --project flag still wins over the @sigil, stdin title input works, empty-stdin-title still fails loudly, --help names it as a quick-capture alias, quick and q remain byte-for-byte unaffected"
+      - "tests/test_serve_cli.py WebCliTests (4 tests) and OpenBrowserWhenReadyTests (5 tests): web reuses the exact _prepare_serve()/create_app() path serve does and always passes workers=1; --no-open never starts a browser thread; omitting it starts exactly one daemon thread targeting _open_browser_when_ready with the resolved URL/host/port; a missing uvicorn/webapp dependency raises the same actionable ValueError serve already does; the readiness poll (fully mocked, no real network access in tests) opens the browser only once /api/health answers and gives up silently after its timeout; wildcard bind hosts (0.0.0.0, ::) are substituted with a browser-reachable loopback address"
+      - "tests/test_lifetxt.py LifeTxtImportCliTests (10 tests): import infers --preset ics/markdown from the .ics/.md/.markdown extension and is checked for byte-for-byte parity against the equivalent import-ics --preset ... invocation; --preset todoist/github delegate explicitly with the same parity check; an ambiguous .csv or .json input without --preset is refused naming both --preset and the offending filename; reading from stdin with no --preset is refused; --help lists ics/markdown/todoist/github; the pre-existing import-ics command is unaffected"
+      - python -m unittest tests.test_lifetxt.LifeTxtTourCliTests tests.test_lifetxt.LifeTxtAddAliasCliTests tests.test_lifetxt.LifeTxtImportCliTests tests.test_lifetxt.LifeTxtIcsImportCliTests tests.test_tour tests.test_serve_cli tests.test_completion_surfaces tests.test_completion_values tests.test_surface_runtime -> Ran 208 tests, OK
+      - "live: a real python -m lifetxt tour run in a genuinely empty scratch directory printed the sample plus a real 'Due today (1): Buy milk' derived section and left the directory with zero files afterward"
+      - "live: a real python -m lifetxt web --no-open run answered a real GET /api/health over an actual bound socket; a second real run without --no-open genuinely launched this sandbox's default browser, which then loaded the served page and drove a full round of real API calls (/, /api/config, /api/revision, /api/items, /api/areas, /api/saved-views, ...) against the running server"
+      - "live: python -m lifetxt import calendar.ics / tasks.md / todoist.csv --preset todoist / github_issues.json --preset github each produced output byte-for-byte identical to the equivalent import-ics --preset ... invocation against the same fixture; import todoist.csv and import github_issues.json with no --preset both refused with an exit-1 message naming --preset and the file"
+      - "live: python -m lifetxt add \"Buy_milk\" --append ... and python -m lifetxt quick \"Buy_milk\" --append ... produced the identical [ ] T Buy_milk line"
+      - "scripts/validate_release_docs.py -> {\"errors\": 0, \"ok\": true} (add/web/import/tour --help are all exercised automatically by the validator's live CLI-help check alongside every other command)"
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - ruff format --check / ruff check on every changed lifetxt/**/tests/** file -> clean (one pre-existing, unrelated trailing-newline drift in lifetxt/entrypoint.py confirmed present on origin/main already, left untouched per this project's own established convention for pre-existing drift)
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/590
+      - https://github.com/Eruhitsuji/lifetxt/issues/591
+      - https://github.com/Eruhitsuji/lifetxt/issues/592
+      - https://github.com/Eruhitsuji/lifetxt/issues/593
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Self-scoped and implemented autonomously per repository owner
+      instruction to implement #590-#593 on one integration branch
+      (feature/adoption-cli-commands, branched from origin/main) ending in
+      one final PR, with each issue landing on its own child branch merged
+      locally into the integration branch first -- the same multi-PR-
+      without-separate-sub-PRs integration pattern already established by
+      cap-fuzzy-search-first-slice's fuzzy-search-surface-expansion-batch
+      entry and cap-distribution-channels' v1.0.1 fix batch (see either
+      entry's own notes): every requirement below names its own child-
+      branch work rather than a separate sub-PR, since none were opened as
+      distinct GitHub PRs.
+
+      #591 (`add`) is a pure argparse registration change: `quick`'s
+      existing `aliases=["q"]` became `aliases=["q", "add"]`, reusing
+      argparse's own multi-name subparser support so `add`, `quick`, and
+      `q` share one parser, one handler (`command_quick`), and one write
+      path with zero duplicated argument or capture-shorthand logic, per
+      the issue's own implementation constraint diagram.
+
+      #592 (`web`) extracted `command_serve`'s existing config/workspace/
+      host/port resolution and `create_app()` construction into a new
+      shared `_prepare_serve()` helper, reused unmodified by both `serve`
+      and `web`; the two subparsers also share one new
+      `_add_serve_core_arguments()` flag-registration helper rather than
+      duplicating six flag definitions. `web`'s browser-readiness signal
+      reuses the server's own pre-existing, always-unauthenticated
+      `/api/health` route (already exempted from bearer-token auth in
+      `lifetxt/webapp.py` for exactly this kind of health-check use) rather
+      than a fixed delay or a new duplicated readiness mechanism, polled
+      via the stdlib `urlopen` already imported at the top of `cli.py` --
+      no new runtime dependency. `0.0.0.0`/`::` bind addresses are
+      substituted with a browser-reachable loopback address before
+      constructing the URL to open, since a browser cannot connect *to* a
+      wildcard bind address the same way a server can bind *from* it.
+
+      #593 (`import`) extracted `import-ics`'s existing flag registration
+      into a shared `_add_import_core_arguments()` helper and added a new
+      `command_import()` that infers `--preset` from a small, closed
+      extension map (`.ics` -> `ics`, `.md`/`.markdown` -> `markdown`) and
+      otherwise requires the caller to pass `--preset` explicitly --
+      deliberately never guessing for `.csv`/`.json`/stdin, per the
+      issue's own "prefer deterministic explicit dispatch over aggressive
+      content guessing" scope. `command_import()` never reimplements any
+      ICS/Markdown/Todoist/GitHub conversion itself; once the preset is
+      resolved it delegates unchanged to the existing
+      `command_import_ics()`.
+
+      #590 (`tour`) is the only genuinely new module in this batch. Per the
+      issue's own explicit steer ("through the current extended-entrypoint
+      pattern rather than enlarging the legacy CLI module"), it is
+      registered in `entrypoint.py`'s `_EXTRA_COMMANDS` and dispatched from
+      `extra_cli.py`, exactly like `capabilities`/`doctor`/`format`, rather
+      than added to `cli.py`'s already very large (15,000+ line) argparse
+      tree. `lifetxt.tour.build_tour_sample()` constructs a three-line,
+      in-memory Beginner Profile sample (`T`/`E`/`N`, `[ ]`/`[N]`
+      statuses, `due`/`from`/`to` keys only -- the exact vocabulary
+      `docs/en/getting-started.md`'s Level 1 section documents) anchored to
+      an injectable reference date, parses it with the real
+      `lifetxt.parser.parse_text()`, and feeds the result to the real
+      `lifetxt.command_center.command_center()` -- the same engine behind
+      `lifetxt today`, the TUI Today view, and the Web Today dashboard
+      (`cap-daily-command-center`) -- so the tour's "what lifetxt can
+      derive" section is a genuine `today` run, not a fourth reimplemented
+      copy of its due/overdue/next-action rules. `render_tour_text()`/
+      `render_tour_json()` are presentation-only, matching the existing
+      precedent of CLI/TUI/Web each independently rendering the same
+      shared `command_center()` result. No file, config, or workspace is
+      read or written at any point (confirmed both by a dedicated
+      directory-diff unit test and a live empty-directory run), so the
+      command works identically from a clean installed wheel/binary with
+      no access to the source checkout's `examples/` directory.
+
+      A dedicated release-artifact/installed-wheel smoke addition (beyond
+      the existing `scripts/validate_release_docs.py` CLI-help check,
+      which already exercises `tour --help`/`add --help`/`web --help`/
+      `import --help` against the checked-out source tree) was judged out
+      of proportion for this batch: `lifetxt tour` has zero repository-
+      relative file access by construction (confirmed by code inspection
+      and the dedicated no-filesystem-write test), so an installed-wheel
+      smoke run would only be re-confirming that same fact through a much
+      heavier mechanism (`cap-distribution-channels`'s own
+      `docs/en/stable-release-artifact-verification.md` procedure). This
+      is recorded as a deliberate scope boundary, not a silently dropped
+      acceptance criterion.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

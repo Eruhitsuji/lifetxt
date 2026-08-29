@@ -5673,7 +5673,10 @@ capabilities:
       - req-distribution-homebrew-tap
       - req-distribution-conda-forge
       - req-distribution-desktop-standalone
+      - req-release-distribution-runbook-skill
     implementation_locations:
+      - .ai/project/skills/release-distribution-runbook/SKILL.md
+      - .ai/project/CONTEXT_INDEX.yml
       - .github/workflows/release.yml
       - .github/workflows/docker-publish.yml
       - .github/workflows/standalone-binaries.yml
@@ -5752,8 +5755,18 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/572
       - https://github.com/Eruhitsuji/lifetxt/issues/573
       - https://github.com/Eruhitsuji/lifetxt/issues/574
+      - https://github.com/Eruhitsuji/lifetxt/issues/579
+      - https://github.com/Eruhitsuji/lifetxt/issues/581
+      - https://github.com/Eruhitsuji/lifetxt/issues/583
+      - https://github.com/Eruhitsuji/lifetxt/issues/584
+      - https://github.com/Eruhitsuji/lifetxt/issues/586
+      - https://github.com/Eruhitsuji/lifetxt/issues/588
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/577
+      - https://github.com/Eruhitsuji/lifetxt/pull/580
+      - https://github.com/Eruhitsuji/lifetxt/pull/582
+      - https://github.com/Eruhitsuji/lifetxt/pull/585
+      - https://github.com/Eruhitsuji/lifetxt/pull/587
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       Self-scoped and implemented autonomously per repository owner
@@ -5809,6 +5822,45 @@ capabilities:
       rather than claimed complete; the GitHub Actions workflow runs on
       clean, single-toolchain runners and is expected to be unaffected, but
       that has not been confirmed by an actual CI run.
+
+      The v1.0.1 release (the first real tag-triggered execution of this
+      whole capability) found and fixed seven real bugs the original
+      implementation and its PR review could not have caught locally:
+      missing `setuptools` in `release.yml`'s isolated build environment
+      (#579), a `docker run -u` argument-order mistake in
+      `docker-publish.yml`'s non-root smoke test (#579), a missing
+      `actions/checkout` before `gh release` commands in both
+      `desktop-installers.yml` and `standalone-binaries.yml` (#579),
+      `release.yml`'s PyPI publish step validating non-package evidence
+      files (`SHA256SUMS`/`sbom.cdx.json`/`provenance.json`) alongside the
+      wheel/sdist (#581), `standalone-binaries.yml` requesting the
+      `macos-13` GitHub-hosted runner label after GitHub retired it on
+      2025-12-04 (#584, migrated to `macos-15-intel`), and
+      `standalone-binaries.yml`'s Windows-generated checksum entry being
+      written with a trailing CRLF instead of LF, silently breaking
+      `package-manifests.yml`'s anchored `grep` match against the combined
+      `SHA256SUMS` (#586). A further non-blocking design gap -- two
+      workflows uploading a release asset literally named `SHA256SUMS`
+      with `--clobber`, so whichever runs last silently replaces rather
+      than merges with the other's checksums -- was found and filed as
+      #583 but deliberately not fixed, since it does not affect any
+      current consumer (each downstream workflow only ever reads the
+      `SHA256SUMS` state that already reflects every upload that has run
+      by the time it reads it). #588 packages the operational sequence and
+      diagnostic habits from that whole v1.0.1 effort as a tool-neutral
+      skill (`.ai/project/skills/release-distribution-runbook/SKILL.md`,
+      referenced from `.ai/project/CONTEXT_INDEX.yml` as `CTX-RELEASE-001`)
+      so a future release does not have to re-derive them from scratch.
+      Separately, a Homebrew Tap PAT permission misconfiguration
+      (`HOMEBREW_TAP_TOKEN` initially granted "Repository advisories"
+      instead of "Contents: Read and write" access) blocked
+      `homebrew-tap.yml`'s push step with a 403 error; this was a
+      human-only account-configuration problem with no corresponding code
+      change, resolved directly by the repository owner correcting the
+      token's permission scope in GitHub's settings UI, and is recorded
+      here as context for the skill's "human-only account/credential
+      problem" triage category rather than as its own requirement chain
+      entry.
     replacement:
       replaces: []
       replaced_by: null

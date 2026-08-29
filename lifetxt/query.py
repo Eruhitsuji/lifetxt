@@ -87,12 +87,25 @@ def diagnostic(severity, code, message, hint="", term=None):
     )
 
 
-def query_fields():
+def _filterable_custom_fields(config):
+    """Field names declared ``filterable: true`` in the active generic
+    ``custom_fields`` registry (#596). Only these become dynamic Query
+    fields; a configured field left ``filterable: false`` stays validated
+    metadata but keeps ordinary Q001 unknown-field behavior."""
+    if not config:
+        return frozenset()
+    from .custom_fields import filterable_field_names
+
+    return filterable_field_names(config)
+
+
+def query_fields(config=None):
     """All recognized field names, for completion and documentation."""
     fields = list(MEMBERSHIP_FIELDS.keys())
     fields.extend(DATE_FIELDS)
     fields.extend(list(CUSTOM_DETAIL_FIELDS))
     fields.extend(["text", "q", "context", "loc", "priority", "exclude_tag"])
+    fields.extend(sorted(_filterable_custom_fields(config)))
     seen = []
     for field in fields:
         if field not in seen:
@@ -131,8 +144,14 @@ def _split_field_op(token):
     return None, None, None
 
 
-def parse_query(text):
-    """Compile a query string into a plan plus typed diagnostics."""
+def parse_query(text, config=None):
+    """Compile a query string into a plan plus typed diagnostics.
+
+    ``config`` is optional; when given, any ``filterable: true`` generic
+    ``custom_fields`` definition is recognized as an equality/membership
+    detail field for this call, matching #596's Query integration.
+    """
+    filterable_custom_fields = _filterable_custom_fields(config)
     plan = OrderedDict(
         (
             ("query", str(text or "")),
@@ -207,7 +226,11 @@ def parse_query(text):
             _add_values(values, value, diagnostics, token)
             continue
 
-        if field in KNOWN_KEYS or field in CUSTOM_DETAIL_FIELDS:
+        if (
+            field in KNOWN_KEYS
+            or field in CUSTOM_DETAIL_FIELDS
+            or field in filterable_custom_fields
+        ):
             if op not in (":", "="):
                 diagnostics.append(
                     diagnostic(
@@ -228,7 +251,7 @@ def parse_query(text):
                 "warning",
                 "Q001",
                 "Unknown query field %r; term ignored." % field,
-                "Known fields: %s." % ", ".join(query_fields()),
+                "Known fields: %s." % ", ".join(query_fields(config)),
                 token,
             )
         )
@@ -343,7 +366,7 @@ def _compare(actual, op, target):
 
 def run_query(items, query_text, config=None, sort=None, order="asc", limit=None):
     """Parse, apply, sort, and limit in one call. Returns (items, diagnostics)."""
-    plan, diagnostics = parse_query(query_text)
+    plan, diagnostics = parse_query(query_text, config)
     filtered = apply_query(items, plan, config)
     if sort:
         from .webapp import sort_items

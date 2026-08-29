@@ -21,12 +21,26 @@ BASE_SVG_NAMES = {
     "lifetxt-favicon.svg",
     "lifetxt-maskable-icon.svg",
 }
+APP_SURFACE_SVG_NAMES = {
+    "lifetxt-app-icon.svg",
+    "lifetxt-favicon.svg",
+    "lifetxt-maskable-icon.svg",
+}
 EXPECTED_NOTEBOOK_PATH = (
-    "M154 84H270L318 132V364C318 384 306 396 286 396H154"
-    "C134 396 122 384 122 364V116C122 96 134 84 154 84Z"
+    "M150 84H291L339 132V364C339 384 327 396 307 396H150"
+    "C130 396 118 384 118 364V116C118 96 130 84 150 84Z"
 )
-EXPECTED_SYMBOL_BOUNDS = (122, 84, 390, 420)
-EXPECTED_NOTEBOOK_BOUNDS = (122, 84, 318, 396)
+EXPECTED_FOLD_PATH = "M291 84V116C291 126 297 132 307 132H339Z"
+EXPECTED_LEAF_LEFT_PATH = (
+    "M335 348C306 352 284 334 281 305C310 303 333 320 339 342"
+    "C340 346 339 347 335 348Z"
+)
+EXPECTED_SYMBOL_BOUNDS = (118, 84, 394, 420)
+EXPECTED_NOTEBOOK_BOUNDS = (118, 84, 339, 396)
+A4_HEIGHT_WIDTH_RATIO = 297 / 210
+GRAPHITE = "#27343D"
+WHITE = "#FFFFFF"
+FOLD_MIST = "#C8D7D9"
 
 
 def _png_size(path: Path) -> tuple[int, int]:
@@ -60,11 +74,25 @@ def _geometry_parts(path: Path) -> dict[str, tuple[str, tuple[tuple[str, str], .
             sorted(
                 (key, value)
                 for key, value in element.attrib.items()
-                if key not in {"data-lifetxt-part", "fill", "color", "opacity"}
+                if key
+                not in {
+                    "data-lifetxt-part",
+                    "fill",
+                    "color",
+                    "opacity",
+                    "mask",
+                }
             )
         )
         parts[name] = (element.tag.rsplit("}", 1)[-1], geometry)
     return parts
+
+
+def _part(root: ET.Element, name: str) -> ET.Element:
+    for element in root.iter():
+        if element.attrib.get("data-lifetxt-part") == name:
+            return element
+    raise AssertionError(f"missing data-lifetxt-part={name!r}")
 
 
 class BrandAssetTests(unittest.TestCase):
@@ -79,22 +107,51 @@ class BrandAssetTests(unittest.TestCase):
                     else "0 0 512 512"
                 )
                 self.assertEqual(root.attrib.get("viewBox"), expected_viewbox)
-                self.assertEqual(root.attrib.get("data-lifetxt-geometry"), "v2")
+                self.assertEqual(root.attrib.get("data-lifetxt-geometry"), "v3")
 
     def test_all_variants_reuse_the_same_base_geometry(self) -> None:
         reference = _geometry_parts(BRAND / "lifetxt-symbol.svg")
         self.assertEqual(reference["notebook"][1], (("d", EXPECTED_NOTEBOOK_PATH),))
+        self.assertEqual(reference["fold"][1], (("d", EXPECTED_FOLD_PATH),))
+        self.assertEqual(reference["leaf-left"][1], (("d", EXPECTED_LEAF_LEFT_PATH),))
         for name in BASE_SVG_NAMES - {"lifetxt-symbol.svg"}:
             with self.subTest(name=name):
                 self.assertEqual(_geometry_parts(BRAND / name), reference)
 
-    def test_geometry_contract_is_centered_portrait_and_safe(self) -> None:
+    def test_geometry_contract_is_centered_a4_proportioned_and_safe(self) -> None:
         sx0, sy0, sx1, sy1 = EXPECTED_SYMBOL_BOUNDS
         nx0, ny0, nx1, ny1 = EXPECTED_NOTEBOOK_BOUNDS
         self.assertEqual((sx0 + sx1) / 2, 256)
         self.assertLess(abs((sy0 + sy1) / 2 - 256), 8)
-        self.assertGreater((ny1 - ny0) / (nx1 - nx0), 1.5)
+        ratio = (ny1 - ny0) / (nx1 - nx0)
+        self.assertAlmostEqual(ratio, A4_HEIGHT_WIDTH_RATIO, delta=0.01)
         self.assertGreaterEqual(min(sx0, sy0, 512 - sx1, 512 - sy1), 84)
+
+    def test_sprout_overlaps_notebook_with_negative_space_separator(self) -> None:
+        notebook_right = EXPECTED_NOTEBOOK_BOUNDS[2]
+        leaf_left_min_x = 281
+        self.assertLess(leaf_left_min_x, notebook_right - 40)
+        for name in BASE_SVG_NAMES:
+            with self.subTest(name=name):
+                root = ET.parse(BRAND / name).getroot()
+                separator_paths = [
+                    element
+                    for element in root.iter()
+                    if element.tag.endswith("path")
+                    and element.attrib.get("stroke-width") == "12"
+                    and "data-lifetxt-part" not in element.attrib
+                ]
+                self.assertGreaterEqual(len(separator_paths), 3)
+
+    def test_app_surface_fold_contrasts_with_tile_and_page(self) -> None:
+        for name in APP_SURFACE_SVG_NAMES:
+            with self.subTest(name=name):
+                root = ET.parse(BRAND / name).getroot()
+                fold = _part(root, "fold")
+                self.assertEqual(fold.attrib.get("fill"), FOLD_MIST)
+                self.assertNotEqual(fold.attrib.get("fill"), GRAPHITE)
+                self.assertNotEqual(fold.attrib.get("fill"), WHITE)
+        self.assertIn(FOLD_MIST, HTML_PAGE)
 
     def test_base_geometry_uses_fills_not_fragile_strokes(self) -> None:
         for name in BASE_SVG_NAMES:
@@ -131,7 +188,7 @@ class BrandAssetTests(unittest.TestCase):
     def test_web_embeds_canonical_favicon_and_base_geometry(self) -> None:
         self.assertIn('data-lifetxt-brand="favicon"', HTML_PAGE)
         self.assertIn('data-lifetxt-brand="mark"', HTML_PAGE)
-        self.assertIn('data-lifetxt-geometry="v2"', HTML_PAGE)
+        self.assertIn('data-lifetxt-geometry="v3"', HTML_PAGE)
         match = re.search(
             r'data-lifetxt-brand="favicon"[^>]+href="data:image/svg\+xml;base64,([^"]+)"',
             HTML_PAGE,

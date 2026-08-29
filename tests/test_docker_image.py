@@ -209,7 +209,13 @@ class DockerImageBuildAndRunTests(unittest.TestCase):
             self.assertEqual(run.returncode, 0, run.stderr)
 
             body = None
-            for _ in range(20):
+            # Bounded to 30s (60 x 0.5s): a freshly built image's first
+            # container start was observed to need more than the original
+            # 10s bound on a real GitHub Actions Ubuntu runner (container
+            # image layers not yet warm, shared/throttled CI I/O), even
+            # though the same test consistently answered well under 5s on
+            # a local dev machine with Docker Desktop.
+            for _ in range(60):
                 try:
                     with urllib.request.urlopen(
                         "http://127.0.0.1:18322/api/health", timeout=1
@@ -218,7 +224,14 @@ class DockerImageBuildAndRunTests(unittest.TestCase):
                         break
                 except (urllib.error.URLError, ConnectionError):
                     time.sleep(0.5)
-            self.assertIsNotNone(body, "container never answered /api/health")
+            if body is None:
+                logs = subprocess.run(
+                    ["docker", "logs", container],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                ).stdout
+                self.fail("container never answered /api/health; logs:\n%s" % logs)
             self.assertIn(b'"ok":true', body)
         finally:
             subprocess.run(

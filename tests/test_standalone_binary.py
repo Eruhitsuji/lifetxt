@@ -175,7 +175,11 @@ class PyInstallerBuildAndRunTests(unittest.TestCase):
         )
         try:
             body = None
-            for _ in range(20):
+            # Bounded to 30s (60 x 0.5s), matching the same widened window
+            # in tests/test_docker_image.py's equivalent poll -- a shared/
+            # throttled CI runner can be slower to make a freshly started
+            # process's port reachable than a local dev machine.
+            for _ in range(60):
                 try:
                     with urllib.request.urlopen(
                         "http://127.0.0.1:18324/api/health", timeout=1

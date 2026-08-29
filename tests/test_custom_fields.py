@@ -10,15 +10,18 @@ fields with no separate Saved View implementation.
 import unittest
 from collections import OrderedDict
 
+from lifetxt import config_registry
 from lifetxt.custom_fields import (
     custom_field_registry_report,
     field_applies,
     filterable_field_names,
     generic_custom_field_diagnostics,
+    install_custom_fields_config_registry,
 )
 from lifetxt.parser import parse_text
 from lifetxt.query import parse_query, run_query
 from lifetxt.saved_views import run_saved_view, validate_saved_views
+from lifetxt.schema_extensions_v5 import schema_bundle_v5
 
 
 def _config(custom_fields):
@@ -360,6 +363,35 @@ class QuerySavedViewIntegrationTests(unittest.TestCase):
         _plan, diagnostics = parse_query("internal_note:secret", config)
         codes = [d["code"] for d in diagnostics]
         self.assertIn("Q001", codes)
+
+
+class ConfigRegistryAndSchemaTests(unittest.TestCase):
+    """The `Configuration Setting Completion` rule: registry metadata and
+    the config-v1 schema must agree on the shape of `custom_fields`."""
+
+    def test_registry_metadata_covers_the_generic_definition_keys(self):
+        install_custom_fields_config_registry()
+        metadata = config_registry.explain_key("custom_fields.energy.type")
+        self.assertIsNotNone(metadata)
+        self.assertEqual(metadata["default"], "string")
+        self.assertIn("enum", metadata["allowed_values"])
+        filterable = config_registry.explain_key("custom_fields.energy.filterable")
+        self.assertFalse(filterable["default"])
+
+    def test_generated_config_schema_declares_custom_fields(self):
+        generated = schema_bundle_v5()["config-v1.schema.json"]
+        definition_schema = generated["properties"]["custom_fields"][
+            "additionalProperties"
+        ]
+        variants = definition_schema["oneOf"]
+        # a bare type-string shorthand, and the full object shape.
+        self.assertEqual(variants[0]["type"], "string")
+        object_schema = variants[1]
+        self.assertFalse(object_schema["additionalProperties"])
+        self.assertIn("filterable", object_schema["properties"])
+        self.assertIn("kinds", object_schema["properties"])
+        self.assertNotIn("privacy", object_schema["properties"])
+        self.assertNotIn("trackers", object_schema["properties"])
 
 
 if __name__ == "__main__":

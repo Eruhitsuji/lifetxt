@@ -124,11 +124,18 @@ def _install_tui_bindings_config_extension():
     install_tui_bindings_config_registry()
 
 
+def _install_custom_fields_config_extension():
+    from .custom_fields import install_custom_fields_config_registry
+
+    install_custom_fields_config_registry()
+
+
 def _legacy_main(argv):
     _install_config_template_extension()
     _install_report_config_extension()
     _install_capture_preset_config_extension()
     _install_tui_bindings_config_extension()
+    _install_custom_fields_config_extension()
     from . import cli as cli_module
     from .archive_safety_v3 import archive_safety_context
     from .runtime_safety_v2 import install_cli_timezone_context
@@ -188,6 +195,7 @@ def _print_help():
     _install_report_config_extension()
     _install_capture_preset_config_extension()
     _install_tui_bindings_config_extension()
+    _install_custom_fields_config_extension()
     from .cli import build_parser
 
     build_parser().print_help()

@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 240" role="img" aria-labelledby="title desc" data-lifetxt-geometry="v3">
+  <title id="title">lifetxt logo</title>
+  <desc id="desc">The canonical lifetxt symbol with the lifetxt wordmark.</desc>
+  <svg x="4" y="4" width="232" height="232" viewBox="0 0 512 512">
+    <defs>
+      <mask id="notebook-sprout-separator" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
+        <rect width="512" height="512" fill="white"/>
+        <path d="M302 420C305 380 315 348 338 323C343 318 352 322 348 329C328 352 320 383 319 420Z" fill="black" stroke="black" stroke-width="12" stroke-linejoin="round"/>
+        <path d="M335 348C306 352 284 334 281 305C310 303 333 320 339 342C340 346 339 347 335 348Z" fill="black" stroke="black" stroke-width="12" stroke-linejoin="round"/>
+        <path d="M338 346C343 321 364 304 394 304C392 330 375 345 344 350C340 350 337 349 338 346Z" fill="black" stroke="black" stroke-width="12" stroke-linejoin="round"/>
+      </mask>
+    </defs>
+    <g data-lifetxt-base="v3" shape-rendering="geometricPrecision">
+      <path data-lifetxt-part="notebook" d="M150 84H291L339 132V364C339 384 327 396 307 396H150C130 396 118 384 118 364V116C118 96 130 84 150 84Z" fill="#27343D" mask="url(#notebook-sprout-separator)"/>
+      <path data-lifetxt-part="fold" d="M291 84V116C291 126 297 132 307 132H339Z" fill="#FFFFFF"/>
+      <circle data-lifetxt-part="row-1-dot" cx="162" cy="184" r="8" fill="#FFFFFF"/>
+      <rect data-lifetxt-part="row-1-line" x="190" y="176" width="94" height="16" rx="8" fill="#FFFFFF"/>
+      <circle data-lifetxt-part="row-2-dot" cx="162" cy="242" r="8" fill="#FFFFFF"/>
+      <rect data-lifetxt-part="row-2-line" x="190" y="234" width="80" height="16" rx="8" fill="#FFFFFF"/>
+      <circle data-lifetxt-part="row-3-dot" cx="162" cy="300" r="8" fill="#FFFFFF"/>
+      <rect data-lifetxt-part="row-3-line" x="190" y="292" width="66" height="16" rx="8" fill="#FFFFFF"/>
+      <path data-lifetxt-part="stem" d="M302 420C305 380 315 348 338 323C343 318 352 322 348 329C328 352 320 383 319 420Z" fill="#2E9F8F"/>
+      <path data-lifetxt-part="leaf-left" d="M335 348C306 352 284 334 281 305C310 303 333 320 339 342C340 346 339 347 335 348Z" fill="#2E9F8F"/>
+      <path data-lifetxt-part="leaf-right" d="M338 346C343 321 364 304 394 304C392 330 375 345 344 350C340 350 337 349 338 346Z" fill="#2E9F8F"/>
+    </g>
+  </svg>
+  <text x="252" y="133" fill="#27343D" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="112" font-weight="650" letter-spacing="-4">life<tspan fill="#2E9F8F">txt</tspan></text>
+  <text x="257" y="184" fill="#66737A" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="28" font-weight="400" letter-spacing="1">Your life. In text. Connected.</text>
+</svg>

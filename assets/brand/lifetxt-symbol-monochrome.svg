@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc" data-lifetxt-geometry="v3">
+  <title id="title">lifetxt monochrome symbol</title>
+  <desc id="desc">Monochrome centered A4-proportioned notebook and overlapping sprout symbol with knockout separation.</desc>
+  <defs>
+    <mask id="notebook-cutouts" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
+      <rect width="512" height="512" fill="black"/>
+      <path data-lifetxt-part="notebook" d="M150 84H291L339 132V364C339 384 327 396 307 396H150C130 396 118 384 118 364V116C118 96 130 84 150 84Z" fill="white"/>
+      <path data-lifetxt-part="fold" d="M291 84V116C291 126 297 132 307 132H339Z" fill="black"/>
+      <circle data-lifetxt-part="row-1-dot" cx="162" cy="184" r="8" fill="black"/>
+      <rect data-lifetxt-part="row-1-line" x="190" y="176" width="94" height="16" rx="8" fill="black"/>
+      <circle data-lifetxt-part="row-2-dot" cx="162" cy="242" r="8" fill="black"/>
+      <rect data-lifetxt-part="row-2-line" x="190" y="234" width="80" height="16" rx="8" fill="black"/>
+      <circle data-lifetxt-part="row-3-dot" cx="162" cy="300" r="8" fill="black"/>
+      <rect data-lifetxt-part="row-3-line" x="190" y="292" width="66" height="16" rx="8" fill="black"/>
+      <path d="M302 420C305 380 315 348 338 323C343 318 352 322 348 329C328 352 320 383 319 420Z" fill="black" stroke="black" stroke-width="12" stroke-linejoin="round"/>
+      <path d="M335 348C306 352 284 334 281 305C310 303 333 320 339 342C340 346 339 347 335 348Z" fill="black" stroke="black" stroke-width="12" stroke-linejoin="round"/>
+      <path d="M338 346C343 321 364 304 394 304C392 330 375 345 344 350C340 350 337 349 338 346Z" fill="black" stroke="black" stroke-width="12" stroke-linejoin="round"/>
+    </mask>
+  </defs>
+  <rect x="0" y="0" width="512" height="512" fill="currentColor" mask="url(#notebook-cutouts)"/>
+  <g data-lifetxt-base="v3">
+    <path data-lifetxt-part="stem" d="M302 420C305 380 315 348 338 323C343 318 352 322 348 329C328 352 320 383 319 420Z" fill="currentColor"/>
+    <path data-lifetxt-part="leaf-left" d="M335 348C306 352 284 334 281 305C310 303 333 320 339 342C340 346 339 347 335 348Z" fill="currentColor"/>
+    <path data-lifetxt-part="leaf-right" d="M338 346C343 321 364 304 394 304C392 330 375 345 344 350C340 350 337 349 338 346Z" fill="currentColor"/>
+  </g>
+</svg>

@@ -1,0 +1,24 @@
+schema_version: 1
+
+links:
+  - requirement_id: req-configurable-smtp-port-shared-mail-transport
+    capability_id: cap-configurable-smtp-mail-transport
+    epic: null
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/616
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/618
+    tests_or_evidence:
+      - "tests/test_mail_delivery.py ValidateSmtpPortTests (8 tests) and SendSmtpTextTests port-related additions (5 tests)"
+      - "tests/test_report_v2_cli.py: 4 new profile-validation tests plus 2 new report-send SMTP-port-passthrough tests (mocked smtplib.SMTP)"
+      - "tests/test_lifetxt.py LifeTxtNotifyTests: 5 new tests (CLI dry-run port note, omitted-port note absence, invalid-port rejection, config-sourced port reaching mocked smtplib.SMTP, no-port default preserved)"
+      - "tests/test_lifetxt.py LifeTxtShareDigestTemplateTests: 2 new tests (digest --format email --smtp-port dry-run note, invalid port rejected before dry-run output)"
+      - "tests/test_config_validation.py: registry entry shape test, C003 plaintext-secret-scanner non-interaction test"
+      - python -m unittest tests.test_mail_delivery tests.test_report_v2_cli tests.test_report_v2 tests.test_lifetxt.LifeTxtNotifyTests tests.test_lifetxt.LifeTxtShareDigestTemplateTests tests.test_config_validation tests.test_schema_extensions_v2 tests.test_digest_report_source -> Ran 198 tests, OK (skipped=5)
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - ruff format --check / ruff check on every changed file -> clean
+      - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      - "live: real smtplib.SMTP call-arg inspection (via mock.patch) confirmed 'smtp.example.com', 587, timeout=10 when an explicit port is configured on a real report send invocation against a disposable fixture, and 'smtp.example.com', timeout=10 (unchanged) when omitted"
+      - "live: real terminal -- notify --email --smtp-port 587 --dry-run and digest --format email --smtp-port 587 --dry-run both show the port note; --smtp-port 999999 is rejected with a named error and exit 1 before any dry-run text for both commands"
+    release_or_deployment: null
+    status: implemented
+
+gaps: []

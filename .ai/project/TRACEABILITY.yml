@@ -9515,6 +9515,105 @@ traceability:
         integration branch's commits are reachable from main.
       status: implemented
 
+    - requirement_id: req-scheduled-report-email-delivery
+      capability_id: cap-ubuntu-server-deployment
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/609
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/617
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/618
+      changed_files_or_scope:
+        - "Add managed scheduled email delivery for report jobs: server-init reporting.jobs[].send_email/environment_file and server-report plan|install --send-email/--environment-file both generate one shared systemd service unit that runs report run first and report send second"
+        - lifetxt/server_init.py
+        - lifetxt/server_report.py
+        - lifetxt/server_report_cli.py
+        - tests/test_server_init.py
+        - tests/test_server_report.py
+        - docs/deployment/ubuntu-server.md
+        - docs/en/cli.md
+        - docs/en/reports.md
+        - docs/ja/reports.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+        - .ai/project/changes/scheduled-report-email-delivery/
+      tests_or_evidence:
+        - "tests/test_server_init.py ReportingConfigGenerationTests: default job unaffected, send_email job generates EnvironmentFile=/two ordered ExecStart= lines, send_email without environment_file rejected, send_email without profile email config rejected, environment_file without send_email rejected, generator-identity check confirming server_report.py reuses server_init.report_service_unit_text/report_timer_unit_text verbatim"
+        - "tests/test_server_report.py BuildPlanTests/ApplyInstallTests/ServerReportCliTests: send_email adds EnvironmentFile=/second ExecStart=, report run ordered before report send, required email config and environment-file validation (including empty-string environment-file without send_email), default plan unaffected, no SMTP credential names in generated content, apply_install result exposes send_email/environment_file, CLI plan/install wiring and invalid-combination exits"
+        - python -m unittest tests.test_server_init -> Ran 33 tests, OK
+        - python -m unittest tests.test_server_report -> Ran 33 tests, OK
+        - python -m unittest tests.test_server_init tests.test_server_report -> Ran 66 tests, OK
+        - "MPLBACKEND=Agg python -W ignore::ResourceWarning -m unittest discover -> Ran 3325 tests in 595.975s, FAILED (3 failures, skipped=195): tests.test_external_verification.ProcessTreeTimeoutTests x2 and tests.test_paths.MultiFileSourceIntegrityTests.test_permission_denied_file_among_multiple_sources_fails_loudly; all 3 reproduce in isolation and are outside #617's write scope"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check lifetxt/server_init.py lifetxt/server_report.py lifetxt/server_report_cli.py tests/test_server_report.py tests/test_server_init.py -> clean
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - "live: real lifetxt server-report plan/install --send-email --environment-file against a disposable valid-email fixture produced an on-disk .service file containing EnvironmentFile=<path>, report run followed by report send as ordered ExecStart= lines, and zero credential values"
+      release_or_deployment: null
+      notes: >-
+        High assurance per issue #617: managed systemd artifacts now support
+        unattended external email delivery. The implementation depends on
+        #616's configurable SMTP-port/shared transport work and deliberately
+        keeps SMTP handling inside the existing authoritative `report send`
+        path. Deployment code only validates the explicit EnvironmentFile=
+        path, requires an already-valid report `email` section through the
+        existing Report validator, and emits unit text through the same
+        `server_init.report_service_unit_text()` generator used by both
+        server-init and server-report. Requires independent security review
+        and Merge Authority approval before merge to main.
+      status: implemented
+
+    - requirement_id: req-configurable-smtp-port-shared-mail-transport
+      capability_id: cap-configurable-smtp-mail-transport
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/616
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/618
+      changed_files_or_scope:
+        - "Add lifetxt.mail_delivery.validate_smtp_port() and a shared _deliver_smtp_message() transport primitive; extend send_smtp_text(port=...); converge notification email onto the shared credential-resolution/transport primitives while preserving its existing message wording; add --smtp-port to notify/digest; add reports.*.email.smtp_port (schema) and notifications.email.smtp_port (registry)"
+        - lifetxt/mail_delivery.py
+        - lifetxt/cli.py
+        - lifetxt/report_cli.py
+        - lifetxt/schema_extensions_v5.py
+        - dist/schemas/config-v1.schema.json
+        - lifetxt/config_registry.py
+        - tests/test_mail_delivery.py
+        - tests/test_report_v2_cli.py
+        - tests/test_lifetxt.py
+        - tests/test_config_validation.py
+        - docs/en/reports.md
+        - docs/ja/reports.md
+        - docs/en/cli.md
+        - docs/ja/cli.md
+        - docs/en/config.md
+        - docs/ja/config.md
+        - .ai/project/changes/configurable-smtp-port-shared-mail-transport/
+      tests_or_evidence:
+        - "tests/test_mail_delivery.py ValidateSmtpPortTests (8 tests) and SendSmtpTextTests port additions (5 tests)"
+        - python -m unittest tests.test_mail_delivery -> Ran 25 tests, OK
+        - "tests/test_report_v2_cli.py: 4 new profile-validation tests plus 2 new report-send SMTP-port-passthrough tests (mocked smtplib.SMTP)"
+        - python -m unittest tests.test_report_v2_cli -> Ran 56 tests, OK
+        - "tests/test_lifetxt.py LifeTxtNotifyTests: 5 new tests (CLI dry-run port note, omitted-port note absence, invalid-port rejection, config-sourced port reaching mocked smtplib.SMTP, no-port default preserved)"
+        - "tests/test_lifetxt.py LifeTxtShareDigestTemplateTests: 2 new tests (digest --format email --smtp-port dry-run note, invalid port rejected before dry-run output)"
+        - python -m unittest tests.test_lifetxt.LifeTxtNotifyTests tests.test_lifetxt.LifeTxtShareDigestTemplateTests -> Ran 23 tests, OK
+        - "tests/test_config_validation.py: registry entry shape test, C003 plaintext-secret-scanner non-interaction test"
+        - python -m unittest tests.test_mail_delivery tests.test_report_v2_cli tests.test_report_v2 tests.test_lifetxt.LifeTxtNotifyTests tests.test_lifetxt.LifeTxtShareDigestTemplateTests tests.test_config_validation tests.test_schema_extensions_v2 tests.test_digest_report_source -> Ran 198 tests, OK (skipped=5)
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on every changed file -> clean
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - "live: a standalone script mocking smtplib.SMTP and driving report_cli.main([\"send\", \"weekly\"], ...) against a real disposable fixture with reports.weekly.email.smtp_port=587 confirmed smtp_cls.call_args == call('smtp.example.com', 587, timeout=10)"
+        - "live: real terminal -- notify --email --smtp-port 587 --dry-run and digest --format email --smtp-port 587 --dry-run both show the port note; --smtp-port 999999 is rejected with a named error and exit 1 before any dry-run text for both commands"
+      release_or_deployment: null
+      notes: >-
+        Security/High assurance per the issue's own explicit escalation.
+        Full change package at
+        .ai/project/changes/configurable-smtp-port-shared-mail-transport/.
+        See cap-configurable-smtp-mail-transport's own notes for the full
+        design rationale, including why notification email was converged
+        onto a shared lower-level transport primitive
+        (`_deliver_smtp_message`) rather than `send_smtp_text()` directly
+        (its existing, test-asserted dry-run message wording differs), and
+        why `notifications.email.smtp_port` deliberately has no JSON Schema
+        entry (matching its sibling `smtp_pass_env`, since no
+        `notifications.*` schema exists at all). Requires independent
+        security review and Merge Authority approval before merge to main.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

@@ -344,5 +344,326 @@ class ReportSendTests(unittest.TestCase):
         self.assertIn("[dry-run]", out)
 
 
+class ReportValidateCliTests(unittest.TestCase):
+    def test_valid_v1_profile_reports_ok(self):
+        with _TempWorkspace() as ws:
+            config_path = ws.write_config({"weekly": {"period": "weekly"}})
+            out, code = _run(["validate", "weekly"], config_path)
+        self.assertEqual(code, 0)
+        self.assertEqual(out, "weekly: OK\n")
+
+    def test_valid_v2_profile_reports_ok(self):
+        with _TempWorkspace() as ws:
+            config_path = ws.write_config(
+                {
+                    "weekly": {
+                        "period": "weekly",
+                        "sections": [{"type": "review"}],
+                        "scope": {"project": "home"},
+                    }
+                }
+            )
+            out, code = _run(["validate", "weekly"], config_path)
+        self.assertEqual(code, 0)
+        self.assertEqual(out, "weekly: OK\n")
+
+    def test_invalid_profile_fails_naming_the_reason(self):
+        with _TempWorkspace() as ws:
+            config_path = ws.write_config(
+                {"weekly": {"period": "weekly", "sections": [{"type": "nope"}]}}
+            )
+            out, code = _run(["validate", "weekly"], config_path)
+        self.assertEqual(code, 1)
+        self.assertIn("weekly: FAIL:", out)
+        self.assertIn("Unknown report section type", out)
+
+    def test_invalid_output_placeholder_is_caught_without_writing_anything(self):
+        with _TempWorkspace() as ws:
+            config_path = ws.write_config(
+                {"weekly": {"period": "weekly", "output": "{nope}.md"}}
+            )
+            out, code = _run(["validate", "weekly"], config_path)
+        self.assertEqual(code, 1)
+        self.assertIn("Unknown report output placeholder", out)
+        self.assertFalse(os.path.exists(os.path.join(ws.tmp.name, "nope.md")))
+
+    def test_unknown_profile_name_fails_loudly(self):
+        with _TempWorkspace() as ws:
+            config_path = ws.write_config({"weekly": {"period": "weekly"}})
+            with self.assertRaisesRegex(ValueError, "Report profile not found"):
+                _run(["validate", "nope"], config_path)
+
+    def test_no_name_and_no_all_is_rejected(self):
+        with _TempWorkspace() as ws:
+            config_path = ws.write_config({"weekly": {"period": "weekly"}})
+            with self.assertRaisesRegex(ValueError, "NAME or --all"):
+                _run(["validate"], config_path)
+
+    def test_name_and_all_together_is_rejected(self):
+        with _TempWorkspace() as ws:
+            config_path = ws.write_config({"weekly": {"period": "weekly"}})
+            with self.assertRaisesRegex(ValueError, "not both"):
+                _run(["validate", "weekly", "--all"], config_path)
+
+    def test_all_reports_every_profile_and_does_not_stop_at_the_first_failure(self):
+        with _TempWorkspace() as ws:
+            config_path = ws.write_config(
+                {
+                    "a-broken": {
+                        "period": "weekly",
+                        "sections": [{"type": "nope"}],
+                    },
+                    "b-ok": {"period": "weekly"},
+                }
+            )
+            out, code = _run(["validate", "--all"], config_path)
+        self.assertEqual(code, 1)
+        self.assertIn("a-broken: FAIL:", out)
+        self.assertIn("b-ok: OK", out)
+
+    def test_all_with_only_valid_profiles_exits_zero(self):
+        with _TempWorkspace() as ws:
+            config_path = ws.write_config(
+                {"a": {"period": "weekly"}, "b": {"period": "daily"}}
+            )
+            out, code = _run(["validate", "--all"], config_path)
+        self.assertEqual(code, 0)
+        self.assertIn("a: OK", out)
+        self.assertIn("b: OK", out)
+
+    def test_all_with_no_profiles_configured_is_ok_and_empty(self):
+        with _TempWorkspace() as ws:
+            config_path = ws.write_config({})
+            out, code = _run(["validate", "--all"], config_path)
+        self.assertEqual(code, 0)
+        self.assertIn("No report profiles configured", out)
+
+    def test_json_format_single_profile(self):
+        with _TempWorkspace() as ws:
+            config_path = ws.write_config({"weekly": {"period": "weekly"}})
+            out, code = _run(["validate", "weekly", "--format", "json"], config_path)
+        self.assertEqual(code, 0)
+        parsed = json.loads(out)
+        self.assertEqual(parsed, {"name": "weekly", "ok": True})
+
+    def test_json_format_all_profiles_is_deterministic(self):
+        with _TempWorkspace() as ws:
+            config_path = ws.write_config(
+                {
+                    "a-broken": {
+                        "period": "weekly",
+                        "sections": [{"type": "nope"}],
+                    },
+                    "b-ok": {"period": "weekly"},
+                }
+            )
+            out, code = _run(["validate", "--all", "--format", "json"], config_path)
+        self.assertEqual(code, 1)
+        parsed = json.loads(out)
+        self.assertFalse(parsed["ok"])
+        names = [entry["name"] for entry in parsed["profiles"]]
+        self.assertEqual(names, ["a-broken", "b-ok"])
+        self.assertFalse(parsed["profiles"][0]["ok"])
+        self.assertIn("error", parsed["profiles"][0])
+        self.assertTrue(parsed["profiles"][1]["ok"])
+        self.assertNotIn("error", parsed["profiles"][1])
+
+    def test_validate_never_touches_life_txt_or_the_filesystem(self):
+        # A broken workspace path (no readable life.txt) must not stop
+        # `report validate` from reporting a profile-configuration result --
+        # validation is a pure config check, never a life.txt read.
+        with _TempWorkspace() as ws:
+            config_path = ws.write_config({"weekly": {"period": "weekly"}})
+            os.unlink(ws.life_path)
+            out, code = _run(["validate", "weekly"], config_path)
+        self.assertEqual(code, 0)
+        self.assertEqual(out, "weekly: OK\n")
+
+    def test_an_unrelated_broken_profile_does_not_block_validating_a_good_one(self):
+        with _TempWorkspace() as ws:
+            config_path = ws.write_config(
+                {
+                    "broken": {
+                        "period": "weekly",
+                        "sections": [{"type": "nope"}],
+                    },
+                    "good": {"period": "weekly"},
+                }
+            )
+            out, code = _run(["validate", "good"], config_path)
+        self.assertEqual(code, 0)
+        self.assertEqual(out, "good: OK\n")
+
+
+class ReportInspectCliTests(unittest.TestCase):
+    def test_inspect_v1_profile_text(self):
+        with _TempWorkspace() as ws:
+            config_path = ws.write_config(
+                {
+                    "weekly": {
+                        "period": "weekly",
+                        "output": "out/{iso_year}-W{iso_week}.md",
+                        "project": "home",
+                    }
+                }
+            )
+            out, code = _run(["inspect", "weekly"], config_path)
+        self.assertEqual(code, 0)
+        self.assertIn("weekly: lifetxt-report-v1 (weekly)", out)
+        self.assertIn("output: out/{iso_year}-W{iso_week}.md ->", out)
+        self.assertIn("scope: project=home", out)
+        self.assertFalse(os.path.exists(os.path.join(ws.tmp.name, "out")))
+
+    def test_inspect_v2_profile_json_matches_preview_period_and_scope(self):
+        with _TempWorkspace() as ws:
+            config_path = ws.write_config(
+                {
+                    "weekly": {
+                        "period": "weekly",
+                        "sections": [{"type": "stats", "group": "daily"}],
+                        "scope": {"project": "home", "open": True},
+                        "compare": "previous",
+                    }
+                }
+            )
+            inspect_out, inspect_code = _run(
+                ["inspect", "weekly", "--format", "json"], config_path
+            )
+            preview_out, _preview_code = _run(
+                ["preview", "weekly", "--format", "json"], config_path
+            )
+        self.assertEqual(inspect_code, 0)
+        inspected = json.loads(inspect_out)
+        previewed = json.loads(preview_out)
+        self.assertEqual(inspected["schema"], "lifetxt-report-v2")
+        self.assertEqual(inspected["period"]["start"], previewed["period_start"])
+        self.assertEqual(inspected["period"]["end"], previewed["period_end"])
+        self.assertEqual(inspected["scope"], {"project": "home", "open": True})
+        self.assertEqual(inspected["compare"], "previous")
+        self.assertEqual(
+            inspected["sections"],
+            [{"type": "stats", "title": None, "options": {"group": "daily"}}],
+        )
+        # inspect never renders body content: no section "data"/"findings" key.
+        self.assertNotIn("data", json.dumps(inspected["sections"]))
+
+    def test_inspect_date_and_previous_use_the_same_selector_as_preview(self):
+        with _TempWorkspace() as ws:
+            config_path = ws.write_config(
+                {"weekly": {"period": "weekly", "sections": [{"type": "review"}]}}
+            )
+            out, code = _run(
+                ["inspect", "weekly", "--date", "2026-01-15", "--format", "json"],
+                config_path,
+            )
+        self.assertEqual(code, 0)
+        parsed = json.loads(out)
+        self.assertEqual(parsed["period"]["start"], "2026-01-12")
+        self.assertEqual(parsed["period"]["end"], "2026-01-18")
+
+    def test_inspect_date_and_previous_are_mutually_exclusive(self):
+        with _TempWorkspace() as ws:
+            config_path = ws.write_config(
+                {"weekly": {"period": "weekly", "sections": [{"type": "review"}]}}
+            )
+            with self.assertRaises(ValueError):
+                _run(
+                    [
+                        "inspect",
+                        "weekly",
+                        "--date",
+                        "2026-01-15",
+                        "--previous",
+                        "--format",
+                        "json",
+                    ],
+                    config_path,
+                )
+
+    def test_inspect_invalid_profile_fails_through_the_same_validator(self):
+        with _TempWorkspace() as ws:
+            config_path = ws.write_config(
+                {"weekly": {"period": "weekly", "sections": [{"type": "nope"}]}}
+            )
+            with self.assertRaisesRegex(ValueError, "Unknown report section type"):
+                _run(["inspect", "weekly"], config_path)
+
+    def test_inspect_no_output_configured_reports_none(self):
+        with _TempWorkspace() as ws:
+            config_path = ws.write_config(
+                {"weekly": {"period": "weekly", "sections": [{"type": "review"}]}}
+            )
+            out, code = _run(["inspect", "weekly", "--format", "json"], config_path)
+        self.assertEqual(code, 0)
+        self.assertIsNone(json.loads(out)["output"])
+
+    def test_inspect_relative_and_absolute_output_paths_resolve(self):
+        with _TempWorkspace() as ws:
+            config_path = ws.write_config(
+                {"relative": {"period": "weekly", "output": "out/report.md"}}
+            )
+            out, _code = _run(["inspect", "relative", "--format", "json"], config_path)
+            resolved = json.loads(out)["output"]["path"]
+        self.assertTrue(os.path.isabs(resolved))
+        self.assertTrue(resolved.endswith(os.path.join("out", "report.md")))
+
+    def test_inspect_never_writes_the_output_file(self):
+        with _TempWorkspace() as ws:
+            config_path = ws.write_config(
+                {"weekly": {"period": "weekly", "output": "generated.md"}}
+            )
+            _run(["inspect", "weekly"], config_path)
+            self.assertFalse(os.path.exists(os.path.join(ws.tmp.name, "generated.md")))
+
+    def test_inspect_never_writes_share_md(self):
+        with _TempWorkspace() as ws:
+            config_path = ws.write_config({"weekly": {"period": "weekly"}})
+            cwd = os.getcwd()
+            os.chdir(ws.tmp.name)
+            try:
+                _run(["inspect", "weekly"], config_path)
+                self.assertFalse(os.path.exists(os.path.join(ws.tmp.name, "share.md")))
+            finally:
+                os.chdir(cwd)
+
+    def test_inspect_email_configured_flag_never_exposes_env_var_values(self):
+        with _TempWorkspace() as ws:
+            config_path = ws.write_config(
+                {
+                    "weekly": {
+                        "period": "weekly",
+                        "email": {
+                            "to": "me@example.com",
+                            "smtp_pass_env": "LIFETXT_SMTP_PASS",
+                        },
+                    }
+                }
+            )
+            with mock.patch.dict(
+                os.environ, {"LIFETXT_SMTP_PASS": "super-secret-value"}
+            ):
+                out, code = _run(["inspect", "weekly", "--format", "json"], config_path)
+        self.assertEqual(code, 0)
+        parsed = json.loads(out)
+        self.assertTrue(parsed["email_configured"])
+        self.assertNotIn("super-secret-value", out)
+        self.assertNotIn("smtp_pass_env", out)
+
+    def test_an_unrelated_broken_profile_does_not_block_inspecting_a_good_one(self):
+        with _TempWorkspace() as ws:
+            config_path = ws.write_config(
+                {
+                    "broken": {
+                        "period": "weekly",
+                        "sections": [{"type": "nope"}],
+                    },
+                    "good": {"period": "weekly", "sections": [{"type": "review"}]},
+                }
+            )
+            out, code = _run(["inspect", "good", "--format", "json"], config_path)
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(out)["report"], "good")
+
+
 if __name__ == "__main__":
     unittest.main()

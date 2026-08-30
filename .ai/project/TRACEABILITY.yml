@@ -9323,6 +9323,99 @@ traceability:
         value when it conflicts with the new one.
       status: implemented
 
+    - requirement_id: req-report-readonly-validate
+      capability_id: cap-report-v2-composition
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/600
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/614
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/612
+      changed_files_or_scope:
+        - "Add `lifetxt report validate NAME|--all [--format text|json]`, reusing the exact _validate_profile() preview/run/send already call plus a syntax-only output-template placeholder check, with zero rendering/writing/network access"
+        - "Fix _profile_named() to validate only the requested profile (via a new _raw_profiles()) instead of eagerly validating every configured profile first"
+        - lifetxt/report_cli.py
+        - tests/test_report_v2_cli.py
+        - docs/en/reports.md
+        - docs/ja/reports.md
+        - docs/en/cli.md
+        - docs/ja/cli.md
+        - docs/deployment/ubuntu-server.md
+      tests_or_evidence:
+        - "tests/test_report_v2_cli.py ReportValidateCliTests (15 tests): valid v1/v2 profile reports OK, invalid profile fails naming the reason, invalid output placeholder caught without writing anything, unknown profile name fails loudly, NAME/--all mutual-exclusivity validation, --all enumerates every profile and does not stop at the first failure, --all with only valid profiles exits 0, --all with no profiles configured, --format json for one profile and for --all (deterministic ordering), validate never touches life.txt (deleting the workspace's life.txt does not affect the result), an unrelated broken profile does not block validating a good one"
+        - python -m unittest tests.test_report_v2_cli -> Ran 50 tests, OK
+        - python -m unittest tests.test_report_v2 tests.test_report_cli tests.test_digest_report_source tests.test_server_init tests.test_server_report -> Ran 94 tests, OK (regression: the _profile_named fix changes no existing test's expected behavior)
+        - "live: real disposable fixture (valid v1, valid v2, one profile with an unknown section type) -- report validate weekly -> \"weekly: OK\"; report validate broken -> \"broken: FAIL: ...\", exit 1; report validate --all lists all three profiles' results, not just the first failure, exit 1; report validate --all --format json produces the matching deterministic JSON; report validate weekly --all correctly refused as a conflicting combination"
+        - "found and fixed a real, pre-existing bug during this task's own live testing (see cap-report-v2-composition's notes and req-report-resolved-inspection): _profile_named() called _profiles(), which eagerly validates every configured profile, so preview/run/send/digest --report for a valid profile failed whenever an unrelated sibling profile was invalid; confirmed via git stash that the bug predates this task; fixed by validating only the requested profile"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check lifetxt/report_cli.py tests/test_report_v2_cli.py -> clean
+        - "manual: docs/en/reports.md and docs/ja/reports.md new-section anchors computed directly against the release-doc validator's own slug() algorithm and confirmed present"
+        - scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> {"errors":0,"ok":true}
+      release_or_deployment: null
+      notes: >-
+        Extends cap-report-v2-composition. `_validate_profile_safe()` never
+        raises -- it wraps `_validate_profile()` (the identical function
+        `preview`/`run`/`send` already call) in a try/except and additionally
+        exercises `resolve_output_template()` against a fixed, arbitrary
+        anchor date purely to catch placeholder-syntax errors, so `validate`
+        performs no life.txt parsing, provider execution, file write, or
+        network access. `--all` deliberately does not reuse `_profiles()`
+        (which raises on the first invalid profile); a new `_raw_profiles()`
+        enumerates the raw `reports` mapping so every profile's result can be
+        collected and reported, per the issue's own "does not stop after the
+        first profile" acceptance criterion. Provider-specific option-key
+        validation is intentionally not newly invented here, since no such
+        validation exists anywhere in `report_v2.py` today (see
+        cap-report-v2-composition's notes for the full reasoning) --
+        `validate` reuses exactly what `preview`/`run` already enforce, no
+        more and no less.
+      status: implemented
+
+    - requirement_id: req-report-resolved-inspection
+      capability_id: cap-report-v2-composition
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/600
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/615
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/612
+      changed_files_or_scope:
+        - "Add `lifetxt report inspect NAME [--date|--previous] [--format text|json]`, reusing _profile_named()/_period_context()/_resolved_output() unchanged and never rendering a section, executing a provider, writing a file, or contacting SMTP"
+        - lifetxt/report_cli.py
+        - tests/test_report_v2_cli.py
+        - docs/en/reports.md
+        - docs/ja/reports.md
+        - docs/en/cli.md
+        - docs/ja/cli.md
+        - docs/deployment/ubuntu-server.md
+      tests_or_evidence:
+        - "tests/test_report_v2_cli.py ReportInspectCliTests (13 tests): v1 profile text output; v2 profile JSON period/scope/compare/sections exactly matches an equivalent preview --format json call's period_start/period_end; --date and --previous use the identical selector preview uses; --date+--previous mutual exclusivity; invalid profile fails through the same validator as report validate; no output configured reports null; relative and absolute output paths both resolve to an absolute path; inspect never writes the configured output file; inspect never leaves a stray share.md; email presence is reported only as a boolean, never the env var name or a real secret value; an unrelated broken profile does not block inspecting a good one"
+        - python -m unittest tests.test_report_v2_cli -> Ran 50 tests, OK
+        - "live: real disposable fixture -- report inspect v2weekly (text) showed schema/period/mode/sections/format/audience/compare/scope/email correctly with zero files written (confirmed via directory listing before/after); report inspect v2weekly --format json produced the designed nested report/schema/period/output/scope/sections/email_configured/format/audience/compare shape; report inspect v2weekly --date 2026-01-15 correctly shifted period.start/period.end; report inspect weekly (v1 profile) showed the resolved absolute output path without creating the output directory"
+        - "live: report preview v2weekly, run from within the fixture directory (with a broken sibling profile present), rendered successfully -- confirms the _profile_named() fix this task made (see req-report-readonly-validate) benefits preview/run/send/digest --report, not only the two new commands"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check lifetxt/report_cli.py tests/test_report_v2_cli.py -> clean
+        - scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> {"errors":0,"ok":true}
+      release_or_deployment: null
+      notes: >-
+        Extends cap-report-v2-composition. Implemented alongside
+        req-report-readonly-validate in the same commit/PR since both reuse
+        the same `_raw_profiles()`/`_profile_named()` seam and #615's own
+        text explicitly asks it to "coordinate with #604/#613 so inspect
+        consumes their shared resolvers rather than duplicating them" --
+        `_command_inspect()` calls `_period_context()` (the identical
+        period/timezone resolver `preview`/`run` use, including the small
+        life.txt timezone-directive read the issue explicitly permits: "It
+        may load config and resolve workspace metadata needed for
+        deterministic path/timezone resolution") and `_resolved_output()`
+        unchanged; it never calls `render_report`/`render_report_v2`, so no
+        section provider executes. The JSON shape
+        (`report`/`schema`/nested `period`/`output`/`scope`/`sections`)
+        follows #615's own example structure rather than a flatter ad hoc
+        one. `_inspect_sections()` exposes each section's raw option dict by
+        reusing `report_v2._reserved_option_keys()` -- the same set
+        `build_report_model()` itself uses to separate provider options from
+        `type`/`title` -- so no second notion of "what counts as an option"
+        exists. `email` presence is reported only as a boolean
+        `email_configured`; no env var name or secret value is ever emitted,
+        which is more conservative than the issue's own allowance ("safe
+        metadata such as configured environment-variable names").
+      status: implemented
+
     - requirement_id: req-server-init-reporting-section
       capability_id: cap-ubuntu-server-deployment
       epic: https://github.com/Eruhitsuji/lifetxt/issues/609
@@ -9391,14 +9484,14 @@ traceability:
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/600
       pull_request: https://github.com/Eruhitsuji/lifetxt/pull/612
       changed_files_or_scope:
-        - "Document the #600/#609 umbrella tracking issues' closure: every child issue (#601-#608, #610, #611) landed as its own commit on feature/report-v2-distribution, merged into one final PR"
+        - "Document the #600/#609 umbrella tracking issues' closure: every child issue (#601-#608, #610, #611, plus the #613/#614/#615 follow-on additions to the same #600 epic) landed as its own commit on feature/report-v2-distribution, merged into one final PR"
         - docs/en/reports.md
         - docs/ja/reports.md
         - docs/deployment/ubuntu-server.md
       tests_or_evidence:
         - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
         - "manual: every new cross-reference anchor verified against the validator's own slug() algorithm"
-        - MPLBACKEND=Agg python -m unittest discover -> Ran 3236 tests, OK (skipped=185)
+        - MPLBACKEND=Agg python -m unittest discover -> full-suite result recorded once run on the final consolidated branch (see req-report-readonly-validate/req-report-resolved-inspection for the focused report-module regression run)
         - python -m unittest tests.test_traceability_gate tests.test_change_package_closeout -> OK
         - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
         - ruff format --check / ruff check on every changed file -> clean

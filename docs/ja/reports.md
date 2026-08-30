@@ -76,6 +76,27 @@ python -m lifetxt report run weekly
 `append` は既存 file と完全な1回分の生成レポートを合わせた内容を atomic に書き戻します。
 必要な親 directory は自動作成します。
 
+1つの profile、または `--all` ですべての profile の設定を、レンダリング・
+書き込み・network access なしで検証します。
+
+```sh
+python -m lifetxt report validate weekly
+python -m lifetxt report validate --all
+```
+
+profile が実際に何をするか -- 解決済みの period・出力先 path・scope、
+（Report v2 profile であれば）provider 一覧 -- を、本文をレンダリングせず、
+何も書き込まずに表示します。
+
+```sh
+python -m lifetxt report inspect weekly
+python -m lifetxt report inspect weekly --format json
+```
+
+`validate`/`inspect`/`preview`/`run` の使い分けと完全な契約については、
+下記の[「profile を validate / inspect する」](#profile-を-validate-inspect-する)
+を参照してください。
+
 ## 生成 metadata
 
 `frontmatter: true` の場合、出力の先頭には次のような metadata が入ります。
@@ -329,6 +350,69 @@ lifetxt digest --report weekly-review --date 2026-07-15 --format slack-webhook -
 
 `--report` を指定した場合、`--week`/`--month`/`--project` は無視され、
 profile 自身の period と filter が適用されます。
+
+## profile を validate / inspect する
+
+`report` の4つの subcommand は、実際に何をするかの度合いが異なる、
+4つの異なる問いに答えます。
+
+| Command | 問い | body をレンダリングする? | 書き込み/送信する? |
+| --- | --- | --- | --- |
+| `report validate` | この profile の設定は構造的に valid か? | いいえ | いいえ |
+| `report inspect` | 解決後、どの period/output/scope/provider が使われるか? | いいえ | いいえ |
+| `report preview` | レンダリングされたレポートはどう見えるか? | はい（stdout へ） | いいえ |
+| `report run` / `report send` | レポートを生成する（あるいは生成してメール送信する）。 | はい | はい |
+
+### `report validate`
+
+```sh
+python -m lifetxt report validate weekly
+python -m lifetxt report validate --all
+python -m lifetxt report validate weekly --format json
+```
+
+指定した1つの profile、または `--all` で全 profile を、`preview`/`run`/
+`send` が使うのとまったく同じ profile validator（period/mode、v1・v2 の
+互換性、`sections`/`scope`/`compare`/`format`/`audience`/`email` の shape）に
+加え、`output` placeholder template の構文チェックだけを通して検証します。
+`life.txt` の parse、section provider の実行、レポート本文のレンダリング、
+file への書き込み、network 接続のいずれも行いません。
+
+`--all` は最初の失敗だけでなく、**すべての** profile の結果を報告します:
+
+```text
+$ python -m lifetxt report validate --all
+broken: FAIL: Report profile broken: Unknown report section type: 'nope'. Known types: ...
+v2weekly: OK
+weekly: OK
+```
+
+チェックしたすべての profile が valid なら exit status は `0`、そうでなければ
+`1` になるため、`server-init`/`server-report` が定期 job を deploy する前の
+CI や systemd の preflight step として使えます。`--format json` は
+（`--all` の場合はリストの）小さく決定的な結果 object を出力します。
+これは `preview --format json` が出す Report Model とは異なります。
+
+### `report inspect`
+
+```sh
+python -m lifetxt report inspect weekly
+python -m lifetxt report inspect weekly --date 2026-07-15 --format json
+```
+
+指定した invocation に対して `preview`/`run` が実際に使う解決済みの plan --
+schema（`lifetxt-report-v1`/`lifetxt-report-v2`）、解決済みの
+`period.start`/`period.end`/`timezone`、（`output` が設定されていれば）
+解決済みの `output.path`、legacy alias 解決後の実効 `scope`、（Report v2
+profile であれば）各 section 自身の option を含む順序付き `sections` 一覧 --
+を、section のレンダリングや provider の呼び出し、file への書き込み、
+SMTP への接続を一切行わずに表示します。`--date`/`--previous` は
+`preview`/`run` が解決するのと同じ period を選択します。invalid な
+profile は `report validate` と同一の validator を通して失敗します。
+
+`email` の有無は boolean の `email_configured` としてのみ報告されます。
+設定された環境変数の *名前* と secret の *値* は `inspect` の出力に
+一切含まれません。
 
 ## Ubuntu Server での定期実行
 

@@ -3937,8 +3937,14 @@ capabilities:
       - req-server-hosted-mcp-runbook
       - req-server-init-ai-workspace
       - req-server-update-backup-coverage-diagnostic
+      - req-server-init-reporting-section
+      - req-server-report-command
     implementation_locations:
       - docs/deployment/ubuntu-server.md
+      - lifetxt/server_report.py
+      - lifetxt/server_report_cli.py
+      - lifetxt/entrypoint.py
+      - tests/test_server_report.py
       - docs/en/ai-integration.md
       - docs/ja/ai-integration.md
       - contrib/README.md
@@ -3976,6 +3982,13 @@ capabilities:
       - server-init config: ai_workspace.enabled, ai_workspace.write_file
       - lifetxt.server_update.backup_coverage_warnings
       - server-update report field: backup_coverage_warnings
+      - server-init config: reporting.enabled, reporting.profiles, reporting.jobs
+      - lifetxt.server_init.report_service_unit_text
+      - lifetxt.server_init.report_timer_unit_text
+      - lifetxt server-report plan|install|remove NAME --app-config PATH [--yes] [--enable] [--start] [--format text|json]
+      - lifetxt.server_report.build_plan
+      - lifetxt.server_report.apply_install
+      - lifetxt.server_report.apply_remove
     tests_or_evidence:
       - tests/test_server_init.py covers dry-run non-mutation, idempotent apply, existing-file refusal, source/data root overlap refusal, generated unit/sudoers injection-value refusal, uv installer selection, generated server-update config, generated systemd/nginx/service-control artifacts, explicit service user requirement, health-check planning, and CLI JSON output.
       - tests/test_server_update.py covers post-restart health readiness retry, including immediate success, connection-refused followed by success, HTTP error followed by success, deadline exhaustion preserving validated_health_check_failed, and restart failure preserving validated_restart_incomplete without health attempts.
@@ -4008,6 +4021,11 @@ capabilities:
       - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
       - ruff format --check / ruff check on changed files -> clean
       - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      - "tests/test_server_init.py ReportingConfigGenerationTests (9 tests): disabled-by-default no reports key/no units, profiles copied into the generated application config, invalid profile/unknown-job-profile/duplicate-job-name/bad-time/unsupported-schedule all rejected before any write, service+timer unit content and OnCalendar= for weekly and daily periods, systemd enable wiring, apply writing real files to disk"
+      - python -m unittest tests.test_server_init -> Ran 27 tests, OK
+      - "tests/test_server_report.py (19 tests): plan/apply_install/apply_remove unit tests (unit content, unknown/invalid profile rejection, conflict refusal, systemctl enable/disable via a mocked server_update._run, generator-marker-gated deletion, best-effort disable-failure tolerance) plus server_report_cli end-to-end tests (dry-run-by-default, --yes writes, unknown profile exits 1 with a named error, entrypoint routing)"
+      - python -m unittest tests.test_server_report -> Ran 19 tests, OK
+      - "live end-to-end on this Windows sandbox: a real disposable fixture (.lifetxt.json + life.txt) driven through the real lifetxt entrypoint -- server-report plan printed the exact designed service+timer unit content in JSON; install --yes wrote both files to disk; remove --yes deleted both files (systemctl calls failed gracefully and were tolerated, since no systemd exists on this host)"
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/260
       - https://github.com/Eruhitsuji/lifetxt/issues/270
@@ -4021,6 +4039,9 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/526
       - https://github.com/Eruhitsuji/lifetxt/issues/528
       - https://github.com/Eruhitsuji/lifetxt/issues/529
+      - https://github.com/Eruhitsuji/lifetxt/issues/609
+      - https://github.com/Eruhitsuji/lifetxt/issues/610
+      - https://github.com/Eruhitsuji/lifetxt/issues/611
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/274
       - https://github.com/Eruhitsuji/lifetxt/pull/276
@@ -4128,6 +4149,42 @@ capabilities:
       established basis for `server-init`/`server-update` changes; see
       `.ai/project/changes/server-init-ai-workspace-and-backup-coverage/`
       for the full change package.
+
+      #609/#610/#611 (self-scoped, implemented in the same
+      feature/report-v2-distribution worktree batch as
+      cap-report-v2-composition) extend `server-init` with an opt-in
+      `reporting` section and add the standalone `server-report` command
+      for already-running deployments, so periodic `lifetxt report` output
+      can be scheduled with systemd the same way the Web service and
+      calendar sync already are. `reporting.profiles` is validated through
+      `report_cli._profiles()` -- the same validator `lifetxt report`
+      itself uses -- rather than reimplemented, and copied verbatim into
+      the generated application config's `reports` section on success.
+      `report_service_unit_text()`/`report_timer_unit_text()` (public, no
+      leading underscore) are the single generator for a report job's
+      systemd oneshot+`Persistent=true`-timer pair; `server-report` reuses
+      them unmodified rather than duplicating unit-generation logic, so a
+      job's unit content is identical regardless of which command
+      installed it. Each job's oneshot service runs `report run <profile>
+      --previous`, and its timer's `OnCalendar=` matches the profile's own
+      period boundary (daily every day, weekly on Monday, monthly on the
+      1st) at a configured `HH:MM`, so the timer fires once the period it
+      reports on has just completed -- matching #609's stated rationale
+      for why `--previous` (added in cap-report-v2-composition's #604) is
+      required for unattended scheduling. `server-report` never creates or
+      edits a report profile (`NAME` must already exist and pass real
+      validation) and uses `--app-config`, not `--config`, to avoid the
+      same global-`--config`-stripping pitfall `server-init`/
+      `server-update` already worked around with `--server-config`.
+      Generated report files are derived, regenerable artifacts and are
+      deliberately not added to `server-update`'s `backup_paths`. No real
+      systemd was available in this sandbox for `systemctl enable`/
+      `disable` calls themselves; those are exercised through the same
+      mocked `server_update._run` pattern `test_server_init.py`/
+      `test_server_update.py` already established, while unit-file
+      content, plan/conflict/apply logic, and full CLI dry-run/`--yes`
+      behavior were verified both by the automated test suite and by a
+      live, non-mocked run against a real disposable fixture on this host.
     replacement:
       replaces: []
       replaced_by: null
@@ -6407,6 +6464,147 @@ capabilities:
       `mcp.py`, or `tui_app.py`. Web UI rendering of `custom_fields`-driven
       values (a custom form widget/editor) is explicitly out of scope per
       the issue's own non-goals and is not attempted here.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-report-v2-composition
+    name: Report v2 composition layer over existing lifetxt aggregations
+    summary: >-
+      A `sections`-based Report v2 profile shape composing lifetxt's existing
+      deterministic domain aggregations (review, stats, agenda, command
+      center, project health, next actions, inbox, ticket attention, health)
+      into one deterministic Report Model, rendered as Markdown/JSON/HTML by
+      pure presentation functions. Adds historical/backfill period selection
+      and previous-period comparison, an external-safe disclosure mode, an
+      email delivery command reusing a shared SMTP/Slack helper, and lets
+      `digest` use a named report profile as its message source. A v1
+      profile (no `sections`) keeps rendering unchanged through the existing
+      `share --format markdown` delegation from #554/PR #555.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-report-v2-composition-core
+      - req-report-v2-period-comparison-and-backfill
+      - req-report-v2-additional-section-providers
+      - req-report-v2-health-domain-function
+      - req-report-v2-json-html-renderers
+      - req-report-v2-external-safe-audience
+      - req-report-v2-email-delivery
+      - req-digest-report-source
+    implementation_locations:
+      - lifetxt/report_v2.py
+      - lifetxt/health.py
+      - lifetxt/mail_delivery.py
+      - lifetxt/report_cli.py
+      - lifetxt/report_config.py
+      - lifetxt/schema_extensions_v5.py
+      - dist/schemas/config-v1.schema.json
+      - lifetxt/cli.py
+      - tests/test_report_v2.py
+      - tests/test_report_v2_cli.py
+      - tests/test_health.py
+      - tests/test_mail_delivery.py
+      - tests/test_digest_report_source.py
+      - docs/en/reports.md
+      - docs/ja/reports.md
+      - docs/en/config.md
+      - docs/ja/config.md
+      - docs/en/cli.md
+      - docs/ja/cli.md
+    public_interfaces:
+      - lifetxt.report_v2.ReportContext
+      - lifetxt.report_v2.build_report_model
+      - lifetxt.report_v2.render_model
+      - lifetxt.report_v2.SECTION_PROVIDERS
+      - lifetxt.health.build_health
+      - lifetxt.mail_delivery.send_smtp_text
+      - lifetxt.mail_delivery.send_slack_webhook
+      - lifetxt report preview|run --date|--previous|--format
+      - lifetxt report send NAME
+      - lifetxt digest --report NAME
+      - reports.*.sections
+      - reports.*.format
+      - reports.*.audience
+      - reports.*.compare
+      - reports.*.email
+    tests_or_evidence:
+      - tests/test_health.py -> Ran 6 tests, OK; full existing health CLI test suite (14 tests) re-run unmodified against the refactored command_health -> OK
+      - tests/test_report_v2.py -> Ran 22 tests, OK (period math, section-provider composition matching direct engine calls, comparison diff, external-audience redaction, all three renderers)
+      - tests/test_mail_delivery.py -> Ran 12 tests, OK; existing digest CLI test suite re-run unmodified against the mail_delivery-backed refactor -> OK
+      - tests/test_report_v2_cli.py -> Ran 17 tests, OK (v2 profile validation, preview/run/send end to end via report_cli.main, --date/--previous/--format wiring, v1 profile unaffected)
+      - tests/test_digest_report_source.py -> Ran 5 tests, OK (real subprocess via run_cli: --report file/email-dry-run/unknown-profile/v1-delegation, plain digest unaffected)
+      - python -m unittest tests.test_report_cli -> Ran 12 tests, OK (existing v1 report tests unmodified)
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - ruff format --check / ruff check on every changed file -> clean
+      - scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> {"errors":0,"ok":true}
+      - "manual: every new cross-reference anchor in docs/en+ja/reports.md and docs/deployment/ubuntu-server.md (outside validate_release_docs.py's checked-document set) verified against the validator's own slug() algorithm run directly"
+      - "found and fixed a real, pre-existing defect while writing an end-to-end test for the unchanged v1 path: _render_share passed no -o to share --format markdown, so share silently wrote its body to ./share.md in the caller's cwd and the v1 report profile's own body became just 'Wrote share.md (N item(s)).' instead of the actual rendered content; confirmed via git stash that no prior test exercised this path without mocking render_report/_render_share"
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/600
+      - https://github.com/Eruhitsuji/lifetxt/issues/601
+      - https://github.com/Eruhitsuji/lifetxt/issues/602
+      - https://github.com/Eruhitsuji/lifetxt/issues/603
+      - https://github.com/Eruhitsuji/lifetxt/issues/604
+      - https://github.com/Eruhitsuji/lifetxt/issues/605
+      - https://github.com/Eruhitsuji/lifetxt/issues/606
+      - https://github.com/Eruhitsuji/lifetxt/issues/607
+      - https://github.com/Eruhitsuji/lifetxt/issues/608
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Self-scoped and implemented autonomously per repository owner
+      instruction to implement #600-#611 in a dedicated worktree, on one
+      integration branch (feature/report-v2-distribution, branched from
+      origin/main) with one child branch per issue merged locally into the
+      integration branch, ending in one final PR.
+
+      #601's core (ReportContext, the provider registry, build_report_model)
+      was implemented together with #603/#604/#605/#606/#607, since the
+      architecture makes all six cheap to prove in one pass: section
+      providers are thin adapters over build_review()/build_stats()/
+      agenda_records()/command_center()/portfolio()/build_health() (the
+      last extracted from the CLI health command's previously inline
+      W301-W305 rules, matching how review.py/stats.py already expose
+      build_review()/build_stats() to multiple surfaces); the
+      command-center/next-actions/inbox/ticket-attention providers reuse
+      command_center.py's own private _next_actions/_inbox_section/
+      _ticket_attention adapters directly rather than re-deriving the exact
+      same shape from public building blocks, matching this project's own
+      established precedent of cross-module private-helper reuse (e.g.
+      mcp.py importing webapp._subgraph). Comparison (#604) is a generic
+      recursive numeric diff over two provider results, not a per-section
+      comparison implementation. External-safe audience (#603) is
+      deliberately the conservative first slice its own issue describes:
+      only stats/health/project-health section types are allowed, and their
+      data is redacted (verbatim-content keys dropped, lists replaced by
+      counts) before being passed through
+      lifetxt.remote_access.redact_remote_value() as defense in depth.
+      JSON/HTML renderers (#607) are pure functions over the already-built
+      Report Model; no renderer re-parses life.txt or re-derives a section.
+
+      #602's mail_delivery.py extraction intentionally has a bounded blast
+      radius: command_digest's email/Slack/file branches were refactored to
+      use it (confirmed behavior-preserving via the full existing digest
+      test suite, with one strict improvement -- --dry-run no longer
+      requires SMTP environment variables to be set first, which nothing
+      relied on), but notification email (_send_notification_email_batch)
+      was left on its own inline SMTP call to keep this task's footprint
+      bounded; it already shares split_email_addresses via the same
+      _split_email_addresses delegation.
+
+      #608 (digest --report NAME) reuses report_cli._render_named_report --
+      the exact function preview/run/send already call -- so digest never
+      gets a second report-composition/rendering implementation;
+      --week/--month/--project are documented as ignored (not rejected)
+      when --report is given, since the profile's own period/filters take
+      over.
+
+      #609/#610/#611 (Ubuntu Server scheduled-report deployment) extend the
+      existing cap-ubuntu-server-deployment capability instead of this one,
+      since they are deployment-automation work over an already-established
+      capability boundary, not new report semantics.
     replacement:
       replaces: []
       replaced_by: null

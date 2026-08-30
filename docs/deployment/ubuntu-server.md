@@ -458,6 +458,76 @@ primary `life.txt` shown above when you want to confine the AI client's
 writes to a dedicated proposal/inbox target rather than the same file
 `lifetxt serve` and the sync timers write to.
 
+## 10. Scheduled reports
+
+Periodic `lifetxt report` output can be scheduled the same way as the Web
+service and calendar sync: systemd owns scheduling, and `report` itself
+still owns what a report generates. No resident lifetxt scheduler is added.
+
+**New or fully regenerated deployments** add an opt-in `reporting` section
+to `server-init.json`:
+
+```json
+{
+  "reporting": {
+    "enabled": true,
+    "profiles": {
+      "weekly": {
+        "period": "weekly",
+        "output": "reports/{iso_year}-W{iso_week}.md",
+        "sections": [{"type": "review"}, {"type": "stats"}]
+      }
+    },
+    "jobs": [
+      {"name": "weekly", "profile": "weekly", "schedule": "after-period", "at": "00:10"}
+    ]
+  }
+}
+```
+
+`reporting.profiles` is validated through the same profile validator
+`lifetxt report` itself uses (see
+[`reports.md`](../en/reports.md#report-v2-composing-existing-aggregations-sections))
+and copied verbatim into the generated application config's `reports`
+section. Each `reporting.jobs` entry generates one systemd oneshot service
+(`lifetxt-report-<name>.service`, running `report run <profile> --previous`)
+and one `Persistent=true` timer (`lifetxt-report-<name>.timer`) whose
+`OnCalendar=` matches the profile's own period boundary — daily every day,
+weekly on Monday, monthly on the 1st — at the configured `at` (24-hour
+`HH:MM`) time, so the timer fires once the period it reports on has just
+completed. `schedule` currently supports only `"after-period"`.
+
+**Already-running deployments** add or remove one report job without
+re-running `server-init` or touching any other deployment artifact:
+
+```sh
+lifetxt server-report plan weekly \
+  --app-config /srv/lifetxt/data/.lifetxt.json \
+  --service-user lifetxt --service-group lifetxt
+lifetxt server-report install weekly \
+  --app-config /srv/lifetxt/data/.lifetxt.json \
+  --service-user lifetxt --service-group lifetxt --yes --enable --start
+lifetxt server-report remove weekly \
+  --app-config /srv/lifetxt/data/.lifetxt.json --yes
+```
+
+`--app-config` (not `--config`) names the target application `.lifetxt.json`
+— using the global `--config` flag here would be silently stripped before
+this command ever saw it, the same pitfall `server-init`/`server-update`
+avoided with their own `--server-config` flag. `server-report` never creates
+or edits a report profile: `weekly` above must already exist in
+`.lifetxt.json`'s `reports` section and pass the real Report v2 validator,
+keeping runtime report configuration and deployment-unit installation as
+separate, reviewable concerns. It reuses the exact same systemd unit
+generator the `reporting` section above uses, so a job's unit content is
+identical regardless of which command installed it. `install` is dry-run
+without `--yes` and refuses to overwrite a conflicting existing unit file;
+`remove` only deletes files that still carry the generator's own marker
+comment, never an unrelated same-named file.
+
+Generated report files are derived, regenerable artifacts, not source data —
+they are deliberately not added to `server-update`'s backup coverage.
+
 ## Also see
 
 - [`contrib/systemd/`](../../contrib/systemd/) — the unit/timer/environment

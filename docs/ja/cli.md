@@ -2727,11 +2727,17 @@ python -m lifetxt digest life.txt --week --format file --path digest-log.md
 | `--to ADDRESS` | 送信先 email address (`email`) |
 | `--smtp-host-env`, `--smtp-user-env`, `--smtp-pass-env` | SMTP host/username/password を格納した環境変数 (`email`)。既定は `LIFETXT_SMTP_HOST`/`_USER`/`_PASS` |
 | `--path PATH` | Markdown を追記する local file (`file`) |
+| `--report NAME` | 組み込みの review summary の代わりに、設定済み `lifetxt report` profile を message source として使う（この場合 `--week`/`--month`/`--project` は無視される） |
+| `--date YYYY-MM-DD` | `--report` 指定時: 今日ではなくこの日付を含む period を生成 |
+| `--previous` | `--report` 指定時: 直近に完了した period を生成 |
 | `--dry-run` | message を組み立てて表示するのみで、network request も書き込みも行わない |
 
 各 channel は、network request や書き込みを行う **前に** 必要な環境変数
 (または `--to`/`--path`) を検証します。そのため secret が不足している
 場合は配信途中でなく即座に明確なエラーで失敗します。
+`lifetxt report list|preview|run|send` と Report v2 の
+`sections`/`format`/`audience`/`compare`/`email` の完全な契約については
+[reports.md](reports.md) を参照してください。
 
 ### `template`
 

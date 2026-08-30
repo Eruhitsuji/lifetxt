@@ -3116,11 +3116,16 @@ python -m lifetxt digest life.txt --week --format file --path digest-log.md
 | `--to ADDRESS` | Recipient email address (`email`) |
 | `--smtp-host-env`, `--smtp-user-env`, `--smtp-pass-env` | Env vars with SMTP host/username/password (`email`); default to `LIFETXT_SMTP_HOST`/`_USER`/`_PASS` |
 | `--path PATH` | Local file to append Markdown to (`file`) |
+| `--report NAME` | Use a configured `lifetxt report` profile as the message source instead of the built-in review summary (`--week`/`--month`/`--project` are ignored) |
+| `--date YYYY-MM-DD` | With `--report`: generate the period containing this date instead of today |
+| `--previous` | With `--report`: generate the immediately completed previous period |
 | `--dry-run` | Build the message and print it without making a network request or writing |
 
 Each channel validates its required environment variables (or `--to`/`--path`)
 **before** making any network request or writing any file, so a missing
 secret fails fast with a clear error rather than partway through delivery.
+See [reports.md](reports.md) for `lifetxt report list|preview|run|send` and
+the full Report v2 `sections`/`format`/`audience`/`compare`/`email` contract.
 
 ### `template`
 
@@ -3551,3 +3556,41 @@ regeneration of `dist/schemas/` does not inflate `changed_line_count` (it
 is still flagged via the schema/migration category above). These trigger
 categories are fixed; they are not configurable through `--server-config`,
 so no flag other than exact-SHA `--approve` can bypass one.
+
+## 24. `server-report`
+
+Install or remove one systemd oneshot+timer pair for a report profile on an
+already-running deployment, without re-running `server-init`. See
+[docs/deployment/ubuntu-server.md §10](../deployment/ubuntu-server.md#10-scheduled-reports)
+for the full runbook, and [reports.md](reports.md) for `server-init`'s own
+opt-in `reporting` section (the equivalent bootstrap-time path for a new or
+fully regenerated deployment).
+
+```sh
+python -m lifetxt server-report plan weekly --app-config /srv/lifetxt/.lifetxt.json --service-user lifetxt --service-group lifetxt
+python -m lifetxt server-report install weekly --app-config /srv/lifetxt/.lifetxt.json --service-user lifetxt --service-group lifetxt --yes --enable --start
+python -m lifetxt server-report remove weekly --app-config /srv/lifetxt/.lifetxt.json --yes
+```
+
+| Option | Meaning |
+|---|---|
+| `--app-config PATH` | Required. The application `.lifetxt.json` containing the report profile -- deliberately not `--config`, which the global `--config` flag would silently strip before this command ever saw it. |
+| `--service-user`, `--service-group` | Required for `plan`/`install`. The systemd unit's `User=`/`Group=`. |
+| `--data-root PATH` | Deployment data root. Defaults to the directory containing `--app-config`. |
+| `--unit-dir PATH` | Directory to read/write unit files. Defaults to `<data-root>/systemd`. |
+| `--python PATH` | Target Python interpreter. Defaults to a bare `lifetxt` on `PATH`. |
+| `--at HH:MM` | 24-hour time the job's timer fires at, relative to the profile's own period boundary. Default `00:10`. |
+| `--service-command ARGV...` | Command prefix used to enable/disable/start the timer. Default `systemctl`. |
+| `--yes` | Actually write (`install`) or delete (`remove`) the unit files. Without this, both subcommands only report what would happen. |
+| `--enable` | With `install --yes`: also run `systemctl enable` on the timer. |
+| `--start` | With `install --yes`: also run `systemctl enable --now` (implies `--enable`). |
+| `--format text\|json` | Output format. |
+
+`NAME` must already exist in `--app-config`'s `reports` section and pass the
+real Report v2 profile validator; `server-report` never creates or edits a
+report profile. `install` refuses to write over a conflicting existing unit
+file (matching `server-init`'s own conflict policy). `remove` best-effort
+disables/stops the timer via `systemctl` (tolerating `systemctl` being
+unavailable or the unit never having been enabled), then deletes only unit
+files that still contain the generator's own marker comment, refusing to
+delete an unrelated same-named file.

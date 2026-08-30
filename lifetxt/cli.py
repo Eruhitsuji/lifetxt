@@ -10847,12 +10847,9 @@ def _notification_email_config(notification_config):
 
 
 def _split_email_addresses(value):
-    if isinstance(value, (list, tuple)):
-        values = []
-        for part in value:
-            values.extend(_split_email_addresses(part))
-        return values
-    return [part.strip() for part in str(value or "").split(",") if part.strip()]
+    from .mail_delivery import split_email_addresses
+
+    return split_email_addresses(value)
 
 
 def _send_notification_email_batch(records, recipient, args, email_config, output=None):
@@ -15435,88 +15432,42 @@ def command_digest(args):
     channel = args.channel
     dry_run = getattr(args, "dry_run", False)
 
+    from .mail_delivery import append_local_file, send_slack_webhook, send_smtp_text
+
     if channel == "slack-webhook":
         url_env = getattr(args, "url_env", None)
         if not url_env:
             raise ValueError("--url-env is required with --format slack-webhook.")
-        webhook_url = os.environ.get(url_env, "")
-        if not webhook_url:
-            raise ValueError("Environment variable %s is not set." % url_env)
-        if dry_run:
-            sys.stdout.write(
-                "[dry-run] Would POST to Slack webhook from $%s:\n%s\n"
-                % (url_env, message)
-            )
-            return 0
-        payload = json.dumps({"text": message}).encode("utf-8")
-        request = Request(
-            webhook_url, data=payload, headers={"Content-Type": "application/json"}
-        )
-        try:
-            urlopen(request, timeout=10)
-        except (HTTPError, URLError) as exc:
-            raise ValueError("Slack webhook request failed: %s" % exc)
-        sys.stdout.write("Sent digest to Slack webhook.\n")
+        send_slack_webhook(message, url_env, dry_run=dry_run, output=sys.stdout)
         return 0
 
     if channel == "email":
         to_addr = getattr(args, "to", None)
         if not to_addr:
             raise ValueError("--to is required with --format email.")
-        host_env = getattr(args, "smtp_host_env", "LIFETXT_SMTP_HOST")
-        user_env = getattr(args, "smtp_user_env", "LIFETXT_SMTP_USER")
-        pass_env = getattr(args, "smtp_pass_env", "LIFETXT_SMTP_PASS")
-        smtp_host = os.environ.get(host_env, "")
-        smtp_user = os.environ.get(user_env, "")
-        smtp_pass = os.environ.get(pass_env, "")
-        if not smtp_host:
-            raise ValueError(
-                "Environment variable %s (SMTP host) is not set." % host_env
-            )
-        if not smtp_user or not smtp_pass:
-            raise ValueError(
-                "Environment variables %s and %s (SMTP credentials) must be set."
-                % (user_env, pass_env)
-            )
-        if dry_run:
-            sys.stdout.write(
-                "[dry-run] Would email digest to %s via %s:\n%s\n"
-                % (to_addr, smtp_host, message)
-            )
-            return 0
-        import smtplib
-        from email.mime.text import MIMEText
-
-        mime = MIMEText(message, "plain", "utf-8")
-        mime["Subject"] = "lifetxt digest: %s" % result["range"]
-        mime["From"] = smtp_user
-        mime["To"] = to_addr
-        with smtplib.SMTP(smtp_host, timeout=10) as smtp:
-            smtp.starttls()
-            smtp.login(smtp_user, smtp_pass)
-            smtp.sendmail(smtp_user, [to_addr], mime.as_string())
-        sys.stdout.write("Sent digest email to %s.\n" % to_addr)
+        send_smtp_text(
+            "lifetxt digest: %s" % result["range"],
+            message,
+            to_addr,
+            host_env=getattr(args, "smtp_host_env", "LIFETXT_SMTP_HOST"),
+            user_env=getattr(args, "smtp_user_env", "LIFETXT_SMTP_USER"),
+            pass_env=getattr(args, "smtp_pass_env", "LIFETXT_SMTP_PASS"),
+            dry_run=dry_run,
+            output=sys.stdout,
+        )
         return 0
 
     if channel == "file":
         digest_path = getattr(args, "digest_path", None)
         if not digest_path:
             raise ValueError("--path is required with --format file.")
-        if dry_run:
-            sys.stdout.write(
-                "[dry-run] Would append digest to %s:\n%s\n" % (digest_path, message)
-            )
-            return 0
-        from .write_operations import append_text as semantic_append_text
-
-        semantic_append_text(
+        append_local_file(
             digest_path,
-            "\n" + message + "\n",
-            expected_revision=getattr(args, "revision", None),
-            operation="digest.append",
-            create=True,
+            message,
+            revision=getattr(args, "revision", None),
+            dry_run=dry_run,
+            output=sys.stdout,
         )
-        sys.stdout.write("Appended digest to %s.\n" % digest_path)
         return 0
 
     raise ValueError("Unsupported digest channel: %s" % channel)

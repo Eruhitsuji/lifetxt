@@ -128,6 +128,22 @@ tool probes (`git rev-parse`, `fzf`/`peco` version checks) use the
 independent, much shorter `--probe-timeout SECONDS` (default: 30) and are
 unaffected by `--release-timeout`.
 
+On timeout, the collector terminates the entire spawned process tree, not
+only the direct process it launched. Killing only the direct process was
+found to be insufficient on real hosts (#453): a real native Windows run
+configured with a 28800-second timeout took roughly another 5.1 hours to
+return, because the nested `python -m unittest discover` child inherits the
+direct process's own stdout/stderr pipe (the same inheritance pattern the
+direct process itself never redirects for its own children) and kept that
+pipe open long after the direct process was killed, so the collector's final
+read blocked until the nested suite finished naturally rather than at the
+configured boundary. On Windows the whole tree is now terminated with
+`taskkill /F /T`; on POSIX the direct process starts its own session so
+`SIGKILL` can be sent to its whole process group. Either way, the collector
+drains whatever output was already produced within a small bounded cleanup
+grace window (15 seconds) after the kill, rather than waiting on a
+descendant indefinitely.
+
 The collector does **not** synthesize evidence it cannot observe. Interactive
 TUI checks, real selector actions, browser-engine behavior, Web deployment
 cutover, Remote clients, SMTP providers, external filesystem classes, physical

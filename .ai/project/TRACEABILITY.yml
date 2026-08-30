@@ -9420,7 +9420,7 @@ traceability:
       capability_id: cap-report-v2-composition
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/619
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/620
       changed_files_or_scope:
         - "Fix `_provider_project_health()` to return `lifetxt.projects.portfolio()`'s row list and aggregate metadata as flat sibling keys (`projects`/`count`/`legend`) instead of nesting the whole portfolio() result under a second `projects` key"
         - lifetxt/report_v2.py
@@ -9448,8 +9448,7 @@ traceability:
         `report inspect` were never broken (neither calls a renderer), which
         is why the issue's own reproduction showed both succeeding while
         `preview`/`send` crashed. No project-health business logic was
-        duplicated into Report v2. pull_request is filled in once the pull
-        request implementing this entry is opened.
+        duplicated into Report v2.
       status: implemented
 
     - requirement_id: req-server-init-reporting-section

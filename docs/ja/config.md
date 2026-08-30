@@ -215,6 +215,13 @@ repository ですが、fork では upstream ではなく自分自身の reposito
 たとえば SMTP は `smtp_pass_env: "LIFETXT_SMTP_PASS"` を使います。`config effective`、
 `config sources`、サポートバンドルは、秘密情報らしいキーをマスクします。
 
+明示的な SMTP port（秘密情報ではありません。例: STARTTLS 送信の `587`）は、
+SMTP 送信を行うすべての箇所で同じ形で指定できます: `reports.*.email.smtp_port`、
+`notifications.email.smtp_port`、digest の `--smtp-port` flag。いずれも最終的に
+共通の `lifetxt.mail_delivery` transport に到達するため、port は実際の network
+接続の前に（1〜65535 の整数として）検証され、省略した場合は既存の既定 SMTP port が
+そのまま維持されます。
+
 ## サンプル
 
 実行可能なサンプルは `examples/config/` にあります。
@@ -245,9 +252,11 @@ lifetxt 集計を組み合わせる composition layer）が有効になり、`fo
 適用される、report 全体の `project`/`tag`/`type`/`status`/`person`/`open`
 フィルタ。トップレベルの旧 `project`/`type`/`tag`/`open` は `scope` への
 互換エイリアスとして扱われます）も指定できます。v1・v2 いずれの profile にも `email`
-（`to`、`subject`、`smtp_host_env`、`smtp_user_env`、`smtp_pass_env`）を
-追加すると `lifetxt report send` に対応します。具体的なプロファイルキーの
-登録情報は `lifetxt config explain reports.<name>.<key>` で確認できます。
+（`to`、`subject`、`smtp_host_env`、`smtp_port`、`smtp_user_env`、`smtp_pass_env`）を
+追加すると `lifetxt report send` に対応します。`smtp_port` は任意の明示的な整数
+port（例: STARTTLS 送信の `587`）で、省略すると既存の既定 SMTP port が維持されます。
+具体的なプロファイルキーの登録情報は `lifetxt config explain reports.<name>.<key>`
+で確認できます。
 
 完全なプロファイル契約、出力パスのプレースホルダ、生成される frontmatter、
 Obsidian/Notion での利用方法は [reports.md](reports.md) を参照してください。

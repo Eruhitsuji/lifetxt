@@ -1256,6 +1256,7 @@ python -m lifetxt notify life.txt --watch --email --email-to me@example.com --in
 | `--smtp-host-env ENVVAR` | SMTP host を格納する環境変数。省略時は `notifications.email.smtp_host_env` または `LIFETXT_SMTP_HOST` |
 | `--smtp-user-env ENVVAR` | SMTP username を格納する環境変数。省略時は `notifications.email.smtp_user_env` または `LIFETXT_SMTP_USER` |
 | `--smtp-pass-env ENVVAR` | SMTP password を格納する環境変数。省略時は `notifications.email.smtp_pass_env` または `LIFETXT_SMTP_PASS` |
+| `--smtp-port PORT` | 明示的な SMTP port（例: STARTTLS の `587`）。省略時は `notifications.email.smtp_port`、それも無ければ既存の既定 port |
 | `--dry-run` | `--email` 時に SMTP 接続せず、送信予定本文を表示 |
 | `--state-file PATH` | `--watch` の通知済み ID を保存する JSON file |
 | `--no-state` | `--watch` で通知済み状態を保存しない |
@@ -2726,6 +2727,7 @@ python -m lifetxt digest life.txt --week --format file --path digest-log.md
 | `--url-env ENVVAR` | Slack incoming webhook URL を格納した環境変数 (`slack-webhook`) |
 | `--to ADDRESS` | 送信先 email address (`email`) |
 | `--smtp-host-env`, `--smtp-user-env`, `--smtp-pass-env` | SMTP host/username/password を格納した環境変数 (`email`)。既定は `LIFETXT_SMTP_HOST`/`_USER`/`_PASS` |
+| `--smtp-port PORT` | 明示的な SMTP port (`email`)。例: STARTTLS の `587`。省略すると既存の既定 port を維持 |
 | `--path PATH` | Markdown を追記する local file (`file`) |
 | `--report NAME` | 組み込みの review summary の代わりに、設定済み `lifetxt report` profile を message source として使う（この場合 `--week`/`--month`/`--project` は無視される） |
 | `--date YYYY-MM-DD` | `--report` 指定時: 今日ではなくこの日付を含む period を生成 |
@@ -2734,7 +2736,9 @@ python -m lifetxt digest life.txt --week --format file --path digest-log.md
 
 各 channel は、network request や書き込みを行う **前に** 必要な環境変数
 (または `--to`/`--path`) を検証します。そのため secret が不足している
-場合は配信途中でなく即座に明確なエラーで失敗します。
+場合は配信途中でなく即座に明確なエラーで失敗します。明示的な `--smtp-port`
+も同様に、`--dry-run` の有無にかかわらず接続前に（1〜65535 の整数として）
+検証されます。
 `lifetxt report list|preview|run|send|validate|inspect` と Report v2 の
 `sections`/`format`/`audience`/`compare`/`scope`/`email` の完全な契約については
 [reports.md](reports.md) を参照してください。

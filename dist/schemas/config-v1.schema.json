@@ -203,6 +203,11 @@
                 "minLength": 1,
                 "type": "string"
               },
+              "smtp_port": {
+                "maximum": 65535,
+                "minimum": 1,
+                "type": "integer"
+              },
               "smtp_user_env": {
                 "minLength": 1,
                 "type": "string"

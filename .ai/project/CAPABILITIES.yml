@@ -6543,6 +6543,7 @@ capabilities:
       - reports.*.compare
       - reports.*.scope
       - reports.*.email
+      - reports.*.email.smtp_port
     tests_or_evidence:
       - tests/test_health.py -> Ran 6 tests, OK; full existing health CLI test suite (14 tests) re-run unmodified against the refactored command_health -> OK
       - tests/test_report_v2.py -> Ran 22 tests, OK (period math, section-provider composition matching direct engine calls, comparison diff, external-audience redaction, all three renderers)
@@ -6579,6 +6580,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/613
       - https://github.com/Eruhitsuji/lifetxt/issues/614
       - https://github.com/Eruhitsuji/lifetxt/issues/615
+      - https://github.com/Eruhitsuji/lifetxt/issues/616
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/612
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
@@ -6705,6 +6707,132 @@ capabilities:
       `type`/`title`), so if provider-level option validation is added to
       `report_v2.py` in the future, both `validate` and `inspect` pick it
       up automatically with no further change.
+
+      #616 adds `reports.*.email.smtp_port` to `_command_send`'s existing
+      `send_smtp_text()` call; the shared SMTP transport primitive itself
+      (`validate_smtp_port`/`_deliver_smtp_message` in
+      `lifetxt/mail_delivery.py`, also reused by `digest --format email` and
+      notification email) is documented in full under the dedicated
+      `cap-configurable-smtp-mail-transport` capability rather than
+      duplicated here, since it is a cross-cutting concern spanning three
+      surfaces, not specific to Report v2.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-configurable-smtp-mail-transport
+    name: Configurable SMTP port and shared mail transport
+    summary: >-
+      An explicit, validated SMTP port (e.g. `587` for STARTTLS submission)
+      supported uniformly across every plain-text SMTP-delivery surface --
+      `report send` (`reports.*.email.smtp_port`), `digest --format email`
+      (`--smtp-port`), and notification email (`--smtp-port`/
+      `notifications.email.smtp_port`) -- all reaching one shared transport
+      primitive (`lifetxt.mail_delivery._deliver_smtp_message`) so the
+      connect/STARTTLS/login/send sequence exists in exactly one place.
+      Omitting a port preserves the exact pre-existing `smtplib.SMTP` call
+      and effective default port for every configuration written before
+      this capability existed.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-configurable-smtp-port-shared-mail-transport
+    implementation_locations:
+      - lifetxt/mail_delivery.py
+      - lifetxt/cli.py
+      - lifetxt/report_cli.py
+      - lifetxt/schema_extensions_v5.py
+      - dist/schemas/config-v1.schema.json
+      - lifetxt/config_registry.py
+      - tests/test_mail_delivery.py
+      - tests/test_report_v2_cli.py
+      - tests/test_lifetxt.py
+      - tests/test_config_validation.py
+      - docs/en/reports.md
+      - docs/ja/reports.md
+      - docs/en/cli.md
+      - docs/ja/cli.md
+      - docs/en/config.md
+      - docs/ja/config.md
+      - .ai/project/changes/configurable-smtp-port-shared-mail-transport/
+    public_interfaces:
+      - lifetxt.mail_delivery.validate_smtp_port
+      - lifetxt.mail_delivery.send_smtp_text (port parameter)
+      - lifetxt notify --smtp-port PORT
+      - lifetxt digest --format email --smtp-port PORT
+      - lifetxt report send (reports.*.email.smtp_port)
+      - notifications.email.smtp_port
+    tests_or_evidence:
+      - "tests/test_mail_delivery.py ValidateSmtpPortTests (8 tests): valid/boundary ports accepted; zero, out-of-range, non-integer string, float, bool, and None all rejected"
+      - "tests/test_mail_delivery.py SendSmtpTextTests port additions (5 tests): explicit port reaches smtplib.SMTP; invalid port rejected before any network access, including under dry_run=True; dry-run message includes/omits the port note correctly"
+      - python -m unittest tests.test_mail_delivery -> Ran 25 tests, OK (12 pre-existing unmodified + 13 new)
+      - "tests/test_report_v2_cli.py: 4 new profile-validation tests (valid/omitted/out-of-range/bool smtp_port) plus 2 new report-send tests (mocked smtplib.SMTP confirms the configured port reaches the real call; omitting it preserves the exact no-port call signature)"
+      - python -m unittest tests.test_report_v2_cli -> Ran 56 tests, OK (50 pre-existing unmodified + 6 new)
+      - "tests/test_lifetxt.py LifeTxtNotifyTests: 5 new tests -- CLI dry-run shows the configured port, omits the note when not given, rejects an invalid port before any dry-run output, and two in-process tests (mocked smtplib.SMTP) proving a config-sourced (not CLI-flag) port reaches the real call and that omitting it preserves the exact pre-existing call signature"
+      - "tests/test_lifetxt.py LifeTxtShareDigestTemplateTests: 2 new tests -- digest --format email --smtp-port dry-run shows the port note; an invalid port is rejected before any dry-run output"
+      - python -m unittest tests.test_lifetxt.LifeTxtNotifyTests tests.test_lifetxt.LifeTxtShareDigestTemplateTests -> Ran 23 tests, OK
+      - "tests/test_config_validation.py: notifications.email.smtp_port registry entry shape; confirmed the integer value is never flagged by the unrelated C003 plaintext-secret scanner (which only matches string values under secret-hinting key names)"
+      - python -m unittest tests.test_mail_delivery tests.test_report_v2_cli tests.test_report_v2 tests.test_lifetxt.LifeTxtNotifyTests tests.test_lifetxt.LifeTxtShareDigestTemplateTests tests.test_config_validation tests.test_schema_extensions_v2 tests.test_digest_report_source -> Ran 198 tests, OK (skipped=5)
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - ruff format --check / ruff check on every changed file -> clean
+      - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      - "live: a standalone script mocking smtplib.SMTP and driving report_cli.main([\"send\", \"weekly\"], ...) against a real disposable fixture with reports.weekly.email.smtp_port=587 confirmed smtp_cls.call_args == call('smtp.example.com', 587, timeout=10) and exit code 0"
+      - "live: real terminal -- notify --email --smtp-port 587 --dry-run and digest --format email --smtp-port 587 --dry-run both print '... via $LIFETXT_SMTP_HOST port 587:' followed by the unchanged message body; --smtp-port 999999 is rejected on both with a named error and exit 1 before any dry-run text"
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/616
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Security/High assurance per the issue's own explicit escalation
+      ("external network delivery and disclosure side effect"); full change
+      package at
+      .ai/project/changes/configurable-smtp-port-shared-mail-transport/.
+      Requires independent security review and Merge Authority approval
+      before merge to main.
+
+      Notification email (`_send_notification_email_batch` in
+      `lifetxt/cli.py`) was deliberately NOT converged onto
+      `send_smtp_text()` directly: that function's dry-run/success message
+      wording (subject-centric) differs from notify's own, already-tested
+      wording (notification-count-centric,
+      `test_notify_cli_email_dry_run` asserts the exact text). Instead, a
+      new private `_deliver_smtp_message()` transport primitive was
+      extracted in `mail_delivery.py` -- the sole
+      connect/starttls/login/sendmail sequence -- reused by both
+      `send_smtp_text()` and notify, which keeps its own message-formatting
+      code but delegates credential resolution
+      (`mail_delivery.resolve_smtp_credentials()`, confirmed to raise
+      byte-identical error text to notify's prior inline checks before
+      switching) and the real network send to the shared primitive. This
+      satisfies the issue's own explicit "(or the same single authoritative
+      helper)" allowance rather than requiring literal convergence onto
+      `send_smtp_text()`.
+
+      `notifications.*` has no JSON Schema section at all (confirmed by
+      search before implementation) -- only one pre-existing
+      `config_registry.py` entry (`smtp_pass_env`) documents any
+      notification key for `config explain`, with every sibling key
+      (`enabled`, `to`, `subject`, `smtp_host_env`, `smtp_user_env`,
+      `lookahead`, `grace`, ...) unvalidated by any schema.
+      `notifications.email.smtp_port` deliberately gets the same
+      registry-only treatment as its sibling `smtp_pass_env`, rather than
+      introducing schema validation for exactly one notification key while
+      every other stays unvalidated.
+
+      `report inspect`'s `email_configured` boolean output is deliberately
+      left unchanged (not expanded to show `smtp_port`) -- out of this
+      change's write scope, since `report inspect` belongs to the
+      already-closed cap-report-v2-composition capability (#615) and this
+      issue's own scope contract does not name it. The port remains fully
+      observable via `report validate` (which runs the identical profile
+      validator) and the profile configuration itself.
+
+      Port validation runs unconditionally, including under `--dry-run`, on
+      every surface: an invalid port must fail loudly even in a dry-run
+      preview rather than silently succeeding for a configuration that
+      would fail for real. Locked in by
+      `test_invalid_port_is_rejected_even_under_dry_run`.
     replacement:
       replaces: []
       replaced_by: null

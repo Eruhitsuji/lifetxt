@@ -21,6 +21,40 @@ class MailDeliveryError(ValueError):
     """Raised for missing credentials or a failed delivery attempt."""
 
 
+def validate_smtp_port(value):
+    """Validate an explicit SMTP port, raising :class:`MailDeliveryError`.
+
+    Returns the validated integer. This is never used to select a default
+    port: omitting a port entirely (``None``) is a distinct, unvalidated
+    case handled by each caller, so smtplib's own default port is preserved
+    exactly for every existing configuration that does not set one.
+    """
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise MailDeliveryError("SMTP port must be an integer, got %r." % (value,))
+    if not (1 <= value <= 65535):
+        raise MailDeliveryError(
+            "SMTP port must be between 1 and 65535, got %d." % value
+        )
+    return value
+
+
+def _deliver_smtp_message(mime, to_addrs, smtp_host, smtp_user, smtp_pass, port=None):
+    """Open one STARTTLS SMTP connection, authenticate, and send ``mime``.
+
+    The sole SMTP transport implementation shared by every mail-delivery
+    caller in this project (``send_smtp_text`` and notification email in
+    ``lifetxt/cli.py``) so the connect/login/send sequence is never
+    duplicated. ``port=None`` reaches ``smtplib.SMTP`` exactly as it did
+    before this parameter existed, preserving the existing effective
+    default port for every caller that does not set one explicitly.
+    """
+    connect_args = (smtp_host, port) if port is not None else (smtp_host,)
+    with smtplib.SMTP(*connect_args, timeout=10) as smtp:
+        smtp.starttls()
+        smtp.login(smtp_user, smtp_pass)
+        smtp.sendmail(smtp_user, to_addrs, mime.as_string())
+
+
 def split_email_addresses(value):
     """Split a comma-separated string, or flatten a list/tuple, into addresses."""
     if isinstance(value, (list, tuple)):
@@ -54,14 +88,21 @@ def send_smtp_text(
     host_env="LIFETXT_SMTP_HOST",
     user_env="LIFETXT_SMTP_USER",
     pass_env="LIFETXT_SMTP_PASS",
+    port=None,
     dry_run=False,
     output=None,
 ):
     """Send ``body`` as a plain-text UTF-8 email via STARTTLS SMTP.
 
-    Shared by ``digest --format email`` and ``report send``. Returns ``True``
-    once the message is sent (or, under ``dry_run``, once it would have
-    been).
+    Shared by ``digest --format email``, ``report send``, and notification
+    email. Returns ``True`` once the message is sent (or, under ``dry_run``,
+    once it would have been).
+
+    ``port`` is an optional explicit SMTP port (e.g. ``587`` for STARTTLS
+    submission), validated up front regardless of ``dry_run`` so an invalid
+    value fails deterministically before any network access is attempted.
+    Omitting it (``None``) preserves the existing effective default port
+    unchanged for every configuration written before this parameter existed.
     """
     to_addrs = (
         split_email_addresses(to_addrs)
@@ -70,12 +111,15 @@ def send_smtp_text(
     )
     if not to_addrs:
         raise MailDeliveryError("At least one recipient email address is required.")
+    if port is not None:
+        port = validate_smtp_port(port)
 
     if dry_run:
         if output is not None:
+            port_note = " port %d" % port if port is not None else ""
             output.write(
-                "[dry-run] Would email %r to %s via $%s:\n%s\n"
-                % (subject, ", ".join(to_addrs), host_env, body)
+                "[dry-run] Would email %r to %s via $%s%s:\n%s\n"
+                % (subject, ", ".join(to_addrs), host_env, port_note, body)
             )
             output.flush()
         return True
@@ -87,10 +131,7 @@ def send_smtp_text(
     mime["Subject"] = subject
     mime["From"] = smtp_user
     mime["To"] = ", ".join(to_addrs)
-    with smtplib.SMTP(smtp_host, timeout=10) as smtp:
-        smtp.starttls()
-        smtp.login(smtp_user, smtp_pass)
-        smtp.sendmail(smtp_user, to_addrs, mime.as_string())
+    _deliver_smtp_message(mime, to_addrs, smtp_host, smtp_user, smtp_pass, port=port)
     if output is not None:
         output.write("Sent email to %s.\n" % ", ".join(to_addrs))
         output.flush()

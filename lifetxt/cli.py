@@ -3802,6 +3802,25 @@ def build_parser():
     )
     digest_cmd.add_argument("--project", help="Restrict digest to a specific project.")
     digest_cmd.add_argument(
+        "--report",
+        metavar="NAME",
+        help=(
+            "Use a configured `lifetxt report` profile as the digest message "
+            "source instead of the built-in review summary. --week/--month/"
+            "--project are ignored when --report is given."
+        ),
+    )
+    digest_cmd.add_argument(
+        "--date",
+        metavar="YYYY-MM-DD",
+        help="With --report: generate the period containing this date instead of today.",
+    )
+    digest_cmd.add_argument(
+        "--previous",
+        action="store_true",
+        help="With --report: generate the immediately completed previous period.",
+    )
+    digest_cmd.add_argument(
         "--format",
         dest="channel",
         choices=("slack-webhook", "email", "file"),
@@ -15385,49 +15404,79 @@ def command_share(args):
     return 0
 
 
+def _digest_message_from_report(args):
+    """Render a configured `lifetxt report` profile as the digest message.
+
+    `report` owns what the document means; digest only reuses the already-
+    rendered text and its own delivery channels (#608). No review/stats/
+    report semantics are duplicated here.
+    """
+    from . import report_cli
+
+    report_name = args.report
+    config_data = getattr(args, "config_data", None) or {}
+    config_path = getattr(args, "config", None)
+    profile = report_cli._profile_named(config_data, report_name)
+    report_args = argparse.Namespace(
+        name=report_name,
+        date=getattr(args, "date", None),
+        previous=getattr(args, "previous", False),
+    )
+    _profile, text, start, end = report_cli._render_named_report(
+        report_args, config_data, config_path=config_path, workspace_name=None
+    )
+    subject_range = "%s to %s" % (start.isoformat(), end.isoformat())
+    return text, subject_range
+
+
 def command_digest(args):
     import contextlib
     import io
 
-    review_args = argparse.Namespace(
-        paths=getattr(args, "paths", None) or [],
-        week=getattr(args, "week", False),
-        month=getattr(args, "month", None),
-        from_date=None,
-        to_date=None,
-        project=getattr(args, "project", None),
-        format="json",
-        pretty=False,
-        config=getattr(args, "config", None),
-        config_data=getattr(args, "config_data", None),
-    )
-    buffer = io.StringIO()
-    with contextlib.redirect_stdout(buffer):
-        command_review(review_args)
-    result = json.loads(buffer.getvalue())
+    report_name = getattr(args, "report", None)
+    if report_name:
+        message, digest_range = _digest_message_from_report(args)
+    else:
+        review_args = argparse.Namespace(
+            paths=getattr(args, "paths", None) or [],
+            week=getattr(args, "week", False),
+            month=getattr(args, "month", None),
+            from_date=None,
+            to_date=None,
+            project=getattr(args, "project", None),
+            format="json",
+            pretty=False,
+            config=getattr(args, "config", None),
+            config_data=getattr(args, "config_data", None),
+        )
+        buffer = io.StringIO()
+        with contextlib.redirect_stdout(buffer):
+            command_review(review_args)
+        result = json.loads(buffer.getvalue())
+        digest_range = result["range"]
 
-    lines = ["*lifetxt digest: %s*" % result["range"], ""]
-    lines.append("Completed tasks: %d" % result["completed_tasks"])
-    lines.append("Open tasks: %d" % result["open_tasks"])
-    if result["habits"]:
-        lines.append("")
-        lines.append("Habits:")
-        for habit_title, habit in result["habits"].items():
-            lines.append(
-                "- %s: %d/%d (%d%%)"
-                % (
-                    habit_title,
-                    habit["done"],
-                    habit["done"] + habit["open"],
-                    habit["completion_rate"],
+        lines = ["*lifetxt digest: %s*" % result["range"], ""]
+        lines.append("Completed tasks: %d" % result["completed_tasks"])
+        lines.append("Open tasks: %d" % result["open_tasks"])
+        if result["habits"]:
+            lines.append("")
+            lines.append("Habits:")
+            for habit_title, habit in result["habits"].items():
+                lines.append(
+                    "- %s: %d/%d (%d%%)"
+                    % (
+                        habit_title,
+                        habit["done"],
+                        habit["done"] + habit["open"],
+                        habit["completion_rate"],
+                    )
                 )
-            )
-    if result["elapsed_by_project"]:
-        lines.append("")
-        lines.append("Elapsed by project:")
-        for project, elapsed in result["elapsed_by_project"].items():
-            lines.append("- %s: %s" % (project, elapsed))
-    message = "\n".join(lines)
+        if result["elapsed_by_project"]:
+            lines.append("")
+            lines.append("Elapsed by project:")
+            for project, elapsed in result["elapsed_by_project"].items():
+                lines.append("- %s: %s" % (project, elapsed))
+        message = "\n".join(lines)
 
     channel = args.channel
     dry_run = getattr(args, "dry_run", False)
@@ -15446,7 +15495,7 @@ def command_digest(args):
         if not to_addr:
             raise ValueError("--to is required with --format email.")
         send_smtp_text(
-            "lifetxt digest: %s" % result["range"],
+            "lifetxt digest: %s" % digest_range,
             message,
             to_addr,
             host_env=getattr(args, "smtp_host_env", "LIFETXT_SMTP_HOST"),

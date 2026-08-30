@@ -5674,6 +5674,7 @@ capabilities:
       - req-distribution-conda-forge
       - req-distribution-desktop-standalone
       - req-release-distribution-runbook-skill
+      - req-distribution-sha256sums-merge-not-clobber
     implementation_locations:
       - .ai/project/skills/release-distribution-runbook/SKILL.md
       - .ai/project/CONTEXT_INDEX.yml
@@ -5684,6 +5685,7 @@ capabilities:
       - .github/workflows/homebrew-tap.yml
       - .github/workflows/conda-recipe.yml
       - .github/workflows/desktop-installers.yml
+      - scripts/merge_sha256sums.py
       - scripts/check_release_tag_version.py
       - scripts/generate_winget_manifest.py
       - scripts/generate_scoop_manifest.py
@@ -5710,6 +5712,7 @@ capabilities:
       - tests/test_generate_homebrew_formula.py
       - tests/test_generate_conda_recipe.py
       - tests/test_set_tauri_desktop_version.py
+      - tests/test_merge_sha256sums.py
       - docs/en/distribution.md
       - docs/ja/distribution.md
       - readme.md
@@ -5746,6 +5749,12 @@ capabilities:
       - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
       - ruff format --check / ruff check lifetxt tests scripts -> clean
       - scripts/validate_release_docs.py -> {"errors":0,"ok":true}
+      - "#583: tests.test_merge_sha256sums -> 7 tests, OK, covering disjoint-file merge, missing-input skip, every-input-missing refusal, later-input-wins collision precedence, no-CRLF output, and malformed-line rejection"
+      - "#583: python -m unittest tests.test_merge_sha256sums tests.test_check_release_tag_version tests.test_release_evidence tests.test_release_pypi_packaging tests.test_standalone_binaries_workflow tests.test_standalone_binaries_checksum_newline tests.test_standalone_binary tests.test_traceability_gate tests.test_change_package_closeout -> Ran 46 tests, OK, including the real (non-mocked) PyInstaller build+run tier"
+      - "#583: python -c \"import yaml; yaml.safe_load(open('.github/workflows/release.yml', encoding='utf-8')); yaml.safe_load(open('.github/workflows/standalone-binaries.yml', encoding='utf-8'))\" -> parses"
+      - "#583: ruff format --check / ruff check scripts/merge_sha256sums.py tests/test_merge_sha256sums.py -> clean"
+      - "#583: scripts/validate_release_docs.py -> {\"errors\": 0, \"ok\": true}"
+      - "#583: python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)"
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/567
       - https://github.com/Eruhitsuji/lifetxt/issues/568
@@ -5767,6 +5776,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/pull/582
       - https://github.com/Eruhitsuji/lifetxt/pull/585
       - https://github.com/Eruhitsuji/lifetxt/pull/587
+      - https://github.com/Eruhitsuji/lifetxt/pull/598
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       Self-scoped and implemented autonomously per repository owner
@@ -5843,10 +5853,29 @@ capabilities:
       workflows uploading a release asset literally named `SHA256SUMS`
       with `--clobber`, so whichever runs last silently replaces rather
       than merges with the other's checksums -- was found and filed as
-      #583 but deliberately not fixed, since it does not affect any
-      current consumer (each downstream workflow only ever reads the
-      `SHA256SUMS` state that already reflects every upload that has run
-      by the time it reads it). #588 packages the operational sequence and
+      #583, initially left unfixed since it did not affect any current
+      consumer (each downstream workflow only ever reads the `SHA256SUMS`
+      state that already reflects every upload that has run by the time it
+      reads it), then fixed on its own follow-up: a new
+      `scripts/merge_sha256sums.py` (parse `<hash>  <filename>` lines,
+      merge several inputs de-duplicated by filename with a later input
+      winning a collision, write the result sorted for a deterministic,
+      reviewable manifest) is now run by both `release.yml`'s and
+      `standalone-binaries.yml`'s `github-release` job immediately before
+      `gh release upload ... --clobber`: each job first attempts
+      `gh release download "$TAG" --pattern SHA256SUMS --output
+      existing-SHA256SUMS --clobber || true` (a no-op when no prior asset
+      exists yet, or when the release is being created for the first time
+      in the same job run), then merges that download with its own
+      freshly generated `SHA256SUMS` before uploading, so the published
+      manifest keeps covering every previously uploaded artifact
+      regardless of which of the two workflows runs first. Both jobs
+      gained an explicit `Set up Python 3.12` step to run the merge
+      script; `release.yml`'s `github-release` job also gained a
+      tag-pinned checkout (`ref: ${{ needs.build.outputs.tag }}`),
+      matching its own `build` job's existing convention, since a
+      `workflow_dispatch` run previously checked out the unpinned default
+      branch there. #588 packages the operational sequence and
       diagnostic habits from that whole v1.0.1 effort as a tool-neutral
       skill (`.ai/project/skills/release-distribution-runbook/SKILL.md`,
       referenced from `.ai/project/CONTEXT_INDEX.yml` as `CTX-RELEASE-001`)

@@ -203,7 +203,8 @@ def _print_help():
         "\nAdditional workflow commands:\n"
         "  tour, next, show, edit, path, count, invoice, standup, to-ics, from-todo, from-markdown\n"
         "Periodic report commands:\n"
-        "  report list|preview|run\n"
+        "  report list|preview|run|send\n"
+        "  server-report plan|install|remove NAME --app-config PATH\n"
         "Personal Context commands:\n"
         "  context health|why|capsule, memory correct, decisions\n"
         "Release-safety and Format 1.0 commands:\n"
@@ -329,6 +330,10 @@ def main(argv=None):
                 config_path=config_path,
                 workspace_name=workspace_name,
             )
+        if command == "server-report":
+            from .server_report_cli import main as server_report_main
+
+            return server_report_main(cleaned)
         if command in _PERSONAL_CONTEXT_COMMANDS:
             from .personal_context_cli import main as personal_context_main
 

@@ -427,8 +427,13 @@ Runnable examples live under `examples/config/`:
 Named periodic report profiles live under the optional top-level `reports`
 object. Each profile requires `period` (`daily`, `weekly`, or `monthly`) and
 may set `output`, `title`, `project`, `type`, `tag`, `open`, `mode`, and
-`frontmatter`. Use `lifetxt config explain reports.<name>.<key>` to inspect the
-registered metadata for a concrete profile key.
+`frontmatter`. A profile that adds `sections` opts into Report v2 (a
+composition layer over existing lifetxt aggregations) and may also set
+`format` (`markdown`/`json`/`html`), `audience` (`private`/`external`), and
+`compare` (`previous`). Any profile, v1 or v2, may add `email` (`to`,
+`subject`, `smtp_host_env`, `smtp_user_env`, `smtp_pass_env`) to support
+`lifetxt report send`. Use `lifetxt config explain reports.<name>.<key>` to
+inspect the registered metadata for a concrete profile key.
 
 See [reports.md](reports.md) for the complete profile contract, output path
 placeholders, generated frontmatter, and Obsidian/Notion workflows. A runnable

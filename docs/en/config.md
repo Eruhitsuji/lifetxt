@@ -429,8 +429,11 @@ object. Each profile requires `period` (`daily`, `weekly`, or `monthly`) and
 may set `output`, `title`, `project`, `type`, `tag`, `open`, `mode`, and
 `frontmatter`. A profile that adds `sections` opts into Report v2 (a
 composition layer over existing lifetxt aggregations) and may also set
-`format` (`markdown`/`json`/`html`), `audience` (`private`/`external`), and
-`compare` (`previous`). Any profile, v1 or v2, may add `email` (`to`,
+`format` (`markdown`/`json`/`html`), `audience` (`private`/`external`),
+`compare` (`previous`), and `scope` (report-wide `project`/`tag`/`type`/
+`status`/`person`/`open` filter applied once before any section provider
+runs; legacy top-level `project`/`type`/`tag`/`open` are accepted as
+compatibility aliases into `scope`). Any profile, v1 or v2, may add `email` (`to`,
 `subject`, `smtp_host_env`, `smtp_user_env`, `smtp_pass_env`) to support
 `lifetxt report send`. Use `lifetxt config explain reports.<name>.<key>` to
 inspect the registered metadata for a concrete profile key.

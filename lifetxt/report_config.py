@@ -156,6 +156,18 @@ def install_report_config_registry():
                 since="unreleased",
             ),
         ),
+        (
+            "reports.*.scope",
+            entry(
+                "object",
+                None,
+                "Report v2: report-wide filter (project/tag/type/status/person/open) "
+                "applied once to the parsed item set before any section provider runs. "
+                "Legacy top-level project/type/tag/open are accepted as compatibility "
+                "aliases into scope; a conflicting value in both forms fails loudly.",
+                since="unreleased",
+            ),
+        ),
     )
     for key, metadata in entries:
         config_registry.CONFIG_REGISTRY[key] = metadata

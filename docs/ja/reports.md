@@ -181,6 +181,54 @@ aggregation を組み合わせる composition layer です。v2 profile はこ�
 未知の `type`、あるいは provider が理解しない option は、profile を読み込んだ時点で
 （rendering の前に）明示的な error になります。
 
+### レポート全体の scope (`scope`)
+
+```json
+{
+  "reports": {
+    "research-weekly": {
+      "period": "weekly",
+      "scope": {"project": ["research"], "tag": ["experiment"], "open": false},
+      "sections": [
+        {"type": "review"},
+        {"type": "stats", "group": "daily"},
+        {"type": "agenda", "range": "next-period"}
+      ]
+    }
+  }
+}
+```
+
+`scope` は、section provider が実行される **前に一度だけ** parse 済み item set を
+絞り込みます。各 provider が個別に `project`/`tag`/`open` option を持つのではなく、
+すべての section が同じ「このレポートは何についてのものか」に合意する形です。
+CLI `filter`/`agenda` command や `query` が既に使っている filtering primitive
+`lifetxt.agenda.filter_items()` を再利用しており、report 専用の filter engine
+ではありません。provider 自身の option（例えば `agenda` の `range`）で scope
+された集合をさらに絞ることはできますが、`scope` が除外した item を provider が
+見ることはありません。
+
+対応 field は `project`、`tag`、`type`、`status`、`person`（それぞれ string
+または string の array）、および `open`（boolean、v1 の `open` 相当）です。
+複数 field を組み合わせるとすべての条件が AND で適用されます。
+
+後方互換のため、v1 の top-level `project`/`type`/`tag`/`open` key は v2 profile
+でも引き続き使え、`scope` への compatibility alias として取り込まれます。
+同じ field に対して legacy key と `scope` で異なる値を指定した場合は、profile
+読み込み時に silent に片方を採用せず明示的な error になります。
+
+```json
+{"project": "home", "scope": {"project": "work"}}
+```
+
+```text
+Report profile weekly: legacy `project` and `scope.project` specify conflicting values.
+```
+
+既存の v1 profile（`sections` 無し）は影響を受けません。top-level の
+`project`/`type`/`tag`/`open` は `scope` とは無関係に、上記のとおり
+そのまま動作します。
+
 ### 出力 format
 
 ```json

@@ -91,6 +91,42 @@ class ReportV2ProfileValidationTests(unittest.TestCase):
         )
         self.assertEqual(profile["email"]["to"], "me@example.com")
 
+    def test_email_smtp_port_accepts_valid_port(self):
+        profile = report_cli._validate_profile(
+            "weekly",
+            {
+                "period": "weekly",
+                "email": {"to": "me@example.com", "smtp_port": 587},
+            },
+        )
+        self.assertEqual(profile["email"]["smtp_port"], 587)
+
+    def test_email_omitting_smtp_port_preserves_default_behavior(self):
+        profile = report_cli._validate_profile(
+            "weekly", {"period": "weekly", "email": {"to": "me@example.com"}}
+        )
+        self.assertNotIn("smtp_port", profile["email"])
+
+    def test_email_smtp_port_out_of_range_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "email.smtp_port"):
+            report_cli._validate_profile(
+                "weekly",
+                {
+                    "period": "weekly",
+                    "email": {"to": "me@example.com", "smtp_port": 99999},
+                },
+            )
+
+    def test_email_smtp_port_bool_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "email.smtp_port"):
+            report_cli._validate_profile(
+                "weekly",
+                {
+                    "period": "weekly",
+                    "email": {"to": "me@example.com", "smtp_port": True},
+                },
+            )
+
     def test_scope_key_without_sections_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "Report v2 key"):
             report_cli._validate_profile(
@@ -342,6 +378,63 @@ class ReportSendTests(unittest.TestCase):
         self.assertEqual(code, 0)
         smtp_cls.assert_not_called()
         self.assertIn("[dry-run]", out)
+
+    def test_send_passes_configured_smtp_port_to_smtplib(self):
+        with _TempWorkspace() as ws:
+            config_path = ws.write_config(
+                {
+                    "weekly": {
+                        "period": "weekly",
+                        "sections": [{"type": "review"}],
+                        "email": {
+                            "to": "me@example.com",
+                            "smtp_host_env": "H",
+                            "smtp_port": 587,
+                            "smtp_user_env": "U",
+                            "smtp_pass_env": "P",
+                        },
+                    }
+                }
+            )
+            smtp_instance = mock.MagicMock()
+            smtp_instance.__enter__.return_value = smtp_instance
+            with mock.patch("smtplib.SMTP", return_value=smtp_instance) as smtp_cls:
+                with mock.patch.dict(
+                    os.environ,
+                    {"H": "smtp.example.com", "U": "me", "P": "secret"},
+                    clear=True,
+                ):
+                    out, code = _run(["send", "weekly"], config_path)
+        self.assertEqual(code, 0)
+        smtp_cls.assert_called_once_with("smtp.example.com", 587, timeout=10)
+        self.assertIn("Sent email to me@example.com", out)
+
+    def test_send_without_smtp_port_preserves_default_smtplib_call(self):
+        with _TempWorkspace() as ws:
+            config_path = ws.write_config(
+                {
+                    "weekly": {
+                        "period": "weekly",
+                        "sections": [{"type": "review"}],
+                        "email": {
+                            "to": "me@example.com",
+                            "smtp_host_env": "H",
+                            "smtp_user_env": "U",
+                            "smtp_pass_env": "P",
+                        },
+                    }
+                }
+            )
+            smtp_instance = mock.MagicMock()
+            smtp_instance.__enter__.return_value = smtp_instance
+            with mock.patch("smtplib.SMTP", return_value=smtp_instance) as smtp_cls:
+                with mock.patch.dict(
+                    os.environ,
+                    {"H": "smtp.example.com", "U": "me", "P": "secret"},
+                    clear=True,
+                ):
+                    _run(["send", "weekly"], config_path)
+        smtp_cls.assert_called_once_with("smtp.example.com", timeout=10)
 
 
 class ReportValidateCliTests(unittest.TestCase):

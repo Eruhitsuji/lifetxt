@@ -325,6 +325,14 @@ worth knowing both exist:
   on disk. Prefer the documented `*_env` convention over relying on either
   check to catch every naming choice.
 
+An explicit SMTP port (not a secret; e.g. `587` for STARTTLS submission) is
+supported the same way across every SMTP-delivery surface: `reports.*.email.
+smtp_port`, `notifications.email.smtp_port`, and digest's `--smtp-port` flag.
+All three ultimately reach the one shared `lifetxt.mail_delivery` transport,
+so the port is validated (an integer from 1 to 65535) before any network
+connection is attempted, and omitting it entirely preserves the effective
+default SMTP port unchanged.
+
 ## Ticketing configuration
 
 Development-ticket behavior (`lifetxt ticket ...`) reads several keys under
@@ -388,7 +396,7 @@ re-explained.
 | Profiles | `profiles` |
 | Defaults | `defaults.timezone`, `defaults.person` |
 | Web server | `web.host`, `web.port` |
-| Notifications | `notifications.email.smtp_pass_env` |
+| Notifications | `notifications.email.smtp_pass_env`, `notifications.email.smtp_port` |
 | Identity | `ids.auto` |
 | Editing | `editor` |
 | Attachments | `attachments.root`, `attachments.max_files`, `attachments.max_bytes`, `attachments.max_file_bytes`, `attachments.ignores`, `attachments.allowed_mime`, `attachments.blocked_mime`, `attachments.open_state_file`, `attachments.remote_source_root`, `attachments.remote_chunk_bytes` |
@@ -434,9 +442,11 @@ composition layer over existing lifetxt aggregations) and may also set
 `status`/`person`/`open` filter applied once before any section provider
 runs; legacy top-level `project`/`type`/`tag`/`open` are accepted as
 compatibility aliases into `scope`). Any profile, v1 or v2, may add `email` (`to`,
-`subject`, `smtp_host_env`, `smtp_user_env`, `smtp_pass_env`) to support
-`lifetxt report send`. Use `lifetxt config explain reports.<name>.<key>` to
-inspect the registered metadata for a concrete profile key.
+`subject`, `smtp_host_env`, `smtp_port`, `smtp_user_env`, `smtp_pass_env`) to
+support `lifetxt report send`; `smtp_port` is an optional explicit integer
+port (e.g. `587` for STARTTLS submission) and omitting it preserves the
+existing default SMTP port. Use `lifetxt config explain reports.<name>.<key>`
+to inspect the registered metadata for a concrete profile key.
 
 See [reports.md](reports.md) for the complete profile contract, output path
 placeholders, generated frontmatter, and Obsidian/Notion workflows. A runnable

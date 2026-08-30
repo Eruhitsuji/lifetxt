@@ -83,6 +83,17 @@ class ValidationTests(unittest.TestCase):
         self.assertFalse(entry["secret"])
         self.assertFalse(entry["restart_required"])
 
+    def test_registry_describes_notifications_smtp_port(self):
+        entry = explain_key("notifications.email.smtp_port")
+        self.assertIsNotNone(entry)
+        self.assertEqual("integer", entry["type"])
+        self.assertIsNone(entry["default"])
+        self.assertFalse(entry["secret"])
+
+    def test_smtp_port_integer_is_not_flagged_as_a_plaintext_secret(self):
+        config = {"notifications": {"email": {"smtp_port": 587}}}
+        self.assertNotIn("C003", self.codes(config))
+
     def test_registry_describes_new_ticketing_keys(self):
         for dotted, expected_type, expected_default in (
             (

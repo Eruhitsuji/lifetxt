@@ -58,7 +58,7 @@ _LEGACY_SCOPE_ALIASES = (
 PROFILE_KEYS = V1_PROFILE_KEYS | V2_ONLY_KEYS
 OUTPUT_FIELDS = frozenset(("date", "year", "month", "iso_year", "iso_week"))
 EMAIL_CONFIG_KEYS = frozenset(
-    ("to", "subject", "smtp_host_env", "smtp_user_env", "smtp_pass_env")
+    ("to", "subject", "smtp_host_env", "smtp_port", "smtp_user_env", "smtp_pass_env")
 )
 # A fixed, arbitrary anchor date used only to exercise `output` placeholder
 # substitution during `report validate`/`report inspect`'s output-template
@@ -221,6 +221,13 @@ def _validate_email_config(name, value):
             raise ValueError(
                 "Report profile %s email.%s must be a non-empty string." % (name, key)
             )
+    if "smtp_port" in value:
+        from . import mail_delivery
+
+        try:
+            mail_delivery.validate_smtp_port(value["smtp_port"])
+        except mail_delivery.MailDeliveryError as exc:
+            raise ValueError("Report profile %s email.smtp_port: %s" % (name, exc))
     return dict(value)
 
 
@@ -756,6 +763,7 @@ def _command_send(args, config_data, config_path=None, workspace_name=None):
         host_env=email_config.get("smtp_host_env", "LIFETXT_SMTP_HOST"),
         user_env=email_config.get("smtp_user_env", "LIFETXT_SMTP_USER"),
         pass_env=email_config.get("smtp_pass_env", "LIFETXT_SMTP_PASS"),
+        port=email_config.get("smtp_port"),
         dry_run=getattr(args, "dry_run", False),
         output=sys.stdout,
     )

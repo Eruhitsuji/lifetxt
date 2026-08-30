@@ -111,6 +111,7 @@ def _report_email_config():
             "to": to_value,
             "subject": non_empty_string,
             "smtp_host_env": non_empty_string,
+            "smtp_port": {"type": "integer", "minimum": 1, "maximum": 65535},
             "smtp_user_env": non_empty_string,
             "smtp_pass_env": non_empty_string,
         },

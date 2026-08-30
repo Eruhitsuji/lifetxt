@@ -6482,7 +6482,12 @@ capabilities:
       `digest` use a named report profile as its message source. A
       report-wide `scope` filter is applied once, before any section
       provider runs, by reusing `lifetxt.agenda.filter_items()` unmodified.
-      A v1 profile (no `sections`) keeps rendering unchanged through the
+      `report validate`/`report inspect` add read-only preflight/
+      observability commands -- profile-configuration validation and
+      resolved-plan inspection -- that reuse the exact same profile
+      validator, period resolver, and output resolver `preview`/`run`/
+      `send` use, with zero rendering, writing, or network access. A v1
+      profile (no `sections`) keeps rendering unchanged through the
       existing `share --format markdown` delegation from #554/PR #555.
     status: active
     owner: Eruhitsuji
@@ -6496,6 +6501,8 @@ capabilities:
       - req-report-v2-email-delivery
       - req-digest-report-source
       - req-report-v2-shared-scope
+      - req-report-readonly-validate
+      - req-report-resolved-inspection
     implementation_locations:
       - lifetxt/report_v2.py
       - lifetxt/health.py
@@ -6516,6 +6523,7 @@ capabilities:
       - docs/ja/config.md
       - docs/en/cli.md
       - docs/ja/cli.md
+      - docs/deployment/ubuntu-server.md
     public_interfaces:
       - lifetxt.report_v2.ReportContext
       - lifetxt.report_v2.build_report_model
@@ -6526,6 +6534,8 @@ capabilities:
       - lifetxt.mail_delivery.send_slack_webhook
       - lifetxt report preview|run --date|--previous|--format
       - lifetxt report send NAME
+      - lifetxt report validate NAME|--all --format text|json
+      - lifetxt report inspect NAME --date|--previous --format text|json
       - lifetxt digest --report NAME
       - reports.*.sections
       - reports.*.format
@@ -6549,6 +6559,13 @@ capabilities:
       - tests/test_report_v2_cli.py -> Ran 25 tests, OK after #613's additions (v2 profile `scope` validation, legacy top-level project/type/tag/open folded in as compatibility aliases, a conflicting legacy value vs. scope value fails loudly naming both, preview/run end-to-end against a scoped profile only including matching items)
       - "found and fixed a real bug during #613's own testing: apply_scope() initially passed a bare scope string (e.g. project: home, the schema's own list-or-string allowance) straight into filter_items(projects=...), which iterates its input character-by-character when given a bare string (lifetxt.agenda._normalize_filter_values); reproduced with a failing end-to-end test before the fix, root-caused by reading _normalize_filter_values's source, and fixed with a _scope_list() normalization helper applied uniformly to every list-or-string scope field"
       - python -m unittest tests.test_schema_extensions_v2 tests.test_config_validation -> Ran 81 tests, OK (config-v1 schema `reports.*.scope` fragment, registry metadata for reports.*.scope)
+      - tests/test_report_v2_cli.py ReportValidateCliTests (15 tests) and ReportInspectCliTests (13 tests) -> Ran 50 tests total in the file, OK
+      - "live: lifetxt report validate/validate --all/validate --all --format json against a real disposable fixture (one valid v1, one valid v2, one with an unknown section type) produced the exact designed per-profile OK/FAIL output, enumerating every profile rather than stopping at the first failure; exit code 1 when any profile failed, 0 otherwise"
+      - "live: lifetxt report inspect against the same fixture (text and --format json) showed the correct resolved schema/period/output-path/scope/sections/format/audience/compare without writing any file or directory (confirmed via directory listing before/after) and without a stray share.md"
+      - "found and fixed a real, pre-existing bug during this task's own live testing: _profile_named(config_data, name) called _profiles(config_data), which eagerly validates every configured profile before returning the one requested -- so preview/run/send/digest --report for a perfectly valid profile failed whenever ANY unrelated profile in the same config was invalid; reproduced live (report preview v2weekly failed solely because a sibling broken profile existed), confirmed via git stash that the bug predates this task, and fixed by making _profile_named validate only the requested profile via a new _raw_profiles()/_validate_profile() call; a dedicated regression test (test_an_unrelated_broken_profile_does_not_block_...) locks this in for both validate and inspect, and the existing full report_cli/report_v2/digest test suites were re-run to confirm no behavior change for every already-valid-profile case"
+      - python -m unittest tests.test_report_v2 tests.test_report_v2_cli tests.test_report_cli tests.test_digest_report_source tests.test_server_init tests.test_server_report -> Ran 144 tests, OK
+      - "manual: computed the docs/en/reports.md and docs/ja/reports.md anchors for the new sections directly with the release-doc validator's own slug() algorithm (docs/ja/reports.md is outside its checked-document set; docs/en/reports.md's anchors are exercised by the validator's own generic anchor check since docs/en/cli.md links into it)"
+      - scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> {"errors":0,"ok":true}
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/600
       - https://github.com/Eruhitsuji/lifetxt/issues/601
@@ -6560,6 +6577,8 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/607
       - https://github.com/Eruhitsuji/lifetxt/issues/608
       - https://github.com/Eruhitsuji/lifetxt/issues/613
+      - https://github.com/Eruhitsuji/lifetxt/issues/614
+      - https://github.com/Eruhitsuji/lifetxt/issues/615
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/612
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
@@ -6630,6 +6649,62 @@ capabilities:
       conflicting value for the same field, and fails loudly (naming both
       the legacy key and the conflicting `scope` key) rather than silently
       picking one when both are set to different values.
+
+      #614/#615 add `report validate`/`report inspect`, two read-only
+      commands answering "is this profile valid?" and "what would this
+      profile resolve to?" respectively, distinct from `preview` ("what
+      would it render?") and `run`/`send` ("generate/send it"). Neither
+      command introduces a second validation or resolution implementation:
+      `_validate_profile_safe()` (new) wraps the exact `_validate_profile()`
+      function `preview`/`run`/`send` already call, adding only a
+      syntax-only `output` placeholder check via the existing
+      `resolve_output_template()` against a fixed, arbitrary anchor date
+      (never the real "today", so validation needs no timezone/life.txt
+      read at all); `_command_inspect()` reuses `_profile_named()`,
+      `_period_context()` (the same period/timezone resolver `preview`/
+      `run` use), and `_resolved_output()` unchanged, and never calls
+      `render_report`/`render_report_v2`, so no section provider executes
+      and no file is written. `validate --all` deliberately does not reuse
+      `_profiles()` (which raises on the first invalid profile): a new
+      `_raw_profiles()` enumerates the raw `reports` mapping so every
+      profile's pass/fail result can be reported, per the issue's own
+      "does not stop after the first profile" requirement.
+
+      `_profile_named()` itself was also fixed as part of this work: it
+      previously called `_profiles()`, which -- because `_profiles()`
+      eagerly validates *every* configured profile before returning any one
+      of them -- meant `preview`/`run`/`send`/`digest --report` for a
+      perfectly valid profile failed whenever an unrelated profile
+      elsewhere in the same config was invalid. This is a real,
+      pre-existing bug (not introduced by #614/#615), found by this task's
+      own live testing of `report inspect` against a fixture with one
+      broken sibling profile; fixed by making `_profile_named()` validate
+      only the requested profile through the new `_raw_profiles()`. `list`
+      (which legitimately wants every profile's shape) is unaffected and
+      keeps its existing all-profiles-eager-validation behavior, since
+      fixing that too is a distinct, unscoped change recorded here as a
+      deliberate boundary rather than silently expanded into.
+
+      `report inspect`'s JSON shape follows #615's own example structure
+      (`report`/`schema`/nested `period`/`output`/`scope`/`sections`)
+      rather than a flatter ad hoc shape, since the issue explicitly asks
+      for something "stable/deterministic enough for humans and deployment
+      tooling." Provider-specific option-key validation ("Provider-specific
+      unknown/invalid options are caught through the same validator used by
+      preview/run") is intentionally NOT newly invented for this task: no
+      such validation exists anywhere in `report_v2.py` today (every
+      section provider reads its own options permissively via `.get()`
+      with defaults, matching this project's established "keep
+      configuration parsing permissive" precedent), so adding strict
+      option-key checking only inside `validate` would make `validate`
+      stricter than `preview`/`run` themselves -- the opposite of the
+      "same validator" reuse requirement. `_inspect_sections()` does expose
+      each section's raw, unvalidated option dict (reusing
+      `report_v2._reserved_option_keys()` to compute it, the same set
+      `build_report_model()` itself uses to separate provider options from
+      `type`/`title`), so if provider-level option validation is added to
+      `report_v2.py` in the future, both `validate` and `inspect` pick it
+      up automatically with no further change.
     replacement:
       replaces: []
       replaced_by: null

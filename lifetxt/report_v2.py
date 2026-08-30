@@ -238,13 +238,19 @@ def _provider_command_center(context, options):
 def _provider_project_health(context, options):
     from .projects import portfolio
 
-    rows = portfolio(
+    result = portfolio(
         context.items,
         config=context.config_data,
         today=context.reference_date,
         include_archived=bool(options.get("include_archived", False)),
     )
-    return OrderedDict((("projects", rows),))
+    return OrderedDict(
+        (
+            ("projects", result["projects"]),
+            ("count", result["count"]),
+            ("legend", result["legend"]),
+        )
+    )
 
 
 def _provider_next_actions(context, options):

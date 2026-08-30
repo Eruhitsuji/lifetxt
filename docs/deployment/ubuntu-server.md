@@ -528,6 +528,132 @@ comment, never an unrelated same-named file.
 Generated report files are derived, regenerable artifacts, not source data —
 they are deliberately not added to `server-update`'s backup coverage.
 
+### Scheduled email delivery
+
+A scheduled job can also email its report after generating it, by adding
+`send_email`/`environment_file` at the job level and an `email` section on
+the profile it references:
+
+```json
+{
+  "reporting": {
+    "enabled": true,
+    "profiles": {
+      "weekly": {
+        "period": "weekly",
+        "output": "reports/{iso_year}-W{iso_week}.md",
+        "sections": [{"type": "review"}, {"type": "stats"}],
+        "email": {
+          "to": "team@example.com",
+          "smtp_host_env": "LIFETXT_SMTP_HOST",
+          "smtp_user_env": "LIFETXT_SMTP_USER",
+          "smtp_pass_env": "LIFETXT_SMTP_PASS",
+          "smtp_port": 587
+        }
+      }
+    },
+    "jobs": [
+      {
+        "name": "weekly",
+        "profile": "weekly",
+        "schedule": "after-period",
+        "at": "00:10",
+        "send_email": true,
+        "environment_file": "/etc/lifetxt/mail.env"
+      }
+    ]
+  }
+}
+```
+
+`environment_file` names a systemd `EnvironmentFile=` **path only** — the
+credential values themselves are never written into `server-init.json`, the
+generated application config, generated unit text, or `server-report`'s
+plan/JSON output. Create it the same way as the Calendar-sync environment
+file in section 3 above:
+
+```sh
+sudo mkdir -p /etc/lifetxt
+sudo tee /etc/lifetxt/mail.env >/dev/null <<'EOF'
+LIFETXT_SMTP_HOST=smtp.example.com
+LIFETXT_SMTP_USER=reports@example.com
+LIFETXT_SMTP_PASS=REPLACE_ME
+EOF
+sudo chmod 600 /etc/lifetxt/mail.env
+sudo chown lifetxt:lifetxt /etc/lifetxt/mail.env
+```
+
+Before scheduling anything, confirm the profile's own email delivery works
+by hand, without touching systemd:
+
+```sh
+lifetxt --config /srv/lifetxt/data/.lifetxt.json report send weekly --dry-run
+# once the dry run looks right and the environment variables above are
+# exported in your current shell (systemd supplies them at run time via
+# EnvironmentFile= instead):
+export LIFETXT_SMTP_HOST=smtp.example.com LIFETXT_SMTP_USER=reports@example.com LIFETXT_SMTP_PASS=REPLACE_ME
+lifetxt --config /srv/lifetxt/data/.lifetxt.json report send weekly
+```
+
+Then install with `--send-email --environment-file`:
+
+```sh
+lifetxt server-report plan weekly \
+  --app-config /srv/lifetxt/data/.lifetxt.json \
+  --service-user lifetxt --service-group lifetxt \
+  --send-email --environment-file /etc/lifetxt/mail.env
+lifetxt server-report install weekly \
+  --app-config /srv/lifetxt/data/.lifetxt.json \
+  --service-user lifetxt --service-group lifetxt \
+  --send-email --environment-file /etc/lifetxt/mail.env \
+  --yes --enable --start
+```
+
+`install`/`plan` refuse before writing anything if the referenced profile
+has no `email` section, or if `--send-email` is given without
+`--environment-file` (or vice versa) — the same validation `server-init`'s
+`reporting.jobs[].send_email`/`environment_file` keys enforce for a
+fully-regenerated deployment. The generated service unit gains
+`EnvironmentFile=/etc/lifetxt/mail.env` and a **second** `ExecStart=` line
+running `report send <profile> --previous` immediately after the first
+`report run <profile> --previous` line; systemd runs a oneshot unit's
+`ExecStart=` lines in order and fails the whole service if one of them
+fails, so email delivery only ever runs after local report generation
+already succeeded — never on a stale or partially-generated report.
+
+Test the scheduled job manually before trusting the timer with it:
+
+```sh
+sudo systemctl start lifetxt-report-weekly.service
+sudo journalctl -u lifetxt-report-weekly.service -n 50
+```
+
+A failure in the `report send` line (bad credentials, unreachable SMTP host)
+fails the whole unit — `journalctl` shows the `report send` error text
+directly (never the SMTP password, which `report send` itself never emits
+per [`reports.md`](../en/reports.md#report-v2-composing-existing-aggregations-sections)'s
+existing no-secret-disclosure guarantee) and the report file `report run`
+already wrote on disk is left untouched for inspection or a manual retry of
+just the send.
+
+To disable email delivery on an existing job without removing the whole
+job, reinstall it with `--send-email` omitted (dropping `send_email`/
+`environment_file` from `server-init.json`'s job entry has the same effect
+on the next `server-init` run):
+
+```sh
+lifetxt server-report install weekly \
+  --app-config /srv/lifetxt/data/.lifetxt.json \
+  --service-user lifetxt --service-group lifetxt --yes
+```
+
+This rewrites the service unit back to its single-`ExecStart=`,
+no-`EnvironmentFile=` form. Rolling back entirely uses the same `remove`
+command shown above (`lifetxt server-report remove weekly ... --yes`), which
+deletes both unit files regardless of whether email delivery was enabled;
+`/etc/lifetxt/mail.env` itself is left in place for you to remove by hand,
+since it is a credential file, not a lifetxt-generated artifact.
+
 Before installing or updating a job, `lifetxt --config
 /srv/lifetxt/data/.lifetxt.json report validate <name>` (or `--all` to check
 every profile at once) verifies the profile's configuration with zero

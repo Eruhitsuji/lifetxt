@@ -318,6 +318,7 @@ depth として通過します。これは既存 `share` renderer 全体の汎�
     "to": ["me@example.com"],
     "subject": "lifetxt weekly report {period_start} - {period_end}",
     "smtp_host_env": "LIFETXT_SMTP_HOST",
+    "smtp_port": 587,
     "smtp_user_env": "LIFETXT_SMTP_USER",
     "smtp_pass_env": "LIFETXT_SMTP_PASS"
   }
@@ -334,9 +335,13 @@ python -m lifetxt report send weekly-review --dry-run
 `{period_start}`、`{period_end}`、`{report}` の placeholder を使え、既定値は
 `lifetxt report: <name>` です。SMTP host/username/password は指定した環境変数
 （既定 `LIFETXT_SMTP_HOST`/`LIFETXT_SMTP_USER`/`LIFETXT_SMTP_PASS`）から
-STARTTLS 経由で読み込まれ、これは `digest --format email` と同じ delivery
-primitive です。`report send` は2つ目の SMTP 実装を追加しません。`--dry-run`
-は接続を開かず、環境変数の設定も不要なまま、送信内容を表示するだけです。
+STARTTLS 経由で読み込まれ、これは `digest --format email` および notification
+email と同じ delivery primitive です。`report send` は2つ目の SMTP 実装を
+追加しません。`smtp_port` は任意の明示的な整数 port（例: STARTTLS 送信の
+`587`、`1`〜`65535`）で、実際の network 接続の前に検証されます。省略すると
+既存の既定 SMTP port がそのまま維持されます。`--dry-run` は接続を開かず、
+環境変数の設定も不要なまま、送信内容（port を指定した場合はそれも含む）を
+表示するだけです。
 
 `lifetxt digest` も、既存の built-in review summary の代わりに report profile
 をメッセージ source として使え、digest の既存 file/email/Slack delivery
@@ -422,7 +427,14 @@ profile は `report validate` と同一の validator を通して失敗します
 既存 deployment へ1つの report job を追加/削除する
 `lifetxt server-report plan|install|remove` については
 [`docs/deployment/ubuntu-server.md`](../deployment/ubuntu-server.md) を
-参照してください。
+参照してください。job は生成した report を送信することもできます --
+`reporting.jobs[].send_email`/`environment_file`、または `server-report` の
+`--send-email`/`--environment-file` を指定すると、`report run` が成功した
+場合にのみ実行される2本目の `ExecStart=report send <profile> --previous`
+行が追加されます。詳細は
+[Ubuntu Server での定期実行の「Scheduled email delivery」section
+（英語）](../deployment/ubuntu-server.md#scheduled-email-delivery)
+を参照してください。
 
 ## 互換性・migration・downgrade
 

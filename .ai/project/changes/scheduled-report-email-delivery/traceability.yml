@@ -1,0 +1,27 @@
+schema_version: 1
+
+links:
+  - requirement_id: req-scheduled-report-email-delivery
+    capability_id: cap-ubuntu-server-deployment
+    epic: https://github.com/Eruhitsuji/lifetxt/issues/609
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/617
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/618
+    tests_or_evidence:
+      - "tests/test_server_init.py ReportingConfigGenerationTests: 7 new tests (default job unaffected, send_email job generates EnvironmentFile=/two ordered ExecStart= lines, send_email without environment_file rejected, send_email without profile email config rejected, environment_file without send_email rejected, generator-identity check confirming server_report.py reuses server_init.report_service_unit_text/report_timer_unit_text verbatim)"
+      - "tests/test_server_report.py BuildPlanTests: 8 new tests (send_email adds EnvironmentFile=/second ExecStart=, run-before-send ordering assertion, send_email requires environment_file, send_email requires a profile with email config, environment_file without send_email rejected including an empty-string path argument, no-send-email plan unaffected, no SMTP credential name ever appears in generated content)"
+      - "tests/test_server_report.py ApplyInstallTests: 1 existing test extended plus 1 new test confirming send_email/environment_file surfaced in the apply_install result dict"
+      - "tests/test_server_report.py ServerReportCliTests: 5 new tests (install with --send-email writes EnvironmentFile=/two ExecStart= lines, plan with --send-email shows the environment file path only, plan without --send-email shows disabled, --send-email without --environment-file exits non-zero, --send-email without profile email config exits non-zero)"
+      - python -m unittest tests.test_server_init -> Ran 33 tests, OK
+      - python -m unittest tests.test_server_report -> Ran 33 tests, OK
+      - python -m unittest tests.test_server_init tests.test_server_report -> Ran 66 tests, OK
+      - "MPLBACKEND=Agg python -W ignore::ResourceWarning -m unittest discover -> Ran 3325 tests in 595.975s, FAILED (3 failures, skipped=195): tests.test_external_verification.ProcessTreeTimeoutTests x2 and tests.test_paths.MultiFileSourceIntegrityTests.test_permission_denied_file_among_multiple_sources_fails_loudly; all 3 reproduce in isolation and are outside #617's write scope"
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - ruff format --check / ruff check lifetxt/server_init.py lifetxt/server_report.py lifetxt/server_report_cli.py tests/test_server_report.py tests/test_server_init.py -> clean
+      - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      - "live: real lifetxt server-report plan/install --send-email --environment-file against a real disposable fixture (profile with a valid email section) produced a real, on-disk .service file containing EnvironmentFile=<path>, report run followed by report send as two ordered ExecStart= lines, and zero occurrences of any credential value; confirmed by reading the generated unit file directly"
+      - "live: the same fixture without --send-email produced the unchanged single-ExecStart=, no-EnvironmentFile= unit"
+      - "live: all four validation-refusal paths (missing email config, missing environment-file, environment-file without send-email, and the reverse) failed loudly with named errors before writing anything, confirmed via a real disposable fixture directory listing before/after each refusal"
+    release_or_deployment: null
+    status: implemented
+
+gaps: []

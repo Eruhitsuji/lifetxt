@@ -1,0 +1,118 @@
+schema_version: 1
+
+verification:
+  executed:
+    - type: unit
+      command: python -m unittest tests.test_server_init
+      requirement_ids:
+        - req-scheduled-report-email-delivery
+      result: 'Ran 33 tests -- OK (26 pre-existing unmodified + 7 new: send_email/environment_file validation and unit-generation coverage)'
+      status: passed
+    - type: unit
+      command: python -m unittest tests.test_server_report
+      requirement_ids:
+        - req-scheduled-report-email-delivery
+      result: 'Ran 33 tests -- OK (19 pre-existing unmodified + 14 new: BuildPlanTests x8, ApplyInstallTests x1 new plus 1 extended, ServerReportCliTests x5)'
+      status: passed
+    - type: regression
+      command: python -m unittest tests.test_server_init tests.test_server_report
+      requirement_ids:
+        - req-scheduled-report-email-delivery
+      result: 'Ran 66 tests -- OK'
+      status: passed
+    - type: regression
+      command: MPLBACKEND=Agg python -W ignore::ResourceWarning -m unittest discover
+      requirement_ids:
+        - req-scheduled-report-email-delivery
+      result: >-
+        Ran 3325 tests in 595.975s -- FAILED (3 failures, skipped=195):
+        tests.test_external_verification.ProcessTreeTimeoutTests x2 and
+        tests.test_paths.MultiFileSourceIntegrityTests.
+        test_permission_denied_file_among_multiple_sources_fails_loudly; all
+        3 reproduce in isolation and are outside #617's write scope
+      status: failed
+    - type: manual
+      command: >-
+        live: real lifetxt server-report plan/install --send-email
+        --environment-file C:/lifetxt-mail.env weekly --app-config
+        <disposable fixture .lifetxt.json> --service-user lifetxt
+        --service-group lifetxt --yes, against a fixture profile with a
+        valid email section
+      requirement_ids:
+        - req-scheduled-report-email-delivery
+      result: >-
+        real lifetxt-report-weekly.service written to disk containing
+        `EnvironmentFile=C:/lifetxt-mail.env`, `ExecStart=lifetxt report run
+        weekly --previous --config ...` followed by `ExecStart=lifetxt
+        report send weekly --previous --config ...`, and zero occurrences of
+        any credential value; confirmed by reading the file directly
+      status: passed
+    - type: manual
+      command: >-
+        live: same fixture, server-report install weekly ... --yes with
+        --send-email omitted
+      requirement_ids:
+        - req-scheduled-report-email-delivery
+      result: >-
+        generated unit has no EnvironmentFile= line and exactly one
+        ExecStart= line, matching pre-#617 behavior exactly
+      status: passed
+    - type: manual
+      command: >-
+        live: server-report plan weekly ... --send-email (no
+        --environment-file)
+      requirement_ids:
+        - req-scheduled-report-email-delivery
+      result: 'fails loudly naming environment_file, exit non-zero, no file written'
+      status: passed
+    - type: manual
+      command: >-
+        live: server-report plan weekly ... --environment-file
+        C:/lifetxt-mail.env (no --send-email)
+      requirement_ids:
+        - req-scheduled-report-email-delivery
+      result: 'fails loudly naming send_email, exit non-zero, no file written'
+      status: passed
+    - type: manual
+      command: >-
+        live: server-report plan weekly ... --send-email
+        --environment-file C:/lifetxt-mail.env against a profile with no
+        email section configured
+      requirement_ids:
+        - req-scheduled-report-email-delivery
+      result: 'fails loudly naming the profile and the missing email configuration, exit non-zero, no file written'
+      status: passed
+    - type: static
+      command: python -m lifetxt check examples/minimal_life.txt
+      requirement_ids:
+        - req-scheduled-report-email-delivery
+      result: 'OK: 10 item(s)'
+      status: passed
+    - type: static
+      command: >-
+        ruff format --check / ruff check lifetxt/server_init.py
+        lifetxt/server_report.py lifetxt/server_report_cli.py
+        tests/test_server_report.py tests/test_server_init.py
+      requirement_ids:
+        - req-scheduled-report-email-delivery
+      result: clean
+      status: passed
+    - type: static
+      command: scripts/validate_release_docs.py
+      requirement_ids:
+        - req-scheduled-report-email-delivery
+      result: '{"errors": 0, "ok": true}'
+      status: passed
+
+pending:
+  - description: >-
+      Full-suite cleanup for the three unrelated/environment-sensitive
+      failures that reproduced outside #617's write scope:
+      tests.test_external_verification.ProcessTreeTimeoutTests x2 and
+      tests.test_paths.MultiFileSourceIntegrityTests.
+      test_permission_denied_file_among_multiple_sources_fails_loudly.
+    owner: Eruhitsuji
+  - description: >-
+      Independent security review and Merge Authority approval, per this
+      change's own human_approvals_required.
+    owner: Eruhitsuji

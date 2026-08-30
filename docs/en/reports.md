@@ -331,6 +331,7 @@ environment.
     "to": ["me@example.com"],
     "subject": "lifetxt weekly report {period_start} - {period_end}",
     "smtp_host_env": "LIFETXT_SMTP_HOST",
+    "smtp_port": 587,
     "smtp_user_env": "LIFETXT_SMTP_USER",
     "smtp_pass_env": "LIFETXT_SMTP_PASS"
   }
@@ -348,9 +349,13 @@ supports `{period_start}`, `{period_end}`, and `{report}` placeholders and
 defaults to `lifetxt report: <name>`. SMTP host/username/password are read
 from the named environment variables (defaulting to `LIFETXT_SMTP_HOST`/
 `LIFETXT_SMTP_USER`/`LIFETXT_SMTP_PASS`) via STARTTLS, the same delivery
-primitive `digest --format email` uses -- `report send` does not add a
-second SMTP implementation. `--dry-run` prints what would be sent without
-opening a connection or requiring the environment variables to be set.
+primitive `digest --format email` and notification email use -- `report
+send` does not add a second SMTP implementation. `smtp_port` is an optional
+explicit integer port (e.g. `587` for STARTTLS submission, `1`-`65535`),
+validated before any network connection is attempted; omitting it preserves
+the existing default SMTP port unchanged. `--dry-run` prints what would be
+sent (including the configured port, when one is set) without opening a
+connection or requiring the environment variables to be set.
 
 `lifetxt digest` can also use a report profile as its message source instead
 of the built-in review summary, reusing digest's existing file/email/Slack
@@ -437,7 +442,14 @@ See [`docs/deployment/ubuntu-server.md`](../deployment/ubuntu-server.md) for
 generates a systemd oneshot + `Persistent=true` timer per job running
 `report run <profile> --previous`) and `lifetxt server-report plan|install|
 remove` (adds or removes one such job on an already-running deployment
-without re-running `server-init`).
+without re-running `server-init`). A job can also email its report after
+generating it -- `reporting.jobs[].send_email`/`environment_file`, or
+`server-report`'s `--send-email`/`--environment-file` -- which adds a second
+`ExecStart=report send <profile> --previous` line that only ever runs after
+`report run` succeeds; see [Scheduling on Ubuntu Server's Scheduled email
+delivery
+section](../deployment/ubuntu-server.md#scheduled-email-delivery) for the
+full walkthrough.
 
 ## Compatibility and migration
 

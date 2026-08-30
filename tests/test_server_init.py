@@ -371,6 +371,23 @@ class AiWorkspaceGenerationTests(unittest.TestCase):
             )
 
 
+_ENVIRONMENT_FILE = "/etc/lifetxt/mail.env"
+
+_EMAIL_PROFILES = {
+    "weekly": {
+        "period": "weekly",
+        "output": "reports/{iso_year}-W{iso_week}.md",
+        "sections": [{"type": "review"}],
+        "email": {
+            "to": "team@example.com",
+            "smtp_host_env": "LIFETXT_SMTP_HOST",
+            "smtp_user_env": "LIFETXT_SMTP_USER",
+            "smtp_pass_env": "LIFETXT_SMTP_PASS",
+        },
+    }
+}
+
+
 def _reporting_config(**overrides):
     profiles = {
         "weekly": {
@@ -563,6 +580,127 @@ class ReportingConfigGenerationTests(unittest.TestCase):
                 server_init.run_server_init(config, yes=True)
             unit_path = os.path.join(tmp, "systemd", "lifetxt-report-weekly.service")
             self.assertTrue(os.path.exists(unit_path))
+
+    def test_default_job_has_no_environment_file_or_second_exec_start(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = server_init.load_config(
+                _write_json(tmp, _config(tmp, reporting=_reporting_config()))
+            )
+            plan = server_init.build_plan(config)
+            service_step = _step(
+                {"steps": plan["steps"]},
+                os.path.join(tmp, "systemd", "lifetxt-report-weekly.service"),
+            )
+            self.assertNotIn("EnvironmentFile=", service_step["content"])
+            self.assertEqual(service_step["content"].count("ExecStart="), 1)
+            self.assertNotIn("report send", service_step["content"])
+
+    def test_send_email_job_generates_environment_file_and_two_exec_starts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            reporting = _reporting_config(
+                profiles=_EMAIL_PROFILES,
+                jobs=[
+                    {
+                        "name": "weekly",
+                        "profile": "weekly",
+                        "schedule": "after-period",
+                        "at": "00:10",
+                        "send_email": True,
+                        "environment_file": _ENVIRONMENT_FILE,
+                    }
+                ],
+            )
+            config = server_init.load_config(
+                _write_json(tmp, _config(tmp, reporting=reporting))
+            )
+            plan = server_init.build_plan(config)
+            service_step = _step(
+                {"steps": plan["steps"]},
+                os.path.join(tmp, "systemd", "lifetxt-report-weekly.service"),
+            )
+            content = service_step["content"]
+            self.assertIn("EnvironmentFile=%s" % _ENVIRONMENT_FILE, content)
+            self.assertEqual(content.count("ExecStart="), 2)
+            run_index = content.index("report run weekly --previous")
+            send_index = content.index("report send weekly --previous")
+            self.assertLess(
+                run_index,
+                send_index,
+                "report run must be scheduled before report send",
+            )
+            self.assertNotIn("LIFETXT_SMTP_PASS", content)
+
+    def test_send_email_without_environment_file_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            reporting = _reporting_config(
+                profiles=_EMAIL_PROFILES,
+                jobs=[
+                    {
+                        "name": "weekly",
+                        "profile": "weekly",
+                        "schedule": "after-period",
+                        "at": "00:10",
+                        "send_email": True,
+                    }
+                ],
+            )
+            with self.assertRaisesRegex(
+                server_init.ServerInitError, "environment_file"
+            ):
+                server_init.load_config(
+                    _write_json(tmp, _config(tmp, reporting=reporting))
+                )
+
+    def test_send_email_without_profile_email_config_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            reporting = _reporting_config(
+                jobs=[
+                    {
+                        "name": "weekly",
+                        "profile": "weekly",
+                        "schedule": "after-period",
+                        "at": "00:10",
+                        "send_email": True,
+                        "environment_file": _ENVIRONMENT_FILE,
+                    }
+                ]
+            )
+            with self.assertRaisesRegex(server_init.ServerInitError, "email"):
+                server_init.load_config(
+                    _write_json(tmp, _config(tmp, reporting=reporting))
+                )
+
+    def test_environment_file_without_send_email_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            reporting = _reporting_config(
+                profiles=_EMAIL_PROFILES,
+                jobs=[
+                    {
+                        "name": "weekly",
+                        "profile": "weekly",
+                        "schedule": "after-period",
+                        "at": "00:10",
+                        "environment_file": _ENVIRONMENT_FILE,
+                    }
+                ],
+            )
+            with self.assertRaisesRegex(server_init.ServerInitError, "send_email"):
+                server_init.load_config(
+                    _write_json(tmp, _config(tmp, reporting=reporting))
+                )
+
+    def test_report_service_unit_text_is_the_exact_function_server_report_reuses(self):
+        # #617's server-init/server-report generator parity guarantee: both
+        # commands must share one unit generator, not two independently
+        # maintained copies that could drift apart.
+        from lifetxt import server_report
+
+        self.assertIs(
+            server_report.report_service_unit_text, server_init.report_service_unit_text
+        )
+        self.assertIs(
+            server_report.report_timer_unit_text, server_init.report_timer_unit_text
+        )
 
 
 def _write_json(root, data):

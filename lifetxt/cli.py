@@ -8696,179 +8696,25 @@ def command_assign(args):
 
 
 def command_health(args):
+    from .health import build_health
+
     config = _config(args)
     items, diagnostics = _parse_or_exit(args.paths, config)
     today = timezone_today()
     since_days = getattr(args, "since", 30)
     lookahead_days = getattr(args, "lookahead", 7)
-    ignore_codes = set(
-        c.upper() for c in _split_csv_args(getattr(args, "ignore", None))
+    ignore_codes = _split_csv_args(getattr(args, "ignore", None))
+    type_filter = _split_csv_args(getattr(args, "health_types", None))
+
+    health_issues = build_health(
+        items,
+        today,
+        since_days=since_days,
+        lookahead_days=lookahead_days,
+        ignore_codes=ignore_codes,
+        kinds=type_filter,
+        config=config,
     )
-    type_filter = set(_split_csv_args(getattr(args, "health_types", None)))
-
-    open_statuses = {"[ ]", "[/]", "[>]", "[?]"}
-
-    habit_completions = {}
-    for item in items:
-        if item.kind == "H" and item.status == "[x]":
-            latest = _latest_item_date(item)
-            if latest:
-                title = item.title
-                if title not in habit_completions or latest > habit_completions[title]:
-                    habit_completions[title] = latest
-
-    recent_persons = set()
-    for item in items:
-        if item.kind == "S":
-            person_vals = item.details.get("person", [])
-            if not person_vals:
-                continue
-            person = str(person_vals[0])
-            latest = _latest_item_date(item)
-            if latest and (today - latest).days <= since_days:
-                recent_persons.add(person)
-            elif item.status in open_statuses and not item.details.get("to"):
-                recent_persons.add(person)
-
-    health_issues = []
-    dependency_records = []
-    if "W305" not in ignore_codes:
-        dependency_records = dependency_blocker_records(
-            items, key=id_key_from_config(config)
-        )
-
-    for item in items:
-        if type_filter and item.kind not in type_filter:
-            continue
-        location = getattr(item, "source", None)
-        line_no = item.line
-
-        if "W301" not in ignore_codes:
-            if (
-                item.kind == "T"
-                and item.status in open_statuses
-                and item.status != "[>]"
-            ):
-                latest = _latest_item_date(item)
-                if latest and (today - latest).days > since_days:
-                    health_issues.append(
-                        OrderedDict(
-                            [
-                                ("code", "W301"),
-                                (
-                                    "message",
-                                    "Task open for %d days without update"
-                                    % (today - latest).days,
-                                ),
-                                ("line", line_no),
-                                ("source", location),
-                                ("title", item.title),
-                            ]
-                        )
-                    )
-
-        if "W302" not in ignore_codes:
-            if item.kind == "H" and item.status in open_statuses:
-                last_done = habit_completions.get(item.title)
-                if last_done is None or (today - last_done).days > since_days:
-                    health_issues.append(
-                        OrderedDict(
-                            [
-                                ("code", "W302"),
-                                (
-                                    "message",
-                                    "Habit has no completion within %d days"
-                                    % since_days,
-                                ),
-                                ("line", line_no),
-                                ("source", location),
-                                ("title", item.title),
-                            ]
-                        )
-                    )
-
-        if "W303" not in ignore_codes:
-            if item.status in open_statuses:
-                for val in item.details.get("due", []):
-                    parsed = _parse_date_only(str(val))
-                    if parsed:
-                        days_until = (parsed - today).days
-                        if days_until < 0:
-                            health_issues.append(
-                                OrderedDict(
-                                    [
-                                        ("code", "W303"),
-                                        (
-                                            "message",
-                                            "Overdue by %d day(s) since %s"
-                                            % (-days_until, val),
-                                        ),
-                                        ("line", line_no),
-                                        ("source", location),
-                                        ("title", item.title),
-                                    ]
-                                )
-                            )
-                        elif days_until <= lookahead_days:
-                            health_issues.append(
-                                OrderedDict(
-                                    [
-                                        ("code", "W303"),
-                                        (
-                                            "message",
-                                            "Due in %d day(s) on %s"
-                                            % (days_until, val),
-                                        ),
-                                        ("line", line_no),
-                                        ("source", location),
-                                        ("title", item.title),
-                                    ]
-                                )
-                            )
-
-        if "W304" not in ignore_codes:
-            if item.status in open_statuses:
-                for key in ("assignee", "owner"):
-                    for val in item.details.get(key, []):
-                        person = str(val)
-                        if person not in recent_persons:
-                            health_issues.append(
-                                OrderedDict(
-                                    [
-                                        ("code", "W304"),
-                                        (
-                                            "message",
-                                            "%s:%s has no recent S presence record within %d days"
-                                            % (key, person, since_days),
-                                        ),
-                                        ("line", line_no),
-                                        ("source", location),
-                                        ("title", item.title),
-                                    ]
-                                )
-                            )
-
-    for record in dependency_records:
-        health_issues.append(
-            OrderedDict(
-                [
-                    ("code", "W305"),
-                    (
-                        "message",
-                        "Blocked by %s via %s"
-                        % (
-                            record["blocker_id"] or record["blocker_location"],
-                            record["relation"],
-                        ),
-                    ),
-                    ("line", record["blocked_line"]),
-                    ("source", record["blocked_source"]),
-                    ("title", record["blocked_title"]),
-                    ("blocked_by", record["blocker_id"] or record["blocker_location"]),
-                    ("relation", record["relation"]),
-                ]
-            )
-        )
 
     _fmt = getattr(args, "format", "text")
     _pretty = getattr(args, "pretty", False)

@@ -9002,6 +9002,11 @@ traceability:
         - python -m unittest tests.test_external_verification -> Ran 82 tests, OK (re-confirmed on Windows after the test-only fix)
         - python -W error::ResourceWarning -m unittest tests.test_external_verification -> Ran 82 tests, OK, zero warnings
         - ruff format --check / ruff check tests/test_external_verification.py -> clean (same pre-existing, unrelated drift as before; the fix itself introduces none)
+        - "PR #599's real CI (for the tree-kill fix above) then found a third, distinct defect once every Linux job actually ran under real load: test_run_command_terminates_the_whole_tree_and_returns_promptly failed once (AssertionError: True is not false : grandchild survived process-tree termination) on the pull_request-triggered run while the identical push-triggered run for the same commit passed -- a genuine timing race, not the process-group defect above. Root cause: the assertion checked _pid_is_alive() immediately after run_command() returned, but SIGKILL delivery and the OS actually reaping the process out of the process table are not the same instant, and a shared/loaded GitHub Actions runner can expose that gap where this repository's own local sandboxes never did"
+        - "added _wait_until_dead(pid, bound_seconds=5), a bounded poll around _pid_is_alive(), and used it only for the 'must eventually be dead' assertion; the sibling 'must still be alive right after only the direct process was killed' assertion in the other test was left unchanged, since that direction is not exposed to the same race"
+        - "live in a real Docker Linux container: the full project suite (python -m unittest discover, 3144 tests) run twice consecutively under real CPU/IO contention from the suite's own concurrent tests -> both runs OK (skipped=197, exit 0), with no recurrence of the timing failure"
+        - python -m unittest tests.test_external_verification.ProcessTreeTimeoutTests -> Ran 2 tests, OK (re-confirmed on Windows after this second fix)
+        - ruff format --check / ruff check tests/test_external_verification.py -> clean, no new drift from this fix either
       release_or_deployment: >-
         CI/release-evidence-tooling-only fix, no product/runtime behavior
         change. Takes effect the next time a real release-profile
@@ -9027,9 +9032,23 @@ traceability:
         (including the real process-tree-kill path) passes deterministically
         on POSIX. The production code path itself was unaffected throughout,
         since module.run_command() already isolated its own Popen call the
-        same way from the very first version of this fix. A fresh real
-        multi-hour Windows external-verification rerun against an actual
-        release-profile timeout, and real macOS confirmation, remain
+        same way from the very first version of this fix. A second,
+        distinct real-CI-only finding followed once that fix's own PR ran
+        under genuine GitHub Actions Linux load: a timing race between
+        SIGKILL delivery and the OS actually reaping the killed process, in
+        one of the new tests' own "the grandchild must eventually be dead"
+        assertion, checked immediately after run_command() returned with no
+        allowance for that (normally sub-millisecond, but occasionally
+        longer under real contention) reap delay -- fixed with a small
+        bounded poll and confirmed via two full real-project-suite runs
+        (3144 tests each) executed back to back in a real Docker Linux
+        container under the container's own concurrent-test load, with zero
+        recurrence. Neither of these two findings would have been visible
+        from this sandbox's Windows-only local test runs alone; both
+        required genuinely running the POSIX code path under real process
+        scheduling to surface. A fresh real multi-hour Windows external-
+        verification rerun against an actual release-profile timeout, and
+        real macOS confirmation, remain
         external-environment work outside this sandbox and are recorded as
         open, matching the pattern already established for #429/#430/#437/
         #438 in this same capability.

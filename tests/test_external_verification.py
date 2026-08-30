@@ -693,6 +693,26 @@ def _wait_for_marker(marker_path, bound_seconds=5):
     )
 
 
+def _wait_until_dead(pid, bound_seconds=5):
+    """Poll ``_pid_is_alive(pid)`` until it reports dead or the bound elapses.
+
+    A SIGKILL/taskkill is delivered promptly, but the OS reaping the
+    process out of the process table (so `_pid_is_alive` actually reports
+    False) is not instantaneous -- reproduced live as a flaky failure on a
+    shared, loaded GitHub Actions Linux runner even though the identical
+    assertion passed reliably in this repository's own local sandboxes.
+    Bounding this to a few seconds still fails loudly on a genuine "the
+    process was never actually killed" regression; it only tolerates the
+    OS's own brief reap delay under load.
+    """
+    deadline = time.monotonic() + bound_seconds
+    alive = _pid_is_alive(pid)
+    while alive and time.monotonic() < deadline:
+        time.sleep(0.1)
+        alive = _pid_is_alive(pid)
+    return alive
+
+
 class ProcessTreeKillPlatformDispatchTests(unittest.TestCase):
     """Unit coverage of the per-platform kill strategy, independent of the
     real-process reproduction below -- exercises the POSIX branch even when
@@ -855,7 +875,7 @@ class ProcessTreeTimeoutTests(unittest.TestCase):
             )
             grandchild_pid = int(marker.read_text(encoding="utf-8"))
             self.assertFalse(
-                _pid_is_alive(grandchild_pid),
+                _wait_until_dead(grandchild_pid),
                 "grandchild survived process-tree termination",
             )
 

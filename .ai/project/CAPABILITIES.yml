@@ -283,6 +283,7 @@ capabilities:
       - "live in the same container after the fix: tests.test_external_verification -> Ran 82 tests in ~7.3s, OK; ProcessTreeTimeoutTests alone repeated 5x consecutively -> Ran 2 tests in ~4.0s, OK every time (deterministic, not a fluke)"
       - "confirmed production code (run_command()) was never at risk: its own Popen call already used _process_tree_popen_kwargs() from this fix's first version, independent of the test-only defect"
       - "the container's minimal base image (no git preinstalled) separately produced 3 unrelated environment-only failures on first run; confirmed environment-only (not a code defect) by re-running identically after installing git -> all pass, matching that github-actions ubuntu-latest ships git preinstalled"
+      - "PR #599's real CI then found a third, distinct defect under genuine GitHub Actions Linux load (not reproducible in isolated local runs): test_run_command_terminates_the_whole_tree_and_returns_promptly's grandchild-is-dead assertion failed once (pull_request-triggered run) while the identical push-triggered run for the same commit passed -- a timing race between SIGKILL delivery and the OS reaping the process, not the process-group defect above. Fixed with a small bounded poll (_wait_until_dead, 5s); confirmed via two full real-project-suite runs (3144 tests each) executed back to back in a real Docker Linux container under the container's own concurrent-test load, zero recurrence"
       - git diff --check -> clean
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/373
@@ -656,9 +657,27 @@ capabilities:
       path was never at risk. Fixed by isolating the synthetic parent into
       its own session the identical way, confirmed via 5 consecutive real
       Linux runs with zero hangs and zero failures, and confirmed
-      unaffected on Windows afterward. Real macOS confirmation and a fresh
-      real multi-hour Windows external-verification rerun confirming no
-      further overrun remain external-environment work outside this
+      unaffected on Windows afterward. That fix's own follow-up PR then
+      exposed a third, distinct defect purely from running under real
+      GitHub Actions Linux load: `test_run_command_terminates_the_whole_
+      tree_and_returns_promptly` failed once (its `pull_request`-triggered
+      run) while the identical `push`-triggered run for the same commit
+      passed -- a genuine timing race, since the assertion checked whether
+      the grandchild was dead immediately after `run_command()` returned,
+      with no allowance for the OS's own (normally sub-millisecond, but
+      occasionally longer under real contention) delay between SIGKILL
+      delivery and actually reaping the process out of the process table.
+      Fixed with a small bounded poll (`_wait_until_dead`, 5s) around the
+      one assertion actually exposed to this race (the sibling "must still
+      be alive" assertion elsewhere is not, and was left unchanged);
+      confirmed via two full real-project-suite runs (3144 tests each) back
+      to back in a real Docker Linux container under the container's own
+      concurrent-test load, with zero recurrence. Neither of these last two
+      findings could have been caught from this sandbox's Windows-only
+      local runs alone -- both needed the POSIX code path actually
+      scheduled under real load to surface. Real macOS confirmation and a
+      fresh real multi-hour Windows external-verification rerun confirming
+      no further overrun remain external-environment work outside this
       sandbox and are recorded as open, matching the pattern already
       established for #429/#430/#437/#438.
     replacement:

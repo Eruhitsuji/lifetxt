@@ -9416,6 +9416,41 @@ traceability:
         metadata such as configured environment-variable names").
       status: implemented
 
+    - requirement_id: req-report-v2-project-health-render-contract
+      capability_id: cap-report-v2-composition
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/619
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/620
+      changed_files_or_scope:
+        - "Fix `_provider_project_health()` to return `lifetxt.projects.portfolio()`'s row list and aggregate metadata as flat sibling keys (`projects`/`count`/`legend`) instead of nesting the whole portfolio() result under a second `projects` key"
+        - lifetxt/report_v2.py
+        - tests/test_report_v2.py
+      tests_or_evidence:
+        - "tests/test_report_v2.py ProjectHealthProviderTests (6 tests): the provider's data matches a direct portfolio() call field for field; Markdown and HTML rendering of a project-health section no longer raise AttributeError; an empty portfolio renders the existing 'No projects.' placeholder; a single-project portfolio renders exactly one row; compare: previous produces a flat {'count': {'current':..., 'previous':..., 'delta':...}} diff instead of a nested 'projects.count' path"
+        - python -m unittest tests.test_report_v2 -> Ran 37 tests, OK
+        - "confirmed via git stash (production code only, test file kept) that all 6 new tests fail against the pre-fix code: 4 raise the exact production traceback (AttributeError: 'str' object has no attribute 'get') or a KeyError for the missing flat 'count'/'projects' keys, and 2 fail an AssertionError comparing the nested shape against the expected flat one; all 6 pass once the fix is restored"
+        - python -m unittest tests.test_report_v2 tests.test_report_v2_cli tests.test_report_cli tests.test_digest_report_source tests.test_server_init tests.test_server_report -> Ran 150 tests, OK
+        - "live, real disposable fixture reproducing the issue's own profile (review/stats/agenda/project-health/next-actions/health sections, compare: previous): report validate weekly -> OK; report inspect weekly --previous --format json -> succeeded (as before, since inspect never renders); report preview weekly --previous -> succeeded, with the Project Health section correctly listing both projects and a flat 'count: 2 -> 2 (+0)' comparison line, where it previously crashed with the exact reported traceback; report run weekly --previous -> wrote the report file; report send weekly --dry-run (with a valid email config) -> rendered the identical body with no SMTP-specific workaround, confirming send inherits the same fix as preview/run"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check lifetxt/report_v2.py tests/test_report_v2.py -> clean
+      release_or_deployment: null
+      notes: >-
+        Standard assurance bug fix (derived report rendering only; does not
+        mutate authoritative life.txt). `lifetxt.projects.portfolio()` is
+        unmodified -- the fix is entirely in how `_provider_project_health()`
+        adapts its already-correct return value, matching the issue's own
+        "prefer the smallest contract-preserving fix" direction and its
+        first listed option (return the row list plus explicit aggregate
+        metadata, since `portfolio()`'s "count"/"legend" fields are useful
+        JSON/HTML output and `_EXTERNAL_UNSAFE_KEYS` already has a top-level
+        `"projects"` redaction entry confirming a flat `{"projects": [...]}`
+        shape was always the intended contract). `report validate`/
+        `report inspect` were never broken (neither calls a renderer), which
+        is why the issue's own reproduction showed both succeeding while
+        `preview`/`send` crashed. No project-health business logic was
+        duplicated into Report v2.
+      status: implemented
+
     - requirement_id: req-server-init-reporting-section
       capability_id: cap-ubuntu-server-deployment
       epic: https://github.com/Eruhitsuji/lifetxt/issues/609

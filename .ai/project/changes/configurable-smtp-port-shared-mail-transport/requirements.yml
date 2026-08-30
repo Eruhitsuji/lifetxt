@@ -1,0 +1,71 @@
+schema_version: 1
+
+requirements:
+  - id: req-configurable-smtp-port-shared-mail-transport
+    statement: >-
+      lifetxt's email-delivery surfaces (`report send`, `digest --format
+      email`, and notification email) must support an explicit integer SMTP
+      port (e.g. 587 for STARTTLS submission) while preserving current
+      default-port behavior when no port is set, and notification email
+      must stop maintaining its own independent SMTP connect/login/send
+      implementation in favor of the transport already shared by `report
+      send` and digest email.
+    source: https://github.com/Eruhitsuji/lifetxt/issues/616
+    acceptance_criteria:
+      - report send supports an explicitly configured SMTP port
+        (`reports.*.email.smtp_port`) and passes it to the shared SMTP
+        helper.
+      - notification email supports an explicitly configured SMTP port via
+        `--smtp-port` or `notifications.email.smtp_port`.
+      - digest email can pass an explicit SMTP port
+        (`--smtp-port`) through the same shared transport contract.
+      - notification email reuses the same authoritative SMTP transport
+        primitives (`resolve_smtp_credentials`/`_deliver_smtp_message`) as
+        `send_smtp_text`, rather than keeping its own SMTP login/send
+        implementation.
+      - Existing configs/invocations with no port setting preserve current
+        behavior exactly (byte-identical `smtplib.SMTP(host, timeout=10)`
+        call).
+      - STARTTLS on an explicitly configured port such as 587 is covered by
+        tests with mocked SMTP, for all three surfaces.
+      - Invalid port values (out of 1-65535 range, non-integer, or bool)
+        are rejected deterministically before any network access,
+        regardless of `--dry-run`.
+      - Dry-run remains network-free and does not resolve credentials.
+      - SMTP credentials remain environment references; secret values never
+        appear in intentional output/errors. The port itself is not secret
+        and may appear in dry-run/inspect output.
+      - Config schema (`reports.*.email.smtp_port`), registry/config-explain
+        metadata (`notifications.email.smtp_port`), and EN/JA docs are
+        updated together.
+      - Existing report/digest/notification email tests are re-run
+        unmodified and pass; no message-text regression in the
+        already-established dry-run/success wording for any of the three
+        surfaces.
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/616
+    status: implemented
+
+decision_log:
+  - question: >-
+      Converge notification email onto `send_smtp_text()` directly (adopting
+      its generic dry-run/success message wording), or extract a lower-level
+      shared transport primitive that both `send_smtp_text()` and
+      notification email call, each keeping their own message wording?
+    decision: >-
+      Extract a shared, private `_deliver_smtp_message()` transport
+      primitive. `send_smtp_text()`'s dry-run/success text differs from
+      notification email's existing text (subject-based vs. a
+      notification-count-based dry-run line), and an existing test
+      (`test_notify_cli_email_dry_run`) asserts the exact notify-specific
+      wording. Converging onto `send_smtp_text()` verbatim would have
+      required either breaking that assertion or threading notify-specific
+      message templates through `send_smtp_text()`'s own signature, both of
+      which either regress an established test or entangle an unrelated
+      concern into the shared helper's public contract. A lower-level
+      shared primitive satisfies the issue's own "(or the same single
+      authoritative helper)" allowance while keeping message ownership with
+      each caller.
+    decided_by: Eruhitsuji
+    method: engineering judgment during implementation, consistent with the
+      issue's own explicit allowance for an equivalent single authoritative
+      helper

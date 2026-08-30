@@ -1,0 +1,96 @@
+schema_version: 1
+
+verification:
+  executed:
+    - type: unit
+      command: python -m unittest tests.test_mail_delivery
+      requirement_ids:
+        - req-configurable-smtp-port-shared-mail-transport
+      result: 'Ran 25 tests -- OK (12 pre-existing unmodified + 13 new: ValidateSmtpPortTests x8, SendSmtpTextTests port additions x5)'
+      status: passed
+    - type: unit
+      command: python -m unittest tests.test_report_v2_cli
+      requirement_ids:
+        - req-configurable-smtp-port-shared-mail-transport
+      result: 'Ran 56 tests -- OK (50 pre-existing unmodified + 6 new: 4 profile-validation, 2 report-send port passthrough)'
+      status: passed
+    - type: unit
+      command: python -m unittest tests.test_lifetxt.LifeTxtNotifyTests tests.test_lifetxt.LifeTxtShareDigestTemplateTests
+      requirement_ids:
+        - req-configurable-smtp-port-shared-mail-transport
+      result: 'Ran 23 tests -- OK (14 + 9; 7 new across both classes)'
+      status: passed
+    - type: unit
+      command: python -m unittest tests.test_config_validation
+      requirement_ids:
+        - req-configurable-smtp-port-shared-mail-transport
+      result: 'includes 2 new tests (registry entry shape, C003 non-interaction); full class passes'
+      status: passed
+    - type: regression
+      command: python -m unittest tests.test_mail_delivery tests.test_report_v2_cli tests.test_report_v2 tests.test_lifetxt.LifeTxtNotifyTests tests.test_lifetxt.LifeTxtShareDigestTemplateTests tests.test_config_validation tests.test_schema_extensions_v2 tests.test_digest_report_source
+      requirement_ids:
+        - req-configurable-smtp-port-shared-mail-transport
+      result: 'Ran 198 tests -- OK (skipped=5)'
+      status: passed
+    - type: manual
+      command: >-
+        live: python -c script mocking smtplib.SMTP and driving
+        lifetxt.report_cli.main(["send", "weekly"], ...) against a real
+        disposable fixture with reports.weekly.email.smtp_port=587
+      requirement_ids:
+        - req-configurable-smtp-port-shared-mail-transport
+      result: >-
+        smtp_cls.call_args == call('smtp.example.com', 587, timeout=10);
+        exit code 0; "Sent email to me@example.com." printed
+      status: passed
+    - type: manual
+      command: >-
+        live: real terminal -- printf life.txt fixture piped into
+        `python -m lifetxt notify --recipient self --email --email-to
+        me@example.com --smtp-port 587 --dry-run`
+      requirement_ids:
+        - req-configurable-smtp-port-shared-mail-transport
+      result: >-
+        dry-run line reads "... via $LIFETXT_SMTP_HOST port 587:", full
+        notification body follows unchanged
+      status: passed
+    - type: manual
+      command: >-
+        live: same fixture with `--smtp-port 999999`
+      requirement_ids:
+        - req-configurable-smtp-port-shared-mail-transport
+      result: 'ERROR: SMTP port must be between 1 and 65535, got 999999. exit=1, no dry-run text printed'
+      status: passed
+    - type: manual
+      command: >-
+        live: real terminal -- `python -m lifetxt digest life.txt --month
+        2026-06 --format email --to me@example.com --smtp-port 587
+        --dry-run`
+      requirement_ids:
+        - req-configurable-smtp-port-shared-mail-transport
+      result: 'dry-run line reads "... via $LIFETXT_SMTP_HOST port 587:", digest body follows unchanged'
+      status: passed
+    - type: static
+      command: python -m lifetxt check examples/minimal_life.txt
+      requirement_ids:
+        - req-configurable-smtp-port-shared-mail-transport
+      result: 'OK: 10 item(s)'
+      status: passed
+    - type: static
+      command: ruff format --check / ruff check on every changed lifetxt/**/tests/** file
+      requirement_ids:
+        - req-configurable-smtp-port-shared-mail-transport
+      result: clean
+      status: passed
+    - type: static
+      command: scripts/validate_release_docs.py
+      requirement_ids:
+        - req-configurable-smtp-port-shared-mail-transport
+      result: '{"errors": 0, "ok": true}'
+      status: passed
+
+pending:
+  - description: >-
+      Independent security review and Merge Authority approval, per this
+      change's own human_approvals_required.
+    owner: Eruhitsuji

@@ -4137,6 +4137,162 @@ class LifeTxtNotifyTests(unittest.TestCase):
         self.assertEqual(1, code)
         self.assertIn("--email-to", stderr)
 
+    def test_notify_cli_email_dry_run_with_smtp_port(self):
+        text = (
+            "[ ] M Ping id:msg_001 sender:bob recipient:self "
+            "notify_from:2000-01-01T00:00 notify_to:2999-01-01T00:00 "
+            "body:hello\n"
+        )
+
+        stdout, stderr, code = run_cli(
+            "notify",
+            "--recipient",
+            "self",
+            "--email",
+            "--email-to",
+            "me@example.com",
+            "--smtp-port",
+            "587",
+            "--dry-run",
+            input_text=text,
+        )
+
+        self.assertEqual("", stderr)
+        self.assertEqual(0, code)
+        self.assertIn("port 587", stdout)
+
+    def test_notify_cli_email_dry_run_without_smtp_port_omits_port_note(self):
+        text = (
+            "[ ] M Ping id:msg_001 sender:bob recipient:self "
+            "notify_from:2000-01-01T00:00 notify_to:2999-01-01T00:00 "
+            "body:hello\n"
+        )
+
+        stdout, stderr, code = run_cli(
+            "notify",
+            "--recipient",
+            "self",
+            "--email",
+            "--email-to",
+            "me@example.com",
+            "--dry-run",
+            input_text=text,
+        )
+
+        self.assertEqual(0, code)
+        self.assertNotIn("port", stdout)
+
+    def test_notify_cli_invalid_smtp_port_fails_before_dry_run_output(self):
+        text = (
+            "[ ] M Ping id:msg_001 sender:bob recipient:self "
+            "notify_from:2000-01-01T00:00 notify_to:2999-01-01T00:00 "
+            "body:hello\n"
+        )
+
+        stdout, stderr, code = run_cli(
+            "notify",
+            "--recipient",
+            "self",
+            "--email",
+            "--email-to",
+            "me@example.com",
+            "--smtp-port",
+            "99999",
+            "--dry-run",
+            input_text=text,
+        )
+
+        self.assertEqual("", stdout)
+        self.assertEqual(1, code)
+        self.assertIn("SMTP port", stderr)
+
+    def test_notify_email_batch_uses_shared_smtp_transport_with_port(self):
+        from lifetxt import cli as lifetxt_cli
+
+        text = (
+            "[ ] M Ping id:msg_001 sender:bob recipient:self "
+            "notify_at:2026-06-06T09:00 body:hello\n"
+        )
+        items, diagnostics = parse_text(text)
+        self.assertFalse(any(d.severity == "error" for d in diagnostics))
+        from lifetxt.notifier import notification_records
+
+        records = notification_records(
+            items, recipient="self", now=datetime(2026, 6, 6, 9, 0)
+        )
+        self.assertEqual(1, len(records))
+
+        args = argparse.Namespace(
+            email_to="me@example.com",
+            smtp_host_env="H",
+            smtp_user_env="U",
+            smtp_pass_env="P",
+            smtp_port=None,
+            email_subject=None,
+            dry_run=False,
+        )
+        smtp_instance = mock.MagicMock()
+        smtp_instance.__enter__.return_value = smtp_instance
+        output = io.StringIO()
+        with mock.patch("smtplib.SMTP", return_value=smtp_instance) as smtp_cls:
+            with mock.patch.dict(
+                os.environ,
+                {"H": "smtp.example.com", "U": "me", "P": "secret"},
+                clear=True,
+            ):
+                result = lifetxt_cli._send_notification_email_batch(
+                    records,
+                    recipient="self",
+                    args=args,
+                    email_config={"smtp_port": 587},
+                    output=output,
+                )
+        self.assertTrue(result)
+        smtp_cls.assert_called_once_with("smtp.example.com", 587, timeout=10)
+        smtp_instance.starttls.assert_called_once()
+        smtp_instance.login.assert_called_once_with("me", "secret")
+        self.assertIn("Sent notification email to me@example.com", output.getvalue())
+
+    def test_notify_email_batch_without_port_preserves_default_smtplib_call(self):
+        from lifetxt import cli as lifetxt_cli
+
+        text = (
+            "[ ] M Ping id:msg_001 sender:bob recipient:self "
+            "notify_at:2026-06-06T09:00 body:hello\n"
+        )
+        items, diagnostics = parse_text(text)
+        from lifetxt.notifier import notification_records
+
+        records = notification_records(
+            items, recipient="self", now=datetime(2026, 6, 6, 9, 0)
+        )
+
+        args = argparse.Namespace(
+            email_to="me@example.com",
+            smtp_host_env="H",
+            smtp_user_env="U",
+            smtp_pass_env="P",
+            smtp_port=None,
+            email_subject=None,
+            dry_run=False,
+        )
+        smtp_instance = mock.MagicMock()
+        smtp_instance.__enter__.return_value = smtp_instance
+        with mock.patch("smtplib.SMTP", return_value=smtp_instance) as smtp_cls:
+            with mock.patch.dict(
+                os.environ,
+                {"H": "smtp.example.com", "U": "me", "P": "secret"},
+                clear=True,
+            ):
+                lifetxt_cli._send_notification_email_batch(
+                    records,
+                    recipient="self",
+                    args=args,
+                    email_config={},
+                    output=io.StringIO(),
+                )
+        smtp_cls.assert_called_once_with("smtp.example.com", timeout=10)
+
 
 class LifeTxtWebConfigAndCheckLineTests(unittest.TestCase):
     def test_check_line_valid_item_returns_ok(self):
@@ -11980,6 +12136,50 @@ class LifeTxtShareDigestTemplateTests(unittest.TestCase):
             )
             self.assertEqual(rc, 1)
             self.assertIn("LIFETXT_TEST_MISSING_WEBHOOK_ENV", err)
+        finally:
+            os.unlink(path)
+
+    def test_digest_email_dry_run_with_smtp_port(self):
+        path = self._make_file("[x] T Done done:2026-06-10\n")
+        try:
+            out, err, rc = run_cli(
+                "digest",
+                path,
+                "--month",
+                "2026-06",
+                "--format",
+                "email",
+                "--to",
+                "me@example.com",
+                "--smtp-port",
+                "587",
+                "--dry-run",
+            )
+            self.assertEqual(rc, 0, err)
+            self.assertIn("[dry-run]", out)
+            self.assertIn("port 587", out)
+        finally:
+            os.unlink(path)
+
+    def test_digest_email_invalid_smtp_port_fails_before_dry_run_output(self):
+        path = self._make_file("[x] T Done done:2026-06-10\n")
+        try:
+            out, err, rc = run_cli(
+                "digest",
+                path,
+                "--month",
+                "2026-06",
+                "--format",
+                "email",
+                "--to",
+                "me@example.com",
+                "--smtp-port",
+                "0",
+                "--dry-run",
+            )
+            self.assertEqual("", out)
+            self.assertEqual(1, rc)
+            self.assertIn("SMTP port", err)
         finally:
             os.unlink(path)
 

@@ -6562,6 +6562,7 @@ capabilities:
       - req-report-v2-shared-scope
       - req-report-readonly-validate
       - req-report-resolved-inspection
+      - req-report-v2-project-health-render-contract
     implementation_locations:
       - lifetxt/report_v2.py
       - lifetxt/health.py
@@ -6626,6 +6627,11 @@ capabilities:
       - python -m unittest tests.test_report_v2 tests.test_report_v2_cli tests.test_report_cli tests.test_digest_report_source tests.test_server_init tests.test_server_report -> Ran 144 tests, OK
       - "manual: computed the docs/en/reports.md and docs/ja/reports.md anchors for the new sections directly with the release-doc validator's own slug() algorithm (docs/ja/reports.md is outside its checked-document set; docs/en/reports.md's anchors are exercised by the validator's own generic anchor check since docs/en/cli.md links into it)"
       - scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> {"errors":0,"ok":true}
+      - "#619: tests/test_report_v2.py ProjectHealthProviderTests (6 tests): the provider's `projects`/`count`/`legend` fields match a direct portfolio() call and every project row is a dict; Markdown and HTML rendering no longer crash; an empty portfolio renders the existing 'No projects.' placeholder; a single-project portfolio renders one row; `compare: previous` against project-health diffs the flat `count` field (`{'count': {...}}`), not a nested `projects.count` path"
+      - "#619: confirmed via git stash (production code only, tests kept) that all 6 new tests fail against the pre-fix code with the exact production AttributeError ('str' object has no attribute 'get') or a KeyError/AssertionError on the nested shape, then pass once the fix is restored"
+      - "#619: python -m unittest tests.test_report_v2 tests.test_report_v2_cli tests.test_report_cli tests.test_digest_report_source tests.test_server_init tests.test_server_report -> Ran 150 tests, OK"
+      - "#619: live, real disposable fixture matching the issue's own reproduction profile (review/stats/agenda/project-health/next-actions/health sections, compare: previous) -- report validate/inspect/preview/run all succeeded; report preview showed the corrected Project Health section body with a flat `count: 2 -> 2 (+0)` comparison line; report send --dry-run (with a valid email config) rendered the identical body with no SMTP-specific workaround"
+      - "#619: python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s); ruff format --check / ruff check lifetxt/report_v2.py tests/test_report_v2.py -> clean"
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/600
       - https://github.com/Eruhitsuji/lifetxt/issues/601
@@ -6640,6 +6646,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/614
       - https://github.com/Eruhitsuji/lifetxt/issues/615
       - https://github.com/Eruhitsuji/lifetxt/issues/616
+      - https://github.com/Eruhitsuji/lifetxt/issues/619
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/612
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
@@ -6775,6 +6782,32 @@ capabilities:
       `cap-configurable-smtp-mail-transport` capability rather than
       duplicated here, since it is a cross-cutting concern spanning three
       surfaces, not specific to Report v2.
+
+      #619 (a production bug found after #612 merged) fixed a
+      provider/renderer contract mismatch in `_provider_project_health()`:
+      it wrapped `lifetxt.projects.portfolio()`'s whole result
+      (`{"count":..., "projects": [...], "legend": {...}}`) under a second
+      `"projects"` key instead of returning that shape directly, so the
+      Markdown/HTML renderer's `row.get(...)` calls iterated the outer
+      mapping's string keys (`"count"`, `"projects"`, `"legend"`) as if they
+      were project rows, raising `AttributeError: 'str' object has no
+      attribute 'get'` on any profile containing a `project-health` section.
+      `validate`/`inspect` never called a renderer, so both had always
+      reported success while `preview`/`run`/`send` crashed -- exactly the
+      asymmetry the issue reported. Fixed with the smallest contract-
+      preserving change the issue itself recommended: the provider now
+      extracts `result["projects"]` (the row list) directly and preserves
+      `count`/`legend` as flat sibling keys, matching the shape every other
+      renderer (`_render_section_markdown`'s other section branches) already
+      assumes and matching `_EXTERNAL_UNSAFE_KEYS`'s existing top-level
+      `"projects"` redaction entry (confirming a flat `{"projects": [...]}`
+      shape, not a nested one, was always the intended external-facing
+      contract). No project-health business logic was duplicated or
+      changed; `lifetxt.projects.portfolio()` itself is untouched. The fix
+      also changes `compare: previous`'s diff key for this section from the
+      accidental `"projects.count"` (produced by the generic recursive
+      `_numeric_diff` walking into the old nested shape) to the intended
+      flat `"count"`, confirmed by a new comparison regression test.
     replacement:
       replaces: []
       replaced_by: null

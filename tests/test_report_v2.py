@@ -220,6 +220,117 @@ class ProviderCompositionTests(unittest.TestCase):
             )
 
 
+class ProjectHealthProviderTests(unittest.TestCase):
+    """Regression coverage for #619: project-health nested portfolio() under a
+    second "projects" key, so the Markdown/HTML renderer's `row.get(...)`
+    calls iterated string keys ("count", "projects", "legend") instead of
+    project row dicts, raising AttributeError.
+    """
+
+    def _single_project_context(self, count):
+        lines = "".join("[ ] T Task %d project:solo\n" % i for i in range(count))
+        items, _diag = parse_text(lines)
+        reference_date = datetime.date(2026, 8, 26)
+        start, end = resolve_period("weekly", reference_date)
+        return ReportContext(items, {}, reference_date, "weekly", start, end, "UTC")
+
+    def test_provider_returns_the_flat_row_list_from_portfolio(self):
+        from lifetxt.projects import portfolio
+
+        context = _context()
+        model = build_report_model(
+            "weekly-projects",
+            {"period": "weekly", "sections": [{"type": "project-health"}]},
+            context,
+            datetime.datetime(2026, 8, 26, 9, 0),
+        )
+        data = model["sections"][0]["data"]
+        direct = portfolio(context.items, config={}, today=context.reference_date)
+        self.assertEqual(data["projects"], direct["projects"])
+        self.assertEqual(data["count"], direct["count"])
+        self.assertEqual(data["legend"], direct["legend"])
+        for row in data["projects"]:
+            self.assertIsInstance(row, dict)
+
+    def test_markdown_renders_multiple_projects_without_crashing(self):
+        context = _context()
+        model = build_report_model(
+            "weekly-projects",
+            {"period": "weekly", "sections": [{"type": "project-health"}]},
+            context,
+            datetime.datetime(2026, 8, 26, 9, 0),
+        )
+        text = render_markdown(model)
+        self.assertIn("home", text)
+        self.assertIn("work", text)
+
+    def test_html_renders_without_crashing(self):
+        context = _context()
+        model = build_report_model(
+            "weekly-projects",
+            {"period": "weekly", "sections": [{"type": "project-health"}]},
+            context,
+            datetime.datetime(2026, 8, 26, 9, 0),
+        )
+        text = render_html(model)
+        self.assertIn("home", text)
+
+    def test_empty_portfolio_renders_placeholder(self):
+        items, _diag = parse_text("[ ] T No project task\n")
+        reference_date = datetime.date(2026, 8, 26)
+        start, end = resolve_period("weekly", reference_date)
+        context = ReportContext(items, {}, reference_date, "weekly", start, end, "UTC")
+        model = build_report_model(
+            "weekly-projects",
+            {"period": "weekly", "sections": [{"type": "project-health"}]},
+            context,
+            datetime.datetime(2026, 8, 26, 9, 0),
+        )
+        data = model["sections"][0]["data"]
+        self.assertEqual(data["projects"], [])
+        self.assertEqual(data["count"], 0)
+        self.assertIn("No projects.", render_markdown(model))
+
+    def test_one_project_renders_a_single_row(self):
+        context = self._single_project_context(1)
+        model = build_report_model(
+            "weekly-projects",
+            {"period": "weekly", "sections": [{"type": "project-health"}]},
+            context,
+            datetime.datetime(2026, 8, 26, 9, 0),
+        )
+        data = model["sections"][0]["data"]
+        self.assertEqual(data["count"], 1)
+        self.assertEqual(len(data["projects"]), 1)
+        self.assertIn("solo", render_markdown(model))
+
+    def test_compare_previous_diffs_the_flat_count_field(self):
+        context = _context()
+        prev_start, prev_end = previous_period(
+            context.period, context.period_start, context.period_end
+        )
+        previous_context = context.with_period(prev_start, prev_end)
+        model = build_report_model(
+            "weekly-projects",
+            {
+                "period": "weekly",
+                "sections": [{"type": "project-health"}],
+                "compare": "previous",
+            },
+            context,
+            datetime.datetime(2026, 8, 26, 9, 0),
+            previous_context=previous_context,
+        )
+        # Must render successfully with a comparison attached, and must
+        # never crash the way an unrendered comparison-only test would miss.
+        render_markdown(model)
+        compare = model["sections"][0]["compare"]
+        self.assertEqual(
+            compare,
+            {"count": {"current": 2, "previous": 2, "delta": 0}},
+        )
+
+
 class ComparisonTests(unittest.TestCase):
     def test_previous_context_attaches_numeric_diff(self):
         context = _context()

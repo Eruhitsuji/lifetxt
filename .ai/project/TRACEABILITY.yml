@@ -9058,7 +9058,7 @@ traceability:
       capability_id: cap-report-v2-composition
       epic: https://github.com/Eruhitsuji/lifetxt/issues/600
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/601
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/612
       changed_files_or_scope:
         - "Add lifetxt/report_v2.py: ReportContext (parse life.txt once), a section-provider registry adapting review/stats/agenda into a Report Model, and a Markdown renderer as pure presentation"
         - lifetxt/report_v2.py
@@ -9070,18 +9070,17 @@ traceability:
         - ruff format --check / ruff check lifetxt/report_v2.py tests/test_report_v2.py -> clean
       release_or_deployment: null
       notes: >-
-        Not yet wired into `lifetxt report`; wiring lands with
+        Not yet wired into `lifetxt report` by this commit alone; wiring
+        landed in the same PR via
         req-report-v2-period-comparison-and-backfill's #604 slice
-        (report_cli.py's `sections`-presence dispatch). pull_request is
-        filled in once the pull request implementing this entry (the final
-        feature/report-v2-distribution -> main PR) is opened.
+        (report_cli.py's `sections`-presence dispatch).
       status: implemented
 
     - requirement_id: req-report-v2-period-comparison-and-backfill
       capability_id: cap-report-v2-composition
       epic: https://github.com/Eruhitsuji/lifetxt/issues/600
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/604
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/612
       changed_files_or_scope:
         - Add previous_period()/next_period() and a generic numeric-diff
           comparison over two section results in report_v2.py
@@ -9103,15 +9102,14 @@ traceability:
         results (`{"current":..., "previous":..., "delta":...}` per matching
         numeric field), not a per-section comparison implementation.
         `--date`/`--previous` apply uniformly to both v1 and v2 profiles at
-        the `report_cli.py` command layer. pull_request is filled in once
-        the final PR is opened.
+        the `report_cli.py` command layer.
       status: implemented
 
     - requirement_id: req-report-v2-additional-section-providers
       capability_id: cap-report-v2-composition
       epic: https://github.com/Eruhitsuji/lifetxt/issues/600
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/605
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/612
       changed_files_or_scope:
         - Add command-center/project-health/next-actions/inbox/ticket-attention
           section providers to report_v2.py's SECTION_PROVIDERS registry
@@ -9131,15 +9129,14 @@ traceability:
         re-deriving the identical shape from public building blocks, e.g.
         `mcp.py` importing `webapp._subgraph`); `project-health` reuses the
         fully public `lifetxt.projects.portfolio()`. No bucket/health/
-        actionable-item rule is reimplemented. pull_request is filled in
-        once the final PR is opened.
+        actionable-item rule is reimplemented.
       status: implemented
 
     - requirement_id: req-report-v2-health-domain-function
       capability_id: cap-report-v2-composition
       epic: https://github.com/Eruhitsuji/lifetxt/issues/600
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/606
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/612
       changed_files_or_scope:
         - Extract the CLI `health` command's inline W301-W305 finding
           construction into lifetxt/health.py::build_health(), matching the
@@ -9159,15 +9156,14 @@ traceability:
         `build_health()` is a pure extraction: the CLI command's W301-W305
         rules, dependency-blocker reuse, and finding shape are unchanged,
         confirmed by re-running the complete pre-existing health CLI test
-        suite with no modification. pull_request is filled in once the
-        final PR is opened.
+        suite with no modification.
       status: implemented
 
     - requirement_id: req-report-v2-json-html-renderers
       capability_id: cap-report-v2-composition
       epic: https://github.com/Eruhitsuji/lifetxt/issues/600
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/607
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/612
       changed_files_or_scope:
         - Add render_json()/render_html() as pure presentation functions over
           the already-built Report Model, plus a `format` profile key and CLI
@@ -9191,15 +9187,14 @@ traceability:
         profile is rejected. Both renderers operate purely on the model
         dict already built by build_report_model(), confirmed by a
         dedicated test that mutating the model after building it changes
-        the rendered output with no re-derivation. pull_request is filled
-        in once the final PR is opened.
+        the rendered output with no re-derivation.
       status: implemented
 
     - requirement_id: req-report-v2-external-safe-audience
       capability_id: cap-report-v2-composition
       epic: https://github.com/Eruhitsuji/lifetxt/issues/600
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/603
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/612
       changed_files_or_scope:
         - Add an `audience` profile key (private/external), section-type
           allowlisting for external, and redact_for_external_audience() plus
@@ -9223,15 +9218,14 @@ traceability:
         and passed through the existing
         `lifetxt.remote_access.redact_remote_value()` as defense in depth.
         Not a general redaction switch over the v1 `share` renderer -- a
-        distinct, narrower trust-boundary contract. pull_request is filled
-        in once the final PR is opened.
+        distinct, narrower trust-boundary contract.
       status: implemented
 
     - requirement_id: req-report-v2-email-delivery
       capability_id: cap-report-v2-composition
       epic: https://github.com/Eruhitsuji/lifetxt/issues/600
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/602
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/612
       changed_files_or_scope:
         - Add lifetxt/mail_delivery.py (send_smtp_text/send_slack_webhook/append_local_file)
           and refactor command_digest's email/Slack/file branches and
@@ -9259,15 +9253,14 @@ traceability:
         `split_email_addresses` via `_split_email_addresses`. `--dry-run`
         no longer requires SMTP environment variables to be set first (a
         strict improvement over the prior digest email branch's behavior;
-        no existing test relied on the old requirement). pull_request is
-        filled in once the final PR is opened.
+        no existing test relied on the old requirement).
       status: implemented
 
     - requirement_id: req-digest-report-source
       capability_id: cap-report-v2-composition
       epic: https://github.com/Eruhitsuji/lifetxt/issues/600
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/608
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/612
       changed_files_or_scope:
         - Add `digest --report NAME [--date|--previous]`, reusing
           report_cli._render_named_report as the message source and the
@@ -9285,15 +9278,14 @@ traceability:
         `preview`/`run`/`send` already call -- so `digest --report` never
         gets a second report-composition/rendering implementation.
         `--week`/`--month`/`--project` are documented as ignored (not
-        rejected) when `--report` is given. pull_request is filled in once
-        the final PR is opened.
+        rejected) when `--report` is given.
       status: implemented
 
     - requirement_id: req-server-init-reporting-section
       capability_id: cap-ubuntu-server-deployment
       epic: https://github.com/Eruhitsuji/lifetxt/issues/609
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/610
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/612
       changed_files_or_scope:
         - "Add an opt-in `reporting` section to server-init: profile validation via report_cli._profiles(), a shared report_service_unit_text()/report_timer_unit_text() systemd unit generator, and build_plan()/enable-loop wiring"
         - lifetxt/server_init.py
@@ -9313,15 +9305,14 @@ traceability:
         `report_timer_unit_text()` are public (no leading underscore) so
         `server-report` (#611) can reuse them without a second
         implementation. No resident lifetxt scheduler is added; systemd
-        timers own scheduling. pull_request is filled in once the final PR
-        is opened.
+        timers own scheduling.
       status: implemented
 
     - requirement_id: req-server-report-command
       capability_id: cap-ubuntu-server-deployment
       epic: https://github.com/Eruhitsuji/lifetxt/issues/609
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/611
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/612
       changed_files_or_scope:
         - Add `lifetxt server-report plan|install|remove`, a bounded
           plan-first deployment operation installing/removing one systemd
@@ -9349,15 +9340,14 @@ traceability:
         itself is wired) rather than growing `cli.py`'s already very large
         argparse tree. `NAME` must already exist in the target application
         config and pass real Report v2 validation; `server-report` never
-        creates or edits a report profile. pull_request is filled in once
-        the final PR is opened.
+        creates or edits a report profile.
       status: implemented
 
     - requirement_id: req-report-v2-distribution-batch-tracking
       capability_id: cap-report-v2-composition
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/600
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/612
       changed_files_or_scope:
         - "Document the #600/#609 umbrella tracking issues' closure: every child issue (#601-#608, #610, #611) landed as its own commit on feature/report-v2-distribution, merged into one final PR"
         - docs/en/reports.md
@@ -9366,20 +9356,28 @@ traceability:
       tests_or_evidence:
         - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
         - "manual: every new cross-reference anchor verified against the validator's own slug() algorithm"
-        - MPLBACKEND=Agg python -m unittest discover -> full suite green (see the batch-integration entry below for the exact count once recorded)
+        - MPLBACKEND=Agg python -m unittest discover -> Ran 3236 tests, OK (skipped=185)
+        - python -m unittest tests.test_traceability_gate tests.test_change_package_closeout -> OK
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on every changed file -> clean
       release_or_deployment: >-
         This entry documents the final feature/report-v2-distribution -> main
-        PR itself, which #600 and #609 are pure umbrella/tracking issues for
-        (per their own text: "This is an umbrella/product-tracking Issue
-        only. It does not authorize one broad implementation PR.").
+        PR itself (PR #612), which #600 and #609 are pure umbrella/tracking
+        issues for (per their own text: "This is an umbrella/product-tracking
+        Issue only. It does not authorize one broad implementation PR.").
       notes: >-
         Follows the multi-PR integration-branch pattern established
         throughout this file (see e.g. req-remote-batch-integration): every
         requirement entry above correctly names its own implementing issue,
         and none of them is #600/#609 themselves, since those are
-        deliberately non-implementing umbrella issues. This entry, plus the
-        batch-integration entry recorded once the final PR exists, close
-        that gap. pull_request is filled in once the final PR is opened.
+        deliberately non-implementing umbrella issues. This entry serves as
+        both #600's docs/tracking record and this batch's own
+        batch-integration entry. Sub-branches were merged into the
+        integration branch via local git merge and push rather than
+        GitHub's PR-merge action, matching this repository's own
+        established pattern for this workflow shape; each sub-branch merge
+        is expected to auto-detect as "merged" on GitHub once the
+        integration branch's commits are reachable from main.
       status: implemented
 
 required_chain:

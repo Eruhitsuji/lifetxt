@@ -60,6 +60,13 @@ OUTPUT_FIELDS = frozenset(("date", "year", "month", "iso_year", "iso_week"))
 EMAIL_CONFIG_KEYS = frozenset(
     ("to", "subject", "smtp_host_env", "smtp_user_env", "smtp_pass_env")
 )
+# A fixed, arbitrary anchor date used only to exercise `output` placeholder
+# substitution during `report validate`/`report inspect`'s output-template
+# check. Any date works equally well for that check (it only rejects unknown
+# placeholder names and format specs, never a specific date value); using a
+# fixed one keeps validation fully deterministic and avoids resolving the
+# real "today" (and the timezone/life.txt read that would require).
+_VALIDATION_ANCHOR_DATE = datetime.date(2000, 1, 3)
 
 resolve_period = report_v2.resolve_period
 
@@ -104,6 +111,44 @@ def build_parser():
         help="Render and print what would be sent without contacting SMTP.",
     )
     send.set_defaults(func=_command_send)
+
+    validate = subparsers.add_parser(
+        "validate",
+        help=(
+            "Validate a report profile's configuration without rendering, "
+            "writing, or connecting to anything."
+        ),
+    )
+    validate.add_argument("name", nargs="?", help="Configured report profile name.")
+    validate.add_argument(
+        "--all",
+        action="store_true",
+        help="Validate every configured report profile instead of one.",
+    )
+    validate.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Output format for validation results.",
+    )
+    validate.set_defaults(func=_command_validate)
+
+    inspect_parser = subparsers.add_parser(
+        "inspect",
+        help=(
+            "Show one report profile's resolved period, output path, scope, "
+            "and providers without rendering or writing anything."
+        ),
+    )
+    inspect_parser.add_argument("name", help="Configured report profile name.")
+    _add_period_selection_arguments(inspect_parser)
+    inspect_parser.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Output format for the inspection result.",
+    )
+    inspect_parser.set_defaults(func=_command_inspect)
     return parser
 
 
@@ -286,13 +331,57 @@ def _validate_profile(name, value):
 
 
 def _profile_named(config_data, name):
-    profiles = _profiles(config_data)
-    if name not in profiles:
-        available = ", ".join(sorted(profiles)) or "(none configured)"
+    # Deliberately validates only the requested profile (via `_raw_profiles`
+    # + `_validate_profile`), not every configured profile: an unrelated
+    # profile's invalid configuration must never block `preview`/`run`/
+    # `send`/`inspect` for a profile that is itself perfectly valid (#615).
+    raw = _raw_profiles(config_data)
+    if name not in raw:
+        available = ", ".join(sorted(raw)) or "(none configured)"
         raise ValueError(
             "Report profile not found: %s. Available: %s" % (name, available)
         )
-    return profiles[name]
+    return _validate_profile(name, raw[name])
+
+
+def _raw_profiles(config_data):
+    """Return the unvalidated ``reports`` mapping (name -> raw profile dict).
+
+    Unlike :func:`_profiles`, this never validates individual profiles --
+    only that ``reports`` itself is present and shaped as an object -- so
+    callers such as ``report validate --all`` can validate each profile
+    independently and report every failure instead of stopping at the
+    first one.
+    """
+    value = config_data.get("reports")
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        raise ValueError("Config reports must be an object of named report profiles.")
+    return value
+
+
+def _validate_profile_safe(name, value):
+    """Validate one raw profile dict, never raising.
+
+    Returns ``(ok, error_message_or_None)``. Reuses the exact
+    :func:`_validate_profile` validator ``preview``/``run``/``send`` already
+    call, plus an output-template placeholder check via
+    :func:`resolve_output_template` against a fixed, arbitrary anchor date --
+    purely a syntax check, so it performs no life.txt parsing, provider
+    execution, file write, or network access.
+    """
+    try:
+        profile = _validate_profile(name, value)
+    except ValueError as exc:
+        return False, str(exc)
+    template = profile.get("output")
+    if template:
+        try:
+            resolve_output_template(template, _VALIDATION_ANCHOR_DATE)
+        except ValueError as exc:
+            return False, str(exc)
+    return True, None
 
 
 def _parse_anchor_date(value):
@@ -670,4 +759,232 @@ def _command_send(args, config_data, config_path=None, workspace_name=None):
         dry_run=getattr(args, "dry_run", False),
         output=sys.stdout,
     )
+    return 0
+
+
+def _command_validate(args, config_data, config_path=None, workspace_name=None):
+    if args.all and args.name:
+        raise ValueError("Use either NAME or --all with `report validate`, not both.")
+    if not args.all and not args.name:
+        raise ValueError("`report validate` requires NAME or --all.")
+    as_json = args.format == "json"
+    if args.all:
+        return _command_validate_all(config_data, as_json=as_json)
+
+    try:
+        raw = _raw_profiles(config_data)
+    except ValueError as exc:
+        return _write_validation_result(args.name, False, str(exc), as_json=as_json)
+    if args.name not in raw:
+        available = ", ".join(sorted(raw)) or "(none configured)"
+        raise ValueError(
+            "Report profile not found: %s. Available: %s" % (args.name, available)
+        )
+    ok, error = _validate_profile_safe(args.name, raw[args.name])
+    return _write_validation_result(args.name, ok, error, as_json=as_json)
+
+
+def _write_validation_result(name, ok, error, as_json=False):
+    if as_json:
+        payload = {"name": name, "ok": ok}
+        if error is not None:
+            payload["error"] = error
+        write_console_text(sys.stdout, json.dumps(payload, ensure_ascii=False) + "\n")
+    elif ok:
+        write_console_text(sys.stdout, "%s: OK\n" % name)
+    else:
+        write_console_text(sys.stdout, "%s: FAIL: %s\n" % (name, error))
+    return 0 if ok else 1
+
+
+def _command_validate_all(config_data, as_json=False):
+    try:
+        raw = _raw_profiles(config_data)
+    except ValueError as exc:
+        if as_json:
+            write_console_text(
+                sys.stdout,
+                json.dumps(
+                    {"ok": False, "error": str(exc), "profiles": []},
+                    ensure_ascii=False,
+                )
+                + "\n",
+            )
+        else:
+            write_console_text(sys.stdout, "FAIL: %s\n" % exc)
+        return 1
+    if not raw:
+        if as_json:
+            write_console_text(
+                sys.stdout, json.dumps({"ok": True, "profiles": []}) + "\n"
+            )
+        else:
+            write_console_text(sys.stdout, "No report profiles configured.\n")
+        return 0
+
+    results = []
+    any_failed = False
+    for name in sorted(raw):
+        text_name = str(name).strip()
+        if not text_name:
+            results.append(
+                (str(name), False, "Report profile names must not be empty.")
+            )
+            any_failed = True
+            continue
+        ok, error = _validate_profile_safe(text_name, raw[name])
+        results.append((text_name, ok, error))
+        if not ok:
+            any_failed = True
+
+    if as_json:
+        payload = {
+            "ok": not any_failed,
+            "profiles": [
+                (
+                    {"name": name, "ok": ok}
+                    if error is None
+                    else {"name": name, "ok": ok, "error": error}
+                )
+                for name, ok, error in results
+            ],
+        }
+        write_console_text(sys.stdout, json.dumps(payload, ensure_ascii=False) + "\n")
+    else:
+        lines = [
+            "%s: OK" % name if ok else "%s: FAIL: %s" % (name, error)
+            for name, ok, error in results
+        ]
+        write_console_text(sys.stdout, "\n".join(lines) + "\n")
+    return 1 if any_failed else 0
+
+
+def _inspect_sections(profile):
+    """Return each configured section's type/title/options (#615).
+
+    Reuses `report_v2`'s own reserved-key set so "options" here is exactly
+    the dict each section provider actually receives at render time --
+    never a second, independently maintained notion of what counts as an
+    option.
+    """
+    reserved = report_v2._reserved_option_keys()
+    sections = []
+    for section in profile.get("sections") or []:
+        sections.append(
+            {
+                "type": section.get("type"),
+                "title": section.get("title"),
+                "options": {
+                    key: value for key, value in section.items() if key not in reserved
+                },
+            }
+        )
+    return sections
+
+
+def _command_inspect(args, config_data, config_path=None, workspace_name=None):
+    """Show a report profile's resolved plan without executing it (#615).
+
+    Reuses the same profile validation, period resolver, and output
+    resolver `preview`/`run` use -- `_profile_named`/`_period_context`/
+    `_resolved_output` -- rather than a second, parallel execution-plan
+    implementation. Never calls `render_report`/`render_report_v2`, so no
+    section provider runs and no file is written; the only life.txt access
+    is the same small timezone-directive read `_period_context` itself
+    already performs to resolve period boundaries. Secret env var *names*
+    (e.g. `smtp_host_env`) are shown; the referenced secret *values* never
+    are.
+    """
+    profile = _profile_named(config_data, args.name)
+    date_override = getattr(args, "date", None)
+    previous = getattr(args, "previous", False)
+    timezone_name, start, end, generated = _period_context(
+        profile, config_data, date_override=date_override, previous=previous
+    )
+    is_v2 = "sections" in profile
+
+    output_template = profile.get("output")
+    resolved_output = None
+    output_error = None
+    if output_template:
+        try:
+            resolved_output = _resolved_output(profile, start, config_data)
+        except ValueError as exc:
+            output_error = str(exc)
+
+    if is_v2:
+        schema = report_v2.REPORT_SCHEMA_V2
+        scope = dict(profile.get("scope") or {})
+    else:
+        schema = REPORT_SCHEMA
+        scope = {
+            key: profile[key]
+            for key in ("project", "type", "tag", "open")
+            if key in profile
+        }
+
+    result = {
+        "report": args.name,
+        "schema": schema,
+        "period": {
+            "type": profile["period"],
+            "start": start.isoformat(),
+            "end": end.isoformat(),
+            "timezone": timezone_name,
+            "generated_at": generated.isoformat(timespec="seconds"),
+        },
+        "output": (
+            {
+                "template": output_template,
+                "path": resolved_output,
+                "mode": profile["mode"],
+                "error": output_error,
+            }
+            if output_template
+            else None
+        ),
+        "scope": scope,
+        "email_configured": bool(profile.get("email")),
+    }
+    if is_v2:
+        result["sections"] = _inspect_sections(profile)
+        result["format"] = profile.get("format", "markdown")
+        result["audience"] = profile.get("audience", "private")
+        result["compare"] = profile.get("compare")
+
+    if args.format == "json":
+        write_console_text(sys.stdout, json.dumps(result, ensure_ascii=False) + "\n")
+        return 0
+
+    lines = [
+        "%s: %s (%s)" % (args.name, schema, profile["period"]),
+        "  period: %s .. %s (%s)" % (start.isoformat(), end.isoformat(), timezone_name),
+        "  mode: %s" % profile["mode"],
+    ]
+    if output_template:
+        if output_error:
+            lines.append(
+                "  output: %s -> INVALID: %s" % (output_template, output_error)
+            )
+        else:
+            lines.append("  output: %s -> %s" % (output_template, resolved_output))
+    else:
+        lines.append("  output: (none configured)")
+    if is_v2:
+        section_text = ", ".join(section["type"] for section in result["sections"])
+        lines.append("  sections: %s" % (section_text or "(none)"))
+        lines.append("  format: %s" % result["format"])
+        lines.append("  audience: %s" % result["audience"])
+        lines.append("  compare: %s" % (result["compare"] or "(none)"))
+    if scope:
+        scope_text = ", ".join(
+            "%s=%s" % (key, value) for key, value in sorted(scope.items())
+        )
+        lines.append("  scope: %s" % scope_text)
+    else:
+        lines.append("  scope: (none)")
+    lines.append(
+        "  email: %s" % ("configured" if result["email_configured"] else "(none)")
+    )
+    write_console_text(sys.stdout, "\n".join(lines) + "\n")
     return 0

@@ -3124,8 +3124,9 @@ python -m lifetxt digest life.txt --week --format file --path digest-log.md
 Each channel validates its required environment variables (or `--to`/`--path`)
 **before** making any network request or writing any file, so a missing
 secret fails fast with a clear error rather than partway through delivery.
-See [reports.md](reports.md) for `lifetxt report list|preview|run|send` and
-the full Report v2 `sections`/`format`/`audience`/`compare`/`email` contract.
+See [reports.md](reports.md) for `lifetxt report
+list|preview|run|send|validate|inspect` and the full Report v2 `sections`/
+`format`/`audience`/`compare`/`scope`/`email` contract.
 
 ### `template`
 
@@ -3256,6 +3257,7 @@ warrant a dedicated guide:
 | `ticket`, `version`, `sprint` | [§19](#19-development-tickets-ticket), [tickets.md](tickets.md) |
 | `remote` | [§20](#20-remote-safe-mode-client-remote), [remote.md](remote.md), [remote-client-writes.md](remote-client-writes.md) |
 | `vm` (opt-in Turing-complete VM) | [vm.md](vm.md) |
+| `report list\|preview\|run\|send\|validate\|inspect` (named periodic reports) | [reports.md](reports.md) |
 
 `python -m lifetxt --help` lists every command; each subcommand's own
 `--help` is always authoritative for its exact flags.

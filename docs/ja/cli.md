@@ -2735,8 +2735,8 @@ python -m lifetxt digest life.txt --week --format file --path digest-log.md
 各 channel は、network request や書き込みを行う **前に** 必要な環境変数
 (または `--to`/`--path`) を検証します。そのため secret が不足している
 場合は配信途中でなく即座に明確なエラーで失敗します。
-`lifetxt report list|preview|run|send` と Report v2 の
-`sections`/`format`/`audience`/`compare`/`email` の完全な契約については
+`lifetxt report list|preview|run|send|validate|inspect` と Report v2 の
+`sections`/`format`/`audience`/`compare`/`scope`/`email` の完全な契約については
 [reports.md](reports.md) を参照してください。
 
 ### `template`

@@ -528,6 +528,19 @@ comment, never an unrelated same-named file.
 Generated report files are derived, regenerable artifacts, not source data —
 they are deliberately not added to `server-update`'s backup coverage.
 
+Before installing or updating a job, `lifetxt --config
+/srv/lifetxt/data/.lifetxt.json report validate <name>` (or `--all` to check
+every profile at once) verifies the profile's configuration with zero
+rendering, writing, or network access — the same validator `server-init`/
+`server-report` themselves already run before generating any unit file, so a
+misconfigured profile is caught before a systemd job is even created.
+`lifetxt --config /srv/lifetxt/data/.lifetxt.json report inspect <name>`
+shows the exact resolved period/output path/scope/provider plan a scheduled
+`report run <profile> --previous` invocation would use, without generating
+report content. See
+[`reports.md`](../en/reports.md#validating-and-inspecting-a-profile) for the
+full contract.
+
 ## Also see
 
 - [`contrib/systemd/`](../../contrib/systemd/) — the unit/timer/environment

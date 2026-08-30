@@ -78,6 +78,27 @@ existing target. `append` reads the existing file and atomically writes the old
 content plus one complete generated report. Parent directories are created as
 needed.
 
+Validate one profile's configuration, or every configured profile, with no
+rendering, writing, or network access:
+
+```sh
+python -m lifetxt report validate weekly
+python -m lifetxt report validate --all
+```
+
+Show what a profile *would* do -- its resolved period, output path, scope,
+and (for a Report v2 profile) provider list -- without rendering body content
+or writing anything:
+
+```sh
+python -m lifetxt report inspect weekly
+python -m lifetxt report inspect weekly --format json
+```
+
+See [Validating and inspecting a profile](#validating-and-inspecting-a-profile)
+below for the full contract and the distinction between `validate`/`inspect`/
+`preview`/`run`.
+
 ## Generated metadata
 
 With `frontmatter: true`, output starts with metadata such as:
@@ -343,6 +364,71 @@ lifetxt digest --report weekly-review --date 2026-07-15 --format slack-webhook -
 
 `--week`/`--month`/`--project` are ignored when `--report` is given; the
 profile's own period and filters apply instead.
+
+## Validating and inspecting a profile
+
+Four `report` subcommands answer four different questions, in increasing
+order of what they actually do:
+
+| Command | Question | Renders body? | Writes/sends? |
+| --- | --- | --- | --- |
+| `report validate` | Is this profile's configuration structurally valid? | No | No |
+| `report inspect` | After resolution, what period/output/scope/providers would be used? | No | No |
+| `report preview` | What would the rendered report look like? | Yes (to stdout) | No |
+| `report run` / `report send` | Generate (or generate and email) the report. | Yes | Yes |
+
+### `report validate`
+
+```sh
+python -m lifetxt report validate weekly
+python -m lifetxt report validate --all
+python -m lifetxt report validate weekly --format json
+```
+
+Validates one named profile, or every configured profile with `--all`,
+through the exact same profile validator `preview`/`run`/`send` use --
+period/mode, v1-vs-v2 compatibility, `sections`/`scope`/`compare`/`format`/
+`audience`/`email` shape -- plus a syntax-only check of the `output`
+placeholder template. It never parses `life.txt`, executes a section
+provider, renders report content, writes a file, or opens a network
+connection.
+
+`--all` reports **every** profile's result, not just the first failure:
+
+```text
+$ python -m lifetxt report validate --all
+broken: FAIL: Report profile broken: Unknown report section type: 'nope'. Known types: ...
+v2weekly: OK
+weekly: OK
+```
+
+Exit status is `0` when every checked profile is valid and `1` otherwise, so
+`report validate --all` is suitable as a CI or `systemd` preflight step
+before `server-init`/`server-report` deploy a scheduled job. `--format json`
+emits a small, deterministic result object (or, with `--all`, a list) instead
+of the text summary; it is not the Report Model `preview --format json`
+produces.
+
+### `report inspect`
+
+```sh
+python -m lifetxt report inspect weekly
+python -m lifetxt report inspect weekly --date 2026-07-15 --format json
+```
+
+Shows the exact resolved plan `preview`/`run` would use for the given
+invocation -- schema (`lifetxt-report-v1`/`lifetxt-report-v2`), resolved
+`period.start`/`period.end`/`timezone`, the resolved `output.path` (when
+`output` is configured), the effective `scope` after legacy-alias resolution,
+and (for a Report v2 profile) the ordered `sections` list with each section's
+own options -- without ever rendering a section, calling a provider, writing
+a file, or contacting SMTP. `--date`/`--previous` select the same period
+`preview`/`run` would resolve. An invalid profile fails through the identical
+validator `report validate` uses.
+
+`email` presence is reported only as a boolean `email_configured`; configured
+environment-variable *names* and secret *values* never appear in `inspect`
+output.
 
 ## Scheduling on Ubuntu Server
 

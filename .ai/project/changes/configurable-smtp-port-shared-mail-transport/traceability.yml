@@ -5,7 +5,7 @@ links:
     capability_id: cap-configurable-smtp-mail-transport
     epic: null
     task_issue: https://github.com/Eruhitsuji/lifetxt/issues/616
-    pull_request: null
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/618
     tests_or_evidence:
       - "tests/test_mail_delivery.py ValidateSmtpPortTests (8 tests) and SendSmtpTextTests port-related additions (5 tests)"
       - "tests/test_report_v2_cli.py: 4 new profile-validation tests plus 2 new report-send SMTP-port-passthrough tests (mocked smtplib.SMTP)"

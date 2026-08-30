@@ -9519,7 +9519,7 @@ traceability:
       capability_id: cap-ubuntu-server-deployment
       epic: https://github.com/Eruhitsuji/lifetxt/issues/609
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/617
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/618
       changed_files_or_scope:
         - "Add managed scheduled email delivery for report jobs: server-init reporting.jobs[].send_email/environment_file and server-report plan|install --send-email/--environment-file both generate one shared systemd service unit that runs report run first and report send second"
         - lifetxt/server_init.py
@@ -9563,7 +9563,7 @@ traceability:
       capability_id: cap-configurable-smtp-mail-transport
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/616
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/618
       changed_files_or_scope:
         - "Add lifetxt.mail_delivery.validate_smtp_port() and a shared _deliver_smtp_message() transport primitive; extend send_smtp_text(port=...); converge notification email onto the shared credential-resolution/transport primitives while preserving its existing message wording; add --smtp-port to notify/digest; add reports.*.email.smtp_port (schema) and notifications.email.smtp_port (registry)"
         - lifetxt/mail_delivery.py

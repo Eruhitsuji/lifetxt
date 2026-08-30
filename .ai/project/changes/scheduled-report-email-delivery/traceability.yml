@@ -5,7 +5,7 @@ links:
     capability_id: cap-ubuntu-server-deployment
     epic: https://github.com/Eruhitsuji/lifetxt/issues/609
     task_issue: https://github.com/Eruhitsuji/lifetxt/issues/617
-    pull_request: null
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/618
     tests_or_evidence:
       - "tests/test_server_init.py ReportingConfigGenerationTests: 7 new tests (default job unaffected, send_email job generates EnvironmentFile=/two ordered ExecStart= lines, send_email without environment_file rejected, send_email without profile email config rejected, environment_file without send_email rejected, generator-identity check confirming server_report.py reuses server_init.report_service_unit_text/report_timer_unit_text verbatim)"
       - "tests/test_server_report.py BuildPlanTests: 8 new tests (send_email adds EnvironmentFile=/second ExecStart=, run-before-send ordering assertion, send_email requires environment_file, send_email requires a profile with email config, environment_file without send_email rejected including an empty-string path argument, no-send-email plan unaffected, no SMTP credential name ever appears in generated content)"

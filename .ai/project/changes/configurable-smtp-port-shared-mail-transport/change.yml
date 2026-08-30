@@ -1,0 +1,83 @@
+schema_version: 1
+
+change:
+  id: configurable-smtp-port-shared-mail-transport
+  title: Configurable SMTP port and shared mail transport across report, digest, and notifications
+  status: implemented
+  change_type: Feature
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/616
+  related_pull_request: []
+  base_commit: bf9adec0010bb78ab892cd74afb58a7f0c4a471b
+  target_release: null
+
+scope:
+  in_scope:
+    - Add `lifetxt.mail_delivery.validate_smtp_port()`, a shared integer
+      port validator (1-65535, rejecting bool/float/string) used by every
+      SMTP-delivery surface.
+    - Add a shared `_deliver_smtp_message()` transport primitive in
+      `lifetxt/mail_delivery.py` (the sole connect/login/send sequence),
+      reused by `send_smtp_text()` and notification email.
+    - Extend `send_smtp_text(..., port=None, ...)` to pass an explicit port
+      to `smtplib.SMTP`, preserving the exact existing call signature when
+      `port` is omitted.
+    - Converge notification email (`_send_notification_email_batch` in
+      `lifetxt/cli.py`) onto the shared `resolve_smtp_credentials()` and
+      `_deliver_smtp_message()` primitives instead of its own inline
+      `smtplib`/`MIMEText`/login/send implementation, while preserving its
+      existing dry-run/success message wording exactly (only adding an
+      optional port note).
+    - Add `--smtp-port` to `notify` and `digest --format email`.
+    - Add `reports.*.email.smtp_port` (schema + `report_cli._validate_email_config`)
+      and `notifications.email.smtp_port` (config registry entry).
+    - Update EN/JA `reports.md`, `cli.md`, and `config.md`.
+  out_of_scope:
+    - SMTP receiving / IMAP.
+    - OAuth or provider-specific (Gmail/Outlook) authentication.
+    - HTML email or attachments.
+    - A delivery queue/retry daemon.
+    - Arbitrary TLS policy configuration.
+    - Implicit TLS / SMTPS on port 465.
+    - Scheduled report execution itself (tracked separately by #617).
+
+write_scope:
+  - lifetxt/mail_delivery.py
+  - lifetxt/cli.py
+  - lifetxt/report_cli.py
+  - lifetxt/schema_extensions_v5.py
+  - dist/schemas/config-v1.schema.json
+  - lifetxt/config_registry.py
+  - tests/test_mail_delivery.py
+  - tests/test_report_v2_cli.py
+  - tests/test_lifetxt.py
+  - tests/test_config_validation.py
+  - docs/en/reports.md
+  - docs/ja/reports.md
+  - docs/en/cli.md
+  - docs/ja/cli.md
+  - docs/en/config.md
+  - docs/ja/config.md
+  - .ai/project/CAPABILITIES.yml
+  - .ai/project/TRACEABILITY.yml
+  - .ai/project/changes/configurable-smtp-port-shared-mail-transport/
+
+forbidden_scope:
+  - .ai/managed/**
+  - Report aggregation/rendering semantics (lifetxt/report_v2.py)
+  - Scheduler/systemd changes (lifetxt/server_init.py, lifetxt/server_report.py)
+  - Provider-specific mail APIs
+  - Unrelated notification behavior changes (records selection, ack/snooze
+    semantics, desktop notification path)
+
+human_approvals_required:
+  - independent security review
+  - Merge Authority approval before merge to main
+
+dependencies:
+  - >-
+    none blocking; issue #617 (scheduled report email delivery) depends on
+    this change and lands as a separate, subsequent child branch in the
+    same integration branch/PR pair

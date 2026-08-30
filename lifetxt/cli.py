@@ -2125,6 +2125,15 @@ def build_parser():
         help="Environment variable with the SMTP password for --email.",
     )
     notify.add_argument(
+        "--smtp-port",
+        type=int,
+        metavar="PORT",
+        help=(
+            "Explicit SMTP port for --email, e.g. 587 for STARTTLS submission. "
+            "Defaults to notifications.email.smtp_port, or the existing default port."
+        ),
+    )
+    notify.add_argument(
         "--dry-run",
         action="store_true",
         help="For --email, print the email that would be sent without using SMTP.",
@@ -3850,6 +3859,12 @@ def build_parser():
         metavar="ENVVAR",
         default="LIFETXT_SMTP_PASS",
         help="Environment variable with the SMTP password (--format email).",
+    )
+    digest_cmd.add_argument(
+        "--smtp-port",
+        type=int,
+        metavar="PORT",
+        help="Explicit SMTP port, e.g. 587 for STARTTLS submission (--format email).",
     )
     digest_cmd.add_argument(
         "--path",
@@ -10901,6 +10916,9 @@ def _send_notification_email_batch(records, recipient, args, email_config, outpu
         or email_config.get("smtp_pass_env")
         or "LIFETXT_SMTP_PASS"
     )
+    port = getattr(args, "smtp_port", None)
+    if port is None:
+        port = email_config.get("smtp_port")
     base_subject = (
         getattr(args, "email_subject", None)
         or email_config.get("subject")
@@ -10909,36 +10927,35 @@ def _send_notification_email_batch(records, recipient, args, email_config, outpu
     subject = notification_email_subject(records, base=base_subject)
     message = format_notification_email(records, recipient=recipient)
 
+    from .mail_delivery import (
+        _deliver_smtp_message,
+        resolve_smtp_credentials,
+        validate_smtp_port,
+    )
+
+    if port is not None:
+        port = validate_smtp_port(port)
+
     if getattr(args, "dry_run", False):
+        port_note = " port %d" % port if port is not None else ""
         output.write(
-            "[dry-run] Would email %d notification(s) to %s via $%s:\n%s\n"
-            % (len(records), ", ".join(to_addrs), host_env, message)
+            "[dry-run] Would email %d notification(s) to %s via $%s%s:\n%s\n"
+            % (len(records), ", ".join(to_addrs), host_env, port_note, message)
         )
         output.flush()
         return True
 
-    smtp_host = os.environ.get(host_env, "")
-    smtp_user = os.environ.get(user_env, "")
-    smtp_pass = os.environ.get(pass_env, "")
-    if not smtp_host:
-        raise ValueError("Environment variable %s (SMTP host) is not set." % host_env)
-    if not smtp_user or not smtp_pass:
-        raise ValueError(
-            "Environment variables %s and %s (SMTP credentials) must be set."
-            % (user_env, pass_env)
-        )
+    smtp_host, smtp_user, smtp_pass = resolve_smtp_credentials(
+        host_env, user_env, pass_env
+    )
 
-    import smtplib
     from email.mime.text import MIMEText
 
     mime = MIMEText(message, "plain", "utf-8")
     mime["Subject"] = subject
     mime["From"] = smtp_user
     mime["To"] = ", ".join(to_addrs)
-    with smtplib.SMTP(smtp_host, timeout=10) as smtp:
-        smtp.starttls()
-        smtp.login(smtp_user, smtp_pass)
-        smtp.sendmail(smtp_user, to_addrs, mime.as_string())
+    _deliver_smtp_message(mime, to_addrs, smtp_host, smtp_user, smtp_pass, port=port)
     output.write("Sent notification email to %s.\n" % ", ".join(to_addrs))
     output.flush()
     return True
@@ -15501,6 +15518,7 @@ def command_digest(args):
             host_env=getattr(args, "smtp_host_env", "LIFETXT_SMTP_HOST"),
             user_env=getattr(args, "smtp_user_env", "LIFETXT_SMTP_USER"),
             pass_env=getattr(args, "smtp_pass_env", "LIFETXT_SMTP_PASS"),
+            port=getattr(args, "smtp_port", None),
             dry_run=dry_run,
             output=sys.stdout,
         )

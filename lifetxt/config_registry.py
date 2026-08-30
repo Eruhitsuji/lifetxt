@@ -211,6 +211,15 @@ CONFIG_REGISTRY = OrderedDict(
             ),
         ),
         (
+            "notifications.email.smtp_port",
+            _entry(
+                "integer",
+                None,
+                "Explicit SMTP port for notification email, e.g. 587 for STARTTLS "
+                "submission. Omitting it preserves the existing default SMTP port.",
+            ),
+        ),
+        (
             "ids.auto",
             _entry("boolean", True, "Automatically assign stable IDs to new items."),
         ),

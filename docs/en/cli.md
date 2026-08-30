@@ -1417,6 +1417,7 @@ Options:
 | `--smtp-host-env ENVVAR` | Env var with SMTP host; default is `notifications.email.smtp_host_env` or `LIFETXT_SMTP_HOST` |
 | `--smtp-user-env ENVVAR` | Env var with SMTP username; default is `notifications.email.smtp_user_env` or `LIFETXT_SMTP_USER` |
 | `--smtp-pass-env ENVVAR` | Env var with SMTP password; default is `notifications.email.smtp_pass_env` or `LIFETXT_SMTP_PASS` |
+| `--smtp-port PORT` | Explicit SMTP port (e.g. `587` for STARTTLS); default is `notifications.email.smtp_port`, or the existing default port when neither is set |
 | `--dry-run` | With `--email`, print the email body without connecting to SMTP |
 | `--state-file PATH` | Persist seen notification IDs for `--watch` |
 | `--no-state` | Disable persistent seen-state for `--watch` |
@@ -3115,6 +3116,7 @@ python -m lifetxt digest life.txt --week --format file --path digest-log.md
 | `--url-env ENVVAR` | Env var with the Slack incoming webhook URL (`slack-webhook`) |
 | `--to ADDRESS` | Recipient email address (`email`) |
 | `--smtp-host-env`, `--smtp-user-env`, `--smtp-pass-env` | Env vars with SMTP host/username/password (`email`); default to `LIFETXT_SMTP_HOST`/`_USER`/`_PASS` |
+| `--smtp-port PORT` | Explicit SMTP port (`email`), e.g. `587` for STARTTLS; omitting it preserves the existing default port |
 | `--path PATH` | Local file to append Markdown to (`file`) |
 | `--report NAME` | Use a configured `lifetxt report` profile as the message source instead of the built-in review summary (`--week`/`--month`/`--project` are ignored) |
 | `--date YYYY-MM-DD` | With `--report`: generate the period containing this date instead of today |
@@ -3123,7 +3125,9 @@ python -m lifetxt digest life.txt --week --format file --path digest-log.md
 
 Each channel validates its required environment variables (or `--to`/`--path`)
 **before** making any network request or writing any file, so a missing
-secret fails fast with a clear error rather than partway through delivery.
+secret fails fast with a clear error rather than partway through delivery. An
+explicit `--smtp-port` is likewise validated (an integer from 1 to 65535)
+before any connection is attempted, regardless of `--dry-run`.
 See [reports.md](reports.md) for `lifetxt report
 list|preview|run|send|validate|inspect` and the full Report v2 `sections`/
 `format`/`audience`/`compare`/`scope`/`email` contract.

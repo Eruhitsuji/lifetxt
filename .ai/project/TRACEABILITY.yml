@@ -8993,6 +8993,15 @@ traceability:
         - ruff format --check / ruff check scripts/run_external_verification.py tests/test_external_verification.py -> clean (pre-existing drift in unrelated, untouched regions of both files confirmed present on main already, not introduced by this change)
         - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
         - git diff --check -> clean
+        - "real Linux confirmation, via a real Docker container (python:3.12-slim), found a second, more severe defect before this branch reached main: PR #599's real CI (ubuntu-latest) hung on the 'Run unit tests' step for 40+ minutes with no test output at all -- reproduced identically in the container, where test_killing_only_the_direct_process_leaves_the_grandchild_alive silently killed the whole unittest runner process rather than merely failing or hanging"
+        - "root cause: that test's synthetic parent Popen was started with no start_new_session, so on POSIX it shared this test runner's own process group (the POSIX default for an unqualified Popen call); its finally block's cleanup call to the real module._kill_process_tree() then executed os.killpg(os.getpgid(pid), SIGKILL) against that shared group, which reaches the test runner itself, not only the synthetic tree -- confirmed by fixing it and reproducing the original failure was gone"
+        - "fix: the synthetic parent Popen call now also uses module._process_tree_popen_kwargs() (start_new_session=True on POSIX, matching module.run_command()'s own Popen call exactly), isolating it into its own process group before the real _kill_process_tree() cleanup call ever runs; does not change what the test demonstrates, since the grandchild's pipe inheritance (the actual subject of the reproduction) is independent of which process group either process belongs to"
+        - "confirmed the production code path itself (module.run_command(), used by every real caller) was never affected: it already used _process_tree_popen_kwargs() for its own Popen call from the start, so its own os.killpg call was always scoped to an isolated process group -- this was a test-only defect, not a real user-facing regression"
+        - "live in the real Docker container, after the fix: tests.test_external_verification -> Ran 82 tests in ~7.3s, OK (previously hung indefinitely and killed the runner); repeated 5x consecutively via tests.test_external_verification.ProcessTreeTimeoutTests alone -> Ran 2 tests in ~4.0s, OK every time, confirming the fix is deterministic, not merely lucky once"
+        - "the container's minimal python:3.12-slim base image (no git preinstalled) also produced 3 unrelated, environment-only failures (VerifyExternalShWrapperTests, ReleaseTimeoutConfigurationTests.test_summary_line_reports_the_configured_release_timeout, MainProgressAndRefusalIntegrationTests) on the very first run before git was installed; confirmed environment-only, not a code defect, by re-running the identical suite after `apt-get install git` -> all pass, matching the fact that github-actions ubuntu-latest runners ship git preinstalled"
+        - python -m unittest tests.test_external_verification -> Ran 82 tests, OK (re-confirmed on Windows after the test-only fix)
+        - python -W error::ResourceWarning -m unittest tests.test_external_verification -> Ran 82 tests, OK, zero warnings
+        - ruff format --check / ruff check tests/test_external_verification.py -> clean (same pre-existing, unrelated drift as before; the fix itself introduces none)
       release_or_deployment: >-
         CI/release-evidence-tooling-only fix, no product/runtime behavior
         change. Takes effect the next time a real release-profile
@@ -9007,11 +9016,20 @@ traceability:
         parent's own pipe handles" default already relied on throughout this
         codebase, and the identical taskkill /F /T fix already proven for an
         analogous PyInstaller-bootloader leak in
-        tests/test_standalone_binary.py). POSIX process-group termination is
-        covered by mocked platform-dispatch unit tests rather than a real
-        POSIX run, unavailable in this Windows sandbox, per the issue's own
-        "otherwise explicitly shown not to regress" allowance. Real Linux/
-        macOS confirmation and a fresh real multi-hour Windows rerun remain
+        tests/test_standalone_binary.py). The originally-planned real POSIX
+        confirmation was not skipped: after the initial PR's real CI hung on
+        a genuine test-only defect for 40+ minutes (a synthetic reproduction
+        test's own cleanup call reaching the test runner's own process group
+        via os.killpg, since that Popen call had not itself been isolated
+        into its own session -- see tests_or_evidence above for the full
+        root-cause and fix), a real Docker Linux container was used to
+        reproduce and fix it directly, and to confirm the fixed test suite
+        (including the real process-tree-kill path) passes deterministically
+        on POSIX. The production code path itself was unaffected throughout,
+        since module.run_command() already isolated its own Popen call the
+        same way from the very first version of this fix. A fresh real
+        multi-hour Windows external-verification rerun against an actual
+        release-profile timeout, and real macOS confirmation, remain
         external-environment work outside this sandbox and are recorded as
         open, matching the pattern already established for #429/#430/#437/
         #438 in this same capability.

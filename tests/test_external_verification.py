@@ -784,6 +784,20 @@ class ProcessTreeTimeoutTests(unittest.TestCase):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
+                # Isolated into its own session/process group on POSIX --
+                # exactly like module.run_command()'s own Popen call --
+                # purely so this test's own cleanup (module._kill_process_tree,
+                # which calls os.killpg on POSIX) cannot reach outside this
+                # synthetic tree. Without this, the synthetic parent shares
+                # this test *runner's own* process group (the POSIX default
+                # for an unqualified Popen call), so cleanup's os.killpg
+                # would signal the test runner itself -- reproduced live via
+                # a real Linux container, where it silently killed the whole
+                # unittest process before any result could be reported. Does
+                # not affect what this test demonstrates: the grandchild
+                # still inherits the direct process's own stdout/stderr pipe
+                # regardless of which session/process group either is in.
+                **module._process_tree_popen_kwargs(),
             )
             try:
                 with self.assertRaises(subprocess.TimeoutExpired):

@@ -160,6 +160,7 @@ capabilities:
       - req-external-verification-release-timeout-default-reopened
       - req-external-verification-short-temp-candidate-boundary
       - req-external-verification-subprocess-decoding
+      - req-external-verification-process-tree-timeout-termination
     implementation_locations:
       - docs/en/cui-test-decomposition-audit.md
       - tests/test_completion_surfaces.py
@@ -267,6 +268,23 @@ capabilities:
       - "live: a real --skip-release run on this Windows host reports release_timeout=28800 in its summary output"
       - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
       - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2509 tests, OK (skipped=5)'
+      - "#453: fresh real Windows evidence on merge commit 9a7c4cf8cb1b8c96abac4111ad0bb4f9b56548c9 (timeout_seconds=28800, duration_seconds=47179.719, the nested unittest run finishing naturally at ~47002.272s) and a follow-up no-sleep concurrent Windows/WSL rerun on the same commit (Windows: timeout_seconds=28800, duration_seconds=29812.907, ~1012.9s overrun with the nested suite again finishing naturally during the overrun; WSL: duration_seconds=28800.157, returned immediately at the configured boundary) both point at the same root cause: run_command()'s subprocess.run(..., timeout=...) kills only the direct run_ci_like.py process on TimeoutExpired, and its own `python -m unittest discover` grandchild -- which run_ci_like.py never redirects stdout/stderr for -- inherits the pipe write end, keeping it open until the grandchild exits naturally"
+      - "tests/test_external_verification.py ProcessTreeKillPlatformDispatchTests (5 tests, mocked): _kill_process_tree uses taskkill /F /T /PID on Windows; on POSIX it calls os.killpg(os.getpgid(pid), signal.SIGKILL) then also process.kill() defensively, and tolerates a process group that already exited (ProcessLookupError); _process_tree_popen_kwargs returns start_new_session=True on POSIX and {} on Windows"
+      - "tests/test_external_verification.py ProcessTreeTimeoutTests (2 tests, real child processes, synthetic paths/PIDs only): a synthetic parent -> grandchild reproduction confirms killing only the direct process (mirroring subprocess.run()'s own TimeoutExpired handling) leaves the grandchild alive and blocks a second communicate() call; run_command() against the identical synthetic tree returns status=timeout well before the grandchild's own sleep would complete naturally, and the grandchild's real PID is confirmed no longer alive afterward"
+      - python -m unittest tests.test_external_verification -> Ran 82 tests, OK
+      - "confirmed via git stash (production code only, tests kept) that test_run_command_terminates_the_whole_tree_and_returns_promptly fails against the pre-#453 code with 12.235 not less than 10 (run_command took ~12.2s, essentially the full synthetic grandchild sleep, to return) -- reproducing the exact late-return defect class -- then passes once the fix is restored; the platform-dispatch unit tests and the standalone parent/grandchild reproduction test cannot run against the pre-fix code by construction (they exercise new symbols), which is expected and not evidence of a weak test"
+      - "live end-to-end on this Windows host: a real synthetic parent -> grandchild tree with a 2s run_command() timeout and a 20s grandchild sleep returned status=timeout in 2.17s (not ~20s), retained the partial stdout already produced ('parent-up'/'grandchild-up'), and the grandchild's real PID was confirmed no longer alive via tasklist afterward"
+      - "live: a real --skip-release run on this Windows host still writes JSON/log/JSONL evidence normally (git-identity check status=passed, duration_seconds=0.031) through the new Popen-based run_command(), confirming the non-timeout path is unaffected"
+      - "repeated (3x) real full-suite (python -m unittest discover) plus test_external_verification/test_verification_python_bootstrap/test_release_evidence/test_check_release_tag_version/test_traceability_gate/test_change_package_closeout runs with -W error::ResourceWarning found and fixed a genuine Popen resource leak the fix's own tests introduced: the process-tree reproduction test's cleanup originally relied on communicate() to drain a possibly-still-lingering pipe; switched to wait() (which does not depend on draining output) plus a non-blocking process.poll() added to run_command()'s own finally block, after which repeated runs produced zero ResourceWarnings"
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - ruff format --check / ruff check scripts/run_external_verification.py tests/test_external_verification.py -> clean (pre-existing drift in 2 unrelated files' untouched regions confirmed present on main already, not introduced by this change)
+      - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      - "PR #599's real Linux CI hung 40+ minutes with zero test output; reproduced identically in a real local Docker Linux container (python:3.12-slim) via `timeout 60 python -m unittest ...` observing a SIGKILL of the whole runner, not a normal failure -- root-caused to test_killing_only_the_direct_process_leaves_the_grandchild_alive's synthetic parent Popen call sharing this test runner's own POSIX process group (no start_new_session), so its cleanup's real _kill_process_tree()/os.killpg() call reached the runner itself; fixed by isolating that Popen call with _process_tree_popen_kwargs() the same way run_command()'s own production Popen call already was"
+      - "live in the same container after the fix: tests.test_external_verification -> Ran 82 tests in ~7.3s, OK; ProcessTreeTimeoutTests alone repeated 5x consecutively -> Ran 2 tests in ~4.0s, OK every time (deterministic, not a fluke)"
+      - "confirmed production code (run_command()) was never at risk: its own Popen call already used _process_tree_popen_kwargs() from this fix's first version, independent of the test-only defect"
+      - "the container's minimal base image (no git preinstalled) separately produced 3 unrelated environment-only failures on first run; confirmed environment-only (not a code defect) by re-running identically after installing git -> all pass, matching that github-actions ubuntu-latest ships git preinstalled"
+      - "PR #599's real CI then found a third, distinct defect under genuine GitHub Actions Linux load (not reproducible in isolated local runs): test_run_command_terminates_the_whole_tree_and_returns_promptly's grandchild-is-dead assertion failed once (pull_request-triggered run) while the identical push-triggered run for the same commit passed -- a timing race between SIGKILL delivery and the OS reaping the process, not the process-group defect above. Fixed with a small bounded poll (_wait_until_dead, 5s); confirmed via two full real-project-suite runs (3144 tests each) executed back to back in a real Docker Linux container under the container's own concurrent-test load, zero recurrence"
+      - git diff --check -> clean
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/373
       - https://github.com/Eruhitsuji/lifetxt/issues/395
@@ -289,6 +307,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/443
       - https://github.com/Eruhitsuji/lifetxt/issues/445
       - https://github.com/Eruhitsuji/lifetxt/issues/447
+      - https://github.com/Eruhitsuji/lifetxt/issues/453
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/396
       - https://github.com/Eruhitsuji/lifetxt/pull/426
@@ -301,6 +320,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/pull/446
       - https://github.com/Eruhitsuji/lifetxt/pull/448
       - https://github.com/Eruhitsuji/lifetxt/pull/449
+      - https://github.com/Eruhitsuji/lifetxt/pull/599
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       External-environment preparation now includes dependency-free host evidence
@@ -575,6 +595,91 @@ capabilities:
       boundary, per the reopening comment's own explicit request, remains
       external-environment work outside this sandbox and is recorded as
       open.
+      #453 found that a bounded `--release-timeout` did not, by itself,
+      bound how long the collector actually took to return: two independent
+      real Windows evidence bundles for the same 28800s configured timeout
+      overran it by roughly 5.1h and roughly 1013s respectively, with the
+      nested `python -m unittest discover` child's own natural completion
+      lining up almost exactly with when the collector finally returned in
+      both cases -- while a concurrent WSL run on the same physical host
+      returned at the configured boundary as expected. Root-caused before
+      writing any fix: `run_command()`'s `subprocess.run(..., timeout=...)`
+      only kills the direct `run_ci_like.py` process on `TimeoutExpired`;
+      `run_ci_like.py` itself never redirects stdout/stderr for its own
+      `python -m unittest discover` child (the same "no redirection means
+      inherit the parent's handles" default every other subprocess call in
+      this codebase already relies on), so that grandchild keeps the
+      collector's own stdout/stderr pipe write end open long after the
+      direct process is killed, and `subprocess.run`'s final drain read
+      blocks until the grandchild exits naturally. Fixed by replacing the
+      `subprocess.run(timeout=...)` call with a directly-managed
+      `subprocess.Popen` plus `communicate(timeout=...)`, and, on
+      `TimeoutExpired`, terminating the *whole* process tree before
+      draining: `taskkill /F /T /PID` on Windows (matching the identical
+      fix already proven for an analogous PyInstaller-bootloader-forked-
+      worker leak in `tests/test_standalone_binary.py`'s own server smoke
+      test), or `os.killpg` against a session the child was started in via
+      `start_new_session=True` on POSIX (POSIX was not available to
+      exercise for real in this sandbox; covered instead by mocked
+      platform-dispatch unit tests asserting the correct `os.killpg`/
+      `os.getpgid`/`start_new_session` calls, per this issue's own
+      "otherwise explicitly shown not to regress" allowance). A second,
+      bounded 15-second cleanup grace window bounds the post-kill drain
+      itself, with one further non-blocking kill-and-continue fallback so
+      an already-astronomically-unlikely stuck drain still cannot hang the
+      collector indefinitely. `git rev-parse`/tool-probe calls and the
+      release-profile call all go through the same `run_command()`, so the
+      fix applies uniformly; this does not change `--probe-timeout` and
+      `--release-timeout`'s existing independence from each other. Verified
+      with a real synthetic parent-plus-inheriting-grandchild reproduction
+      (confirmed via git stash to fail against the pre-fix code with a
+      ~12.2-second late return, matching the real-host defect class) and a
+      live end-to-end smoke on this Windows host confirming both the
+      prompt return and the grandchild's actual termination.
+      This branch's first PR (#599) exposed a second, more severe defect
+      once real Linux CI actually ran it: the "Run unit tests" step hung
+      for 40+ minutes with zero output, silently exceeding the whole job's
+      time budget rather than merely failing loudly. Reproduced identically
+      in a real local Docker Linux container (`python:3.12-slim`), which
+      is what made root-causing it possible without waiting on CI itself:
+      `test_killing_only_the_direct_process_leaves_the_grandchild_alive`'s
+      own synthetic parent `Popen` call had no `start_new_session`, so on
+      POSIX it defaulted into *this test runner's own* process group; its
+      `finally` cleanup then called the real `_kill_process_tree()`, whose
+      POSIX branch's `os.killpg(os.getpgid(pid), SIGKILL)` consequently
+      signalled that shared group -- killing the unittest runner itself,
+      not only the synthetic tree. This was a defect in the new
+      reproduction test only, never in `run_command()`'s own production
+      `Popen` call, which already used `_process_tree_popen_kwargs()`
+      (and therefore `start_new_session=True` on POSIX) for itself from
+      the very first version of this fix; live confirmation in the same
+      container (`git stash` on the test file alone) shows the production
+      path was never at risk. Fixed by isolating the synthetic parent into
+      its own session the identical way, confirmed via 5 consecutive real
+      Linux runs with zero hangs and zero failures, and confirmed
+      unaffected on Windows afterward. That fix's own follow-up PR then
+      exposed a third, distinct defect purely from running under real
+      GitHub Actions Linux load: `test_run_command_terminates_the_whole_
+      tree_and_returns_promptly` failed once (its `pull_request`-triggered
+      run) while the identical `push`-triggered run for the same commit
+      passed -- a genuine timing race, since the assertion checked whether
+      the grandchild was dead immediately after `run_command()` returned,
+      with no allowance for the OS's own (normally sub-millisecond, but
+      occasionally longer under real contention) delay between SIGKILL
+      delivery and actually reaping the process out of the process table.
+      Fixed with a small bounded poll (`_wait_until_dead`, 5s) around the
+      one assertion actually exposed to this race (the sibling "must still
+      be alive" assertion elsewhere is not, and was left unchanged);
+      confirmed via two full real-project-suite runs (3144 tests each) back
+      to back in a real Docker Linux container under the container's own
+      concurrent-test load, with zero recurrence. Neither of these last two
+      findings could have been caught from this sandbox's Windows-only
+      local runs alone -- both needed the POSIX code path actually
+      scheduled under real load to surface. Real macOS confirmation and a
+      fresh real multi-hour Windows external-verification rerun confirming
+      no further overrun remain external-environment work outside this
+      sandbox and are recorded as open, matching the pattern already
+      established for #429/#430/#437/#438.
     replacement:
       replaces: []
       replaced_by: null

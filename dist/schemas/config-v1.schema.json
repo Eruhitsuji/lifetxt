@@ -181,6 +181,65 @@
       "additionalProperties": {
         "additionalProperties": false,
         "properties": {
+          "audience": {
+            "enum": [
+              "private",
+              "external"
+            ]
+          },
+          "compare": {
+            "enum": [
+              "previous"
+            ]
+          },
+          "email": {
+            "additionalProperties": false,
+            "properties": {
+              "smtp_host_env": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "smtp_pass_env": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "smtp_user_env": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "subject": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "to": {
+                "oneOf": [
+                  {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "items": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "minItems": 1,
+                    "type": "array"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "to"
+            ],
+            "type": "object"
+          },
+          "format": {
+            "enum": [
+              "markdown",
+              "json",
+              "html"
+            ]
+          },
           "frontmatter": {
             "type": "boolean"
           },
@@ -208,6 +267,36 @@
           "project": {
             "minLength": 1,
             "type": "string"
+          },
+          "sections": {
+            "items": {
+              "additionalProperties": true,
+              "properties": {
+                "title": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": {
+                  "enum": [
+                    "review",
+                    "stats",
+                    "agenda",
+                    "command-center",
+                    "project-health",
+                    "next-actions",
+                    "inbox",
+                    "ticket-attention",
+                    "health"
+                  ]
+                }
+              },
+              "required": [
+                "type"
+              ],
+              "type": "object"
+            },
+            "minItems": 1,
+            "type": "array"
           },
           "tag": {
             "minLength": 1,

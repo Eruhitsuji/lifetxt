@@ -1,0 +1,121 @@
+schema_version: 1
+
+requirements:
+  - id: req-scheduled-report-email-delivery
+    statement: >-
+      A scheduled `server-report`/`server-init reporting.jobs[]` job must be
+      able to run `report run` and then `report send` (only after `report
+      run` succeeds) as part of its systemd oneshot unit, with SMTP
+      credentials supplied via an explicit `EnvironmentFile=` path -- never
+      the credential contents themselves -- in generated unit text or plan
+      output.
+    source: https://github.com/Eruhitsuji/lifetxt/issues/617
+    acceptance_criteria:
+      - "`reporting.jobs[].send_email`/`environment_file` (server-init) and
+        `server-report plan|install --send-email --environment-file`
+        (already-running deployments) both generate a service unit with an
+        `EnvironmentFile={path}` line and a second `ExecStart=... report send
+        {profile} --previous ...` line following the existing `report run`
+        line."
+      - "`report run` is scheduled strictly before `report send` in the
+        generated unit, and a failed `report run` fails the whole oneshot
+        unit before `report send` ever executes (systemd's own ordered
+        `ExecStart=` semantics for `Type=oneshot`, not custom orchestration
+        code)."
+      - "`send_email=true` (or `--send-email`) without a referenced profile
+        that already has a valid `email` section is refused before any unit
+        file is written, naming the profile."
+      - "`send_email=true` (or `--send-email`) without `environment_file` (or
+        `--environment-file`) is refused before any unit file is written."
+      - "`environment_file`/`--environment-file` given without
+        `send_email=true`/`--send-email` is refused before any unit file is
+        written."
+      - "`environment_file`'s value must be an absolute, whitespace-free path
+        (reusing the existing `_validate_required_absolute_nowhitespace_path`
+        injection-safety check, not a second implementation)."
+      - No generated unit text, plan output, or `apply_install` result JSON
+        ever contains SMTP credential values -- only the `environment_file`
+        path and a `send_email` boolean.
+      - "`server-init`'s `reporting` section and `server-report`'s
+        `plan|install` commands share one unit generator
+        (`server_init.report_service_unit_text`); a job installed either way
+        produces byte-identical unit content for the same inputs."
+      - >-
+        A default job (no `send_email`, or `--send-email` omitted) is
+        completely unaffected -- no `EnvironmentFile=` line, exactly one
+        `ExecStart=` line, matching pre-#617 behavior exactly.
+      - "`server-report install`/`plan` text and `--format json` output
+        surface `send_email`/`environment_file` as top-level fields so the
+        added network side effect is obvious without parsing generated unit
+        text."
+      - Tests cover server-init/server-report generator parity (both call
+        sites share the identical function, not two independently
+        maintained copies).
+      - >-
+        EN documentation (deployment runbook, CLI reference, reports guide)
+        is updated with a full example -- env file creation with restrictive
+        permissions, `report send --dry-run` verification, plan/install,
+        manual service test, journal inspection, and disable/rollback.
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/617
+    status: implemented
+
+decision_log:
+  - question: >-
+      Enforce "report send only runs after report run succeeds" with a
+      second `ExecStart=` line (systemd's own ordering/failure semantics) or
+      with a wrapper script / custom Python orchestration?
+    decision: >-
+      Two ordered `ExecStart=` lines. `Type=oneshot` units run their
+      `ExecStart=` lines in declared order and fail the whole service if any
+      line fails (a plain, well-documented systemd guarantee), so no new
+      orchestration code, wrapper script, or exit-code plumbing is needed --
+      the existing shared unit-text generator only needed a second templated
+      line, matching the issue's own suggested design.
+    decided_by: Eruhitsuji
+    method: >-
+      matches the issue's own explicit design suggestion; confirmed via
+      live verification that a generated unit with two ExecStart= lines is
+      accepted by systemd's unit-file grammar (checked by inspecting the
+      generated unit text against systemd.service(5)'s documented multiple-
+      ExecStart= semantics for Type=oneshot, since this Windows sandbox has
+      no live systemd to actually schedule the unit against)
+  - question: >-
+      Where should `send_email`/`environment_file` validation for the
+      "profile must already have a valid `email` section" rule live -- a new
+      check in `server_init.py`/`server_report.py`, or reuse the existing
+      report profile validator?
+    decision: >-
+      Reuse only. `server_init._validate_reporting_config()` already calls
+      `report_cli._profiles()` (the same validator `lifetxt report` itself
+      uses) to validate every profile before this change; the new
+      `send_email` check reads `validated_profiles[profile_name].get("email")`
+      from that already-validated result rather than re-parsing or
+      re-validating the profile's email section a second time.
+      `server_report.build_plan()` mirrors the identical reuse pattern
+      against the profile it reads from the target application config.
+    decided_by: Eruhitsuji
+    method: >-
+      engineering judgment, consistent with this project's established
+      "no second implementation" reuse discipline -- see issue #616's
+      _deliver_smtp_message and this capability's own prior
+      report_service_unit_text sharing
+  - question: >-
+      Should docs/ja/cli.md's server-report section be added as part of this
+      change, since #617 touches the English server-report documentation?
+    decision: >-
+      No. docs/ja/cli.md has no numbered sections 19-24 at all today
+      (Development Tickets, Remote Safe Mode Client, Commands Documented
+      Elsewhere, server-init, server-update, server-report are all missing) --
+      a large, pre-existing translation gap spanning several past features,
+      confirmed by comparing section headings between docs/en/cli.md and
+      docs/ja/cli.md before writing any documentation for this change. Adding
+      one isolated section out of order, or translating the whole missing
+      range, is out of this issue's scope and would either look structurally
+      odd (a lone §24 with nothing before it) or balloon this change into an
+      unrelated, much larger translation task. Recorded as a known,
+      pre-existing gap rather than silently left unmentioned; docs/ja/reports.md
+      (which does have a relevant section) was updated instead.
+    decided_by: Eruhitsuji
+    method: >-
+      engineering judgment during documentation, per this project's
+      Horizontal Review Scope Discipline

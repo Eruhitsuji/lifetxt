@@ -75,6 +75,26 @@ def build_parser():
                 help="24-hour time the job's timer fires at, relative to the "
                 "profile's own period boundary. Default: 00:10.",
             )
+            sub.add_argument(
+                "--send-email",
+                action="store_true",
+                help=(
+                    "Also run `report send` after `report run` succeeds, "
+                    "delivering the profile's configured email. Requires the "
+                    "profile to already have a valid `email` section and "
+                    "--environment-file."
+                ),
+            )
+            sub.add_argument(
+                "--environment-file",
+                metavar="PATH",
+                help=(
+                    "Absolute path to a systemd EnvironmentFile= holding SMTP "
+                    "credential environment variables. Only the path is ever "
+                    "written into generated unit text or plan output -- never "
+                    "its contents. Required with --send-email."
+                ),
+            )
         sub.add_argument(
             "--service-command",
             nargs="+",
@@ -141,6 +161,14 @@ def _render(args, payload, text_lines):
         write_console_text(sys.stdout, "\n".join(text_lines) + "\n")
 
 
+def _scheduled_email_line(plan):
+    if plan["send_email"]:
+        return (
+            "Scheduled email: enabled (environment file: %s)" % plan["environment_file"]
+        )
+    return "Scheduled email: disabled"
+
+
 def _command_plan(args):
     plan = build_plan(
         args.name,
@@ -151,8 +179,13 @@ def _command_plan(args):
         python=args.python,
         unit_dir=args.unit_dir,
         schedule_at=args.at,
+        send_email=args.send_email,
+        environment_file=args.environment_file,
     )
-    lines = ["Plan for report job %r (%s):" % (args.name, plan["status"])]
+    lines = [
+        "Plan for report job %r (%s):" % (args.name, plan["status"]),
+        _scheduled_email_line(plan),
+    ]
     for step in plan["steps"]:
         lines.append("- %s: %s" % (step["action"], step["path"]))
     if plan["conflicts"]:
@@ -173,10 +206,13 @@ def _command_install(args):
         python=args.python,
         unit_dir=args.unit_dir,
         schedule_at=args.at,
+        send_email=args.send_email,
+        environment_file=args.environment_file,
     )
     if not args.yes:
         lines = [
             "[dry-run] Would write:",
+            _scheduled_email_line(plan),
         ] + ["  - %s (%s)" % (s["path"], s["action"]) for s in plan["steps"]]
         _render(args, plan, lines)
         return 0
@@ -186,9 +222,11 @@ def _command_install(args):
         enable=args.enable or args.start,
         start=args.start,
     )
-    lines = ["Installed report job %r:" % args.name] + [
-        "  - %s" % p for p in result["written"]
-    ]
+    lines = (
+        ["Installed report job %r:" % args.name]
+        + ["  - %s" % p for p in result["written"]]
+        + [_scheduled_email_line(result)]
+    )
     _render(args, result, lines)
     return 0
 

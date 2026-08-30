@@ -3939,6 +3939,7 @@ capabilities:
       - req-server-update-backup-coverage-diagnostic
       - req-server-init-reporting-section
       - req-server-report-command
+      - req-scheduled-report-email-delivery
     implementation_locations:
       - docs/deployment/ubuntu-server.md
       - lifetxt/server_report.py
@@ -3962,6 +3963,7 @@ capabilities:
       - .ai/project/changes/server-update-production-readiness/
       - .ai/project/changes/server-init-bootstrap/
       - .ai/project/changes/server-init-ai-workspace-and-backup-coverage/
+      - .ai/project/changes/scheduled-report-email-delivery/
     public_interfaces:
       - lifetxt server-init --server-config PATH [--yes] [--format text|json]
       - lifetxt.server_init.run_server_init
@@ -3989,6 +3991,8 @@ capabilities:
       - lifetxt.server_report.build_plan
       - lifetxt.server_report.apply_install
       - lifetxt.server_report.apply_remove
+      - server-init config: reporting.jobs[].send_email, reporting.jobs[].environment_file
+      - lifetxt server-report plan|install NAME ... --send-email --environment-file PATH
     tests_or_evidence:
       - tests/test_server_init.py covers dry-run non-mutation, idempotent apply, existing-file refusal, source/data root overlap refusal, generated unit/sudoers injection-value refusal, uv installer selection, generated server-update config, generated systemd/nginx/service-control artifacts, explicit service user requirement, health-check planning, and CLI JSON output.
       - tests/test_server_update.py covers post-restart health readiness retry, including immediate success, connection-refused followed by success, HTTP error followed by success, deadline exhaustion preserving validated_health_check_failed, and restart failure preserving validated_restart_incomplete without health attempts.
@@ -4026,6 +4030,17 @@ capabilities:
       - "tests/test_server_report.py (19 tests): plan/apply_install/apply_remove unit tests (unit content, unknown/invalid profile rejection, conflict refusal, systemctl enable/disable via a mocked server_update._run, generator-marker-gated deletion, best-effort disable-failure tolerance) plus server_report_cli end-to-end tests (dry-run-by-default, --yes writes, unknown profile exits 1 with a named error, entrypoint routing)"
       - python -m unittest tests.test_server_report -> Ran 19 tests, OK
       - "live end-to-end on this Windows sandbox: a real disposable fixture (.lifetxt.json + life.txt) driven through the real lifetxt entrypoint -- server-report plan printed the exact designed service+timer unit content in JSON; install --yes wrote both files to disk; remove --yes deleted both files (systemctl calls failed gracefully and were tolerated, since no systemd exists on this host)"
+      - "#617: tests/test_server_init.py ReportingConfigGenerationTests (7 new tests): default job unaffected (no EnvironmentFile=, one ExecStart=), send_email job generates EnvironmentFile=/two ordered ExecStart= lines, send_email without environment_file rejected, send_email without a profile email config rejected, environment_file without send_email rejected, and an identity check confirming server_report.py reuses server_init.report_service_unit_text/report_timer_unit_text verbatim (not a parallel copy)"
+      - python -m unittest tests.test_server_init -> Ran 33 tests, OK
+      - "#617: tests/test_server_report.py BuildPlanTests (8 new tests): send_email adds EnvironmentFile=/second ExecStart=, report run scheduled strictly before report send (index-order assertion), send_email requires environment_file, send_email requires a profile with a valid email config, environment_file without send_email rejected (including an empty-string path argument), default plan unaffected, no SMTP credential name ever appears in generated content"
+      - "#617: tests/test_server_report.py ApplyInstallTests/ServerReportCliTests (1 extended + 6 new tests): send_email/environment_file surfaced on the apply_install result dict; --send-email/--environment-file CLI wiring for plan/install text and dry-run output; both invalid-combination CLI paths exit non-zero with a named error"
+      - python -m unittest tests.test_server_report -> Ran 33 tests, OK
+      - "#617: confirmed via git stash (production code only, tests kept) that the original 13 new tests across both files fail against the pre-#617 code, then pass once the fix is restored; added one further empty-string --environment-file regression test while completing the handoff"
+      - "#617: live -- a real lifetxt server-report plan/install --send-email --environment-file against a real disposable fixture (profile with a valid email section) produced a real, on-disk .service file containing EnvironmentFile=<path>, report run followed by report send as two ordered ExecStart= lines, and zero occurrences of any credential value, confirmed by reading the generated unit file directly; the same fixture without --send-email produced the unchanged single-ExecStart=, no-EnvironmentFile= unit; all four validation-refusal paths (missing email config, missing environment-file, environment-file without send-email, and the reverse) failed loudly with named errors before writing anything"
+      - "MPLBACKEND=Agg python -W ignore::ResourceWarning -m unittest discover -> Ran 3325 tests in 595.975s, FAILED (3 failures, skipped=195): tests.test_external_verification.ProcessTreeTimeoutTests x2 and tests.test_paths.MultiFileSourceIntegrityTests.test_permission_denied_file_among_multiple_sources_fails_loudly; all 3 reproduce in isolation and are outside #617's write scope"
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - ruff format --check / ruff check lifetxt/server_init.py lifetxt/server_report.py lifetxt/server_report_cli.py tests/test_server_report.py tests/test_server_init.py -> clean
+      - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/260
       - https://github.com/Eruhitsuji/lifetxt/issues/270
@@ -4042,6 +4057,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/609
       - https://github.com/Eruhitsuji/lifetxt/issues/610
       - https://github.com/Eruhitsuji/lifetxt/issues/611
+      - https://github.com/Eruhitsuji/lifetxt/issues/617
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/274
       - https://github.com/Eruhitsuji/lifetxt/pull/276
@@ -4185,6 +4201,48 @@ capabilities:
       content, plan/conflict/apply logic, and full CLI dry-run/`--yes`
       behavior were verified both by the automated test suite and by a
       live, non-mocked run against a real disposable fixture on this host.
+
+      #617 (implemented on the sibling child branch
+      issue-617-scheduled-email-delivery, in the same
+      feature/smtp-port-scheduled-email integration branch as #616's
+      cap-configurable-smtp-mail-transport, which it depends on) extends a
+      scheduled job with optional email delivery: `reporting.jobs[].
+      send_email`/`environment_file` (server-init) and `server-report
+      plan|install`'s `--send-email`/`--environment-file` both flow into the
+      same shared `report_service_unit_text()` this capability already
+      established, which now conditionally emits an
+      `EnvironmentFile={environment_file}` line and a second
+      `ExecStart={exe} report send {profile} --previous --config
+      {app_config}` line after the existing `report run` line -- no second
+      unit generator, no wrapper script, no custom orchestration code.
+      systemd's own `Type=oneshot` ordered-`ExecStart=`-with-fail-fast
+      semantics is the entire enforcement mechanism for "email only after a
+      successful report run." Validation (send_email requires a profile with
+      a valid `email` section and requires environment_file; environment_file
+      without send_email is rejected) reuses the report-profile validator
+      both `server_init._validate_reporting_config()` and
+      `server_report.build_plan()` already run
+      (`report_cli._profiles()`/its result) and the existing
+      `_validate_required_absolute_nowhitespace_path()` injection-safety
+      check already protecting `service_control.wrapper_path`/
+      `sudoers_path`/the AI-workspace `write_file` path -- no second
+      implementation of either check. `environment_file` is referenced by
+      path only everywhere in lifetxt (generated unit text, plan output, the
+      `apply_install` result dict); its contents are never opened, read, or
+      embedded -- systemd supplies the real credential values to the
+      `report send` process at service-start time via the standard
+      `EnvironmentFile=` directive, outside lifetxt's own process entirely.
+      Found while documenting this change that `docs/ja/cli.md` has no
+      numbered sections 19-24 at all (Development Tickets, Remote Safe Mode
+      Client, Commands Documented Elsewhere, server-init, server-update,
+      server-report are all missing) -- a large, pre-existing translation
+      gap spanning several past features, unrelated to and out of scope for
+      this change; `docs/ja/reports.md`'s scheduling cross-reference was
+      extended instead, and the gap is recorded in this change's own
+      decisions.md rather than silently left unmentioned. Security/High
+      assurance, matching this capability's own established basis for
+      server-init/server-update/server-report changes; full change package
+      at `.ai/project/changes/scheduled-report-email-delivery/`.
     replacement:
       replaces: []
       replaced_by: null

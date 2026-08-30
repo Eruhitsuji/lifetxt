@@ -3586,6 +3586,8 @@ python -m lifetxt server-report remove weekly --app-config /srv/lifetxt/.lifetxt
 | `--unit-dir PATH` | Directory to read/write unit files. Defaults to `<data-root>/systemd`. |
 | `--python PATH` | Target Python interpreter. Defaults to a bare `lifetxt` on `PATH`. |
 | `--at HH:MM` | 24-hour time the job's timer fires at, relative to the profile's own period boundary. Default `00:10`. |
+| `--send-email` | For `plan`/`install`: also run `report send <profile> --previous` as a second `ExecStart=` line after `report run` succeeds. Requires `--environment-file` and a profile with a valid `email` section. |
+| `--environment-file PATH` | Absolute path to a systemd `EnvironmentFile=` holding SMTP credential environment variables. Only the path is ever written into generated unit text or plan output -- never its contents. Required with `--send-email`; rejected without it. |
 | `--service-command ARGV...` | Command prefix used to enable/disable/start the timer. Default `systemctl`. |
 | `--yes` | Actually write (`install`) or delete (`remove`) the unit files. Without this, both subcommands only report what would happen. |
 | `--enable` | With `install --yes`: also run `systemctl enable` on the timer. |
@@ -3600,3 +3602,12 @@ disables/stops the timer via `systemctl` (tolerating `systemctl` being
 unavailable or the unit never having been enabled), then deletes only unit
 files that still contain the generator's own marker comment, refusing to
 delete an unrelated same-named file.
+
+`--send-email`'s second `ExecStart=` line only ever runs after the first
+(`report run`) succeeds, since systemd runs a oneshot unit's `ExecStart=`
+lines in order and fails the whole service if one fails -- a failed or
+partial report is never emailed. See
+[docs/deployment/ubuntu-server.md's Scheduled email delivery
+section](../deployment/ubuntu-server.md#scheduled-email-delivery) for the
+full walkthrough, including creating the `EnvironmentFile=` and testing
+delivery by hand first.

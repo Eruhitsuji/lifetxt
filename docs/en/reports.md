@@ -442,7 +442,14 @@ See [`docs/deployment/ubuntu-server.md`](../deployment/ubuntu-server.md) for
 generates a systemd oneshot + `Persistent=true` timer per job running
 `report run <profile> --previous`) and `lifetxt server-report plan|install|
 remove` (adds or removes one such job on an already-running deployment
-without re-running `server-init`).
+without re-running `server-init`). A job can also email its report after
+generating it -- `reporting.jobs[].send_email`/`environment_file`, or
+`server-report`'s `--send-email`/`--environment-file` -- which adds a second
+`ExecStart=report send <profile> --previous` line that only ever runs after
+`report run` succeeds; see [Scheduling on Ubuntu Server's Scheduled email
+delivery
+section](../deployment/ubuntu-server.md#scheduled-email-delivery) for the
+full walkthrough.
 
 ## Compatibility and migration
 

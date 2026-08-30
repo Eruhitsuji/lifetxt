@@ -8912,6 +8912,61 @@ traceability:
         extraction rationale.
       status: implemented
 
+    - requirement_id: req-distribution-sha256sums-merge-not-clobber
+      capability_id: cap-distribution-channels
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/567
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/583
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/598
+      changed_files_or_scope:
+        - Add scripts/merge_sha256sums.py, merging one or more
+          SHA256SUMS-format files into one de-duplicated, filename-sorted
+          manifest, and run it from both release.yml's and
+          standalone-binaries.yml's github-release job immediately before
+          gh release upload ... --clobber, downloading any already-published
+          SHA256SUMS asset first and merging it with the freshly generated
+          one instead of letting --clobber silently replace it
+        - scripts/merge_sha256sums.py
+        - tests/test_merge_sha256sums.py
+        - .github/workflows/release.yml
+        - .github/workflows/standalone-binaries.yml
+      tests_or_evidence:
+        - "tests/test_merge_sha256sums.py MergeSha256SumsCliTests (7 tests): disjoint-file merge into one sorted manifest, a missing input file is skipped rather than an error, every input missing fails loudly and writes nothing, a later input wins a filename collision, output never contains a carriage return, a malformed line fails loudly and writes nothing, blank lines are ignored"
+        - python -m unittest tests.test_merge_sha256sums -> Ran 7 tests, OK
+        - python -m unittest tests.test_check_release_tag_version tests.test_release_evidence tests.test_release_pypi_packaging tests.test_standalone_binaries_workflow tests.test_standalone_binaries_checksum_newline tests.test_traceability_gate tests.test_change_package_closeout -> Ran 31 tests, OK
+        - python -m unittest tests.test_standalone_binary -> Ran 10 tests, OK, including the real (non-mocked) PyInstaller build+run tier, confirming the new Set up Python step and checksum step in standalone-binaries.yml did not disturb the existing build contract
+        - "python -c \"import yaml; yaml.safe_load(open('.github/workflows/release.yml', encoding='utf-8')); yaml.safe_load(open('.github/workflows/standalone-binaries.yml', encoding='utf-8'))\" -> both parse"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check scripts/merge_sha256sums.py tests/test_merge_sha256sums.py -> clean
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - git diff --check -> clean
+      release_or_deployment: >-
+        CI/release-automation-only fix, no product/runtime behavior change.
+        Takes effect the next time both release.yml and
+        standalone-binaries.yml run for the same tag (a real end-to-end
+        merge against an actual GitHub Release has not been exercised in
+        this session, since it requires a real tag push or
+        workflow_dispatch run).
+      notes: >-
+        Closes the one deliberately-deferred gap #567's v1.0.1 release
+        batch left open (see cap-distribution-channels's own notes for the
+        full v1.0.1 diagnostic history this follows). merge_sha256sums.py
+        is a small, independently testable pure-parsing/merging module
+        (parse_sha256sums/merge_entries/render_sha256sums/merge_files) with
+        a thin CLI wrapper, matching the style already established by
+        scripts/check_release_tag_version.py and the
+        scripts/generate_*_manifest.py family. Both workflow call sites use
+        the identical two-line pattern (best-effort download of any
+        existing asset, then merge-and-overwrite the freshly generated
+        file before the existing upload step), so the two jobs cannot
+        drift into different merge behavior. release.yml's github-release
+        job also gained a tag-pinned checkout and a Python 3.12 setup step
+        it did not previously need; standalone-binaries.yml's github-release
+        job gained only the Python 3.12 setup step, since its existing
+        checkout step already runs unpinned for an unrelated, documented
+        reason (it only ever needed `.git` context for the `gh` CLI, not
+        repository content) that this change does not disturb.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

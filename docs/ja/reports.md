@@ -427,7 +427,14 @@ profile は `report validate` と同一の validator を通して失敗します
 既存 deployment へ1つの report job を追加/削除する
 `lifetxt server-report plan|install|remove` については
 [`docs/deployment/ubuntu-server.md`](../deployment/ubuntu-server.md) を
-参照してください。
+参照してください。job は生成した report を送信することもできます --
+`reporting.jobs[].send_email`/`environment_file`、または `server-report` の
+`--send-email`/`--environment-file` を指定すると、`report run` が成功した
+場合にのみ実行される2本目の `ExecStart=report send <profile> --previous`
+行が追加されます。詳細は
+[Ubuntu Server での定期実行の「Scheduled email delivery」section
+（英語）](../deployment/ubuntu-server.md#scheduled-email-delivery)
+を参照してください。
 
 ## 互換性・migration・downgrade
 

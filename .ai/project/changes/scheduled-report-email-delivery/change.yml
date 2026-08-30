@@ -1,0 +1,108 @@
+schema_version: 1
+
+change:
+  id: scheduled-report-email-delivery
+  title: Add scheduled report email delivery to server-report and server-init report jobs
+  status: implemented
+  change_type: Feature
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/617
+  related_pull_request: []
+  base_commit: bf9adec0010bb78ab892cd74afb58a7f0c4a471b
+  target_release: null
+
+scope:
+  in_scope:
+    - >-
+      Add `send_email`/`environment_file` validation to
+      `server_init._validate_reporting_config()` for `reporting.jobs[]`
+      entries -- `send_email` requires the referenced profile to already
+      carry a valid `email` section (reusing the already-validated report
+      profile, never re-validated) and requires `environment_file` to be an
+      absolute, whitespace-free path; `environment_file` without
+      `send_email=true` is rejected.
+    - >-
+      Extend `server_init.report_service_unit_text()` to conditionally emit
+      an `EnvironmentFile={environment_file}` line and a second
+      `ExecStart={exe} report send {profile} --previous --config
+      {app_config}` line (after the existing `report run` line) when
+      `job.get("send_email")` is set -- the single shared unit generator
+      `server_report.py` already imports unmodified, so both call sites gain
+      this with no further wiring.
+    - >-
+      Extend `server_report.build_plan()` with `send_email=False,
+      environment_file=None` parameters, the same validation rules as
+      above, and surface both fields on the returned `plan`/`apply_install`
+      result dicts.
+    - >-
+      Add `--send-email`/`--environment-file` to `server-report
+      plan|install`, and a `_scheduled_email_line()` renderer used in
+      `plan`/dry-run/post-install text output.
+    - >-
+      Update EN documentation (`docs/deployment/ubuntu-server.md`'s new
+      "Scheduled email delivery" subsection, `docs/en/cli.md`'s
+      `server-report` section, `docs/en/reports.md`'s scheduling
+      cross-reference) and the JA counterpart that already has a home for
+      this content (`docs/ja/reports.md`'s scheduling cross-reference).
+      `docs/ja/cli.md` has no `server-report`/`server-init` section to
+      extend at all -- a large, pre-existing translation gap unrelated to
+      this change, recorded in decisions.md rather than silently expanded
+      into.
+  out_of_scope:
+    - >-
+      SMTP transport/port itself (already delivered by #616, this change's
+      dependency).
+    - >-
+      A resident lifetxt scheduler; systemd timers remain the sole
+      scheduling mechanism.
+    - >-
+      Reading or embedding `environment_file`'s contents anywhere in
+      lifetxt; it is always referenced by path only.
+    - >-
+      Retrying a failed `report send` automatically -- a failed second
+      `ExecStart=` line fails the whole oneshot unit and is visible via
+      `journalctl`, matching this project's existing fail-loudly design
+      principle.
+    - >-
+      Translating docs/ja/cli.md's missing sections 19-24 (Development
+      Tickets, Remote, Commands Documented Elsewhere, server-init,
+      server-update, server-report) -- a pre-existing gap predating this
+      change, out of scope per Horizontal Review Scope Discipline.
+
+write_scope:
+  - lifetxt/server_init.py
+  - lifetxt/server_report.py
+  - lifetxt/server_report_cli.py
+  - tests/test_server_init.py
+  - tests/test_server_report.py
+  - docs/deployment/ubuntu-server.md
+  - docs/en/cli.md
+  - docs/en/reports.md
+  - docs/ja/reports.md
+  - .ai/project/CAPABILITIES.yml
+  - .ai/project/TRACEABILITY.yml
+  - .ai/project/changes/scheduled-report-email-delivery/
+
+forbidden_scope:
+  - .ai/managed/**
+  - >-
+    lifetxt/mail_delivery.py, lifetxt/cli.py, lifetxt/report_cli.py (SMTP
+    transport itself; already delivered by #616)
+  - lifetxt/report_v2.py (report rendering/section semantics)
+  - >-
+    Reverse proxy, Web service, or calendar-sync scheduling (sections 3-4 of
+    the runbook)
+  - docs/ja/cli.md's pre-existing missing sections 19-24 (see out_of_scope)
+
+human_approvals_required:
+  - independent security review
+  - Merge Authority approval before merge to main
+
+dependencies:
+  - >-
+    depends on #616 (configurable SMTP port and shared mail transport),
+    implemented on the sibling child branch issue-616-smtp-port-mail-transport
+    in the same feature/smtp-port-scheduled-email integration branch, merged
+    before this branch's work began

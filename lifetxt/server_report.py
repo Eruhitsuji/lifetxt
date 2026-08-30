@@ -22,7 +22,9 @@ from collections import OrderedDict
 
 from . import report_cli, server_update
 from .server_init import (
+    ServerInitError,
     _classify_path,
+    _validate_required_absolute_nowhitespace_path,
     report_service_unit_text,
     report_timer_unit_text,
 )
@@ -78,6 +80,22 @@ def validated_profile(app_config, name, config_path):
     return validated[name]
 
 
+def _validate_environment_file_path(value, config_path):
+    """Path-safety-validate an ``--environment-file`` value (#617).
+
+    Reuses server_init's own absolute/no-whitespace/no-control-character
+    path validator unmodified, rather than a second implementation of the
+    same systemd EnvironmentFile= injection-safety check, translating its
+    ServerInitError into this module's own ServerReportError.
+    """
+    try:
+        _validate_required_absolute_nowhitespace_path(
+            value, "--environment-file", config_path
+        )
+    except ServerInitError as exc:
+        raise ServerReportError(str(exc))
+
+
 def _unit_config(job_name, config_path, service_user, service_group, data_root, python):
     resolved_data_root = data_root or os.path.dirname(os.path.abspath(config_path))
     return {
@@ -104,19 +122,53 @@ def build_plan(
     python=None,
     unit_dir=None,
     schedule_at="00:10",
+    send_email=False,
+    environment_file=None,
 ):
     """Build the two-file plan for one report job's systemd units.
 
     Never writes anything; the caller decides whether to :func:`apply_plan`
     (``install``) or discard the plan (``plan``, a dry-run preview).
+
+    ``send_email``/``environment_file`` (#617) opt one job into scheduled
+    email delivery: the profile must already carry a valid `email` section
+    (checked through the same authoritative Report validator
+    :func:`validated_profile` already runs -- never duplicated here), and
+    ``environment_file`` is path-safety-validated before it ever reaches
+    generated unit text. Neither adds a second SMTP implementation; both
+    flow straight into :func:`lifetxt.server_init.report_service_unit_text`,
+    the one shared unit generator ``server-init``'s own opt-in ``reporting``
+    section also uses.
     """
     app_config = load_application_config(config_path)
     profile = validated_profile(app_config, profile_name, config_path)
+    if send_email:
+        if not profile.get("email"):
+            raise ServerReportError(
+                "Report profile %r has no `email` configuration; --send-email "
+                "requires one, validated the same way `report send` requires "
+                "it." % profile_name
+            )
+        if not environment_file:
+            raise ServerReportError(
+                "--send-email requires --environment-file PATH (an explicit "
+                "EnvironmentFile= path for SMTP credentials)."
+            )
+        _validate_environment_file_path(environment_file, config_path)
+    elif environment_file is not None:
+        raise ServerReportError("--environment-file requires --send-email.")
+
     unit_config = _unit_config(
         profile_name, config_path, service_user, service_group, data_root, python
     )
     resolved_unit_dir = unit_dir or os.path.join(unit_config["data_root"], "systemd")
-    job = {"name": profile_name, "profile": profile_name, "at": schedule_at}
+    job = {
+        "name": profile_name,
+        "profile": profile_name,
+        "at": schedule_at,
+        "send_email": send_email,
+        "environment_file": environment_file,
+    }
     service_path, timer_path = _unit_paths(resolved_unit_dir, profile_name)
 
     steps = [
@@ -138,6 +190,8 @@ def build_plan(
             ("status", "planned"),
             ("profile", profile_name),
             ("unit_name", "lifetxt-report-%s" % profile_name),
+            ("send_email", send_email),
+            ("environment_file", environment_file),
             ("steps", steps),
         ]
     )
@@ -178,7 +232,13 @@ def apply_install(plan, service_command=None, enable=False, start=False, timeout
                 % (plan["unit_name"], (result.stderr or result.stdout or "").strip()),
                 step="enable",
             )
-    return {"status": "installed", "written": written, "commands": commands}
+    return {
+        "status": "installed",
+        "written": written,
+        "commands": commands,
+        "send_email": plan["send_email"],
+        "environment_file": plan["environment_file"],
+    }
 
 
 def build_remove_plan(profile_name, unit_dir):

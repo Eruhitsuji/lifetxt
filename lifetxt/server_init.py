@@ -60,6 +60,7 @@ DEFAULT_CONFIG = {
     },
     "reverse_proxy": {"backend": "none", "nginx_config_path": None},
     "ai_workspace": {"enabled": False, "write_file": "ai-inbox.life.txt"},
+    "reporting": {"enabled": False, "profiles": {}, "jobs": []},
     "integrity_checks": ["workspace_validate", "check", "ids"],
     "validation_commands": [],
     "health_url": None,
@@ -91,6 +92,7 @@ def load_config(path):
         "service_control",
         "reverse_proxy",
         "ai_workspace",
+        "reporting",
     ):
         merged = dict(DEFAULT_CONFIG[key])
         merged.update(config.get(key) or {})
@@ -188,6 +190,91 @@ def _validate_config(config, source_path):
                 "life_txt_path." % source_path,
                 step="load_config",
             )
+    _validate_reporting_config(config, source_path)
+
+
+_REPORT_SCHEDULES = ("after-period",)
+_REPORT_TIME_RE = re.compile(r"^([01]\d|2[0-3]):([0-5]\d)$")
+
+
+def _validate_reporting_config(config, source_path):
+    """Validate ``reporting.profiles``/``reporting.jobs`` and return the
+    validated profile mapping (or ``{}`` when reporting is disabled).
+
+    Report profile validation is never reimplemented here: the profiles are
+    handed to :func:`lifetxt.report_cli._profiles`, the same authoritative
+    validator ``lifetxt report`` itself uses, so an invalid profile fails
+    server-init the same way it would fail a real ``lifetxt report`` run.
+    """
+    reporting = config.get("reporting") or {}
+    if not reporting.get("enabled"):
+        return {}
+    profiles = reporting.get("profiles")
+    if not isinstance(profiles, dict):
+        raise ServerInitError(
+            "Config %s: reporting.profiles must be an object of named report profiles."
+            % source_path,
+            step="load_config",
+        )
+    from . import report_cli
+
+    try:
+        validated_profiles = report_cli._profiles({"reports": profiles})
+    except ValueError as exc:
+        raise ServerInitError(
+            "Config %s: reporting.profiles failed report profile validation: %s"
+            % (source_path, exc),
+            step="load_config",
+        )
+    jobs = reporting.get("jobs")
+    if not isinstance(jobs, list):
+        raise ServerInitError(
+            "Config %s: reporting.jobs must be an array." % source_path,
+            step="load_config",
+        )
+    seen_names = set()
+    for index, job in enumerate(jobs):
+        if not isinstance(job, dict):
+            raise ServerInitError(
+                "Config %s: reporting.jobs[%d] must be an object."
+                % (source_path, index),
+                step="load_config",
+            )
+        name = job.get("name")
+        if not isinstance(name, str) or not name.strip():
+            raise ServerInitError(
+                "Config %s: reporting.jobs[%d].name must be a non-empty string."
+                % (source_path, index),
+                step="load_config",
+            )
+        if name in seen_names:
+            raise ServerInitError(
+                "Config %s: reporting.jobs has a duplicate name: %s"
+                % (source_path, name),
+                step="load_config",
+            )
+        seen_names.add(name)
+        profile_name = job.get("profile")
+        if profile_name not in validated_profiles:
+            raise ServerInitError(
+                "Config %s: reporting.jobs[%d].profile %r is not defined in "
+                "reporting.profiles." % (source_path, index, profile_name),
+                step="load_config",
+            )
+        if job.get("schedule") not in _REPORT_SCHEDULES:
+            raise ServerInitError(
+                "Config %s: reporting.jobs[%d].schedule must be one of: %s."
+                % (source_path, index, ", ".join(_REPORT_SCHEDULES)),
+                step="load_config",
+            )
+        at = job.get("at")
+        if not isinstance(at, str) or not _REPORT_TIME_RE.match(at):
+            raise ServerInitError(
+                "Config %s: reporting.jobs[%d].at must be an HH:MM 24-hour time."
+                % (source_path, index),
+                step="load_config",
+            )
+    return validated_profiles
 
 
 def _validate_single_line(value, key, source_path):
@@ -413,70 +500,86 @@ def _application_config(config):
         [("host", "127.0.0.1"), ("port", config["web"].get("port", 8765))]
     )
     if not config["ai_workspace"].get("enabled"):
-        return OrderedDict(
+        result = OrderedDict(
             [
                 ("paths", [_life_txt_path(config), generated]),
                 ("write_file", _life_txt_path(config)),
                 ("web", web_section),
             ]
         )
-    # ai_workspace.enabled switches to the `workspaces`-shaped config #500's
-    # own "AI-safe workspaces" example describes: `default` resolves to
-    # exactly what the legacy shape above would have (same sources, same
-    # write target), and `ai` adds a read-only reference to the primary
-    # life.txt plus a confined, writable AI-inbox source. See
-    # lifetxt.workspace.iter_workspace_definitions() for how this is read.
-    return OrderedDict(
-        [
-            (
-                "workspaces",
-                OrderedDict(
-                    [
-                        (
-                            "default",
-                            OrderedDict(
-                                [
-                                    (
-                                        "sources",
-                                        [_life_txt_path(config), generated],
-                                    ),
-                                    ("write_file", _life_txt_path(config)),
-                                ]
+    else:
+        # ai_workspace.enabled switches to the `workspaces`-shaped config
+        # #500's own "AI-safe workspaces" example describes: `default`
+        # resolves to exactly what the legacy shape above would have (same
+        # sources, same write target), and `ai` adds a read-only reference
+        # to the primary life.txt plus a confined, writable AI-inbox
+        # source. See lifetxt.workspace.iter_workspace_definitions() for
+        # how this is read.
+        result = OrderedDict(
+            [
+                (
+                    "workspaces",
+                    OrderedDict(
+                        [
+                            (
+                                "default",
+                                OrderedDict(
+                                    [
+                                        (
+                                            "sources",
+                                            [_life_txt_path(config), generated],
+                                        ),
+                                        ("write_file", _life_txt_path(config)),
+                                    ]
+                                ),
                             ),
-                        ),
-                        (
-                            "ai",
-                            OrderedDict(
-                                [
-                                    (
-                                        "sources",
-                                        [
-                                            OrderedDict(
-                                                [
-                                                    ("path", _life_txt_path(config)),
-                                                    ("role", "readonly"),
-                                                    ("writable", False),
-                                                ]
-                                            ),
-                                            OrderedDict(
-                                                [
-                                                    ("path", _ai_inbox_path(config)),
-                                                    ("role", "primary"),
-                                                    ("writable", True),
-                                                ]
-                                            ),
-                                        ],
-                                    ),
-                                    ("write_file", _ai_inbox_path(config)),
-                                ]
+                            (
+                                "ai",
+                                OrderedDict(
+                                    [
+                                        (
+                                            "sources",
+                                            [
+                                                OrderedDict(
+                                                    [
+                                                        (
+                                                            "path",
+                                                            _life_txt_path(config),
+                                                        ),
+                                                        ("role", "readonly"),
+                                                        ("writable", False),
+                                                    ]
+                                                ),
+                                                OrderedDict(
+                                                    [
+                                                        (
+                                                            "path",
+                                                            _ai_inbox_path(config),
+                                                        ),
+                                                        ("role", "primary"),
+                                                        ("writable", True),
+                                                    ]
+                                                ),
+                                            ],
+                                        ),
+                                        ("write_file", _ai_inbox_path(config)),
+                                    ]
+                                ),
                             ),
-                        ),
-                    ]
+                        ]
+                    ),
                 ),
-            ),
-            ("web", web_section),
-        ]
-    )
+                ("web", web_section),
+            ]
+        )
+    # reporting.enabled copies the validated report profiles into the
+    # generated application config's authoritative `reports` mapping (#610).
+    # Profile validation itself lives entirely in report_cli.py -- see
+    # _validate_reporting_config, which runs before build_plan is ever
+    # called, so an invalid profile here would already have failed loudly.
+    if config["reporting"].get("enabled") and config["reporting"].get("profiles"):
+        result["reports"] = OrderedDict(sorted(config["reporting"]["profiles"].items()))
+    return result
 
 
 def _lifetxt_executable(config):
@@ -568,6 +671,74 @@ Unit=lifetxt-sync-ics.service
 [Install]
 WantedBy=timers.target
 """
+
+
+_REPORT_ONCALENDAR_BY_PERIOD = {
+    "daily": "*-*-* {at}:00",
+    "weekly": "Mon *-*-* {at}:00",
+    "monthly": "*-*-01 {at}:00",
+}
+
+
+def report_service_unit_text(config, job):
+    """The oneshot systemd service running one scheduled report job.
+
+    Shared by ``server-init`` (#610) and ``server-report`` (#611) so a
+    scheduled report timer's unit content is generated in exactly one
+    place regardless of which command installed it.
+    """
+    return (
+        '# Generated by lifetxt for scheduled report job "{name}".\n'
+        "[Unit]\n"
+        "Description=lifetxt scheduled report: {name} ({profile})\n"
+        "Documentation=https://github.com/Eruhitsuji/lifetxt/blob/main/docs/deployment/ubuntu-server.md\n"
+        "\n"
+        "[Service]\n"
+        "Type=oneshot\n"
+        "User={user}\n"
+        "Group={group}\n"
+        "WorkingDirectory={data_root}\n"
+        "ExecStart={exe} report run {profile} --previous --config {app_config}\n"
+        "NoNewPrivileges=true\n"
+        "PrivateTmp=true\n"
+        "ProtectSystem=strict\n"
+        "ProtectHome=true\n"
+        "ReadWritePaths={data_root}\n"
+    ).format(
+        name=job["name"],
+        profile=job["profile"],
+        user=config["service_user"],
+        group=config["service_group"],
+        data_root=config["data_root"],
+        exe=_lifetxt_executable(config),
+        app_config=_application_config_path(config),
+    )
+
+
+def report_timer_unit_text(job, profile_period):
+    """The systemd timer (``Persistent=true``) triggering one report job.
+
+    ``profile_period`` (``daily``/``weekly``/``monthly``) selects the
+    ``OnCalendar=`` expression matching that period's own boundary, so the
+    timer fires once the period it reports on has just completed; the
+    report job itself always runs with ``--previous`` so the freshly
+    completed period is what actually gets rendered (#609's rationale).
+    """
+    oncalendar = _REPORT_ONCALENDAR_BY_PERIOD[profile_period].format(at=job["at"])
+    return (
+        '# Generated by lifetxt for scheduled report job "{name}".\n'
+        "[Unit]\n"
+        "Description=Periodic timer for lifetxt-report-{name}.service\n"
+        "Documentation=https://github.com/Eruhitsuji/lifetxt/blob/main/docs/deployment/ubuntu-server.md\n"
+        "\n"
+        "[Timer]\n"
+        "OnCalendar={oncalendar}\n"
+        "Persistent=true\n"
+        "Unit=lifetxt-report-{name}.service\n"
+        "\n"
+        "[Install]\n"
+        "WantedBy=timers.target\n"
+    ).format(name=job["name"], oncalendar=oncalendar)
 
 
 def _service_wrapper(config):
@@ -737,6 +908,42 @@ def build_plan(config):
             }
         )
 
+    reporting = config.get("reporting") or {}
+    reporting_jobs = (
+        list(reporting.get("jobs") or []) if reporting.get("enabled") else []
+    )
+    reporting_profiles = _validate_reporting_config(config, "<in-memory config>")
+    if (
+        reporting_jobs
+        and config["systemd"].get("enabled")
+        and config["systemd"].get("install_units")
+    ):
+        unit_dir = config["systemd"].get("unit_dir") or os.path.join(
+            config["data_root"], "systemd"
+        )
+        for job in reporting_jobs:
+            profile_period = reporting_profiles[job["profile"]]["period"]
+            steps.append(
+                {
+                    "kind": "file",
+                    "path": os.path.join(
+                        unit_dir, "lifetxt-report-%s.service" % job["name"]
+                    ),
+                    "mode": "0644",
+                    "content": report_service_unit_text(config, job),
+                }
+            )
+            steps.append(
+                {
+                    "kind": "file",
+                    "path": os.path.join(
+                        unit_dir, "lifetxt-report-%s.timer" % job["name"]
+                    ),
+                    "mode": "0644",
+                    "content": report_timer_unit_text(job, profile_period),
+                }
+            )
+
     install_config = _server_update_config(config)
     steps.append(
         {
@@ -773,7 +980,10 @@ def build_plan(config):
         config["systemd"].get("enable") or config["systemd"].get("start")
     ):
         action = "--now" if config["systemd"].get("start") else ""
-        for unit in install_config["services"]:
+        enable_units = list(install_config["services"]) + [
+            "lifetxt-report-%s.timer" % job["name"] for job in reporting_jobs
+        ]
+        for unit in enable_units:
             argv = list(config["systemd"].get("service_command") or ["systemctl"]) + [
                 "enable"
             ]

@@ -78,6 +78,27 @@ existing target. `append` reads the existing file and atomically writes the old
 content plus one complete generated report. Parent directories are created as
 needed.
 
+Validate one profile's configuration, or every configured profile, with no
+rendering, writing, or network access:
+
+```sh
+python -m lifetxt report validate weekly
+python -m lifetxt report validate --all
+```
+
+Show what a profile *would* do -- its resolved period, output path, scope,
+and (for a Report v2 profile) provider list -- without rendering body content
+or writing anything:
+
+```sh
+python -m lifetxt report inspect weekly
+python -m lifetxt report inspect weekly --format json
+```
+
+See [Validating and inspecting a profile](#validating-and-inspecting-a-profile)
+below for the full contract and the distinction between `validate`/`inspect`/
+`preview`/`run`.
+
 ## Generated metadata
 
 With `frontmatter: true`, output starts with metadata such as:
@@ -137,12 +158,295 @@ Equivalent automation can use systemd timers, Windows Task Scheduler, or
 `launchd`. Run the same `report run NAME` command from the scheduler so manual
 and scheduled output share one contract.
 
+## Report v2: composing existing aggregations (`sections`)
+
+A profile that declares a `sections` array opts into **Report v2**, a
+composition layer over lifetxt's existing deterministic domain aggregations
+(`review`, `stats`, `agenda`, `command_center`, `portfolio`, `health`, and
+more) instead of the `share --format markdown` delegation described above. A
+v2 profile never reimplements what those aggregations mean; it only selects,
+orders, and renders them.
+
+```json
+{
+  "reports": {
+    "weekly-review": {
+      "period": "weekly",
+      "output": "reports/{iso_year}-W{iso_week}.md",
+      "compare": "previous",
+      "sections": [
+        {"type": "review"},
+        {"type": "stats", "group": "daily"},
+        {"type": "agenda", "range": "next-period"},
+        {"type": "command-center", "horizon": 3},
+        {"type": "project-health"},
+        {"type": "next-actions"},
+        {"type": "inbox"},
+        {"type": "ticket-attention"},
+        {"type": "health"}
+      ]
+    }
+  }
+}
+```
+
+Each section is `{"type": "<name>", ...options}`. `title` is an optional
+override for the rendered heading. Available types:
+
+| Type | Reuses | Notable options |
+| --- | --- | --- |
+| `review` | `lifetxt.review.build_review()` | `project` |
+| `stats` | `lifetxt.stats.build_stats()` | `group` (`daily`/`weekly`/`monthly`) |
+| `agenda` | `lifetxt.agenda.agenda_records()` | `range` (`period` default, `next-period`, `previous-period`) |
+| `command-center` | `lifetxt.command_center.command_center()` | `horizon`, `next_actions_limit`, `inbox_limit`, `ticket_stale_after_days` |
+| `project-health` | `lifetxt.projects.portfolio()` | `include_archived` |
+| `next-actions` | the shared actionable-item definition | `limit` |
+| `inbox` | Unified Inbox summary | `limit` |
+| `ticket-attention` | the Command Center ticket-attention rule | `stale_after_days` |
+| `health` | `lifetxt.health.build_health()` (the same rules `lifetxt health` uses) | `since_days`, `lookahead_days`, `ignore_codes`, `kinds` |
+
+An unknown `type`, or an option a provider does not understand, fails loudly
+when the profile is read -- before any rendering happens.
+
+### Report-wide scope (`scope`)
+
+```json
+{
+  "reports": {
+    "research-weekly": {
+      "period": "weekly",
+      "scope": {"project": ["research"], "tag": ["experiment"], "open": false},
+      "sections": [
+        {"type": "review"},
+        {"type": "stats", "group": "daily"},
+        {"type": "agenda", "range": "next-period"}
+      ]
+    }
+  }
+}
+```
+
+`scope` narrows the parsed item set **once**, before any section provider
+runs, so every section agrees on what the report is about instead of each
+provider needing its own `project`/`tag`/`open` options. It reuses
+`lifetxt.agenda.filter_items()` -- the same filtering primitive the CLI
+`filter`/`agenda` commands and `query` already use -- rather than a
+report-only filter engine. A provider's own options may narrow the scoped
+set further (for example `agenda`'s `range`); no provider can see an item
+`scope` already excluded.
+
+Supported fields: `project`, `tag`, `type`, `status`, `person` (each a
+string or an array of strings), and `open` (boolean, equivalent to the v1
+`open` convenience). Combining fields applies all of them together (AND).
+
+For backward compatibility, the legacy top-level `project`/`type`/`tag`/
+`open` keys (the v1 filter contract) are still accepted on a v2 profile and
+folded into `scope` as compatibility aliases. A profile that sets both a
+legacy key and a conflicting `scope` value for the same field fails loudly
+when the profile is read, rather than silently picking one:
+
+```json
+{"project": "home", "scope": {"project": "work"}}
+```
+
+```text
+Report profile weekly: legacy `project` and `scope.project` specify conflicting values.
+```
+
+Existing v1 profiles (no `sections`) are unaffected: their top-level
+`project`/`type`/`tag`/`open` keep working exactly as documented above,
+independent of `scope`.
+
+### Output format
+
+```json
+{"format": "markdown", "sections": [...]}
+```
+
+`format` is `markdown` (default), `json`, or `html`. All three render the
+same already-built Report Model; none re-parses `life.txt` or re-derives a
+section. Override it for one call with `--format`:
+
+```sh
+python -m lifetxt report preview weekly-review --format json
+```
+
+`--format` is only valid for a `sections` profile; using it on a v1 profile
+is rejected.
+
+### Historical periods (`--date`, `--previous`)
+
+```sh
+python -m lifetxt report preview weekly-review --date 2026-07-15
+python -m lifetxt report run weekly-review --previous
+```
+
+`--date YYYY-MM-DD` generates the configured period containing that date.
+`--previous` generates the immediately completed previous period relative to
+today -- the form a scheduler should use right after a period rolls over, so
+the freshly completed period is what gets rendered rather than the new one
+already in progress. `--date` and `--previous` are mutually exclusive. Both
+also apply to v1 profiles.
+
+### Comparing against the previous period (`compare`)
+
+```json
+{"compare": "previous", "sections": [{"type": "stats"}]}
+```
+
+When set, every section is also computed for the immediately preceding
+period, and a generic numeric diff (`{"current": ..., "previous": ...,
+"delta": ...}` per matching numeric field) is attached as that section's
+`compare` value. No section's own comparison semantics are hand-written; the
+diff walks whatever the provider already returned.
+
+### External-safe reports (`audience`)
+
+```json
+{
+  "audience": "external",
+  "sections": [{"type": "stats"}, {"type": "health"}]
+}
+```
+
+`audience` is `private` (default) or `external`. `external` is deliberately
+conservative: only aggregate-only section types (`stats`, `health`,
+`project-health`) are allowed -- a profile using `review`, `agenda`,
+`command-center`, `next-actions`, `inbox`, or `ticket-attention` under
+`audience: external` is rejected when the profile is read. Every allowed
+section's data is also redacted before rendering: any field that could carry
+a verbatim title, path, excerpt, or other personal text is dropped (a
+dropped list becomes a `<field>_count` instead), and the result is passed
+through the same path/token redaction `remote_access.redact_remote_value()`
+already applies elsewhere in lifetxt as defense in depth. This is not a
+general redaction switch over the v1 `share` renderer -- it is a distinct,
+narrower contract for reports meant to leave your private lifetxt
+environment.
+
+### Emailing a report (`email`, `report send`)
+
+```json
+{
+  "email": {
+    "to": ["me@example.com"],
+    "subject": "lifetxt weekly report {period_start} - {period_end}",
+    "smtp_host_env": "LIFETXT_SMTP_HOST",
+    "smtp_user_env": "LIFETXT_SMTP_USER",
+    "smtp_pass_env": "LIFETXT_SMTP_PASS"
+  }
+}
+```
+
+```sh
+python -m lifetxt report send weekly-review
+python -m lifetxt report send weekly-review --date 2026-07-15
+python -m lifetxt report send weekly-review --dry-run
+```
+
+`email` works on both v1 and v2 profiles. `to` is required; `subject`
+supports `{period_start}`, `{period_end}`, and `{report}` placeholders and
+defaults to `lifetxt report: <name>`. SMTP host/username/password are read
+from the named environment variables (defaulting to `LIFETXT_SMTP_HOST`/
+`LIFETXT_SMTP_USER`/`LIFETXT_SMTP_PASS`) via STARTTLS, the same delivery
+primitive `digest --format email` uses -- `report send` does not add a
+second SMTP implementation. `--dry-run` prints what would be sent without
+opening a connection or requiring the environment variables to be set.
+
+`lifetxt digest` can also use a report profile as its message source instead
+of the built-in review summary, reusing digest's existing file/email/Slack
+delivery channels:
+
+```sh
+lifetxt digest --report weekly-review --format email --to me@example.com
+lifetxt digest --report weekly-review --format file --path weekly.md
+lifetxt digest --report weekly-review --date 2026-07-15 --format slack-webhook --url-env LIFETXT_SLACK_WEBHOOK
+```
+
+`--week`/`--month`/`--project` are ignored when `--report` is given; the
+profile's own period and filters apply instead.
+
+## Validating and inspecting a profile
+
+Four `report` subcommands answer four different questions, in increasing
+order of what they actually do:
+
+| Command | Question | Renders body? | Writes/sends? |
+| --- | --- | --- | --- |
+| `report validate` | Is this profile's configuration structurally valid? | No | No |
+| `report inspect` | After resolution, what period/output/scope/providers would be used? | No | No |
+| `report preview` | What would the rendered report look like? | Yes (to stdout) | No |
+| `report run` / `report send` | Generate (or generate and email) the report. | Yes | Yes |
+
+### `report validate`
+
+```sh
+python -m lifetxt report validate weekly
+python -m lifetxt report validate --all
+python -m lifetxt report validate weekly --format json
+```
+
+Validates one named profile, or every configured profile with `--all`,
+through the exact same profile validator `preview`/`run`/`send` use --
+period/mode, v1-vs-v2 compatibility, `sections`/`scope`/`compare`/`format`/
+`audience`/`email` shape -- plus a syntax-only check of the `output`
+placeholder template. It never parses `life.txt`, executes a section
+provider, renders report content, writes a file, or opens a network
+connection.
+
+`--all` reports **every** profile's result, not just the first failure:
+
+```text
+$ python -m lifetxt report validate --all
+broken: FAIL: Report profile broken: Unknown report section type: 'nope'. Known types: ...
+v2weekly: OK
+weekly: OK
+```
+
+Exit status is `0` when every checked profile is valid and `1` otherwise, so
+`report validate --all` is suitable as a CI or `systemd` preflight step
+before `server-init`/`server-report` deploy a scheduled job. `--format json`
+emits a small, deterministic result object (or, with `--all`, a list) instead
+of the text summary; it is not the Report Model `preview --format json`
+produces.
+
+### `report inspect`
+
+```sh
+python -m lifetxt report inspect weekly
+python -m lifetxt report inspect weekly --date 2026-07-15 --format json
+```
+
+Shows the exact resolved plan `preview`/`run` would use for the given
+invocation -- schema (`lifetxt-report-v1`/`lifetxt-report-v2`), resolved
+`period.start`/`period.end`/`timezone`, the resolved `output.path` (when
+`output` is configured), the effective `scope` after legacy-alias resolution,
+and (for a Report v2 profile) the ordered `sections` list with each section's
+own options -- without ever rendering a section, calling a provider, writing
+a file, or contacting SMTP. `--date`/`--previous` select the same period
+`preview`/`run` would resolve. An invalid profile fails through the identical
+validator `report validate` uses.
+
+`email` presence is reported only as a boolean `email_configured`; configured
+environment-variable *names* and secret *values* never appear in `inspect`
+output.
+
+## Scheduling on Ubuntu Server
+
+See [`docs/deployment/ubuntu-server.md`](../deployment/ubuntu-server.md) for
+`server-init`'s opt-in `reporting` section (new/regenerated deployments,
+generates a systemd oneshot + `Persistent=true` timer per job running
+`report run <profile> --previous`) and `lifetxt server-report plan|install|
+remove` (adds or removes one such job on an already-running deployment
+without re-running `server-init`).
+
 ## Compatibility and migration
 
 This is additive configuration. When `reports` is absent, existing lifetxt
 behavior is unchanged. No `life.txt` grammar migration is required. To downgrade
 to a version without report profiles, remove or ignore the `reports` section;
 `life.txt` itself needs no conversion because report files are derived output.
+A profile without `sections` keeps behaving exactly as the v1 section above
+describes; adding `sections` is the only way to opt into Report v2.
 
 Use `lifetxt config explain reports.weekly.period` (replace `weekly` with your
 profile name) to inspect the registered configuration metadata.

@@ -9054,6 +9054,467 @@ traceability:
         #438 in this same capability.
       status: implemented
 
+    - requirement_id: req-report-v2-composition-core
+      capability_id: cap-report-v2-composition
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/600
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/601
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/612
+      changed_files_or_scope:
+        - "Add lifetxt/report_v2.py: ReportContext (parse life.txt once), a section-provider registry adapting review/stats/agenda into a Report Model, and a Markdown renderer as pure presentation"
+        - lifetxt/report_v2.py
+        - tests/test_report_v2.py
+      tests_or_evidence:
+        - tests/test_report_v2.py ProviderCompositionTests, RendererTests -> 22 tests total across the whole module, OK
+        - "test_review_provider_reuses_build_review/test_stats_provider_reuses_build_stats/test_command_center_provider_matches_direct_call confirm each provider's data equals a direct call to the existing domain function"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check lifetxt/report_v2.py tests/test_report_v2.py -> clean
+      release_or_deployment: null
+      notes: >-
+        Not yet wired into `lifetxt report` by this commit alone; wiring
+        landed in the same PR via
+        req-report-v2-period-comparison-and-backfill's #604 slice
+        (report_cli.py's `sections`-presence dispatch).
+      status: implemented
+
+    - requirement_id: req-report-v2-period-comparison-and-backfill
+      capability_id: cap-report-v2-composition
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/600
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/604
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/612
+      changed_files_or_scope:
+        - Add previous_period()/next_period() and a generic numeric-diff
+          comparison over two section results in report_v2.py
+        - Wire --date/--previous into `report preview|run|send`, and into v1
+          profile rendering, via report_cli.py
+        - lifetxt/report_v2.py
+        - lifetxt/report_cli.py
+        - tests/test_report_v2.py
+        - tests/test_report_v2_cli.py
+      tests_or_evidence:
+        - tests/test_report_v2.py PeriodMathTests, ComparisonTests -> included in the 22-test module run, OK
+        - tests/test_report_v2_cli.py test_date_anchor_selects_historical_period, test_previous_flag_shifts_the_period_back_one_week_relative_to_today, test_date_and_previous_are_mutually_exclusive
+        - python -m unittest tests.test_report_v2 tests.test_report_v2_cli tests.test_report_cli -> Ran 51 tests, OK
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+      release_or_deployment: null
+      notes: >-
+        Comparison is a generic recursive numeric diff over two provider
+        results (`{"current":..., "previous":..., "delta":...}` per matching
+        numeric field), not a per-section comparison implementation.
+        `--date`/`--previous` apply uniformly to both v1 and v2 profiles at
+        the `report_cli.py` command layer.
+      status: implemented
+
+    - requirement_id: req-report-v2-additional-section-providers
+      capability_id: cap-report-v2-composition
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/600
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/605
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/612
+      changed_files_or_scope:
+        - Add command-center/project-health/next-actions/inbox/ticket-attention
+          section providers to report_v2.py's SECTION_PROVIDERS registry
+        - lifetxt/report_v2.py
+        - tests/test_report_v2.py
+      tests_or_evidence:
+        - "tests/test_report_v2.py test_next_actions_and_inbox_and_ticket_attention_providers_run, test_command_center_provider_matches_direct_call"
+        - python -m unittest tests.test_report_v2 -> Ran 22 tests, OK
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      release_or_deployment: null
+      notes: >-
+        command-center/next-actions/inbox/ticket-attention providers reuse
+        `lifetxt.command_center.command_center()` and its own private
+        `_next_actions`/`_inbox_section`/`_ticket_attention` adapters
+        directly (imported cross-module, matching this project's own
+        established precedent of reusing private helpers rather than
+        re-deriving the identical shape from public building blocks, e.g.
+        `mcp.py` importing `webapp._subgraph`); `project-health` reuses the
+        fully public `lifetxt.projects.portfolio()`. No bucket/health/
+        actionable-item rule is reimplemented.
+      status: implemented
+
+    - requirement_id: req-report-v2-health-domain-function
+      capability_id: cap-report-v2-composition
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/600
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/606
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/612
+      changed_files_or_scope:
+        - Extract the CLI `health` command's inline W301-W305 finding
+          construction into lifetxt/health.py::build_health(), matching the
+          build_review()/build_stats() pattern; command_health() now calls it
+        - Add a `health` section provider to report_v2.py reusing build_health()
+        - lifetxt/health.py
+        - lifetxt/cli.py
+        - lifetxt/report_v2.py
+        - tests/test_health.py
+      tests_or_evidence:
+        - tests/test_health.py -> Ran 6 tests, OK
+        - "full existing health CLI test suite (LifeTxtHealthCliTests, LifeTxtHealthExtTests, LifeTxtHealthEdgeCaseTests, LifeTxtHealthW304Tests -- 14 tests) re-run unmodified against the refactored command_health() -> OK, confirming byte-identical behavior"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check lifetxt/health.py lifetxt/cli.py tests/test_health.py -> clean
+      release_or_deployment: null
+      notes: >-
+        `build_health()` is a pure extraction: the CLI command's W301-W305
+        rules, dependency-blocker reuse, and finding shape are unchanged,
+        confirmed by re-running the complete pre-existing health CLI test
+        suite with no modification.
+      status: implemented
+
+    - requirement_id: req-report-v2-json-html-renderers
+      capability_id: cap-report-v2-composition
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/600
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/607
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/612
+      changed_files_or_scope:
+        - Add render_json()/render_html() as pure presentation functions over
+          the already-built Report Model, plus a `format` profile key and CLI
+          --format override
+        - lifetxt/report_v2.py
+        - lifetxt/report_cli.py
+        - lifetxt/report_config.py
+        - lifetxt/schema_extensions_v5.py
+        - dist/schemas/config-v1.schema.json
+        - tests/test_report_v2.py
+        - tests/test_report_v2_cli.py
+      tests_or_evidence:
+        - tests/test_report_v2.py RendererTests (json/html/markdown, and test_renderers_never_call_a_provider_or_reparse)
+        - tests/test_report_v2_cli.py test_preview_format_override_produces_json, test_format_override_rejected_for_v1_profile
+        - python -m unittest tests.test_report_v2 tests.test_report_v2_cli -> Ran 39 tests, OK
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+      release_or_deployment: null
+      notes: >-
+        `format` is v2-only (requires `sections`); using `--format` on a v1
+        profile is rejected. Both renderers operate purely on the model
+        dict already built by build_report_model(), confirmed by a
+        dedicated test that mutating the model after building it changes
+        the rendered output with no re-derivation.
+      status: implemented
+
+    - requirement_id: req-report-v2-external-safe-audience
+      capability_id: cap-report-v2-composition
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/600
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/603
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/612
+      changed_files_or_scope:
+        - Add an `audience` profile key (private/external), section-type
+          allowlisting for external, and redact_for_external_audience() plus
+          a remote_access.redact_remote_value() defense-in-depth pass
+        - lifetxt/report_v2.py
+        - lifetxt/report_cli.py
+        - tests/test_report_v2.py
+        - tests/test_report_v2_cli.py
+      tests_or_evidence:
+        - tests/test_report_v2.py SectionValidationTests.test_external_audience_rejects_unsafe_section_type/test_external_audience_accepts_safe_section_type
+        - tests/test_report_v2.py ExternalAudienceRedactionTests (redaction drops titles/replaces lists with counts; end-to-end never leaks task titles in a rendered external report)
+        - tests/test_report_v2_cli.py test_external_audience_rejects_unsafe_section (profile-load-time rejection)
+        - python -m unittest tests.test_report_v2 tests.test_report_v2_cli -> Ran 39 tests, OK
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      release_or_deployment: null
+      notes: >-
+        Deliberately the conservative first slice #603 itself describes:
+        only `stats`/`health`/`project-health` section types are allowed
+        under `audience: external`; every allowed section's data is still
+        redacted (verbatim-content keys dropped, lists replaced by counts)
+        and passed through the existing
+        `lifetxt.remote_access.redact_remote_value()` as defense in depth.
+        Not a general redaction switch over the v1 `share` renderer -- a
+        distinct, narrower trust-boundary contract.
+      status: implemented
+
+    - requirement_id: req-report-v2-email-delivery
+      capability_id: cap-report-v2-composition
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/600
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/602
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/612
+      changed_files_or_scope:
+        - Add lifetxt/mail_delivery.py (send_smtp_text/send_slack_webhook/append_local_file)
+          and refactor command_digest's email/Slack/file branches and
+          cli.py's _split_email_addresses to reuse it
+        - Add `email` profile key and `lifetxt report send NAME`
+        - lifetxt/mail_delivery.py
+        - lifetxt/cli.py
+        - lifetxt/report_cli.py
+        - tests/test_mail_delivery.py
+        - tests/test_report_v2_cli.py
+      tests_or_evidence:
+        - tests/test_mail_delivery.py -> Ran 12 tests, OK
+        - "existing digest CLI test suite (LifeTxtShareDigestTemplateTests, 7 tests) re-run unmodified against the mail_delivery-backed refactor -> OK"
+        - tests/test_report_v2_cli.py ReportSendTests (email config required, dry-run prints without SMTP, v1 profile email dry-run)
+        - python -m unittest tests.test_mail_delivery tests.test_report_v2_cli tests.test_lifetxt.LifeTxtShareDigestTemplateTests -> Ran 24 tests, OK
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+      release_or_deployment: null
+      notes: >-
+        `report send` and `digest --format email` now share one SMTP
+        implementation instead of `report send` becoming a third. Bounded
+        scope: `_send_notification_email_batch` (notification email) was
+        left on its own inline SMTP call rather than also refactored, to
+        keep this task's footprint bounded; it already shares
+        `split_email_addresses` via `_split_email_addresses`. `--dry-run`
+        no longer requires SMTP environment variables to be set first (a
+        strict improvement over the prior digest email branch's behavior;
+        no existing test relied on the old requirement).
+      status: implemented
+
+    - requirement_id: req-digest-report-source
+      capability_id: cap-report-v2-composition
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/600
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/608
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/612
+      changed_files_or_scope:
+        - Add `digest --report NAME [--date|--previous]`, reusing
+          report_cli._render_named_report as the message source and the
+          existing digest delivery channels unchanged
+        - lifetxt/cli.py
+        - tests/test_digest_report_source.py
+      tests_or_evidence:
+        - tests/test_digest_report_source.py -> Ran 5 tests, OK (real subprocess via run_cli: file channel writes the rendered v2 report, dry-run email shows the rendered body, unknown profile fails loudly, v1 profile still delegates to share, plain digest without --report unaffected)
+        - python -m unittest tests.test_digest_report_source tests.test_lifetxt.LifeTxtShareDigestTemplateTests tests.test_lifetxt.LifeTxtNotifyTests tests.test_report_cli -> Ran 33 tests, OK
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check lifetxt/cli.py tests/test_digest_report_source.py -> clean
+      release_or_deployment: null
+      notes: >-
+        Reuses `report_cli._render_named_report` -- the exact function
+        `preview`/`run`/`send` already call -- so `digest --report` never
+        gets a second report-composition/rendering implementation.
+        `--week`/`--month`/`--project` are documented as ignored (not
+        rejected) when `--report` is given.
+      status: implemented
+
+    - requirement_id: req-report-v2-shared-scope
+      capability_id: cap-report-v2-composition
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/600
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/613
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/612
+      changed_files_or_scope:
+        - "Add a report-wide `scope` profile key (project/tag/type/status/person/open), applied once by reusing lifetxt.agenda.filter_items() before any section provider runs, with legacy top-level project/type/tag/open folded in as compatibility aliases"
+        - lifetxt/report_v2.py
+        - lifetxt/report_cli.py
+        - lifetxt/report_config.py
+        - lifetxt/schema_extensions_v5.py
+        - dist/schemas/config-v1.schema.json
+        - tests/test_report_v2.py
+        - tests/test_report_v2_cli.py
+        - docs/en/reports.md
+        - docs/ja/reports.md
+        - docs/en/config.md
+        - docs/ja/config.md
+      tests_or_evidence:
+        - "tests/test_report_v2.py ScopeTests: validate_scope rejects unknown keys, non-object scope, non-string-or-array list fields, and a non-boolean open; apply_scope filters by each of project/tag/type/status/person individually and combined, with a string value treated as a single-element list; an empty/absent scope is a no-op leaving item order and count unchanged"
+        - "tests/test_report_v2_cli.py: a v2 profile's scope is validated at profile-load time and reported with the profile's own name on error; a legacy top-level project/type/tag/open value is folded into scope when scope does not already set a conflicting value for the same field; a legitimately conflicting legacy value vs. scope value fails loudly naming both the legacy key and the scope key; preview/run against a scoped profile only include matching items"
+        - python -m unittest tests.test_report_v2 tests.test_report_v2_cli tests.test_schema_extensions_v2 tests.test_config_validation -> Ran 112 tests, OK (skipped=5)
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check lifetxt/report_v2.py lifetxt/report_cli.py lifetxt/report_config.py lifetxt/schema_extensions_v5.py tests/test_report_v2.py tests/test_report_v2_cli.py -> clean
+        - "found and fixed a real bug during this task's own testing: apply_scope() initially passed a bare scope string (e.g. project: home) straight into filter_items(projects=...), which iterates a bare string character-by-character (lifetxt.agenda._normalize_filter_values expects a list or None); reproduced with a failing end-to-end assertion before the fix, root-caused by reading _normalize_filter_values's source, and fixed with a _scope_list() normalization helper applied uniformly to every list-or-string scope field"
+      release_or_deployment: null
+      notes: >-
+        Extends cap-report-v2-composition. `apply_scope()`/`validate_scope()`
+        in report_v2.py are pure functions delegating entirely to
+        `lifetxt.agenda.filter_items()` -- the same surface-neutral
+        filtering primitive CLI `filter`/`agenda`/`query` already use --
+        rather than a second, report-only filter engine. Scope is resolved
+        exactly once in `render_report_v2()`, immediately after items are
+        parsed and before any section provider runs, so no provider needs
+        (or is given) its own filtering logic. `report_cli._resolve_v2_scope()`
+        folds legacy v1 top-level `project`/`type`/`tag`/`open` keys into
+        `scope` as compatibility aliases, matching this project's
+        established precedent (e.g. cap-config-safe-writes's legacy-key
+        tolerance) of accepting an older shape without silently picking a
+        value when it conflicts with the new one.
+      status: implemented
+
+    - requirement_id: req-report-readonly-validate
+      capability_id: cap-report-v2-composition
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/600
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/614
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/612
+      changed_files_or_scope:
+        - "Add `lifetxt report validate NAME|--all [--format text|json]`, reusing the exact _validate_profile() preview/run/send already call plus a syntax-only output-template placeholder check, with zero rendering/writing/network access"
+        - "Fix _profile_named() to validate only the requested profile (via a new _raw_profiles()) instead of eagerly validating every configured profile first"
+        - lifetxt/report_cli.py
+        - tests/test_report_v2_cli.py
+        - docs/en/reports.md
+        - docs/ja/reports.md
+        - docs/en/cli.md
+        - docs/ja/cli.md
+        - docs/deployment/ubuntu-server.md
+      tests_or_evidence:
+        - "tests/test_report_v2_cli.py ReportValidateCliTests (15 tests): valid v1/v2 profile reports OK, invalid profile fails naming the reason, invalid output placeholder caught without writing anything, unknown profile name fails loudly, NAME/--all mutual-exclusivity validation, --all enumerates every profile and does not stop at the first failure, --all with only valid profiles exits 0, --all with no profiles configured, --format json for one profile and for --all (deterministic ordering), validate never touches life.txt (deleting the workspace's life.txt does not affect the result), an unrelated broken profile does not block validating a good one"
+        - python -m unittest tests.test_report_v2_cli -> Ran 50 tests, OK
+        - python -m unittest tests.test_report_v2 tests.test_report_cli tests.test_digest_report_source tests.test_server_init tests.test_server_report -> Ran 94 tests, OK (regression: the _profile_named fix changes no existing test's expected behavior)
+        - "live: real disposable fixture (valid v1, valid v2, one profile with an unknown section type) -- report validate weekly -> \"weekly: OK\"; report validate broken -> \"broken: FAIL: ...\", exit 1; report validate --all lists all three profiles' results, not just the first failure, exit 1; report validate --all --format json produces the matching deterministic JSON; report validate weekly --all correctly refused as a conflicting combination"
+        - "found and fixed a real, pre-existing bug during this task's own live testing (see cap-report-v2-composition's notes and req-report-resolved-inspection): _profile_named() called _profiles(), which eagerly validates every configured profile, so preview/run/send/digest --report for a valid profile failed whenever an unrelated sibling profile was invalid; confirmed via git stash that the bug predates this task; fixed by validating only the requested profile"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check lifetxt/report_cli.py tests/test_report_v2_cli.py -> clean
+        - "manual: docs/en/reports.md and docs/ja/reports.md new-section anchors computed directly against the release-doc validator's own slug() algorithm and confirmed present"
+        - scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> {"errors":0,"ok":true}
+      release_or_deployment: null
+      notes: >-
+        Extends cap-report-v2-composition. `_validate_profile_safe()` never
+        raises -- it wraps `_validate_profile()` (the identical function
+        `preview`/`run`/`send` already call) in a try/except and additionally
+        exercises `resolve_output_template()` against a fixed, arbitrary
+        anchor date purely to catch placeholder-syntax errors, so `validate`
+        performs no life.txt parsing, provider execution, file write, or
+        network access. `--all` deliberately does not reuse `_profiles()`
+        (which raises on the first invalid profile); a new `_raw_profiles()`
+        enumerates the raw `reports` mapping so every profile's result can be
+        collected and reported, per the issue's own "does not stop after the
+        first profile" acceptance criterion. Provider-specific option-key
+        validation is intentionally not newly invented here, since no such
+        validation exists anywhere in `report_v2.py` today (see
+        cap-report-v2-composition's notes for the full reasoning) --
+        `validate` reuses exactly what `preview`/`run` already enforce, no
+        more and no less.
+      status: implemented
+
+    - requirement_id: req-report-resolved-inspection
+      capability_id: cap-report-v2-composition
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/600
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/615
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/612
+      changed_files_or_scope:
+        - "Add `lifetxt report inspect NAME [--date|--previous] [--format text|json]`, reusing _profile_named()/_period_context()/_resolved_output() unchanged and never rendering a section, executing a provider, writing a file, or contacting SMTP"
+        - lifetxt/report_cli.py
+        - tests/test_report_v2_cli.py
+        - docs/en/reports.md
+        - docs/ja/reports.md
+        - docs/en/cli.md
+        - docs/ja/cli.md
+        - docs/deployment/ubuntu-server.md
+      tests_or_evidence:
+        - "tests/test_report_v2_cli.py ReportInspectCliTests (13 tests): v1 profile text output; v2 profile JSON period/scope/compare/sections exactly matches an equivalent preview --format json call's period_start/period_end; --date and --previous use the identical selector preview uses; --date+--previous mutual exclusivity; invalid profile fails through the same validator as report validate; no output configured reports null; relative and absolute output paths both resolve to an absolute path; inspect never writes the configured output file; inspect never leaves a stray share.md; email presence is reported only as a boolean, never the env var name or a real secret value; an unrelated broken profile does not block inspecting a good one"
+        - python -m unittest tests.test_report_v2_cli -> Ran 50 tests, OK
+        - "live: real disposable fixture -- report inspect v2weekly (text) showed schema/period/mode/sections/format/audience/compare/scope/email correctly with zero files written (confirmed via directory listing before/after); report inspect v2weekly --format json produced the designed nested report/schema/period/output/scope/sections/email_configured/format/audience/compare shape; report inspect v2weekly --date 2026-01-15 correctly shifted period.start/period.end; report inspect weekly (v1 profile) showed the resolved absolute output path without creating the output directory"
+        - "live: report preview v2weekly, run from within the fixture directory (with a broken sibling profile present), rendered successfully -- confirms the _profile_named() fix this task made (see req-report-readonly-validate) benefits preview/run/send/digest --report, not only the two new commands"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check lifetxt/report_cli.py tests/test_report_v2_cli.py -> clean
+        - scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> {"errors":0,"ok":true}
+      release_or_deployment: null
+      notes: >-
+        Extends cap-report-v2-composition. Implemented alongside
+        req-report-readonly-validate in the same commit/PR since both reuse
+        the same `_raw_profiles()`/`_profile_named()` seam and #615's own
+        text explicitly asks it to "coordinate with #604/#613 so inspect
+        consumes their shared resolvers rather than duplicating them" --
+        `_command_inspect()` calls `_period_context()` (the identical
+        period/timezone resolver `preview`/`run` use, including the small
+        life.txt timezone-directive read the issue explicitly permits: "It
+        may load config and resolve workspace metadata needed for
+        deterministic path/timezone resolution") and `_resolved_output()`
+        unchanged; it never calls `render_report`/`render_report_v2`, so no
+        section provider executes. The JSON shape
+        (`report`/`schema`/nested `period`/`output`/`scope`/`sections`)
+        follows #615's own example structure rather than a flatter ad hoc
+        one. `_inspect_sections()` exposes each section's raw option dict by
+        reusing `report_v2._reserved_option_keys()` -- the same set
+        `build_report_model()` itself uses to separate provider options from
+        `type`/`title` -- so no second notion of "what counts as an option"
+        exists. `email` presence is reported only as a boolean
+        `email_configured`; no env var name or secret value is ever emitted,
+        which is more conservative than the issue's own allowance ("safe
+        metadata such as configured environment-variable names").
+      status: implemented
+
+    - requirement_id: req-server-init-reporting-section
+      capability_id: cap-ubuntu-server-deployment
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/609
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/610
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/612
+      changed_files_or_scope:
+        - "Add an opt-in `reporting` section to server-init: profile validation via report_cli._profiles(), a shared report_service_unit_text()/report_timer_unit_text() systemd unit generator, and build_plan()/enable-loop wiring"
+        - lifetxt/server_init.py
+        - tests/test_server_init.py
+      tests_or_evidence:
+        - "tests/test_server_init.py ReportingConfigGenerationTests (9 tests): disabled-by-default no-op, profiles copied into the generated application config, invalid profile/unknown-job-profile/duplicate-name/bad-time/unsupported-schedule all rejected before any write, correct service+timer content and OnCalendar= for weekly/daily periods, systemd enable wiring, real file write via apply"
+        - python -m unittest tests.test_server_init -> Ran 27 tests, OK
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check lifetxt/server_init.py tests/test_server_init.py -> clean
+      release_or_deployment: null
+      notes: >-
+        Extends cap-ubuntu-server-deployment rather than a new capability,
+        since this is the same server-init plan-first bootstrap subsystem.
+        `reporting.profiles` validation is never reimplemented: it is
+        handed to `report_cli._profiles()`, the same validator `lifetxt
+        report` itself uses. `report_service_unit_text()`/
+        `report_timer_unit_text()` are public (no leading underscore) so
+        `server-report` (#611) can reuse them without a second
+        implementation. No resident lifetxt scheduler is added; systemd
+        timers own scheduling.
+      status: implemented
+
+    - requirement_id: req-server-report-command
+      capability_id: cap-ubuntu-server-deployment
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/609
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/611
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/612
+      changed_files_or_scope:
+        - Add `lifetxt server-report plan|install|remove`, a bounded
+          plan-first deployment operation installing/removing one systemd
+          report job on an already-running deployment
+        - lifetxt/server_report.py
+        - lifetxt/server_report_cli.py
+        - lifetxt/entrypoint.py
+        - tests/test_server_report.py
+      tests_or_evidence:
+        - "tests/test_server_report.py (19 tests): plan/apply_install/apply_remove unit tests plus server_report_cli end-to-end tests (dry-run-by-default, --yes writes, unknown profile exits 1, entrypoint routing)"
+        - python -m unittest tests.test_server_report -> Ran 19 tests, OK
+        - "live end-to-end on this Windows sandbox: real disposable fixture driven through the real lifetxt entrypoint -- plan/install/remove all confirmed against real files on disk, systemctl calls tolerated failing gracefully (no systemd on this host)"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+      release_or_deployment: null
+      notes: >-
+        Extends cap-ubuntu-server-deployment. Reuses
+        `server_init.report_service_unit_text()`/`report_timer_unit_text()`
+        unmodified. Uses `--app-config`, not `--config`, since the global
+        `--config` flag is stripped from argv by
+        `entrypoint._extract_config_arg` before any subcommand sees it --
+        the same pitfall `server-init`/`server-update` already worked
+        around with their own `--server-config` flag. Wired through
+        `entrypoint.py`'s extended-command dispatch (matching how `report`
+        itself is wired) rather than growing `cli.py`'s already very large
+        argparse tree. `NAME` must already exist in the target application
+        config and pass real Report v2 validation; `server-report` never
+        creates or edits a report profile.
+      status: implemented
+
+    - requirement_id: req-report-v2-distribution-batch-tracking
+      capability_id: cap-report-v2-composition
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/600
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/612
+      changed_files_or_scope:
+        - "Document the #600/#609 umbrella tracking issues' closure: every child issue (#601-#608, #610, #611, plus the #613/#614/#615 follow-on additions to the same #600 epic) landed as its own commit on feature/report-v2-distribution, merged into one final PR"
+        - docs/en/reports.md
+        - docs/ja/reports.md
+        - docs/deployment/ubuntu-server.md
+      tests_or_evidence:
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - "manual: every new cross-reference anchor verified against the validator's own slug() algorithm"
+        - MPLBACKEND=Agg python -m unittest discover -> Ran 3277 tests, OK (skipped=185), run on the fully consolidated feature/report-v2-distribution branch after all eight sub-branches (#601-#608, #610, #611, plus #613/#614/#615) merged
+        - python -m unittest tests.test_traceability_gate tests.test_change_package_closeout -> OK
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on every changed file -> clean
+      release_or_deployment: >-
+        This entry documents the final feature/report-v2-distribution -> main
+        PR itself (PR #612), which #600 and #609 are pure umbrella/tracking
+        issues for (per their own text: "This is an umbrella/product-tracking
+        Issue only. It does not authorize one broad implementation PR.").
+      notes: >-
+        Follows the multi-PR integration-branch pattern established
+        throughout this file (see e.g. req-remote-batch-integration): every
+        requirement entry above correctly names its own implementing issue,
+        and none of them is #600/#609 themselves, since those are
+        deliberately non-implementing umbrella issues. This entry serves as
+        both #600's docs/tracking record and this batch's own
+        batch-integration entry. Sub-branches were merged into the
+        integration branch via local git merge and push rather than
+        GitHub's PR-merge action, matching this repository's own
+        established pattern for this workflow shape; each sub-branch merge
+        is expected to auto-detect as "merged" on GitHub once the
+        integration branch's commits are reachable from main.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

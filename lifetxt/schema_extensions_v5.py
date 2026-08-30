@@ -142,6 +142,31 @@ def _report_section():
     }
 
 
+def _report_scope():
+    string_or_strings = {
+        "oneOf": [
+            {"type": "string", "minLength": 1},
+            {
+                "type": "array",
+                "minItems": 1,
+                "items": {"type": "string", "minLength": 1},
+            },
+        ]
+    }
+    return {
+        "type": "object",
+        "properties": {
+            "project": string_or_strings,
+            "tag": string_or_strings,
+            "type": string_or_strings,
+            "status": string_or_strings,
+            "person": string_or_strings,
+            "open": {"type": "boolean"},
+        },
+        "additionalProperties": False,
+    }
+
+
 def _report_profile():
     non_empty_string = {"type": "string", "minLength": 1}
     return {
@@ -165,6 +190,7 @@ def _report_profile():
             "format": {"enum": ["markdown", "json", "html"]},
             "audience": {"enum": ["private", "external"]},
             "compare": {"enum": ["previous"]},
+            "scope": _report_scope(),
             "email": _report_email_config(),
         },
         "additionalProperties": False,

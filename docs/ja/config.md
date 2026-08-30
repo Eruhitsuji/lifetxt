@@ -241,7 +241,10 @@ repository ですが、fork では upstream ではなく自分自身の reposito
 を任意で指定できます。`sections` を追加した profile は Report v2（既存の
 lifetxt 集計を組み合わせる composition layer）が有効になり、`format`
 （`markdown`/`json`/`html`）、`audience`（`private`/`external`）、`compare`
-（`previous`）も指定できます。v1・v2 いずれの profile にも `email`
+（`previous`）、`scope`（各 section provider が実行される前に一度だけ
+適用される、report 全体の `project`/`tag`/`type`/`status`/`person`/`open`
+フィルタ。トップレベルの旧 `project`/`type`/`tag`/`open` は `scope` への
+互換エイリアスとして扱われます）も指定できます。v1・v2 いずれの profile にも `email`
 （`to`、`subject`、`smtp_host_env`、`smtp_user_env`、`smtp_pass_env`）を
 追加すると `lifetxt report send` に対応します。具体的なプロファイルキーの
 登録情報は `lifetxt config explain reports.<name>.<key>` で確認できます。

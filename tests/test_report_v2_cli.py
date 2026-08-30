@@ -91,6 +91,64 @@ class ReportV2ProfileValidationTests(unittest.TestCase):
         )
         self.assertEqual(profile["email"]["to"], "me@example.com")
 
+    def test_scope_key_without_sections_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "Report v2 key"):
+            report_cli._validate_profile(
+                "weekly", {"period": "weekly", "scope": {"project": ["x"]}}
+            )
+
+    def test_v2_profile_resolves_explicit_scope(self):
+        profile = report_cli._validate_profile(
+            "weekly",
+            {
+                "period": "weekly",
+                "sections": [{"type": "review"}],
+                "scope": {"project": ["home"], "open": True},
+            },
+        )
+        self.assertEqual(profile["scope"], {"project": ["home"], "open": True})
+
+    def test_v2_profile_with_no_scope_defaults_to_empty(self):
+        profile = report_cli._validate_profile(
+            "weekly", {"period": "weekly", "sections": [{"type": "review"}]}
+        )
+        self.assertEqual(profile["scope"], {})
+
+    def test_legacy_top_level_project_becomes_scope_alias(self):
+        profile = report_cli._validate_profile(
+            "weekly",
+            {
+                "period": "weekly",
+                "project": "home",
+                "sections": [{"type": "review"}],
+            },
+        )
+        self.assertEqual(profile["scope"]["project"], "home")
+
+    def test_conflicting_legacy_and_scope_values_are_rejected(self):
+        with self.assertRaisesRegex(ValueError, "conflicting"):
+            report_cli._validate_profile(
+                "weekly",
+                {
+                    "period": "weekly",
+                    "project": "home",
+                    "scope": {"project": "work"},
+                    "sections": [{"type": "review"}],
+                },
+            )
+
+    def test_matching_legacy_and_scope_values_are_not_a_conflict(self):
+        profile = report_cli._validate_profile(
+            "weekly",
+            {
+                "period": "weekly",
+                "project": "home",
+                "scope": {"project": "home", "open": True},
+                "sections": [{"type": "review"}],
+            },
+        )
+        self.assertEqual(profile["scope"], {"project": "home", "open": True})
+
 
 class ReportV2CliEndToEndTests(unittest.TestCase):
     def test_preview_v2_profile_renders_markdown_by_default(self):
@@ -103,6 +161,33 @@ class ReportV2CliEndToEndTests(unittest.TestCase):
         self.assertIn("report_schema: lifetxt-report-v2", out)
         self.assertIn("## Review", out)
         self.assertIn("Completed tasks: 1", out)
+
+    def test_scope_restricts_every_section_to_the_scoped_project(self):
+        with _TempWorkspace() as ws:
+            config_path = ws.write_config(
+                {
+                    "home-only": {
+                        "period": "weekly",
+                        "scope": {"project": "home"},
+                        "sections": [{"type": "review"}],
+                    },
+                    "work-only": {
+                        "period": "weekly",
+                        "scope": {"project": "work"},
+                        "sections": [{"type": "review"}],
+                    },
+                }
+            )
+            home_out, _ = _run(
+                ["preview", "home-only", "--format", "json"], config_path
+            )
+            work_out, _ = _run(
+                ["preview", "work-only", "--format", "json"], config_path
+            )
+        home_model = json.loads(home_out)
+        work_model = json.loads(work_out)
+        self.assertEqual(home_model["sections"][0]["data"]["completed_tasks"], 1)
+        self.assertEqual(work_model["sections"][0]["data"]["completed_tasks"], 0)
 
     def test_preview_format_override_produces_json(self):
         with _TempWorkspace() as ws:

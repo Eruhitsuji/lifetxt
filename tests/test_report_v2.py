@@ -5,6 +5,7 @@ from lifetxt.parser import parse_text
 from lifetxt.report_v2 import (
     ReportContext,
     ReportError,
+    apply_scope,
     build_report_model,
     next_period,
     previous_period,
@@ -13,6 +14,7 @@ from lifetxt.report_v2 import (
     render_json,
     render_markdown,
     resolve_period,
+    validate_scope,
     validate_sections,
 )
 
@@ -78,6 +80,53 @@ class SectionValidationTests(unittest.TestCase):
     def test_empty_sections_rejected(self):
         with self.assertRaises(ReportError):
             validate_sections([])
+
+
+class ScopeTests(unittest.TestCase):
+    def test_none_scope_validates_to_empty_dict(self):
+        self.assertEqual(validate_scope(None), {})
+
+    def test_unknown_scope_key_rejected(self):
+        with self.assertRaises(ReportError):
+            validate_scope({"nope": "x"})
+
+    def test_open_must_be_boolean(self):
+        with self.assertRaises(ReportError):
+            validate_scope({"open": "yes"})
+
+    def test_list_or_string_fields_reject_other_types(self):
+        with self.assertRaises(ReportError):
+            validate_scope({"project": 123})
+
+    def test_valid_scope_passes_through(self):
+        scope = {"project": ["home"], "tag": "urgent", "open": True}
+        self.assertEqual(validate_scope(scope), scope)
+
+    def test_apply_scope_with_no_scope_returns_items_unchanged(self):
+        items, _diag = parse_text(FIXTURE)
+        self.assertEqual(apply_scope(items, {}), items)
+        self.assertEqual(apply_scope(items, None), items)
+
+    def test_apply_scope_filters_by_project(self):
+        items, _diag = parse_text(FIXTURE)
+        scoped = apply_scope(items, {"project": ["home"]})
+        self.assertTrue(scoped)
+        self.assertTrue(
+            all("home" in item.details.get("project", []) for item in scoped)
+        )
+
+    def test_apply_scope_open_only(self):
+        items, _diag = parse_text(FIXTURE)
+        scoped = apply_scope(items, {"open": True})
+        statuses = {item.status for item in scoped}
+        self.assertNotIn("[x]", statuses)
+
+    def test_apply_scope_combines_filters_with_and_semantics(self):
+        items, _diag = parse_text(FIXTURE)
+        scoped = apply_scope(items, {"project": ["work"], "open": True})
+        for item in scoped:
+            self.assertIn("work", item.details.get("project", []))
+            self.assertNotEqual(item.status, "[x]")
 
 
 class ProviderCompositionTests(unittest.TestCase):

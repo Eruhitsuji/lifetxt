@@ -6479,9 +6479,11 @@ capabilities:
       pure presentation functions. Adds historical/backfill period selection
       and previous-period comparison, an external-safe disclosure mode, an
       email delivery command reusing a shared SMTP/Slack helper, and lets
-      `digest` use a named report profile as its message source. A v1
-      profile (no `sections`) keeps rendering unchanged through the existing
-      `share --format markdown` delegation from #554/PR #555.
+      `digest` use a named report profile as its message source. A
+      report-wide `scope` filter is applied once, before any section
+      provider runs, by reusing `lifetxt.agenda.filter_items()` unmodified.
+      A v1 profile (no `sections`) keeps rendering unchanged through the
+      existing `share --format markdown` delegation from #554/PR #555.
     status: active
     owner: Eruhitsuji
     source_requirements:
@@ -6493,6 +6495,7 @@ capabilities:
       - req-report-v2-external-safe-audience
       - req-report-v2-email-delivery
       - req-digest-report-source
+      - req-report-v2-shared-scope
     implementation_locations:
       - lifetxt/report_v2.py
       - lifetxt/health.py
@@ -6528,6 +6531,7 @@ capabilities:
       - reports.*.format
       - reports.*.audience
       - reports.*.compare
+      - reports.*.scope
       - reports.*.email
     tests_or_evidence:
       - tests/test_health.py -> Ran 6 tests, OK; full existing health CLI test suite (14 tests) re-run unmodified against the refactored command_health -> OK
@@ -6541,6 +6545,10 @@ capabilities:
       - scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> {"errors":0,"ok":true}
       - "manual: every new cross-reference anchor in docs/en+ja/reports.md and docs/deployment/ubuntu-server.md (outside validate_release_docs.py's checked-document set) verified against the validator's own slug() algorithm run directly"
       - "found and fixed a real, pre-existing defect while writing an end-to-end test for the unchanged v1 path: _render_share passed no -o to share --format markdown, so share silently wrote its body to ./share.md in the caller's cwd and the v1 report profile's own body became just 'Wrote share.md (N item(s)).' instead of the actual rendered content; confirmed via git stash that no prior test exercised this path without mocking render_report/_render_share"
+      - tests/test_report_v2.py -> Ran 31 tests, OK after #613's ScopeTests additions (validate_scope/apply_scope/_scope_list coverage: unknown key rejection, non-object/non-bool/non-string-or-array type rejection, string-vs-array field normalization, project/tag/type/status/person/open filtering each individually and combined, empty scope is a no-op)
+      - tests/test_report_v2_cli.py -> Ran 25 tests, OK after #613's additions (v2 profile `scope` validation, legacy top-level project/type/tag/open folded in as compatibility aliases, a conflicting legacy value vs. scope value fails loudly naming both, preview/run end-to-end against a scoped profile only including matching items)
+      - "found and fixed a real bug during #613's own testing: apply_scope() initially passed a bare scope string (e.g. project: home, the schema's own list-or-string allowance) straight into filter_items(projects=...), which iterates its input character-by-character when given a bare string (lifetxt.agenda._normalize_filter_values); reproduced with a failing end-to-end test before the fix, root-caused by reading _normalize_filter_values's source, and fixed with a _scope_list() normalization helper applied uniformly to every list-or-string scope field"
+      - python -m unittest tests.test_schema_extensions_v2 tests.test_config_validation -> Ran 81 tests, OK (config-v1 schema `reports.*.scope` fragment, registry metadata for reports.*.scope)
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/600
       - https://github.com/Eruhitsuji/lifetxt/issues/601
@@ -6551,7 +6559,9 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/606
       - https://github.com/Eruhitsuji/lifetxt/issues/607
       - https://github.com/Eruhitsuji/lifetxt/issues/608
-    related_pull_requests: []
+      - https://github.com/Eruhitsuji/lifetxt/issues/613
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/612
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       Self-scoped and implemented autonomously per repository owner
@@ -6605,6 +6615,21 @@ capabilities:
       existing cap-ubuntu-server-deployment capability instead of this one,
       since they are deployment-automation work over an already-established
       capability boundary, not new report semantics.
+
+      #613 (report-wide scope) adds a `scope` profile key applied once, in
+      `render_report_v2()`, immediately after items are parsed and before
+      any section provider runs -- every provider therefore only ever sees
+      the already-filtered item set, with no per-provider filtering
+      duplicated. `apply_scope()`/`validate_scope()` in report_v2.py are
+      pure functions delegating entirely to the existing
+      `lifetxt.agenda.filter_items()` primitive (the same one CLI
+      `filter`/`agenda`/`query` already use), not a report-only filter
+      engine. `_resolve_v2_scope()` in report_cli.py folds the legacy v1
+      top-level `project`/`type`/`tag`/`open` keys in as compatibility
+      aliases into `scope` when a profile does not already set a
+      conflicting value for the same field, and fails loudly (naming both
+      the legacy key and the conflicting `scope` key) rather than silently
+      picking one when both are set to different values.
     replacement:
       replaces: []
       replaced_by: null

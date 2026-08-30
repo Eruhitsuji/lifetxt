@@ -96,6 +96,77 @@ def _custom_field_definition():
     }
 
 
+def _report_email_config():
+    non_empty_string = {"type": "string", "minLength": 1}
+    to_value = {
+        "oneOf": [
+            non_empty_string,
+            {"type": "array", "minItems": 1, "items": non_empty_string},
+        ]
+    }
+    return {
+        "type": "object",
+        "required": ["to"],
+        "properties": {
+            "to": to_value,
+            "subject": non_empty_string,
+            "smtp_host_env": non_empty_string,
+            "smtp_user_env": non_empty_string,
+            "smtp_pass_env": non_empty_string,
+        },
+        "additionalProperties": False,
+    }
+
+
+def _report_section():
+    return {
+        "type": "object",
+        "required": ["type"],
+        "properties": {
+            "type": {
+                "enum": [
+                    "review",
+                    "stats",
+                    "agenda",
+                    "command-center",
+                    "project-health",
+                    "next-actions",
+                    "inbox",
+                    "ticket-attention",
+                    "health",
+                ]
+            },
+            "title": {"type": "string", "minLength": 1},
+        },
+        "additionalProperties": True,
+    }
+
+
+def _report_scope():
+    string_or_strings = {
+        "oneOf": [
+            {"type": "string", "minLength": 1},
+            {
+                "type": "array",
+                "minItems": 1,
+                "items": {"type": "string", "minLength": 1},
+            },
+        ]
+    }
+    return {
+        "type": "object",
+        "properties": {
+            "project": string_or_strings,
+            "tag": string_or_strings,
+            "type": string_or_strings,
+            "status": string_or_strings,
+            "person": string_or_strings,
+            "open": {"type": "boolean"},
+        },
+        "additionalProperties": False,
+    }
+
+
 def _report_profile():
     non_empty_string = {"type": "string", "minLength": 1}
     return {
@@ -111,6 +182,16 @@ def _report_profile():
             "open": {"type": "boolean"},
             "mode": {"enum": ["replace", "create", "append"]},
             "frontmatter": {"type": "boolean"},
+            "sections": {
+                "type": "array",
+                "minItems": 1,
+                "items": _report_section(),
+            },
+            "format": {"enum": ["markdown", "json", "html"]},
+            "audience": {"enum": ["private", "external"]},
+            "compare": {"enum": ["previous"]},
+            "scope": _report_scope(),
+            "email": _report_email_config(),
         },
         "additionalProperties": False,
     }

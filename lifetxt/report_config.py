@@ -105,6 +105,69 @@ def install_report_config_registry():
                 since="unreleased",
             ),
         ),
+        (
+            "reports.*.sections",
+            entry(
+                "array",
+                None,
+                "Report v2: ordered list of {type, ...options} section providers. "
+                "Presence of this key opts the profile into Report v2 composition "
+                "instead of the v1 `share --format markdown` delegation.",
+                since="unreleased",
+            ),
+        ),
+        (
+            "reports.*.format",
+            entry(
+                "string",
+                "markdown",
+                "Report v2 output format.",
+                allowed=["markdown", "json", "html"],
+                since="unreleased",
+            ),
+        ),
+        (
+            "reports.*.audience",
+            entry(
+                "string",
+                "private",
+                "Report v2 disclosure boundary. `external` restricts sections to "
+                "aggregate-only types and redacts verbatim content from their data.",
+                allowed=["private", "external"],
+                since="unreleased",
+            ),
+        ),
+        (
+            "reports.*.compare",
+            entry(
+                "string",
+                None,
+                "Report v2: attach a numeric diff against the immediately previous period.",
+                allowed=["previous"],
+                since="unreleased",
+            ),
+        ),
+        (
+            "reports.*.email",
+            entry(
+                "object",
+                None,
+                "Deliver this report by email via `lifetxt report send`; requires `to`.",
+                since="unreleased",
+            ),
+        ),
+        (
+            "reports.*.scope",
+            entry(
+                "object",
+                None,
+                "Report v2: report-wide filter (project/tag/type/status/person/open) "
+                "applied once to the parsed item set before any section provider runs. "
+                "Legacy top-level project/type/tag/open are accepted as compatibility "
+                "aliases into scope; a conflicting value in both forms fails loudly.",
+                since="unreleased",
+            ),
+        ),
     )
     for key, metadata in entries:
         config_registry.CONFIG_REGISTRY[key] = metadata

@@ -3802,6 +3802,25 @@ def build_parser():
     )
     digest_cmd.add_argument("--project", help="Restrict digest to a specific project.")
     digest_cmd.add_argument(
+        "--report",
+        metavar="NAME",
+        help=(
+            "Use a configured `lifetxt report` profile as the digest message "
+            "source instead of the built-in review summary. --week/--month/"
+            "--project are ignored when --report is given."
+        ),
+    )
+    digest_cmd.add_argument(
+        "--date",
+        metavar="YYYY-MM-DD",
+        help="With --report: generate the period containing this date instead of today.",
+    )
+    digest_cmd.add_argument(
+        "--previous",
+        action="store_true",
+        help="With --report: generate the immediately completed previous period.",
+    )
+    digest_cmd.add_argument(
         "--format",
         dest="channel",
         choices=("slack-webhook", "email", "file"),
@@ -8696,179 +8715,25 @@ def command_assign(args):
 
 
 def command_health(args):
+    from .health import build_health
+
     config = _config(args)
     items, diagnostics = _parse_or_exit(args.paths, config)
     today = timezone_today()
     since_days = getattr(args, "since", 30)
     lookahead_days = getattr(args, "lookahead", 7)
-    ignore_codes = set(
-        c.upper() for c in _split_csv_args(getattr(args, "ignore", None))
+    ignore_codes = _split_csv_args(getattr(args, "ignore", None))
+    type_filter = _split_csv_args(getattr(args, "health_types", None))
+
+    health_issues = build_health(
+        items,
+        today,
+        since_days=since_days,
+        lookahead_days=lookahead_days,
+        ignore_codes=ignore_codes,
+        kinds=type_filter,
+        config=config,
     )
-    type_filter = set(_split_csv_args(getattr(args, "health_types", None)))
-
-    open_statuses = {"[ ]", "[/]", "[>]", "[?]"}
-
-    habit_completions = {}
-    for item in items:
-        if item.kind == "H" and item.status == "[x]":
-            latest = _latest_item_date(item)
-            if latest:
-                title = item.title
-                if title not in habit_completions or latest > habit_completions[title]:
-                    habit_completions[title] = latest
-
-    recent_persons = set()
-    for item in items:
-        if item.kind == "S":
-            person_vals = item.details.get("person", [])
-            if not person_vals:
-                continue
-            person = str(person_vals[0])
-            latest = _latest_item_date(item)
-            if latest and (today - latest).days <= since_days:
-                recent_persons.add(person)
-            elif item.status in open_statuses and not item.details.get("to"):
-                recent_persons.add(person)
-
-    health_issues = []
-    dependency_records = []
-    if "W305" not in ignore_codes:
-        dependency_records = dependency_blocker_records(
-            items, key=id_key_from_config(config)
-        )
-
-    for item in items:
-        if type_filter and item.kind not in type_filter:
-            continue
-        location = getattr(item, "source", None)
-        line_no = item.line
-
-        if "W301" not in ignore_codes:
-            if (
-                item.kind == "T"
-                and item.status in open_statuses
-                and item.status != "[>]"
-            ):
-                latest = _latest_item_date(item)
-                if latest and (today - latest).days > since_days:
-                    health_issues.append(
-                        OrderedDict(
-                            [
-                                ("code", "W301"),
-                                (
-                                    "message",
-                                    "Task open for %d days without update"
-                                    % (today - latest).days,
-                                ),
-                                ("line", line_no),
-                                ("source", location),
-                                ("title", item.title),
-                            ]
-                        )
-                    )
-
-        if "W302" not in ignore_codes:
-            if item.kind == "H" and item.status in open_statuses:
-                last_done = habit_completions.get(item.title)
-                if last_done is None or (today - last_done).days > since_days:
-                    health_issues.append(
-                        OrderedDict(
-                            [
-                                ("code", "W302"),
-                                (
-                                    "message",
-                                    "Habit has no completion within %d days"
-                                    % since_days,
-                                ),
-                                ("line", line_no),
-                                ("source", location),
-                                ("title", item.title),
-                            ]
-                        )
-                    )
-
-        if "W303" not in ignore_codes:
-            if item.status in open_statuses:
-                for val in item.details.get("due", []):
-                    parsed = _parse_date_only(str(val))
-                    if parsed:
-                        days_until = (parsed - today).days
-                        if days_until < 0:
-                            health_issues.append(
-                                OrderedDict(
-                                    [
-                                        ("code", "W303"),
-                                        (
-                                            "message",
-                                            "Overdue by %d day(s) since %s"
-                                            % (-days_until, val),
-                                        ),
-                                        ("line", line_no),
-                                        ("source", location),
-                                        ("title", item.title),
-                                    ]
-                                )
-                            )
-                        elif days_until <= lookahead_days:
-                            health_issues.append(
-                                OrderedDict(
-                                    [
-                                        ("code", "W303"),
-                                        (
-                                            "message",
-                                            "Due in %d day(s) on %s"
-                                            % (days_until, val),
-                                        ),
-                                        ("line", line_no),
-                                        ("source", location),
-                                        ("title", item.title),
-                                    ]
-                                )
-                            )
-
-        if "W304" not in ignore_codes:
-            if item.status in open_statuses:
-                for key in ("assignee", "owner"):
-                    for val in item.details.get(key, []):
-                        person = str(val)
-                        if person not in recent_persons:
-                            health_issues.append(
-                                OrderedDict(
-                                    [
-                                        ("code", "W304"),
-                                        (
-                                            "message",
-                                            "%s:%s has no recent S presence record within %d days"
-                                            % (key, person, since_days),
-                                        ),
-                                        ("line", line_no),
-                                        ("source", location),
-                                        ("title", item.title),
-                                    ]
-                                )
-                            )
-
-    for record in dependency_records:
-        health_issues.append(
-            OrderedDict(
-                [
-                    ("code", "W305"),
-                    (
-                        "message",
-                        "Blocked by %s via %s"
-                        % (
-                            record["blocker_id"] or record["blocker_location"],
-                            record["relation"],
-                        ),
-                    ),
-                    ("line", record["blocked_line"]),
-                    ("source", record["blocked_source"]),
-                    ("title", record["blocked_title"]),
-                    ("blocked_by", record["blocker_id"] or record["blocker_location"]),
-                    ("relation", record["relation"]),
-                ]
-            )
-        )
 
     _fmt = getattr(args, "format", "text")
     _pretty = getattr(args, "pretty", False)
@@ -11001,12 +10866,9 @@ def _notification_email_config(notification_config):
 
 
 def _split_email_addresses(value):
-    if isinstance(value, (list, tuple)):
-        values = []
-        for part in value:
-            values.extend(_split_email_addresses(part))
-        return values
-    return [part.strip() for part in str(value or "").split(",") if part.strip()]
+    from .mail_delivery import split_email_addresses
+
+    return split_email_addresses(value)
 
 
 def _send_notification_email_batch(records, recipient, args, email_config, output=None):
@@ -15542,135 +15404,119 @@ def command_share(args):
     return 0
 
 
+def _digest_message_from_report(args):
+    """Render a configured `lifetxt report` profile as the digest message.
+
+    `report` owns what the document means; digest only reuses the already-
+    rendered text and its own delivery channels (#608). No review/stats/
+    report semantics are duplicated here.
+    """
+    from . import report_cli
+
+    report_name = args.report
+    config_data = getattr(args, "config_data", None) or {}
+    config_path = getattr(args, "config", None)
+    profile = report_cli._profile_named(config_data, report_name)
+    report_args = argparse.Namespace(
+        name=report_name,
+        date=getattr(args, "date", None),
+        previous=getattr(args, "previous", False),
+    )
+    _profile, text, start, end = report_cli._render_named_report(
+        report_args, config_data, config_path=config_path, workspace_name=None
+    )
+    subject_range = "%s to %s" % (start.isoformat(), end.isoformat())
+    return text, subject_range
+
+
 def command_digest(args):
     import contextlib
     import io
 
-    review_args = argparse.Namespace(
-        paths=getattr(args, "paths", None) or [],
-        week=getattr(args, "week", False),
-        month=getattr(args, "month", None),
-        from_date=None,
-        to_date=None,
-        project=getattr(args, "project", None),
-        format="json",
-        pretty=False,
-        config=getattr(args, "config", None),
-        config_data=getattr(args, "config_data", None),
-    )
-    buffer = io.StringIO()
-    with contextlib.redirect_stdout(buffer):
-        command_review(review_args)
-    result = json.loads(buffer.getvalue())
+    report_name = getattr(args, "report", None)
+    if report_name:
+        message, digest_range = _digest_message_from_report(args)
+    else:
+        review_args = argparse.Namespace(
+            paths=getattr(args, "paths", None) or [],
+            week=getattr(args, "week", False),
+            month=getattr(args, "month", None),
+            from_date=None,
+            to_date=None,
+            project=getattr(args, "project", None),
+            format="json",
+            pretty=False,
+            config=getattr(args, "config", None),
+            config_data=getattr(args, "config_data", None),
+        )
+        buffer = io.StringIO()
+        with contextlib.redirect_stdout(buffer):
+            command_review(review_args)
+        result = json.loads(buffer.getvalue())
+        digest_range = result["range"]
 
-    lines = ["*lifetxt digest: %s*" % result["range"], ""]
-    lines.append("Completed tasks: %d" % result["completed_tasks"])
-    lines.append("Open tasks: %d" % result["open_tasks"])
-    if result["habits"]:
-        lines.append("")
-        lines.append("Habits:")
-        for habit_title, habit in result["habits"].items():
-            lines.append(
-                "- %s: %d/%d (%d%%)"
-                % (
-                    habit_title,
-                    habit["done"],
-                    habit["done"] + habit["open"],
-                    habit["completion_rate"],
+        lines = ["*lifetxt digest: %s*" % result["range"], ""]
+        lines.append("Completed tasks: %d" % result["completed_tasks"])
+        lines.append("Open tasks: %d" % result["open_tasks"])
+        if result["habits"]:
+            lines.append("")
+            lines.append("Habits:")
+            for habit_title, habit in result["habits"].items():
+                lines.append(
+                    "- %s: %d/%d (%d%%)"
+                    % (
+                        habit_title,
+                        habit["done"],
+                        habit["done"] + habit["open"],
+                        habit["completion_rate"],
+                    )
                 )
-            )
-    if result["elapsed_by_project"]:
-        lines.append("")
-        lines.append("Elapsed by project:")
-        for project, elapsed in result["elapsed_by_project"].items():
-            lines.append("- %s: %s" % (project, elapsed))
-    message = "\n".join(lines)
+        if result["elapsed_by_project"]:
+            lines.append("")
+            lines.append("Elapsed by project:")
+            for project, elapsed in result["elapsed_by_project"].items():
+                lines.append("- %s: %s" % (project, elapsed))
+        message = "\n".join(lines)
 
     channel = args.channel
     dry_run = getattr(args, "dry_run", False)
+
+    from .mail_delivery import append_local_file, send_slack_webhook, send_smtp_text
 
     if channel == "slack-webhook":
         url_env = getattr(args, "url_env", None)
         if not url_env:
             raise ValueError("--url-env is required with --format slack-webhook.")
-        webhook_url = os.environ.get(url_env, "")
-        if not webhook_url:
-            raise ValueError("Environment variable %s is not set." % url_env)
-        if dry_run:
-            sys.stdout.write(
-                "[dry-run] Would POST to Slack webhook from $%s:\n%s\n"
-                % (url_env, message)
-            )
-            return 0
-        payload = json.dumps({"text": message}).encode("utf-8")
-        request = Request(
-            webhook_url, data=payload, headers={"Content-Type": "application/json"}
-        )
-        try:
-            urlopen(request, timeout=10)
-        except (HTTPError, URLError) as exc:
-            raise ValueError("Slack webhook request failed: %s" % exc)
-        sys.stdout.write("Sent digest to Slack webhook.\n")
+        send_slack_webhook(message, url_env, dry_run=dry_run, output=sys.stdout)
         return 0
 
     if channel == "email":
         to_addr = getattr(args, "to", None)
         if not to_addr:
             raise ValueError("--to is required with --format email.")
-        host_env = getattr(args, "smtp_host_env", "LIFETXT_SMTP_HOST")
-        user_env = getattr(args, "smtp_user_env", "LIFETXT_SMTP_USER")
-        pass_env = getattr(args, "smtp_pass_env", "LIFETXT_SMTP_PASS")
-        smtp_host = os.environ.get(host_env, "")
-        smtp_user = os.environ.get(user_env, "")
-        smtp_pass = os.environ.get(pass_env, "")
-        if not smtp_host:
-            raise ValueError(
-                "Environment variable %s (SMTP host) is not set." % host_env
-            )
-        if not smtp_user or not smtp_pass:
-            raise ValueError(
-                "Environment variables %s and %s (SMTP credentials) must be set."
-                % (user_env, pass_env)
-            )
-        if dry_run:
-            sys.stdout.write(
-                "[dry-run] Would email digest to %s via %s:\n%s\n"
-                % (to_addr, smtp_host, message)
-            )
-            return 0
-        import smtplib
-        from email.mime.text import MIMEText
-
-        mime = MIMEText(message, "plain", "utf-8")
-        mime["Subject"] = "lifetxt digest: %s" % result["range"]
-        mime["From"] = smtp_user
-        mime["To"] = to_addr
-        with smtplib.SMTP(smtp_host, timeout=10) as smtp:
-            smtp.starttls()
-            smtp.login(smtp_user, smtp_pass)
-            smtp.sendmail(smtp_user, [to_addr], mime.as_string())
-        sys.stdout.write("Sent digest email to %s.\n" % to_addr)
+        send_smtp_text(
+            "lifetxt digest: %s" % digest_range,
+            message,
+            to_addr,
+            host_env=getattr(args, "smtp_host_env", "LIFETXT_SMTP_HOST"),
+            user_env=getattr(args, "smtp_user_env", "LIFETXT_SMTP_USER"),
+            pass_env=getattr(args, "smtp_pass_env", "LIFETXT_SMTP_PASS"),
+            dry_run=dry_run,
+            output=sys.stdout,
+        )
         return 0
 
     if channel == "file":
         digest_path = getattr(args, "digest_path", None)
         if not digest_path:
             raise ValueError("--path is required with --format file.")
-        if dry_run:
-            sys.stdout.write(
-                "[dry-run] Would append digest to %s:\n%s\n" % (digest_path, message)
-            )
-            return 0
-        from .write_operations import append_text as semantic_append_text
-
-        semantic_append_text(
+        append_local_file(
             digest_path,
-            "\n" + message + "\n",
-            expected_revision=getattr(args, "revision", None),
-            operation="digest.append",
-            create=True,
+            message,
+            revision=getattr(args, "revision", None),
+            dry_run=dry_run,
+            output=sys.stdout,
         )
-        sys.stdout.write("Appended digest to %s.\n" % digest_path)
         return 0
 
     raise ValueError("Unsupported digest channel: %s" % channel)

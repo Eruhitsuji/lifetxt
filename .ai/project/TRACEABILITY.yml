@@ -8967,6 +8967,56 @@ traceability:
         repository content) that this change does not disturb.
       status: implemented
 
+    - requirement_id: req-external-verification-process-tree-timeout-termination
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/453
+      pull_request: null
+      changed_files_or_scope:
+        - Replace run_command()'s subprocess.run(timeout=...) call with a
+          directly-managed Popen so a timeout can terminate the whole
+          spawned process tree (taskkill /F /T on Windows; a new session
+          plus os.killpg on POSIX) instead of only the direct process,
+          bounded by a documented 15-second post-kill cleanup grace window
+        - scripts/run_external_verification.py
+        - tests/test_external_verification.py
+        - docs/en/external-environment-verification.md
+      tests_or_evidence:
+        - "tests/test_external_verification.py ProcessTreeKillPlatformDispatchTests (5 tests, mocked): taskkill /F /T /PID on Windows; os.killpg(os.getpgid(pid), SIGKILL) plus a defensive process.kill() on POSIX; tolerates an already-exited process group; Popen kwargs select start_new_session on POSIX and {} on Windows"
+        - "tests/test_external_verification.py ProcessTreeTimeoutTests (2 tests, real child processes, synthetic paths/PIDs only): a synthetic parent -> grandchild reproduction confirms killing only the direct process leaves the grandchild alive and blocks a second communicate() call; run_command() against the identical tree returns status=timeout well before the grandchild's own sleep completes, with the grandchild's real PID confirmed dead afterward"
+        - python -m unittest tests.test_external_verification -> Ran 82 tests, OK
+        - "confirmed via git stash (production code only, tests kept) that test_run_command_terminates_the_whole_tree_and_returns_promptly fails against the pre-fix code (12.235 not less than 10, run_command took ~12.2s -- essentially the full synthetic grandchild sleep -- to return), then passes once the fix is restored"
+        - "live end-to-end on this Windows host: a real synthetic parent -> grandchild tree with a 2s run_command() timeout and a 20s grandchild sleep returned status=timeout in 2.17s, retained the partial stdout already produced, and the grandchild's real PID was confirmed no longer alive via tasklist afterward"
+        - "live: a real --skip-release run still writes JSON/log/JSONL evidence normally through the new Popen-based run_command() (git-identity check status=passed, duration_seconds=0.031), confirming the non-timeout path is unaffected"
+        - "repeated (3x) real full-suite runs plus the adjacent external-verification/bootstrap/release-evidence/tag-version/traceability-gate/change-package-closeout modules with -W error::ResourceWarning found and fixed a Popen resource leak the fix's own reproduction test introduced (cleanup relying on communicate() rather than wait()); zero ResourceWarnings after the fix"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check scripts/run_external_verification.py tests/test_external_verification.py -> clean (pre-existing drift in unrelated, untouched regions of both files confirmed present on main already, not introduced by this change)
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - git diff --check -> clean
+      release_or_deployment: >-
+        CI/release-evidence-tooling-only fix, no product/runtime behavior
+        change. Takes effect the next time a real release-profile
+        external-verification run actually reaches its configured timeout
+        boundary (a real multi-hour Windows overrun reproduction was not
+        re-exercised in this session; the fix is verified via a fast
+        synthetic parent/grandchild reproduction plus a live short-timeout
+        smoke instead, per the issue's own explicit allowance).
+      notes: >-
+        See cap-stable-external-verification-preparation's own notes for the
+        full root-cause account (the same "no redirection means inherit the
+        parent's own pipe handles" default already relied on throughout this
+        codebase, and the identical taskkill /F /T fix already proven for an
+        analogous PyInstaller-bootloader leak in
+        tests/test_standalone_binary.py). POSIX process-group termination is
+        covered by mocked platform-dispatch unit tests rather than a real
+        POSIX run, unavailable in this Windows sandbox, per the issue's own
+        "otherwise explicitly shown not to regress" allowance. Real Linux/
+        macOS confirmation and a fresh real multi-hour Windows rerun remain
+        external-environment work outside this sandbox and are recorded as
+        open, matching the pattern already established for #429/#430/#437/
+        #438 in this same capability.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -633,6 +634,216 @@ class CommandCaptureTests(unittest.TestCase):
         self.assertEqual(record["timeout_seconds"], 1)
         self.assertIn("timeout after 1 seconds", record["error"])
         self.assertIn("partial-output", record["stdout"])
+
+
+# #453: a grandchild that inherits its parent's stdout/stderr pipe (by not
+# redirecting them itself, exactly like run_ci_like.py's own
+# `subprocess.check_call(["python", "-m", "unittest", "discover"])` call)
+# keeps that pipe open even after the direct parent process is killed, so a
+# caller that only kills the immediate process ends up blocked draining
+# output until the grandchild exits naturally. `_GRANDCHILD_SLEEP_SECONDS`
+# is chosen to comfortably outlast every timeout used below while staying
+# short enough that a broken fix does not make the suite hang for long.
+_GRANDCHILD_SLEEP_SECONDS = 12
+
+
+def _parent_with_inheriting_grandchild_script(marker_path):
+    """Synthesize a `-c` script spawning a grandchild that inherits the
+    parent's own stdout/stderr and records its own PID to `marker_path`."""
+    grandchild_code = (
+        "import os, sys, time;"
+        f"open({str(marker_path)!r}, 'w', encoding='utf-8').write(str(os.getpid()));"
+        "print('grandchild-up', flush=True);"
+        f"time.sleep({_GRANDCHILD_SLEEP_SECONDS})"
+    )
+    return (
+        "import subprocess, sys;"
+        f"gc = subprocess.Popen([sys.executable, '-c', {grandchild_code!r}]);"
+        "print('parent-up', flush=True);"
+        "gc.wait()"
+    )
+
+
+def _pid_is_alive(pid):
+    if os.name == "nt":
+        result = subprocess.run(
+            ["tasklist", "/FI", "PID eq %d" % pid],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+        )
+        return str(pid) in result.stdout
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def _wait_for_marker(marker_path, bound_seconds=5):
+    deadline = time.monotonic() + bound_seconds
+    while time.monotonic() < deadline:
+        if marker_path.exists() and marker_path.read_text(encoding="utf-8").strip():
+            return True
+        time.sleep(0.1)
+    return marker_path.exists() and bool(
+        marker_path.read_text(encoding="utf-8").strip()
+    )
+
+
+class ProcessTreeKillPlatformDispatchTests(unittest.TestCase):
+    """Unit coverage of the per-platform kill strategy, independent of the
+    real-process reproduction below -- exercises the POSIX branch even when
+    this suite itself runs on Windows."""
+
+    def test_windows_kill_uses_taskkill_with_the_tree_flag(self):
+        fake_process = mock.Mock(pid=4321)
+        with (
+            mock.patch.object(module.os, "name", "nt"),
+            mock.patch.object(module.subprocess, "run") as run,
+        ):
+            module._kill_process_tree(fake_process)
+        run.assert_called_once_with(
+            ["taskkill", "/F", "/T", "/PID", "4321"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        fake_process.kill.assert_not_called()
+
+    def test_posix_kill_signals_the_whole_process_group(self):
+        # os.getpgid/os.killpg/signal.SIGKILL do not exist at all on this
+        # module's own os/signal objects when the suite itself runs on
+        # Windows, so patching them here needs create=True regardless of
+        # which host actually runs the test.
+        fake_process = mock.Mock(pid=4321)
+        with (
+            mock.patch.object(module.os, "name", "posix"),
+            mock.patch.object(module.signal, "SIGKILL", 9, create=True),
+            mock.patch.object(
+                module.os, "getpgid", return_value=4321, create=True
+            ) as getpgid,
+            mock.patch.object(module.os, "killpg", create=True) as killpg,
+        ):
+            module._kill_process_tree(fake_process)
+            getpgid.assert_called_once_with(4321)
+            killpg.assert_called_once_with(4321, module.signal.SIGKILL)
+        # The direct handle is also killed defensively, in case the child
+        # never actually joined a killable session.
+        fake_process.kill.assert_called_once_with()
+
+    def test_posix_kill_tolerates_a_process_group_that_already_exited(self):
+        fake_process = mock.Mock(pid=4321)
+        with (
+            mock.patch.object(module.os, "name", "posix"),
+            mock.patch.object(module.signal, "SIGKILL", 9, create=True),
+            mock.patch.object(module.os, "getpgid", return_value=4321, create=True),
+            mock.patch.object(
+                module.os,
+                "killpg",
+                side_effect=ProcessLookupError,
+                create=True,
+            ),
+        ):
+            module._kill_process_tree(fake_process)  # must not raise
+        fake_process.kill.assert_called_once_with()
+
+    def test_popen_kwargs_start_a_new_session_on_posix(self):
+        with mock.patch.object(module.os, "name", "posix"):
+            self.assertEqual(
+                module._process_tree_popen_kwargs(), {"start_new_session": True}
+            )
+
+    def test_popen_kwargs_are_empty_on_windows(self):
+        with mock.patch.object(module.os, "name", "nt"):
+            self.assertEqual(module._process_tree_popen_kwargs(), {})
+
+
+class ProcessTreeTimeoutTests(unittest.TestCase):
+    """Real-process reproduction of #453: a grandchild inheriting the pipe
+    must not keep the collector blocked past a bounded cleanup window, and
+    must actually be terminated, not merely orphaned."""
+
+    def test_killing_only_the_direct_process_leaves_the_grandchild_alive(self):
+        # Demonstrates the underlying platform behavior this issue depends
+        # on: killing only the immediate process -- exactly what
+        # subprocess.run()'s own built-in timeout handling does -- is not
+        # enough to free a pipe a grandchild inherited, so a caller must
+        # terminate the whole tree instead. This does not call
+        # module.run_command() (which already contains the fix); it
+        # replicates the pre-fix pattern directly.
+        with tempfile.TemporaryDirectory() as tmp:
+            marker = Path(tmp) / "grandchild.pid"
+            process = subprocess.Popen(
+                [
+                    sys.executable,
+                    "-c",
+                    _parent_with_inheriting_grandchild_script(marker),
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            try:
+                with self.assertRaises(subprocess.TimeoutExpired):
+                    process.communicate(timeout=1)
+                self.assertTrue(_wait_for_marker(marker), "grandchild never started")
+                grandchild_pid = int(marker.read_text(encoding="utf-8"))
+                # Kill only the direct process, mirroring what
+                # subprocess.run()'s own TimeoutExpired handling does.
+                process.kill()
+                with self.assertRaises(subprocess.TimeoutExpired):
+                    process.communicate(timeout=1)
+                self.assertTrue(
+                    _pid_is_alive(grandchild_pid),
+                    "expected the grandchild to survive an immediate-parent-only kill",
+                )
+            finally:
+                # Clean up with the real fix regardless of the outcome
+                # above, so this test never leaves a lingering process. Use
+                # wait(), not communicate(): the output already collected
+                # above is enough for the assertions, and wait() reliably
+                # clears Popen's own "still running" bookkeeping (avoiding a
+                # ResourceWarning at garbage-collection time) without
+                # depending on draining a pipe that a slow-to-die grandchild
+                # under load could still momentarily hold open.
+                module._kill_process_tree(process)
+                try:
+                    process.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait(timeout=5)
+
+    def test_run_command_terminates_the_whole_tree_and_returns_promptly(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            marker = Path(tmp) / "grandchild.pid"
+            redact = lambda value: str(value)
+            record = module.run_command(
+                [
+                    sys.executable,
+                    "-c",
+                    _parent_with_inheriting_grandchild_script(marker),
+                ],
+                Path.cwd(),
+                redact,
+                2,
+            )
+            self.assertEqual(record["status"], "timeout")
+            self.assertEqual(record["timeout_seconds"], 2)
+            # Returned well before the grandchild's own sleep would have
+            # completed naturally -- the collector regained control instead
+            # of waiting on the still-open inherited pipe.
+            self.assertLess(record["duration_seconds"], _GRANDCHILD_SLEEP_SECONDS - 2)
+            self.assertTrue(
+                _wait_for_marker(marker, bound_seconds=1),
+                "grandchild never started",
+            )
+            grandchild_pid = int(marker.read_text(encoding="utf-8"))
+            self.assertFalse(
+                _pid_is_alive(grandchild_pid),
+                "grandchild survived process-tree termination",
+            )
 
 
 class BundleTests(unittest.TestCase):

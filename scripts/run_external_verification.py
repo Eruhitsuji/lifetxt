@@ -18,6 +18,7 @@ import os
 import platform
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -418,6 +419,62 @@ def _decode_timeout_output(value):
     return value
 
 
+# #453: once the configured timeout is reached, killing only the direct
+# subprocess is not enough to regain control promptly. On Windows, a
+# descendant the direct process spawned (e.g. run_ci_like.py's own
+# `python -m unittest discover` child) inherits the pipe write end passed
+# to the direct process, so it keeps that handle open after the direct
+# process is killed; the collector's final read then blocks until the
+# descendant exits on its own -- reproduced live as a multi-hour overrun on
+# a real Windows host. This grace window bounds how long the collector waits
+# to drain output after killing the *whole* process tree, so a kill that
+# somehow fails to free every descendant still cannot hang the collector.
+_PROCESS_TREE_CLEANUP_GRACE_SECONDS = 15
+
+
+def _process_tree_popen_kwargs():
+    """Popen kwargs isolating the child as the root of a killable process tree.
+
+    POSIX: start a new session so `os.killpg` can signal the whole tree
+    without also reaching this collector process's own process group.
+    Windows has no equivalent grouping requirement for `taskkill /T`, which
+    instead walks the OS's own parent-PID tree, so no extra creation flag
+    is needed there.
+    """
+    if os.name == "nt":
+        return {}
+    return {"start_new_session": True}
+
+
+def _kill_process_tree(process):
+    """Terminate `process` and every descendant it spawned, not only itself.
+
+    `Popen.communicate()` does not kill the process on its own timeout, and
+    a direct `process.kill()` reaches only the immediate PID -- see the
+    module-level note on `_PROCESS_TREE_CLEANUP_GRACE_SECONDS` for why that
+    is insufficient once a descendant has inherited the output pipes.
+    """
+    if os.name == "nt":
+        # taskkill's own /T tree-kill walks the OS parent-PID lineage; no
+        # process-group setup is required on this platform.
+        subprocess.run(
+            ["taskkill", "/F", "/T", "/PID", str(process.pid)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        return
+    try:
+        os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+    except (ProcessLookupError, PermissionError):
+        pass
+    # Always follow up on the direct handle too, in case the child never
+    # actually joined a killable session (e.g. it failed before setsid).
+    try:
+        process.kill()
+    except OSError:
+        pass
+
+
 def run_command(command, cwd, redact, timeout):
     started = time.monotonic()
     record = {
@@ -429,7 +486,7 @@ def run_command(command, cwd, redact, timeout):
         "stderr": "",
     }
     try:
-        completed = subprocess.run(
+        process = subprocess.Popen(
             command,
             cwd=cwd,
             text=True,
@@ -437,26 +494,64 @@ def run_command(command, cwd, redact, timeout):
             errors="replace",
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            check=False,
-            timeout=timeout,
+            **_process_tree_popen_kwargs(),
         )
-        record["exit_code"] = completed.returncode
-        record["status"] = "passed" if completed.returncode == 0 else "failed"
-        record["stdout"] = redact(completed.stdout)
-        record["stderr"] = redact(completed.stderr)
-    except subprocess.TimeoutExpired as exc:
-        # A distinct status from "failed": a timeout means the collector cut
-        # the command off at a configured boundary, not that the command
-        # itself reported a non-zero result. Never represented as passed.
-        record["status"] = "timeout"
-        record["timeout_seconds"] = timeout
-        record["stdout"] = redact(_decode_timeout_output(exc.stdout))
-        record["stderr"] = redact(_decode_timeout_output(exc.stderr))
-        record["error"] = f"timeout after {timeout} seconds"
+    except OSError as exc:
+        record["status"] = "blocked"
+        record["error"] = redact(f"{type(exc).__name__}: {exc}")
+        record["duration_seconds"] = round(time.monotonic() - started, 3)
+        return record
+
+    try:
+        try:
+            stdout, stderr = process.communicate(timeout=timeout)
+            record["exit_code"] = process.returncode
+            record["status"] = "passed" if process.returncode == 0 else "failed"
+            record["stdout"] = redact(stdout)
+            record["stderr"] = redact(stderr)
+        except subprocess.TimeoutExpired:
+            # A distinct status from "failed": a timeout means the collector
+            # cut the command off at a configured boundary, not that the
+            # command itself reported a non-zero result. Never represented
+            # as passed. Terminate the whole process tree (not only this
+            # direct handle) before draining, within the bounded grace
+            # window above.
+            _kill_process_tree(process)
+            try:
+                stdout, stderr = process.communicate(
+                    timeout=_PROCESS_TREE_CLEANUP_GRACE_SECONDS
+                )
+            except subprocess.TimeoutExpired as exc:
+                # The tree kill did not free the pipes within the grace
+                # window (should not happen once every descendant is
+                # actually dead). Retry the kill once more without blocking
+                # further -- returning promptly matters more here than
+                # draining any additional output a still-lingering
+                # descendant might emit.
+                _kill_process_tree(process)
+                stdout = _decode_timeout_output(exc.stdout)
+                stderr = _decode_timeout_output(exc.stderr)
+            record["status"] = "timeout"
+            record["timeout_seconds"] = timeout
+            record["stdout"] = redact(stdout)
+            record["stderr"] = redact(stderr)
+            record["error"] = f"timeout after {timeout} seconds"
     except OSError as exc:
         record["status"] = "blocked"
         record["error"] = redact(f"{type(exc).__name__}: {exc}")
     finally:
+        for stream in (process.stdout, process.stderr):
+            if stream is not None:
+                try:
+                    stream.close()
+                except OSError:
+                    pass
+        # Non-blocking: refreshes Popen's own exit-status bookkeeping when
+        # the process has, in fact, already exited (the common case, and
+        # always true once _kill_process_tree has run) without depending on
+        # a communicate() call that may have already given up on draining a
+        # still-lingering descendant's pipe.
+        process.poll()
         record["duration_seconds"] = round(time.monotonic() - started, 3)
     return record
 

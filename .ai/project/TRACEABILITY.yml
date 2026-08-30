@@ -9491,7 +9491,7 @@ traceability:
       tests_or_evidence:
         - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
         - "manual: every new cross-reference anchor verified against the validator's own slug() algorithm"
-        - MPLBACKEND=Agg python -m unittest discover -> full-suite result recorded once run on the final consolidated branch (see req-report-readonly-validate/req-report-resolved-inspection for the focused report-module regression run)
+        - MPLBACKEND=Agg python -m unittest discover -> Ran 3277 tests, OK (skipped=185), run on the fully consolidated feature/report-v2-distribution branch after all eight sub-branches (#601-#608, #610, #611, plus #613/#614/#615) merged
         - python -m unittest tests.test_traceability_gate tests.test_change_package_closeout -> OK
         - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
         - ruff format --check / ruff check on every changed file -> clean

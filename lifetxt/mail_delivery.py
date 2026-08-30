@@ -63,9 +63,11 @@ def send_smtp_text(
     once the message is sent (or, under ``dry_run``, once it would have
     been).
     """
-    to_addrs = split_email_addresses(to_addrs) if isinstance(to_addrs, str) else [
-        str(addr).strip() for addr in (to_addrs or []) if str(addr).strip()
-    ]
+    to_addrs = (
+        split_email_addresses(to_addrs)
+        if isinstance(to_addrs, str)
+        else [str(addr).strip() for addr in (to_addrs or []) if str(addr).strip()]
+    )
     if not to_addrs:
         raise MailDeliveryError("At least one recipient email address is required.")
 

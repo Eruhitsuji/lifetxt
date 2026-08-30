@@ -371,6 +371,200 @@ class AiWorkspaceGenerationTests(unittest.TestCase):
             )
 
 
+def _reporting_config(**overrides):
+    profiles = {
+        "weekly": {
+            "period": "weekly",
+            "output": "reports/{iso_year}-W{iso_week}.md",
+            "sections": [{"type": "review"}],
+        }
+    }
+    jobs = [
+        {
+            "name": "weekly",
+            "profile": "weekly",
+            "schedule": "after-period",
+            "at": "00:10",
+        }
+    ]
+    result = {"enabled": True, "profiles": profiles, "jobs": jobs}
+    result.update(overrides)
+    return result
+
+
+class ReportingConfigGenerationTests(unittest.TestCase):
+    def test_disabled_by_default_generates_no_reports_key_or_units(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = server_init.load_config(_write_json(tmp, _config(tmp)))
+            self.assertNotIn("reports", server_init._application_config(config))
+            plan = server_init.build_plan(config)
+            self.assertFalse(
+                any(
+                    "lifetxt-report-" in (step.get("path") or "")
+                    for step in plan["steps"]
+                )
+            )
+
+    def test_enabled_copies_profiles_into_application_config(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = server_init.load_config(
+                _write_json(tmp, _config(tmp, reporting=_reporting_config()))
+            )
+            app_config = server_init._application_config(config)
+            self.assertIn("weekly", app_config["reports"])
+            self.assertEqual(app_config["reports"]["weekly"]["period"], "weekly")
+
+    def test_invalid_report_profile_is_rejected_before_any_write(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            bad = _reporting_config(
+                profiles={"weekly": {"period": "not-a-real-period"}}
+            )
+            with self.assertRaises(server_init.ServerInitError):
+                server_init.load_config(_write_json(tmp, _config(tmp, reporting=bad)))
+
+    def test_job_referencing_unknown_profile_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            bad = _reporting_config(
+                jobs=[
+                    {
+                        "name": "weekly",
+                        "profile": "does-not-exist",
+                        "schedule": "after-period",
+                        "at": "00:10",
+                    }
+                ]
+            )
+            with self.assertRaisesRegex(server_init.ServerInitError, "not defined"):
+                server_init.load_config(_write_json(tmp, _config(tmp, reporting=bad)))
+
+    def test_duplicate_job_names_are_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            bad = _reporting_config(
+                jobs=[
+                    {
+                        "name": "weekly",
+                        "profile": "weekly",
+                        "schedule": "after-period",
+                        "at": "00:10",
+                    },
+                    {
+                        "name": "weekly",
+                        "profile": "weekly",
+                        "schedule": "after-period",
+                        "at": "01:00",
+                    },
+                ]
+            )
+            with self.assertRaisesRegex(server_init.ServerInitError, "duplicate"):
+                server_init.load_config(_write_json(tmp, _config(tmp, reporting=bad)))
+
+    def test_invalid_time_format_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            bad = _reporting_config(
+                jobs=[
+                    {
+                        "name": "weekly",
+                        "profile": "weekly",
+                        "schedule": "after-period",
+                        "at": "not-a-time",
+                    }
+                ]
+            )
+            with self.assertRaises(server_init.ServerInitError):
+                server_init.load_config(_write_json(tmp, _config(tmp, reporting=bad)))
+
+    def test_unsupported_schedule_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            bad = _reporting_config(
+                jobs=[
+                    {
+                        "name": "weekly",
+                        "profile": "weekly",
+                        "schedule": "cron-like",
+                        "at": "00:10",
+                    }
+                ]
+            )
+            with self.assertRaises(server_init.ServerInitError):
+                server_init.load_config(_write_json(tmp, _config(tmp, reporting=bad)))
+
+    def test_plan_generates_service_and_timer_units_and_enables_the_timer(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = server_init.load_config(
+                _write_json(
+                    tmp,
+                    _config(
+                        tmp,
+                        reporting=_reporting_config(),
+                        systemd={"enable": True},
+                    ),
+                )
+            )
+            plan = server_init.build_plan(config)
+            unit_dir = os.path.join(tmp, "systemd")
+            service_step = _step(
+                {"steps": plan["steps"]},
+                os.path.join(unit_dir, "lifetxt-report-weekly.service"),
+            )
+            self.assertIn("report run weekly --previous", service_step["content"])
+            timer_step = _step(
+                {"steps": plan["steps"]},
+                os.path.join(unit_dir, "lifetxt-report-weekly.timer"),
+            )
+            self.assertIn("OnCalendar=Mon *-*-* 00:10:00", timer_step["content"])
+            self.assertIn("Persistent=true", timer_step["content"])
+            enable_names = [
+                step["name"]
+                for step in plan["steps"]
+                if step.get("kind") == "command"
+                and "systemd:enable" in step.get("name", "")
+            ]
+            self.assertIn("systemd:enable:lifetxt-report-weekly.timer", enable_names)
+
+    def test_daily_profile_uses_daily_oncalendar(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            profiles = {
+                "daily": {
+                    "period": "daily",
+                    "output": "d.md",
+                    "sections": [{"type": "stats"}],
+                }
+            }
+            jobs = [
+                {
+                    "name": "daily",
+                    "profile": "daily",
+                    "schedule": "after-period",
+                    "at": "23:50",
+                }
+            ]
+            config = server_init.load_config(
+                _write_json(
+                    tmp,
+                    _config(
+                        tmp,
+                        reporting={"enabled": True, "profiles": profiles, "jobs": jobs},
+                    ),
+                )
+            )
+            plan = server_init.build_plan(config)
+            timer_step = _step(
+                {"steps": plan["steps"]},
+                os.path.join(tmp, "systemd", "lifetxt-report-daily.timer"),
+            )
+            self.assertIn("OnCalendar=*-*-* 23:50:00", timer_step["content"])
+
+    def test_apply_writes_report_units_to_disk(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = server_init.load_config(
+                _write_json(tmp, _config(tmp, reporting=_reporting_config()))
+            )
+            with mock.patch("lifetxt.server_update._run", return_value=_Completed()):
+                server_init.run_server_init(config, yes=True)
+            unit_path = os.path.join(tmp, "systemd", "lifetxt-report-weekly.service")
+            self.assertTrue(os.path.exists(unit_path))
+
+
 def _write_json(root, data):
     path = os.path.join(root, "server-init.json")
     with open(path, "w", encoding="utf-8") as handle:

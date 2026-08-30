@@ -46,7 +46,15 @@ V1_PROFILE_KEYS = frozenset(
         "frontmatter",
     )
 )
-V2_ONLY_KEYS = frozenset(("sections", "format", "audience", "compare", "email"))
+V2_ONLY_KEYS = frozenset(
+    ("sections", "format", "audience", "compare", "email", "scope")
+)
+_LEGACY_SCOPE_ALIASES = (
+    ("project", "project"),
+    ("type", "type"),
+    ("tag", "tag"),
+    ("open", "open"),
+)
 PROFILE_KEYS = V1_PROFILE_KEYS | V2_ONLY_KEYS
 OUTPUT_FIELDS = frozenset(("date", "year", "month", "iso_year", "iso_week"))
 EMAIL_CONFIG_KEYS = frozenset(
@@ -171,6 +179,32 @@ def _validate_email_config(name, value):
     return dict(value)
 
 
+def _resolve_v2_scope(name, value):
+    """Resolve a v2 profile's report-wide ``scope`` (#613).
+
+    Legacy top-level ``project``/``type``/``tag``/``open`` keys (the v1
+    filter contract, already type-checked by the caller) are folded in as
+    compatibility aliases when ``scope`` does not already specify a
+    conflicting value for the same field; a genuinely conflicting value
+    fails loudly rather than silently picking one.
+    """
+    try:
+        scope = dict(report_v2.validate_scope(value.get("scope")))
+    except report_v2.ReportError as exc:
+        raise ValueError("Report profile %s: %s" % (name, exc))
+    for legacy_key, scope_key in _LEGACY_SCOPE_ALIASES:
+        if legacy_key not in value:
+            continue
+        legacy_value = value[legacy_key]
+        if scope_key in scope and scope[scope_key] != legacy_value:
+            raise ValueError(
+                "Report profile %s: legacy `%s` and `scope.%s` specify conflicting values."
+                % (name, legacy_key, scope_key)
+            )
+        scope.setdefault(scope_key, legacy_value)
+    return scope
+
+
 def _validate_profile(name, value):
     if not isinstance(value, dict):
         raise ValueError("Report profile %s must be an object." % name)
@@ -242,6 +276,7 @@ def _validate_profile(name, value):
             raise ValueError("Report profile %s: %s" % (name, exc))
         result["format"] = output_format
         result["audience"] = audience
+        result["scope"] = _resolve_v2_scope(name, value)
         if "email" in value:
             result["email"] = _validate_email_config(name, value["email"])
     elif "email" in value:
@@ -465,6 +500,7 @@ def render_report_v2(
     generated = timezone_now(timezone_name)
 
     items = _load_items([], config_data)
+    items = report_v2.apply_scope(items, profile.get("scope"))
     id_key = id_key_from_config(config_data)
     context = report_v2.ReportContext(
         items,

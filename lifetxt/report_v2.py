@@ -37,6 +37,12 @@ COMPARE_MODES = ("previous",)
 # :func:`redact_for_external_audience` before rendering.
 EXTERNAL_SAFE_SECTION_TYPES = frozenset(("stats", "health", "project-health"))
 
+# Report-wide `scope` keys (#613): applied once to the parsed item set,
+# before any section provider runs, using the shared filtering primitive
+# every other lifetxt surface (CLI filter/agenda/query) already uses.
+SCOPE_KEYS = frozenset(("project", "tag", "type", "open", "status", "person"))
+_SCOPE_LIST_OR_STRING_KEYS = ("project", "tag", "type", "status", "person")
+
 
 class ReportError(ValueError):
     """Raised for Report v2 configuration, resolution, or composition errors."""
@@ -328,6 +334,64 @@ def validate_sections(sections, audience="private"):
                 % (section_type, ", ".join(sorted(EXTERNAL_SAFE_SECTION_TYPES)))
             )
     return sections
+
+
+def validate_scope(scope):
+    """Validate a report-wide ``scope`` object, raising :class:`ReportError`.
+
+    ``scope`` may be ``None`` (no report-wide filter), in which case an
+    empty dict is returned.
+    """
+    if scope is None:
+        return {}
+    if not isinstance(scope, dict):
+        raise ReportError("Report `scope` must be an object.")
+    unknown = sorted(set(scope) - SCOPE_KEYS)
+    if unknown:
+        raise ReportError(
+            "Report scope has unknown key(s): %s" % ", ".join(str(k) for k in unknown)
+        )
+    for key in _SCOPE_LIST_OR_STRING_KEYS:
+        if key in scope and not isinstance(scope[key], (list, str)):
+            raise ReportError(
+                "Report scope.%s must be a string or an array of strings." % key
+            )
+    if "open" in scope and not isinstance(scope["open"], bool):
+        raise ReportError("Report scope.open must be true or false.")
+    return scope
+
+
+def _scope_list(scope, key):
+    value = scope.get(key)
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return [value]
+    return value
+
+
+def apply_scope(items, scope):
+    """Filter ``items`` once by ``scope``, shared by every section provider.
+
+    Reuses :func:`lifetxt.agenda.filter_items` -- the same surface-neutral
+    filtering primitive the CLI ``filter``/``agenda`` commands and `query`
+    already use -- rather than a report-only filter engine. A provider may
+    narrow this result further (e.g. ``agenda``'s own ``range`` option) but
+    section providers never see an item this function excluded.
+    """
+    if not scope:
+        return items
+    from .agenda import filter_items
+
+    return filter_items(
+        items,
+        open_only=bool(scope.get("open", False)),
+        statuses=_scope_list(scope, "status"),
+        kinds=_scope_list(scope, "type"),
+        projects=_scope_list(scope, "project"),
+        tags=_scope_list(scope, "tag"),
+        persons=_scope_list(scope, "person"),
+    )
 
 
 # ---------------------------------------------------------------------------

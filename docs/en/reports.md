@@ -187,6 +187,55 @@ override for the rendered heading. Available types:
 An unknown `type`, or an option a provider does not understand, fails loudly
 when the profile is read -- before any rendering happens.
 
+### Report-wide scope (`scope`)
+
+```json
+{
+  "reports": {
+    "research-weekly": {
+      "period": "weekly",
+      "scope": {"project": ["research"], "tag": ["experiment"], "open": false},
+      "sections": [
+        {"type": "review"},
+        {"type": "stats", "group": "daily"},
+        {"type": "agenda", "range": "next-period"}
+      ]
+    }
+  }
+}
+```
+
+`scope` narrows the parsed item set **once**, before any section provider
+runs, so every section agrees on what the report is about instead of each
+provider needing its own `project`/`tag`/`open` options. It reuses
+`lifetxt.agenda.filter_items()` -- the same filtering primitive the CLI
+`filter`/`agenda` commands and `query` already use -- rather than a
+report-only filter engine. A provider's own options may narrow the scoped
+set further (for example `agenda`'s `range`); no provider can see an item
+`scope` already excluded.
+
+Supported fields: `project`, `tag`, `type`, `status`, `person` (each a
+string or an array of strings), and `open` (boolean, equivalent to the v1
+`open` convenience). Combining fields applies all of them together (AND).
+
+For backward compatibility, the legacy top-level `project`/`type`/`tag`/
+`open` keys (the v1 filter contract) are still accepted on a v2 profile and
+folded into `scope` as compatibility aliases. A profile that sets both a
+legacy key and a conflicting `scope` value for the same field fails loudly
+when the profile is read, rather than silently picking one:
+
+```json
+{"project": "home", "scope": {"project": "work"}}
+```
+
+```text
+Report profile weekly: legacy `project` and `scope.project` specify conflicting values.
+```
+
+Existing v1 profiles (no `sections`) are unaffected: their top-level
+`project`/`type`/`tag`/`open` keep working exactly as documented above,
+independent of `scope`.
+
 ### Output format
 
 ```json

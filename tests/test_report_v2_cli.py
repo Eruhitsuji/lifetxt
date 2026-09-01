@@ -1,4 +1,5 @@
 import contextlib
+import datetime
 import io
 import json
 import os
@@ -7,6 +8,8 @@ import unittest
 from unittest import mock
 
 from lifetxt import report_cli
+
+REPORT_FIXTURE_TODAY = datetime.date(2026, 8, 26)
 
 LIFE_TEXT = """\
 [x] T Buy_milk done:2026-08-25 project:home
@@ -192,7 +195,10 @@ class ReportV2CliEndToEndTests(unittest.TestCase):
             config_path = ws.write_config(
                 {"weekly": {"period": "weekly", "sections": [{"type": "review"}]}}
             )
-            out, code = _run(["preview", "weekly"], config_path)
+            with mock.patch.object(
+                report_cli, "timezone_today", return_value=REPORT_FIXTURE_TODAY
+            ):
+                out, code = _run(["preview", "weekly"], config_path)
         self.assertEqual(code, 0)
         self.assertIn("report_schema: lifetxt-report-v2", out)
         self.assertIn("## Review", out)
@@ -214,12 +220,15 @@ class ReportV2CliEndToEndTests(unittest.TestCase):
                     },
                 }
             )
-            home_out, _ = _run(
-                ["preview", "home-only", "--format", "json"], config_path
-            )
-            work_out, _ = _run(
-                ["preview", "work-only", "--format", "json"], config_path
-            )
+            with mock.patch.object(
+                report_cli, "timezone_today", return_value=REPORT_FIXTURE_TODAY
+            ):
+                home_out, _ = _run(
+                    ["preview", "home-only", "--format", "json"], config_path
+                )
+                work_out, _ = _run(
+                    ["preview", "work-only", "--format", "json"], config_path
+                )
         home_model = json.loads(home_out)
         work_model = json.loads(work_out)
         self.assertEqual(home_model["sections"][0]["data"]["completed_tasks"], 1)

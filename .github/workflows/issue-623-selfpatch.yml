@@ -1,0 +1,69 @@
+name: Apply issue 623 scoped patch
+
+on:
+  push:
+    branches:
+      - fix/issue-623-report-v2-weekly-tests
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out issue branch
+        uses: actions/checkout@v5
+        with:
+          ref: fix/issue-623-report-v2-weekly-tests
+          fetch-depth: 0
+
+      - name: Apply deterministic test and traceability updates
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          test_path = Path("tests/test_report_v2_cli.py")
+          text = test_path.read_text(encoding="utf-8")
+          text = text.replace(
+              "import contextlib\nimport io\n",
+              "import contextlib\nimport datetime\nimport io\n",
+              1,
+          )
+          text = text.replace(
+              "from lifetxt import report_cli\n\nLIFE_TEXT",
+              "from lifetxt import report_cli\n\nREPORT_FIXTURE_TODAY = datetime.date(2026, 8, 26)\n\nLIFE_TEXT",
+              1,
+          )
+          old = '''            out, code = _run(["preview", "weekly"], config_path)\n'''
+          new = '''            with mock.patch.object(\n                report_cli, "timezone_today", return_value=REPORT_FIXTURE_TODAY\n            ):\n                out, code = _run(["preview", "weekly"], config_path)\n'''
+          if old not in text:
+              raise SystemExit("first Report v2 target block not found")
+          text = text.replace(old, new, 1)
+          old = '''            home_out, _ = _run(\n                ["preview", "home-only", "--format", "json"], config_path\n            )\n            work_out, _ = _run(\n                ["preview", "work-only", "--format", "json"], config_path\n            )\n'''
+          new = '''            with mock.patch.object(\n                report_cli, "timezone_today", return_value=REPORT_FIXTURE_TODAY\n            ):\n                home_out, _ = _run(\n                    ["preview", "home-only", "--format", "json"], config_path\n                )\n                work_out, _ = _run(\n                    ["preview", "work-only", "--format", "json"], config_path\n                )\n'''
+          if old not in text:
+              raise SystemExit("scoped Report v2 target block not found")
+          text = text.replace(old, new, 1)
+          test_path.write_text(text, encoding="utf-8", newline="\n")
+
+          trace_path = Path(".ai/project/TRACEABILITY.yml")
+          trace = trace_path.read_text(encoding="utf-8")
+          marker = "\nrequired_chain:\n"
+          if marker not in trace:
+              raise SystemExit("traceability insertion marker not found")
+          record = '''\n    - requirement_id: req-report-v2-weekly-test-determinism\n      capability_id: cap-report-v2-composition\n      epic: https://github.com/Eruhitsuji/lifetxt/issues/600\n      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/623\n      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/624\n      changed_files_or_scope:\n        - tests/test_report_v2_cli.py\n        - .ai/project/TRACEABILITY.yml\n      tests_or_evidence:\n        - python -m unittest tests.test_report_v2_cli\n        - required CI on PR #624\n      release_or_deployment: null\n      notes: >-\n        Test-only maintenance for the existing Report v2 capability. The two\n        current-week end-to-end assertions are anchored to 2026-08-26, the\n        fixture week containing done:2026-08-25, so calendar-week rollover no\n        longer changes the expected completed-task count. Production report\n        period semantics are unchanged.\n      status: implemented\n'''
+          trace = trace.replace(marker, record + marker, 1)
+          trace_path.write_text(trace, encoding="utf-8", newline="\n")
+          PY
+
+      - name: Commit only the authorized final files
+        shell: bash
+        run: |
+          git config user.name "Eruhitsuji"
+          git config user.email "132959232+Eruhitsuji@users.noreply.github.com"
+          git rm .github/workflows/issue-623-selfpatch.yml
+          git add tests/test_report_v2_cli.py .ai/project/TRACEABILITY.yml
+          git commit -m "test: freeze Report v2 weekly fixture date (#623)"
+          git push origin HEAD:fix/issue-623-report-v2-weekly-tests

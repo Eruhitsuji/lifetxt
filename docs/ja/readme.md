@@ -12,6 +12,8 @@
 - [config.md](./config.md): configuration files と effective settings
 - [web.md](./web.md): optional FastAPI/Web UI surface
 - [ai-integration.md](./ai-integration.md): MCP と AI client usage
+- [personal-context.md](./personal-context.md): AIを使った Personal Context /
+  Personal DB の作成・維持・再利用
 - [use-cases.md](./use-cases.md): practical setups
 
 ## Minimal life.txt
@@ -34,6 +36,7 @@
 | Topic | Document |
 | --- | --- |
 | AI/MCP integration | [ai-integration.md](./ai-integration.md) |
+| AIによる Personal Context / Personal DB | [personal-context.md](./personal-context.md) |
 | CLI reference | [cli.md](./cli.md) |
 | Configuration | [config.md](./config.md) |
 | Delegated mutations, remote attachments, recovery | [delegated-remote-attachments-and-recovery.md](./delegated-remote-attachments-and-recovery.md) |

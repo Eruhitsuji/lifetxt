@@ -565,6 +565,12 @@ fact を捕捉し、この workspace を読む全ての AI client から再利�
 文書化された pattern であり、Personal Context Engine 調査（#503）が最初の
 スライスとして選定したものです。
 
+Chat、PDF、ZIP、repositoryなどから最初の `personal.life.txt` をどう作るか、
+その後どうreconcile/correctして育てるか、Context Capsuleや通常のlifetxt
+surfaceでどう再利用するかという、より広いprovider-independentなworkflowは
+[Personal Contextの作成・維持・活用ガイド](./personal-context.md)を参照してください。
+このガイドは `Bootstrap -> Maintain -> Consume` を扱い、MCPを必須にしません。
+
 ### Convention の内容
 
 - **Kind**: `N`（Note）。Note は既に任意の custom detail key を無検査で

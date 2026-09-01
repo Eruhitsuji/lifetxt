@@ -622,6 +622,13 @@ contract; it is a documented pattern built entirely from mechanisms this
 project already ships, selected by the Personal Context Engine investigation
 (#503) as the smallest first slice worth documenting.
 
+For the broader, provider-independent workflow -- including how an AI should
+build an initial `personal.life.txt` from chat, PDFs, ZIPs, repositories, or
+other material, how to reconcile and correct it over time, and how to reuse it
+through Context Capsules and ordinary lifetxt surfaces -- see the
+[Personal Context authoring and usage guide](./personal-context.md). That guide
+covers `Bootstrap -> Maintain -> Consume` and does not require MCP.
+
 ### The convention
 
 - **Kind**: `N` (Note). Notes already accept any custom detail key with no

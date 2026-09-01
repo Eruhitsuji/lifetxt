@@ -1,0 +1,42 @@
+name: Issue 623 newline helper
+
+on:
+  push:
+    branches:
+      - test/issue-623-report-v2-week-anchor
+
+permissions:
+  contents: write
+
+jobs:
+  normalize-newline:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out task branch
+        uses: actions/checkout@v5
+        with:
+          ref: test/issue-623-report-v2-week-anchor
+          fetch-depth: 0
+
+      - name: Restore final newline
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('tests/test_report_v2_cli.py')
+          data = path.read_bytes()
+          if data.endswith(b'\n'):
+              raise SystemExit('final newline already present')
+          path.write_bytes(data + b'\n')
+          PY
+
+      - name: Remove one-shot helper and commit bounded update
+        shell: bash
+        run: |
+          rm .github/workflows/issue-623-newline-helper.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/test_report_v2_cli.py .github/workflows/issue-623-newline-helper.yml
+          git diff --cached --check
+          git commit -m "test: restore Report v2 test final newline"
+          git push origin HEAD:test/issue-623-report-v2-week-anchor

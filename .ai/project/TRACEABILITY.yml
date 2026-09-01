@@ -9659,7 +9659,7 @@ traceability:
         - .ai/project/TRACEABILITY.yml
       tests_or_evidence:
         - python -m unittest tests.test_report_v2_cli
-        - required CI on PR #624
+        - required CI on PR #625
       release_or_deployment: null
       notes: >-
         Test-only maintenance for the existing Report v2 capability. The two

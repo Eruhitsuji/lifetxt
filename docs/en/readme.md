@@ -15,6 +15,8 @@ Start with:
 - [config.md](./config.md) for configuration files and effective settings.
 - [web.md](./web.md) for the optional FastAPI/Web UI surface.
 - [ai-integration.md](./ai-integration.md) for MCP and AI client usage.
+- [personal-context.md](./personal-context.md) for AI-assisted Personal Context /
+  Personal DB authoring, maintenance, and reuse.
 - [use-cases.md](./use-cases.md) for practical setups.
 
 ## Minimal life.txt
@@ -37,6 +39,7 @@ Every Markdown file under `docs/en/` is listed here.
 | Topic | Document |
 | --- | --- |
 | AI/MCP integration | [ai-integration.md](./ai-integration.md) |
+| Personal Context / Personal DB with AI | [personal-context.md](./personal-context.md) |
 | CLI reference | [cli.md](./cli.md) |
 | Configuration | [config.md](./config.md) |
 | Delegated mutations, remote attachments, recovery | [delegated-remote-attachments-and-recovery.md](./delegated-remote-attachments-and-recovery.md) |

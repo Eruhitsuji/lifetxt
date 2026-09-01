@@ -1,4 +1,5 @@
 import contextlib
+import datetime
 import io
 import json
 import os
@@ -187,7 +188,10 @@ class ReportV2ProfileValidationTests(unittest.TestCase):
 
 
 class ReportV2CliEndToEndTests(unittest.TestCase):
-    def test_preview_v2_profile_renders_markdown_by_default(self):
+    @mock.patch.object(
+        report_cli, "timezone_today", return_value=datetime.date(2026, 8, 26)
+    )
+    def test_preview_v2_profile_renders_markdown_by_default(self, _timezone_today):
         with _TempWorkspace() as ws:
             config_path = ws.write_config(
                 {"weekly": {"period": "weekly", "sections": [{"type": "review"}]}}
@@ -198,7 +202,12 @@ class ReportV2CliEndToEndTests(unittest.TestCase):
         self.assertIn("## Review", out)
         self.assertIn("Completed tasks: 1", out)
 
-    def test_scope_restricts_every_section_to_the_scoped_project(self):
+    @mock.patch.object(
+        report_cli, "timezone_today", return_value=datetime.date(2026, 8, 26)
+    )
+    def test_scope_restricts_every_section_to_the_scoped_project(
+        self, _timezone_today
+    ):
         with _TempWorkspace() as ws:
             config_path = ws.write_config(
                 {

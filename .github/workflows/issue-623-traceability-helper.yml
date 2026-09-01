@@ -33,30 +33,33 @@ jobs:
           if text.count(marker) != 1:
               raise SystemExit('required_chain marker is not unique')
 
-          entry = '''
-    - requirement_id: req-report-v2-date-independent-weekly-tests
-      capability_id: cap-report-v2-composition
-      epic: https://github.com/Eruhitsuji/lifetxt/issues/600
-      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/623
-      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/626
-      changed_files_or_scope:
-        - Anchor the two Report v2 current-week CLI tests to a deterministic 2026-08-26 clock using the existing report_cli.timezone_today mock seam
-        - tests/test_report_v2_cli.py
-        - .ai/project/TRACEABILITY.yml
-      tests_or_evidence:
-        - "PR #622 CI on 2026-09-01 reproduced the pre-existing wall-clock defect: the fixed done:2026-08-25 fixture fell outside the new 2026-08-31 through 2026-09-06 weekly period and two assertions changed from completed_tasks=1 to 0"
-        - "The affected tests retain the default weekly CLI path and mock report_cli.timezone_today to 2026-08-26, matching the existing period-selection test seam rather than changing production Report v2 semantics"
-        - "PR #626 required CI is the authoritative verification for the focused test module and full repository suite"
-      release_or_deployment: null
-      notes: >-
-        Test-only maintenance for the existing cap-report-v2-composition
-        capability. No production Report v2 behavior, schema, period math, or
-        public interface changes. The test fixture remains dated 2026-08-25;
-        only the test clock is anchored so the intended current-week assertion
-        is independent of the wall-clock week in which CI runs.
-      status: implemented
-'''
-          path.write_text(text.replace(marker, '\n' + entry + marker, 1), encoding='utf-8')
+          lines = [
+              '',
+              '    - requirement_id: req-report-v2-date-independent-weekly-tests',
+              '      capability_id: cap-report-v2-composition',
+              '      epic: https://github.com/Eruhitsuji/lifetxt/issues/600',
+              '      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/623',
+              '      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/626',
+              '      changed_files_or_scope:',
+              '        - Anchor the two Report v2 current-week CLI tests to a deterministic 2026-08-26 clock using the existing report_cli.timezone_today mock seam',
+              '        - tests/test_report_v2_cli.py',
+              '        - .ai/project/TRACEABILITY.yml',
+              '      tests_or_evidence:',
+              '        - "PR #622 CI on 2026-09-01 reproduced the pre-existing wall-clock defect: the fixed done:2026-08-25 fixture fell outside the new 2026-08-31 through 2026-09-06 weekly period and two assertions changed from completed_tasks=1 to 0"',
+              '        - "The affected tests retain the default weekly CLI path and mock report_cli.timezone_today to 2026-08-26, matching the existing period-selection test seam rather than changing production Report v2 semantics"',
+              '        - "PR #626 required CI is the authoritative verification for the focused test module and full repository suite"',
+              '      release_or_deployment: null',
+              '      notes: >-',
+              '        Test-only maintenance for the existing cap-report-v2-composition',
+              '        capability. No production Report v2 behavior, schema, period math, or',
+              '        public interface changes. The test fixture remains dated 2026-08-25;',
+              '        only the test clock is anchored so the intended current-week assertion',
+              '        is independent of the wall-clock week in which CI runs.',
+              '      status: implemented',
+              '',
+          ]
+          entry = '\n'.join(lines)
+          path.write_text(text.replace(marker, entry + marker, 1), encoding='utf-8')
           PY
 
       - name: Remove one-shot helper and commit bounded update

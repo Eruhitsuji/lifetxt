@@ -246,7 +246,32 @@ This category/audience/command metadata lives in one place,
 `lifetxt/cli_taxonomy.py`, so `--help`, `help`, and this table cannot drift
 from each other without failing `tests/test_cli_taxonomy.py`.
 
-### 1.2 Fuzzy Search
+### 1.2 Localization
+
+lifetxt's human-readable CLI text (headings, guidance, `help`) can be shown in
+English or Japanese. Command names, options, Format 1.0 syntax, and every
+machine-readable output (`--json`/`--format json`/JSONL/CSV, the Web API, MCP,
+and schemas) never change with locale -- only presentation text does.
+
+```sh
+lifetxt --lang ja help beginner
+LIFETXT_LANG=ja lifetxt today
+lifetxt --lang en today
+```
+
+Locale is resolved in this order: an explicit `--lang` value, then the
+`LIFETXT_LANG` environment variable, then the OS/process locale, then English.
+A Japanese OS locale in any of its common forms (`ja`, `ja_JP`, `ja-JP`,
+`ja_JP.UTF-8`) normalizes to `ja`; an unsupported locale falls back to English
+rather than failing. A missing Japanese translation for a given string also
+falls back to English rather than crashing or printing nothing.
+
+```sh
+lifetxt --lang ja help
+lifetxt --lang fr help    # unsupported locale: falls back to English
+```
+
+### 1.3 Fuzzy Search
 
 `search` and `find` match exact substrings by default. Add `--fuzzy` to also
 match a field within a small typo/edit distance of the pattern -- useful when

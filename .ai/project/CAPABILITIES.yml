@@ -4254,11 +4254,16 @@ capabilities:
     summary: >-
       One shared deterministic daily-context read model
       (`lifetxt.command_center.command_center()` / `command-center-v1`)
-      combining overdue/due-today/upcoming/blocked/waiting/next-actions,
-      habits/messages/captures, a bounded Unified Inbox proposal summary,
-      project attention, and a configuration-safety signal, reused unmodified
-      by CLI `today`, MCP `get_command_center`, the TUI `Today` view, and the
-      Web `GET /api/command-center` read endpoint.
+      combining now/today-events/overdue/due-today/upcoming/blocked/waiting/
+      next-actions, habits/messages/captures, a bounded Unified Inbox
+      proposal summary, project/ticket attention, and a configuration-safety
+      signal, reused unmodified by CLI `today`, MCP `get_command_center`, the
+      TUI `Today` view, and the Web `GET /api/command-center` read endpoint.
+      `today` is the daily hub: current Status/Presence and today's Events
+      (`now`/`today_events`), a deterministic `reason` on every overdue/due
+      row, and an optional `--saved-view`/`--area`/MCP `saved_view`/`area`
+      personalization scope reusing the existing saved-view/area selection
+      mechanisms unmodified (#627).
     status: active
     owner: Eruhitsuji
     source_requirements:
@@ -4266,6 +4271,7 @@ capabilities:
       - req-tui-today-view
       - req-web-command-center-endpoint
       - req-web-today-dashboard
+      - req-today-daily-hub-enhancement
     implementation_locations:
       - lifetxt/command_center.py
       - lifetxt/schema_extensions_v7.py
@@ -4275,27 +4281,38 @@ capabilities:
       - lifetxt/tui_app.py
       - lifetxt/webapp.py
       - lifetxt/web_assets.html
-      - lifetxt/schema_extensions_v7.py
+      - lifetxt/web_assets_js_16.js
+      - lifetxt/web_assets_js_17.js
+      - lifetxt/areas.py
       - tests/test_life_hub.py
       - tests/test_cui_extensions.py
       - tests/test_lifetxt.py
       - tests/test_today_cli.py
+      - tests/test_mcp_expansion.py
+      - tests/test_web_assets.py
       - docs/en/life-hub.md
       - docs/ja/life-hub.md
       - docs/en/cli.md
       - docs/ja/cli.md
       - docs/en/web.md
       - docs/ja/web.md
+      - docs/en/getting-started.md
+      - docs/ja/getting-started.md
     public_interfaces:
       - lifetxt.command_center.command_center
+      - lifetxt.command_center.scoped_items
+      - lifetxt.areas.area_row_keys
       - lifetxt today
-      - MCP tool get_command_center
-      - command-center-v1.schema.json
-      - TUI /today command and Today view
-      - GET /api/command-center
+      - lifetxt today --saved-view NAME
+      - lifetxt today --area NAME
+      - MCP tool get_command_center (saved_view/area arguments)
+      - command-center-v1.schema.json (now/today_events fields, overdue/due_today reason field)
+      - TUI /today command and Today view (Status/Today/Tickets compact lines)
+      - GET /api/command-center (?saved_view=/?area=)
       - Web UI Today tab (?view=today)
       - command_center() ticket_attention field / counts.ticket_attention
       - command_center() ticket_stale_after_days parameter
+      - command_center() now / today_events fields
     tests_or_evidence:
       - tests/test_life_hub.py CommandCenterTests (21 tests, including next_actions/inbox coverage)
       - tests/test_schema_extensions_v2.py SchemaExtensionsV2Tests (schema bundle equality, draft 2020-12 validation of the extended sample)
@@ -4320,7 +4337,20 @@ capabilities:
       - python -m unittest tests.test_life_hub -> Ran 33 tests, OK
       - ruff format --check / ruff check tests/test_life_hub.py -> clean
       - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - "#627: tests/test_life_hub.py CommandCenterNowAndTodayEventsTests (5 tests): now reuses active_status_items across multiple people; today_events includes E/R kinds occurring today and excludes other days; an E item with both at:/on: prefers the at: time for display; overdue/due_today rows carry a deterministic reason (\"N days overdue\"/\"due today\"); now/today_events are empty lists (never omitted keys) when nothing qualifies"
+      - "#627: tests/test_life_hub.py ScopedItemsTests (6 tests): scoped_items(area=...) narrows to the named area, an unknown area/saved_view raises ValueError, saved_view narrows via the configured query, combining saved_view+area raises ValueError, no scope returns every item unchanged"
+      - "#627: tests/test_today_cli.py TodayHubStructureTests (6 tests, real subprocess): the text renderer uses the NOW/ATTENTION/TODAY/NEXT ACTIONS/BLOCKED/HABITS headings; NOW shows active status and TODAY shows today's events; an ATTENTION row carries its deterministic reason; an overdue actionable item is not duplicated under NEXT ACTIONS; a Habit-kind actionable item is shown once, under HABITS, not NEXT ACTIONS; a blocked task is listed under BLOCKED"
+      - "#627: tests/test_today_cli.py TodayScopeCliTests (4 tests, real subprocess): --area narrows the JSON report, an unknown --area fails loudly (exit 1, stderr names it), --saved-view narrows the report using a real configured saved view, --saved-view and --area are rejected together by argparse before any command code runs"
+      - "#627: tests/test_cui_extensions.py WorkspaceTodayHubSectionsTests (4 tests): active status renders as a compact \"Status: ...\" line, today's event renders as a compact \"Today: ...\" line, a ticket needing attention renders as a compact \"Tickets: N need attention (...)\" line, and all three are omitted entirely (zero extra rendered lines, INBOX still visible within the fixed render height) when nothing qualifies"
+      - "#627: tests/test_mcp_expansion.py CommandCenterScopeToolTests (4 tests): get_command_center's area/saved_view arguments narrow the result identically to the CLI flags, an unknown area raises ValueError (translated to a JSON-RPC error by the existing dispatcher), and omitting both matches an unscoped direct engine call"
+      - "#627: tests/test_lifetxt.py LifeTxtWebApiTests.test_command_center_api_respects_saved_view_and_area_scope, test_command_center_api_unknown_area_returns_400 -- GET /api/command-center?area=/?saved_view= narrow the result the same way, an unknown area returns 400"
+      - python -m unittest tests.test_life_hub tests.test_today_cli tests.test_cui_extensions tests.test_web_assets tests.test_web_commands tests.test_web_i18n tests.test_schema_extensions_v2 tests.test_nextaction tests.test_mcp_expansion tests.test_surface_runtime tests.test_release_policy tests.test_report_v2 tests.test_report_v2_cli -> Ran 733 tests, OK (skipped=1)
+      - "live: real python -m lifetxt today against a disposable fixture (active status, an on:/at: event, an overdue task, a due-today task, a blocked task, a habit) rendered the exact designed NOW/ATTENTION/TODAY/NEXT ACTIONS/BLOCKED/HABITS/INBOX structure, with the overdue task shown once (under ATTENTION, not repeated under NEXT ACTIONS) and the habit shown once (under HABITS, not repeated under NEXT ACTIONS)"
+      - "live: real lifetxt today --saved-view/--area against a real configured workspace narrowed the report and annotated the header; an unknown --area exited 1 with a named error"
+      - "live: real lifetxt serve process; GET /api/command-center returned the now/today_events/reason fields; the served page's assembled JavaScript passed node --check with no syntax error; GET / contained the today-now/today-attention card markup"
+      - "node --check on the assembled Web UI JavaScript (all 18 fragments concatenated) -> no syntax error"
     related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/627
       - https://github.com/Eruhitsuji/lifetxt/issues/472
       - https://github.com/Eruhitsuji/lifetxt/issues/473
       - https://github.com/Eruhitsuji/lifetxt/issues/475
@@ -4451,6 +4481,97 @@ capabilities:
       code touched, since `node_facts()`'s own UTC-based staleness formula
       was never wrong. Test-only fix; no other file in this capability
       changed.
+      #627 ("Enhance `lifetxt today` as the primary daily command center")
+      implements that issue's Phase 1-5 "Future direction" as one bounded,
+      reviewable extension of this existing capability rather than a
+      parallel Today subsystem, matching the issue's own explicit
+      "integrate before inventing" guardrail. Phase 1 (make the default
+      excellent): two new buckets -- `now` (reusing
+      `lifetxt.presence.active_status_items` unmodified) and `today_events`
+      (reusing `lifetxt.agenda.agenda_records` bounded to a single day,
+      narrowed to E/R kinds, preferring an `at:` time-of-day match over an
+      `on:` all-day span for display only -- no new occurrence rule); a
+      deterministic `reason` on every `overdue`/`due_today` row, derived
+      from `lifetxt.temporal_context.node_facts()`'s existing
+      `overdue_by`/`due_in` facts (the same facts `get_temporal_context`
+      and the `explain_item` prompt already expose); and a restructured
+      CLI text renderer grouping the unchanged buckets under the issue's
+      documented NOW/ATTENTION/TODAY/NEXT ACTIONS/BLOCKED/HABITS/INBOX
+      headings, skipping a row already printed under an earlier heading
+      (an overdue task is not repeated under NEXT ACTIONS; a Habit-kind
+      actionable item is shown once, under HABITS) so the same record is
+      never presented twice -- `--json` output is completely unaffected by
+      this grouping. Phase 2 (common front door): the TUI Today view and
+      the Web Today dashboard both gained the same `now`/`today_events`
+      data plus the previously CLI-only `ticket_attention`, closing a
+      cross-surface parity gap found while implementing this issue,
+      without introducing a second due/blocked/actionable/staleness rule
+      in either renderer. The TUI additions are deliberately compact,
+      omitted-when-empty one-line summaries (`compact_line()`) rather than
+      full bordered subsections: `_build_today()` has no scrolling and a
+      fixed render height, and an early full-subsection version of this
+      change was found, via the existing
+      `WorkspaceTodayViewTests.test_today_view_shows_now_attention_inbox_and_upcoming_sections`
+      regression test, to push the pre-existing INBOX/UPCOMING sections
+      entirely off-screen at the test's 40-row height -- the compact form
+      adds at most three lines total and was verified not to regress that
+      test. The Web dashboard reuses the existing `_todayRefRow`/
+      `_todaySubsection` renderers (extended to optionally show a `when`
+      pill for events and a `reasons` pill for tickets) rather than a
+      parallel rendering path; it does not have the TUI's fixed-height
+      constraint, so its new subsections are always rendered (consistent
+      with how Blocked/Waiting/Projects already behave there), and this
+      capability's own git-blob-SHA-locked pristine-page test
+      (`tests/test_web_assets.py`) was updated to the new, intentionally
+      different byte content. Phase 3 (stable machine-readable context):
+      `command-center-v1.schema.json`'s generator gained the `now`/
+      `today_events` fields and a sample `reason`, regenerated to match
+      byte-for-byte (verified against `tests.test_schema_extensions_v2`);
+      the MCP tool's `revision` attachment (`cap-mcp-context-revision`,
+      #513) needed no change, since it wraps the tool's return value
+      generically. Phase 4 (personalization through existing concepts): a
+      new `lifetxt.command_center.scoped_items(items, config, saved_view=,
+      area=)` helper -- reusing `lifetxt.saved_views.run_saved_view()` and
+      a newly-extracted `lifetxt.areas.area_row_keys()` (factored out of
+      `tui_app.py`'s previously-private `_area_row_keys`, now a thin
+      wrapper delegating to it, so the TUI `/area` command and this
+      capability share one area-membership implementation) -- narrows the
+      item set before aggregation. Wired into CLI `today --saved-view`/
+      `--area` (an `argparse` mutually-exclusive group), MCP
+      `get_command_center`'s `saved_view`/`area` arguments, and Web
+      `GET /api/command-center?saved_view=`/`?area=` (unknown name or
+      combining both -> a 400 there, matching the route's existing
+      `/api/areas/{name}`/`/api/saved-views/{name}` error convention);
+      three call sites, one shared implementation, no new configuration
+      language. Phase 5 (assistive intelligence, deterministic first
+      step): the `reason` field above is this phase's concrete,
+      deterministic groundwork -- "explaining why an item deserves
+      attention" and "identifying likely deadline risk from existing
+      deterministic signals" are both satisfied by surfacing an existing
+      fact, not by generating new text. The issue's own Phase 5 guardrail
+      ("Only after deterministic Today semantics are stable should
+      optional assistive features be considered") is read as deliberately
+      scoping the remaining two items in that phase -- "generating a daily
+      summary" and "helping choose among already-actionable next
+      actions" -- out of this change: both are generative/LLM-shaped
+      features with no existing deterministic engine to reuse, and this
+      project's own precedent (#503's Personal Context Engine scoping,
+      #502's MCP permission-profile design) is to resolve that kind of
+      product/design decision with the repository owner via
+      `AskUserQuestion` before building, not to invent an AI subsystem
+      unprompted inside an otherwise-deterministic aggregation change.
+      They are recorded here as explicit, reasoned follow-up candidates,
+      not silently dropped acceptance-criteria items. Also explicitly out
+      of scope for this pass, recorded as known, pre-existing (not
+      newly-introduced) gaps rather than silently left unmentioned: the
+      TUI's and Web's `Due today`/`Next actions`/`Overdue` subsections
+      still list the same actionable-and-due-today task in more than one
+      subsection (unlike the CLI's now-deduplicated NEXT ACTIONS), since
+      deduplicating them would need a larger rendering restructure than
+      this pass's bounded compact-line/parity additions; and
+      `docs/ja/cli.md` has no cross-reference to `life-hub.md` for `today`
+      at all, a pre-existing translation gap already recorded under #617's
+      own traceability entry, not introduced or widened here.
     replacement:
       replaces: []
       replaced_by: null

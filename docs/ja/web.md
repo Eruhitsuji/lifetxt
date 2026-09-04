@@ -80,7 +80,7 @@ MCP tool は `list_items`、`get_item`、`create_item`、`update_item`、
 | `PUT` | `/api/items/{line}` | 書き込み先ファイルの指定行 item を置換 |
 | `DELETE` | `/api/items/{line}` | 書き込み先ファイルの指定行 item を削除 |
 | `GET` | `/api/agenda` | 日時範囲に関連する agenda record を表示 |
-| `GET` | `/api/command-center` | canonical な Daily Command Center: overdue/due-today/upcoming、blocked、waiting、next actions、habits、messages、captures、bounded な Unified Inbox summary、project attention、safety signal |
+| `GET` | `/api/command-center` | canonical な Daily Command Center: current status、today's events、overdue/due-today/upcoming、blocked、waiting、next actions、habits、messages、captures、bounded な Unified Inbox summary、project/ticket attention、safety signal |
 | `GET` | `/api/saved-views` | 設定済みの saved view(`saved_views` config)を一覧表示 |
 | `GET` | `/api/saved-views/{name}` | 1 つの saved view を実行。`GET /api/items` と同じ `count`/`items`/`query_diagnostics` 形式 |
 | `GET` | `/api/areas` | `area:` によるグループを task 進捗と共に一覧表示 |
@@ -115,8 +115,11 @@ repeat record には、可能な場合 `generated: true`、`source_id`、
 Unified Inbox proposal の bounded な `inbox` summary を含みます。
 `?horizon=N`(日数、default 3)、`?person=NAME`(未読 message を scope)、
 `?mode=today|morning|evening`(presentation のみの metadata。bucket は常に
-すべて計算されます)を受け付けます。bucket の完全な一覧は
-[life-hub.md](life-hub.md) を参照してください。
+すべて計算されます)、`?saved_view=NAME`/`?area=NAME`（personalization
+scope。`lifetxt.command_center.scoped_items()` に委譲しており、`lifetxt today
+--saved-view`/`--area` や MCP `get_command_center` の `saved_view`/`area`
+引数と同じ scope です。不明な名前や両方の同時指定は 400）を受け付けます。
+bucket の完全な一覧は [life-hub.md](life-hub.md) を参照してください。
 
 `GET /api/saved-views` と `GET /api/saved-views/{name}` は、CLI の
 `view list`/`view run` と同じ named query である `lifetxt.saved_views` に

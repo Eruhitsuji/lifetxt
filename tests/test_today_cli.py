@@ -5,7 +5,7 @@ import os
 import tempfile
 import unittest
 
-from tests.test_lifetxt import run_cli
+from tests.test_lifetxt import normalize_newlines, run_cli
 
 
 SAMPLE = (
@@ -26,6 +26,7 @@ class TodayCliTicketAttentionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             src = self._write_source(temp_dir)
             stdout, stderr, code = run_cli("today", src)
+            stdout = normalize_newlines(stdout)
             self.assertEqual(0, code, stderr)
             self.assertIn("Tickets needing attention (1):", stdout)
             self.assertIn("Reviewed: review", stdout)
@@ -41,6 +42,7 @@ class TodayCliTicketAttentionTests(unittest.TestCase):
                 temp_dir, "#! timezone: UTC\n[ ] T Plain record:ticket severity:low\n"
             )
             stdout, stderr, code = run_cli("today", src)
+            stdout = normalize_newlines(stdout)
             self.assertEqual(0, code, stderr)
             self.assertNotIn("Tickets needing attention", stdout)
 
@@ -48,12 +50,156 @@ class TodayCliTicketAttentionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             src = self._write_source(temp_dir)
             stdout, stderr, code = run_cli("today", src, "--json")
+            stdout = normalize_newlines(stdout)
             self.assertEqual(0, code, stderr)
             data = json.loads(stdout)
             self.assertEqual(
                 ["Reviewed"], [r["title"] for r in data["ticket_attention"]]
             )
             self.assertEqual(1, data["counts"]["ticket_attention"])
+
+
+HUB_SAMPLE = (
+    "#! timezone: UTC\n"
+    "[/] S self state:focus from:2026-09-04T08:00\n"
+    "[ ] E Team_meeting at:09:00 on:2026-09-04\n"
+    "[ ] T Overdue_report due:2026-08-30 project:lifetxt id:t1\n"
+    "[ ] T Configure_DNS project:lifetxt id:t2\n"
+    "[ ] T Deploy_website project:lifetxt depends_on:t2\n"
+    "[ ] H Exercise\n"
+)
+
+
+class TodayHubStructureTests(unittest.TestCase):
+    """Covers #627's NOW/ATTENTION/TODAY/NEXT ACTIONS/BLOCKED/HABITS/INBOX
+    daily-hub restructuring of the text renderer."""
+
+    def _write_source(self, temp_dir, text=HUB_SAMPLE):
+        path = os.path.join(temp_dir, "life.txt")
+        with open(path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(text)
+        return path
+
+    def test_text_output_uses_the_documented_hub_headings(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            src = self._write_source(temp_dir)
+            stdout, stderr, code = run_cli("today", src)
+            stdout = normalize_newlines(stdout)
+            self.assertEqual(0, code, stderr)
+            for heading in (
+                "NOW",
+                "ATTENTION",
+                "TODAY",
+                "NEXT ACTIONS",
+                "BLOCKED",
+                "HABITS",
+            ):
+                self.assertIn("\n%s\n" % heading, stdout)
+
+    def test_now_shows_active_status_and_today_shows_events(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            src = self._write_source(temp_dir)
+            stdout, stderr, code = run_cli("today", src)
+            stdout = normalize_newlines(stdout)
+            self.assertEqual(0, code, stderr)
+            self.assertIn("self: focus", stdout)
+            self.assertIn("Team_meeting", stdout)
+
+    def test_attention_row_carries_a_deterministic_reason(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            src = self._write_source(temp_dir)
+            stdout, stderr, code = run_cli("today", src)
+            stdout = normalize_newlines(stdout)
+            self.assertEqual(0, code, stderr)
+            self.assertIn("days overdue", stdout)
+
+    def test_overdue_item_is_not_duplicated_under_next_actions(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            src = self._write_source(temp_dir)
+            stdout, stderr, code = run_cli("today", src)
+            stdout = normalize_newlines(stdout)
+            self.assertEqual(0, code, stderr)
+            # Overdue_report is actionable (open, unblocked) and therefore
+            # already listed under ATTENTION; NEXT ACTIONS must not repeat it.
+            next_actions_block = stdout.split("\nNEXT ACTIONS\n", 1)[1]
+            next_actions_block = next_actions_block.split("\n\n", 1)[0]
+            self.assertNotIn("Overdue_report", next_actions_block)
+            self.assertIn("Configure_DNS", next_actions_block)
+
+    def test_habit_is_not_duplicated_under_next_actions(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            src = self._write_source(temp_dir)
+            stdout, stderr, code = run_cli("today", src)
+            stdout = normalize_newlines(stdout)
+            self.assertEqual(0, code, stderr)
+            next_actions_block = stdout.split("\nNEXT ACTIONS\n", 1)[1]
+            next_actions_block = next_actions_block.split("\n\n", 1)[0]
+            self.assertNotIn("Exercise", next_actions_block)
+            self.assertIn("\nHABITS\n", stdout)
+            habits_block = stdout.split("\nHABITS\n", 1)[1]
+            self.assertIn("Exercise", habits_block)
+
+    def test_blocked_task_is_listed_under_blocked(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            src = self._write_source(temp_dir)
+            stdout, stderr, code = run_cli("today", src)
+            stdout = normalize_newlines(stdout)
+            self.assertEqual(0, code, stderr)
+            blocked_block = stdout.split("\nBLOCKED\n", 1)[1].split("\n\n", 1)[0]
+            self.assertIn("Deploy_website", blocked_block)
+
+
+class TodayScopeCliTests(unittest.TestCase):
+    """Covers #627 Phase 4 personalization: --saved-view / --area."""
+
+    def _write_source(self, temp_dir):
+        path = os.path.join(temp_dir, "life.txt")
+        with open(path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(
+                "#! timezone: UTC\n"
+                "[ ] T Home_task project:home area:home\n"
+                "[ ] T Work_task project:work area:work\n"
+            )
+        return path
+
+    def test_area_narrows_the_report_and_annotates_the_header(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            src = self._write_source(temp_dir)
+            stdout, stderr, code = run_cli("today", src, "--area", "home", "--json")
+            stdout = normalize_newlines(stdout)
+            self.assertEqual(0, code, stderr)
+            data = json.loads(stdout)
+            self.assertEqual(["Home_task"], [r["title"] for r in data["next_actions"]])
+
+    def test_unknown_area_fails_loudly(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            src = self._write_source(temp_dir)
+            stdout, stderr, code = run_cli("today", src, "--area", "nope")
+            stdout = normalize_newlines(stdout)
+            self.assertEqual(1, code)
+            self.assertIn("Unknown area", stderr)
+
+    def test_saved_view_narrows_the_report(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            src = self._write_source(temp_dir)
+            cfg = os.path.join(temp_dir, ".lifetxt.json")
+            with open(cfg, "w", encoding="utf-8") as handle:
+                json.dump({"saved_views": {"home": {"query": "area:home"}}}, handle)
+            stdout, stderr, code = run_cli(
+                "--config", cfg, "today", src, "--saved-view", "home", "--json"
+            )
+            self.assertEqual(0, code, stderr)
+            data = json.loads(stdout)
+            self.assertEqual(["Home_task"], [r["title"] for r in data["next_actions"]])
+
+    def test_saved_view_and_area_are_mutually_exclusive(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            src = self._write_source(temp_dir)
+            stdout, stderr, code = run_cli(
+                "today", src, "--saved-view", "a", "--area", "b"
+            )
+            self.assertNotEqual(0, code)
+            self.assertIn("not allowed with argument", stderr)
 
 
 if __name__ == "__main__":

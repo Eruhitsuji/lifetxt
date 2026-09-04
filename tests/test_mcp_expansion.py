@@ -1514,5 +1514,49 @@ class ContextRevisionTests(McpTestCase):
         self.assertNotEqual(before, after)
 
 
+class CommandCenterScopeToolTests(McpTestCase):
+    """get_command_center's saved_view/area parameters (#627 Phase 4): the
+    same lifetxt.command_center.scoped_items() helper `lifetxt today
+    --saved-view`/`--area` use, so CLI and MCP personalization agree."""
+
+    SCOPE_SAMPLE = (
+        "[ ] T Home_task id:t1 project:home area:home\n"
+        "[ ] T Work_task id:t2 project:work area:work\n"
+    )
+
+    def test_area_narrows_the_result(self):
+        context, _path = self._context(content=self.SCOPE_SAMPLE)
+
+        result = call_tool("get_command_center", {"area": "home"}, context)
+
+        self.assertEqual(["Home_task"], [r["title"] for r in result["next_actions"]])
+
+    def test_saved_view_narrows_the_result(self):
+        context, _path = self._context(
+            content=self.SCOPE_SAMPLE,
+            config={"saved_views": {"home": {"query": "area:home"}}},
+        )
+
+        result = call_tool("get_command_center", {"saved_view": "home"}, context)
+
+        self.assertEqual(["Home_task"], [r["title"] for r in result["next_actions"]])
+
+    def test_unknown_area_raises_value_error(self):
+        context, _path = self._context(content=self.SCOPE_SAMPLE)
+
+        with self.assertRaises(ValueError):
+            call_tool("get_command_center", {"area": "nope"}, context)
+
+    def test_no_scope_matches_the_direct_engine_call(self):
+        context, _path = self._context(content=self.SCOPE_SAMPLE)
+
+        result = call_tool("get_command_center", {}, context)
+
+        self.assertEqual(
+            {"Home_task", "Work_task"},
+            {r["title"] for r in result["next_actions"]},
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

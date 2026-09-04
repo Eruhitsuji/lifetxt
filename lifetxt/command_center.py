@@ -87,6 +87,136 @@ def _message_suppressed(item, today):
     return False
 
 
+def scoped_items(items, config, saved_view=None, area=None):
+    """Narrow the input item set to a personalization scope before aggregation.
+
+    At most one of ``saved_view``/``area`` may be given. Both reuse an
+    existing selection mechanism unmodified --
+    :func:`lifetxt.saved_views.run_saved_view` / :func:`lifetxt.areas.area_row_keys`
+    -- rather than inventing a Today-only configuration language. Raises
+    ``ValueError`` (matching the convention those modules already use for an
+    unknown name) when both are given or when resolution fails, so a caller
+    can report the exact same message a direct ``saved view`` or ``area``
+    lookup would.
+    """
+    if saved_view and area:
+        raise ValueError(
+            "today: --saved-view and --area cannot be combined; choose one scope."
+        )
+    if saved_view:
+        from .saved_views import run_saved_view
+
+        filtered, diagnostics = run_saved_view(items, config, saved_view)
+        errors = [d for d in diagnostics if d.get("severity") == "error"]
+        if errors:
+            raise ValueError(errors[0]["message"])
+        return filtered
+    if area:
+        from .areas import area_row_keys, area_show
+
+        keys = area_row_keys(items, config, area)
+        if not keys:
+            area_show(items, config, area)  # raises ValueError on an unknown name
+        return [it for it in items if (getattr(it, "source", None), it.line) in keys]
+    return items
+
+
+def _status_now(items, person=None):
+    """Active Status/Presence records: current context for the NOW section.
+
+    Reuses :func:`lifetxt.presence.active_status_items` unmodified -- the
+    same open-``S``-record definition ``lifetxt status``/``lifetxt start``
+    already use -- so "what is the person doing right now" is derived once.
+    """
+    from .presence import active_status_items
+
+    rows = []
+    for item in active_status_items(items, person=person):
+        rows.append(
+            OrderedDict(
+                (
+                    ("person", _first(item, "person") or "self"),
+                    ("state", _first(item, "state") or item.title),
+                    ("title", item.title),
+                    ("since", _first(item, "from")),
+                    ("source", item.source),
+                    ("line", item.line),
+                )
+            )
+        )
+    return rows
+
+
+def _today_events(items, today):
+    """Events and Reminders whose occurrence falls on ``today``.
+
+    Reuses :func:`lifetxt.agenda.agenda_records` unmodified, bounded to a
+    single day's range -- the identical occurrence/recurrence/timezone
+    resolution ``agenda`` and the Web Calendar already use -- then narrows
+    the result to Event/Reminder kinds. Deadlines and Tasks due today
+    already appear in ``due_today``, so they are not duplicated here.
+    """
+    if today is None:
+        return []
+    import datetime
+
+    from .agenda import agenda_records, format_match_time
+
+    range_start = datetime.datetime.combine(today, datetime.time.min)
+    range_end = datetime.datetime.combine(today, datetime.time.max)
+    rows = []
+    for record in agenda_records(items, range_start, range_end):
+        if record.get("type") not in ("E", "R"):
+            continue
+        # Prefer an at: time-of-day match for display over an all-day on:
+        # span when both are present on the same record -- agenda_records()
+        # already computed both; this only picks which existing match to
+        # show, it does not derive a new occurrence.
+        when = record.get("when")
+        for match in record.get("matches") or []:
+            if match.get("key") == "at":
+                when = format_match_time(match)
+                break
+        rows.append(
+            OrderedDict(
+                (
+                    ("when", when),
+                    ("title", record.get("title")),
+                    ("kind", record.get("type")),
+                    ("status", record.get("status")),
+                    ("blocked", record.get("blocked", False)),
+                    ("source", record.get("source")),
+                    ("line", record.get("line")),
+                )
+            )
+        )
+    return rows
+
+
+def _attention_reason(item, today):
+    """A short, deterministic explanation for why an item needs attention.
+
+    Reuses :func:`lifetxt.temporal_context.node_facts` unmodified -- the
+    same ``overdue_by``/``due_in`` signals :func:`lifetxt.temporal_context.temporal_context`
+    and the ``explain_item`` MCP prompt already derive -- so "why is this
+    urgent" has one deterministic answer, not a second one reimplemented
+    here. Deliberately text, not a generated summary: this is the
+    deterministic groundwork assistive Today features can build on later,
+    not an assistive feature itself.
+    """
+    if today is None:
+        return None
+    from .temporal_context import node_facts
+
+    for fact in node_facts(item, today):
+        if fact["rule"] == "overdue_by":
+            days = fact["days"]
+            return "%d day%s overdue" % (days, "" if days == 1 else "s")
+        if fact["rule"] == "due_in" and fact["days"] == 0:
+            return "due today"
+    return None
+
+
 def _is_blocked(item, status_by_id):
     for target in item.details.get("depends_on") or []:
         blocker = status_by_id.get(str(target))
@@ -128,7 +258,13 @@ def command_center(
     ``review`` status, at or above a high severity, or stale beyond
     ``ticket_stale_after_days`` (default matches
     :data:`lifetxt.ticket_project_values.DEFAULT_STALE_DAYS`); no severity,
-    workflow, or staleness rule is duplicated here.
+    workflow, or staleness rule is duplicated here. ``now`` reuses
+    :func:`lifetxt.presence.active_status_items` for current Status/Presence
+    context, and ``today_events`` reuses :func:`lifetxt.agenda.agenda_records`
+    bounded to ``today`` for Event/Reminder occurrences. Every ``overdue``/
+    ``due_today`` entry that has a determinable due date also carries a
+    deterministic ``reason`` (from :func:`lifetxt.temporal_context.node_facts`)
+    explaining why it needs attention.
     """
     config = config or {}
     status_by_id = _status_by_id(items)
@@ -166,9 +302,17 @@ def command_center(
         due = _date_of(_first(item, "due"))
         if due is not None and today is not None:
             if due < today:
-                overdue.append(_ref(item))
+                ref = _ref(item)
+                reason = _attention_reason(item, today)
+                if reason:
+                    ref["reason"] = reason
+                overdue.append(ref)
             elif due == today:
-                due_today.append(_ref(item))
+                ref = _ref(item)
+                reason = _attention_reason(item, today)
+                if reason:
+                    ref["reason"] = reason
+                due_today.append(ref)
             elif due <= _add_days(today, horizon_days):
                 upcoming.append(_ref(item))
         if (
@@ -184,6 +328,8 @@ def command_center(
     next_actions = _next_actions(items, next_actions_limit)
     inbox = _inbox_section(config, inbox_limit)
     ticket_attention = _ticket_attention(items, today, ticket_stale_after_days)
+    now = _status_now(items, person)
+    today_events = _today_events(items, today)
 
     return OrderedDict(
         (
@@ -191,6 +337,8 @@ def command_center(
             ("reference_date", today.isoformat() if today is not None else None),
             ("horizon_days", horizon_days),
             ("person", person),
+            ("now", now),
+            ("today_events", today_events),
             ("overdue", overdue),
             ("due_today", due_today),
             ("upcoming", upcoming),
@@ -208,6 +356,8 @@ def command_center(
                 "counts",
                 OrderedDict(
                     (
+                        ("now", len(now)),
+                        ("today_events", len(today_events)),
                         ("overdue", len(overdue)),
                         ("due_today", len(due_today)),
                         ("upcoming", len(upcoming)),

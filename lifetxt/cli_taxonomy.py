@@ -828,6 +828,53 @@ def related_commands(name):
     return tuple(siblings[:4])
 
 
+#: Success-output guidance for a small set of beginner-facing write
+#: commands (#638): 0-2 deterministic "Next:" command names, reusing
+#: `_EXAMPLES` above for the copyable example rather than a second table,
+#: plus whether the operation is undoable through the existing
+#: `lifetxt undo PATH` / pre-write-backup mutation contract. This is
+#: presentation metadata only -- it introduces no new workflow/state
+#: engine and does not decide which commands exist or how they behave.
+SUCCESS_GUIDANCE = {
+    "init": {"next": ("quick", "today"), "undoable": False},
+    "quick": {"next": ("today",), "undoable": True},
+    "done": {"next": ("today",), "undoable": True},
+    "complete": {"next": ("today",), "undoable": True},
+}
+
+register_messages(
+    {
+        "success.next": {"en": "Next:", "ja": "次に:"},
+        "success.undo": {"en": "Undo:", "ja": "元に戻す:"},
+    }
+)
+
+
+def render_success_guidance(command, path=None):
+    """Short "Next:"/"Undo:" guidance for one write command's TTY success
+    output. Returns ``""`` when ``command`` has no registered guidance, so
+    a call site can always write the result unconditionally.
+
+    Callers remain responsible for only calling this on an actual TTY and
+    only after a real successful mutation -- this function does not know
+    or care whether either is true.
+    """
+    info = SUCCESS_GUIDANCE.get(command)
+    if not info:
+        return ""
+    lines = ["", _t("success.next")]
+    for next_command in info.get("next", ()):
+        examples = _EXAMPLES.get(next_command)
+        example = examples[0] if examples else "lifetxt %s" % next_command
+        lines.append("  %s" % example)
+    if info.get("undoable") and path:
+        lines.append("")
+        lines.append(_t("success.undo"))
+        lines.append("  lifetxt undo %s" % path)
+    lines.append("")
+    return "\n".join(lines)
+
+
 #: The beginner-to-daily-to-advanced audience flows described in the issue.
 #: Each entry is a fixed, small, curated sequence -- not the full category
 #: listing -- so `lifetxt help <audience>` stays a short, readable path

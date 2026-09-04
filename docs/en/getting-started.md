@@ -190,6 +190,16 @@ first -- it is already valid input to the full grammar.
   calendar, journaling, team status, AI integration).
 - [`philosophy.md`](./philosophy.md) -- why lifetxt is built this way.
 
+## Learning the next step from success output
+
+In an interactive terminal, `init`, `add`/`quick`, `done`, and `complete`
+print a short "Next:" line naming one or two commands to try next, so the
+beginner loop above (`init` -> `add` -> `today` -> `done`) can be learned
+just from what each command prints. `add`/`done`/`complete` also print
+"Undo:" whenever that specific change can really be undone with
+`lifetxt undo PATH`. Scripted, piped, or redirected output is completely
+unaffected: no extra lines are ever added there.
+
 ## Running `lifetxt` with no arguments
 
 In an interactive terminal, running just `lifetxt` with no other arguments is

@@ -194,6 +194,15 @@ Level 1 や Level 2 で書いたものを先に変更する必要はありませ
   calendar、journaling、team status、AI integration）
 - [`philosophy.md`](./philosophy.md) -- なぜ lifetxt がこの設計なのか
 
+## 成功時の出力から次の一歩を学ぶ
+
+対話端末では、`init`、`add`/`quick`、`done`、`complete` が短い「Next:」行を
+表示し、次に試すコマンドを1〜2個示します。これにより、上記の初心者向け
+ループ（`init` -> `add` -> `today` -> `done`）を各コマンドの出力だけから
+学べます。`add`/`done`/`complete` はさらに、その変更が実際に
+`lifetxt undo PATH` で元に戻せる場合のみ「Undo:」を表示します。script・
+pipe・redirect 経由の出力には一切影響しません -- 追加の行は表示されません。
+
 ## 引数なしで `lifetxt` を実行する
 
 対話端末で `lifetxt` を他の引数なしで実行すると、スマートな入口として動作

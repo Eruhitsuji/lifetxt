@@ -64,6 +64,12 @@ from .diagnostic_contract import (
 )
 from .i18n import register_messages as _register_messages, translate as _t
 from .ics import items_from_ics_text
+from .init_presets import DEFAULT_PRESET as _INIT_DEFAULT_PRESET
+from .init_presets import (
+    preset_names,
+    render_life_text as _render_init_life_text,
+    validate_preset,
+)
 from .ids import (
     auto_ids_enabled,
     collect_item_ids,
@@ -150,6 +156,10 @@ _register_messages(
         "init.project_prompt": {
             "en": "Default project name (leave blank to skip): ",
             "ja": "既定のプロジェクト名 (空欄で省略): ",
+        },
+        "init.preset_prompt": {
+            "en": "Starter preset [{presets}] (leave blank for minimal): ",
+            "ja": "Starter preset [{presets}] (空欄で minimal): ",
         },
         "init.wrote": {"en": "Wrote {path}", "ja": "書き込みました: {path}"},
         "init.next": {"en": "Next: {command}", "ja": "次に: {command}"},
@@ -3097,6 +3107,13 @@ def build_parser():
     )
     init_cmd.add_argument(
         "--project", help="Default project name (for #! project: directive)."
+    )
+    init_cmd.add_argument(
+        "--preset",
+        choices=preset_names(),
+        default=None,
+        help="Starter section skeleton for a common use case. Defaults to "
+        "minimal (today's plain single-task starter, unchanged).",
     )
     init_cmd.add_argument(
         "--yes",
@@ -8055,17 +8072,24 @@ def command_init(args):
         sys.stdout.flush()
         project = sys.stdin.readline().strip()
 
-    today = timezone_today().isoformat()
+    preset = getattr(args, "preset", None)
+    if preset is None and not yes:
+        sys.stdout.write(
+            _t("init.preset_prompt", presets=", ".join(preset_names())) + "\n"
+        )
+        sys.stdout.flush()
+        answer = sys.stdin.readline().strip()
+        preset = answer or _INIT_DEFAULT_PRESET
+    if preset is None:
+        preset = _INIT_DEFAULT_PRESET
+    try:
+        validate_preset(preset)
+    except ValueError as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
 
-    life_lines = []
-    life_lines.append("#! self: %s" % name)
-    life_lines.append("#! timezone: %s" % timezone_val)
-    if project:
-        life_lines.append("#! project: %s" % project)
-    life_lines.append("")
-    project_detail = (" project:%s" % project) if project else ""
-    life_lines.append("[ ] T First_Task%s due:%s" % (project_detail, today))
-    life_text = "\n".join(life_lines) + "\n"
+    today = timezone_today().isoformat()
+    life_text = _render_init_life_text(name, timezone_val, project, today, preset)
 
     defaults = OrderedDict()
     defaults["person"] = name

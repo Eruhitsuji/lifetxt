@@ -2984,13 +2984,31 @@ python -m lifetxt doctor
 | `--name NAME` | Your name, written as `#! self:` and `defaults.person` |
 | `--timezone TZ` | Your timezone, written as `#! timezone:` and `defaults.timezone` |
 | `--project NAME` | Default project, written as `#! project:` and `defaults.project` |
-| `--yes` | Run fully non-interactively using defaults (`self`, `UTC`, no project) — skips every prompt, including the overwrite confirmation when combined with `--force`. Use this in scripts and CI. |
+| `--preset {minimal,personal,student,work,research}` | Starter section skeleton. Defaults to `minimal` (today's plain single-task starter, unchanged) |
+| `--yes` | Run fully non-interactively using defaults (`self`, `UTC`, no project, `minimal` preset) — skips every prompt, including the overwrite confirmation when combined with `--force`. Use this in scripts and CI. |
 
-Without `--yes`, `init` prompts for your name, timezone, and default project,
-and asks before overwriting an existing `life.txt` or config file (unless
-`--force` is also given). With `--yes`, none of the three prompts are shown;
-any value not supplied via `--name`/`--timezone`/`--project` falls back to
-its built-in default.
+Without `--yes`, `init` prompts for your name, timezone, default project, and
+starter preset, and asks before overwriting an existing `life.txt` or config
+file (unless `--force` is also given). With `--yes`, none of these prompts
+are shown; any value not supplied via `--name`/`--timezone`/`--project`/
+`--preset` falls back to its built-in default.
+
+`--preset` only adds a small skeleton of `# Section` comment headings around
+the same starter task -- no new Format syntax, no fabricated sample data, and
+no separate parser or writer per preset:
+
+```sh
+python -m lifetxt init --preset student
+python -m lifetxt init --preset research --yes
+```
+
+| Preset | Sections |
+|---|---|
+| `minimal` (default) | none -- just the starter task, matching `init`'s original output |
+| `personal` | Tasks, Notes |
+| `student` | Tasks, Classes / Events, Deadlines, Notes |
+| `work` | Tasks, Meetings, Projects, Notes |
+| `research` | Tasks, Meetings, Experiments, Research Notes |
 
 `doctor` reports pass/warn/fail checks and never modifies files:
 

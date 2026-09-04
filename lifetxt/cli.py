@@ -3597,6 +3597,11 @@ def build_parser():
         help="Auto-correct safe issues in-place (writes to the writable path only).",
     )
     lint_cmd.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="With --fix, show what would change without writing anything.",
+    )
+    lint_cmd.add_argument(
         "--pretty",
         action="store_true",
         help="Pretty-print JSON output.",
@@ -10803,6 +10808,15 @@ _LINT_CASING_VARIANTS = {
     for k in list(_LINT_KEY_VARIANTS.values()) + list(_LINT_KEY_VARIANTS.keys())
 }
 
+#: Lint codes `--fix` (#635) may auto-apply: each one already carries a
+#: deterministic, unique replacement in ``issue["fix"]`` (a known-typo
+#: rename for L001, a case-normalization for L002). L003 (duplicate key)
+#: and L100 (custom ruleset match) are excluded even when they happen to
+#: carry a ``fix`` value: a duplicate key's correct resolution requires
+#: judgment this engine cannot safely infer, and a custom rule's
+#: replacement is operator-authored, not proven safe by this classification.
+_LINT_FIXABLE_CODES = frozenset(("L001", "L002"))
+
 
 def command_lint(args):
     from .model import RECOMMENDED_KEYS_BY_TYPE
@@ -10931,17 +10945,25 @@ def command_lint(args):
                                 )
                             )
 
-    # --fix: auto-rename typo keys in fixable issues (L001, L002)
+    # --fix: auto-rename typo keys in fixable issues (L001, L002) only.
+    # L003 (duplicate key) and L100 (custom ruleset match) are never
+    # auto-applied here: a duplicate key's "correct" resolution requires
+    # judgment this command cannot safely infer, and a custom rule's
+    # replacement is operator-supplied, not proven safe by this engine.
     if do_fix:
+        dry_run = getattr(args, "dry_run", False)
         fixable = [
-            i for i in issues if i.get("fix") and i.get("code") in ("L001", "L002")
+            i for i in issues if i.get("fix") and i.get("code") in _LINT_FIXABLE_CODES
         ]
-        fixed_count = 0
-        # Group by source file
+        skipped_ambiguous = len(issues) - len(fixable)
         by_path = {}
         for issue in fixable:
             src = issue.get("source") or "-"
             by_path.setdefault(src, []).append(issue)
+
+        fixed_count = 0
+        written_files = 0
+        skipped_files = []
         for path, path_issues in by_path.items():
             if path == "-":
                 sys.stderr.write("WARNING: Cannot fix stdin; skipping.\n")
@@ -10960,15 +10982,42 @@ def command_lint(args):
                         new_key + ":",
                         lines[ln - 1],
                     )
-                    fixed_count += 1
             new_text = "".join(lines)
-            atomic_write_text(path, new_text)
+
+            # Validate the complete post-fix file before writing anything:
+            # if even one planned fix would introduce a parse error, this
+            # file's fixes are skipped entirely rather than partially
+            # applied.
+            _new_items, new_diagnostics = parse_text(
+                new_text, id_key=id_key, check_ids=False, check_references=False
+            )
+            if _has_error(new_diagnostics):
+                skipped_files.append(path)
+                continue
+
+            if dry_run:
+                sys.stdout.write(
+                    "[dry-run] Would fix %d issue(s) in %s\n" % (len(path_issues), path)
+                )
+            else:
+                atomic_write_text(path, new_text)
+            fixed_count += len(path_issues)
+            written_files += 1
+
         sys.stdout.write(
-            _t("lint.fixed_summary", fixed=fixed_count, files=len(by_path)) + "\n"
+            _t("lint.fixed_summary", fixed=fixed_count, files=written_files) + "\n"
         )
-        # Re-run lint to report remaining issues
-        remaining = [i for i in issues if i.get("code") == "L003" or not i.get("fix")]
-        return 1 if remaining else 0
+        if skipped_files:
+            sys.stdout.write(
+                "Skipped %d file(s): fix would introduce a parse error -- %s\n"
+                % (len(skipped_files), ", ".join(skipped_files))
+            )
+        if skipped_ambiguous:
+            sys.stdout.write(
+                "Skipped %d finding(s): no unique safe fix is available.\n"
+                % skipped_ambiguous
+            )
+        return 1 if (skipped_files or skipped_ambiguous) else 0
 
     if args.format == "json":
         # The stored "message" field stays exactly as constructed above

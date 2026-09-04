@@ -297,6 +297,23 @@ python -m lifetxt search "stast" --fuzzy life.txt   # "stats" を含む title �
 python -m lifetxt find "stast" life.txt --fuzzy      # item / project / person / group / area / proposal 全体で同様の許容
 ```
 
+### 1.4 安全に確定できる `lint --fix`
+
+`lint` は既定で read-only。`--fix` は、単一の deterministic かつ意味を変えない
+置換で解決できる finding だけを自動修正する -- 既知の key typo (`L001`) と
+非標準の casing (`L002`) のみ。それ以外の finding（duplicate key や custom
+`--ruleset` match）は変更しない。`--fix` は曖昧な置換を推測しない。
+
+```sh
+python -m lifetxt lint life.txt --fix              # 安全な修正を適用
+python -m lifetxt lint life.txt --fix --dry-run    # 書き込まずにpreview
+```
+
+`--fix` は書き込み前に、そのファイルの完全な修正 plan を構築し、結果全文を
+canonical parser で再検証する。1つでも修正後に parse error を起こす場合、
+そのファイルの修正は（ファイル名を表示して）まとめてskipされ、部分適用は
+行わない -- 修正は常に「1つの完全な、再検証済みファイル」としてのみ書き込まれる。
+
 ## 2. 共通仕様
 
 ### 2.0 外部 config

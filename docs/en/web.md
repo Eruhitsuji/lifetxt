@@ -342,6 +342,25 @@ competes for space. The
 record editor opens as a centered modal from `＋ New`, and clicking an item
 opens a centered record detail modal.
 
+### Beginner Authoring Mode
+
+The record editor's Type and Status fields default to showing every Format
+1.0 value (Full mode). A "Hide advanced options" / "Show advanced options"
+button at the top of the editor toggles **Beginner mode**, which narrows
+those two selects to the [Beginner / Minimal
+Profile](./getting-started.md)'s subset -- `T`/`E`/`N` types and
+`[ ]`/`[x]`/`[N]` statuses -- reusing the exact same vocabulary
+`lifetxt/beginner_profile.py` defines (also exposed at
+`GET /api/beginner-profile`) rather than a second, Web-only copy of it.
+
+This is presentation only: no Format, parser, or data change is involved.
+Opening an existing record whose Type or Status falls outside the beginner
+subset (for example a `D` deadline or a `[/]` in-progress status) always
+keeps that value visible and selected, even in Beginner mode -- it is never
+silently hidden, dropped, or rewritten. The preference is remembered per
+browser (not shared across devices or with other viewers) and defaults to
+Full mode, so nothing changes for an existing user until they opt in.
+
 ## Web UI Configuration
 
 `/api/config` exposes a safe subset of `web.*` settings to the browser. The

@@ -178,7 +178,9 @@ first -- it is already valid input to the full grammar.
 
 - `lifetxt tour` -- a 30-second, zero-config demonstration; a good place to
   start before writing anything.
-- `lifetxt init` -- create your own starter `life.txt` and config.
+- `lifetxt init` -- create your own starter `life.txt` and config. Add
+  `--preset student`, `work`, `research`, or `personal` for a small starter
+  section skeleton matching your use case (see [`cli.md`](./cli.md)).
 - `lifetxt add "Buy milk ^tomorrow"` -- capture your first real record.
 - `lifetxt web` -- open the browser UI against it.
 - [`life_txt_format_spec.md`](./life_txt_format_spec.md) -- the complete

@@ -293,6 +293,25 @@ python -m lifetxt search "stast" --fuzzy life.txt   # matches a title containing
 python -m lifetxt find "stast" life.txt --fuzzy      # same tolerance across items, projects, people, groups, areas, proposals
 ```
 
+### 1.4 Guarded `lint --fix`
+
+`lint` is read-only by default. `--fix` auto-corrects only the findings it
+can resolve with a single, deterministic, meaning-preserving replacement --
+a known key-name typo (`L001`) or non-standard key casing (`L002`). Every
+other finding (a duplicate key, or a custom `--ruleset` match) is left
+untouched: `--fix` never guesses at an ambiguous replacement.
+
+```sh
+python -m lifetxt lint life.txt --fix              # apply safe fixes
+python -m lifetxt lint life.txt --fix --dry-run    # preview without writing
+```
+
+Before writing anything, `--fix` builds the complete fix plan for a file and
+re-parses the resulting text with the canonical parser. If even one planned
+fix would introduce a parse error, that file's fixes are skipped entirely
+(reported by name) rather than partially applied -- a fix is only ever
+written as one complete, already-revalidated file.
+
 ## 2. Common Conventions
 
 ### 2.0 Global Options

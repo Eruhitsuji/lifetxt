@@ -277,6 +277,12 @@ lifetxt --lang ja help
 lifetxt --lang fr help    # 未対応の locale: English へ fallback
 ```
 
+Beginner/Daily の流れ（`tour`、`init`、`add`/`quick`、`today`、`done`/`complete`）
+と、`check`/`lint`/`doctor` の代表的な固定ラベル・次の一歩の案内が対象。
+parser/validator が生成する個々の diagnostic メッセージはまだ翻訳対象外で、
+その raw text・code・severity・location は English のままであり `--lang` の
+影響を受けない。
+
 ### 1.3 あいまい検索 (Fuzzy Search)
 
 `search` と `find` は既定で完全な部分一致のみを対象とする。`--fuzzy` を付けると、

@@ -187,3 +187,20 @@ first -- it is already valid input to the full grammar.
 - [`use-cases.md`](./use-cases.md) -- practical setups (task tracking,
   calendar, journaling, team status, AI integration).
 - [`philosophy.md`](./philosophy.md) -- why lifetxt is built this way.
+
+## Read this in another language
+
+lifetxt's human-readable CLI text (headings, guidance, `help`) can be shown
+in Japanese instead of English -- command names, options, and Format 1.0
+syntax always stay the same canonical English tokens:
+
+```sh
+lifetxt --lang ja tour
+lifetxt --lang ja init
+lifetxt --lang ja help beginner
+LIFETXT_LANG=ja lifetxt today
+```
+
+See [`cli.md`](./cli.md)'s Localization section for the full precedence
+rules, and read this same guide in Japanese at
+[`docs/ja/getting-started.md`](../ja/getting-started.md).

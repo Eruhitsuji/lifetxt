@@ -252,7 +252,32 @@ category / audience / command のメタデータは `lifetxt/cli_taxonomy.py`
 一箇所にまとまっているため、`--help`、`help`、この表が互いに drift する
 と `tests/test_cli_taxonomy.py` が fail します。
 
-### 1.2 あいまい検索 (Fuzzy Search)
+### 1.2 多言語化 (Localization)
+
+lifetxt の人間向け CLI 出力（見出し・案内文・`help`）は英語または日本語で
+表示できる。コマンド名・option 名・Format 1.0 の構文、そしてあらゆる
+machine-readable 出力（`--json`/`--format json`/JSONL/CSV、Web API、MCP、
+schema）は locale によって変化しない。変化するのは表示文字列のみである。
+
+```sh
+lifetxt --lang ja help beginner
+LIFETXT_LANG=ja lifetxt today
+lifetxt --lang en today
+```
+
+locale は次の優先順位で解決される: 明示的な `--lang` 値、`LIFETXT_LANG`
+環境変数、OS/プロセスの locale、最後に English。日本語の OS locale は
+よくある表記（`ja`、`ja_JP`、`ja-JP`、`ja_JP.UTF-8`）のいずれでも `ja` に
+正規化される。未対応の locale は失敗せず English へ fallback する。ある
+文字列に日本語訳が無い場合も、crash や空表示にはならず English へ
+fallback する。
+
+```sh
+lifetxt --lang ja help
+lifetxt --lang fr help    # 未対応の locale: English へ fallback
+```
+
+### 1.3 あいまい検索 (Fuzzy Search)
 
 `search` と `find` は既定で完全な部分一致のみを対象とする。`--fuzzy` を付けると、
 pattern から一定の編集距離（typo や打ち間違い）以内の field も対象になる。あいまい

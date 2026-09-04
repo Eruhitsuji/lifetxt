@@ -183,6 +183,9 @@ Level 1 や Level 2 で書いたものを先に変更する必要はありませ
 - `lifetxt tour` -- config 不要の 30 秒デモ。何かを書く前にまず試すと
   よいです。
 - `lifetxt init` -- 自分用の `life.txt` と config を作成します。
+  `--preset student`、`work`、`research`、`personal` を付けると、用途に
+  合った小さな starter section skeleton になります（[`cli.md`](./cli.md)
+  参照）。
 - `lifetxt add "Buy milk ^tomorrow"` -- 最初の実データを capture します。
 - `lifetxt web` -- それに対してブラウザ UI を開きます。
 - [`life_txt_format_spec.md`](./life_txt_format_spec.md) -- 完全な grammar

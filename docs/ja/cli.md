@@ -2647,13 +2647,31 @@ python -m lifetxt doctor
 | `--name NAME` | 自分の名前。`#! self:` と `defaults.person` に書き込まれる |
 | `--timezone TZ` | timezone。`#! timezone:` と `defaults.timezone` に書き込まれる |
 | `--project NAME` | default project。`#! project:` と `defaults.project` に書き込まれる |
-| `--yes` | すべて既定値 (`self`、`UTC`、project なし) で非対話実行。`--force` と併用した場合の上書き確認プロンプトも省略される。script や CI 向け |
+| `--preset {minimal,personal,student,work,research}` | starter section skeleton。省略時は `minimal`（従来通りの単一タスクのみの starter）|
+| `--yes` | すべて既定値 (`self`、`UTC`、project なし、`minimal` preset) で非対話実行。`--force` と併用した場合の上書き確認プロンプトも省略される。script や CI 向け |
 
-`--yes` を付けない場合、`init` は名前・timezone・default project を尋ね、
-既存の `life.txt` や config file を上書きする前に確認します
-(`--force` 指定時を除く)。`--yes` を付けると3つのプロンプトはすべて
-スキップされ、`--name`/`--timezone`/`--project` で指定されなかった値は
-組み込みの既定値になります。
+`--yes` を付けない場合、`init` は名前・timezone・default project・starter
+preset を尋ね、既存の `life.txt` や config file を上書きする前に確認します
+(`--force` 指定時を除く)。`--yes` を付けるとこれらのプロンプトはすべて
+スキップされ、`--name`/`--timezone`/`--project`/`--preset` で指定されなかった
+値は組み込みの既定値になります。
+
+`--preset` は同じ starter task の周りに `# Section` という comment 見出しの
+小さな skeleton を追加するだけです -- 新しい Format 構文も、架空の sample
+data も、preset ごとの別 parser/writer も追加しません。
+
+```sh
+python -m lifetxt init --preset student
+python -m lifetxt init --preset research --yes
+```
+
+| Preset | Section |
+|---|---|
+| `minimal`（既定）| なし -- starter task のみ。`init` の従来の出力と同じ |
+| `personal` | Tasks, Notes |
+| `student` | Tasks, Classes / Events, Deadlines, Notes |
+| `work` | Tasks, Meetings, Projects, Notes |
+| `research` | Tasks, Meetings, Experiments, Research Notes |
 
 `doctor` は pass/warn/fail の check を表示し、file は一切変更しません。
 

@@ -7106,7 +7106,8 @@ capabilities:
       - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/629
-    related_pull_requests: []
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/630
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       Self-scoped from #629's own explicit "prefer reuse before a new

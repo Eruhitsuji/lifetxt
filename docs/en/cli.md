@@ -271,6 +271,12 @@ lifetxt --lang ja help
 lifetxt --lang fr help    # unsupported locale: falls back to English
 ```
 
+Beginner/daily flows (`tour`, `init`, `add`/`quick`, `today`, `done`/`complete`)
+and a representative slice of `check`/`lint`/`doctor`'s own fixed labels and
+next-step guidance are covered. Individual parser/validator diagnostic
+messages are not yet translated -- their raw text, code, severity, and
+location fields stay in English and are unaffected by `--lang` either way.
+
 ### 1.3 Fuzzy Search
 
 `search` and `find` match exact substrings by default. Add `--fuzzy` to also

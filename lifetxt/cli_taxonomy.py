@@ -561,6 +561,92 @@ register_messages(
             "en": "Full flag reference: lifetxt --help, lifetxt <command> --help",
             "ja": "完全なフラグ一覧: lifetxt --help, lifetxt <command> --help",
         },
+        # Beginner/Daily audience flow step goals (#632). Keyed by
+        # "audience.<audience_id>.goal.<command>" so a step's translation
+        # travels with its command, not its position in the tuple.
+        "audience.beginner.goal.tour": {
+            "en": "see what lifetxt can do, with zero setup",
+            "ja": "セットアップ不要で lifetxt を体験する",
+        },
+        "audience.beginner.goal.init": {
+            "en": "create your life.txt",
+            "ja": "life.txt を作成する",
+        },
+        "audience.beginner.goal.quick": {
+            "en": "capture your first task",
+            "ja": "最初のタスクを記録する",
+        },
+        "audience.beginner.goal.today": {
+            "en": "see what needs attention today",
+            "ja": "今日必要なことを確認する",
+        },
+        "audience.beginner.goal.done": {
+            "en": "mark a task finished",
+            "ja": "タスクを完了にする",
+        },
+        "audience.daily.goal.quick": {
+            "en": "capture something new",
+            "ja": "新しいことを記録する",
+        },
+        "audience.daily.goal.today": {
+            "en": "see what's due or overdue",
+            "ja": "期限や期限超過を確認する",
+        },
+        "audience.daily.goal.next": {
+            "en": "pick the next actionable task",
+            "ja": "次に取り組むタスクを選ぶ",
+        },
+        "audience.daily.goal.show": {
+            "en": "look at one item's full detail",
+            "ja": "項目の詳細を確認する",
+        },
+        "audience.daily.goal.edit": {
+            "en": "change it in your editor",
+            "ja": "エディタで編集する",
+        },
+        "audience.daily.goal.review": {
+            "en": "look back at the week",
+            "ja": "1週間を振り返る",
+        },
+        # Beginner-facing command summaries (#632). Every other command
+        # keeps command_summary()'s existing English-only argparse `help=`
+        # text; localizing the full command set is out of this issue's
+        # scope.
+        "command.summary.tour": {
+            "en": "Zero-config, dependency-free 30-second demonstration of "
+            "what lifetxt derives from a sample life.txt. Writes nothing.",
+            "ja": "設定不要・依存なしで、サンプルの life.txt から lifetxt が"
+            "何を導出できるかを30秒で確認できます。何も書き込みません。",
+        },
+        "command.summary.init": {
+            "en": "Interactive first-time setup: create life.txt and .lifetxt.json.",
+            "ja": "対話形式の初回セットアップ: life.txt と .lifetxt.json を作成します。",
+        },
+        "command.summary.quick": {
+            "en": "Quickly capture a new item.",
+            "ja": "新しい項目をすばやく記録します。",
+        },
+        "command.summary.today": {
+            "en": "Show the daily command center: what's now, needs "
+            "attention, and is actionable today.",
+            "ja": "今日のコマンドセンターを表示します: 現在の状況、注意が"
+            "必要な項目、今日やるべきことです。",
+        },
+        "command.summary.done": {
+            "en": "Mark an item done.",
+            "ja": "項目を完了にします。",
+        },
+        "command.summary.complete": {
+            "en": "Mark a repeat-enabled item done and materialize its next occurrence.",
+            "ja": "繰り返し設定された項目を完了にし、次回分を生成します。",
+        },
+        "command.summary.help": {
+            "en": "Progressive-disclosure, goal-based, and machine-readable "
+            "help: audience guides, one-command lookups, and a JSON "
+            "capability catalog.",
+            "ja": "段階的に開示される、目的別・機械可読な help です: "
+            "audience ガイド、コマンド単体の参照、JSON カタログを提供します。",
+        },
     }
 )
 
@@ -1048,6 +1134,16 @@ def render_help_overview_text():
     return "\n".join(lines) + "\n"
 
 
+def audience_step_goal(audience_id, command, default_goal):
+    """Locale-aware per-step goal text for one audience flow step (#632).
+
+    Falls back to ``default_goal`` (the English text already carried by
+    ``AUDIENCES``) when no translation is registered, so an untranslated
+    audience/step never renders blank.
+    """
+    return _t("audience.%s.goal.%s" % (audience_id, command)) or default_goal
+
+
 def render_audience_text(audience_id):
     audience = AUDIENCES[audience_id]
     lines = [
@@ -1057,11 +1153,23 @@ def render_audience_text(audience_id):
         "",
     ]
     for index, (command, goal, example) in enumerate(audience["flow"]):
-        lines.append("  %d. %-28s %s" % (index + 1, example, goal))
+        localized_goal = audience_step_goal(audience_id, command, goal)
+        lines.append("  %d. %-28s %s" % (index + 1, example, localized_goal))
     lines.append("")
     lines.append(_t("help.lookup_command"))
     lines.append(_t("help.full_flag_reference"))
     return "\n".join(lines) + "\n"
+
+
+def localized_command_summary(name, default_summary):
+    """Locale-aware command summary for `lifetxt help NAME`'s text form.
+
+    `command_record()`/`catalog_payload()` (the JSON surface) keep reading
+    `command_summary()` directly and stay locale-invariant; this wrapper is
+    only for the plain-text renderer, and only overrides the small set of
+    beginner-facing commands with a registered translation.
+    """
+    return _t("command.summary.%s" % name) or default_summary
 
 
 def render_command_text(name):
@@ -1073,7 +1181,7 @@ def render_command_text(name):
     lines = [
         "lifetxt help %s" % name,
         "",
-        record["summary"],
+        localized_command_summary(name, record["summary"]),
         "",
         "Category: %s" % category_title_text,
         "Aliases: %s" % (", ".join(record["aliases"]) or "none"),

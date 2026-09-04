@@ -34,6 +34,8 @@ def schema_bundle_v7():
                         "reference_date": {"type": ["string", "null"]},
                         "horizon_days": {"type": "integer", "minimum": 0},
                         "person": {"type": ["string", "null"]},
+                        "now": item_ref,
+                        "today_events": item_ref,
                         "overdue": item_ref,
                         "due_today": item_ref,
                         "upcoming": item_ref,
@@ -113,7 +115,25 @@ def schema_samples_v7():
                     "reference_date": "2026-07-24",
                     "horizon_days": 3,
                     "person": None,
-                    "overdue": [{"title": "Design", "kind": "T", "status": "[ ]"}],
+                    "now": [
+                        {
+                            "person": "self",
+                            "state": "focus",
+                            "title": "self",
+                            "since": "2026-07-24T08:00",
+                        }
+                    ],
+                    "today_events": [
+                        {"when": "2026-07-24T09:00", "title": "Standup", "kind": "E"}
+                    ],
+                    "overdue": [
+                        {
+                            "title": "Design",
+                            "kind": "T",
+                            "status": "[ ]",
+                            "reason": "2 days overdue",
+                        }
+                    ],
                     "due_today": [],
                     "upcoming": [],
                     "blocked": [],
@@ -145,6 +165,8 @@ def schema_samples_v7():
                     "ticket_attention": [],
                     "safety": {"config_errors": 0, "config_warnings": 0, "ok": True},
                     "counts": {
+                        "now": 1,
+                        "today_events": 1,
                         "overdue": 1,
                         "due_today": 0,
                         "next_actions": 1,

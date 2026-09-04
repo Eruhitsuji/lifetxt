@@ -4,7 +4,7 @@ import tempfile
 import unittest
 
 from lifetxt.parser import parse_text
-from lifetxt.command_center import command_center
+from lifetxt.command_center import command_center, scoped_items
 from lifetxt.areas import area_list, area_show, collect_areas
 from lifetxt.links import backlink_records
 from lifetxt.inbox import stage_create
@@ -165,6 +165,87 @@ class CommandCenterTests(unittest.TestCase):
             self.assertNotIn("changes", proposal)
             self.assertNotIn("expected_revision", proposal)
             self.assertNotIn("warnings", proposal)
+
+
+NOW_EVENTS_SAMPLE = """#! timezone: UTC
+[/] S self state:focus from:2026-07-24T08:00
+[/] S bob state:away from:2026-07-23T10:00 person:bob
+[ ] E Standup at:09:00 on:2026-07-24
+[ ] R Take_pills due:2026-07-24
+[ ] E Tomorrow_event on:2026-07-25
+[ ] T Overdue_task due:2026-07-01
+[ ] T DueToday_task due:2026-07-24
+"""
+
+
+class CommandCenterNowAndTodayEventsTests(unittest.TestCase):
+    def setUp(self):
+        self.items, _ = parse_text(NOW_EVENTS_SAMPLE)
+        self.cc = command_center(self.items, {}, TODAY)
+
+    def test_now_reuses_active_status_items(self):
+        rows = self.cc["now"]
+        self.assertEqual({"self", "bob"}, {row["person"] for row in rows})
+        self.assertEqual(2, self.cc["counts"]["now"])
+
+    def test_today_events_include_event_and_reminder_but_not_other_days(self):
+        titles = {row["title"] for row in self.cc["today_events"]}
+        self.assertEqual({"Standup", "Take_pills"}, titles)
+        self.assertEqual(2, self.cc["counts"]["today_events"])
+
+    def test_today_events_prefer_the_at_time_over_an_all_day_span(self):
+        standup = next(r for r in self.cc["today_events"] if r["title"] == "Standup")
+        self.assertEqual("2026-07-24T09:00", standup["when"])
+
+    def test_overdue_and_due_today_carry_a_deterministic_reason(self):
+        overdue = next(r for r in self.cc["overdue"] if r["title"] == "Overdue_task")
+        due_today = next(
+            r for r in self.cc["due_today"] if r["title"] == "DueToday_task"
+        )
+        self.assertEqual("23 days overdue", overdue["reason"])
+        self.assertEqual("due today", due_today["reason"])
+
+    def test_now_and_today_events_omitted_when_nothing_qualifies(self):
+        items, _ = parse_text("#! timezone: UTC\n[ ] T Plain\n")
+        cc = command_center(items, {}, TODAY)
+        self.assertEqual([], cc["now"])
+        self.assertEqual([], cc["today_events"])
+
+
+AREA_SCOPE_SAMPLE = """#! timezone: UTC
+[ ] T Home_task project:home area:home
+[ ] T Work_task project:work area:work
+"""
+
+
+class ScopedItemsTests(unittest.TestCase):
+    def setUp(self):
+        self.items, _ = parse_text(AREA_SCOPE_SAMPLE)
+
+    def test_area_narrows_to_the_named_area(self):
+        result = scoped_items(self.items, {}, area="home")
+        self.assertEqual(["Home_task"], [it.title for it in result])
+
+    def test_unknown_area_raises_value_error(self):
+        with self.assertRaises(ValueError):
+            scoped_items(self.items, {}, area="nope")
+
+    def test_saved_view_narrows_using_the_configured_query(self):
+        config = {"saved_views": {"home": {"query": "area:home"}}}
+        result = scoped_items(self.items, config, saved_view="home")
+        self.assertEqual(["Home_task"], [it.title for it in result])
+
+    def test_unknown_saved_view_raises_value_error(self):
+        with self.assertRaises(ValueError):
+            scoped_items(self.items, {}, saved_view="nope")
+
+    def test_combining_saved_view_and_area_raises_value_error(self):
+        with self.assertRaises(ValueError):
+            scoped_items(self.items, {}, saved_view="home", area="home")
+
+    def test_no_scope_returns_every_item_unchanged(self):
+        result = scoped_items(self.items, {})
+        self.assertEqual(self.items, result)
 
 
 TICKET_SAMPLE = """#! timezone: UTC

@@ -843,13 +843,14 @@ def _saved_view_row_keys(items, config, name):
 
 
 def _area_row_keys(items, config, name):
-    """(source, line) keys for every item in one area, reusing collect_areas."""
-    from .areas import collect_areas
+    """(source, line) keys for every item in one area.
 
-    bucket = collect_areas(items, config).get(name)
-    if bucket is None:
-        return frozenset()
-    return frozenset((ref.get("source"), ref.get("line")) for ref in bucket["items"])
+    Thin wrapper over :func:`lifetxt.areas.area_row_keys`, kept so existing
+    call sites in this module do not need to change.
+    """
+    from .areas import area_row_keys
+
+    return area_row_keys(items, config, name)
 
 
 def _cmd_saved(state, argument):
@@ -2473,16 +2474,61 @@ def _build_today(state, width, height):
                 ]
             )
 
+    def compact_line(label, text):
+        """One truncated summary line; omitted entirely by the caller when
+        there is nothing to say, so an empty bucket costs zero screen rows."""
+        prefix = "  %s: " % label
+        remaining = max(10, width - display_width(prefix) - 2)
+        lines.append(
+            [
+                ("  ", "default"),
+                (label + ": ", "section"),
+                (fit(text, remaining, glyphs), "row"),
+            ]
+        )
+
     lines.append([("  ", "default"), ("NOW", "panel_title")])
+    presence = today.get("now") or []
+    if presence:
+        parts = []
+        for row in presence[:2]:
+            since = " since %s" % row["since"] if row.get("since") else ""
+            parts.append(
+                "%s %s%s" % (row.get("person") or "self", row.get("state") or "", since)
+            )
+        if len(presence) > 2:
+            parts.append("+%d more" % (len(presence) - 2))
+        compact_line("Status", "; ".join(parts))
     section("Due today", today.get("due_today"), "Nothing due today.")
     section("Next actions", today.get("next_actions"), "Nothing actionable.")
     section("Overdue", today.get("overdue"), "Nothing overdue.")
+    events = today.get("today_events") or []
+    if events:
+        parts = [
+            "%s %s" % (row.get("when") or "", row.get("title") or "")
+            for row in events[:2]
+        ]
+        if len(events) > 2:
+            parts.append("+%d more" % (len(events) - 2))
+        compact_line("Today", "; ".join(parts))
 
     lines.append([("", "default")])
     lines.append([("  ", "default"), ("ATTENTION", "panel_title")])
     section("Blocked", today.get("blocked"), "Nothing blocked.")
     section("Waiting", today.get("waiting"), "Nothing waiting.")
     section("Projects", today.get("project_attention"), "All projects green.")
+    tickets = today.get("ticket_attention") or []
+    if tickets:
+        top = tickets[0]
+        compact_line(
+            "Tickets",
+            "%d need attention (%s%s)"
+            % (
+                len(tickets),
+                top.get("title") or "",
+                ", ..." if len(tickets) > 1 else "",
+            ),
+        )
 
     lines.append([("", "default")])
     lines.append([("  ", "default"), ("INBOX", "panel_title")])

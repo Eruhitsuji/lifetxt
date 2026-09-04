@@ -114,6 +114,19 @@ command と同じ parser を使うので、この vocabulary だけで書ける�
 `filter`、`agenda`、`tui`、`serve` など他のすべての surface でもそのまま
 動きます。
 
+数行書いたら、`lifetxt today` が日々の入口になります:
+
+```sh
+python -m lifetxt today life.txt
+```
+
+これは第二の data model や新しい vocabulary ではありません -- 既に書いた
+内容（due のもの、actionable なもの、blocked なもの、today の event）を
+1 つの view に要約・優先順位付けするだけです。想定する動線は小さいまま
+です: life.txt に書く、`today` で何に attention が必要か確認する、より
+深く見る必要があるときだけ専門 command（`agenda`、`next`、`project`、...）
+を使う。全体像は [life-hub.md](life-hub.md) を参照してください。
+
 ## Level 2 -- Daily Use
 
 基本に慣れてきたら、以下の既存機能で ID・link・recurrence の内部仕様に

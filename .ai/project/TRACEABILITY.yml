@@ -9671,6 +9671,76 @@ traceability:
         is independent of the wall-clock week in which CI runs.
       status: implemented
 
+    - requirement_id: req-today-daily-hub-enhancement
+      capability_id: cap-daily-command-center
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/627
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/628
+      changed_files_or_scope:
+        - Add now (Status/Presence) and today_events (Event/Reminder occurrences) buckets, and a deterministic reason on overdue/due_today rows, to the shared command_center() aggregation
+        - Add lifetxt.command_center.scoped_items() and lifetxt.areas.area_row_keys() (extracted from tui_app.py's private helper) for --saved-view/--area personalization
+        - Restructure the CLI today text renderer into the documented NOW/ATTENTION/TODAY/NEXT ACTIONS/BLOCKED/HABITS/INBOX hub headings with cross-section dedup
+        - Add today --saved-view NAME / --area NAME (mutually exclusive)
+        - Extend MCP get_command_center with saved_view/area arguments
+        - Extend GET /api/command-center with ?saved_view=/?area= query parameters
+        - Add compact, omitted-when-empty Status/Today/Tickets lines to the TUI Today view
+        - Add Status/Today subsections and a Tickets subsection to the Web Today dashboard cards
+        - Regenerate command-center-v1.schema.json for the new now/today_events/reason fields
+        - lifetxt/command_center.py
+        - lifetxt/cli.py
+        - lifetxt/mcp.py
+        - lifetxt/webapp.py
+        - lifetxt/tui_app.py
+        - lifetxt/areas.py
+        - lifetxt/web_assets.html
+        - lifetxt/web_assets_js_16.js
+        - lifetxt/web_assets_js_17.js
+        - lifetxt/schema_extensions_v7.py
+        - dist/schemas/command-center-v1.schema.json
+        - tests/test_life_hub.py
+        - tests/test_today_cli.py
+        - tests/test_cui_extensions.py
+        - tests/test_mcp_expansion.py
+        - tests/test_lifetxt.py
+        - tests/test_web_assets.py
+        - tests/test_schema_extensions_v2.py
+        - docs/en/life-hub.md
+        - docs/ja/life-hub.md
+        - docs/en/cli.md
+        - docs/en/web.md
+        - docs/ja/web.md
+        - docs/en/getting-started.md
+        - docs/ja/getting-started.md
+      tests_or_evidence:
+        - tests/test_life_hub.py CommandCenterNowAndTodayEventsTests (5 tests) and ScopedItemsTests (6 tests)
+        - tests/test_today_cli.py TodayHubStructureTests (8 tests, dates computed relative to datetime.date.today() so the fixtures stay correct regardless of the wall-clock date the suite runs on) and TodayScopeCliTests (4 tests), real subprocess via run_cli
+        - tests/test_cui_extensions.py WorkspaceTodayHubSectionsTests (4 tests)
+        - tests/test_mcp_expansion.py CommandCenterScopeToolTests (4 tests)
+        - tests/test_lifetxt.py LifeTxtWebApiTests.test_command_center_api_respects_saved_view_and_area_scope, test_command_center_api_unknown_area_returns_400
+        - tests/test_web_assets.py LEGACY_PRISTINE_GIT_BLOB_SHA updated to match the intentionally changed served page
+        - python -m unittest tests.test_life_hub tests.test_today_cli tests.test_cui_extensions tests.test_web_assets tests.test_web_commands tests.test_web_i18n tests.test_schema_extensions_v2 tests.test_nextaction tests.test_mcp_expansion tests.test_surface_runtime tests.test_release_policy tests.test_report_v2 tests.test_report_v2_cli tests.test_lifetxt.LifeTxtWebApiTests -> pass
+        - node --check on the assembled Web UI JavaScript (18 fragments concatenated) -> no syntax error
+        - "live: real python -m lifetxt today against a disposable fixture (active status, an on:/at: event, an overdue task, a due-today task, a blocked task, a habit) rendered the exact designed NOW/ATTENTION/TODAY/NEXT ACTIONS/BLOCKED/HABITS/INBOX structure with no duplicate presentation of the overdue task or the habit"
+        - "live: real lifetxt today --saved-view/--area against a real configured workspace narrowed the report; an unknown --area exited 1 with a named error"
+        - "live: real lifetxt serve process; GET /api/command-center returned the now/today_events/reason fields and ?area=/?saved_view= scoping worked; served page confirmed to contain the new Today/Status card markup"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - scripts/validate_release_docs.py -> ok true
+        - "MPLBACKEND=Agg python -W ignore::ResourceWarning -m unittest discover -> Ran 3362 tests in 698.219s, OK (skipped=10) -- full repository suite, confirming zero regressions outside this capability"
+        - "found and fixed during this task's own verification, before opening the PR: the first version of the restructured CLI renderer silently dropped the pre-existing 'upcoming' bucket from text output (it has no dedicated heading among the issue's 8 named sections, but was previously always shown); restored as a lightweight 'Upcoming (Nd)' section, deduplicated against rows already shown under ATTENTION/NEXT ACTIONS/BLOCKED, with two new regression tests (an upcoming item not shown elsewhere still renders; one already shown under NEXT ACTIONS is not repeated)"
+        - "found and fixed during this task's own verification: the first version of TodayHubStructureTests hardcoded literal 2026-09 dates matching this sandbox's current system clock, which would silently break once the wall-clock date advances past them; rewritten to compute every date relative to datetime.date.today() at test run time, matching this project's own established convention (e.g. tests.test_lifetxt's existing datetime.date.today() + timedelta fixtures) for any test whose subject reads the real system date"
+      release_or_deployment: null
+      notes: >-
+        Implements #627's Phase 1-5 "Future direction" as one bounded
+        extension of the existing cap-daily-command-center capability. See
+        that capability entry's own notes for the full per-phase account,
+        including the two Phase 5 items (generated daily summary; assisted
+        next-action selection) deliberately left as recorded follow-up
+        candidates rather than built without a scoping decision, and the
+        two known pre-existing gaps (TUI/Web Due-today/Next-actions/Overdue
+        overlap; docs/ja/cli.md's missing today cross-reference) left
+        unaddressed as out of this pass's bounded scope.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

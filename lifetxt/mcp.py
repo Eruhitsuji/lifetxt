@@ -969,12 +969,22 @@ def _tool_schemas():
         ),
         _tool(
             "get_command_center",
-            "Daily command center: overdue, due, upcoming, blocked, waiting, messages, "
-            "habits, captures, and projects needing attention.",
+            "Daily command center: current status, today's events, overdue, due, "
+            "upcoming, blocked, waiting, next actions, habits, messages, inbox, and "
+            "projects/tickets needing attention -- the same aggregation `lifetxt today`, "
+            "the TUI Today view, and the Web Today dashboard already use.",
             {
                 "horizon": _integer("Upcoming horizon in days. Default 3."),
                 "person": _string("Scope unacknowledged messages to a recipient."),
                 "mode": _string("Brief mode label: today, morning, or evening."),
+                "saved_view": _string(
+                    "Scope to one configured saved view instead of every item. "
+                    "Mutually exclusive with area."
+                ),
+                "area": _string(
+                    "Scope to one life area instead of every item. Mutually "
+                    "exclusive with saved_view."
+                ),
             },
             read_only=True,
         ),
@@ -2916,9 +2926,13 @@ def _tool_get_portfolio(args, context):
 
 def _tool_get_command_center(args, context):
     """Daily command center: overdue, due, blocked, messages, project attention."""
-    from .command_center import command_center
+    from .command_center import command_center, scoped_items
 
     items, _diagnostics = _read_items(context)
+    saved_view = args.get("saved_view")
+    area = args.get("area")
+    if saved_view or area:
+        items = scoped_items(items, context.config, saved_view=saved_view, area=area)
     horizon = args.get("horizon")
     try:
         horizon = int(horizon) if horizon is not None else 3

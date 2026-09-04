@@ -4895,6 +4895,43 @@ class LifeTxtWebApiTests(unittest.TestCase):
             self.assertEqual(200, scoped.status_code)
             self.assertEqual(0, scoped.json()["counts"]["messages"])
 
+    def test_command_center_api_respects_saved_view_and_area_scope(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                "#! timezone: UTC\n"
+                "[ ] T Home_task project:home area:home\n"
+                "[ ] T Work_task project:work area:work\n",
+                encoding="utf-8",
+            )
+            config = {"saved_views": {"home": {"query": "area:home"}}}
+            client = self._client([path], writable_path=path, config=config)
+
+            by_area = client.get("/api/command-center?area=home")
+            by_view = client.get("/api/command-center?saved_view=home")
+            unscoped = client.get("/api/command-center")
+
+            self.assertEqual(200, by_area.status_code)
+            self.assertEqual(
+                ["Home_task"], [r["title"] for r in by_area.json()["next_actions"]]
+            )
+            self.assertEqual(200, by_view.status_code)
+            self.assertEqual(
+                ["Home_task"], [r["title"] for r in by_view.json()["next_actions"]]
+            )
+            self.assertEqual(200, unscoped.status_code)
+            self.assertEqual(2, len(unscoped.json()["next_actions"]))
+
+    def test_command_center_api_unknown_area_returns_400(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text("#! timezone: UTC\n[ ] T Task\n", encoding="utf-8")
+            client = self._client([path], writable_path=path)
+
+            response = client.get("/api/command-center?area=nope")
+
+            self.assertEqual(400, response.status_code)
+
     def test_saved_views_api_lists_configured_views(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = os.path.join(temp_dir, "life.txt")

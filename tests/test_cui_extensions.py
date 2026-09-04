@@ -1201,6 +1201,66 @@ class WorkspaceTodayViewTests(unittest.TestCase):
         self.assertEqual(1, state._today["counts"]["overdue"])
 
 
+class WorkspaceTodayHubSectionsTests(unittest.TestCase):
+    """The Today view's compact NOW/Status, Events, and Tickets additions
+    (#627): omitted entirely when empty, a bounded one-liner when present."""
+
+    def _state(self, text):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        path = os.path.join(tmp.name, "life.txt")
+        with open(path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(text)
+        args = argparse.Namespace(paths=[path], config_data={})
+        state = tui_app.WorkspaceState(args, glyphs=tui_app.UNICODE_GLYPHS)
+        state.reload()
+        state.view = "today"
+        return state
+
+    def test_active_status_renders_as_a_compact_status_line(self):
+        state = self._state(
+            "#! timezone: UTC\n[/] S self state:focus from:2026-09-04T08:00\n"
+        )
+
+        text = tui_app.frame_to_text(tui_app.build_frame(state, 100, 40))
+
+        self.assertIn("Status: self focus", text)
+
+    def test_todays_event_renders_as_a_compact_today_line(self):
+        state = self._state(
+            "#! timezone: UTC\n[ ] E Standup at:09:00 on:%s\n"
+            % tui_app.timezone_today().isoformat()
+        )
+
+        text = tui_app.frame_to_text(tui_app.build_frame(state, 100, 40))
+
+        self.assertIn("Today: ", text)
+        self.assertIn("Standup", text)
+
+    def test_ticket_needing_attention_renders_as_a_compact_tickets_line(self):
+        state = self._state(
+            "#! timezone: UTC\n"
+            "[ ] T Reviewed record:ticket ticket_status:review id:tk1 severity:low\n"
+        )
+
+        text = tui_app.frame_to_text(tui_app.build_frame(state, 100, 40))
+
+        self.assertIn("Tickets: 1 need attention", text)
+        self.assertIn("Reviewed", text)
+
+    def test_no_status_events_or_tickets_adds_no_extra_lines(self):
+        state = self._state("#! timezone: UTC\n[ ] T Plain\n")
+
+        text = tui_app.frame_to_text(tui_app.build_frame(state, 100, 40))
+
+        self.assertNotIn("Status:", text)
+        self.assertNotIn("Today: ", text)
+        self.assertNotIn("Tickets:", text)
+        # And the rest of the view (INBOX) is still visible within the
+        # fixed render height once nothing is added.
+        self.assertIn("INBOX", text)
+
+
 class WorkspaceSavedViewAndAreaTests(unittest.TestCase):
     """`/saved` and `/area` reuse lifetxt.saved_views/lifetxt.areas unmodified."""
 

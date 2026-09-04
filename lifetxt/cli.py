@@ -12159,6 +12159,13 @@ def _render_today_text(report, saved_view=None, area=None):
         for row in habit_rows:
             write_text(None, "  %s %s\n" % (row["status"], row["title"]))
 
+    upcoming_rows = unshown(report.get("upcoming"))
+    if upcoming_rows:
+        write_text(None, "\nUpcoming (%dd)\n" % report["horizon_days"])
+        for row in upcoming_rows:
+            due = " due:%s" % row["due"] if row.get("due") else ""
+            write_text(None, "  %s %s%s\n" % (row["status"], row["title"], due))
+
     inbox = report.get("inbox") or {}
     pending_count = inbox.get("pending_count", 0)
     messages = report.get("messages") or []

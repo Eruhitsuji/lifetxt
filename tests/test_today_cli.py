@@ -1,5 +1,9 @@
-"""CLI text-output coverage for `lifetxt today`'s ticket_attention section (#499)."""
+"""CLI text-output coverage for `lifetxt today`'s ticket_attention section (#499)
+and the #627 daily-hub restructuring (NOW/ATTENTION/TODAY/NEXT ACTIONS/
+BLOCKED/HABITS/INBOX) and --saved-view/--area personalization scope.
+"""
 
+import datetime
 import json
 import os
 import tempfile
@@ -59,25 +63,30 @@ class TodayCliTicketAttentionTests(unittest.TestCase):
             self.assertEqual(1, data["counts"]["ticket_attention"])
 
 
-HUB_SAMPLE = (
-    "#! timezone: UTC\n"
-    "[/] S self state:focus from:2026-09-04T08:00\n"
-    "[ ] E Team_meeting at:09:00 on:2026-09-04\n"
-    "[ ] T Overdue_report due:2026-08-30 project:lifetxt id:t1\n"
-    "[ ] T Configure_DNS project:lifetxt id:t2\n"
-    "[ ] T Deploy_website project:lifetxt depends_on:t2\n"
-    "[ ] H Exercise\n"
-)
+def _hub_sample():
+    """Build a fixture relative to the real "today" `lifetxt today` sees, so
+    these tests stay correct regardless of the wall-clock date they run on."""
+    today = datetime.date.today()
+    overdue = (today - datetime.timedelta(days=5)).isoformat()
+    return (
+        "#! timezone: UTC\n"
+        "[/] S self state:focus from:%sT08:00\n"
+        "[ ] E Team_meeting at:09:00 on:%s\n"
+        "[ ] T Overdue_report due:%s project:lifetxt id:t1\n"
+        "[ ] T Configure_DNS project:lifetxt id:t2\n"
+        "[ ] T Deploy_website project:lifetxt depends_on:t2\n"
+        "[ ] H Exercise\n" % (today.isoformat(), today.isoformat(), overdue)
+    )
 
 
 class TodayHubStructureTests(unittest.TestCase):
     """Covers #627's NOW/ATTENTION/TODAY/NEXT ACTIONS/BLOCKED/HABITS/INBOX
     daily-hub restructuring of the text renderer."""
 
-    def _write_source(self, temp_dir, text=HUB_SAMPLE):
+    def _write_source(self, temp_dir, text=None):
         path = os.path.join(temp_dir, "life.txt")
         with open(path, "w", encoding="utf-8", newline="\n") as handle:
-            handle.write(text)
+            handle.write(_hub_sample() if text is None else text)
         return path
 
     def test_text_output_uses_the_documented_hub_headings(self):
@@ -147,6 +156,38 @@ class TodayHubStructureTests(unittest.TestCase):
             self.assertEqual(0, code, stderr)
             blocked_block = stdout.split("\nBLOCKED\n", 1)[1].split("\n\n", 1)[0]
             self.assertIn("Deploy_website", blocked_block)
+
+    def test_upcoming_item_not_already_shown_elsewhere_still_renders(self):
+        soon = (datetime.date.today() + datetime.timedelta(days=2)).isoformat()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write(
+                    "#! timezone: UTC\n"
+                    "[?] T Waiting_and_soon due:%s project:lifetxt\n" % soon
+                )
+            stdout, stderr, code = run_cli("today", path)
+            stdout = normalize_newlines(stdout)
+            self.assertEqual(0, code, stderr)
+            self.assertIn("Upcoming (3d)", stdout)
+            self.assertIn("Waiting_and_soon", stdout.split("Upcoming (3d)", 1)[1])
+
+    def test_upcoming_item_already_shown_under_next_actions_is_not_repeated(self):
+        soon = (datetime.date.today() + datetime.timedelta(days=2)).isoformat()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write(
+                    "#! timezone: UTC\n"
+                    "[ ] T Soon_actionable due:%s project:lifetxt\n" % soon
+                )
+            stdout, stderr, code = run_cli("today", path)
+            stdout = normalize_newlines(stdout)
+            self.assertEqual(0, code, stderr)
+            next_actions_block = stdout.split("\nNEXT ACTIONS\n", 1)[1]
+            next_actions_block = next_actions_block.split("\n\n", 1)[0]
+            self.assertIn("Soon_actionable", next_actions_block)
+            self.assertNotIn("Upcoming (3d)", stdout)
 
 
 class TodayScopeCliTests(unittest.TestCase):

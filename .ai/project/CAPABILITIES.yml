@@ -4349,6 +4349,9 @@ capabilities:
       - "live: real lifetxt today --saved-view/--area against a real configured workspace narrowed the report and annotated the header; an unknown --area exited 1 with a named error"
       - "live: real lifetxt serve process; GET /api/command-center returned the now/today_events/reason fields; the served page's assembled JavaScript passed node --check with no syntax error; GET / contained the today-now/today-attention card markup"
       - "node --check on the assembled Web UI JavaScript (all 18 fragments concatenated) -> no syntax error"
+      - "MPLBACKEND=Agg python -W ignore::ResourceWarning -m unittest discover -> Ran 3362 tests in 698.219s, OK (skipped=10) -- full repository suite"
+      - "found and fixed before opening the PR: the initial CLI renderer silently dropped the pre-existing 'upcoming' bucket from text output; restored as a deduplicated 'Upcoming (Nd)' section with two new regression tests"
+      - "found and fixed before opening the PR: TodayHubStructureTests initially hardcoded literal dates matching this sandbox's then-current system clock; rewritten to compute every date relative to datetime.date.today() at test run time so the fixtures stay correct on any date the suite runs"
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/627
       - https://github.com/Eruhitsuji/lifetxt/issues/472

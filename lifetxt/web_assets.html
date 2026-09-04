@@ -399,6 +399,7 @@ __LIFETXT_WEB_STYLES__  </style>
       </div>
       <form class="stack" onsubmit="saveItem(event)">
         <div class="editor-help-strip wide">Hover or focus the ? badges for field help. Type-specific suggested detail keys appear above the Details box.</div>
+        <button type="button" id="authoring-advanced-toggle" class="secondary wide" onclick="toggleAuthoringMode()" title="Beginner mode shows only the Task/Event/Note types and the most common statuses; this shows or hides the rest.">Show advanced options</button>
         <label class="field-label">
           <span class="field-label-head"><span>Status</span><span class="field-help" tabindex="0" data-help="Workflow state: [ ] open, [/] active, [x] done, [-] cancelled, [>] deferred, [?] maybe, [N] note.">?</span></span>
           <select id="edit-status">

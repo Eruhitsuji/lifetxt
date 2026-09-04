@@ -191,6 +191,15 @@ Level 1 や Level 2 で書いたものを先に変更する必要はありませ
   calendar、journaling、team status、AI integration）
 - [`philosophy.md`](./philosophy.md) -- なぜ lifetxt がこの設計なのか
 
+## 引数なしで `lifetxt` を実行する
+
+対話端末で `lifetxt` を他の引数なしで実行すると、スマートな入口として動作
+します。現在のディレクトリにまだ何もセットアップされていない場合は
+`tour`/`init`/`help beginner` へ誘導し、既にセットアップ済みの場合は
+`today`（日次コマンドセンター）へ直接進みます。script・pipe・redirect 経由
+の実行には一切影響しません -- 従来通りの完全なコマンド一覧と非ゼロの終了
+コードを返します。
+
 ## Web UI の Beginner mode
 
 [Web UI](./web.md#beginner-authoring-mode) の record editor は advanced な

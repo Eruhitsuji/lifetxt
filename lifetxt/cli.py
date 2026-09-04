@@ -62,6 +62,7 @@ from .diagnostic_contract import (
     diagnostic_category,
     diagnostic_to_output_dict,
 )
+from .i18n import register_messages as _register_messages, translate as _t
 from .ics import items_from_ics_text
 from .ids import (
     auto_ids_enabled,
@@ -120,6 +121,184 @@ from .status_summary import (
 )
 from .validator import validate_item
 from .vm import DEFAULT_MAX_STEPS as VM_DEFAULT_MAX_STEPS
+
+
+#: Human-readable text for a bounded set of beginner/daily commands
+#: (`init`, `today`, `done`, `complete`), localized to English/Japanese
+#: (#631/#632). Command names, options, and Format 1.0 syntax never
+#: translate; only fixed labels/headings do. Every other command's plain
+#: output stays exactly as it was.
+_register_messages(
+    {
+        "init.overwrite_prompt": {
+            "en": "File(s) already exist: {files}",
+            "ja": "既にファイルが存在します: {files}",
+        },
+        "init.overwrite_confirm": {
+            "en": "Overwrite? [y/N] ",
+            "ja": "上書きしますか? [y/N] ",
+        },
+        "init.aborted": {"en": "Aborted.", "ja": "中止しました。"},
+        "init.name_prompt": {
+            "en": "Your name (for S presence records) [self]: ",
+            "ja": "あなたの名前 (S presence 記録用) [self]: ",
+        },
+        "init.timezone_prompt": {
+            "en": "Timezone (e.g. Asia/Tokyo, UTC) [UTC]: ",
+            "ja": "タイムゾーン (例: Asia/Tokyo, UTC) [UTC]: ",
+        },
+        "init.project_prompt": {
+            "en": "Default project name (leave blank to skip): ",
+            "ja": "既定のプロジェクト名 (空欄で省略): ",
+        },
+        "init.wrote": {"en": "Wrote {path}", "ja": "書き込みました: {path}"},
+        "init.next": {"en": "Next: {command}", "ja": "次に: {command}"},
+        "today.brief_for": {
+            "en": "{mode} brief for {date}",
+            "ja": "{date} の{mode}ブリーフ",
+        },
+        "today.brief": {"en": "{mode} brief", "ja": "{mode}ブリーフ"},
+        "today.mode.today": {"en": "Today", "ja": "今日"},
+        "today.config_error": {
+            "en": "  ! config has {n} error(s)",
+            "ja": "  ! 設定に {n} 件のエラーがあります",
+        },
+        "today.now": {"en": "NOW", "ja": "現在"},
+        "today.attention": {"en": "ATTENTION", "ja": "注意"},
+        "today.projects_attention": {
+            "en": "  Projects needing attention ({n}):",
+            "ja": "  注意が必要なプロジェクト ({n}件):",
+        },
+        "today.tickets_attention": {
+            "en": "  Tickets needing attention ({n}):",
+            "ja": "  注意が必要なチケット ({n}件):",
+        },
+        "today.today_heading": {"en": "TODAY", "ja": "今日"},
+        "today.next_actions": {"en": "NEXT ACTIONS", "ja": "次のアクション"},
+        "today.next_actions_already_listed": {
+            "en": "  (already listed above)",
+            "ja": "  (上に表示済み)",
+        },
+        "today.next_actions_none": {
+            "en": "  Nothing actionable.",
+            "ja": "  実行可能な項目はありません。",
+        },
+        "today.blocked": {"en": "BLOCKED", "ja": "ブロック中"},
+        "today.waiting_prefix": {"en": "(waiting)", "ja": "(待機中)"},
+        "today.habits": {"en": "HABITS", "ja": "習慣"},
+        "today.upcoming": {"en": "Upcoming ({n}d)", "ja": "今後の予定 ({n}日)"},
+        "today.inbox": {"en": "INBOX", "ja": "受信箱"},
+        "today.inbox_pending": {
+            "en": "  {n} pending item(s)",
+            "ja": "  未処理の項目 {n} 件",
+        },
+        "today.inbox_message": {
+            "en": "  message: {title}",
+            "ja": "  メッセージ: {title}",
+        },
+        "today.inbox_capture": {
+            "en": "  capture: {title}",
+            "ja": "  キャプチャ: {title}",
+        },
+        "today.all_clear": {"en": "All clear.", "ja": "問題ありません。"},
+        "done.already": {
+            "en": "Already done: {title}",
+            "ja": "既に完了しています: {title}",
+        },
+        "done.done": {"en": "Done: {line}", "ja": "完了しました: {line}"},
+        "done.logged": {
+            "en": "Logged: {line} (streak: {streak} day(s))",
+            "ja": "記録しました: {line} (連続 {streak} 日)",
+        },
+        "done.dry_run_would_mark": {
+            "en": "[dry-run] Would mark done: {line}",
+            "ja": "[dry-run] 完了としてマークする予定: {line}",
+        },
+        "done.dry_run_would_log": {
+            "en": "[dry-run] Would log habit completion: {line} (streak: {streak} day(s))",
+            "ja": "[dry-run] 習慣の完了を記録する予定: {line} (連続 {streak} 日)",
+        },
+        # Beginner-facing diagnostics (#633): check/lint/doctor's own
+        # fixed labels and next-step guidance. Individual parser/validator
+        # diagnostic hint text (hundreds of W/E codes) is out of scope for
+        # this bounded slice and stays English-only; every diagnostic's raw
+        # code, severity, and location data never localizes.
+        "check.ok": {"en": "OK: {n} item(s)", "ja": "OK: {n} 件"},
+        "check.ok_no_matching_diagnostics": {
+            "en": "OK: {n} item(s), 0 matching diagnostic(s)",
+            "ja": "OK: {n} 件、該当する diagnostic は 0 件",
+        },
+        "lint.no_issues": {
+            "en": "No lint issues found.",
+            "ja": "lint の問題は見つかりませんでした。",
+        },
+        "lint.typo_key": {
+            "en": "Key {key!r} looks like a typo for {canonical!r}.",
+            "ja": "キー {key!r} は {canonical!r} の typo の可能性があります。",
+        },
+        "lint.bad_casing": {
+            "en": "Key {key!r} uses non-standard casing; expected {expected!r}.",
+            "ja": "キー {key!r} の大文字/小文字表記が標準的ではありません "
+            "(期待値: {expected!r})。",
+        },
+        "lint.duplicate_key": {
+            "en": "Duplicate key {key!r} ({n} values). Consider using a "
+            "multi-value list.",
+            "ja": "キー {key!r} が重複しています ({n} 件の値)。"
+            "複数値のリストとして扱うことを検討してください。",
+        },
+        "lint.fixed_summary": {
+            "en": "Fixed {fixed} issue(s) in {files} file(s).",
+            "ja": "{files} 個のファイルで {fixed} 件の問題を修正しました。",
+        },
+        "doctor.python_ok": {
+            "en": "Python {major}.{minor}",
+            "ja": "Python {major}.{minor}",
+        },
+        "doctor.python_fail": {
+            "en": "Python {major}.{minor} (3.10+ required)",
+            "ja": "Python {major}.{minor} (3.10 以上が必要です)",
+        },
+        "doctor.life_not_found": {
+            "en": "Not found: {path} -- run: lifetxt init",
+            "ja": "見つかりません: {path} -- 実行してください: lifetxt init",
+        },
+        "doctor.life_not_readable": {
+            "en": "Not readable: {path}",
+            "ja": "読み取れません: {path}",
+        },
+        "doctor.life_found": {"en": "Found: {path}", "ja": "見つかりました: {path}"},
+        "doctor.config_not_found": {
+            "en": "Not found: {path} -- run: lifetxt config init",
+            "ja": "見つかりません: {path} -- 実行してください: lifetxt config init",
+        },
+        "doctor.config_found": {
+            "en": "Found: {path}",
+            "ja": "見つかりました: {path}",
+        },
+        "doctor.disk_warn": {
+            "en": "{free_mib:.1f} MiB free on {dir} (below the 100 MiB safety floor)",
+            "ja": "{dir} の空き容量は {free_mib:.1f} MiB です "
+            "(安全ラインの 100 MiB を下回っています)",
+        },
+        "doctor.disk_ok": {
+            "en": "{free_mib:.1f} MiB free on {dir}",
+            "ja": "{dir} の空き容量は {free_mib:.1f} MiB です",
+        },
+        "doctor.check_fail": {
+            "en": "{n} error(s) -- run: lifetxt check {path}",
+            "ja": "{n} 件のエラー -- 実行してください: lifetxt check {path}",
+        },
+        "doctor.check_warn": {
+            "en": "{n} warning(s) -- run: lifetxt check {path}",
+            "ja": "{n} 件の警告 -- 実行してください: lifetxt check {path}",
+        },
+        "doctor.check_ok": {
+            "en": "{n} item(s), no errors",
+            "ja": "{n} 件、エラーなし",
+        },
+    }
+)
 
 
 def main(argv=None):
@@ -4174,9 +4353,11 @@ def command_check(args):
                 if str(getattr(diagnostic, "code", "")).upper() == "W225":
                     write_text(None, _W225_GUIDANCE + "\n")
         elif has_filter:
-            write_text(None, "OK: %d item(s), 0 matching diagnostic(s)\n" % len(items))
+            write_text(
+                None, _t("check.ok_no_matching_diagnostics", n=len(items)) + "\n"
+            )
         else:
-            write_text(None, "OK: %d item(s)\n" % len(items))
+            write_text(None, _t("check.ok", n=len(items)) + "\n")
 
     return _exit_code(filtered_diagnostics, args.warnings_as_errors)
 
@@ -7262,7 +7443,7 @@ def command_done(args):
         )
 
     if target.status == "[x]":
-        sys.stdout.write("Already done: %s\n" % target.title)
+        sys.stdout.write(_t("done.already", title=target.title) + "\n")
         return 0
 
     update_args = _build_mark_done_args(target, date_iso)
@@ -7273,13 +7454,13 @@ def command_done(args):
 
     dry_run = getattr(args, "dry_run", False)
     if dry_run:
-        sys.stdout.write("[dry-run] Would mark done: %s\n" % updated_line)
+        sys.stdout.write(_t("done.dry_run_would_mark", line=updated_line) + "\n")
         return 0
 
     _ensure_writable_path(path, config, "done")
     _pre_write_backup(path, config, "done")
     atomic_write_text(path, updated_text)
-    sys.stdout.write("Done: %s\n" % updated_line)
+    sys.stdout.write(_t("done.done", line=updated_line) + "\n")
     return 0
 
 
@@ -7348,15 +7529,14 @@ def _command_done_habit(path, text, target, date_iso, config, args):
     dry_run = getattr(args, "dry_run", False)
     if dry_run:
         sys.stdout.write(
-            "[dry-run] Would log habit completion: %s (streak: %d day(s))\n"
-            % (updated_line, streak)
+            _t("done.dry_run_would_log", line=updated_line, streak=streak) + "\n"
         )
         return 0
 
     _ensure_writable_path(path, config, "done")
     _pre_write_backup(path, config, "done")
     atomic_write_text(path, updated_text)
-    sys.stdout.write("Logged: %s (streak: %d day(s))\n" % (updated_line, streak))
+    sys.stdout.write(_t("done.logged", line=updated_line, streak=streak) + "\n")
     return 0
 
 
@@ -7380,7 +7560,7 @@ def command_complete(args):
         return 0
 
     if target.status == "[x]":
-        sys.stdout.write("Already done: %s\n" % target.title)
+        sys.stdout.write(_t("done.already", title=target.title) + "\n")
         return 0
 
     date_arg = getattr(args, "date", None)
@@ -7404,12 +7584,12 @@ def command_complete(args):
             _print_diagnostics(diagnostics)
             return 1
         if dry_run:
-            sys.stdout.write("[dry-run] Would mark done: %s\n" % updated_line)
+            sys.stdout.write(_t("done.dry_run_would_mark", line=updated_line) + "\n")
             return 0
         _ensure_writable_path(path, config, "complete")
         _pre_write_backup(path, config, "complete")
         atomic_write_text(path, updated_text)
-        sys.stdout.write("Done: %s\n" % updated_line)
+        sys.stdout.write(_t("done.done", line=updated_line) + "\n")
         return 0
 
     next_anchor_key, next_dt, rule = _compute_next_occurrence(
@@ -7840,17 +8020,17 @@ def command_init(args):
 
     if (life_exists or config_exists) and not yes:
         existing = [p for p in (life_file, config_file) if os.path.exists(p)]
-        sys.stdout.write("File(s) already exist: %s\n" % ", ".join(existing))
-        sys.stdout.write("Overwrite? [y/N] ")
+        sys.stdout.write(_t("init.overwrite_prompt", files=", ".join(existing)) + "\n")
+        sys.stdout.write(_t("init.overwrite_confirm"))
         sys.stdout.flush()
         answer = sys.stdin.readline().strip().lower()
         if answer not in ("y", "yes"):
-            sys.stdout.write("Aborted.\n")
+            sys.stdout.write(_t("init.aborted") + "\n")
             return 0
 
     name = getattr(args, "name", None)
     if not name and not yes:
-        sys.stdout.write("Your name (for S presence records) [self]: ")
+        sys.stdout.write(_t("init.name_prompt"))
         sys.stdout.flush()
         name = sys.stdin.readline().strip() or "self"
     if not name:
@@ -7858,7 +8038,7 @@ def command_init(args):
 
     timezone_val = getattr(args, "timezone", None)
     if not timezone_val and not yes:
-        sys.stdout.write("Timezone (e.g. Asia/Tokyo, UTC) [UTC]: ")
+        sys.stdout.write(_t("init.timezone_prompt"))
         sys.stdout.flush()
         timezone_val = sys.stdin.readline().strip() or "UTC"
     if not timezone_val:
@@ -7866,7 +8046,7 @@ def command_init(args):
 
     project = getattr(args, "project", None)
     if project is None and not yes:
-        sys.stdout.write("Default project name (leave blank to skip): ")
+        sys.stdout.write(_t("init.project_prompt"))
         sys.stdout.flush()
         project = sys.stdin.readline().strip()
 
@@ -7891,10 +8071,12 @@ def command_init(args):
     config_text = json.dumps(config_data, ensure_ascii=False, indent=2) + "\n"
 
     write_text(life_file, life_text)
-    sys.stdout.write("Wrote %s\n" % life_file)
+    sys.stdout.write(_t("init.wrote", path=life_file) + "\n")
     write_text(config_file, config_text)
-    sys.stdout.write("Wrote %s\n" % config_file)
-    sys.stdout.write("Next: python -m lifetxt check %s\n" % life_file)
+    sys.stdout.write(_t("init.wrote", path=config_file) + "\n")
+    sys.stdout.write(
+        _t("init.next", command="python -m lifetxt check %s" % life_file) + "\n"
+    )
     return 0
 
 
@@ -8469,6 +8651,15 @@ def command_doctor(args):
 
     checks = []
     any_fail = [False]
+    # doctor --format json is a stable machine contract (dist/schemas/
+    # doctor-v1.schema.json): its "message" field must not vary with
+    # --lang, even though the same messages are locale-aware in text mode.
+    _doctor_json_mode = getattr(args, "format", "text") == "json"
+
+    def _dt(message_id, **kwargs):
+        if _doctor_json_mode:
+            return _t(message_id, locale="en", **kwargs)
+        return _t(message_id, **kwargs)
 
     def add_check(symbol, label, message):
         checks.append((symbol, label, message))
@@ -8477,9 +8668,9 @@ def command_doctor(args):
 
     major, minor = sys.version_info[:2]
     if (major, minor) >= (3, 10):
-        add_check("OK", "python", "Python %d.%d" % (major, minor))
+        add_check("OK", "python", _dt("doctor.python_ok", major=major, minor=minor))
     else:
-        add_check("FAIL", "python", "Python %d.%d (3.10+ required)" % (major, minor))
+        add_check("FAIL", "python", _dt("doctor.python_fail", major=major, minor=minor))
     add_check(
         "OK",
         "system",
@@ -8538,19 +8729,17 @@ def command_doctor(args):
     ]
     for path in life_paths:
         if not os.path.exists(path):
-            add_check("FAIL", "life.txt", "Not found: %s -- run: lifetxt init" % path)
+            add_check("FAIL", "life.txt", _dt("doctor.life_not_found", path=path))
         elif not os.access(path, os.R_OK):
-            add_check("FAIL", "life.txt", "Not readable: %s" % path)
+            add_check("FAIL", "life.txt", _dt("doctor.life_not_readable", path=path))
         else:
-            add_check("OK", "life.txt", "Found: %s" % path)
+            add_check("OK", "life.txt", _dt("doctor.life_found", path=path))
 
     config_path = getattr(args, "config", None) or ".lifetxt.json"
     if not os.path.exists(config_path):
-        add_check(
-            "WARN", "config", "Not found: %s -- run: lifetxt config init" % config_path
-        )
+        add_check("WARN", "config", _dt("doctor.config_not_found", path=config_path))
     else:
-        add_check("OK", "config", "Found: %s" % config_path)
+        add_check("OK", "config", _dt("doctor.config_found", path=config_path))
 
     import shutil
 
@@ -8568,11 +8757,14 @@ def command_doctor(args):
             add_check(
                 "WARN",
                 "disk",
-                "%.1f MiB free on %s (below the 100 MiB safety floor)"
-                % (free_mib, disk_check_dir),
+                _dt("doctor.disk_warn", free_mib=free_mib, dir=disk_check_dir),
             )
         else:
-            add_check("OK", "disk", "%.1f MiB free on %s" % (free_mib, disk_check_dir))
+            add_check(
+                "OK",
+                "disk",
+                _dt("doctor.disk_ok", free_mib=free_mib, dir=disk_check_dir),
+            )
 
     for tool in ("fzf", "peco"):
         if shutil.which(tool):
@@ -8601,18 +8793,16 @@ def command_doctor(args):
             add_check(
                 "FAIL",
                 "check",
-                "%d error(s) -- run: lifetxt check %s"
-                % (len(errors), existing_paths[0]),
+                _dt("doctor.check_fail", n=len(errors), path=existing_paths[0]),
             )
         elif warnings_list:
             add_check(
                 "WARN",
                 "check",
-                "%d warning(s) -- run: lifetxt check %s"
-                % (len(warnings_list), existing_paths[0]),
+                _dt("doctor.check_warn", n=len(warnings_list), path=existing_paths[0]),
             )
         else:
-            add_check("OK", "check", "%d item(s), no errors" % len(items))
+            add_check("OK", "check", _dt("doctor.check_ok", n=len(items)))
 
         id_key = id_key_from_config(config)
         missing_count = sum(1 for item in items if not item.details.get(id_key))
@@ -10689,6 +10879,7 @@ def command_lint(args):
                                 ),
                                 ("fix", None),
                                 ("key", key),
+                                ("count", n),
                             ]
                         )
                     )
@@ -10773,13 +10964,16 @@ def command_lint(args):
             new_text = "".join(lines)
             atomic_write_text(path, new_text)
         sys.stdout.write(
-            "Fixed %d issue(s) in %d file(s).\n" % (fixed_count, len(by_path))
+            _t("lint.fixed_summary", fixed=fixed_count, files=len(by_path)) + "\n"
         )
         # Re-run lint to report remaining issues
         remaining = [i for i in issues if i.get("code") == "L003" or not i.get("fix")]
         return 1 if remaining else 0
 
     if args.format == "json":
+        # The stored "message" field stays exactly as constructed above
+        # (English) in --json output: it is machine-readable and must not
+        # change with locale, per #631/#633's contract.
         write_text(
             None,
             json.dumps(
@@ -10792,13 +10986,13 @@ def command_lint(args):
         )
     else:
         if not issues:
-            write_text(None, "No lint issues found.\n")
+            write_text(None, _t("lint.no_issues") + "\n")
         else:
             for issue in issues:
                 src = issue.get("source") or ""
                 ln = issue.get("line") or "?"
                 code = issue.get("code", "")
-                msg = issue.get("message", "")
+                msg = _localized_lint_text_message(issue)
                 fix = issue.get("fix")
                 fix_hint = (
                     " (fix: %r -> %r)" % (issue.get("key", ""), fix) if fix else ""
@@ -10807,6 +11001,24 @@ def command_lint(args):
                 sys.stdout.write("%s  %s  %s%s\n" % (loc, code, msg, fix_hint))
 
     return 1 if issues else 0
+
+
+def _localized_lint_text_message(issue):
+    """Locale-aware rendering of one lint finding's message (#633).
+
+    Only used for the plain-text renderer above; `--json` output always
+    reads the issue's own stored ``message`` field (English, unchanged) so
+    machine-readable lint output never varies with locale.
+    """
+    code = issue.get("code", "")
+    key = issue.get("key", "")
+    if code == "L001":
+        return _t("lint.typo_key", key=key, canonical=issue.get("fix"))
+    if code == "L002":
+        return _t("lint.bad_casing", key=key, expected=issue.get("fix"))
+    if code == "L003":
+        return _t("lint.duplicate_key", key=key, n=issue.get("count"))
+    return issue.get("message", "")
 
 
 def command_notify(args):
@@ -12036,9 +12248,12 @@ def _render_today_text(report, saved_view=None, area=None):
     presented twice.
     """
     counts = report["counts"]
-    header = "%s brief" % report["mode"].capitalize()
+    mode = report["mode"]
+    mode_label = _t("today.mode.%s" % mode) or mode.capitalize()
     if report["reference_date"]:
-        header += " for %s" % report["reference_date"]
+        header = _t("today.brief_for", mode=mode_label, date=report["reference_date"])
+    else:
+        header = _t("today.brief", mode=mode_label)
     if saved_view:
         header += " (saved view: %s)" % saved_view
     elif area:
@@ -12046,7 +12261,7 @@ def _render_today_text(report, saved_view=None, area=None):
     write_text(None, header + "\n")
     if not report["safety"]["ok"]:
         write_text(
-            None, "  ! config has %d error(s)\n" % report["safety"]["config_errors"]
+            None, _t("today.config_error", n=report["safety"]["config_errors"]) + "\n"
         )
 
     shown = set()
@@ -12066,7 +12281,7 @@ def _render_today_text(report, saved_view=None, area=None):
 
     now_rows = report.get("now") or []
     if now_rows:
-        write_text(None, "\nNOW\n")
+        write_text(None, "\n%s\n" % _t("today.now"))
         for row in now_rows:
             since = " since %s" % row["since"] if row.get("since") else ""
             write_text(
@@ -12080,7 +12295,7 @@ def _render_today_text(report, saved_view=None, area=None):
         attention_rows or report["ticket_attention"] or report["project_attention"]
     )
     if has_attention:
-        write_text(None, "\nATTENTION\n")
+        write_text(None, "\n%s\n" % _t("today.attention"))
         for row in attention_rows:
             due = " due:%s" % row["due"] if row.get("due") else ""
             reason = " (%s)" % row["reason"] if row.get("reason") else ""
@@ -12090,8 +12305,8 @@ def _render_today_text(report, saved_view=None, area=None):
         if report["project_attention"]:
             write_text(
                 None,
-                "  Projects needing attention (%d):\n"
-                % len(report["project_attention"]),
+                _t("today.projects_attention", n=len(report["project_attention"]))
+                + "\n",
             )
             for row in report["project_attention"]:
                 write_text(
@@ -12106,7 +12321,7 @@ def _render_today_text(report, saved_view=None, area=None):
         if report["ticket_attention"]:
             write_text(
                 None,
-                "  Tickets needing attention (%d):\n" % len(report["ticket_attention"]),
+                _t("today.tickets_attention", n=len(report["ticket_attention"])) + "\n",
             )
             for row in report["ticket_attention"]:
                 write_text(
@@ -12117,7 +12332,7 @@ def _render_today_text(report, saved_view=None, area=None):
 
     today_rows = report.get("today_events") or []
     if today_rows:
-        write_text(None, "\nTODAY\n")
+        write_text(None, "\n%s\n" % _t("today.today_heading"))
         for row in today_rows:
             when = row.get("when") or ""
             write_text(None, "  %s %s\n" % (when, row.get("title") or ""))
@@ -12128,7 +12343,7 @@ def _render_today_text(report, saved_view=None, area=None):
     next_rows = unshown(
         [row for row in (report.get("next_actions") or []) if row.get("kind") != "H"]
     )
-    write_text(None, "\nNEXT ACTIONS\n")
+    write_text(None, "\n%s\n" % _t("today.next_actions"))
     if next_rows:
         for row in next_rows:
             project = " @%s" % row["project"] if row.get("project") else ""
@@ -12137,31 +12352,35 @@ def _render_today_text(report, saved_view=None, area=None):
                 None, "  %s %s%s%s\n" % (row["status"], row["title"], project, due)
             )
     elif report.get("next_actions"):
-        write_text(None, "  (already listed above)\n")
+        write_text(None, _t("today.next_actions_already_listed") + "\n")
     else:
-        write_text(None, "  Nothing actionable.\n")
+        write_text(None, _t("today.next_actions_none") + "\n")
 
     blocked_rows = report.get("blocked") or []
     waiting_rows = report.get("waiting") or []
     if blocked_rows or waiting_rows:
-        write_text(None, "\nBLOCKED\n")
+        write_text(None, "\n%s\n" % _t("today.blocked"))
         for row in blocked_rows:
             write_text(None, "  %s %s\n" % (row["status"], row["title"]))
         blocked_keys = set(row_key(row) for row in blocked_rows)
         for row in waiting_rows:
             if row_key(row) in blocked_keys:
                 continue
-            write_text(None, "  (waiting) %s %s\n" % (row["status"], row["title"]))
+            write_text(
+                None,
+                "  %s %s %s\n"
+                % (_t("today.waiting_prefix"), row["status"], row["title"]),
+            )
 
     habit_rows = report.get("habits") or []
     if habit_rows:
-        write_text(None, "\nHABITS\n")
+        write_text(None, "\n%s\n" % _t("today.habits"))
         for row in habit_rows:
             write_text(None, "  %s %s\n" % (row["status"], row["title"]))
 
     upcoming_rows = unshown(report.get("upcoming"))
     if upcoming_rows:
-        write_text(None, "\nUpcoming (%dd)\n" % report["horizon_days"])
+        write_text(None, "\n%s\n" % _t("today.upcoming", n=report["horizon_days"]))
         for row in upcoming_rows:
             due = " due:%s" % row["due"] if row.get("due") else ""
             write_text(None, "  %s %s%s\n" % (row["status"], row["title"], due))
@@ -12171,17 +12390,16 @@ def _render_today_text(report, saved_view=None, area=None):
     messages = report.get("messages") or []
     captures = report.get("captures") or []
     if pending_count or messages or captures:
-        write_text(None, "\nINBOX\n")
+        write_text(None, "\n%s\n" % _t("today.inbox"))
         if pending_count:
-            plural = "" if pending_count == 1 else "s"
-            write_text(None, "  %d pending item%s\n" % (pending_count, plural))
+            write_text(None, _t("today.inbox_pending", n=pending_count) + "\n")
         for row in messages:
-            write_text(None, "  message: %s\n" % row["title"])
+            write_text(None, _t("today.inbox_message", title=row["title"]) + "\n")
         for row in captures:
-            write_text(None, "  capture: %s\n" % row["title"])
+            write_text(None, _t("today.inbox_capture", title=row["title"]) + "\n")
 
     if all(v == 0 for v in counts.values()):
-        write_text(None, "\nAll clear.\n")
+        write_text(None, "\n%s\n" % _t("today.all_clear"))
 
 
 def command_area_list(args):

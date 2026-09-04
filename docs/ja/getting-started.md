@@ -190,3 +190,20 @@ Level 1 や Level 2 で書いたものを先に変更する必要はありませ
 - [`use-cases.md`](./use-cases.md) -- 実践的な setup（task tracking、
   calendar、journaling、team status、AI integration）
 - [`philosophy.md`](./philosophy.md) -- なぜ lifetxt がこの設計なのか
+
+## 別の言語で読む
+
+lifetxt の人間向け CLI 出力（見出し・案内文・`help`）は英語の代わりに
+日本語で表示できます。コマンド名・option・Format 1.0 の構文は常に同じ
+canonical な英語トークンのままです:
+
+```sh
+lifetxt --lang ja tour
+lifetxt --lang ja init
+lifetxt --lang ja help beginner
+LIFETXT_LANG=ja lifetxt today
+```
+
+完全な優先順位のルールは [`cli.md`](./cli.md) の多言語化セクションを、
+このガイドの英語版は
+[`docs/en/getting-started.md`](../en/getting-started.md) を参照してください。

@@ -26,6 +26,7 @@ from .extra_safety import (
 )
 from .extra_attachment import command_attachment
 from .tour import command_tour
+from .cli_taxonomy import command_help
 from .safety_foundation import read_text_exact
 from .timezone_policy import resolve_timezone_name, timezone_context
 
@@ -67,6 +68,15 @@ def _build_parser(command):
     parser = argparse.ArgumentParser(prog="python -m lifetxt %s" % command)
     if command == "tour":
         _add_output(parser, choices=("text", "json"), default="text")
+    elif command == "help":
+        parser.add_argument("topic", nargs="?", default=None)
+        parser.add_argument("--format", choices=("text", "json"), default="text")
+        parser.add_argument(
+            "--json",
+            action="store_true",
+            help="Shorthand for --format json.",
+        )
+        parser.add_argument("-o", "--output")
     elif command == "next":
         parser.add_argument("paths", nargs="*")
         parser.add_argument("--user")
@@ -514,6 +524,8 @@ def main(argv=None, config_path=None, workspace_name=None):
 def _dispatch(command, args, config_data, config_path):
     if command == "tour":
         return command_tour(args, config_data)
+    if command == "help":
+        return command_help(args, config_data)
     if command == "next":
         return command_next(args, config_data)
     if command == "show":

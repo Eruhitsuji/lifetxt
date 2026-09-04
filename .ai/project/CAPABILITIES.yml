@@ -7054,3 +7054,149 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-cli-help-taxonomy
+    name: Role-based CLI help, progressive-disclosure help, and machine-readable command catalog
+    summary: >-
+      A single source of truth (`lifetxt/cli_taxonomy.py`) for a role-based
+      grouping of every real top-level CLI command into 9 categories, a
+      new `lifetxt help` command giving beginner/daily/power/ai/admin
+      guided paths and per-command lookups, and a `--json` machine-readable
+      capability catalog for scripts and AI clients -- without renaming,
+      removing, or changing the argument spec of any existing command.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-cli-help-taxonomy
+    implementation_locations:
+      - lifetxt/cli_taxonomy.py
+      - lifetxt/entrypoint.py
+      - lifetxt/extra_cli.py
+      - tests/test_cli_taxonomy.py
+      - docs/en/cli.md
+      - docs/ja/cli.md
+    public_interfaces:
+      - lifetxt help
+      - lifetxt help beginner|daily|power|ai|admin
+      - lifetxt help NAME
+      - lifetxt help --json / --format json
+      - lifetxt --help (categorized "Start here" prefix block)
+      - lifetxt.cli_taxonomy.all_commands
+      - lifetxt.cli_taxonomy.CATEGORIES
+      - lifetxt.cli_taxonomy.AUDIENCES
+      - lifetxt.cli_taxonomy.command_record
+      - lifetxt.cli_taxonomy.catalog_payload
+    tests_or_evidence:
+      - "tests/test_cli_taxonomy.py CategoryCoverageTests (4 tests): every command returned by a fresh, direct walk of cli.build_parser()'s subparser tree plus entrypoint._EXTRA_COMMANDS/_PERSONAL_CONTEXT_COMMANDS/{report,server-report} has exactly one category, no category names a removed/renamed command, and cli_taxonomy.all_commands() itself matches that independent parser walk"
+      - "tests/test_cli_taxonomy.py SafetyMetadataTests (3 tests): WRITE_COMMANDS/DESTRUCTIVE_COMMANDS are real commands, DESTRUCTIVE_COMMANDS subset of WRITE_COMMANDS, command_safety() shape for a read-only/write/destructive example each"
+      - "tests/test_cli_taxonomy.py AliasResolutionTests (5 tests): quick's add/q aliases resolve to the canonical command, canonical names resolve to themselves, an audience id resolves as an audience, an unknown topic raises ValueError naming the known audiences"
+      - "tests/test_cli_taxonomy.py AudienceAndExampleDataTests (3 tests): every audience flow step, curated example, and related-command override names a real command; related_commands() never includes the command itself"
+      - "tests/test_cli_taxonomy.py PayloadShapeTests (4 tests): catalog_payload()/command_record()/audience_payload() are JSON-serializable, the catalog covers every real command, the lean vs detailed command_record() shapes differ exactly as documented"
+      - "tests/test_cli_taxonomy.py CliHelpCommandTests (8 tests, real subprocess via run_cli): bare `help`, `help --json`, `help daily`, `help add` (alias resolution), `help today --json`, an unknown topic failing loudly (exit 1, stderr names the known audiences), `--help`'s categorized prefix appearing ahead of the unchanged full flat reference, and `python -m lifetxt help` matching the installed `lifetxt` console script byte-for-byte (skipped when no installed script is on PATH)"
+      - "tests/test_cli_taxonomy.py CliCategoryDocumentationDriftTests (1 test): parses docs/en/cli.md's '### 1.1 Command Categories and Guided Paths' table and diffs it against cli_taxonomy.CATEGORIES the same missing/stale/mismatch way tests.test_surface_runtime.TuiDocumentationDriftTests already does for the TUI command table"
+      - "confirmed the drift gates are real, not tautological: deliberately removed 'help' from CATEGORIES's daily tuple in-process and reproduced exact failures in both test_every_real_command_is_categorized and test_docs_category_table_matches_the_taxonomy_registry, then restored it and re-confirmed all tests pass"
+      - python -m unittest tests.test_cli_taxonomy -> Ran 28 tests, OK (skipped=1)
+      - python -m unittest tests.test_completion_surfaces tests.test_completion_values tests.test_surface_runtime.TuiDocumentationDriftTests tests.test_release_policy -> Ran 101 tests, OK (skipped=1)
+      - "MPLBACKEND=Agg python -W ignore::ResourceWarning -m unittest discover -> full repository suite, OK, confirming no regression from adding the `help` command to entrypoint._EXTRA_COMMANDS or from the docs/en/cli.md section renumbering (1.1 Fuzzy Search -> 1.2 Fuzzy Search)"
+      - "live: python -m lifetxt help / help beginner / help add --json / help nope (exit 1) / --help (categorized prefix ahead of the full flag reference) all verified against the real installed CLI"
+      - 'scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> {"errors": 0, "ok": true}'
+      - "manual: docs/ja/cli.md's three new cross-reference anchors (#19-最近追加されたコマンド範囲, #1310-rrule-繰り返しルールの展開, #11-コマンドカテゴリとガイド付きパス) verified against scripts/validate_release_docs.py's own slug() algorithm run directly, since docs/ja/ is outside that script's checked-document set"
+      - git diff --check -- docs/en/cli.md docs/ja/cli.md -> clean; both files' fenced code-block counts remain even (balanced) after editing
+      - ruff format --check / ruff check lifetxt/cli_taxonomy.py lifetxt/entrypoint.py lifetxt/extra_cli.py tests/test_cli_taxonomy.py -> clean
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/629
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Self-scoped from #629's own explicit "prefer reuse before a new
+      registry" guidance: `cli_taxonomy.all_commands()` is derived at
+      runtime from `cli.build_parser()`'s subparser tree (grouping
+      `_SubParsersAction.choices` by parser identity to recover canonical
+      names vs. aliases such as `quick`'s `q`/`add`) plus
+      `entrypoint._EXTRA_COMMANDS`/`_PERSONAL_CONTEXT_COMMANDS`/
+      `{report, server-report}` -- never a second hand-copied command list.
+      `CATEGORIES` (9 groups covering all 110 real top-level commands),
+      `AUDIENCES` (5 curated beginner/daily/power/ai/admin flows), curated
+      `_EXAMPLES`/`_RELATED_OVERRIDES`, and the `WRITE_COMMANDS`/
+      `DESTRUCTIVE_COMMANDS` safety classification are the only genuinely
+      new data this capability adds, since no existing per-CLI-command
+      read-only/destructive registry exists anywhere in the codebase
+      (`mcp.py`'s `READ_ONLY_TOOLS`/`DESTRUCTIVE_TOOLS` classify MCP tool
+      names, a different namespace, and `surface_runtime.OPERATION_REGISTRY`
+      is a coarser 16-entry cross-surface operation registry, not a
+      per-command one) -- confirmed by investigation before writing any new
+      classification. `WRITE_COMMANDS`/`DESTRUCTIVE_COMMANDS` are
+      explicitly documented, in both the module docstring and
+      `docs/en/cli.md`/`docs/ja/cli.md`, as a best-effort classification for
+      human/AI guidance, not an enforcement mechanism -- the actual
+      permission boundary for untrusted AI clients remains MCP's
+      `--profile read|assist|full` (`cap-mcp-permission-profiles`, #502),
+      per the issue's own explicit instruction not to duplicate that
+      existing classification.
+
+      `lifetxt help` is registered through the existing extended-command
+      pattern (`entrypoint._EXTRA_COMMANDS` -> `extra_cli.py`'s
+      `_build_parser`/`_dispatch`), the same mechanism `tour` already uses,
+      rather than growing `cli.py`'s own already very large (15,000+ line)
+      argparse tree. `--help`'s new categorized "Start here" + category
+      index block is prepended ahead of the complete, byte-for-byte
+      unchanged flat argparse help in `entrypoint._print_help()` -- purely
+      additive, confirmed by a dedicated regression test asserting the
+      pre-existing "Additional workflow commands" epilogue text is still
+      present. No command was renamed, no alias removed, and no argument
+      spec changed anywhere in this capability.
+
+      `command_arguments()`/`command_options()` (used for `lifetxt help
+      NAME --json`'s detailed `arguments`/`options` fields) are populated
+      only for the 91 commands that have a real `cli.build_parser()`
+      subparser to introspect; the 19 commands dispatched through
+      `extra_cli`/`personal_context_cli`/`report_cli`/`server_report_cli`
+      (which build a throwaway parser per invocation, some injecting
+      routing-only marker flags such as `review --someday` that would be
+      misleading to surface as ordinary options) report empty
+      `arguments`/`options` rather than guessed or misleading data --
+      recorded as a deliberate scope boundary rather than a silently
+      incomplete result.
+
+      A companion read-only MCP `get_cli_help` tool over the same
+      `cli_taxonomy` data (the issue's own "necessary considered" /
+      optional item) was not implemented in this pass and is recorded here
+      as an explicit, unimplemented follow-up candidate, since `lifetxt
+      help --json` already gives an AI client calling `lifetxt` as a
+      subprocess (or told to run it) the identical machine-readable
+      catalog with no MCP-side code needed; adding an MCP tool duplicating
+      it is lower-value than the issue's own "necessary" bar without
+      further evidence of demand.
+
+      docs/ja/cli.md's command-overview table had drifted before this
+      change: it was missing roughly 22 real commands
+      (`workspace`/`project`/`portfolio`/`today`/`area`/`backlinks`/
+      `temporal`/`query`/`view`/`group`/`message`/`person`/`proposal`/
+      `ticket`/`version`/`sprint`/`rrule`/`update-check`/`update`/
+      `server-init`/`server-update`/`remote`/`vm`/`import`) that
+      docs/en/cli.md already documented, and its section numbering had
+      diverged further than expected: docs/en/cli.md has 24 numbered
+      sections including dedicated Development Tickets (§19), Remote Safe
+      Mode (§20), and a "Commands Documented Elsewhere" index (§21), while
+      docs/ja/cli.md stops at §19 ("最近追加されたコマンド範囲", a terse
+      catch-all summary of English-only additions) with no equivalent
+      detailed sections for `ticket`/`remote`/`server-init`/
+      `server-update`/`server-report`/`context`/`memory`/`decisions` at
+      all. This change closes the table-level drift (all ~22 missing rows
+      added, cross-referenced to the existing §19 catch-all or to their
+      already-published dedicated `.md` guides such as `tickets.md`/
+      `remote.md`/`personal-context-toolkit.md` rather than to
+      non-existent ja.md section numbers) and adds one further §19 bullet
+      summarizing `ticket`/`server-init`/`server-update`/`server-report`/
+      `help`, but does not attempt a full section-by-section translation
+      of docs/en/cli.md's §16.1-§24 content into Japanese -- that is a much
+      larger, separately-scoped translation effort (matching this
+      project's own established precedent, e.g. #422's decision to file
+      `docs/ja/cli.md`'s §2.1 gap as its own follow-up rather than fold it
+      into #421) and is recorded here as an explicit follow-up candidate,
+      not silently left unmentioned.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

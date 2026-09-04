@@ -71,6 +71,14 @@ the beginner-facing spelling of `quick`/`q`; `web` starts the same server as
 `serve` and opens your browser to it. See section 16 ("`tour`, `init`, and
 `doctor`") of the [CLI guide](./docs/en/cli.md) for the full flag reference.
 
+Not sure which of lifetxt's many commands to reach for? `lifetxt help` gives
+a role-based index (Getting Started, Query, Projects, and more) plus guided
+paths for beginners, daily users, power users, AI clients, and administrators
+— `lifetxt help beginner` walks through the smallest useful loop, and
+`lifetxt help <command>` looks up any one command by name or alias. Add
+`--json` for a machine-readable capability catalog. See
+[§1.1 of the CLI guide](./docs/en/cli.md#11-command-categories-and-guided-paths).
+
 For the fastest introduction to what actually goes *inside* `life.txt`, see
 [docs/en/getting-started.md](./docs/en/getting-started.md): a five-minute
 Beginner / Minimal Profile that is a strict subset of the full format, so

@@ -49,6 +49,35 @@ _DOCTOR_SAFETY_FLAGS = frozenset(
 )
 
 
+def _extract_lang_arg(argv):
+    """Strip a global ``--lang``/``--lang=`` override from ``argv``.
+
+    Presentation-only: no downstream parser (the legacy ``cli.py`` one or
+    any extended-command throwaway parser) needs to know about ``--lang``,
+    so it is removed before ``argv`` reaches either one. Returns
+    ``(cleaned_argv, lang_value_or_none)``.
+    """
+    raw = list(sys.argv[1:] if argv is None else argv)
+    lang = None
+    cleaned = []
+    index = 0
+    while index < len(raw):
+        value = raw[index]
+        if value == "--lang":
+            if index + 1 >= len(raw):
+                raise ValueError("--lang requires a value.")
+            lang = raw[index + 1]
+            index += 2
+            continue
+        if value.startswith("--lang="):
+            lang = value.split("=", 1)[1]
+            index += 1
+            continue
+        cleaned.append(value)
+        index += 1
+    return cleaned, lang
+
+
 def _extract_config_arg(argv):
     raw = list(sys.argv[1:] if argv is None else argv)
     config_path = None
@@ -236,6 +265,18 @@ def _uses_workspace_safety_doctor(argv):
 
 
 def main(argv=None):
+    try:
+        argv_without_lang, lang_arg = _extract_lang_arg(argv)
+    except ValueError as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
+    from .i18n import locale_context, resolve_locale
+
+    with locale_context(resolve_locale(explicit=lang_arg)):
+        return _dispatch(argv_without_lang)
+
+
+def _dispatch(argv):
     try:
         raw, cleaned, config_path, workspace_name = _extract_config_arg(argv)
     except ValueError as exc:

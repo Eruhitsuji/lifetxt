@@ -323,5 +323,66 @@ class CliCategoryDocumentationDriftTests(unittest.TestCase):
         self.assertEqual([], mismatches)
 
 
+class LocalizedHelpTextTests(unittest.TestCase):
+    """`--lang ja` renders the same top-level Help/taxonomy semantics in
+    Japanese, while machine-readable `--json` output stays locale-invariant
+    (#631)."""
+
+    def test_lang_ja_translates_top_level_help_prefix(self):
+        out, err, rc = run_cli("--lang", "ja", "--help")
+        self.assertEqual(rc, 0)
+        self.assertIn("はじめに:", out)
+        self.assertIn("初めての方は次を試してください", out)
+        # Command names/categories stay canonical English tokens.
+        self.assertIn("lifetxt tour", out)
+        self.assertIn("lifetxt init", out)
+
+    def test_lang_ja_translates_help_overview(self):
+        out, err, rc = run_cli("--lang", "ja", "help")
+        self.assertEqual(rc, 0)
+        self.assertIn("ガイド付きパス:", out)
+        self.assertIn("コマンド分類:", out)
+
+    def test_lang_ja_translates_beginner_audience(self):
+        out, err, rc = run_cli("--lang", "ja", "help", "beginner")
+        self.assertEqual(rc, 0)
+        self.assertIn("初心者向け", out)
+
+    def test_english_default_is_unaffected(self):
+        out, err, rc = run_cli("help")
+        self.assertEqual(rc, 0)
+        self.assertIn("Start here:", out)
+        self.assertIn("Guided paths:", out)
+
+    def test_lifetxt_lang_env_var_selects_japanese(self):
+        out, err, rc = run_cli("help", "beginner", env_update={"LIFETXT_LANG": "ja"})
+        self.assertEqual(rc, 0)
+        self.assertIn("初心者向け", out)
+
+    def test_help_json_is_locale_invariant(self):
+        out_en, err_en, rc_en = run_cli("help", "--json")
+        out_ja, err_ja, rc_ja = run_cli("--lang", "ja", "help", "--json")
+        self.assertEqual(rc_en, 0)
+        self.assertEqual(rc_ja, 0)
+        self.assertEqual(json.loads(out_en), json.loads(out_ja))
+
+    def test_help_beginner_json_is_locale_invariant(self):
+        out_en, err_en, rc_en = run_cli("help", "beginner", "--json")
+        out_ja, err_ja, rc_ja = run_cli("--lang", "ja", "help", "beginner", "--json")
+        self.assertEqual(rc_en, 0)
+        self.assertEqual(rc_ja, 0)
+        self.assertEqual(json.loads(out_en), json.loads(out_ja))
+
+    def test_unsupported_lang_value_falls_back_to_english(self):
+        out, err, rc = run_cli("--lang", "fr", "help")
+        self.assertEqual(rc, 0)
+        self.assertIn("Start here:", out)
+
+    def test_lang_flag_does_not_reach_the_subcommand_as_an_unknown_argument(self):
+        out, err, rc = run_cli("--lang", "ja", "capabilities", "--format", "json")
+        self.assertEqual(rc, 0)
+        self.assertNotIn("unrecognized arguments", err)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -324,6 +324,12 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             "tags": public_tags_config(app.state.config),
         }
 
+    @app.get("/api/beginner-profile")
+    def get_beginner_profile():
+        from .beginner_profile import beginner_profile_payload
+
+        return beginner_profile_payload()
+
     @app.get("/api/items")
     def get_items(
         open_only=False,

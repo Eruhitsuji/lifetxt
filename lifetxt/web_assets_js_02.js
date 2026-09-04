@@ -53,6 +53,10 @@
           "人が読みやすい短いレコード文です。タイトルに空白を含む場合は、生の life.txt では引用符で囲ってください。",
         "One key:value per line. Repeat the same key for multiple values. Use body: or | continuation lines for longer text.":
           "1行につき key:value を1つ。同じキーを繰り返すと複数の値を指定できます。長い文には body: または | の継続行を使います。",
+        "Show advanced options": "詳細オプションを表示",
+        "Hide advanced options": "詳細オプションを隠す",
+        "Beginner mode shows only the Task/Event/Note types and the most common statuses; this shows or hides the rest.":
+          "Beginner mode では Task/Event/Note の種類と主要な状態のみを表示します。このボタンで残りの表示・非表示を切り替えます。",
       },
     };
 

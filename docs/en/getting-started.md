@@ -188,6 +188,14 @@ first -- it is already valid input to the full grammar.
   calendar, journaling, team status, AI integration).
 - [`philosophy.md`](./philosophy.md) -- why lifetxt is built this way.
 
+## Beginner mode in the Web UI
+
+The [Web UI](./web.md#beginner-authoring-mode)'s record editor can hide
+advanced Type/Status options, showing only this Beginner Profile's
+`T`/`E`/`N` types and `[ ]`/`[x]`/`[N]` statuses until you choose to reveal
+the rest -- the same vocabulary described above, applied to an authoring
+surface instead of only this document.
+
 ## Read this in another language
 
 lifetxt's human-readable CLI text (headings, guidance, `help`) can be shown

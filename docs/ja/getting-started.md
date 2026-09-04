@@ -191,6 +191,14 @@ Level 1 や Level 2 で書いたものを先に変更する必要はありませ
   calendar、journaling、team status、AI integration）
 - [`philosophy.md`](./philosophy.md) -- なぜ lifetxt がこの設計なのか
 
+## Web UI の Beginner mode
+
+[Web UI](./web.md#beginner-authoring-mode) の record editor は advanced な
+Type/Status option を隠し、この Beginner Profile の `T`/`E`/`N` type と
+`[ ]`/`[x]`/`[N]` status だけを表示できます（展開すれば残りも表示可能）。
+この document で説明している vocabulary そのものを authoring surface に
+適用したものです。
+
 ## 別の言語で読む
 
 lifetxt の人間向け CLI 出力（見出し・案内文・`help`）は英語の代わりに

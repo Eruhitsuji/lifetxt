@@ -7,10 +7,31 @@ that parser was established, then delegates everything else unchanged.
 
 import datetime
 import json
+import os
 import sys
 from collections import OrderedDict
 
+from .i18n import register_messages as _register_messages
 from .timezone_policy import today as timezone_today
+
+
+_register_messages(
+    {
+        "bare.welcome": {"en": "Welcome to lifetxt", "ja": "lifetxt へようこそ"},
+        "bare.try_tour": {
+            "en": "Try it without creating files:",
+            "ja": "ファイルを作らずに試す:",
+        },
+        "bare.start_using": {
+            "en": "Start using lifetxt:",
+            "ja": "lifetxt を使い始める:",
+        },
+        "bare.need_guidance": {
+            "en": "Need guidance:",
+            "ja": "案内が必要な場合:",
+        },
+    }
+)
 
 
 _EXTRA_COMMANDS = frozenset(
@@ -264,6 +285,60 @@ def _uses_workspace_safety_doctor(argv):
     return False
 
 
+def _bare_invocation_setup_resolved():
+    """Read-only, best-effort check for whether lifetxt already has a
+    configured or default life.txt to work with in the current directory
+    (#636). Checks existence only, never file contents, so it can never
+    mutate anything and stays cheap enough to run on every bare invocation.
+    A custom, non-default single-file setup that this heuristic misses
+    degrades gracefully to the "not yet initialized" guidance below, which
+    is harmless to show even to an already-initialized workspace.
+    """
+    config_path = os.environ.get("LIFETXT_CONFIG")
+    if config_path and os.path.exists(config_path):
+        return True
+    if os.path.exists(".lifetxt.json"):
+        return True
+    if os.path.exists("life.txt"):
+        return True
+    return False
+
+
+def _bare_invocation_guidance():
+    from .i18n import translate as _t
+
+    lines = [
+        _t("bare.welcome"),
+        "",
+        _t("bare.try_tour"),
+        "  lifetxt tour",
+        "",
+        _t("bare.start_using"),
+        "  lifetxt init",
+        "",
+        _t("bare.need_guidance"),
+        "  lifetxt help beginner",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def _bare_invocation_main():
+    """Interactive-terminal-only smart entry for bare `lifetxt` (#636).
+
+    Never invoked for non-TTY/redirected execution, which keeps its
+    existing deterministic, script-safe argparse usage/exit-2 behavior.
+    Delegates to the existing `today` command when a workspace already
+    looks set up, and to short tour/init/help guidance otherwise --
+    neither branch adds new setup-detection or daily-aggregation logic of
+    its own.
+    """
+    if _bare_invocation_setup_resolved():
+        return _dispatch(["today"])
+    sys.stdout.write(_bare_invocation_guidance())
+    return 0
+
+
 def main(argv=None):
     try:
         argv_without_lang, lang_arg = _extract_lang_arg(argv)
@@ -273,6 +348,8 @@ def main(argv=None):
     from .i18n import locale_context, resolve_locale
 
     with locale_context(resolve_locale(explicit=lang_arg)):
+        if not argv_without_lang and sys.stdin.isatty() and sys.stdout.isatty():
+            return _bare_invocation_main()
         return _dispatch(argv_without_lang)
 
 

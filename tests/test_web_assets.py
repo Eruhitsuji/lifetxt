@@ -12,7 +12,7 @@ from lifetxt import web_assets, webapp
 
 
 REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
-LEGACY_PRISTINE_GIT_BLOB_SHA = "a0ebf28f5e007f6481cd14ec87574c979b87b2ce"
+LEGACY_PRISTINE_GIT_BLOB_SHA = "9da1d4c4123b011e983ecf1f623d841b967bd9d4"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )
@@ -49,7 +49,9 @@ class WebAssetExtractionTests(unittest.TestCase):
             _git_blob_sha(assembled.encode("utf-8")),
             LEGACY_PRISTINE_GIT_BLOB_SHA,
         )
-        self.assertEqual(web_assets.HTML_PAGE, web_assets._apply_brand_assets(assembled))
+        self.assertEqual(
+            web_assets.HTML_PAGE, web_assets._apply_brand_assets(assembled)
+        )
 
     def test_packaged_fragment_resources_exist(self):
         package = resources.files("lifetxt")
@@ -61,8 +63,10 @@ class WebAssetExtractionTests(unittest.TestCase):
             self.assertTrue(resource.read_bytes(), name)
 
     def test_shell_no_longer_embeds_full_css_or_script(self):
-        shell = resources.files("lifetxt").joinpath("web_assets.html").read_text(
-            encoding="utf-8"
+        shell = (
+            resources.files("lifetxt")
+            .joinpath("web_assets.html")
+            .read_text(encoding="utf-8")
         )
         self.assertIn(web_assets._STYLE_MARKER, shell)
         self.assertIn(web_assets._SCRIPT_MARKER, shell)

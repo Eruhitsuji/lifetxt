@@ -112,6 +112,19 @@ That is the entire Level 1 vocabulary. `check` uses the same parser as every
 other command, so anything you can write with only this vocabulary already
 works with `filter`, `agenda`, `tui`, `serve`, and every other surface.
 
+Once you have written a few lines, `lifetxt today` is the daily entry point:
+
+```sh
+python -m lifetxt today life.txt
+```
+
+It is not a second data model or a new vocabulary -- it summarizes and
+prioritizes what you already wrote (what's due, what's actionable, what's
+blocked, today's events) into one view. The intended path stays small: write
+in life.txt, run `today` to see what needs attention, and reach for a
+specialized command (`agenda`, `next`, `project`, ...) only when you need to
+go deeper. See [life-hub.md](life-hub.md) for the full picture.
+
 ## Level 2 -- Daily Use
 
 Once the basics feel natural, these existing features cover most everyday

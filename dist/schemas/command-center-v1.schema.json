@@ -84,6 +84,12 @@
       },
       "type": "array"
     },
+    "now": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
     "overdue": {
       "items": {
         "type": "object"
@@ -118,6 +124,12 @@
       "type": "object"
     },
     "ticket_attention": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "today_events": {
       "items": {
         "type": "object"
       },

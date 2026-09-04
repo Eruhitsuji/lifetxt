@@ -10,6 +10,19 @@
       return `<div class="today-subsection"><div class="today-subsection-title">${escapeHtml(title)} (${rows.length})</div>${body}</div>`;
     }
 
+    // Omitted entirely (no title, no wrapper) when empty, so the Status/
+    // Presence and Events subsections cost zero space on a simple file --
+    // only the shared command-center data decides whether they render.
+    function _todayStatusSubsection(rows) {
+      rows = rows || [];
+      if (!rows.length) return "";
+      const body = rows.slice(0, TODAY_ROW_LIMIT).map(row => {
+        const since = row.since ? `<span class="pill">since ${escapeHtml(row.since)}</span>` : "";
+        return `<div class="dash-row"><span class="dash-row-title">${escapeHtml(row.person || "self")}: ${escapeHtml(row.state || "")}</span>${since}</div>`;
+      }).join("");
+      return `<div class="today-subsection"><div class="today-subsection-title">Status (${rows.length})</div>${body}</div>`;
+    }
+
     async function loadToday() {
       const dateEl = document.getElementById("today-date");
       let data;
@@ -29,6 +42,8 @@
       const nowEl = document.getElementById("today-now");
       if (nowEl) {
         nowEl.innerHTML =
+          _todayStatusSubsection(data.now) +
+          _todaySubsection("Today", data.today_events, "Nothing scheduled today.") +
           _todaySubsection("Due today", data.due_today, "Nothing due today.") +
           _todaySubsection("Next actions", data.next_actions, "Nothing actionable.") +
           _todaySubsection("Overdue", data.overdue, "Nothing overdue.");
@@ -50,6 +65,7 @@
         attentionEl.innerHTML =
           _todaySubsection("Blocked", data.blocked, "Nothing blocked.") +
           _todaySubsection("Waiting", data.waiting, "Nothing waiting.") +
+          _todaySubsection("Tickets", data.ticket_attention, "No tickets need attention.") +
           `<div class="today-subsection"><div class="today-subsection-title">Projects (${projects.length})</div>` +
           (projectRows || `<div class="empty">All projects green.</div>`) + `</div>` +
           safetyRow;

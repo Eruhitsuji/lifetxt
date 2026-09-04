@@ -62,6 +62,7 @@ from .diagnostic_contract import (
     diagnostic_category,
     diagnostic_to_output_dict,
 )
+from .cli_taxonomy import render_success_guidance as _render_success_guidance
 from .i18n import register_messages as _register_messages, translate as _t
 from .ics import items_from_ics_text
 from .init_presets import DEFAULT_PRESET as _INIT_DEFAULT_PRESET
@@ -6854,6 +6855,8 @@ def command_quick(args):
         operation="quick.capture",
     )
     sys.stdout.write("%s\n" % line)
+    if sys.stdout.isatty():
+        sys.stdout.write(_render_success_guidance("quick", path=dest))
     return 0
 
 
@@ -7483,6 +7486,8 @@ def command_done(args):
     _pre_write_backup(path, config, "done")
     atomic_write_text(path, updated_text)
     sys.stdout.write(_t("done.done", line=updated_line) + "\n")
+    if sys.stdout.isatty():
+        sys.stdout.write(_render_success_guidance("done", path=path))
     return 0
 
 
@@ -7559,6 +7564,8 @@ def _command_done_habit(path, text, target, date_iso, config, args):
     _pre_write_backup(path, config, "done")
     atomic_write_text(path, updated_text)
     sys.stdout.write(_t("done.logged", line=updated_line, streak=streak) + "\n")
+    if sys.stdout.isatty():
+        sys.stdout.write(_render_success_guidance("done", path=path))
     return 0
 
 
@@ -7612,6 +7619,8 @@ def command_complete(args):
         _pre_write_backup(path, config, "complete")
         atomic_write_text(path, updated_text)
         sys.stdout.write(_t("done.done", line=updated_line) + "\n")
+        if sys.stdout.isatty():
+            sys.stdout.write(_render_success_guidance("complete", path=path))
         return 0
 
     next_anchor_key, next_dt, rule = _compute_next_occurrence(
@@ -8103,9 +8112,14 @@ def command_init(args):
     sys.stdout.write(_t("init.wrote", path=life_file) + "\n")
     write_text(config_file, config_text)
     sys.stdout.write(_t("init.wrote", path=config_file) + "\n")
-    sys.stdout.write(
-        _t("init.next", command="python -m lifetxt check %s" % life_file) + "\n"
-    )
+    if sys.stdout.isatty():
+        # TTY only (#638): the more beginner-friendly next-step guidance
+        # (add -> today) instead of the plain script-safe check suggestion.
+        sys.stdout.write(_render_success_guidance("init"))
+    else:
+        sys.stdout.write(
+            _t("init.next", command="python -m lifetxt check %s" % life_file) + "\n"
+        )
     return 0
 
 

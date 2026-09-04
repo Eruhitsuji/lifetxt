@@ -748,15 +748,20 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         return {"count": len(records), "records": records}
 
     @app.get("/api/command-center")
-    def get_command_center_route(horizon=None, person=None, mode="today"):
+    def get_command_center_route(
+        horizon=None, person=None, mode="today", saved_view=None, area=None
+    ):
         """The canonical Daily Command Center, unchanged from CLI/MCP.
 
         Delegates entirely to :func:`lifetxt.command_center.command_center`;
         this route only reads input, resolves query parameters, and returns
         the same object shape CLI ``today`` and MCP ``get_command_center``
-        already produce.
+        already produce. ``saved_view``/``area`` reuse
+        :func:`lifetxt.command_center.scoped_items` unmodified -- the same
+        personalization scope ``lifetxt today --saved-view``/``--area``
+        already apply -- so Web/CLI/MCP agree on what a scoped Today means.
         """
-        from .command_center import command_center
+        from .command_center import command_center, scoped_items
 
         items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
         raise_for_errors(diagnostics)
@@ -771,6 +776,13 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
                         ValueError("horizon must be an integer number of days.")
                     ),
                 )
+        if saved_view or area:
+            try:
+                items = scoped_items(
+                    items, app.state.config, saved_view=saved_view, area=area
+                )
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=error_detail(exc))
         return command_center(
             items,
             app.state.config,

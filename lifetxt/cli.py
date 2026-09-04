@@ -1275,6 +1275,24 @@ def build_parser():
     today_command.add_argument(
         "--person", help="Scope unacknowledged messages to a recipient."
     )
+    today_scope = today_command.add_mutually_exclusive_group()
+    today_scope.add_argument(
+        "--saved-view",
+        dest="saved_view",
+        metavar="NAME",
+        help=(
+            "Scope today to one configured saved view instead of every item "
+            "(see `lifetxt view list`). Mutually exclusive with --area."
+        ),
+    )
+    today_scope.add_argument(
+        "--area",
+        metavar="NAME",
+        help=(
+            "Scope today to one life area instead of every item "
+            "(see `lifetxt area list`). Mutually exclusive with --saved-view."
+        ),
+    )
     today_command.add_argument("--json", action="store_true", help="Emit JSON.")
     today_command.set_defaults(func=command_today)
 
@@ -11978,11 +11996,22 @@ def command_portfolio(args):
 
 
 def command_today(args):
-    from .command_center import command_center
+    from .command_center import command_center, scoped_items
+
+    config = _config(args)
+    items = _project_items(args)
+    saved_view = getattr(args, "saved_view", None)
+    area = getattr(args, "area", None)
+    if saved_view or area:
+        try:
+            items = scoped_items(items, config, saved_view=saved_view, area=area)
+        except ValueError as exc:
+            sys.stderr.write("ERROR: %s\n" % exc)
+            return 1
 
     report = command_center(
-        _project_items(args),
-        _config(args),
+        items,
+        config,
         _project_today(),
         horizon_days=getattr(args, "horizon", 3),
         person=getattr(args, "person", None),
@@ -11991,62 +12020,161 @@ def command_today(args):
     if getattr(args, "json", False):
         write_text(None, json.dumps(report, ensure_ascii=False, indent=2) + "\n")
         return 0
+    _render_today_text(report, saved_view=saved_view, area=area)
+    return 0
+
+
+def _render_today_text(report, saved_view=None, area=None):
+    """Render the daily command center as the NOW/ATTENTION/TODAY/NEXT
+    ACTIONS/BLOCKED/HABITS/INBOX hub structure lifetxt today's documented
+    information architecture describes (#627).
+
+    Every row still comes from ``report`` (the shared
+    :func:`lifetxt.command_center.command_center` aggregation) unchanged;
+    this function only decides where to print each row and skips a row
+    already printed under an earlier heading, so the same record is not
+    presented twice.
+    """
     counts = report["counts"]
     header = "%s brief" % report["mode"].capitalize()
     if report["reference_date"]:
         header += " for %s" % report["reference_date"]
+    if saved_view:
+        header += " (saved view: %s)" % saved_view
+    elif area:
+        header += " (area: %s)" % area
     write_text(None, header + "\n")
     if not report["safety"]["ok"]:
         write_text(
             None, "  ! config has %d error(s)\n" % report["safety"]["config_errors"]
         )
-    _today_section("Overdue", report["overdue"])
-    _today_section("Due today", report["due_today"])
-    _today_section("Upcoming (%dd)" % report["horizon_days"], report["upcoming"])
-    _today_section("Blocked", report["blocked"])
-    _today_section("Waiting", report["waiting"])
-    _today_section("Messages", report["messages"])
-    _today_section("Habits", report["habits"])
-    _today_section("Captures (untriaged)", report["captures"])
-    if report["project_attention"]:
-        write_text(
-            None,
-            "Projects needing attention (%d):\n" % len(report["project_attention"]),
-        )
-        for row in report["project_attention"]:
+
+    shown = set()
+
+    def row_key(row):
+        return (row.get("source"), row.get("line"))
+
+    def unshown(rows):
+        fresh = []
+        for row in rows or []:
+            key = row_key(row)
+            if key in shown:
+                continue
+            shown.add(key)
+            fresh.append(row)
+        return fresh
+
+    now_rows = report.get("now") or []
+    if now_rows:
+        write_text(None, "\nNOW\n")
+        for row in now_rows:
+            since = " since %s" % row["since"] if row.get("since") else ""
             write_text(
                 None,
-                "  [%s] %s: %s\n"
-                % (row["health"][0].upper(), row["name"], "; ".join(row["reasons"])),
+                "  %s: %s%s\n"
+                % (row.get("person") or "self", row.get("state") or "", since),
             )
-    if report["ticket_attention"]:
-        write_text(
-            None,
-            "Tickets needing attention (%d):\n" % len(report["ticket_attention"]),
-        )
-        for row in report["ticket_attention"]:
+
+    attention_rows = unshown(report.get("overdue")) + unshown(report.get("due_today"))
+    has_attention = bool(
+        attention_rows or report["ticket_attention"] or report["project_attention"]
+    )
+    if has_attention:
+        write_text(None, "\nATTENTION\n")
+        for row in attention_rows:
+            due = " due:%s" % row["due"] if row.get("due") else ""
+            reason = " (%s)" % row["reason"] if row.get("reason") else ""
+            write_text(
+                None, "  %s %s%s%s\n" % (row["status"], row["title"], due, reason)
+            )
+        if report["project_attention"]:
             write_text(
                 None,
-                "  %s %s: %s\n"
-                % (row["status"], row["title"], ", ".join(row["reasons"])),
+                "  Projects needing attention (%d):\n"
+                % len(report["project_attention"]),
             )
+            for row in report["project_attention"]:
+                write_text(
+                    None,
+                    "    [%s] %s: %s\n"
+                    % (
+                        row["health"][0].upper(),
+                        row["name"],
+                        "; ".join(row["reasons"]),
+                    ),
+                )
+        if report["ticket_attention"]:
+            write_text(
+                None,
+                "  Tickets needing attention (%d):\n" % len(report["ticket_attention"]),
+            )
+            for row in report["ticket_attention"]:
+                write_text(
+                    None,
+                    "    %s %s: %s\n"
+                    % (row["status"], row["title"], ", ".join(row["reasons"])),
+                )
+
+    today_rows = report.get("today_events") or []
+    if today_rows:
+        write_text(None, "\nTODAY\n")
+        for row in today_rows:
+            when = row.get("when") or ""
+            write_text(None, "  %s %s\n" % (when, row.get("title") or ""))
+
+    # Habit-kind actionable items get their own HABITS heading below rather
+    # than doubling up in NEXT ACTIONS; next_action_items() itself is not
+    # touched, only which of its rows this renderer prints where.
+    next_rows = unshown(
+        [row for row in (report.get("next_actions") or []) if row.get("kind") != "H"]
+    )
+    write_text(None, "\nNEXT ACTIONS\n")
+    if next_rows:
+        for row in next_rows:
+            project = " @%s" % row["project"] if row.get("project") else ""
+            due = " due:%s" % row["due"] if row.get("due") else ""
+            write_text(
+                None, "  %s %s%s%s\n" % (row["status"], row["title"], project, due)
+            )
+    elif report.get("next_actions"):
+        write_text(None, "  (already listed above)\n")
+    else:
+        write_text(None, "  Nothing actionable.\n")
+
+    blocked_rows = report.get("blocked") or []
+    waiting_rows = report.get("waiting") or []
+    if blocked_rows or waiting_rows:
+        write_text(None, "\nBLOCKED\n")
+        for row in blocked_rows:
+            write_text(None, "  %s %s\n" % (row["status"], row["title"]))
+        blocked_keys = set(row_key(row) for row in blocked_rows)
+        for row in waiting_rows:
+            if row_key(row) in blocked_keys:
+                continue
+            write_text(None, "  (waiting) %s %s\n" % (row["status"], row["title"]))
+
+    habit_rows = report.get("habits") or []
+    if habit_rows:
+        write_text(None, "\nHABITS\n")
+        for row in habit_rows:
+            write_text(None, "  %s %s\n" % (row["status"], row["title"]))
+
+    inbox = report.get("inbox") or {}
+    pending_count = inbox.get("pending_count", 0)
+    messages = report.get("messages") or []
+    captures = report.get("captures") or []
+    if pending_count or messages or captures:
+        write_text(None, "\nINBOX\n")
+        if pending_count:
+            plural = "" if pending_count == 1 else "s"
+            write_text(None, "  %d pending item%s\n" % (pending_count, plural))
+        for row in messages:
+            write_text(None, "  message: %s\n" % row["title"])
+        for row in captures:
+            write_text(None, "  capture: %s\n" % row["title"])
+
     if all(v == 0 for v in counts.values()):
-        write_text(None, "All clear.\n")
-    return 0
-
-
-def _today_section(label, rows, limit=10):
-    if not rows:
-        return
-    write_text(None, "%s (%d):\n" % (label, len(rows)))
-    for row in rows[:limit]:
-        due = " due:%s" % row["due"] if row.get("due") else ""
-        project = " @%s" % row["project"] if row.get("project") else ""
-        write_text(
-            None, "  - %s %s%s%s\n" % (row["status"], row["title"], project, due)
-        )
-    if len(rows) > limit:
-        write_text(None, "  ... and %d more\n" % (len(rows) - limit))
+        write_text(None, "\nAll clear.\n")
 
 
 def command_area_list(args):

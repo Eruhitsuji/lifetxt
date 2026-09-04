@@ -134,3 +134,16 @@ def area_show(items, config=None, name=None):
         ref for ref in area["items"] if ref["status"] in OPEN_STATUSES
     ]
     return summary
+
+
+def area_row_keys(items, config, name):
+    """(source, line) keys for every item in one area, reusing collect_areas.
+
+    Shared by the TUI ``/area`` command and ``lifetxt today --area`` so
+    neither reimplements area membership; a caller that wants an
+    unknown-area error should call :func:`area_show` separately.
+    """
+    bucket = collect_areas(items, config).get(name)
+    if bucket is None:
+        return frozenset()
+    return frozenset((ref.get("source"), ref.get("line")) for ref in bucket["items"])

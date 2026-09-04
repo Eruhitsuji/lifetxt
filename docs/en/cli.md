@@ -177,7 +177,7 @@ python -m lifetxt vm run program.life.txt --entry s1
 | `workspace` | Inspect and validate named workspaces and their source manifests (see [config.md](config.md#named-workspaces)) |
 | `project` | List, inspect, and manage projects built from `project:` records (see [projects.md](projects.md)) |
 | `portfolio` | Compare projects by state, progress, risk, and workload (see [projects.md](projects.md)) |
-| `today` | Daily command center: overdue, due, blocked, messages, and project attention (see [life-hub.md](life-hub.md)) |
+| `today` | Daily command center hub: current status, today's events, overdue/due, next actions, blocked, habits, and inbox, optionally scoped with `--saved-view`/`--area` (see [life-hub.md](life-hub.md)) |
 | `area` | Group tasks and projects by `area:` (see [life-hub.md](life-hub.md)) |
 | `backlinks` | Show items that reference a given ID (incoming links) (see [life-hub.md](life-hub.md)) |
 | `temporal` | Show one item's derived temporal context: overdue/due/staleness and nearby dated items (see [life-hub.md](life-hub.md)) |

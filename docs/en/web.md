@@ -81,7 +81,7 @@ tools.
 | `PUT` | `/api/items/{line}` | Replace an item on a line in the writable file |
 | `DELETE` | `/api/items/{line}` | Delete an item line from the writable file |
 | `GET` | `/api/agenda` | Show agenda records for a datetime range |
-| `GET` | `/api/command-center` | The canonical Daily Command Center: overdue/due-today/upcoming, blocked, waiting, next actions, habits, messages, captures, a bounded Unified Inbox summary, project attention, and a safety signal |
+| `GET` | `/api/command-center` | The canonical Daily Command Center: current status, today's events, overdue/due-today/upcoming, blocked, waiting, next actions, habits, messages, captures, a bounded Unified Inbox summary, project/ticket attention, and a safety signal |
 | `GET` | `/api/saved-views` | List every configured saved view (`saved_views` config) |
 | `GET` | `/api/saved-views/{name}` | Run one saved view; same `count`/`items`/`query_diagnostics` shape as `GET /api/items` |
 | `GET` | `/api/areas` | List every `area:` grouping with task progress |
@@ -124,8 +124,12 @@ does not write generated occurrences back to the source file.
 (the shared actionable-item definition also behind `next` and the TUI
 `/next` view) and a bounded `inbox` summary of pending/deferred Unified
 Inbox proposals. Accepts `?horizon=N` (days, default 3), `?person=NAME`
-(scopes unacknowledged messages), and `?mode=today|morning|evening`
-(presentation metadata only; every bucket is always computed). See
+(scopes unacknowledged messages), `?mode=today|morning|evening`
+(presentation metadata only; every bucket is always computed), and
+`?saved_view=NAME`/`?area=NAME` (personalization scope, delegating to
+`lifetxt.command_center.scoped_items()` -- the same scope `lifetxt today
+--saved-view`/`--area` and MCP `get_command_center`'s `saved_view`/`area`
+arguments already apply; an unknown name or combining both is a 400). See
 [life-hub.md](life-hub.md) for the full bucket list.
 
 `GET /api/saved-views` and `GET /api/saved-views/{name}` delegate entirely to

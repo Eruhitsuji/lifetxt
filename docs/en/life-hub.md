@@ -7,20 +7,41 @@ the CLI, MCP, and future Web surfaces agree on the same picture.
 
 ## Daily command center
 
-`today` builds one deterministic aggregation of the day:
+`today` builds one deterministic aggregation of the day and is the intended
+starting point of the day: capture something, run `today`, see what needs
+attention, then move to the specialized command (`agenda`, `next`, `project`,
+`proposal`, ...) for anything that needs deeper inspection or a mutation.
+`today` itself never invents a second definition of "actionable", "blocked",
+"overdue", or "today" — every bucket below reuses the exact engine the
+matching specialized command already uses.
 
 ```console
 $ lifetxt today
 $ lifetxt today --mode morning --horizon 5
 $ lifetxt today --person self --json
+$ lifetxt today --area home
+$ lifetxt today --saved-view urgent
 ```
 
 `--mode` changes presentation emphasis, not the underlying records. Use it for
 morning planning, midday re-checks, or evening review while keeping the same
 deterministic buckets available to JSON and MCP clients.
 
+`--saved-view NAME`/`--area NAME` scope the whole aggregation to one
+configured saved view (see [query.md](query.md)) or one `area:` before
+building it — personalization through the same existing selection
+mechanisms `view run`/`area show` already use, not a Today-only
+configuration language. The two are mutually exclusive.
+
 Buckets:
 
+- **now** — currently active Status/Presence records (`S` items with a
+  `from:` and no `to:`), reusing the same open-status definition
+  `lifetxt status`/`lifetxt start` already use
+- **today events** — `E`/`R` items whose occurrence falls today, reusing
+  `agenda`'s own occurrence/recurrence/timezone resolution bounded to a
+  single day; tasks/deadlines due today already appear in **due today**
+  below, so they are not repeated here
 - **overdue** — tasks/deadlines with a `due:` before today
 - **due today** — `due:` equal to today
 - **upcoming** — `due:` within the horizon (default 3 days)
@@ -45,9 +66,25 @@ Buckets:
   already use, never a second definition of either
 - **safety** — a quick configuration-validity signal
 
+Every `overdue`/`due today` row that has a determinable due date also carries
+a deterministic `reason` (e.g. `"3 days overdue"`, `"due today"`), derived
+from the same `overdue_by`/`due_in` facts [temporal context](#temporal-context)
+already computes — a fixed, inspectable "why", not a generated explanation.
+
+The CLI text renderer groups these buckets under the documented daily-hub
+headings — `NOW`, `ATTENTION`, `TODAY`, `NEXT ACTIONS`, `BLOCKED`, `HABITS`,
+`INBOX` — and skips a row already shown under an earlier heading (an overdue
+task is not repeated under `NEXT ACTIONS`; a Habit is shown once, under
+`HABITS`) so the same record is never presented twice. `--json` output is
+unaffected by this grouping and returns every bucket unchanged; empty
+buckets are simply empty lists rather than being renamed or removed.
+
 The same aggregation is available to AI clients through the MCP tool
-`get_command_center`, which also carries a `revision` field (see
-[ai-integration.md](ai-integration.md#context-revision)).
+`get_command_center` (which also accepts `saved_view`/`area` and carries a
+`revision` field, see [ai-integration.md](ai-integration.md#context-revision))
+and to the TUI `/today` view and the Web Today dashboard — all four surfaces
+read the identical `command_center()` result, so "today" means the same thing
+everywhere.
 
 ## Areas
 

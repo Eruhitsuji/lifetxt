@@ -4,18 +4,33 @@ Life Hub commands は life.txt workspace を、今日 attention が必要なも�
 
 ## Daily command center
 
-`today` は 1 日分を deterministic に aggregate します。
+`today` は 1 日分を deterministic に aggregate する、1 日の起点となる command
+です: 何か capture したら `today` を実行し、attention が必要なものを確認し、
+detail な確認や mutation が必要なものだけ専門 command（`agenda`、`next`、
+`project`、`proposal`、...）に進みます。`today` 自身は "actionable"、
+"blocked"、"overdue"、"today" の第二の定義を発明しません — 以下の各 bucket
+は対応する専門 command が既に使っている engine をそのまま再利用します。
 
 ```console
 $ lifetxt today
 $ lifetxt today --mode morning --horizon 5
 $ lifetxt today --person self --json
+$ lifetxt today --area home
+$ lifetxt today --saved-view urgent
 ```
 
 `--mode` は presentation emphasis を変えるだけで、underlying records は変えません。morning planning、midday re-check、evening review に使っても、JSON と MCP clients に渡る deterministic buckets は同じです。
 
+`--saved-view NAME`/`--area NAME` は aggregate する前に、1 つの configured
+saved view（[query.md](query.md) 参照）または 1 つの `area:` へ scope を
+絞ります。`view run`/`area show` が既に使っている選択機構をそのまま再利用する
+personalization であり、Today 専用の configuration language ではありません。
+両者は同時に指定できません。
+
 Buckets:
 
+- **now**: 現在 active な Status/Presence records（`from:` を持ち `to:` を持たない `S` items）。`lifetxt status`/`lifetxt start` が既に使っている open-status の定義をそのまま再利用します
+- **today events**: occurrence が today に該当する `E`/`R` items。`agenda` 自身の occurrence/recurrence/timezone 解決を 1 日分に bound して再利用します。today due の tasks/deadlines は下記の **due today** に既に現れるため、ここでは重複させません
 - **overdue**: `due:` が today より前の tasks/deadlines
 - **due today**: `due:` が today
 - **upcoming**: horizon 内の `due:`。default は 3 days
@@ -30,9 +45,25 @@ Buckets:
 - **ticket attention**: `review` status、high severity、または stale な open `record:ticket` items。該当した理由をそれぞれ記録します。`ticket project` report や `temporal` と同じ `severity`/staleness rule を再利用し、別定義は作りません
 - **safety**: configuration-validity の quick signal
 
-同じ aggregation は MCP tool `get_command_center` からも使えます。この tool
-は `revision` field も持ちます（[ai-integration.md](ai-integration.md#context-revision)
-を参照）。
+due date が判別できる **overdue**/**due today** の各 row は、deterministic な
+`reason`（例: `"3 days overdue"`、`"due today"`）も持ちます。これは
+[temporal context](#temporal-context) が既に計算している `overdue_by`/`due_in`
+の fact から導出される、固定で inspectable な "why" であり、生成された
+説明ではありません。
+
+CLI の text renderer はこれらの bucket を `NOW`、`ATTENTION`、`TODAY`、
+`NEXT ACTIONS`、`BLOCKED`、`HABITS`、`INBOX` という documented な daily-hub
+見出しの下にまとめ、既に前の見出しで表示された row は skip します（overdue な
+task は `NEXT ACTIONS` で重複表示されず、Habit は `HABITS` の下で一度だけ
+表示されます）ので、同じ record が二重に提示されることはありません。
+`--json` 出力はこの grouping の影響を受けず、すべての bucket をそのまま返し
+ます。空の bucket は rename や削除ではなく単に空の list になります。
+
+同じ aggregation は MCP tool `get_command_center`（`saved_view`/`area` も
+受け付け、`revision` field も持ちます。[ai-integration.md](ai-integration.md#context-revision)
+参照）と、TUI `/today` view、Web の Today dashboard からも使えます —
+4 つの surface すべてが同じ `command_center()` の結果を読むため、
+「today」の意味はどこでも同じです。
 
 ## Areas
 

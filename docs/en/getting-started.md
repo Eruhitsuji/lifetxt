@@ -188,6 +188,15 @@ first -- it is already valid input to the full grammar.
   calendar, journaling, team status, AI integration).
 - [`philosophy.md`](./philosophy.md) -- why lifetxt is built this way.
 
+## Running `lifetxt` with no arguments
+
+In an interactive terminal, running just `lifetxt` with no other arguments is
+a smart entry point: it points you at `tour`/`init`/`help beginner` if
+nothing looks set up yet in the current directory, or straight to `today`
+(the daily command center) once it does. Scripted, piped, or redirected
+invocations are completely unaffected -- they still get the usual full
+command list and a non-zero exit code, exactly as before.
+
 ## Beginner mode in the Web UI
 
 The [Web UI](./web.md#beginner-authoring-mode)'s record editor can hide

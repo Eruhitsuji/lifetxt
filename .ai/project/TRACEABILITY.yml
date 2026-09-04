@@ -9741,6 +9741,66 @@ traceability:
         unaddressed as out of this pass's bounded scope.
       status: implemented
 
+    - requirement_id: req-cli-help-taxonomy
+      capability_id: cap-cli-help-taxonomy
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/629
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/630
+      changed_files_or_scope:
+        - Add lifetxt/cli_taxonomy.py as the single source of truth for a
+          role-based command taxonomy (9 categories covering all 110 real
+          top-level commands), 5 beginner/daily/power/ai/admin guided-path
+          audiences, curated examples/related-commands, and a best-effort
+          read-only/destructive safety classification
+        - Add lifetxt help (bare, an audience id, or a command/alias name;
+          --json/--format json for machine-readable output) via the
+          existing extended-command pattern
+        - Prepend a categorized "Start here" + category-index block to
+          lifetxt --help, purely additive ahead of the unchanged flat
+          argparse help
+        - Sync docs/en/cli.md's and docs/ja/cli.md's command-overview index
+          with the current implementation and add a new Command Categories
+          and Guided Paths subsection to both
+        - Add a docs-vs-implementation drift-detection test mirroring the
+          existing TUI documentation drift gate
+        - lifetxt/cli_taxonomy.py
+        - lifetxt/entrypoint.py
+        - lifetxt/extra_cli.py
+        - tests/test_cli_taxonomy.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - python -m unittest tests.test_cli_taxonomy -> Ran 28 tests, OK (skipped=1)
+        - python -m unittest tests.test_completion_surfaces tests.test_completion_values tests.test_surface_runtime.TuiDocumentationDriftTests tests.test_release_policy -> Ran 101 tests, OK (skipped=1)
+        - "MPLBACKEND=Agg python -W ignore::ResourceWarning -m unittest discover -> full repository suite, OK"
+        - "confirmed the drift gates are real: deliberately desynced cli_taxonomy.CATEGORIES from the runtime command set and from docs/en/cli.md, reproduced exact failures in both test_every_real_command_is_categorized and test_docs_category_table_matches_the_taxonomy_registry, then restored and re-confirmed green"
+        - "live: python -m lifetxt help / help beginner / help daily / help power / help ai / help admin / help add / help add --json / help today --json / help nope (exit 1) / --help (categorized prefix ahead of the unchanged full flag reference) all verified against the real installed CLI"
+        - 'scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> {"errors": 0, "ok": true}'
+        - "manual: docs/ja/cli.md's new cross-reference anchors verified against scripts/validate_release_docs.py's own slug() algorithm run directly, since docs/ja/ is outside that script's checked-document set"
+        - git diff --check -- docs/en/cli.md docs/ja/cli.md -> clean; fenced code-block counts remain even (balanced) in both files
+        - ruff format --check / ruff check lifetxt/cli_taxonomy.py lifetxt/entrypoint.py lifetxt/extra_cli.py tests/test_cli_taxonomy.py -> clean
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      release_or_deployment: null
+      notes: >-
+        Self-scoped, Standard-assurance implementation of #629, below the
+        .ai/project/changes/README.md change-package threshold: purely a
+        presentation/discoverability reorganization with no command
+        renamed, no alias or argument spec changed, no Format/grammar/CLI
+        API change, and no security-boundary change (the existing MCP
+        `--profile read|assist|full` permission enforcement, #502, is
+        untouched and remains the actual enforcement mechanism; this
+        capability's read_only/destructive metadata is explicitly
+        documented as guidance only). See cap-cli-help-taxonomy's own notes
+        for the full design rationale, the pre-existing docs/ja/cli.md
+        table drift this closed (~22 missing command rows), and the
+        explicit follow-up candidates recorded (an MCP get_cli_help tool;
+        full section-by-section translation of docs/en/cli.md's §16.1-§24
+        into Japanese). pull_request is filled in once the pull request
+        implementing this entry is opened.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

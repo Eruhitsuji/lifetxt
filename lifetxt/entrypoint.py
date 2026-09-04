@@ -30,6 +30,7 @@ _EXTRA_COMMANDS = frozenset(
         "capabilities",
         "attachment",
         "tour",
+        "help",
     )
 )
 
@@ -197,7 +198,9 @@ def _print_help():
     _install_tui_bindings_config_extension()
     _install_custom_fields_config_extension()
     from .cli import build_parser
+    from .cli_taxonomy import render_top_level_help_prefix
 
+    sys.stdout.write(render_top_level_help_prefix())
     build_parser().print_help()
     sys.stdout.write(
         "\nAdditional workflow commands:\n"
@@ -217,6 +220,8 @@ def _print_help():
         "  files --open ID, who --workload, quick --journal, completion powershell\n"
         "See docs/en/new-cli-workflows.md, docs/en/personal-context-toolkit.md, "
         "and docs/en/release-safety-foundations.md.\n"
+        "\n"
+        "New to lifetxt? Run: lifetxt help\n"
     )
     return 0
 

@@ -201,7 +201,52 @@ python -m lifetxt vm run program.life.txt --entry s1
 lifetxt also has a small set of workflow and format-1.0 commands not detailed
 in this file; see [§21](#21-commands-documented-elsewhere) for pointers.
 
-### 1.1 Fuzzy Search
+### 1.1 Command Categories and Guided Paths
+
+The table above is the complete flat reference. For a role-based index --
+and for beginners who don't yet know which command name to look for -- run:
+
+```sh
+python -m lifetxt help
+```
+
+`help` (with no arguments) shows a "Start here" quick loop, the guided-path
+audiences below, and this same category grouping. `python -m lifetxt --help`
+also prints the category grouping ahead of the full flag reference. See
+[§16](#16-tour-init-and-doctor) for `help`'s full command reference,
+including its `--json` machine-readable form for scripts and AI clients.
+
+| Category | Commands |
+|---|---|
+| Getting Started / Daily | `tour`, `help`, `init`, `quick` (`add`), `today`, `next`, `agenda`, `show`, `edit`, `done`, `complete`, `review`, `assist`, `state`, `start`, `stop`, `assign`, `timer`, `notify` |
+| Query / Explore | `filter`, `search`, `find`, `query`, `view`, `summary`, `inbox`, `health`, `temporal`, `count`, `status` |
+| Projects / People / Collaboration | `project`, `portfolio`, `area`, `person`, `group`, `who`, `message`, `proposal`, `ticket`, `version`, `sprint` |
+| Structure / Data Integrity | `check`, `integrity`, `ids`, `links`, `backlinks`, `sources`, `tag`, `lint`, `deps`, `diff`, `snapshot`, `undo`, `cleanup`, `files` |
+| Import / Export / Reports | `import`, `import-ics`, `sync-ics`, `to-json`, `to-jsonl`, `to-csv`, `from-json`, `from-jsonl`, `from-csv`, `from-markdown`, `from-todo`, `to-ics`, `markdown`, `stats`, `plot`, `export-heatmap`, `standup`, `invoice`, `share`, `digest`, `report` |
+| Interfaces / Integration | `tui`, `fzf`, `web`, `serve`, `mcp`, `ai`, `completion`, `git-hook`, `watch`, `remote` |
+| Workspace / Configuration / Safety | `config`, `workspace`, `path`, `doctor`, `format`, `safety`, `capabilities`, `attachment`, `update`, `update-check`, `server-init`, `server-update`, `server-report` |
+| Personal Context | `context`, `memory`, `decisions` |
+| Advanced / Experimental | `archive`, `batch`, `encrypt`, `decrypt`, `migrate`, `template`, `demo`, `vm`, `rrule` |
+
+Guided paths (`python -m lifetxt help AUDIENCE`):
+
+| Audience | Flow |
+|---|---|
+| Beginner | `tour` -> `init` -> `add` -> `today` -> `done` |
+| Daily user | `add` -> `today` -> `next` -> `show`/`edit` -> `review` |
+| Power user | `query` -> `view` -> `project` -> `workspace` -> `links` |
+| AI user | `mcp` -> `ai` -> `context` |
+| Administration / development | `integrity` -> `safety` -> `format` -> `capabilities` |
+
+Looking up one command (`python -m lifetxt help NAME`, alias names such as
+`add` resolve to their canonical command) prints its category, aliases,
+read-only/destructive classification, a copyable example, and related
+commands -- add `--json` (or `--format json`) for the machine-readable form.
+This category/audience/command metadata lives in one place,
+`lifetxt/cli_taxonomy.py`, so `--help`, `help`, and this table cannot drift
+from each other without failing `tests/test_cli_taxonomy.py`.
+
+### 1.2 Fuzzy Search
 
 `search` and `find` match exact substrings by default. Add `--fuzzy` to also
 match a field within a small typo/edit distance of the pattern -- useful when
@@ -2998,6 +3043,41 @@ always goes through your existing local git remote (`origin` by default,
 or `--remote NAME`) -- `--repo` only chooses which ref *name* to ask for,
 never which URL is fetched from.
 
+### 16.1 `help`
+
+Progressive-disclosure, goal-based, and machine-readable help, distinct from
+`tour` (an experiential walkthrough of a sample workspace) and from
+`--help` (the exhaustive flag reference). `help` answers "what should I run"
+rather than "what flags does X take":
+
+```sh
+python -m lifetxt help
+python -m lifetxt help beginner
+python -m lifetxt help daily
+python -m lifetxt help power
+python -m lifetxt help ai
+python -m lifetxt help admin
+python -m lifetxt help add
+python -m lifetxt help add --json
+```
+
+| Form | Shows |
+|---|---|
+| `help` (no argument) | The "Start here" quick loop, every guided-path audience, and the category index from [§1.1](#11-command-categories-and-guided-paths) |
+| `help beginner\|daily\|power\|ai\|admin` | That audience's short, ordered command flow with one copyable example per step |
+| `help NAME` | One command's category, aliases, a copyable example, related commands, and whether it is read-only or destructive; `NAME` may be an alias (`add`, `q`, `d`, `s`, `a`, `f`) |
+| `--json` (or `--format json`) | The same information as structured JSON instead of text -- `lifetxt-help-catalog-v1` for the bare form, `lifetxt-help-audience-v1` for an audience, `lifetxt-help-command-v1` (with `arguments`/`options`/`examples` added) for one command |
+| `-o`, `--output FILE` | Write to a file instead of stdout |
+
+`help` never reads life.txt, configuration, or any workspace: its output is
+static per lifetxt version, so it is safe to call from a script or an AI
+client with no data access. `read_only`/`destructive` in its JSON output are
+a best-effort classification for guidance, not an enforced permission
+boundary -- MCP's `--profile read|assist|full` (see
+[ai-integration.md](ai-integration.md)) is the actual enforcement mechanism
+for untrusted AI clients. An unrecognized command name or audience fails
+loudly (exit 1) naming the known audiences rather than guessing.
+
 ## 17. `encrypt` and `decrypt`
 
 Current behavior: `encrypt` defaults to `--algorithm xsk`, which stores values
@@ -3262,6 +3342,8 @@ warrant a dedicated guide:
 | `remote` | [§20](#20-remote-safe-mode-client-remote), [remote.md](remote.md), [remote-client-writes.md](remote-client-writes.md) |
 | `vm` (opt-in Turing-complete VM) | [vm.md](vm.md) |
 | `report list\|preview\|run\|send\|validate\|inspect` (named periodic reports) | [reports.md](reports.md) |
+| `server-report plan\|install\|remove` (scheduled report jobs) | [§24](#24-server-report), [reports.md](reports.md) |
+| `context`, `memory`, `decisions` (Personal Context) | [personal-context-toolkit.md](personal-context-toolkit.md) |
 
 `python -m lifetxt --help` lists every command; each subcommand's own
 `--help` is always authoritative for its exact flags.

@@ -83,6 +83,30 @@ python -m lifetxt decrypt [path ...]
 python -m lifetxt share [path ...]
 python -m lifetxt digest [path ...]
 python -m lifetxt template list
+python -m lifetxt help
+python -m lifetxt workspace list
+python -m lifetxt project list
+python -m lifetxt portfolio [path ...]
+python -m lifetxt today [path ...]
+python -m lifetxt area list [path ...]
+python -m lifetxt backlinks ID [path ...]
+python -m lifetxt temporal ID [path ...]
+python -m lifetxt query "QUERY" [path ...]
+python -m lifetxt view list
+python -m lifetxt group list [path ...]
+python -m lifetxt message recipients [path ...]
+python -m lifetxt person list [path ...]
+python -m lifetxt proposal list
+python -m lifetxt ticket list [path ...]
+python -m lifetxt version list [path ...]
+python -m lifetxt sprint list [path ...]
+python -m lifetxt rrule daily
+python -m lifetxt update-check
+python -m lifetxt update
+python -m lifetxt server-init --server-config server-init.json
+python -m lifetxt server-update --server-config server-update.json
+python -m lifetxt remote profile-list
+python -m lifetxt vm run program.life.txt --entry s1
 ```
 
 | Command | 目的 |
@@ -97,6 +121,7 @@ python -m lifetxt template list
 | `demo` | demo、test、screenshot 用の有効な life.txt record を生成 |
 | `markdown` | safe Markdown field を HTML / text / JSON / JSONL として描画 |
 | `import-ics` | iCalendar `.ics` の予定を life.txt event item に変換 |
+| `import` | `import-ics` の ics/markdown/todoist/github preset を束ねる統一エントリポイント |
 | `sync-ics` | iCalendar URL を取得して life.txt event item を再生成 |
 | `filter` | item を絞り込み、life.txt / JSON / JSONL で出力 |
 | `from-json` | JSON を life.txt へ変換 |
@@ -151,8 +176,83 @@ python -m lifetxt template list
 | `share` | filter + review + chart をまとめた自己完結型 HTML/Markdown report を出力 |
 | `digest` | `review` のサマリーを Slack、email、または local file へ送信 |
 | `template` | 再利用可能な named item template を list / apply |
+| `workspace` | 名前付き workspace とその source manifest を検査・検証する ([config.md](config.md#named-workspaces) 参照) |
+| `project` | `project:` record から構築した project を list / 検査 / 管理する ([projects.md](projects.md) 参照) |
+| `portfolio` | project を state、進捗、risk、workload で比較する ([projects.md](projects.md) 参照) |
+| `today` | 日次 command center: 現在の status、本日の event、overdue/due、next action、blocked、habit、inbox をまとめて表示。`--saved-view`/`--area` で絞り込み可能 ([life-hub.md](life-hub.md) 参照) |
+| `area` | task と project を `area:` でグループ化する ([life-hub.md](life-hub.md) 参照) |
+| `backlinks` | 指定 ID を参照している item (incoming link) を表示する ([life-hub.md](life-hub.md) 参照) |
+| `temporal` | 1 item の派生 temporal context (overdue/due/staleness と近接する日付付き item) を表示する ([life-hub.md](life-hub.md) 参照) |
+| `query` | 共通 query 言語で item を絞り込む ([query.md](query.md) 参照) |
+| `view` | saved view (名前付き query) を list / 検査 / 実行する ([query.md](query.md) 参照) |
+| `group` | messaging group を検査・検証する ([messaging.md](messaging.md) 参照) |
+| `message` | message を作成し、宛先と配信状態を検査する ([messaging.md](messaging.md) 参照) |
+| `person` | ある person の作業・message・meeting・membership の概要を表示する ([people.md](people.md) 参照) |
+| `proposal` | Unified Inbox: staged proposal を review / edit / accept / reject する ([inbox.md](inbox.md) 参照) |
+| `ticket` | development ticket (`record:ticket`): 新規作成、list、表示、編集、遷移、links ([§19](#19-最近追加されたコマンド範囲)、[tickets.md](tickets.md) 参照) |
+| `version` | ticket release version を管理する ([tickets.md](tickets.md) 参照) |
+| `sprint` | ticket sprint を管理する ([tickets.md](tickets.md) 参照) |
+| `rrule` | recurrence rule を具体的な発生日へ展開する ([13.10](#1310-rrule-繰り返しルールの展開) 参照) |
+| `update-check` | 新しい lifetxt release/tag が GitHub にあるか確認する、読み取り専用 ([16](#16-tourinitdoctor) 参照) |
+| `update` | 実行中の lifetxt git install を新しい release/tag/ref へ fast-forward する ([16](#16-tourinitdoctor) 参照) |
+| `server-init` | 本番運用向け Ubuntu Server bootstrap の plan-first コマンド ([§19](#19-最近追加されたコマンド範囲) 参照) |
+| `server-update` | systemd 管理された install の guarded な本番更新コマンド ([§19](#19-最近追加されたコマンド範囲) 参照) |
+| `server-report` | 稼働中の deployment に対する scheduled report job の plan/install/remove ([§19](#19-最近追加されたコマンド範囲) 参照) |
+| `remote` | CLI から認証済み Remote Safe Mode を利用する: profile、読み取り、ticket 書き込み ([§19](#19-最近追加されたコマンド範囲) 参照) |
+| `vm` | opt-in の Turing-complete VM: 有効な life.txt record を 2-counter machine として実行する ([vm.md](vm.md) 参照) |
+| `context`、`memory`、`decisions` | Personal Context の決定論的な参照・修正コマンド ([personal-context-toolkit.md](personal-context-toolkit.md) 参照) |
 
-### 1.1 あいまい検索 (Fuzzy Search)
+lifetxt にはこの file で詳しく説明していない小さな workflow / format-1.0
+コマンド群もあります。[§19](#19-最近追加されたコマンド範囲) を参照して
+ください。
+
+### 1.1 コマンドカテゴリとガイド付きパス
+
+上の表がフラットな完全リファレンスです。役割別の索引を見たい場合や、
+まだコマンド名を知らない初心者は次を実行してください:
+
+```sh
+python -m lifetxt help
+```
+
+引数なしの `help` は "Start here" の最小ループ、下記のガイド付きパス
+audience、そしてこの表と同じカテゴリ分類を表示します。
+`python -m lifetxt --help` も、通常の flag reference の前にこのカテゴリ
+分類を表示します。`help` の完全なコマンドリファレンス
+（AI client 向けの `--json` 機械可読形式を含む）は [§16](#16-tourinitdoctor)
+を参照してください。
+
+| カテゴリ | コマンド |
+|---|---|
+| Getting Started / Daily | `tour`、`help`、`init`、`quick` (`add`)、`today`、`next`、`agenda`、`show`、`edit`、`done`、`complete`、`review`、`assist`、`state`、`start`、`stop`、`assign`、`timer`、`notify` |
+| Query / Explore | `filter`、`search`、`find`、`query`、`view`、`summary`、`inbox`、`health`、`temporal`、`count`、`status` |
+| Projects / People / Collaboration | `project`、`portfolio`、`area`、`person`、`group`、`who`、`message`、`proposal`、`ticket`、`version`、`sprint` |
+| Structure / Data Integrity | `check`、`integrity`、`ids`、`links`、`backlinks`、`sources`、`tag`、`lint`、`deps`、`diff`、`snapshot`、`undo`、`cleanup`、`files` |
+| Import / Export / Reports | `import`、`import-ics`、`sync-ics`、`to-json`、`to-jsonl`、`to-csv`、`from-json`、`from-jsonl`、`from-csv`、`from-markdown`、`from-todo`、`to-ics`、`markdown`、`stats`、`plot`、`export-heatmap`、`standup`、`invoice`、`share`、`digest`、`report` |
+| Interfaces / Integration | `tui`、`fzf`、`web`、`serve`、`mcp`、`ai`、`completion`、`git-hook`、`watch`、`remote` |
+| Workspace / Configuration / Safety | `config`、`workspace`、`path`、`doctor`、`format`、`safety`、`capabilities`、`attachment`、`update`、`update-check`、`server-init`、`server-update`、`server-report` |
+| Personal Context | `context`、`memory`、`decisions` |
+| Advanced / Experimental | `archive`、`batch`、`encrypt`、`decrypt`、`migrate`、`template`、`demo`、`vm`、`rrule` |
+
+ガイド付きパス (`python -m lifetxt help AUDIENCE`):
+
+| Audience | フロー |
+|---|---|
+| Beginner | `tour` -> `init` -> `add` -> `today` -> `done` |
+| Daily user | `add` -> `today` -> `next` -> `show`/`edit` -> `review` |
+| Power user | `query` -> `view` -> `project` -> `workspace` -> `links` |
+| AI user | `mcp` -> `ai` -> `context` |
+| Administration / development | `integrity` -> `safety` -> `format` -> `capabilities` |
+
+1 コマンドを調べる (`python -m lifetxt help NAME`、`add` のような alias も
+canonical なコマンドへ解決されます) と、カテゴリ、alias、read-only /
+destructive の分類、コピー可能な例、related command が表示されます。
+`--json` (または `--format json`) を付けると機械可読形式になります。この
+category / audience / command のメタデータは `lifetxt/cli_taxonomy.py`
+一箇所にまとまっているため、`--help`、`help`、この表が互いに drift する
+と `tests/test_cli_taxonomy.py` が fail します。
+
+### 1.2 あいまい検索 (Fuzzy Search)
 
 `search` と `find` は既定で完全な部分一致のみを対象とする。`--fuzzy` を付けると、
 pattern から一定の編集距離（typo や打ち間違い）以内の field も対象になる。あいまい
@@ -2609,6 +2709,40 @@ target を解決します (最新公開 Release、無ければ tag。`--repo`/
 `--remote NAME` で変更可) を通じて行われます — `--repo` は問い合わせる
 ref の名前を選ぶだけで、fetch 元の URL を変えることはありません。
 
+### 16.1 `help`
+
+段階的開示・目的ベース・機械可読な help コマンドです。`tour` (サンプル
+workspace を使った体験型の導線) や `--help` (網羅的な flag reference) とは
+役割が異なり、「何を実行すべきか」に答えます:
+
+```sh
+python -m lifetxt help
+python -m lifetxt help beginner
+python -m lifetxt help daily
+python -m lifetxt help power
+python -m lifetxt help ai
+python -m lifetxt help admin
+python -m lifetxt help add
+python -m lifetxt help add --json
+```
+
+| 形式 | 表示内容 |
+|---|---|
+| `help` (引数なし) | "Start here" の最小ループ、各 audience のガイド付きパス、[§1.1](#11-コマンドカテゴリとガイド付きパス) と同じカテゴリ索引 |
+| `help beginner\|daily\|power\|ai\|admin` | その audience 向けの短い順序付きコマンドフローと、各手順のコピー可能な例 |
+| `help NAME` | そのコマンドのカテゴリ、alias、コピー可能な例、related commands、read-only/destructive の分類。`NAME` には alias (`add`、`q`、`d`、`s`、`a`、`f`) も使えます |
+| `--json` (または `--format json`) | 同じ情報を text ではなく構造化 JSON で出力します。引数なしは `lifetxt-help-catalog-v1`、audience 指定は `lifetxt-help-audience-v1`、コマンド指定は `lifetxt-help-command-v1` (`arguments`/`options`/`examples` を追加) |
+| `-o`, `--output FILE` | stdout の代わりに file へ書き込みます |
+
+`help` は life.txt・config・workspace のいずれも読み取りません。出力は
+lifetxt の version ごとに固定なので、data access の無い script や AI
+client から呼び出しても安全です。JSON 出力の `read_only`/`destructive`
+はあくまで目安の分類であり、強制される権限境界ではありません — 信頼でき
+ない AI client に対する実際の権限境界は MCP の `--profile
+read|assist|full` ([ai-integration.md](ai-integration.md) 参照) です。
+未知のコマンド名や audience を指定すると、既知の audience 名を示した
+うえで明示的に失敗します (exit 1)。
+
 ## 17. `encrypt` と `decrypt`
 
 標準ライブラリのみを使った field 単位の暗号化 (journal の body、message の
@@ -2785,3 +2919,5 @@ python -m lifetxt template apply weekly_review --append life.txt --dry-run
 - `--version` は CLI の実行版確認に使います。release gate や baseline 記録では、この値と `doctor --check-update` の結果を併記します。
 - 共通オプションのうち、入力ファイル、workspace、設定ファイル、出力形式に関わる指定は、設定解決順序と同じ優先順位で評価されます。詳細は `config.md` と `release-baselines.md` を参照してください。
 - `vm run PATH --entry ID` は、`value:` / `op:` / `var:` / `next:` / `zero:` / `nonzero:` という既存の custom key を 2-counter Minsky machine として解釈する、opt-in のチューリング完全実行モデルです。`check` を含む他のどのコマンドも VM record を実行しません。詳細は [vm.md](vm.md) を参照してください。
+- `ticket`（development ticket: 新規作成、list、表示、編集、状態遷移、links）は英語版 [tickets.md](tickets.md) で詳しく説明しています。同様に `server-init`（本番 Ubuntu Server bootstrap の plan-first コマンド）、`server-update`（systemd 管理 install の guarded な本番更新）、`server-report`（稼働中 deployment への scheduled report job の plan/install/remove）はいずれも既定で dry-run、`--yes` で適用する安全設計です。詳細は英語版 [cli.md](../en/cli.md) の該当節を参照してください。
+- `python -m lifetxt help` は、コマンドをカテゴリ別に整理した索引、beginner/daily/power/ai/admin のガイド付きパス、そして `--json` による機械可読な capability catalog を提供します ([§1.1](#11-コマンドカテゴリとガイド付きパス) 参照)。既存コマンドの名前・alias・引数・終了コードは変更されません。

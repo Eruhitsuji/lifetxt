@@ -12361,7 +12361,12 @@ def _progress_display(raw):
 
 
 def _relative_date_suffix(value, reference=None):
-    relative = relative_time(value, today=reference)
+    # A caller with no already-resolved reference date (report["reference_date"]
+    # etc.) still gets the workspace-aware "today" (#142) here, rather than
+    # falling through to relative_time's own bare system-date default, which
+    # would drift from every other surface when the configured workspace
+    # timezone differs from the host's.
+    relative = relative_time(value, today=reference or timezone_today())
     return " (%s)" % relative if relative else ""
 
 

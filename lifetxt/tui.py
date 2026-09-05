@@ -11,6 +11,7 @@ from .parser import parse_text
 from .serializer import item_to_line
 from .status_summary import latest_status_records
 from .timeutil import relative_time
+from .timezone_policy import today as timezone_today
 
 
 TUI_SECTIONS = ("tasks", "agenda", "status")
@@ -1331,7 +1332,12 @@ def _task_row(item, id_key, blocked=False):
         if item.details.get(key):
             value = item.details[key][0]
             suffix = (
-                " (%s)" % relative_time(value)
+                # The workspace-aware "today" (#142) is passed explicitly;
+                # relative_time's own default falls back to the bare system
+                # date, which drifts from every other surface's notion of
+                # "today" whenever the configured workspace timezone differs
+                # from the host's.
+                " (%s)" % relative_time(value, today=timezone_today())
                 if key
                 in {"due", "do", "from", "to", "on", "at", "created", "updated", "done"}
                 else ""

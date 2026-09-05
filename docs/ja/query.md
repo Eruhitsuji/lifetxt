@@ -64,7 +64,14 @@ $ lifetxt query "open project:web tag:urgent due<2026-08-01"
 $ lifetxt query "area:work" --sort due --limit 10 --format table
 $ lifetxt query "status:done project:web" --format json
 $ lifetxt query "open text:\"release plan\""
+$ lifetxt query "progress<50%" --sort progress
 ```
+
+`--sort progress`（および `GET /api/items` の同じ `sort`/`order` query
+parameter）は item を `progress:` の ratio で並び替えます。`progress:` が
+無い、または parse できない item は、`--order asc`/`desc` に関わらず常に
+有効な値を持つ item の後ろに来ます -- `progress` query field 自身が使う
+「値が無いことを暗黙に `0%` とは扱わない」ルールと同じです。
 
 ## Saved views
 

@@ -37,6 +37,7 @@ _register_messages(
 _EXTRA_COMMANDS = frozenset(
     (
         "next",
+        "recent",
         "show",
         "edit",
         "path",

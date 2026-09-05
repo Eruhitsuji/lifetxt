@@ -10636,6 +10636,192 @@ traceability:
         batch's own scope.
       status: implemented
 
+    - requirement_id: req-reopen-item
+      capability_id: cap-reopen-item
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/664
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/670
+      changed_files_or_scope:
+        - Add `lifetxt reopen PATH [ID]` to undo an item's completion
+        - lifetxt/cli.py
+        - lifetxt/cli_taxonomy.py
+        - tests/test_lifetxt.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - "python -m unittest tests.test_lifetxt.LifeTxtReopenCliTests -> Ran 11 tests, OK"
+        - "python -m unittest tests.test_cli_taxonomy tests.test_completion_surfaces tests.test_completion_values tests.test_surface_runtime.TuiDocumentationDriftTests -> Ran 98 tests, OK (skipped=1)"
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+      release_or_deployment: null
+      notes: >-
+        First implementation task of the daily-cli-convenience-batch
+        (Issues #664-#668), landing on its own task branch merged into
+        feature/daily-cli-convenience-batch before a final human-approved
+        PR into main, per explicit repository owner instruction to
+        implement the whole batch autonomously on one integration branch.
+        Reuses `lifetxt.assist._default_status` (the same kind-aware
+        status helper `clone` already uses) and the existing
+        `_resolve_target_item`/guarded-mutation path
+        `done`/`progress`/`clone` already established. Habit records are
+        refused outright (they log completions as multiple `done:` dates,
+        not a single completed state) rather than guessed at.
+      status: implemented
+
+    - requirement_id: req-progress-set
+      capability_id: cap-progress-direct-set
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/665
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/670
+      changed_files_or_scope:
+        - Add --set VALUE to the existing `lifetxt progress` command, mutually exclusive with --delta
+        - lifetxt/cli.py
+        - tests/test_lifetxt.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - "python -m unittest tests.test_lifetxt.LifeTxtProgressCliTests -> Ran 27 tests, OK"
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+      release_or_deployment: null
+      notes: >-
+        Second implementation task of the daily-cli-convenience-batch.
+        Extends cap-progress-standard-key's existing shared
+        `progress:` parser/validator and command_progress's guarded
+        mutation path unmodified; --set requires no existing progress:
+        value (unlike --delta, which needs a starting point), documented
+        and tested as the chosen behavior per the issue's own acceptance
+        criterion.
+      status: implemented
+
+    - requirement_id: req-due-date-command
+      capability_id: cap-due-date-command
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/666
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/670
+      changed_files_or_scope:
+        - Add `lifetxt due PATH ID DATE` / `--clear` for quick due-date changes
+        - lifetxt/cli.py
+        - lifetxt/cli_taxonomy.py
+        - tests/test_lifetxt.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - "python -m unittest tests.test_lifetxt.LifeTxtDueCliTests -> Ran 12 tests, OK (before #667's shorthand tests were added)"
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+      release_or_deployment: null
+      notes: >-
+        Third implementation task of the daily-cli-convenience-batch.
+        `ID` is a required positional with no `--line`/`--text` support,
+        a deliberate scope decision: a second optional positional for the
+        date would make which token means what ambiguous once combined
+        with those flags. Accepts only explicit `YYYY-MM-DD` in this
+        commit; #667 (same branch, next commit) adds the relative-date
+        shorthand this issue's own scope deferred.
+      status: implemented
+
+    - requirement_id: req-relative-date-shorthand
+      capability_id: cap-due-date-command
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/667
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/670
+      changed_files_or_scope:
+        - Wire the existing lifetxt.shorthand.resolve_date_token resolver into `due`'s date argument
+        - lifetxt/cli.py
+        - tests/test_lifetxt.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - "python -m unittest tests.test_lifetxt.LifeTxtDueCliTests -> Ran 17 tests, OK"
+        - "python -m unittest tests.test_lifetxt.LifeTxtQuickCliTests -> Ran 11 tests, OK (no regression to the pre-existing --due/--do/--until shorthand callers of the same resolver)"
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+      release_or_deployment: null
+      notes: >-
+        Fourth implementation task of the daily-cli-convenience-batch,
+        depending on #666 per its own task contract. Found during
+        implementation that `lifetxt.shorthand.resolve_date_token` (today/
+        tomorrow/yesterday/weekday/next_WEEKDAY/next_week/+Nd offsets)
+        already existed and was already the shared resolver
+        `quick`/`add`'s `--due`/`--do`/`--until` flags used via
+        `cli._resolve_relative_date` -- so this task wires `due` onto the
+        exact same pre-existing resolver rather than adding a second
+        implementation, satisfying the issue's own "one shared resolver"
+        acceptance criterion by construction. Resolution is confined to
+        the CLI boundary (`command_due`/`command_quick` in
+        `lifetxt/cli.py`); no Format, Query, Web API, or MCP surface
+        gained relative-date semantics.
+      status: implemented
+
+    - requirement_id: req-recent-items-command
+      capability_id: cap-recent-items-command
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/668
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/670
+      changed_files_or_scope:
+        - Add `lifetxt recent PATH` for recently created or updated items
+        - lifetxt/extra_core.py
+        - lifetxt/extra_cli.py
+        - lifetxt/entrypoint.py
+        - lifetxt/cli_taxonomy.py
+        - tests/test_extra_cli.py
+        - docs/en/new-cli-workflows.md
+        - docs/ja/new-cli-workflows.md
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - "python -m unittest tests.test_extra_cli.RecentCliTests -> Ran 11 tests, OK"
+        - "python -m unittest tests.test_extra_cli tests.test_cli_taxonomy tests.test_completion_surfaces tests.test_completion_values tests.test_surface_runtime.TuiDocumentationDriftTests -> Ran 141 tests, OK (skipped=1)"
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+      release_or_deployment: null
+      notes: >-
+        Fifth and final implementation task of the daily-cli-convenience-
+        batch. Registered through the existing extended-command dispatch
+        (`entrypoint._EXTRA_COMMANDS` -> `extra_cli.py`), the same
+        mechanism `next`/`show`/`tour` already use, rather than growing
+        `cli.py`'s argparse tree. Reuses `extra_common.py`'s existing
+        `_load_items`/`_first`/`_item_record`/`_table`/`_emit`/`_json_text`
+        helpers and `lifetxt.ids.collect_item_ids`/`short_id` unmodified.
+      status: implemented
+
+    - requirement_id: req-daily-cli-convenience-batch-integration
+      capability_id: cap-reopen-item
+      epic: null
+      task_issue: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/670
+      changed_files_or_scope:
+        - Record the daily-cli-convenience-batch's integration into main as its own traceable step
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - "MPLBACKEND=Agg python -W ignore::ResourceWarning -m unittest discover, run on the fully consolidated feature/daily-cli-convenience-batch branch after all five sub-branches (#664-#668) merged"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on every changed file -> clean
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: >-
+        This entry documents PR #670 itself: feature/daily-cli-convenience-batch
+        (Issues #664, #665, #666, #667, #668, each on its own child branch
+        merged locally into the integration branch) merging into main.
+      notes: >-
+        Follows the multi-PR integration-branch pattern established
+        throughout this project (see req-remote-batch-integration and
+        every subsequent batch-integration entry in this file): every
+        requirement entry above correctly names its own child branch's
+        work, and none of them named this final PR before it existed.
+        Self-scoped and implemented autonomously per repository owner
+        instruction to implement #664-#668 on one integration branch
+        ending in one final PR, with each issue's own child branch merged
+        locally into the integration branch before the final PR was
+        opened.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

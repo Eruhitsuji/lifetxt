@@ -17,6 +17,7 @@ from .model import (
     VALID_STATUSES,
     VALID_TYPES,
 )
+from .progress import ProgressValueError, parse_progress
 from .timeutil import normalize_duration
 from .timeutil import (
     is_date,
@@ -77,6 +78,7 @@ VALIDATOR_DIAGNOSTIC_HINTS = {
     "W222": "Replace the value with the compact duration shown in the message.",
     "W223": "Use only RRULE parts supported by lifetxt recurrence expansion.",
     "W226": "Use a duration such as 25m, 1h30m, or 90.",
+    "W230": "Use progress:75% or progress:3/5.",
 }
 
 
@@ -306,6 +308,18 @@ def _validate_value(item, key, value):
                     "W207",
                     "state: %r should usually be one of: %s."
                     % (value, ", ".join(STATUS_STATE_VALUES)),
+                    item.line,
+                )
+            )
+    elif key == "progress":
+        try:
+            parse_progress(value)
+        except ProgressValueError as exc:
+            diagnostics.append(
+                _diagnostic(
+                    "warning",
+                    "W230",
+                    "progress: %s." % exc.reason,
                     item.line,
                 )
             )

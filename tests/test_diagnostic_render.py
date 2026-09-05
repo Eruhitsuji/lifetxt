@@ -156,6 +156,38 @@ class RenderDiagnosticRichTests(unittest.TestCase):
             os.unlink(path)
 
 
+class RenderDiagnosticSuggestionSectionTests(unittest.TestCase):
+    def test_single_suggestion_renders_did_you_mean_line(self):
+        diagnostic = Diagnostic("error", "E003", "Invalid status '[X]'.")
+        text = render_diagnostic_rich(diagnostic)
+        self.assertIn("Did you mean '[x]'?", text)
+
+    def test_multiple_suggestions_render_a_bulleted_list(self):
+        diagnostic = Diagnostic(
+            "warning",
+            "W106",
+            "Detail key 'ta' is custom for type T; it will be preserved.",
+        )
+        text = render_diagnostic_rich(diagnostic)
+        self.assertIn("Did you mean one of:", text)
+        self.assertIn("  tag", text)
+        self.assertIn("  team", text)
+
+    def test_no_suggestion_section_when_none_applies(self):
+        diagnostic = Diagnostic(
+            "warning",
+            "W106",
+            "Detail key 'mood_score' is custom for type J; it will be preserved.",
+        )
+        text = render_diagnostic_rich(diagnostic)
+        self.assertNotIn("Did you mean", text)
+
+    def test_no_suggestion_section_for_unsupported_code(self):
+        diagnostic = Diagnostic("warning", "W213", "Duplicate id:foo.")
+        text = render_diagnostic_rich(diagnostic)
+        self.assertNotIn("Did you mean", text)
+
+
 class RenderDiagnosticsSummaryTests(unittest.TestCase):
     def test_singular_wording_for_one_of_each(self):
         diagnostics = [

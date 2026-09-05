@@ -1,7 +1,8 @@
 """Rich, human-readable text rendering of stable `Diagnostic` objects
 (#639): a source-line snippet, a span caret/range when a precise end
-position is known, the diagnostic's own `hint` text, and a trailing
-error/warning summary.
+position is known, the diagnostic's own `hint` text, a bounded, read-only
+"Did you mean?" suggestion section (#640, see `diagnostic_suggestions.py`),
+and a trailing error/warning summary.
 
 This is a presentation layer only. It reads no new information the parser
 and validator did not already attach to each `Diagnostic` (see
@@ -12,6 +13,8 @@ directly and never touches this module.
 """
 
 from __future__ import unicode_literals
+
+from .diagnostic_suggestions import suggestions_for_diagnostic
 
 
 def _read_source_line(path, line_no):
@@ -88,6 +91,16 @@ def render_diagnostic_rich(diagnostic):
     if diagnostic.hint:
         lines.append("")
         lines.append("Hint: %s" % diagnostic.hint)
+
+    suggestions = suggestions_for_diagnostic(diagnostic)
+    if len(suggestions) == 1:
+        lines.append("")
+        lines.append("Did you mean %r?" % suggestions[0])
+    elif len(suggestions) > 1:
+        lines.append("")
+        lines.append("Did you mean one of:")
+        for candidate in suggestions:
+            lines.append("  %s" % candidate)
 
     return "\n".join(lines)
 

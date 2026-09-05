@@ -304,8 +304,8 @@ def _validate_value(item, key, value):
                 _diagnostic(
                     "warning",
                     "W207",
-                    "state: should usually be one of: %s."
-                    % ", ".join(STATUS_STATE_VALUES),
+                    "state: %r should usually be one of: %s."
+                    % (value, ", ".join(STATUS_STATE_VALUES)),
                     item.line,
                 )
             )

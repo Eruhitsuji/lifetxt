@@ -755,6 +755,18 @@ diagnostic 全体を要約する `N problems: X error(s), Y warning(s)` 行が
 付きます。これは上記の安定 JSON field に対する presentation-only の拡張で
 あり、`--format json` には一切影響しません。
 
+明示的に対応している少数の diagnostic（invalid な status/type token、
+known または type-recommended な key に近い detail key、invalid な
+`state:` 値）については、text output が diagnostic 自身の hint の直後に
+`Did you mean?` 行（候補が複数同程度に妥当な場合は bullet list）を追加する
+ことがあります。これはあくまで提案であり、parser/validator が受理する内容を
+一切変えず、file を mutation せず、diagnostic の severity・code や command
+の exit code も変えません。候補は lifetxt の既存 canonical vocabulary
+（status/type token とその known alias、known/recommended な detail-key
+set、known な `state:` 値）からのみ取得します。canonical vocabulary に近い
+候補がない key はそのまま custom data として扱われ、無理に候補を出すことは
+ありません。`--format json` に suggestion field が含まれることはありません。
+
 例:
 
 ```sh

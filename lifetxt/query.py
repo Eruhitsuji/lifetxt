@@ -300,6 +300,22 @@ def parse_query(text, config=None):
     return plan, diagnostics
 
 
+def explain_query(text, config=None):
+    """Return a stable, serializable explanation of a query's interpretation."""
+    plan, diagnostics = parse_query(text, config)
+    plan_without_diagnostics = OrderedDict(
+        (key, value) for key, value in plan.items() if key != "diagnostics"
+    )
+    return OrderedDict(
+        (
+            ("schema", "lifetxt-query-explain-v1"),
+            ("query", plan["query"]),
+            ("plan", plan_without_diagnostics),
+            ("diagnostics", diagnostics),
+        )
+    )
+
+
 def _add_values(target, value, diagnostics, token):
     if value is None or value == "":
         diagnostics.append(

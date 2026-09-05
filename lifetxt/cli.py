@@ -1617,6 +1617,11 @@ def build_parser():
         help="Output format.",
     )
     query_command.add_argument(
+        "--explain",
+        action="store_true",
+        help="Show how the query is interpreted instead of matching items.",
+    )
+    query_command.add_argument(
         "--pretty", action="store_true", help="Pretty-print JSON."
     )
     query_command.add_argument(
@@ -12804,20 +12809,70 @@ def command_vm_graph(args):
     return 0
 
 
+def _format_query_explanation(explanation):
+    """Render the query explanation for people at a terminal."""
+    plan = explanation["plan"]
+    lines = ["Query explanation:", "  query: %s" % plan["query"]]
+    for key in ("membership", "details", "date_filters", "progress_filters", "text"):
+        value = plan[key]
+        if isinstance(value, dict):
+            rendered = [
+                "%s=%s" % (field, ", ".join(str(item) for item in values))
+                for field, values in value.items()
+            ]
+        elif isinstance(value, list):
+            rendered = [json.dumps(item, ensure_ascii=False) for item in value]
+        else:
+            rendered = [str(value)]
+        lines.append("  %s: %s" % (key, "; ".join(rendered) or "(none)"))
+    lines.append("  open_only: %s" % ("true" if plan["open_only"] else "false"))
+    diagnostics = explanation["diagnostics"]
+    if diagnostics:
+        lines.append("  diagnostics:")
+        for item in diagnostics:
+            lines.append(
+                "    %s %s: %s" % (item["severity"], item["code"], item["message"])
+            )
+    else:
+        lines.append("  diagnostics: (none)")
+    return "\n".join(lines) + "\n"
+
+
 def command_query(args):
-    from .query import run_query
+    from .query import explain_query, run_query
+
+    config = _config(args)
+    if getattr(args, "explain", False):
+        explanation = explain_query(args.query, config=config)
+        if getattr(args, "format", "life") == "json":
+            output = (
+                json.dumps(
+                    explanation,
+                    ensure_ascii=False,
+                    indent=2 if getattr(args, "pretty", False) else None,
+                    separators=None if getattr(args, "pretty", False) else (",", ":"),
+                )
+                + "\n"
+            )
+        else:
+            output = _format_query_explanation(explanation)
+        write_text(getattr(args, "output", None), output)
+        if any(d["severity"] == "error" for d in explanation["diagnostics"]):
+            for d in explanation["diagnostics"]:
+                if d["severity"] == "error":
+                    sys.stderr.write("ERROR: %s %s\n" % (d["code"], d["message"]))
+            return 1
+        return 0
 
     items, _diagnostics = _parse_or_exit(
-        _normalize_paths(
-            getattr(args, "paths", None), _config(args), stdin_when_empty=False
-        )
+        _normalize_paths(getattr(args, "paths", None), config, stdin_when_empty=False)
         or ["life.txt"],
-        _config(args),
+        config,
     )
     filtered, query_diags = run_query(
         items,
         args.query,
-        config=_config(args),
+        config=config,
         sort=getattr(args, "sort", None),
         order=getattr(args, "order", "asc"),
         limit=getattr(args, "limit", None),

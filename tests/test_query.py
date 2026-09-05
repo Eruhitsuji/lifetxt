@@ -1,8 +1,10 @@
+import json
 import unittest
 
 from lifetxt.parser import parse_text
 from lifetxt import query
 from lifetxt import saved_views
+from tests.test_lifetxt import run_cli
 
 
 SAMPLE = """#! timezone: UTC
@@ -15,6 +17,40 @@ SAMPLE = """#! timezone: UTC
 
 
 class QueryParseTests(unittest.TestCase):
+    def test_explain_query_returns_serializable_plan_and_diagnostics(self):
+        explanation = query.explain_query("open project:web due<2026-10-01")
+
+        self.assertEqual("lifetxt-query-explain-v1", explanation["schema"])
+        self.assertEqual("open project:web due<2026-10-01", explanation["query"])
+        self.assertNotIn("diagnostics", explanation["plan"])
+        self.assertTrue(explanation["plan"]["open_only"])
+        self.assertEqual(["web"], explanation["plan"]["membership"]["project"])
+        self.assertEqual([], explanation["diagnostics"])
+
+    def test_explain_cli_json_does_not_require_a_life_file(self):
+        stdout, stderr, code = run_cli(
+            "query",
+            "open project:web",
+            "--explain",
+            "--format",
+            "json",
+        )
+
+        self.assertEqual(0, code, stderr)
+        self.assertEqual("", stderr)
+        explanation = json.loads(stdout)
+        self.assertEqual("lifetxt-query-explain-v1", explanation["schema"])
+        self.assertEqual(["web"], explanation["plan"]["membership"]["project"])
+
+    def test_explain_cli_reports_invalid_query_and_keeps_plan(self):
+        stdout, stderr, code = run_cli(
+            "query", "due:not-a-date", "--explain", "--format", "json"
+        )
+
+        self.assertEqual(1, code)
+        self.assertEqual("Q002", json.loads(stdout)["diagnostics"][0]["code"])
+        self.assertIn("ERROR: Q002", stderr)
+
     def test_membership_and_open_flag(self):
         plan, diags = query.parse_query("open project:web tag:urgent")
         self.assertTrue(plan["open_only"])

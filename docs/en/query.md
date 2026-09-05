@@ -76,6 +76,16 @@ $ lifetxt query "status:done project:web" --format json
 $ lifetxt query "open text:\"release plan\""
 ```
 
+Use `--explain` to inspect the parser's interpretation without returning
+matching items. The default output is intended for people; add `--format json`
+for a stable machine-readable envelope (`lifetxt-query-explain-v1`). Diagnostics
+are included in the explanation, and an invalid query still exits with status 1.
+
+```console
+$ lifetxt query 'open project:research due<2026-10-01' --explain
+$ lifetxt query 'open project:research due<2026-10-01' --explain --format json
+```
+
 ## Saved views
 
 Save common queries under `saved_views` in configuration:

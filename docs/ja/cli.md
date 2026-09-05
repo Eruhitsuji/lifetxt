@@ -1723,7 +1723,7 @@ Up/Down で入力履歴を呼び出せます。`--no-completion` で補完と li
 
 ### 10.3 既存 item の更新
 
-行番号または完全一致の `id:` で item を選択して更新します。
+行番号または `id:` で item を選択して更新します。
 
 ```sh
 python -m lifetxt assist --update life.txt --line 3 --title "New Title"
@@ -1739,12 +1739,46 @@ python -m lifetxt assist --update life.txt --match-id task_001 --output updated_
 |---|---|
 | `--update FILE` | 既存 life.txt を読み込んで更新 |
 | `--line N` | `N` 行目の item を選択 |
-| `--match-id ID` | `id:` が `ID` と完全一致する item を選択 |
+| `--match-id ID` | `id:` が `ID` と完全一致する item を選択。完全一致が無い場合は、`ID` を一意な prefix として持つ item を選択 |
 | `--add-detail key=value` | detail value を追加 |
 | `--remove-detail key` | 指定 key の value をすべて削除 |
 | `--output FILE` | 更新後のファイル全体を別ファイルに書き出し |
 
 `--output` がない場合、update mode は入力ファイルへ書き戻します。
+
+#### Short ID prefix による選択
+
+`--match-id`（および `start`/`done`/`complete` が受け付ける `ID` positional
+argument）は完全な `id:` value を必要としません。effective item set の中で
+一意であれば、より短い prefix でも動作します:
+
+```sh
+python -m lifetxt done life.txt task_01J   # id:task_01JZY5M93PK17C7BA4M8 に一致
+```
+
+解決順序は常に「完全一致を優先し、その次に一意な prefix」です:
+
+1. 入力した文字列と完全一致する `id:` value が常に優先されます。他の item が
+   より短い `id:` でその文字列を prefix match する場合でも同様です。
+2. それ以外の場合、入力した文字列を prefix に持つ item がちょうど1件である
+   必要があります。
+
+複数の item に一致する prefix は、推測せず拒否されます:
+
+```text
+ERROR: Ambiguous ID prefix `task_a`.
+
+Matches:
+  task_a12345
+  task_a16789
+
+Use a longer prefix.
+```
+
+これは全ての ID selection command が共有する単一の resolver
+（`lifetxt.ids.resolve_item_by_id`）によるもので、`--match-id`/`ID` はどこでも
+同じ挙動をします。保存される `id:` value や machine-readable output は
+影響を受けません -- 入力する selector だけが prefix を受け付けます。
 
 ## 11. `serve`
 

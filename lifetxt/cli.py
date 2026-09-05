@@ -6892,16 +6892,9 @@ def _resolve_target_item(items, id_key, args, prompt_verb="Select"):
 
     item_id = getattr(args, "id", None)
     if item_id:
-        matches = [
-            item
-            for item in items
-            if item_id in [str(v) for v in item.details.get(id_key, [])]
-        ]
-        if not matches:
-            raise ValueError("No item with %s:%s." % (id_key, item_id))
-        if len(matches) > 1:
-            raise ValueError("Multiple items with %s:%s." % (id_key, item_id))
-        return matches[0], False
+        from .ids import resolve_item_by_id
+
+        return resolve_item_by_id(items, item_id, id_key), False
 
     text_query = getattr(args, "text", None)
     if text_query:

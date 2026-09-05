@@ -54,6 +54,60 @@ def collect_item_ids(items, key="id"):
     return values
 
 
+class AmbiguousIdPrefixError(ValueError):
+    """Raised by :func:`resolve_item_by_id` when a short ID prefix matches
+    more than one item (#653). Never guesses among the candidates."""
+
+    def __init__(self, value, candidate_ids):
+        self.value = str(value)
+        self.candidate_ids = list(candidate_ids)
+        lines = ["Ambiguous ID prefix `%s`." % self.value, "", "Matches:"]
+        lines.extend("  " + candidate for candidate in self.candidate_ids)
+        lines.extend(["", "Use a longer prefix."])
+        super(AmbiguousIdPrefixError, self).__init__("\n".join(lines))
+
+
+def resolve_item_by_id(items, value, key="id"):
+    """Resolve ``value`` to exactly one item by exact id: match, falling
+    back to a unique id: prefix match (#653).
+
+    Resolution order:
+
+    1. An exact ``key:`` value equal to ``value`` always wins outright,
+       even when a shorter id: elsewhere would also prefix-match it.
+    2. Otherwise, ``value`` must be a prefix of exactly one item's
+       ``key:`` value.
+
+    Raises ``ValueError`` naming ``value`` when nothing matches, and
+    :class:`AmbiguousIdPrefixError` naming every candidate id: when more
+    than one item's id: starts with ``value``. This is the one shared
+    resolver every read/write command should reuse rather than each
+    growing its own prefix-matching logic.
+    """
+    value = str(value)
+    exact = [
+        item for item in items if value in [str(v) for v in item.details.get(key, [])]
+    ]
+    if exact:
+        if len(exact) > 1:
+            raise ValueError("Multiple items with %s:%s." % (key, value))
+        return exact[0]
+
+    prefix_hits = []
+    for item in items:
+        for candidate in item.details.get(key, []):
+            candidate = str(candidate)
+            if candidate.startswith(value):
+                prefix_hits.append((candidate, item))
+                break
+    if not prefix_hits:
+        raise ValueError("No item with %s:%s (or matching prefix)." % (key, value))
+    if len(prefix_hits) > 1:
+        prefix_hits.sort(key=lambda pair: pair[0])
+        raise AmbiguousIdPrefixError(value, [cid for cid, _item in prefix_hits])
+    return prefix_hits[0][1]
+
+
 def duplicate_id_diagnostics(items, key="id", cross_source_only=False):
     seen = {}
     diagnostics = []

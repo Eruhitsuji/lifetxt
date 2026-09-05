@@ -1838,7 +1838,7 @@ line editing helpers.
 
 ### 10.3 Update Existing Items
 
-Update an item by line number or by exact `id:` value.
+Update an item by line number or by `id:` value.
 
 ```sh
 python -m lifetxt assist --update life.txt --line 3 --title "New Title"
@@ -1854,12 +1854,45 @@ Update options:
 |---|---|
 | `--update FILE` | Read and update an existing life.txt file |
 | `--line N` | Select the item on line `N` |
-| `--match-id ID` | Select the item whose `id:` exactly equals `ID` |
+| `--match-id ID` | Select the item whose `id:` is exactly `ID`, or, when nothing matches exactly, whose `id:` is uniquely prefixed by `ID` |
 | `--add-detail key=value` | Append a detail value |
 | `--remove-detail key` | Remove all values for a detail key |
 | `--output FILE` | Write the updated whole file to another file |
 
 Without `--output`, update mode writes back to the input file.
+
+#### Short ID prefix selection
+
+`--match-id` (and the plain `ID` positional argument accepted by `start`,
+`done`, and `complete`) does not require the full `id:` value. A shorter
+prefix works as long as it is unique across the effective item set:
+
+```sh
+python -m lifetxt done life.txt task_01J   # matches id:task_01JZY5M93PK17C7BA4M8
+```
+
+Resolution order is always exact match first, then unique prefix:
+
+1. An `id:` value equal to what you typed always wins outright, even when
+   a shorter `id:` elsewhere would also prefix-match it.
+2. Otherwise, exactly one item's `id:` must start with what you typed.
+
+A prefix matching more than one item is refused rather than guessed:
+
+```text
+ERROR: Ambiguous ID prefix `task_a`.
+
+Matches:
+  task_a12345
+  task_a16789
+
+Use a longer prefix.
+```
+
+This is one shared resolver (`lifetxt.ids.resolve_item_by_id`) reused by
+every ID-selecting command, so `--match-id`/`ID` behaves identically
+everywhere; stored `id:` values and every machine-readable output are
+unaffected -- only the *selector* you type accepts a prefix.
 
 ## 11. `serve`
 

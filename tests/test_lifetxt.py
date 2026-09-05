@@ -2786,6 +2786,37 @@ class LifeTxtDoneCliTests(unittest.TestCase):
             self.assertIn("[x] T Buy_milk", content)
             self.assertIn("[ ] T Clean_house", content)
 
+    def test_done_by_unique_id_prefix_marks_complete(self):
+        # #653: a unique id: prefix resolves to the same item as the full
+        # id:, reusing the shared resolver every ID-selecting command goes
+        # through -- no command-specific prefix logic was added here.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as f:
+                f.write(
+                    "[ ] T Buy_milk id:t001abcdef\n[ ] T Clean_house id:t002ghijkl\n"
+                )
+            stdout, stderr, code = run_cli("done", path, "t001")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("[x] T Buy_milk", content)
+            self.assertIn("[ ] T Clean_house", content)
+
+    def test_done_by_ambiguous_id_prefix_fails_naming_every_candidate(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as f:
+                f.write(self.SOURCE_TEXT)
+            stdout, stderr, code = run_cli("done", path, "t0")
+            self.assertNotEqual(0, code)
+            self.assertIn("Ambiguous ID prefix", stderr)
+            self.assertIn("t001", stderr)
+            self.assertIn("t002", stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertNotIn("[x]", content)
+
     def test_done_by_id_appends_done_date(self):
         import datetime as dt
 
@@ -6917,6 +6948,50 @@ class LifeTxtAssistCliTests(unittest.TestCase):
                     "[ ] T Other id:task_002\n",
                     handle.read(),
                 )
+
+    def test_assist_update_by_unique_id_prefix(self):
+        # #653: --match-id now resolves a unique id: prefix through the
+        # shared resolve_item_by_id() resolver, same as done/start/complete.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Old_Title id:task_001abc\n")
+                handle.write("[ ] T Other id:task_999xyz\n")
+
+            stdout, stderr, code = run_cli(
+                "assist",
+                "--update",
+                path,
+                "--match-id",
+                "task_001",
+                "--status",
+                "done",
+                "--done",
+                "2026-06-06",
+            )
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            with open(path, "r", encoding="utf-8") as handle:
+                content = handle.read()
+            self.assertIn("[x] T Old_Title id:task_001abc", content)
+            self.assertIn("[ ] T Other id:task_999xyz", content)
+
+    def test_assist_update_by_ambiguous_id_prefix_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T First id:task_a111\n")
+                handle.write("[ ] T Second id:task_a222\n")
+
+            stdout, stderr, code = run_cli(
+                "assist", "--update", path, "--match-id", "task_a", "--status", "done"
+            )
+
+            self.assertNotEqual(0, code)
+            self.assertIn("Ambiguous ID prefix", stderr)
+            self.assertIn("task_a111", stderr)
+            self.assertIn("task_a222", stderr)
 
     def test_assist_interactive_help_commands(self):
         stdout, stderr, code = run_cli(

@@ -52,6 +52,13 @@
       "removal_condition": "Remove after every public caller supplies an explicit anchor date through timezone_policy."
     },
     {
+      "path": "lifetxt/timeutil.py",
+      "call": "date.today",
+      "classification": "compatibility-parsing",
+      "reason": "relative_time()'s fallback default when a caller supplies no explicit today; every current lifetxt caller (cli.py, extra_core.py, tui.py) already passes an explicit workspace-aware today from lifetxt.timezone_policy, so this path is reached only by a caller outside that convention.",
+      "removal_condition": "Remove after every public caller of relative_time() supplies an explicit anchor date through timezone_policy."
+    },
+    {
       "path": "lifetxt/timezone_policy.py",
       "call": "datetime.datetime.now",
       "classification": "timezone-foundation",

@@ -70,6 +70,13 @@ def _build_parser(command):
         _add_output(parser, choices=("text", "json"), default="text")
     elif command == "help":
         parser.add_argument("topic", nargs="?", default=None)
+        parser.add_argument(
+            "code",
+            nargs="?",
+            default=None,
+            help="Diagnostic code to explain, only meaningful with "
+            "topic=diagnostic (e.g. `lifetxt help diagnostic E003`).",
+        )
         parser.add_argument("--format", choices=("text", "json"), default="text")
         parser.add_argument(
             "--json",

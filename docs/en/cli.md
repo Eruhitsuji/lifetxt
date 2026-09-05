@@ -3160,7 +3160,9 @@ python -m lifetxt help add --json
 | `help` (no argument) | The "Start here" quick loop, every guided-path audience, and the category index from [§1.1](#11-command-categories-and-guided-paths) |
 | `help beginner\|daily\|power\|ai\|admin` | That audience's short, ordered command flow with one copyable example per step |
 | `help NAME` | One command's category, aliases, a copyable example, related commands, and whether it is read-only or destructive; `NAME` may be an alias (`add`, `q`, `d`, `s`, `a`, `f`) |
-| `--json` (or `--format json`) | The same information as structured JSON instead of text -- `lifetxt-help-catalog-v1` for the bare form, `lifetxt-help-audience-v1` for an audience, `lifetxt-help-command-v1` (with `arguments`/`options`/`examples` added) for one command |
+| `help diagnostic` | A compact, one-line-per-code overview of every diagnostic code this catalog documents |
+| `help diagnostic CODE` | One diagnostic code's category, severity, meaning, remediation, and a valid/invalid example, e.g. `help diagnostic E003` |
+| `--json` (or `--format json`) | The same information as structured JSON instead of text -- `lifetxt-help-catalog-v1` for the bare form, `lifetxt-help-audience-v1` for an audience, `lifetxt-help-command-v1` (with `arguments`/`options`/`examples` added) for one command, `lifetxt-diagnostic-catalog-v1` for `diagnostic` with no code, `lifetxt-diagnostic-explain-v1` for `diagnostic CODE` |
 | `-o`, `--output FILE` | Write to a file instead of stdout |
 
 `help` never reads life.txt, configuration, or any workspace: its output is
@@ -3171,6 +3173,17 @@ boundary -- MCP's `--profile read|assist|full` (see
 [ai-integration.md](ai-integration.md)) is the actual enforcement mechanism
 for untrusted AI clients. An unrecognized command name or audience fails
 loudly (exit 1) naming the known audiences rather than guessing.
+
+`help diagnostic CODE` documents a bounded, explicitly curated subset of
+stable diagnostic codes -- the ones a Beginner Profile user is most likely to
+hit (`E001`-`E005`, `E010`, `W101`-`W103`, `W106`, `W207`, `W213`, `W225`) --
+not every code in the system. `code`, `category`, and `severity` are the same
+locale-independent machine identity `check --format json` already publishes
+(see [§3](#3-check)); only the human-facing `summary` text is localized
+today. `remediation` reuses the same text as the diagnostic's own `hint`
+field where one already exists, so it stays English-only for the same
+diagnostics that field is English-only for. An unknown code fails loudly
+(exit 1) naming the documented codes rather than guessing the closest match.
 
 ## 17. `encrypt` and `decrypt`
 

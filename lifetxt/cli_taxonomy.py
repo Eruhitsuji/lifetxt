@@ -1281,6 +1281,25 @@ def command_help(args, config_data):
         bool(getattr(args, "json", False)) or getattr(args, "format", "text") == "json"
     )
 
+    if topic == "diagnostic":
+        from . import diagnostic_catalog
+
+        code = getattr(args, "code", None)
+        if code is None:
+            text = (
+                diagnostic_catalog.render_overview_json()
+                if as_json
+                else diagnostic_catalog.render_overview_text()
+            )
+        else:
+            text = (
+                diagnostic_catalog.render_code_json(code)
+                if as_json
+                else diagnostic_catalog.render_code_text(code)
+            )
+        _write_output(text, getattr(args, "output", None))
+        return 0
+
     if topic is None:
         text = render_catalog_json() if as_json else render_help_overview_text()
         _write_output(text, getattr(args, "output", None))

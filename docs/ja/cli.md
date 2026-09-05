@@ -2822,7 +2822,9 @@ python -m lifetxt help add --json
 | `help` (引数なし) | "Start here" の最小ループ、各 audience のガイド付きパス、[§1.1](#11-コマンドカテゴリとガイド付きパス) と同じカテゴリ索引 |
 | `help beginner\|daily\|power\|ai\|admin` | その audience 向けの短い順序付きコマンドフローと、各手順のコピー可能な例 |
 | `help NAME` | そのコマンドのカテゴリ、alias、コピー可能な例、related commands、read-only/destructive の分類。`NAME` には alias (`add`、`q`、`d`、`s`、`a`、`f`) も使えます |
-| `--json` (または `--format json`) | 同じ情報を text ではなく構造化 JSON で出力します。引数なしは `lifetxt-help-catalog-v1`、audience 指定は `lifetxt-help-audience-v1`、コマンド指定は `lifetxt-help-command-v1` (`arguments`/`options`/`examples` を追加) |
+| `help diagnostic` | この catalog が文書化している diagnostic code 全体を、1 code 1行で簡潔に一覧表示します |
+| `help diagnostic CODE` | 1つの diagnostic code のカテゴリ・severity・意味・remediation・valid/invalid な例を表示します（例: `help diagnostic E003`） |
+| `--json` (または `--format json`) | 同じ情報を text ではなく構造化 JSON で出力します。引数なしは `lifetxt-help-catalog-v1`、audience 指定は `lifetxt-help-audience-v1`、コマンド指定は `lifetxt-help-command-v1` (`arguments`/`options`/`examples` を追加)、code なしの `diagnostic` は `lifetxt-diagnostic-catalog-v1`、`diagnostic CODE` は `lifetxt-diagnostic-explain-v1` |
 | `-o`, `--output FILE` | stdout の代わりに file へ書き込みます |
 
 `help` は life.txt・config・workspace のいずれも読み取りません。出力は
@@ -2833,6 +2835,19 @@ client から呼び出しても安全です。JSON 出力の `read_only`/`destru
 read|assist|full` ([ai-integration.md](ai-integration.md) 参照) です。
 未知のコマンド名や audience を指定すると、既知の audience 名を示した
 うえで明示的に失敗します (exit 1)。
+
+`help diagnostic CODE` は、stable diagnostic code のうち Beginner Profile
+利用者が遭遇しやすい、明示的に選定された bounded な subset
+（`E001`-`E005`、`E010`、`W101`-`W103`、`W106`、`W207`、`W213`、`W225`）
+のみを文書化します。system に存在する全 code ではありません。
+`code`・`category`・`severity` は `check --format json`（[§3](#3-check)
+参照）が既に公開している locale-independent な machine identity と
+同じもので、人間向けの `summary` text のみが現時点で localize
+されています。`remediation` は、その diagnostic 自身の `hint` field が
+既に持つ text がある場合はそれを再利用するため、その `hint` field が
+英語のままの diagnostic については `remediation` も英語のままです。
+未知の code を指定すると、最も近い code を勝手に推測することなく、
+既知の code 一覧を示したうえで明示的に失敗します (exit 1)。
 
 ## 17. `encrypt` と `decrypt`
 

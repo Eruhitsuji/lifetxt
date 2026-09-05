@@ -23,6 +23,10 @@ parked tagとdependencyの確認結果、および結果順に使ったordering 
 JSON outputでは各itemに `why` object が追加され、text/life outputでは人向けの
 `Why:` 行が追加されます。`--why` なしの出力は変わりません。
 
+CLI・TUI・Web の human-readable な date field には、`due:2026-09-07 (in 2 days)`
+や `done:2026-09-04 (yesterday)` のような relative label が補助表示されます。
+canonical な保存値と machine-readable output は変更されません。
+
 ## Inspect and edit one item
 
 ```sh

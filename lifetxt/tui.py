@@ -10,6 +10,7 @@ from .nextaction import ACTIONABLE_KINDS, blocked_map
 from .parser import parse_text
 from .serializer import item_to_line
 from .status_summary import latest_status_records
+from .timeutil import relative_time
 
 
 TUI_SECTIONS = ("tasks", "agenda", "status")
@@ -1313,9 +1314,29 @@ def _task_row(item, id_key, blocked=False):
     bits = [item.status, item.kind, item.title]
     if item_id:
         bits.append("id:%s" % item_id)
-    for key in ("project", "due", "do", "priority", "progress"):
+    for key in (
+        "project",
+        "due",
+        "do",
+        "from",
+        "to",
+        "on",
+        "at",
+        "created",
+        "updated",
+        "done",
+        "priority",
+        "progress",
+    ):
         if item.details.get(key):
-            bits.append("%s:%s" % (key, item.details[key][0]))
+            value = item.details[key][0]
+            suffix = (
+                " (%s)" % relative_time(value)
+                if key
+                in {"due", "do", "from", "to", "on", "at", "created", "updated", "done"}
+                else ""
+            )
+            bits.append("%s:%s%s" % (key, value, suffix))
     return {
         "section": "tasks",
         "type": item.kind,

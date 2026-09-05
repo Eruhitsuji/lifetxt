@@ -26,6 +26,11 @@ fields used to place it in the result. JSON output adds a `why` object to each
 item; text and life output include a human-readable `Why:` line. Without
 `--why`, output is unchanged.
 
+Human-readable date fields on CLI, TUI, and Web listings include an optional
+relative label, such as `due:2026-09-07 (in 2 days)` or `done:2026-09-04
+(yesterday)`. The canonical stored value and machine-readable output remain
+unchanged.
+
 ## Inspect and edit one item
 
 ```sh

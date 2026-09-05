@@ -333,9 +333,17 @@ iCalendar sync は `source:ics uid:event-1@example.com` を書き、通常は同
 |---|---|---|
 | `est` | 見積もり作業量または見積もり時間 | `est:2h` |
 | `elapsed` | 実際の累積経過時間 | `elapsed:1h30m` |
+| `progress` | status とは独立した定量的な進捗 | `progress:75%` |
 
 `elapsed:` は `timer` CLI command が使用します。`25m`、`1h`、`1h30m`、bare minutes の `90` のような短い形式を推奨します。
 parse 可能だが canonical でない duration は `W222`、`elapsed:1d` や `elapsed:90x` のような認識できない duration は `W226` として報告され、0 分として黙って扱われません。
+
+`progress:` は定量的な進捗を percentage（`0`-`100`、例: `progress:75%`）または fraction
+（`current/total`、例: `progress:3/10`）として記録します。`status:` や `done:` とは独立してお
+り、`[x]` の item に `progress:100%` は必須ではなく、`progress:100%` の item が自動的に done
+として扱われることもありません。`check` は範囲外の percentage、0 以下の fraction total、負の
+fraction current、total を超える fraction current を `W230` として報告し、serialize 時に元の
+percentage/fraction 表記はそのまま保持されます。
 
 ### 7.6 Recurrence keys
 
@@ -456,7 +464,7 @@ date-only の end boundary、例えば `--to 2026-06-12` は `2026-06-13T00:00`
 ### 9.1 Task (`T`)
 
 ```txt
-do due priority assignee owner project tag id
+do due priority progress assignee owner project tag id
 ```
 
 例:

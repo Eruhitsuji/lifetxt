@@ -122,6 +122,11 @@ DETAIL_DESCRIPTIONS = {
     "context": ("Context or situation.", "context:home"),
     "loc": ("Location.", 'loc:"Meeting Room A"'),
     "priority": ("Priority.", "priority:A"),
+    "progress": (
+        "Quantitative progress, independent of status: a percentage "
+        "(0-100%) or a fraction (current/total).",
+        "progress:75%",
+    ),
     "est": ("Estimated duration.", "est:90m"),
     "elapsed": ("Actual elapsed duration.", "elapsed:1h30m"),
     "tag": ("Tag. Repeat the key for multiple tags.", "tag:important"),

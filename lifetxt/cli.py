@@ -7,6 +7,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import sys
 import types
 from collections import OrderedDict
@@ -62,7 +63,18 @@ from .diagnostic_contract import (
     diagnostic_category,
     diagnostic_to_output_dict,
 )
+from .diagnostic_cascade import classify_cascade_roles
+from .sarif import render_sarif
+from .diagnostic_render import render_diagnostic_rich, render_diagnostics_summary
+from .cli_taxonomy import render_success_guidance as _render_success_guidance
+from .i18n import register_messages as _register_messages, translate as _t
 from .ics import items_from_ics_text
+from .init_presets import DEFAULT_PRESET as _INIT_DEFAULT_PRESET
+from .init_presets import (
+    preset_names,
+    render_life_text as _render_init_life_text,
+    validate_preset,
+)
 from .ids import (
     auto_ids_enabled,
     collect_item_ids,
@@ -93,7 +105,7 @@ from .links import (
 from .markdown import markdown_to_html, markdown_to_plain
 from .model import Diagnostic, Item
 from .timezone_policy import local_now_naive, today as timezone_today
-from .timeutil import format_datetime, parse_date_or_datetime
+from .timeutil import format_datetime, parse_date_or_datetime, relative_time
 from .notifier import (
     format_notification_email,
     format_notification_table,
@@ -122,11 +134,195 @@ from .validator import validate_item
 from .vm import DEFAULT_MAX_STEPS as VM_DEFAULT_MAX_STEPS
 
 
+#: Human-readable text for a bounded set of beginner/daily commands
+#: (`init`, `today`, `done`, `complete`), localized to English/Japanese
+#: (#631/#632). Command names, options, and Format 1.0 syntax never
+#: translate; only fixed labels/headings do. Every other command's plain
+#: output stays exactly as it was.
+_register_messages(
+    {
+        "init.overwrite_prompt": {
+            "en": "File(s) already exist: {files}",
+            "ja": "既にファイルが存在します: {files}",
+        },
+        "init.overwrite_confirm": {
+            "en": "Overwrite? [y/N] ",
+            "ja": "上書きしますか? [y/N] ",
+        },
+        "init.aborted": {"en": "Aborted.", "ja": "中止しました。"},
+        "init.name_prompt": {
+            "en": "Your name (for S presence records) [self]: ",
+            "ja": "あなたの名前 (S presence 記録用) [self]: ",
+        },
+        "init.timezone_prompt": {
+            "en": "Timezone (e.g. Asia/Tokyo, UTC) [UTC]: ",
+            "ja": "タイムゾーン (例: Asia/Tokyo, UTC) [UTC]: ",
+        },
+        "init.project_prompt": {
+            "en": "Default project name (leave blank to skip): ",
+            "ja": "既定のプロジェクト名 (空欄で省略): ",
+        },
+        "init.preset_prompt": {
+            "en": "Starter preset [{presets}] (leave blank for minimal): ",
+            "ja": "Starter preset [{presets}] (空欄で minimal): ",
+        },
+        "init.wrote": {"en": "Wrote {path}", "ja": "書き込みました: {path}"},
+        "init.next": {"en": "Next: {command}", "ja": "次に: {command}"},
+        "today.brief_for": {
+            "en": "{mode} brief for {date}",
+            "ja": "{date} の{mode}ブリーフ",
+        },
+        "today.brief": {"en": "{mode} brief", "ja": "{mode}ブリーフ"},
+        "today.mode.today": {"en": "Today", "ja": "今日"},
+        "today.config_error": {
+            "en": "  ! config has {n} error(s)",
+            "ja": "  ! 設定に {n} 件のエラーがあります",
+        },
+        "today.now": {"en": "NOW", "ja": "現在"},
+        "today.attention": {"en": "ATTENTION", "ja": "注意"},
+        "today.projects_attention": {
+            "en": "  Projects needing attention ({n}):",
+            "ja": "  注意が必要なプロジェクト ({n}件):",
+        },
+        "today.tickets_attention": {
+            "en": "  Tickets needing attention ({n}):",
+            "ja": "  注意が必要なチケット ({n}件):",
+        },
+        "today.today_heading": {"en": "TODAY", "ja": "今日"},
+        "today.next_actions": {"en": "NEXT ACTIONS", "ja": "次のアクション"},
+        "today.next_actions_already_listed": {
+            "en": "  (already listed above)",
+            "ja": "  (上に表示済み)",
+        },
+        "today.next_actions_none": {
+            "en": "  Nothing actionable.",
+            "ja": "  実行可能な項目はありません。",
+        },
+        "today.blocked": {"en": "BLOCKED", "ja": "ブロック中"},
+        "today.waiting_prefix": {"en": "(waiting)", "ja": "(待機中)"},
+        "today.habits": {"en": "HABITS", "ja": "習慣"},
+        "today.upcoming": {"en": "Upcoming ({n}d)", "ja": "今後の予定 ({n}日)"},
+        "today.inbox": {"en": "INBOX", "ja": "受信箱"},
+        "today.inbox_pending": {
+            "en": "  {n} pending item(s)",
+            "ja": "  未処理の項目 {n} 件",
+        },
+        "today.inbox_message": {
+            "en": "  message: {title}",
+            "ja": "  メッセージ: {title}",
+        },
+        "today.inbox_capture": {
+            "en": "  capture: {title}",
+            "ja": "  キャプチャ: {title}",
+        },
+        "today.all_clear": {"en": "All clear.", "ja": "問題ありません。"},
+        "done.already": {
+            "en": "Already done: {title}",
+            "ja": "既に完了しています: {title}",
+        },
+        "done.done": {"en": "Done: {line}", "ja": "完了しました: {line}"},
+        "done.logged": {
+            "en": "Logged: {line} (streak: {streak} day(s))",
+            "ja": "記録しました: {line} (連続 {streak} 日)",
+        },
+        "done.dry_run_would_mark": {
+            "en": "[dry-run] Would mark done: {line}",
+            "ja": "[dry-run] 完了としてマークする予定: {line}",
+        },
+        "done.dry_run_would_log": {
+            "en": "[dry-run] Would log habit completion: {line} (streak: {streak} day(s))",
+            "ja": "[dry-run] 習慣の完了を記録する予定: {line} (連続 {streak} 日)",
+        },
+        # Beginner-facing diagnostics (#633): check/lint/doctor's own
+        # fixed labels and next-step guidance. Individual parser/validator
+        # diagnostic hint text (hundreds of W/E codes) is out of scope for
+        # this bounded slice and stays English-only; every diagnostic's raw
+        # code, severity, and location data never localizes.
+        "check.ok": {"en": "OK: {n} item(s)", "ja": "OK: {n} 件"},
+        "check.ok_no_matching_diagnostics": {
+            "en": "OK: {n} item(s), 0 matching diagnostic(s)",
+            "ja": "OK: {n} 件、該当する diagnostic は 0 件",
+        },
+        "lint.no_issues": {
+            "en": "No lint issues found.",
+            "ja": "lint の問題は見つかりませんでした。",
+        },
+        "lint.typo_key": {
+            "en": "Key {key!r} looks like a typo for {canonical!r}.",
+            "ja": "キー {key!r} は {canonical!r} の typo の可能性があります。",
+        },
+        "lint.bad_casing": {
+            "en": "Key {key!r} uses non-standard casing; expected {expected!r}.",
+            "ja": "キー {key!r} の大文字/小文字表記が標準的ではありません "
+            "(期待値: {expected!r})。",
+        },
+        "lint.duplicate_key": {
+            "en": "Duplicate key {key!r} ({n} values). Consider using a "
+            "multi-value list.",
+            "ja": "キー {key!r} が重複しています ({n} 件の値)。"
+            "複数値のリストとして扱うことを検討してください。",
+        },
+        "lint.fixed_summary": {
+            "en": "Fixed {fixed} issue(s) in {files} file(s).",
+            "ja": "{files} 個のファイルで {fixed} 件の問題を修正しました。",
+        },
+        "doctor.python_ok": {
+            "en": "Python {major}.{minor}",
+            "ja": "Python {major}.{minor}",
+        },
+        "doctor.python_fail": {
+            "en": "Python {major}.{minor} (3.10+ required)",
+            "ja": "Python {major}.{minor} (3.10 以上が必要です)",
+        },
+        "doctor.life_not_found": {
+            "en": "Not found: {path} -- run: lifetxt init",
+            "ja": "見つかりません: {path} -- 実行してください: lifetxt init",
+        },
+        "doctor.life_not_readable": {
+            "en": "Not readable: {path}",
+            "ja": "読み取れません: {path}",
+        },
+        "doctor.life_found": {"en": "Found: {path}", "ja": "見つかりました: {path}"},
+        "doctor.config_not_found": {
+            "en": "Not found: {path} -- run: lifetxt config init",
+            "ja": "見つかりません: {path} -- 実行してください: lifetxt config init",
+        },
+        "doctor.config_found": {
+            "en": "Found: {path}",
+            "ja": "見つかりました: {path}",
+        },
+        "doctor.disk_warn": {
+            "en": "{free_mib:.1f} MiB free on {dir} (below the 100 MiB safety floor)",
+            "ja": "{dir} の空き容量は {free_mib:.1f} MiB です "
+            "(安全ラインの 100 MiB を下回っています)",
+        },
+        "doctor.disk_ok": {
+            "en": "{free_mib:.1f} MiB free on {dir}",
+            "ja": "{dir} の空き容量は {free_mib:.1f} MiB です",
+        },
+        "doctor.check_fail": {
+            "en": "{n} error(s) -- run: lifetxt check {path}",
+            "ja": "{n} 件のエラー -- 実行してください: lifetxt check {path}",
+        },
+        "doctor.check_warn": {
+            "en": "{n} warning(s) -- run: lifetxt check {path}",
+            "ja": "{n} 件の警告 -- 実行してください: lifetxt check {path}",
+        },
+        "doctor.check_ok": {
+            "en": "{n} item(s), no errors",
+            "ja": "{n} 件、エラーなし",
+        },
+    }
+)
+
+
 def main(argv=None):
+    from .cli_error_guidance import render_value_error_text
+
     try:
         argv, config_path, workspace_name = _extract_config_arg(argv)
     except ValueError as exc:
-        sys.stderr.write("ERROR: %s\n" % exc)
+        sys.stderr.write(render_value_error_text(exc))
         return 1
     if argv and argv[0] == "fzf-preview":
         if len(argv) != 2:
@@ -142,12 +338,12 @@ def main(argv=None):
     try:
         args.config_data = load_config(config_path)
     except ValueError as exc:
-        sys.stderr.write("ERROR: %s\n" % exc)
+        sys.stderr.write(render_value_error_text(exc))
         return 1
     try:
         _maybe_apply_workspace(args)
     except ValueError as exc:
-        sys.stderr.write("ERROR: %s\n" % exc)
+        sys.stderr.write(render_value_error_text(exc))
         return 1
     if not hasattr(args, "func"):
         parser.print_help()
@@ -155,7 +351,7 @@ def main(argv=None):
     try:
         return args.func(args)
     except ValueError as exc:
-        sys.stderr.write("ERROR: %s\n" % exc)
+        sys.stderr.write(render_value_error_text(exc))
         return 1
 
 
@@ -233,9 +429,10 @@ def build_parser():
     )
     check.add_argument(
         "--format",
-        choices=("text", "json"),
+        choices=("text", "json", "sarif"),
         default="text",
-        help="Diagnostic output format.",
+        help="Diagnostic output format. sarif emits a SARIF 2.1.0 document "
+        "(#644), built from the same filtered diagnostics as text/json.",
     )
     check.add_argument(
         "--warnings-as-errors",
@@ -1419,6 +1616,11 @@ def build_parser():
         default="life",
         choices=["life", "json", "jsonl", "table"],
         help="Output format.",
+    )
+    query_command.add_argument(
+        "--explain",
+        action="store_true",
+        help="Show how the query is interpreted instead of matching items.",
     )
     query_command.add_argument(
         "--pretty", action="store_true", help="Pretty-print JSON."
@@ -2794,6 +2996,59 @@ def build_parser():
     )
     stop_cmd.set_defaults(func=command_stop)
 
+    progress_cmd = subparsers.add_parser(
+        "progress",
+        help="Increment or decrement an item's progress: value (#660).",
+    )
+    progress_cmd.add_argument("path", help="life.txt file containing the item.")
+    progress_cmd.add_argument(
+        "--delta",
+        required=True,
+        help=(
+            "Signed delta: +N/-N changes a fraction's current (total is kept), "
+            "+N%%/-N%% changes a percentage's value. Representation kind is "
+            "always preserved. A negative value must use --delta=-N (with '='); "
+            "'--delta -N' is parsed as an unknown flag by argparse."
+        ),
+    )
+    progress_cmd.add_argument(
+        "id", nargs="?", default=None, help="ID of the item to update."
+    )
+    progress_cmd.add_argument(
+        "--line", type=int, default=None, help="Line number of the item."
+    )
+    progress_cmd.add_argument(
+        "--text", default=None, help="Title substring to search for."
+    )
+    progress_cmd.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would change without writing to the file.",
+    )
+    progress_cmd.set_defaults(func=command_progress)
+
+    clone_cmd = subparsers.add_parser(
+        "clone",
+        help="Create a new item derived from an existing one, resetting "
+        "identity/history details (#659).",
+    )
+    clone_cmd.add_argument("path", help="life.txt file containing the source item.")
+    clone_cmd.add_argument(
+        "id", nargs="?", default=None, help="ID of the item to clone."
+    )
+    clone_cmd.add_argument(
+        "--line", type=int, default=None, help="Line number of the item."
+    )
+    clone_cmd.add_argument(
+        "--text", default=None, help="Title substring to search for."
+    )
+    clone_cmd.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show the generated item without writing it.",
+    )
+    clone_cmd.set_defaults(func=command_clone)
+
     complete_cmd = subparsers.add_parser(
         "complete",
         help=(
@@ -2918,6 +3173,13 @@ def build_parser():
     )
     init_cmd.add_argument(
         "--project", help="Default project name (for #! project: directive)."
+    )
+    init_cmd.add_argument(
+        "--preset",
+        choices=preset_names(),
+        default=None,
+        help="Starter section skeleton for a common use case. Defaults to "
+        "minimal (today's plain single-task starter, unchanged).",
     )
     init_cmd.add_argument(
         "--yes",
@@ -3416,6 +3678,11 @@ def build_parser():
         "--fix",
         action="store_true",
         help="Auto-correct safe issues in-place (writes to the writable path only).",
+    )
+    lint_cmd.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="With --fix, show what would change without writing anything.",
     )
     lint_cmd.add_argument(
         "--pretty",
@@ -4167,16 +4434,29 @@ def command_check(args):
             indent=2,
         )
         write_text(None, output + "\n")
+    elif args.format == "sarif":
+        write_text(None, render_sarif(filtered_diagnostics))
     else:
         if filtered_diagnostics:
-            for diagnostic in filtered_diagnostics:
-                write_text(None, diagnostic.format() + "\n")
+            cascade_roles = classify_cascade_roles(filtered_diagnostics)
+            for index, diagnostic in enumerate(filtered_diagnostics):
+                if index:
+                    write_text(None, "\n")
+                relation = cascade_roles.get(id(diagnostic))
+                write_text(
+                    None, render_diagnostic_rich(diagnostic, relation=relation) + "\n"
+                )
                 if str(getattr(diagnostic, "code", "")).upper() == "W225":
                     write_text(None, _W225_GUIDANCE + "\n")
+            write_text(
+                None, "\n" + render_diagnostics_summary(filtered_diagnostics) + "\n"
+            )
         elif has_filter:
-            write_text(None, "OK: %d item(s), 0 matching diagnostic(s)\n" % len(items))
+            write_text(
+                None, _t("check.ok_no_matching_diagnostics", n=len(items)) + "\n"
+            )
         else:
-            write_text(None, "OK: %d item(s)\n" % len(items))
+            write_text(None, _t("check.ok", n=len(items)) + "\n")
 
     return _exit_code(filtered_diagnostics, args.warnings_as_errors)
 
@@ -6651,6 +6931,8 @@ def command_quick(args):
         operation="quick.capture",
     )
     sys.stdout.write("%s\n" % line)
+    if sys.stdout.isatty():
+        sys.stdout.write(_render_success_guidance("quick", path=dest))
     return 0
 
 
@@ -6669,16 +6951,9 @@ def _resolve_target_item(items, id_key, args, prompt_verb="Select"):
 
     item_id = getattr(args, "id", None)
     if item_id:
-        matches = [
-            item
-            for item in items
-            if item_id in [str(v) for v in item.details.get(id_key, [])]
-        ]
-        if not matches:
-            raise ValueError("No item with %s:%s." % (id_key, item_id))
-        if len(matches) > 1:
-            raise ValueError("Multiple items with %s:%s." % (id_key, item_id))
-        return matches[0], False
+        from .ids import resolve_item_by_id
+
+        return resolve_item_by_id(items, item_id, id_key), False
 
     text_query = getattr(args, "text", None)
     if text_query:
@@ -7237,6 +7512,218 @@ def _captured_stdout():
         sys.stdout = original
 
 
+_PROGRESS_DELTA_RE = re.compile(r"^([+-])(\d+(?:\.\d+)?)(%)?$")
+
+
+def _apply_progress_delta(parsed, delta_text):
+    """Apply a signed +N/-N or +N%/-N%% delta to a parsed progress value
+    (#660), preserving its representation kind (fraction stays a fraction,
+    percentage stays a percentage) and returning the new raw text.
+
+    Both the fraction and the percentage path parse the delta digit text
+    with arbitrary-precision arithmetic (int for a fraction, Decimal for a
+    percentage) rather than float: float's own %g formatting rounds to 6
+    significant digits (silently truncating or completely no-op'ing a
+    small delta against a precise existing value), and float() on a very
+    long digit string overflows to inf, which int() then rejects with an
+    uncaught OverflowError instead of a clean CLI error. Decimal has
+    neither failure mode -- an absurdly large percentage delta still
+    fails, but via the caller's ordinary out-of-range ProgressValueError,
+    not a crash.
+
+    Raises ValueError, naming the reason, for a delta that does not match
+    the target's representation (a %% delta against a fraction, or vice
+    versa), a non-integer delta against a fraction, or an unparseable
+    delta string. Bounds validation (0-100% / 0<=current<=total) is left
+    to the caller, which re-parses the returned value via
+    lifetxt.progress.parse_progress().
+    """
+    match = _PROGRESS_DELTA_RE.match(str(delta_text or "").strip())
+    if not match:
+        raise ValueError(
+            "Invalid --delta %r. Use +N/-N for a fraction, or +N%%/-N%% for "
+            "a percentage." % delta_text
+        )
+    sign, amount_text, percent_sign = match.groups()
+
+    if parsed.kind == "fraction":
+        if percent_sign:
+            raise ValueError(
+                "progress:%s is a fraction; use +N/-N (no %%) to change its "
+                "numerator, not a percentage delta." % parsed.raw
+            )
+        if "." in amount_text:
+            raise ValueError(
+                "Fraction delta must be a whole number, got %r." % delta_text
+            )
+        amount = int(amount_text)
+        signed = amount if sign == "+" else -amount
+        return "%d/%d" % (parsed.current + signed, parsed.total)
+
+    if not percent_sign:
+        raise ValueError(
+            "progress:%s is a percentage; use +N%%/-N%% to change it, not a "
+            "fraction delta." % parsed.raw
+        )
+    from decimal import Decimal
+
+    current_decimal = Decimal(parsed.raw[:-1])  # strip the trailing '%'
+    delta_decimal = Decimal(amount_text)
+    signed_decimal = delta_decimal if sign == "+" else -delta_decimal
+    return "%s%%" % format(current_decimal + signed_decimal, "f")
+
+
+def command_progress(args):
+    """Increment or decrement an item's progress: value by a signed delta,
+    preserving its percentage/fraction representation (#660)."""
+    from .progress import ProgressValueError, parse_progress
+
+    config = _config(args)
+    path = args.path
+    if not path or path == "-":
+        raise ValueError("progress requires a file path, not stdin.")
+    id_key = id_key_from_config(config)
+    text = read_text(path)
+    items, _ = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
+    target, aborted = _resolve_target_item(
+        items, id_key, args, prompt_verb="Update progress:"
+    )
+    if aborted:
+        return 0
+
+    raw_values = target.details.get("progress")
+    if not raw_values:
+        # A missing progress: is never implicitly 0% (#645's own design
+        # constraint); reject rather than guess an initial value.
+        raise ValueError(
+            "Item %r has no progress: detail. Set an initial value first "
+            "(for example `lifetxt assist --update %s --match-id %s "
+            "--add-detail progress:0%%`)."
+            % (target.title, path, (target.details.get(id_key) or [""])[0])
+        )
+    current_raw = raw_values[0]
+    try:
+        parsed = parse_progress(current_raw)
+    except ProgressValueError as exc:
+        raise ValueError(
+            "Existing progress:%s is invalid: %s" % (current_raw, exc.reason)
+        )
+
+    new_raw = _apply_progress_delta(parsed, args.delta)
+    try:
+        parse_progress(new_raw)
+    except ProgressValueError as exc:
+        raise ValueError(
+            "Resulting progress:%s would be invalid: %s" % (new_raw, exc.reason)
+        )
+
+    if getattr(args, "dry_run", False):
+        sys.stdout.write(
+            "[dry-run] Would change progress:%s to progress:%s.\n"
+            % (current_raw, new_raw)
+        )
+        return 0
+
+    update_args = types.SimpleNamespace(
+        line=target.line,
+        match_id=None,
+        status=None,
+        kind=None,
+        title=None,
+        add_detail=["progress:%s" % new_raw],
+        detail=None,
+        remove_detail=["progress"],
+    )
+    for flag in DETAIL_FLAGS:
+        dest = "from_" if flag == "from" else flag
+        if not hasattr(update_args, dest):
+            setattr(update_args, dest, None)
+
+    updated_text, updated_line, diagnostics = update_text(text, update_args)
+    if _has_error(diagnostics):
+        _print_diagnostics(diagnostics)
+        return 1
+
+    _ensure_writable_path(path, config, "progress")
+    _pre_write_backup(path, config, "progress")
+    atomic_write_text(path, updated_text)
+    sys.stdout.write("Updated: %s\n" % updated_line)
+    if sys.stdout.isatty():
+        sys.stdout.write(_render_success_guidance("progress", path=path))
+    return 0
+
+
+#: Detail keys never copied onto a clone (#659): identity/system provenance
+#: (matching model.py's own SYSTEM_RECOMMENDED_KEYS grouping of
+#: source/uid/created/updated -- a clone is a genuinely new record, not a
+#: continuation of the source's identity), plus done (completion history)
+#: and progress (explicitly reset to "no progress yet", never implicitly
+#: 0%, matching #645's own missing-progress-is-not-zero principle). The
+#: source's own id: is excluded separately below, keyed off the workspace's
+#: configured id_key rather than the literal string "id".
+_CLONE_RESET_DETAIL_KEYS = frozenset(
+    ("source", "uid", "created", "updated", "done", "progress")
+)
+
+
+def command_clone(args):
+    """Create a new item derived from an existing one (#659), resetting
+    identity/history-category details rather than copying them verbatim.
+    The source item is never modified."""
+    from .assist import _default_status as _clone_default_status
+
+    config = _config(args)
+    path = args.path
+    if not path or path == "-":
+        raise ValueError("clone requires a file path, not stdin.")
+    id_key = id_key_from_config(config)
+    text = read_text(path)
+    items, _ = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
+    target, aborted = _resolve_target_item(items, id_key, args, prompt_verb="Clone:")
+    if aborted:
+        return 0
+
+    new_details = OrderedDict()
+    for key, values in target.details.items():
+        if key == id_key or key in _CLONE_RESET_DETAIL_KEYS:
+            continue
+        new_details[key] = list(values)
+
+    status = _clone_default_status(target.kind, new_details)
+    new_item = Item(status, target.kind, target.title, new_details)
+
+    if auto_ids_enabled(config):
+        existing_ids = collect_item_ids(items, key=id_key)
+        ensure_item_id(
+            new_item,
+            existing_ids=existing_ids,
+            key=id_key,
+            prefix=id_prefix_for_item(new_item, config),
+        )
+
+    new_line = item_to_assisted_line(new_item)
+    parsed_new, new_diagnostics = parse_text(new_line + "\n")
+    if not parsed_new or _has_error(new_diagnostics):
+        _print_diagnostics(new_diagnostics)
+        raise ValueError("Generated clone did not produce a valid item: %s" % new_line)
+
+    if getattr(args, "dry_run", False):
+        sys.stdout.write(
+            "[dry-run] Would clone %r to:\n%s\n" % (target.title, new_line)
+        )
+        return 0
+
+    _ensure_writable_path(path, config, "clone")
+    _pre_write_backup(path, config, "clone")
+    from .write_operations import append_life_records
+
+    append_life_records(path, new_line + "\n", operation="clone.append")
+    sys.stdout.write("Cloned: %s\n" % new_line)
+    if sys.stdout.isatty():
+        sys.stdout.write(_render_success_guidance("clone", path=path))
+    return 0
+
+
 def command_done(args):
     config = _config(args)
     path = args.path
@@ -7262,7 +7749,7 @@ def command_done(args):
         )
 
     if target.status == "[x]":
-        sys.stdout.write("Already done: %s\n" % target.title)
+        sys.stdout.write(_t("done.already", title=target.title) + "\n")
         return 0
 
     update_args = _build_mark_done_args(target, date_iso)
@@ -7273,13 +7760,15 @@ def command_done(args):
 
     dry_run = getattr(args, "dry_run", False)
     if dry_run:
-        sys.stdout.write("[dry-run] Would mark done: %s\n" % updated_line)
+        sys.stdout.write(_t("done.dry_run_would_mark", line=updated_line) + "\n")
         return 0
 
     _ensure_writable_path(path, config, "done")
     _pre_write_backup(path, config, "done")
     atomic_write_text(path, updated_text)
-    sys.stdout.write("Done: %s\n" % updated_line)
+    sys.stdout.write(_t("done.done", line=updated_line) + "\n")
+    if sys.stdout.isatty():
+        sys.stdout.write(_render_success_guidance("done", path=path))
     return 0
 
 
@@ -7348,15 +7837,16 @@ def _command_done_habit(path, text, target, date_iso, config, args):
     dry_run = getattr(args, "dry_run", False)
     if dry_run:
         sys.stdout.write(
-            "[dry-run] Would log habit completion: %s (streak: %d day(s))\n"
-            % (updated_line, streak)
+            _t("done.dry_run_would_log", line=updated_line, streak=streak) + "\n"
         )
         return 0
 
     _ensure_writable_path(path, config, "done")
     _pre_write_backup(path, config, "done")
     atomic_write_text(path, updated_text)
-    sys.stdout.write("Logged: %s (streak: %d day(s))\n" % (updated_line, streak))
+    sys.stdout.write(_t("done.logged", line=updated_line, streak=streak) + "\n")
+    if sys.stdout.isatty():
+        sys.stdout.write(_render_success_guidance("done", path=path))
     return 0
 
 
@@ -7380,7 +7870,7 @@ def command_complete(args):
         return 0
 
     if target.status == "[x]":
-        sys.stdout.write("Already done: %s\n" % target.title)
+        sys.stdout.write(_t("done.already", title=target.title) + "\n")
         return 0
 
     date_arg = getattr(args, "date", None)
@@ -7404,12 +7894,14 @@ def command_complete(args):
             _print_diagnostics(diagnostics)
             return 1
         if dry_run:
-            sys.stdout.write("[dry-run] Would mark done: %s\n" % updated_line)
+            sys.stdout.write(_t("done.dry_run_would_mark", line=updated_line) + "\n")
             return 0
         _ensure_writable_path(path, config, "complete")
         _pre_write_backup(path, config, "complete")
         atomic_write_text(path, updated_text)
-        sys.stdout.write("Done: %s\n" % updated_line)
+        sys.stdout.write(_t("done.done", line=updated_line) + "\n")
+        if sys.stdout.isatty():
+            sys.stdout.write(_render_success_guidance("complete", path=path))
         return 0
 
     next_anchor_key, next_dt, rule = _compute_next_occurrence(
@@ -7840,17 +8332,17 @@ def command_init(args):
 
     if (life_exists or config_exists) and not yes:
         existing = [p for p in (life_file, config_file) if os.path.exists(p)]
-        sys.stdout.write("File(s) already exist: %s\n" % ", ".join(existing))
-        sys.stdout.write("Overwrite? [y/N] ")
+        sys.stdout.write(_t("init.overwrite_prompt", files=", ".join(existing)) + "\n")
+        sys.stdout.write(_t("init.overwrite_confirm"))
         sys.stdout.flush()
         answer = sys.stdin.readline().strip().lower()
         if answer not in ("y", "yes"):
-            sys.stdout.write("Aborted.\n")
+            sys.stdout.write(_t("init.aborted") + "\n")
             return 0
 
     name = getattr(args, "name", None)
     if not name and not yes:
-        sys.stdout.write("Your name (for S presence records) [self]: ")
+        sys.stdout.write(_t("init.name_prompt"))
         sys.stdout.flush()
         name = sys.stdin.readline().strip() or "self"
     if not name:
@@ -7858,7 +8350,7 @@ def command_init(args):
 
     timezone_val = getattr(args, "timezone", None)
     if not timezone_val and not yes:
-        sys.stdout.write("Timezone (e.g. Asia/Tokyo, UTC) [UTC]: ")
+        sys.stdout.write(_t("init.timezone_prompt"))
         sys.stdout.flush()
         timezone_val = sys.stdin.readline().strip() or "UTC"
     if not timezone_val:
@@ -7866,21 +8358,28 @@ def command_init(args):
 
     project = getattr(args, "project", None)
     if project is None and not yes:
-        sys.stdout.write("Default project name (leave blank to skip): ")
+        sys.stdout.write(_t("init.project_prompt"))
         sys.stdout.flush()
         project = sys.stdin.readline().strip()
 
-    today = timezone_today().isoformat()
+    preset = getattr(args, "preset", None)
+    if preset is None and not yes:
+        sys.stdout.write(
+            _t("init.preset_prompt", presets=", ".join(preset_names())) + "\n"
+        )
+        sys.stdout.flush()
+        answer = sys.stdin.readline().strip()
+        preset = answer or _INIT_DEFAULT_PRESET
+    if preset is None:
+        preset = _INIT_DEFAULT_PRESET
+    try:
+        validate_preset(preset)
+    except ValueError as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
 
-    life_lines = []
-    life_lines.append("#! self: %s" % name)
-    life_lines.append("#! timezone: %s" % timezone_val)
-    if project:
-        life_lines.append("#! project: %s" % project)
-    life_lines.append("")
-    project_detail = (" project:%s" % project) if project else ""
-    life_lines.append("[ ] T First_Task%s due:%s" % (project_detail, today))
-    life_text = "\n".join(life_lines) + "\n"
+    today = timezone_today().isoformat()
+    life_text = _render_init_life_text(name, timezone_val, project, today, preset)
 
     defaults = OrderedDict()
     defaults["person"] = name
@@ -7891,10 +8390,17 @@ def command_init(args):
     config_text = json.dumps(config_data, ensure_ascii=False, indent=2) + "\n"
 
     write_text(life_file, life_text)
-    sys.stdout.write("Wrote %s\n" % life_file)
+    sys.stdout.write(_t("init.wrote", path=life_file) + "\n")
     write_text(config_file, config_text)
-    sys.stdout.write("Wrote %s\n" % config_file)
-    sys.stdout.write("Next: python -m lifetxt check %s\n" % life_file)
+    sys.stdout.write(_t("init.wrote", path=config_file) + "\n")
+    if sys.stdout.isatty():
+        # TTY only (#638): the more beginner-friendly next-step guidance
+        # (add -> today) instead of the plain script-safe check suggestion.
+        sys.stdout.write(_render_success_guidance("init"))
+    else:
+        sys.stdout.write(
+            _t("init.next", command="python -m lifetxt check %s" % life_file) + "\n"
+        )
     return 0
 
 
@@ -8469,6 +8975,15 @@ def command_doctor(args):
 
     checks = []
     any_fail = [False]
+    # doctor --format json is a stable machine contract (dist/schemas/
+    # doctor-v1.schema.json): its "message" field must not vary with
+    # --lang, even though the same messages are locale-aware in text mode.
+    _doctor_json_mode = getattr(args, "format", "text") == "json"
+
+    def _dt(message_id, **kwargs):
+        if _doctor_json_mode:
+            return _t(message_id, locale="en", **kwargs)
+        return _t(message_id, **kwargs)
 
     def add_check(symbol, label, message):
         checks.append((symbol, label, message))
@@ -8477,9 +8992,9 @@ def command_doctor(args):
 
     major, minor = sys.version_info[:2]
     if (major, minor) >= (3, 10):
-        add_check("OK", "python", "Python %d.%d" % (major, minor))
+        add_check("OK", "python", _dt("doctor.python_ok", major=major, minor=minor))
     else:
-        add_check("FAIL", "python", "Python %d.%d (3.10+ required)" % (major, minor))
+        add_check("FAIL", "python", _dt("doctor.python_fail", major=major, minor=minor))
     add_check(
         "OK",
         "system",
@@ -8538,19 +9053,17 @@ def command_doctor(args):
     ]
     for path in life_paths:
         if not os.path.exists(path):
-            add_check("FAIL", "life.txt", "Not found: %s -- run: lifetxt init" % path)
+            add_check("FAIL", "life.txt", _dt("doctor.life_not_found", path=path))
         elif not os.access(path, os.R_OK):
-            add_check("FAIL", "life.txt", "Not readable: %s" % path)
+            add_check("FAIL", "life.txt", _dt("doctor.life_not_readable", path=path))
         else:
-            add_check("OK", "life.txt", "Found: %s" % path)
+            add_check("OK", "life.txt", _dt("doctor.life_found", path=path))
 
     config_path = getattr(args, "config", None) or ".lifetxt.json"
     if not os.path.exists(config_path):
-        add_check(
-            "WARN", "config", "Not found: %s -- run: lifetxt config init" % config_path
-        )
+        add_check("WARN", "config", _dt("doctor.config_not_found", path=config_path))
     else:
-        add_check("OK", "config", "Found: %s" % config_path)
+        add_check("OK", "config", _dt("doctor.config_found", path=config_path))
 
     import shutil
 
@@ -8568,11 +9081,14 @@ def command_doctor(args):
             add_check(
                 "WARN",
                 "disk",
-                "%.1f MiB free on %s (below the 100 MiB safety floor)"
-                % (free_mib, disk_check_dir),
+                _dt("doctor.disk_warn", free_mib=free_mib, dir=disk_check_dir),
             )
         else:
-            add_check("OK", "disk", "%.1f MiB free on %s" % (free_mib, disk_check_dir))
+            add_check(
+                "OK",
+                "disk",
+                _dt("doctor.disk_ok", free_mib=free_mib, dir=disk_check_dir),
+            )
 
     for tool in ("fzf", "peco"):
         if shutil.which(tool):
@@ -8601,18 +9117,16 @@ def command_doctor(args):
             add_check(
                 "FAIL",
                 "check",
-                "%d error(s) -- run: lifetxt check %s"
-                % (len(errors), existing_paths[0]),
+                _dt("doctor.check_fail", n=len(errors), path=existing_paths[0]),
             )
         elif warnings_list:
             add_check(
                 "WARN",
                 "check",
-                "%d warning(s) -- run: lifetxt check %s"
-                % (len(warnings_list), existing_paths[0]),
+                _dt("doctor.check_warn", n=len(warnings_list), path=existing_paths[0]),
             )
         else:
-            add_check("OK", "check", "%d item(s), no errors" % len(items))
+            add_check("OK", "check", _dt("doctor.check_ok", n=len(items)))
 
         id_key = id_key_from_config(config)
         missing_count = sum(1 for item in items if not item.details.get(id_key))
@@ -10613,6 +11127,15 @@ _LINT_CASING_VARIANTS = {
     for k in list(_LINT_KEY_VARIANTS.values()) + list(_LINT_KEY_VARIANTS.keys())
 }
 
+#: Lint codes `--fix` (#635) may auto-apply: each one already carries a
+#: deterministic, unique replacement in ``issue["fix"]`` (a known-typo
+#: rename for L001, a case-normalization for L002). L003 (duplicate key)
+#: and L100 (custom ruleset match) are excluded even when they happen to
+#: carry a ``fix`` value: a duplicate key's correct resolution requires
+#: judgment this engine cannot safely infer, and a custom rule's
+#: replacement is operator-authored, not proven safe by this classification.
+_LINT_FIXABLE_CODES = frozenset(("L001", "L002"))
+
 
 def command_lint(args):
     from .model import RECOMMENDED_KEYS_BY_TYPE
@@ -10689,6 +11212,7 @@ def command_lint(args):
                                 ),
                                 ("fix", None),
                                 ("key", key),
+                                ("count", n),
                             ]
                         )
                     )
@@ -10740,17 +11264,25 @@ def command_lint(args):
                                 )
                             )
 
-    # --fix: auto-rename typo keys in fixable issues (L001, L002)
+    # --fix: auto-rename typo keys in fixable issues (L001, L002) only.
+    # L003 (duplicate key) and L100 (custom ruleset match) are never
+    # auto-applied here: a duplicate key's "correct" resolution requires
+    # judgment this command cannot safely infer, and a custom rule's
+    # replacement is operator-supplied, not proven safe by this engine.
     if do_fix:
+        dry_run = getattr(args, "dry_run", False)
         fixable = [
-            i for i in issues if i.get("fix") and i.get("code") in ("L001", "L002")
+            i for i in issues if i.get("fix") and i.get("code") in _LINT_FIXABLE_CODES
         ]
-        fixed_count = 0
-        # Group by source file
+        skipped_ambiguous = len(issues) - len(fixable)
         by_path = {}
         for issue in fixable:
             src = issue.get("source") or "-"
             by_path.setdefault(src, []).append(issue)
+
+        fixed_count = 0
+        written_files = 0
+        skipped_files = []
         for path, path_issues in by_path.items():
             if path == "-":
                 sys.stderr.write("WARNING: Cannot fix stdin; skipping.\n")
@@ -10769,17 +11301,47 @@ def command_lint(args):
                         new_key + ":",
                         lines[ln - 1],
                     )
-                    fixed_count += 1
             new_text = "".join(lines)
-            atomic_write_text(path, new_text)
+
+            # Validate the complete post-fix file before writing anything:
+            # if even one planned fix would introduce a parse error, this
+            # file's fixes are skipped entirely rather than partially
+            # applied.
+            _new_items, new_diagnostics = parse_text(
+                new_text, id_key=id_key, check_ids=False, check_references=False
+            )
+            if _has_error(new_diagnostics):
+                skipped_files.append(path)
+                continue
+
+            if dry_run:
+                sys.stdout.write(
+                    "[dry-run] Would fix %d issue(s) in %s\n" % (len(path_issues), path)
+                )
+            else:
+                atomic_write_text(path, new_text)
+            fixed_count += len(path_issues)
+            written_files += 1
+
         sys.stdout.write(
-            "Fixed %d issue(s) in %d file(s).\n" % (fixed_count, len(by_path))
+            _t("lint.fixed_summary", fixed=fixed_count, files=written_files) + "\n"
         )
-        # Re-run lint to report remaining issues
-        remaining = [i for i in issues if i.get("code") == "L003" or not i.get("fix")]
-        return 1 if remaining else 0
+        if skipped_files:
+            sys.stdout.write(
+                "Skipped %d file(s): fix would introduce a parse error -- %s\n"
+                % (len(skipped_files), ", ".join(skipped_files))
+            )
+        if skipped_ambiguous:
+            sys.stdout.write(
+                "Skipped %d finding(s): no unique safe fix is available.\n"
+                % skipped_ambiguous
+            )
+        return 1 if (skipped_files or skipped_ambiguous) else 0
 
     if args.format == "json":
+        # The stored "message" field stays exactly as constructed above
+        # (English) in --json output: it is machine-readable and must not
+        # change with locale, per #631/#633's contract.
         write_text(
             None,
             json.dumps(
@@ -10792,13 +11354,13 @@ def command_lint(args):
         )
     else:
         if not issues:
-            write_text(None, "No lint issues found.\n")
+            write_text(None, _t("lint.no_issues") + "\n")
         else:
             for issue in issues:
                 src = issue.get("source") or ""
                 ln = issue.get("line") or "?"
                 code = issue.get("code", "")
-                msg = issue.get("message", "")
+                msg = _localized_lint_text_message(issue)
                 fix = issue.get("fix")
                 fix_hint = (
                     " (fix: %r -> %r)" % (issue.get("key", ""), fix) if fix else ""
@@ -10807,6 +11369,24 @@ def command_lint(args):
                 sys.stdout.write("%s  %s  %s%s\n" % (loc, code, msg, fix_hint))
 
     return 1 if issues else 0
+
+
+def _localized_lint_text_message(issue):
+    """Locale-aware rendering of one lint finding's message (#633).
+
+    Only used for the plain-text renderer above; `--json` output always
+    reads the issue's own stored ``message`` field (English, unchanged) so
+    machine-readable lint output never varies with locale.
+    """
+    code = issue.get("code", "")
+    key = issue.get("key", "")
+    if code == "L001":
+        return _t("lint.typo_key", key=key, canonical=issue.get("fix"))
+    if code == "L002":
+        return _t("lint.bad_casing", key=key, expected=issue.get("fix"))
+    if code == "L003":
+        return _t("lint.duplicate_key", key=key, n=issue.get("count"))
+    return issue.get("message", "")
 
 
 def command_notify(args):
@@ -12024,6 +12604,43 @@ def command_today(args):
     return 0
 
 
+def _progress_display(raw):
+    """Render a ``progress:`` value for human-readable listings (#649).
+
+    Percentages are shown as-is; fractions are shown as ``m/n`` with a
+    derived percentage alongside. Returns ``""`` when ``raw`` is absent, so
+    a record with no ``progress:`` detail shows nothing extra. An
+    unparseable value (which ``check`` would separately flag as W230) is
+    still shown as-is rather than silently hidden.
+    """
+    if not raw:
+        return ""
+    from .progress import ProgressValueError, parse_progress
+
+    try:
+        parsed = parse_progress(raw)
+    except ProgressValueError:
+        return raw
+    if parsed.kind == "fraction":
+        return "%s (%d%%)" % (raw, int(round(parsed.percent)))
+    return raw
+
+
+def _relative_date_suffix(value, reference=None):
+    # A caller with no already-resolved reference date (report["reference_date"]
+    # etc.) still gets the workspace-aware "today" (#142) here, rather than
+    # falling through to relative_time's own bare system-date default, which
+    # would drift from every other surface when the configured workspace
+    # timezone differs from the host's.
+    relative = relative_time(value, today=reference or timezone_today())
+    return " (%s)" % relative if relative else ""
+
+
+def _progress_suffix(row):
+    display = _progress_display(row.get("progress"))
+    return " progress:%s" % display if display else ""
+
+
 def _render_today_text(report, saved_view=None, area=None):
     """Render the daily command center as the NOW/ATTENTION/TODAY/NEXT
     ACTIONS/BLOCKED/HABITS/INBOX hub structure lifetxt today's documented
@@ -12036,9 +12653,12 @@ def _render_today_text(report, saved_view=None, area=None):
     presented twice.
     """
     counts = report["counts"]
-    header = "%s brief" % report["mode"].capitalize()
+    mode = report["mode"]
+    mode_label = _t("today.mode.%s" % mode) or mode.capitalize()
     if report["reference_date"]:
-        header += " for %s" % report["reference_date"]
+        header = _t("today.brief_for", mode=mode_label, date=report["reference_date"])
+    else:
+        header = _t("today.brief", mode=mode_label)
     if saved_view:
         header += " (saved view: %s)" % saved_view
     elif area:
@@ -12046,7 +12666,7 @@ def _render_today_text(report, saved_view=None, area=None):
     write_text(None, header + "\n")
     if not report["safety"]["ok"]:
         write_text(
-            None, "  ! config has %d error(s)\n" % report["safety"]["config_errors"]
+            None, _t("today.config_error", n=report["safety"]["config_errors"]) + "\n"
         )
 
     shown = set()
@@ -12066,7 +12686,7 @@ def _render_today_text(report, saved_view=None, area=None):
 
     now_rows = report.get("now") or []
     if now_rows:
-        write_text(None, "\nNOW\n")
+        write_text(None, "\n%s\n" % _t("today.now"))
         for row in now_rows:
             since = " since %s" % row["since"] if row.get("since") else ""
             write_text(
@@ -12080,18 +12700,29 @@ def _render_today_text(report, saved_view=None, area=None):
         attention_rows or report["ticket_attention"] or report["project_attention"]
     )
     if has_attention:
-        write_text(None, "\nATTENTION\n")
+        write_text(None, "\n%s\n" % _t("today.attention"))
         for row in attention_rows:
-            due = " due:%s" % row["due"] if row.get("due") else ""
+            due = (
+                " due:%s%s"
+                % (
+                    row["due"],
+                    _relative_date_suffix(row["due"], report["reference_date"]),
+                )
+                if row.get("due")
+                else ""
+            )
             reason = " (%s)" % row["reason"] if row.get("reason") else ""
+            progress = _progress_suffix(row)
             write_text(
-                None, "  %s %s%s%s\n" % (row["status"], row["title"], due, reason)
+                None,
+                "  %s %s%s%s%s\n"
+                % (row["status"], row["title"], due, progress, reason),
             )
         if report["project_attention"]:
             write_text(
                 None,
-                "  Projects needing attention (%d):\n"
-                % len(report["project_attention"]),
+                _t("today.projects_attention", n=len(report["project_attention"]))
+                + "\n",
             )
             for row in report["project_attention"]:
                 write_text(
@@ -12106,7 +12737,7 @@ def _render_today_text(report, saved_view=None, area=None):
         if report["ticket_attention"]:
             write_text(
                 None,
-                "  Tickets needing attention (%d):\n" % len(report["ticket_attention"]),
+                _t("today.tickets_attention", n=len(report["ticket_attention"])) + "\n",
             )
             for row in report["ticket_attention"]:
                 write_text(
@@ -12117,7 +12748,7 @@ def _render_today_text(report, saved_view=None, area=None):
 
     today_rows = report.get("today_events") or []
     if today_rows:
-        write_text(None, "\nTODAY\n")
+        write_text(None, "\n%s\n" % _t("today.today_heading"))
         for row in today_rows:
             when = row.get("when") or ""
             write_text(None, "  %s %s\n" % (when, row.get("title") or ""))
@@ -12128,60 +12759,85 @@ def _render_today_text(report, saved_view=None, area=None):
     next_rows = unshown(
         [row for row in (report.get("next_actions") or []) if row.get("kind") != "H"]
     )
-    write_text(None, "\nNEXT ACTIONS\n")
+    write_text(None, "\n%s\n" % _t("today.next_actions"))
     if next_rows:
         for row in next_rows:
             project = " @%s" % row["project"] if row.get("project") else ""
-            due = " due:%s" % row["due"] if row.get("due") else ""
+            due = (
+                " due:%s%s"
+                % (
+                    row["due"],
+                    _relative_date_suffix(row["due"], report["reference_date"]),
+                )
+                if row.get("due")
+                else ""
+            )
+            progress = _progress_suffix(row)
             write_text(
-                None, "  %s %s%s%s\n" % (row["status"], row["title"], project, due)
+                None,
+                "  %s %s%s%s%s\n"
+                % (row["status"], row["title"], project, due, progress),
             )
     elif report.get("next_actions"):
-        write_text(None, "  (already listed above)\n")
+        write_text(None, _t("today.next_actions_already_listed") + "\n")
     else:
-        write_text(None, "  Nothing actionable.\n")
+        write_text(None, _t("today.next_actions_none") + "\n")
 
     blocked_rows = report.get("blocked") or []
     waiting_rows = report.get("waiting") or []
     if blocked_rows or waiting_rows:
-        write_text(None, "\nBLOCKED\n")
+        write_text(None, "\n%s\n" % _t("today.blocked"))
         for row in blocked_rows:
             write_text(None, "  %s %s\n" % (row["status"], row["title"]))
         blocked_keys = set(row_key(row) for row in blocked_rows)
         for row in waiting_rows:
             if row_key(row) in blocked_keys:
                 continue
-            write_text(None, "  (waiting) %s %s\n" % (row["status"], row["title"]))
+            write_text(
+                None,
+                "  %s %s %s\n"
+                % (_t("today.waiting_prefix"), row["status"], row["title"]),
+            )
 
     habit_rows = report.get("habits") or []
     if habit_rows:
-        write_text(None, "\nHABITS\n")
+        write_text(None, "\n%s\n" % _t("today.habits"))
         for row in habit_rows:
             write_text(None, "  %s %s\n" % (row["status"], row["title"]))
 
     upcoming_rows = unshown(report.get("upcoming"))
     if upcoming_rows:
-        write_text(None, "\nUpcoming (%dd)\n" % report["horizon_days"])
+        write_text(None, "\n%s\n" % _t("today.upcoming", n=report["horizon_days"]))
         for row in upcoming_rows:
-            due = " due:%s" % row["due"] if row.get("due") else ""
-            write_text(None, "  %s %s%s\n" % (row["status"], row["title"], due))
+            due = (
+                " due:%s%s"
+                % (
+                    row["due"],
+                    _relative_date_suffix(row["due"], report["reference_date"]),
+                )
+                if row.get("due")
+                else ""
+            )
+            progress = _progress_suffix(row)
+            write_text(
+                None, "  %s %s%s%s\n" % (row["status"], row["title"], due, progress)
+            )
 
     inbox = report.get("inbox") or {}
     pending_count = inbox.get("pending_count", 0)
     messages = report.get("messages") or []
     captures = report.get("captures") or []
     if pending_count or messages or captures:
-        write_text(None, "\nINBOX\n")
+        write_text(None, "\n%s\n" % _t("today.inbox"))
         if pending_count:
-            plural = "" if pending_count == 1 else "s"
-            write_text(None, "  %d pending item%s\n" % (pending_count, plural))
+            write_text(None, _t("today.inbox_pending", n=pending_count) + "\n")
         for row in messages:
-            write_text(None, "  message: %s\n" % row["title"])
+            write_text(None, _t("today.inbox_message", title=row["title"]) + "\n")
         for row in captures:
-            write_text(None, "  capture: %s\n" % row["title"])
+            write_text(None, _t("today.inbox_capture", title=row["title"]) + "\n")
 
     if all(v == 0 for v in counts.values()):
-        write_text(None, "\nAll clear.\n")
+        write_text(None, "\n%s\n" % _t("today.all_clear"))
 
 
 def command_area_list(args):
@@ -12446,20 +13102,70 @@ def command_vm_graph(args):
     return 0
 
 
+def _format_query_explanation(explanation):
+    """Render the query explanation for people at a terminal."""
+    plan = explanation["plan"]
+    lines = ["Query explanation:", "  query: %s" % plan["query"]]
+    for key in ("membership", "details", "date_filters", "progress_filters", "text"):
+        value = plan[key]
+        if isinstance(value, dict):
+            rendered = [
+                "%s=%s" % (field, ", ".join(str(item) for item in values))
+                for field, values in value.items()
+            ]
+        elif isinstance(value, list):
+            rendered = [json.dumps(item, ensure_ascii=False) for item in value]
+        else:
+            rendered = [str(value)]
+        lines.append("  %s: %s" % (key, "; ".join(rendered) or "(none)"))
+    lines.append("  open_only: %s" % ("true" if plan["open_only"] else "false"))
+    diagnostics = explanation["diagnostics"]
+    if diagnostics:
+        lines.append("  diagnostics:")
+        for item in diagnostics:
+            lines.append(
+                "    %s %s: %s" % (item["severity"], item["code"], item["message"])
+            )
+    else:
+        lines.append("  diagnostics: (none)")
+    return "\n".join(lines) + "\n"
+
+
 def command_query(args):
-    from .query import run_query
+    from .query import explain_query, run_query
+
+    config = _config(args)
+    if getattr(args, "explain", False):
+        explanation = explain_query(args.query, config=config)
+        if getattr(args, "format", "life") == "json":
+            output = (
+                json.dumps(
+                    explanation,
+                    ensure_ascii=False,
+                    indent=2 if getattr(args, "pretty", False) else None,
+                    separators=None if getattr(args, "pretty", False) else (",", ":"),
+                )
+                + "\n"
+            )
+        else:
+            output = _format_query_explanation(explanation)
+        write_text(getattr(args, "output", None), output)
+        if any(d["severity"] == "error" for d in explanation["diagnostics"]):
+            for d in explanation["diagnostics"]:
+                if d["severity"] == "error":
+                    sys.stderr.write("ERROR: %s %s\n" % (d["code"], d["message"]))
+            return 1
+        return 0
 
     items, _diagnostics = _parse_or_exit(
-        _normalize_paths(
-            getattr(args, "paths", None), _config(args), stdin_when_empty=False
-        )
+        _normalize_paths(getattr(args, "paths", None), config, stdin_when_empty=False)
         or ["life.txt"],
-        _config(args),
+        config,
     )
     filtered, query_diags = run_query(
         items,
         args.query,
-        config=_config(args),
+        config=config,
         sort=getattr(args, "sort", None),
         order=getattr(args, "order", "asc"),
         limit=getattr(args, "limit", None),
@@ -12830,7 +13536,11 @@ def _person_section(label, rows, limit=10):
         return
     write_text(None, "  %s (%d):\n" % (label, len(rows)))
     for row in rows[:limit]:
-        due = " due:%s" % row["due"] if row.get("due") else ""
+        due = (
+            " due:%s%s" % (row["due"], _relative_date_suffix(row["due"]))
+            if row.get("due")
+            else ""
+        )
         project = " @%s" % row["project"] if row.get("project") else ""
         write_text(
             None, "    - %s %s%s%s\n" % (row["status"], row["title"], project, due)

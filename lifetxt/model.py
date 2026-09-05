@@ -110,6 +110,7 @@ KNOWN_KEYS = (
     "context",
     "loc",
     "priority",
+    "progress",
     "est",
     "tag",
     "note",
@@ -179,7 +180,17 @@ RECOMMENDED_KEY_GROUPS = (
 RECOMMENDED_KEYS = KNOWN_KEYS
 
 RECOMMENDED_KEYS_BY_TYPE = {
-    "T": ("do", "due", "priority", "assignee", "owner", "project", "tag", "id"),
+    "T": (
+        "do",
+        "due",
+        "priority",
+        "progress",
+        "assignee",
+        "owner",
+        "project",
+        "tag",
+        "id",
+    ),
     "E": ("from", "to", "on", "loc", "attendee", "project", "id"),
     "D": ("due", "priority", "owner", "assignee", "project", "id"),
     "R": ("at", "on", "project", "context", "note", "id"),

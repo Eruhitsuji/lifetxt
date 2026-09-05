@@ -259,6 +259,10 @@ def row_priority(row):
     return row_detail(row, "priority")
 
 
+def row_progress(row):
+    return row_detail(row, "progress")
+
+
 def row_haystack(row):
     parts = [row.get("title"), row.get("id"), row.get("section"), row.get("type")]
     for key, values in (row.get("details") or {}).items():
@@ -2282,14 +2286,20 @@ def _row_line(state, row, selected, width, query):
 
 
 # Meta cells are fixed width so that columns line up across rows even when a
-# record is missing a project, due date, or priority.
-META_COLUMNS = (("project", 14), ("due", 18), ("priority", 10))
+# record is missing a project, due date, priority, or progress.
+META_COLUMNS = (("project", 14), ("due", 18), ("priority", 10), ("progress", 16))
 
 
 def meta_columns_for_width(width):
-    """Pick which meta columns fit next to the title at this terminal width."""
-    if width >= 90:
+    """Pick which meta columns fit next to the title at this terminal width.
+
+    ``progress`` (#650) only appears in the widest tier, so every narrower
+    layout's existing column set is unchanged.
+    """
+    if width >= 110:
         return META_COLUMNS
+    if width >= 90:
+        return META_COLUMNS[:3]
     if width >= 72:
         return META_COLUMNS[:2]
     if width >= 56:
@@ -2322,13 +2332,22 @@ def _row_meta(state, row, width):
                     "meta",
                 )
             )
-        else:
+        elif name == "priority":
             priority = row_priority(row)
             label = "%s %s" % (glyphs["flag"], priority) if priority else ""
             spans.append(
                 (
                     pad(fit(label, column_width - 1, glyphs), column_width),
                     "counter_warn",
+                )
+            )
+        else:
+            progress = row_progress(row)
+            label = "progress:" + progress if progress else ""
+            spans.append(
+                (
+                    pad(fit(label, column_width - 1, glyphs), column_width),
+                    "meta",
                 )
             )
     if row.get("blocked") and width >= 96:

@@ -716,7 +716,17 @@ class LifeTxtParserTests(unittest.TestCase):
         from lifetxt.model import KNOWN_KEYS, RECOMMENDED_KEYS_BY_TYPE
 
         self.assertEqual(
-            ("do", "due", "priority", "assignee", "owner", "project", "tag", "id"),
+            (
+                "do",
+                "due",
+                "priority",
+                "progress",
+                "assignee",
+                "owner",
+                "project",
+                "tag",
+                "id",
+            ),
             RECOMMENDED_KEYS_BY_TYPE["T"],
         )
         self.assertLessEqual(
@@ -2343,6 +2353,32 @@ class LifeTxtQuickCliTests(unittest.TestCase):
             self.assertIn("due:2026-12-31", content)
             self.assertIn("project:home", content)
 
+    def test_quick_applies_progress_flag(self):
+        # #647: --progress is added automatically by registering "progress"
+        # in assist.DETAIL_FLAGS, the same mechanism every other detail flag
+        # (due, project, priority, ...) already goes through for quick/q/add
+        # and assist -- no dedicated flag-handling code was written for it.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            stdout, stderr, code = run_cli(
+                "quick", "Write_paper", "--progress", "3/10", "--append", path
+            )
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:3/10", content)
+
+    def test_add_alias_applies_progress_flag(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            stdout, stderr, code = run_cli(
+                "add", "Write_paper", "--progress", "75%", "--append", path
+            )
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:75%", content)
+
     def test_quick_resolves_today(self):
         import datetime as dt
 
@@ -2750,6 +2786,37 @@ class LifeTxtDoneCliTests(unittest.TestCase):
             self.assertIn("[x] T Buy_milk", content)
             self.assertIn("[ ] T Clean_house", content)
 
+    def test_done_by_unique_id_prefix_marks_complete(self):
+        # #653: a unique id: prefix resolves to the same item as the full
+        # id:, reusing the shared resolver every ID-selecting command goes
+        # through -- no command-specific prefix logic was added here.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as f:
+                f.write(
+                    "[ ] T Buy_milk id:t001abcdef\n[ ] T Clean_house id:t002ghijkl\n"
+                )
+            stdout, stderr, code = run_cli("done", path, "t001")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("[x] T Buy_milk", content)
+            self.assertIn("[ ] T Clean_house", content)
+
+    def test_done_by_ambiguous_id_prefix_fails_naming_every_candidate(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as f:
+                f.write(self.SOURCE_TEXT)
+            stdout, stderr, code = run_cli("done", path, "t0")
+            self.assertNotEqual(0, code)
+            self.assertIn("Ambiguous ID prefix", stderr)
+            self.assertIn("t001", stderr)
+            self.assertIn("t002", stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertNotIn("[x]", content)
+
     def test_done_by_id_appends_done_date(self):
         import datetime as dt
 
@@ -2832,6 +2899,457 @@ class LifeTxtDoneCliTests(unittest.TestCase):
             with open(path, encoding="utf-8") as f:
                 content = f.read()
             self.assertIn("done:2026-05-01", content)
+
+
+class LifeTxtProgressCliTests(unittest.TestCase):
+    """Covers #660: `lifetxt progress` increment/decrement of progress:."""
+
+    def _write(self, temp_dir, source):
+        path = os.path.join(temp_dir, "life.txt")
+        with open(path, "w", encoding="utf-8", newline="\n") as f:
+            f.write(source)
+        return path
+
+    def test_increments_a_fraction_and_keeps_total(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir, "[ ] T Experiment id:experiment_1 progress:3/10\n"
+            )
+            stdout, stderr, code = run_cli(
+                "progress", path, "experiment_1", "--delta", "+1"
+            )
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:4/10", content)
+
+    def test_decrements_a_fraction_and_keeps_total(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir, "[ ] T Experiment id:experiment_1 progress:3/10\n"
+            )
+            stdout, stderr, code = run_cli(
+                "progress", path, "experiment_1", "--delta=-1"
+            )
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:2/10", content)
+
+    def test_increments_a_percentage(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:task_1 progress:40%\n")
+            stdout, stderr, code = run_cli(
+                "progress", path, "task_1", "--delta", "+10%"
+            )
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:50%", content)
+
+    def test_decrements_a_percentage(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:task_1 progress:40%\n")
+            stdout, stderr, code = run_cli("progress", path, "task_1", "--delta=-15%")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:25%", content)
+
+    def test_rejects_percentage_delta_against_a_fraction(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir, "[ ] T Experiment id:experiment_1 progress:3/10\n"
+            )
+            stdout, stderr, code = run_cli(
+                "progress", path, "experiment_1", "--delta", "+10%"
+            )
+            self.assertEqual(1, code)
+            self.assertIn("fraction", stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:3/10", content)
+
+    def test_rejects_fraction_delta_against_a_percentage(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:task_1 progress:40%\n")
+            stdout, stderr, code = run_cli("progress", path, "task_1", "--delta", "+1")
+            self.assertEqual(1, code)
+            self.assertIn("percentage", stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:40%", content)
+
+    def test_rejects_a_fraction_result_above_total(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir, "[ ] T Experiment id:experiment_1 progress:9/10\n"
+            )
+            stdout, stderr, code = run_cli(
+                "progress", path, "experiment_1", "--delta", "+5"
+            )
+            self.assertEqual(1, code)
+            self.assertIn("must not exceed total", stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:9/10", content)
+
+    def test_rejects_a_fraction_result_below_zero(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir, "[ ] T Experiment id:experiment_1 progress:3/10\n"
+            )
+            stdout, stderr, code = run_cli(
+                "progress", path, "experiment_1", "--delta=-100"
+            )
+            self.assertEqual(1, code)
+            self.assertIn("must not be negative", stderr)
+
+    def test_rejects_a_percentage_result_above_100(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:task_1 progress:95%\n")
+            stdout, stderr, code = run_cli(
+                "progress", path, "task_1", "--delta", "+10%"
+            )
+            self.assertEqual(1, code)
+            self.assertIn("out of range", stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:95%", content)
+
+    def test_rejects_a_percentage_result_below_0(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:task_1 progress:5%\n")
+            stdout, stderr, code = run_cli("progress", path, "task_1", "--delta=-10%")
+            self.assertEqual(1, code)
+            self.assertIn("out of range", stderr)
+
+    def test_missing_progress_is_never_treated_as_zero(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T No_progress id:task_2\n")
+            stdout, stderr, code = run_cli("progress", path, "task_2", "--delta", "+1")
+            self.assertEqual(1, code)
+            self.assertIn("has no progress:", stderr)
+
+    def test_invalid_delta_syntax_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:task_1 progress:40%\n")
+            stdout, stderr, code = run_cli(
+                "progress", path, "task_1", "--delta", "banana"
+            )
+            self.assertEqual(1, code)
+            self.assertIn("Invalid --delta", stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:40%", content)
+
+    def test_dry_run_reports_the_change_without_writing(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir, "[ ] T Experiment id:experiment_1 progress:3/10\n"
+            )
+            stdout, stderr, code = run_cli(
+                "progress", path, "experiment_1", "--delta", "+1", "--dry-run"
+            )
+            self.assertEqual(0, code, stderr)
+            self.assertIn("progress:4/10", stdout)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:3/10", content)
+            self.assertNotIn("progress:4/10", content)
+
+    def test_a_tiny_percentage_delta_is_not_rounded_away(self):
+        # A CodeX review finding: %g formatting defaults to 6 significant
+        # digits, so a tiny delta against an existing precise value was
+        # silently lost (50% + 0.000001% produced 50%, an unchanged
+        # no-op). Decimal-based arithmetic on the raw text preserves it.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir, "[ ] T Experiment id:experiment_1 progress:50%\n"
+            )
+            stdout, stderr, code = run_cli(
+                "progress", path, "experiment_1", "--delta", "+0.000001%"
+            )
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:50.000001%", content)
+
+    def test_a_long_percentage_delta_fails_loudly_instead_of_overflowing(self):
+        # A CodeX review finding: float(amount_text) on an extremely long
+        # digit string overflows to inf, and int() on inf then raised an
+        # uncaught OverflowError instead of a clean CLI error.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir, "[ ] T Experiment id:experiment_1 progress:50%\n"
+            )
+            stdout, stderr, code = run_cli(
+                "progress", path, "experiment_1", "--delta=+" + "9" * 400 + "%"
+            )
+            self.assertEqual(1, code)
+            self.assertIn("out of range", stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:50%", content)
+
+    def test_a_long_fraction_delta_fails_loudly_instead_of_overflowing(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir, "[ ] T Experiment id:experiment_1 progress:3/10\n"
+            )
+            stdout, stderr, code = run_cli(
+                "progress", path, "experiment_1", "--delta=+" + "9" * 400
+            )
+            self.assertEqual(1, code)
+            self.assertIn("must not exceed total", stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:3/10", content)
+
+    def test_resolves_by_unique_id_prefix(self):
+        # #653/#660: progress reuses the shared resolver, so a short unique
+        # id: prefix works exactly like on done/start/complete.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir,
+                "[ ] T Experiment id:experiment_1abcdef progress:3/10\n"
+                "[ ] T Other id:other_1ghijkl progress:1/2\n",
+            )
+            stdout, stderr, code = run_cli(
+                "progress", path, "experiment_1", "--delta", "+1"
+            )
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:4/10", content)
+            self.assertIn("progress:1/2", content)
+
+    def test_selects_by_line(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir,
+                "[ ] T First id:t1 progress:1/2\n[ ] T Second id:t2 progress:1/4\n",
+            )
+            stdout, stderr, code = run_cli(
+                "progress", path, "--line", "2", "--delta", "+1"
+            )
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:1/2", content)
+            self.assertIn("progress:2/4", content)
+
+    def test_selects_by_text(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir,
+                "[ ] T Buy_milk id:t1 progress:1/2\n[ ] T Walk_dog id:t2 progress:1/4\n",
+            )
+            stdout, stderr, code = run_cli(
+                "progress", path, "--text", "Walk", "--delta", "+1"
+            )
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:1/2", content)
+            self.assertIn("progress:2/4", content)
+
+
+class LifeTxtCloneCliTests(unittest.TestCase):
+    """Covers #659: `lifetxt clone` derives a new item from an existing one."""
+
+    def _write(self, temp_dir, source):
+        path = os.path.join(temp_dir, "life.txt")
+        with open(path, "w", encoding="utf-8", newline="\n") as f:
+            f.write(source)
+        return path
+
+    def test_clones_a_task_resetting_identity_and_history_fields(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir,
+                '[/] T "Experiment condition A" id:experiment_01 '
+                "project:research priority:A progress:8/10 "
+                "created:2026-01-01 updated:2026-08-01\n",
+            )
+            stdout, stderr, code = run_cli("clone", path, "experiment_01")
+            self.assertEqual(0, code, stderr)
+            self.assertIn("Cloned:", stdout)
+            with open(path, encoding="utf-8") as f:
+                lines = f.read().splitlines()
+            self.assertEqual(2, len(lines))
+            # Original item is byte-for-byte unchanged.
+            self.assertEqual(
+                '[/] T "Experiment condition A" id:experiment_01 '
+                "project:research priority:A progress:8/10 "
+                "created:2026-01-01 updated:2026-08-01",
+                lines[0],
+            )
+            new_line = lines[1]
+            self.assertTrue(new_line.startswith("[ ] T"))
+            self.assertIn("project:research", new_line)
+            self.assertIn("priority:A", new_line)
+            for excluded in (
+                "id:experiment_01",
+                "progress:",
+                "created:",
+                "updated:",
+            ):
+                self.assertNotIn(excluded, new_line)
+
+    def test_new_item_gets_no_id_when_auto_ids_are_disabled(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Original id:orig_1 project:work\n")
+            stdout, stderr, code = run_cli("clone", path, "orig_1")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                lines = f.read().splitlines()
+            self.assertNotIn("id:", lines[1])
+
+    def test_new_item_gets_a_fresh_unique_id_when_auto_ids_are_enabled(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Original id:orig_1 project:work\n")
+            config_path = os.path.join(temp_dir, "config.json")
+            with open(config_path, "w", encoding="utf-8") as f:
+                json.dump({"ids": {"auto": True}}, f)
+            stdout, stderr, code = run_cli(
+                "--config", config_path, "clone", path, "orig_1"
+            )
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                lines = f.read().splitlines()
+            self.assertIn("id:", lines[1])
+            new_id = lines[1].split("id:", 1)[1].split()[0]
+            self.assertNotEqual("orig_1", new_id)
+
+    def test_status_defaults_to_open_for_ordinary_kinds(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[x] T Done_task id:t1 done:2026-01-01\n")
+            stdout, stderr, code = run_cli("clone", path, "t1")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                lines = f.read().splitlines()
+            self.assertTrue(lines[1].startswith("[ ] T"))
+            self.assertNotIn("done:", lines[1])
+
+    def test_note_kind_keeps_note_status(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir, "[N] N Meeting_notes id:note1 project:research\n"
+            )
+            stdout, stderr, code = run_cli("clone", path, "note1")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                lines = f.read().splitlines()
+            self.assertTrue(lines[1].startswith("[N] N"))
+
+    def test_open_presence_status_clones_as_active(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir,
+                "[/] S Busy id:status1 state:busy from:2026-09-01T09:00\n",
+            )
+            stdout, stderr, code = run_cli("clone", path, "status1")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                lines = f.read().splitlines()
+            self.assertTrue(lines[1].startswith("[/] S"))
+
+    def test_closed_presence_status_clones_as_done(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir,
+                "[x] S Busy id:status1 state:busy from:2026-09-01T09:00 "
+                "to:2026-09-01T10:00\n",
+            )
+            stdout, stderr, code = run_cli("clone", path, "status1")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                lines = f.read().splitlines()
+            self.assertTrue(lines[1].startswith("[x] S"))
+
+    def test_missing_id_fails_loudly(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Original id:orig_1\n")
+            stdout, stderr, code = run_cli("clone", path, "nonexistent")
+            self.assertEqual(1, code)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertEqual(1, content.count("\n"))
+
+    def test_resolves_by_unique_id_prefix(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir,
+                "[ ] T First id:abc123def456 project:work\n"
+                "[ ] T Second id:xyz789ghi000 project:home\n",
+            )
+            stdout, stderr, code = run_cli("clone", path, "abc1")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                lines = f.read().splitlines()
+            self.assertEqual(3, len(lines))
+            self.assertIn("project:work", lines[2])
+
+    def test_ambiguous_id_prefix_fails_naming_every_candidate(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir,
+                "[ ] T First id:abc123def456\n[ ] T Second id:abc999xyz000\n",
+            )
+            stdout, stderr, code = run_cli("clone", path, "abc")
+            self.assertEqual(1, code)
+            self.assertIn("Ambiguous ID prefix", stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertEqual(2, content.count("\n"))
+
+    def test_selects_by_line(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir,
+                "[ ] T First id:t1 project:work\n[ ] T Second id:t2 project:home\n",
+            )
+            stdout, stderr, code = run_cli("clone", path, "--line", "2")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                lines = f.read().splitlines()
+            self.assertIn("project:home", lines[2])
+
+    def test_selects_by_text(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir,
+                "[ ] T Buy_milk id:t1 project:home\n[ ] T Walk_dog id:t2 project:home\n",
+            )
+            stdout, stderr, code = run_cli("clone", path, "--text", "Walk")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                lines = f.read().splitlines()
+            self.assertIn("Walk_dog", lines[2])
+
+    def test_dry_run_reports_the_generated_item_without_writing(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Original id:orig_1 project:work\n")
+            stdout, stderr, code = run_cli("clone", path, "orig_1", "--dry-run")
+            self.assertEqual(0, code, stderr)
+            self.assertIn("project:work", stdout)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertEqual(1, content.count("\n"))
+
+    def test_generated_clone_passes_check(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir,
+                '[/] T "Experiment condition A" id:experiment_01 '
+                "project:research priority:A progress:8/10\n",
+            )
+            stdout, stderr, code = run_cli("clone", path, "experiment_01")
+            self.assertEqual(0, code, stderr)
+            stdout, stderr, code = run_cli("check", path)
+            self.assertEqual(0, code, stderr)
+            self.assertIn("OK: 2 item(s)", stdout)
 
 
 class LifeTxtDoneHabitCliTests(unittest.TestCase):
@@ -4356,6 +4874,25 @@ class LifeTxtWebConfigAndCheckLineTests(unittest.TestCase):
         result = public_web_config({"web": {"week_start": "friday"}})
         self.assertEqual("monday", result["week_start"])
 
+    def test_config_api_reports_the_workspace_aware_today(self):
+        # A CodeX review finding against #658: the Web UI's relative-time
+        # display computed instant-based (hour/minute) diffs using the
+        # browser's own local clock, disagreeing with the CLI/TUI's
+        # date-based, workspace-timezone-aware relative_time(). /api/config
+        # now exposes the same timezone_today() the server itself already
+        # uses, so relativeTime() in web_assets_js_14.js can align with it.
+        try:
+            from fastapi.testclient import TestClient
+        except Exception as exc:
+            self.skipTest(f"FastAPI test client is unavailable: {exc}")
+        from lifetxt.timezone_policy import today as timezone_today
+        from lifetxt.webapp import create_app
+
+        client = TestClient(create_app(paths=[]))
+        response = client.get("/api/config")
+        self.assertEqual(200, response.status_code)
+        self.assertEqual(timezone_today().isoformat(), response.json()["today"])
+
     def test_index_page_includes_calendar_view(self):
         try:
             from fastapi.testclient import TestClient
@@ -4535,6 +5072,28 @@ class LifeTxtWebConfigAndCheckLineTests(unittest.TestCase):
         # record with 3 in-window matches should count as 3 toward the limit.
         self.assertIn('entries.length ? "" : guidedEmptyState', load_body)
         self.assertIn("entries.slice(0, limit)", load_body)
+
+    def test_items_view_serves_the_progress_badge_helper_and_markup(self):
+        try:
+            from fastapi.testclient import TestClient
+        except Exception as exc:
+            self.skipTest(f"FastAPI test client is unavailable: {exc}")
+        from lifetxt.webapp import create_app
+
+        client = TestClient(create_app(paths=[]))
+        html = client.get("/").text
+        # #651: the Items view shows a progress bar+label component for a
+        # progress: detail, without inventing a second UI-only data model --
+        # buildProgressBadge() reads item.details.progress directly.
+        self.assertIn("function progressInfo", html)
+        self.assertIn("function buildProgressBadge", html)
+        self.assertIn("buildProgressBadge(item.details)", html)
+        self.assertIn("progress-badge", html)
+        self.assertIn("progress-fill", html)
+        # The generic Details textarea is still the only edit surface for
+        # progress: (no dedicated per-key input, matching every other
+        # detail); it just documents the key via its placeholder/help text.
+        self.assertIn("progress:75%", html)
 
     def test_help_modal_has_a_searchable_command_reference(self):
         try:
@@ -6367,6 +6926,35 @@ class LifeTxtWebAppTests(unittest.TestCase):
             [item.title for item in by_time_desc],
         )
 
+    def test_webapp_sort_items_by_progress_missing_sorts_last(self):
+        from lifetxt import webapp
+
+        # #652: progress: accepts either representation, normalized to a
+        # ratio for sorting; missing/invalid progress: is never treated as
+        # 0% and always sorts after every item that has a valid value,
+        # regardless of asc/desc.
+        text = (
+            "[ ] T Low progress:10%\n"
+            "[ ] T High progress:3/4\n"
+            "[ ] T NoProgress\n"
+            "[ ] T Bad progress:not-a-number\n"
+            "[ ] T Mid progress:50%\n"
+        )
+        items, diagnostics = parse_text(text)
+        self.assertFalse(any(d.severity == "error" for d in diagnostics))
+
+        ascending = webapp.sort_items(items, "progress", "asc")
+        self.assertEqual(
+            ["Low", "Mid", "High", "NoProgress", "Bad"],
+            [item.title for item in ascending],
+        )
+
+        descending = webapp.sort_items(items, "progress", "desc")
+        self.assertEqual(
+            ["High", "Mid", "Low", "NoProgress", "Bad"],
+            [item.title for item in descending],
+        )
+
     def test_webapp_limit_items(self):
         from lifetxt import webapp
 
@@ -6830,6 +7418,50 @@ class LifeTxtAssistCliTests(unittest.TestCase):
                     "[ ] T Other id:task_002\n",
                     handle.read(),
                 )
+
+    def test_assist_update_by_unique_id_prefix(self):
+        # #653: --match-id now resolves a unique id: prefix through the
+        # shared resolve_item_by_id() resolver, same as done/start/complete.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Old_Title id:task_001abc\n")
+                handle.write("[ ] T Other id:task_999xyz\n")
+
+            stdout, stderr, code = run_cli(
+                "assist",
+                "--update",
+                path,
+                "--match-id",
+                "task_001",
+                "--status",
+                "done",
+                "--done",
+                "2026-06-06",
+            )
+
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            with open(path, "r", encoding="utf-8") as handle:
+                content = handle.read()
+            self.assertIn("[x] T Old_Title id:task_001abc", content)
+            self.assertIn("[ ] T Other id:task_999xyz", content)
+
+    def test_assist_update_by_ambiguous_id_prefix_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T First id:task_a111\n")
+                handle.write("[ ] T Second id:task_a222\n")
+
+            stdout, stderr, code = run_cli(
+                "assist", "--update", path, "--match-id", "task_a", "--status", "done"
+            )
+
+            self.assertNotEqual(0, code)
+            self.assertIn("Ambiguous ID prefix", stderr)
+            self.assertIn("task_a111", stderr)
+            self.assertIn("task_a222", stderr)
 
     def test_assist_interactive_help_commands(self):
         stdout, stderr, code = run_cli(

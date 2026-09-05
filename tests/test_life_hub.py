@@ -40,6 +40,18 @@ class CommandCenterTests(unittest.TestCase):
         self.assertEqual(["DueToday"], [r["title"] for r in cc["due_today"]])
         self.assertEqual(["Soon"], [r["title"] for r in cc["upcoming"]])
 
+    def test_progress_is_carried_on_ref_rows_when_present(self):
+        items, _ = parse_text(
+            "#! timezone: UTC\n"
+            "[ ] T Design project:web assignee:alice due:2026-07-01 progress:40%\n"
+        )
+        cc = command_center(items, {}, TODAY)
+        self.assertEqual("40%", cc["overdue"][0]["progress"])
+
+    def test_progress_is_none_when_absent(self):
+        cc = self.cc()
+        self.assertIsNone(cc["overdue"][0]["progress"])
+
     def test_blocked_and_waiting(self):
         cc = self.cc()
         self.assertEqual(["Deploy"], [r["title"] for r in cc["blocked"]])

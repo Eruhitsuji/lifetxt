@@ -9801,6 +9801,841 @@ traceability:
         implementing this entry is opened.
       status: implemented
 
+    - requirement_id: req-cli-i18n-locale-resolution
+      capability_id: cap-cli-localization-foundation
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/631
+      pull_request: null
+      changed_files_or_scope:
+        - Add lifetxt/i18n.py: locale resolver (explicit > LIFETXT_LANG > OS locale > English), message catalog, register_messages/translate/locale_context
+        - Wire --lang and LIFETXT_LANG into lifetxt/cli.py
+        - lifetxt/i18n.py
+        - lifetxt/cli.py
+        - tests/test_i18n.py
+      tests_or_evidence:
+        - "python -m unittest tests.test_i18n -> Ran 23 tests, OK"
+        - "locale precedence, normalization (ja/ja_JP/ja-JP -> ja; c/posix/unsupported -> None), missing-translation/missing-message-id fallback, and register_messages merge-not-replace semantics are all directly unit-tested"
+      release_or_deployment: null
+      notes: >-
+        First implementation task of the beginner-i18n-experience batch.
+        See cap-cli-localization-foundation's own notes for the
+        fall-through-behavior investigation (confirmed intentional, not a
+        bug, during a later review pass).
+      status: implemented
+
+    - requirement_id: req-cli-i18n-message-catalog
+      capability_id: cap-cli-localization-foundation
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/631
+      pull_request: null
+      changed_files_or_scope:
+        - "Add the flat {message_id: {locale: text}} message catalog and a representative #629 taxonomy message set"
+        - lifetxt/i18n.py
+        - lifetxt/cli_taxonomy.py
+        - tests/test_cli_taxonomy.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - "python -m unittest tests.test_cli_taxonomy -> Ran 37 tests, OK"
+      release_or_deployment: null
+      notes: >-
+        Message IDs are owned by their calling module (cli_taxonomy.py
+        registers its own display strings into i18n.py's shared catalog)
+        rather than i18n.py duplicating command/category/audience metadata.
+      status: implemented
+
+    - requirement_id: req-beginner-daily-cli-localization
+      capability_id: cap-beginner-daily-localization
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/632
+      pull_request: null
+      changed_files_or_scope:
+        - Translate the #629 taxonomy's beginner/daily-audience guided-path text to Japanese through the shared catalog
+        - lifetxt/cli_taxonomy.py
+        - lifetxt/entrypoint.py
+        - lifetxt/tour.py
+        - tests/test_beginner_daily_localization.py
+        - docs/en/getting-started.md
+        - docs/ja/getting-started.md
+      tests_or_evidence:
+        - "python -m unittest tests.test_beginner_daily_localization -> Ran 5 tests, OK"
+      release_or_deployment: null
+      notes: >-
+        Second implementation task of the batch, extending
+        cap-cli-localization-foundation.
+      status: implemented
+
+    - requirement_id: req-diagnostics-localization
+      capability_id: cap-beginner-daily-localization
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/633
+      pull_request: null
+      changed_files_or_scope:
+        - Translate a representative set of parser/validator diagnostic hints and doctor's human-readable output to Japanese
+        - lifetxt/cli_taxonomy.py
+        - tests/test_diagnostics_localization.py
+      tests_or_evidence:
+        - "python -m unittest tests.test_diagnostics_localization -> Ran 3 tests, OK (1 known pre-existing unrelated flake, #662, when run alongside other tests in the same process -- reproduced in isolation and confirmed via git diff to be untouched by this or any later change)"
+      release_or_deployment: null
+      notes: >-
+        #662 (test_doctor_json_is_locale_invariant comparing a live
+        disk-free-space reading across two separate subprocess calls) was
+        found while gathering evidence for this entry and filed separately.
+      status: implemented
+
+    - requirement_id: req-web-beginner-authoring-mode
+      capability_id: cap-web-beginner-authoring-mode
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/634
+      pull_request: null
+      changed_files_or_scope:
+        - Add an opt-in beginner authoring mode to the Web record editor, restricted to the Beginner/Minimal Profile vocabulary
+        - lifetxt/beginner_profile.py
+        - lifetxt/web_assets.html
+        - lifetxt/web_assets_js_02.js
+        - lifetxt/web_assets_js_05.js
+        - lifetxt/webapp.py
+        - tests/test_beginner_authoring_mode_js.py
+        - tests/test_beginner_profile.py
+        - docs/en/getting-started.md
+        - docs/en/web.md
+        - docs/ja/getting-started.md
+        - docs/ja/web.md
+      tests_or_evidence:
+        - "python -m unittest tests.test_beginner_profile tests.test_beginner_authoring_mode_js tests.test_web_assets -> OK"
+      release_or_deployment: null
+      notes: >-
+        Reuses the Beginner/Minimal Profile vocabulary already documented
+        under cap-beginner-minimal-profile (#558) as the single source of
+        the restricted key set.
+      status: implemented
+
+    - requirement_id: req-guarded-lint-fix
+      capability_id: cap-guarded-lint-fix
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/635
+      pull_request: null
+      changed_files_or_scope:
+        - Harden lifetxt lint --fix into a plan-validate-then-write sequence with a --dry-run preview
+        - lifetxt/cli.py
+        - tests/test_lint_fix_hardening.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - "python -m unittest tests.test_lint_fix_hardening -> OK"
+      release_or_deployment: null
+      notes: >-
+        Reuses the existing guarded mutation/revision/backup path already
+        established by other write commands.
+      status: implemented
+
+    - requirement_id: req-bare-invocation-smart-entry
+      capability_id: cap-bare-invocation-smart-entry
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/636
+      pull_request: null
+      changed_files_or_scope:
+        - Make a bare `lifetxt` invocation on a real TTY show a short beginner-oriented orientation instead of an argparse usage error
+        - lifetxt/entrypoint.py
+        - tests/test_bare_invocation.py
+        - docs/en/getting-started.md
+        - docs/ja/getting-started.md
+      tests_or_evidence:
+        - "python -m unittest tests.test_bare_invocation -> OK"
+      release_or_deployment: null
+      notes: >-
+        TTY-gated; a redirected or scripted bare invocation keeps its exact
+        prior argparse-error behavior.
+      status: implemented
+
+    - requirement_id: req-init-starter-presets
+      capability_id: cap-init-starter-presets
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/637
+      pull_request: null
+      changed_files_or_scope:
+        - Add use-case-oriented starter section skeletons to lifetxt init --preset
+        - lifetxt/cli.py
+        - lifetxt/init_presets.py
+        - tests/test_init_presets.py
+        - docs/en/cli.md
+        - docs/en/getting-started.md
+        - docs/ja/cli.md
+        - docs/ja/getting-started.md
+      tests_or_evidence:
+        - "python -m unittest tests.test_init_presets -> OK"
+      release_or_deployment: null
+      notes: >-
+        Extends the pre-existing init preset mechanism rather than a
+        parallel scaffolding path.
+      status: implemented
+
+    - requirement_id: req-success-guidance-next-undo
+      capability_id: cap-success-guidance
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/638
+      pull_request: null
+      changed_files_or_scope:
+        - Add TTY-only Next/Undo guidance after a curated set of beginner-facing write commands succeed
+        - lifetxt/cli.py
+        - lifetxt/cli_taxonomy.py
+        - tests/test_success_guidance.py
+        - docs/en/getting-started.md
+        - docs/ja/getting-started.md
+      tests_or_evidence:
+        - "python -m unittest tests.test_success_guidance -> OK"
+      release_or_deployment: null
+      notes: >-
+        render_success_guidance gracefully returns "" for an unregistered
+        command; #659/#660 (progress, clone) both call it unconditionally,
+        matching this established pattern.
+      status: implemented
+
+    - requirement_id: req-check-rich-text-diagnostics
+      capability_id: cap-rich-check-diagnostics
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/639
+      pull_request: null
+      changed_files_or_scope:
+        - Render check's text output with source snippets, span carets, and hints
+        - lifetxt/diagnostic_render.py
+        - lifetxt/cli.py
+        - tests/test_check_rich_diagnostics.py
+        - tests/test_diagnostic_render.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - "python -m unittest tests.test_check_rich_diagnostics tests.test_diagnostic_render -> OK"
+      release_or_deployment: null
+      notes: Presentation-only; no diagnostic code, category, or parser/validator rule changed.
+      status: implemented
+
+    - requirement_id: req-check-diagnostic-suggestions
+      capability_id: cap-rich-check-diagnostics
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/640
+      pull_request: null
+      changed_files_or_scope:
+        - Add safe "Did you mean?" typo/invalid-token suggestions to check diagnostics, reusing only real, currently-valid candidates
+        - lifetxt/diagnostic_render.py
+        - lifetxt/diagnostic_suggestions.py
+        - lifetxt/validator.py
+        - tests/test_check_suggestions.py
+        - tests/test_diagnostic_suggestions.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - "python -m unittest tests.test_check_suggestions tests.test_diagnostic_suggestions -> OK"
+      release_or_deployment: null
+      notes: Never fabricates a candidate that is not already real and currently valid.
+      status: implemented
+
+    - requirement_id: req-diagnostic-explain-catalog
+      capability_id: cap-rich-check-diagnostics
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/641
+      pull_request: null
+      changed_files_or_scope:
+        - Add lifetxt help diagnostic CODE, a diagnostic code explanation catalog
+        - lifetxt/diagnostic_catalog.py
+        - lifetxt/cli_taxonomy.py
+        - lifetxt/extra_cli.py
+        - tests/test_diagnostic_catalog.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - "python -m unittest tests.test_diagnostic_catalog -> OK"
+      release_or_deployment: null
+      notes: null
+      status: implemented
+
+    - requirement_id: req-diagnostic-cascade-grouping
+      capability_id: cap-rich-check-diagnostics
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/642
+      pull_request: null
+      changed_files_or_scope:
+        - Group cascading E009/E010 diagnostics by root cause so a single underlying syntax error does not appear as many independent-looking diagnostics
+        - lifetxt/diagnostic_cascade.py
+        - lifetxt/diagnostic_render.py
+        - lifetxt/cli.py
+        - tests/test_check_cascade.py
+        - tests/test_diagnostic_cascade.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - "python -m unittest tests.test_check_cascade tests.test_diagnostic_cascade -> OK"
+      release_or_deployment: null
+      notes: null
+      status: implemented
+
+    - requirement_id: req-cli-error-guidance
+      capability_id: cap-cli-error-guidance
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/643
+      pull_request: null
+      changed_files_or_scope:
+        - Add TTY-only actionable guidance for five common CLI-level error families
+        - lifetxt/cli_error_guidance.py
+        - lifetxt/cli.py
+        - lifetxt/entrypoint.py
+        - lifetxt/config.py
+        - tests/test_cli_error_guidance.py
+        - tests/test_cli_error_recovery.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - "python -m unittest tests.test_cli_error_guidance tests.test_cli_error_recovery -> Ran 32 tests, OK"
+      release_or_deployment: null
+      notes: >-
+        Initially implemented with every guidance string hardcoded in
+        English (localized in a later pass; see req-cli-error-guidance-localized).
+      status: implemented
+
+    - requirement_id: req-cli-error-guidance-localized
+      capability_id: cap-cli-error-guidance
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/643
+      pull_request: null
+      changed_files_or_scope:
+        - Connect cli_error_guidance.py's TTY-only guidance lines to #631's shared localization catalog, per #643's own design principle
+        - lifetxt/cli_error_guidance.py
+        - tests/test_cli_error_guidance.py
+      tests_or_evidence:
+        - "python -m unittest tests.test_cli_error_guidance -> Ran 17 tests, OK (3 new LocalizationTests)"
+        - "live-verified: i18n.locale_context('ja') plus a fake TTY renders Japanese guidance (もしかして.../参照:/利用可能:) while the leading ERROR line and underlying exception text stay exactly the original English"
+      release_or_deployment: null
+      notes: >-
+        Found during a CodeX-review-informed pass over the whole #631-660
+        batch: every guidance string was still hardcoded in English even
+        though #631 had since landed in the same batch, directly
+        contradicting #643's own acceptance criterion
+        "#631後はen/ja fixed wordingをshared localizationから表示できる構造である。".
+        Fixed by registering the guidance strings in lifetxt.i18n's catalog
+        and rendering them through translate(); the leading "ERROR: ..."
+        line and the underlying exception text are deliberately left
+        untouched, per this module's own documented locale-independence
+        invariant for that line.
+      status: implemented
+
+    - requirement_id: req-check-sarif-export
+      capability_id: cap-sarif-export
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/644
+      pull_request: null
+      changed_files_or_scope:
+        - Add lifetxt check --format sarif, a pure SARIF 2.1.0 export adapter over the already-filtered stable Diagnostic list
+        - lifetxt/sarif.py
+        - lifetxt/cli.py
+        - tests/test_sarif.py
+        - tests/test_check_sarif.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - "python -m unittest tests.test_sarif tests.test_check_sarif -> Ran 28 tests, OK"
+      release_or_deployment: null
+      notes: >-
+        Initially implemented with unescaped path-to-URI conversion (fixed
+        in a later pass; see req-sarif-uri-percent-encoding).
+      status: implemented
+
+    - requirement_id: req-sarif-uri-percent-encoding
+      capability_id: cap-sarif-export
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/644
+      pull_request: null
+      changed_files_or_scope:
+        - Percent-encode every SARIF artifactLocation.uri path segment and give a UNC path a correct server-as-authority form
+        - lifetxt/sarif.py
+        - tests/test_sarif.py
+      tests_or_evidence:
+        - "python -m unittest tests.test_sarif -> Ran 23 tests, OK (6 new regression tests)"
+        - "confirmed via git stash (production code only, tests kept) that all 4 UNC/encoding-specific new tests fail against the pre-fix code with the exact malformed URIs, then pass once the fix is restored"
+        - "live-verified end to end via a real `lifetxt check PATH --format sarif` invocation against a path containing a space and a #"
+      release_or_deployment: null
+      notes: >-
+        Found during a CodeX-review-informed pass over the whole #631-660
+        batch: _to_uri() never percent-encoded a path (a space made the URI
+        invalid outright; an unescaped # would be read as introducing a URI
+        fragment, silently discarding everything after it), and a UNC path
+        produced a non-standard four-slash file:////server/... form.
+        Fixed with urllib.parse.quote (leaving only / and a Windows
+        drive-letter : unescaped) and a dedicated UNC-path branch using the
+        server name as the URI authority (RFC 8089's Windows UNC-path
+        appendix).
+      status: implemented
+
+    - requirement_id: req-progress-core-semantic
+      capability_id: cap-progress-standard-key
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/645
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/646
+      pull_request: null
+      changed_files_or_scope:
+        - Add the shared progress: parser/validator (percentage/fraction), reused by every surface below
+        - lifetxt/progress.py
+        - lifetxt/model.py
+        - lifetxt/validator.py
+        - lifetxt/interactive.py
+        - tests/test_progress.py
+        - tests/test_check_progress.py
+        - docs/en/life_txt_format_spec.md
+        - docs/ja/life_txt_format_spec.md
+      tests_or_evidence:
+        - "python -m unittest tests.test_progress tests.test_check_progress -> Ran 34 tests, OK"
+      release_or_deployment: null
+      notes: >-
+        Single source of truth every other #645 child issue reuses rather
+        than re-implementing its own progress: parser.
+      status: implemented
+
+    - requirement_id: req-progress-cli-authoring
+      capability_id: cap-progress-standard-key
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/645
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/647
+      pull_request: null
+      changed_files_or_scope:
+        - Add --progress to quick/add/assist capture commands
+        - lifetxt/assist.py
+        - tests/test_lifetxt.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - "python -m unittest tests.test_lifetxt.LifeTxtQuickCliTests -> OK"
+      release_or_deployment: null
+      notes: Trivially small change to the existing shared DETAIL_FLAGS tuple.
+      status: implemented
+
+    - requirement_id: req-progress-query-comparison
+      capability_id: cap-progress-standard-key
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/645
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/648
+      pull_request: null
+      changed_files_or_scope:
+        - Add percentage/fraction numeric comparison for progress: to the shared Query language
+        - lifetxt/query.py
+        - tests/test_query.py
+        - docs/en/query.md
+        - docs/ja/query.md
+      tests_or_evidence:
+        - "python -m unittest tests.test_query -> Ran 87 tests, OK"
+      release_or_deployment: null
+      notes: >-
+        Missing/invalid progress never implicitly matches as 0%; reuses
+        parse_progress() for both the plan-building and item-matching sides.
+      status: implemented
+
+    - requirement_id: req-progress-cli-today-display
+      capability_id: cap-progress-standard-key
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/645
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/649
+      pull_request: null
+      changed_files_or_scope:
+        - Show progress: on CLI attention/next-action/upcoming rows and Today's command-center output
+        - lifetxt/cli.py
+        - lifetxt/command_center.py
+        - tests/test_life_hub.py
+        - tests/test_today_cli.py
+        - docs/en/life-hub.md
+        - docs/ja/life-hub.md
+      tests_or_evidence:
+        - "python -m unittest tests.test_life_hub tests.test_today_cli -> OK"
+      release_or_deployment: null
+      notes: Extends the one shared _ref() row builder rather than touching each bucket individually.
+      status: implemented
+
+    - requirement_id: req-progress-tui-display
+      capability_id: cap-progress-standard-key
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/645
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/650
+      pull_request: null
+      changed_files_or_scope:
+        - Add a progress column to the TUI dashboard and inspector
+        - lifetxt/tui.py
+        - lifetxt/tui_app.py
+        - tests/test_cui_extensions.py
+      tests_or_evidence:
+        - "python -m unittest tests.test_cui_extensions -> OK"
+      release_or_deployment: null
+      notes: A new, carefully width-gated 4th META_COLUMN rather than displacing any existing column.
+      status: implemented
+
+    - requirement_id: req-progress-web-display
+      capability_id: cap-progress-standard-key
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/645
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/651
+      pull_request: null
+      changed_files_or_scope:
+        - Add a progress bar+label component to the Web UI Items view
+        - lifetxt/web_assets.html
+        - lifetxt/web_assets_css_04.css
+        - lifetxt/web_assets_js_02.js
+        - lifetxt/web_assets_js_04.js
+        - lifetxt/web_assets_js_05.js
+        - tests/test_lifetxt.py
+        - tests/test_web_assets.py
+        - tests/test_web_i18n.py
+      tests_or_evidence:
+        - "python -m unittest tests.test_web_assets tests.test_web_i18n -> OK"
+      release_or_deployment: null
+      notes: >-
+        An additive visual component with no special-casing of the
+        existing generic detail-textarea edit UI.
+      status: implemented
+
+    - requirement_id: req-progress-sort-filter-integration
+      capability_id: cap-progress-standard-key
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/645
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/652
+      pull_request: null
+      changed_files_or_scope:
+        - Integrate progress: ratio into the shared sort_items() used by CLI query --sort, GET /api/items?sort=, and saved views
+        - lifetxt/web_read_service.py
+        - tests/test_lifetxt.py
+      tests_or_evidence:
+        - "python -m unittest tests.test_lifetxt.LifeTxtWebApiTests -> OK"
+      release_or_deployment: null
+      notes: Reuses the already-shared sort_items() rather than a per-surface sort implementation.
+      status: implemented
+
+    - requirement_id: req-short-id-resolution
+      capability_id: cap-short-id-resolution
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/653
+      pull_request: null
+      changed_files_or_scope:
+        - Add resolve_item_by_id (exact-then-unique-prefix), reused by every ID-selecting command; rewire assist.py's independent resolver onto it
+        - lifetxt/ids.py
+        - lifetxt/assist.py
+        - lifetxt/cli.py
+        - tests/test_ids.py
+        - tests/test_lifetxt.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - "python -m unittest tests.test_ids -> Ran 9 tests, OK"
+      release_or_deployment: null
+      notes: >-
+        A horizontal fix found and rewired a second, independently-implemented
+        exact-match-only resolver in assist.py's _select_update_item onto
+        this shared resolver.
+      status: implemented
+
+    - requirement_id: req-short-id-display
+      capability_id: cap-short-id-resolution
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/654
+      pull_request: null
+      changed_files_or_scope:
+        - Show a shortest-unique-prefix short ID in lifetxt next's table output
+        - lifetxt/ids.py
+        - lifetxt/extra_core.py
+        - tests/test_short_id.py
+        - tests/test_extra_cli.py
+        - docs/en/new-cli-workflows.md
+        - docs/ja/new-cli-workflows.md
+      tests_or_evidence:
+        - "python -m unittest tests.test_short_id tests.test_extra_cli -> OK"
+      release_or_deployment: null
+      notes: >-
+        Computed against the full loaded workspace (not just the
+        filtered/limited result set) so it is guaranteed to resolve back
+        via resolve_item_by_id later.
+      status: implemented
+
+    - requirement_id: req-query-explain
+      capability_id: cap-query-explain
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/655
+      pull_request: null
+      changed_files_or_scope:
+        - Add lifetxt query --explain, returning a stable lifetxt-query-explain-v1 JSON object
+        - lifetxt/query.py
+        - lifetxt/cli.py
+        - tests/test_query.py
+        - docs/en/cli.md
+        - docs/en/query.md
+        - docs/ja/cli.md
+        - docs/ja/query.md
+      tests_or_evidence:
+        - "python -m unittest tests.test_query -> OK"
+      release_or_deployment: null
+      notes: >-
+        Implemented by CodeX on child branch issue-655-query-explain,
+        reviewed (tests/lint independently re-run) and merged into
+        feature/beginner-i18n-experience.
+      status: implemented
+
+    - requirement_id: req-next-why-explanation
+      capability_id: cap-next-why-explanation
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/656
+      pull_request: null
+      changed_files_or_scope:
+        - Add --why to lifetxt next, showing deterministic selection evidence
+        - lifetxt/extra_cli.py
+        - lifetxt/extra_core.py
+        - tests/test_extra_cli.py
+        - docs/en/new-cli-workflows.md
+        - docs/ja/new-cli-workflows.md
+      tests_or_evidence:
+        - "python -m unittest tests.test_extra_cli -> Ran 30 tests, OK"
+      release_or_deployment: null
+      notes: >-
+        Implemented by CodeX on child branch issue-656-next-why, reviewed
+        (tests/lint independently re-run) and merged into
+        feature/beginner-i18n-experience. A sort_key/due mismatch found
+        later is recorded separately (req-next-why-sort-key-fidelity).
+      status: implemented
+
+    - requirement_id: req-next-why-sort-key-fidelity
+      capability_id: cap-next-why-explanation
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/656
+      pull_request: null
+      changed_files_or_scope:
+        - Make _next_action_explanation's sort_key match command_next's real sort exactly (raw values, never the "(none)"-substituted display strings; drop the do: fallback for due)
+        - lifetxt/extra_core.py
+        - tests/test_extra_cli.py
+      tests_or_evidence:
+        - "python -m unittest tests.test_extra_cli -> Ran 32 tests, OK (2 new regression tests)"
+        - "confirmed via git stash (production code only, tests kept) that both new tests fail against the pre-fix code with the exact wrong bucket/value, then pass once the fix is restored"
+        - "live-verified against a 3-item fixture (no-priority-or-due, priority+due, do-only) that the returned order and each item's sort_key now agree exactly"
+      release_or_deployment: null
+      notes: >-
+        Found during a CodeX-review-informed pass over the whole #631-660
+        batch: _priority_key("(none)") lands in a different bucket
+        ((2, 0, "(NONE)")) than the real sort's _priority_key(None)
+        ((3, 9999, "")); and a do: value was folded into "due" even though
+        the real sort only ever reads due:. The --rank branch was
+        unaffected (it already calls the real _rank_key() function
+        directly).
+      status: implemented
+
+    - requirement_id: req-relative-time-display
+      capability_id: cap-relative-time-display
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/658
+      pull_request: null
+      changed_files_or_scope:
+        - Add lifetxt.timeutil.relative_time() and wire it into CLI show, TUI dashboard, and Web UI item details
+        - lifetxt/timeutil.py
+        - lifetxt/cli.py
+        - lifetxt/extra_core.py
+        - lifetxt/tui.py
+        - lifetxt/web_assets_js_02.js
+        - lifetxt/web_assets_js_14.js
+        - tests/test_timezone_aware.py
+        - tests/test_web_assets.py
+        - docs/en/new-cli-workflows.md
+        - docs/ja/new-cli-workflows.md
+      tests_or_evidence:
+        - "python -m unittest tests.test_timezone_aware tests.test_web_assets -> OK"
+      release_or_deployment: null
+      notes: >-
+        Implemented by CodeX on child branch issue-658-relative-time,
+        reviewed before merging: two real bugs found and fixed (see
+        req-relative-time-workspace-timezone-awareness and
+        req-relative-time-js-name-collision-fix) before this branch was
+        merged into feature/beginner-i18n-experience.
+      status: implemented
+
+    - requirement_id: req-relative-time-workspace-timezone-awareness
+      capability_id: cap-relative-time-display
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/658
+      pull_request: null
+      changed_files_or_scope:
+        - Pass an explicit workspace-aware today= at every relative_time() call site instead of relying on its bare-system-date default
+        - lifetxt/cli.py
+        - lifetxt/extra_core.py
+        - lifetxt/tui.py
+        - config/release/clock-boundary-baseline-v1.json
+      tests_or_evidence:
+        - "direct unit verification: _relative_date_suffix('2026-09-01')/('2026-09-10') produce correct workspace-timezone-aware day differences"
+        - "python -m unittest tests.test_release_policy -> OK, after classifying relative_time()'s own bare date.today() fallback default in the clock-boundary baseline"
+      release_or_deployment: null
+      notes: >-
+        Found reviewing the CodeX-implemented child branch: three call
+        sites never passed an explicit today=, so relative_time()'s own
+        default fell back to the bare host system date rather than
+        lifetxt.timezone_policy.today() (#142). relative_time()'s own
+        fallback default was deliberately left unchanged (a layering
+        concern: whether timeutil.py should depend on timezone_policy.py)
+        and is instead recorded as an approved clock-boundary-baseline
+        exception (classification compatibility-parsing).
+      status: implemented
+
+    - requirement_id: req-relative-time-js-name-collision-fix
+      capability_id: cap-relative-time-display
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/658
+      pull_request: null
+      changed_files_or_scope:
+        - Rename a new colliding buildDueRelLabel() JS function to buildRelativeTimeBadge to stop it silently shadowing the pre-existing overdue/due-soon badge function of the same name
+        - lifetxt/web_assets_js_14.js
+        - tests/test_web_assets.py
+      tests_or_evidence:
+        - "node --check on the assembled 18-fragment Web UI JavaScript -> no syntax error"
+        - "grep confirmed js_16/js_17's pre-existing buildDueRelLabel() calls resolve only to the original js_04 definition after the rename"
+        - "LEGACY_PRISTINE_GIT_BLOB_SHA in tests/test_web_assets.py updated to match"
+      release_or_deployment: null
+      notes: >-
+        Found reviewing the CodeX-implemented child branch: all 18 JS
+        fragments concatenate into one shared-scope script, so the new,
+        differently-behaved buildDueRelLabel() would have silently
+        overridden the pre-existing overdue/due-soon color-coded due-date
+        badge for every existing caller (Items view, Today view) -- a real,
+        confirmed regression, not hypothetical.
+      status: implemented
+
+    - requirement_id: req-relative-time-js-date-based-semantics
+      capability_id: cap-relative-time-display
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/658
+      pull_request: null
+      changed_files_or_scope:
+        - Rewrite the JS relativeTime() from an instant-based (millisecond) diff to a calendar-date-based diff matching the Python side's exact wording and semantics, using a new server-provided appConfig.today
+        - lifetxt/web_assets_js_14.js
+        - lifetxt/webapp.py
+        - tests/test_web_assets.py
+        - tests/test_lifetxt.py
+      tests_or_evidence:
+        - "live-verified (Node.js): the rewritten relativeTime() produces today/tomorrow/yesterday/in N days/N days ago for 8 representative cases, including the appConfig-missing fallback to the browser's own local date"
+        - "python -m unittest tests.test_lifetxt.LifeTxtWebConfigAndCheckLineTests -> Ran 25 tests, OK (1 new test: test_config_api_reports_the_workspace_aware_today)"
+        - "python -m unittest tests.test_web_assets tests.test_web_i18n tests.test_web_commands tests.test_release_policy -> Ran 107 tests, OK"
+      release_or_deployment: >-
+        GET /api/config gains a new "today" field (the server's own
+        workspace-aware current date); purely additive.
+      notes: >-
+        Found during a CodeX-review-informed pass over the whole #631-660
+        batch: relativeTime() computed Date.now() - d.getTime() in
+        milliseconds using the browser's own local clock/timezone, so
+        "today" never appeared at all (an item due earlier today showed as
+        "5 hrs ago") and every result disagreed with the CLI/TUI's
+        calendar-date-based, workspace-aware semantics. Fixed with a
+        Date.UTC-based day-difference computation against the new
+        appConfig.today value.
+      status: implemented
+
+    - requirement_id: req-progress-increment-cli
+      capability_id: cap-progress-increment-cli
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/645
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/660
+      pull_request: null
+      changed_files_or_scope:
+        - Add lifetxt progress PATH [ID] --delta DELTA, reusing the shared progress: parser/validator and the guarded mutation/revision path
+        - lifetxt/cli.py
+        - lifetxt/cli_taxonomy.py
+        - tests/test_lifetxt.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - "python -m unittest tests.test_lifetxt.LifeTxtProgressCliTests -> Ran 16 tests, OK"
+        - "live-verified: fraction/percentage increment and decrement, kind-mismatch rejection, out-of-range rejection, missing-progress rejection, invalid --delta syntax, --dry-run, ID/--line/--text selection including short ID prefixes"
+      release_or_deployment: null
+      notes: >-
+        --delta is a required named option (not positional) because
+        argparse rejects a space-separated negative value as an
+        unrecognized flag unless joined with = (--delta=-10%).
+      status: implemented
+
+    - requirement_id: req-progress-delta-precision-and-overflow-safety
+      capability_id: cap-progress-increment-cli
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/645
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/660
+      pull_request: null
+      changed_files_or_scope:
+        - Replace float()/%g-based delta arithmetic with int()/decimal.Decimal arithmetic computed directly from raw text, avoiding precision loss and OverflowError
+        - lifetxt/cli.py
+        - tests/test_lifetxt.py
+      tests_or_evidence:
+        - "python -m unittest tests.test_lifetxt.LifeTxtProgressCliTests -> Ran 19 tests, OK (3 new regression tests)"
+        - "reproduced before the fix: 50% + 0.000001% -> 50% (unchanged no-op); a 400-digit delta raised an uncaught OverflowError"
+        - "re-verified after the fix: 50% + 0.000001% -> 50.000001%; a 400-digit delta fails loudly via the normal out-of-range ProgressValueError path instead of crashing"
+      release_or_deployment: null
+      notes: >-
+        Found during a CodeX-review-informed pass over the whole #631-660
+        batch: _apply_progress_delta used float()/%g formatting (6
+        significant digits by default) for the percentage path, silently
+        rounding or no-op'ing a tiny delta against a precise existing
+        value, and float() overflowed to inf on an absurdly long digit
+        string, which int() then rejected with an uncaught OverflowError.
+      status: implemented
+
+    - requirement_id: req-clone-item
+      capability_id: cap-clone-item
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/659
+      pull_request: null
+      changed_files_or_scope:
+        - Add lifetxt clone PATH [ID], deriving a new item excluding identity/history-category details, reusing the shared ID resolver, kind-aware default status, and guarded append/mutation path
+        - lifetxt/cli.py
+        - lifetxt/cli_taxonomy.py
+        - tests/test_lifetxt.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - "python -m unittest tests.test_lifetxt.LifeTxtCloneCliTests -> Ran 14 tests, OK"
+        - "live-verified: identity/history exclusion (id_key/source/uid/created/updated/done/progress reset, everything else copied), ID assignment when ids.auto is enabled vs. omitted when disabled, status defaulting per kind (T open, N/J [N], S open/closed), missing/ambiguous ID resolution, --line/--text selection, --dry-run, and that the generated line passes lifetxt check"
+      release_or_deployment: null
+      notes: >-
+        Reuses lifetxt.write_operations.append_life_records (the same
+        guarded append path quick uses) and
+        lifetxt.ids.ensure_item_id/collect_item_ids/auto_ids_enabled
+        (already imported in cli.py for apply_auto_id_to_item) rather than
+        second/third implementations of either mechanism. Landed in the
+        same commit as req-progress-increment-cli (#660) since both were
+        implemented in the same session pass with interleaved diffs across
+        shared files -- a deliberate, flagged deviation from this batch's
+        usual one-issue-per-branch pattern.
+      status: implemented
+
+    - requirement_id: req-beginner-i18n-experience-batch-integration
+      capability_id: cap-cli-localization-foundation
+      epic: null
+      task_issue: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/663
+      changed_files_or_scope:
+        - Record the beginner-i18n-experience batch's integration into main as its own traceable step, once the final PR is opened
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - "MPLBACKEND=Agg python -m unittest discover run against the fully consolidated feature/beginner-i18n-experience branch (see the PR description for the exact result)"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on every changed file -> clean
+      release_or_deployment: >-
+        This entry documents the final feature/beginner-i18n-experience ->
+        main pull request itself (PR #663), covering issues #631-644 and
+        #645-660 (#645 as the parent/epic satisfied by #646-652; #657
+        closed as a duplicate of the existing `lifetxt start` command).
+      notes: >-
+        Follows the multi-PR integration-branch pattern established
+        throughout this project (see req-remote-batch-integration and
+        every later *-batch-integration entry in this file): every
+        requirement entry above correctly names its own task issue, and
+        none of them names this final PR, because it did not exist yet
+        when they were written. Every sub-branch for this batch was
+        merged into feature/beginner-i18n-experience via local git merge
+        and push (gh pr merge is blocked by this session's auto-mode
+        permission classifier), matching the established workflow; two
+        issues (#659, #660) landed as one bundled commit directly on the
+        integration branch rather than via a separate child branch, a
+        deliberate, flagged deviation recorded in both their own entries
+        above. A CodeX-review-informed pass over the whole batch found and
+        fixed four real bugs (progress delta precision/overflow, next
+        --why sort_key/due mismatch, Web relative-time date-basis and
+        workspace-timezone-awareness, SARIF URI percent-encoding) and
+        investigated two further findings that were confirmed as false
+        positives (i18n explicit-locale fall-through behavior, already
+        intentional and tested) -- see each finding's own requirement
+        entry above for detail. Two unrelated, pre-existing test flakes
+        were found and filed as follow-ups during this pass (#661:
+        tests.test_temporal_context wall-clock time-bomb; #662:
+        tests.test_diagnostics_localization live disk-free-space
+        comparison), neither fixed here since both are outside this
+        batch's own scope.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

@@ -9,6 +9,7 @@ lifetxt next life.txt
 lifetxt next life.txt --project research --limit 10
 lifetxt next life.txt --format json
 lifetxt next life.txt --rank
+lifetxt next life.txt --why
 ```
 
 `next` は open な Task、Deferred、Recurring、Habit records から、`someday`、`maybe`、`waiting` tags が付いておらず、unfinished または unresolvable な `depends_on` reference に block されていないものを選びます。TUI `/next` view と MCP `get_next_actions` tool と同じ definition です。blocking は command に渡されたすべての files を横断して解決されるため、別 file にある dependency でも item は parked されます。results は priority、due date、age で ordered されます。
@@ -16,6 +17,24 @@ lifetxt next life.txt --rank
 `--rank` を追加すると overdue items を priority より先に置きます。ties は通常の priority、due date、age ordering に戻ります。`--rank` なしの output は変わりません。
 
 `--rank` は selected item の `due` value が valid date であることを要求します。`due:not-a-date` のように parse できない value がある場合、silent に no due date 扱いせず item 名を含む error で失敗します。`--rank` なしの `next` は従来通り unparseable `due` を許容します。
+
+`--why` を追加すると、返された各itemについて、actionableなstatus/type、
+parked tagとdependencyの確認結果、および結果順に使ったordering fieldを表示します。
+JSON outputでは各itemに `why` object が追加され、text/life outputでは人向けの
+`Why:` 行が追加されます。`--why` なしの出力は変わりません。
+
+`next` の default（table）output は `ID` 列に完全な `id:` value ではなく
+**Short ID** を表示します -- loaded workspace 内の全 `id:` の中で、その item を
+一意に識別できる最短の prefix（最低6文字）です。呼び出しのたびに derive される
+だけで別の short-ID registry は存在せず、常に同じ item へ解決されることが
+保証されています: `done`、`start`、`complete`、`assist --update --match-id`
+（いずれも一意な ID prefix を受け付けます。[cli.md](cli.md#103-既存-item-の更新)
+参照）にそのまま渡せます。`--format json`/`--format life` は影響を受けず、
+常に完全な `id:` value を表示します。
+
+CLI・TUI・Web の human-readable な date field には、`due:2026-09-07 (in 2 days)`
+や `done:2026-09-04 (yesterday)` のような relative label が補助表示されます。
+canonical な保存値と machine-readable output は変更されません。
 
 ## Inspect and edit one item
 

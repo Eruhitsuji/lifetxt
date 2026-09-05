@@ -17,8 +17,38 @@ import json
 from collections import OrderedDict
 
 from .command_center import command_center
+from .i18n import register_messages, translate as _t
 from .parser import parse_text
 from .timezone_policy import today as timezone_today
+
+
+register_messages(
+    {
+        "tour.heading": {"en": "lifetxt in 30 seconds", "ja": "lifetxt を30秒で体験"},
+        "tour.step1": {
+            "en": "1. A readable life record",
+            "ja": "1. 読みやすいライフレコード",
+        },
+        "tour.step2": {
+            "en": "2. What lifetxt can derive (a real `lifetxt today` run, for {date})",
+            "ja": "2. lifetxt が導出できること（{date} の実際の `lifetxt today` 実行結果）",
+        },
+        "tour.all_clear": {
+            "en": "All clear -- nothing due, overdue, or upcoming in this sample.",
+            "ja": "問題なし -- このサンプルには期限も期限超過も予定もありません。",
+        },
+        "tour.bucket.due_today": {"en": "Due today", "ja": "今日が期限"},
+        "tour.bucket.overdue": {"en": "Overdue", "ja": "期限超過"},
+        "tour.bucket.upcoming": {"en": "Upcoming", "ja": "今後の予定"},
+        "tour.bucket.next_actions": {"en": "Next actions", "ja": "次のアクション"},
+        "tour.and_more": {"en": "... and {n} more", "ja": "...他{n}件"},
+        "tour.next": {"en": "Next", "ja": "次に試す"},
+        "tour.docs": {
+            "en": "Docs: docs/en/getting-started.md",
+            "ja": "ドキュメント: docs/ja/getting-started.md",
+        },
+    }
+)
 
 
 def build_tour_sample(reference_date):
@@ -63,7 +93,7 @@ def _bucket_lines(label, rows, limit=5):
         due = " due:%s" % row["due"] if row.get("due") else ""
         lines.append("  %s %s%s" % (row["status"], row["title"], due))
     if len(rows) > limit:
-        lines.append("  ... and %d more" % (len(rows) - limit))
+        lines.append("  %s" % _t("tour.and_more", n=len(rows) - limit))
     return lines
 
 
@@ -72,30 +102,31 @@ def render_tour_text(reference_date, source_text, report):
 
     A fourth, independent presentation of the shared ``command_center``
     result -- alongside the existing CLI ``today``, TUI Today view, and Web
-    Today dashboard renderers -- not a second computation of it.
+    Today dashboard renderers -- not a second computation of it. Headings
+    and guidance are locale-aware (#631/#632); the sample record text and
+    every `lifetxt ...` command shown remain canonical English tokens.
     """
-    lines = ["lifetxt in 30 seconds", "", "1. A readable life record"]
+    lines = [_t("tour.heading"), "", _t("tour.step1")]
     lines.extend(source_text.rstrip("\n").splitlines())
     lines.append("")
-    lines.append(
-        "2. What lifetxt can derive (a real `lifetxt today` run, for %s)"
-        % reference_date.isoformat()
-    )
+    lines.append(_t("tour.step2", date=reference_date.isoformat()))
     derived = []
-    derived.extend(_bucket_lines("Due today", report["due_today"]))
-    derived.extend(_bucket_lines("Overdue", report["overdue"]))
-    derived.extend(_bucket_lines("Upcoming", report["upcoming"]))
-    derived.extend(_bucket_lines("Next actions", report["next_actions"]))
+    derived.extend(_bucket_lines(_t("tour.bucket.due_today"), report["due_today"]))
+    derived.extend(_bucket_lines(_t("tour.bucket.overdue"), report["overdue"]))
+    derived.extend(_bucket_lines(_t("tour.bucket.upcoming"), report["upcoming"]))
+    derived.extend(
+        _bucket_lines(_t("tour.bucket.next_actions"), report["next_actions"])
+    )
     if not derived:
-        derived = ["All clear -- nothing due, overdue, or upcoming in this sample."]
+        derived = [_t("tour.all_clear")]
     lines.extend(derived)
     lines.append("")
-    lines.append("Next")
+    lines.append(_t("tour.next"))
     lines.append("  lifetxt init")
     lines.append('  lifetxt add "Buy milk ^tomorrow"')
     lines.append("  lifetxt today")
     lines.append("")
-    lines.append("Docs: docs/en/getting-started.md")
+    lines.append(_t("tour.docs"))
     return "\n".join(lines) + "\n"
 
 

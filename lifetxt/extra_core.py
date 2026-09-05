@@ -34,6 +34,7 @@ from .parser import parse_text
 from .paths import expand_paths
 from .serializer import item_to_line
 from .timeutil import parse_elapsed
+from .timeutil import relative_time
 
 from .extra_common import *
 
@@ -85,18 +86,40 @@ def command_next(args, config_data):
         )
     if args.limit:
         selected = selected[: args.limit]
+    explanations = {}
+    if args.why:
+        today = timezone_today() if args.rank else None
+        for item in selected:
+            explanations[id(item)] = _next_action_explanation(item, args.rank, today)
     if args.format == "json":
+        output_rows = []
+        for item in selected:
+            row = _item_record(item)
+            if args.why:
+                row["why"] = explanations[id(item)]
+            output_rows.append(row)
         return _emit(
-            _json_text([_item_record(item) for item in selected], args.pretty),
+            _json_text(output_rows, args.pretty),
             args.output,
         )
     if args.format == "life":
-        return _emit(
-            "".join(item_to_line(item) + "\n" for item in selected), args.output
-        )
+        output = []
+        for item in selected:
+            output.append(item_to_line(item) + "\n")
+            if args.why:
+                output.append("Why: %s\n" % explanations[id(item)]["summary"])
+        return _emit("".join(output), args.output)
+    # Short IDs (#654) are a presentation-only derivation of the full id:
+    # value, computed fresh here against every id: in the loaded workspace
+    # (not just the selected/limited rows) so a short ID shown in this table
+    # always resolves back to the same item via resolve_item_by_id() -- no
+    # separate short-ID registry is kept anywhere.
+    from .ids import collect_item_ids, short_id
+
+    all_ids = collect_item_ids(items, key="id")
     rows = [
         (
-            _item_id(item) or "-",
+            (short_id(all_ids, _item_id(item)) if _item_id(item) else None) or "-",
             _first(item, "priority") or "-",
             _first(item, "due") or "-",
             _first(item, "project") or "-",
@@ -104,7 +127,87 @@ def command_next(args, config_data):
         )
         for item in selected
     ]
-    return _emit(_table(("ID", "PRI", "DUE", "PROJECT", "TITLE"), rows), args.output)
+    output = _table(("ID", "PRI", "DUE", "PROJECT", "TITLE"), rows)
+    if args.why:
+        output += (
+            "\n".join(
+                "Why: %s: %s"
+                % (_item_id(item) or item.title, explanations[id(item)]["summary"])
+                for item in selected
+            )
+            + "\n"
+        )
+    return _emit(output, args.output)
+
+
+def _next_action_explanation(item, rank=False, today=None):
+    """Describe the deterministic eligibility and ordering evidence.
+
+    The `sort_key` field must reproduce exactly what `command_next`'s own
+    sort actually compares on -- it is read from the raw (possibly
+    missing) detail values, the same way `command_next` reads them,
+    never from the human-readable "(none)"-substituted display strings
+    below. A prior version computed `_priority_key("(none)")` instead of
+    `_priority_key(None)` (a different, wrong bucket: `_priority_key`
+    treats an empty string as "no priority" but treats the literal text
+    "(none)" as an unparseable priority value, landing in a different
+    sort bucket), and folded a `do:` value into the "due" used for
+    sorting even though the real sort only ever reads `due:` -- both
+    found by CodeX review to make the `--why` evidence disagree with the
+    actual ordering it claims to explain.
+    """
+    tags = [str(value).lstrip("#").lower() for value in _values(item, "tag")]
+    raw_priority = _first(item, "priority")
+    raw_due = _first(item, "due")
+    raw_created = _first(item, "created")
+    priority = raw_priority or "(none)"
+    due = raw_due or "(none)"
+    created = raw_created or "(none)"
+    criteria = [
+        "status %s is actionable" % item.status,
+        "type %s is actionable" % item.kind,
+        "no parked tags (%s)" % (", ".join(tags) if tags else "none"),
+        "dependencies resolved",
+    ]
+    if rank:
+        order = "overdue-aware rank"
+        sort_key = list(_rank_key(item, today))
+    else:
+        order = "priority, due, created, line"
+        far_future = datetime.date.max
+        sort_key = [
+            _priority_key(raw_priority),
+            _date_value(raw_due) or far_future,
+            _date_value(raw_created) or far_future,
+            item.line or 0,
+        ]
+    sort_key = [
+        value.isoformat() if isinstance(value, datetime.date) else value
+        for value in sort_key
+    ]
+    return OrderedDict(
+        (
+            ("criteria", criteria),
+            (
+                "ordering",
+                OrderedDict(
+                    (
+                        ("method", order),
+                        ("priority", priority),
+                        ("due", due),
+                        ("created", created),
+                        ("line", item.line),
+                        ("sort_key", sort_key),
+                    )
+                ),
+            ),
+            (
+                "summary",
+                "%s; %s; %s; %s; ordered by %s"
+                % (criteria[0], criteria[1], criteria[2], criteria[3], order),
+            ),
+        )
+    )
 
 
 def command_show(args, config_data):
@@ -149,13 +252,29 @@ def command_show(args, config_data):
         lines.append("Hierarchy: " + " <- ".join(parent_chain))
     if item.details:
         lines.append("Details:")
+        # Pass the workspace-aware "today" explicitly (#142); relative_time's
+        # own default falls back to the bare system date, which drifts from
+        # every other surface's notion of "today" whenever the configured
+        # workspace timezone differs from the host's.
+        show_today = timezone_today()
         for key, values in item.details.items():
             for value in values:
-                lines.append("  %s: %s" % (key, value))
+                relative = (
+                    relative_time(value, today=show_today)
+                    if key in _DATE_DETAIL_KEYS
+                    else ""
+                )
+                suffix = " (%s)" % relative if relative else ""
+                lines.append("  %s: %s%s" % (key, value, suffix))
     if incoming:
         lines.append("Incoming links:")
         lines.extend("  " + value for value in incoming)
     return _emit("\n".join(lines) + "\n", args.output)
+
+
+_DATE_DETAIL_KEYS = frozenset(
+    ("due", "do", "from", "to", "on", "at", "created", "updated", "done")
+)
 
 
 def _resolve_editor(args, config_data):

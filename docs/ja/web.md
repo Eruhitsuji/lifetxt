@@ -272,6 +272,24 @@ Team、Status、Notifications、Stats、Graph、Display、Kiosk)だけが全幅�
 コンテンツと画面を奪い合いません。record editor は `＋ New` から中央 modal として開き、item を
 クリックした詳細表示も中央の record detail modal として表示します。
 
+### Beginner Authoring Mode
+
+record editor の Type / Status field は既定で Format 1.0 の全値を表示します
+(Full mode)。editor 上部の「Hide advanced options」/「Show advanced options」
+button で **Beginner mode** を切り替えられます。Beginner mode ではこの2つの
+select を [Beginner / Minimal Profile](./getting-started.md) の subset
+（`T`/`E`/`N` type、`[ ]`/`[x]`/`[N]` status）へ絞り込みます。この vocabulary
+は `lifetxt/beginner_profile.py`（`GET /api/beginner-profile` としても公開）と
+完全に同じものを再利用しており、Web 側で別に定義し直してはいません。
+
+これは表示上の機能のみであり、Format・parser・データを変更しません。
+Beginner mode 中でも、既存 record が beginner subset 外の Type/Status
+（例えば `D` の deadline や `[/]` の in-progress）を持つ場合、その値は常に
+表示・選択された状態を保ちます。silently に隠したり、破棄したり、書き換えたり
+することはありません。設定は browser ごとに記憶され（他の device や閲覧者とは
+共有されません）、既定は Full mode のため、明示的に切り替えるまで既存ユーザーの
+挙動は変わりません。
+
 ## Web UI configuration
 
 `/api/config` は browser に公開してよい `web.*` 設定だけを返します。GUI は

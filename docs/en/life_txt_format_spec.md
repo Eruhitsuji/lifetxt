@@ -365,12 +365,22 @@ ownership, filtering, or routing.
 |---|---|---|
 | `est` | Estimated effort or duration | `est:2h` |
 | `elapsed` | Accumulated actual elapsed time | `elapsed:1h30m` |
+| `progress` | Quantitative progress, independent of status | `progress:75%` |
 
 `elapsed:` is used by the `timer` CLI command. Compact values such as `25m`,
 `1h`, `1h30m`, and bare minutes such as `90` are supported. `check` reports
 parseable but non-canonical duration values as `W222`; unrecognized values such
 as `elapsed:1d` or `elapsed:90x` are reported as `W226` instead of being treated
 as zero minutes.
+
+`progress:` records quantitative progress as a percentage (`0`-`100`,
+e.g. `progress:75%`) or a fraction (`current/total`, e.g. `progress:3/10`).
+It is independent of `status:` and `done:`: a `[x]` item is not required to
+carry `progress:100%`, and a `progress:100%` item is not automatically
+treated as done. `check` reports an out-of-range percentage, a
+zero-or-negative fraction total, a negative fraction current, or a fraction
+current exceeding its total as `W230`; the original percentage-or-fraction
+representation is preserved unchanged on serialization.
 
 ### 7.6 Recurrence Keys
 
@@ -513,7 +523,7 @@ Use `T` for work that can be completed.
 Recommended keys:
 
 ```txt
-do due priority assignee owner project tag id
+do due priority progress assignee owner project tag id
 ```
 
 | Key | Why it is recommended |
@@ -521,6 +531,7 @@ do due priority assignee owner project tag id
 | `do` | When the task should be worked on |
 | `due` | When the task must be finished |
 | `priority` | Relative importance |
+| `progress` | Quantitative progress, independent of status |
 | `assignee` | Person assigned to do the task |
 | `owner` | Person accountable for the task |
 | `project`, `tag` | Organization and retrieval |

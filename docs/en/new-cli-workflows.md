@@ -9,6 +9,7 @@ lifetxt next life.txt
 lifetxt next life.txt --project research --limit 10
 lifetxt next life.txt --format json
 lifetxt next life.txt --rank
+lifetxt next life.txt --why
 ```
 
 `next` selects open Task, Deferred, Recurring, and Habit records that are not tagged `someday`, `maybe`, or `waiting`, and not blocked by an unfinished (or unresolvable) `depends_on` reference, using the same definition as the TUI `/next` view and the MCP `get_next_actions` tool. Blocking is resolved across every file passed to the command, so a dependency in another file still parks the item. Results are ordered by priority, due date, and age.
@@ -18,6 +19,27 @@ Selection previously differed across CLI, TUI, and MCP (Task-only kind coverage,
 Add `--rank` to place overdue items first regardless of priority; ties still fall back to `next`'s normal priority, due date, and age ordering. Without `--rank`, output is unchanged.
 
 `--rank` requires every selected item's `due` value to be a valid date; an item with an unparseable `due` (for example `due:not-a-date`) makes `next --rank` fail with an error naming the item instead of silently ranking it as if it had no due date. `next` without `--rank` is unaffected and keeps tolerating an unparseable `due` as it always has.
+
+Add `--why` to show the deterministic evidence for each returned item: its
+actionable status and type, parked-tag and dependency checks, and the ordering
+fields used to place it in the result. JSON output adds a `why` object to each
+item; text and life output include a human-readable `Why:` line. Without
+`--why`, output is unchanged.
+
+`next`'s default (table) output shows a **short ID** in the `ID` column
+instead of the full `id:` value -- the shortest prefix that still uniquely
+identifies the item among every `id:` in the loaded workspace, at least 6
+characters. It is derived fresh on every call (there is no separate short-ID
+registry) and is guaranteed to resolve back to the same item: pass it
+directly to `done`, `start`, `complete`, or `assist --update --match-id`,
+which all accept a unique ID prefix (see [cli.md](cli.md#103-update-existing-items)).
+`--format json`/`--format life` are unaffected and always show the full
+`id:` value.
+
+Human-readable date fields on CLI, TUI, and Web listings include an optional
+relative label, such as `due:2026-09-07 (in 2 days)` or `done:2026-09-04
+(yesterday)`. The canonical stored value and machine-readable output remain
+unchanged.
 
 ## Inspect and edit one item
 

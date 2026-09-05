@@ -183,6 +183,9 @@ Level 1 や Level 2 で書いたものを先に変更する必要はありませ
 - `lifetxt tour` -- config 不要の 30 秒デモ。何かを書く前にまず試すと
   よいです。
 - `lifetxt init` -- 自分用の `life.txt` と config を作成します。
+  `--preset student`、`work`、`research`、`personal` を付けると、用途に
+  合った小さな starter section skeleton になります（[`cli.md`](./cli.md)
+  参照）。
 - `lifetxt add "Buy milk ^tomorrow"` -- 最初の実データを capture します。
 - `lifetxt web` -- それに対してブラウザ UI を開きます。
 - [`life_txt_format_spec.md`](./life_txt_format_spec.md) -- 完全な grammar
@@ -190,3 +193,46 @@ Level 1 や Level 2 で書いたものを先に変更する必要はありませ
 - [`use-cases.md`](./use-cases.md) -- 実践的な setup（task tracking、
   calendar、journaling、team status、AI integration）
 - [`philosophy.md`](./philosophy.md) -- なぜ lifetxt がこの設計なのか
+
+## 成功時の出力から次の一歩を学ぶ
+
+対話端末では、`init`、`add`/`quick`、`done`、`complete` が短い「Next:」行を
+表示し、次に試すコマンドを1〜2個示します。これにより、上記の初心者向け
+ループ（`init` -> `add` -> `today` -> `done`）を各コマンドの出力だけから
+学べます。`add`/`done`/`complete` はさらに、その変更が実際に
+`lifetxt undo PATH` で元に戻せる場合のみ「Undo:」を表示します。script・
+pipe・redirect 経由の出力には一切影響しません -- 追加の行は表示されません。
+
+## 引数なしで `lifetxt` を実行する
+
+対話端末で `lifetxt` を他の引数なしで実行すると、スマートな入口として動作
+します。現在のディレクトリにまだ何もセットアップされていない場合は
+`tour`/`init`/`help beginner` へ誘導し、既にセットアップ済みの場合は
+`today`（日次コマンドセンター）へ直接進みます。script・pipe・redirect 経由
+の実行には一切影響しません -- 従来通りの完全なコマンド一覧と非ゼロの終了
+コードを返します。
+
+## Web UI の Beginner mode
+
+[Web UI](./web.md#beginner-authoring-mode) の record editor は advanced な
+Type/Status option を隠し、この Beginner Profile の `T`/`E`/`N` type と
+`[ ]`/`[x]`/`[N]` status だけを表示できます（展開すれば残りも表示可能）。
+この document で説明している vocabulary そのものを authoring surface に
+適用したものです。
+
+## 別の言語で読む
+
+lifetxt の人間向け CLI 出力（見出し・案内文・`help`）は英語の代わりに
+日本語で表示できます。コマンド名・option・Format 1.0 の構文は常に同じ
+canonical な英語トークンのままです:
+
+```sh
+lifetxt --lang ja tour
+lifetxt --lang ja init
+lifetxt --lang ja help beginner
+LIFETXT_LANG=ja lifetxt today
+```
+
+完全な優先順位のルールは [`cli.md`](./cli.md) の多言語化セクションを、
+このガイドの英語版は
+[`docs/en/getting-started.md`](../en/getting-started.md) を参照してください。

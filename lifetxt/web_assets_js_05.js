@@ -22,7 +22,7 @@
           <span class="type-badge ${typeCls}">${escapeHtml(item.type)}</span>
           <div>
             <div class="title markdown">${titleHtml}${parentInd}${occurrenceBadge}${generatedBadge}</div>
-            <div class="meta">${escapeHtml(detailText(item.details))}${refLinks}${dueRel}</div>
+            <div class="meta">${escapeHtml(detailText(item.details))}${refLinks}${dueRel}${progressBadge}</div>
             ${preview}
           </div>
           <span class="source">${escapeHtml(item.source || `line ${item.line || ""}`)}${item.generated ? " / generated" : ""}${item.editable ? "" : " / read-only"}</span>
@@ -320,6 +320,8 @@
       if (isDisplayMode()) return;
       selectedItem = item;
       document.getElementById("editor-heading").textContent = item.editable ? `Edit line ${item.line}` : "Read-only record";
+      ensureBeginnerProfileVocabulary();
+      refreshAuthoringModeOptions(item.status, item.type);
       document.getElementById("edit-status").value = item.status;
       document.getElementById("edit-type").value = item.type;
       document.getElementById("edit-title").value = item.title;
@@ -336,6 +338,8 @@
       openEditorModal();
       selectedItem = null;
       document.getElementById("editor-heading").textContent = "New Record";
+      ensureBeginnerProfileVocabulary();
+      refreshAuthoringModeOptions("[ ]", "T");
       document.getElementById("edit-status").value = "[ ]";
       document.getElementById("edit-type").value = "T";
       document.getElementById("edit-title").value = "";
@@ -345,6 +349,61 @@
       document.getElementById("editor-note").textContent = "Create a new record or select an editable row.";
       setEditorDisabled(false);
       renderItems(currentItems);
+    }
+    // ── Beginner authoring mode (#634) ──────────────────────────────
+    // Progressive disclosure over the Beginner / Minimal Profile (#558):
+    // beginner mode hides advanced Type/Status options by default, but
+    // never drops or rewrites an advanced value already on an opened
+    // record -- the current value is always kept selectable even when it
+    // falls outside the beginner subset. The vocabulary itself is fetched
+    // from /api/beginner-profile (lifetxt/beginner_profile.py), the single
+    // Python source of truth, with a matching hardcoded fallback used
+    // immediately so the editor is never blocked on that round trip.
+    let beginnerProfileVocabulary = { types: ["T", "E", "N"], statuses: ["[ ]", "[x]", "[N]"] };
+    let beginnerProfileFetchStarted = false;
+    const AUTHORING_FULL_STATUSES = ["[ ]", "[/]", "[x]", "[-]", "[>]", "[?]", "[N]"];
+    const AUTHORING_FULL_TYPES = ["T", "E", "D", "R", "H", "N", "S", "M", "J"];
+    function ensureBeginnerProfileVocabulary() {
+      if (beginnerProfileFetchStarted) return;
+      beginnerProfileFetchStarted = true;
+      api("/api/beginner-profile").then(data => {
+        if (data && Array.isArray(data.types) && Array.isArray(data.statuses)) {
+          beginnerProfileVocabulary = { types: data.types, statuses: data.statuses };
+        }
+        refreshAuthoringModeOptions();
+      }).catch(() => { /* keep the hardcoded fallback */ });
+    }
+    function authoringModePreference() {
+      try { return localStorage.getItem("lifetxt_authoring_mode") || "full"; }
+      catch (e) { return "full"; }
+    }
+    function setAuthoringModePreference(mode) {
+      try { localStorage.setItem("lifetxt_authoring_mode", mode); } catch (e) { /* ignore */ }
+    }
+    function _authoringVisibleValues(all, beginnerList, mode, currentValue) {
+      if (mode !== "beginner") return all.slice();
+      const visible = all.filter(v => beginnerList.includes(v));
+      if (currentValue && !visible.includes(currentValue)) visible.push(currentValue);
+      return visible;
+    }
+    function refreshAuthoringModeOptions(desiredStatus, desiredType) {
+      const mode = authoringModePreference();
+      const statusSel = document.getElementById("edit-status");
+      const typeSel = document.getElementById("edit-type");
+      if (!statusSel || !typeSel) return;
+      const curStatus = desiredStatus !== undefined ? desiredStatus : statusSel.value;
+      const curType = desiredType !== undefined ? desiredType : typeSel.value;
+      const visStatus = _authoringVisibleValues(AUTHORING_FULL_STATUSES, beginnerProfileVocabulary.statuses, mode, curStatus);
+      const visType = _authoringVisibleValues(AUTHORING_FULL_TYPES, beginnerProfileVocabulary.types, mode, curType);
+      statusSel.innerHTML = visStatus.map(v => `<option${v === curStatus ? " selected" : ""}>${v}</option>`).join("");
+      typeSel.innerHTML = visType.map(v => `<option${v === curType ? " selected" : ""}>${v}</option>`).join("");
+      const toggle = document.getElementById("authoring-advanced-toggle");
+      if (toggle) toggle.textContent = t(mode === "beginner" ? "Show advanced options" : "Hide advanced options");
+    }
+    function toggleAuthoringMode() {
+      const next = authoringModePreference() === "beginner" ? "full" : "beginner";
+      setAuthoringModePreference(next);
+      refreshAuthoringModeOptions();
     }
     function setEditorDisabled(disabled) {
       for (const id of ["edit-status", "edit-type", "edit-title", "edit-details", "save-button"]) {

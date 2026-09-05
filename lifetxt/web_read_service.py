@@ -13,9 +13,7 @@ def assert_unique_ids(items, key="id"):
     """Reject authoritative writes when a workspace contains duplicate IDs."""
     duplicates = duplicate_id_diagnostics(items, key=key)
     if any(row.code == "W213" for row in duplicates):
-        raise ValueError(
-            "Authoritative write rejected: workspace IDs must be unique."
-        )
+        raise ValueError("Authoritative write rejected: workspace IDs must be unique.")
 
 
 def assert_unique_workspace_ids(
@@ -82,6 +80,7 @@ def sort_items(items, sort_key="line", order="asc"):
         "on",
         "updated",
         "created",
+        "progress",
     }
     if key_name not in supported:
         key_name = "line"
@@ -104,6 +103,19 @@ def sort_key_for_item(item, key_name):
         return (0, item.title.lower(), item.line or 0)
     if key_name == "source":
         return (0, getattr(item, "source", "") or "", item.line or 0)
+    if key_name == "progress":
+        # A missing or unparseable progress: sorts to the end (tuple[0]=1),
+        # matching the pattern date-based keys already use here -- never
+        # implicitly treated as 0% (#652).
+        from .progress import ProgressValueError, parse_progress
+
+        values = item.details.get("progress")
+        if values:
+            try:
+                return (0, parse_progress(values[0]).ratio, item.line or 0)
+            except ProgressValueError:
+                pass
+        return (1, "", item.line or 0)
     keys = (
         (
             "from",

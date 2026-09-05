@@ -28,6 +28,8 @@ from __future__ import unicode_literals
 import json
 from collections import OrderedDict
 
+from .i18n import register_messages, translate as _t
+
 
 #: Cache of `cli.build_parser()` itself (not just its subparser map), because
 #: this module also needs each subcommand's `help=` text off the raw
@@ -160,6 +162,22 @@ def command_aliases(name):
     return _canonical_names_and_aliases().get(name, ())
 
 
+def all_command_tokens():
+    """Every string a user could type as the top-level command: every
+    canonical name from :func:`all_commands` plus every alias for it
+    (`add`, `q`, `d`, `f`, `a`, `s`, ...).
+
+    Used by #643's unknown-command guidance to tell a genuinely unknown
+    command apart from a valid alias -- :func:`all_commands` alone only
+    returns canonical names, so checking membership in it directly would
+    misreport every alias as unknown.
+    """
+    tokens = set(all_commands())
+    for name in all_commands():
+        tokens.update(command_aliases(name))
+    return tokens
+
+
 def command_summary(name):
     text = _parser_command_help().get(name)
     if text:
@@ -228,6 +246,8 @@ CATEGORIES = OrderedDict(
                     "edit",
                     "done",
                     "complete",
+                    "progress",
+                    "clone",
                     "review",
                     "assist",
                     "state",
@@ -411,6 +431,267 @@ CATEGORIES = OrderedDict(
 )
 
 
+#: Human-readable category/audience titles and descriptions, in English and
+#: Japanese (#631/#632). ``CATEGORIES``/``AUDIENCES`` above stay the single,
+#: locale-independent source of truth for *which* commands belong where;
+#: this registration only supplies the display text a text renderer shows
+#: for a given category/audience id. `lifetxt help --json` and
+#: `catalog_payload()`/`audience_payload()` intentionally keep reading
+#: ``CATEGORIES``/``AUDIENCES`` directly (English only) so machine-readable
+#: output never changes with locale.
+register_messages(
+    {
+        "category.daily.title": {
+            "en": "Getting Started / Daily",
+            "ja": "はじめに / 日常操作",
+        },
+        "category.daily.description": {
+            "en": "The commands most people use most days.",
+            "ja": "多くのユーザーが日常的に使うコマンドです。",
+        },
+        "category.query.title": {"en": "Query / Explore", "ja": "検索 / 絞り込み"},
+        "category.query.description": {
+            "en": "Read-only ways to filter, search, and summarize your data.",
+            "ja": "データを絞り込み・検索・要約する読み取り専用の手段です。",
+        },
+        "category.collab.title": {
+            "en": "Projects / People / Collaboration",
+            "ja": "プロジェクト / 人 / 共同作業",
+        },
+        "category.collab.description": {
+            "en": "Projects, people, groups, messages, proposals, and "
+            "development tickets.",
+            "ja": "プロジェクト、人、グループ、メッセージ、提案、開発チケットを扱います。",
+        },
+        "category.structure.title": {
+            "en": "Structure / Data Integrity",
+            "ja": "構造 / データ整合性",
+        },
+        "category.structure.description": {
+            "en": "Inspect and validate the shape of your data: ids, links, and style.",
+            "ja": "id・リンク・記法などデータの形を検査・検証します。",
+        },
+        "category.import_export.title": {
+            "en": "Import / Export / Reports",
+            "ja": "インポート / エクスポート / レポート",
+        },
+        "category.import_export.description": {
+            "en": "Move data in and out of life.txt, and generate reports.",
+            "ja": "life.txt とデータをやり取りし、レポートを生成します。",
+        },
+        "category.interfaces.title": {
+            "en": "Interfaces / Integration",
+            "ja": "インターフェース / 連携",
+        },
+        "category.interfaces.description": {
+            "en": "Other ways to use lifetxt: terminal UI, browser, AI clients.",
+            "ja": "ターミナルUI、ブラウザ、AIクライアントなど他の利用方法です。",
+        },
+        "category.workspace_config.title": {
+            "en": "Workspace / Configuration / Safety",
+            "ja": "ワークスペース / 設定 / 安全性",
+        },
+        "category.workspace_config.description": {
+            "en": "Configuration, named workspaces, diagnostics, Format, "
+            "and deployment administration.",
+            "ja": "設定、名前付きワークスペース、診断、Format、デプロイ管理です。",
+        },
+        "category.personal_context.title": {
+            "en": "Personal Context",
+            "ja": "パーソナルコンテキスト",
+        },
+        "category.personal_context.description": {
+            "en": "Deterministic views over your own recorded "
+            "preferences and decisions.",
+            "ja": "自分自身が記録した好みや決定を確定的に閲覧します。",
+        },
+        "category.advanced.title": {
+            "en": "Advanced / Experimental",
+            "ja": "高度 / 実験的機能",
+        },
+        "category.advanced.description": {
+            "en": "Less commonly needed tools, bulk operations, and the "
+            "opt-in experimental VM.",
+            "ja": "あまり使わないツール、一括操作、任意参加の実験的VMです。",
+        },
+        "audience.beginner.title": {"en": "Beginner", "ja": "初心者向け"},
+        "audience.beginner.description": {
+            "en": "Never used lifetxt before? Start here.",
+            "ja": "lifetxt を初めて使う方はここから始めてください。",
+        },
+        "audience.daily.title": {"en": "Daily user", "ja": "日常利用"},
+        "audience.daily.description": {
+            "en": "The loop most days look like once you're set up.",
+            "ja": "セットアップ後、多くの日で繰り返す基本の流れです。",
+        },
+        "audience.power.title": {"en": "Power user", "ja": "上級者向け"},
+        "audience.power.description": {
+            "en": "Query, saved views, projects, workspaces, and the reference graph.",
+            "ja": "クエリ、保存したビュー、プロジェクト、ワークスペース、参照グラフです。",
+        },
+        "audience.ai.title": {"en": "AI user", "ja": "AI連携"},
+        "audience.ai.description": {
+            "en": "Connect an AI client to your workspace safely.",
+            "ja": "AIクライアントを安全にワークスペースへ接続します。",
+        },
+        "audience.admin.title": {
+            "en": "Administration / development",
+            "ja": "管理 / 開発",
+        },
+        "audience.admin.description": {
+            "en": "Diagnostics, recovery, Format, and cross-surface capability checks.",
+            "ja": "診断、復旧、Format、各インターフェース間の機能チェックです。",
+        },
+        "help.start_here": {"en": "Start here:", "ja": "はじめに:"},
+        "help.new_here": {
+            "en": "New here? Try: lifetxt help beginner",
+            "ja": "初めての方は次を試してください: lifetxt help beginner",
+        },
+        "help.categories_full_ref": {
+            "en": "Command categories (full flag reference follows below):",
+            "ja": "コマンド分類（この下に完全なフラグ一覧が続きます）:",
+        },
+        "help.command_categories": {
+            "en": "Command categories:",
+            "ja": "コマンド分類:",
+        },
+        "help.guided_paths": {"en": "Guided paths:", "ja": "ガイド付きパス:"},
+        "help.guided_paths_inline": {
+            "en": "Guided paths: lifetxt help [beginner|daily|power|ai|admin]",
+            "ja": "ガイド付きパス: lifetxt help [beginner|daily|power|ai|admin]",
+        },
+        "help.machine_readable": {
+            "en": "Machine-readable: lifetxt help --json, lifetxt help "
+            "<command> --json",
+            "ja": "機械可読出力: lifetxt help --json, lifetxt help <command> --json",
+        },
+        "help.machine_readable_full": {
+            "en": "Machine-readable: lifetxt help --json, lifetxt help "
+            "<command> --json, lifetxt help <audience> --json",
+            "ja": "機械可読出力: lifetxt help --json, lifetxt help <command> --json, "
+            "lifetxt help <audience> --json",
+        },
+        "help.lookup_command": {
+            "en": "Look up one command: lifetxt help <command>",
+            "ja": "コマンドを調べる: lifetxt help <command>",
+        },
+        "help.full_flag_reference": {
+            "en": "Full flag reference: lifetxt --help, lifetxt <command> --help",
+            "ja": "完全なフラグ一覧: lifetxt --help, lifetxt <command> --help",
+        },
+        # Beginner/Daily audience flow step goals (#632). Keyed by
+        # "audience.<audience_id>.goal.<command>" so a step's translation
+        # travels with its command, not its position in the tuple.
+        "audience.beginner.goal.tour": {
+            "en": "see what lifetxt can do, with zero setup",
+            "ja": "セットアップ不要で lifetxt を体験する",
+        },
+        "audience.beginner.goal.init": {
+            "en": "create your life.txt",
+            "ja": "life.txt を作成する",
+        },
+        "audience.beginner.goal.quick": {
+            "en": "capture your first task",
+            "ja": "最初のタスクを記録する",
+        },
+        "audience.beginner.goal.today": {
+            "en": "see what needs attention today",
+            "ja": "今日必要なことを確認する",
+        },
+        "audience.beginner.goal.done": {
+            "en": "mark a task finished",
+            "ja": "タスクを完了にする",
+        },
+        "audience.daily.goal.quick": {
+            "en": "capture something new",
+            "ja": "新しいことを記録する",
+        },
+        "audience.daily.goal.today": {
+            "en": "see what's due or overdue",
+            "ja": "期限や期限超過を確認する",
+        },
+        "audience.daily.goal.next": {
+            "en": "pick the next actionable task",
+            "ja": "次に取り組むタスクを選ぶ",
+        },
+        "audience.daily.goal.show": {
+            "en": "look at one item's full detail",
+            "ja": "項目の詳細を確認する",
+        },
+        "audience.daily.goal.edit": {
+            "en": "change it in your editor",
+            "ja": "エディタで編集する",
+        },
+        "audience.daily.goal.review": {
+            "en": "look back at the week",
+            "ja": "1週間を振り返る",
+        },
+        # Beginner-facing command summaries (#632). Every other command
+        # keeps command_summary()'s existing English-only argparse `help=`
+        # text; localizing the full command set is out of this issue's
+        # scope.
+        "command.summary.tour": {
+            "en": "Zero-config, dependency-free 30-second demonstration of "
+            "what lifetxt derives from a sample life.txt. Writes nothing.",
+            "ja": "設定不要・依存なしで、サンプルの life.txt から lifetxt が"
+            "何を導出できるかを30秒で確認できます。何も書き込みません。",
+        },
+        "command.summary.init": {
+            "en": "Interactive first-time setup: create life.txt and .lifetxt.json.",
+            "ja": "対話形式の初回セットアップ: life.txt と .lifetxt.json を作成します。",
+        },
+        "command.summary.quick": {
+            "en": "Quickly capture a new item.",
+            "ja": "新しい項目をすばやく記録します。",
+        },
+        "command.summary.today": {
+            "en": "Show the daily command center: what's now, needs "
+            "attention, and is actionable today.",
+            "ja": "今日のコマンドセンターを表示します: 現在の状況、注意が"
+            "必要な項目、今日やるべきことです。",
+        },
+        "command.summary.done": {
+            "en": "Mark an item done.",
+            "ja": "項目を完了にします。",
+        },
+        "command.summary.complete": {
+            "en": "Mark a repeat-enabled item done and materialize its next occurrence.",
+            "ja": "繰り返し設定された項目を完了にし、次回分を生成します。",
+        },
+        "command.summary.help": {
+            "en": "Progressive-disclosure, goal-based, and machine-readable "
+            "help: audience guides, one-command lookups, and a JSON "
+            "capability catalog.",
+            "ja": "段階的に開示される、目的別・機械可読な help です: "
+            "audience ガイド、コマンド単体の参照、JSON カタログを提供します。",
+        },
+    }
+)
+
+
+def category_title(category_id):
+    """Locale-aware category title, falling back to the English default."""
+    return _t("category.%s.title" % category_id) or CATEGORIES[category_id]["title"]
+
+
+def category_description(category_id):
+    return (
+        _t("category.%s.description" % category_id)
+        or CATEGORIES[category_id]["description"]
+    )
+
+
+def audience_title(audience_id):
+    return _t("audience.%s.title" % audience_id) or AUDIENCES[audience_id]["title"]
+
+
+def audience_description(audience_id):
+    return (
+        _t("audience.%s.description" % audience_id)
+        or AUDIENCES[audience_id]["description"]
+    )
+
+
 def command_category(name):
     for category_id, category in CATEGORIES.items():
         if name in category["commands"]:
@@ -430,6 +711,8 @@ WRITE_COMMANDS = frozenset(
         "edit",
         "done",
         "complete",
+        "progress",
+        "clone",
         "assist",
         "state",
         "start",
@@ -563,6 +846,53 @@ def related_commands(name):
         return ()
     siblings = [c for c in CATEGORIES[category_id]["commands"] if c != name]
     return tuple(siblings[:4])
+
+
+#: Success-output guidance for a small set of beginner-facing write
+#: commands (#638): 0-2 deterministic "Next:" command names, reusing
+#: `_EXAMPLES` above for the copyable example rather than a second table,
+#: plus whether the operation is undoable through the existing
+#: `lifetxt undo PATH` / pre-write-backup mutation contract. This is
+#: presentation metadata only -- it introduces no new workflow/state
+#: engine and does not decide which commands exist or how they behave.
+SUCCESS_GUIDANCE = {
+    "init": {"next": ("quick", "today"), "undoable": False},
+    "quick": {"next": ("today",), "undoable": True},
+    "done": {"next": ("today",), "undoable": True},
+    "complete": {"next": ("today",), "undoable": True},
+}
+
+register_messages(
+    {
+        "success.next": {"en": "Next:", "ja": "次に:"},
+        "success.undo": {"en": "Undo:", "ja": "元に戻す:"},
+    }
+)
+
+
+def render_success_guidance(command, path=None):
+    """Short "Next:"/"Undo:" guidance for one write command's TTY success
+    output. Returns ``""`` when ``command`` has no registered guidance, so
+    a call site can always write the result unconditionally.
+
+    Callers remain responsible for only calling this on an actual TTY and
+    only after a real successful mutation -- this function does not know
+    or care whether either is true.
+    """
+    info = SUCCESS_GUIDANCE.get(command)
+    if not info:
+        return ""
+    lines = ["", _t("success.next")]
+    for next_command in info.get("next", ()):
+        examples = _EXAMPLES.get(next_command)
+        example = examples[0] if examples else "lifetxt %s" % next_command
+        lines.append("  %s" % example)
+    if info.get("undoable") and path:
+        lines.append("")
+        lines.append(_t("success.undo"))
+        lines.append("  lifetxt undo %s" % path)
+    lines.append("")
+    return "\n".join(lines)
 
 
 #: The beginner-to-daily-to-advanced audience flows described in the issue.
@@ -806,12 +1136,13 @@ def render_category_overview_lines():
     """Compact per-category command listing, one line per category.
 
     Shared by both `lifetxt --help`'s prefix block and `lifetxt help`'s
-    plain-text overview, so the two can't independently drift.
+    plain-text overview, so the two can't independently drift. Titles are
+    locale-aware (#631); the command names themselves never translate.
     """
     lines = []
-    for category in CATEGORIES.values():
+    for category_id, category in CATEGORIES.items():
         commands = ", ".join(category["commands"])
-        lines.append("  %s:" % category["title"])
+        lines.append("  %s:" % category_title(category_id))
         lines.append("    %s" % commands)
     return lines
 
@@ -821,23 +1152,24 @@ def render_top_level_help_prefix():
 
     Purely additive: the full flat argparse help that follows is unchanged,
     so every existing `--help` consumer keeps seeing everything it already
-    saw, just with this discoverability block ahead of it.
+    saw, just with this discoverability block ahead of it. Locale-aware
+    (#631/#632): command names, options, and Format syntax never translate.
     """
     lines = [
-        "Start here:",
+        _t("help.start_here"),
         "  lifetxt tour              explore a working example, no setup required",
         "  lifetxt init              create life.txt and .lifetxt.json",
         '  lifetxt add "..."         capture your first task',
         "  lifetxt today             see what needs attention today",
         "  lifetxt done ID           mark it done",
         "",
-        "New here? Try: lifetxt help beginner",
-        "Command categories (full flag reference follows below):",
+        _t("help.new_here"),
+        _t("help.categories_full_ref"),
     ]
     lines.extend(render_category_overview_lines())
     lines.append("")
-    lines.append("Guided paths: lifetxt help [beginner|daily|power|ai|admin]")
-    lines.append("Machine-readable: lifetxt help --json, lifetxt help <command> --json")
+    lines.append(_t("help.guided_paths_inline"))
+    lines.append(_t("help.machine_readable"))
     lines.append("")
     return "\n".join(lines) + "\n"
 
@@ -846,58 +1178,79 @@ def render_help_overview_text():
     lines = [
         "lifetxt help",
         "",
-        "Start here:",
+        _t("help.start_here"),
         "  lifetxt tour              explore a working example, no setup required",
         "  lifetxt init              create life.txt and .lifetxt.json",
         '  lifetxt add "..."         capture your first task',
         "  lifetxt today             see what needs attention today",
         "  lifetxt done ID           mark it done",
         "",
-        "Guided paths:",
+        _t("help.guided_paths"),
     ]
-    for audience_id, audience in AUDIENCES.items():
-        lines.append("  lifetxt help %-9s %s" % (audience_id, audience["description"]))
+    for audience_id in AUDIENCES:
+        lines.append(
+            "  lifetxt help %-9s %s" % (audience_id, audience_description(audience_id))
+        )
     lines.append("")
-    lines.append("Command categories:")
+    lines.append(_t("help.command_categories"))
     lines.extend(render_category_overview_lines())
     lines.append("")
-    lines.append("Look up one command: lifetxt help <command>")
-    lines.append(
-        "Machine-readable: lifetxt help --json, lifetxt help <command> --json, "
-        "lifetxt help <audience> --json"
-    )
-    lines.append("Full flag reference: lifetxt --help, lifetxt <command> --help")
+    lines.append(_t("help.lookup_command"))
+    lines.append(_t("help.machine_readable_full"))
+    lines.append(_t("help.full_flag_reference"))
     return "\n".join(lines) + "\n"
+
+
+def audience_step_goal(audience_id, command, default_goal):
+    """Locale-aware per-step goal text for one audience flow step (#632).
+
+    Falls back to ``default_goal`` (the English text already carried by
+    ``AUDIENCES``) when no translation is registered, so an untranslated
+    audience/step never renders blank.
+    """
+    return _t("audience.%s.goal.%s" % (audience_id, command)) or default_goal
 
 
 def render_audience_text(audience_id):
     audience = AUDIENCES[audience_id]
     lines = [
-        "lifetxt help %s -- %s" % (audience_id, audience["title"]),
+        "lifetxt help %s -- %s" % (audience_id, audience_title(audience_id)),
         "",
-        audience["description"],
+        audience_description(audience_id),
         "",
     ]
     for index, (command, goal, example) in enumerate(audience["flow"]):
-        lines.append("  %d. %-28s %s" % (index + 1, example, goal))
+        localized_goal = audience_step_goal(audience_id, command, goal)
+        lines.append("  %d. %-28s %s" % (index + 1, example, localized_goal))
     lines.append("")
-    lines.append("Look up any of these commands: lifetxt help <command>")
-    lines.append("Full flag reference: lifetxt <command> --help")
+    lines.append(_t("help.lookup_command"))
+    lines.append(_t("help.full_flag_reference"))
     return "\n".join(lines) + "\n"
+
+
+def localized_command_summary(name, default_summary):
+    """Locale-aware command summary for `lifetxt help NAME`'s text form.
+
+    `command_record()`/`catalog_payload()` (the JSON surface) keep reading
+    `command_summary()` directly and stay locale-invariant; this wrapper is
+    only for the plain-text renderer, and only overrides the small set of
+    beginner-facing commands with a registered translation.
+    """
+    return _t("command.summary.%s" % name) or default_summary
 
 
 def render_command_text(name):
     record = command_record(name, detailed=True)
     category_id = record["category"]
-    category_title = (
-        CATEGORIES[category_id]["title"] if category_id else "(uncategorized)"
+    category_title_text = (
+        category_title(category_id) if category_id else "(uncategorized)"
     )
     lines = [
         "lifetxt help %s" % name,
         "",
-        record["summary"],
+        localized_command_summary(name, record["summary"]),
         "",
-        "Category: %s" % category_title,
+        "Category: %s" % category_title_text,
         "Aliases: %s" % (", ".join(record["aliases"]) or "none"),
         "Read-only: %s   Destructive: %s"
         % (
@@ -947,6 +1300,25 @@ def command_help(args, config_data):
     as_json = (
         bool(getattr(args, "json", False)) or getattr(args, "format", "text") == "json"
     )
+
+    if topic == "diagnostic":
+        from . import diagnostic_catalog
+
+        code = getattr(args, "code", None)
+        if code is None:
+            text = (
+                diagnostic_catalog.render_overview_json()
+                if as_json
+                else diagnostic_catalog.render_overview_text()
+            )
+        else:
+            text = (
+                diagnostic_catalog.render_code_json(code)
+                if as_json
+                else diagnostic_catalog.render_code_text(code)
+            )
+        _write_output(text, getattr(args, "output", None))
+        return 0
 
     if topic is None:
         text = render_catalog_json() if as_json else render_help_overview_text()

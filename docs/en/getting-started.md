@@ -178,7 +178,9 @@ first -- it is already valid input to the full grammar.
 
 - `lifetxt tour` -- a 30-second, zero-config demonstration; a good place to
   start before writing anything.
-- `lifetxt init` -- create your own starter `life.txt` and config.
+- `lifetxt init` -- create your own starter `life.txt` and config. Add
+  `--preset student`, `work`, `research`, or `personal` for a small starter
+  section skeleton matching your use case (see [`cli.md`](./cli.md)).
 - `lifetxt add "Buy milk ^tomorrow"` -- capture your first real record.
 - `lifetxt web` -- open the browser UI against it.
 - [`life_txt_format_spec.md`](./life_txt_format_spec.md) -- the complete
@@ -187,3 +189,47 @@ first -- it is already valid input to the full grammar.
 - [`use-cases.md`](./use-cases.md) -- practical setups (task tracking,
   calendar, journaling, team status, AI integration).
 - [`philosophy.md`](./philosophy.md) -- why lifetxt is built this way.
+
+## Learning the next step from success output
+
+In an interactive terminal, `init`, `add`/`quick`, `done`, and `complete`
+print a short "Next:" line naming one or two commands to try next, so the
+beginner loop above (`init` -> `add` -> `today` -> `done`) can be learned
+just from what each command prints. `add`/`done`/`complete` also print
+"Undo:" whenever that specific change can really be undone with
+`lifetxt undo PATH`. Scripted, piped, or redirected output is completely
+unaffected: no extra lines are ever added there.
+
+## Running `lifetxt` with no arguments
+
+In an interactive terminal, running just `lifetxt` with no other arguments is
+a smart entry point: it points you at `tour`/`init`/`help beginner` if
+nothing looks set up yet in the current directory, or straight to `today`
+(the daily command center) once it does. Scripted, piped, or redirected
+invocations are completely unaffected -- they still get the usual full
+command list and a non-zero exit code, exactly as before.
+
+## Beginner mode in the Web UI
+
+The [Web UI](./web.md#beginner-authoring-mode)'s record editor can hide
+advanced Type/Status options, showing only this Beginner Profile's
+`T`/`E`/`N` types and `[ ]`/`[x]`/`[N]` statuses until you choose to reveal
+the rest -- the same vocabulary described above, applied to an authoring
+surface instead of only this document.
+
+## Read this in another language
+
+lifetxt's human-readable CLI text (headings, guidance, `help`) can be shown
+in Japanese instead of English -- command names, options, and Format 1.0
+syntax always stay the same canonical English tokens:
+
+```sh
+lifetxt --lang ja tour
+lifetxt --lang ja init
+lifetxt --lang ja help beginner
+LIFETXT_LANG=ja lifetxt today
+```
+
+See [`cli.md`](./cli.md)'s Localization section for the full precedence
+rules, and read this same guide in Japanese at
+[`docs/ja/getting-started.md`](../ja/getting-started.md).

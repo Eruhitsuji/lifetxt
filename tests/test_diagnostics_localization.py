@@ -124,7 +124,24 @@ class DoctorLocalizationTests(unittest.TestCase):
             out_ja, _, _ = run_cli(
                 "--lang", "ja", "doctor", life_file, "--format", "json"
             )
-            self.assertEqual(json.loads(out_en), json.loads(out_ja))
+            records_en = json.loads(out_en)
+            records_ja = json.loads(out_ja)
+            # The "disk" check embeds a live free-space reading in its message
+            # (part of cap-doctor-unification's system diagnostics). The two
+            # subprocess calls above are genuinely separate, moments apart, so
+            # real disk activity on the host between them can change that one
+            # number even though every other field is correctly
+            # locale-invariant (#662). Compare everything except that live
+            # value: same status/check keys and count, and every non-"disk"
+            # message identical (which already proves the locale text itself
+            # is unaffected).
+            self.assertEqual(len(records_en), len(records_ja))
+            for record_en, record_ja in zip(records_en, records_ja):
+                self.assertEqual(record_en["status"], record_ja["status"])
+                self.assertEqual(record_en["check"], record_ja["check"])
+                if record_en["check"] == "disk":
+                    continue
+                self.assertEqual(record_en["message"], record_ja["message"])
 
 
 if __name__ == "__main__":

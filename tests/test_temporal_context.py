@@ -3,9 +3,20 @@ import unittest
 
 from lifetxt.parser import parse_text
 from lifetxt.temporal_context import node_facts, temporal_context
+from lifetxt.ticket_project_values import reference_time
 
 
 TODAY = datetime.date(2026, 8, 22)
+
+# node_facts() deliberately compares staleness against the real wall clock
+# (reference_time(None), matching ticket_project_report.py's own design),
+# not against the fixed TODAY constant above -- so t6/t7's `updated:` values
+# must be derived relative to the real clock at test-run time rather than
+# fixed calendar dates, or this fixture becomes a time bomb as real time
+# passes (#661).
+_REAL_TODAY = reference_time(None).date()
+_STALE_UPDATED = (_REAL_TODAY - datetime.timedelta(days=400)).isoformat()
+_FRESH_UPDATED = (_REAL_TODAY - datetime.timedelta(days=1)).isoformat()
 
 SAMPLE = """#! timezone: UTC
 [ ] T Overdue due:2026-08-20 id:t1
@@ -13,9 +24,9 @@ SAMPLE = """#! timezone: UTC
 [ ] T Soon due:2026-08-23 id:t3
 [ ] T FarOut due:2026-09-15 id:t4
 [ ] T NoDate id:t5
-[ ] T Stale updated:2026-01-01 id:t6
-[ ] T Fresh updated:2026-08-21 id:t7
-"""
+[ ] T Stale updated:{stale} id:t6
+[ ] T Fresh updated:{fresh} id:t7
+""".format(stale=_STALE_UPDATED, fresh=_FRESH_UPDATED)
 
 
 def _by_id(items, value):
@@ -74,8 +85,8 @@ class NodeFactsTests(unittest.TestCase):
 
     def test_custom_stale_after_days_changes_the_threshold(self):
         target = _by_id(self.items, "t7")
-        # Fresh was updated one day before the fixed TODAY constant would
-        # imply, but node_facts uses the real clock for staleness (matching
+        # Fresh was updated one day before the real clock at test-run time,
+        # and node_facts uses the real clock for staleness (matching
         # ticket_project_report.py's own reference_time(None) behavior), so
         # a very small threshold still trips it deterministically.
         facts = node_facts(target, TODAY, stale_after_days=0)

@@ -63,6 +63,7 @@ from .diagnostic_contract import (
     diagnostic_to_output_dict,
 )
 from .diagnostic_cascade import classify_cascade_roles
+from .sarif import render_sarif
 from .diagnostic_render import render_diagnostic_rich, render_diagnostics_summary
 from .cli_taxonomy import render_success_guidance as _render_success_guidance
 from .i18n import register_messages as _register_messages, translate as _t
@@ -427,9 +428,10 @@ def build_parser():
     )
     check.add_argument(
         "--format",
-        choices=("text", "json"),
+        choices=("text", "json", "sarif"),
         default="text",
-        help="Diagnostic output format.",
+        help="Diagnostic output format. sarif emits a SARIF 2.1.0 document "
+        "(#644), built from the same filtered diagnostics as text/json.",
     )
     check.add_argument(
         "--warnings-as-errors",
@@ -4373,6 +4375,8 @@ def command_check(args):
             indent=2,
         )
         write_text(None, output + "\n")
+    elif args.format == "sarif":
+        write_text(None, render_sarif(filtered_diagnostics))
     else:
         if filtered_diagnostics:
             cascade_roles = classify_cascade_roles(filtered_diagnostics)

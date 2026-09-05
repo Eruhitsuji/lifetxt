@@ -730,9 +730,10 @@ The guards fail loudly rather than hanging when `dir:` points somewhere huge.
 Validate life.txt syntax and semantic rules.
 
 ```sh
-python -m lifetxt check [path ...] [--format text|json] [--warnings-as-errors]
+python -m lifetxt check [path ...] [--format text|json|sarif] [--warnings-as-errors]
 python -m lifetxt check life.txt --severity warning --category reference
 python -m lifetxt check life.txt --code E010,W213 --format json
+python -m lifetxt check life.txt --format sarif > lifetxt.sarif
 ```
 
 Options:
@@ -742,6 +743,7 @@ Options:
 | `path ...` | Input file(s), or `-` for stdin |
 | `--format text` | Print human-readable diagnostics |
 | `--format json` | Print diagnostics as JSON |
+| `--format sarif` | Print diagnostics as a SARIF 2.1.0 document (see below) |
 | `--warnings-as-errors` | Exit non-zero when warnings are present |
 | `--severity error|warning` | Show only matching severities; repeatable or comma-separated |
 | `--code CODE` | Show only matching diagnostic codes such as `E010` or `W213`; repeatable or comma-separated |
@@ -838,12 +840,43 @@ partner leaves a lone diagnostic with no relation note, and filtering away
 only the first diagnostic still lets the remaining ones on that line form
 their own group. `--format json` never carries this relationship either.
 
+SARIF output:
+
+`--format sarif` emits a [SARIF 2.1.0](https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html)
+document over the exact same filtered diagnostics `text`/`json` render --
+`--code`/`--severity`/`--category`/`--ignore`/`--warnings-as-errors` all
+apply identically, and the resulting result count and order always match
+`--format json`'s diagnostic array. This is a pure, read-only export: it
+never re-runs or changes validation, and it has no network, upload, or
+credential handling of its own -- pipe the output to a file and hand that
+file to whatever consumes SARIF (for example GitHub Code Scanning's
+`upload-sarif` Action, or an IDE extension):
+
+```sh
+python -m lifetxt check life.txt --format sarif > lifetxt.sarif
+```
+
+Mapping: `code` becomes `ruleId` (one deduplicated rule entry per distinct
+code, never repeated per occurrence); `severity` becomes `level`
+(`error`/`warning`, matching lifetxt's only two severities); `source`
+becomes `artifactLocation.uri` (an absolute path becomes a `file://` URI on
+either Windows or POSIX; a relative path -- the common case -- is used
+as-is, which SARIF's relative-URI-reference form permits directly);
+`line`/`column` become `region.startLine`/`startColumn` with no offset
+conversion, since SARIF's column semantics already match lifetxt's own
+1-based convention; `end_line`/`end_column` become `region.endLine`/
+`endColumn` only when a diagnostic already carries a precise end position
+-- an unknown end is never invented. `hint`, when non-empty, is carried as
+`result.properties.hint`. `text`/`json` output is completely unchanged by
+this addition.
+
 Examples:
 
 ```sh
 python -m lifetxt check life.txt
 python -m lifetxt check life.txt --warnings-as-errors
 python -m lifetxt check life.txt --format json
+python -m lifetxt check life.txt --format sarif > lifetxt.sarif
 python -m lifetxt check life.txt --category id,reference
 ```
 

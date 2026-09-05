@@ -703,9 +703,10 @@ lifetxt check life.txt --category files # attachment の診断のみ
 life.txt の構文と意味的なルールを検査します。
 
 ```sh
-python -m lifetxt check [path ...] [--format text|json] [--warnings-as-errors]
+python -m lifetxt check [path ...] [--format text|json|sarif] [--warnings-as-errors]
 python -m lifetxt check life.txt --severity warning --category reference
 python -m lifetxt check life.txt --code E010,W213 --format json
+python -m lifetxt check life.txt --format sarif > lifetxt.sarif
 ```
 
 | Option | 意味 |
@@ -713,6 +714,7 @@ python -m lifetxt check life.txt --code E010,W213 --format json
 | `path ...` | 入力ファイル。`-` なら標準入力 |
 | `--format text` | 人間向けの診断を表示 |
 | `--format json` | 診断を JSON で表示 |
+| `--format sarif` | 診断を SARIF 2.1.0 document として表示（下記参照） |
 | `--warnings-as-errors` | warning がある場合も非ゼロ終了 |
 | `--severity error|warning` | severity で絞り込み。複数回指定または comma-separated |
 | `--code CODE` | `E010` や `W213` などの診断 code で絞り込み。複数回指定または comma-separated |
@@ -809,12 +811,43 @@ diagnostic 同士がこの方法で関連付けられることはなく、この
 だけで group を形成します。`--format json` にもこの関係が含まれることは
 ありません。
 
+SARIF 出力:
+
+`--format sarif` は、`text`/`json` が表示するのと全く同じ filter 済み
+diagnostic から [SARIF 2.1.0](https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html)
+document を生成します -- `--code`/`--severity`/`--category`/`--ignore`/
+`--warnings-as-errors` はすべて同じように適用され、result の件数と順序は
+常に `--format json` の diagnostic 配列と一致します。これは純粋に
+read-only な export です: validation を再実行・変更することはなく、
+network・upload・credential の扱いは一切ありません -- 出力を file へ
+pipe して、SARIF を受け取る側（例えば GitHub Code Scanning の
+`upload-sarif` Action や IDE extension）にその file を渡してください:
+
+```sh
+python -m lifetxt check life.txt --format sarif > lifetxt.sarif
+```
+
+Mapping: `code` は `ruleId` になります（同じ code は occurrence ごとに
+繰り返されず、1つの deduplicated rule entry になります）。`severity` は
+`level`（`error`/`warning`。lifetxt の2つの severity にそのまま対応）に
+なります。`source` は `artifactLocation.uri` になります（絶対 path は
+Windows/POSIX いずれでも `file://` URI に、相対 path -- 一般的なケース
+-- はそのまま使われます。これは SARIF の relative-URI-reference 形式が
+直接許容するものです）。`line`/`column` はオフセット変換なしで
+`region.startLine`/`startColumn` になります。SARIF の column 意味論は
+lifetxt 自身の1始まりの規則と既に一致するためです。`end_line`/
+`end_column` は、diagnostic が既に正確な end position を持つ場合にのみ
+`region.endLine`/`endColumn` になります -- 不明な end を推測することは
+ありません。`hint` は、空でない場合 `result.properties.hint` として
+運ばれます。`text`/`json` 出力はこの追加によって一切変わりません。
+
 例:
 
 ```sh
 python -m lifetxt check life.txt
 python -m lifetxt check life.txt --warnings-as-errors
 python -m lifetxt check life.txt --format json
+python -m lifetxt check life.txt --format sarif > lifetxt.sarif
 python -m lifetxt check life.txt --category id,reference
 ```
 

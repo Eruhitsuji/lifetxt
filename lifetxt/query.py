@@ -70,6 +70,10 @@ DATE_FIELDS = (
 EXCLUDE_FIELDS = ("exclude_tag", "extag", "-tag")
 COMPARISON_OPS = ("<=", ">=", "!=", "<", ">", "=", ":")
 
+# progress: is compared as a ratio (0.0-1.0) derived from its percentage or
+# fraction representation (#648), not as string membership or a date.
+PROGRESS_FIELDS = ("progress",)
+
 # Documented custom detail keys that are not in KNOWN_KEYS but are first-class
 # organizing dimensions (Life Hub areas, project records). Queried as details.
 CUSTOM_DETAIL_FIELDS = ("area", "record", "severity")
@@ -104,7 +108,9 @@ def query_fields(config=None):
     fields = list(MEMBERSHIP_FIELDS.keys())
     fields.extend(DATE_FIELDS)
     fields.extend(list(CUSTOM_DETAIL_FIELDS))
-    fields.extend(["text", "q", "context", "loc", "priority", "exclude_tag"])
+    fields.extend(
+        ["text", "q", "context", "loc", "priority", "progress", "exclude_tag"]
+    )
     fields.extend(sorted(_filterable_custom_fields(config)))
     seen = []
     for field in fields:
@@ -159,6 +165,7 @@ def parse_query(text, config=None):
             ("excludes", []),
             ("details", OrderedDict()),
             ("date_filters", []),
+            ("progress_filters", []),
             ("text", []),
             ("open_only", False),
         )
@@ -188,6 +195,39 @@ def parse_query(text, config=None):
         if field in ("text", "q"):
             if value:
                 plan["text"].append(value)
+            continue
+
+        if field in PROGRESS_FIELDS:
+            from .progress import ProgressValueError, parse_progress
+
+            if not value:
+                diagnostics.append(
+                    diagnostic(
+                        "warning",
+                        "Q003",
+                        "Empty value in %r; term ignored." % token,
+                        "Provide a value after the field.",
+                        token,
+                    )
+                )
+                continue
+            try:
+                parsed = parse_progress(value)
+            except ProgressValueError as exc:
+                diagnostics.append(
+                    diagnostic(
+                        "error",
+                        "Q005",
+                        "Invalid progress value in %r: %s." % (token, exc.reason),
+                        "Use a percentage such as progress<50% or a fraction "
+                        "such as progress>=3/5.",
+                        token,
+                    )
+                )
+                continue
+            plan["progress_filters"].append(
+                OrderedDict((("field", field), ("op", op), ("ratio", parsed.ratio)))
+            )
             continue
 
         if field in DATE_FIELDS:
@@ -323,6 +363,12 @@ def apply_query(items, plan, config=None):
     if date_filters:
         filtered = [item for item in filtered if _matches_dates(item, date_filters)]
 
+    progress_filters = plan.get("progress_filters") or []
+    if progress_filters:
+        filtered = [
+            item for item in filtered if _matches_progress(item, progress_filters)
+        ]
+
     return filtered
 
 
@@ -344,6 +390,24 @@ def _matches_dates(item, date_filters):
         if actual is None or target is None:
             return False
         if not _compare(actual, op, target):
+            return False
+    return True
+
+
+def _matches_progress(item, progress_filters):
+    from .progress import ProgressValueError, parse_progress
+
+    raw = item.details.get("progress")
+    if not raw:
+        # Missing progress: is never treated as 0%; it simply never matches
+        # a progress comparison, per #648's explicit design constraint.
+        return False
+    try:
+        actual = parse_progress(raw[0]).ratio
+    except ProgressValueError:
+        return False
+    for spec in progress_filters:
+        if not _compare(actual, spec["op"], spec["ratio"]):
             return False
     return True
 

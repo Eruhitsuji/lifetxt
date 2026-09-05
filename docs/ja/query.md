@@ -12,6 +12,7 @@ query は whitespace-separated terms です。values は quoted にできます�
 | `field:a,b` | 同じ field 内の values の OR |
 | `field=value` | `:` と同じ |
 | `field<DATE` `field>DATE` | date comparison (`<`, `>`, `<=`, `>=`, `!=`) |
+| `progress<50%` `progress>=3/4` | [`progress:`](life_txt_format_spec.md#75-effort-keys) の ratio comparison (`<`, `>`, `<=`, `>=`, `!=`) |
 | `-tag:value` | exclude。`exclude_tag:value` も可 |
 | `open` | open workflow statuses のみ |
 | `text:"free text"` | title への substring match。bare words も可 |
@@ -22,12 +23,19 @@ query は whitespace-separated terms です。values は quoted にできます�
 
 - **Membership**: `status`, `type`/`kind`, `project`, `tag`, `tag_all`, `user`, `person`, `owner`, `assignee`, `attendee`, `sender`, `recipient`, `team`
 - **Dates**: `due`, `do`, `from`, `to`, `on`, `at`, `done`, `created`, `updated`
+- **Progress**（ratio comparison）: `progress`。例: `progress<50%` や
+  `progress>=3/4`。percentage と fraction のどちらの値も、validation で使う
+  [`progress:`](life_txt_format_spec.md#75-effort-keys) parser と同じもので
+  ratio に正規化されるため、item がどちらの表記を使っていても正しく比較され
+  ます。item の `progress:` 値が invalid な場合、または `progress:` detail
+  が無い場合は、どの `progress` comparison にも一致しません -- 値が無いこと
+  を暗黙に `0%` とは扱いません。
 - **Details** (equality): `area`, `context`, `loc`, `priority`, and any known key
 - **Custom**（equality、opt-in）: [汎用 `custom_fields`](config.md#汎用-custom-field) の
   definition のうち `filterable: true` のもの
 - **Text**: `text` / `q`, or bare words
 
-unknown fields は `Q001` warning になり ignored されます。invalid dates は `Q002` error です。warnings は result set と一緒に返りますが、errors は query を止めます。field typo が silently zero results にならず、malformed date comparison が valid のふりをしないようにするためです。
+unknown fields は `Q001` warning になり ignored されます。invalid dates は `Q002` error です。invalid な `progress` comparison value は `Q005` error です。warnings は result set と一緒に返りますが、errors は query を止めます。field typo が silently zero results にならず、malformed date や progress comparison が valid のふりをしないようにするためです。
 
 ### Custom field
 

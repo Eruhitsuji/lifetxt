@@ -22,7 +22,7 @@
           <span class="type-badge ${typeCls}">${escapeHtml(item.type)}</span>
           <div>
             <div class="title markdown">${titleHtml}${parentInd}${occurrenceBadge}${generatedBadge}</div>
-            <div class="meta">${escapeHtml(detailText(item.details))}${refLinks}${dueRel}</div>
+            <div class="meta">${escapeHtml(detailText(item.details))}${refLinks}${dueRel}${progressBadge}</div>
             ${preview}
           </div>
           <span class="source">${escapeHtml(item.source || `line ${item.line || ""}`)}${item.generated ? " / generated" : ""}${item.editable ? "" : " / read-only"}</span>

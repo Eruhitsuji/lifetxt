@@ -118,7 +118,7 @@ class DictionaryTests(unittest.TestCase):
             "Workflow state: [ ] open, [/] active, [x] done, [-] cancelled, [>] deferred, [?] maybe, [N] note.",
             "Record kind: T task, E event, D deadline, R reminder, H habit, N note, S presence status, M message, J journal.",
             "Short human-readable record text. Use quotes in raw life.txt if the title contains spaces.",
-            "One key:value per line. Repeat the same key for multiple values. Use body: or | continuation lines for longer text.",
+            "One key:value per line. Repeat the same key for multiple values. Use body: or | continuation lines for longer text. progress: accepts a percentage (progress:75%) or a fraction (progress:3/10), independent of status.",
         ):
             self.assertIn(text, self.dictionary)
 

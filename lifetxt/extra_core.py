@@ -85,15 +85,29 @@ def command_next(args, config_data):
         )
     if args.limit:
         selected = selected[: args.limit]
+    explanations = {}
+    if args.why:
+        today = timezone_today() if args.rank else None
+        for item in selected:
+            explanations[id(item)] = _next_action_explanation(item, args.rank, today)
     if args.format == "json":
+        output_rows = []
+        for item in selected:
+            row = _item_record(item)
+            if args.why:
+                row["why"] = explanations[id(item)]
+            output_rows.append(row)
         return _emit(
-            _json_text([_item_record(item) for item in selected], args.pretty),
+            _json_text(output_rows, args.pretty),
             args.output,
         )
     if args.format == "life":
-        return _emit(
-            "".join(item_to_line(item) + "\n" for item in selected), args.output
-        )
+        output = []
+        for item in selected:
+            output.append(item_to_line(item) + "\n")
+            if args.why:
+                output.append("Why: %s\n" % explanations[id(item)]["summary"])
+        return _emit("".join(output), args.output)
     rows = [
         (
             _item_id(item) or "-",
@@ -104,7 +118,69 @@ def command_next(args, config_data):
         )
         for item in selected
     ]
-    return _emit(_table(("ID", "PRI", "DUE", "PROJECT", "TITLE"), rows), args.output)
+    output = _table(("ID", "PRI", "DUE", "PROJECT", "TITLE"), rows)
+    if args.why:
+        output += (
+            "\n".join(
+                "Why: %s: %s"
+                % (_item_id(item) or item.title, explanations[id(item)]["summary"])
+                for item in selected
+            )
+            + "\n"
+        )
+    return _emit(output, args.output)
+
+
+def _next_action_explanation(item, rank=False, today=None):
+    """Describe the deterministic eligibility and ordering evidence."""
+    tags = [str(value).lstrip("#").lower() for value in _values(item, "tag")]
+    priority = _first(item, "priority") or "(none)"
+    due = _first(item, "due") or _first(item, "do") or "(none)"
+    created = _first(item, "created") or "(none)"
+    criteria = [
+        "status %s is actionable" % item.status,
+        "type %s is actionable" % item.kind,
+        "no parked tags (%s)" % (", ".join(tags) if tags else "none"),
+        "dependencies resolved",
+    ]
+    if rank:
+        order = "overdue-aware rank"
+        sort_key = list(_rank_key(item, today))
+    else:
+        order = "priority, due, created, line"
+        sort_key = [
+            _priority_key(priority),
+            _date_value(due) or datetime.date.max,
+            _date_value(created) or datetime.date.max,
+            item.line or 0,
+        ]
+    sort_key = [
+        value.isoformat() if isinstance(value, datetime.date) else value
+        for value in sort_key
+    ]
+    return OrderedDict(
+        (
+            ("criteria", criteria),
+            (
+                "ordering",
+                OrderedDict(
+                    (
+                        ("method", order),
+                        ("priority", priority),
+                        ("due", due),
+                        ("created", created),
+                        ("line", item.line),
+                        ("sort_key", sort_key),
+                    )
+                ),
+            ),
+            (
+                "summary",
+                "%s; %s; %s; %s; ordered by %s"
+                % (criteria[0], criteria[1], criteria[2], criteria[3], order),
+            ),
+        )
+    )
 
 
 def command_show(args, config_data):

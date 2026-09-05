@@ -9,6 +9,7 @@ lifetxt next life.txt
 lifetxt next life.txt --project research --limit 10
 lifetxt next life.txt --format json
 lifetxt next life.txt --rank
+lifetxt next life.txt --why
 ```
 
 `next` は open な Task、Deferred、Recurring、Habit records から、`someday`、`maybe`、`waiting` tags が付いておらず、unfinished または unresolvable な `depends_on` reference に block されていないものを選びます。TUI `/next` view と MCP `get_next_actions` tool と同じ definition です。blocking は command に渡されたすべての files を横断して解決されるため、別 file にある dependency でも item は parked されます。results は priority、due date、age で ordered されます。
@@ -16,6 +17,11 @@ lifetxt next life.txt --rank
 `--rank` を追加すると overdue items を priority より先に置きます。ties は通常の priority、due date、age ordering に戻ります。`--rank` なしの output は変わりません。
 
 `--rank` は selected item の `due` value が valid date であることを要求します。`due:not-a-date` のように parse できない value がある場合、silent に no due date 扱いせず item 名を含む error で失敗します。`--rank` なしの `next` は従来通り unparseable `due` を許容します。
+
+`--why` を追加すると、返された各itemについて、actionableなstatus/type、
+parked tagとdependencyの確認結果、および結果順に使ったordering fieldを表示します。
+JSON outputでは各itemに `why` object が追加され、text/life outputでは人向けの
+`Why:` 行が追加されます。`--why` なしの出力は変わりません。
 
 ## Inspect and edit one item
 

@@ -141,11 +141,28 @@ def command_next(args, config_data):
 
 
 def _next_action_explanation(item, rank=False, today=None):
-    """Describe the deterministic eligibility and ordering evidence."""
+    """Describe the deterministic eligibility and ordering evidence.
+
+    The `sort_key` field must reproduce exactly what `command_next`'s own
+    sort actually compares on -- it is read from the raw (possibly
+    missing) detail values, the same way `command_next` reads them,
+    never from the human-readable "(none)"-substituted display strings
+    below. A prior version computed `_priority_key("(none)")` instead of
+    `_priority_key(None)` (a different, wrong bucket: `_priority_key`
+    treats an empty string as "no priority" but treats the literal text
+    "(none)" as an unparseable priority value, landing in a different
+    sort bucket), and folded a `do:` value into the "due" used for
+    sorting even though the real sort only ever reads `due:` -- both
+    found by CodeX review to make the `--why` evidence disagree with the
+    actual ordering it claims to explain.
+    """
     tags = [str(value).lstrip("#").lower() for value in _values(item, "tag")]
-    priority = _first(item, "priority") or "(none)"
-    due = _first(item, "due") or _first(item, "do") or "(none)"
-    created = _first(item, "created") or "(none)"
+    raw_priority = _first(item, "priority")
+    raw_due = _first(item, "due")
+    raw_created = _first(item, "created")
+    priority = raw_priority or "(none)"
+    due = raw_due or "(none)"
+    created = raw_created or "(none)"
     criteria = [
         "status %s is actionable" % item.status,
         "type %s is actionable" % item.kind,
@@ -157,10 +174,11 @@ def _next_action_explanation(item, rank=False, today=None):
         sort_key = list(_rank_key(item, today))
     else:
         order = "priority, due, created, line"
+        far_future = datetime.date.max
         sort_key = [
-            _priority_key(priority),
-            _date_value(due) or datetime.date.max,
-            _date_value(created) or datetime.date.max,
+            _priority_key(raw_priority),
+            _date_value(raw_due) or far_future,
+            _date_value(raw_created) or far_future,
             item.line or 0,
         ]
     sort_key = [

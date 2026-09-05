@@ -39,6 +39,7 @@ from __future__ import unicode_literals
 import json
 import re
 from collections import OrderedDict
+from urllib.parse import quote
 
 from .diagnostic_contract import diagnostic_category
 
@@ -61,6 +62,10 @@ SEVERITY_TO_LEVEL = {
 }
 
 _WINDOWS_DRIVE_RE = re.compile(r"^[A-Za-z]:/")
+#: A UNC path after backslash normalization: "//host/share/rest...". The
+#: host is its own URI authority component (RFC 8089's Windows UNC-path
+#: appendix); "rest" is an ordinary path.
+_UNC_RE = re.compile(r"^//([^/]+)(/.*)?$")
 
 
 def _to_uri(path):
@@ -68,20 +73,37 @@ def _to_uri(path):
 
     Handles both platform path styles: an absolute Windows path
     (`C:\\Users\\...` or already-forward-slashed `C:/Users/...`) becomes
-    `file:///C:/Users/...`; an absolute POSIX path becomes
-    `file:///...`; a relative path (the common case -- most `check`
-    invocations pass a relative life.txt path) is used as-is, with
-    backslashes normalized to forward slashes, which SARIF's own
-    relative-URI-reference form permits directly with no scheme.
+    `file:///C:/Users/...`; a UNC path (`\\\\server\\share\\...`) becomes
+    `file://server/share/...`, with the server name as the URI's own
+    authority component rather than folded into the path (which would
+    otherwise produce a non-standard four-slash `file:////server/...`);
+    an absolute POSIX path becomes `file:///...`; a relative path (the
+    common case -- most `check` invocations pass a relative life.txt
+    path) is used as-is, with backslashes normalized to forward slashes,
+    which SARIF's own relative-URI-reference form permits directly with
+    no scheme.
+
+    Every path segment is percent-encoded (`urllib.parse.quote`, leaving
+    only `/` -- and `:` for a Windows drive letter -- unescaped) so a
+    path containing a space, `#`, or non-ASCII character (all valid on
+    both Windows and POSIX filesystems) produces a well-formed URI a
+    SARIF consumer can actually resolve, rather than one where `#`
+    would be read as introducing a URI fragment and a literal space
+    would make the URI invalid outright -- a CodeX review finding
+    against the original unescaped version.
     """
     if not path or path == "-":
         return None
     normalized = str(path).replace("\\", "/")
     if _WINDOWS_DRIVE_RE.match(normalized):
-        return "file:///" + normalized
+        return "file:///" + quote(normalized, safe="/:")
+    unc_match = _UNC_RE.match(normalized)
+    if unc_match:
+        host, rest = unc_match.group(1), unc_match.group(2) or ""
+        return "file://" + quote(host, safe="") + quote(rest, safe="/")
     if normalized.startswith("/"):
-        return "file://" + normalized
-    return normalized
+        return "file://" + quote(normalized, safe="/")
+    return quote(normalized, safe="/")
 
 
 def _region(diagnostic):

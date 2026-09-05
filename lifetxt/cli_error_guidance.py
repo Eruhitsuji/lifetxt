@@ -17,6 +17,14 @@ command/workspace name -- an unknown command's candidates come from
 #629 already established, never a second hand-copied list), and an
 unknown workspace's candidates come from the exact "Available: ..." list
 `lifetxt.workspace.resolve_workspace()` already computed and raised.
+
+The additional TTY-only guidance lines (never the leading "ERROR: ..."
+line or the underlying exception text itself, both of which stay
+locale-independent per the invariant above) are rendered through #631's
+shared localization catalog, per #643's own "#631/#633 が利用可能なら固定
+文言はそこへ接続する" design principle -- a CodeX review finding noted this
+module still had every guidance string hardcoded in English even though
+#631 has since landed in the same batch.
 """
 
 from __future__ import unicode_literals
@@ -25,11 +33,50 @@ import difflib
 import re
 import sys
 
+from .i18n import register_messages as _register_messages
+from .i18n import translate as _t
+
 _MAX_SUGGESTIONS = 3
 _CLOSE_MATCH_CUTOFF = 0.6
 
 _UNKNOWN_WORKSPACE_RE = re.compile(r"^Unknown workspace '(.*)'\. Available: (.*)$")
 _MISSING_OPTION_VALUE_RE = re.compile(r"^(--\S+) requires a (.+)\.$")
+
+_register_messages(
+    {
+        "error_guidance.did_you_mean_one": {
+            "en": "Did you mean {candidate!r}?",
+            "ja": "もしかして {candidate!r} ではありませんか?",
+        },
+        "error_guidance.did_you_mean_many": {
+            "en": "Did you mean one of:",
+            "ja": "もしかして次のいずれかではありませんか:",
+        },
+        "error_guidance.see": {"en": "See:", "ja": "参照:"},
+        "error_guidance.available": {"en": "Available:", "ja": "利用可能:"},
+        "error_guidance.no_workspaces_configured": {
+            "en": "No workspaces are configured yet.",
+            "ja": "workspace はまだ設定されていません。",
+        },
+        "error_guidance.try": {"en": "Try:", "ja": "次を試してください:"},
+        "error_guidance.usage": {
+            "en": "Usage: {option} {value_kind}",
+            "ja": "使い方: {option} {value_kind}",
+        },
+        "error_guidance.could_not_read": {
+            "en": "Could not read: {filename}",
+            "ja": "読み込めませんでした: {filename}",
+        },
+        "error_guidance.check_path": {
+            "en": "Check that the path is correct.",
+            "ja": "path が正しいか確認してください。",
+        },
+        "error_guidance.run_lifetxt_path": {
+            "en": "Run `lifetxt path` to see the paths lifetxt would use.",
+            "ja": "`lifetxt path` を実行すると lifetxt が使う path を確認できます。",
+        },
+    }
+)
 
 
 def _is_tty():
@@ -52,8 +99,8 @@ def _did_you_mean_lines(candidates):
     if not candidates:
         return []
     if len(candidates) == 1:
-        return ["Did you mean %r?" % candidates[0]]
-    lines = ["Did you mean one of:"]
+        return [_t("error_guidance.did_you_mean_one", candidate=candidates[0])]
+    lines = [_t("error_guidance.did_you_mean_many")]
     lines.extend("  %s" % candidate for candidate in candidates)
     return lines
 
@@ -70,7 +117,7 @@ def unknown_command_text(command):
         lines.extend(_did_you_mean_lines(candidates))
         if candidates:
             lines.append("")
-        lines.append("See:")
+        lines.append(_t("error_guidance.see"))
         lines.append("  lifetxt help beginner")
     return "\n".join(lines) + "\n"
 
@@ -95,15 +142,15 @@ def render_value_error_text(exc):
         lines.extend(_did_you_mean_lines(_close_matches(name, available)))
         lines.append("")
         if available:
-            lines.append("Available:")
+            lines.append(_t("error_guidance.available"))
             lines.extend("  %s" % item for item in available)
         else:
-            lines.append("No workspaces are configured yet.")
+            lines.append(_t("error_guidance.no_workspaces_configured"))
         return "\n".join(lines) + "\n"
 
     if message.startswith("Could not read config:"):
         lines.append("")
-        lines.append("Try:")
+        lines.append(_t("error_guidance.try"))
         lines.append("  lifetxt doctor")
         return "\n".join(lines) + "\n"
 
@@ -111,7 +158,9 @@ def render_value_error_text(exc):
     if option_match:
         option, value_kind = option_match.group(1), option_match.group(2)
         lines.append("")
-        lines.append("Usage: %s %s" % (option, value_kind.upper()))
+        lines.append(
+            _t("error_guidance.usage", option=option, value_kind=value_kind.upper())
+        )
         return "\n".join(lines) + "\n"
 
     return "\n".join(lines) + "\n"
@@ -126,8 +175,8 @@ def render_os_error_text(exc):
     filename = getattr(exc, "filename", None)
     if filename:
         lines.append("")
-        lines.append("Could not read: %s" % filename)
-        lines.append("Try:")
-        lines.append("  Check that the path is correct.")
-        lines.append("  Run `lifetxt path` to see the paths lifetxt would use.")
+        lines.append(_t("error_guidance.could_not_read", filename=filename))
+        lines.append(_t("error_guidance.try"))
+        lines.append("  " + _t("error_guidance.check_path"))
+        lines.append("  " + _t("error_guidance.run_lifetxt_path"))
     return "\n".join(lines) + "\n"

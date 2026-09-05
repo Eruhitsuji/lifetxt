@@ -130,5 +130,57 @@ class RenderOsErrorTextTests(unittest.TestCase):
         self.assertEqual("ERROR: generic failure\n", text)
 
 
+class LocalizationTests(unittest.TestCase):
+    """#643's own "#631/#633 が利用可能なら固定文言はそこへ接続する" design
+    principle: the TTY-only guidance lines (never the leading "ERROR: ..."
+    line, which stays locale-independent) render through #631's shared
+    localization catalog. A CodeX review finding against the #631-660
+    batch noted this module still hardcoded every guidance string in
+    English even after #631 landed in the same batch.
+    """
+
+    def test_unknown_command_guidance_is_localized_to_japanese(self):
+        from lifetxt import i18n
+
+        with i18n.locale_context("ja"):
+            with mock.patch.object(cli_error_guidance.sys, "stderr", _FakeTty()):
+                text = cli_error_guidance.unknown_command_text("todya")
+        # The leading ERROR line stays English/locale-independent.
+        self.assertTrue(text.startswith("ERROR: Unknown command: 'todya'\n"))
+        self.assertIn("もしかして 'today' ではありませんか?", text)
+        self.assertIn("参照:", text)
+        self.assertNotIn("Did you mean", text)
+        self.assertNotIn("See:", text)
+
+    def test_unknown_workspace_guidance_is_localized_to_japanese(self):
+        from lifetxt import i18n
+
+        exc = ValueError("Unknown workspace 'reseach'. Available: personal, research")
+        with i18n.locale_context("ja"):
+            with mock.patch.object(cli_error_guidance.sys, "stderr", _FakeTty()):
+                text = cli_error_guidance.render_value_error_text(exc)
+        # The leading ERROR line is untouched (it happens to also contain
+        # the English word "Available:" as part of the raw exception
+        # text, which must stay locale-independent).
+        self.assertTrue(
+            text.startswith(
+                "ERROR: Unknown workspace 'reseach'. Available: personal, research\n"
+            )
+        )
+        self.assertIn("もしかして 'research' ではありませんか?", text)
+        self.assertIn("利用可能:\n  personal", text)
+        self.assertNotIn("Available:\n  personal", text)
+
+    def test_default_locale_guidance_is_unchanged_english(self):
+        # No locale context active: default English wording is unaffected
+        # by the localization wiring (this is what every other test in
+        # this file already asserts; this test only makes the "unaffected
+        # by default" invariant explicit).
+        with mock.patch.object(cli_error_guidance.sys, "stderr", _FakeTty()):
+            text = cli_error_guidance.unknown_command_text("todya")
+        self.assertIn("Did you mean 'today'?", text)
+        self.assertIn("See:", text)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -109,7 +109,14 @@
       return label;
     }
 
-    function buildDueRelLabel(item) {
+    function buildRelativeTimeBadge(item) {
+      // Renamed from an earlier "buildDueRelLabel" to avoid colliding with
+      // the pre-existing, differently-behaved buildDueRelLabel() defined in
+      // web_assets_js_04.js (overdue/due-soon color-coded due-date label,
+      // used by the Items and Today views). Both function declarations
+      // share one script-wide top-level scope once concatenated, so the
+      // same name here would have silently shadowed the earlier one for
+      // every caller, not just this file's own.
       const value = item?.details?.due?.[0] || item?.details?.do?.[0] ||
         item?.details?.from?.[0] || item?.details?.at?.[0] || item?.details?.on?.[0] || "";
       const rel = relativeTime(value);

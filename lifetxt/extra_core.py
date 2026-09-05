@@ -226,9 +226,18 @@ def command_show(args, config_data):
         lines.append("Hierarchy: " + " <- ".join(parent_chain))
     if item.details:
         lines.append("Details:")
+        # Pass the workspace-aware "today" explicitly (#142); relative_time's
+        # own default falls back to the bare system date, which drifts from
+        # every other surface's notion of "today" whenever the configured
+        # workspace timezone differs from the host's.
+        show_today = timezone_today()
         for key, values in item.details.items():
             for value in values:
-                relative = relative_time(value) if key in _DATE_DETAIL_KEYS else ""
+                relative = (
+                    relative_time(value, today=show_today)
+                    if key in _DATE_DETAIL_KEYS
+                    else ""
+                )
                 suffix = " (%s)" % relative if relative else ""
                 lines.append("  %s: %s%s" % (key, value, suffix))
     if incoming:

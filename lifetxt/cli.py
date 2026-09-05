@@ -3083,6 +3083,30 @@ def build_parser():
     )
     reopen_cmd.set_defaults(func=command_reopen)
 
+    due_cmd = subparsers.add_parser(
+        "due",
+        help="Set, replace, or clear an item's due: date (#666).",
+    )
+    due_cmd.add_argument("path", help="life.txt file containing the item.")
+    due_cmd.add_argument("id", help="ID of the item to update.")
+    due_cmd.add_argument(
+        "date",
+        nargs="?",
+        default=None,
+        help="New due date (YYYY-MM-DD). Omit when using --clear.",
+    )
+    due_cmd.add_argument(
+        "--clear",
+        action="store_true",
+        help="Remove due: from the item instead of setting one.",
+    )
+    due_cmd.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would change without writing to the file.",
+    )
+    due_cmd.set_defaults(func=command_due)
+
     complete_cmd = subparsers.add_parser(
         "complete",
         help=(
@@ -7855,6 +7879,84 @@ def command_reopen(args):
     sys.stdout.write("Reopened: %s\n" % updated_line)
     if sys.stdout.isatty():
         sys.stdout.write(_render_success_guidance("reopen", path=path))
+    return 0
+
+
+_DUE_ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def command_due(args):
+    """Set, replace, or clear an item's due: date (#666).
+
+    Reuses the same target resolver and guarded mutation path as
+    `done`/`progress`/`clone` rather than a second item-editing path. The
+    stored value is always a canonical absolute due:YYYY-MM-DD."""
+    config = _config(args)
+    path = args.path
+    if not path or path == "-":
+        raise ValueError("due requires a file path, not stdin.")
+    id_key = id_key_from_config(config)
+    text = read_text(path)
+    items, _ = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
+    target, aborted = _resolve_target_item(items, id_key, args, prompt_verb="Set due:")
+    if aborted:
+        return 0
+
+    clear = getattr(args, "clear", False)
+    date_arg = getattr(args, "date", None)
+    if clear and date_arg:
+        raise ValueError("Use either a date or --clear, not both.")
+    if not clear and not date_arg:
+        raise ValueError("Specify a due date (YYYY-MM-DD) or --clear.")
+
+    if clear:
+        if "due" not in target.details:
+            sys.stdout.write("No due: to clear on %r.\n" % target.title)
+            return 0
+        remove_detail = ["due"]
+        add_detail = None
+        dry_run_summary = "Would clear due: on %r." % target.title
+    else:
+        resolved = str(date_arg).strip()
+        if (
+            not _DUE_ISO_DATE_RE.match(resolved)
+            or parse_date_or_datetime(resolved) is None
+        ):
+            raise ValueError("Invalid due date %r. Use YYYY-MM-DD." % date_arg)
+        remove_detail = ["due"]
+        add_detail = ["due:%s" % resolved]
+        dry_run_summary = "Would set due:%s on %r." % (resolved, target.title)
+
+    if getattr(args, "dry_run", False):
+        sys.stdout.write("[dry-run] %s\n" % dry_run_summary)
+        return 0
+
+    update_args = types.SimpleNamespace(
+        line=target.line,
+        match_id=None,
+        status=None,
+        kind=None,
+        title=None,
+        add_detail=add_detail,
+        detail=None,
+        remove_detail=remove_detail,
+    )
+    for flag in DETAIL_FLAGS:
+        dest = "from_" if flag == "from" else flag
+        if not hasattr(update_args, dest):
+            setattr(update_args, dest, None)
+
+    updated_text, updated_line, diagnostics = update_text(text, update_args)
+    if _has_error(diagnostics):
+        _print_diagnostics(diagnostics)
+        return 1
+
+    _ensure_writable_path(path, config, "due")
+    _pre_write_backup(path, config, "due")
+    atomic_write_text(path, updated_text)
+    sys.stdout.write("Updated: %s\n" % updated_line)
+    if sys.stdout.isatty():
+        sys.stdout.write(_render_success_guidance("due", path=path))
     return 0
 
 

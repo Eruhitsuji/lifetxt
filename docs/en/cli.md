@@ -218,7 +218,7 @@ including its `--json` machine-readable form for scripts and AI clients.
 
 | Category | Commands |
 |---|---|
-| Getting Started / Daily | `tour`, `help`, `init`, `quick` (`add`), `today`, `next`, `agenda`, `show`, `edit`, `done`, `complete`, `progress`, `clone`, `reopen`, `review`, `assist`, `state`, `start`, `stop`, `assign`, `timer`, `notify` |
+| Getting Started / Daily | `tour`, `help`, `init`, `quick` (`add`), `today`, `next`, `agenda`, `show`, `edit`, `done`, `complete`, `progress`, `clone`, `reopen`, `due`, `review`, `assist`, `state`, `start`, `stop`, `assign`, `timer`, `notify` |
 | Query / Explore | `filter`, `search`, `find`, `query`, `view`, `summary`, `inbox`, `health`, `temporal`, `count`, `status` |
 | Projects / People / Collaboration | `project`, `portfolio`, `area`, `person`, `group`, `who`, `message`, `proposal`, `ticket`, `version`, `sprint` |
 | Structure / Data Integrity | `check`, `integrity`, `ids`, `links`, `backlinks`, `sources`, `tag`, `lint`, `deps`, `diff`, `snapshot`, `undo`, `cleanup`, `files` |
@@ -3111,6 +3111,28 @@ so `reopen` refuses habits outright and names the alternative
 unique ID prefix (see [Short ID prefix selection](#short-id-prefix-selection));
 `--line`/`--text` select an item the same way as `done`. `--dry-run` shows
 the resulting status and which detail would be removed without writing.
+
+### 13.14 `due`
+
+`lifetxt due PATH ID DATE` sets or replaces one item's `due:` value;
+`lifetxt due PATH ID --clear` removes it. `ID` is required and positional
+(unlike `done`/`progress`/`clone`, `due` does not accept `--line`/`--text`,
+since a second optional positional for the date would make which token
+means what ambiguous). It reuses the same guarded mutation path as
+`done`/`progress`/`clone`, so revision/backup handling is identical, and
+only ever touches `due:` — every other detail, and item status, are
+preserved unchanged.
+
+```sh
+python -m lifetxt due life.txt task_1 2026-09-07
+python -m lifetxt due life.txt task_1 --clear
+python -m lifetxt due life.txt task_1 2026-09-07 --dry-run
+```
+
+An invalid date is rejected before anything is written. `--clear` on an
+item with no `due:` is a deterministic no-op (exit `0`, nothing written).
+`ID` accepts a unique ID prefix (see [Short ID prefix selection](#short-id-prefix-selection)).
+`--dry-run` shows what would change without writing.
 
 ## 14. Aliases
 

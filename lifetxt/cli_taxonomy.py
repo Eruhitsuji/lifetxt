@@ -248,6 +248,7 @@ CATEGORIES = OrderedDict(
                     "complete",
                     "progress",
                     "clone",
+                    "reopen",
                     "review",
                     "assist",
                     "state",
@@ -713,6 +714,7 @@ WRITE_COMMANDS = frozenset(
         "complete",
         "progress",
         "clone",
+        "reopen",
         "assist",
         "state",
         "start",
@@ -806,6 +808,7 @@ _EXAMPLES = {
     "edit": ("lifetxt edit ID",),
     "done": ("lifetxt done ID",),
     "complete": ("lifetxt complete ID",),
+    "reopen": ("lifetxt reopen ID",),
     "review": ("lifetxt review --last-week",),
     "search": ('lifetxt search "milk"',),
     "find": ('lifetxt find "milk"',),
@@ -860,6 +863,7 @@ SUCCESS_GUIDANCE = {
     "quick": {"next": ("today",), "undoable": True},
     "done": {"next": ("today",), "undoable": True},
     "complete": {"next": ("today",), "undoable": True},
+    "reopen": {"next": ("today",), "undoable": True},
 }
 
 register_messages(

@@ -218,7 +218,7 @@ including its `--json` machine-readable form for scripts and AI clients.
 
 | Category | Commands |
 |---|---|
-| Getting Started / Daily | `tour`, `help`, `init`, `quick` (`add`), `today`, `next`, `agenda`, `show`, `edit`, `done`, `complete`, `progress`, `clone`, `review`, `assist`, `state`, `start`, `stop`, `assign`, `timer`, `notify` |
+| Getting Started / Daily | `tour`, `help`, `init`, `quick` (`add`), `today`, `next`, `agenda`, `show`, `edit`, `done`, `complete`, `progress`, `clone`, `reopen`, `review`, `assist`, `state`, `start`, `stop`, `assign`, `timer`, `notify` |
 | Query / Explore | `filter`, `search`, `find`, `query`, `view`, `summary`, `inbox`, `health`, `temporal`, `count`, `status` |
 | Projects / People / Collaboration | `project`, `portfolio`, `area`, `person`, `group`, `who`, `message`, `proposal`, `ticket`, `version`, `sprint` |
 | Structure / Data Integrity | `check`, `integrity`, `ids`, `links`, `backlinks`, `sources`, `tag`, `lint`, `deps`, `diff`, `snapshot`, `undo`, `cleanup`, `files` |
@@ -3078,6 +3078,33 @@ never reports a collision. `ID` accepts a unique ID prefix (see
 [Short ID prefix selection](#short-id-prefix-selection)); `--line`/`--text`
 select the source item the same way as `done`. `--dry-run` shows the
 generated item without writing it.
+
+### 13.13 `reopen`
+
+`lifetxt reopen PATH [ID]` undoes a completion: it removes `done:` and
+restores the item to its existing kind-aware open/default status, the exact
+same status `clone` gives a fresh copy (`[ ]` for ordinary kinds; `[N]` for
+`N`/`J`; `[/]` or `[x]` for `S` depending on whether `to:` remains). It
+reuses the same target resolver and guarded mutation path as
+`done`/`complete`/`clone` rather than a second item-editing path.
+
+```sh
+python -m lifetxt reopen life.txt task_1
+python -m lifetxt reopen life.txt task_1 --dry-run
+```
+
+Given `[x] T Task id:task_1 done:2026-09-01 project:home`, `reopen`
+produces `[ ] T Task id:task_1 project:home` — `done:` is removed and every
+other detail is preserved unchanged.
+
+An already-open item is a deterministic no-op (exit `0`, nothing written,
+"Already open" printed) rather than an error. Habit (`H`) records log
+completions as multiple `done:` dates rather than a single completed state,
+so `reopen` refuses habits outright and names the alternative
+(`assist --update` to remove one specific `done:` date). `ID` accepts a
+unique ID prefix (see [Short ID prefix selection](#short-id-prefix-selection));
+`--line`/`--text` select an item the same way as `done`. `--dry-run` shows
+the resulting status and which detail would be removed without writing.
 
 ## 14. Aliases
 

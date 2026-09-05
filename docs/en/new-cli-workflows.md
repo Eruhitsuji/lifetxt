@@ -36,6 +36,11 @@ which all accept a unique ID prefix (see [cli.md](cli.md#103-update-existing-ite
 `--format json`/`--format life` are unaffected and always show the full
 `id:` value.
 
+Human-readable date fields on CLI, TUI, and Web listings include an optional
+relative label, such as `due:2026-09-07 (in 2 days)` or `done:2026-09-04
+(yesterday)`. The canonical stored value and machine-readable output remain
+unchanged.
+
 ## Inspect and edit one item
 
 ```sh

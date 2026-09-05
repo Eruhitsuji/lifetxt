@@ -1,5 +1,5 @@
 import re
-from datetime import datetime, time
+from datetime import date, datetime, time
 
 
 DATE_FORMAT = "%Y-%m-%d"
@@ -217,6 +217,30 @@ def format_datetime(value):
     else:
         text = value.strftime(DATETIME_FORMAT)
     return text + _format_timezone_offset(value)
+
+
+def relative_time(value, today=None):
+    """Return an English, date-based relative label for a stored date/time."""
+    parsed = parse_iso_datetime(str(value or ""))
+    if parsed is None:
+        return ""
+    reference = today if today is not None else date.today()
+    if isinstance(reference, str):
+        reference = parse_iso_date(reference)
+    if isinstance(reference, datetime):
+        reference = reference.date()
+    if not isinstance(reference, date):
+        raise TypeError("relative_time expects today to be a date or datetime.")
+    days = (parsed.date() - reference).days
+    if days == 0:
+        return "today"
+    if days == 1:
+        return "tomorrow"
+    if days == -1:
+        return "yesterday"
+    if days > 0:
+        return "in %d days" % days
+    return "%d days ago" % abs(days)
 
 
 def _life_datetime(value):

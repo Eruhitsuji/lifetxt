@@ -89,7 +89,7 @@ python -m lifetxt today [path ...]
 python -m lifetxt area list [path ...]
 python -m lifetxt backlinks ID [path ...]
 python -m lifetxt temporal ID [path ...]
-python -m lifetxt query "QUERY" [path ...]
+python -m lifetxt query "QUERY" [path ...] [--explain]
 python -m lifetxt view list
 python -m lifetxt group list [path ...]
 python -m lifetxt message recipients [path ...]

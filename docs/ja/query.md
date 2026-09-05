@@ -66,6 +66,16 @@ $ lifetxt query "status:done project:web" --format json
 $ lifetxt query "open text:\"release plan\""
 ```
 
+`--explain` を付けると、検索結果を出さずに parser が query をどう解釈したかを
+確認できます。既定の出力は人向けで、`--format json` を追加すると
+`lifetxt-query-explain-v1` の machine-readable な JSON envelope になります。
+diagnostics も explanation に含まれ、不正な query は終了コード 1 になります。
+
+```console
+$ lifetxt query 'open project:research due<2026-10-01' --explain
+$ lifetxt query 'open project:research due<2026-10-01' --explain --format json
+```
+
 ## Saved views
 
 よく使う query は configuration の `saved_views` に保存します。

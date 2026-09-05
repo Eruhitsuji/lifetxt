@@ -315,10 +315,12 @@ _register_messages(
 
 
 def main(argv=None):
+    from .cli_error_guidance import render_value_error_text
+
     try:
         argv, config_path, workspace_name = _extract_config_arg(argv)
     except ValueError as exc:
-        sys.stderr.write("ERROR: %s\n" % exc)
+        sys.stderr.write(render_value_error_text(exc))
         return 1
     if argv and argv[0] == "fzf-preview":
         if len(argv) != 2:
@@ -334,12 +336,12 @@ def main(argv=None):
     try:
         args.config_data = load_config(config_path)
     except ValueError as exc:
-        sys.stderr.write("ERROR: %s\n" % exc)
+        sys.stderr.write(render_value_error_text(exc))
         return 1
     try:
         _maybe_apply_workspace(args)
     except ValueError as exc:
-        sys.stderr.write("ERROR: %s\n" % exc)
+        sys.stderr.write(render_value_error_text(exc))
         return 1
     if not hasattr(args, "func"):
         parser.print_help()
@@ -347,7 +349,7 @@ def main(argv=None):
     try:
         return args.func(args)
     except ValueError as exc:
-        sys.stderr.write("ERROR: %s\n" % exc)
+        sys.stderr.write(render_value_error_text(exc))
         return 1
 
 

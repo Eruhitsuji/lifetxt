@@ -303,9 +303,17 @@ def load_config(path=None):
     if resolved is None:
         return {}
     with open(resolved, "r", encoding="utf-8-sig") as handle:
-        data = json.load(handle, object_pairs_hook=OrderedDict)
+        text = handle.read()
+    try:
+        data = json.loads(text, object_pairs_hook=OrderedDict)
+    except ValueError as exc:
+        raise ValueError(
+            "Could not read config: %s\nReason: invalid JSON (%s)" % (resolved, exc)
+        )
     if not isinstance(data, dict):
-        raise ValueError("Config file must contain a JSON object.")
+        raise ValueError(
+            "Could not read config: %s\nReason: must contain a JSON object" % resolved
+        )
     data["_path"] = resolved
     return data
 

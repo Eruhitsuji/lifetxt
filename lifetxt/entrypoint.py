@@ -343,7 +343,9 @@ def main(argv=None):
     try:
         argv_without_lang, lang_arg = _extract_lang_arg(argv)
     except ValueError as exc:
-        sys.stderr.write("ERROR: %s\n" % exc)
+        from .cli_error_guidance import render_value_error_text
+
+        sys.stderr.write(render_value_error_text(exc))
         return 1
     from .i18n import locale_context, resolve_locale
 
@@ -357,7 +359,9 @@ def _dispatch(argv):
     try:
         raw, cleaned, config_path, workspace_name = _extract_config_arg(argv)
     except ValueError as exc:
-        sys.stderr.write("ERROR: %s\n" % exc)
+        from .cli_error_guidance import render_value_error_text
+
+        sys.stderr.write(render_value_error_text(exc))
         return 1
 
     if not cleaned:
@@ -473,12 +477,24 @@ def _dispatch(argv):
                 config_path=config_path,
                 workspace_name=workspace_name,
             )
+        if not command.startswith("-"):
+            from . import cli_taxonomy
+
+            if command not in cli_taxonomy.all_command_tokens():
+                from .cli_error_guidance import unknown_command_text
+
+                sys.stderr.write(unknown_command_text(command))
+                return 2
         return _legacy_main(raw)
     except ValueError as exc:
-        sys.stderr.write("ERROR: %s\n" % exc)
+        from .cli_error_guidance import render_value_error_text
+
+        sys.stderr.write(render_value_error_text(exc))
         return 1
     except OSError as exc:
-        sys.stderr.write("ERROR: %s\n" % exc)
+        from .cli_error_guidance import render_os_error_text
+
+        sys.stderr.write(render_os_error_text(exc))
         return 1
 
 

@@ -446,6 +446,30 @@ explicit `parent:` details when the parent can be inferred.
 | `1` | Validation error or command error |
 | `2` | CLI usage error, such as missing subcommand |
 
+### 2.5.1 CLI Error Recovery
+
+Every CLI-level error (as opposed to a `check` diagnostic about life.txt
+content itself; see [§3](#3-check)) still prints its original one-line
+`ERROR: ...` message to stderr, unchanged, with the same exit code as
+before -- scripts and redirected output see byte-identical behavior. When
+stderr is a real interactive terminal, five common, easily-recovered error
+families additionally get actionable follow-up guidance appended after
+that line:
+
+| Family | Extra guidance |
+|---|---|
+| Unknown command (a typo such as `todya`) | `Did you mean?` naming the closest real command name(s) from the same runtime-derived registry `lifetxt help` uses (never a fabricated command), plus `lifetxt help beginner` |
+| Missing value for a global option (`--config`, `--workspace`, `--lang`) | The exact `Usage: --OPTION VALUE_KIND` form |
+| Unknown workspace name | `Did you mean?` against the real configured workspace names, plus the full `Available:` list |
+| Missing or malformed configuration file (invalid JSON, not a JSON object) | `lifetxt doctor` as the next step |
+| Missing or unreadable input path | The unreadable path restated plainly, plus `lifetxt path` to see what lifetxt would actually use |
+
+A suggestion is only ever a real, currently valid name (a command,
+workspace, or alias) -- an error with no close match shows no `Did you
+mean?` line rather than guessing. This never changes an exit code, and it
+never adds anything to `--format json`/`--format jsonl` output or any other
+structured output.
+
 ### 2.6 Format Compatibility
 
 The CLI follows the file grammar in

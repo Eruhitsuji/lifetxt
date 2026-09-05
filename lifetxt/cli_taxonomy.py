@@ -162,6 +162,22 @@ def command_aliases(name):
     return _canonical_names_and_aliases().get(name, ())
 
 
+def all_command_tokens():
+    """Every string a user could type as the top-level command: every
+    canonical name from :func:`all_commands` plus every alias for it
+    (`add`, `q`, `d`, `f`, `a`, `s`, ...).
+
+    Used by #643's unknown-command guidance to tell a genuinely unknown
+    command apart from a valid alias -- :func:`all_commands` alone only
+    returns canonical names, so checking membership in it directly would
+    misreport every alias as unknown.
+    """
+    tokens = set(all_commands())
+    for name in all_commands():
+        tokens.update(command_aliases(name))
+    return tokens
+
+
 def command_summary(name):
     text = _parser_command_help().get(name)
     if text:

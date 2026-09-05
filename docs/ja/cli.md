@@ -422,6 +422,28 @@ life output は既定で元の行を保持します。`--canonical` を使うと
 | `1` | 検証エラーまたはコマンドエラー |
 | `2` | サブコマンド不足などの CLI usage error |
 
+### 2.5.1 CLI エラーからの復帰
+
+CLI level のエラー（life.txt の内容そのものに関する `check` diagnostic
+とは別。[§3](#3-check) 参照）は、これまで通り元の1行の `ERROR: ...`
+message を stderr にそのまま表示し、終了コードも変わりません -- script や
+redirect された出力は byte-for-byte 同じ挙動のままです。stderr が実際の
+対話端末である場合に限り、よくある回復しやすい5つの error family に
+追加の actionable な guidance が、その行の後に付きます:
+
+| Family | 追加される guidance |
+|---|---|
+| 未知の command（`todya` のような typo） | `lifetxt help` と同じ runtime-derived registry から、最も近い実在の command 名の `Did you mean?`（架空の command は出しません）と `lifetxt help beginner` |
+| global option（`--config`、`--workspace`、`--lang`）の値が不足 | 正確な `Usage: --OPTION VALUE_KIND` の形式 |
+| 未知の workspace 名 | 実際に設定されている workspace 名に対する `Did you mean?` と、`Available:` の全一覧 |
+| 設定ファイルが欠落・不正（invalid JSON、JSON object でない） | 次の一歩としての `lifetxt doctor` |
+| 入力 path が欠落・読み取り不可 | 読み取れなかった path をそのまま示し、lifetxt が実際に使う path を確認する `lifetxt path` |
+
+候補は常に実在する（command・workspace・alias の）名前のみです -- 近い
+候補がない場合は `Did you mean?` 行自体を出さず、推測はしません。これは
+終了コードを一切変更せず、`--format json`/`--format jsonl` などの
+構造化出力には何も追加しません。
+
 ### 2.6 フォーマット互換性
 
 CLI は [life_txt_format_spec.md](./life_txt_format_spec.md) のファイル文法に従います。互換性で重要な点は次の通りです。

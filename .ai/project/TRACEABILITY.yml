@@ -10822,6 +10822,56 @@ traceability:
         opened.
       status: implemented
 
+    - requirement_id: req-release-v1-0-2-version-bump
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/669
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/669
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/671
+      changed_files_or_scope:
+        - Bump authoritative package version 1.0.1 -> 1.0.2 and add EN/JA v1.0.2 release notes summarizing #664-#668
+        - pyproject.toml
+        - lifetxt/__init__.py
+        - docs/en/release-notes-v1.0.2.md
+        - docs/ja/release-notes-v1.0.2.md
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - "python -c \"import lifetxt; print(lifetxt.__version__)\" -> 1.0.2"
+        - "python -c \"import lifetxt.mcp as m; print(m.SERVER_VERSION)\" -> 1.0.2 (unchanged since #464's era fix: both already derive from lifetxt.__version__)"
+        - "python -m lifetxt --version -> lifetxt 1.0.2"
+        - "python scripts/check_release_tag_version.py v1.0.2 -> OK: tag v1.0.2 matches pyproject.toml version 1.0.2"
+        - "python scripts/release_evidence.py --output .cache/release-v1.0.2-evidence -> lifetxt-1.0.2-py3-none-any.whl (sha256 35ce52c7900a74641b99bed5fca3c4a97d916843ba4e829117c5f47b15d6b079), lifetxt-1.0.2.tar.gz (sha256 64b859de21628fc885a03d1c310401efdc071a44c0c6e2934a82bc73c545e2fc)"
+        - "twine check on both built artifacts -> PASSED for both"
+        - "wheel/sdist contents scanned for __pycache__/.pyc/.git/.venv/secret/.env entries -> none found"
+        - "live: fresh venv, wheel-only install (no dev/web extras) -> pip list shows exactly lifetxt, pip, tzdata (Windows); both lifetxt.exe and python -m lifetxt entry points report lifetxt 1.0.2; lifetxt --help renders"
+        - "live: from a scratch working directory against the installed wheel -- lifetxt init --yes, check (OK: 2 item(s)), due life.txt t1 tomorrow (resolved to the correct next calendar date), progress --set 25%, complete, reopen, recent (correctly excludes items with no created:/updated:), and a final check (OK: 2 item(s)) all succeeded against the real installed console-script entry point"
+        - "python -m unittest tests.test_lifetxt.LifeTxtReopenCliTests tests.test_lifetxt.LifeTxtProgressCliTests tests.test_lifetxt.LifeTxtDueCliTests tests.test_extra_cli.RecentCliTests -> Ran 66 tests, OK"
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - "ruff format --check / ruff check on every changed file -> clean (14 unrelated files showed pre-existing formatting drift already present on main, not introduced by this change)"
+        - "MPLBACKEND=Agg python -W ignore::ResourceWarning -m unittest discover on the release branch -> full repository suite (see PR for exact result)"
+        - "python -m unittest tests.test_traceability_gate tests.test_change_package_closeout -> OK"
+      release_or_deployment: >-
+        Version-metadata-only change preparing v1.0.2 per #669's Phase B/C/D
+        checklist. Tag creation, CI re-confirmation on the merge commit, and
+        the four primary publication workflows (release.yml/docker-publish.yml/
+        desktop-installers.yml/standalone-binaries.yml) plus the explicitly-
+        dispatched downstream workflows (homebrew-tap.yml/package-manifests.yml/
+        conda-recipe.yml) remain separate, human-authorized release-authority
+        actions performed after this PR merges, per #669's Phase E onward and
+        this project's non-overridable human-approval requirements for merge,
+        release, and deployment.
+      notes: >-
+        No new capability: reuses cap-stable-release-governance, the same
+        capability the v1.0.0/v1.0.1 version-bump/release-preparation work
+        was recorded under. Every command-level feature this release
+        packages (reopen/progress --set/due/relative-date shorthand/recent)
+        already has its own capability/traceability entry from #664-#668's
+        own PR (#670); this entry covers only the release-preparation step
+        itself (version bump, release notes, build/artifact validation),
+        matching the precedent established by
+        req-distribution-v1-0-1-version-bump for the prior patch release.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

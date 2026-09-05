@@ -1313,7 +1313,7 @@ def _task_row(item, id_key, blocked=False):
     bits = [item.status, item.kind, item.title]
     if item_id:
         bits.append("id:%s" % item_id)
-    for key in ("project", "due", "do", "priority"):
+    for key in ("project", "due", "do", "priority", "progress"):
         if item.details.get(key):
             bits.append("%s:%s" % (key, item.details[key][0]))
     return {

@@ -2519,8 +2519,13 @@ auto|unicode|ascii` chooses the box-drawing set. `auto` probes the output
 encoding and falls back to ASCII when the terminal cannot represent the rounded
 borders, so Windows code pages degrade cleanly instead of raising. Column
 widths are East Asian Width-aware, so Japanese titles stay aligned, and the meta
-columns (project, due, priority) drop out one at a time as the terminal narrows
-rather than wrapping.
+columns (project, due, priority, and -- on the widest terminals -- `progress:`)
+drop out one at a time as the terminal narrows rather than wrapping. A record
+with no `progress:` detail shows nothing in that column. Selecting a row and
+opening the detail inspector (`s`) shows the same `progress:` value alongside
+the full life.txt line; editing it, like editing any other detail, goes
+through `e` (open in `$EDITOR`), the same guarded, revision-checked write path
+every other TUI edit uses.
 
 Defaults can be set in config under `tui.theme`, `tui.keymap`, `tui.glyphs`,
 `tui.limit`, `tui.agenda_window`, and `tui.bindings` (see above).

@@ -11,6 +11,7 @@ from lifetxt import entrypoint
 from lifetxt import extra_cli
 from lifetxt.extra_common import _rank_key
 from lifetxt.model import Item
+from tests.test_lifetxt import run_cli
 
 
 SAMPLE = """[ ] T \"日本語 task\" id:t1 priority:A due:2026-07-20 project:alpha assignee:leo created:2026-07-01 elapsed:1h30m file:docs/readme.txt
@@ -160,6 +161,41 @@ class ExtraCliTests(unittest.TestCase):
 
         self.assertIn("Why: t1: status [ ] is actionable", output)
         self.assertIn("ordered by priority, due, created, line", output)
+
+    def test_next_table_shows_short_id_but_json_keeps_full_id(self):
+        # #654: the table's ID column is a presentation-only short ID; JSON
+        # (machine-readable) output must keep the full id: unchanged.
+        path = os.path.join(self.tempdir.name, "shortid.txt")
+        with open(path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(
+                "[ ] T First id:task_a12345 priority:A\n"
+                "[ ] T Second id:task_a16789 priority:B\n"
+            )
+        table_output = self.run_extra(["next", path])
+        self.assertIn("task_a12", table_output)
+        self.assertIn("task_a16", table_output)
+        self.assertNotIn("task_a12345", table_output)
+        self.assertNotIn("task_a16789", table_output)
+
+        json_output = self.run_extra(["next", path, "--format", "json"])
+        rows = json.loads(json_output)
+        self.assertEqual({"task_a12345", "task_a16789"}, {row["id"] for row in rows})
+
+    def test_next_table_short_id_round_trips_through_done(self):
+        path = os.path.join(self.tempdir.name, "shortid_roundtrip.txt")
+        with open(path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write("[ ] T First id:task_a12345\n[ ] T Second id:task_a16789\n")
+        table_output = self.run_extra(["next", path])
+        short = next(
+            line.split()[0]
+            for line in table_output.splitlines()
+            if line.startswith("task_a12")
+        )
+        stdout, stderr, code = run_cli("done", path, short)
+        self.assertEqual(0, code, stderr)
+        with open(path, encoding="utf-8") as handle:
+            content = handle.read()
+        self.assertIn("[x] T First id:task_a12345", content)
 
     def _write_convergence_fixture(self):
         path = os.path.join(self.tempdir.name, "converge.txt")

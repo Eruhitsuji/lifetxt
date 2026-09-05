@@ -54,6 +54,33 @@ def collect_item_ids(items, key="id"):
     return values
 
 
+DEFAULT_SHORT_ID_MIN_LENGTH = 6
+
+
+def short_id(all_ids, value, min_length=DEFAULT_SHORT_ID_MIN_LENGTH):
+    """Return the shortest prefix of ``value`` that is still unique among
+    ``all_ids``, at least ``min_length`` characters (#654).
+
+    Presentation-only and computed fresh on every call: there is no
+    separate short-ID registry, so it stays deterministic for a fixed
+    ``(all_ids, value)`` pair and never needs migrating or invalidating.
+    Every short ID this returns is guaranteed to resolve back to the same
+    item via :func:`resolve_item_by_id` against the same ``all_ids``, since
+    both functions apply the same prefix-uniqueness rule.
+    """
+    value = str(value)
+    if not value:
+        return value
+    if len(value) <= min_length:
+        return value
+    others = [str(other) for other in all_ids if str(other) != value]
+    for length in range(min_length, len(value)):
+        candidate = value[:length]
+        if not any(other.startswith(candidate) for other in others):
+            return candidate
+    return value
+
+
 class AmbiguousIdPrefixError(ValueError):
     """Raised by :func:`resolve_item_by_id` when a short ID prefix matches
     more than one item (#653). Never guesses among the candidates."""

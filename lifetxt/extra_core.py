@@ -108,9 +108,17 @@ def command_next(args, config_data):
             if args.why:
                 output.append("Why: %s\n" % explanations[id(item)]["summary"])
         return _emit("".join(output), args.output)
+    # Short IDs (#654) are a presentation-only derivation of the full id:
+    # value, computed fresh here against every id: in the loaded workspace
+    # (not just the selected/limited rows) so a short ID shown in this table
+    # always resolves back to the same item via resolve_item_by_id() -- no
+    # separate short-ID registry is kept anywhere.
+    from .ids import collect_item_ids, short_id
+
+    all_ids = collect_item_ids(items, key="id")
     rows = [
         (
-            _item_id(item) or "-",
+            (short_id(all_ids, _item_id(item)) if _item_id(item) else None) or "-",
             _first(item, "priority") or "-",
             _first(item, "due") or "-",
             _first(item, "project") or "-",

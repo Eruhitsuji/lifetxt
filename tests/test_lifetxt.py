@@ -2901,6 +2901,409 @@ class LifeTxtDoneCliTests(unittest.TestCase):
             self.assertIn("done:2026-05-01", content)
 
 
+class LifeTxtProgressCliTests(unittest.TestCase):
+    """Covers #660: `lifetxt progress` increment/decrement of progress:."""
+
+    def _write(self, temp_dir, source):
+        path = os.path.join(temp_dir, "life.txt")
+        with open(path, "w", encoding="utf-8", newline="\n") as f:
+            f.write(source)
+        return path
+
+    def test_increments_a_fraction_and_keeps_total(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir, "[ ] T Experiment id:experiment_1 progress:3/10\n"
+            )
+            stdout, stderr, code = run_cli(
+                "progress", path, "experiment_1", "--delta", "+1"
+            )
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:4/10", content)
+
+    def test_decrements_a_fraction_and_keeps_total(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir, "[ ] T Experiment id:experiment_1 progress:3/10\n"
+            )
+            stdout, stderr, code = run_cli(
+                "progress", path, "experiment_1", "--delta=-1"
+            )
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:2/10", content)
+
+    def test_increments_a_percentage(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:task_1 progress:40%\n")
+            stdout, stderr, code = run_cli(
+                "progress", path, "task_1", "--delta", "+10%"
+            )
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:50%", content)
+
+    def test_decrements_a_percentage(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:task_1 progress:40%\n")
+            stdout, stderr, code = run_cli("progress", path, "task_1", "--delta=-15%")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:25%", content)
+
+    def test_rejects_percentage_delta_against_a_fraction(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir, "[ ] T Experiment id:experiment_1 progress:3/10\n"
+            )
+            stdout, stderr, code = run_cli(
+                "progress", path, "experiment_1", "--delta", "+10%"
+            )
+            self.assertEqual(1, code)
+            self.assertIn("fraction", stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:3/10", content)
+
+    def test_rejects_fraction_delta_against_a_percentage(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:task_1 progress:40%\n")
+            stdout, stderr, code = run_cli("progress", path, "task_1", "--delta", "+1")
+            self.assertEqual(1, code)
+            self.assertIn("percentage", stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:40%", content)
+
+    def test_rejects_a_fraction_result_above_total(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir, "[ ] T Experiment id:experiment_1 progress:9/10\n"
+            )
+            stdout, stderr, code = run_cli(
+                "progress", path, "experiment_1", "--delta", "+5"
+            )
+            self.assertEqual(1, code)
+            self.assertIn("must not exceed total", stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:9/10", content)
+
+    def test_rejects_a_fraction_result_below_zero(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir, "[ ] T Experiment id:experiment_1 progress:3/10\n"
+            )
+            stdout, stderr, code = run_cli(
+                "progress", path, "experiment_1", "--delta=-100"
+            )
+            self.assertEqual(1, code)
+            self.assertIn("must not be negative", stderr)
+
+    def test_rejects_a_percentage_result_above_100(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:task_1 progress:95%\n")
+            stdout, stderr, code = run_cli(
+                "progress", path, "task_1", "--delta", "+10%"
+            )
+            self.assertEqual(1, code)
+            self.assertIn("out of range", stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:95%", content)
+
+    def test_rejects_a_percentage_result_below_0(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:task_1 progress:5%\n")
+            stdout, stderr, code = run_cli("progress", path, "task_1", "--delta=-10%")
+            self.assertEqual(1, code)
+            self.assertIn("out of range", stderr)
+
+    def test_missing_progress_is_never_treated_as_zero(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T No_progress id:task_2\n")
+            stdout, stderr, code = run_cli("progress", path, "task_2", "--delta", "+1")
+            self.assertEqual(1, code)
+            self.assertIn("has no progress:", stderr)
+
+    def test_invalid_delta_syntax_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:task_1 progress:40%\n")
+            stdout, stderr, code = run_cli(
+                "progress", path, "task_1", "--delta", "banana"
+            )
+            self.assertEqual(1, code)
+            self.assertIn("Invalid --delta", stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:40%", content)
+
+    def test_dry_run_reports_the_change_without_writing(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir, "[ ] T Experiment id:experiment_1 progress:3/10\n"
+            )
+            stdout, stderr, code = run_cli(
+                "progress", path, "experiment_1", "--delta", "+1", "--dry-run"
+            )
+            self.assertEqual(0, code, stderr)
+            self.assertIn("progress:4/10", stdout)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:3/10", content)
+            self.assertNotIn("progress:4/10", content)
+
+    def test_resolves_by_unique_id_prefix(self):
+        # #653/#660: progress reuses the shared resolver, so a short unique
+        # id: prefix works exactly like on done/start/complete.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir,
+                "[ ] T Experiment id:experiment_1abcdef progress:3/10\n"
+                "[ ] T Other id:other_1ghijkl progress:1/2\n",
+            )
+            stdout, stderr, code = run_cli(
+                "progress", path, "experiment_1", "--delta", "+1"
+            )
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:4/10", content)
+            self.assertIn("progress:1/2", content)
+
+    def test_selects_by_line(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir,
+                "[ ] T First id:t1 progress:1/2\n[ ] T Second id:t2 progress:1/4\n",
+            )
+            stdout, stderr, code = run_cli(
+                "progress", path, "--line", "2", "--delta", "+1"
+            )
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:1/2", content)
+            self.assertIn("progress:2/4", content)
+
+    def test_selects_by_text(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir,
+                "[ ] T Buy_milk id:t1 progress:1/2\n[ ] T Walk_dog id:t2 progress:1/4\n",
+            )
+            stdout, stderr, code = run_cli(
+                "progress", path, "--text", "Walk", "--delta", "+1"
+            )
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:1/2", content)
+            self.assertIn("progress:2/4", content)
+
+
+class LifeTxtCloneCliTests(unittest.TestCase):
+    """Covers #659: `lifetxt clone` derives a new item from an existing one."""
+
+    def _write(self, temp_dir, source):
+        path = os.path.join(temp_dir, "life.txt")
+        with open(path, "w", encoding="utf-8", newline="\n") as f:
+            f.write(source)
+        return path
+
+    def test_clones_a_task_resetting_identity_and_history_fields(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir,
+                '[/] T "Experiment condition A" id:experiment_01 '
+                "project:research priority:A progress:8/10 "
+                "created:2026-01-01 updated:2026-08-01\n",
+            )
+            stdout, stderr, code = run_cli("clone", path, "experiment_01")
+            self.assertEqual(0, code, stderr)
+            self.assertIn("Cloned:", stdout)
+            with open(path, encoding="utf-8") as f:
+                lines = f.read().splitlines()
+            self.assertEqual(2, len(lines))
+            # Original item is byte-for-byte unchanged.
+            self.assertEqual(
+                '[/] T "Experiment condition A" id:experiment_01 '
+                "project:research priority:A progress:8/10 "
+                "created:2026-01-01 updated:2026-08-01",
+                lines[0],
+            )
+            new_line = lines[1]
+            self.assertTrue(new_line.startswith("[ ] T"))
+            self.assertIn("project:research", new_line)
+            self.assertIn("priority:A", new_line)
+            for excluded in (
+                "id:experiment_01",
+                "progress:",
+                "created:",
+                "updated:",
+            ):
+                self.assertNotIn(excluded, new_line)
+
+    def test_new_item_gets_no_id_when_auto_ids_are_disabled(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Original id:orig_1 project:work\n")
+            stdout, stderr, code = run_cli("clone", path, "orig_1")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                lines = f.read().splitlines()
+            self.assertNotIn("id:", lines[1])
+
+    def test_new_item_gets_a_fresh_unique_id_when_auto_ids_are_enabled(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Original id:orig_1 project:work\n")
+            config_path = os.path.join(temp_dir, "config.json")
+            with open(config_path, "w", encoding="utf-8") as f:
+                json.dump({"ids": {"auto": True}}, f)
+            stdout, stderr, code = run_cli(
+                "--config", config_path, "clone", path, "orig_1"
+            )
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                lines = f.read().splitlines()
+            self.assertIn("id:", lines[1])
+            new_id = lines[1].split("id:", 1)[1].split()[0]
+            self.assertNotEqual("orig_1", new_id)
+
+    def test_status_defaults_to_open_for_ordinary_kinds(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[x] T Done_task id:t1 done:2026-01-01\n")
+            stdout, stderr, code = run_cli("clone", path, "t1")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                lines = f.read().splitlines()
+            self.assertTrue(lines[1].startswith("[ ] T"))
+            self.assertNotIn("done:", lines[1])
+
+    def test_note_kind_keeps_note_status(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir, "[N] N Meeting_notes id:note1 project:research\n"
+            )
+            stdout, stderr, code = run_cli("clone", path, "note1")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                lines = f.read().splitlines()
+            self.assertTrue(lines[1].startswith("[N] N"))
+
+    def test_open_presence_status_clones_as_active(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir,
+                "[/] S Busy id:status1 state:busy from:2026-09-01T09:00\n",
+            )
+            stdout, stderr, code = run_cli("clone", path, "status1")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                lines = f.read().splitlines()
+            self.assertTrue(lines[1].startswith("[/] S"))
+
+    def test_closed_presence_status_clones_as_done(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir,
+                "[x] S Busy id:status1 state:busy from:2026-09-01T09:00 "
+                "to:2026-09-01T10:00\n",
+            )
+            stdout, stderr, code = run_cli("clone", path, "status1")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                lines = f.read().splitlines()
+            self.assertTrue(lines[1].startswith("[x] S"))
+
+    def test_missing_id_fails_loudly(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Original id:orig_1\n")
+            stdout, stderr, code = run_cli("clone", path, "nonexistent")
+            self.assertEqual(1, code)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertEqual(1, content.count("\n"))
+
+    def test_resolves_by_unique_id_prefix(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir,
+                "[ ] T First id:abc123def456 project:work\n"
+                "[ ] T Second id:xyz789ghi000 project:home\n",
+            )
+            stdout, stderr, code = run_cli("clone", path, "abc1")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                lines = f.read().splitlines()
+            self.assertEqual(3, len(lines))
+            self.assertIn("project:work", lines[2])
+
+    def test_ambiguous_id_prefix_fails_naming_every_candidate(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir,
+                "[ ] T First id:abc123def456\n[ ] T Second id:abc999xyz000\n",
+            )
+            stdout, stderr, code = run_cli("clone", path, "abc")
+            self.assertEqual(1, code)
+            self.assertIn("Ambiguous ID prefix", stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertEqual(2, content.count("\n"))
+
+    def test_selects_by_line(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir,
+                "[ ] T First id:t1 project:work\n[ ] T Second id:t2 project:home\n",
+            )
+            stdout, stderr, code = run_cli("clone", path, "--line", "2")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                lines = f.read().splitlines()
+            self.assertIn("project:home", lines[2])
+
+    def test_selects_by_text(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir,
+                "[ ] T Buy_milk id:t1 project:home\n[ ] T Walk_dog id:t2 project:home\n",
+            )
+            stdout, stderr, code = run_cli("clone", path, "--text", "Walk")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                lines = f.read().splitlines()
+            self.assertIn("Walk_dog", lines[2])
+
+    def test_dry_run_reports_the_generated_item_without_writing(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Original id:orig_1 project:work\n")
+            stdout, stderr, code = run_cli("clone", path, "orig_1", "--dry-run")
+            self.assertEqual(0, code, stderr)
+            self.assertIn("project:work", stdout)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertEqual(1, content.count("\n"))
+
+    def test_generated_clone_passes_check(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir,
+                '[/] T "Experiment condition A" id:experiment_01 '
+                "project:research priority:A progress:8/10\n",
+            )
+            stdout, stderr, code = run_cli("clone", path, "experiment_01")
+            self.assertEqual(0, code, stderr)
+            stdout, stderr, code = run_cli("check", path)
+            self.assertEqual(0, code, stderr)
+            self.assertIn("OK: 2 item(s)", stdout)
+
+
 class LifeTxtDoneHabitCliTests(unittest.TestCase):
     def test_done_habit_appends_log_and_keeps_status_open(self):
         source = "[ ] H Exercise repeat:daily project:health id:h1\n"

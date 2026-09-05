@@ -218,7 +218,7 @@ including its `--json` machine-readable form for scripts and AI clients.
 
 | Category | Commands |
 |---|---|
-| Getting Started / Daily | `tour`, `help`, `init`, `quick` (`add`), `today`, `next`, `agenda`, `show`, `edit`, `done`, `complete`, `review`, `assist`, `state`, `start`, `stop`, `assign`, `timer`, `notify` |
+| Getting Started / Daily | `tour`, `help`, `init`, `quick` (`add`), `today`, `next`, `agenda`, `show`, `edit`, `done`, `complete`, `progress`, `clone`, `review`, `assist`, `state`, `start`, `stop`, `assign`, `timer`, `notify` |
 | Query / Explore | `filter`, `search`, `find`, `query`, `view`, `summary`, `inbox`, `health`, `temporal`, `count`, `status` |
 | Projects / People / Collaboration | `project`, `portfolio`, `area`, `person`, `group`, `who`, `message`, `proposal`, `ticket`, `version`, `sprint` |
 | Structure / Data Integrity | `check`, `integrity`, `ids`, `links`, `backlinks`, `sources`, `tag`, `lint`, `deps`, `diff`, `snapshot`, `undo`, `cleanup`, `files` |
@@ -2993,6 +2993,91 @@ Every 2 weeks on Sunday, Tuesday (weeks start Sunday)
 A position in `BYDAY` (`2MO`) applies only to `FREQ=MONTHLY` and
 `FREQ=YEARLY`. Weekly and daily expansion ignores the number, so `check`
 warns rather than letting `FREQ=WEEKLY;BYDAY=2MO` quietly mean every Monday.
+
+### 13.11 `progress`
+
+`lifetxt progress PATH [ID] --delta DELTA` increments or decrements an
+item's existing `progress:` value by a signed delta, without rewriting it
+by hand. It reuses the shared `progress:` parser and validator (`0<=
+current<=total` for a fraction, `0-100` for a percentage) and the same
+guarded mutation path as `done`/`complete`, so revision/backup handling is
+identical.
+
+```sh
+python -m lifetxt progress life.txt experiment_1 --delta +1
+python -m lifetxt progress life.txt experiment_1 --delta=-1
+python -m lifetxt progress life.txt task_1 --delta +10%
+python -m lifetxt progress life.txt task_1 --delta=-15% --dry-run
+```
+
+Given `progress:3/10`, `--delta +1` produces `progress:4/10` (the
+denominator is kept); given `progress:40%`, `--delta +10%` produces
+`progress:50%`. **Representation kind is never converted**: a `%`-suffixed
+delta against a fraction, or a plain-number delta against a percentage,
+fails loudly instead of guessing which one you meant. A negative delta
+must use `--delta=-N` (with `=`) — `--delta -N` is parsed by argparse as an
+unrecognized flag, not a value.
+
+A result outside the valid range (`progress:14/10`, `progress:105%`, a
+negative fraction numerator) is rejected before anything is written, and an
+item with **no** existing `progress:` detail is rejected rather than
+silently treated as `0%` — set an initial value first (for example via
+`assist --update ID --match-id ID --add-detail progress:0%`). `ID` accepts
+a unique ID prefix (see [Short ID prefix selection](#short-id-prefix-selection));
+`--line`/`--text` select an item the same way as `done`. `--dry-run` shows
+the resulting value without writing.
+
+### 13.12 `clone`
+
+`lifetxt clone PATH [ID]` creates a new item derived from an existing one,
+without copying its identity or history. It reuses the item's existing
+parsed representation and the same append/mutation contract `quick` uses,
+so revision/backup handling and ID generation are identical — this is not
+a raw text copy.
+
+```sh
+lifetxt clone life.txt experiment_01
+lifetxt clone life.txt experiment_01 --dry-run
+```
+
+Given:
+
+```text
+[/] T "Experiment condition A" id:experiment_01 project:research
+    priority:A progress:8/10
+```
+
+`clone` appends:
+
+```text
+[ ] T "Experiment condition A" project:research priority:A
+```
+
+**Copy policy** (defined once, in one place, rather than per-field):
+ordinary metadata (`project`, `tag`, `priority`, `context`, dates, and
+every other detail not listed below) is copied as-is. The following are
+never copied onto the clone:
+
+- the source's own ID (whatever key `id_key` resolves to) — a duplicate ID
+  would corrupt the workspace, so it is never carried over
+- `source`, `uid`, `created`, `updated` — identity/system provenance of the
+  *original* record, not the new one
+- `done` — completion history
+- `progress` — reset entirely rather than carried over or implicitly
+  assumed to be `0%`, matching the same missing-progress principle
+  `progress` (13.11) uses
+
+**Status** defaults to open (`[ ]`) for ordinary kinds, reusing the exact
+same kind-aware default `assist`'s interactive prompt uses: `N`/`J` (notes,
+journal entries) get `[N]`, and `S` (presence status) gets `[/]` or `[x]`
+depending on whether the resulting details still carry a `to:` value. The
+original item is never modified. If `ids.auto` is enabled, the new item
+receives a freshly generated, guaranteed-unique ID the same way `quick`
+does; if disabled, the new item simply has no ID at all — either way, `ids`
+never reports a collision. `ID` accepts a unique ID prefix (see
+[Short ID prefix selection](#short-id-prefix-selection)); `--line`/`--text`
+select the source item the same way as `done`. `--dry-run` shows the
+generated item without writing it.
 
 ## 14. Aliases
 

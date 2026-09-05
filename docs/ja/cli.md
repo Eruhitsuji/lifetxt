@@ -767,6 +767,26 @@ set、known な `state:` 値）からのみ取得します。canonical vocabular
 候補がない key はそのまま custom data として扱われ、無理に候補を出すことは
 ありません。`--format json` に suggestion field が含まれることはありません。
 
+text output はさらに、1つの狭く根拠のある root-cause / secondary 関係を
+表示します: 全く同じ source line 上で繰り返される `E009`/`E010`
+（「detail に見えない」）失敗です。この2つの code は、parser の
+1行あたり1回の detail-parsing loop 呼び出しからしか生成され得ません
+（例えば quote されていない複数語の title は、残りの単語がその loop に
+渡り、それぞれ別々に報告される失敗になります）。その行で最初に出た
+diagnostic には `Related: N other diagnostic(s) on this line may be
+consequences of this one` という note が、それ以降の diagnostic には
+`Related: possibly caused by CODE at column N above; fix that first` と
+いう note が付きます。これは意図的に狭い範囲に限定されています:
+単に同じ行・近い行にある、code が似ている、message が似ているだけの
+diagnostic 同士がこの方法で関連付けられることはなく、この特定の、
+構造的に保証された code の組み合わせのみが対象です。`--code`/
+`--severity`/`--category`/`--ignore` による filter は先に適用され、
+関係は残った diagnostic に対して再計算されます: 相手がすべて filter
+で除外されれば、残った diagnostic には relation note が付かず、逆に
+最初の diagnostic だけが除外されても、残りの diagnostic 同士は自分たち
+だけで group を形成します。`--format json` にもこの関係が含まれることは
+ありません。
+
 例:
 
 ```sh

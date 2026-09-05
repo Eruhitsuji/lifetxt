@@ -2,7 +2,9 @@
 (#639): a source-line snippet, a span caret/range when a precise end
 position is known, the diagnostic's own `hint` text, a bounded, read-only
 "Did you mean?" suggestion section (#640, see `diagnostic_suggestions.py`),
-and a trailing error/warning summary.
+an optional root-cause/secondary relation note for one narrow, evidenced
+cascade family (#642, see `diagnostic_cascade.py`), and a trailing
+error/warning summary.
 
 This is a presentation layer only. It reads no new information the parser
 and validator did not already attach to each `Diagnostic` (see
@@ -55,8 +57,15 @@ def _caret_marker(column, end_line, line_no, end_column, line_length):
     return " " * start + "^" + "~" * max(0, width - 1)
 
 
-def render_diagnostic_rich(diagnostic):
-    """One diagnostic's multi-line rich text block (no trailing newline)."""
+def render_diagnostic_rich(diagnostic, relation=None):
+    """One diagnostic's multi-line rich text block (no trailing newline).
+
+    `relation` is an optional cascade role from
+    `lifetxt.diagnostic_cascade.classify_cascade_roles()` (#642):
+    `("root", [secondary_diagnostic, ...])` or
+    `("secondary", root_diagnostic)`. `None` (the default) renders exactly
+    as before #642 -- this parameter is purely additive.
+    """
     header_parts = []
     if diagnostic.source:
         header_parts.append(str(diagnostic.source))
@@ -101,6 +110,28 @@ def render_diagnostic_rich(diagnostic):
         lines.append("Did you mean one of:")
         for candidate in suggestions:
             lines.append("  %s" % candidate)
+
+    if relation:
+        kind = relation[0]
+        if kind == "root":
+            secondaries = relation[1]
+            lines.append("")
+            lines.append(
+                "Related: %d other diagnostic(s) on this line may be "
+                "consequences of this one (see below)." % len(secondaries)
+            )
+        elif kind == "secondary":
+            root = relation[1]
+            lines.append("")
+            if root.column is not None:
+                lines.append(
+                    "Related: possibly caused by %s at column %s above; "
+                    "fix that first." % (root.code, root.column)
+                )
+            else:
+                lines.append(
+                    "Related: possibly caused by %s above; fix that first." % root.code
+                )
 
     return "\n".join(lines)
 

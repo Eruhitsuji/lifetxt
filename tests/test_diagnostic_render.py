@@ -188,6 +188,42 @@ class RenderDiagnosticSuggestionSectionTests(unittest.TestCase):
         self.assertNotIn("Did you mean", text)
 
 
+class RenderDiagnosticCascadeRelationTests(unittest.TestCase):
+    def test_no_relation_note_when_relation_is_none(self):
+        diagnostic = Diagnostic("error", "E010", "Expected detail in key:value form.")
+        text = render_diagnostic_rich(diagnostic, relation=None)
+        self.assertNotIn("Related:", text)
+
+    def test_root_relation_names_the_secondary_count(self):
+        diagnostic = Diagnostic("error", "E010", "x", line=1, column=13)
+        secondary_a = Diagnostic("error", "E010", "x", line=1, column=20)
+        secondary_b = Diagnostic("error", "E010", "x", line=1, column=24)
+        text = render_diagnostic_rich(
+            diagnostic, relation=("root", [secondary_a, secondary_b])
+        )
+        self.assertIn(
+            "Related: 2 other diagnostic(s) on this line may be "
+            "consequences of this one (see below).",
+            text,
+        )
+
+    def test_secondary_relation_names_the_root_code_and_column(self):
+        root = Diagnostic("error", "E010", "x", line=1, column=13)
+        secondary = Diagnostic("error", "E010", "x", line=1, column=20)
+        text = render_diagnostic_rich(secondary, relation=("secondary", root))
+        self.assertIn(
+            "Related: possibly caused by E010 at column 13 above; fix that first.",
+            text,
+        )
+
+    def test_secondary_relation_without_root_column_omits_the_column_clause(self):
+        root = Diagnostic("error", "E010", "x", line=1, column=None)
+        secondary = Diagnostic("error", "E010", "x", line=1, column=20)
+        text = render_diagnostic_rich(secondary, relation=("secondary", root))
+        self.assertIn("Related: possibly caused by E010 above; fix that first.", text)
+        self.assertNotIn("at column", text)
+
+
 class RenderDiagnosticsSummaryTests(unittest.TestCase):
     def test_singular_wording_for_one_of_each(self):
         diagnostics = [

@@ -62,6 +62,7 @@ from .diagnostic_contract import (
     diagnostic_category,
     diagnostic_to_output_dict,
 )
+from .diagnostic_cascade import classify_cascade_roles
 from .diagnostic_render import render_diagnostic_rich, render_diagnostics_summary
 from .cli_taxonomy import render_success_guidance as _render_success_guidance
 from .i18n import register_messages as _register_messages, translate as _t
@@ -4372,10 +4373,14 @@ def command_check(args):
         write_text(None, output + "\n")
     else:
         if filtered_diagnostics:
+            cascade_roles = classify_cascade_roles(filtered_diagnostics)
             for index, diagnostic in enumerate(filtered_diagnostics):
                 if index:
                     write_text(None, "\n")
-                write_text(None, render_diagnostic_rich(diagnostic) + "\n")
+                relation = cascade_roles.get(id(diagnostic))
+                write_text(
+                    None, render_diagnostic_rich(diagnostic, relation=relation) + "\n"
+                )
                 if str(getattr(diagnostic, "code", "")).upper() == "W225":
                     write_text(None, _W225_GUIDANCE + "\n")
             write_text(

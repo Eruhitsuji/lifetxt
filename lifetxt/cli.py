@@ -12340,6 +12340,33 @@ def command_today(args):
     return 0
 
 
+def _progress_display(raw):
+    """Render a ``progress:`` value for human-readable listings (#649).
+
+    Percentages are shown as-is; fractions are shown as ``m/n`` with a
+    derived percentage alongside. Returns ``""`` when ``raw`` is absent, so
+    a record with no ``progress:`` detail shows nothing extra. An
+    unparseable value (which ``check`` would separately flag as W230) is
+    still shown as-is rather than silently hidden.
+    """
+    if not raw:
+        return ""
+    from .progress import ProgressValueError, parse_progress
+
+    try:
+        parsed = parse_progress(raw)
+    except ProgressValueError:
+        return raw
+    if parsed.kind == "fraction":
+        return "%s (%d%%)" % (raw, int(round(parsed.percent)))
+    return raw
+
+
+def _progress_suffix(row):
+    display = _progress_display(row.get("progress"))
+    return " progress:%s" % display if display else ""
+
+
 def _render_today_text(report, saved_view=None, area=None):
     """Render the daily command center as the NOW/ATTENTION/TODAY/NEXT
     ACTIONS/BLOCKED/HABITS/INBOX hub structure lifetxt today's documented
@@ -12403,8 +12430,11 @@ def _render_today_text(report, saved_view=None, area=None):
         for row in attention_rows:
             due = " due:%s" % row["due"] if row.get("due") else ""
             reason = " (%s)" % row["reason"] if row.get("reason") else ""
+            progress = _progress_suffix(row)
             write_text(
-                None, "  %s %s%s%s\n" % (row["status"], row["title"], due, reason)
+                None,
+                "  %s %s%s%s%s\n"
+                % (row["status"], row["title"], due, progress, reason),
             )
         if report["project_attention"]:
             write_text(
@@ -12452,8 +12482,11 @@ def _render_today_text(report, saved_view=None, area=None):
         for row in next_rows:
             project = " @%s" % row["project"] if row.get("project") else ""
             due = " due:%s" % row["due"] if row.get("due") else ""
+            progress = _progress_suffix(row)
             write_text(
-                None, "  %s %s%s%s\n" % (row["status"], row["title"], project, due)
+                None,
+                "  %s %s%s%s%s\n"
+                % (row["status"], row["title"], project, due, progress),
             )
     elif report.get("next_actions"):
         write_text(None, _t("today.next_actions_already_listed") + "\n")
@@ -12487,7 +12520,10 @@ def _render_today_text(report, saved_view=None, area=None):
         write_text(None, "\n%s\n" % _t("today.upcoming", n=report["horizon_days"]))
         for row in upcoming_rows:
             due = " due:%s" % row["due"] if row.get("due") else ""
-            write_text(None, "  %s %s%s\n" % (row["status"], row["title"], due))
+            progress = _progress_suffix(row)
+            write_text(
+                None, "  %s %s%s%s\n" % (row["status"], row["title"], due, progress)
+            )
 
     inbox = report.get("inbox") or {}
     pending_count = inbox.get("pending_count", 0)

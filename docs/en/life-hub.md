@@ -71,6 +71,11 @@ a deterministic `reason` (e.g. `"3 days overdue"`, `"due today"`), derived
 from the same `overdue_by`/`due_in` facts [temporal context](#temporal-context)
 already computes — a fixed, inspectable "why", not a generated explanation.
 
+Every attention/next-action/upcoming row also carries the record's raw
+`progress:` value unchanged (`null` when absent). The CLI text renderer shows
+it as `progress:75%` or `progress:3/10 (30%)` next to the row when present,
+and shows nothing extra when it is absent.
+
 The CLI text renderer groups these buckets under the documented daily-hub
 headings — `NOW`, `ATTENTION`, `TODAY`, `NEXT ACTIONS`, `BLOCKED`, `HABITS`,
 `INBOX` — and skips a row already shown under an earlier heading (an overdue

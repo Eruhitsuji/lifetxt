@@ -51,6 +51,11 @@ due date が判別できる **overdue**/**due today** の各 row は、determini
 の fact から導出される、固定で inspectable な "why" であり、生成された
 説明ではありません。
 
+attention/next-action/upcoming の各 row は record の生の `progress:` 値も
+そのまま保持します（無ければ `null`）。CLI の text renderer は値がある場合、
+row の隣に `progress:75%` や `progress:3/10 (30%)` のように表示し、
+無い場合は何も追加表示しません。
+
 CLI の text renderer はこれらの bucket を `NOW`、`ATTENTION`、`TODAY`、
 `NEXT ACTIONS`、`BLOCKED`、`HABITS`、`INBOX` という documented な daily-hub
 見出しの下にまとめ、既に前の見出しで表示された row は skip します（overdue な

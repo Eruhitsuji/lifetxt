@@ -51,8 +51,8 @@
           "レコードの種類: T タスク, E イベント, D 締切, R リマインダー, H 習慣, N メモ, S 在席ステータス, M メッセージ, J 日誌。",
         "Short human-readable record text. Use quotes in raw life.txt if the title contains spaces.":
           "人が読みやすい短いレコード文です。タイトルに空白を含む場合は、生の life.txt では引用符で囲ってください。",
-        "One key:value per line. Repeat the same key for multiple values. Use body: or | continuation lines for longer text.":
-          "1行につき key:value を1つ。同じキーを繰り返すと複数の値を指定できます。長い文には body: または | の継続行を使います。",
+        "One key:value per line. Repeat the same key for multiple values. Use body: or | continuation lines for longer text. progress: accepts a percentage (progress:75%) or a fraction (progress:3/10), independent of status.":
+          "1行につき key:value を1つ。同じキーを繰り返すと複数の値を指定できます。長い文には body: または | の継続行を使います。progress: は percentage（progress:75%）または fraction（progress:3/10）を受け付け、status とは独立しています。",
         "Show advanced options": "詳細オプションを表示",
         "Hide advanced options": "詳細オプションを隠す",
         "Beginner mode shows only the Task/Event/Note types and the most common statuses; this shows or hides the rest.":

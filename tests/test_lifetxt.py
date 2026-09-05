@@ -4546,6 +4546,28 @@ class LifeTxtWebConfigAndCheckLineTests(unittest.TestCase):
         self.assertIn('entries.length ? "" : guidedEmptyState', load_body)
         self.assertIn("entries.slice(0, limit)", load_body)
 
+    def test_items_view_serves_the_progress_badge_helper_and_markup(self):
+        try:
+            from fastapi.testclient import TestClient
+        except Exception as exc:
+            self.skipTest(f"FastAPI test client is unavailable: {exc}")
+        from lifetxt.webapp import create_app
+
+        client = TestClient(create_app(paths=[]))
+        html = client.get("/").text
+        # #651: the Items view shows a progress bar+label component for a
+        # progress: detail, without inventing a second UI-only data model --
+        # buildProgressBadge() reads item.details.progress directly.
+        self.assertIn("function progressInfo", html)
+        self.assertIn("function buildProgressBadge", html)
+        self.assertIn("buildProgressBadge(item.details)", html)
+        self.assertIn("progress-badge", html)
+        self.assertIn("progress-fill", html)
+        # The generic Details textarea is still the only edit surface for
+        # progress: (no dedicated per-key input, matching every other
+        # detail); it just documents the key via its placeholder/help text.
+        self.assertIn("progress:75%", html)
+
     def test_help_modal_has_a_searchable_command_reference(self):
         try:
             from fastapi.testclient import TestClient

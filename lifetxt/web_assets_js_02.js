@@ -289,8 +289,12 @@
       return Number.isFinite(n) && n > 0 ? n : fallback;
     }
     function detailText(details) {
+      const dateKeys = new Set(["do", "from", "to", "on", "at", "created", "updated", "done"]);
       return Object.entries(details || {}).flatMap(([key, values]) =>
-        values.map(value => `${key}:${value}`)
+        values.map(value => {
+          const rel = dateKeys.has(key) ? relativeTime(value) : "";
+          return `${key}:${value}${rel ? ` (${rel})` : ""}`;
+        })
       ).join(" ");
     }
     function itemStableKey(item) {

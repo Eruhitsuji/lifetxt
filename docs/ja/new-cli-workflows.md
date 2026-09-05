@@ -32,6 +32,10 @@ JSON outputでは各itemに `why` object が追加され、text/life outputで�
 参照）にそのまま渡せます。`--format json`/`--format life` は影響を受けず、
 常に完全な `id:` value を表示します。
 
+CLI・TUI・Web の human-readable な date field には、`due:2026-09-07 (in 2 days)`
+や `done:2026-09-04 (yesterday)` のような relative label が補助表示されます。
+canonical な保存値と machine-readable output は変更されません。
+
 ## Inspect and edit one item
 
 ```sh

@@ -224,7 +224,7 @@ audience、そしてこの表と同じカテゴリ分類を表示します。
 
 | カテゴリ | コマンド |
 |---|---|
-| Getting Started / Daily | `tour`、`help`、`init`、`quick` (`add`)、`today`、`next`、`agenda`、`show`、`edit`、`done`、`complete`、`progress`、`clone`、`review`、`assist`、`state`、`start`、`stop`、`assign`、`timer`、`notify` |
+| Getting Started / Daily | `tour`、`help`、`init`、`quick` (`add`)、`today`、`next`、`agenda`、`show`、`edit`、`done`、`complete`、`progress`、`clone`、`reopen`、`review`、`assist`、`state`、`start`、`stop`、`assign`、`timer`、`notify` |
 | Query / Explore | `filter`、`search`、`find`、`query`、`view`、`summary`、`inbox`、`health`、`temporal`、`count`、`status` |
 | Projects / People / Collaboration | `project`、`portfolio`、`area`、`person`、`group`、`who`、`message`、`proposal`、`ticket`、`version`、`sprint` |
 | Structure / Data Integrity | `check`、`integrity`、`ids`、`links`、`backlinks`、`sources`、`tag`、`lint`、`deps`、`diff`、`snapshot`、`undo`、`cleanup`、`files` |
@@ -2736,6 +2736,33 @@ status）は結果の details に `to:` が残っているかどうかで `[/]` 
 prefix を受け付けます（[Short ID prefix による選択](#short-id-prefix-による選択)
 参照）。`--line`/`--text` は `done` と同じ方法で元 item を選択します。
 `--dry-run` は書き込まずに生成された item を表示します。
+
+### 13.13 `reopen`
+
+`lifetxt reopen PATH [ID]` は完了を取り消します: `done:` を削除し、`clone`
+が新しい item に与えるのと全く同じ kind-aware な open/default status
+（通常の kind は `[ ]`、`N`/`J` は `[N]`、`S` は `to:` が残っているかどうかで
+`[/]` または `[x]`）に item を戻します。`done`/`complete`/`clone` と同じ
+target resolver と guarded mutation path を再利用しており、別の
+item-editing path ではありません。
+
+```sh
+python -m lifetxt reopen life.txt task_1
+python -m lifetxt reopen life.txt task_1 --dry-run
+```
+
+`[x] T Task id:task_1 done:2026-09-01 project:home` を `reopen` すると、
+`[ ] T Task id:task_1 project:home` になります —— `done:` だけが削除され、
+他の detail はすべてそのまま保持されます。
+
+既に open な item に対しては、エラーではなく確定的な no-op（exit `0`、
+書き込みなし、"Already open" を表示）になります。Habit（`H`）は
+completion を単一の completed state ではなく複数の `done:` 日付の history
+として記録するため、`reopen` は habit を拒否し、代替手段
+（特定の `done:` 日付を削除するための `assist --update`）を案内します。
+`ID` は一意な ID prefix を受け付けます（[Short ID prefix による選択](#short-id-prefix-による選択)
+参照）。`--line`/`--text` は `done` と同じ方法で item を選択します。
+`--dry-run` は書き込まずに、結果の status と削除される detail を表示します。
 
 ## 14. alias
 

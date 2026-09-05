@@ -3049,6 +3049,28 @@ def build_parser():
     )
     clone_cmd.set_defaults(func=command_clone)
 
+    reopen_cmd = subparsers.add_parser(
+        "reopen",
+        help="Undo an item's completion: remove done: and restore its "
+        "kind-aware open status (#664).",
+    )
+    reopen_cmd.add_argument("path", help="life.txt file containing the item.")
+    reopen_cmd.add_argument(
+        "id", nargs="?", default=None, help="ID of the item to reopen."
+    )
+    reopen_cmd.add_argument(
+        "--line", type=int, default=None, help="Line number of the item."
+    )
+    reopen_cmd.add_argument(
+        "--text", default=None, help="Title substring to search for."
+    )
+    reopen_cmd.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would change without writing to the file.",
+    )
+    reopen_cmd.set_defaults(func=command_reopen)
+
     complete_cmd = subparsers.add_parser(
         "complete",
         help=(
@@ -7721,6 +7743,92 @@ def command_clone(args):
     sys.stdout.write("Cloned: %s\n" % new_line)
     if sys.stdout.isatty():
         sys.stdout.write(_render_success_guidance("clone", path=path))
+    return 0
+
+
+#: Detail keys that belong only to a completed state and must be removed
+#: when reopening (#664). Kept a tuple, not a single key, so a future
+#: completion-only key can be added in one place.
+_REOPEN_RESET_DETAIL_KEYS = ("done",)
+
+
+def command_reopen(args):
+    """Undo an item's completion (#664): remove completion-only metadata
+    and restore the item to its existing kind-aware open/default status.
+
+    Reuses the same target resolver, kind-aware status helper, and guarded
+    mutation path as `clone`/`done`/`complete` rather than a second
+    item-editing path."""
+    from .assist import _default_status as _reopen_default_status
+
+    config = _config(args)
+    path = args.path
+    if not path or path == "-":
+        raise ValueError("reopen requires a file path, not stdin.")
+    id_key = id_key_from_config(config)
+    text = read_text(path)
+    items, _ = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
+    target, aborted = _resolve_target_item(items, id_key, args, prompt_verb="Reopen:")
+    if aborted:
+        return 0
+
+    if target.kind == "H":
+        # Habit records log completions as a multiple-value done: history
+        # rather than a single completed state; there is no one entry to
+        # "undo" the way there is for an ordinary [x] item.
+        raise ValueError(
+            "Habit %r logs completions as multiple done: dates; reopen "
+            "does not support habits. Remove the specific done: date with "
+            "`lifetxt assist --update` instead." % target.title
+        )
+
+    if target.status != "[x]":
+        sys.stdout.write(
+            "Already open: %s (status %s); nothing to reopen.\n"
+            % (target.title, target.status)
+        )
+        return 0
+
+    remaining_details = OrderedDict(
+        (key, list(values))
+        for key, values in target.details.items()
+        if key not in _REOPEN_RESET_DETAIL_KEYS
+    )
+    new_status = _reopen_default_status(target.kind, remaining_details)
+
+    if getattr(args, "dry_run", False):
+        sys.stdout.write(
+            "[dry-run] Would reopen %r to status %s and remove %s.\n"
+            % (target.title, new_status, ", ".join(_REOPEN_RESET_DETAIL_KEYS))
+        )
+        return 0
+
+    update_args = types.SimpleNamespace(
+        line=target.line,
+        match_id=None,
+        status=new_status,
+        kind=None,
+        title=None,
+        add_detail=None,
+        detail=None,
+        remove_detail=list(_REOPEN_RESET_DETAIL_KEYS),
+    )
+    for flag in DETAIL_FLAGS:
+        dest = "from_" if flag == "from" else flag
+        if not hasattr(update_args, dest):
+            setattr(update_args, dest, None)
+
+    updated_text, updated_line, diagnostics = update_text(text, update_args)
+    if _has_error(diagnostics):
+        _print_diagnostics(diagnostics)
+        return 1
+
+    _ensure_writable_path(path, config, "reopen")
+    _pre_write_backup(path, config, "reopen")
+    atomic_write_text(path, updated_text)
+    sys.stdout.write("Reopened: %s\n" % updated_line)
+    if sys.stdout.isatty():
+        sys.stdout.write(_render_success_guidance("reopen", path=path))
     return 0
 
 

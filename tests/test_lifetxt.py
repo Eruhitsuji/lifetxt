@@ -2902,7 +2902,7 @@ class LifeTxtDoneCliTests(unittest.TestCase):
 
 
 class LifeTxtProgressCliTests(unittest.TestCase):
-    """Covers #660: `lifetxt progress` increment/decrement of progress:."""
+    """Covers #660 (`--delta`) and #665 (`--set`): `lifetxt progress`."""
 
     def _write(self, temp_dir, source):
         path = os.path.join(temp_dir, "life.txt")
@@ -3154,6 +3154,103 @@ class LifeTxtProgressCliTests(unittest.TestCase):
             self.assertIn("progress:1/2", content)
             self.assertIn("progress:2/4", content)
 
+    def test_set_replaces_a_percentage_value(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:task_1 progress:40%\n")
+            stdout, stderr, code = run_cli("progress", path, "task_1", "--set", "75%")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:75%", content)
+            self.assertNotIn("progress:40%", content)
+
+    def test_set_replaces_a_fraction_value(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir, "[ ] T Experiment id:experiment_1 progress:3/10\n"
+            )
+            stdout, stderr, code = run_cli(
+                "progress", path, "experiment_1", "--set", "8/10"
+            )
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:8/10", content)
+            self.assertNotIn("progress:3/10", content)
+
+    def test_set_works_when_the_item_has_no_existing_progress(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:task_1\n")
+            stdout, stderr, code = run_cli("progress", path, "task_1", "--set", "0%")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:0%", content)
+
+    def test_set_rejects_an_out_of_range_value_before_any_write(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:task_1 progress:40%\n")
+            stdout, stderr, code = run_cli("progress", path, "task_1", "--set", "150%")
+            self.assertEqual(1, code)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:40%", content)
+            self.assertNotIn("progress:150%", content)
+
+    def test_set_rejects_an_invalid_fraction_before_any_write(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir, "[ ] T Experiment id:experiment_1 progress:3/10\n"
+            )
+            stdout, stderr, code = run_cli(
+                "progress", path, "experiment_1", "--set", "12/10"
+            )
+            self.assertEqual(1, code)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:3/10", content)
+
+    def test_set_and_delta_are_mutually_exclusive(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:task_1 progress:40%\n")
+            stdout, stderr, code = run_cli(
+                "progress", path, "task_1", "--set", "75%", "--delta", "+1%"
+            )
+            self.assertEqual(2, code)
+            self.assertIn("not allowed with argument", stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:40%", content)
+
+    def test_set_dry_run_reports_without_writing(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:task_1 progress:40%\n")
+            stdout, stderr, code = run_cli(
+                "progress", path, "task_1", "--set", "75%", "--dry-run"
+            )
+            self.assertEqual(0, code, stderr)
+            self.assertIn("progress:75%", stdout)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:40%", content)
+            self.assertNotIn("progress:75%", content)
+
+    def test_set_resolves_by_unique_id_prefix(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir,
+                "[ ] T Experiment id:experiment_1abcdef progress:3/10\n"
+                "[ ] T Other id:other_1ghijkl progress:1/2\n",
+            )
+            stdout, stderr, code = run_cli(
+                "progress", path, "experiment_1", "--set", "9/10"
+            )
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:9/10", content)
+            self.assertIn("progress:1/2", content)
+
 
 class LifeTxtCloneCliTests(unittest.TestCase):
     """Covers #659: `lifetxt clone` derives a new item from an existing one."""
@@ -3350,6 +3447,345 @@ class LifeTxtCloneCliTests(unittest.TestCase):
             stdout, stderr, code = run_cli("check", path)
             self.assertEqual(0, code, stderr)
             self.assertIn("OK: 2 item(s)", stdout)
+
+
+class LifeTxtReopenCliTests(unittest.TestCase):
+    """Covers #664: `lifetxt reopen` undoes an item's completion."""
+
+    def _write(self, temp_dir, source):
+        path = os.path.join(temp_dir, "life.txt")
+        with open(path, "w", encoding="utf-8", newline="\n") as f:
+            f.write(source)
+        return path
+
+    def test_reopens_a_completed_task_removing_done_and_preserving_details(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir,
+                "[x] T Task id:t1 done:2026-09-01 project:home priority:A\n",
+            )
+            stdout, stderr, code = run_cli("reopen", path, "t1")
+            self.assertEqual(0, code, stderr)
+            self.assertIn("Reopened:", stdout)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertTrue(content.startswith("[ ] T Task"))
+            self.assertNotIn("done:", content)
+            self.assertIn("project:home", content)
+            self.assertIn("priority:A", content)
+
+    def test_note_kind_reopens_to_note_status(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # N is never [x] in ordinary use, so mark it [x] directly to
+            # exercise the kind-aware default status regardless of how it
+            # got there.
+            path = self._write(temp_dir, "[x] N Meeting_notes id:n1 done:2026-09-01\n")
+            stdout, stderr, code = run_cli("reopen", path, "n1")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertTrue(content.startswith("[N] N"))
+            self.assertNotIn("done:", content)
+
+    def test_already_open_item_is_a_deterministic_noop(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:t1 project:home\n")
+            stdout, stderr, code = run_cli("reopen", path, "t1")
+            self.assertEqual(0, code, stderr)
+            self.assertIn("Already open", stdout)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertEqual("[ ] T Task id:t1 project:home\n", content)
+
+    def test_habit_is_refused_with_an_actionable_message(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir, "[ ] H Exercise id:h1 done:2026-06-01 done:2026-06-02\n"
+            )
+            stdout, stderr, code = run_cli("reopen", path, "h1")
+            self.assertEqual(1, code)
+            self.assertIn("Habit", stderr)
+            self.assertIn("assist --update", stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("done:2026-06-01", content)
+            self.assertIn("done:2026-06-02", content)
+
+    def test_resolves_by_unique_id_prefix(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir,
+                "[x] T First id:abc123def456 done:2026-09-01\n"
+                "[x] T Second id:xyz789ghi000 done:2026-09-01\n",
+            )
+            stdout, stderr, code = run_cli("reopen", path, "abc1")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                lines = f.read().splitlines()
+            self.assertTrue(lines[0].startswith("[ ] T First"))
+            self.assertTrue(lines[1].startswith("[x] T Second"))
+
+    def test_ambiguous_id_prefix_fails_without_mutation(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir,
+                "[x] T First id:abc123def456 done:2026-09-01\n"
+                "[x] T Second id:abc999xyz000 done:2026-09-01\n",
+            )
+            stdout, stderr, code = run_cli("reopen", path, "abc")
+            self.assertEqual(1, code)
+            self.assertIn("Ambiguous ID prefix", stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertEqual(2, content.count("done:2026-09-01"))
+
+    def test_missing_id_fails_loudly(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[x] T Task id:t1 done:2026-09-01\n")
+            stdout, stderr, code = run_cli("reopen", path, "nonexistent")
+            self.assertEqual(1, code)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("done:2026-09-01", content)
+
+    def test_selects_by_line(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir,
+                "[x] T First id:t1 done:2026-09-01\n[ ] T Second id:t2 project:home\n",
+            )
+            stdout, stderr, code = run_cli("reopen", path, "--line", "1")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                lines = f.read().splitlines()
+            self.assertTrue(lines[0].startswith("[ ] T First"))
+
+    def test_selects_by_text(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir,
+                "[x] T Buy_milk id:t1 done:2026-09-01\n"
+                "[ ] T Walk_dog id:t2 project:home\n",
+            )
+            stdout, stderr, code = run_cli("reopen", path, "--text", "Buy")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                lines = f.read().splitlines()
+            self.assertTrue(lines[0].startswith("[ ] T Buy_milk"))
+
+    def test_dry_run_reports_without_writing(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir, "[x] T Task id:t1 done:2026-09-01 project:home\n"
+            )
+            stdout, stderr, code = run_cli("reopen", path, "t1", "--dry-run")
+            self.assertEqual(0, code, stderr)
+            self.assertIn("[dry-run]", stdout)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("done:2026-09-01", content)
+            self.assertTrue(content.startswith("[x] T Task"))
+
+    def test_reopened_item_passes_check(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir, "[x] T Task id:t1 done:2026-09-01 project:home\n"
+            )
+            stdout, stderr, code = run_cli("reopen", path, "t1")
+            self.assertEqual(0, code, stderr)
+            stdout, stderr, code = run_cli("check", path)
+            self.assertEqual(0, code, stderr)
+            self.assertIn("OK: 1 item(s)", stdout)
+
+
+class LifeTxtDueCliTests(unittest.TestCase):
+    """Covers #666: `lifetxt due` sets, replaces, or clears due:.
+
+    Includes #667's relative-date shorthand (today/tomorrow/+Nd/...),
+    resolved through the exact same lifetxt.shorthand.resolve_date_token
+    quick's --due/--do/--until flags already use."""
+
+    def _write(self, temp_dir, source):
+        path = os.path.join(temp_dir, "life.txt")
+        with open(path, "w", encoding="utf-8", newline="\n") as f:
+            f.write(source)
+        return path
+
+    def test_shorthand_today_resolves_to_the_workspace_aware_current_date(self):
+        import datetime as dt
+
+        today_iso = dt.date.today().isoformat()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:t1\n")
+            stdout, stderr, code = run_cli("due", path, "t1", "today")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("due:%s" % today_iso, content)
+
+    def test_shorthand_tomorrow_resolves_to_the_next_calendar_date(self):
+        import datetime as dt
+
+        tomorrow_iso = (dt.date.today() + dt.timedelta(days=1)).isoformat()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:t1\n")
+            stdout, stderr, code = run_cli("due", path, "t1", "tomorrow")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("due:%s" % tomorrow_iso, content)
+
+    def test_shorthand_offset_resolves_deterministically(self):
+        import datetime as dt
+
+        expected_iso = (dt.date.today() + dt.timedelta(days=3)).isoformat()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:t1\n")
+            stdout, stderr, code = run_cli("due", path, "t1", "+3d")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("due:%s" % expected_iso, content)
+
+    def test_explicit_iso_date_is_unaffected_by_shorthand_resolution(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:t1\n")
+            stdout, stderr, code = run_cli("due", path, "t1", "2026-12-25")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("due:2026-12-25", content)
+
+    def test_unrecognized_shorthand_fails_with_actionable_guidance(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:t1 due:2026-01-01\n")
+            stdout, stderr, code = run_cli("due", path, "t1", "next monday-ish")
+            self.assertEqual(1, code)
+            self.assertIn("is not a date", stderr)
+            self.assertIn("today", stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("due:2026-01-01", content)
+
+    def test_sets_due_on_an_item_with_none(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:t1 project:home\n")
+            stdout, stderr, code = run_cli("due", path, "t1", "2026-09-07")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("due:2026-09-07", content)
+            self.assertIn("project:home", content)
+
+    def test_replaces_an_existing_due(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:t1 due:2026-01-01\n")
+            stdout, stderr, code = run_cli("due", path, "t1", "2026-09-07")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("due:2026-09-07", content)
+            self.assertNotIn("due:2026-01-01", content)
+
+    def test_clear_removes_due(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir, "[ ] T Task id:t1 due:2026-09-07 project:home\n"
+            )
+            stdout, stderr, code = run_cli("due", path, "t1", "--clear")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertNotIn("due:", content)
+            self.assertIn("project:home", content)
+
+    def test_clear_on_item_with_no_due_is_a_noop(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:t1 project:home\n")
+            stdout, stderr, code = run_cli("due", path, "t1", "--clear")
+            self.assertEqual(0, code, stderr)
+            self.assertIn("No due:", stdout)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertEqual("[ ] T Task id:t1 project:home\n", content)
+
+    def test_date_and_clear_together_are_rejected(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:t1\n")
+            stdout, stderr, code = run_cli("due", path, "t1", "2026-09-07", "--clear")
+            self.assertEqual(1, code)
+            self.assertIn("either a date or --clear", stderr)
+
+    def test_no_date_and_no_clear_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:t1\n")
+            stdout, stderr, code = run_cli("due", path, "t1")
+            self.assertEqual(1, code)
+            self.assertIn("Specify a due date", stderr)
+
+    def test_invalid_date_is_rejected_before_any_write(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:t1 due:2026-01-01\n")
+            stdout, stderr, code = run_cli("due", path, "t1", "not-a-date")
+            self.assertEqual(1, code)
+            self.assertIn("is not a date", stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("due:2026-01-01", content)
+
+    def test_resolves_by_unique_id_prefix(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir,
+                "[ ] T First id:abc123def456\n[ ] T Second id:xyz789ghi000\n",
+            )
+            stdout, stderr, code = run_cli("due", path, "abc1", "2026-09-07")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                lines = f.read().splitlines()
+            self.assertIn("due:2026-09-07", lines[0])
+            self.assertNotIn("due:", lines[1])
+
+    def test_ambiguous_id_prefix_fails_without_mutation(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir,
+                "[ ] T First id:abc123def456\n[ ] T Second id:abc999xyz000\n",
+            )
+            stdout, stderr, code = run_cli("due", path, "abc", "2026-09-07")
+            self.assertEqual(1, code)
+            self.assertIn("Ambiguous ID prefix", stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertNotIn("due:", content)
+
+    def test_missing_id_fails_loudly(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:t1\n")
+            stdout, stderr, code = run_cli("due", path, "nope", "2026-09-07")
+            self.assertEqual(1, code)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertNotIn("due:", content)
+
+    def test_dry_run_reports_without_writing(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:t1\n")
+            stdout, stderr, code = run_cli("due", path, "t1", "2026-09-07", "--dry-run")
+            self.assertEqual(0, code, stderr)
+            self.assertIn("due:2026-09-07", stdout)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertNotIn("due:", content)
+
+    def test_updated_item_passes_check(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:t1\n")
+            stdout, stderr, code = run_cli("due", path, "t1", "2026-09-07")
+            self.assertEqual(0, code, stderr)
+            stdout, stderr, code = run_cli("check", path)
+            self.assertEqual(0, code, stderr)
+            self.assertIn("OK: 1 item(s)", stdout)
 
 
 class LifeTxtDoneHabitCliTests(unittest.TestCase):

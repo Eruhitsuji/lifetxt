@@ -224,8 +224,8 @@ audience、そしてこの表と同じカテゴリ分類を表示します。
 
 | カテゴリ | コマンド |
 |---|---|
-| Getting Started / Daily | `tour`、`help`、`init`、`quick` (`add`)、`today`、`next`、`agenda`、`show`、`edit`、`done`、`complete`、`progress`、`clone`、`review`、`assist`、`state`、`start`、`stop`、`assign`、`timer`、`notify` |
-| Query / Explore | `filter`、`search`、`find`、`query`、`view`、`summary`、`inbox`、`health`、`temporal`、`count`、`status` |
+| Getting Started / Daily | `tour`、`help`、`init`、`quick` (`add`)、`today`、`next`、`agenda`、`show`、`edit`、`done`、`complete`、`progress`、`clone`、`reopen`、`due`、`review`、`assist`、`state`、`start`、`stop`、`assign`、`timer`、`notify` |
+| Query / Explore | `filter`、`search`、`find`、`query`、`view`、`summary`、`inbox`、`health`、`temporal`、`count`、`status`、`recent` |
 | Projects / People / Collaboration | `project`、`portfolio`、`area`、`person`、`group`、`who`、`message`、`proposal`、`ticket`、`version`、`sprint` |
 | Structure / Data Integrity | `check`、`integrity`、`ids`、`links`、`backlinks`、`sources`、`tag`、`lint`、`deps`、`diff`、`snapshot`、`undo`、`cleanup`、`files` |
 | Import / Export / Reports | `import`、`import-ics`、`sync-ics`、`to-json`、`to-jsonl`、`to-csv`、`from-json`、`from-jsonl`、`from-csv`、`from-markdown`、`from-todo`、`to-ics`、`markdown`、`stats`、`plot`、`export-heatmap`、`standup`、`invoice`、`share`、`digest`、`report` |
@@ -2659,16 +2659,20 @@ Every 2 weeks on Sunday, Tuesday (weeks start Sunday)
 ### 13.11 `progress`
 
 `lifetxt progress PATH [ID] --delta DELTA` は、既存の `progress:` 値を手で
-書き換える代わりに、signed delta だけ増減します。共有の `progress:`
-parser/validator（fraction は `0<=current<=total`、percentage は
-`0-100`）と、`done`/`complete` と同じ guarded mutation path を再利用する
-ため、revision/backup の扱いは同じです。
+書き換える代わりに、signed delta だけ増減します。`lifetxt progress PATH
+[ID] --set VALUE`（#665）は代わりに `progress:` を、渡した representation
+のまま直接 `VALUE` に置き換えます。`--delta` と `--set` は互いに排他的
+です。どちらも共有の `progress:` parser/validator（fraction は
+`0<=current<=total`、percentage は `0-100`）と、`done`/`complete` と同じ
+guarded mutation path を再利用するため、revision/backup の扱いは同じです。
 
 ```sh
 python -m lifetxt progress life.txt experiment_1 --delta +1
 python -m lifetxt progress life.txt experiment_1 --delta=-1
 python -m lifetxt progress life.txt task_1 --delta +10%
 python -m lifetxt progress life.txt task_1 --delta=-15% --dry-run
+python -m lifetxt progress life.txt task_1 --set 75%
+python -m lifetxt progress life.txt experiment_1 --set 3/10
 ```
 
 `progress:3/10` に `--delta +1` を適用すると `progress:4/10`
@@ -2680,10 +2684,12 @@ python -m lifetxt progress life.txt task_1 --delta=-15% --dry-run
 argparse に未知の flag として解釈されます。
 
 有効範囲外の結果（`progress:14/10`、`progress:105%`、負の fraction
-numerator）は書き込み前に拒否され、`progress:` を持たない item は暗黙に
-`0%` とはみなされず拒否されます —— まず初期値を設定してください（例:
-`assist --update ID --match-id ID --add-detail progress:0%`）。`ID` は
-一意な ID prefix を受け付けます（[Short ID prefix による選択](#short-id-prefix-による選択)
+numerator）は書き込み前に拒否されます。`progress:` を持たない item に
+`--delta` を使うと暗黙に `0%` とはみなされず拒否されます —— まず `--set`
+で初期値を設定してください（例: `lifetxt progress PATH ID --set 0%`）。
+`--set` 自体は既存の `progress:` の有無に関わらず動作します。加減算の
+起点を必要としないためです。`ID` は一意な ID prefix を受け付けます
+（[Short ID prefix による選択](#short-id-prefix-による選択)
 参照）。`--line`/`--text` は `done` と同じ方法で item を選択します。
 `--dry-run` は書き込まずに結果の値だけ表示します。
 
@@ -2736,6 +2742,89 @@ status）は結果の details に `to:` が残っているかどうかで `[/]` 
 prefix を受け付けます（[Short ID prefix による選択](#short-id-prefix-による選択)
 参照）。`--line`/`--text` は `done` と同じ方法で元 item を選択します。
 `--dry-run` は書き込まずに生成された item を表示します。
+
+### 13.13 `reopen`
+
+`lifetxt reopen PATH [ID]` は完了を取り消します: `done:` を削除し、`clone`
+が新しい item に与えるのと全く同じ kind-aware な open/default status
+（通常の kind は `[ ]`、`N`/`J` は `[N]`、`S` は `to:` が残っているかどうかで
+`[/]` または `[x]`）に item を戻します。`done`/`complete`/`clone` と同じ
+target resolver と guarded mutation path を再利用しており、別の
+item-editing path ではありません。
+
+```sh
+python -m lifetxt reopen life.txt task_1
+python -m lifetxt reopen life.txt task_1 --dry-run
+```
+
+`[x] T Task id:task_1 done:2026-09-01 project:home` を `reopen` すると、
+`[ ] T Task id:task_1 project:home` になります —— `done:` だけが削除され、
+他の detail はすべてそのまま保持されます。
+
+既に open な item に対しては、エラーではなく確定的な no-op（exit `0`、
+書き込みなし、"Already open" を表示）になります。Habit（`H`）は
+completion を単一の completed state ではなく複数の `done:` 日付の history
+として記録するため、`reopen` は habit を拒否し、代替手段
+（特定の `done:` 日付を削除するための `assist --update`）を案内します。
+`ID` は一意な ID prefix を受け付けます（[Short ID prefix による選択](#short-id-prefix-による選択)
+参照）。`--line`/`--text` は `done` と同じ方法で item を選択します。
+`--dry-run` は書き込まずに、結果の status と削除される detail を表示します。
+
+### 13.14 `due`
+
+`lifetxt due PATH ID DATE` は item の `due:` 値を設定・置換します。
+`lifetxt due PATH ID --clear` は削除します。`ID` は必須の positional
+です（`done`/`progress`/`clone` と異なり、`due` は `--line`/`--text` を
+受け付けません。date 用の 2 つ目の optional positional を追加すると、
+どちらの token が何を意味するか曖昧になるためです）。
+`done`/`progress`/`clone` と同じ guarded mutation path を再利用するため、
+revision/backup の扱いは同じであり、変更されるのは `due:` だけです ——
+他の detail と item の status はすべてそのまま保持されます。
+
+```sh
+python -m lifetxt due life.txt task_1 2026-09-07
+python -m lifetxt due life.txt task_1 tomorrow
+python -m lifetxt due life.txt task_1 --clear
+python -m lifetxt due life.txt task_1 2026-09-07 --dry-run
+```
+
+`DATE` は [§13.15](#1315-相対日付-shorthand) で説明する、範囲を限定した
+相対日付 shorthand（`today`、`tomorrow`、`+3d` など）も受け付けます。
+書き込み前に絶対日付へ解決されるため、file 内の `due:` は常に canonical
+です。不正または認識できない日付は書き込み前に拒否されます。`due:` を
+持たない item に対する `--clear` は確定的な no-op です（exit `0`、
+書き込みなし）。`ID` は一意な ID prefix を受け付けます
+（[Short ID prefix による選択](#short-id-prefix-による選択)
+参照）。`--dry-run` は書き込まずに変更内容を表示します。
+
+### 13.15 相対日付 shorthand
+
+human-facing な日付を受け付けるいくつかのコマンドは、自分で
+`YYYY-MM-DD` を入力する代わりに、範囲を限定した確定的な相対 token を
+受け付けます: `today`、`tomorrow`、`yesterday`、曜日名（次の出現日）、
+`next_曜日`、`next_week`、そして `+3d`、`-1w`、`+2m`、`+1y` のような
+signed offset です。これは自然言語の日付 parser では **ありません** ——
+`next monday` や `in two weeks` のような自由記述の表現は意図的に
+サポートされておらず、推測せず actionable なエラーで失敗します。
+
+```sh
+python -m lifetxt due life.txt task_1 tomorrow
+python -m lifetxt quick "Submit report" --due tomorrow
+python -m lifetxt quick "Renew lease" --due +30d
+```
+
+**解決はこの CLI 入力境界でのみ行われます**。受け付ける全コマンドが
+再利用する単一の shared resolver（`lifetxt.shorthand.resolve_date_token`）
+が、`today`/`agenda`/`done` が自身の日付解決にすでに使っているのと同じ
+workspace-aware な現在日付を使って解決します。`life.txt` に実際に
+書き込まれる値は常に解決済みの canonical な絶対日付です ——
+`due:tomorrow` ではなく `due:2026-09-09` —— そのため Format 1.0 自体には
+新しい記法が一切追加されず、file の他の読み手（parser、`check`、Web
+API、MCP）にはただの絶対日付として見えます。`quick`/`add` の
+`--due`/`--do`/`--until` flag は `due`（13.14）が存在する前から既にこの
+shorthand を解決していました。両者は今、それぞれ独立に日付を parse
+するのではなく、全く同じ resolver を共有しています。明示的な
+`YYYY-MM-DD` の値はそのまま変更されません。
 
 ## 14. alias
 

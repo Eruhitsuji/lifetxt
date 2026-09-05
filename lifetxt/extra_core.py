@@ -34,6 +34,7 @@ from .parser import parse_text
 from .paths import expand_paths
 from .serializer import item_to_line
 from .timeutil import parse_elapsed
+from .timeutil import parse_iso_datetime
 from .timeutil import relative_time
 
 from .extra_common import *
@@ -137,6 +138,78 @@ def command_next(args, config_data):
             )
             + "\n"
         )
+    return _emit(output, args.output)
+
+
+def command_recent(args, config_data):
+    """List recently created or updated items, newest first (#668).
+
+    Read-only composition over existing parsing, `short_id`, and
+    `relative_time` -- no new indexing/cache subsystem. Default basis is
+    `updated:`, falling back to `created:` when `updated:` is absent;
+    `--updated`/`--created` select one basis explicitly with no fallback,
+    so an item missing that exact detail is deterministically excluded
+    rather than guessed at or crashing the command.
+    """
+    if getattr(args, "updated", False) and getattr(args, "created", False):
+        raise ValueError("Use either --updated or --created, not both.")
+
+    items = _load_items(args.paths, config_data)
+
+    if getattr(args, "created", False):
+        basis, allow_fallback = "created", False
+    elif getattr(args, "updated", False):
+        basis, allow_fallback = "updated", False
+    else:
+        basis, allow_fallback = "updated", True
+
+    limit = args.limit
+    if limit is not None and limit <= 0:
+        raise ValueError("--limit must be a positive integer, got %r." % limit)
+
+    entries = []
+    for item in items:
+        raw = _first(item, basis, default=None)
+        used_basis = basis
+        if not raw and allow_fallback:
+            raw = _first(item, "created", default=None)
+            used_basis = "created"
+        if not raw:
+            continue
+        parsed = parse_iso_datetime(raw)
+        if parsed is None:
+            # Malformed timestamp: excluded deterministically rather than
+            # crashing the command or guessing at an ordering.
+            continue
+        entries.append((parsed, raw, used_basis, item))
+
+    entries.sort(key=lambda entry: (entry[0], entry[3].line or 0), reverse=True)
+    if limit:
+        entries = entries[:limit]
+
+    if args.format == "json":
+        rows = []
+        for _parsed, raw, used_basis, item in entries:
+            record = _item_record(item)
+            record["timestamp_basis"] = used_basis
+            record["timestamp"] = raw
+            rows.append(record)
+        return _emit(_json_text(rows, args.pretty), args.output)
+
+    from .ids import collect_item_ids, short_id
+
+    all_ids = collect_item_ids(items, key="id")
+    today = timezone_today()
+    rows = [
+        (
+            (short_id(all_ids, _item_id(item)) if _item_id(item) else None) or "-",
+            relative_time(raw, today=today) or "-",
+            item.kind,
+            item.title,
+        )
+        for _parsed, raw, used_basis, item in entries
+    ]
+    output = _table(("ID", "WHEN", "TYPE", "TITLE"), rows)
     return _emit(output, args.output)
 
 

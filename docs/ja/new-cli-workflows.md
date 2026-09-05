@@ -36,6 +36,32 @@ CLI・TUI・Web の human-readable な date field には、`due:2026-09-07 (in 2
 や `done:2026-09-04 (yesterday)` のような relative label が補助表示されます。
 canonical な保存値と machine-readable output は変更されません。
 
+## Recently changed items
+
+```sh
+lifetxt recent life.txt
+lifetxt recent life.txt --updated
+lifetxt recent life.txt --created
+lifetxt recent life.txt --limit 10
+lifetxt recent life.txt --format json
+```
+
+`recent` は、最近作成・更新された item を newest-first で表示する
+read-only な view です -- 新しい indexing/cache subsystem ではなく、既存の
+parsing、short ID、relative-time 表示を薄く組み合わせたものです。
+default では `updated:` を基準にし、`updated:` を持たない item は
+`created:` に fallback します。`--updated`/`--created` はどちらか一方の
+基準を明示的に選択し、fallback なしになります —— その detail を持たない
+item は推測せず除外されます。選択した基準の下でタイムスタンプを全く
+持たない item や、parse できない item は、command を crash させず
+silent に除外されます。
+
+`--limit N` は行数を制限します（default 20、正の整数のみ）。text output
+では `next`（上記参照）と同じ short unique ID に加えて relative-time
+label（`today`、`2 days ago` など）を表示します。`--format json` は
+代わりに各 item の完全な `id:` と、実際に使われた raw な絶対タイムスタンプ
+を保持します —— locale に依存する表示用文字列ではありません。
+
 ## Inspect and edit one item
 
 ```sh

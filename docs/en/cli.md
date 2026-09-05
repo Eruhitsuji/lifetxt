@@ -218,8 +218,8 @@ including its `--json` machine-readable form for scripts and AI clients.
 
 | Category | Commands |
 |---|---|
-| Getting Started / Daily | `tour`, `help`, `init`, `quick` (`add`), `today`, `next`, `agenda`, `show`, `edit`, `done`, `complete`, `progress`, `clone`, `review`, `assist`, `state`, `start`, `stop`, `assign`, `timer`, `notify` |
-| Query / Explore | `filter`, `search`, `find`, `query`, `view`, `summary`, `inbox`, `health`, `temporal`, `count`, `status` |
+| Getting Started / Daily | `tour`, `help`, `init`, `quick` (`add`), `today`, `next`, `agenda`, `show`, `edit`, `done`, `complete`, `progress`, `clone`, `reopen`, `due`, `review`, `assist`, `state`, `start`, `stop`, `assign`, `timer`, `notify` |
+| Query / Explore | `filter`, `search`, `find`, `query`, `view`, `summary`, `inbox`, `health`, `temporal`, `count`, `status`, `recent` |
 | Projects / People / Collaboration | `project`, `portfolio`, `area`, `person`, `group`, `who`, `message`, `proposal`, `ticket`, `version`, `sprint` |
 | Structure / Data Integrity | `check`, `integrity`, `ids`, `links`, `backlinks`, `sources`, `tag`, `lint`, `deps`, `diff`, `snapshot`, `undo`, `cleanup`, `files` |
 | Import / Export / Reports | `import`, `import-ics`, `sync-ics`, `to-json`, `to-jsonl`, `to-csv`, `from-json`, `from-jsonl`, `from-csv`, `from-markdown`, `from-todo`, `to-ics`, `markdown`, `stats`, `plot`, `export-heatmap`, `standup`, `invoice`, `share`, `digest`, `report` |
@@ -2998,16 +2998,20 @@ warns rather than letting `FREQ=WEEKLY;BYDAY=2MO` quietly mean every Monday.
 
 `lifetxt progress PATH [ID] --delta DELTA` increments or decrements an
 item's existing `progress:` value by a signed delta, without rewriting it
-by hand. It reuses the shared `progress:` parser and validator (`0<=
-current<=total` for a fraction, `0-100` for a percentage) and the same
-guarded mutation path as `done`/`complete`, so revision/backup handling is
-identical.
+by hand. `lifetxt progress PATH [ID] --set VALUE` (#665) instead replaces
+`progress:` directly with `VALUE`, in whichever representation you give it.
+`--delta` and `--set` are mutually exclusive. Both reuse the shared
+`progress:` parser and validator (`0<=current<=total` for a fraction,
+`0-100` for a percentage) and the same guarded mutation path as
+`done`/`complete`, so revision/backup handling is identical.
 
 ```sh
 python -m lifetxt progress life.txt experiment_1 --delta +1
 python -m lifetxt progress life.txt experiment_1 --delta=-1
 python -m lifetxt progress life.txt task_1 --delta +10%
 python -m lifetxt progress life.txt task_1 --delta=-15% --dry-run
+python -m lifetxt progress life.txt task_1 --set 75%
+python -m lifetxt progress life.txt experiment_1 --set 3/10
 ```
 
 Given `progress:3/10`, `--delta +1` produces `progress:4/10` (the
@@ -3019,11 +3023,13 @@ must use `--delta=-N` (with `=`) — `--delta -N` is parsed by argparse as an
 unrecognized flag, not a value.
 
 A result outside the valid range (`progress:14/10`, `progress:105%`, a
-negative fraction numerator) is rejected before anything is written, and an
-item with **no** existing `progress:` detail is rejected rather than
-silently treated as `0%` — set an initial value first (for example via
-`assist --update ID --match-id ID --add-detail progress:0%`). `ID` accepts
-a unique ID prefix (see [Short ID prefix selection](#short-id-prefix-selection));
+negative fraction numerator) is rejected before anything is written.
+`--delta` against an item with **no** existing `progress:` detail is
+rejected rather than silently treated as `0%` — set an initial value first
+with `--set` (for example `lifetxt progress PATH ID --set 0%`); `--set`
+itself works whether or not the item already has a `progress:` value,
+since it never needs an existing one to add to or subtract from. `ID`
+accepts a unique ID prefix (see [Short ID prefix selection](#short-id-prefix-selection));
 `--line`/`--text` select an item the same way as `done`. `--dry-run` shows
 the resulting value without writing.
 
@@ -3078,6 +3084,91 @@ never reports a collision. `ID` accepts a unique ID prefix (see
 [Short ID prefix selection](#short-id-prefix-selection)); `--line`/`--text`
 select the source item the same way as `done`. `--dry-run` shows the
 generated item without writing it.
+
+### 13.13 `reopen`
+
+`lifetxt reopen PATH [ID]` undoes a completion: it removes `done:` and
+restores the item to its existing kind-aware open/default status, the exact
+same status `clone` gives a fresh copy (`[ ]` for ordinary kinds; `[N]` for
+`N`/`J`; `[/]` or `[x]` for `S` depending on whether `to:` remains). It
+reuses the same target resolver and guarded mutation path as
+`done`/`complete`/`clone` rather than a second item-editing path.
+
+```sh
+python -m lifetxt reopen life.txt task_1
+python -m lifetxt reopen life.txt task_1 --dry-run
+```
+
+Given `[x] T Task id:task_1 done:2026-09-01 project:home`, `reopen`
+produces `[ ] T Task id:task_1 project:home` — `done:` is removed and every
+other detail is preserved unchanged.
+
+An already-open item is a deterministic no-op (exit `0`, nothing written,
+"Already open" printed) rather than an error. Habit (`H`) records log
+completions as multiple `done:` dates rather than a single completed state,
+so `reopen` refuses habits outright and names the alternative
+(`assist --update` to remove one specific `done:` date). `ID` accepts a
+unique ID prefix (see [Short ID prefix selection](#short-id-prefix-selection));
+`--line`/`--text` select an item the same way as `done`. `--dry-run` shows
+the resulting status and which detail would be removed without writing.
+
+### 13.14 `due`
+
+`lifetxt due PATH ID DATE` sets or replaces one item's `due:` value;
+`lifetxt due PATH ID --clear` removes it. `ID` is required and positional
+(unlike `done`/`progress`/`clone`, `due` does not accept `--line`/`--text`,
+since a second optional positional for the date would make which token
+means what ambiguous). It reuses the same guarded mutation path as
+`done`/`progress`/`clone`, so revision/backup handling is identical, and
+only ever touches `due:` — every other detail, and item status, are
+preserved unchanged.
+
+```sh
+python -m lifetxt due life.txt task_1 2026-09-07
+python -m lifetxt due life.txt task_1 tomorrow
+python -m lifetxt due life.txt task_1 --clear
+python -m lifetxt due life.txt task_1 2026-09-07 --dry-run
+```
+
+`DATE` also accepts the bounded relative shorthand described in
+[§13.15](#1315-relative-date-shorthand) (`today`, `tomorrow`, `+3d`, ...);
+it is resolved to an absolute date before anything is written, so
+`due:` in the file is always canonical. An invalid or unrecognized date
+is rejected before anything is written. `--clear` on an item with no
+`due:` is a deterministic no-op (exit `0`, nothing written). `ID` accepts
+a unique ID prefix (see [Short ID prefix selection](#short-id-prefix-selection)).
+`--dry-run` shows what would change without writing.
+
+### 13.15 Relative date shorthand
+
+A handful of commands that take a human-facing date accept a small,
+deterministic set of relative tokens instead of typing `YYYY-MM-DD`
+yourself: `today`, `tomorrow`, `yesterday`, a weekday name (the next
+occurrence), `next_WEEKDAY`, `next_week`, and a signed offset such as
+`+3d`, `-1w`, `+2m`, `+1y`. This is **not** a natural-language date
+parser — `next monday`, `in two weeks`, and similar free-text phrases are
+deliberately unsupported and fail with an actionable message rather than
+being guessed at.
+
+```sh
+python -m lifetxt due life.txt task_1 tomorrow
+python -m lifetxt quick "Submit report" --due tomorrow
+python -m lifetxt quick "Renew lease" --due +30d
+```
+
+**Resolution happens only at this CLI input boundary**, through the one
+shared resolver (`lifetxt.shorthand.resolve_date_token`) every accepting
+command reuses, using the same workspace-aware current date
+`today`/`agenda`/`done` already resolve their own dates against. The value
+actually written to
+`life.txt` is always the resolved canonical absolute date —
+`due:2026-09-09`, never `due:tomorrow` — so Format 1.0 itself gains no new
+syntax and every other reader of the file (the parser, `check`, the Web
+API, MCP) sees only ordinary absolute dates. `quick`/`add`'s
+`--due`/`--do`/`--until` flags already resolved this same shorthand
+before `due` (13.14) existed; both now share the identical resolver
+rather than each parsing dates independently. An explicit `YYYY-MM-DD`
+value is returned unchanged.
 
 ## 14. Aliases
 

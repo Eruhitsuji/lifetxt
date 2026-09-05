@@ -7,6 +7,7 @@ import sys
 from .extra_common import _load_config, _resolved_input_paths
 from .extra_core import (
     command_next,
+    command_recent,
     command_show,
     command_edit,
     command_path,
@@ -107,6 +108,29 @@ def _build_parser(command):
             action="store_true",
             help="Explain why each returned item was selected as a next action.",
         )
+    elif command == "recent":
+        parser.add_argument("paths", nargs="*")
+        parser.add_argument(
+            "--updated",
+            action="store_true",
+            help="Use updated: as the timestamp basis, with no fallback to "
+            "created: -- an item missing updated: is excluded.",
+        )
+        parser.add_argument(
+            "--created",
+            action="store_true",
+            help="Use created: as the timestamp basis, with no fallback -- "
+            "an item missing created: is excluded.",
+        )
+        parser.add_argument(
+            "--limit",
+            type=int,
+            default=20,
+            help="Bound the number of rows returned. Must be positive.",
+        )
+        parser.add_argument("--format", choices=("text", "json"), default="text")
+        parser.add_argument("--pretty", action="store_true")
+        parser.add_argument("-o", "--output")
     elif command == "show":
         parser.add_argument("id")
         parser.add_argument("paths", nargs="*")
@@ -540,6 +564,8 @@ def _dispatch(command, args, config_data, config_path):
         return command_help(args, config_data)
     if command == "next":
         return command_next(args, config_data)
+    if command == "recent":
+        return command_recent(args, config_data)
     if command == "show":
         return command_show(args, config_data)
     if command == "edit":

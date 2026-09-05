@@ -102,6 +102,11 @@ def _build_parser(command):
             "priority/due/created ordering. Selection is unchanged; only "
             "the order differs from the default.",
         )
+        parser.add_argument(
+            "--why",
+            action="store_true",
+            help="Explain why each returned item was selected as a next action.",
+        )
     elif command == "show":
         parser.add_argument("id")
         parser.add_argument("paths", nargs="*")

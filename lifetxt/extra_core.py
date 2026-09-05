@@ -34,6 +34,7 @@ from .parser import parse_text
 from .paths import expand_paths
 from .serializer import item_to_line
 from .timeutil import parse_elapsed
+from .timeutil import relative_time
 
 from .extra_common import *
 
@@ -227,11 +228,18 @@ def command_show(args, config_data):
         lines.append("Details:")
         for key, values in item.details.items():
             for value in values:
-                lines.append("  %s: %s" % (key, value))
+                relative = relative_time(value) if key in _DATE_DETAIL_KEYS else ""
+                suffix = " (%s)" % relative if relative else ""
+                lines.append("  %s: %s%s" % (key, value, suffix))
     if incoming:
         lines.append("Incoming links:")
         lines.extend("  " + value for value in incoming)
     return _emit("\n".join(lines) + "\n", args.output)
+
+
+_DATE_DETAIL_KEYS = frozenset(
+    ("due", "do", "from", "to", "on", "at", "created", "updated", "done")
+)
 
 
 def _resolve_editor(args, config_data):

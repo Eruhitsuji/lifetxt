@@ -2998,17 +2998,29 @@ def build_parser():
 
     progress_cmd = subparsers.add_parser(
         "progress",
-        help="Increment or decrement an item's progress: value (#660).",
+        help="Increment/decrement or directly set an item's progress: value "
+        "(#660, #665).",
     )
     progress_cmd.add_argument("path", help="life.txt file containing the item.")
-    progress_cmd.add_argument(
+    progress_group = progress_cmd.add_mutually_exclusive_group(required=True)
+    progress_group.add_argument(
         "--delta",
-        required=True,
         help=(
             "Signed delta: +N/-N changes a fraction's current (total is kept), "
             "+N%%/-N%% changes a percentage's value. Representation kind is "
             "always preserved. A negative value must use --delta=-N (with '='); "
-            "'--delta -N' is parsed as an unknown flag by argparse."
+            "'--delta -N' is parsed as an unknown flag by argparse. Requires "
+            "an existing progress: value."
+        ),
+    )
+    progress_group.add_argument(
+        "--set",
+        dest="set_value",
+        help=(
+            "Directly set progress: to VALUE (e.g. 75%% or 3/10), replacing "
+            "any existing value as-is with no fraction/percentage "
+            "conversion. Works even when the item has no progress: yet. "
+            "Mutually exclusive with --delta."
         ),
     )
     progress_cmd.add_argument(
@@ -7596,8 +7608,9 @@ def _apply_progress_delta(parsed, delta_text):
 
 
 def command_progress(args):
-    """Increment or decrement an item's progress: value by a signed delta,
-    preserving its percentage/fraction representation (#660)."""
+    """Increment/decrement an item's progress: value by a signed delta, or
+    directly set it (#665), preserving/choosing the percentage/fraction
+    representation (#660)."""
     from .progress import ProgressValueError, parse_progress
 
     config = _config(args)
@@ -7614,35 +7627,48 @@ def command_progress(args):
         return 0
 
     raw_values = target.details.get("progress")
-    if not raw_values:
-        # A missing progress: is never implicitly 0% (#645's own design
-        # constraint); reject rather than guess an initial value.
-        raise ValueError(
-            "Item %r has no progress: detail. Set an initial value first "
-            "(for example `lifetxt assist --update %s --match-id %s "
-            "--add-detail progress:0%%`)."
-            % (target.title, path, (target.details.get(id_key) or [""])[0])
-        )
-    current_raw = raw_values[0]
-    try:
-        parsed = parse_progress(current_raw)
-    except ProgressValueError as exc:
-        raise ValueError(
-            "Existing progress:%s is invalid: %s" % (current_raw, exc.reason)
-        )
+    current_raw = raw_values[0] if raw_values else None
+    set_value = getattr(args, "set_value", None)
 
-    new_raw = _apply_progress_delta(parsed, args.delta)
-    try:
-        parse_progress(new_raw)
-    except ProgressValueError as exc:
-        raise ValueError(
-            "Resulting progress:%s would be invalid: %s" % (new_raw, exc.reason)
-        )
+    if set_value is not None:
+        # Direct assignment (#665): the representation kind is whatever the
+        # user supplied -- never converted -- and is accepted even with no
+        # existing progress: to compare against. #645's missing-progress-
+        # is-not-implicitly-0% rule governs --delta, which needs a
+        # starting point to add/subtract from; --set does not.
+        new_raw = set_value.strip()
+        try:
+            parse_progress(new_raw)
+        except ProgressValueError as exc:
+            raise ValueError("progress:%s is invalid: %s" % (new_raw, exc.reason))
+    else:
+        if not current_raw:
+            # A missing progress: is never implicitly 0% (#645's own design
+            # constraint); reject rather than guess an initial value.
+            raise ValueError(
+                "Item %r has no progress: detail. Set an initial value "
+                "first (for example `lifetxt progress %s %s --set 0%%`)."
+                % (target.title, path, (target.details.get(id_key) or [""])[0])
+            )
+        try:
+            parsed = parse_progress(current_raw)
+        except ProgressValueError as exc:
+            raise ValueError(
+                "Existing progress:%s is invalid: %s" % (current_raw, exc.reason)
+            )
+
+        new_raw = _apply_progress_delta(parsed, args.delta)
+        try:
+            parse_progress(new_raw)
+        except ProgressValueError as exc:
+            raise ValueError(
+                "Resulting progress:%s would be invalid: %s" % (new_raw, exc.reason)
+            )
 
     if getattr(args, "dry_run", False):
         sys.stdout.write(
             "[dry-run] Would change progress:%s to progress:%s.\n"
-            % (current_raw, new_raw)
+            % (current_raw if current_raw is not None else "(none)", new_raw)
         )
         return 0
 

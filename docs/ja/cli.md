@@ -2659,16 +2659,20 @@ Every 2 weeks on Sunday, Tuesday (weeks start Sunday)
 ### 13.11 `progress`
 
 `lifetxt progress PATH [ID] --delta DELTA` は、既存の `progress:` 値を手で
-書き換える代わりに、signed delta だけ増減します。共有の `progress:`
-parser/validator（fraction は `0<=current<=total`、percentage は
-`0-100`）と、`done`/`complete` と同じ guarded mutation path を再利用する
-ため、revision/backup の扱いは同じです。
+書き換える代わりに、signed delta だけ増減します。`lifetxt progress PATH
+[ID] --set VALUE`（#665）は代わりに `progress:` を、渡した representation
+のまま直接 `VALUE` に置き換えます。`--delta` と `--set` は互いに排他的
+です。どちらも共有の `progress:` parser/validator（fraction は
+`0<=current<=total`、percentage は `0-100`）と、`done`/`complete` と同じ
+guarded mutation path を再利用するため、revision/backup の扱いは同じです。
 
 ```sh
 python -m lifetxt progress life.txt experiment_1 --delta +1
 python -m lifetxt progress life.txt experiment_1 --delta=-1
 python -m lifetxt progress life.txt task_1 --delta +10%
 python -m lifetxt progress life.txt task_1 --delta=-15% --dry-run
+python -m lifetxt progress life.txt task_1 --set 75%
+python -m lifetxt progress life.txt experiment_1 --set 3/10
 ```
 
 `progress:3/10` に `--delta +1` を適用すると `progress:4/10`
@@ -2680,10 +2684,12 @@ python -m lifetxt progress life.txt task_1 --delta=-15% --dry-run
 argparse に未知の flag として解釈されます。
 
 有効範囲外の結果（`progress:14/10`、`progress:105%`、負の fraction
-numerator）は書き込み前に拒否され、`progress:` を持たない item は暗黙に
-`0%` とはみなされず拒否されます —— まず初期値を設定してください（例:
-`assist --update ID --match-id ID --add-detail progress:0%`）。`ID` は
-一意な ID prefix を受け付けます（[Short ID prefix による選択](#short-id-prefix-による選択)
+numerator）は書き込み前に拒否されます。`progress:` を持たない item に
+`--delta` を使うと暗黙に `0%` とはみなされず拒否されます —— まず `--set`
+で初期値を設定してください（例: `lifetxt progress PATH ID --set 0%`）。
+`--set` 自体は既存の `progress:` の有無に関わらず動作します。加減算の
+起点を必要としないためです。`ID` は一意な ID prefix を受け付けます
+（[Short ID prefix による選択](#short-id-prefix-による選択)
 参照）。`--line`/`--text` は `done` と同じ方法で item を選択します。
 `--dry-run` は書き込まずに結果の値だけ表示します。
 

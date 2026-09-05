@@ -3599,13 +3599,73 @@ class LifeTxtReopenCliTests(unittest.TestCase):
 
 
 class LifeTxtDueCliTests(unittest.TestCase):
-    """Covers #666: `lifetxt due` sets, replaces, or clears due:."""
+    """Covers #666: `lifetxt due` sets, replaces, or clears due:.
+
+    Includes #667's relative-date shorthand (today/tomorrow/+Nd/...),
+    resolved through the exact same lifetxt.shorthand.resolve_date_token
+    quick's --due/--do/--until flags already use."""
 
     def _write(self, temp_dir, source):
         path = os.path.join(temp_dir, "life.txt")
         with open(path, "w", encoding="utf-8", newline="\n") as f:
             f.write(source)
         return path
+
+    def test_shorthand_today_resolves_to_the_workspace_aware_current_date(self):
+        import datetime as dt
+
+        today_iso = dt.date.today().isoformat()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:t1\n")
+            stdout, stderr, code = run_cli("due", path, "t1", "today")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("due:%s" % today_iso, content)
+
+    def test_shorthand_tomorrow_resolves_to_the_next_calendar_date(self):
+        import datetime as dt
+
+        tomorrow_iso = (dt.date.today() + dt.timedelta(days=1)).isoformat()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:t1\n")
+            stdout, stderr, code = run_cli("due", path, "t1", "tomorrow")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("due:%s" % tomorrow_iso, content)
+
+    def test_shorthand_offset_resolves_deterministically(self):
+        import datetime as dt
+
+        expected_iso = (dt.date.today() + dt.timedelta(days=3)).isoformat()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:t1\n")
+            stdout, stderr, code = run_cli("due", path, "t1", "+3d")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("due:%s" % expected_iso, content)
+
+    def test_explicit_iso_date_is_unaffected_by_shorthand_resolution(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:t1\n")
+            stdout, stderr, code = run_cli("due", path, "t1", "2026-12-25")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("due:2026-12-25", content)
+
+    def test_unrecognized_shorthand_fails_with_actionable_guidance(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:t1 due:2026-01-01\n")
+            stdout, stderr, code = run_cli("due", path, "t1", "next monday-ish")
+            self.assertEqual(1, code)
+            self.assertIn("is not a date", stderr)
+            self.assertIn("today", stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("due:2026-01-01", content)
 
     def test_sets_due_on_an_item_with_none(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -3668,7 +3728,7 @@ class LifeTxtDueCliTests(unittest.TestCase):
             path = self._write(temp_dir, "[ ] T Task id:t1 due:2026-01-01\n")
             stdout, stderr, code = run_cli("due", path, "t1", "not-a-date")
             self.assertEqual(1, code)
-            self.assertIn("Invalid due date", stderr)
+            self.assertIn("is not a date", stderr)
             with open(path, encoding="utf-8") as f:
                 content = f.read()
             self.assertIn("due:2026-01-01", content)

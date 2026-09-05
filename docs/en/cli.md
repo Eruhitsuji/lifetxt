@@ -796,6 +796,24 @@ known `state:` values); a key that has no close match to that vocabulary is
 left alone as ordinary custom data, never guessed at. `--format json` never
 carries a suggestion field.
 
+The text output also marks one narrow, evidenced root-cause/secondary
+relationship: repeated `E009`/`E010` ("this does not look like a detail")
+failures on the *exact same* source line, which the parser can only ever
+produce from one call to its per-line detail-parsing loop (for example, an
+unquoted multi-word title spills its remaining words into that loop as
+several separately-reported failures). The first such diagnostic on the
+line gets a `Related: N other diagnostic(s) on this line may be
+consequences of this one` note; each later one gets `Related: possibly
+caused by CODE at column N above; fix that first`. This is deliberately
+narrow: two diagnostics that merely sit on the same or nearby lines, share
+a similar code, or have similar wording are never linked this way -- only
+this one specific, structurally-guaranteed pair of codes is. `--code`/
+`--severity`/`--category`/`--ignore` filtering is applied first, and the
+relationship is recomputed over whatever remains: filtering away every
+partner leaves a lone diagnostic with no relation note, and filtering away
+only the first diagnostic still lets the remaining ones on that line form
+their own group. `--format json` never carries this relationship either.
+
 Examples:
 
 ```sh

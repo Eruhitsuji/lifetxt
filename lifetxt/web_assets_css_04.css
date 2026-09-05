@@ -74,6 +74,11 @@
     .due-rel.overdue { color: var(--danger); }
     .due-rel.due-soon { color: #b45309; }
     [data-theme="dark"] .due-rel.due-soon { color: #fbbf24; }
+    /* ── progress: bar + label (#651) ── */
+    .progress-badge { display: inline-flex; align-items: center; gap: .3rem; margin-left: .5rem; vertical-align: middle; }
+    .progress-track { display: inline-block; width: 60px; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+    .progress-fill { display: block; height: 100%; background: var(--accent); }
+    .progress-label { font-size: .78rem; font-weight: 600; color: var(--muted); white-space: nowrap; }
     /* ── Undo toast ── */
     .toast .undo-btn {
       margin-left: .75rem;

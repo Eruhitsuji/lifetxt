@@ -89,7 +89,7 @@ python -m lifetxt today [path ...]
 python -m lifetxt area list [path ...]
 python -m lifetxt backlinks ID [path ...]
 python -m lifetxt temporal ID [path ...]
-python -m lifetxt query "QUERY" [path ...]
+python -m lifetxt query "QUERY" [path ...] [--explain]
 python -m lifetxt view list
 python -m lifetxt group list [path ...]
 python -m lifetxt message recipients [path ...]
@@ -218,7 +218,7 @@ including its `--json` machine-readable form for scripts and AI clients.
 
 | Category | Commands |
 |---|---|
-| Getting Started / Daily | `tour`, `help`, `init`, `quick` (`add`), `today`, `next`, `agenda`, `show`, `edit`, `done`, `complete`, `review`, `assist`, `state`, `start`, `stop`, `assign`, `timer`, `notify` |
+| Getting Started / Daily | `tour`, `help`, `init`, `quick` (`add`), `today`, `next`, `agenda`, `show`, `edit`, `done`, `complete`, `progress`, `clone`, `review`, `assist`, `state`, `start`, `stop`, `assign`, `timer`, `notify` |
 | Query / Explore | `filter`, `search`, `find`, `query`, `view`, `summary`, `inbox`, `health`, `temporal`, `count`, `status` |
 | Projects / People / Collaboration | `project`, `portfolio`, `area`, `person`, `group`, `who`, `message`, `proposal`, `ticket`, `version`, `sprint` |
 | Structure / Data Integrity | `check`, `integrity`, `ids`, `links`, `backlinks`, `sources`, `tag`, `lint`, `deps`, `diff`, `snapshot`, `undo`, `cleanup`, `files` |
@@ -246,7 +246,38 @@ This category/audience/command metadata lives in one place,
 `lifetxt/cli_taxonomy.py`, so `--help`, `help`, and this table cannot drift
 from each other without failing `tests/test_cli_taxonomy.py`.
 
-### 1.2 Fuzzy Search
+### 1.2 Localization
+
+lifetxt's human-readable CLI text (headings, guidance, `help`) can be shown in
+English or Japanese. Command names, options, Format 1.0 syntax, and every
+machine-readable output (`--json`/`--format json`/JSONL/CSV, the Web API, MCP,
+and schemas) never change with locale -- only presentation text does.
+
+```sh
+lifetxt --lang ja help beginner
+LIFETXT_LANG=ja lifetxt today
+lifetxt --lang en today
+```
+
+Locale is resolved in this order: an explicit `--lang` value, then the
+`LIFETXT_LANG` environment variable, then the OS/process locale, then English.
+A Japanese OS locale in any of its common forms (`ja`, `ja_JP`, `ja-JP`,
+`ja_JP.UTF-8`) normalizes to `ja`; an unsupported locale falls back to English
+rather than failing. A missing Japanese translation for a given string also
+falls back to English rather than crashing or printing nothing.
+
+```sh
+lifetxt --lang ja help
+lifetxt --lang fr help    # unsupported locale: falls back to English
+```
+
+Beginner/daily flows (`tour`, `init`, `add`/`quick`, `today`, `done`/`complete`)
+and a representative slice of `check`/`lint`/`doctor`'s own fixed labels and
+next-step guidance are covered. Individual parser/validator diagnostic
+messages are not yet translated -- their raw text, code, severity, and
+location fields stay in English and are unaffected by `--lang` either way.
+
+### 1.3 Fuzzy Search
 
 `search` and `find` match exact substrings by default. Add `--fuzzy` to also
 match a field within a small typo/edit distance of the pattern -- useful when
@@ -261,6 +292,25 @@ score to compare.
 python -m lifetxt search "stast" --fuzzy life.txt   # matches a title containing "stats"
 python -m lifetxt find "stast" life.txt --fuzzy      # same tolerance across items, projects, people, groups, areas, proposals
 ```
+
+### 1.4 Guarded `lint --fix`
+
+`lint` is read-only by default. `--fix` auto-corrects only the findings it
+can resolve with a single, deterministic, meaning-preserving replacement --
+a known key-name typo (`L001`) or non-standard key casing (`L002`). Every
+other finding (a duplicate key, or a custom `--ruleset` match) is left
+untouched: `--fix` never guesses at an ambiguous replacement.
+
+```sh
+python -m lifetxt lint life.txt --fix              # apply safe fixes
+python -m lifetxt lint life.txt --fix --dry-run    # preview without writing
+```
+
+Before writing anything, `--fix` builds the complete fix plan for a file and
+re-parses the resulting text with the canonical parser. If even one planned
+fix would introduce a parse error, that file's fixes are skipped entirely
+(reported by name) rather than partially applied -- a fix is only ever
+written as one complete, already-revalidated file.
 
 ## 2. Common Conventions
 
@@ -395,6 +445,30 @@ explicit `parent:` details when the parent can be inferred.
 | `0` | Success |
 | `1` | Validation error or command error |
 | `2` | CLI usage error, such as missing subcommand |
+
+### 2.5.1 CLI Error Recovery
+
+Every CLI-level error (as opposed to a `check` diagnostic about life.txt
+content itself; see [§3](#3-check)) still prints its original one-line
+`ERROR: ...` message to stderr, unchanged, with the same exit code as
+before -- scripts and redirected output see byte-identical behavior. When
+stderr is a real interactive terminal, five common, easily-recovered error
+families additionally get actionable follow-up guidance appended after
+that line:
+
+| Family | Extra guidance |
+|---|---|
+| Unknown command (a typo such as `todya`) | `Did you mean?` naming the closest real command name(s) from the same runtime-derived registry `lifetxt help` uses (never a fabricated command), plus `lifetxt help beginner` |
+| Missing value for a global option (`--config`, `--workspace`, `--lang`) | The exact `Usage: --OPTION VALUE_KIND` form |
+| Unknown workspace name | `Did you mean?` against the real configured workspace names, plus the full `Available:` list |
+| Missing or malformed configuration file (invalid JSON, not a JSON object) | `lifetxt doctor` as the next step |
+| Missing or unreadable input path | The unreadable path restated plainly, plus `lifetxt path` to see what lifetxt would actually use |
+
+A suggestion is only ever a real, currently valid name (a command,
+workspace, or alias) -- an error with no close match shows no `Did you
+mean?` line rather than guessing. This never changes an exit code, and it
+never adds anything to `--format json`/`--format jsonl` output or any other
+structured output.
 
 ### 2.6 Format Compatibility
 
@@ -656,9 +730,10 @@ The guards fail loudly rather than hanging when `dir:` points somewhere huge.
 Validate life.txt syntax and semantic rules.
 
 ```sh
-python -m lifetxt check [path ...] [--format text|json] [--warnings-as-errors]
+python -m lifetxt check [path ...] [--format text|json|sarif] [--warnings-as-errors]
 python -m lifetxt check life.txt --severity warning --category reference
 python -m lifetxt check life.txt --code E010,W213 --format json
+python -m lifetxt check life.txt --format sarif > lifetxt.sarif
 ```
 
 Options:
@@ -668,6 +743,7 @@ Options:
 | `path ...` | Input file(s), or `-` for stdin |
 | `--format text` | Print human-readable diagnostics |
 | `--format json` | Print diagnostics as JSON |
+| `--format sarif` | Print diagnostics as a SARIF 2.1.0 document (see below) |
 | `--warnings-as-errors` | Exit non-zero when warnings are present |
 | `--severity error|warning` | Show only matching severities; repeatable or comma-separated |
 | `--code CODE` | Show only matching diagnostic codes such as `E010` or `W213`; repeatable or comma-separated |
@@ -720,12 +796,87 @@ parser-native end spans are implemented; do not infer a stable `span` from
 The same diagnostic object shape is used by the raw-line validation surfaces
 `POST /api/check-line` and MCP `check_line`.
 
+Text diagnostics:
+
+`check`'s default text output renders each diagnostic as a small block: a
+header line (`path:line:column  SEVERITY CODE  message`), a source-line
+snippet with a `^` caret (or a `^~~~` range when the diagnostic's own end
+position is known and on the same line), and the diagnostic's `hint` text
+when one is present. A source snippet is shown only when the diagnostic's
+file can still be read at its original path and line number; an unreadable
+or already-modified source falls back to the header line alone rather than
+failing. A trailing `N problems: X error(s), Y warning(s)` line summarizes
+the full filtered set. This is a presentation-only enhancement over the
+stable JSON fields above; `--format json` is completely unaffected.
+
+For a small, explicitly supported set of diagnostics -- an invalid status or
+type token, a detail key that is close to a known or type-recommended key, and
+an invalid `state:` value -- the text output may add a `Did you mean?` line
+(or a bulleted list when more than one candidate is equally plausible) right
+after the diagnostic's own hint. This is a suggestion only: it never changes
+what the parser or validator accepts, never mutates the file, and never
+changes a diagnostic's severity, code, or the command's exit code. Candidates
+come only from lifetxt's existing canonical vocabulary (the status/type token
+lists and their known aliases, the known/recommended detail-key sets, and the
+known `state:` values); a key that has no close match to that vocabulary is
+left alone as ordinary custom data, never guessed at. `--format json` never
+carries a suggestion field.
+
+The text output also marks one narrow, evidenced root-cause/secondary
+relationship: repeated `E009`/`E010` ("this does not look like a detail")
+failures on the *exact same* source line, which the parser can only ever
+produce from one call to its per-line detail-parsing loop (for example, an
+unquoted multi-word title spills its remaining words into that loop as
+several separately-reported failures). The first such diagnostic on the
+line gets a `Related: N other diagnostic(s) on this line may be
+consequences of this one` note; each later one gets `Related: possibly
+caused by CODE at column N above; fix that first`. This is deliberately
+narrow: two diagnostics that merely sit on the same or nearby lines, share
+a similar code, or have similar wording are never linked this way -- only
+this one specific, structurally-guaranteed pair of codes is. `--code`/
+`--severity`/`--category`/`--ignore` filtering is applied first, and the
+relationship is recomputed over whatever remains: filtering away every
+partner leaves a lone diagnostic with no relation note, and filtering away
+only the first diagnostic still lets the remaining ones on that line form
+their own group. `--format json` never carries this relationship either.
+
+SARIF output:
+
+`--format sarif` emits a [SARIF 2.1.0](https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html)
+document over the exact same filtered diagnostics `text`/`json` render --
+`--code`/`--severity`/`--category`/`--ignore`/`--warnings-as-errors` all
+apply identically, and the resulting result count and order always match
+`--format json`'s diagnostic array. This is a pure, read-only export: it
+never re-runs or changes validation, and it has no network, upload, or
+credential handling of its own -- pipe the output to a file and hand that
+file to whatever consumes SARIF (for example GitHub Code Scanning's
+`upload-sarif` Action, or an IDE extension):
+
+```sh
+python -m lifetxt check life.txt --format sarif > lifetxt.sarif
+```
+
+Mapping: `code` becomes `ruleId` (one deduplicated rule entry per distinct
+code, never repeated per occurrence); `severity` becomes `level`
+(`error`/`warning`, matching lifetxt's only two severities); `source`
+becomes `artifactLocation.uri` (an absolute path becomes a `file://` URI on
+either Windows or POSIX; a relative path -- the common case -- is used
+as-is, which SARIF's relative-URI-reference form permits directly);
+`line`/`column` become `region.startLine`/`startColumn` with no offset
+conversion, since SARIF's column semantics already match lifetxt's own
+1-based convention; `end_line`/`end_column` become `region.endLine`/
+`endColumn` only when a diagnostic already carries a precise end position
+-- an unknown end is never invented. `hint`, when non-empty, is carried as
+`result.properties.hint`. `text`/`json` output is completely unchanged by
+this addition.
+
 Examples:
 
 ```sh
 python -m lifetxt check life.txt
 python -m lifetxt check life.txt --warnings-as-errors
 python -m lifetxt check life.txt --format json
+python -m lifetxt check life.txt --format sarif > lifetxt.sarif
 python -m lifetxt check life.txt --category id,reference
 ```
 
@@ -1655,7 +1806,7 @@ Known detail keys also have direct flags. Each can be repeated:
 --id --parent --ref --depends_on --blocks --related --created --updated --done --due --do --from --to
 --state --user --person --owner --assignee --attendee --sender --recipient --team --group --service --channel
 --visibility --notify_at --notify_from --notify_to --ack --snooze_until --on --at --repeat --interval --until --count
---project --context --loc --priority --est --elapsed --tag --note --body --mood --weather --url
+--project --context --loc --priority --progress --est --elapsed --tag --note --body --mood --weather --url
 --reason --moved_to
 ```
 
@@ -1687,7 +1838,7 @@ line editing helpers.
 
 ### 10.3 Update Existing Items
 
-Update an item by line number or by exact `id:` value.
+Update an item by line number or by `id:` value.
 
 ```sh
 python -m lifetxt assist --update life.txt --line 3 --title "New Title"
@@ -1703,12 +1854,45 @@ Update options:
 |---|---|
 | `--update FILE` | Read and update an existing life.txt file |
 | `--line N` | Select the item on line `N` |
-| `--match-id ID` | Select the item whose `id:` exactly equals `ID` |
+| `--match-id ID` | Select the item whose `id:` is exactly `ID`, or, when nothing matches exactly, whose `id:` is uniquely prefixed by `ID` |
 | `--add-detail key=value` | Append a detail value |
 | `--remove-detail key` | Remove all values for a detail key |
 | `--output FILE` | Write the updated whole file to another file |
 
 Without `--output`, update mode writes back to the input file.
+
+#### Short ID prefix selection
+
+`--match-id` (and the plain `ID` positional argument accepted by `start`,
+`done`, and `complete`) does not require the full `id:` value. A shorter
+prefix works as long as it is unique across the effective item set:
+
+```sh
+python -m lifetxt done life.txt task_01J   # matches id:task_01JZY5M93PK17C7BA4M8
+```
+
+Resolution order is always exact match first, then unique prefix:
+
+1. An `id:` value equal to what you typed always wins outright, even when
+   a shorter `id:` elsewhere would also prefix-match it.
+2. Otherwise, exactly one item's `id:` must start with what you typed.
+
+A prefix matching more than one item is refused rather than guessed:
+
+```text
+ERROR: Ambiguous ID prefix `task_a`.
+
+Matches:
+  task_a12345
+  task_a16789
+
+Use a longer prefix.
+```
+
+This is one shared resolver (`lifetxt.ids.resolve_item_by_id`) reused by
+every ID-selecting command, so `--match-id`/`ID` behaves identically
+everywhere; stored `id:` values and every machine-readable output are
+unaffected -- only the *selector* you type accepts a prefix.
 
 ## 11. `serve`
 
@@ -2368,8 +2552,13 @@ auto|unicode|ascii` chooses the box-drawing set. `auto` probes the output
 encoding and falls back to ASCII when the terminal cannot represent the rounded
 borders, so Windows code pages degrade cleanly instead of raising. Column
 widths are East Asian Width-aware, so Japanese titles stay aligned, and the meta
-columns (project, due, priority) drop out one at a time as the terminal narrows
-rather than wrapping.
+columns (project, due, priority, and -- on the widest terminals -- `progress:`)
+drop out one at a time as the terminal narrows rather than wrapping. A record
+with no `progress:` detail shows nothing in that column. Selecting a row and
+opening the detail inspector (`s`) shows the same `progress:` value alongside
+the full life.txt line; editing it, like editing any other detail, goes
+through `e` (open in `$EDITOR`), the same guarded, revision-checked write path
+every other TUI edit uses.
 
 Defaults can be set in config under `tui.theme`, `tui.keymap`, `tui.glyphs`,
 `tui.limit`, `tui.agenda_window`, and `tui.bindings` (see above).
@@ -2805,6 +2994,91 @@ A position in `BYDAY` (`2MO`) applies only to `FREQ=MONTHLY` and
 `FREQ=YEARLY`. Weekly and daily expansion ignores the number, so `check`
 warns rather than letting `FREQ=WEEKLY;BYDAY=2MO` quietly mean every Monday.
 
+### 13.11 `progress`
+
+`lifetxt progress PATH [ID] --delta DELTA` increments or decrements an
+item's existing `progress:` value by a signed delta, without rewriting it
+by hand. It reuses the shared `progress:` parser and validator (`0<=
+current<=total` for a fraction, `0-100` for a percentage) and the same
+guarded mutation path as `done`/`complete`, so revision/backup handling is
+identical.
+
+```sh
+python -m lifetxt progress life.txt experiment_1 --delta +1
+python -m lifetxt progress life.txt experiment_1 --delta=-1
+python -m lifetxt progress life.txt task_1 --delta +10%
+python -m lifetxt progress life.txt task_1 --delta=-15% --dry-run
+```
+
+Given `progress:3/10`, `--delta +1` produces `progress:4/10` (the
+denominator is kept); given `progress:40%`, `--delta +10%` produces
+`progress:50%`. **Representation kind is never converted**: a `%`-suffixed
+delta against a fraction, or a plain-number delta against a percentage,
+fails loudly instead of guessing which one you meant. A negative delta
+must use `--delta=-N` (with `=`) — `--delta -N` is parsed by argparse as an
+unrecognized flag, not a value.
+
+A result outside the valid range (`progress:14/10`, `progress:105%`, a
+negative fraction numerator) is rejected before anything is written, and an
+item with **no** existing `progress:` detail is rejected rather than
+silently treated as `0%` — set an initial value first (for example via
+`assist --update ID --match-id ID --add-detail progress:0%`). `ID` accepts
+a unique ID prefix (see [Short ID prefix selection](#short-id-prefix-selection));
+`--line`/`--text` select an item the same way as `done`. `--dry-run` shows
+the resulting value without writing.
+
+### 13.12 `clone`
+
+`lifetxt clone PATH [ID]` creates a new item derived from an existing one,
+without copying its identity or history. It reuses the item's existing
+parsed representation and the same append/mutation contract `quick` uses,
+so revision/backup handling and ID generation are identical — this is not
+a raw text copy.
+
+```sh
+lifetxt clone life.txt experiment_01
+lifetxt clone life.txt experiment_01 --dry-run
+```
+
+Given:
+
+```text
+[/] T "Experiment condition A" id:experiment_01 project:research
+    priority:A progress:8/10
+```
+
+`clone` appends:
+
+```text
+[ ] T "Experiment condition A" project:research priority:A
+```
+
+**Copy policy** (defined once, in one place, rather than per-field):
+ordinary metadata (`project`, `tag`, `priority`, `context`, dates, and
+every other detail not listed below) is copied as-is. The following are
+never copied onto the clone:
+
+- the source's own ID (whatever key `id_key` resolves to) — a duplicate ID
+  would corrupt the workspace, so it is never carried over
+- `source`, `uid`, `created`, `updated` — identity/system provenance of the
+  *original* record, not the new one
+- `done` — completion history
+- `progress` — reset entirely rather than carried over or implicitly
+  assumed to be `0%`, matching the same missing-progress principle
+  `progress` (13.11) uses
+
+**Status** defaults to open (`[ ]`) for ordinary kinds, reusing the exact
+same kind-aware default `assist`'s interactive prompt uses: `N`/`J` (notes,
+journal entries) get `[N]`, and `S` (presence status) gets `[/]` or `[x]`
+depending on whether the resulting details still carry a `to:` value. The
+original item is never modified. If `ids.auto` is enabled, the new item
+receives a freshly generated, guaranteed-unique ID the same way `quick`
+does; if disabled, the new item simply has no ID at all — either way, `ids`
+never reports a collision. `ID` accepts a unique ID prefix (see
+[Short ID prefix selection](#short-id-prefix-selection)); `--line`/`--text`
+select the source item the same way as `done`. `--dry-run` shows the
+generated item without writing it.
+
 ## 14. Aliases
 
 Status aliases include:
@@ -2934,13 +3208,31 @@ python -m lifetxt doctor
 | `--name NAME` | Your name, written as `#! self:` and `defaults.person` |
 | `--timezone TZ` | Your timezone, written as `#! timezone:` and `defaults.timezone` |
 | `--project NAME` | Default project, written as `#! project:` and `defaults.project` |
-| `--yes` | Run fully non-interactively using defaults (`self`, `UTC`, no project) — skips every prompt, including the overwrite confirmation when combined with `--force`. Use this in scripts and CI. |
+| `--preset {minimal,personal,student,work,research}` | Starter section skeleton. Defaults to `minimal` (today's plain single-task starter, unchanged) |
+| `--yes` | Run fully non-interactively using defaults (`self`, `UTC`, no project, `minimal` preset) — skips every prompt, including the overwrite confirmation when combined with `--force`. Use this in scripts and CI. |
 
-Without `--yes`, `init` prompts for your name, timezone, and default project,
-and asks before overwriting an existing `life.txt` or config file (unless
-`--force` is also given). With `--yes`, none of the three prompts are shown;
-any value not supplied via `--name`/`--timezone`/`--project` falls back to
-its built-in default.
+Without `--yes`, `init` prompts for your name, timezone, default project, and
+starter preset, and asks before overwriting an existing `life.txt` or config
+file (unless `--force` is also given). With `--yes`, none of these prompts
+are shown; any value not supplied via `--name`/`--timezone`/`--project`/
+`--preset` falls back to its built-in default.
+
+`--preset` only adds a small skeleton of `# Section` comment headings around
+the same starter task -- no new Format syntax, no fabricated sample data, and
+no separate parser or writer per preset:
+
+```sh
+python -m lifetxt init --preset student
+python -m lifetxt init --preset research --yes
+```
+
+| Preset | Sections |
+|---|---|
+| `minimal` (default) | none -- just the starter task, matching `init`'s original output |
+| `personal` | Tasks, Notes |
+| `student` | Tasks, Classes / Events, Deadlines, Notes |
+| `work` | Tasks, Meetings, Projects, Notes |
+| `research` | Tasks, Meetings, Experiments, Research Notes |
 
 `doctor` reports pass/warn/fail checks and never modifies files:
 
@@ -3066,7 +3358,9 @@ python -m lifetxt help add --json
 | `help` (no argument) | The "Start here" quick loop, every guided-path audience, and the category index from [§1.1](#11-command-categories-and-guided-paths) |
 | `help beginner\|daily\|power\|ai\|admin` | That audience's short, ordered command flow with one copyable example per step |
 | `help NAME` | One command's category, aliases, a copyable example, related commands, and whether it is read-only or destructive; `NAME` may be an alias (`add`, `q`, `d`, `s`, `a`, `f`) |
-| `--json` (or `--format json`) | The same information as structured JSON instead of text -- `lifetxt-help-catalog-v1` for the bare form, `lifetxt-help-audience-v1` for an audience, `lifetxt-help-command-v1` (with `arguments`/`options`/`examples` added) for one command |
+| `help diagnostic` | A compact, one-line-per-code overview of every diagnostic code this catalog documents |
+| `help diagnostic CODE` | One diagnostic code's category, severity, meaning, remediation, and a valid/invalid example, e.g. `help diagnostic E003` |
+| `--json` (or `--format json`) | The same information as structured JSON instead of text -- `lifetxt-help-catalog-v1` for the bare form, `lifetxt-help-audience-v1` for an audience, `lifetxt-help-command-v1` (with `arguments`/`options`/`examples` added) for one command, `lifetxt-diagnostic-catalog-v1` for `diagnostic` with no code, `lifetxt-diagnostic-explain-v1` for `diagnostic CODE` |
 | `-o`, `--output FILE` | Write to a file instead of stdout |
 
 `help` never reads life.txt, configuration, or any workspace: its output is
@@ -3077,6 +3371,17 @@ boundary -- MCP's `--profile read|assist|full` (see
 [ai-integration.md](ai-integration.md)) is the actual enforcement mechanism
 for untrusted AI clients. An unrecognized command name or audience fails
 loudly (exit 1) naming the known audiences rather than guessing.
+
+`help diagnostic CODE` documents a bounded, explicitly curated subset of
+stable diagnostic codes -- the ones a Beginner Profile user is most likely to
+hit (`E001`-`E005`, `E010`, `W101`-`W103`, `W106`, `W207`, `W213`, `W225`) --
+not every code in the system. `code`, `category`, and `severity` are the same
+locale-independent machine identity `check --format json` already publishes
+(see [§3](#3-check)); only the human-facing `summary` text is localized
+today. `remediation` reuses the same text as the diagnostic's own `hint`
+field where one already exists, so it stays English-only for the same
+diagnostics that field is English-only for. An unknown code fails loudly
+(exit 1) naming the documented codes rather than guessing the closest match.
 
 ## 17. `encrypt` and `decrypt`
 

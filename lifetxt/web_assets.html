@@ -399,6 +399,7 @@ __LIFETXT_WEB_STYLES__  </style>
       </div>
       <form class="stack" onsubmit="saveItem(event)">
         <div class="editor-help-strip wide">Hover or focus the ? badges for field help. Type-specific suggested detail keys appear above the Details box.</div>
+        <button type="button" id="authoring-advanced-toggle" class="secondary wide" onclick="toggleAuthoringMode()" title="Beginner mode shows only the Task/Event/Note types and the most common statuses; this shows or hides the rest.">Show advanced options</button>
         <label class="field-label">
           <span class="field-label-head"><span>Status</span><span class="field-help" tabindex="0" data-help="Workflow state: [ ] open, [/] active, [x] done, [-] cancelled, [>] deferred, [?] maybe, [N] note.">?</span></span>
           <select id="edit-status">
@@ -418,9 +419,9 @@ __LIFETXT_WEB_STYLES__  </style>
           <input id="edit-title" required>
         </label>
         <label class="wide field-label">
-          <span class="field-label-head"><span>Details</span><span class="field-help" tabindex="0" data-help="One key:value per line. Repeat the same key for multiple values. Use body: or | continuation lines for longer text.">?</span></span>
+          <span class="field-label-head"><span>Details</span><span class="field-help" tabindex="0" data-help="One key:value per line. Repeat the same key for multiple values. Use body: or | continuation lines for longer text. progress: accepts a percentage (progress:75%) or a fraction (progress:3/10), independent of status.">?</span></span>
           <div id="type-hints" class="type-hints" style="display:none"></div>
-          <textarea id="edit-details" placeholder="due:2026-06-12&#10;project:research"></textarea>
+          <textarea id="edit-details" placeholder="due:2026-06-12&#10;project:research&#10;progress:75%"></textarea>
         </label>
         <div id="editor-note" class="note wide">Create a new record or select an editable row.</div>
         <div id="import-raw-row">

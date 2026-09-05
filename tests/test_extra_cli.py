@@ -1,6 +1,7 @@
 import contextlib
 import datetime
 import io
+import json
 import os
 import tempfile
 import unittest
@@ -10,6 +11,7 @@ from lifetxt import entrypoint
 from lifetxt import extra_cli
 from lifetxt.extra_common import _rank_key
 from lifetxt.model import Item
+from tests.test_lifetxt import run_cli
 
 
 SAMPLE = """[ ] T \"日本語 task\" id:t1 priority:A due:2026-07-20 project:alpha assignee:leo created:2026-07-01 elapsed:1h30m file:docs/readme.txt
@@ -142,6 +144,82 @@ class ExtraCliTests(unittest.TestCase):
         )
         rank_false_explicit = self.run_extra(["next", self.path, "--format", "json"])
         self.assertEqual(with_rank_flag_absent, rank_false_explicit)
+
+    def test_next_why_adds_selection_evidence_to_json(self):
+        output = self.run_extra(["next", self.path, "--why", "--format", "json"])
+        rows = json.loads(output)
+
+        first = next(row for row in rows if row["id"] == "t1")
+        self.assertEqual("A", first["why"]["ordering"]["priority"])
+        self.assertEqual(
+            "priority, due, created, line", first["why"]["ordering"]["method"]
+        )
+        self.assertIn("dependencies resolved", first["why"]["criteria"])
+
+    def test_next_why_adds_selection_evidence_to_text(self):
+        output = self.run_extra(["next", self.path, "--why", "--format", "text"])
+
+        self.assertIn("Why: t1: status [ ] is actionable", output)
+        self.assertIn("ordered by priority, due, created, line", output)
+
+    def test_next_why_sort_key_matches_a_missing_priority_the_way_the_real_sort_does(
+        self,
+    ):
+        # A CodeX review finding: the explanation substituted the display
+        # string "(none)" for a missing priority before computing
+        # sort_key, landing _priority_key("(none)") in a different bucket
+        # ((2, 0, "(NONE)")) than the real sort's _priority_key(None)
+        # ((3, 9999, "")) -- the evidence disagreed with the actual order.
+        output = self.run_extra(["next", self.path, "--why", "--format", "json"])
+        rows = json.loads(output)
+        t5 = next(row for row in rows if row["id"] == "t5")
+        self.assertEqual("(none)", t5["why"]["ordering"]["priority"])
+        self.assertEqual([3, 9999, ""], t5["why"]["ordering"]["sort_key"][0])
+
+    def test_next_why_due_evidence_never_reports_a_do_value_as_due(self):
+        # A CodeX review finding: the explanation folded a do: value into
+        # "due" for display and for sort_key, even though the real sort
+        # (and the real due-based tiebreak) only ever reads due:.
+        output = self.run_extra(["next", self.path, "--why", "--format", "json"])
+        rows = json.loads(output)
+        t5 = next(row for row in rows if row["id"] == "t5")
+        self.assertEqual("(none)", t5["why"]["ordering"]["due"])
+        self.assertEqual("9999-12-31", t5["why"]["ordering"]["sort_key"][1])
+
+    def test_next_table_shows_short_id_but_json_keeps_full_id(self):
+        # #654: the table's ID column is a presentation-only short ID; JSON
+        # (machine-readable) output must keep the full id: unchanged.
+        path = os.path.join(self.tempdir.name, "shortid.txt")
+        with open(path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(
+                "[ ] T First id:task_a12345 priority:A\n"
+                "[ ] T Second id:task_a16789 priority:B\n"
+            )
+        table_output = self.run_extra(["next", path])
+        self.assertIn("task_a12", table_output)
+        self.assertIn("task_a16", table_output)
+        self.assertNotIn("task_a12345", table_output)
+        self.assertNotIn("task_a16789", table_output)
+
+        json_output = self.run_extra(["next", path, "--format", "json"])
+        rows = json.loads(json_output)
+        self.assertEqual({"task_a12345", "task_a16789"}, {row["id"] for row in rows})
+
+    def test_next_table_short_id_round_trips_through_done(self):
+        path = os.path.join(self.tempdir.name, "shortid_roundtrip.txt")
+        with open(path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write("[ ] T First id:task_a12345\n[ ] T Second id:task_a16789\n")
+        table_output = self.run_extra(["next", path])
+        short = next(
+            line.split()[0]
+            for line in table_output.splitlines()
+            if line.startswith("task_a12")
+        )
+        stdout, stderr, code = run_cli("done", path, short)
+        self.assertEqual(0, code, stderr)
+        with open(path, encoding="utf-8") as handle:
+            content = handle.read()
+        self.assertIn("[x] T First id:task_a12345", content)
 
     def _write_convergence_fixture(self):
         path = os.path.join(self.tempdir.name, "converge.txt")

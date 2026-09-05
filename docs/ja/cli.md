@@ -91,7 +91,7 @@ python -m lifetxt today [path ...]
 python -m lifetxt area list [path ...]
 python -m lifetxt backlinks ID [path ...]
 python -m lifetxt temporal ID [path ...]
-python -m lifetxt query "QUERY" [path ...]
+python -m lifetxt query "QUERY" [path ...] [--explain]
 python -m lifetxt view list
 python -m lifetxt group list [path ...]
 python -m lifetxt message recipients [path ...]
@@ -224,7 +224,7 @@ audience、そしてこの表と同じカテゴリ分類を表示します。
 
 | カテゴリ | コマンド |
 |---|---|
-| Getting Started / Daily | `tour`、`help`、`init`、`quick` (`add`)、`today`、`next`、`agenda`、`show`、`edit`、`done`、`complete`、`review`、`assist`、`state`、`start`、`stop`、`assign`、`timer`、`notify` |
+| Getting Started / Daily | `tour`、`help`、`init`、`quick` (`add`)、`today`、`next`、`agenda`、`show`、`edit`、`done`、`complete`、`progress`、`clone`、`review`、`assist`、`state`、`start`、`stop`、`assign`、`timer`、`notify` |
 | Query / Explore | `filter`、`search`、`find`、`query`、`view`、`summary`、`inbox`、`health`、`temporal`、`count`、`status` |
 | Projects / People / Collaboration | `project`、`portfolio`、`area`、`person`、`group`、`who`、`message`、`proposal`、`ticket`、`version`、`sprint` |
 | Structure / Data Integrity | `check`、`integrity`、`ids`、`links`、`backlinks`、`sources`、`tag`、`lint`、`deps`、`diff`、`snapshot`、`undo`、`cleanup`、`files` |
@@ -252,7 +252,38 @@ category / audience / command のメタデータは `lifetxt/cli_taxonomy.py`
 一箇所にまとまっているため、`--help`、`help`、この表が互いに drift する
 と `tests/test_cli_taxonomy.py` が fail します。
 
-### 1.2 あいまい検索 (Fuzzy Search)
+### 1.2 多言語化 (Localization)
+
+lifetxt の人間向け CLI 出力（見出し・案内文・`help`）は英語または日本語で
+表示できる。コマンド名・option 名・Format 1.0 の構文、そしてあらゆる
+machine-readable 出力（`--json`/`--format json`/JSONL/CSV、Web API、MCP、
+schema）は locale によって変化しない。変化するのは表示文字列のみである。
+
+```sh
+lifetxt --lang ja help beginner
+LIFETXT_LANG=ja lifetxt today
+lifetxt --lang en today
+```
+
+locale は次の優先順位で解決される: 明示的な `--lang` 値、`LIFETXT_LANG`
+環境変数、OS/プロセスの locale、最後に English。日本語の OS locale は
+よくある表記（`ja`、`ja_JP`、`ja-JP`、`ja_JP.UTF-8`）のいずれでも `ja` に
+正規化される。未対応の locale は失敗せず English へ fallback する。ある
+文字列に日本語訳が無い場合も、crash や空表示にはならず English へ
+fallback する。
+
+```sh
+lifetxt --lang ja help
+lifetxt --lang fr help    # 未対応の locale: English へ fallback
+```
+
+Beginner/Daily の流れ（`tour`、`init`、`add`/`quick`、`today`、`done`/`complete`）
+と、`check`/`lint`/`doctor` の代表的な固定ラベル・次の一歩の案内が対象。
+parser/validator が生成する個々の diagnostic メッセージはまだ翻訳対象外で、
+その raw text・code・severity・location は English のままであり `--lang` の
+影響を受けない。
+
+### 1.3 あいまい検索 (Fuzzy Search)
 
 `search` と `find` は既定で完全な部分一致のみを対象とする。`--fuzzy` を付けると、
 pattern から一定の編集距離（typo や打ち間違い）以内の field も対象になる。あいまい
@@ -265,6 +296,23 @@ Latin 文字の大小文字差は無視される）、完全一致は常に近�
 python -m lifetxt search "stast" --fuzzy life.txt   # "stats" を含む title にも一致
 python -m lifetxt find "stast" life.txt --fuzzy      # item / project / person / group / area / proposal 全体で同様の許容
 ```
+
+### 1.4 安全に確定できる `lint --fix`
+
+`lint` は既定で read-only。`--fix` は、単一の deterministic かつ意味を変えない
+置換で解決できる finding だけを自動修正する -- 既知の key typo (`L001`) と
+非標準の casing (`L002`) のみ。それ以外の finding（duplicate key や custom
+`--ruleset` match）は変更しない。`--fix` は曖昧な置換を推測しない。
+
+```sh
+python -m lifetxt lint life.txt --fix              # 安全な修正を適用
+python -m lifetxt lint life.txt --fix --dry-run    # 書き込まずにpreview
+```
+
+`--fix` は書き込み前に、そのファイルの完全な修正 plan を構築し、結果全文を
+canonical parser で再検証する。1つでも修正後に parse error を起こす場合、
+そのファイルの修正は（ファイル名を表示して）まとめてskipされ、部分適用は
+行わない -- 修正は常に「1つの完全な、再検証済みファイル」としてのみ書き込まれる。
 
 ## 2. 共通仕様
 
@@ -373,6 +421,28 @@ life output は既定で元の行を保持します。`--canonical` を使うと
 | `0` | 成功 |
 | `1` | 検証エラーまたはコマンドエラー |
 | `2` | サブコマンド不足などの CLI usage error |
+
+### 2.5.1 CLI エラーからの復帰
+
+CLI level のエラー（life.txt の内容そのものに関する `check` diagnostic
+とは別。[§3](#3-check) 参照）は、これまで通り元の1行の `ERROR: ...`
+message を stderr にそのまま表示し、終了コードも変わりません -- script や
+redirect された出力は byte-for-byte 同じ挙動のままです。stderr が実際の
+対話端末である場合に限り、よくある回復しやすい5つの error family に
+追加の actionable な guidance が、その行の後に付きます:
+
+| Family | 追加される guidance |
+|---|---|
+| 未知の command（`todya` のような typo） | `lifetxt help` と同じ runtime-derived registry から、最も近い実在の command 名の `Did you mean?`（架空の command は出しません）と `lifetxt help beginner` |
+| global option（`--config`、`--workspace`、`--lang`）の値が不足 | 正確な `Usage: --OPTION VALUE_KIND` の形式 |
+| 未知の workspace 名 | 実際に設定されている workspace 名に対する `Did you mean?` と、`Available:` の全一覧 |
+| 設定ファイルが欠落・不正（invalid JSON、JSON object でない） | 次の一歩としての `lifetxt doctor` |
+| 入力 path が欠落・読み取り不可 | 読み取れなかった path をそのまま示し、lifetxt が実際に使う path を確認する `lifetxt path` |
+
+候補は常に実在する（command・workspace・alias の）名前のみです -- 近い
+候補がない場合は `Did you mean?` 行自体を出さず、推測はしません。これは
+終了コードを一切変更せず、`--format json`/`--format jsonl` などの
+構造化出力には何も追加しません。
 
 ### 2.6 フォーマット互換性
 
@@ -633,9 +703,10 @@ lifetxt check life.txt --category files # attachment の診断のみ
 life.txt の構文と意味的なルールを検査します。
 
 ```sh
-python -m lifetxt check [path ...] [--format text|json] [--warnings-as-errors]
+python -m lifetxt check [path ...] [--format text|json|sarif] [--warnings-as-errors]
 python -m lifetxt check life.txt --severity warning --category reference
 python -m lifetxt check life.txt --code E010,W213 --format json
+python -m lifetxt check life.txt --format sarif > lifetxt.sarif
 ```
 
 | Option | 意味 |
@@ -643,6 +714,7 @@ python -m lifetxt check life.txt --code E010,W213 --format json
 | `path ...` | 入力ファイル。`-` なら標準入力 |
 | `--format text` | 人間向けの診断を表示 |
 | `--format json` | 診断を JSON で表示 |
+| `--format sarif` | 診断を SARIF 2.1.0 document として表示（下記参照） |
 | `--warnings-as-errors` | warning がある場合も非ゼロ終了 |
 | `--severity error|warning` | severity で絞り込み。複数回指定または comma-separated |
 | `--code CODE` | `E010` や `W213` などの診断 code で絞り込み。複数回指定または comma-separated |
@@ -694,12 +766,88 @@ transition period を文書化します。その期間は古い field 名も利�
 raw-line validation surface である `POST /api/check-line` と MCP `check_line`
 も同じ diagnostic object shape を使います。
 
+Text diagnostics:
+
+`check` の default text output は、各 diagnostic を小さな block として
+表示します: header 行（`path:line:column  SEVERITY CODE  message`）、
+`^` caret 付きの source-line snippet（diagnostic 自身の end position が
+同じ行内で分かっている場合は `^~~~` の range）、そして `hint` がある場合は
+その text です。source snippet は、diagnostic の file が元の path・行番号で
+まだ読める場合にのみ表示されます -- 読めない、あるいは既に変更された source
+は失敗せず header 行だけの表示に fallback します。末尾には filter 後の
+diagnostic 全体を要約する `N problems: X error(s), Y warning(s)` 行が
+付きます。これは上記の安定 JSON field に対する presentation-only の拡張で
+あり、`--format json` には一切影響しません。
+
+明示的に対応している少数の diagnostic（invalid な status/type token、
+known または type-recommended な key に近い detail key、invalid な
+`state:` 値）については、text output が diagnostic 自身の hint の直後に
+`Did you mean?` 行（候補が複数同程度に妥当な場合は bullet list）を追加する
+ことがあります。これはあくまで提案であり、parser/validator が受理する内容を
+一切変えず、file を mutation せず、diagnostic の severity・code や command
+の exit code も変えません。候補は lifetxt の既存 canonical vocabulary
+（status/type token とその known alias、known/recommended な detail-key
+set、known な `state:` 値）からのみ取得します。canonical vocabulary に近い
+候補がない key はそのまま custom data として扱われ、無理に候補を出すことは
+ありません。`--format json` に suggestion field が含まれることはありません。
+
+text output はさらに、1つの狭く根拠のある root-cause / secondary 関係を
+表示します: 全く同じ source line 上で繰り返される `E009`/`E010`
+（「detail に見えない」）失敗です。この2つの code は、parser の
+1行あたり1回の detail-parsing loop 呼び出しからしか生成され得ません
+（例えば quote されていない複数語の title は、残りの単語がその loop に
+渡り、それぞれ別々に報告される失敗になります）。その行で最初に出た
+diagnostic には `Related: N other diagnostic(s) on this line may be
+consequences of this one` という note が、それ以降の diagnostic には
+`Related: possibly caused by CODE at column N above; fix that first` と
+いう note が付きます。これは意図的に狭い範囲に限定されています:
+単に同じ行・近い行にある、code が似ている、message が似ているだけの
+diagnostic 同士がこの方法で関連付けられることはなく、この特定の、
+構造的に保証された code の組み合わせのみが対象です。`--code`/
+`--severity`/`--category`/`--ignore` による filter は先に適用され、
+関係は残った diagnostic に対して再計算されます: 相手がすべて filter
+で除外されれば、残った diagnostic には relation note が付かず、逆に
+最初の diagnostic だけが除外されても、残りの diagnostic 同士は自分たち
+だけで group を形成します。`--format json` にもこの関係が含まれることは
+ありません。
+
+SARIF 出力:
+
+`--format sarif` は、`text`/`json` が表示するのと全く同じ filter 済み
+diagnostic から [SARIF 2.1.0](https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html)
+document を生成します -- `--code`/`--severity`/`--category`/`--ignore`/
+`--warnings-as-errors` はすべて同じように適用され、result の件数と順序は
+常に `--format json` の diagnostic 配列と一致します。これは純粋に
+read-only な export です: validation を再実行・変更することはなく、
+network・upload・credential の扱いは一切ありません -- 出力を file へ
+pipe して、SARIF を受け取る側（例えば GitHub Code Scanning の
+`upload-sarif` Action や IDE extension）にその file を渡してください:
+
+```sh
+python -m lifetxt check life.txt --format sarif > lifetxt.sarif
+```
+
+Mapping: `code` は `ruleId` になります（同じ code は occurrence ごとに
+繰り返されず、1つの deduplicated rule entry になります）。`severity` は
+`level`（`error`/`warning`。lifetxt の2つの severity にそのまま対応）に
+なります。`source` は `artifactLocation.uri` になります（絶対 path は
+Windows/POSIX いずれでも `file://` URI に、相対 path -- 一般的なケース
+-- はそのまま使われます。これは SARIF の relative-URI-reference 形式が
+直接許容するものです）。`line`/`column` はオフセット変換なしで
+`region.startLine`/`startColumn` になります。SARIF の column 意味論は
+lifetxt 自身の1始まりの規則と既に一致するためです。`end_line`/
+`end_column` は、diagnostic が既に正確な end position を持つ場合にのみ
+`region.endLine`/`endColumn` になります -- 不明な end を推測することは
+ありません。`hint` は、空でない場合 `result.properties.hint` として
+運ばれます。`text`/`json` 出力はこの追加によって一切変わりません。
+
 例:
 
 ```sh
 python -m lifetxt check life.txt
 python -m lifetxt check life.txt --warnings-as-errors
 python -m lifetxt check life.txt --format json
+python -m lifetxt check life.txt --format sarif > lifetxt.sarif
 python -m lifetxt check life.txt --category id,reference
 ```
 
@@ -1544,7 +1692,7 @@ known detail key には直接フラグもあります。各フラグは複数回
 --state --user --person --owner --assignee --attendee --sender --recipient --team --group --service --channel
 --visibility --notify_at --notify_from --notify_to --ack --snooze_until --on --at --repeat
 --interval --until --count
---project --context --loc --priority --est --elapsed --tag --note --body --mood --weather --url
+--project --context --loc --priority --progress --est --elapsed --tag --note --body --mood --weather --url
 --reason --moved_to
 ```
 
@@ -1575,7 +1723,7 @@ Up/Down で入力履歴を呼び出せます。`--no-completion` で補完と li
 
 ### 10.3 既存 item の更新
 
-行番号または完全一致の `id:` で item を選択して更新します。
+行番号または `id:` で item を選択して更新します。
 
 ```sh
 python -m lifetxt assist --update life.txt --line 3 --title "New Title"
@@ -1591,12 +1739,46 @@ python -m lifetxt assist --update life.txt --match-id task_001 --output updated_
 |---|---|
 | `--update FILE` | 既存 life.txt を読み込んで更新 |
 | `--line N` | `N` 行目の item を選択 |
-| `--match-id ID` | `id:` が `ID` と完全一致する item を選択 |
+| `--match-id ID` | `id:` が `ID` と完全一致する item を選択。完全一致が無い場合は、`ID` を一意な prefix として持つ item を選択 |
 | `--add-detail key=value` | detail value を追加 |
 | `--remove-detail key` | 指定 key の value をすべて削除 |
 | `--output FILE` | 更新後のファイル全体を別ファイルに書き出し |
 
 `--output` がない場合、update mode は入力ファイルへ書き戻します。
+
+#### Short ID prefix による選択
+
+`--match-id`（および `start`/`done`/`complete` が受け付ける `ID` positional
+argument）は完全な `id:` value を必要としません。effective item set の中で
+一意であれば、より短い prefix でも動作します:
+
+```sh
+python -m lifetxt done life.txt task_01J   # id:task_01JZY5M93PK17C7BA4M8 に一致
+```
+
+解決順序は常に「完全一致を優先し、その次に一意な prefix」です:
+
+1. 入力した文字列と完全一致する `id:` value が常に優先されます。他の item が
+   より短い `id:` でその文字列を prefix match する場合でも同様です。
+2. それ以外の場合、入力した文字列を prefix に持つ item がちょうど1件である
+   必要があります。
+
+複数の item に一致する prefix は、推測せず拒否されます:
+
+```text
+ERROR: Ambiguous ID prefix `task_a`.
+
+Matches:
+  task_a12345
+  task_a16789
+
+Use a longer prefix.
+```
+
+これは全ての ID selection command が共有する単一の resolver
+（`lifetxt.ids.resolve_item_by_id`）によるもので、`--match-id`/`ID` はどこでも
+同じ挙動をします。保存される `id:` value や machine-readable output は
+影響を受けません -- 入力する selector だけが prefix を受け付けます。
 
 ## 11. `serve`
 
@@ -2082,7 +2264,12 @@ TUI 起動前に明示的に拒否され、問題の内容が示されます。�
 `auto` は出力 encoding を判定し、端末が丸角罫線を表現できない場合は ASCII に fallback するため、
 Windows の code page でも例外にならず安全に劣化します。
 列幅は East Asian Width を考慮するため日本語 title でも整列が崩れず、
-meta 列 (project、due、priority) は端末幅が狭くなると折り返さずに 1 列ずつ省略されます。
+meta 列 (project、due、priority、そして最も広い端末幅でのみ表示される `progress:`) は
+端末幅が狭くなると折り返さずに 1 列ずつ省略されます。`progress:` detail を持たない record は
+その列に何も表示されません。row を選択して detail inspector（`s`）を開くと、他の detail と
+同様に `progress:` の値も life.txt の行全体と一緒に表示されます。編集も他の detail と同じく
+`e`（`$EDITOR` で開く）を使い、他の TUI での編集と同じ guarded / revision-checked な write path
+を通ります。
 
 既定値は config の `tui.theme`、`tui.keymap`、`tui.glyphs`、`tui.limit`、`tui.agenda_window`、
 `tui.bindings`（上記参照）で設定できます。
@@ -2469,6 +2656,87 @@ Every 2 weeks on Sunday, Tuesday (weeks start Sunday)
 週次・日次の展開では数値が無視されるため、`FREQ=WEEKLY;BYDAY=2MO` が黙って
 「毎週月曜日」になることのないよう `check` が警告します。
 
+### 13.11 `progress`
+
+`lifetxt progress PATH [ID] --delta DELTA` は、既存の `progress:` 値を手で
+書き換える代わりに、signed delta だけ増減します。共有の `progress:`
+parser/validator（fraction は `0<=current<=total`、percentage は
+`0-100`）と、`done`/`complete` と同じ guarded mutation path を再利用する
+ため、revision/backup の扱いは同じです。
+
+```sh
+python -m lifetxt progress life.txt experiment_1 --delta +1
+python -m lifetxt progress life.txt experiment_1 --delta=-1
+python -m lifetxt progress life.txt task_1 --delta +10%
+python -m lifetxt progress life.txt task_1 --delta=-15% --dry-run
+```
+
+`progress:3/10` に `--delta +1` を適用すると `progress:4/10`
+（denominator は保持されます）。`progress:40%` に `--delta +10%` を適用
+すると `progress:50%` になります。**representation kind は勝手に変換され
+ません**: fraction に `%` 付き delta を、percentage に数値だけの delta を
+適用しようとすると、推測せず fail-loud エラーになります。負の delta は
+`--delta=-N`（`=` 付き）で指定する必要があります —— `--delta -N` は
+argparse に未知の flag として解釈されます。
+
+有効範囲外の結果（`progress:14/10`、`progress:105%`、負の fraction
+numerator）は書き込み前に拒否され、`progress:` を持たない item は暗黙に
+`0%` とはみなされず拒否されます —— まず初期値を設定してください（例:
+`assist --update ID --match-id ID --add-detail progress:0%`）。`ID` は
+一意な ID prefix を受け付けます（[Short ID prefix による選択](#short-id-prefix-による選択)
+参照）。`--line`/`--text` は `done` と同じ方法で item を選択します。
+`--dry-run` は書き込まずに結果の値だけ表示します。
+
+### 13.12 `clone`
+
+`lifetxt clone PATH [ID]` は、既存の item を元に、identity や history を
+コピーしない新規 item を作成します。既存の parsed representation と、
+`quick` と同じ append/mutation contract を再利用するため、revision/backup
+の扱いと ID 生成は同じです —— raw text copy ではありません。
+
+```sh
+lifetxt clone life.txt experiment_01
+lifetxt clone life.txt experiment_01 --dry-run
+```
+
+元の item:
+
+```text
+[/] T "Experiment condition A" id:experiment_01 project:research
+    priority:A progress:8/10
+```
+
+`clone` は次を追記します:
+
+```text
+[ ] T "Experiment condition A" project:research priority:A
+```
+
+**Copy policy**（field ごとではなく1箇所で定義）: 通常の metadata
+（`project`、`tag`、`priority`、`context`、日付、その他下記に無い detail）
+はそのままコピーされます。以下は clone にコピーされません:
+
+- 元 item の ID（`id_key` が解決する key。重複 ID は workspace を破損させる
+  ため、決して引き継ぎません）
+- `source`、`uid`、`created`、`updated` —— 新しい item のものではなく、
+  *元の* record の identity/system provenance
+- `done` —— 完了 history
+- `progress` —— 引き継がず完全に reset します。`0%` と暗黙に仮定すること
+  もありません。これは `progress`（13.11）が使う missing-progress 原則と
+  同じです
+
+**Status** は通常の kind では open（`[ ]`）を default とします。これは
+`assist` の interactive prompt が使うのと全く同じ kind-aware default を
+再利用しています: `N`/`J`（note、journal）は `[N]`、`S`（presence
+status）は結果の details に `to:` が残っているかどうかで `[/]` または
+`[x]` になります。元の item は変更されません。`ids.auto` が有効な場合、
+新しい item には `quick` と同じ方法で一意性が保証された新規 ID が割り
+当てられます。無効な場合、新しい item は ID を全く持ちません —— どちら
+の場合も `ids` が重複を報告することはありません。`ID` は一意な ID
+prefix を受け付けます（[Short ID prefix による選択](#short-id-prefix-による選択)
+参照）。`--line`/`--text` は `done` と同じ方法で元 item を選択します。
+`--dry-run` は書き込まずに生成された item を表示します。
+
 ## 14. alias
 
 status alias:
@@ -2599,13 +2867,31 @@ python -m lifetxt doctor
 | `--name NAME` | 自分の名前。`#! self:` と `defaults.person` に書き込まれる |
 | `--timezone TZ` | timezone。`#! timezone:` と `defaults.timezone` に書き込まれる |
 | `--project NAME` | default project。`#! project:` と `defaults.project` に書き込まれる |
-| `--yes` | すべて既定値 (`self`、`UTC`、project なし) で非対話実行。`--force` と併用した場合の上書き確認プロンプトも省略される。script や CI 向け |
+| `--preset {minimal,personal,student,work,research}` | starter section skeleton。省略時は `minimal`（従来通りの単一タスクのみの starter）|
+| `--yes` | すべて既定値 (`self`、`UTC`、project なし、`minimal` preset) で非対話実行。`--force` と併用した場合の上書き確認プロンプトも省略される。script や CI 向け |
 
-`--yes` を付けない場合、`init` は名前・timezone・default project を尋ね、
-既存の `life.txt` や config file を上書きする前に確認します
-(`--force` 指定時を除く)。`--yes` を付けると3つのプロンプトはすべて
-スキップされ、`--name`/`--timezone`/`--project` で指定されなかった値は
-組み込みの既定値になります。
+`--yes` を付けない場合、`init` は名前・timezone・default project・starter
+preset を尋ね、既存の `life.txt` や config file を上書きする前に確認します
+(`--force` 指定時を除く)。`--yes` を付けるとこれらのプロンプトはすべて
+スキップされ、`--name`/`--timezone`/`--project`/`--preset` で指定されなかった
+値は組み込みの既定値になります。
+
+`--preset` は同じ starter task の周りに `# Section` という comment 見出しの
+小さな skeleton を追加するだけです -- 新しい Format 構文も、架空の sample
+data も、preset ごとの別 parser/writer も追加しません。
+
+```sh
+python -m lifetxt init --preset student
+python -m lifetxt init --preset research --yes
+```
+
+| Preset | Section |
+|---|---|
+| `minimal`（既定）| なし -- starter task のみ。`init` の従来の出力と同じ |
+| `personal` | Tasks, Notes |
+| `student` | Tasks, Classes / Events, Deadlines, Notes |
+| `work` | Tasks, Meetings, Projects, Notes |
+| `research` | Tasks, Meetings, Experiments, Research Notes |
 
 `doctor` は pass/warn/fail の check を表示し、file は一切変更しません。
 
@@ -2731,7 +3017,9 @@ python -m lifetxt help add --json
 | `help` (引数なし) | "Start here" の最小ループ、各 audience のガイド付きパス、[§1.1](#11-コマンドカテゴリとガイド付きパス) と同じカテゴリ索引 |
 | `help beginner\|daily\|power\|ai\|admin` | その audience 向けの短い順序付きコマンドフローと、各手順のコピー可能な例 |
 | `help NAME` | そのコマンドのカテゴリ、alias、コピー可能な例、related commands、read-only/destructive の分類。`NAME` には alias (`add`、`q`、`d`、`s`、`a`、`f`) も使えます |
-| `--json` (または `--format json`) | 同じ情報を text ではなく構造化 JSON で出力します。引数なしは `lifetxt-help-catalog-v1`、audience 指定は `lifetxt-help-audience-v1`、コマンド指定は `lifetxt-help-command-v1` (`arguments`/`options`/`examples` を追加) |
+| `help diagnostic` | この catalog が文書化している diagnostic code 全体を、1 code 1行で簡潔に一覧表示します |
+| `help diagnostic CODE` | 1つの diagnostic code のカテゴリ・severity・意味・remediation・valid/invalid な例を表示します（例: `help diagnostic E003`） |
+| `--json` (または `--format json`) | 同じ情報を text ではなく構造化 JSON で出力します。引数なしは `lifetxt-help-catalog-v1`、audience 指定は `lifetxt-help-audience-v1`、コマンド指定は `lifetxt-help-command-v1` (`arguments`/`options`/`examples` を追加)、code なしの `diagnostic` は `lifetxt-diagnostic-catalog-v1`、`diagnostic CODE` は `lifetxt-diagnostic-explain-v1` |
 | `-o`, `--output FILE` | stdout の代わりに file へ書き込みます |
 
 `help` は life.txt・config・workspace のいずれも読み取りません。出力は
@@ -2742,6 +3030,19 @@ client から呼び出しても安全です。JSON 出力の `read_only`/`destru
 read|assist|full` ([ai-integration.md](ai-integration.md) 参照) です。
 未知のコマンド名や audience を指定すると、既知の audience 名を示した
 うえで明示的に失敗します (exit 1)。
+
+`help diagnostic CODE` は、stable diagnostic code のうち Beginner Profile
+利用者が遭遇しやすい、明示的に選定された bounded な subset
+（`E001`-`E005`、`E010`、`W101`-`W103`、`W106`、`W207`、`W213`、`W225`）
+のみを文書化します。system に存在する全 code ではありません。
+`code`・`category`・`severity` は `check --format json`（[§3](#3-check)
+参照）が既に公開している locale-independent な machine identity と
+同じもので、人間向けの `summary` text のみが現時点で localize
+されています。`remediation` は、その diagnostic 自身の `hint` field が
+既に持つ text がある場合はそれを再利用するため、その `hint` field が
+英語のままの diagnostic については `remediation` も英語のままです。
+未知の code を指定すると、最も近い code を勝手に推測することなく、
+既知の code 一覧を示したうえで明示的に失敗します (exit 1)。
 
 ## 17. `encrypt` と `decrypt`
 

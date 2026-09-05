@@ -7,10 +7,31 @@ that parser was established, then delegates everything else unchanged.
 
 import datetime
 import json
+import os
 import sys
 from collections import OrderedDict
 
+from .i18n import register_messages as _register_messages
 from .timezone_policy import today as timezone_today
+
+
+_register_messages(
+    {
+        "bare.welcome": {"en": "Welcome to lifetxt", "ja": "lifetxt へようこそ"},
+        "bare.try_tour": {
+            "en": "Try it without creating files:",
+            "ja": "ファイルを作らずに試す:",
+        },
+        "bare.start_using": {
+            "en": "Start using lifetxt:",
+            "ja": "lifetxt を使い始める:",
+        },
+        "bare.need_guidance": {
+            "en": "Need guidance:",
+            "ja": "案内が必要な場合:",
+        },
+    }
+)
 
 
 _EXTRA_COMMANDS = frozenset(
@@ -47,6 +68,35 @@ _DOCTOR_SAFETY_FLAGS = frozenset(
         "--gap-policy",
     )
 )
+
+
+def _extract_lang_arg(argv):
+    """Strip a global ``--lang``/``--lang=`` override from ``argv``.
+
+    Presentation-only: no downstream parser (the legacy ``cli.py`` one or
+    any extended-command throwaway parser) needs to know about ``--lang``,
+    so it is removed before ``argv`` reaches either one. Returns
+    ``(cleaned_argv, lang_value_or_none)``.
+    """
+    raw = list(sys.argv[1:] if argv is None else argv)
+    lang = None
+    cleaned = []
+    index = 0
+    while index < len(raw):
+        value = raw[index]
+        if value == "--lang":
+            if index + 1 >= len(raw):
+                raise ValueError("--lang requires a value.")
+            lang = raw[index + 1]
+            index += 2
+            continue
+        if value.startswith("--lang="):
+            lang = value.split("=", 1)[1]
+            index += 1
+            continue
+        cleaned.append(value)
+        index += 1
+    return cleaned, lang
 
 
 def _extract_config_arg(argv):
@@ -235,11 +285,83 @@ def _uses_workspace_safety_doctor(argv):
     return False
 
 
+def _bare_invocation_setup_resolved():
+    """Read-only, best-effort check for whether lifetxt already has a
+    configured or default life.txt to work with in the current directory
+    (#636). Checks existence only, never file contents, so it can never
+    mutate anything and stays cheap enough to run on every bare invocation.
+    A custom, non-default single-file setup that this heuristic misses
+    degrades gracefully to the "not yet initialized" guidance below, which
+    is harmless to show even to an already-initialized workspace.
+    """
+    config_path = os.environ.get("LIFETXT_CONFIG")
+    if config_path and os.path.exists(config_path):
+        return True
+    if os.path.exists(".lifetxt.json"):
+        return True
+    if os.path.exists("life.txt"):
+        return True
+    return False
+
+
+def _bare_invocation_guidance():
+    from .i18n import translate as _t
+
+    lines = [
+        _t("bare.welcome"),
+        "",
+        _t("bare.try_tour"),
+        "  lifetxt tour",
+        "",
+        _t("bare.start_using"),
+        "  lifetxt init",
+        "",
+        _t("bare.need_guidance"),
+        "  lifetxt help beginner",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def _bare_invocation_main():
+    """Interactive-terminal-only smart entry for bare `lifetxt` (#636).
+
+    Never invoked for non-TTY/redirected execution, which keeps its
+    existing deterministic, script-safe argparse usage/exit-2 behavior.
+    Delegates to the existing `today` command when a workspace already
+    looks set up, and to short tour/init/help guidance otherwise --
+    neither branch adds new setup-detection or daily-aggregation logic of
+    its own.
+    """
+    if _bare_invocation_setup_resolved():
+        return _dispatch(["today"])
+    sys.stdout.write(_bare_invocation_guidance())
+    return 0
+
+
 def main(argv=None):
+    try:
+        argv_without_lang, lang_arg = _extract_lang_arg(argv)
+    except ValueError as exc:
+        from .cli_error_guidance import render_value_error_text
+
+        sys.stderr.write(render_value_error_text(exc))
+        return 1
+    from .i18n import locale_context, resolve_locale
+
+    with locale_context(resolve_locale(explicit=lang_arg)):
+        if not argv_without_lang and sys.stdin.isatty() and sys.stdout.isatty():
+            return _bare_invocation_main()
+        return _dispatch(argv_without_lang)
+
+
+def _dispatch(argv):
     try:
         raw, cleaned, config_path, workspace_name = _extract_config_arg(argv)
     except ValueError as exc:
-        sys.stderr.write("ERROR: %s\n" % exc)
+        from .cli_error_guidance import render_value_error_text
+
+        sys.stderr.write(render_value_error_text(exc))
         return 1
 
     if not cleaned:
@@ -355,12 +477,24 @@ def main(argv=None):
                 config_path=config_path,
                 workspace_name=workspace_name,
             )
+        if not command.startswith("-"):
+            from . import cli_taxonomy
+
+            if command not in cli_taxonomy.all_command_tokens():
+                from .cli_error_guidance import unknown_command_text
+
+                sys.stderr.write(unknown_command_text(command))
+                return 2
         return _legacy_main(raw)
     except ValueError as exc:
-        sys.stderr.write("ERROR: %s\n" % exc)
+        from .cli_error_guidance import render_value_error_text
+
+        sys.stderr.write(render_value_error_text(exc))
         return 1
     except OSError as exc:
-        sys.stderr.write("ERROR: %s\n" % exc)
+        from .cli_error_guidance import render_os_error_text
+
+        sys.stderr.write(render_os_error_text(exc))
         return 1
 
 

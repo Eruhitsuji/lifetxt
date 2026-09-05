@@ -91,22 +91,53 @@
     }
 
     // ── Relative time display ─────────────────────────────────────
+    // Date-based (never hour/minute-based) to match
+    // lifetxt.timeutil.relative_time()'s exact CLI/TUI wording and
+    // semantics: "today"/"tomorrow"/"yesterday"/"in N days"/"N days ago",
+    // computed as a calendar-date difference, never an instant-to-instant
+    // millisecond one. A CodeX review finding against #658: the original
+    // version computed Date.now() - d.getTime() in milliseconds, so
+    // "today" never appeared at all (an item due earlier today showed as
+    // "5 hrs ago"), and it compared against the browser's own local
+    // clock/timezone rather than the workspace-configured one every other
+    // surface uses. `appConfig.today` (added alongside this fix) carries
+    // the same workspace-aware reference date /api/config already
+    // resolves server-side (lifetxt.timezone_policy.today(), #142); the
+    // browser's own local date is only a fallback for the brief window
+    // before that config has loaded.
+    function _isoDateOnlyUTC(text) {
+      const match = String(text || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (!match) return null;
+      return Date.UTC(+match[1], +match[2] - 1, +match[3]);
+    }
+
     function relativeTime(isoString) {
-      if (!isoString) return "";
-      const d = new Date(isoString);
-      if (isNaN(d)) return "";
-      const diff = Date.now() - d.getTime();
-      const absDiff = Math.abs(diff);
-      const future = diff < 0;
-      const mins = Math.floor(absDiff / 60000);
-      const hours = Math.floor(absDiff / 3600000);
-      const days = Math.floor(absDiff / 86400000);
-      let label;
-      if (mins < 1) label = "just now";
-      else if (mins < 60) label = `${mins} min${mins > 1 ? "s" : ""} ${future ? "from now" : "ago"}`;
-      else if (hours < 24) label = `${hours} hr${hours > 1 ? "s" : ""} ${future ? "from now" : "ago"}`;
-      else label = `${days} day${days > 1 ? "s" : ""} ${future ? "from now" : "ago"}`;
-      return label;
+      const parsedUTC = _isoDateOnlyUTC(isoString);
+      if (parsedUTC === null) return "";
+      const now = new Date();
+      const referenceUTC =
+        _isoDateOnlyUTC(appConfig?.today) ??
+        Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+      const days = Math.round((parsedUTC - referenceUTC) / 86400000);
+      if (days === 0) return "today";
+      if (days === 1) return "tomorrow";
+      if (days === -1) return "yesterday";
+      if (days > 0) return `in ${days} days`;
+      return `${-days} days ago`;
+    }
+
+    function buildRelativeTimeBadge(item) {
+      // Renamed from an earlier "buildDueRelLabel" to avoid colliding with
+      // the pre-existing, differently-behaved buildDueRelLabel() defined in
+      // web_assets_js_04.js (overdue/due-soon color-coded due-date label,
+      // used by the Items and Today views). Both function declarations
+      // share one script-wide top-level scope once concatenated, so the
+      // same name here would have silently shadowed the earlier one for
+      // every caller, not just this file's own.
+      const value = item?.details?.due?.[0] || item?.details?.do?.[0] ||
+        item?.details?.from?.[0] || item?.details?.at?.[0] || item?.details?.on?.[0] || "";
+      const rel = relativeTime(value);
+      return rel ? `<span class="relative-time" title="${escapeHtml(value)}">(${escapeHtml(rel)})</span>` : "";
     }
 
     // ── Notification row state display ────────────────────────────

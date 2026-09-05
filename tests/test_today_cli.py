@@ -190,6 +190,53 @@ class TodayHubStructureTests(unittest.TestCase):
             self.assertNotIn("Upcoming (3d)", stdout)
 
 
+class TodayProgressDisplayTests(unittest.TestCase):
+    """Covers #649: `progress:` shown in Today's human-readable listings,
+    with no change to records that carry no `progress:` detail."""
+
+    def _write_source(self, temp_dir, text):
+        path = os.path.join(temp_dir, "life.txt")
+        with open(path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(text)
+        return path
+
+    def test_overdue_task_with_percentage_progress_shows_it_in_attention(self):
+        overdue = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            src = self._write_source(
+                temp_dir,
+                "#! timezone: UTC\n[ ] T Report due:%s progress:40%%\n" % overdue,
+            )
+            stdout, stderr, code = run_cli("today", src)
+            stdout = normalize_newlines(stdout)
+            self.assertEqual(0, code, stderr)
+            attention_block = stdout.split("\nATTENTION\n", 1)[1].split("\n\n", 1)[0]
+            self.assertIn("progress:40%", attention_block)
+
+    def test_next_action_with_fraction_progress_shows_derived_percentage(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            src = self._write_source(
+                temp_dir,
+                "#! timezone: UTC\n[ ] T Experiment project:x progress:3/10\n",
+            )
+            stdout, stderr, code = run_cli("today", src)
+            stdout = normalize_newlines(stdout)
+            self.assertEqual(0, code, stderr)
+            next_actions_block = stdout.split("\nNEXT ACTIONS\n", 1)[1]
+            next_actions_block = next_actions_block.split("\n\n", 1)[0]
+            self.assertIn("progress:3/10 (30%)", next_actions_block)
+
+    def test_record_without_progress_is_unchanged(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            src = self._write_source(
+                temp_dir, "#! timezone: UTC\n[ ] T Plain_task project:x\n"
+            )
+            stdout, stderr, code = run_cli("today", src)
+            stdout = normalize_newlines(stdout)
+            self.assertEqual(0, code, stderr)
+            self.assertNotIn("progress:", stdout)
+
+
 class TodayScopeCliTests(unittest.TestCase):
     """Covers #627 Phase 4 personalization: --saved-view / --area."""
 

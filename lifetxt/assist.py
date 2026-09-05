@@ -58,6 +58,7 @@ DETAIL_FLAGS = (
     "context",
     "loc",
     "priority",
+    "progress",
     "est",
     "elapsed",
     "tag",
@@ -292,15 +293,17 @@ def _select_update_item(line_items, args):
                 return line_no, item
         raise ValueError("Line %s is not a life.txt item." % args.line)
 
-    matches = []
+    # Shared exact-then-unique-prefix resolver (#653), so --match-id
+    # accepts a short ID prefix exactly like every other ID-selecting
+    # command rather than growing its own separate matching logic.
+    from .ids import resolve_item_by_id
+
+    items_by_identity = [item for _line_no, item in line_items]
+    resolved = resolve_item_by_id(items_by_identity, args.match_id, key="id")
     for line_no, item in line_items:
-        if args.match_id in item.details.get("id", []):
-            matches.append((line_no, item))
-    if not matches:
-        raise ValueError("No item found with id:%s." % args.match_id)
-    if len(matches) > 1:
-        raise ValueError("Multiple items found with id:%s." % args.match_id)
-    return matches[0]
+        if item is resolved:
+            return line_no, item
+    raise ValueError("No item found with id:%s." % args.match_id)
 
 
 def _add_detail_entries(details, entries):

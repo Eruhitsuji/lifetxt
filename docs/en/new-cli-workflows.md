@@ -26,6 +26,16 @@ fields used to place it in the result. JSON output adds a `why` object to each
 item; text and life output include a human-readable `Why:` line. Without
 `--why`, output is unchanged.
 
+`next`'s default (table) output shows a **short ID** in the `ID` column
+instead of the full `id:` value -- the shortest prefix that still uniquely
+identifies the item among every `id:` in the loaded workspace, at least 6
+characters. It is derived fresh on every call (there is no separate short-ID
+registry) and is guaranteed to resolve back to the same item: pass it
+directly to `done`, `start`, `complete`, or `assist --update --match-id`,
+which all accept a unique ID prefix (see [cli.md](cli.md#103-update-existing-items)).
+`--format json`/`--format life` are unaffected and always show the full
+`id:` value.
+
 ## Inspect and edit one item
 
 ```sh

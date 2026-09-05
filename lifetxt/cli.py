@@ -7520,6 +7520,17 @@ def _apply_progress_delta(parsed, delta_text):
     (#660), preserving its representation kind (fraction stays a fraction,
     percentage stays a percentage) and returning the new raw text.
 
+    Both the fraction and the percentage path parse the delta digit text
+    with arbitrary-precision arithmetic (int for a fraction, Decimal for a
+    percentage) rather than float: float's own %g formatting rounds to 6
+    significant digits (silently truncating or completely no-op'ing a
+    small delta against a precise existing value), and float() on a very
+    long digit string overflows to inf, which int() then rejects with an
+    uncaught OverflowError instead of a clean CLI error. Decimal has
+    neither failure mode -- an absurdly large percentage delta still
+    fails, but via the caller's ordinary out-of-range ProgressValueError,
+    not a crash.
+
     Raises ValueError, naming the reason, for a delta that does not match
     the target's representation (a %% delta against a fraction, or vice
     versa), a non-integer delta against a fraction, or an unparseable
@@ -7534,10 +7545,6 @@ def _apply_progress_delta(parsed, delta_text):
             "a percentage." % delta_text
         )
     sign, amount_text, percent_sign = match.groups()
-    amount = float(amount_text)
-    if amount == int(amount):
-        amount = int(amount)
-    signed = amount if sign == "+" else -amount
 
     if parsed.kind == "fraction":
         if percent_sign:
@@ -7545,10 +7552,12 @@ def _apply_progress_delta(parsed, delta_text):
                 "progress:%s is a fraction; use +N/-N (no %%) to change its "
                 "numerator, not a percentage delta." % parsed.raw
             )
-        if not isinstance(signed, int):
+        if "." in amount_text:
             raise ValueError(
                 "Fraction delta must be a whole number, got %r." % delta_text
             )
+        amount = int(amount_text)
+        signed = amount if sign == "+" else -amount
         return "%d/%d" % (parsed.current + signed, parsed.total)
 
     if not percent_sign:
@@ -7556,7 +7565,12 @@ def _apply_progress_delta(parsed, delta_text):
             "progress:%s is a percentage; use +N%%/-N%% to change it, not a "
             "fraction delta." % parsed.raw
         )
-    return "%g%%" % (parsed.percent + signed)
+    from decimal import Decimal
+
+    current_decimal = Decimal(parsed.raw[:-1])  # strip the trailing '%'
+    delta_decimal = Decimal(amount_text)
+    signed_decimal = delta_decimal if sign == "+" else -delta_decimal
+    return "%s%%" % format(current_decimal + signed_decimal, "f")
 
 
 def command_progress(args):

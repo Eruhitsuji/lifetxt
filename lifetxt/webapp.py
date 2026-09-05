@@ -313,6 +313,12 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         return {
             "paths": app.state.paths,
             "writable_path": app.state.writable_path,
+            # Workspace-aware "today" (#142), so the browser's relative-time
+            # display (relativeTime() in web_assets_js_14.js) can compute
+            # calendar-day differences against the same reference date the
+            # CLI/TUI already use, rather than the browser's own local date
+            # -- a CodeX review finding against #658.
+            "today": timezone_today().isoformat(),
             "user": config_user_name(app.state.config),
             "notifications": public_notification_config(app.state.config),
             "ids": public_id_config(app.state.config),

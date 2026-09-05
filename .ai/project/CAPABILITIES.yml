@@ -7201,3 +7201,840 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-cli-localization-foundation
+    name: CLI localization foundation (English/Japanese)
+    summary: >-
+      A lightweight, dependency-free locale resolver and shared message
+      catalog (`lifetxt/i18n.py`) supporting English/Japanese for
+      human-readable CLI presentation only: `--lang`, `LIFETXT_LANG`, and
+      OS-locale normalization, with English as the mandatory fallback.
+      Machine-readable output (JSON/JSONL/CSV/API/MCP/schema), command
+      names, aliases, and Format 1.0 grammar stay locale-independent by
+      design.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-cli-i18n-locale-resolution
+      - req-cli-i18n-message-catalog
+    implementation_locations:
+      - lifetxt/i18n.py
+      - lifetxt/cli.py
+      - lifetxt/cli_taxonomy.py
+      - tests/test_i18n.py
+      - tests/test_cli_taxonomy.py
+      - docs/en/cli.md
+      - docs/ja/cli.md
+    public_interfaces:
+      - lifetxt --lang en|ja
+      - LIFETXT_LANG environment variable
+      - lifetxt.i18n.resolve_locale
+      - lifetxt.i18n.register_messages
+      - lifetxt.i18n.translate
+      - lifetxt.i18n.locale_context
+    tests_or_evidence:
+      - "python -m unittest tests.test_i18n tests.test_cli_taxonomy -> Ran 60 tests, OK"
+      - "locale precedence (explicit > LIFETXT_LANG > OS locale > English), normalization (ja/ja_JP/ja-JP -> ja, unsupported -> None), missing-translation/missing-message-id fallback, and structured-output invariance are all directly unit-tested"
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/631
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      First implementation task of the beginner-i18n-experience batch
+      (#631-644, then #645-660), landing on `feature/beginner-i18n-experience`.
+      `resolve_locale`'s fall-through behavior (an unsupported explicit
+      `--lang` value falls through to check LIFETXT_LANG/OS locale rather
+      than jumping straight to English) is deliberate and locked in by
+      `test_unsupported_explicit_value_falls_through_to_env` -- confirmed
+      correct during a later review pass (a CodeX review comment initially
+      read this as contradicting #631's "unsupported locale falls back to
+      English" acceptance criterion, but that criterion is specifically
+      scoped to OS-locale normalization, not to every priority level;
+      re-verified against the issue's own precedence-list wording and the
+      existing, deliberately-named test before concluding this was a false
+      positive, not a bug).
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-beginner-daily-localization
+    name: Beginner/Daily CLI surface and diagnostics localization
+    summary: >-
+      Japanese translations for the #629 taxonomy's beginner/daily-audience
+      guided-path text and a representative set of parser/validator
+      diagnostic hints, rendered through the #631 shared catalog rather
+      than a second hand-maintained translation table.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-beginner-daily-cli-localization
+      - req-diagnostics-localization
+    implementation_locations:
+      - lifetxt/cli_taxonomy.py
+      - lifetxt/entrypoint.py
+      - lifetxt/tour.py
+      - tests/test_beginner_daily_localization.py
+      - tests/test_diagnostics_localization.py
+      - docs/en/getting-started.md
+      - docs/ja/getting-started.md
+    public_interfaces:
+      - lifetxt --lang ja help beginner
+      - lifetxt --lang ja doctor
+    tests_or_evidence:
+      - "python -m unittest tests.test_beginner_daily_localization tests.test_diagnostics_localization -> 84 tests, 1 known pre-existing unrelated flake (#662, disk-free-space live-value comparison, confirmed via git diff to be untouched by this or any later change in this batch)"
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/632
+      - https://github.com/Eruhitsuji/lifetxt/issues/633
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Second implementation task of the batch, extending
+      cap-cli-localization-foundation rather than a parallel translation
+      mechanism. #662 (a pre-existing, environment-dependent test flake in
+      test_doctor_json_is_locale_invariant, comparing a live disk-free-space
+      reading across two separate subprocess calls) was found while
+      gathering traceability evidence for this batch and filed separately
+      rather than folded into this entry's scope.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-web-beginner-authoring-mode
+    name: Beginner authoring mode for the Web record editor
+    summary: >-
+      An opt-in, simplified detail-editing mode in the Web UI's record
+      editor restricted to the Beginner/Minimal Profile vocabulary
+      (docs/en/getting-started.md's Level 1 keys), so a first-time user
+      is not shown the full detail-key surface before they need it.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-web-beginner-authoring-mode
+    implementation_locations:
+      - lifetxt/beginner_profile.py
+      - lifetxt/web_assets.html
+      - lifetxt/web_assets_js_02.js
+      - lifetxt/web_assets_js_05.js
+      - lifetxt/webapp.py
+      - tests/test_beginner_authoring_mode_js.py
+      - tests/test_beginner_profile.py
+      - docs/en/getting-started.md
+      - docs/en/web.md
+      - docs/ja/getting-started.md
+      - docs/ja/web.md
+    public_interfaces:
+      - GET /api/beginner-profile
+      - Web UI record editor beginner-mode toggle
+    tests_or_evidence:
+      - "python -m unittest tests.test_beginner_profile tests.test_beginner_authoring_mode_js tests.test_web_assets -> OK"
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/634
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Reuses the Beginner/Minimal Profile vocabulary already documented for
+      #558 (cap-beginner-minimal-profile) as the single source of the
+      restricted key set, rather than a second hand-copied list.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-guarded-lint-fix
+    name: Guarded `lint --fix` (plan-validate-then-write)
+    summary: >-
+      Hardens `lifetxt lint --fix` (safe, mechanical fixes only) into a
+      plan-then-validate-then-write sequence with a `--dry-run` preview,
+      so a fix is never partially applied and the resulting file is
+      always re-validated before being written.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-guarded-lint-fix
+    implementation_locations:
+      - lifetxt/cli.py
+      - tests/test_lint_fix_hardening.py
+      - docs/en/cli.md
+      - docs/ja/cli.md
+    public_interfaces:
+      - lifetxt lint --fix
+      - lifetxt lint --fix --dry-run
+    tests_or_evidence:
+      - "python -m unittest tests.test_lint_fix_hardening -> OK"
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/635
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Reuses the existing guarded mutation/revision/backup path already
+      established by other write commands; no second write mechanism.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-bare-invocation-smart-entry
+    name: Bare `lifetxt` invocation as a TTY-only smart entry point
+    summary: >-
+      Running `lifetxt` with no arguments, on a real interactive terminal,
+      shows a short beginner-oriented orientation (workspace state plus
+      the top 2-3 next actions) instead of argparse's default "the
+      following arguments are required" error. Non-TTY/redirected
+      invocation is completely unaffected.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-bare-invocation-smart-entry
+    implementation_locations:
+      - lifetxt/entrypoint.py
+      - tests/test_bare_invocation.py
+      - docs/en/getting-started.md
+      - docs/ja/getting-started.md
+    public_interfaces:
+      - lifetxt (no arguments, TTY only)
+    tests_or_evidence:
+      - "python -m unittest tests.test_bare_invocation -> OK"
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/636
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      TTY-gated the same way as #638/#643's guidance features; a redirected
+      or scripted bare invocation keeps its exact prior argparse-error
+      behavior.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-init-starter-presets
+    name: "`lifetxt init` starter section skeletons"
+    summary: >-
+      Adds use-case-oriented starter section skeletons to `lifetxt init`
+      (e.g. a few example Task/Event/Note lines per preset) so a new
+      workspace is not a completely blank file, reducing the "blank page"
+      barrier for first-time users.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-init-starter-presets
+    implementation_locations:
+      - lifetxt/cli.py
+      - lifetxt/init_presets.py
+      - tests/test_init_presets.py
+      - docs/en/cli.md
+      - docs/en/getting-started.md
+      - docs/ja/cli.md
+      - docs/ja/getting-started.md
+    public_interfaces:
+      - lifetxt init --preset NAME
+    tests_or_evidence:
+      - "python -m unittest tests.test_init_presets -> OK"
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/637
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Extends the pre-existing `init` preset mechanism (`_INIT_DEFAULT_PRESET`,
+      `preset_names`, `validate_preset` already imported in cli.py) rather
+      than a parallel scaffolding path.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-success-guidance
+    name: Next Action / Undo guidance after beginner write commands
+    summary: >-
+      TTY-only "Next:"/"Undo:" guidance printed after a small, curated set
+      of beginner-facing write commands succeed (reusing
+      `cli_taxonomy.render_success_guidance`, already documented under
+      `cap-adoption-onboarding-commands`'s SUCCESS_GUIDANCE dict), so a
+      first-time user is told what to do next and how to undo a mistake
+      without having to already know either.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-success-guidance-next-undo
+    implementation_locations:
+      - lifetxt/cli.py
+      - lifetxt/cli_taxonomy.py
+      - tests/test_success_guidance.py
+      - docs/en/getting-started.md
+      - docs/ja/getting-started.md
+    public_interfaces:
+      - lifetxt.cli_taxonomy.render_success_guidance
+      - lifetxt.cli_taxonomy.SUCCESS_GUIDANCE
+    tests_or_evidence:
+      - "python -m unittest tests.test_success_guidance -> OK"
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/638
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      `render_success_guidance` is the same function `progress`/`clone`
+      (#659/#660) call, gracefully returning "" for a command with no
+      registered entry rather than requiring every write command to be
+      added to the curated SUCCESS_GUIDANCE set.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-rich-check-diagnostics
+    name: "Rich `check` diagnostics: snippets, suggestions, catalog, cascades"
+    summary: >-
+      Extends `lifetxt check`'s text output with source snippets, span
+      carets, and hints (#639); safe "Did you mean?" typo/invalid-token
+      suggestions reusing only real, currently-valid candidates (#640); a
+      `lifetxt help diagnostic CODE` explanation catalog (#641); and
+      root-cause grouping for cascading E009/E010 diagnostics so a single
+      underlying syntax error does not appear as many independent-looking
+      diagnostics (#642).
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-check-rich-text-diagnostics
+      - req-check-diagnostic-suggestions
+      - req-diagnostic-explain-catalog
+      - req-diagnostic-cascade-grouping
+    implementation_locations:
+      - lifetxt/diagnostic_render.py
+      - lifetxt/diagnostic_suggestions.py
+      - lifetxt/diagnostic_catalog.py
+      - lifetxt/diagnostic_cascade.py
+      - lifetxt/cli.py
+      - lifetxt/cli_taxonomy.py
+      - lifetxt/extra_cli.py
+      - lifetxt/validator.py
+      - tests/test_check_rich_diagnostics.py
+      - tests/test_diagnostic_render.py
+      - tests/test_check_suggestions.py
+      - tests/test_diagnostic_suggestions.py
+      - tests/test_diagnostic_catalog.py
+      - tests/test_check_cascade.py
+      - tests/test_diagnostic_cascade.py
+      - docs/en/cli.md
+      - docs/ja/cli.md
+    public_interfaces:
+      - lifetxt check (rich text output with snippet/span/hint)
+      - lifetxt help diagnostic CODE
+      - lifetxt.diagnostic_render.render_diagnostic_rich
+      - lifetxt.diagnostic_suggestions
+      - lifetxt.diagnostic_catalog.explain_record
+      - lifetxt.diagnostic_cascade.classify_cascade_roles
+    tests_or_evidence:
+      - "python -m unittest tests.test_check_rich_diagnostics tests.test_diagnostic_render tests.test_check_suggestions tests.test_diagnostic_suggestions tests.test_diagnostic_catalog tests.test_check_cascade tests.test_diagnostic_cascade -> Ran 120 tests, OK"
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/639
+      - https://github.com/Eruhitsuji/lifetxt/issues/640
+      - https://github.com/Eruhitsuji/lifetxt/issues/641
+      - https://github.com/Eruhitsuji/lifetxt/issues/642
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Four closely related `check`-diagnostics-presentation issues grouped
+      into one capability entry since they share the same rendering layer
+      (`diagnostic_render.py`) and were implemented back-to-back in the
+      same batch; each still names its own requirement/task issue above.
+      None of these change a diagnostic code, category, or the underlying
+      parser/validator rule set -- only how existing diagnostics are
+      presented, explained, or grouped in human-facing text output.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-cli-error-guidance
+    name: TTY-only actionable guidance for common CLI-level errors
+    summary: >-
+      Bounded, TTY-only "Did you mean?"/"Available:"/"Try:"/"Usage:"
+      guidance for five common CLI-level error families (unknown command,
+      missing global option value, unknown workspace, invalid/missing
+      config, missing/unreadable input path), appended after the exact,
+      unchanged "ERROR: ..." line every one of these already produced --
+      scripts and redirected output see byte-identical behavior. Every
+      candidate comes from a real, currently-valid registry (#629's
+      command taxonomy, or the workspace resolver's own "Available: ..."
+      list), never a fabricated one.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-cli-error-guidance
+      - req-cli-error-guidance-localized
+    implementation_locations:
+      - lifetxt/cli_error_guidance.py
+      - lifetxt/cli.py
+      - lifetxt/entrypoint.py
+      - lifetxt/config.py
+      - tests/test_cli_error_guidance.py
+      - tests/test_cli_error_recovery.py
+      - docs/en/cli.md
+      - docs/ja/cli.md
+    public_interfaces:
+      - lifetxt.cli_error_guidance.unknown_command_text
+      - lifetxt.cli_error_guidance.render_value_error_text
+      - lifetxt.cli_error_guidance.render_os_error_text
+    tests_or_evidence:
+      - "python -m unittest tests.test_cli_error_guidance tests.test_cli_error_recovery -> Ran 32 tests, OK"
+      - "found during a CodeX-review-informed pass over the whole #631-660 batch: every TTY-only guidance line was still hardcoded in English even though #631's shared localization catalog had since landed in the same batch, directly contradicting #643's own '#631/#633 が利用可能なら固定文言はそこへ接続する' design principle; fixed by registering the guidance strings in lifetxt.i18n's catalog and rendering them through translate(), leaving the leading ERROR line and the underlying exception text untouched (both must stay locale-independent per this module's own documented invariant)"
+      - "live-verified end to end: with i18n.locale_context('ja') active and a fake TTY, unknown_command_text/render_value_error_text render Japanese guidance text (もしかして.../参照:/利用可能:) while the leading ERROR line stays exactly the original English exception text"
+      - "3 new regression tests (LocalizationTests) added to tests/test_cli_error_guidance.py; full 17-test file re-run OK after the fix"
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/643
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Initially implemented with every guidance string hardcoded in
+      English; localized to the shared #631 catalog in a later
+      CodeX-review-informed pass on the same batch (see
+      req-cli-error-guidance-localized), closing a real, evidenced gap
+      against #643's own acceptance criteria rather than a hypothetical
+      one.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-sarif-export
+    name: SARIF 2.1.0 export for `lifetxt check`
+    summary: >-
+      A pure, read-only SARIF 2.1.0 serializer over the already-filtered,
+      stable `Diagnostic` list `check` computes, for CI/editor
+      integration (e.g. `gh code-scanning`-style upload). Never re-runs
+      or re-implements a parser/validator rule, never invents a
+      diagnostic code or category, and never guesses an end position a
+      diagnostic does not already carry.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-check-sarif-export
+      - req-sarif-uri-percent-encoding
+    implementation_locations:
+      - lifetxt/sarif.py
+      - lifetxt/cli.py
+      - tests/test_sarif.py
+      - tests/test_check_sarif.py
+      - docs/en/cli.md
+      - docs/ja/cli.md
+    public_interfaces:
+      - lifetxt check --format sarif
+      - lifetxt.sarif.sarif_document
+      - lifetxt.sarif.render_sarif
+    tests_or_evidence:
+      - "python -m unittest tests.test_sarif tests.test_check_sarif -> Ran 32 tests, OK"
+      - "found during a CodeX-review-informed pass over the whole #631-660 batch: `_to_uri()` never percent-encoded a path, so a space made the resulting artifactLocation.uri invalid outright and an unescaped '#' would be read by a strict URI consumer as introducing a fragment identifier (silently discarding everything after it); a UNC path also produced a non-standard four-slash file:////server/... form by folding the server name into the path instead of using it as the URI's own authority component"
+      - "fixed with urllib.parse.quote (percent-encoding every segment, leaving only / and a Windows drive-letter : unescaped) and a dedicated UNC-path branch using the server name as the URI authority (RFC 8089's Windows UNC-path appendix)"
+      - "live-verified: C:\\My Files\\日本語\\life #1.txt -> file:///C:/My%20Files/%E6%97%A5%E6%9C%AC%E8%AA%9E/life%20%231.txt; \\\\server\\share\\life.txt -> file://server/share/life.txt; confirmed end-to-end via a real `lifetxt check PATH --format sarif` invocation against a path containing a space and a #"
+      - "6 new regression tests added to tests/test_sarif.py (percent-encoding of spaces/#/non-ASCII, UNC-path authority handling with and without a share); confirmed via git stash that all 4 UNC/encoding-specific tests fail against the pre-fix code with the exact malformed URIs described above, then pass once the fix is restored; full 23-test ToUriTests/SarifDocumentStructureTests suite re-run OK"
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/644
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Initially implemented with unescaped path-to-URI conversion; the
+      percent-encoding and UNC-authority fixes were added in a later
+      CodeX-review-informed pass on the same batch (see
+      req-sarif-uri-percent-encoding), closing a real, reproduced bug
+      (an invalid or misresolved SARIF location for any path containing
+      a space, #, non-ASCII character, or UNC share) rather than a
+      hypothetical one.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-progress-standard-key
+    name: Standard `progress:` detail key (percentage/fraction)
+    summary: >-
+      A standard `progress:` detail key representing quantitative progress
+      independent of `[ ]`/`[/]`/`[x]` workflow status, supporting two
+      representations (`75%` percentage, `3/10` fraction) via one shared
+      parser/validator (`lifetxt/progress.py`) reused by every surface:
+      Query (numeric percentage/fraction comparison, #648), CLI
+      human-readable/Today display (#649), TUI dashboard/inspector display
+      (#650), Web UI bar+label display (#651), shared sort/filter (#652),
+      and `--progress` CLI authoring integration across quick/add/assist
+      (#647). `status` and `progress` are deliberately independent; no
+      automatic `progress:100% -> [x]` sync exists anywhere.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-progress-core-semantic
+      - req-progress-cli-authoring
+      - req-progress-query-comparison
+      - req-progress-cli-today-display
+      - req-progress-tui-display
+      - req-progress-web-display
+      - req-progress-sort-filter-integration
+    implementation_locations:
+      - lifetxt/progress.py
+      - lifetxt/model.py
+      - lifetxt/validator.py
+      - lifetxt/interactive.py
+      - lifetxt/assist.py
+      - lifetxt/query.py
+      - lifetxt/cli.py
+      - lifetxt/command_center.py
+      - lifetxt/tui.py
+      - lifetxt/tui_app.py
+      - lifetxt/web_assets.html
+      - lifetxt/web_assets_css_04.css
+      - lifetxt/web_assets_js_02.js
+      - lifetxt/web_assets_js_04.js
+      - lifetxt/web_assets_js_05.js
+      - lifetxt/web_read_service.py
+      - tests/test_progress.py
+      - tests/test_check_progress.py
+      - tests/test_query.py
+      - tests/test_life_hub.py
+      - tests/test_today_cli.py
+      - tests/test_cui_extensions.py
+      - tests/test_lifetxt.py
+      - tests/test_web_assets.py
+      - tests/test_web_i18n.py
+      - docs/en/life_txt_format_spec.md
+      - docs/en/life-hub.md
+      - docs/en/query.md
+      - docs/en/cli.md
+      - docs/ja/life_txt_format_spec.md
+      - docs/ja/life-hub.md
+      - docs/ja/query.md
+      - docs/ja/cli.md
+    public_interfaces:
+      - progress:75% / progress:3/10 detail key
+      - lifetxt.progress.parse_progress
+      - lifetxt.progress.ProgressValue
+      - lifetxt query "progress<50%"
+      - --progress flag on quick/add/assist
+      - TUI progress column
+      - Web UI progress bar+label
+    tests_or_evidence:
+      - "python -m unittest tests.test_progress tests.test_check_progress tests.test_query tests.test_life_hub tests.test_cui_extensions tests.test_web_i18n -> Ran 396 tests, OK (skipped=1, unrelated)"
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/645
+      - https://github.com/Eruhitsuji/lifetxt/issues/646
+      - https://github.com/Eruhitsuji/lifetxt/issues/647
+      - https://github.com/Eruhitsuji/lifetxt/issues/648
+      - https://github.com/Eruhitsuji/lifetxt/issues/649
+      - https://github.com/Eruhitsuji/lifetxt/issues/650
+      - https://github.com/Eruhitsuji/lifetxt/issues/651
+      - https://github.com/Eruhitsuji/lifetxt/issues/652
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      #645 is the parent/epic issue decomposed into #646-652, each with its
+      own implementation commit; this one capability entry covers the
+      whole feature since every child reuses the same #646 shared
+      `progress.py` parser/validator rather than re-implementing it per
+      surface -- exactly the design principle #645 itself states. #660
+      (increment/decrement CLI convenience) extends this capability and is
+      recorded as its own entry (cap-progress-increment-cli) since it was
+      implemented later, in a separate follow-up task.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-short-id-resolution
+    name: Short unique ID prefix resolution and display
+    summary: >-
+      A shared exact-then-unique-prefix ID resolver
+      (`lifetxt.ids.resolve_item_by_id`) reused by every ID-selecting
+      command (`done`, `start`, `complete`, `progress`, `clone`,
+      `assist --update --match-id`, ...), so a unique prefix of an item's
+      `id:` value works anywhere a full ID would (#653); plus a
+      presentation-only shortest-unique-prefix derivation
+      (`lifetxt.ids.short_id`) shown in `next`'s table output, computed
+      fresh against the whole loaded workspace so it always resolves back
+      to the same item (#654).
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-short-id-resolution
+      - req-short-id-display
+    implementation_locations:
+      - lifetxt/ids.py
+      - lifetxt/assist.py
+      - lifetxt/cli.py
+      - lifetxt/extra_core.py
+      - tests/test_ids.py
+      - tests/test_short_id.py
+      - tests/test_lifetxt.py
+      - tests/test_extra_cli.py
+      - docs/en/cli.md
+      - docs/en/new-cli-workflows.md
+      - docs/ja/cli.md
+      - docs/ja/new-cli-workflows.md
+    public_interfaces:
+      - lifetxt.ids.resolve_item_by_id
+      - lifetxt.ids.AmbiguousIdPrefixError
+      - lifetxt.ids.short_id
+      - lifetxt next (table ID column)
+    tests_or_evidence:
+      - "python -m unittest tests.test_ids tests.test_short_id tests.test_extra_cli -> OK"
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/653
+      - https://github.com/Eruhitsuji/lifetxt/issues/654
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      A horizontal fix during #653 found and rewired a second,
+      independently-implemented exact-match-only resolver in
+      `assist.py`'s `_select_update_item` onto the same shared
+      `resolve_item_by_id`, per this project's Horizontal Review Scope
+      Discipline. `progress` and `clone` (#659/#660) both reuse this
+      resolver via the shared `_resolve_target_item` helper, confirmed by
+      live testing short-ID-prefix selection against both new commands.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-query-explain
+    name: "`lifetxt query --explain`"
+    summary: >-
+      A `--explain` flag on `lifetxt query` returning a stable, versioned
+      (`lifetxt-query-explain-v1`) JSON object describing how the shared
+      Query language interpreted a query string (its parsed plan and any
+      diagnostics), so a user can debug why a query matched or did not
+      match without guessing at the parser's internal behavior.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-query-explain
+    implementation_locations:
+      - lifetxt/query.py
+      - lifetxt/cli.py
+      - tests/test_query.py
+      - docs/en/cli.md
+      - docs/en/query.md
+      - docs/ja/cli.md
+      - docs/ja/query.md
+    public_interfaces:
+      - lifetxt query --explain
+      - lifetxt.query.explain_query
+    tests_or_evidence:
+      - "python -m unittest tests.test_query -> OK"
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/655
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      `explain_query` wraps `parse_query` unmodified (strips the internal
+      diagnostics key into its own top-level field), so the explanation can
+      never disagree with what `run_query`/`apply_query` actually do.
+      Reviewed and merged into `feature/beginner-i18n-experience` from a
+      CodeX-implemented child branch (issue-655-query-explain) after
+      independent test/lint re-verification.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-next-why-explanation
+    name: "`lifetxt next --why` selection explanation"
+    summary: >-
+      A `--why` flag on `lifetxt next` showing the deterministic evidence
+      for each returned item's actionable status and its ordering: parked-
+      tag/dependency checks, and the exact sort key fields used to place
+      it in the result (JSON `why` object; text/life `Why:` line).
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-next-why-explanation
+      - req-next-why-sort-key-fidelity
+    implementation_locations:
+      - lifetxt/extra_cli.py
+      - lifetxt/extra_core.py
+      - tests/test_extra_cli.py
+      - docs/en/new-cli-workflows.md
+      - docs/ja/new-cli-workflows.md
+    public_interfaces:
+      - lifetxt next --why
+      - lifetxt.extra_core._next_action_explanation
+    tests_or_evidence:
+      - "python -m unittest tests.test_extra_cli -> Ran 32 tests, OK"
+      - "found during a CodeX-review-informed pass over the whole #631-660 batch: the non-rank branch's sort_key substituted the display string \"(none)\" for a missing priority before computing _priority_key, landing in a different bucket ((2, 0, \"(NONE)\")) than the real sort's _priority_key(None) ((3, 9999, \"\")); it also folded a do: value into \"due\" for both display and sort_key even though the real sort only ever reads due: -- both made the --why evidence disagree with the actual order it claims to explain"
+      - "fixed by computing sort_key from the same raw (possibly-missing) detail values command_next's own sort reads, never from the \"(none)\"-substituted display strings; live-verified against a 3-item fixture (no-priority-or-due, priority+due, do-only) that the returned order and each item's sort_key now agree exactly"
+      - "2 new regression tests added to tests/test_extra_cli.py; confirmed via git stash that both fail against the pre-fix code with the exact wrong bucket/value described above, then pass once the fix is restored; full 32-test suite re-run OK"
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/656
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Initially implemented (and reviewed/merged from a CodeX-implemented
+      child branch, issue-656-next-why) with the sort_key/due mismatch
+      described above; fixed in a later CodeX-review-informed pass on the
+      same batch (see req-next-why-sort-key-fidelity), closing a real,
+      reproduced discrepancy between the --why evidence and the actual
+      next ordering rather than a hypothetical one. The rank branch
+      (--rank --why) was unaffected, since it already called the real
+      _rank_key() function directly rather than re-deriving its own copy.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-relative-time-display
+    name: Human-readable relative time display
+    summary: >-
+      A shared, workspace-timezone-aware, calendar-date-based relative-time
+      label (`lifetxt.timeutil.relative_time()`: "today"/"tomorrow"/
+      "yesterday"/"in N days"/"N days ago") appended to date-bearing detail
+      values across CLI (`show`), TUI (dashboard), and Web UI displays. The
+      canonical stored value and every machine-readable output are
+      completely unchanged.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-relative-time-display
+      - req-relative-time-workspace-timezone-awareness
+      - req-relative-time-js-name-collision-fix
+      - req-relative-time-js-date-based-semantics
+    implementation_locations:
+      - lifetxt/timeutil.py
+      - lifetxt/cli.py
+      - lifetxt/extra_core.py
+      - lifetxt/tui.py
+      - lifetxt/timezone_policy.py
+      - lifetxt/webapp.py
+      - lifetxt/web_assets_js_02.js
+      - lifetxt/web_assets_js_14.js
+      - tests/test_timezone_aware.py
+      - tests/test_web_assets.py
+      - tests/test_lifetxt.py
+      - docs/en/new-cli-workflows.md
+      - docs/ja/new-cli-workflows.md
+    public_interfaces:
+      - lifetxt.timeutil.relative_time
+      - CLI show / TUI dashboard relative-time suffix
+      - Web UI relative-time badge
+      - GET /api/config "today" field
+    tests_or_evidence:
+      - "python -m unittest tests.test_timezone_aware tests.test_web_assets tests.test_lifetxt.LifeTxtWebConfigAndCheckLineTests -> Ran 234 tests, OK"
+      - "reviewed a CodeX-implemented child branch (issue-658-relative-time) before merging and found two real bugs: (1) three call sites (cli.py's _relative_date_suffix, extra_core.py's command_show, tui.py's _task_row) never passed an explicit today=, so relative_time()'s own default fell back to the bare host system date rather than this project's workspace-aware timezone_policy.today() (#142); (2) a new JS function was named buildDueRelLabel, colliding with and silently shadowing the pre-existing, differently-behaved buildDueRelLabel() in web_assets_js_04.js (the overdue/due-soon color-coded due-date badge), since all JS fragments concatenate into one shared-scope script -- fixed by passing an explicit today= at each call site and renaming the new function to buildRelativeTimeBadge"
+      - "a later CodeX-review-informed pass found a third, deeper bug: the JS relativeTime() computed an instant-to-instant millisecond diff (Date.now() - d.getTime()), producing hour/minute-based labels (\"5 hrs ago\") using the browser's own local clock/timezone, completely disagreeing with the Python side's calendar-date-based, workspace-aware semantics -- \"today\" never appeared in the JS version at all; fixed by rewriting relativeTime() to compute a calendar-date-only (Date.UTC-based) day difference against a new appConfig.today field (GET /api/config now exposes the same timezone_today() the server already resolves), falling back to the browser's own local date only before that config has loaded"
+      - "live-verified (Node.js): the rewritten relativeTime() produces the exact Python-matching wording (today/tomorrow/yesterday/in N days/N days ago) for 8 representative cases including the appConfig-missing fallback"
+      - "LEGACY_PRISTINE_GIT_BLOB_SHA in tests/test_web_assets.py updated twice (once for the collision-rename fix, once for the date-based relativeTime rewrite) to match the intentionally changed served page"
+      - "one new backend regression test (test_config_api_reports_the_workspace_aware_today) added to tests/test_lifetxt.py"
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/658
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      `relative_time()`'s own bare `date.today()` fallback default was
+      deliberately left unchanged (every caller now passes an explicit
+      `today=` instead) to avoid a layering concern: whether
+      `lifetxt/timeutil.py`, a fairly low-level/generic module, should
+      depend on `lifetxt/timezone_policy.py`. This fallback default is
+      recorded as an approved exception in
+      `config/release/clock-boundary-baseline-v1.json` (classification
+      `compatibility-parsing`, matching the module's existing sibling
+      `datetime.now` entry), since this project's `clock_boundary_audit`
+      release-policy gate treats any unclassified direct host-clock call as
+      a new finding that fails release-manifest validation.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-progress-increment-cli
+    name: "`lifetxt progress` increment/decrement CLI"
+    summary: >-
+      `lifetxt progress PATH [ID] --delta DELTA` increments or decrements
+      an item's existing `progress:` value by a signed delta (`+N`/`-N`
+      for a fraction, `+N%`/`-N%` for a percentage), reusing the #646
+      shared `progress:` parser/validator and the same guarded
+      mutation/revision path as `done`/`complete`. Representation kind is
+      never converted; an out-of-range result or a missing `progress:`
+      detail is rejected before anything is written.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-progress-increment-cli
+      - req-progress-delta-precision-and-overflow-safety
+    implementation_locations:
+      - lifetxt/cli.py
+      - lifetxt/cli_taxonomy.py
+      - tests/test_lifetxt.py
+      - docs/en/cli.md
+      - docs/ja/cli.md
+    public_interfaces:
+      - lifetxt progress PATH ID --delta DELTA
+      - lifetxt progress PATH --line N --delta DELTA
+      - lifetxt progress PATH --text QUERY --delta DELTA
+    tests_or_evidence:
+      - "python -m unittest tests.test_lifetxt.LifeTxtProgressCliTests -> Ran 19 tests, OK"
+      - "live-verified: fraction/percentage increment and decrement, kind-mismatch rejection (percentage delta against a fraction and vice versa), out-of-range rejection in both directions, missing-progress rejection (never implicitly 0%), invalid --delta syntax, --dry-run, ID/--line/--text selection including short ID prefixes (reusing cap-short-id-resolution)"
+      - "found during a CodeX-review-informed pass: _apply_progress_delta used float() and %g formatting for the percentage path, which rounds to 6 significant digits (silently truncating or completely no-op'ing a tiny delta against a precise existing value -- e.g. 50% + 0.000001% produced 50%, an unchanged no-op) and overflows to inf on an absurdly long digit string, which int() then rejected with an uncaught OverflowError instead of a clean CLI error"
+      - "fixed with arbitrary-precision arithmetic: int() directly on the fraction delta's digit text (never through float), and decimal.Decimal arithmetic computed directly from the raw progress: text and the raw delta digit text for the percentage path -- neither path can overflow, and Decimal addition naturally preserves full precision instead of rounding"
+      - "3 new regression tests added to tests/test_lifetxt.py (tiny-delta precision, long fraction/percentage delta both failing loudly via the normal out-of-range path instead of crashing); confirmed via live reproduction before the fix (33.333333% + 0.000001% -> 33.3333%, an OverflowError on a 400-digit delta) and re-verified correct after"
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/660
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Extends cap-progress-standard-key. `--delta` is a required *named*
+      option (not positional) specifically because argparse rejects a
+      space-separated negative value (`--delta -10%`) as an unrecognized
+      flag unless joined with `=` (`--delta=-10%`); this is documented in
+      the flag's own --help text. Landed in the same commit as
+      cap-clone-item (#659) since both were implemented in the same
+      session pass and their diffs ended up interleaved across the same
+      shared files (cli.py, cli_taxonomy.py, both cli.md docs) before being
+      split out -- a deliberate, flagged deviation from this batch's usual
+      one-issue-per-branch pattern.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-clone-item
+    name: "`lifetxt clone` item duplication"
+    summary: >-
+      `lifetxt clone PATH [ID]` creates a new item derived from an
+      existing one, excluding identity/history-category details rather
+      than copying them verbatim: the workspace's `id_key`, `source`,
+      `uid`, `created`, `updated`, `done`, and `progress` are reset;
+      everything else (`project`, `tag`, `priority`, `context`, dates,
+      ...) is copied as-is. Status defaults to open for ordinary kinds,
+      reusing `assist.py`'s existing kind-aware `_default_status` helper
+      (N/J -> `[N]`, S -> `[/]` or `[x]` depending on whether a `to:`
+      value survives, everything else -> `[ ]`). The source item is
+      never modified, and no duplicate ID is ever produced.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-clone-item
+    implementation_locations:
+      - lifetxt/cli.py
+      - lifetxt/cli_taxonomy.py
+      - tests/test_lifetxt.py
+      - docs/en/cli.md
+      - docs/ja/cli.md
+    public_interfaces:
+      - lifetxt clone PATH ID
+      - lifetxt clone PATH --line N
+      - lifetxt clone PATH --text QUERY
+    tests_or_evidence:
+      - "python -m unittest tests.test_lifetxt.LifeTxtCloneCliTests -> Ran 14 tests, OK"
+      - "live-verified: identity/history exclusion, ID assignment when ids.auto is enabled (a fresh, guaranteed-unique ID via the same ensure_item_id/collect_item_ids helpers command_complete already uses) vs. omitted entirely when disabled, status defaulting per kind (ordinary T open, N/J [N], S open [/] / closed [x]), missing/ambiguous ID resolution (reusing cap-short-id-resolution), --line/--text selection, --dry-run, and that the generated line passes lifetxt check"
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/659
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Reuses `lifetxt.write_operations.append_life_records` (the same
+      guarded append/mutation path `quick` uses) rather than a second
+      write mechanism, and `lifetxt.ids.ensure_item_id`/`collect_item_ids`/
+      `auto_ids_enabled` (already imported in cli.py for `apply_auto_id_to_item`)
+      rather than a third ID-assignment implementation. Landed in the same
+      commit as cap-progress-increment-cli (#660); see that entry's notes
+      for why.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

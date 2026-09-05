@@ -41,6 +41,37 @@ class ToUriTests(unittest.TestCase):
         self.assertIsNone(_to_uri("-"))
         self.assertIsNone(_to_uri(None))
 
+    def test_spaces_and_hash_are_percent_encoded(self):
+        # A CodeX review finding: an unescaped "#" would be read by a
+        # strict URI consumer as introducing a fragment identifier
+        # (silently discarding everything after it as "the fragment"
+        # rather than part of the path), and a literal space makes the
+        # URI outright invalid.
+        self.assertEqual(
+            "file:///C:/My%20Files/life%20%231.txt",
+            _to_uri("C:\\My Files\\life #1.txt"),
+        )
+        self.assertEqual("sub%20dir/life%20%231.txt", _to_uri("sub dir/life #1.txt"))
+
+    def test_non_ascii_characters_are_percent_encoded(self):
+        self.assertEqual(
+            "file:///home/me/%E6%97%A5%E6%9C%AC%E8%AA%9E/life.txt",
+            _to_uri("/home/me/日本語/life.txt"),
+        )
+
+    def test_unc_path_uses_the_server_as_the_uri_authority(self):
+        # The server name is its own URI authority component (RFC 8089's
+        # Windows UNC-path appendix), not folded into the path -- the
+        # original version produced a non-standard four-slash
+        # file:////server/... by treating the whole normalized UNC path
+        # as an ordinary POSIX-absolute one.
+        self.assertEqual(
+            "file://server/share/life.txt", _to_uri("\\\\server\\share\\life.txt")
+        )
+
+    def test_unc_path_with_no_share_still_uses_the_server_as_authority(self):
+        self.assertEqual("file://server", _to_uri("\\\\server"))
+
 
 class SarifDocumentStructureTests(unittest.TestCase):
     def test_top_level_shape(self):

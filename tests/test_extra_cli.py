@@ -162,6 +162,30 @@ class ExtraCliTests(unittest.TestCase):
         self.assertIn("Why: t1: status [ ] is actionable", output)
         self.assertIn("ordered by priority, due, created, line", output)
 
+    def test_next_why_sort_key_matches_a_missing_priority_the_way_the_real_sort_does(
+        self,
+    ):
+        # A CodeX review finding: the explanation substituted the display
+        # string "(none)" for a missing priority before computing
+        # sort_key, landing _priority_key("(none)") in a different bucket
+        # ((2, 0, "(NONE)")) than the real sort's _priority_key(None)
+        # ((3, 9999, "")) -- the evidence disagreed with the actual order.
+        output = self.run_extra(["next", self.path, "--why", "--format", "json"])
+        rows = json.loads(output)
+        t5 = next(row for row in rows if row["id"] == "t5")
+        self.assertEqual("(none)", t5["why"]["ordering"]["priority"])
+        self.assertEqual([3, 9999, ""], t5["why"]["ordering"]["sort_key"][0])
+
+    def test_next_why_due_evidence_never_reports_a_do_value_as_due(self):
+        # A CodeX review finding: the explanation folded a do: value into
+        # "due" for display and for sort_key, even though the real sort
+        # (and the real due-based tiebreak) only ever reads due:.
+        output = self.run_extra(["next", self.path, "--why", "--format", "json"])
+        rows = json.loads(output)
+        t5 = next(row for row in rows if row["id"] == "t5")
+        self.assertEqual("(none)", t5["why"]["ordering"]["due"])
+        self.assertEqual("9999-12-31", t5["why"]["ordering"]["sort_key"][1])
+
     def test_next_table_shows_short_id_but_json_keeps_full_id(self):
         # #654: the table's ID column is a presentation-only short ID; JSON
         # (machine-readable) output must keep the full id: unchanged.

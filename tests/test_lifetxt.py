@@ -3058,6 +3058,54 @@ class LifeTxtProgressCliTests(unittest.TestCase):
             self.assertIn("progress:3/10", content)
             self.assertNotIn("progress:4/10", content)
 
+    def test_a_tiny_percentage_delta_is_not_rounded_away(self):
+        # A CodeX review finding: %g formatting defaults to 6 significant
+        # digits, so a tiny delta against an existing precise value was
+        # silently lost (50% + 0.000001% produced 50%, an unchanged
+        # no-op). Decimal-based arithmetic on the raw text preserves it.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir, "[ ] T Experiment id:experiment_1 progress:50%\n"
+            )
+            stdout, stderr, code = run_cli(
+                "progress", path, "experiment_1", "--delta", "+0.000001%"
+            )
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:50.000001%", content)
+
+    def test_a_long_percentage_delta_fails_loudly_instead_of_overflowing(self):
+        # A CodeX review finding: float(amount_text) on an extremely long
+        # digit string overflows to inf, and int() on inf then raised an
+        # uncaught OverflowError instead of a clean CLI error.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir, "[ ] T Experiment id:experiment_1 progress:50%\n"
+            )
+            stdout, stderr, code = run_cli(
+                "progress", path, "experiment_1", "--delta=+" + "9" * 400 + "%"
+            )
+            self.assertEqual(1, code)
+            self.assertIn("out of range", stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:50%", content)
+
+    def test_a_long_fraction_delta_fails_loudly_instead_of_overflowing(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir, "[ ] T Experiment id:experiment_1 progress:3/10\n"
+            )
+            stdout, stderr, code = run_cli(
+                "progress", path, "experiment_1", "--delta=+" + "9" * 400
+            )
+            self.assertEqual(1, code)
+            self.assertIn("must not exceed total", stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:3/10", content)
+
     def test_resolves_by_unique_id_prefix(self):
         # #653/#660: progress reuses the shared resolver, so a short unique
         # id: prefix works exactly like on done/start/complete.
@@ -4825,6 +4873,25 @@ class LifeTxtWebConfigAndCheckLineTests(unittest.TestCase):
 
         result = public_web_config({"web": {"week_start": "friday"}})
         self.assertEqual("monday", result["week_start"])
+
+    def test_config_api_reports_the_workspace_aware_today(self):
+        # A CodeX review finding against #658: the Web UI's relative-time
+        # display computed instant-based (hour/minute) diffs using the
+        # browser's own local clock, disagreeing with the CLI/TUI's
+        # date-based, workspace-timezone-aware relative_time(). /api/config
+        # now exposes the same timezone_today() the server itself already
+        # uses, so relativeTime() in web_assets_js_14.js can align with it.
+        try:
+            from fastapi.testclient import TestClient
+        except Exception as exc:
+            self.skipTest(f"FastAPI test client is unavailable: {exc}")
+        from lifetxt.timezone_policy import today as timezone_today
+        from lifetxt.webapp import create_app
+
+        client = TestClient(create_app(paths=[]))
+        response = client.get("/api/config")
+        self.assertEqual(200, response.status_code)
+        self.assertEqual(timezone_today().isoformat(), response.json()["today"])
 
     def test_index_page_includes_calendar_view(self):
         try:

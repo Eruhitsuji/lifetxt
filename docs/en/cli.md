@@ -783,6 +783,19 @@ failing. A trailing `N problems: X error(s), Y warning(s)` line summarizes
 the full filtered set. This is a presentation-only enhancement over the
 stable JSON fields above; `--format json` is completely unaffected.
 
+For a small, explicitly supported set of diagnostics -- an invalid status or
+type token, a detail key that is close to a known or type-recommended key, and
+an invalid `state:` value -- the text output may add a `Did you mean?` line
+(or a bulleted list when more than one candidate is equally plausible) right
+after the diagnostic's own hint. This is a suggestion only: it never changes
+what the parser or validator accepts, never mutates the file, and never
+changes a diagnostic's severity, code, or the command's exit code. Candidates
+come only from lifetxt's existing canonical vocabulary (the status/type token
+lists and their known aliases, the known/recommended detail-key sets, and the
+known `state:` values); a key that has no close match to that vocabulary is
+left alone as ordinary custom data, never guessed at. `--format json` never
+carries a suggestion field.
+
 Examples:
 
 ```sh

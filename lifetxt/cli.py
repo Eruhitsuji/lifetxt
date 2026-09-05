@@ -62,6 +62,7 @@ from .diagnostic_contract import (
     diagnostic_category,
     diagnostic_to_output_dict,
 )
+from .diagnostic_render import render_diagnostic_rich, render_diagnostics_summary
 from .cli_taxonomy import render_success_guidance as _render_success_guidance
 from .i18n import register_messages as _register_messages, translate as _t
 from .ics import items_from_ics_text
@@ -4371,10 +4372,15 @@ def command_check(args):
         write_text(None, output + "\n")
     else:
         if filtered_diagnostics:
-            for diagnostic in filtered_diagnostics:
-                write_text(None, diagnostic.format() + "\n")
+            for index, diagnostic in enumerate(filtered_diagnostics):
+                if index:
+                    write_text(None, "\n")
+                write_text(None, render_diagnostic_rich(diagnostic) + "\n")
                 if str(getattr(diagnostic, "code", "")).upper() == "W225":
                     write_text(None, _W225_GUIDANCE + "\n")
+            write_text(
+                None, "\n" + render_diagnostics_summary(filtered_diagnostics) + "\n"
+            )
         elif has_filter:
             write_text(
                 None, _t("check.ok_no_matching_diagnostics", n=len(items)) + "\n"

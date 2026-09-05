@@ -770,6 +770,19 @@ parser-native end spans are implemented; do not infer a stable `span` from
 The same diagnostic object shape is used by the raw-line validation surfaces
 `POST /api/check-line` and MCP `check_line`.
 
+Text diagnostics:
+
+`check`'s default text output renders each diagnostic as a small block: a
+header line (`path:line:column  SEVERITY CODE  message`), a source-line
+snippet with a `^` caret (or a `^~~~` range when the diagnostic's own end
+position is known and on the same line), and the diagnostic's `hint` text
+when one is present. A source snippet is shown only when the diagnostic's
+file can still be read at its original path and line number; an unreadable
+or already-modified source falls back to the header line alone rather than
+failing. A trailing `N problems: X error(s), Y warning(s)` line summarizes
+the full filtered set. This is a presentation-only enhancement over the
+stable JSON fields above; `--format json` is completely unaffected.
+
 Examples:
 
 ```sh

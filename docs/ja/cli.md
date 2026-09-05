@@ -742,6 +742,19 @@ transition period を文書化します。その期間は古い field 名も利�
 raw-line validation surface である `POST /api/check-line` と MCP `check_line`
 も同じ diagnostic object shape を使います。
 
+Text diagnostics:
+
+`check` の default text output は、各 diagnostic を小さな block として
+表示します: header 行（`path:line:column  SEVERITY CODE  message`）、
+`^` caret 付きの source-line snippet（diagnostic 自身の end position が
+同じ行内で分かっている場合は `^~~~` の range）、そして `hint` がある場合は
+その text です。source snippet は、diagnostic の file が元の path・行番号で
+まだ読める場合にのみ表示されます -- 読めない、あるいは既に変更された source
+は失敗せず header 行だけの表示に fallback します。末尾には filter 後の
+diagnostic 全体を要約する `N problems: X error(s), Y warning(s)` 行が
+付きます。これは上記の安定 JSON field に対する presentation-only の拡張で
+あり、`--format json` には一切影響しません。
+
 例:
 
 ```sh

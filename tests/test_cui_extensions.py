@@ -2188,12 +2188,31 @@ class WorkspaceFrameTests(unittest.TestCase):
     def test_narrow_terminal_drops_meta_columns_instead_of_wrapping(self):
         self.assertEqual((), tui_app.meta_columns_for_width(40))
         self.assertEqual(1, len(tui_app.meta_columns_for_width(60)))
-        self.assertEqual(3, len(tui_app.meta_columns_for_width(120)))
+        self.assertEqual(3, len(tui_app.meta_columns_for_width(100)))
+        self.assertEqual(4, len(tui_app.meta_columns_for_width(120)))
 
         state = self._state()
         frame = tui_app.build_frame(state, 44, 24)
         for line in frame:
             self.assertLessEqual(tui_app.display_width(tui_app.spans_to_text(line)), 44)
+
+    def test_progress_column_shows_only_in_the_widest_tier(self):
+        row_with_progress = {"details": {"progress": ["75%"]}}
+        row_without_progress = {"details": {}}
+        state = self._state()
+
+        self.assertIn(
+            "progress:75%",
+            tui_app.spans_to_text(tui_app._row_meta(state, row_with_progress, 120)),
+        )
+        self.assertNotIn(
+            "progress:",
+            tui_app.spans_to_text(tui_app._row_meta(state, row_with_progress, 100)),
+        )
+        self.assertNotIn(
+            "progress:",
+            tui_app.spans_to_text(tui_app._row_meta(state, row_without_progress, 120)),
+        )
 
     def test_context_label_drops_whole_parts_instead_of_clipping_values(self):
         state = self._state()

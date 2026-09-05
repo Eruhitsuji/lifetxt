@@ -2230,7 +2230,12 @@ TUI 起動前に明示的に拒否され、問題の内容が示されます。�
 `auto` は出力 encoding を判定し、端末が丸角罫線を表現できない場合は ASCII に fallback するため、
 Windows の code page でも例外にならず安全に劣化します。
 列幅は East Asian Width を考慮するため日本語 title でも整列が崩れず、
-meta 列 (project、due、priority) は端末幅が狭くなると折り返さずに 1 列ずつ省略されます。
+meta 列 (project、due、priority、そして最も広い端末幅でのみ表示される `progress:`) は
+端末幅が狭くなると折り返さずに 1 列ずつ省略されます。`progress:` detail を持たない record は
+その列に何も表示されません。row を選択して detail inspector（`s`）を開くと、他の detail と
+同様に `progress:` の値も life.txt の行全体と一緒に表示されます。編集も他の detail と同じく
+`e`（`$EDITOR` で開く）を使い、他の TUI での編集と同じ guarded / revision-checked な write path
+を通ります。
 
 既定値は config の `tui.theme`、`tui.keymap`、`tui.glyphs`、`tui.limit`、`tui.agenda_window`、
 `tui.bindings`（上記参照）で設定できます。

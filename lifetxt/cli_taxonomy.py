@@ -112,6 +112,7 @@ _EXTRA_SUMMARIES = {
     "audience guides, one-command lookups, and a JSON capability catalog.",
     "next": "List actionable next steps: open tasks and habits that are not "
     "blocked, someday-tagged, or otherwise deferred.",
+    "recent": "List recently created or updated items, newest first.",
     "show": "Show one item's full detail by ID.",
     "edit": "Open an item in $EDITOR through a safe temporary-copy "
     "review-and-apply flow.",
@@ -279,6 +280,7 @@ CATEGORIES = OrderedDict(
                     "temporal",
                     "count",
                     "status",
+                    "recent",
                 ),
             },
         ),
@@ -805,6 +807,7 @@ _EXAMPLES = {
     "quick": ('lifetxt add "Buy milk"',),
     "today": ("lifetxt today",),
     "next": ("lifetxt next",),
+    "recent": ("lifetxt recent",),
     "agenda": ("lifetxt agenda --window 1w",),
     "show": ("lifetxt show ID",),
     "edit": ("lifetxt edit ID",),

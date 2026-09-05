@@ -2353,6 +2353,32 @@ class LifeTxtQuickCliTests(unittest.TestCase):
             self.assertIn("due:2026-12-31", content)
             self.assertIn("project:home", content)
 
+    def test_quick_applies_progress_flag(self):
+        # #647: --progress is added automatically by registering "progress"
+        # in assist.DETAIL_FLAGS, the same mechanism every other detail flag
+        # (due, project, priority, ...) already goes through for quick/q/add
+        # and assist -- no dedicated flag-handling code was written for it.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            stdout, stderr, code = run_cli(
+                "quick", "Write_paper", "--progress", "3/10", "--append", path
+            )
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:3/10", content)
+
+    def test_add_alias_applies_progress_flag(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            stdout, stderr, code = run_cli(
+                "add", "Write_paper", "--progress", "75%", "--append", path
+            )
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("progress:75%", content)
+
     def test_quick_resolves_today(self):
         import datetime as dt
 

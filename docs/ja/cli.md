@@ -1692,7 +1692,7 @@ known detail key には直接フラグもあります。各フラグは複数回
 --state --user --person --owner --assignee --attendee --sender --recipient --team --group --service --channel
 --visibility --notify_at --notify_from --notify_to --ack --snooze_until --on --at --repeat
 --interval --until --count
---project --context --loc --priority --est --elapsed --tag --note --body --mood --weather --url
+--project --context --loc --priority --progress --est --elapsed --tag --note --body --mood --weather --url
 --reason --moved_to
 ```
 

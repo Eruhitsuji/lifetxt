@@ -58,6 +58,7 @@ DETAIL_FLAGS = (
     "context",
     "loc",
     "priority",
+    "progress",
     "est",
     "elapsed",
     "tag",

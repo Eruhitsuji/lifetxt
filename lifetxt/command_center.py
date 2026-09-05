@@ -55,6 +55,7 @@ def _ref(item):
             ("due", _first(item, "due")),
             ("project", _first(item, "project")),
             ("assignee", _first(item, "assignee") or _first(item, "owner")),
+            ("progress", _first(item, "progress")),
             ("source", item.source),
             ("line", item.line),
         )

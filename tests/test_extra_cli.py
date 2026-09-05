@@ -1,6 +1,7 @@
 import contextlib
 import datetime
 import io
+import json
 import os
 import tempfile
 import unittest
@@ -142,6 +143,23 @@ class ExtraCliTests(unittest.TestCase):
         )
         rank_false_explicit = self.run_extra(["next", self.path, "--format", "json"])
         self.assertEqual(with_rank_flag_absent, rank_false_explicit)
+
+    def test_next_why_adds_selection_evidence_to_json(self):
+        output = self.run_extra(["next", self.path, "--why", "--format", "json"])
+        rows = json.loads(output)
+
+        first = next(row for row in rows if row["id"] == "t1")
+        self.assertEqual("A", first["why"]["ordering"]["priority"])
+        self.assertEqual(
+            "priority, due, created, line", first["why"]["ordering"]["method"]
+        )
+        self.assertIn("dependencies resolved", first["why"]["criteria"])
+
+    def test_next_why_adds_selection_evidence_to_text(self):
+        output = self.run_extra(["next", self.path, "--why", "--format", "text"])
+
+        self.assertIn("Why: t1: status [ ] is actionable", output)
+        self.assertIn("ordered by priority, due, created, line", output)
 
     def _write_convergence_fixture(self):
         path = os.path.join(self.tempdir.name, "converge.txt")

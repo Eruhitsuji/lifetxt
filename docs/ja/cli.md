@@ -224,7 +224,7 @@ audience、そしてこの表と同じカテゴリ分類を表示します。
 
 | カテゴリ | コマンド |
 |---|---|
-| Getting Started / Daily | `tour`、`help`、`init`、`quick` (`add`)、`today`、`next`、`agenda`、`show`、`edit`、`done`、`complete`、`progress`、`clone`、`reopen`、`review`、`assist`、`state`、`start`、`stop`、`assign`、`timer`、`notify` |
+| Getting Started / Daily | `tour`、`help`、`init`、`quick` (`add`)、`today`、`next`、`agenda`、`show`、`edit`、`done`、`complete`、`progress`、`clone`、`reopen`、`due`、`review`、`assist`、`state`、`start`、`stop`、`assign`、`timer`、`notify` |
 | Query / Explore | `filter`、`search`、`find`、`query`、`view`、`summary`、`inbox`、`health`、`temporal`、`count`、`status` |
 | Projects / People / Collaboration | `project`、`portfolio`、`area`、`person`、`group`、`who`、`message`、`proposal`、`ticket`、`version`、`sprint` |
 | Structure / Data Integrity | `check`、`integrity`、`ids`、`links`、`backlinks`、`sources`、`tag`、`lint`、`deps`、`diff`、`snapshot`、`undo`、`cleanup`、`files` |
@@ -2769,6 +2769,28 @@ completion を単一の completed state ではなく複数の `done:` 日付の 
 `ID` は一意な ID prefix を受け付けます（[Short ID prefix による選択](#short-id-prefix-による選択)
 参照）。`--line`/`--text` は `done` と同じ方法で item を選択します。
 `--dry-run` は書き込まずに、結果の status と削除される detail を表示します。
+
+### 13.14 `due`
+
+`lifetxt due PATH ID DATE` は item の `due:` 値を設定・置換します。
+`lifetxt due PATH ID --clear` は削除します。`ID` は必須の positional
+です（`done`/`progress`/`clone` と異なり、`due` は `--line`/`--text` を
+受け付けません。date 用の 2 つ目の optional positional を追加すると、
+どちらの token が何を意味するか曖昧になるためです）。
+`done`/`progress`/`clone` と同じ guarded mutation path を再利用するため、
+revision/backup の扱いは同じであり、変更されるのは `due:` だけです ——
+他の detail と item の status はすべてそのまま保持されます。
+
+```sh
+python -m lifetxt due life.txt task_1 2026-09-07
+python -m lifetxt due life.txt task_1 --clear
+python -m lifetxt due life.txt task_1 2026-09-07 --dry-run
+```
+
+不正な日付は書き込み前に拒否されます。`due:` を持たない item に対する
+`--clear` は確定的な no-op です（exit `0`、書き込みなし）。`ID` は一意な
+ID prefix を受け付けます（[Short ID prefix による選択](#short-id-prefix-による選択)
+参照）。`--dry-run` は書き込まずに変更内容を表示します。
 
 ## 14. alias
 

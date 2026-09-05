@@ -3598,6 +3598,136 @@ class LifeTxtReopenCliTests(unittest.TestCase):
             self.assertIn("OK: 1 item(s)", stdout)
 
 
+class LifeTxtDueCliTests(unittest.TestCase):
+    """Covers #666: `lifetxt due` sets, replaces, or clears due:."""
+
+    def _write(self, temp_dir, source):
+        path = os.path.join(temp_dir, "life.txt")
+        with open(path, "w", encoding="utf-8", newline="\n") as f:
+            f.write(source)
+        return path
+
+    def test_sets_due_on_an_item_with_none(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:t1 project:home\n")
+            stdout, stderr, code = run_cli("due", path, "t1", "2026-09-07")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("due:2026-09-07", content)
+            self.assertIn("project:home", content)
+
+    def test_replaces_an_existing_due(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:t1 due:2026-01-01\n")
+            stdout, stderr, code = run_cli("due", path, "t1", "2026-09-07")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("due:2026-09-07", content)
+            self.assertNotIn("due:2026-01-01", content)
+
+    def test_clear_removes_due(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir, "[ ] T Task id:t1 due:2026-09-07 project:home\n"
+            )
+            stdout, stderr, code = run_cli("due", path, "t1", "--clear")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertNotIn("due:", content)
+            self.assertIn("project:home", content)
+
+    def test_clear_on_item_with_no_due_is_a_noop(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:t1 project:home\n")
+            stdout, stderr, code = run_cli("due", path, "t1", "--clear")
+            self.assertEqual(0, code, stderr)
+            self.assertIn("No due:", stdout)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertEqual("[ ] T Task id:t1 project:home\n", content)
+
+    def test_date_and_clear_together_are_rejected(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:t1\n")
+            stdout, stderr, code = run_cli("due", path, "t1", "2026-09-07", "--clear")
+            self.assertEqual(1, code)
+            self.assertIn("either a date or --clear", stderr)
+
+    def test_no_date_and_no_clear_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:t1\n")
+            stdout, stderr, code = run_cli("due", path, "t1")
+            self.assertEqual(1, code)
+            self.assertIn("Specify a due date", stderr)
+
+    def test_invalid_date_is_rejected_before_any_write(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:t1 due:2026-01-01\n")
+            stdout, stderr, code = run_cli("due", path, "t1", "not-a-date")
+            self.assertEqual(1, code)
+            self.assertIn("Invalid due date", stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("due:2026-01-01", content)
+
+    def test_resolves_by_unique_id_prefix(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir,
+                "[ ] T First id:abc123def456\n[ ] T Second id:xyz789ghi000\n",
+            )
+            stdout, stderr, code = run_cli("due", path, "abc1", "2026-09-07")
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                lines = f.read().splitlines()
+            self.assertIn("due:2026-09-07", lines[0])
+            self.assertNotIn("due:", lines[1])
+
+    def test_ambiguous_id_prefix_fails_without_mutation(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir,
+                "[ ] T First id:abc123def456\n[ ] T Second id:abc999xyz000\n",
+            )
+            stdout, stderr, code = run_cli("due", path, "abc", "2026-09-07")
+            self.assertEqual(1, code)
+            self.assertIn("Ambiguous ID prefix", stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertNotIn("due:", content)
+
+    def test_missing_id_fails_loudly(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:t1\n")
+            stdout, stderr, code = run_cli("due", path, "nope", "2026-09-07")
+            self.assertEqual(1, code)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertNotIn("due:", content)
+
+    def test_dry_run_reports_without_writing(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:t1\n")
+            stdout, stderr, code = run_cli("due", path, "t1", "2026-09-07", "--dry-run")
+            self.assertEqual(0, code, stderr)
+            self.assertIn("due:2026-09-07", stdout)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertNotIn("due:", content)
+
+    def test_updated_item_passes_check(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task id:t1\n")
+            stdout, stderr, code = run_cli("due", path, "t1", "2026-09-07")
+            self.assertEqual(0, code, stderr)
+            stdout, stderr, code = run_cli("check", path)
+            self.assertEqual(0, code, stderr)
+            self.assertIn("OK: 1 item(s)", stdout)
+
+
 class LifeTxtDoneHabitCliTests(unittest.TestCase):
     def test_done_habit_appends_log_and_keeps_status_open(self):
         source = "[ ] H Exercise repeat:daily project:health id:h1\n"

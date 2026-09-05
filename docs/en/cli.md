@@ -3125,14 +3125,50 @@ preserved unchanged.
 
 ```sh
 python -m lifetxt due life.txt task_1 2026-09-07
+python -m lifetxt due life.txt task_1 tomorrow
 python -m lifetxt due life.txt task_1 --clear
 python -m lifetxt due life.txt task_1 2026-09-07 --dry-run
 ```
 
-An invalid date is rejected before anything is written. `--clear` on an
-item with no `due:` is a deterministic no-op (exit `0`, nothing written).
-`ID` accepts a unique ID prefix (see [Short ID prefix selection](#short-id-prefix-selection)).
+`DATE` also accepts the bounded relative shorthand described in
+[§13.15](#1315-relative-date-shorthand) (`today`, `tomorrow`, `+3d`, ...);
+it is resolved to an absolute date before anything is written, so
+`due:` in the file is always canonical. An invalid or unrecognized date
+is rejected before anything is written. `--clear` on an item with no
+`due:` is a deterministic no-op (exit `0`, nothing written). `ID` accepts
+a unique ID prefix (see [Short ID prefix selection](#short-id-prefix-selection)).
 `--dry-run` shows what would change without writing.
+
+### 13.15 Relative date shorthand
+
+A handful of commands that take a human-facing date accept a small,
+deterministic set of relative tokens instead of typing `YYYY-MM-DD`
+yourself: `today`, `tomorrow`, `yesterday`, a weekday name (the next
+occurrence), `next_WEEKDAY`, `next_week`, and a signed offset such as
+`+3d`, `-1w`, `+2m`, `+1y`. This is **not** a natural-language date
+parser — `next monday`, `in two weeks`, and similar free-text phrases are
+deliberately unsupported and fail with an actionable message rather than
+being guessed at.
+
+```sh
+python -m lifetxt due life.txt task_1 tomorrow
+python -m lifetxt quick "Submit report" --due tomorrow
+python -m lifetxt quick "Renew lease" --due +30d
+```
+
+**Resolution happens only at this CLI input boundary**, through the one
+shared resolver (`lifetxt.shorthand.resolve_date_token`) every accepting
+command reuses, using the same workspace-aware current date
+`today`/`agenda`/`done` already resolve their own dates against. The value
+actually written to
+`life.txt` is always the resolved canonical absolute date —
+`due:2026-09-09`, never `due:tomorrow` — so Format 1.0 itself gains no new
+syntax and every other reader of the file (the parser, `check`, the Web
+API, MCP) sees only ordinary absolute dates. `quick`/`add`'s
+`--due`/`--do`/`--until` flags already resolved this same shorthand
+before `due` (13.14) existed; both now share the identical resolver
+rather than each parsing dates independently. An explicit `YYYY-MM-DD`
+value is returned unchanged.
 
 ## 14. Aliases
 

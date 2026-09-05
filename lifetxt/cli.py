@@ -3093,7 +3093,9 @@ def build_parser():
         "date",
         nargs="?",
         default=None,
-        help="New due date (YYYY-MM-DD). Omit when using --clear.",
+        help="New due date: YYYY-MM-DD, today, tomorrow, yesterday, a "
+        "weekday, next_week, or an offset such as +3d/-1w/+2m. Omit when "
+        "using --clear.",
     )
     due_cmd.add_argument(
         "--clear",
@@ -7888,9 +7890,16 @@ _DUE_ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 def command_due(args):
     """Set, replace, or clear an item's due: date (#666).
 
-    Reuses the same target resolver and guarded mutation path as
-    `done`/`progress`/`clone` rather than a second item-editing path. The
-    stored value is always a canonical absolute due:YYYY-MM-DD."""
+    Accepts the shared today/tomorrow/+Nd/... shorthand (#667) at this CLI
+    boundary only, resolved through the workspace-aware timezone policy
+    before anything is written -- the exact same
+    `lifetxt.shorthand.resolve_date_token` resolver `quick`'s
+    --due/--do/--until flags already use. The stored value is always a
+    canonical absolute due:YYYY-MM-DD; reuses the same target resolver
+    and guarded mutation path as `done`/`progress`/`clone` rather than a
+    second item-editing path."""
+    from .shorthand import ShorthandError, resolve_date_token
+
     config = _config(args)
     path = args.path
     if not path or path == "-":
@@ -7907,7 +7916,9 @@ def command_due(args):
     if clear and date_arg:
         raise ValueError("Use either a date or --clear, not both.")
     if not clear and not date_arg:
-        raise ValueError("Specify a due date (YYYY-MM-DD) or --clear.")
+        raise ValueError(
+            "Specify a due date (YYYY-MM-DD, today, tomorrow, +Nd, ...) or --clear."
+        )
 
     if clear:
         if "due" not in target.details:
@@ -7917,12 +7928,19 @@ def command_due(args):
         add_detail = None
         dry_run_summary = "Would clear due: on %r." % target.title
     else:
-        resolved = str(date_arg).strip()
+        try:
+            resolved = resolve_date_token(date_arg, today=timezone_today(), strict=True)
+        except ShorthandError as exc:
+            raise ValueError(str(exc))
         if (
             not _DUE_ISO_DATE_RE.match(resolved)
             or parse_date_or_datetime(resolved) is None
         ):
-            raise ValueError("Invalid due date %r. Use YYYY-MM-DD." % date_arg)
+            raise ValueError(
+                "Invalid due date %r. Use YYYY-MM-DD, today, tomorrow, "
+                "yesterday, a weekday, next_week, or an offset such as "
+                "+3d, -1w, +2m." % date_arg
+            )
         remove_detail = ["due"]
         add_detail = ["due:%s" % resolved]
         dry_run_summary = "Would set due:%s on %r." % (resolved, target.title)

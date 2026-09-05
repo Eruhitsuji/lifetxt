@@ -2998,16 +2998,20 @@ warns rather than letting `FREQ=WEEKLY;BYDAY=2MO` quietly mean every Monday.
 
 `lifetxt progress PATH [ID] --delta DELTA` increments or decrements an
 item's existing `progress:` value by a signed delta, without rewriting it
-by hand. It reuses the shared `progress:` parser and validator (`0<=
-current<=total` for a fraction, `0-100` for a percentage) and the same
-guarded mutation path as `done`/`complete`, so revision/backup handling is
-identical.
+by hand. `lifetxt progress PATH [ID] --set VALUE` (#665) instead replaces
+`progress:` directly with `VALUE`, in whichever representation you give it.
+`--delta` and `--set` are mutually exclusive. Both reuse the shared
+`progress:` parser and validator (`0<=current<=total` for a fraction,
+`0-100` for a percentage) and the same guarded mutation path as
+`done`/`complete`, so revision/backup handling is identical.
 
 ```sh
 python -m lifetxt progress life.txt experiment_1 --delta +1
 python -m lifetxt progress life.txt experiment_1 --delta=-1
 python -m lifetxt progress life.txt task_1 --delta +10%
 python -m lifetxt progress life.txt task_1 --delta=-15% --dry-run
+python -m lifetxt progress life.txt task_1 --set 75%
+python -m lifetxt progress life.txt experiment_1 --set 3/10
 ```
 
 Given `progress:3/10`, `--delta +1` produces `progress:4/10` (the
@@ -3019,11 +3023,13 @@ must use `--delta=-N` (with `=`) — `--delta -N` is parsed by argparse as an
 unrecognized flag, not a value.
 
 A result outside the valid range (`progress:14/10`, `progress:105%`, a
-negative fraction numerator) is rejected before anything is written, and an
-item with **no** existing `progress:` detail is rejected rather than
-silently treated as `0%` — set an initial value first (for example via
-`assist --update ID --match-id ID --add-detail progress:0%`). `ID` accepts
-a unique ID prefix (see [Short ID prefix selection](#short-id-prefix-selection));
+negative fraction numerator) is rejected before anything is written.
+`--delta` against an item with **no** existing `progress:` detail is
+rejected rather than silently treated as `0%` — set an initial value first
+with `--set` (for example `lifetxt progress PATH ID --set 0%`); `--set`
+itself works whether or not the item already has a `progress:` value,
+since it never needs an existing one to add to or subtract from. `ID`
+accepts a unique ID prefix (see [Short ID prefix selection](#short-id-prefix-selection));
 `--line`/`--text` select an item the same way as `done`. `--dry-run` shows
 the resulting value without writing.
 

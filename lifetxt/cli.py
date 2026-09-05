@@ -7,6 +7,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import sys
 import types
 from collections import OrderedDict
@@ -2994,6 +2995,59 @@ def build_parser():
         help="Show what would change without writing.",
     )
     stop_cmd.set_defaults(func=command_stop)
+
+    progress_cmd = subparsers.add_parser(
+        "progress",
+        help="Increment or decrement an item's progress: value (#660).",
+    )
+    progress_cmd.add_argument("path", help="life.txt file containing the item.")
+    progress_cmd.add_argument(
+        "--delta",
+        required=True,
+        help=(
+            "Signed delta: +N/-N changes a fraction's current (total is kept), "
+            "+N%%/-N%% changes a percentage's value. Representation kind is "
+            "always preserved. A negative value must use --delta=-N (with '='); "
+            "'--delta -N' is parsed as an unknown flag by argparse."
+        ),
+    )
+    progress_cmd.add_argument(
+        "id", nargs="?", default=None, help="ID of the item to update."
+    )
+    progress_cmd.add_argument(
+        "--line", type=int, default=None, help="Line number of the item."
+    )
+    progress_cmd.add_argument(
+        "--text", default=None, help="Title substring to search for."
+    )
+    progress_cmd.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would change without writing to the file.",
+    )
+    progress_cmd.set_defaults(func=command_progress)
+
+    clone_cmd = subparsers.add_parser(
+        "clone",
+        help="Create a new item derived from an existing one, resetting "
+        "identity/history details (#659).",
+    )
+    clone_cmd.add_argument("path", help="life.txt file containing the source item.")
+    clone_cmd.add_argument(
+        "id", nargs="?", default=None, help="ID of the item to clone."
+    )
+    clone_cmd.add_argument(
+        "--line", type=int, default=None, help="Line number of the item."
+    )
+    clone_cmd.add_argument(
+        "--text", default=None, help="Title substring to search for."
+    )
+    clone_cmd.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show the generated item without writing it.",
+    )
+    clone_cmd.set_defaults(func=command_clone)
 
     complete_cmd = subparsers.add_parser(
         "complete",
@@ -7456,6 +7510,204 @@ def _captured_stdout():
         yield buffer
     finally:
         sys.stdout = original
+
+
+_PROGRESS_DELTA_RE = re.compile(r"^([+-])(\d+(?:\.\d+)?)(%)?$")
+
+
+def _apply_progress_delta(parsed, delta_text):
+    """Apply a signed +N/-N or +N%/-N%% delta to a parsed progress value
+    (#660), preserving its representation kind (fraction stays a fraction,
+    percentage stays a percentage) and returning the new raw text.
+
+    Raises ValueError, naming the reason, for a delta that does not match
+    the target's representation (a %% delta against a fraction, or vice
+    versa), a non-integer delta against a fraction, or an unparseable
+    delta string. Bounds validation (0-100% / 0<=current<=total) is left
+    to the caller, which re-parses the returned value via
+    lifetxt.progress.parse_progress().
+    """
+    match = _PROGRESS_DELTA_RE.match(str(delta_text or "").strip())
+    if not match:
+        raise ValueError(
+            "Invalid --delta %r. Use +N/-N for a fraction, or +N%%/-N%% for "
+            "a percentage." % delta_text
+        )
+    sign, amount_text, percent_sign = match.groups()
+    amount = float(amount_text)
+    if amount == int(amount):
+        amount = int(amount)
+    signed = amount if sign == "+" else -amount
+
+    if parsed.kind == "fraction":
+        if percent_sign:
+            raise ValueError(
+                "progress:%s is a fraction; use +N/-N (no %%) to change its "
+                "numerator, not a percentage delta." % parsed.raw
+            )
+        if not isinstance(signed, int):
+            raise ValueError(
+                "Fraction delta must be a whole number, got %r." % delta_text
+            )
+        return "%d/%d" % (parsed.current + signed, parsed.total)
+
+    if not percent_sign:
+        raise ValueError(
+            "progress:%s is a percentage; use +N%%/-N%% to change it, not a "
+            "fraction delta." % parsed.raw
+        )
+    return "%g%%" % (parsed.percent + signed)
+
+
+def command_progress(args):
+    """Increment or decrement an item's progress: value by a signed delta,
+    preserving its percentage/fraction representation (#660)."""
+    from .progress import ProgressValueError, parse_progress
+
+    config = _config(args)
+    path = args.path
+    if not path or path == "-":
+        raise ValueError("progress requires a file path, not stdin.")
+    id_key = id_key_from_config(config)
+    text = read_text(path)
+    items, _ = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
+    target, aborted = _resolve_target_item(
+        items, id_key, args, prompt_verb="Update progress:"
+    )
+    if aborted:
+        return 0
+
+    raw_values = target.details.get("progress")
+    if not raw_values:
+        # A missing progress: is never implicitly 0% (#645's own design
+        # constraint); reject rather than guess an initial value.
+        raise ValueError(
+            "Item %r has no progress: detail. Set an initial value first "
+            "(for example `lifetxt assist --update %s --match-id %s "
+            "--add-detail progress:0%%`)."
+            % (target.title, path, (target.details.get(id_key) or [""])[0])
+        )
+    current_raw = raw_values[0]
+    try:
+        parsed = parse_progress(current_raw)
+    except ProgressValueError as exc:
+        raise ValueError(
+            "Existing progress:%s is invalid: %s" % (current_raw, exc.reason)
+        )
+
+    new_raw = _apply_progress_delta(parsed, args.delta)
+    try:
+        parse_progress(new_raw)
+    except ProgressValueError as exc:
+        raise ValueError(
+            "Resulting progress:%s would be invalid: %s" % (new_raw, exc.reason)
+        )
+
+    if getattr(args, "dry_run", False):
+        sys.stdout.write(
+            "[dry-run] Would change progress:%s to progress:%s.\n"
+            % (current_raw, new_raw)
+        )
+        return 0
+
+    update_args = types.SimpleNamespace(
+        line=target.line,
+        match_id=None,
+        status=None,
+        kind=None,
+        title=None,
+        add_detail=["progress:%s" % new_raw],
+        detail=None,
+        remove_detail=["progress"],
+    )
+    for flag in DETAIL_FLAGS:
+        dest = "from_" if flag == "from" else flag
+        if not hasattr(update_args, dest):
+            setattr(update_args, dest, None)
+
+    updated_text, updated_line, diagnostics = update_text(text, update_args)
+    if _has_error(diagnostics):
+        _print_diagnostics(diagnostics)
+        return 1
+
+    _ensure_writable_path(path, config, "progress")
+    _pre_write_backup(path, config, "progress")
+    atomic_write_text(path, updated_text)
+    sys.stdout.write("Updated: %s\n" % updated_line)
+    if sys.stdout.isatty():
+        sys.stdout.write(_render_success_guidance("progress", path=path))
+    return 0
+
+
+#: Detail keys never copied onto a clone (#659): identity/system provenance
+#: (matching model.py's own SYSTEM_RECOMMENDED_KEYS grouping of
+#: source/uid/created/updated -- a clone is a genuinely new record, not a
+#: continuation of the source's identity), plus done (completion history)
+#: and progress (explicitly reset to "no progress yet", never implicitly
+#: 0%, matching #645's own missing-progress-is-not-zero principle). The
+#: source's own id: is excluded separately below, keyed off the workspace's
+#: configured id_key rather than the literal string "id".
+_CLONE_RESET_DETAIL_KEYS = frozenset(
+    ("source", "uid", "created", "updated", "done", "progress")
+)
+
+
+def command_clone(args):
+    """Create a new item derived from an existing one (#659), resetting
+    identity/history-category details rather than copying them verbatim.
+    The source item is never modified."""
+    from .assist import _default_status as _clone_default_status
+
+    config = _config(args)
+    path = args.path
+    if not path or path == "-":
+        raise ValueError("clone requires a file path, not stdin.")
+    id_key = id_key_from_config(config)
+    text = read_text(path)
+    items, _ = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
+    target, aborted = _resolve_target_item(items, id_key, args, prompt_verb="Clone:")
+    if aborted:
+        return 0
+
+    new_details = OrderedDict()
+    for key, values in target.details.items():
+        if key == id_key or key in _CLONE_RESET_DETAIL_KEYS:
+            continue
+        new_details[key] = list(values)
+
+    status = _clone_default_status(target.kind, new_details)
+    new_item = Item(status, target.kind, target.title, new_details)
+
+    if auto_ids_enabled(config):
+        existing_ids = collect_item_ids(items, key=id_key)
+        ensure_item_id(
+            new_item,
+            existing_ids=existing_ids,
+            key=id_key,
+            prefix=id_prefix_for_item(new_item, config),
+        )
+
+    new_line = item_to_assisted_line(new_item)
+    parsed_new, new_diagnostics = parse_text(new_line + "\n")
+    if not parsed_new or _has_error(new_diagnostics):
+        _print_diagnostics(new_diagnostics)
+        raise ValueError("Generated clone did not produce a valid item: %s" % new_line)
+
+    if getattr(args, "dry_run", False):
+        sys.stdout.write(
+            "[dry-run] Would clone %r to:\n%s\n" % (target.title, new_line)
+        )
+        return 0
+
+    _ensure_writable_path(path, config, "clone")
+    _pre_write_backup(path, config, "clone")
+    from .write_operations import append_life_records
+
+    append_life_records(path, new_line + "\n", operation="clone.append")
+    sys.stdout.write("Cloned: %s\n" % new_line)
+    if sys.stdout.isatty():
+        sys.stdout.write(_render_success_guidance("clone", path=path))
+    return 0
 
 
 def command_done(args):

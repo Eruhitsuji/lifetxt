@@ -224,7 +224,7 @@ audience、そしてこの表と同じカテゴリ分類を表示します。
 
 | カテゴリ | コマンド |
 |---|---|
-| Getting Started / Daily | `tour`、`help`、`init`、`quick` (`add`)、`today`、`next`、`agenda`、`show`、`edit`、`done`、`complete`、`review`、`assist`、`state`、`start`、`stop`、`assign`、`timer`、`notify` |
+| Getting Started / Daily | `tour`、`help`、`init`、`quick` (`add`)、`today`、`next`、`agenda`、`show`、`edit`、`done`、`complete`、`progress`、`clone`、`review`、`assist`、`state`、`start`、`stop`、`assign`、`timer`、`notify` |
 | Query / Explore | `filter`、`search`、`find`、`query`、`view`、`summary`、`inbox`、`health`、`temporal`、`count`、`status` |
 | Projects / People / Collaboration | `project`、`portfolio`、`area`、`person`、`group`、`who`、`message`、`proposal`、`ticket`、`version`、`sprint` |
 | Structure / Data Integrity | `check`、`integrity`、`ids`、`links`、`backlinks`、`sources`、`tag`、`lint`、`deps`、`diff`、`snapshot`、`undo`、`cleanup`、`files` |
@@ -2655,6 +2655,87 @@ Every 2 weeks on Sunday, Tuesday (weeks start Sunday)
 `BYDAY` の序数（`2MO`）が意味を持つのは `FREQ=MONTHLY` と `FREQ=YEARLY` だけです。
 週次・日次の展開では数値が無視されるため、`FREQ=WEEKLY;BYDAY=2MO` が黙って
 「毎週月曜日」になることのないよう `check` が警告します。
+
+### 13.11 `progress`
+
+`lifetxt progress PATH [ID] --delta DELTA` は、既存の `progress:` 値を手で
+書き換える代わりに、signed delta だけ増減します。共有の `progress:`
+parser/validator（fraction は `0<=current<=total`、percentage は
+`0-100`）と、`done`/`complete` と同じ guarded mutation path を再利用する
+ため、revision/backup の扱いは同じです。
+
+```sh
+python -m lifetxt progress life.txt experiment_1 --delta +1
+python -m lifetxt progress life.txt experiment_1 --delta=-1
+python -m lifetxt progress life.txt task_1 --delta +10%
+python -m lifetxt progress life.txt task_1 --delta=-15% --dry-run
+```
+
+`progress:3/10` に `--delta +1` を適用すると `progress:4/10`
+（denominator は保持されます）。`progress:40%` に `--delta +10%` を適用
+すると `progress:50%` になります。**representation kind は勝手に変換され
+ません**: fraction に `%` 付き delta を、percentage に数値だけの delta を
+適用しようとすると、推測せず fail-loud エラーになります。負の delta は
+`--delta=-N`（`=` 付き）で指定する必要があります —— `--delta -N` は
+argparse に未知の flag として解釈されます。
+
+有効範囲外の結果（`progress:14/10`、`progress:105%`、負の fraction
+numerator）は書き込み前に拒否され、`progress:` を持たない item は暗黙に
+`0%` とはみなされず拒否されます —— まず初期値を設定してください（例:
+`assist --update ID --match-id ID --add-detail progress:0%`）。`ID` は
+一意な ID prefix を受け付けます（[Short ID prefix による選択](#short-id-prefix-による選択)
+参照）。`--line`/`--text` は `done` と同じ方法で item を選択します。
+`--dry-run` は書き込まずに結果の値だけ表示します。
+
+### 13.12 `clone`
+
+`lifetxt clone PATH [ID]` は、既存の item を元に、identity や history を
+コピーしない新規 item を作成します。既存の parsed representation と、
+`quick` と同じ append/mutation contract を再利用するため、revision/backup
+の扱いと ID 生成は同じです —— raw text copy ではありません。
+
+```sh
+lifetxt clone life.txt experiment_01
+lifetxt clone life.txt experiment_01 --dry-run
+```
+
+元の item:
+
+```text
+[/] T "Experiment condition A" id:experiment_01 project:research
+    priority:A progress:8/10
+```
+
+`clone` は次を追記します:
+
+```text
+[ ] T "Experiment condition A" project:research priority:A
+```
+
+**Copy policy**（field ごとではなく1箇所で定義）: 通常の metadata
+（`project`、`tag`、`priority`、`context`、日付、その他下記に無い detail）
+はそのままコピーされます。以下は clone にコピーされません:
+
+- 元 item の ID（`id_key` が解決する key。重複 ID は workspace を破損させる
+  ため、決して引き継ぎません）
+- `source`、`uid`、`created`、`updated` —— 新しい item のものではなく、
+  *元の* record の identity/system provenance
+- `done` —— 完了 history
+- `progress` —— 引き継がず完全に reset します。`0%` と暗黙に仮定すること
+  もありません。これは `progress`（13.11）が使う missing-progress 原則と
+  同じです
+
+**Status** は通常の kind では open（`[ ]`）を default とします。これは
+`assist` の interactive prompt が使うのと全く同じ kind-aware default を
+再利用しています: `N`/`J`（note、journal）は `[N]`、`S`（presence
+status）は結果の details に `to:` が残っているかどうかで `[/]` または
+`[x]` になります。元の item は変更されません。`ids.auto` が有効な場合、
+新しい item には `quick` と同じ方法で一意性が保証された新規 ID が割り
+当てられます。無効な場合、新しい item は ID を全く持ちません —— どちら
+の場合も `ids` が重複を報告することはありません。`ID` は一意な ID
+prefix を受け付けます（[Short ID prefix による選択](#short-id-prefix-による選択)
+参照）。`--line`/`--text` は `done` と同じ方法で元 item を選択します。
+`--dry-run` は書き込まずに生成された item を表示します。
 
 ## 14. alias
 

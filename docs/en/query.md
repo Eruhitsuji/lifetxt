@@ -15,6 +15,7 @@ A query is whitespace-separated terms. Values may be quoted.
 | `field:a,b`              | OR of values within the field                       |
 | `field=value`            | same as `:`                                         |
 | `field<DATE` `field>DATE`| date comparison (`<`, `>`, `<=`, `>=`, `!=`)        |
+| `progress<50%` `progress>=3/4` | [`progress:`](life_txt_format_spec.md#75-effort-keys) ratio comparison (`<`, `>`, `<=`, `>=`, `!=`) |
 | `-tag:value`             | exclude (also `exclude_tag:value`)                  |
 | `open`                   | only open workflow statuses                         |
 | `text:"free text"`       | substring match on the title (bare words also work) |
@@ -27,16 +28,24 @@ ORed.
 - **Membership**: `status`, `type`/`kind`, `project`, `tag`, `tag_all`, `user`,
   `person`, `owner`, `assignee`, `attendee`, `sender`, `recipient`, `team`
 - **Dates**: `due`, `do`, `from`, `to`, `on`, `at`, `done`, `created`, `updated`
+- **Progress** (ratio comparison): `progress`, e.g. `progress<50%` or
+  `progress>=3/4` -- both percentage and fraction values are normalized to a
+  ratio via the same [`progress:`](life_txt_format_spec.md#75-effort-keys)
+  parser used by validation, so either representation compares correctly
+  regardless of which one an item actually uses. An invalid `progress:`
+  value on an item, or a missing `progress:` detail, never matches any
+  `progress` comparison -- a missing value is not implicitly `0%`.
 - **Details** (equality): `area`, `context`, `loc`, `priority`, and any known key
 - **Custom** (equality, opt-in): any [generic `custom_fields`](config.md#generic-custom-fields)
   definition with `filterable: true`
 - **Text**: `text` / `q`, or bare words
 
 Unknown fields produce a `Q001` warning and are ignored; invalid dates produce a
-`Q002` error.
+`Q002` error; an unparseable `progress` comparison value produces a `Q005`
+error.
 Warnings are returned with the result set; errors stop the query. This is why a
 misspelled field does not silently narrow your result to zero, while a malformed
-date comparison cannot pretend to be valid.
+date or progress comparison cannot pretend to be valid.
 
 ### Custom fields
 

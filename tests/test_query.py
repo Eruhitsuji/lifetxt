@@ -62,6 +62,29 @@ class QueryParseTests(unittest.TestCase):
         plan, _ = query.parse_query('text:"buy milk" project:web')
         self.assertIn("buy milk", plan["text"])
 
+    def test_progress_percentage_comparison_parsed(self):
+        plan, diags = query.parse_query("progress<50%")
+        self.assertEqual([], diags)
+        self.assertEqual("progress", plan["progress_filters"][0]["field"])
+        self.assertEqual("<", plan["progress_filters"][0]["op"])
+        self.assertAlmostEqual(0.5, plan["progress_filters"][0]["ratio"])
+
+    def test_progress_fraction_comparison_parsed(self):
+        plan, diags = query.parse_query("progress>=3/4")
+        self.assertEqual([], diags)
+        self.assertAlmostEqual(0.75, plan["progress_filters"][0]["ratio"])
+
+    def test_progress_invalid_value_is_error(self):
+        _plan, diags = query.parse_query("progress<nope")
+        self.assertEqual("Q005", diags[0]["code"])
+
+    def test_progress_empty_value_warns(self):
+        _plan, diags = query.parse_query("progress:")
+        self.assertTrue(any(d["code"] == "Q003" for d in diags))
+
+    def test_progress_listed_in_query_fields(self):
+        self.assertIn("progress", query.query_fields())
+
 
 class QueryApplyTests(unittest.TestCase):
     def setUp(self):
@@ -96,6 +119,40 @@ class QueryApplyTests(unittest.TestCase):
 
     def test_text_search(self):
         self.assertEqual(["Design"], self._run("text:Design"))
+
+
+PROGRESS_SAMPLE = """#! timezone: UTC
+[/] T Low progress:10%
+[/] T Mid progress:50%
+[/] T High progress:3/4
+[/] T NoProgress
+[/] T Bad progress:not-a-number
+"""
+
+
+class ProgressQueryApplyTests(unittest.TestCase):
+    def setUp(self):
+        self.items, _ = parse_text(PROGRESS_SAMPLE)
+
+    def _run(self, q):
+        result, _ = query.run_query(self.items, q, {})
+        return [i.title for i in result]
+
+    def test_percentage_less_than(self):
+        self.assertEqual(["Low"], self._run("progress<50%"))
+
+    def test_percentage_greater_equal(self):
+        self.assertEqual(["Mid", "High"], self._run("progress>=50%"))
+
+    def test_fraction_threshold(self):
+        self.assertEqual(["High"], self._run("progress>=3/4"))
+
+    def test_missing_progress_never_matches(self):
+        # progress>=0% must not implicitly treat a missing progress: as 0%.
+        self.assertNotIn("NoProgress", self._run("progress>=0%"))
+
+    def test_invalid_progress_value_never_matches(self):
+        self.assertNotIn("Bad", self._run("progress>=0%"))
 
 
 class SavedViewTests(unittest.TestCase):

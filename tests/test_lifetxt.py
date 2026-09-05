@@ -6399,6 +6399,35 @@ class LifeTxtWebAppTests(unittest.TestCase):
             [item.title for item in by_time_desc],
         )
 
+    def test_webapp_sort_items_by_progress_missing_sorts_last(self):
+        from lifetxt import webapp
+
+        # #652: progress: accepts either representation, normalized to a
+        # ratio for sorting; missing/invalid progress: is never treated as
+        # 0% and always sorts after every item that has a valid value,
+        # regardless of asc/desc.
+        text = (
+            "[ ] T Low progress:10%\n"
+            "[ ] T High progress:3/4\n"
+            "[ ] T NoProgress\n"
+            "[ ] T Bad progress:not-a-number\n"
+            "[ ] T Mid progress:50%\n"
+        )
+        items, diagnostics = parse_text(text)
+        self.assertFalse(any(d.severity == "error" for d in diagnostics))
+
+        ascending = webapp.sort_items(items, "progress", "asc")
+        self.assertEqual(
+            ["Low", "Mid", "High", "NoProgress", "Bad"],
+            [item.title for item in ascending],
+        )
+
+        descending = webapp.sort_items(items, "progress", "desc")
+        self.assertEqual(
+            ["High", "Mid", "Low", "NoProgress", "Bad"],
+            [item.title for item in descending],
+        )
+
     def test_webapp_limit_items(self):
         from lifetxt import webapp
 

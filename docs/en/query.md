@@ -74,7 +74,14 @@ $ lifetxt query "open project:web tag:urgent due<2026-08-01"
 $ lifetxt query "area:work" --sort due --limit 10 --format table
 $ lifetxt query "status:done project:web" --format json
 $ lifetxt query "open text:\"release plan\""
+$ lifetxt query "progress<50%" --sort progress
 ```
+
+`--sort progress` (and the same `sort`/`order` query parameters on `GET
+/api/items`) orders items by their `progress:` ratio; an item with no
+`progress:` detail, or an unparseable one, always sorts after every item
+that has a valid value, regardless of `--order asc`/`desc` -- the same
+never-implicitly-`0%` rule the `progress` query field itself uses.
 
 ## Saved views
 

@@ -2998,17 +2998,29 @@ def build_parser():
 
     progress_cmd = subparsers.add_parser(
         "progress",
-        help="Increment or decrement an item's progress: value (#660).",
+        help="Increment/decrement or directly set an item's progress: value "
+        "(#660, #665).",
     )
     progress_cmd.add_argument("path", help="life.txt file containing the item.")
-    progress_cmd.add_argument(
+    progress_group = progress_cmd.add_mutually_exclusive_group(required=True)
+    progress_group.add_argument(
         "--delta",
-        required=True,
         help=(
             "Signed delta: +N/-N changes a fraction's current (total is kept), "
             "+N%%/-N%% changes a percentage's value. Representation kind is "
             "always preserved. A negative value must use --delta=-N (with '='); "
-            "'--delta -N' is parsed as an unknown flag by argparse."
+            "'--delta -N' is parsed as an unknown flag by argparse. Requires "
+            "an existing progress: value."
+        ),
+    )
+    progress_group.add_argument(
+        "--set",
+        dest="set_value",
+        help=(
+            "Directly set progress: to VALUE (e.g. 75%% or 3/10), replacing "
+            "any existing value as-is with no fraction/percentage "
+            "conversion. Works even when the item has no progress: yet. "
+            "Mutually exclusive with --delta."
         ),
     )
     progress_cmd.add_argument(
@@ -3048,6 +3060,54 @@ def build_parser():
         help="Show the generated item without writing it.",
     )
     clone_cmd.set_defaults(func=command_clone)
+
+    reopen_cmd = subparsers.add_parser(
+        "reopen",
+        help="Undo an item's completion: remove done: and restore its "
+        "kind-aware open status (#664).",
+    )
+    reopen_cmd.add_argument("path", help="life.txt file containing the item.")
+    reopen_cmd.add_argument(
+        "id", nargs="?", default=None, help="ID of the item to reopen."
+    )
+    reopen_cmd.add_argument(
+        "--line", type=int, default=None, help="Line number of the item."
+    )
+    reopen_cmd.add_argument(
+        "--text", default=None, help="Title substring to search for."
+    )
+    reopen_cmd.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would change without writing to the file.",
+    )
+    reopen_cmd.set_defaults(func=command_reopen)
+
+    due_cmd = subparsers.add_parser(
+        "due",
+        help="Set, replace, or clear an item's due: date (#666).",
+    )
+    due_cmd.add_argument("path", help="life.txt file containing the item.")
+    due_cmd.add_argument("id", help="ID of the item to update.")
+    due_cmd.add_argument(
+        "date",
+        nargs="?",
+        default=None,
+        help="New due date: YYYY-MM-DD, today, tomorrow, yesterday, a "
+        "weekday, next_week, or an offset such as +3d/-1w/+2m. Omit when "
+        "using --clear.",
+    )
+    due_cmd.add_argument(
+        "--clear",
+        action="store_true",
+        help="Remove due: from the item instead of setting one.",
+    )
+    due_cmd.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would change without writing to the file.",
+    )
+    due_cmd.set_defaults(func=command_due)
 
     complete_cmd = subparsers.add_parser(
         "complete",
@@ -7574,8 +7634,9 @@ def _apply_progress_delta(parsed, delta_text):
 
 
 def command_progress(args):
-    """Increment or decrement an item's progress: value by a signed delta,
-    preserving its percentage/fraction representation (#660)."""
+    """Increment/decrement an item's progress: value by a signed delta, or
+    directly set it (#665), preserving/choosing the percentage/fraction
+    representation (#660)."""
     from .progress import ProgressValueError, parse_progress
 
     config = _config(args)
@@ -7592,35 +7653,48 @@ def command_progress(args):
         return 0
 
     raw_values = target.details.get("progress")
-    if not raw_values:
-        # A missing progress: is never implicitly 0% (#645's own design
-        # constraint); reject rather than guess an initial value.
-        raise ValueError(
-            "Item %r has no progress: detail. Set an initial value first "
-            "(for example `lifetxt assist --update %s --match-id %s "
-            "--add-detail progress:0%%`)."
-            % (target.title, path, (target.details.get(id_key) or [""])[0])
-        )
-    current_raw = raw_values[0]
-    try:
-        parsed = parse_progress(current_raw)
-    except ProgressValueError as exc:
-        raise ValueError(
-            "Existing progress:%s is invalid: %s" % (current_raw, exc.reason)
-        )
+    current_raw = raw_values[0] if raw_values else None
+    set_value = getattr(args, "set_value", None)
 
-    new_raw = _apply_progress_delta(parsed, args.delta)
-    try:
-        parse_progress(new_raw)
-    except ProgressValueError as exc:
-        raise ValueError(
-            "Resulting progress:%s would be invalid: %s" % (new_raw, exc.reason)
-        )
+    if set_value is not None:
+        # Direct assignment (#665): the representation kind is whatever the
+        # user supplied -- never converted -- and is accepted even with no
+        # existing progress: to compare against. #645's missing-progress-
+        # is-not-implicitly-0% rule governs --delta, which needs a
+        # starting point to add/subtract from; --set does not.
+        new_raw = set_value.strip()
+        try:
+            parse_progress(new_raw)
+        except ProgressValueError as exc:
+            raise ValueError("progress:%s is invalid: %s" % (new_raw, exc.reason))
+    else:
+        if not current_raw:
+            # A missing progress: is never implicitly 0% (#645's own design
+            # constraint); reject rather than guess an initial value.
+            raise ValueError(
+                "Item %r has no progress: detail. Set an initial value "
+                "first (for example `lifetxt progress %s %s --set 0%%`)."
+                % (target.title, path, (target.details.get(id_key) or [""])[0])
+            )
+        try:
+            parsed = parse_progress(current_raw)
+        except ProgressValueError as exc:
+            raise ValueError(
+                "Existing progress:%s is invalid: %s" % (current_raw, exc.reason)
+            )
+
+        new_raw = _apply_progress_delta(parsed, args.delta)
+        try:
+            parse_progress(new_raw)
+        except ProgressValueError as exc:
+            raise ValueError(
+                "Resulting progress:%s would be invalid: %s" % (new_raw, exc.reason)
+            )
 
     if getattr(args, "dry_run", False):
         sys.stdout.write(
             "[dry-run] Would change progress:%s to progress:%s.\n"
-            % (current_raw, new_raw)
+            % (current_raw if current_raw is not None else "(none)", new_raw)
         )
         return 0
 
@@ -7721,6 +7795,186 @@ def command_clone(args):
     sys.stdout.write("Cloned: %s\n" % new_line)
     if sys.stdout.isatty():
         sys.stdout.write(_render_success_guidance("clone", path=path))
+    return 0
+
+
+#: Detail keys that belong only to a completed state and must be removed
+#: when reopening (#664). Kept a tuple, not a single key, so a future
+#: completion-only key can be added in one place.
+_REOPEN_RESET_DETAIL_KEYS = ("done",)
+
+
+def command_reopen(args):
+    """Undo an item's completion (#664): remove completion-only metadata
+    and restore the item to its existing kind-aware open/default status.
+
+    Reuses the same target resolver, kind-aware status helper, and guarded
+    mutation path as `clone`/`done`/`complete` rather than a second
+    item-editing path."""
+    from .assist import _default_status as _reopen_default_status
+
+    config = _config(args)
+    path = args.path
+    if not path or path == "-":
+        raise ValueError("reopen requires a file path, not stdin.")
+    id_key = id_key_from_config(config)
+    text = read_text(path)
+    items, _ = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
+    target, aborted = _resolve_target_item(items, id_key, args, prompt_verb="Reopen:")
+    if aborted:
+        return 0
+
+    if target.kind == "H":
+        # Habit records log completions as a multiple-value done: history
+        # rather than a single completed state; there is no one entry to
+        # "undo" the way there is for an ordinary [x] item.
+        raise ValueError(
+            "Habit %r logs completions as multiple done: dates; reopen "
+            "does not support habits. Remove the specific done: date with "
+            "`lifetxt assist --update` instead." % target.title
+        )
+
+    if target.status != "[x]":
+        sys.stdout.write(
+            "Already open: %s (status %s); nothing to reopen.\n"
+            % (target.title, target.status)
+        )
+        return 0
+
+    remaining_details = OrderedDict(
+        (key, list(values))
+        for key, values in target.details.items()
+        if key not in _REOPEN_RESET_DETAIL_KEYS
+    )
+    new_status = _reopen_default_status(target.kind, remaining_details)
+
+    if getattr(args, "dry_run", False):
+        sys.stdout.write(
+            "[dry-run] Would reopen %r to status %s and remove %s.\n"
+            % (target.title, new_status, ", ".join(_REOPEN_RESET_DETAIL_KEYS))
+        )
+        return 0
+
+    update_args = types.SimpleNamespace(
+        line=target.line,
+        match_id=None,
+        status=new_status,
+        kind=None,
+        title=None,
+        add_detail=None,
+        detail=None,
+        remove_detail=list(_REOPEN_RESET_DETAIL_KEYS),
+    )
+    for flag in DETAIL_FLAGS:
+        dest = "from_" if flag == "from" else flag
+        if not hasattr(update_args, dest):
+            setattr(update_args, dest, None)
+
+    updated_text, updated_line, diagnostics = update_text(text, update_args)
+    if _has_error(diagnostics):
+        _print_diagnostics(diagnostics)
+        return 1
+
+    _ensure_writable_path(path, config, "reopen")
+    _pre_write_backup(path, config, "reopen")
+    atomic_write_text(path, updated_text)
+    sys.stdout.write("Reopened: %s\n" % updated_line)
+    if sys.stdout.isatty():
+        sys.stdout.write(_render_success_guidance("reopen", path=path))
+    return 0
+
+
+_DUE_ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def command_due(args):
+    """Set, replace, or clear an item's due: date (#666).
+
+    Accepts the shared today/tomorrow/+Nd/... shorthand (#667) at this CLI
+    boundary only, resolved through the workspace-aware timezone policy
+    before anything is written -- the exact same
+    `lifetxt.shorthand.resolve_date_token` resolver `quick`'s
+    --due/--do/--until flags already use. The stored value is always a
+    canonical absolute due:YYYY-MM-DD; reuses the same target resolver
+    and guarded mutation path as `done`/`progress`/`clone` rather than a
+    second item-editing path."""
+    from .shorthand import ShorthandError, resolve_date_token
+
+    config = _config(args)
+    path = args.path
+    if not path or path == "-":
+        raise ValueError("due requires a file path, not stdin.")
+    id_key = id_key_from_config(config)
+    text = read_text(path)
+    items, _ = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
+    target, aborted = _resolve_target_item(items, id_key, args, prompt_verb="Set due:")
+    if aborted:
+        return 0
+
+    clear = getattr(args, "clear", False)
+    date_arg = getattr(args, "date", None)
+    if clear and date_arg:
+        raise ValueError("Use either a date or --clear, not both.")
+    if not clear and not date_arg:
+        raise ValueError(
+            "Specify a due date (YYYY-MM-DD, today, tomorrow, +Nd, ...) or --clear."
+        )
+
+    if clear:
+        if "due" not in target.details:
+            sys.stdout.write("No due: to clear on %r.\n" % target.title)
+            return 0
+        remove_detail = ["due"]
+        add_detail = None
+        dry_run_summary = "Would clear due: on %r." % target.title
+    else:
+        try:
+            resolved = resolve_date_token(date_arg, today=timezone_today(), strict=True)
+        except ShorthandError as exc:
+            raise ValueError(str(exc))
+        if (
+            not _DUE_ISO_DATE_RE.match(resolved)
+            or parse_date_or_datetime(resolved) is None
+        ):
+            raise ValueError(
+                "Invalid due date %r. Use YYYY-MM-DD, today, tomorrow, "
+                "yesterday, a weekday, next_week, or an offset such as "
+                "+3d, -1w, +2m." % date_arg
+            )
+        remove_detail = ["due"]
+        add_detail = ["due:%s" % resolved]
+        dry_run_summary = "Would set due:%s on %r." % (resolved, target.title)
+
+    if getattr(args, "dry_run", False):
+        sys.stdout.write("[dry-run] %s\n" % dry_run_summary)
+        return 0
+
+    update_args = types.SimpleNamespace(
+        line=target.line,
+        match_id=None,
+        status=None,
+        kind=None,
+        title=None,
+        add_detail=add_detail,
+        detail=None,
+        remove_detail=remove_detail,
+    )
+    for flag in DETAIL_FLAGS:
+        dest = "from_" if flag == "from" else flag
+        if not hasattr(update_args, dest):
+            setattr(update_args, dest, None)
+
+    updated_text, updated_line, diagnostics = update_text(text, update_args)
+    if _has_error(diagnostics):
+        _print_diagnostics(diagnostics)
+        return 1
+
+    _ensure_writable_path(path, config, "due")
+    _pre_write_backup(path, config, "due")
+    atomic_write_text(path, updated_text)
+    sys.stdout.write("Updated: %s\n" % updated_line)
+    if sys.stdout.isatty():
+        sys.stdout.write(_render_success_guidance("due", path=path))
     return 0
 
 

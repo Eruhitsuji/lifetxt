@@ -452,5 +452,143 @@ class ExtraCliTests(unittest.TestCase):
         self.assertIn("'next'", output)
 
 
+class RecentCliTests(unittest.TestCase):
+    """Covers #668: `lifetxt recent` lists recently changed items."""
+
+    def setUp(self):
+        self.tempdir = tempfile.TemporaryDirectory()
+        self.path = os.path.join(self.tempdir.name, "life.txt")
+
+    def tearDown(self):
+        self.tempdir.cleanup()
+
+    def _write(self, source):
+        with open(self.path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(source)
+
+    def run_extra(self, argv, expect_ok=True):
+        output = io.StringIO()
+        error = io.StringIO()
+        with contextlib.redirect_stdout(output), contextlib.redirect_stderr(error):
+            try:
+                result = extra_cli.main(argv)
+            except ValueError as exc:
+                if expect_ok:
+                    raise
+                return output.getvalue(), str(exc), 1
+        if expect_ok:
+            self.assertEqual(0, result, error.getvalue())
+        return output.getvalue(), error.getvalue(), result
+
+    def test_orders_newest_updated_first(self):
+        self._write(
+            "[ ] T Oldest id:t1 updated:2026-01-01\n"
+            "[ ] T Newest id:t2 updated:2026-06-01\n"
+            "[ ] T Middle id:t3 updated:2026-03-01\n"
+        )
+        output, _err, _code = self.run_extra(["recent", self.path])
+        self.assertLess(output.index("Newest"), output.index("Middle"))
+        self.assertLess(output.index("Middle"), output.index("Oldest"))
+
+    def test_falls_back_to_created_when_updated_is_absent(self):
+        self._write(
+            "[ ] T Has_updated id:t1 created:2026-01-01 updated:2026-02-01\n"
+            "[ ] T Only_created id:t2 created:2026-06-01\n"
+        )
+        output, _err, _code = self.run_extra(["recent", self.path])
+        self.assertLess(output.index("Only_created"), output.index("Has_updated"))
+
+    def test_updated_flag_excludes_items_with_no_updated(self):
+        self._write(
+            "[ ] T Has_updated id:t1 updated:2026-02-01\n"
+            "[ ] T Only_created id:t2 created:2026-06-01\n"
+        )
+        output, _err, _code = self.run_extra(["recent", self.path, "--updated"])
+        self.assertIn("Has_updated", output)
+        self.assertNotIn("Only_created", output)
+
+    def test_created_flag_excludes_items_with_no_created(self):
+        self._write(
+            "[ ] T Has_created id:t1 created:2026-02-01\n"
+            "[ ] T Only_updated id:t2 updated:2026-06-01\n"
+        )
+        output, _err, _code = self.run_extra(["recent", self.path, "--created"])
+        self.assertIn("Has_created", output)
+        self.assertNotIn("Only_updated", output)
+
+    def test_updated_and_created_together_are_rejected(self):
+        self._write("[ ] T Task id:t1 updated:2026-01-01\n")
+        _out, err, code = self.run_extra(
+            ["recent", self.path, "--updated", "--created"], expect_ok=False
+        )
+        self.assertEqual(1, code)
+        self.assertIn("either --updated or --created", err)
+
+    def test_limit_bounds_output(self):
+        self._write(
+            "[ ] T One id:t1 updated:2026-01-01\n"
+            "[ ] T Two id:t2 updated:2026-02-01\n"
+            "[ ] T Three id:t3 updated:2026-03-01\n"
+        )
+        output, _err, _code = self.run_extra(
+            ["recent", self.path, "--limit", "1", "--format", "json"]
+        )
+        rows = json.loads(output)
+        self.assertEqual(1, len(rows))
+        self.assertEqual("t3", rows[0]["id"])
+
+    def test_invalid_limit_is_rejected(self):
+        self._write("[ ] T Task id:t1 updated:2026-01-01\n")
+        _out, err, code = self.run_extra(
+            ["recent", self.path, "--limit", "0"], expect_ok=False
+        )
+        self.assertEqual(1, code)
+        self.assertIn("--limit must be a positive integer", err)
+
+    def test_malformed_timestamp_is_excluded_not_crashed(self):
+        self._write(
+            "[ ] T Good id:t1 updated:2026-01-01\n[ ] T Bad id:t2 updated:not-a-date\n"
+        )
+        output, _err, _code = self.run_extra(["recent", self.path])
+        self.assertIn("Good", output)
+        self.assertNotIn("Bad", output)
+
+    def test_short_id_round_trips_through_done(self):
+        self._write(
+            "[ ] T Task id:task_a12345 updated:2026-01-01\n"
+            "[ ] T Other id:task_a16789 updated:2026-02-01\n"
+        )
+        table_output, _err, _code = self.run_extra(["recent", self.path])
+        short = next(
+            line.split()[0] for line in table_output.splitlines() if "Other" in line
+        )
+        self.assertTrue(short.startswith("task_a16"))
+        self.assertNotEqual("task_a16789", short)
+        stdout, stderr, code = run_cli("done", self.path, short)
+        self.assertEqual(0, code, stderr)
+        with open(self.path, encoding="utf-8") as handle:
+            content = handle.read()
+        self.assertIn("[x] T Other id:task_a16789", content)
+
+    def test_json_output_preserves_full_id_and_raw_timestamp(self):
+        self._write("[ ] T Task id:task_a12345 updated:2026-06-01\n")
+        output, _err, _code = self.run_extra(["recent", self.path, "--format", "json"])
+        rows = json.loads(output)
+        self.assertEqual(1, len(rows))
+        self.assertEqual("task_a12345", rows[0]["id"])
+        self.assertEqual("2026-06-01", rows[0]["timestamp"])
+        self.assertEqual("updated", rows[0]["timestamp_basis"])
+
+    def test_default_basis_recorded_per_row_in_json(self):
+        self._write(
+            "[ ] T Has_updated id:t1 updated:2026-02-01\n"
+            "[ ] T Only_created id:t2 created:2026-06-01\n"
+        )
+        output, _err, _code = self.run_extra(["recent", self.path, "--format", "json"])
+        rows = {row["id"]: row for row in json.loads(output)}
+        self.assertEqual("updated", rows["t1"]["timestamp_basis"])
+        self.assertEqual("created", rows["t2"]["timestamp_basis"])
+
+
 if __name__ == "__main__":
     unittest.main()

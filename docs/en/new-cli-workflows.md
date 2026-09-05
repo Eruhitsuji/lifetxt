@@ -41,6 +41,31 @@ relative label, such as `due:2026-09-07 (in 2 days)` or `done:2026-09-04
 (yesterday)`. The canonical stored value and machine-readable output remain
 unchanged.
 
+## Recently changed items
+
+```sh
+lifetxt recent life.txt
+lifetxt recent life.txt --updated
+lifetxt recent life.txt --created
+lifetxt recent life.txt --limit 10
+lifetxt recent life.txt --format json
+```
+
+`recent` is a read-only, newest-first view of recently created or updated
+items -- a thin composition over existing parsing, short IDs, and
+relative-time display, not a new indexing/cache subsystem. By default it
+orders by `updated:`, falling back to `created:` for an item with no
+`updated:`; `--updated`/`--created` select one basis explicitly with no
+fallback, so an item missing that exact detail is excluded rather than
+guessed at. An item with no timestamp at all under the selected basis, or
+an unparseable one, is silently excluded rather than crashing the command.
+
+`--limit N` bounds the number of rows (default 20; must be positive).
+Text output shows the same short unique ID `next` shows (see above) plus a
+relative-time label (`today`, `2 days ago`, ...); `--format json` instead
+preserves every item's full `id:` and the raw absolute timestamp actually
+used, never a locale-dependent display string.
+
 ## Inspect and edit one item
 
 ```sh

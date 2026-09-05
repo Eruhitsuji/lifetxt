@@ -8038,3 +8038,200 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-reopen-item
+    name: "`lifetxt reopen` completion undo"
+    summary: >-
+      `lifetxt reopen PATH [ID]` undoes an item's completion: removes
+      `done:` and restores the item to its existing kind-aware
+      open/default status (the same status `clone` gives a fresh copy),
+      reusing the same target resolver and guarded mutation path as
+      `done`/`complete`/`clone` rather than a second item-editing path.
+      An already-open item is a deterministic no-op; Habit records (which
+      log completions as multiple `done:` dates, not a single completed
+      state) are refused with an actionable alternative.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-reopen-item
+    implementation_locations:
+      - lifetxt/cli.py
+      - lifetxt/cli_taxonomy.py
+      - tests/test_lifetxt.py
+      - docs/en/cli.md
+      - docs/ja/cli.md
+    public_interfaces:
+      - lifetxt reopen PATH ID
+      - lifetxt reopen PATH --line N
+      - lifetxt reopen PATH --text QUERY
+    tests_or_evidence:
+      - "python -m unittest tests.test_lifetxt.LifeTxtReopenCliTests -> Ran 11 tests, OK"
+      - "live-verified: completion-only metadata (done:) removed while every other detail is preserved; kind-aware status restoration for T and N kinds; already-open no-op; Habit refusal naming the assist --update alternative; short-ID prefix resolution and ambiguous-prefix refusal without mutation; --line/--text selection; --dry-run; the reopened line passes lifetxt check"
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/664
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Reuses `lifetxt.assist._default_status` (the same kind-aware status
+      helper `clone` already uses) and the shared `_resolve_target_item`/
+      guarded-mutation path `done`/`progress`/`clone` already established,
+      rather than a second item-editing implementation. Part of the
+      daily-cli-convenience-batch (#664-#668), implemented on its own
+      child branch merged into feature/daily-cli-convenience-batch.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-progress-direct-set
+    name: "`lifetxt progress --set` direct assignment"
+    summary: >-
+      Adds `--set VALUE` to the existing `lifetxt progress` command as a
+      thin extension: direct assignment of `progress:`, mutually
+      exclusive with `--delta`, reusing the shared `progress:`
+      parser/validator and guarded mutation path unmodified. `--set`
+      preserves whatever representation (fraction or percentage) the
+      caller supplies with no conversion, and works even when the item
+      has no existing `progress:` value, since a direct assignment needs
+      no starting point to add to or subtract from.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-progress-set
+    implementation_locations:
+      - lifetxt/cli.py
+      - tests/test_lifetxt.py
+      - docs/en/cli.md
+      - docs/ja/cli.md
+    public_interfaces:
+      - lifetxt progress PATH ID --set VALUE
+    tests_or_evidence:
+      - "python -m unittest tests.test_lifetxt.LifeTxtProgressCliTests -> Ran 27 tests, OK"
+      - "live-verified: --set replaces both fraction and percentage representations as-is; works with no existing progress: value; out-of-range/invalid values rejected before any write; --set and --delta are mutually exclusive (argparse-enforced); --dry-run previews without writing; short-ID prefix resolution unaffected"
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/665
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Extends cap-progress-standard-key (#645-#660)'s existing
+      `lifetxt.progress` shared parser/validator and command_progress's
+      guarded mutation path; no second progress representation or
+      write mechanism was introduced. Part of the daily-cli-convenience-
+      batch (#664-#668).
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-due-date-command
+    name: "`lifetxt due` quick due-date changes"
+    summary: >-
+      `lifetxt due PATH ID DATE` sets or replaces one item's `due:` value;
+      `lifetxt due PATH ID --clear` removes it. Reuses the same guarded
+      mutation path as `done`/`progress`/`clone`; only ever touches
+      `due:`, preserving every other detail and item status unchanged.
+      `ID` is a required positional (unlike sibling single-item commands,
+      `due` does not accept `--line`/`--text`, since a second optional
+      positional for the date would make which token means what
+      ambiguous). `DATE` also accepts the bounded relative-date shorthand
+      (`today`, `tomorrow`, `+3d`, weekday names, `next_week`, and signed
+      offsets), resolved through the exact same
+      `lifetxt.shorthand.resolve_date_token` resolver `quick`'s
+      `--due`/`--do`/`--until` flags already used -- resolution happens
+      only at this CLI input boundary, so the stored `due:` value is
+      always a canonical absolute date and Format 1.0 gains no new syntax.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-due-date-command
+      - req-relative-date-shorthand
+    implementation_locations:
+      - lifetxt/cli.py
+      - lifetxt/cli_taxonomy.py
+      - tests/test_lifetxt.py
+      - docs/en/cli.md
+      - docs/ja/cli.md
+    public_interfaces:
+      - lifetxt due PATH ID DATE
+      - lifetxt due PATH ID --clear
+      - lifetxt.shorthand.resolve_date_token (reused, not new)
+    tests_or_evidence:
+      - "python -m unittest tests.test_lifetxt.LifeTxtDueCliTests -> Ran 17 tests, OK"
+      - "live-verified: set/replace/clear; --clear on an item with no due: is a deterministic no-op; invalid/unrecognized dates rejected before any write with an actionable message; short-ID prefix resolution and ambiguous-prefix refusal without mutation; --dry-run; today/tomorrow/+3d shorthand resolves to the correct workspace-aware absolute date; an explicit YYYY-MM-DD is unaffected by shorthand resolution; the updated line passes lifetxt check"
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/666
+      - https://github.com/Eruhitsuji/lifetxt/issues/667
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      #667 depends on #666, per its own task contract, and is implemented
+      as a direct follow-up commit wiring the pre-existing
+      `lifetxt.shorthand.resolve_date_token` resolver (already used by
+      `quick`/`add`'s `--due`/`--do`/`--until` flags) into `due`'s date
+      argument, rather than a second relative-date parser -- satisfying
+      #667's own "one shared resolver" acceptance criterion by
+      construction. No Format, Query, Web API, or MCP surface gained any
+      relative-date semantics; resolution is confined to
+      `lifetxt/cli.py`'s `command_due`/`command_quick`. Part of the
+      daily-cli-convenience-batch (#664-#668).
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-recent-items-command
+    name: "`lifetxt recent` recently changed items"
+    summary: >-
+      `lifetxt recent PATH` is a read-only, newest-first view of recently
+      created or updated items -- a thin composition over existing
+      parsing, `lifetxt.ids.short_id`, and `lifetxt.timeutil.relative_time`,
+      not a new indexing/cache subsystem. Default basis is `updated:`,
+      falling back to `created:` when absent; `--updated`/`--created`
+      select one basis explicitly with no fallback, so an item missing
+      that exact detail (or carrying an unparseable one) is
+      deterministically excluded rather than guessed at or crashing the
+      command. `--limit N` bounds output; `--format json` preserves full
+      `id:` values and the raw absolute timestamp actually used, never a
+      locale-dependent display string.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-recent-items-command
+    implementation_locations:
+      - lifetxt/extra_core.py
+      - lifetxt/extra_cli.py
+      - lifetxt/entrypoint.py
+      - lifetxt/cli_taxonomy.py
+      - tests/test_extra_cli.py
+      - docs/en/new-cli-workflows.md
+      - docs/ja/new-cli-workflows.md
+      - docs/en/cli.md
+      - docs/ja/cli.md
+    public_interfaces:
+      - lifetxt recent PATH
+      - lifetxt recent PATH --updated
+      - lifetxt recent PATH --created
+      - lifetxt recent PATH --limit N
+      - lifetxt recent PATH --format json
+    tests_or_evidence:
+      - "python -m unittest tests.test_extra_cli.RecentCliTests -> Ran 11 tests, OK"
+      - "live-verified: newest-first ordering by updated: with created: fallback; --updated/--created exclude items missing that exact basis with no fallback; --updated and --created together rejected; --limit bounds output and rejects a non-positive value; a malformed timestamp is excluded rather than crashing; the table's short ID round-trips through done exactly like next's; --format json preserves the full id: and raw timestamp plus which basis was actually used per row"
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/668
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Registered through the existing extended-command dispatch
+      (`entrypoint._EXTRA_COMMANDS` -> `extra_cli.py`), the same mechanism
+      `next`/`show`/`tour` already use, rather than growing `cli.py`'s
+      already very large argparse tree. Reuses `_load_items`/`_first`/
+      `_item_record`/`_table`/`_emit`/`_json_text` from `extra_common.py`
+      (the same helpers `next` already uses) and
+      `lifetxt.ids.collect_item_ids`/`short_id` unmodified -- no new
+      timestamp parsing, short-ID derivation, or table-rendering
+      implementation. Part of the daily-cli-convenience-batch
+      (#664-#668).
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

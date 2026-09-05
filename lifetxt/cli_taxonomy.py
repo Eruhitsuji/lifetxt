@@ -112,6 +112,7 @@ _EXTRA_SUMMARIES = {
     "audience guides, one-command lookups, and a JSON capability catalog.",
     "next": "List actionable next steps: open tasks and habits that are not "
     "blocked, someday-tagged, or otherwise deferred.",
+    "recent": "List recently created or updated items, newest first.",
     "show": "Show one item's full detail by ID.",
     "edit": "Open an item in $EDITOR through a safe temporary-copy "
     "review-and-apply flow.",
@@ -248,6 +249,8 @@ CATEGORIES = OrderedDict(
                     "complete",
                     "progress",
                     "clone",
+                    "reopen",
+                    "due",
                     "review",
                     "assist",
                     "state",
@@ -277,6 +280,7 @@ CATEGORIES = OrderedDict(
                     "temporal",
                     "count",
                     "status",
+                    "recent",
                 ),
             },
         ),
@@ -713,6 +717,8 @@ WRITE_COMMANDS = frozenset(
         "complete",
         "progress",
         "clone",
+        "reopen",
+        "due",
         "assist",
         "state",
         "start",
@@ -801,11 +807,14 @@ _EXAMPLES = {
     "quick": ('lifetxt add "Buy milk"',),
     "today": ("lifetxt today",),
     "next": ("lifetxt next",),
+    "recent": ("lifetxt recent",),
     "agenda": ("lifetxt agenda --window 1w",),
     "show": ("lifetxt show ID",),
     "edit": ("lifetxt edit ID",),
     "done": ("lifetxt done ID",),
     "complete": ("lifetxt complete ID",),
+    "reopen": ("lifetxt reopen ID",),
+    "due": ("lifetxt due life.txt ID 2026-09-07",),
     "review": ("lifetxt review --last-week",),
     "search": ('lifetxt search "milk"',),
     "find": ('lifetxt find "milk"',),
@@ -860,6 +869,8 @@ SUCCESS_GUIDANCE = {
     "quick": {"next": ("today",), "undoable": True},
     "done": {"next": ("today",), "undoable": True},
     "complete": {"next": ("today",), "undoable": True},
+    "reopen": {"next": ("today",), "undoable": True},
+    "due": {"next": ("today",), "undoable": True},
 }
 
 register_messages(

@@ -716,7 +716,17 @@ class LifeTxtParserTests(unittest.TestCase):
         from lifetxt.model import KNOWN_KEYS, RECOMMENDED_KEYS_BY_TYPE
 
         self.assertEqual(
-            ("do", "due", "priority", "assignee", "owner", "project", "tag", "id"),
+            (
+                "do",
+                "due",
+                "priority",
+                "progress",
+                "assignee",
+                "owner",
+                "project",
+                "tag",
+                "id",
+            ),
             RECOMMENDED_KEYS_BY_TYPE["T"],
         )
         self.assertLessEqual(

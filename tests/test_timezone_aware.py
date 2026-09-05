@@ -1,6 +1,6 @@
 import unittest
 from collections import OrderedDict
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 from lifetxt.agenda import item_time_matches
 from lifetxt.csvio import items_from_csv_text, items_to_csv
@@ -19,11 +19,22 @@ from lifetxt.timeutil import (
     format_datetime,
     parse_date_or_datetime,
     parse_datetime,
+    relative_time,
 )
 from lifetxt.validator import validate_item
 
 
 class TimezoneAwareParsingTests(unittest.TestCase):
+    def test_relative_time_uses_calendar_days(self):
+        today = date(2026, 9, 5)
+        self.assertEqual("in 2 days", relative_time("2026-09-07", today))
+        self.assertEqual("3 days ago", relative_time("2026-09-02", today))
+        self.assertEqual("yesterday", relative_time("2026-09-04", today))
+        self.assertEqual("today", relative_time("2026-09-05T12:30", today))
+
+    def test_relative_time_ignores_invalid_values(self):
+        self.assertEqual("", relative_time("not-a-date", date(2026, 9, 5)))
+
     def test_explicit_offset_remains_aware(self):
         parsed = parse_datetime("2026-07-22T09:30:15.25+09:00")
         self.assertIsInstance(parsed, LifeDateTime)

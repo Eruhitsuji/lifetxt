@@ -104,7 +104,7 @@ from .links import (
 from .markdown import markdown_to_html, markdown_to_plain
 from .model import Diagnostic, Item
 from .timezone_policy import local_now_naive, today as timezone_today
-from .timeutil import format_datetime, parse_date_or_datetime
+from .timeutil import format_datetime, parse_date_or_datetime, relative_time
 from .notifier import (
     format_notification_email,
     format_notification_table,
@@ -12360,6 +12360,11 @@ def _progress_display(raw):
     return raw
 
 
+def _relative_date_suffix(value, reference=None):
+    relative = relative_time(value, today=reference)
+    return " (%s)" % relative if relative else ""
+
+
 def _progress_suffix(row):
     display = _progress_display(row.get("progress"))
     return " progress:%s" % display if display else ""
@@ -12426,7 +12431,15 @@ def _render_today_text(report, saved_view=None, area=None):
     if has_attention:
         write_text(None, "\n%s\n" % _t("today.attention"))
         for row in attention_rows:
-            due = " due:%s" % row["due"] if row.get("due") else ""
+            due = (
+                " due:%s%s"
+                % (
+                    row["due"],
+                    _relative_date_suffix(row["due"], report["reference_date"]),
+                )
+                if row.get("due")
+                else ""
+            )
             reason = " (%s)" % row["reason"] if row.get("reason") else ""
             progress = _progress_suffix(row)
             write_text(
@@ -12479,7 +12492,15 @@ def _render_today_text(report, saved_view=None, area=None):
     if next_rows:
         for row in next_rows:
             project = " @%s" % row["project"] if row.get("project") else ""
-            due = " due:%s" % row["due"] if row.get("due") else ""
+            due = (
+                " due:%s%s"
+                % (
+                    row["due"],
+                    _relative_date_suffix(row["due"], report["reference_date"]),
+                )
+                if row.get("due")
+                else ""
+            )
             progress = _progress_suffix(row)
             write_text(
                 None,
@@ -12517,7 +12538,15 @@ def _render_today_text(report, saved_view=None, area=None):
     if upcoming_rows:
         write_text(None, "\n%s\n" % _t("today.upcoming", n=report["horizon_days"]))
         for row in upcoming_rows:
-            due = " due:%s" % row["due"] if row.get("due") else ""
+            due = (
+                " due:%s%s"
+                % (
+                    row["due"],
+                    _relative_date_suffix(row["due"], report["reference_date"]),
+                )
+                if row.get("due")
+                else ""
+            )
             progress = _progress_suffix(row)
             write_text(
                 None, "  %s %s%s%s\n" % (row["status"], row["title"], due, progress)
@@ -13236,7 +13265,11 @@ def _person_section(label, rows, limit=10):
         return
     write_text(None, "  %s (%d):\n" % (label, len(rows)))
     for row in rows[:limit]:
-        due = " due:%s" % row["due"] if row.get("due") else ""
+        due = (
+            " due:%s%s" % (row["due"], _relative_date_suffix(row["due"]))
+            if row.get("due")
+            else ""
+        )
         project = " @%s" % row["project"] if row.get("project") else ""
         write_text(
             None, "    - %s %s%s%s\n" % (row["status"], row["title"], project, due)

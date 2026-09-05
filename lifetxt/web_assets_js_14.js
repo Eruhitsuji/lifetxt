@@ -109,6 +109,13 @@
       return label;
     }
 
+    function buildDueRelLabel(item) {
+      const value = item?.details?.due?.[0] || item?.details?.do?.[0] ||
+        item?.details?.from?.[0] || item?.details?.at?.[0] || item?.details?.on?.[0] || "";
+      const rel = relativeTime(value);
+      return rel ? `<span class="relative-time" title="${escapeHtml(value)}">(${escapeHtml(rel)})</span>` : "";
+    }
+
     // ── Notification row state display ────────────────────────────
     function notifStateBadge(record) {
       const ack = record?.details?.ack?.[0];

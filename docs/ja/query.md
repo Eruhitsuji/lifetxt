@@ -73,6 +73,16 @@ parameter）は item を `progress:` の ratio で並び替えます。`progress
 有効な値を持つ item の後ろに来ます -- `progress` query field 自身が使う
 「値が無いことを暗黙に `0%` とは扱わない」ルールと同じです。
 
+`--explain` を付けると、検索結果を出さずに parser が query をどう解釈したかを
+確認できます。既定の出力は人向けで、`--format json` を追加すると
+`lifetxt-query-explain-v1` の machine-readable な JSON envelope になります。
+diagnostics も explanation に含まれ、不正な query は終了コード 1 になります。
+
+```console
+$ lifetxt query 'open project:research due<2026-10-01' --explain
+$ lifetxt query 'open project:research due<2026-10-01' --explain --format json
+```
+
 ## Saved views
 
 よく使う query は configuration の `saved_views` に保存します。

@@ -48,7 +48,43 @@ def cmd_tui(args):
     The prompt-first workspace in ``lifetxt.tui_app`` is the primary interface.
     It needs a TTY and curses, so piping or redirecting `lifetxt tui` still
     produces the dependency-free dashboard snapshot below.
+
+    Remote mode (``--remote-url``, #677/#679) requires the interactive
+    curses workspace: the dependency-free plain-text dashboard above reads
+    local files directly and has no backend concept, so it never silently
+    substitutes local data for a remote connection.
     """
+    remote_url = getattr(args, "remote_url", None)
+    if remote_url:
+        if getattr(args, "plain", False) or not _stdout_is_tty():
+            sys.stderr.write(
+                "ERROR: --remote-url requires a real terminal (the "
+                "interactive curses TUI). --plain and piped/redirected "
+                "output are not supported for remote mode.\n"
+            )
+            return 1
+        try:
+            import curses  # noqa: F401
+        except ImportError:
+            sys.stderr.write(
+                "ERROR: --remote-url requires curses, which is unavailable "
+                "in this environment.\n"
+            )
+            return 1
+        options = tui_options(args)
+        try:
+            from .tui_bindings import resolve_bindings
+
+            resolve_bindings(options["keymap"], options.get("bindings"))
+        except ValueError as exc:
+            sys.stderr.write("ERROR: %s\n" % exc)
+            return 1
+        from .tui_app import run_workspace
+
+        try:
+            return run_workspace(args)
+        except KeyboardInterrupt:
+            return 0
     if getattr(args, "plain", False) or not _stdout_is_tty():
         sys.stdout.write(render_dashboard_safe(args))
         return 0
@@ -1040,10 +1076,18 @@ def render_inspector(row, project_filter=None, search_query=""):
     return "\n".join(lines)
 
 
-def dashboard_model(args, project_filter=None, search_query="", limit=None):
+def dashboard_model(args, project_filter=None, search_query="", limit=None, items=None):
+    """Build the TUI dashboard sections from a parsed item list.
+
+    ``items`` lets a caller (the #678 TUI backend boundary) supply an
+    already-fetched item list -- local or remote -- instead of this
+    function re-reading ``args.paths`` itself. Omitting it preserves the
+    original local-file behavior exactly.
+    """
     options = tui_options(args)
     limit = options["limit"] if limit is None else max(1, int(limit))
-    items = load_items(args.paths)
+    if items is None:
+        items = load_items(args.paths)
     project_values = [project_filter] if project_filter else None
     blockers = blocked_map(items)
     task_items = filter_items(

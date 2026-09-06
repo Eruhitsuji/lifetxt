@@ -2,6 +2,7 @@ from __future__ import unicode_literals
 
 import argparse
 import unittest
+import unittest.mock
 
 from lifetxt import tui_app
 from lifetxt.tui_backend import RemoteTuiBackend, remote_source_label
@@ -12,6 +13,8 @@ class _StubConnection(object):
 
     def __init__(self, items_payload=None):
         self.host = "example.internal"
+        self.base_url = "https://example.internal"
+        self.username = "alice"
         # `file_revision` mirrors the real RemoteTuiConnection field: the
         # last revision *this connection* has observed. `server_revision`
         # is the fake "true" remote state a test mutates to simulate a
@@ -343,6 +346,159 @@ class RemotePollingLoopTests(unittest.TestCase):
         self.assertTrue(dirty)
         self.assertEqual(state.remote_status, "connected")
         self.assertEqual(state.remote_status_detail, "")
+
+
+class RemoteTuiBackendOfflineCacheTests(unittest.TestCase):
+    """#681: opt-in read-only offline cache."""
+
+    def setUp(self):
+        import tempfile
+
+        self.cache_dir = tempfile.mkdtemp()
+        self._patch = unittest.mock.patch(
+            "lifetxt.tui_remote_cache.cache_dir", return_value=self.cache_dir
+        )
+        self._patch.start()
+        self.addCleanup(self._patch.stop)
+
+    def test_cache_disabled_by_default_never_persists_anything(self):
+        import os
+
+        connection = _StubConnection({"items": [_item_payload("t1", 1)]})
+        backend = RemoteTuiBackend(connection)
+        backend.load_items()
+        self.assertEqual(
+            os.listdir(self.cache_dir) if os.path.isdir(self.cache_dir) else [], []
+        )
+
+    def test_enabled_cache_persists_after_a_successful_read(self):
+        import os
+
+        connection = _StubConnection({"items": [_item_payload("t1", 1)]})
+        backend = RemoteTuiBackend(connection, cache_enabled=True)
+        backend.load_items()
+        self.assertTrue(os.listdir(self.cache_dir))
+
+    def test_falls_back_to_cache_on_connection_failure(self):
+        from lifetxt.tui_remote_client import RemoteConnectionError
+
+        connection = _StubConnection({"items": [_item_payload("t1", 1)]})
+        backend = RemoteTuiBackend(connection, cache_enabled=True)
+        backend.load_items()  # populate the cache while connected
+
+        connection.raise_next(RemoteConnectionError("refused"))
+        items, diagnostic = backend.load_items()
+
+        self.assertIsNotNone(items)
+        self.assertEqual(len(items), 1)
+        self.assertTrue(backend.serving_cache)
+        self.assertIn("cached", diagnostic.lower())
+
+    def test_no_cache_available_still_reports_the_original_error(self):
+        from lifetxt.tui_remote_client import RemoteConnectionError
+
+        connection = _StubConnection({"items": []})
+        backend = RemoteTuiBackend(connection, cache_enabled=True)
+        connection.raise_next(RemoteConnectionError("refused"))
+
+        items, diagnostic = backend.load_items()
+
+        self.assertIsNone(items)
+        self.assertIn("refused", diagnostic)
+        self.assertFalse(backend.serving_cache)
+
+    def test_serving_cache_refuses_every_mutation(self):
+        from lifetxt.tui_remote_client import RemoteConnectionError
+
+        connection = _StubConnection({"items": [_item_payload("t1", 1)]})
+        backend = RemoteTuiBackend(connection, cache_enabled=True)
+        backend.load_items()
+        connection.raise_next(RemoteConnectionError("refused"))
+        backend.load_items()
+        self.assertTrue(backend.serving_cache)
+
+        source = remote_source_label(connection)
+        with self.assertRaises(ValueError):
+            backend.apply_semantic_changes(
+                {source: [{"id": "t1", "status": "[x]"}]}, {}, id_key="id"
+            )
+        with self.assertRaises(ValueError):
+            backend.create_item(
+                {"status": "[ ]", "type": "T", "title": "x", "details": {}}
+            )
+        with self.assertRaises(ValueError):
+            backend.delete_item("t1")
+
+    def test_a_real_successful_read_clears_cached_mode(self):
+        from lifetxt.tui_remote_client import RemoteConnectionError
+
+        connection = _StubConnection({"items": [_item_payload("t1", 1)]})
+        backend = RemoteTuiBackend(connection, cache_enabled=True)
+        backend.load_items()
+        connection.raise_next(RemoteConnectionError("refused"))
+        backend.load_items()
+        self.assertTrue(backend.serving_cache)
+
+        backend.load_items()  # server reachable again
+        self.assertFalse(backend.serving_cache)
+
+        # Writes now succeed once cached mode is cleared.
+        source = remote_source_label(connection)
+        backend.apply_semantic_changes(
+            {source: [{"id": "t1", "status": "[x]"}]}, {}, id_key="id"
+        )
+
+    def test_cache_never_contains_the_password(self):
+        import os
+
+        from lifetxt.tui_remote_client import RemoteTuiConnection
+
+        real_connection = RemoteTuiConnection(
+            "http://127.0.0.1:9", username="alice", password="hunter2"
+        )
+        backend = RemoteTuiBackend(real_connection, cache_enabled=True)
+        backend._save_cache_snapshot([{"id": "t1", "text": "x", "line": 1}])
+        found_any = False
+        for name in os.listdir(self.cache_dir):
+            found_any = True
+            with open(
+                os.path.join(self.cache_dir, name), "r", encoding="utf-8"
+            ) as handle:
+                text = handle.read()
+            self.assertNotIn("hunter2", text)
+        self.assertTrue(found_any)
+
+
+class WorkspaceStatePollReconnectAfterCacheTests(unittest.TestCase):
+    """#681/#680 integration: reconnecting after cached mode forces a real
+    reload and clears write-refusal, even when the revision happens to be
+    unchanged from what the cache already showed."""
+
+    def test_reconnect_forces_a_reload_and_clears_cache_mode(self):
+        from lifetxt.tui_remote_client import RemoteConnectionError
+
+        connection = _StubConnection({"items": [_item_payload("t1", 1)]})
+        backend = RemoteTuiBackend(connection, cache_enabled=True)
+        args = argparse.Namespace(paths=[], config_data={}, remote_url="http://x")
+        state = tui_app.WorkspaceState(
+            args, glyphs=tui_app.ASCII_GLYPHS, backend=backend
+        )
+        state.load()
+        state.refresh()
+
+        connection.raise_next(RemoteConnectionError("refused"))
+        state._last_remote_poll = 0.0
+        tui_app._poll_remote(state, now=1000.0)
+        self.assertEqual(state.remote_status, "disconnected")
+
+        # Reconnect: the server is reachable again with the identical
+        # revision the cache already had.
+        state._last_remote_poll = 1000.0
+        dirty = tui_app._poll_remote(state, now=1002.0)
+
+        self.assertTrue(dirty)
+        self.assertEqual(state.remote_status, "connected")
+        self.assertFalse(backend.serving_cache)
 
 
 if __name__ == "__main__":

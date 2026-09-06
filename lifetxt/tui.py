@@ -1040,10 +1040,18 @@ def render_inspector(row, project_filter=None, search_query=""):
     return "\n".join(lines)
 
 
-def dashboard_model(args, project_filter=None, search_query="", limit=None):
+def dashboard_model(args, project_filter=None, search_query="", limit=None, items=None):
+    """Build the TUI dashboard sections from a parsed item list.
+
+    ``items`` lets a caller (the #678 TUI backend boundary) supply an
+    already-fetched item list -- local or remote -- instead of this
+    function re-reading ``args.paths`` itself. Omitting it preserves the
+    original local-file behavior exactly.
+    """
     options = tui_options(args)
     limit = options["limit"] if limit is None else max(1, int(limit))
-    items = load_items(args.paths)
+    if items is None:
+        items = load_items(args.paths)
     project_values = [project_filter] if project_filter else None
     blockers = blocked_map(items)
     task_items = filter_items(

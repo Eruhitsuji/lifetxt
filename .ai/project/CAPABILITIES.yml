@@ -8383,3 +8383,61 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-remote-tui
+    name: Web API-backed remote curses TUI
+    summary: >-
+      A narrow backend/data-source boundary for the interactive curses
+      `lifetxt tui`, letting the same presentation layer operate against
+      either local files (unchanged default behavior) or, in later slices,
+      a remote `lifetxt serve` Web API workspace. The first slice
+      (#678) extracts the boundary without adding any transport: it reuses
+      the exact existing local read (`lifetxt.tui.load_items`) and
+      semantic-commit (`lifetxt.write_operations.mutate_items`/
+      `mutate_item_files`) functions the TUI already called directly,
+      behind a small `TuiBackend`/`LocalTuiBackend` contract.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-tui-backend-boundary
+    implementation_locations:
+      - lifetxt/tui_backend.py
+      - lifetxt/tui.py
+      - lifetxt/tui_app.py
+      - tests/test_tui_backend.py
+    public_interfaces:
+      - lifetxt.tui_backend.TuiBackend
+      - lifetxt.tui_backend.LocalTuiBackend
+      - lifetxt.tui.dashboard_model (items= parameter)
+      - lifetxt.tui_app.WorkspaceState (backend= parameter)
+    tests_or_evidence:
+      - "tests/test_tui_backend.py (7 tests): base contract raises NotImplementedError, LocalTuiBackend.load_items() matches lifetxt.tui.load_items() exactly, apply_semantic_changes() writes a single file through the same mutate_items() call _mutate_rows used directly before, WorkspaceState defaults to LocalTuiBackend, WorkspaceState.load() uses the injected backend, an injected backend is used instead of the default"
+      - python -m unittest tests.test_tui_backend tests.test_cui_extensions -> Ran 182 tests, OK (skipped=1) -- the complete pre-existing local TUI test suite passes unmodified, confirming the extraction is behavior-preserving
+      - "live: python -m lifetxt tui life.txt --plain against a real fixture renders identically to before the extraction"
+      - ruff format --check / ruff check on changed files -> clean
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/677
+      - https://github.com/Eruhitsuji/lifetxt/issues/678
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      #678 is the first of three bounded #677 children (#678 boundary,
+      #679 remote Web backend, #680 polling/UX/docs) implemented on their
+      own child branches into one integration branch. This slice is
+      deliberately transport-free per #678's own scope: no HTTP, auth,
+      or remote configuration is added here. `_mutate_rows` in
+      `lifetxt/tui_app.py` keeps all of its existing grouping, validation,
+      and undo-stack bookkeeping; only the final disk-commit step was
+      extracted into `TuiBackend.apply_semantic_changes`, since that is
+      the one step a remote backend genuinely needs to replace. Bulk edits
+      spanning more than one source file at once
+      (`apply_semantic_changes` receiving more than one grouped path)
+      remain local-only by design; a remote backend is not required to
+      implement that case in the MVP slice. `dashboard_model()` gained an
+      additive `items=` parameter (default `None` preserves the exact
+      original behavior of parsing `args.paths` itself) so a caller can
+      supply an already-fetched item list instead.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

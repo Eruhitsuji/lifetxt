@@ -4,6 +4,7 @@ import argparse
 import os
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from lifetxt import tui_app
 from lifetxt.tui_backend import LocalTuiBackend, TuiBackend
@@ -23,6 +24,8 @@ class TuiBackendContractTests(unittest.TestCase):
             backend.load_items()
         with self.assertRaises(NotImplementedError):
             backend.apply_semantic_changes({}, {}, id_key="id")
+        with self.assertRaises(NotImplementedError):
+            backend.edit_item({})
 
 
 class LocalTuiBackendTests(unittest.TestCase):
@@ -58,6 +61,14 @@ class LocalTuiBackendTests(unittest.TestCase):
         backend = LocalTuiBackend(self.args)
         self.assertFalse(backend.is_remote)
         self.assertEqual(backend.connection_label(), "local")
+
+    def test_edit_item_preserves_existing_local_editor_flow(self):
+        record = {"source": self.path, "line": 1, "id": "t1"}
+        config = {"editor": "vim"}
+        with patch("lifetxt.fzf_helper.open_editor", return_value=0) as editor:
+            result = LocalTuiBackend(self.args).edit_item(record, config=config)
+        self.assertEqual(result, 0)
+        editor.assert_called_once_with(record, config=config)
 
 
 class WorkspaceStateBackendWiringTests(unittest.TestCase):

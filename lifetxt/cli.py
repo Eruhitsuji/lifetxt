@@ -2067,6 +2067,35 @@ def build_parser():
         "--agenda-window",
         help="Agenda window around now, such as 6h, 12h, 1d. Defaults to config tui.agenda_window or 12h.",
     )
+    tui.add_argument(
+        "--remote-url",
+        dest="remote_url",
+        help="Run the interactive TUI against a remote `lifetxt serve` "
+        "workspace over HTTP(S) instead of local files (#677). Example: "
+        "https://example.internal or http://127.0.0.1:8765.",
+    )
+    tui.add_argument(
+        "--remote-user",
+        dest="remote_user",
+        help="HTTP Basic Auth username for --remote-url (for example, an "
+        "Apache reverse-proxy login). The password is never a literal "
+        "argument; see --remote-password-env.",
+    )
+    tui.add_argument(
+        "--remote-password-env",
+        dest="remote_password_env",
+        help="Environment variable holding the --remote-user password. "
+        "Defaults to LIFETXT_REMOTE_TUI_PASSWORD.",
+    )
+    tui.add_argument(
+        "--allow-insecure-remote-http",
+        dest="allow_insecure_remote_http",
+        action="store_true",
+        help="Permit plain HTTP to a non-loopback --remote-url host. Only "
+        "appropriate when the connection is already secured by another "
+        "layer, such as a WireGuard tunnel; HTTPS remains the safer "
+        "general default.",
+    )
     tui.set_defaults(func=command_tui)
 
     fzf = subparsers.add_parser(
@@ -14818,9 +14847,14 @@ def command_workspace_validate(args):
 
 
 def command_tui(args):
-    args.paths = _normalize_paths(
-        args.paths, _config(args), stdin_when_empty=False
-    ) or ["life.txt"]
+    if getattr(args, "remote_url", None):
+        # Remote mode never reads or defaults to a local life.txt; paths
+        # are meaningless for a Web API-backed workspace (#677/#679).
+        args.paths = list(args.paths or [])
+    else:
+        args.paths = _normalize_paths(
+            args.paths, _config(args), stdin_when_empty=False
+        ) or ["life.txt"]
     from .tui import cmd_tui
 
     return cmd_tui(args)

@@ -48,7 +48,43 @@ def cmd_tui(args):
     The prompt-first workspace in ``lifetxt.tui_app`` is the primary interface.
     It needs a TTY and curses, so piping or redirecting `lifetxt tui` still
     produces the dependency-free dashboard snapshot below.
+
+    Remote mode (``--remote-url``, #677/#679) requires the interactive
+    curses workspace: the dependency-free plain-text dashboard above reads
+    local files directly and has no backend concept, so it never silently
+    substitutes local data for a remote connection.
     """
+    remote_url = getattr(args, "remote_url", None)
+    if remote_url:
+        if getattr(args, "plain", False) or not _stdout_is_tty():
+            sys.stderr.write(
+                "ERROR: --remote-url requires a real terminal (the "
+                "interactive curses TUI). --plain and piped/redirected "
+                "output are not supported for remote mode.\n"
+            )
+            return 1
+        try:
+            import curses  # noqa: F401
+        except ImportError:
+            sys.stderr.write(
+                "ERROR: --remote-url requires curses, which is unavailable "
+                "in this environment.\n"
+            )
+            return 1
+        options = tui_options(args)
+        try:
+            from .tui_bindings import resolve_bindings
+
+            resolve_bindings(options["keymap"], options.get("bindings"))
+        except ValueError as exc:
+            sys.stderr.write("ERROR: %s\n" % exc)
+            return 1
+        from .tui_app import run_workspace
+
+        try:
+            return run_workspace(args)
+        except KeyboardInterrupt:
+            return 0
     if getattr(args, "plain", False) or not _stdout_is_tty():
         sys.stdout.write(render_dashboard_safe(args))
         return 0

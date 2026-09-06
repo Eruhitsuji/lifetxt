@@ -10876,7 +10876,7 @@ traceability:
       capability_id: cap-due-date-command
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/672
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/674
       changed_files_or_scope:
         - Make LifeTxtQuickCliTests.test_quick_resolves_today tolerate a real local-midnight boundary crossed while the CLI subprocess runs
         - tests/test_lifetxt.py

@@ -334,6 +334,7 @@ class SafetyFoundationTests(unittest.TestCase):
             "remote-ticket-mutation-v1.schema.json",
             "archive-plan-v1.schema.json",
             "temporal-context-v1.schema.json",
+            "freebusy-v1.schema.json",
         }
         self.assertEqual(expected, set(bundle))
         for schema in bundle.values():

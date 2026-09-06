@@ -10993,6 +10993,33 @@ traceability:
         entry (into the integration branch) is opened.
       status: implemented
 
+    - requirement_id: req-tui-backend-boundary
+      capability_id: cap-remote-tui
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/677
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/678
+      pull_request: null
+      changed_files_or_scope:
+        - Extract a transport-free TUI backend/data-source boundary (TuiBackend/LocalTuiBackend), routing WorkspaceState.load() item reads and _mutate_rows's disk commit through it while preserving local behavior exactly
+        - lifetxt/tui_backend.py
+        - lifetxt/tui.py
+        - lifetxt/tui_app.py
+        - tests/test_tui_backend.py
+      tests_or_evidence:
+        - python -m unittest tests.test_tui_backend tests.test_cui_extensions -> Ran 182 tests, OK (skipped=1)
+        - 'live: python -m lifetxt tui life.txt --plain renders identically to before the extraction'
+        - ruff format --check / ruff check on changed files -> clean
+      release_or_deployment: null
+      notes: >-
+        Second implementation task of the 676-680 batch, landing on its
+        own task branch merged into the
+        feature/676-680-capability-matrix-and-remote-tui integration
+        branch before a final human-approved PR into main. No HTTP,
+        auth, or remote configuration is added by this task, per #678's
+        own scope; that is #679's job. pull_request is filled in once the
+        pull request implementing this entry (into the integration
+        branch) is opened.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

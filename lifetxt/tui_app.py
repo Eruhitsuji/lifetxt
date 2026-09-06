@@ -1185,8 +1185,6 @@ def _cmd_edit(state, argument):
         raise ValueError("No row selected.")
     if not row.get("source"):
         raise ValueError("Selected row has no source file.")
-    from .fzf_helper import open_editor
-
     record = {
         "id": row.get("id", ""),
         "source": row.get("source", ""),
@@ -1200,7 +1198,7 @@ def _cmd_edit(state, argument):
     # A terminal editor draws over the curses screen, so the TUI has to release
     # the terminal for the duration of the child process and take it back after.
     with _suspend_terminal(state):
-        open_editor(record, config=config)
+        state.backend.edit_item(record, config=config)
     state.reload()
     return (
         "info",

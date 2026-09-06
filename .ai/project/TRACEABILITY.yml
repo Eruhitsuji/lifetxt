@@ -10937,6 +10937,34 @@ traceability:
         (#481) recorded as deferred v1 scope.
       status: implemented
 
+    - requirement_id: req-quick-today-test-determinism
+      capability_id: cap-due-date-command
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/672
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/674
+      changed_files_or_scope:
+        - Make LifeTxtQuickCliTests.test_quick_resolves_today tolerate a real local-midnight boundary crossed while the CLI subprocess runs
+        - tests/test_lifetxt.py
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - "python -m unittest tests.test_lifetxt.LifeTxtQuickCliTests.test_quick_resolves_today -> Ran 1 test, OK"
+        - "python -m unittest tests.test_lifetxt.LifeTxtQuickCliTests -> Ran 11 tests, OK"
+        - ruff format --check tests/test_lifetxt.py -> 1 file already formatted
+        - ruff check tests/test_lifetxt.py -> All checks passed
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - "MPLBACKEND=Agg python -W ignore::ResourceWarning -m unittest discover -> Ran 3806 tests in 876.745s, FAILED (3 failures, skipped=16): the same two ProcessTreeTimeoutTests and MultiFileSourceIntegrityTests.test_permission_denied_file_among_multiple_sources_fails_loudly already recorded as reproducible, environment-dependent failures on main; all are outside #672's write scope, while LifeTxtQuickCliTests passed independently"
+      release_or_deployment: null
+      notes: >-
+        Test-only maintenance of cap-due-date-command. The assertion now
+        samples the host-local date immediately before and after the CLI
+        subprocess, then requires the complete generated task line to use
+        one of those observed dates. This preserves the production
+        `quick --due today` contract while removing the precomputed-date
+        race seen when the v1.0.2 coverage job crossed UTC midnight. No
+        production code, public interface, format, dependency, user data,
+        release workflow, or separately tracked today-hub test changed.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

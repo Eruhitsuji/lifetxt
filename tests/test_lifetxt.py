@@ -2382,13 +2382,21 @@ class LifeTxtQuickCliTests(unittest.TestCase):
     def test_quick_resolves_today(self):
         import datetime as dt
 
-        today_iso = dt.date.today().isoformat()
         with tempfile.TemporaryDirectory() as temp_dir:
             path = os.path.join(temp_dir, "life.txt")
-            run_cli("quick", "Task", "--due", "today", "--append", path)
+            before_today = dt.date.today().isoformat()
+            _stdout, stderr, code = run_cli(
+                "quick", "Task", "--due", "today", "--append", path
+            )
+            after_today = dt.date.today().isoformat()
+            self.assertEqual(0, code, stderr)
             with open(path, encoding="utf-8") as f:
                 content = f.read()
-            self.assertIn("due:%s" % today_iso, content)
+            expected_lines = {
+                "[ ] T Task due:%s\n" % before_today,
+                "[ ] T Task due:%s\n" % after_today,
+            }
+            self.assertIn(content, expected_lines)
 
     def test_quick_resolves_tomorrow(self):
         import datetime as dt

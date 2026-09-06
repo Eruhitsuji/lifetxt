@@ -369,8 +369,13 @@ def _now():
 class WorkspaceState(object):
     """All mutable UI state for one TUI session."""
 
-    def __init__(self, args, glyphs=None):
+    def __init__(self, args, glyphs=None, backend=None):
         self.args = args
+        if backend is None:
+            from .tui_backend import LocalTuiBackend
+
+            backend = LocalTuiBackend(args)
+        self.backend = backend
         self.options = tui_options(args)
         self.active_workspace = active_workspace_name(
             getattr(args, "config_data", None) or {}
@@ -466,16 +471,23 @@ class WorkspaceState(object):
             # rather than becoming unusable; the message still surfaces via
             # self.error below.
             bindings_error = str(exc)
+        backend_items = None
+        backend_error = None
         try:
             # Load unfiltered: the project filter is a cheap in-memory pass in
-            # refresh(), so changing it must not force another parse.
+            # refresh(), so changing it must not force another parse. Items
+            # are fetched once through the backend (#678) and reused below
+            # for Command Center, instead of dashboard_model() and this
+            # method each re-reading the source(s) independently.
+            backend_items, backend_error = self.backend.load_items()
             self._model = dashboard_model(
                 self.args,
                 project_filter=None,
                 search_query="",
                 limit=ROW_SCAN_LIMIT,
+                items=backend_items,
             )
-            self.error = ""
+            self.error = backend_error or ""
         except Exception as exc:
             self.error = str(exc)
             self._model = None
@@ -490,11 +502,10 @@ class WorkspaceState(object):
             self._area_keys = frozenset()
         if self._model is not None:
             try:
-                # A second, cheap parse: dashboard_model() does not expose the
-                # items it already parsed, and command_center() is the single
-                # shared aggregation every surface must read unmodified (see
+                # command_center() is the single shared aggregation every
+                # surface must read unmodified (see
                 # lifetxt/command_center.py's module docstring).
-                items = load_items(self.args.paths)
+                items = backend_items
                 config = getattr(self.args, "config_data", None) or {}
                 self._today = command_center(items, config, timezone_today())
             except Exception:
@@ -1846,11 +1857,18 @@ def run_command(state, text):
 
 
 def _mutate_rows(state, rows, label, change_for_row, require_task=False):
-    """Apply selected row changes through one revision-aware semantic commit."""
+    """Apply selected row changes through one revision-aware semantic commit.
+
+    Grouping/validation/undo bookkeeping stays here; the actual disk commit
+    is delegated to ``state.backend`` (#678), so a future remote backend can
+    replace only that one step. Local behavior is unchanged: the default
+    backend performs the exact same
+    ``mutate_items``/``mutate_item_files`` calls this function used to make
+    directly.
+    """
     if not rows:
         raise ValueError("No row selected.")
     from . import mutation
-    from .write_operations import mutate_item_files, mutate_items
 
     grouped = {}
     before = {}
@@ -1870,32 +1888,9 @@ def _mutate_rows(state, rows, label, change_for_row, require_task=False):
         before[path] = mutation.read_text_snapshot(path)
 
     id_key = state.options["id_key"]
-    after = {}
-    if len(grouped) == 1:
-        path = next(iter(grouped))
-        result = mutate_items(
-            path,
-            grouped[path],
-            id_key=id_key,
-            expected_revision=before[path].content_hash,
-            operation="tui.semantic",
-        )
-        after[path] = result.after_hash
-    else:
-        specs = {}
-        for path in grouped:
-            specs[path] = {
-                "changes": grouped[path],
-                "expected_revision": before[path].content_hash,
-            }
-        result = mutate_item_files(
-            specs,
-            id_key=id_key,
-            operation="tui.semantic.multi",
-            journal_dir=_tui_journal_dir(state),
-        )
-        for target in result.targets:
-            after[target.path] = target.after_hash
+    after = state.backend.apply_semantic_changes(
+        grouped, before, id_key=id_key, journal_dir=_tui_journal_dir(state)
+    )
     _remember_undo(state, before, after, label)
     state.marked = set()
     state.reload()

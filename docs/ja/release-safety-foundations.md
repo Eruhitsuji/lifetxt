@@ -51,6 +51,25 @@ lifetxt capabilities --read-only --authentication session --pretty
 
 versioned response は format/canonical/schema versions、supported operations、authentication mode、read-only state、writable targets、optional features、SHA-256 revision-precondition support を report します。future remote clients の base contract です。
 
+### Cross-surface capability matrix
+
+```bash
+lifetxt capabilities --surface-matrix
+lifetxt capabilities --surface-matrix --format json --pretty
+```
+
+additive で read-only な mode で、real な top-level CLI command ごとに Web UI・interactive curses TUI・REST API・MCP で同等の機能が利用できるかを report します。default の `lifetxt capabilities` document は一切変更しません。
+
+各 command は surface ごとに次の5つの安定した support state のいずれかを report します:
+
+- `full` -- command が対応する operation が全て その surface で利用可能
+- `partial` -- command が複数の operation に対応し、一部だけ利用可能
+- `unsupported` -- 対応する operation は存在するが、その surface では未実装
+- `not_applicable` -- command が意図的に CLI-only（interface launcher、local administration、file-format import/export converter）であり、cross-surface parity は期待されない
+- `unmapped` -- command がまだ authoritative な operation/surface metadata に接続されていない。これは known gap であり、その surface に機能がないという主張ではない。
+
+matrix は `lifetxt.cli_taxonomy`（canonical CLI command catalog）と `lifetxt.surface_runtime.OPERATION_REGISTRY`（既存の CLI/Web/MCP semantic operation registry）から derive され、第二の hand-maintained feature table ではありません。`web_ui` と `api` は独立した column として report されますが、現時点では同じ registry の事実（`"web" in operation.surfaces`）から計算されています -- これは known な、documented された limitation であり、より細かい per-operation の Web UI/REST API audit が完了するまでのものです。
+
 ## Safety boundary checklist
 
 - unsupported `#! format_version:` を宣言する file は、migration path を選ぶまで mutate しない。

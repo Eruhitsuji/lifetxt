@@ -8321,3 +8321,65 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-cli-surface-capability-matrix
+    name: Per-command CLI/Web UI/TUI/API/MCP capability matrix
+    summary: >-
+      An additive, read-only `lifetxt capabilities --surface-matrix` report
+      giving, for every real top-level CLI command, a deterministic support
+      state (full/partial/unsupported/not_applicable/unmapped) on the Web
+      UI, interactive curses TUI, REST API, and MCP surfaces. Derived from
+      the existing `cli_taxonomy.all_commands()` command catalog (#629) and
+      `surface_runtime.OPERATION_REGISTRY` (#50) rather than a second
+      hand-maintained feature table; never changes the default
+      `lifetxt capabilities` remote-client capability document.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-cli-surface-capability-matrix
+    implementation_locations:
+      - lifetxt/capability_matrix.py
+      - lifetxt/extra_cli.py
+      - lifetxt/extra_safety.py
+      - tests/test_capability_matrix.py
+      - docs/en/release-safety-foundations.md
+      - docs/ja/release-safety-foundations.md
+    public_interfaces:
+      - lifetxt capabilities --surface-matrix
+      - lifetxt.capability_matrix.matrix_payload
+      - lifetxt.capability_matrix.command_surface_states
+      - lifetxt-capability-matrix-v1 JSON document
+    tests_or_evidence:
+      - "tests/test_capability_matrix.py (13 tests): every state is one of the stable enum, unmapped/not_applicable/full/unsupported classification, multi-operation aggregation for `today`, aliases never appear as independent rows, matrix payload shape and full command coverage, text rendering, and that the default `lifetxt capabilities` document is unaffected"
+      - python -m unittest tests.test_capability_matrix tests.test_surface_runtime tests.test_completion_surfaces tests.test_cli_taxonomy -> Ran 111 tests, OK (skipped=1)
+      - "live: lifetxt capabilities --surface-matrix (text and --format json) render correctly; lifetxt capabilities (default) unchanged"
+      - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      - ruff format --check / ruff check on changed files -> clean
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/676
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      #676 asked to prefer extending cap-surface-capability-consistency
+      (#50) unless the user-visible matrix has a genuinely separate
+      contract. Implementation confirmed a separate contract is warranted:
+      OPERATION_REGISTRY's `surfaces` tuple only distinguishes
+      cli/web/mcp (no `tui`, and `web` bundles the browser UI and the REST
+      API together), so a new small curated model
+      (command-to-operation mapping, a not-applicable command set, and a
+      curated TUI operation set) was needed to answer the per-command
+      question this issue asks. `web_ui` and `api` are reported as two
+      independently computed columns but currently agree for every row
+      (both read `"web" in operation.surfaces`); documented as a known
+      limitation rather than fabricating a finer distinction not yet
+      verified. The command-to-operation mapping intentionally covers only
+      commands with a clear, defensible correspondence to an existing
+      OPERATION_REGISTRY entry (~23 of 110 commands); everything else is
+      either a curated CLI-only `not_applicable` command (interface
+      launchers, local administration, import/export converters) or
+      honestly `unmapped` rather than guessed. Widening the curated mapping
+      as more commands are audited is an explicit, unimplemented follow-up.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

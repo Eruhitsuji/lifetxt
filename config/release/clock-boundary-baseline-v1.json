@@ -78,6 +78,13 @@
       "classification": "animation",
       "reason": "The timestamp drives transient TUI animation/toast expiry and never affects persisted records.",
       "removal_condition": "Use time.monotonic when the TUI renderer is split from workspace state."
+    },
+    {
+      "path": "lifetxt/tui_app.py",
+      "call": "time.time",
+      "classification": "operational-network",
+      "reason": "Paces the Remote TUI backend's bounded background poll interval (#680); it schedules a network request cadence and never selects or persists a life.txt workflow date.",
+      "removal_condition": "Use time.monotonic if the poll scheduler is ever isolated from wall-clock display concerns."
     }
   ]
 }

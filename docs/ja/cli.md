@@ -2043,6 +2043,54 @@ fuzzy 補完付きの slash command palette、入力に追従する live filter�
 stdout が TTY でない場合 (pipe や redirect) や `--plain` 指定時は、代わりに plain text の
 dashboard snapshot を 1 回出力するため、`python -m lifetxt tui > snapshot.txt` も従来どおり動作します。
 
+#### Remote mode (`--remote-url`)
+
+`tui` は local file の代わりに、remote な `lifetxt serve` workspace に対して HTTP(S) 経由で動作させることもできます。
+
+```sh
+python -m lifetxt tui --remote-url https://lifetxt.example.internal
+python -m lifetxt tui --remote-url http://127.0.0.1:8765
+python -m lifetxt tui --remote-url http://lifetxt.wg-internal:8080 \
+    --remote-user alice --allow-insecure-remote-http
+```
+
+- `--remote-url` を指定すると remote mode になります。省略した場合、local な `tui` の挙動は完全に従来どおりです。
+- `--remote-user` は HTTP Basic Auth の username を設定します（例: Apache reverse proxy が要求するもの）。password を CLI 引数の literal 値として渡すことはできません。`LIFETXT_REMOTE_TUI_PASSWORD` 環境変数、または `--remote-password-env` で指定した変数から読み込みます。
+- loopback 以外の host への plain HTTP は `--allow-insecure-remote-http` を明示的に指定しない限り拒否されます。これは WireGuard tunnel など、別の layer で既に保護されている接続のみを想定した opt-in です。HTTPS がより安全な default であることに変わりはなく、このフラグは public host への plain HTTP を安全にするものではありません。
+- remote mode は server の既存の REST API（`GET /api/items`、`PUT`/`DELETE .../api/items/id/{id}`、`POST /api/items`）と、既存の file 全体の `If-Match`/`X-Lifetxt-Revision` precondition contract を再利用します。session が最後に読み込んで以降 file が変更されていた場合、write は conflict として拒否され、黙って上書きされたり自動的に retry されたりすることはありません。
+- interactive curses workspace が必須です。remote mode で `--plain` や pipe/redirect された出力はサポートされません。
+
+**参照 deployment。** 想定している topology は、private network からのみ到達可能な personal server です。
+
+```text
+Remote client
+  lifetxt tui --remote-url http://lifetxt.wg-internal:8080 --remote-user alice \
+      --allow-insecure-remote-http
+      |
+      | HTTP over WireGuard（tunnel layer で既に暗号化済み）
+      v
+Apache :8080  (HTTP Basic Auth)
+      |
+      | reverse proxy
+      v
+127.0.0.1:8765  lifetxt serve
+      |
+      v
+server 側の authoritative な life.txt/workspace
+```
+
+plain HTTP 上での Basic Auth がここで許容されるのは、WireGuard が既に link を暗号化しているためです。それ以外の場合、password は容易に復元可能な encoding で送信されるだけです。この topology の Apache endpoint を public Internet に直接公開しないでください。
+
+**操作と revision safety。** remote mode は server の既存の REST API（`GET /api/items`、`PUT`/`DELETE .../api/items/id/{id}`、`POST /api/items`）と、既存の file 全体の `If-Match`/`X-Lifetxt-Revision` precondition contract を再利用します。TUI 専用に新しい protocol を発明したものではなく、`lifetxt serve` deployment がすでに持っている contract そのものです。session が最後に読み込んで以降 file が変更されていた場合、write は conflict として拒否され、黙って上書きされたり自動的に retry されたりすることはありません。conflict message と reload が回復手段です。remote mode に local な write target はありません: まだ remote 対応のないコマンド（現時点では presence status を扱う `/state` と `/now`）は local file への書き込みではなく明確な error を報告します。
+
+**自動 refresh。** 接続後、TUI は 1.5 秒ごとに軽量な `GET /api/revision` 呼び出し 1 回だけで server を poll します（全 item を再取得するより大幅に軽量です）。この revision が実際に変化した場合のみ、item 一覧全体を reload します。選択中の item が引き続き存在する限り、background reload をまたいで active view・選択・search/filter の状態は維持されます。`/reload` はいつでも手動 fallback として利用できます。これは意図的にシンプルな bounded polling であり、push protocol（SSE/WebSocket）ではありません。計測によって正当化されれば、将来的な最適化として追加される可能性があります。
+
+**接続状態。** header には `remote:<host> as <user> (connected)` または `(disconnected)` が表示されます（password は表示されません）。接続の喪失・復旧は toast で通知されます。一時的な network 障害では、status word のみが変化し、直前まで表示していた view はそのまま残ります。startup 時の接続失敗は、local file への fallback ではなく、明確な error で終了します。
+
+**複数 client での利用。** 同じ server に対する複数の `tui --remote-url` session（あるいは TUI・Web UI・CLI client の混在）は安全です。それぞれの authoritative な write は writer 自身が最後に知っている revision を伴うため、別の client の stale な edit は黙って上書きされることなく conflict として拒否され、commit された変更は 1 polling interval 以内に他の全 client から見えるようになります。
+
+**現時点の制限。** offline/local cache や offline mutation queue はありません -- remote 障害が local data への fallback を引き起こすことは、設計上ありません。1 回の semantic commit で多数の item にまたがる marked-row の一括編集は local のみ対応です。remote での編集は 1 item ずつ適用されます。presence status（`/state`、`/now`）にはまだ remote 相当がありません。この機能が置き換えるものではない、別の ticket 中心の remote client については、既存の dependency-free な Remote Safe Mode CLI/REPL である `lifetxt remote` を参照してください。
+
 #### input bar
 
 既定の `prompt` keymap では input bar が常に focus されています。plain text を入力すると

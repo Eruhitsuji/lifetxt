@@ -564,6 +564,8 @@ def command_format(args, _config_data):
 
 
 def command_capabilities(args, config_data):
+    if getattr(args, "surface_matrix", False):
+        return command_capability_matrix(args)
     targets = []
     from .config import config_write_file
     from .surface_runtime import capability_document_for
@@ -579,6 +581,25 @@ def command_capabilities(args, config_data):
         config=config_data,
     )
     return _output(report, args)
+
+
+def command_capability_matrix(args):
+    """`lifetxt capabilities --surface-matrix` (#676): additive, read-only
+    per-command Web UI/TUI/API/MCP support-state report. Never changes the
+    default `lifetxt capabilities` remote-client capability document above.
+    """
+    from .capability_matrix import matrix_payload, render_matrix_text
+
+    payload = matrix_payload()
+    fmt = getattr(args, "format", "json")
+    pretty = bool(getattr(args, "pretty", False))
+    output = getattr(args, "output", None)
+    if fmt == "json":
+        text = _json_text(payload, pretty=pretty)
+    else:
+        text = render_matrix_text(payload["commands"])
+    _write_output(text, output)
+    return 0
 
 
 def _output(report, args, failure=False):

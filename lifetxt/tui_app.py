@@ -39,6 +39,13 @@ WORKSPACE_VIEWS = ("all",) + TUI_SECTIONS + ("next", "today")
 TODAY_SECTION_LIMIT = 8
 WORKSPACE_SORTS = ("natural", "due", "priority", "title", "status")
 WORKSPACE_POLL_SECONDS = 0.25
+
+#: Bounded network polling interval for remote mode (#680). Deliberately
+#: much longer than WORKSPACE_POLL_SECONDS (the local curses input-timeout
+#: cadence, unrelated to network traffic): remote polling is one cheap
+#: GET /api/revision call, not a filesystem stat, so it must not run at the
+#: same 0.25s cadence a local file-change monitor safely can.
+REMOTE_POLL_SECONDS = 1.5
 TOAST_SECONDS = 6.0
 ROW_SCAN_LIMIT = 5000
 
@@ -369,8 +376,13 @@ def _now():
 class WorkspaceState(object):
     """All mutable UI state for one TUI session."""
 
-    def __init__(self, args, glyphs=None):
+    def __init__(self, args, glyphs=None, backend=None):
         self.args = args
+        if backend is None:
+            from .tui_backend import LocalTuiBackend
+
+            backend = LocalTuiBackend(args)
+        self.backend = backend
         self.options = tui_options(args)
         self.active_workspace = active_workspace_name(
             getattr(args, "config_data", None) or {}
@@ -417,6 +429,12 @@ class WorkspaceState(object):
         self.load_count = 0
         self._model = None
         self._today = None
+        # Remote connection status (#680). Meaningless for a local backend;
+        # "connected" is the default so a local session never shows a
+        # spurious disconnected indicator.
+        self.remote_status = "connected"
+        self.remote_status_detail = ""
+        self._last_remote_poll = 0.0
 
     # -- derived -----------------------------------------------------------
 
@@ -466,16 +484,23 @@ class WorkspaceState(object):
             # rather than becoming unusable; the message still surfaces via
             # self.error below.
             bindings_error = str(exc)
+        backend_items = None
+        backend_error = None
         try:
             # Load unfiltered: the project filter is a cheap in-memory pass in
-            # refresh(), so changing it must not force another parse.
+            # refresh(), so changing it must not force another parse. Items
+            # are fetched once through the backend (#678) and reused below
+            # for Command Center, instead of dashboard_model() and this
+            # method each re-reading the source(s) independently.
+            backend_items, backend_error = self.backend.load_items()
             self._model = dashboard_model(
                 self.args,
                 project_filter=None,
                 search_query="",
                 limit=ROW_SCAN_LIMIT,
+                items=backend_items,
             )
-            self.error = ""
+            self.error = backend_error or ""
         except Exception as exc:
             self.error = str(exc)
             self._model = None
@@ -490,11 +515,10 @@ class WorkspaceState(object):
             self._area_keys = frozenset()
         if self._model is not None:
             try:
-                # A second, cheap parse: dashboard_model() does not expose the
-                # items it already parsed, and command_center() is the single
-                # shared aggregation every surface must read unmodified (see
+                # command_center() is the single shared aggregation every
+                # surface must read unmodified (see
                 # lifetxt/command_center.py's module docstring).
-                items = load_items(self.args.paths)
+                items = backend_items
                 config = getattr(self.args, "config_data", None) or {}
                 self._today = command_center(items, config, timezone_today())
             except Exception:
@@ -1307,6 +1331,26 @@ def _cmd_add(state, argument):
     title = (argument or "").strip()
     if not title:
         raise ValueError("Usage: /add TITLE")
+    if state.backend.is_remote:
+        # Remote create (#677/#679 MVP): the server, not this process,
+        # assigns the id and parses the capture shorthand, so this reuses
+        # the exact same POST /api/items route the Web UI and CLI `add`
+        # already call rather than a second creation implementation.
+        from .shorthand import ShorthandError, parse_capture
+
+        try:
+            parsed_title, details = parse_capture(title, strict_dates=True)
+        except ShorthandError as exc:
+            raise ValueError(str(exc))
+        payload = {
+            "status": "[ ]",
+            "type": "T",
+            "title": parsed_title,
+            "details": {key: list(values) for key, values in details.items()},
+        }
+        state.backend.create_item(payload)
+        state.reload()
+        return ("success", "Added: %s" % parsed_title)
     path = _write_target(state)
     existing = set(row.get("id") for row in state.rows if row.get("id"))
     line = _quick_add_line(title, state.options["id_key"], existing_ids=existing)
@@ -1846,14 +1890,19 @@ def run_command(state, text):
 
 
 def _mutate_rows(state, rows, label, change_for_row, require_task=False):
-    """Apply selected row changes through one revision-aware semantic commit."""
+    """Apply selected row changes through one revision-aware semantic commit.
+
+    Grouping/validation/undo bookkeeping stays here; the actual disk commit
+    is delegated to ``state.backend`` (#678), so a future remote backend can
+    replace only that one step. Local behavior is unchanged: the default
+    backend performs the exact same
+    ``mutate_items``/``mutate_item_files`` calls this function used to make
+    directly.
+    """
     if not rows:
         raise ValueError("No row selected.")
-    from . import mutation
-    from .write_operations import mutate_item_files, mutate_items
 
     grouped = {}
-    before = {}
     for row in rows:
         if not row.get("source") or not row.get("id"):
             raise ValueError(
@@ -1866,37 +1915,24 @@ def _mutate_rows(state, rows, label, change_for_row, require_task=False):
             )
         path = row["source"]
         grouped.setdefault(path, []).append(change_for_row(row))
-    for path in sorted(grouped):
-        before[path] = mutation.read_text_snapshot(path)
+
+    # Local mode snapshots each file's exact text for CAS and the undo
+    # stack; remote mode has no local file to snapshot and relies on the
+    # backend's own revision-precondition contract instead (#679), so undo
+    # is not offered there.
+    before = {}
+    if not state.backend.is_remote:
+        from . import mutation
+
+        for path in sorted(grouped):
+            before[path] = mutation.read_text_snapshot(path)
 
     id_key = state.options["id_key"]
-    after = {}
-    if len(grouped) == 1:
-        path = next(iter(grouped))
-        result = mutate_items(
-            path,
-            grouped[path],
-            id_key=id_key,
-            expected_revision=before[path].content_hash,
-            operation="tui.semantic",
-        )
-        after[path] = result.after_hash
-    else:
-        specs = {}
-        for path in grouped:
-            specs[path] = {
-                "changes": grouped[path],
-                "expected_revision": before[path].content_hash,
-            }
-        result = mutate_item_files(
-            specs,
-            id_key=id_key,
-            operation="tui.semantic.multi",
-            journal_dir=_tui_journal_dir(state),
-        )
-        for target in result.targets:
-            after[target.path] = target.after_hash
-    _remember_undo(state, before, after, label)
+    after = state.backend.apply_semantic_changes(
+        grouped, before, id_key=id_key, journal_dir=_tui_journal_dir(state)
+    )
+    if before:
+        _remember_undo(state, before, after, label)
     state.marked = set()
     state.reload()
     return len(rows)
@@ -1949,6 +1985,16 @@ def _tui_journal_dir(state):
 
 
 def _write_target(state):
+    if state.backend.is_remote:
+        # Remote mode never has a local write target; #677 explicitly
+        # forbids ever falling back to one. Callers still using this
+        # helper (presence /state, /now) are commands #679's MVP slice
+        # does not cover yet, and surface this as a clear error rather
+        # than crashing or writing to a stray local file.
+        raise ValueError(
+            "This command has no remote equivalent yet in this release; "
+            "it requires a local workspace."
+        )
     config = getattr(state.args, "config_data", None) or {}
     from .config import config_write_file
 
@@ -2023,6 +2069,23 @@ def _build_header(state, width):
     tagline = " %s workspace" % glyphs["dot"]
     if getattr(state, "active_workspace", None):
         tagline += " %s workspace:%s" % (glyphs["dot"], state.active_workspace)
+    backend = getattr(state, "backend", None)
+    if backend is not None and getattr(backend, "is_remote", False):
+        # Credential-safe by construction: connection_label() never
+        # includes a password (#677/#679).
+        if getattr(backend, "serving_cache", False):
+            # #681: cached mode is visually distinct from a plain
+            # disconnect -- the user is looking at real, but stale, data.
+            status_word = "cached, stale"
+        elif getattr(state, "remote_status", "connected") == "disconnected":
+            status_word = "disconnected"
+        else:
+            status_word = "connected"
+        tagline += " %s remote:%s (%s)" % (
+            glyphs["dot"],
+            backend.connection_label(),
+            status_word,
+        )
     title = " lifetxt" + tagline
     summary = "%d task %s %d agenda %s %d status " % (
         counts.get("tasks", 0),
@@ -3329,12 +3392,83 @@ def _safe_command(state, text):
 # ---------------------------------------------------------------------------
 
 
+def _backend_for_args(args):
+    """Select the local or remote TUI backend for one ``run_workspace`` call
+    (#677/#679). Local files remain the unconditional default; remote mode
+    is opt-in via ``--remote-url``."""
+    if getattr(args, "remote_url", None):
+        from .tui_backend import RemoteTuiBackend
+
+        return RemoteTuiBackend.from_args(args)
+    from .tui_backend import LocalTuiBackend
+
+    return LocalTuiBackend(args)
+
+
+def _reload_preserving_selection(state):
+    """Reload, then restore the cursor to the same logical row if it still
+    exists (#680), instead of the raw index :meth:`WorkspaceState.refresh`
+    otherwise leaves pointing at whatever row happens to land at the old
+    position after the row list changes shape."""
+    current = state.selected_row()
+    key = row_key(current) if current is not None else None
+    state.reload()
+    if key is not None:
+        for index, row in enumerate(state.rows):
+            if row_key(row) == key:
+                state.selected = index
+                break
+
+
+def _poll_remote(state, now):
+    """One bounded background-polling tick for a remote backend (#680).
+
+    Returns True when the caller should redraw. Never raises: a transient
+    failure is recorded on ``state.remote_status``/``state.error`` and the
+    last-known rows are left completely untouched, so a network blip never
+    destroys the current in-memory view. Only an actual, confirmed change
+    (``poll_changed()`` returning True) triggers a real reload.
+    """
+    if now - state._last_remote_poll < REMOTE_POLL_SECONDS:
+        return False
+    state._last_remote_poll = now
+    was_disconnected = state.remote_status == "disconnected"
+    try:
+        changed = state.backend.poll_changed()
+    except Exception as exc:
+        state.remote_status = "disconnected"
+        state.remote_status_detail = str(exc)
+        if not was_disconnected:
+            state.notify("Remote connection lost: %s" % exc, "error")
+        return True
+    state.remote_status = "connected"
+    state.remote_status_detail = ""
+    if was_disconnected:
+        state.notify("Remote connection restored.", "success")
+        # A reconnect must always force a real reload (#681), even when the
+        # revision happens to match what a stale cached view already
+        # showed: RemoteTuiBackend.serving_cache is only cleared by a real
+        # successful load_items() call, and writes must stay refused until
+        # that happens.
+        _reload_preserving_selection(state)
+        return True
+    if not changed:
+        return was_disconnected
+    _reload_preserving_selection(state)
+    return True
+
+
 def run_workspace(args):
     import curses
+    import time
 
     from .tui import FileChangeWatcher
 
-    watcher = FileChangeWatcher(getattr(args, "paths", []) or []).start()
+    backend = _backend_for_args(args)
+    # Remote mode has no local files to watch; polling refresh is #680's
+    # job. An empty path list makes the local file-change monitor a no-op.
+    watch_paths = [] if backend.is_remote else (getattr(args, "paths", []) or [])
+    watcher = FileChangeWatcher(watch_paths).start()
 
     @contextlib.contextmanager
     def suspend(stdscr):
@@ -3349,7 +3483,7 @@ def run_workspace(args):
             stdscr.refresh()
 
     def main(stdscr):
-        state = WorkspaceState(args)
+        state = WorkspaceState(args, backend=backend)
         state.suspend = lambda: suspend(stdscr)
         color_attrs = init_colors(curses, state.options.get("theme", "auto"))
         stdscr.timeout(int(WORKSPACE_POLL_SECONDS * 1000))
@@ -3390,6 +3524,8 @@ def run_workspace(args):
             if key == -1:
                 if state.toast and state.toast.expired():
                     state.toast = None
+                    dirty = True
+                if backend.is_remote and _poll_remote(state, time.time()):
                     dirty = True
                 continue
             height, _width = stdscr.getmaxyx()

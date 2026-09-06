@@ -499,6 +499,12 @@ def _build_parser(command):
             choices=("token", "session", "proxy", "none"),
             default="token",
         )
+        parser.add_argument(
+            "--surface-matrix",
+            action="store_true",
+            help="Report the per-command Web UI/TUI/API/MCP capability "
+            "matrix instead of the remote-client capability document.",
+        )
         _add_output(parser)
     elif command == "doctor":
         parser.add_argument("--workspace-safety", action="store_true", required=True)

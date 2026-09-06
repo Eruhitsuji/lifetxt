@@ -2318,6 +2318,132 @@ panel for the selected row. When stdout is not a TTY (piping or redirecting), or
 with `--plain`, the command prints a single plain-text dashboard snapshot
 instead, so `python -m lifetxt tui > snapshot.txt` still works.
 
+#### Remote mode (`--remote-url`)
+
+`tui` can operate against a remote `lifetxt serve` workspace over HTTP(S)
+instead of local files, so a client machine can inspect and operate an
+authoritative workspace hosted elsewhere with the same interaction model
+used for local files.
+
+```sh
+python -m lifetxt tui --remote-url https://lifetxt.example.internal
+python -m lifetxt tui --remote-url http://127.0.0.1:8765
+python -m lifetxt tui --remote-url http://lifetxt.wg-internal:8080 \
+    --remote-user alice --allow-insecure-remote-http
+```
+
+- `--remote-url` selects remote mode; local `tui` is completely unchanged
+  when it is omitted.
+- `--remote-user` sets an HTTP Basic Auth username (for example, one an
+  Apache reverse proxy enforces). The password is never a literal CLI
+  argument: it is read from the `LIFETXT_REMOTE_TUI_PASSWORD` environment
+  variable, or the variable named by `--remote-password-env`.
+- Plain HTTP to a non-loopback host is refused unless
+  `--allow-insecure-remote-http` is given explicitly. This is intended only
+  for a connection already secured by another layer, such as a WireGuard
+  tunnel -- HTTPS remains the safer general default, and this flag does not
+  make plain HTTP to a public host safe.
+- Requires the interactive curses workspace: `--plain` and piped/redirected
+  output are not supported for remote mode.
+
+**Reference deployment.** The motivating topology is a personal server
+reachable only over a private network:
+
+```text
+Remote client
+  lifetxt tui --remote-url http://lifetxt.wg-internal:8080 --remote-user alice \
+      --allow-insecure-remote-http
+      |
+      | HTTP over WireGuard (already encrypted at the tunnel layer)
+      v
+Apache :8080  (HTTP Basic Auth)
+      |
+      | reverse proxy
+      v
+127.0.0.1:8765  lifetxt serve
+      |
+      v
+server-side authoritative life.txt/workspace
+```
+
+Basic Auth over plain HTTP is only appropriate here because WireGuard
+already encrypts the link; the password is otherwise sent in a trivially
+reversible encoding. Never place this topology's Apache endpoint directly
+on the public Internet.
+
+**Operations and revision safety.** Remote mode reads and writes through
+the server's ordinary REST API (`GET /api/items`,
+`PUT`/`DELETE .../api/items/id/{id}`, `POST /api/items`), using the
+server's existing whole-file `If-Match`/`X-Lifetxt-Revision` precondition
+contract -- the same one every `lifetxt serve` deployment already has, not
+a second protocol invented for the TUI. A write is rejected with a
+conflict, never silently applied or auto-retried, if the file changed
+since this session last read it; the conflict message and a reload are
+your recovery path. There is no local write target in remote mode:
+commands with no remote equivalent yet (currently `/state` and `/now`,
+which manage presence status) report a clear error instead of writing to a
+local file.
+
+**Automatic refresh.** Once connected, the TUI polls the server every 1.5
+seconds using a single cheap `GET /api/revision` call -- far lighter than
+re-fetching every item -- and only reloads the full item list when that
+revision actually changed. The active view, selection, and search/filter
+state are preserved across a background reload when the selected item
+still exists. `/reload` remains available as a manual fallback at any
+time. This is deliberately simple bounded polling, not a push protocol
+(SSE/WebSocket); a future optimization may add one if measurements justify
+it.
+
+**Connection status.** The header shows `remote:<host> as <user>
+(connected)` or `(disconnected)` -- never a password -- and a toast
+announces a lost or restored connection. A transient network failure
+leaves the last-known view on screen rather than clearing it; only the
+status word changes. A startup connection failure exits with a clear
+error rather than falling back to any local file.
+
+**Multi-client use.** Two or more `tui --remote-url` sessions (or a mix of
+TUI, Web UI, and CLI clients) against the same server are safe: each
+authoritative write carries the writer's own last-known revision, so a
+second client's stale edit is rejected as a conflict rather than silently
+overwriting the first client's change, and a committed change becomes
+visible to every other client within one polling interval.
+
+**Offline read cache (`--remote-cache`).** By default, remote mode has no
+offline cache: a connection failure never falls back to local data. Passing
+`--remote-cache` opts in to a bounded, read-only last-known snapshot: after
+every successful read, the fetched items and revision are persisted under
+`~/.cache/lifetxt/remote-tui/` (or `$LIFETXT_REMOTE_TUI_CACHE_DIR`), keyed by
+the server URL and username so different servers or users never mix. If the
+connection is later unreachable, the TUI shows this cached view instead of
+only an error, with the header reporting `cached, stale` and the age of the
+snapshot. The cache:
+
+- is never treated as authoritative and is bounded to 2000 items;
+- never stores credentials, tokens, or Authorization headers -- only the
+  server-visible item content already returned by `GET /api/items`;
+- is written with owner-only file permissions where the OS supports it;
+- refuses every mutation (create/edit/delete) while it is the active view,
+  since a cached snapshot cannot honor the server's revision-precondition
+  contract -- reconnecting and reloading first is required before writing
+  again.
+
+`--remote-clear-cache` deletes the cache for the given `--remote-url` (and
+`--remote-user`, if set) and exits without starting the TUI:
+
+```sh
+python -m lifetxt tui --remote-url https://lifetxt.example.internal --remote-cache
+python -m lifetxt tui --remote-url https://lifetxt.example.internal --remote-clear-cache
+```
+
+**Current limitations.** No offline mutation queue -- writes always require
+a live connection, even with `--remote-cache` enabled. Marked-row bulk edits
+spanning many items in one semantic commit remain local-only; remote edits
+are applied one item at a time. Presence status (`/state`, `/now`) has no
+remote equivalent yet. See `lifetxt remote` (the existing dependency-free
+Remote Safe Mode CLI/REPL, [§20](#20-remote-safe-mode-client-remote))
+for a different, ticket-focused remote client this feature does not
+replace.
+
 #### The input bar
 
 The input bar is always focused in the default `prompt` keymap. Typing plain

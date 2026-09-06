@@ -6,18 +6,18 @@ operate against either local files or a remote ``lifetxt serve`` Web API
 (#679/#680) without scattering ``if remote:`` branches through rendering,
 command handling, and mutation code.
 
-This module is deliberately transport-free: :class:`LocalTuiBackend` is the
-only implementation here, and it wraps today's existing local-file
-read/parse/mutation behavior unchanged -- it does not add a new local
-storage mechanism, it only gives the existing one a name other backends can
-implement instead of.
+The backend contract is semantic rather than filesystem-shaped.  The local
+implementation wraps today's existing local-file read/parse/mutation behavior
+unchanged, while the remote implementation owns the HTTP and temporary-editor
+handoff needed for a remote workspace without inventing a client-side source
+path.
 
-The contract is semantic (list items, apply a small set of item-level
-edits), not a fake filesystem API: a future :class:`RemoteTuiBackend`
-implements the same methods against HTTP endpoints without pretending a
-remote server is a local file.
+The contract is semantic (list items, apply a small set of item-level edits),
+not a fake filesystem API: :class:`RemoteTuiBackend` implements the same
+methods against HTTP endpoints without pretending a remote server is a local
+file.
 
-Two seams are wired through this contract today:
+Three seams are wired through this contract today:
 
 - reading the item set for the dashboard model and Command Center
   (:meth:`TuiBackend.load_items`);
@@ -25,6 +25,8 @@ Two seams are wired through this contract today:
   (:meth:`TuiBackend.apply_semantic_changes`), the single choke point
   ``lifetxt.tui_app._mutate_rows`` already funneled every row mutation
   through before this extraction.
+- opening an editor session for one item (:meth:`TuiBackend.edit_item`), so a
+  virtual remote source label can never reach a local-file mutation helper.
 
 Everything else -- grouping selected rows by source file, building the
 per-row change dict, undo-stack bookkeeping, reload-after-write -- stays in
@@ -79,6 +81,10 @@ class TuiBackend(object):
         result}``, used as the expected-revision precondition for each
         file. Returns ``{source_path: after_content_hash}``.
         """
+        raise NotImplementedError
+
+    def edit_item(self, record, config=None):
+        """Edit one selected item through this backend's authoritative path."""
         raise NotImplementedError
 
     def connection_label(self):
@@ -139,6 +145,12 @@ class LocalTuiBackend(TuiBackend):
             for target in result.targets:
                 after[target.path] = target.after_hash
         return after
+
+    def edit_item(self, record, config=None):
+        """Preserve the pre-#683 local editor/delegated-mutation flow."""
+        from .fzf_helper import open_editor
+
+        return open_editor(record, config=config)
 
     def connection_label(self):
         return "local"
@@ -344,6 +356,48 @@ class RemoteTuiBackend(TuiBackend):
             )
         return {path: self.connection.file_revision}
 
+    def edit_item(self, record, config=None):
+        """Edit a non-authoritative client-side copy, then revision-check PUT.
+
+        The stable ``remote:<host>`` source label is presentation metadata,
+        never a path.  Capture the server revision before the editor opens so
+        an intervening write is rejected by the existing Web API ``If-Match``
+        contract after the editor exits.
+        """
+        self._refuse_if_serving_cache("edit an item")
+        item_id = str(record.get("id") or "")
+        if not item_id:
+            raise ValueError("Remote edits require an id: to target.")
+        current_item = self._items_by_id.get(item_id)
+        if current_item is None:
+            raise ValueError(
+                "Item id:%s is not loaded from the remote workspace. "
+                "Reload and try again." % item_id
+            )
+        expected_revision = self.connection.file_revision
+        if not expected_revision:
+            raise ValueError(
+                "The remote workspace revision is unknown. Reload before editing."
+            )
+
+        from .fzf_helper import editor_help_message, resolve_editor
+
+        editor = resolve_editor(config)
+        if not editor:
+            raise ValueError(editor_help_message())
+        edited_item = _edit_remote_item_copy(current_item, editor)
+        payload = _item_update_payload(edited_item)
+        if payload == _item_update_payload(current_item):
+            return {"changed": False, "written": False}
+
+        response = self.connection.request(
+            "PUT",
+            "/api/items/id/%s" % urllib.parse.quote(item_id, safe=""),
+            json_body=payload,
+            if_match=expected_revision,
+        )
+        return {"changed": True, "written": True, "response": response}
+
     def create_item(self, payload):
         """Create a new item on the remote workspace (#677 MVP: quick capture)."""
         self._refuse_if_serving_cache("create an item")
@@ -399,3 +453,62 @@ def _merged_update_payload(item, change):
         "title": item.title,
         "details": details,
     }
+
+
+def _item_update_payload(item):
+    return {
+        "status": item.status,
+        "type": item.kind,
+        "title": item.title,
+        "details": OrderedDict(
+            (key, list(values)) for key, values in item.details.items()
+        ),
+    }
+
+
+def _edit_remote_item_copy(item, editor):
+    """Return one validated item edited in a private temporary directory."""
+    import os
+    import shutil
+    import subprocess
+    import tempfile
+
+    from .fzf_helper import editor_command, editor_help_message
+    from .parser import parse_text
+    from .serializer import item_to_line
+
+    directory = tempfile.mkdtemp(prefix="lifetxt-remote-edit-")
+    temp_path = os.path.join(directory, "life.txt")
+    try:
+        descriptor = os.open(temp_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(item_to_line(item) + "\n")
+        command = editor_command(editor, temp_path, 1)
+        try:
+            return_code = int(subprocess.call(command))
+        except OSError as exc:
+            raise ValueError(
+                "Could not run editor %r: %s\n%s" % (editor, exc, editor_help_message())
+            )
+        if return_code != 0:
+            raise ValueError("Editor exited with status %d." % return_code)
+        try:
+            with open(temp_path, "r", encoding="utf-8-sig") as handle:
+                edited_text = handle.read()
+        except (OSError, UnicodeError) as exc:
+            raise ValueError("Could not read the edited temporary item: %s" % exc)
+
+        items, diagnostics = parse_text(
+            edited_text, check_ids=False, check_references=False
+        )
+        errors = [row for row in diagnostics if row.severity == "error"]
+        if errors:
+            raise ValueError("Invalid edited life.txt item: %s" % errors[0].format())
+        if len(items) != 1:
+            raise ValueError(
+                "Remote /edit must contain exactly one life.txt item; found %d."
+                % len(items)
+            )
+        return items[0]
+    finally:
+        shutil.rmtree(directory, ignore_errors=True)

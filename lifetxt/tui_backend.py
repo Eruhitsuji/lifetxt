@@ -181,9 +181,21 @@ class RemoteTuiBackend(TuiBackend):
 
     is_remote = True
 
-    def __init__(self, connection):
+    def __init__(self, connection, cache_enabled=False):
         self.connection = connection
         self._items_by_id = {}
+        #: Read-only offline cache (#681), off by default: enabling it
+        #: leaves a local copy of remotely-readable content on this
+        #: device, so it is opt-in rather than automatic.
+        self.cache_enabled = bool(cache_enabled)
+        #: True only while the currently-loaded items came from the local
+        #: cache rather than a live server response. Every mutation method
+        #: below refuses outright while this is set, and it is cleared the
+        #: moment a real read succeeds again -- #681's "disable writes
+        #: while serving cached data" / "discard cached-mode presentation
+        #: and refresh before allowing writes" requirements.
+        self.serving_cache = False
+        self.cache_saved_at = None
 
     @classmethod
     def from_args(cls, args):
@@ -210,19 +222,33 @@ class RemoteTuiBackend(TuiBackend):
                 getattr(args, "allow_insecure_remote_http", False)
             ),
         )
-        return cls(connection)
+        return cls(connection, cache_enabled=bool(getattr(args, "remote_cache", False)))
 
-    def load_items(self):
+    def _refuse_if_serving_cache(self, action):
+        if self.serving_cache:
+            raise ValueError(
+                "Cannot %s while showing offline cached data (last known as "
+                "of %s). Reconnect and reload first."
+                % (action, self._cache_age_label())
+            )
+
+    def _cache_age_label(self):
+        if not self.cache_saved_at:
+            return "an unknown time"
+        import datetime
+
+        moment = datetime.datetime.fromtimestamp(
+            self.cache_saved_at, datetime.timezone.utc
+        )
+        return moment.strftime("%Y-%m-%d %H:%M UTC")
+
+    def _items_from_payload(self, raw_items):
         from .parser import parse_text
 
-        try:
-            payload = self.connection.request("GET", "/api/items")
-        except Exception as exc:  # RemoteTuiError subclasses and any other failure
-            return None, str(exc)
         source = remote_source_label(self.connection)
         items = []
         by_id = {}
-        for raw in (payload or {}).get("items", []):
+        for raw in raw_items or []:
             text = raw.get("text") or ""
             parsed, diagnostics = parse_text(text + "\n")
             if not parsed:
@@ -235,10 +261,61 @@ class RemoteTuiBackend(TuiBackend):
             item_id = raw.get("id")
             if item_id:
                 by_id[str(item_id)] = item
+        return items, by_id
+
+    def load_items(self):
+        try:
+            payload = self.connection.request("GET", "/api/items")
+        except Exception as exc:  # RemoteTuiError subclasses and any other failure
+            if self.cache_enabled:
+                cached = self._load_cached_snapshot()
+                if cached is not None:
+                    return cached
+            return None, str(exc)
+
+        raw_items = (payload or {}).get("items", [])
+        items, by_id = self._items_from_payload(raw_items)
         self._items_by_id = by_id
+        self.serving_cache = False
+        self.cache_saved_at = None
+        if self.cache_enabled:
+            self._save_cache_snapshot(raw_items)
         return items, None
 
+    def _save_cache_snapshot(self, raw_items):
+        from .tui_remote_cache import save_snapshot
+
+        try:
+            save_snapshot(
+                self.connection.base_url,
+                raw_items,
+                self.connection.file_revision,
+                username=self.connection.username,
+            )
+        except OSError:
+            # A cache write failure must never take down a live session.
+            pass
+
+    def _load_cached_snapshot(self):
+        from .tui_remote_cache import load_snapshot
+
+        snapshot = load_snapshot(
+            self.connection.base_url, username=self.connection.username
+        )
+        if snapshot is None:
+            return None
+        items, by_id = self._items_from_payload(snapshot.get("items"))
+        self._items_by_id = by_id
+        self.serving_cache = True
+        self.cache_saved_at = snapshot.get("saved_at")
+        diagnostic = (
+            "Showing offline cached data from %s (server unreachable)."
+            % self._cache_age_label()
+        )
+        return items, diagnostic
+
     def apply_semantic_changes(self, grouped, before, id_key, journal_dir=None):
+        self._refuse_if_serving_cache("edit an item")
         if len(grouped) != 1:
             raise NotImplementedError(
                 "Remote TUI mode edits one remote workspace at a time; "
@@ -269,6 +346,7 @@ class RemoteTuiBackend(TuiBackend):
 
     def create_item(self, payload):
         """Create a new item on the remote workspace (#677 MVP: quick capture)."""
+        self._refuse_if_serving_cache("create an item")
         return self.connection.request(
             "POST",
             "/api/items",
@@ -278,6 +356,7 @@ class RemoteTuiBackend(TuiBackend):
 
     def delete_item(self, item_id):
         """Delete one item on the remote workspace (#677 MVP: delete)."""
+        self._refuse_if_serving_cache("delete an item")
         return self.connection.request(
             "DELETE",
             "/api/items/id/%s" % urllib.parse.quote(str(item_id), safe=""),

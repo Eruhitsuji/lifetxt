@@ -2096,6 +2096,24 @@ def build_parser():
         "layer, such as a WireGuard tunnel; HTTPS remains the safer "
         "general default.",
     )
+    tui.add_argument(
+        "--remote-cache",
+        dest="remote_cache",
+        action="store_true",
+        help="Opt in to a read-only offline cache (#681) for --remote-url: "
+        "after a successful read, persist a bounded last-known snapshot "
+        "under ~/.cache/lifetxt/remote-tui/ so a disconnected session can "
+        "show stale-but-labeled data instead of only a connection error. "
+        "Off by default; never caches credentials. Mutation commands are "
+        "refused while showing cached data.",
+    )
+    tui.add_argument(
+        "--remote-clear-cache",
+        dest="remote_clear_cache",
+        action="store_true",
+        help="Delete the offline cache for --remote-url (and --remote-user, "
+        "if given), then exit without starting the TUI.",
+    )
     tui.set_defaults(func=command_tui)
 
     fzf = subparsers.add_parser(
@@ -14847,6 +14865,17 @@ def command_workspace_validate(args):
 
 
 def command_tui(args):
+    if getattr(args, "remote_clear_cache", False):
+        if not getattr(args, "remote_url", None):
+            sys.stderr.write("ERROR: --remote-clear-cache requires --remote-url.\n")
+            return 1
+        from .tui_remote_cache import clear_snapshot
+
+        cleared = clear_snapshot(
+            args.remote_url, username=getattr(args, "remote_user", None)
+        )
+        print("Offline cache cleared." if cleared else "No offline cache to clear.")
+        return 0
     if getattr(args, "remote_url", None):
         # Remote mode never reads or defaults to a local life.txt; paths
         # are meaningless for a Web API-backed workspace (#677/#679).

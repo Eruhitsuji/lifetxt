@@ -8391,26 +8391,31 @@ capabilities:
       `lifetxt tui`, letting the same presentation layer operate against
       either local files (unchanged default behavior, #678) or a remote
       `lifetxt serve` Web API workspace over HTTP(S) (#679), with bounded
-      background polling refresh and connection-status UX (#680). Remote
-      mode (`lifetxt tui --remote-url URL`) reuses the server's existing
-      item REST routes and its existing whole-file `If-Match`/
-      `X-Lifetxt-Revision` precondition contract for revision-safe
-      concurrent writes -- no server route needed to change for this.
+      background polling refresh and connection-status UX (#680), plus an
+      opt-in bounded read-only offline cache for disconnected sessions
+      (#681). Remote mode (`lifetxt tui --remote-url URL`) reuses the
+      server's existing item REST routes and its existing whole-file
+      `If-Match`/`X-Lifetxt-Revision` precondition contract for
+      revision-safe concurrent writes -- no server route needed to change
+      for this.
     status: active
     owner: Eruhitsuji
     source_requirements:
       - req-tui-backend-boundary
       - req-tui-remote-web-backend
       - req-tui-remote-polling-and-ux
+      - req-tui-remote-offline-cache
     implementation_locations:
       - lifetxt/tui_backend.py
       - lifetxt/tui_remote_client.py
+      - lifetxt/tui_remote_cache.py
       - lifetxt/tui.py
       - lifetxt/tui_app.py
       - lifetxt/cli.py
       - tests/test_tui_backend.py
       - tests/test_tui_remote_client.py
       - tests/test_tui_remote_backend.py
+      - tests/test_tui_remote_cache.py
       - tests/test_shared_surface_mutation_routing.py
       - config/release/clock-boundary-baseline-v1.json
       - docs/en/cli.md
@@ -8421,15 +8426,24 @@ capabilities:
       - lifetxt.tui_backend.RemoteTuiBackend
       - lifetxt.tui_backend.RemoteTuiBackend.poll_changed
       - lifetxt.tui_remote_client.RemoteTuiConnection
+      - lifetxt.tui_remote_cache.save_snapshot
+      - lifetxt.tui_remote_cache.load_snapshot
+      - lifetxt.tui_remote_cache.clear_snapshot
       - lifetxt.tui.dashboard_model (items= parameter)
       - lifetxt.tui_app.WorkspaceState (backend= parameter, remote_status/remote_status_detail fields)
       - lifetxt.tui_app.REMOTE_POLL_SECONDS
-      - lifetxt tui --remote-url URL [--remote-user NAME] [--remote-password-env VAR] [--allow-insecure-remote-http]
+      - lifetxt tui --remote-url URL [--remote-user NAME] [--remote-password-env VAR] [--allow-insecure-remote-http] [--remote-cache] [--remote-clear-cache]
     tests_or_evidence:
       - "tests/test_tui_backend.py (7 tests): base contract raises NotImplementedError, LocalTuiBackend.load_items() matches lifetxt.tui.load_items() exactly, apply_semantic_changes() writes a single file through the same mutate_items() call _mutate_rows used directly before, WorkspaceState defaults to LocalTuiBackend, WorkspaceState.load() uses the injected backend, an injected backend is used instead of the default"
       - "tests/test_tui_remote_client.py (13 tests): loopback plain HTTP allowed, non-loopback plain HTTP refused without --allow-insecure-remote-http and allowed with it, invalid scheme rejected, connection.describe() never includes the password, Basic Auth header sent only when a username is configured (and never leaks the raw password), If-Match forwarded, a successful response updates the tracked file_revision, 401 raises RemoteAuthError, 409 raises RemoteMutationConflict carrying current_revision/current_item, a network failure raises RemoteConnectionError"
       - "tests/test_tui_remote_backend.py (28 tests): load_items() reconstructs Item objects with a stable virtual source and the server's own line numbers, a connection failure surfaces as a message rather than a crash, a status change sends a correctly-merged PUT payload, set_details merges onto the cached item, a delete change calls the DELETE route, a conflict propagates with exactly one attempt (no retry), multi-file grouping and a change with no id: are both rejected, WorkspaceState.load()/_mutate_rows()/_write_target()/_cmd_add() all route correctly through an injected RemoteTuiBackend, the header shows the connection label with no credentials and reflects (disconnected); poll_changed() reports no-change/change/propagates a connection failure and uses only the cheap GET /api/revision route; the #680 _poll_remote main-loop tick is a no-op before its interval elapses, does not reload on an unchanged revision, reloads and restores the same logical row's selection on a real change even when row order shifted, marks disconnected without losing existing rows on a poll failure, and clears the disconnected status with a success notification on reconnection"
       - tests/test_shared_surface_mutation_routing.py -> re-run unmodified except giving its pre-existing fake TUI state fixture the same LocalTuiBackend WorkspaceState defaults to, since _mutate_rows/_write_target now route through state.backend (#678/#679); a real regression this fixture surfaced, fixed rather than worked around
+      - "tests/test_tui_remote_cache.py (11 tests): connection_cache_key is stable for the same URL+user and distinct across different users/servers; save_snapshot/load_snapshot round-trips items/revision/saved_at; a missing cache file, a corrupt (non-JSON) cache file, and a wrong cache_version file all load as None rather than raising; the persisted payload never contains password/authorization/basic-auth substrings; the cache is bounded to MAX_CACHED_ITEMS; clear_snapshot removes an existing cache and reports success, and reports failure for a cache that never existed"
+      - "tests/test_tui_remote_backend.py RemoteTuiBackendOfflineCacheTests and WorkspaceStatePollReconnectAfterCacheTests (added to the existing 28 tests): a load_items() failure with --remote-cache falls back to the cache and marks serving_cache; a successful load_items() saves a fresh snapshot and clears serving_cache; every mutation method (apply_semantic_changes/create_item/delete_item) raises a named error while serving_cache is true; _poll_remote()'s reconnection-from-disconnected branch always forces a real reload (even when the revision looks unchanged) so serving_cache reliably clears before writes are allowed again"
+      - python -m unittest tests.test_release_policy tests.test_tui_remote_backend tests.test_tui_remote_cache -> Ran 55 tests, OK
+      - python -m unittest tests.test_cui_extensions tests.test_tui_backend tests.test_tui_remote_client tests.test_tui_remote_backend tests.test_tui_remote_cache tests.test_shared_surface_mutation_routing tests.test_release_policy tests.test_completion_surfaces tests.test_completion_values tests.test_cli_taxonomy -> Ran 356 tests, OK (skipped=2)
+      - ruff format --check / ruff check on lifetxt/tui_backend.py lifetxt/tui_remote_cache.py lifetxt/tui_app.py lifetxt/cli.py tests/test_tui_remote_backend.py tests/test_tui_remote_cache.py -> clean
+      - 'scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> {"errors": 0, "ok": true}'
       - python -m unittest tests.test_tui_backend tests.test_tui_remote_client tests.test_tui_remote_backend tests.test_cui_extensions tests.test_completion_surfaces tests.test_completion_values tests.test_surface_runtime tests.test_cli_taxonomy -> Ran 422 tests, OK (skipped=2) -- the complete pre-existing local TUI/CLI test suite passes unmodified
       - python -m unittest tests.test_lifetxt.LifeTxtWebApiTests tests.test_lifetxt.LifeTxtWebAppTests -> Ran 65 tests, OK (confirms zero webapp.py route changes were needed)
       - python -m unittest tests.test_shared_surface_mutation_routing tests.test_release_policy -> Ran 21 tests, OK
@@ -8444,6 +8458,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/678
       - https://github.com/Eruhitsuji/lifetxt/issues/679
       - https://github.com/Eruhitsuji/lifetxt/issues/680
+      - https://github.com/Eruhitsuji/lifetxt/issues/681
     related_pull_requests: []
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
@@ -8543,10 +8558,55 @@ capabilities:
       project's existing precedent for every other allowed clock call in
       that baseline.
 
-      Offline/local read cache is an explicit, separate follow-up (#681)
-      and is not implemented by this entry: a remote connection failure
-      here still shows a clear disconnected status with the last-known
-      view, never a cached/offline mode.
+      #681 adds `lifetxt/tui_remote_cache.py`, an opt-in (`--remote-cache`,
+      off by default) bounded read-only offline cache: after every
+      successful `RemoteTuiBackend.load_items()` call, `save_snapshot()`
+      persists the raw item payload and current revision under
+      `~/.cache/lifetxt/remote-tui/` (or `$LIFETXT_REMOTE_TUI_CACHE_DIR`),
+      keyed by `connection_cache_key(base_url, username)` (a SHA-256 of
+      `url|username`, truncated to 32 hex characters) so different servers
+      or users never collide, bounded to `MAX_CACHED_ITEMS = 2000`, and
+      written with owner-only permissions (`stat.S_IRUSR | stat.S_IWUSR`)
+      where the OS supports it -- never containing credentials, since the
+      persisted payload is exactly the already-credential-free
+      `GET /api/items` response. `RemoteTuiBackend.load_items()` falls back
+      to `load_snapshot()` only when `--remote-cache` is enabled and the
+      live request fails, setting a new `serving_cache`/`cache_saved_at`
+      state; every mutation method
+      (`apply_semantic_changes`/`create_item`/`delete_item`) checks
+      `_refuse_if_serving_cache()` first and raises a named `ValueError`
+      naming the attempted action, since a cached snapshot cannot honor
+      the server's revision-precondition contract. `_build_header` in
+      `lifetxt/tui_app.py` reports a `cached, stale` status word (with the
+      snapshot's age) instead of `disconnected` while serving cached data.
+      `_poll_remote()`'s reconnection-from-disconnected branch was changed
+      to *always* force a real `_reload_preserving_selection()` call on
+      reconnection, not only when the polled revision differs from the
+      last-known one -- this was necessary because a cache-serving session
+      has no reliable "last-known revision" to compare against, so relying
+      on the pre-existing revision-diff check alone could leave
+      `serving_cache` incorrectly set (and writes incorrectly refused)
+      after the connection was actually restored; this is a genuine
+      behavior change to #680's reconnection logic, not an addition
+      alongside it. `lifetxt/cli.py` gained `--remote-cache` and
+      `--remote-clear-cache` (the latter calls
+      `tui_remote_cache.clear_snapshot()` and exits before starting the
+      TUI, handled first in `command_tui` so it works even without
+      `--remote-cache` set). Two real regressions were found and fixed
+      while writing the offline-cache tests, both already recorded as
+      resolved in `tests_or_evidence` above: a `_StubConnection` test
+      double missing `base_url`/`username` attributes the new
+      `_save_cache_snapshot`/`_load_cached_snapshot` methods read, and a
+      second `clock_boundary_audit` release-policy finding for the new
+      `time.time()` call in `tui_remote_cache.py:save_snapshot`'s default
+      `now` parameter, classified `operational-recovery` in
+      `config/release/clock-boundary-baseline-v1.json` (cache freshness
+      metadata, not a life.txt workflow date choice) matching the same
+      classification already used for `transaction_journal.py` and
+      `server_update.py`'s comparable recovery-evidence timestamps. An
+      offline *mutation* queue remains explicitly out of scope, per #681's
+      own boundary: writes always require a live connection regardless of
+      whether `--remote-cache` is enabled.
     replacement:
       replaces: []
       replaced_by: null

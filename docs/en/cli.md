@@ -2408,12 +2408,39 @@ second client's stale edit is rejected as a conflict rather than silently
 overwriting the first client's change, and a committed change becomes
 visible to every other client within one polling interval.
 
-**Current limitations.** No offline/local cache and no offline mutation
-queue -- a remote failure never falls back to local data, by design.
-Marked-row bulk edits spanning many items in one semantic commit remain
-local-only; remote edits are applied one item at a time. Presence status
-(`/state`, `/now`) has no remote equivalent yet. See `lifetxt remote` (the
-existing dependency-free Remote Safe Mode CLI/REPL, [§20](#20-remote-safe-mode-client-remote))
+**Offline read cache (`--remote-cache`).** By default, remote mode has no
+offline cache: a connection failure never falls back to local data. Passing
+`--remote-cache` opts in to a bounded, read-only last-known snapshot: after
+every successful read, the fetched items and revision are persisted under
+`~/.cache/lifetxt/remote-tui/` (or `$LIFETXT_REMOTE_TUI_CACHE_DIR`), keyed by
+the server URL and username so different servers or users never mix. If the
+connection is later unreachable, the TUI shows this cached view instead of
+only an error, with the header reporting `cached, stale` and the age of the
+snapshot. The cache:
+
+- is never treated as authoritative and is bounded to 2000 items;
+- never stores credentials, tokens, or Authorization headers -- only the
+  server-visible item content already returned by `GET /api/items`;
+- is written with owner-only file permissions where the OS supports it;
+- refuses every mutation (create/edit/delete) while it is the active view,
+  since a cached snapshot cannot honor the server's revision-precondition
+  contract -- reconnecting and reloading first is required before writing
+  again.
+
+`--remote-clear-cache` deletes the cache for the given `--remote-url` (and
+`--remote-user`, if set) and exits without starting the TUI:
+
+```sh
+python -m lifetxt tui --remote-url https://lifetxt.example.internal --remote-cache
+python -m lifetxt tui --remote-url https://lifetxt.example.internal --remote-clear-cache
+```
+
+**Current limitations.** No offline mutation queue -- writes always require
+a live connection, even with `--remote-cache` enabled. Marked-row bulk edits
+spanning many items in one semantic commit remain local-only; remote edits
+are applied one item at a time. Presence status (`/state`, `/now`) has no
+remote equivalent yet. See `lifetxt remote` (the existing dependency-free
+Remote Safe Mode CLI/REPL, [§20](#20-remote-safe-mode-client-remote))
 for a different, ticket-focused remote client this feature does not
 replace.
 

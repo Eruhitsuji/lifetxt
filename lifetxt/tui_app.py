@@ -2073,11 +2073,14 @@ def _build_header(state, width):
     if backend is not None and getattr(backend, "is_remote", False):
         # Credential-safe by construction: connection_label() never
         # includes a password (#677/#679).
-        status_word = (
-            "disconnected"
-            if getattr(state, "remote_status", "connected") == "disconnected"
-            else "connected"
-        )
+        if getattr(backend, "serving_cache", False):
+            # #681: cached mode is visually distinct from a plain
+            # disconnect -- the user is looking at real, but stale, data.
+            status_word = "cached, stale"
+        elif getattr(state, "remote_status", "connected") == "disconnected":
+            status_word = "disconnected"
+        else:
+            status_word = "connected"
         tagline += " %s remote:%s (%s)" % (
             glyphs["dot"],
             backend.connection_label(),
@@ -3442,6 +3445,13 @@ def _poll_remote(state, now):
     state.remote_status_detail = ""
     if was_disconnected:
         state.notify("Remote connection restored.", "success")
+        # A reconnect must always force a real reload (#681), even when the
+        # revision happens to match what a stale cached view already
+        # showed: RemoteTuiBackend.serving_cache is only cleared by a real
+        # successful load_items() call, and writes must stay refused until
+        # that happens.
+        _reload_preserving_selection(state)
+        return True
     if not changed:
         return was_disconnected
     _reload_preserving_selection(state)

@@ -91,6 +91,7 @@ python -m lifetxt today [path ...]
 python -m lifetxt area list [path ...]
 python -m lifetxt backlinks ID [path ...]
 python -m lifetxt temporal ID [path ...]
+python -m lifetxt freebusy [path ...] --from START --to END
 python -m lifetxt query "QUERY" [path ...] [--explain]
 python -m lifetxt view list
 python -m lifetxt group list [path ...]
@@ -183,6 +184,7 @@ python -m lifetxt vm run program.life.txt --entry s1
 | `area` | task と project を `area:` でグループ化する ([life-hub.md](life-hub.md) 参照) |
 | `backlinks` | 指定 ID を参照している item (incoming link) を表示する ([life-hub.md](life-hub.md) 参照) |
 | `temporal` | 1 item の派生 temporal context (overdue/due/staleness と近接する日付付き item) を表示する ([life-hub.md](life-hub.md) 参照) |
+| `freebusy` | 期間内の `E`/`R` items について busy/free time interval と重複 conflict を表示する ([life-hub.md](life-hub.md) 参照) |
 | `query` | 共通 query 言語で item を絞り込む ([query.md](query.md) 参照) |
 | `view` | saved view (名前付き query) を list / 検査 / 実行する ([query.md](query.md) 参照) |
 | `group` | messaging group を検査・検証する ([messaging.md](messaging.md) 参照) |
@@ -225,7 +227,7 @@ audience、そしてこの表と同じカテゴリ分類を表示します。
 | カテゴリ | コマンド |
 |---|---|
 | Getting Started / Daily | `tour`、`help`、`init`、`quick` (`add`)、`today`、`next`、`agenda`、`show`、`edit`、`done`、`complete`、`progress`、`clone`、`reopen`、`due`、`review`、`assist`、`state`、`start`、`stop`、`assign`、`timer`、`notify` |
-| Query / Explore | `filter`、`search`、`find`、`query`、`view`、`summary`、`inbox`、`health`、`temporal`、`count`、`status`、`recent` |
+| Query / Explore | `filter`、`search`、`find`、`query`、`view`、`summary`、`inbox`、`health`、`temporal`、`freebusy`、`count`、`status`、`recent` |
 | Projects / People / Collaboration | `project`、`portfolio`、`area`、`person`、`group`、`who`、`message`、`proposal`、`ticket`、`version`、`sprint` |
 | Structure / Data Integrity | `check`、`integrity`、`ids`、`links`、`backlinks`、`sources`、`tag`、`lint`、`deps`、`diff`、`snapshot`、`undo`、`cleanup`、`files` |
 | Import / Export / Reports | `import`、`import-ics`、`sync-ics`、`to-json`、`to-jsonl`、`to-csv`、`from-json`、`from-jsonl`、`from-csv`、`from-markdown`、`from-todo`、`to-ics`、`markdown`、`stats`、`plot`、`export-heatmap`、`standup`、`invoice`、`share`、`digest`、`report` |

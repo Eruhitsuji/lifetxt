@@ -8393,7 +8393,9 @@ capabilities:
       `lifetxt serve` Web API workspace over HTTP(S) (#679), with bounded
       background polling refresh and connection-status UX (#680), plus an
       opt-in bounded read-only offline cache for disconnected sessions
-      (#681). Remote mode (`lifetxt tui --remote-url URL`) reuses the
+      (#681), and client-side temporary editor sessions that apply one
+      validated item through the remote backend (#683). Remote mode
+      (`lifetxt tui --remote-url URL`) reuses the
       server's existing item REST routes and its existing whole-file
       `If-Match`/`X-Lifetxt-Revision` precondition contract for
       revision-safe concurrent writes -- no server route needed to change
@@ -8405,6 +8407,7 @@ capabilities:
       - req-tui-remote-web-backend
       - req-tui-remote-polling-and-ux
       - req-tui-remote-offline-cache
+      - req-tui-remote-editor
     implementation_locations:
       - lifetxt/tui_backend.py
       - lifetxt/tui_remote_client.py
@@ -8422,8 +8425,11 @@ capabilities:
       - docs/ja/cli.md
     public_interfaces:
       - lifetxt.tui_backend.TuiBackend
+      - lifetxt.tui_backend.TuiBackend.edit_item
       - lifetxt.tui_backend.LocalTuiBackend
       - lifetxt.tui_backend.RemoteTuiBackend
+      - lifetxt.tui_backend.LocalTuiBackend.edit_item
+      - lifetxt.tui_backend.RemoteTuiBackend.edit_item
       - lifetxt.tui_backend.RemoteTuiBackend.poll_changed
       - lifetxt.tui_remote_client.RemoteTuiConnection
       - lifetxt.tui_remote_cache.save_snapshot
@@ -8453,12 +8459,21 @@ capabilities:
       - "live: a second real-server run drove _poll_remote() directly -- a no-change poll reported clean/connected; a concurrent client's real committed status change was detected on the next poll, triggered a real reload, and the header showed remote:<host> (connected) throughout"
       - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
       - ruff format --check / ruff check on changed files -> clean
+      - "#683: RemoteTuiBackendEditorTests (7 tests) cover private client-side temporary editing with nvim/vim, semantic no-change, invalid and multiple-item output, stale-revision conflict without retry, editor failure, offline-cache refusal, and credential exclusion"
+      - "#683: LocalTuiBackend.edit_item delegates to the unchanged fzf_helper.open_editor flow; existing tests retain terminal suspension and configured-editor coverage"
+      - "#683: python -m unittest tests.test_supported_runtime tests.test_tui_backend tests.test_tui_remote_backend tests.test_cui_extensions -> Ran 224 tests, OK"
+      - "#683: python -m unittest tests.test_tui_remote_client tests.test_tui_remote_cache tests.test_shared_surface_mutation_routing tests.test_completion_surfaces tests.test_completion_values tests.test_surface_runtime tests.test_cli_taxonomy -> Ran 150 tests, OK (skipped=14)"
+      - "#683: after installing the web extra, python -m unittest tests.test_lifetxt.LifeTxtWebApiTests tests.test_lifetxt.LifeTxtWebAppTests tests.test_tui_remote_client tests.test_tui_remote_backend -> Ran 117 tests, OK"
+      - "#683 live: a real 127.0.0.1 lifetxt serve process accepted the validated temporary-editor PUT; an intervening server PUT while a second editor was open caused RemoteMutationConflict and preserved the concurrent authoritative value"
+      - "#683: MPLBACKEND=Agg python -m unittest discover -> Ran 3914 tests, OK (skipped=197) before optional web dependencies were installed"
+      - '#683: scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> {"errors": 0, "ok": true}'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/677
       - https://github.com/Eruhitsuji/lifetxt/issues/678
       - https://github.com/Eruhitsuji/lifetxt/issues/679
       - https://github.com/Eruhitsuji/lifetxt/issues/680
       - https://github.com/Eruhitsuji/lifetxt/issues/681
+      - https://github.com/Eruhitsuji/lifetxt/issues/683
     related_pull_requests: []
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-

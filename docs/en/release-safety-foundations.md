@@ -161,6 +161,25 @@ lifetxt capabilities --read-only --authentication session --pretty
 
 The versioned response reports format, canonical, and schema versions; supported operations; authentication mode; read-only state; writable targets; optional features; and SHA-256 revision-precondition support. This is the base contract for future remote clients.
 
+### Cross-surface capability matrix
+
+```bash
+lifetxt capabilities --surface-matrix
+lifetxt capabilities --surface-matrix --format json --pretty
+```
+
+An additive, read-only mode that reports, for every real top-level CLI command, whether equivalent functionality is available on the Web UI, the interactive curses TUI, the REST API, and MCP. It never changes the default `lifetxt capabilities` document above.
+
+Each command reports one of five stable support states per surface:
+
+- `full` -- every operation the command corresponds to is available on that surface;
+- `partial` -- the command corresponds to more than one operation and only some are available;
+- `unsupported` -- the corresponding operation exists but is not implemented on that surface;
+- `not_applicable` -- the command is intentionally CLI-only (an interface launcher, local administration, or a file-format import/export converter) and cross-surface parity is not expected;
+- `unmapped` -- the command has not yet been connected to authoritative operation/surface metadata; this is a known gap, not a claim that the surface lacks the feature.
+
+The matrix is derived from `lifetxt.cli_taxonomy` (the canonical CLI command catalog) and `lifetxt.surface_runtime.OPERATION_REGISTRY` (the shared CLI/Web/MCP semantic operation registry); it is not a second hand-maintained feature table. `web_ui` and `api` are reported as two independent columns, but currently compute from the same registry fact (`"web" in operation.surfaces`) -- a known, documented limitation until finer per-operation Web UI vs REST API auditing lands.
+
 ## Safety boundary checklist
 
 - Do not mutate a file that declares an unsupported `#! format_version:` until a migration path is chosen.

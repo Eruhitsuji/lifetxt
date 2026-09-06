@@ -10969,7 +10969,7 @@ traceability:
       capability_id: cap-cli-surface-capability-matrix
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/676
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/682
       changed_files_or_scope:
         - Add lifetxt capabilities --surface-matrix, deriving a per-command Web UI/TUI/API/MCP support-state report from cli_taxonomy.all_commands() and surface_runtime.OPERATION_REGISTRY
         - lifetxt/capability_matrix.py
@@ -10987,17 +10987,16 @@ traceability:
       notes: >-
         First implementation task of the 676-680 batch (issues #676-#680
         targeted at this session), landing on its own task branch merged
-        into the feature/676-680-capability-matrix-and-remote-tui
-        integration branch before a final human-approved PR into main.
-        pull_request is filled in once the pull request implementing this
-        entry (into the integration branch) is opened.
+        locally into the feature/676-680-capability-matrix-and-remote-tui
+        integration branch (no separate sub-PR was opened for this task
+        branch), then carried into main via the final integration PR #682.
       status: implemented
 
     - requirement_id: req-tui-backend-boundary
       capability_id: cap-remote-tui
       epic: https://github.com/Eruhitsuji/lifetxt/issues/677
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/678
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/682
       changed_files_or_scope:
         - Extract a transport-free TUI backend/data-source boundary (TuiBackend/LocalTuiBackend), routing WorkspaceState.load() item reads and _mutate_rows's disk commit through it while preserving local behavior exactly
         - lifetxt/tui_backend.py
@@ -11011,20 +11010,19 @@ traceability:
       release_or_deployment: null
       notes: >-
         Second implementation task of the 676-680 batch, landing on its
-        own task branch merged into the
+        own task branch merged locally into the
         feature/676-680-capability-matrix-and-remote-tui integration
-        branch before a final human-approved PR into main. No HTTP,
-        auth, or remote configuration is added by this task, per #678's
-        own scope; that is #679's job. pull_request is filled in once the
-        pull request implementing this entry (into the integration
-        branch) is opened.
+        branch (no separate sub-PR), then carried into main via the
+        final integration PR #682. No HTTP, auth, or remote
+        configuration is added by this task, per #678's own scope; that
+        is #679's job.
       status: implemented
 
     - requirement_id: req-tui-remote-web-backend
       capability_id: cap-remote-tui
       epic: https://github.com/Eruhitsuji/lifetxt/issues/677
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/679
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/682
       changed_files_or_scope:
         - Add RemoteTuiConnection (dependency-free urllib HTTP client with Basic Auth, loopback/insecure-HTTP transport guard, and whole-file revision tracking) and RemoteTuiBackend, reusing the existing lifetxt serve item REST routes and whole-file If-Match/X-Lifetxt-Revision contract unmodified
         - Add lifetxt tui --remote-url/--remote-user/--remote-password-env/--allow-insecure-remote-http
@@ -11045,20 +11043,21 @@ traceability:
         - ruff format --check / ruff check on changed files -> clean
       release_or_deployment: null
       notes: >-
-        Third implementation task of the 676-680 batch. See
-        cap-remote-tui's own notes for the design pivot away from a
-        redundant item-level revision precondition once the existing
-        whole-file surface_runtime contract was found to already provide
-        it -- no lifetxt/webapp.py route changed for this task.
-        pull_request is filled in once the pull request implementing this
-        entry (into the integration branch) is opened.
+        Third implementation task of the 676-680 batch, landing on its
+        own task branch merged locally into the integration branch (no
+        separate sub-PR), then carried into main via the final
+        integration PR #682. See cap-remote-tui's own notes for the
+        design pivot away from a redundant item-level revision
+        precondition once the existing whole-file surface_runtime
+        contract was found to already provide it -- no lifetxt/webapp.py
+        route changed for this task.
       status: implemented
 
     - requirement_id: req-tui-remote-polling-and-ux
       capability_id: cap-remote-tui
       epic: https://github.com/Eruhitsuji/lifetxt/issues/677
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/680
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/682
       changed_files_or_scope:
         - Add RemoteTuiBackend.poll_changed() (cheap GET /api/revision-only check) and wire a bounded 1.5s background poll into run_workspace's idle tick, with key-preserving selection restore and connected/disconnected status UX
         - Fix a real regression: give tests/test_shared_surface_mutation_routing.py's fake TUI state fixture a LocalTuiBackend so its calls into _mutate_rows/_write_target keep working now that those require state.backend
@@ -11091,16 +11090,17 @@ traceability:
         suite and fixed here, and for why the local
         WORKSPACE_POLL_SECONDS=0.25 cadence is untouched and unused by
         remote polling. Offline/local read cache is intentionally excluded
-        and tracked as the separate follow-up issue #681. pull_request is
-        filled in once the pull request implementing this entry (into the
-        integration branch) is opened.
+        and tracked as the separate follow-up issue #681. Landed on its
+        own task branch merged locally into the integration branch (no
+        separate sub-PR), then carried into main via the final
+        integration PR #682.
       status: implemented
 
     - requirement_id: req-tui-remote-offline-cache
       capability_id: cap-remote-tui
       epic: https://github.com/Eruhitsuji/lifetxt/issues/677
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/681
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/682
       changed_files_or_scope:
         - Add an opt-in (--remote-cache, off by default), bounded, read-only offline cache for the Remote TUI backend, persisting the last-known item snapshot and revision under ~/.cache/lifetxt/remote-tui/ keyed by server URL and username
         - Fall back to the cache only when --remote-cache is enabled and a live read fails; refuse every mutation while serving cached data
@@ -11133,9 +11133,42 @@ traceability:
         no reliable last-known revision to diff against) and the two
         regressions (a `_StubConnection` test double missing
         `base_url`/`username`, and a second `clock_boundary_audit` finding)
-        found and fixed while adding this coverage. pull_request is filled
-        in once the pull request implementing this entry (into the
-        integration branch) is opened.
+        found and fixed while adding this coverage. Landed on its own
+        task branch merged locally into the integration branch (no
+        separate sub-PR), then carried into main via the final
+        integration PR #682.
+      status: implemented
+
+    - requirement_id: req-676-680-681-batch-integration
+      capability_id: cap-cli-surface-capability-matrix
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/677
+      task_issue: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/682
+      changed_files_or_scope:
+        - Record the 676-680(+681) batch's integration into main as its own traceable step
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - "MPLBACKEND=Agg python -W ignore::ResourceWarning -m unittest discover -> Ran 3906 tests, OK (skipped=11), run on the fully consolidated feature/676-680-capability-matrix-and-remote-tui branch after all five task branches (#676, #678, #679/#680, #681) merged"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on every changed file -> clean
+      release_or_deployment: >-
+        This entry documents PR #682 itself: feature/676-680-capability-matrix-and-remote-tui
+        (Issues #676, #677 (epic), #678, #679, #680, #681, each on its own
+        task branch merged locally into the integration branch, with no
+        separate sub-PR opened for any of them) merging into main.
+      notes: >-
+        Follows the multi-PR integration-branch pattern established
+        throughout this project (see req-remote-batch-integration and every
+        subsequent batch-integration entry in this file), in the no-separate-
+        sub-PR variant already used by
+        req-fuzzy-search-surface-expansion-batch-integration: since none of
+        the five task branches for this batch were opened as their own
+        GitHub PRs (each was merged locally into the integration branch
+        before push), their own requirement entries above are updated to
+        name this PR (#682) directly, satisfying the traceability gate's
+        pull_request-field requirement, rather than left at pull_request:
+        null pointing at a sub-PR that was never opened.
       status: implemented
 
 required_chain:

@@ -10965,6 +10965,34 @@ traceability:
         release workflow, or separately tracked today-hub test changed.
       status: implemented
 
+    - requirement_id: req-cli-surface-capability-matrix
+      capability_id: cap-cli-surface-capability-matrix
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/676
+      pull_request: null
+      changed_files_or_scope:
+        - Add lifetxt capabilities --surface-matrix, deriving a per-command Web UI/TUI/API/MCP support-state report from cli_taxonomy.all_commands() and surface_runtime.OPERATION_REGISTRY
+        - lifetxt/capability_matrix.py
+        - lifetxt/extra_cli.py
+        - lifetxt/extra_safety.py
+        - tests/test_capability_matrix.py
+        - docs/en/release-safety-foundations.md
+        - docs/ja/release-safety-foundations.md
+      tests_or_evidence:
+        - python -m unittest tests.test_capability_matrix tests.test_surface_runtime tests.test_completion_surfaces tests.test_cli_taxonomy -> Ran 111 tests, OK (skipped=1)
+        - 'live: lifetxt capabilities --surface-matrix (text/json) render correctly; default lifetxt capabilities unchanged'
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - ruff format --check / ruff check on changed files -> clean
+      release_or_deployment: null
+      notes: >-
+        First implementation task of the 676-680 batch (issues #676-#680
+        targeted at this session), landing on its own task branch merged
+        into the feature/676-680-capability-matrix-and-remote-tui
+        integration branch before a final human-approved PR into main.
+        pull_request is filled in once the pull request implementing this
+        entry (into the integration branch) is opened.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

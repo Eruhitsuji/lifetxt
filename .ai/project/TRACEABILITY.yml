@@ -10872,6 +10872,72 @@ traceability:
         req-distribution-v1-0-1-version-bump for the prior patch release.
       status: implemented
 
+    - requirement_id: req-freebusy-detection
+      capability_id: cap-freebusy-detection
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/673
+      pull_request: null
+      changed_files_or_scope:
+        - Add lifetxt freebusy, a read-only free/busy interval and overlap
+          detector for E/R items, reusing lifetxt.agenda.item_time_matches
+          rather than a second occurrence-timing engine; closes
+          cap-temporal-context's own deferred overlap/near-window scope
+        - lifetxt/freebusy.py
+        - lifetxt/cli.py
+        - lifetxt/cli_taxonomy.py
+        - lifetxt/schema_extensions_v25.py
+        - lifetxt/__init__.py
+        - dist/schemas/freebusy-v1.schema.json
+        - tests/test_freebusy.py
+        - tests/test_freebusy_cli.py
+        - tests/test_schema_extensions_v2.py
+        - tests/test_safety_foundation.py
+        - tests/test_safety_cli.py
+        - tests/test_ticket_custom_field_public_contract.py
+        - tests/test_ticket_workflow_surfaces.py
+        - docs/en/cli.md
+        - docs/en/life-hub.md
+        - docs/ja/cli.md
+        - docs/ja/life-hub.md
+        - .ai/project/CAPABILITIES.yml
+      tests_or_evidence:
+        - tests/test_freebusy.py ComputeFreebusyBasicsTests, MergeAndOverlapTests, ZeroDurationInstantTests, DiagnosticsTests, DayWindowTests (16 tests)
+        - tests/test_freebusy_cli.py FreebusyCliTests (8 tests, real subprocess via run_cli)
+        - python -m unittest tests.test_freebusy tests.test_freebusy_cli -> Ran 24 tests, OK
+        - python -m unittest tests.test_schema_extensions_v2 tests.test_safety_foundation tests.test_safety_cli tests.test_ticket_custom_field_public_contract tests.test_ticket_workflow_surfaces -> OK (schema bundle count 78 -> 79 updated everywhere it was hardcoded, including one previously-unlisted assertion found in tests.test_safety_foundation)
+        - python -m unittest tests.test_cli_taxonomy tests.test_completion_surfaces tests.test_completion_values tests.test_surface_runtime -> OK (freebusy categorized under Query / Explore in cli_taxonomy.CATEGORIES and docs/en/cli.md's category table; no capability/command-catalog drift)
+        - 'MPLBACKEND=Agg python -W ignore::ResourceWarning -m unittest discover -> Ran 3830 tests, OK (skipped=200), full repository suite'
+        - 'live: real lifetxt freebusy against a fixture with two overlapping Events (from:/to:), one Reminder (at:), and one plain Task (due: only, correctly excluded) reported 2 busy intervals, the correct free gaps, 1 conflict, and 1 instant in both text and --json form'
+        - 'live: --day-start 09:00 --day-end 17:00 against a 2-day range clipped free intervals to each day''s working-hours window while busy/conflicts stayed unaffected'
+        - 'live: from:not-a-date, an item with no from:/to:/at:/on: at all, and a repeat:daily item each produced the exact designed diagnostic (invalid_time_value / missing_time_detail / skipped_recurring) rather than being silently dropped'
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on every changed file -> clean
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: null
+      notes: >-
+        Implemented in an isolated worktree per repository owner
+        instruction. Reuses lifetxt.agenda.item_time_matches unmodified
+        (no second implementation of from:/to:/at:/on: occurrence
+        resolution); busy-eligible matches are selected by filtering
+        item_time_matches()'s own key field (BUSY_MATCH_KEYS), so a future
+        new match kind there flows through automatically. Scope
+        deliberately follows the issue's own acceptance criteria: only
+        E/R kinds; only from:/to:/at:/on: count as busy (notify_from/
+        notify_to and point keys due:/do:/moved_to:/notify_at: excluded
+        as reminders/deadlines, not attendance); recurring items
+        (repeat:) are excluded with a skipped_recurring diagnostic rather
+        than expanded, since recurring-occurrence busy/free computation
+        is explicitly out of scope for this first slice; missing/invalid
+        time values are reported as diagnostics via the exact parsers
+        item_time_matches() itself uses (parse_datetime/parse_time/
+        parse_date), never silently ignored. TUI, Web UI, and MCP
+        exposure remain explicit, unimplemented follow-up candidates
+        recorded in docs/en/life-hub.md and docs/ja/life-hub.md. Closes
+        the overlap/near-window scope cap-temporal-context's own notes
+        (#481) recorded as deferred v1 scope. pull_request is filled in
+        once the pull request implementing this entry is opened.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

@@ -158,6 +158,51 @@ and delegating entirely to the same engine; it returns the identical
 `temporal-context-v1` object `lifetxt temporal --json` prints, plus a
 `revision` field (see [ai-integration.md](ai-integration.md#context-revision)).
 
+## Freebusy
+
+`freebusy` answers "when am I actually free, and do any of my scheduled items
+overlap?" over a datetime range — reusing the same occurrence-timing engine
+`agenda` already uses (`from:`/`to:`/`at:`/`on:` resolution), rather than a
+second implementation of how those values resolve to concrete spans:
+
+```console
+$ lifetxt freebusy --from 2026-08-22T09:00 --to 2026-08-22T18:00
+$ lifetxt freebusy --around now --window 4h
+$ lifetxt freebusy --from 2026-08-22 --to 2026-08-24 --day-start 09:00 --day-end 17:00
+$ lifetxt freebusy --from 2026-08-22T09:00 --to 2026-08-22T18:00 --json
+```
+
+Only `E` (Event) and `R` (Reminder) items are considered — other kinds do not
+represent scheduled time. Within those, only `from:`/`to:`, `at:`, and `on:`
+values count as busy; `notify_from:`/`notify_to:` (reminder windows) and point
+keys like `due:`/`do:` are deadlines, not attendance, and are excluded.
+
+The report has four parts:
+
+- **busy**: merged, overlap-collapsed intervals actually covered by scheduled
+  items, each naming the source item and which detail produced it.
+- **free**: the gaps between busy intervals within the requested range. Add
+  `--day-start`/`--day-end` (used together) to additionally clip free
+  intervals to a daily working-hours window on every day the range spans;
+  busy intervals and conflicts are always reported for the full range
+  regardless of this option.
+- **conflicts**: pairs of *different* items whose busy intervals genuinely
+  overlap (touching, back-to-back intervals are not a conflict).
+- **instants**: zero-duration markers — a bare `at:` value, or a `from:`/`to:`
+  value with no matching counterpart — which cannot occupy time and so never
+  affect busy/free, but are still reported rather than silently dropped.
+
+A `diagnostics` list reports, non-fatally, anything this first slice cannot
+resolve: an unparseable `from:`/`to:`/`at:`/`on:` value, an `E`/`R` item with
+none of those details at all, or a `repeat:` item (recurring-occurrence
+expansion is out of scope for this slice, so such an item is skipped with a
+`skipped_recurring` diagnostic rather than silently ignored or incorrectly
+expanded).
+
+Nothing here is written back to life.txt; this is a pure read-only report,
+matching `temporal`/`integrity`. TUI, Web UI, and MCP exposure are not yet
+implemented and remain explicit follow-up candidates.
+
 ## Projects over MCP
 
 The project and portfolio aggregations are exposed to AI clients as read-only

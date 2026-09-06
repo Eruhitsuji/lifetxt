@@ -118,6 +118,30 @@ MCP: `get_temporal_context`（`id`、`window`、`limit`、`stale_after`）。rea
 `temporal-context-v1` object に加えて `revision` field を返します
 （[ai-integration.md](ai-integration.md#context-revision) を参照）。
 
+## Freebusy
+
+`freebusy` は「実際にいつ空いているか、scheduled items 同士が重複していないか」を期間で答えます。`agenda` が既に使っている occurrence-timing engine（`from:`/`to:`/`at:`/`on:` の解決）をそのまま再利用し、別の実装は作りません。
+
+```console
+$ lifetxt freebusy --from 2026-08-22T09:00 --to 2026-08-22T18:00
+$ lifetxt freebusy --around now --window 4h
+$ lifetxt freebusy --from 2026-08-22 --to 2026-08-24 --day-start 09:00 --day-end 17:00
+$ lifetxt freebusy --from 2026-08-22T09:00 --to 2026-08-22T18:00 --json
+```
+
+対象は `E`（Event）と `R`（Reminder）のみ -- 他の kind は scheduled time を表しません。その中でも busy として数えるのは `from:`/`to:`、`at:`、`on:` のみで、`notify_from:`/`notify_to:`（reminder window）や `due:`/`do:` のような point key は締切であって出席ではないため除外します。
+
+report は 4 部構成です:
+
+- **busy**: 実際に scheduled items が占める、重複を merge した interval。それぞれどの item・どの detail 由来かを記録。
+- **free**: 指定範囲内で busy interval に覆われていない gap。`--day-start`/`--day-end`（併用必須）を指定すると、free interval を各日の稼働時間帯にさらに clip します。busy と conflicts は常に範囲全体で報告され、この option の影響を受けません。
+- **conflicts**: 実際に重複している *別々の* item のペア（隣接しているだけで touching している interval は conflict ではありません）。
+- **instants**: 時間を占有しない zero-duration marker（単独の `at:` 値、または対になる値がない `from:`/`to:`）。busy/free には影響しませんが、黙って捨てず report します。
+
+`diagnostics` list は、この最初の slice で解決できないものを非致命的に報告します: 解析できない `from:`/`to:`/`at:`/`on:` 値、それらの detail を一切持たない `E`/`R` item、または `repeat:` item（繰り返し occurrence の展開はこの slice の scope 外のため、黙って無視・誤って展開する代わりに `skipped_recurring` diagnostic で skip します）。
+
+life.txt へ書き戻すものは何もない、pure read-only report です（`temporal`/`integrity` と同様）。TUI、Web UI、MCP への露出は未実装で、明示的な follow-up candidate として残しています。
+
 ## Projects over MCP
 
 project と portfolio aggregations は read-only tools として AI clients に公開されます。`get_projects`、`get_project`、`get_portfolio` です。CLI の `project`/`portfolio` commands と同じ `lifetxt/projects.py` logic を再利用するため、model は transparent progress/health formulas を含めて human と同じ view を見ます。

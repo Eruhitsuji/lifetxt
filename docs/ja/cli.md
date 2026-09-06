@@ -2089,7 +2089,21 @@ plain HTTP 上での Basic Auth がここで許容されるのは、WireGuard �
 
 **複数 client での利用。** 同じ server に対する複数の `tui --remote-url` session（あるいは TUI・Web UI・CLI client の混在）は安全です。それぞれの authoritative な write は writer 自身が最後に知っている revision を伴うため、別の client の stale な edit は黙って上書きされることなく conflict として拒否され、commit された変更は 1 polling interval 以内に他の全 client から見えるようになります。
 
-**現時点の制限。** offline/local cache や offline mutation queue はありません -- remote 障害が local data への fallback を引き起こすことは、設計上ありません。1 回の semantic commit で多数の item にまたがる marked-row の一括編集は local のみ対応です。remote での編集は 1 item ずつ適用されます。presence status（`/state`、`/now`）にはまだ remote 相当がありません。この機能が置き換えるものではない、別の ticket 中心の remote client については、既存の dependency-free な Remote Safe Mode CLI/REPL である `lifetxt remote` を参照してください。
+**offline read cache（`--remote-cache`）。** 既定では remote mode に offline cache はなく、接続障害が local data への fallback を引き起こすことはありません。`--remote-cache` を指定すると、bounded かつ read-only な last-known snapshot を opt-in できます。read に成功するたびに、取得した item と revision が `~/.cache/lifetxt/remote-tui/`（または `$LIFETXT_REMOTE_TUI_CACHE_DIR`）以下に、server URL と username をキーとして永続化されるため、異なる server や user のデータが混ざることはありません。後で接続不能になった場合、TUI は error のみを表示するのではなく、この cache された view を表示し、header には `cached, stale` と snapshot の経過時間が表示されます。この cache は:
+
+- authoritative とは決して扱われず、2000 item を上限とします。
+- credential、token、Authorization header を一切保存しません -- `GET /api/items` がすでに返している server 側で可視な item content のみです。
+- OS がサポートする場合、owner-only の file permission で書き込まれます。
+- cache が active view である間は、すべての mutation（create/edit/delete）を拒否します。cache された snapshot は server の revision-precondition contract を満たせないため、再度書き込む前に再接続して reload する必要があります。
+
+`--remote-clear-cache` は、指定した `--remote-url`（および設定されていれば `--remote-user`）の cache を削除し、TUI を起動せずに終了します:
+
+```sh
+python -m lifetxt tui --remote-url https://lifetxt.example.internal --remote-cache
+python -m lifetxt tui --remote-url https://lifetxt.example.internal --remote-clear-cache
+```
+
+**現時点の制限。** offline mutation queue はありません -- `--remote-cache` を有効にしていても、write には常に live な接続が必要です。1 回の semantic commit で多数の item にまたがる marked-row の一括編集は local のみ対応です。remote での編集は 1 item ずつ適用されます。presence status（`/state`、`/now`）にはまだ remote 相当がありません。この機能が置き換えるものではない、別の ticket 中心の remote client については、既存の dependency-free な Remote Safe Mode CLI/REPL である `lifetxt remote` を参照してください。
 
 #### input bar
 

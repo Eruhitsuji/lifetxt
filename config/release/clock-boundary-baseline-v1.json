@@ -85,6 +85,13 @@
       "classification": "operational-network",
       "reason": "Paces the Remote TUI backend's bounded background poll interval (#680); it schedules a network request cadence and never selects or persists a life.txt workflow date.",
       "removal_condition": "Use time.monotonic if the poll scheduler is ever isolated from wall-clock display concerns."
+    },
+    {
+      "path": "lifetxt/tui_remote_cache.py",
+      "call": "time.time",
+      "classification": "operational-recovery",
+      "reason": "Records the offline Remote TUI read-cache's own save timestamp (#681) so a disconnected session can report how stale the cached view is; it is cache freshness metadata, not a life.txt workflow date choice.",
+      "removal_condition": "Route through a shared operational UTC clock if one is introduced for cache/recovery evidence generally."
     }
   ]
 }

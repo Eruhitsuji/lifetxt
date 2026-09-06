@@ -11096,6 +11096,48 @@ traceability:
         integration branch) is opened.
       status: implemented
 
+    - requirement_id: req-tui-remote-offline-cache
+      capability_id: cap-remote-tui
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/677
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/681
+      pull_request: null
+      changed_files_or_scope:
+        - Add an opt-in (--remote-cache, off by default), bounded, read-only offline cache for the Remote TUI backend, persisting the last-known item snapshot and revision under ~/.cache/lifetxt/remote-tui/ keyed by server URL and username
+        - Fall back to the cache only when --remote-cache is enabled and a live read fails; refuse every mutation while serving cached data
+        - Add --remote-clear-cache to delete the cache and exit without starting the TUI
+        - Show a "cached, stale" status word and snapshot age in the TUI header while serving cached data
+        - Fix _poll_remote()'s reconnection branch to always force a real reload on reconnection from disconnected (not only on a revision diff), so serving_cache reliably clears before writes are allowed again
+        - Fix a real regression: classify the new time.time() cache-save-timestamp call in config/release/clock-boundary-baseline-v1.json (operational-recovery) so the clock_boundary_audit release-policy gate stays green
+        - lifetxt/tui_remote_cache.py
+        - lifetxt/tui_backend.py
+        - lifetxt/tui_app.py
+        - lifetxt/cli.py
+        - tests/test_tui_remote_cache.py
+        - tests/test_tui_remote_backend.py
+        - config/release/clock-boundary-baseline-v1.json
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - python -m unittest tests.test_release_policy tests.test_tui_remote_backend tests.test_tui_remote_cache -> Ran 55 tests, OK
+        - python -m unittest tests.test_cui_extensions tests.test_tui_backend tests.test_tui_remote_client tests.test_tui_remote_backend tests.test_tui_remote_cache tests.test_shared_surface_mutation_routing tests.test_release_policy tests.test_completion_surfaces tests.test_completion_values tests.test_cli_taxonomy -> Ran 356 tests, OK (skipped=2)
+        - 'scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> {"errors": 0, "ok": true}'
+        - ruff format --check / ruff check on changed files -> clean
+      release_or_deployment: null
+      notes: >-
+        Fifth implementation task of the 676-680(+681) batch, implementing
+        the follow-up the user explicitly asked to be implemented "if there
+        is room" (best-effort). See cap-remote-tui's own notes for the full
+        design account, including why the pre-existing revision-diff-only
+        reconnection check in `_poll_remote()` had to change to an
+        unconditional reload on reconnection (a cache-serving session has
+        no reliable last-known revision to diff against) and the two
+        regressions (a `_StubConnection` test double missing
+        `base_url`/`username`, and a second `clock_boundary_audit` finding)
+        found and fixed while adding this coverage. pull_request is filled
+        in once the pull request implementing this entry (into the
+        integration branch) is opened.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

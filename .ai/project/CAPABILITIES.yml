@@ -8299,7 +8299,8 @@ capabilities:
       - scripts/validate_release_docs.py -> {"errors":0,"ok":true}
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/673
-    related_pull_requests: []
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/675
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       Implemented on its own worktree/branch per repository owner

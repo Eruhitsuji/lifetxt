@@ -10876,7 +10876,7 @@ traceability:
       capability_id: cap-freebusy-detection
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/673
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/675
       changed_files_or_scope:
         - Add lifetxt freebusy, a read-only free/busy interval and overlap
           detector for E/R items, reusing lifetxt.agenda.item_time_matches
@@ -10934,8 +10934,7 @@ traceability:
         exposure remain explicit, unimplemented follow-up candidates
         recorded in docs/en/life-hub.md and docs/ja/life-hub.md. Closes
         the overlap/near-window scope cap-temporal-context's own notes
-        (#481) recorded as deferred v1 scope. pull_request is filled in
-        once the pull request implementing this entry is opened.
+        (#481) recorded as deferred v1 scope.
       status: implemented
 
 required_chain:

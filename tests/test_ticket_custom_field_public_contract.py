@@ -24,7 +24,7 @@ class TicketCustomFieldPublicContractTests(unittest.TestCase):
         self.assertIn("ticket-workflow-v1.schema.json", bundle)
         self.assertIn("ticket-activity-v1.schema.json", bundle)
         self.assertIn("ticket-planning-v1.schema.json", bundle)
-        self.assertEqual(78, len(bundle))
+        self.assertEqual(79, len(bundle))
 
     def test_capability_keeps_unknown_keys_and_remote_writes_safe(self):
         config = {

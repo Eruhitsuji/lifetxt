@@ -1546,6 +1546,46 @@ def build_parser():
     temporal_command.add_argument("--json", action="store_true", help="Emit JSON.")
     temporal_command.set_defaults(func=command_temporal)
 
+    freebusy_command = subparsers.add_parser(
+        "freebusy",
+        help="Show busy/free time intervals and overlap conflicts for "
+        "E/R items with from:/to:/at:/on: within a datetime range.",
+    )
+    _add_input_paths(freebusy_command)
+    freebusy_command.add_argument(
+        "--from",
+        dest="start",
+        help="Range start: now, YYYY-MM-DD, or ISO-like datetime with optional seconds, fraction, and timezone.",
+    )
+    freebusy_command.add_argument(
+        "--to",
+        dest="end",
+        help="Range end: now, YYYY-MM-DD, or ISO-like datetime with optional seconds, fraction, and timezone.",
+    )
+    freebusy_command.add_argument(
+        "--around",
+        help="Center of a range: now, YYYY-MM-DD, or ISO-like datetime. Defaults to now.",
+    )
+    freebusy_command.add_argument(
+        "--window",
+        default="1h",
+        help="Half-width for --around, e.g. 30m, 2h, 1d, 1w, 1mo, or 1y.",
+    )
+    freebusy_command.add_argument(
+        "--day-start",
+        metavar="HH:MM",
+        help="Restrict reported free intervals to this daily start time. "
+        "Requires --day-end.",
+    )
+    freebusy_command.add_argument(
+        "--day-end",
+        metavar="HH:MM",
+        help="Restrict reported free intervals to this daily end time. "
+        "Requires --day-start.",
+    )
+    freebusy_command.add_argument("--json", action="store_true", help="Emit JSON.")
+    freebusy_command.set_defaults(func=command_freebusy)
+
     vm_command = subparsers.add_parser(
         "vm",
         help="Opt-in, isolated lifetxt VM: run a Turing-complete 2-counter "
@@ -13282,6 +13322,111 @@ def command_temporal(args):
                     edge["target"]["title"],
                 ),
             )
+    return 0
+
+
+def command_freebusy(args):
+    from .freebusy import compute_freebusy
+    from .timeutil import parse_time
+
+    items, diagnostics = _parse_or_exit(
+        _normalize_paths(
+            getattr(args, "paths", None), _config(args), stdin_when_empty=False
+        )
+        or ["life.txt"],
+        _config(args),
+    )
+    try:
+        range_start, range_end = parse_agenda_range(
+            start_text=getattr(args, "start", None),
+            end_text=getattr(args, "end", None),
+            around_text=getattr(args, "around", None),
+            window_text=getattr(args, "window", "1h"),
+        )
+    except ValueError as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
+
+    day_start_text = getattr(args, "day_start", None)
+    day_end_text = getattr(args, "day_end", None)
+    if bool(day_start_text) != bool(day_end_text):
+        sys.stderr.write("ERROR: --day-start and --day-end must be used together.\n")
+        return 1
+    day_window = None
+    if day_start_text and day_end_text:
+        day_start_time = parse_time(day_start_text)
+        day_end_time = parse_time(day_end_text)
+        if day_start_time is None or day_end_time is None:
+            sys.stderr.write("ERROR: --day-start and --day-end must look like HH:MM.\n")
+            return 1
+        if day_end_time <= day_start_time:
+            sys.stderr.write("ERROR: --day-end must be later than --day-start.\n")
+            return 1
+        day_window = (day_start_time, day_end_time)
+
+    try:
+        result = compute_freebusy(items, range_start, range_end, day_window=day_window)
+    except ValueError as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
+
+    if getattr(args, "json", False):
+        write_text(None, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+        _print_warnings(diagnostics)
+        return 0
+
+    write_text(
+        None,
+        "Freebusy for %s..%s:\n" % (result["range_start"], result["range_end"]),
+    )
+    if not result["busy"]:
+        write_text(None, "  No busy intervals.\n")
+    else:
+        write_text(None, "  Busy (%d):\n" % len(result["busy"]))
+        for entry in result["busy"]:
+            write_text(
+                None,
+                "    %s..%s (%s) %s\n"
+                % (
+                    entry["start"],
+                    entry["end"],
+                    entry["source_field"],
+                    entry["item"]["title"],
+                ),
+            )
+    if not result["free"]:
+        write_text(None, "  No free intervals.\n")
+    else:
+        write_text(None, "  Free (%d):\n" % len(result["free"]))
+        for entry in result["free"]:
+            write_text(None, "    %s..%s\n" % (entry["start"], entry["end"]))
+    if result["conflicts"]:
+        write_text(None, "  Conflicts (%d):\n" % len(result["conflicts"]))
+        for conflict in result["conflicts"]:
+            write_text(
+                None,
+                "    %s overlaps %s: %s..%s\n"
+                % (
+                    conflict["a"]["title"],
+                    conflict["b"]["title"],
+                    conflict["start"],
+                    conflict["end"],
+                ),
+            )
+    if result["instants"]:
+        write_text(None, "  Instants (%d):\n" % len(result["instants"]))
+        for instant in result["instants"]:
+            write_text(
+                None,
+                "    %s (%s) %s\n"
+                % (instant["at"], instant["source_field"], instant["item"]["title"]),
+            )
+    for diag in result["diagnostics"]:
+        write_text(
+            None,
+            "  NOTE: %s %s\n" % (diag["code"], diag["message"]),
+        )
+    _print_warnings(diagnostics)
     return 0
 
 

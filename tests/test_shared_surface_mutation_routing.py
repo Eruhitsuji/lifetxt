@@ -24,6 +24,12 @@ class _TuiState(object):
         self.marked = set()
         self.undo_stack = []
         self.reload_count = 0
+        # _mutate_rows/_write_target route through the local/remote backend
+        # boundary (#678/#679); this fixture predates that extraction, so
+        # give it the same LocalTuiBackend WorkspaceState defaults to.
+        from lifetxt.tui_backend import LocalTuiBackend
+
+        self.backend = LocalTuiBackend(self.args)
 
     def target_rows(self):
         return list(self._rows)

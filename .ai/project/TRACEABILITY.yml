@@ -11020,6 +11020,82 @@ traceability:
         branch) is opened.
       status: implemented
 
+    - requirement_id: req-tui-remote-web-backend
+      capability_id: cap-remote-tui
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/677
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/679
+      pull_request: null
+      changed_files_or_scope:
+        - Add RemoteTuiConnection (dependency-free urllib HTTP client with Basic Auth, loopback/insecure-HTTP transport guard, and whole-file revision tracking) and RemoteTuiBackend, reusing the existing lifetxt serve item REST routes and whole-file If-Match/X-Lifetxt-Revision contract unmodified
+        - Add lifetxt tui --remote-url/--remote-user/--remote-password-env/--allow-insecure-remote-http
+        - lifetxt/tui_backend.py
+        - lifetxt/tui_remote_client.py
+        - lifetxt/tui.py
+        - lifetxt/tui_app.py
+        - lifetxt/cli.py
+        - tests/test_tui_remote_client.py
+        - tests/test_tui_remote_backend.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - python -m unittest tests.test_tui_backend tests.test_tui_remote_client tests.test_tui_remote_backend tests.test_cui_extensions tests.test_completion_surfaces tests.test_completion_values tests.test_surface_runtime tests.test_cli_taxonomy -> Ran 386 tests, OK (skipped=1)
+        - python -m unittest tests.test_lifetxt.LifeTxtWebApiTests tests.test_lifetxt.LifeTxtWebAppTests -> Ran 65 tests, OK (confirms zero webapp.py changes were needed)
+        - "live end-to-end against a real lifetxt serve process: load/update/conflict/create all verified over real HTTP; two independent RemoteTuiBackend instances observed each other's committed change after reload"
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - ruff format --check / ruff check on changed files -> clean
+      release_or_deployment: null
+      notes: >-
+        Third implementation task of the 676-680 batch. See
+        cap-remote-tui's own notes for the design pivot away from a
+        redundant item-level revision precondition once the existing
+        whole-file surface_runtime contract was found to already provide
+        it -- no lifetxt/webapp.py route changed for this task.
+        pull_request is filled in once the pull request implementing this
+        entry (into the integration branch) is opened.
+      status: implemented
+
+    - requirement_id: req-tui-remote-polling-and-ux
+      capability_id: cap-remote-tui
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/677
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/680
+      pull_request: null
+      changed_files_or_scope:
+        - Add RemoteTuiBackend.poll_changed() (cheap GET /api/revision-only check) and wire a bounded 1.5s background poll into run_workspace's idle tick, with key-preserving selection restore and connected/disconnected status UX
+        - Fix a real regression: give tests/test_shared_surface_mutation_routing.py's fake TUI state fixture a LocalTuiBackend so its calls into _mutate_rows/_write_target keep working now that those require state.backend
+        - Fix a real regression: classify the new time.time() poll-scheduling call in config/release/clock-boundary-baseline-v1.json (operational-network) so the clock_boundary_audit release-policy gate stays green
+        - Add remote deployment/security/limitations documentation
+        - lifetxt/tui_backend.py
+        - lifetxt/tui_app.py
+        - tests/test_tui_remote_backend.py
+        - tests/test_shared_surface_mutation_routing.py
+        - config/release/clock-boundary-baseline-v1.json
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - python -m unittest tests.test_tui_backend tests.test_tui_remote_client tests.test_tui_remote_backend tests.test_cui_extensions tests.test_completion_surfaces tests.test_completion_values tests.test_surface_runtime tests.test_cli_taxonomy -> Ran 422 tests, OK (skipped=2)
+        - python -m unittest tests.test_shared_surface_mutation_routing tests.test_release_policy -> Ran 21 tests, OK
+        - "MPLBACKEND=Agg python -W ignore::ResourceWarning -m unittest discover -> Ran 3877 tests, OK (skipped=11) full repository suite"
+        - "live: a real second server run confirmed a no-change poll stays clean/connected, and a concurrent client's real committed change is detected on the next poll, reloads, and preserves the header's connected status"
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - ruff format --check / ruff check on changed files -> clean
+      release_or_deployment: null
+      notes: >-
+        Fourth implementation task of the 676-680 batch, and the final
+        child of the #677 Remote TUI epic. #679 and #680 were implemented
+        together in one child branch/commit with interleaved edits to the
+        same files (lifetxt/tui_app.py, lifetxt/tui_backend.py), matching
+        this project's own established precedent for tightly-coupled
+        issues sharing a session pass (see e.g. cap-clone-item's notes on
+        #659/#660). See cap-remote-tui's own notes for the full account of
+        the two real regressions found only by the complete repository
+        suite and fixed here, and for why the local
+        WORKSPACE_POLL_SECONDS=0.25 cadence is untouched and unused by
+        remote polling. Offline/local read cache is intentionally excluded
+        and tracked as the separate follow-up issue #681. pull_request is
+        filled in once the pull request implementing this entry (into the
+        integration branch) is opened.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

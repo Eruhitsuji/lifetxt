@@ -106,6 +106,7 @@ from .markdown import markdown_to_html, markdown_to_plain
 from .model import Diagnostic, Item
 from . import native_codec
 from . import sqlite_codec
+from . import lifetxtz_codec
 from .timezone_policy import local_now_naive, today as timezone_today
 from .timeutil import format_datetime, parse_date_or_datetime, relative_time
 from .notifier import (
@@ -5154,6 +5155,46 @@ def _import_sqlite_preset(path, args):
     return sqlite_codec.import_sqlite(path)
 
 
+def _export_lifetxtz(args):
+    """`lifetxt export --format lifetxtz` handler (#693).
+
+    Reuses the item loading/filtering path every other export format
+    shares and delegates archive construction to
+    lifetxt.lifetxtz_codec.export_lifetxtz(), which implements the
+    lifetxtz-v1 contract frozen by #692.
+    """
+    items, diagnostics = _parse_or_exit(args.paths, _config(args))
+    items = _filter_items_from_args(items, args)
+    if not args.output:
+        raise ValueError(
+            "--format lifetxtz requires -o/--output: .lifetxtz is a binary "
+            "format and cannot be written to stdout."
+        )
+    id_key = id_key_from_config(_config(args))
+    lifetxtz_codec.export_lifetxtz(items, args.output, key=id_key)
+    _print_warnings(diagnostics)
+    return 0
+
+
+def _import_lifetxtz_preset(path, args):
+    """`import --preset lifetxtz` handler (#693), registered into
+    IMPORT_PRESET_HANDLERS below. Verifies archive integrity, then parses
+    and validates the recovered native payload through the authoritative
+    parser before any item is returned -- refusing (SystemExit(1), the
+    same convention _parse_or_exit already uses) before any write.
+    """
+    payload_text = lifetxtz_codec.import_lifetxtz(path)
+    id_key = id_key_from_config(_config(args))
+    items, diagnostics = parse_text(
+        payload_text, id_key=id_key, check_ids=False, check_references=False
+    )
+    if _has_error(diagnostics):
+        _print_diagnostics(diagnostics)
+        raise SystemExit(1)
+    _print_warnings(diagnostics)
+    return items
+
+
 def command_demo(args):
     if args.count < 0:
         raise ValueError("--count must be zero or greater.")
@@ -5492,6 +5533,7 @@ _IMPORT_EXTENSION_PRESETS = {
     ".db": "sqlite",
     ".sqlite": "sqlite",
     ".sqlite3": "sqlite",
+    ".lifetxtz": "lifetxtz",
 }
 
 #: Every supported --preset value, in the order shown to users. Extended by
@@ -17058,3 +17100,5 @@ register_export_format("markdown", command_share)
 register_export_format("life", command_filter)
 register_export_format("sqlite", _export_sqlite)
 register_import_preset("sqlite", _import_sqlite_preset)
+register_export_format("lifetxtz", _export_lifetxtz)
+register_import_preset("lifetxtz", _import_lifetxtz_preset)

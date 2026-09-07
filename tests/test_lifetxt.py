@@ -2242,6 +2242,425 @@ class LifeTxtFilterCliTests(unittest.TestCase):
         )
 
 
+class LifeTxtExportCliTests(unittest.TestCase):
+    """`lifetxt export` is a routing-only dispatcher: it must produce output
+    byte-for-byte identical to the equivalent existing command (#688)."""
+
+    _FIXTURE = (
+        "[ ] T Open_Task due:2026-06-08 project:work\n"
+        "[x] T Done_Task due:2026-06-08 done:2026-06-08 project:work\n"
+        "[ ] E Meeting from:2026-06-08T10:00 to:2026-06-08T11:00\n"
+    )
+
+    def test_export_json_matches_to_json(self):
+        stdout_a, stderr_a, code_a = run_cli(
+            "export", "--format", "json", "--pretty", input_text=self._FIXTURE
+        )
+        stdout_b, stderr_b, code_b = run_cli(
+            "to-json", "--pretty", input_text=self._FIXTURE
+        )
+        self.assertEqual(0, code_a)
+        self.assertEqual(0, code_b)
+        self.assertEqual("", stderr_a)
+        self.assertEqual(normalize_newlines(stdout_b), normalize_newlines(stdout_a))
+
+    def test_export_jsonl_matches_to_jsonl(self):
+        stdout_a, _, code_a = run_cli(
+            "export", "--format", "jsonl", input_text=self._FIXTURE
+        )
+        stdout_b, _, code_b = run_cli("to-jsonl", input_text=self._FIXTURE)
+        self.assertEqual(0, code_a)
+        self.assertEqual(0, code_b)
+        self.assertEqual(normalize_newlines(stdout_b), normalize_newlines(stdout_a))
+
+    def test_export_csv_matches_to_csv(self):
+        stdout_a, _, code_a = run_cli(
+            "export", "--format", "csv", input_text=self._FIXTURE
+        )
+        stdout_b, _, code_b = run_cli("to-csv", input_text=self._FIXTURE)
+        self.assertEqual(0, code_a)
+        self.assertEqual(0, code_b)
+        self.assertEqual(normalize_newlines(stdout_b), normalize_newlines(stdout_a))
+
+    def test_export_json_applies_filters_like_to_json(self):
+        stdout_a, _, code_a = run_cli(
+            "export",
+            "--format",
+            "json",
+            "--open",
+            "--type",
+            "task",
+            input_text=self._FIXTURE,
+        )
+        stdout_b, _, code_b = run_cli(
+            "to-json", "--open", "--type", "task", input_text=self._FIXTURE
+        )
+        self.assertEqual(0, code_a)
+        self.assertEqual(0, code_b)
+        self.assertEqual(normalize_newlines(stdout_b), normalize_newlines(stdout_a))
+        self.assertIn("Open_Task", stdout_a)
+        self.assertNotIn("Done_Task", stdout_a)
+
+    def test_export_markdown_matches_share(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = os.path.join(temp_dir, "life.txt")
+            with open(input_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write(self._FIXTURE)
+            out_a = os.path.join(temp_dir, "a.md")
+            out_b = os.path.join(temp_dir, "b.md")
+            _, _, code_a = run_cli(
+                "export", input_path, "--format", "markdown", "-o", out_a
+            )
+            _, _, code_b = run_cli(
+                "share", input_path, "--format", "markdown", "-o", out_b
+            )
+            self.assertEqual(0, code_a)
+            self.assertEqual(0, code_b)
+            with open(out_a, encoding="utf-8") as handle:
+                text_a = handle.read()
+            with open(out_b, encoding="utf-8") as handle:
+                text_b = handle.read()
+            self.assertEqual(text_b, text_a)
+
+    def test_export_output_file_matches_to_csv_output_file(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            out_a = os.path.join(temp_dir, "a.csv")
+            out_b = os.path.join(temp_dir, "b.csv")
+            run_cli(
+                "export",
+                "--format",
+                "csv",
+                "-o",
+                out_a,
+                input_text=self._FIXTURE,
+            )
+            run_cli("to-csv", "-o", out_b, input_text=self._FIXTURE)
+            with open(out_a, encoding="utf-8") as handle:
+                text_a = handle.read()
+            with open(out_b, encoding="utf-8") as handle:
+                text_b = handle.read()
+            self.assertEqual(text_b, text_a)
+
+    def test_export_unsupported_format_rejected_by_argparse(self):
+        _, stderr, code = run_cli(
+            "export", "--format", "not-a-real-format", input_text=self._FIXTURE
+        )
+        self.assertNotEqual(0, code)
+        self.assertIn("invalid choice", stderr)
+
+    def test_export_requires_format(self):
+        _, stderr, code = run_cli("export", input_text=self._FIXTURE)
+        self.assertNotEqual(0, code)
+        self.assertIn("--format", stderr)
+
+    def test_export_help(self):
+        stdout, stderr, code = run_cli("export", "--help")
+        self.assertEqual(0, code)
+        self.assertIn("--format", stdout)
+
+
+class LifeTxtNativeLifeFormatTests(unittest.TestCase):
+    """`export --format life` / `import --preset life` (#689)."""
+
+    _FIXTURE = (
+        '[ ] T "Repeated tags" id:t1 tag:alpha tag:beta project:work '
+        "custom_field:value1 custom_field:value2\n"
+        "[N] J Multiline_Note id:t2\n"
+        "| first line\n"
+        "| second line\n"
+        "[ ] T Child id:t3 parent:t1\n"
+    )
+
+    def test_export_life_matches_filter_native_output(self):
+        stdout_a, _, code_a = run_cli(
+            "export", "--format", "life", input_text=self._FIXTURE
+        )
+        stdout_b, _, code_b = run_cli("filter", input_text=self._FIXTURE)
+        self.assertEqual(0, code_a)
+        self.assertEqual(0, code_b)
+        self.assertEqual(normalize_newlines(stdout_b), normalize_newlines(stdout_a))
+
+    def test_export_life_canonical_matches_filter_canonical(self):
+        stdout_a, _, code_a = run_cli(
+            "export",
+            "--format",
+            "life",
+            "--canonical",
+            input_text=self._FIXTURE,
+        )
+        stdout_b, _, code_b = run_cli("filter", "--canonical", input_text=self._FIXTURE)
+        self.assertEqual(0, code_a)
+        self.assertEqual(0, code_b)
+        self.assertEqual(normalize_newlines(stdout_b), normalize_newlines(stdout_a))
+
+    def test_export_then_import_life_round_trips_multiline_and_repeated_details(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = os.path.join(temp_dir, "life.txt")
+            with open(input_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write(self._FIXTURE)
+            subset_path = os.path.join(temp_dir, "subset.life.txt")
+            restored_path = os.path.join(temp_dir, "restored.life.txt")
+
+            _, stderr_a, code_a = run_cli(
+                "export", input_path, "--format", "life", "-o", subset_path
+            )
+            self.assertEqual(0, code_a, stderr_a)
+            with open(subset_path, encoding="utf-8") as handle:
+                subset_text = handle.read()
+            self.assertEqual(
+                normalize_newlines(self._FIXTURE), normalize_newlines(subset_text)
+            )
+
+            _, stderr_b, code_b = run_cli(
+                "import", subset_path, "--preset", "life", "-o", restored_path
+            )
+            self.assertEqual(0, code_b, stderr_b)
+            with open(restored_path, encoding="utf-8") as handle:
+                restored_text = handle.read()
+            self.assertEqual(
+                normalize_newlines(subset_text), normalize_newlines(restored_text)
+            )
+
+    def test_import_life_extension_inference_for_compound_extension(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = os.path.join(temp_dir, "subset.life.txt")
+            output_path = os.path.join(temp_dir, "restored.life.txt")
+            with open(input_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Task id:t1\n")
+            _, stderr, code = run_cli("import", input_path, "-o", output_path)
+            self.assertEqual(0, code, stderr)
+            with open(output_path, encoding="utf-8") as handle:
+                self.assertIn("Task", handle.read())
+
+    def test_import_plain_txt_is_never_guessed_as_native(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = os.path.join(temp_dir, "plain.txt")
+            with open(input_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Task id:t1\n")
+            _, stderr, code = run_cli("import", input_path, "-o", "out.life.txt")
+            self.assertNotEqual(0, code)
+            self.assertIn("--preset", stderr)
+
+    def test_import_life_refuses_invalid_syntax_before_writing(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = os.path.join(temp_dir, "broken.life.txt")
+            output_path = os.path.join(temp_dir, "out.life.txt")
+            with open(input_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write('[ ] T "Unterminated quote\n')
+            _, stderr, code = run_cli(
+                "import", input_path, "--preset", "life", "-o", output_path
+            )
+            self.assertEqual(1, code)
+            self.assertTrue(stderr.strip())
+            self.assertFalse(os.path.exists(output_path))
+
+    def test_import_life_append_merges_into_existing_output(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_path = os.path.join(temp_dir, "life.txt")
+            with open(output_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Existing id:e1\n")
+            input_path = os.path.join(temp_dir, "subset.life.txt")
+            with open(input_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T New id:n1\n")
+            _, stderr, code = run_cli(
+                "import",
+                input_path,
+                "--preset",
+                "life",
+                "-o",
+                output_path,
+                "--append",
+            )
+            self.assertEqual(0, code, stderr)
+            with open(output_path, encoding="utf-8") as handle:
+                text = handle.read()
+            self.assertIn("Existing", text)
+            self.assertIn("New", text)
+
+    def test_import_life_warns_about_dropped_directives(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = os.path.join(temp_dir, "with_directive.life.txt")
+            output_path = os.path.join(temp_dir, "out.life.txt")
+            with open(input_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("#! timezone: Asia/Tokyo\n\n[ ] T Task id:t1\n")
+            _, stderr, code = run_cli(
+                "import", input_path, "--preset", "life", "-o", output_path
+            )
+            self.assertEqual(0, code, stderr)
+            self.assertIn("directive", stderr.lower())
+            self.assertIn("timezone", stderr)
+
+
+class LifeTxtSqliteCliTests(unittest.TestCase):
+    """`export --format sqlite` / `import --preset sqlite` (#691)."""
+
+    _FIXTURE = (
+        '[ ] T "Write report" id:t1 due:2026-06-08 tag:urgent tag:review project:work\n'
+        "[N] J Journal_Entry id:t2\n"
+        "| first line\n"
+        "| second line\n"
+    )
+
+    def test_export_then_import_round_trips_status_kind_title_and_details(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = os.path.join(temp_dir, "life.txt")
+            with open(input_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write(self._FIXTURE)
+            db_path = os.path.join(temp_dir, "life.db")
+            restored_path = os.path.join(temp_dir, "restored.life.txt")
+
+            _, stderr_a, code_a = run_cli(
+                "export", input_path, "--format", "sqlite", "-o", db_path
+            )
+            self.assertEqual(0, code_a, stderr_a)
+            self.assertTrue(os.path.exists(db_path))
+
+            _, stderr_b, code_b = run_cli(
+                "import", db_path, "--preset", "sqlite", "-o", restored_path
+            )
+            self.assertEqual(0, code_b, stderr_b)
+            with open(restored_path, encoding="utf-8") as handle:
+                restored = handle.read()
+            self.assertIn("Write_report", restored.replace('"', "").replace(" ", "_"))
+            self.assertIn("id:t1", restored)
+            self.assertIn("tag:urgent", restored)
+            self.assertIn("tag:review", restored)
+            self.assertIn("Journal_Entry", restored)
+            self.assertIn("first line", restored)
+            self.assertIn("second line", restored)
+
+            _, stderr_c, code_c = run_cli("check", restored_path)
+            self.assertEqual(0, code_c, stderr_c)
+
+    def test_sqlite_extension_inference_for_import(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = os.path.join(temp_dir, "life.txt")
+            with open(input_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Task id:t1\n")
+            db_path = os.path.join(temp_dir, "life.sqlite")
+            restored_path = os.path.join(temp_dir, "restored.life.txt")
+            run_cli("export", input_path, "--format", "sqlite", "-o", db_path)
+            _, stderr, code = run_cli("import", db_path, "-o", restored_path)
+            self.assertEqual(0, code, stderr)
+            with open(restored_path, encoding="utf-8") as handle:
+                self.assertIn("Task", handle.read())
+
+    def test_export_sqlite_requires_output(self):
+        _, stderr, code = run_cli(
+            "export", "--format", "sqlite", input_text=self._FIXTURE
+        )
+        self.assertNotEqual(0, code)
+        self.assertIn("--output", stderr)
+
+    def test_import_refuses_a_corrupt_database_before_writing(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            bad_db = os.path.join(temp_dir, "bad.db")
+            with open(bad_db, "wb") as handle:
+                handle.write(b"not a real sqlite file")
+            out_path = os.path.join(temp_dir, "out.life.txt")
+            _, stderr, code = run_cli(
+                "import", bad_db, "--preset", "sqlite", "-o", out_path
+            )
+            self.assertNotEqual(0, code)
+            self.assertFalse(os.path.exists(out_path))
+
+    def test_export_sqlite_applies_filters(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            db_path = os.path.join(temp_dir, "filtered.db")
+            restored_path = os.path.join(temp_dir, "restored.life.txt")
+            run_cli(
+                "export",
+                "--format",
+                "sqlite",
+                "--type",
+                "task",
+                "-o",
+                db_path,
+                input_text=self._FIXTURE,
+            )
+            run_cli("import", db_path, "--preset", "sqlite", "-o", restored_path)
+            with open(restored_path, encoding="utf-8") as handle:
+                text = handle.read()
+            self.assertIn("Write_report".replace("_", " "), text.replace('"', ""))
+            self.assertNotIn("Journal_Entry", text)
+
+
+class LifeTxtLifetxtzCliTests(unittest.TestCase):
+    """`export --format lifetxtz` / `import` (.lifetxtz) (#693)."""
+
+    _FIXTURE = (
+        '[ ] T "Write report" id:t1 due:2026-06-08 tag:urgent tag:review project:work\n'
+        "[N] J Journal_Entry id:t2\n"
+        "| first line\n"
+        "| second line\n"
+    )
+
+    def test_export_then_import_round_trips_status_kind_title_and_details(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = os.path.join(temp_dir, "life.txt")
+            with open(input_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write(self._FIXTURE)
+            archive_path = os.path.join(temp_dir, "life.lifetxtz")
+            restored_path = os.path.join(temp_dir, "restored.life.txt")
+
+            _, stderr_a, code_a = run_cli(
+                "export", input_path, "--format", "lifetxtz", "-o", archive_path
+            )
+            self.assertEqual(0, code_a, stderr_a)
+            self.assertTrue(os.path.exists(archive_path))
+
+            _, stderr_b, code_b = run_cli("import", archive_path, "-o", restored_path)
+            self.assertEqual(0, code_b, stderr_b)
+            with open(restored_path, encoding="utf-8") as handle:
+                restored = handle.read()
+            self.assertIn("id:t1", restored)
+            self.assertIn("tag:urgent", restored)
+            self.assertIn("tag:review", restored)
+            self.assertIn("Journal_Entry", restored)
+            self.assertIn("first line", restored)
+            self.assertIn("second line", restored)
+
+            _, stderr_c, code_c = run_cli("check", restored_path)
+            self.assertEqual(0, code_c, stderr_c)
+
+    def test_export_lifetxtz_requires_output(self):
+        _, stderr, code = run_cli(
+            "export", "--format", "lifetxtz", input_text=self._FIXTURE
+        )
+        self.assertNotEqual(0, code)
+        self.assertIn("--output", stderr)
+
+    def test_import_refuses_a_corrupt_archive_before_writing(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            bad_archive = os.path.join(temp_dir, "bad.lifetxtz")
+            with open(bad_archive, "wb") as handle:
+                handle.write(b"not a real zip archive")
+            out_path = os.path.join(temp_dir, "out.life.txt")
+            _, stderr, code = run_cli("import", bad_archive, "-o", out_path)
+            self.assertNotEqual(0, code)
+            self.assertFalse(os.path.exists(out_path))
+
+    def test_export_lifetxtz_applies_filters(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            archive_path = os.path.join(temp_dir, "filtered.lifetxtz")
+            restored_path = os.path.join(temp_dir, "restored.life.txt")
+            run_cli(
+                "export",
+                "--format",
+                "lifetxtz",
+                "--type",
+                "task",
+                "-o",
+                archive_path,
+                input_text=self._FIXTURE,
+            )
+            run_cli("import", archive_path, "-o", restored_path)
+            with open(restored_path, encoding="utf-8") as handle:
+                text = handle.read()
+            self.assertIn("id:t1", text)
+            self.assertNotIn("Journal_Entry", text)
+
+
 class LifeTxtDirectiveTests(unittest.TestCase):
     def test_parse_directives_extracts_block(self):
         from lifetxt.parser import parse_directives

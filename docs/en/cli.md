@@ -118,6 +118,7 @@ python -m lifetxt vm run program.life.txt --entry s1
 | `to-json` | Convert life.txt to a JSON array |
 | `to-jsonl` | Convert life.txt to JSONL |
 | `to-csv` | Convert life.txt to CSV |
+| `export` | Unified `--format json\|jsonl\|csv\|markdown\|life\|sqlite\|lifetxtz` entry point |
 | `demo` | Generate valid demo life.txt records for demos, tests, and screenshots |
 | `markdown` | Render safe Markdown fields as HTML, text, JSON, or JSONL |
 | `import-ics` | Convert iCalendar `.ics` events to life.txt event items |
@@ -224,7 +225,7 @@ including its `--json` machine-readable form for scripts and AI clients.
 | Query / Explore | `filter`, `search`, `find`, `query`, `view`, `summary`, `inbox`, `health`, `temporal`, `freebusy`, `count`, `status`, `recent` |
 | Projects / People / Collaboration | `project`, `portfolio`, `area`, `person`, `group`, `who`, `message`, `proposal`, `ticket`, `version`, `sprint` |
 | Structure / Data Integrity | `check`, `integrity`, `ids`, `links`, `backlinks`, `sources`, `tag`, `lint`, `deps`, `diff`, `snapshot`, `undo`, `cleanup`, `files` |
-| Import / Export / Reports | `import`, `import-ics`, `sync-ics`, `to-json`, `to-jsonl`, `to-csv`, `from-json`, `from-jsonl`, `from-csv`, `from-markdown`, `from-todo`, `to-ics`, `markdown`, `stats`, `plot`, `export-heatmap`, `standup`, `invoice`, `share`, `digest`, `report` |
+| Import / Export / Reports | `import`, `export`, `import-ics`, `sync-ics`, `to-json`, `to-jsonl`, `to-csv`, `from-json`, `from-jsonl`, `from-csv`, `from-markdown`, `from-todo`, `to-ics`, `markdown`, `stats`, `plot`, `export-heatmap`, `standup`, `invoice`, `share`, `digest`, `report` |
 | Interfaces / Integration | `tui`, `fzf`, `web`, `serve`, `mcp`, `ai`, `completion`, `git-hook`, `watch`, `remote` |
 | Workspace / Configuration / Safety | `config`, `workspace`, `path`, `doctor`, `format`, `safety`, `capabilities`, `attachment`, `update`, `update-check`, `server-init`, `server-update`, `server-report` |
 | Personal Context | `context`, `memory`, `decisions` |
@@ -1285,6 +1286,41 @@ python -m lifetxt to-json life.txt --occurrences --after 2026-06-01 --before 202
 python -m lifetxt to-csv life.txt --occurrences --after 2026-06-01 --before 2026-06-30 -o occurrences.csv
 ```
 
+### 4.10 `export`: the unified export entry point
+
+```sh
+python -m lifetxt export life.txt --format json -o life.json
+python -m lifetxt export life.txt --format jsonl -o life.jsonl
+python -m lifetxt export life.txt --format csv -o life.csv
+python -m lifetxt export life.txt --format markdown -o life.md
+python -m lifetxt export life.txt --format life -o subset.life.txt
+python -m lifetxt export life.txt --format sqlite -o life.db
+python -m lifetxt export life.txt --format lifetxtz -o life.lifetxtz
+```
+
+`export` is a routing-only dispatcher over the existing `to-json`, `to-jsonl`,
+`to-csv`, and `share --format markdown` implementations, plus the native
+`life`, `sqlite`, and `lifetxtz` formats below -- it contains no second
+serializer. `--format` is required; every filter option from
+[4.9](#49-export-filter-options) is accepted for every format. `--pretty`
+applies to `json`; `--canonical` applies to `life` (rewrite indentation as
+explicit `parent:` links, matching `filter --canonical`); `--title`, `--week`,
+and `--month` apply to `markdown` (matching `share`'s own range-label
+options).
+
+| `--format` | Equivalent to | Fidelity |
+|---|---|---|
+| `json` | `to-json` | machine-readable, filtered |
+| `jsonl` | `to-jsonl` | machine-readable, filtered |
+| `csv` | `to-csv` | machine-readable, filtered |
+| `markdown` | `share --format markdown` | human-readable report |
+| `life` | `filter` (native output) | native Format 1.0 semantics; see [5.3](#53-native-life-import-and-export) |
+| `sqlite` | -- | semantic item/detail round-trip; see [5.4](#54-sqlite-interchange) |
+| `lifetxtz` | -- | verified native payload fidelity; see [5.5](#55-lifetxtz-compressed-archive) |
+
+`sqlite` and `lifetxtz` are binary formats and require an explicit
+`-o`/`--output` file; they cannot be written to stdout.
+
 ## 5. iCalendar Import And Sync
 
 ### 5.0 `import`: the unified entry point
@@ -1491,6 +1527,121 @@ as `agenda`, `filter`, `to-json`, and `check`.
 When using `--merge-existing`, comments and unmatched hand-written lines in the
 generated output are preserved. Matching records are replaced by UID-backed
 generated events, and missing `source:ics` events can be soft-deleted.
+
+### 5.3 Native `life` import and export
+
+```sh
+python -m lifetxt export life.txt --format life -o subset.life.txt
+python -m lifetxt import subset.life.txt --preset life -o restored.life.txt
+python -m lifetxt import subset.life.txt --preset life -o life.txt --append
+```
+
+`--format life`/`--preset life` treat lifetxt's own native representation as
+an explicit, first-class conversion format so native data can be moved,
+filtered, validated, and merged through the same discoverable surface used
+for JSON/CSV/Markdown, instead of only through direct file editing.
+
+- **Export** (`export --format life`, equivalent to `filter` with the
+  default/native output) reuses the existing parser, filter, and native
+  rendering path. Items keep their exact original text, including repeated
+  detail keys, custom fields, `\|`-continuation multiline `body:`/`note:`
+  values, `id:`/link details, and mixed item types. Pass `--canonical` to
+  flatten indentation into explicit `parent:` links instead (matching
+  `filter --canonical`).
+- **Import** (`import --preset life`, or `import-ics --preset life`) parses
+  and validates the source through the authoritative parser *before* writing
+  or appending anything; a syntax error refuses the write entirely rather
+  than producing a partially-imported file. A `*.life.txt` input infers
+  `--preset life` automatically; a plain `.txt` is never guessed, because it
+  may hold other text content.
+- **Fidelity boundary**: item records round-trip losslessly (their exact
+  original line/continuation text is reused). Blank lines, `#` comments, and
+  file-level `#!KEY: VALUE` directives are **not** carried through import,
+  the same limitation every other item-based command in this CLI already has
+  (comments/directives are not part of the `Item` model `parse_text` returns).
+  If the source has directives, `import --preset life` prints a warning
+  naming them instead of dropping them silently.
+
+Examples:
+
+```sh
+python -m lifetxt export life.txt --format life --project research -o research.life.txt
+python -m lifetxt export life.txt --format life --canonical -o flattened.life.txt
+python -m lifetxt import research.life.txt --preset life -o archive/research.life.txt
+```
+
+### 5.4 SQLite interchange
+
+```sh
+python -m lifetxt export life.txt --format sqlite -o life.db
+python -m lifetxt import life.db --preset sqlite -o restored.life.txt
+```
+
+`--format sqlite` / `--preset sqlite` write and read a versioned relational
+interchange database (schema `lifetxt-sqlite-v1`, defined in
+[format-sqlite-interchange-v1.md](format-sqlite-interchange-v1.md)) using
+only the Python standard library `sqlite3` module -- no new dependency.
+
+- **SQLite is an interchange representation, not lifetxt's authoritative
+  store.** Plain `life.txt` remains authoritative; there is no live sync
+  and no watch mode.
+- The database has three tables -- `metadata`, `items`, `details` -- and can
+  be queried directly with any SQL client:
+
+  ```sh
+  sqlite3 life.db "SELECT status, kind, title FROM items ORDER BY item_seq;"
+  sqlite3 life.db "SELECT i.title, d.key, d.value FROM items i JOIN details d ON d.item_seq = i.item_seq WHERE i.kind = 'T';"
+  ```
+
+- Export is transactional: the database is built at a private temporary
+  path and only committed to `-o`/`--output` on success, so a failure never
+  leaves a partial `.db` file. `-o`/`--output` is required -- SQLite is a
+  binary format and cannot be written to stdout.
+- Import refuses a foreign/corrupt database, a missing or mismatched
+  `schema_version`, or a missing `items`/`details` table, before returning
+  any item -- see the schema document's own validation order.
+- `.db`, `.sqlite`, and `.sqlite3` all infer `--preset sqlite` for `import`.
+- Item order, every detail key (including custom/repeated keys and their
+  value order), and multiline `body:` values round-trip semantically; the
+  original file's indentation is flattened into explicit `parent:` links
+  (the same normalization `filter --canonical` already performs), and
+  blank lines/comments/`#!` directives are not part of the item model and
+  do not round-trip. See the schema document for the full contract,
+  including its determinism boundary.
+
+### 5.5 `.lifetxtz` compressed archive
+
+```sh
+python -m lifetxt export life.txt --format lifetxtz -o life.lifetxtz
+python -m lifetxt import life.lifetxtz -o restored.life.txt
+```
+
+`--format lifetxtz`/`.lifetxtz` inputs to `import` write and read a
+versioned, compressed, integrity-checked native archive (container
+`lifetxtz-v1`, defined in
+[format-lifetxtz-v1.md](format-lifetxtz-v1.md)), using only the standard
+library `zipfile`/`hashlib` -- no new dependency.
+
+- **`.lifetxtz` is a compact storage/transfer container, not lifetxt's
+  authoritative store.** Plain `life.txt` remains authoritative; the
+  archive holds exactly one canonicalized native payload and nothing else
+  (no attachments, config, or history).
+- The archive is a standard ZIP containing exactly `manifest.json` (a
+  small integrity/identity record with a SHA-256 of the payload) and
+  `data.life.txt` (the canonical native payload) -- any other member set,
+  including duplicates or extras, is refused.
+- Import verifies the container version, manifest structure, and payload
+  checksum, and enforces bounded decompression size limits *before*
+  decompressing anything, so a corrupt or maliciously crafted archive is
+  refused rather than partially processed. It never extracts a member to
+  the filesystem by path -- only the two fixed member names are ever read
+  into memory -- so path traversal is not possible.
+- `-o`/`--output` is required for export; `.lifetxtz` is a binary format
+  and cannot be written to stdout.
+- Given the same filtered item set and options, the payload -- and
+  therefore its checksum -- is always byte-identical; the full archive is
+  byte-identical too when the export timestamp is held equal. See the
+  format document for the exact determinism contract.
 
 ## 6. `filter`
 

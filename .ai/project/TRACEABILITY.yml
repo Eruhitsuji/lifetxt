@@ -11243,6 +11243,266 @@ traceability:
         null pointing at a sub-PR that was never opened.
       status: implemented
 
+    - requirement_id: req-export-unified-dispatcher
+      capability_id: cap-import-export-format-expansion
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/687
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/688
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/694
+      changed_files_or_scope:
+        - Add `lifetxt export --format json|jsonl|csv|markdown`, a routing-only dispatcher over the existing to-json/to-jsonl/to-csv/share implementations via an extensible EXPORT_FORMAT_HANDLERS registry
+        - lifetxt/cli.py
+        - lifetxt/cli_taxonomy.py
+        - tests/test_lifetxt.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - tests/test_lifetxt.py LifeTxtExportCliTests (9 tests): byte-for-byte parity against to-json/to-jsonl/to-csv/share --format markdown for filtered and unfiltered input, output-file parity, argparse rejection of an unsupported/missing format, --help
+        - .venv/Scripts/python.exe -m unittest tests.test_lifetxt.LifeTxtExportCliTests -> Ran 9 tests, OK
+        - .venv/Scripts/python.exe -m unittest tests.test_cli_taxonomy tests.test_completion_surfaces tests.test_completion_values -> Ran 97 tests, OK (skipped=1)
+        - .venv/Scripts/python.exe -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check lifetxt/cli.py lifetxt/cli_taxonomy.py tests/test_lifetxt.py -> clean
+      release_or_deployment: null
+      notes: >-
+        First implementation task of the #687 import/export-format-expansion
+        batch (decomposed into #688-#693), landing on its own child branch
+        merged locally into feature/687-693-import-export-formats before a
+        final human-approved PR into main. EXPORT_FORMAT_HANDLERS contains no
+        duplicate JSON/JSONL/CSV/Markdown serializer logic: every handler is
+        the exact pre-existing command function (command_to_json,
+        command_to_jsonl, command_to_csv, command_share). The registry is
+        populated at module bottom via register_export_format() calls, after
+        every handler function is defined, avoiding a forward-reference
+        NameError while keeping "add a new format" a single registration call
+        for #689/#691/#693 rather than a second export framework.
+        pull_request is now filled in (PR #694).
+      status: implemented
+
+    - requirement_id: req-native-life-import-export
+      capability_id: cap-import-export-format-expansion
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/687
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/689
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/694
+      changed_files_or_scope:
+        - Extract copy_item/canonical_hierarchy_items/items_to_life_text from cli.py into lifetxt/native_codec.py as the shared native payload boundary; delegate cli.py's private wrappers to it unchanged
+        - Register `life` as a lifetxt export format (reusing command_filter's existing native-output branch) and as an import preset (parse+validate through the authoritative parser before any write, reusing item.source_text for round-trip fidelity)
+        - Infer --preset life only for the unambiguous *.life.txt compound extension; a plain .txt is never guessed
+        - "Warn (not silently drop) when #!directive lines are present in life-preset import input, since they are not part of the Item model and cannot round-trip"
+        - lifetxt/native_codec.py
+        - lifetxt/cli.py
+        - tests/test_lifetxt.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - "tests/test_lifetxt.py LifeTxtNativeLifeFormatTests (8 tests): export --format life matches filter (plain and --canonical), export-then-import round-trips repeated detail keys and multiline body continuation byte-for-byte, *.life.txt extension inference, plain .txt never guessed, invalid syntax refused before any write (destination file never created), --append merges into an existing file, dropped directive lines produce an explicit stderr warning naming them"
+        - .venv/Scripts/python.exe -m unittest tests.test_lifetxt.LifeTxtNativeLifeFormatTests -> Ran 8 tests, OK
+        - .venv/Scripts/python.exe -m unittest tests.test_lifetxt.LifeTxtExportCliTests tests.test_lifetxt.LifeTxtFilterCliTests tests.test_lifetxt.LifeTxtIcsImportCliTests -> Ran 45 tests, OK
+        - .venv/Scripts/python.exe -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check lifetxt/cli.py lifetxt/native_codec.py tests/test_lifetxt.py -> clean
+      release_or_deployment: null
+      notes: >-
+        Second implementation task of the #687 batch, depending on #688's
+        EXPORT_FORMAT_HANDLERS registry. native_codec.py has no dependency on
+        cli.py, so the sqlite (#691) and lifetxtz (#693) codec modules can
+        import it directly without a circular import through cli.py, which
+        both import to register their own export/import formats. Item
+        records round-trip exactly (source_text, including `|` continuation
+        lines, is reused verbatim); blank lines, `#` comments, and
+        `#!KEY:VALUE` directives are not part of the Item model
+        parse_text returns and are therefore not carried through import --
+        the same limitation every other item-based command in this
+        codebase already has. A directive-specific warning was added since
+        directives (e.g. #!timezone:) carry semantic configuration that
+        would otherwise be silently lost with no diagnostic at all.
+        pull_request is now filled in (PR #694).
+      status: implemented
+
+    - requirement_id: req-sqlite-interchange-spec
+      capability_id: cap-import-export-format-expansion
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/687
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/690
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/694
+      changed_files_or_scope:
+        - Define the lifetxt-sqlite-v1 schema (metadata/items/details), round-trip contract, determinism boundary, import refusal order, export transaction/atomic-write safety, and extension-recognition rules
+        - docs/en/format-sqlite-interchange-v1.md
+      tests_or_evidence:
+        - manual review against every §690 acceptance-criterion bullet (schema DDL, representative mappings for Task/repeated tags/Journal-multiline-body, extension rules, determinism/refusal definitions)
+        - the schema is reused verbatim, unmodified, by #691's implementation (see that entry's own evidence)
+      release_or_deployment: null
+      notes: >-
+        Design/specification only, per #690's own forbidden scope (no
+        runtime implementation code, no CLI changes). High assurance per the
+        issue's own recommendation (durable data-interchange schema);
+        repository owner authorized this entire #687 batch's autonomous
+        implementation, including treating this schema as frozen for #691
+        to implement against in the same session, per the explicit request
+        to implement all of #687-693 end to end on one integration branch.
+        Canonicalizes hierarchy at export time (flattening indent into an
+        explicit parent: detail) rather than storing an indent column, so
+        SQLite's own item representation stays uniform with #689's existing
+        canonical rendering path -- no second hierarchy model. Determinism
+        is deliberately scoped to row content/order, not SQLite file bytes,
+        since SQLite's own on-disk B-tree layout is not something lifetxt
+        controls; full byte determinism is reserved for lifetxtz-v1 (#692).
+      status: implemented
+
+    - requirement_id: req-sqlite-interchange-implementation
+      capability_id: cap-import-export-format-expansion
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/687
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/691
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/694
+      changed_files_or_scope:
+        - Add lifetxt/sqlite_codec.py implementing lifetxt-sqlite-v1 (metadata/items/details schema, transactional export via atomic_write_bytes, validated import refusing foreign/corrupt/version-mismatched databases before returning any item)
+        - Register `sqlite` as an export format and an import preset (.db/.sqlite/.sqlite3 extension inference)
+        - "Fix a real, previously-unreachable bug: the CLI timezone-context bootstrap's candidate-file scan had no extension filter and crashed with an uncaught UnicodeDecodeError on a binary .db path; fixed in both the active (safety_compat_v2) and original (runtime_safety_v2) installer closures"
+        - lifetxt/sqlite_codec.py
+        - lifetxt/cli.py
+        - lifetxt/runtime_safety_v2.py
+        - lifetxt/safety_compat_v2.py
+        - tests/test_sqlite_codec.py
+        - tests/test_lifetxt.py
+        - tests/test_cli_timezone_context_v2.py
+        - docs/en/cli.md
+      tests_or_evidence:
+        - "tests/test_sqlite_codec.py (13 tests): metadata rows, item order + repeated-detail-key round trip, indentation canonicalized into parent: links, deterministic row content/order across two exports, multiline body value round trip, failed export leaves no partial destination, full round trip through import, missing/non-sqlite/foreign/version-mismatched/details-table-missing databases all refused"
+        - .venv/Scripts/python.exe -m unittest tests.test_sqlite_codec -> Ran 13 tests, OK
+        - "tests/test_lifetxt.py LifeTxtSqliteCliTests (5 tests): export-then-import CLI round trip including a `check` pass on the restored file, .sqlite extension inference, --format sqlite requires -o, a corrupt database refused before any write, --type filtering applies to sqlite export"
+        - .venv/Scripts/python.exe -m unittest tests.test_lifetxt.LifeTxtSqliteCliTests -> Ran 5 tests, OK
+        - "confirmed the timezone-bootstrap bug is real and reproducible: `python -m lifetxt import life.db --preset sqlite -o out.life.txt` crashed with 'utf-8 codec can't decode byte 0x89' before the fix, even though calling command_import_ics()/command_import() directly in-process succeeded -- isolated to lifetxt.runtime_safety_v2.install_cli_timezone_context's argv candidate-path scan, which has no extension filter and only caught OSError, not UnicodeDecodeError, around its read_text_exact() call"
+        - tests/test_cli_timezone_context_v2.py CliTimezoneContextWorkspaceIntegrationTests.test_a_binary_candidate_path_does_not_crash_the_bootstrap (new regression test)
+        - .venv/Scripts/python.exe -m unittest tests.test_cli_timezone_context_v2 tests.test_timezone_policy_v2 -> Ran 27 tests, OK
+        - .venv/Scripts/python.exe -m unittest tests.test_cli_taxonomy tests.test_completion_surfaces tests.test_completion_values -> Ran 97 tests, OK (skipped=1)
+        - .venv/Scripts/python.exe -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on every changed file -> clean
+      release_or_deployment: null
+      notes: >-
+        Fourth implementation task of the #687 batch, implementing the
+        lifetxt-sqlite-v1 schema #690 froze unmodified: no schema/fidelity
+        decision was reopened during implementation. High assurance per
+        #690/#691's own recommendation (durable data-interchange schema);
+        repository owner authorized this entire #687 batch's autonomous
+        implementation on one integration branch. The timezone-bootstrap fix
+        was found only because this is the first binary format ever passed
+        as a CLI positional path argument in this codebase -- every prior
+        import format (.ics/.md/.csv/.json) happens to be valid UTF-8, so
+        the same pre-existing, unfiltered candidate-path scan never hit this
+        code path before. Fixed directly in this task (not deferred as a
+        follow-up) since it is the same root cause this task's own new
+        surface exposes, per this project's Horizontal Review Scope
+        Discipline; the same fix also protects the upcoming lifetxtz preset
+        (#693), which is equally binary.
+        pull_request is now filled in (PR #694).
+      status: implemented
+
+    - requirement_id: req-lifetxtz-format-spec
+      capability_id: cap-import-export-format-expansion
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/687
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/692
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/694
+      changed_files_or_scope:
+        - Define lifetxtz-v1 (ZIP container, exactly manifest.json + data.life.txt, SHA-256 integrity, deterministic normalized ZIP metadata, decompression resource limits, refusal order, extension recognition)
+        - docs/en/format-lifetxtz-v1.md
+      tests_or_evidence:
+        - manual review against every #692 acceptance-criterion bullet (manifest schema, deterministic archive requirements, refusal behavior, decompression limits, path-traversal-impossible-by-construction member rules)
+        - the schema is reused verbatim, unmodified, by #693's implementation (see that entry's own evidence)
+      release_or_deployment: null
+      notes: >-
+        Design/specification only, per #692's own forbidden scope (no
+        runtime implementation code, no CLI changes). High assurance per
+        the issue's own recommendation (durable serialized container plus
+        untrusted compressed-input boundary); repository owner authorized
+        this entire #687 batch's autonomous implementation, including
+        treating this contract as frozen for #693 to implement against in
+        the same session. The payload reuses #689's native rendering
+        boundary directly (canonical=True), so this format has no second
+        item-serialization implementation. Import never calls
+        ZipFile.extract()/extractall(); only ZipFile.read() against the two
+        literal, fixed member names is used, which makes path traversal
+        impossible by construction rather than merely checked for. Member
+        size ceilings are checked against the ZIP central directory's
+        declared (not inflated) size before any decompression, so a
+        zip-bomb cannot force unbounded allocation regardless of
+        compression ratio.
+        pull_request is now filled in (PR #694).
+      status: implemented
+
+    - requirement_id: req-lifetxtz-implementation
+      capability_id: cap-import-export-format-expansion
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/687
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/693
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/694
+      changed_files_or_scope:
+        - Add lifetxt/lifetxtz_codec.py implementing lifetxtz-v1 (exactly manifest.json + data.life.txt, SHA-256 integrity, deterministic normalized ZIP metadata, declared-size resource limits checked before decompression, read()-only member access)
+        - Register `lifetxtz` as an export format and an import preset (.lifetxtz extension inference)
+        - lifetxt/lifetxtz_codec.py
+        - lifetxt/cli.py
+        - tests/test_lifetxtz_codec.py
+        - tests/test_lifetxt.py
+        - docs/en/cli.md
+      tests_or_evidence:
+        - "tests/test_lifetxtz_codec.py (14 tests): exactly the two required members, manifest field shape/checksum/byte-count, byte-identical archives given the same created_at, indentation canonicalized into parent: links, failed export leaves no partial destination, round trip recovers the exact payload, refusal of a non-zip file / foreign zip / extra member / path-traversal member name / mismatched container version / checksum mismatch / oversized declared payload (rejected before decompression) / a missing manifest field"
+        - .venv/Scripts/python.exe -m unittest tests.test_lifetxtz_codec -> Ran 14 tests, OK
+        - "tests/test_lifetxt.py LifeTxtLifetxtzCliTests (4 tests): export-then-import CLI round trip including a `check` pass on the restored file, --format lifetxtz requires -o, a corrupt archive refused before any write, --type filtering applies to lifetxtz export"
+        - .venv/Scripts/python.exe -m unittest tests.test_lifetxt.LifeTxtLifetxtzCliTests -> Ran 4 tests, OK
+        - 'scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> {"errors": 0, "ok": true}'
+        - .venv/Scripts/python.exe -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on every changed file -> clean
+      release_or_deployment: null
+      notes: >-
+        Sixth and final implementation task of the #687 batch, implementing
+        the lifetxtz-v1 container #692 froze unmodified: no container/
+        fidelity/security decision was reopened during implementation. High
+        assurance per #692/#693's own recommendation (durable serialized
+        container consuming untrusted compressed input); repository owner
+        authorized this entire #687 batch's autonomous implementation on
+        one integration branch. The oversized-declared-payload resource-
+        limit test confirms the codec never attempts to decompress a
+        member whose central-directory-declared size exceeds its ceiling,
+        so a zip-bomb-style archive cannot force unbounded memory
+        allocation regardless of compression ratio. The #691 timezone-
+        bootstrap fix (catching UnicodeDecodeError alongside OSError around
+        the CLI-wide candidate-path scan) already covers this codec's own
+        binary .lifetxtz paths with no further change needed here,
+        confirmed by LifeTxtLifetxtzCliTests passing unmodified on first
+        run. This entry closes all six #687 child issues (#688-#693);
+        pull_request is now filled in (PR #694).
+      status: implemented
+
+    - requirement_id: req-687-693-import-export-formats-batch-integration
+      capability_id: cap-import-export-format-expansion
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/687
+      task_issue: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/694
+      changed_files_or_scope:
+        - Record the #687 batch's integration into main as its own traceable step
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - "MPLBACKEND=Agg python -W ignore::ResourceWarning -m unittest discover -> Ran 3972 tests, FAILED (failures=6, skipped=11), run on the fully consolidated feature/687-693-import-export-formats branch after all six sub-branches (#688-#693) merged"
+        - "all 6 failures are in tests.test_tui_remote_backend.RemoteTuiBackendEditorTests (Windows nvim.EXE/vim.EXE PATHEXT resolution); confirmed pre-existing by checking out tests/test_tui_remote_backend.py from origin/main unmodified and re-running -- the identical 3 failures reproduce there, and this branch's own diff never touches tests/test_tui_remote_backend.py, lifetxt/tui_backend.py, or lifetxt/fzf_helper.py"
+        - python -m unittest tests.test_traceability_gate tests.test_change_package_closeout -> Ran 17 tests, OK
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - 'scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> {"errors": 0, "ok": true}'
+        - ruff format --check / ruff check on every changed file -> clean (repository-wide format check shows only pre-existing, unrelated drift in 13 files this branch never touches, confirmed present on origin/main already)
+        - "live end-to-end smoke: export/import round trip for json/life/sqlite/lifetxtz against a fixture with repeated tags, multiline body: continuation, and a parent: link; each restored file individually re-checked with zero warnings"
+      release_or_deployment: >-
+        This entry documents PR #694 itself: feature/687-693-import-export-formats
+        (Issues #688, #689, #690, #691, #692, #693, each on its own child
+        branch merged locally into the integration branch before this final
+        PR; #687 is the planning-only umbrella epic with no independent
+        implementation) merging into main.
+      notes: >-
+        Follows the multi-PR integration-branch pattern established
+        throughout this project (see req-remote-batch-integration and every
+        subsequent batch-integration entry in this file): every requirement
+        entry above correctly names its own child branch's work, and none
+        of them named this final PR before it existed. Self-scoped and
+        implemented autonomously per repository owner instruction to
+        implement #687-693 on one integration branch ending in one final
+        PR, with each child issue's own branch merged locally into the
+        integration branch before the final PR was opened. No epic issue
+        beyond #687 itself exists for this batch.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

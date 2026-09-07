@@ -8686,21 +8686,29 @@ capabilities:
     source_requirements:
       - req-export-unified-dispatcher
       - req-native-life-import-export
+      - req-sqlite-interchange-implementation
     implementation_locations:
       - lifetxt/cli.py
       - lifetxt/native_codec.py
+      - lifetxt/sqlite_codec.py
+      - lifetxt/runtime_safety_v2.py
+      - lifetxt/safety_compat_v2.py
       - tests/test_lifetxt.py
+      - tests/test_sqlite_codec.py
+      - tests/test_cli_timezone_context_v2.py
       - docs/en/cli.md
       - docs/ja/cli.md
       - docs/en/format-sqlite-interchange-v1.md
     public_interfaces:
-      - lifetxt export --format json|jsonl|csv|markdown|life
-      - lifetxt import --preset life
+      - lifetxt export --format json|jsonl|csv|markdown|life|sqlite
+      - lifetxt import --preset life|sqlite
       - lifetxt.cli.EXPORT_FORMAT_HANDLERS
       - lifetxt.cli.register_export_format
       - lifetxt.cli.register_import_preset
       - lifetxt.native_codec.items_to_life_text
       - lifetxt.native_codec.canonical_hierarchy_items
+      - lifetxt.sqlite_codec.export_sqlite
+      - lifetxt.sqlite_codec.import_sqlite
     tests_or_evidence:
       - "tests/test_lifetxt.py LifeTxtExportCliTests (9 tests): export --format json/jsonl/csv/markdown byte-for-byte matches to-json/to-jsonl/to-csv/share --format markdown for filtered and unfiltered input, output-file parity, unsupported-format/missing-format argparse rejection, --help"
       - .venv/Scripts/python.exe -m unittest tests.test_lifetxt.LifeTxtExportCliTests -> Ran 9 tests, OK
@@ -8710,11 +8718,20 @@ capabilities:
       - "tests/test_lifetxt.py LifeTxtNativeLifeFormatTests (8 tests): export --format life matches filter (both plain and --canonical), export-then-import round-trips repeated detail keys and multiline body: continuation byte-for-byte, *.life.txt extension inference, plain .txt never guessed, invalid syntax refused before any write, --append merges into an existing file, dropped #!directive lines produce an explicit warning naming them"
       - .venv/Scripts/python.exe -m unittest tests.test_lifetxt.LifeTxtNativeLifeFormatTests -> Ran 8 tests, OK
       - .venv/Scripts/python.exe -m unittest tests.test_lifetxt.LifeTxtExportCliTests tests.test_lifetxt.LifeTxtFilterCliTests tests.test_lifetxt.LifeTxtIcsImportCliTests -> Ran 45 tests, OK
+      - "tests/test_sqlite_codec.py (13 tests): metadata rows, item order + repeated-detail-key round trip, indentation canonicalized into parent: links, deterministic row content/order across two exports, multiline body value round trip, failed export leaves no partial destination, full round trip through import, missing/non-sqlite/foreign/version-mismatched/details-table-missing databases all refused"
+      - .venv/Scripts/python.exe -m unittest tests.test_sqlite_codec -> Ran 13 tests, OK
+      - "tests/test_lifetxt.py LifeTxtSqliteCliTests (5 tests): export-then-import CLI round trip (including a `check` pass on the restored file), .sqlite extension inference, --format sqlite requires -o, a corrupt database is refused before any write, --type filtering applies to sqlite export"
+      - .venv/Scripts/python.exe -m unittest tests.test_lifetxt.LifeTxtSqliteCliTests -> Ran 5 tests, OK
+      - "found and fixed a real, previously-unreachable bug while adding this coverage: lifetxt.runtime_safety_v2/safety_compat_v2's CLI timezone-context bootstrap scans every existing path named on argv (cli_timezone_candidate_paths has no extension filter) and read it as UTF-8 text looking for a #!timezone: directive; a binary .db path crashed that scan with an uncaught UnicodeDecodeError before the actual import command ever ran, since only OSError was caught -- fixed in both the active (safety_compat_v2) and original (runtime_safety_v2) installer closures by also catching UnicodeDecodeError and continuing to the next candidate"
+      - tests/test_cli_timezone_context_v2.py CliTimezoneContextWorkspaceIntegrationTests.test_a_binary_candidate_path_does_not_crash_the_bootstrap (new regression test, confirmed via manual revert to fail with the original UnicodeDecodeError before the fix)
+      - .venv/Scripts/python.exe -m unittest tests.test_cli_timezone_context_v2 tests.test_timezone_policy_v2 -> Ran 27 tests, OK
+      - ruff format --check / ruff check on every changed file -> clean
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/687
       - https://github.com/Eruhitsuji/lifetxt/issues/688
       - https://github.com/Eruhitsuji/lifetxt/issues/689
       - https://github.com/Eruhitsuji/lifetxt/issues/690
+      - https://github.com/Eruhitsuji/lifetxt/issues/691
     related_pull_requests: []
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
@@ -8727,7 +8744,14 @@ capabilities:
       a single small dict with no duplicated serializer logic. #689's native
       `life` format, #691's `sqlite` format, and #693's `lifetxtz` format
       each register into this same dict rather than growing a second export
-      framework, per #688's own scope contract.
+      framework, per #688's own scope contract. #691 implements the
+      `lifetxt-sqlite-v1` schema #690 froze, unmodified: sqlite_codec.py is
+      dependency-free (stdlib `sqlite3` only), canonicalizes hierarchy at
+      export time via native_codec.canonical_hierarchy_items (#689) rather
+      than a second hierarchy model, is transactional (builds at a private
+      temp path, commits via the shared atomic_write_bytes primitive, never
+      leaves a partial destination on failure), and refuses a foreign/
+      corrupt/version-mismatched database before returning any item.
     replacement:
       replaces: []
       replaced_by: null

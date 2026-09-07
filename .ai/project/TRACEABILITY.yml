@@ -11345,6 +11345,54 @@ traceability:
         controls; full byte determinism is reserved for lifetxtz-v1 (#692).
       status: implemented
 
+    - requirement_id: req-sqlite-interchange-implementation
+      capability_id: cap-import-export-format-expansion
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/687
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/691
+      pull_request: null
+      changed_files_or_scope:
+        - Add lifetxt/sqlite_codec.py implementing lifetxt-sqlite-v1 (metadata/items/details schema, transactional export via atomic_write_bytes, validated import refusing foreign/corrupt/version-mismatched databases before returning any item)
+        - Register `sqlite` as an export format and an import preset (.db/.sqlite/.sqlite3 extension inference)
+        - "Fix a real, previously-unreachable bug: the CLI timezone-context bootstrap's candidate-file scan had no extension filter and crashed with an uncaught UnicodeDecodeError on a binary .db path; fixed in both the active (safety_compat_v2) and original (runtime_safety_v2) installer closures"
+        - lifetxt/sqlite_codec.py
+        - lifetxt/cli.py
+        - lifetxt/runtime_safety_v2.py
+        - lifetxt/safety_compat_v2.py
+        - tests/test_sqlite_codec.py
+        - tests/test_lifetxt.py
+        - tests/test_cli_timezone_context_v2.py
+        - docs/en/cli.md
+      tests_or_evidence:
+        - "tests/test_sqlite_codec.py (13 tests): metadata rows, item order + repeated-detail-key round trip, indentation canonicalized into parent: links, deterministic row content/order across two exports, multiline body value round trip, failed export leaves no partial destination, full round trip through import, missing/non-sqlite/foreign/version-mismatched/details-table-missing databases all refused"
+        - .venv/Scripts/python.exe -m unittest tests.test_sqlite_codec -> Ran 13 tests, OK
+        - "tests/test_lifetxt.py LifeTxtSqliteCliTests (5 tests): export-then-import CLI round trip including a `check` pass on the restored file, .sqlite extension inference, --format sqlite requires -o, a corrupt database refused before any write, --type filtering applies to sqlite export"
+        - .venv/Scripts/python.exe -m unittest tests.test_lifetxt.LifeTxtSqliteCliTests -> Ran 5 tests, OK
+        - "confirmed the timezone-bootstrap bug is real and reproducible: `python -m lifetxt import life.db --preset sqlite -o out.life.txt` crashed with 'utf-8 codec can't decode byte 0x89' before the fix, even though calling command_import_ics()/command_import() directly in-process succeeded -- isolated to lifetxt.runtime_safety_v2.install_cli_timezone_context's argv candidate-path scan, which has no extension filter and only caught OSError, not UnicodeDecodeError, around its read_text_exact() call"
+        - tests/test_cli_timezone_context_v2.py CliTimezoneContextWorkspaceIntegrationTests.test_a_binary_candidate_path_does_not_crash_the_bootstrap (new regression test)
+        - .venv/Scripts/python.exe -m unittest tests.test_cli_timezone_context_v2 tests.test_timezone_policy_v2 -> Ran 27 tests, OK
+        - .venv/Scripts/python.exe -m unittest tests.test_cli_taxonomy tests.test_completion_surfaces tests.test_completion_values -> Ran 97 tests, OK (skipped=1)
+        - .venv/Scripts/python.exe -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on every changed file -> clean
+      release_or_deployment: null
+      notes: >-
+        Fourth implementation task of the #687 batch, implementing the
+        lifetxt-sqlite-v1 schema #690 froze unmodified: no schema/fidelity
+        decision was reopened during implementation. High assurance per
+        #690/#691's own recommendation (durable data-interchange schema);
+        repository owner authorized this entire #687 batch's autonomous
+        implementation on one integration branch. The timezone-bootstrap fix
+        was found only because this is the first binary format ever passed
+        as a CLI positional path argument in this codebase -- every prior
+        import format (.ics/.md/.csv/.json) happens to be valid UTF-8, so
+        the same pre-existing, unfiltered candidate-path scan never hit this
+        code path before. Fixed directly in this task (not deferred as a
+        follow-up) since it is the same root cause this task's own new
+        surface exposes, per this project's Horizontal Review Scope
+        Discipline; the same fix also protects the upcoming lifetxtz preset
+        (#693), which is equally binary.
+        pull_request is filled in once the final integration PR is opened.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

@@ -104,6 +104,7 @@ from .links import (
 )
 from .markdown import markdown_to_html, markdown_to_plain
 from .model import Diagnostic, Item
+from . import native_codec
 from .timezone_policy import local_now_naive, today as timezone_today
 from .timeutil import format_datetime, parse_date_or_datetime, relative_time
 from .notifier import (
@@ -753,35 +754,38 @@ def build_parser():
     _add_import_core_arguments(import_ics)
     import_ics.add_argument(
         "--preset",
-        choices=("ics", "markdown", "todoist", "github"),
+        choices=tuple(IMPORT_PRESETS),
         default="ics",
         help=(
             "Source preset. Default 'ics' converts VEVENT entries; "
             "'markdown' imports Markdown task lists, 'todoist' imports Todoist CSV exports, "
-            "and 'github' imports GitHub Issues JSON exports."
+            "'github' imports GitHub Issues JSON exports, and 'life' parses/validates native "
+            "life.txt through the authoritative parser before writing."
         ),
     )
     import_ics.set_defaults(func=command_import_ics)
 
     import_command = subparsers.add_parser(
         "import",
-        help="Unified entry point for import-ics's ics/markdown/todoist/github presets.",
+        help="Unified entry point for import-ics's presets: ics/markdown/todoist/github/life/...",
         description=(
             "Routing-only dispatcher over the existing import-ics implementation: "
-            "no second ICS/Markdown/Todoist/GitHub conversion. A .ics input infers "
-            "--preset ics and a .md/.markdown input infers --preset markdown; every "
-            "other input (including .csv and .json) requires an explicit --preset."
+            "no second ICS/Markdown/Todoist/GitHub/native conversion. A .ics input "
+            "infers --preset ics, a .md/.markdown input infers --preset markdown, "
+            "and a *.life.txt input infers --preset life; every other input "
+            "(including .csv and .json) requires an explicit --preset."
         ),
     )
     _add_import_core_arguments(import_command)
     import_command.add_argument(
         "--preset",
-        choices=("ics", "markdown", "todoist", "github"),
+        choices=tuple(IMPORT_PRESETS),
         default=None,
         help=(
             "Source preset. Inferred from the input file extension when omitted: "
-            "'ics' for .ics, 'markdown' for .md/.markdown. Required for every "
-            "other input, including .csv (todoist) and .json (github)."
+            "'ics' for .ics, 'markdown' for .md/.markdown, 'life' for *.life.txt. "
+            "Required for every other input, including .csv (todoist) and .json "
+            "(github)."
         ),
     )
     import_command.set_defaults(func=command_import)
@@ -5459,6 +5463,43 @@ _IMPORT_EXTENSION_PRESETS = {
     ".markdown": "markdown",
 }
 
+#: Every supported --preset value, in the order shown to users. Extended by
+#: register_import_preset() for formats that ship in their own module
+#: (sqlite: #691, lifetxtz: #693) so command_import_ics/command_import don't
+#: need to import those modules unconditionally.
+IMPORT_PRESETS = ["ics", "markdown", "todoist", "github", "life"]
+
+#: preset name -> (path, items, args) -> list[Item]. Registered by codec
+#: modules that need direct file access (binary formats): sqlite/lifetxtz.
+#: The "life" preset is handled inline below since it only needs read_text.
+IMPORT_PRESET_HANDLERS = {}
+
+
+def register_import_preset(name, handler):
+    """Register an additional `import --preset NAME` handler.
+
+    ``handler(path, args) -> list[Item]`` receives the raw path (never
+    pre-read as text, since binary formats such as sqlite/lifetxtz cannot be
+    decoded as UTF-8) and must raise on invalid/corrupt/unsupported input
+    before returning -- see #691/#693.
+    """
+    IMPORT_PRESETS.append(name)
+    IMPORT_PRESET_HANDLERS[name] = handler
+
+
+def _compound_extension_preset(candidate):
+    """Detect an unambiguous compound extension such as *.life.txt.
+
+    Plain os.path.splitext only ever returns the final extension, so
+    "subset.life.txt" resolves to ".txt" -- indistinguishable from an
+    arbitrary text file. Native life.txt is only inferred for the explicit,
+    unambiguous ".life.txt" suffix (#689); a plain ".txt" is never guessed.
+    """
+    lower = candidate.lower()
+    if lower.endswith(".life.txt"):
+        return "life"
+    return None
+
 
 def command_import(args):
     """Routing-only dispatcher: infer --preset from the input extension when
@@ -5476,15 +5517,17 @@ def command_import(args):
         if candidate is None:
             raise ValueError(
                 "Cannot determine the import format without --preset. Reading "
-                "from stdin requires an explicit --preset: ics, markdown, "
-                "todoist, or github."
+                "from stdin requires an explicit --preset: %s."
+                % ", ".join(IMPORT_PRESETS)
             )
-        ext = os.path.splitext(candidate)[1].lower()
-        preset = _IMPORT_EXTENSION_PRESETS.get(ext)
+        preset = _compound_extension_preset(candidate)
+        if preset is None:
+            ext = os.path.splitext(candidate)[1].lower()
+            preset = _IMPORT_EXTENSION_PRESETS.get(ext)
         if preset is None:
             raise ValueError(
                 "Cannot determine the import format for '%s'. Pass --preset "
-                "explicitly: ics, markdown, todoist, or github." % candidate
+                "explicitly: %s." % (candidate, ", ".join(IMPORT_PRESETS))
             )
         args.preset = preset
     return command_import_ics(args)
@@ -5497,6 +5540,29 @@ def command_import_ics(args):
     items = []
     preset = getattr(args, "preset", "ics") or "ics"
     for path in _normalize_paths(args.paths):
+        if preset in IMPORT_PRESET_HANDLERS:
+            items.extend(IMPORT_PRESET_HANDLERS[preset](path, args))
+            continue
+        if preset == "life":
+            text = read_text(path)
+            id_key = id_key_from_config(_config(args))
+            path_items, path_diagnostics = parse_text(
+                text, id_key=id_key, check_ids=False, check_references=False
+            )
+            if _has_error(path_diagnostics):
+                _print_diagnostics(path_diagnostics)
+                return 1
+            _print_warnings(path_diagnostics)
+            directives = parse_directives(text)
+            if directives:
+                sys.stderr.write(
+                    "WARNING: %s: %d directive line(s) (%s) are not preserved "
+                    "by `import --preset life`; edit the file directly if you "
+                    "need them.\n"
+                    % (path, len(directives), ", ".join(sorted(directives)))
+                )
+            items.extend(path_items)
+            continue
         text = read_text(path)
         if preset == "ics":
             items.extend(
@@ -5546,7 +5612,12 @@ def command_import_ics(args):
         return 1
     _print_warnings(diagnostics)
 
-    output = _items_to_life_text(items, canonical=True)
+    # Native life.txt input already carries its own exact original text per
+    # item (source_text, including | continuation lines); reuse it verbatim
+    # for round-trip fidelity instead of re-canonicalizing it. Every other
+    # preset builds synthetic items with no original life.txt text to
+    # preserve, so those keep the existing canonical rendering.
+    output = _items_to_life_text(items, canonical=(preset != "life"))
     if args.append:
         _ensure_writable_path(args.output, _config(args), "import-ics")
         append_text(args.output, output)
@@ -15060,56 +15131,22 @@ def _validated_life_text_or_exit(items, canonical=False, key="id"):
 
 
 def _items_to_life_text(items, canonical=False, key="id"):
-    if canonical:
-        items = _canonical_hierarchy_items(items, key=key)
-    lines = []
-    for item in items:
-        if canonical:
-            lines.append(item_to_line(item))
-        else:
-            lines.append(getattr(item, "source_text", None) or item_to_line(item))
-    text = "\n".join(lines)
-    if text:
-        text += "\n"
-    return text
+    """Render items as native life.txt text.
+
+    Delegates to lifetxt.native_codec (#689), the shared payload boundary
+    also used by the sqlite (#691) and lifetxtz (#693) codecs, so this
+    module keeps exactly one implementation of native rendering.
+    """
+    return native_codec.items_to_life_text(items, canonical=canonical, key=key)
 
 
 def _canonical_hierarchy_items(items, key="id"):
     """Return item copies with explicit parent: links and no indentation."""
-    canonical = []
-    stack = []
-    for item in items:
-        cloned = _copy_item(item)
-        indent = int(getattr(item, "indent", 0) or 0)
-        while stack and stack[-1][0] >= indent:
-            stack.pop()
-
-        if indent > 0 and not cloned.details.get("parent") and stack:
-            parent = stack[-1][1]
-            parent_ids = parent.details.get(key, [])
-            if parent_ids:
-                cloned.details.setdefault("parent", []).append(parent_ids[0])
-
-        cloned.indent = 0
-        canonical.append(cloned)
-        stack.append((indent, cloned))
-    return canonical
+    return native_codec.canonical_hierarchy_items(items, key=key)
 
 
 def _copy_item(item):
-    cloned = Item(
-        item.status,
-        item.kind,
-        item.title,
-        OrderedDict((key, list(values)) for key, values in item.details.items()),
-        line=item.line,
-        source_text=getattr(item, "source_text", None),
-        source=getattr(item, "source", None),
-        indent=getattr(item, "indent", 0),
-    )
-    if hasattr(item, "end_line"):
-        cloned.end_line = item.end_line
-    return cloned
+    return native_codec.copy_item(item)
 
 
 def format_id_audit(audit, only="all"):
@@ -16987,3 +17024,4 @@ register_export_format("json", command_to_json)
 register_export_format("jsonl", command_to_jsonl)
 register_export_format("csv", command_to_csv)
 register_export_format("markdown", command_share)
+register_export_format("life", command_filter)

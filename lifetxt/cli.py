@@ -786,6 +786,49 @@ def build_parser():
     )
     import_command.set_defaults(func=command_import)
 
+    export_command = subparsers.add_parser(
+        "export",
+        help="Unified entry point for exporting life.txt to json/jsonl/csv/markdown/life.",
+        description=(
+            "Routing-only dispatcher over the existing to-json/to-jsonl/to-csv/"
+            "share exporters: no second JSON/JSONL/CSV/Markdown serializer. "
+            "See EXPORT_FORMAT_HANDLERS for the small registration seam other "
+            "formats (native life, sqlite, lifetxtz) extend."
+        ),
+    )
+    _add_input_paths(export_command)
+    export_command.add_argument(
+        "--format",
+        required=True,
+        choices=sorted(EXPORT_FORMAT_HANDLERS),
+        help="Output format.",
+    )
+    export_command.add_argument(
+        "-o", "--output", help="Output file. Defaults to stdout for text formats."
+    )
+    export_command.add_argument(
+        "--pretty", action="store_true", help="Pretty-print JSON."
+    )
+    export_command.add_argument(
+        "--canonical",
+        action="store_true",
+        help="For --format life: rewrite indentation as explicit parent: links.",
+    )
+    export_command.add_argument("--title", help="For --format markdown: report title.")
+    export_command.add_argument(
+        "--week",
+        action="store_true",
+        help="For --format markdown: restrict range label to the current ISO week.",
+    )
+    export_command.add_argument(
+        "--month",
+        metavar="YYYY-MM",
+        help="For --format markdown: restrict range label to a specific calendar month.",
+    )
+    _add_item_filter_arguments(export_command)
+    _add_occurrence_export_arguments(export_command)
+    export_command.set_defaults(func=command_export)
+
     sync_ics = subparsers.add_parser(
         "sync-ics",
         help="Fetch iCalendar .ics URLs and write generated life.txt event items.",
@@ -5045,6 +5088,38 @@ def command_to_csv(args):
     write_text(args.output, output)
     _print_warnings(diagnostics)
     return 0
+
+
+#: Export-format dispatch registry for `lifetxt export --format ...`.
+#:
+#: Each handler is an existing, independently-tested command function
+#: (command_to_json, command_share, ...); this dict never contains a second
+#: implementation of any serializer. New formats (native life, sqlite,
+#: lifetxtz) register here rather than growing a second export framework --
+#: see #688/#689/#691/#693. Populated at the bottom of this module (after
+#: every handler function is defined) via register_export_format calls.
+EXPORT_FORMAT_HANDLERS = {}
+
+
+def register_export_format(name, handler):
+    """Register an additional `lifetxt export --format NAME` handler.
+
+    `handler(args) -> int` follows the same contract as every existing
+    export command function. Called by native_codec/sqlite_codec/
+    lifetxtz_codec at import time so `lifetxt export` never needs to know
+    about a new format's implementation module directly.
+    """
+    EXPORT_FORMAT_HANDLERS[name] = handler
+
+
+def command_export(args):
+    handler = EXPORT_FORMAT_HANDLERS.get(args.format)
+    if handler is None:
+        raise ValueError(
+            "Unsupported export format: %r. Supported: %s"
+            % (args.format, ", ".join(sorted(EXPORT_FORMAT_HANDLERS)))
+        )
+    return handler(args)
 
 
 def command_demo(args):
@@ -16903,3 +16978,12 @@ def command_template_apply(args):
         % (name, len(expanded_lines), target)
     )
     return 0
+
+
+# Base `lifetxt export` format registrations. Placed at module bottom so
+# every referenced handler function is already defined; see
+# EXPORT_FORMAT_HANDLERS's own docstring above.
+register_export_format("json", command_to_json)
+register_export_format("jsonl", command_to_jsonl)
+register_export_format("csv", command_to_csv)
+register_export_format("markdown", command_share)

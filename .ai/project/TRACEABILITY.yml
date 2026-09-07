@@ -2,6 +2,36 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-tui-wide-character-input
+      capability_id: cap-tui-wide-character-input
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/685
+      pull_request: null
+      changed_files_or_scope:
+        - Prefer curses get_wch() for interactive input so Japanese and other
+          non-ASCII text reaches the existing input buffer as Unicode
+        - Normalize Unicode control characters through the existing integer key
+          mapping and preserve getch() as a compatibility fallback
+        - Preserve local file-watch and Remote TUI polling idle behavior by
+          translating get_wch() timeout errors to the existing -1 sentinel
+        - lifetxt/tui_app.py
+        - tests/test_cui_extensions.py
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - focused Japanese input-buffer/live-filter regression
+        - focused wide-character read, timeout, control/special-key, and getch
+          fallback regressions
+        - project TUI suites, format, lint, full unit suite, and integration
+          smoke to be recorded before PR handoff
+      release_or_deployment: next normal maintenance release
+      notes: >-
+        Standard-assurance bug fix extending the existing curses runner and
+        shared local/remote WorkspaceState input path. No dependency, grammar,
+        localization, Web, CLI parser, remote API, or data migration change.
+        The pull_request field is filled after GitHub assigns the PR number.
+      status: implemented
+
     - requirement_id: req-ai-standard-guided-activation
       capability_id: cap-ai-standard-guided-activation
       epic: standard adoption / foundation setup

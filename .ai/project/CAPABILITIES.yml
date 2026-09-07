@@ -6473,6 +6473,42 @@ capabilities:
       issue's own explicit non-goal list (no arbitrary command arguments,
       shell fragments, or new detail semantics in this first slice).
 
+  - id: cap-tui-wide-character-input
+    name: Unicode-aware TUI command input
+    summary: >-
+      The interactive curses TUI reads printable keyboard and IME input through
+      curses' wide-character API, preserving Japanese and other non-ASCII text
+      as Unicode while retaining the existing integer special-key, control-key,
+      timeout-polling, and byte-oriented test-double fallback behavior.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-tui-wide-character-input
+    implementation_locations:
+      - lifetxt/tui_app.py
+      - tests/test_cui_extensions.py
+    public_interfaces:
+      - lifetxt tui interactive input bar
+      - TUI live filter input
+      - TUI slash-command arguments
+    tests_or_evidence:
+      - "tests/test_cui_extensions.py: Japanese characters remain intact in the input buffer and drive the existing live filter"
+      - "tests/test_cui_extensions.py: wide-character reads, timeout-to-idle mapping, special/control-key normalization, and getch fallback"
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/685
+    related_pull_requests: []
+    reuse_policy: >-
+      Reuse the existing curses runner, normalize_key, handle_key, and shared
+      local/remote WorkspaceState input path; do not add another input engine.
+    notes: >-
+      This capability changes only the terminal input boundary. TUI labels,
+      command names, life.txt grammar, and terminal/OS-owned IME candidate UI
+      remain unchanged.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
   - id: cap-tui-key-bindings
     name: Configurable TUI key bindings
     summary: >-

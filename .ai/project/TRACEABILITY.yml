@@ -11316,6 +11316,35 @@ traceability:
         pull_request is filled in once the final integration PR is opened.
       status: implemented
 
+    - requirement_id: req-sqlite-interchange-spec
+      capability_id: cap-import-export-format-expansion
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/687
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/690
+      pull_request: null
+      changed_files_or_scope:
+        - Define the lifetxt-sqlite-v1 schema (metadata/items/details), round-trip contract, determinism boundary, import refusal order, export transaction/atomic-write safety, and extension-recognition rules
+        - docs/en/format-sqlite-interchange-v1.md
+      tests_or_evidence:
+        - manual review against every §690 acceptance-criterion bullet (schema DDL, representative mappings for Task/repeated tags/Journal-multiline-body, extension rules, determinism/refusal definitions)
+        - the schema is reused verbatim, unmodified, by #691's implementation (see that entry's own evidence)
+      release_or_deployment: null
+      notes: >-
+        Design/specification only, per #690's own forbidden scope (no
+        runtime implementation code, no CLI changes). High assurance per the
+        issue's own recommendation (durable data-interchange schema);
+        repository owner authorized this entire #687 batch's autonomous
+        implementation, including treating this schema as frozen for #691
+        to implement against in the same session, per the explicit request
+        to implement all of #687-693 end to end on one integration branch.
+        Canonicalizes hierarchy at export time (flattening indent into an
+        explicit parent: detail) rather than storing an indent column, so
+        SQLite's own item representation stays uniform with #689's existing
+        canonical rendering path -- no second hierarchy model. Determinism
+        is deliberately scoped to row content/order, not SQLite file bytes,
+        since SQLite's own on-disk B-tree layout is not something lifetxt
+        controls; full byte determinism is reserved for lifetxtz-v1 (#692).
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

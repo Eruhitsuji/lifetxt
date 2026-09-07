@@ -21,6 +21,16 @@
       "path": "lifetxt/config_writer.py",
       "call": "os.replace",
       "reason": "Bounded backup rotation in the dedicated atomic configuration writer. This is the reviewed home the write-route baseline previously called for: config writes validate against config-v1.schema.json, keep a bounded .bak rotation via os.replace, and commit atomically through atomic_write_text. It writes JSON configuration, not authoritative life.txt/state, so it is intentionally separate from mutation routing."
+    },
+    {
+      "path": "lifetxt/sqlite_codec.py",
+      "call": "atomic_write_bytes",
+      "reason": "SQLite interchange export (#691) builds the complete database at a private temporary path first and only commits the finished bytes via the shared atomic-replace primitive. The destination is a new binary export file the caller names with -o, never authoritative life.txt/state, so the higher-level conflict-aware mutation.py wrapper (built for concurrently-editable text records) does not apply; atomic_write_bytes alone already guarantees no partial destination on failure."
+    },
+    {
+      "path": "lifetxt/lifetxtz_codec.py",
+      "call": "atomic_write_bytes",
+      "reason": "The .lifetxtz compressed archive export (#693) is built entirely in memory and committed via the shared atomic-replace primitive, matching sqlite_codec.py's own reviewed rationale above: the destination is a new binary export file, not authoritative life.txt/state, and atomic_write_bytes alone already guarantees no partial destination on failure."
     }
   ]
 }

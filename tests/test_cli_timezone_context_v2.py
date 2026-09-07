@@ -159,7 +159,12 @@ class CliTimezoneContextWorkspaceIntegrationTests(unittest.TestCase):
         binary_path = os.path.join(self.root, "life.db")
         with open(binary_path, "wb") as handle:
             handle.write(b"SQLite format 3\x00\x89 not really a database\xff")
-        config = self.config_path({})
+        # An explicit config default makes the resolved timezone deterministic
+        # regardless of the host's own timezone detection (which differs
+        # between local Windows dev hosts and Linux CI runners) -- this test
+        # is about the binary candidate path not crashing the scan, not about
+        # timezone precedence, which other tests in this class already cover.
+        config = self.config_path({"defaults": {"timezone": "Asia/Tokyo"}})
         seen = {}
         module = self.probe_module(seen)
         runtime_safety_v2.install_cli_timezone_context(module)
@@ -168,7 +173,7 @@ class CliTimezoneContextWorkspaceIntegrationTests(unittest.TestCase):
                 ["import", binary_path, "--preset", "sqlite", "tui", "--plain"]
             )
         self.assertEqual(0, exit_code)
-        self.assertEqual("local", seen["timezone"])
+        self.assertEqual("Asia/Tokyo", seen["timezone"])
 
 
 class TuiAndNotifierInheritAmbientTimezoneContextTests(unittest.TestCase):

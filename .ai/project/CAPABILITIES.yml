@@ -1047,7 +1047,8 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/388
       - https://github.com/Eruhitsuji/lifetxt/issues/389
       - https://github.com/Eruhitsuji/lifetxt/issues/390
-    related_pull_requests: []
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/686
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       These safeguards are non-blocking maintainability work. They do not
@@ -6472,6 +6473,48 @@ capabilities:
       fields `quick` already accepts as flags are supported, per the
       issue's own explicit non-goal list (no arbitrary command arguments,
       shell fragments, or new detail semantics in this first slice).
+
+  - id: cap-tui-wide-character-input
+    name: Unicode-aware TUI command input
+    summary: >-
+      The interactive curses TUI reads printable keyboard and IME input through
+      curses' wide-character API, preserving Japanese and other non-ASCII text
+      as Unicode while retaining the existing integer special-key, control-key,
+      timeout-polling, and byte-oriented test-double fallback behavior.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-tui-wide-character-input
+    implementation_locations:
+      - lifetxt/tui_app.py
+      - tests/test_cui_extensions.py
+    public_interfaces:
+      - lifetxt tui interactive input bar
+      - TUI live filter input
+      - TUI slash-command arguments
+    tests_or_evidence:
+      - "python -m unittest tests.test_cui_extensions -> Ran 179 tests, OK; includes Japanese input-buffer/live-filter, wide-character reads, timeout-to-idle mapping, special/control-key normalization, and getch fallback"
+      - "python -m unittest tests.test_tui_backend tests.test_tui_remote_client tests.test_tui_remote_backend tests.test_tui_remote_cache tests.test_tui_bindings tests.test_surface_runtime -> Ran 115 tests, OK (skipped=8)"
+      - "MPLBACKEND=Agg python -m unittest discover -> Ran 3918 tests, OK (skipped=197)"
+      - "python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)"
+      - "python -m ruff format --check lifetxt/tui_app.py tests/test_cui_extensions.py; python -m ruff check lifetxt tests scripts; git diff --check -> clean"
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/685
+    related_pull_requests: []
+    reuse_policy: >-
+      Reuse the existing curses runner, normalize_key, handle_key, and shared
+      local/remote WorkspaceState input path; do not add another input engine.
+    notes: >-
+      This capability changes only the terminal input boundary. TUI labels,
+      command names, life.txt grammar, and terminal/OS-owned IME candidate UI
+      remain unchanged. A repository-wide Ruff format check also identified 14
+      pre-existing files outside #685's write scope that the installed Ruff
+      0.16.6 would reformat; the two changed Python files pass format checks,
+      and repository-wide lint passes.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
 
   - id: cap-tui-key-bindings
     name: Configurable TUI key bindings

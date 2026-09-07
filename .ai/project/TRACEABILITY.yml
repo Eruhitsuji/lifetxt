@@ -2,6 +2,41 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-tui-wide-character-input
+      capability_id: cap-tui-wide-character-input
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/685
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/686
+      changed_files_or_scope:
+        - Prefer curses get_wch() for interactive input so Japanese and other
+          non-ASCII text reaches the existing input buffer as Unicode
+        - Normalize Unicode control characters through the existing integer key
+          mapping and preserve getch() as a compatibility fallback
+        - Preserve local file-watch and Remote TUI polling idle behavior by
+          translating get_wch() timeout errors to the existing -1 sentinel
+        - lifetxt/tui_app.py
+        - tests/test_cui_extensions.py
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - "python -m unittest tests.test_cui_extensions -> Ran 179 tests, OK; includes Japanese input-buffer/live-filter, wide-character read, timeout, control/special-key, and getch fallback regressions"
+        - "python -m unittest tests.test_tui_backend tests.test_tui_remote_client tests.test_tui_remote_backend tests.test_tui_remote_cache tests.test_tui_bindings tests.test_surface_runtime -> Ran 115 tests, OK (skipped=8)"
+        - "MPLBACKEND=Agg python -m unittest discover -> Ran 3918 tests, OK (skipped=197)"
+        - "python -m unittest tests.test_traceability_gate tests.test_schema_extensions_v2.RealCapabilitySchemaTests -> Ran 16 tests, OK (skipped=2)"
+        - "python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)"
+        - "python -m ruff format --check lifetxt/tui_app.py tests/test_cui_extensions.py; python -m ruff check lifetxt tests scripts; git diff --check -> clean"
+      release_or_deployment: next normal maintenance release
+      notes: >-
+        Standard-assurance bug fix extending the existing curses runner and
+        shared local/remote WorkspaceState input path. No dependency, grammar,
+        localization, Web, CLI parser, remote API, or data migration change.
+        No manual real-terminal/IME session was available in the execution
+        environment; the curses boundary is covered with deterministic wide-
+        character and timeout test doubles. Repository-wide Ruff format found
+        14 pre-existing out-of-scope files that Ruff 0.16.6 would reformat; no
+        unrelated formatting was applied, while both changed Python files pass.
+      status: implemented
+
     - requirement_id: req-ai-standard-guided-activation
       capability_id: cap-ai-standard-guided-activation
       epic: standard adoption / foundation setup

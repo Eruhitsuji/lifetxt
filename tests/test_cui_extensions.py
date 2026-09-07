@@ -1099,6 +1099,17 @@ class WorkspaceStateTests(unittest.TestCase):
         self.assertEqual("ello", state.input)
         self.assertEqual(0, state.cursor)
 
+    def test_japanese_text_operates_on_the_input_buffer_and_filters(self):
+        state, _path = self._state("[ ] T 牛乳を買う id:t1\n[ ] T Write_Report id:t2\n")
+
+        for char in "牛乳":
+            tui_app.handle_key(state, char)
+            state.refresh()
+
+        self.assertEqual("牛乳", state.input)
+        self.assertEqual(2, state.cursor)
+        self.assertEqual(["牛乳を買う"], [row["title"] for row in state.rows])
+
 
 class WorkspaceTodayViewTests(unittest.TestCase):
     """The Today view must render the shared Command Center, not a copy of it."""
@@ -2406,6 +2417,40 @@ class WorkspaceFrameTests(unittest.TestCase):
         self.assertEqual("escape", tui_app.normalize_key(FakeCurses, 27))
         self.assertEqual("ctrl-t", tui_app.normalize_key(FakeCurses, 20))
         self.assertEqual("a", tui_app.normalize_key(FakeCurses, 97))
+        self.assertEqual("日", tui_app.normalize_key(FakeCurses, "日"))
+        self.assertEqual("ctrl-c", tui_app.normalize_key(FakeCurses, "\x03"))
+        self.assertEqual("enter", tui_app.normalize_key(FakeCurses, "\n"))
+        self.assertEqual("", tui_app.normalize_key(FakeCurses, "日本"))
+
+    def test_read_curses_key_prefers_wide_character_input(self):
+        class FakeCurses:
+            error = RuntimeError
+
+        class FakeScreen:
+            def get_wch(self):
+                return "日"
+
+            def getch(self):
+                raise AssertionError("byte-oriented input must not be used")
+
+        self.assertEqual("日", tui_app._read_curses_key(FakeCurses, FakeScreen()))
+
+    def test_read_curses_key_maps_wide_input_timeout_to_idle_sentinel(self):
+        class FakeCurses:
+            error = RuntimeError
+
+        class FakeScreen:
+            def get_wch(self):
+                raise RuntimeError("no input")
+
+        self.assertEqual(-1, tui_app._read_curses_key(FakeCurses, FakeScreen()))
+
+    def test_read_curses_key_falls_back_to_getch(self):
+        class FakeScreen:
+            def getch(self):
+                return 259
+
+        self.assertEqual(259, tui_app._read_curses_key(object(), FakeScreen()))
 
 
 class WorkspaceRunnerTests(unittest.TestCase):

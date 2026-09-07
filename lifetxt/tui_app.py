@@ -3014,6 +3014,16 @@ def _effective_binding_rows(state):
 
 def normalize_key(curses_module, key):
     """Translate a curses key code into a stable name used by handle_key."""
+    if isinstance(key, str):
+        if len(key) != 1:
+            return ""
+        codepoint = ord(key)
+        if codepoint >= 32 and codepoint != 127:
+            return key
+        # get_wch() returns control characters as one-character strings.
+        # Route them through the same integer mapping getch() historically
+        # used so Enter, Tab, Escape, Backspace, and Ctrl keys stay identical.
+        key = codepoint
     specials = {
         getattr(curses_module, "KEY_UP", -101): "up",
         getattr(curses_module, "KEY_DOWN", -102): "down",
@@ -3046,6 +3056,24 @@ def normalize_key(curses_module, key):
         except ValueError:
             return ""
     return ""
+
+
+def _read_curses_key(curses_module, stdscr):
+    """Read one Unicode-aware key while preserving the legacy fallback.
+
+    ``getch()`` exposes encoded input byte by byte, which corrupts text entered
+    through a Japanese IME. ``get_wch()`` returns printable input as Unicode
+    strings and special keys as integers. In timeout mode it raises
+    ``curses.error`` instead of returning ``-1``, so translate that expected
+    idle condition back to the runner's existing sentinel.
+    """
+    get_wch = getattr(stdscr, "get_wch", None)
+    if get_wch is None:
+        return stdscr.getch()
+    try:
+        return get_wch()
+    except curses_module.error:
+        return -1
 
 
 def handle_key(state, key, page=5):
@@ -3512,7 +3540,7 @@ def run_workspace(args):
                 stdscr.refresh()
                 dirty = False
             try:
-                key = stdscr.getch()
+                key = _read_curses_key(curses, stdscr)
             except KeyboardInterrupt:
                 # curses.wrapper uses cbreak(), which leaves ISIG enabled, so
                 # Ctrl-C arrives as SIGINT rather than as key code 3. Treat it

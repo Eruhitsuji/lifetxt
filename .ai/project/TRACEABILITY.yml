@@ -11243,6 +11243,40 @@ traceability:
         null pointing at a sub-PR that was never opened.
       status: implemented
 
+    - requirement_id: req-export-unified-dispatcher
+      capability_id: cap-import-export-format-expansion
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/687
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/688
+      pull_request: null
+      changed_files_or_scope:
+        - Add `lifetxt export --format json|jsonl|csv|markdown`, a routing-only dispatcher over the existing to-json/to-jsonl/to-csv/share implementations via an extensible EXPORT_FORMAT_HANDLERS registry
+        - lifetxt/cli.py
+        - lifetxt/cli_taxonomy.py
+        - tests/test_lifetxt.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - tests/test_lifetxt.py LifeTxtExportCliTests (9 tests): byte-for-byte parity against to-json/to-jsonl/to-csv/share --format markdown for filtered and unfiltered input, output-file parity, argparse rejection of an unsupported/missing format, --help
+        - .venv/Scripts/python.exe -m unittest tests.test_lifetxt.LifeTxtExportCliTests -> Ran 9 tests, OK
+        - .venv/Scripts/python.exe -m unittest tests.test_cli_taxonomy tests.test_completion_surfaces tests.test_completion_values -> Ran 97 tests, OK (skipped=1)
+        - .venv/Scripts/python.exe -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check lifetxt/cli.py lifetxt/cli_taxonomy.py tests/test_lifetxt.py -> clean
+      release_or_deployment: null
+      notes: >-
+        First implementation task of the #687 import/export-format-expansion
+        batch (decomposed into #688-#693), landing on its own child branch
+        merged locally into feature/687-693-import-export-formats before a
+        final human-approved PR into main. EXPORT_FORMAT_HANDLERS contains no
+        duplicate JSON/JSONL/CSV/Markdown serializer logic: every handler is
+        the exact pre-existing command function (command_to_json,
+        command_to_jsonl, command_to_csv, command_share). The registry is
+        populated at module bottom via register_export_format() calls, after
+        every handler function is defined, avoiding a forward-reference
+        NameError while keeping "add a new format" a single registration call
+        for #689/#691/#693 rather than a second export framework.
+        pull_request is filled in once the final integration PR is opened.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

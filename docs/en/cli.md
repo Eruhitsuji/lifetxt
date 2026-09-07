@@ -2384,6 +2384,18 @@ commands with no remote equivalent yet (currently `/state` and `/now`,
 which manage presence status) report a clear error instead of writing to a
 local file.
 
+**Editing with the client editor.** `/edit` opens only the selected remote
+item in a private temporary `life.txt` copy on the client, using the same
+`EDITOR`, `VISUAL`, or configuration `editor` setting as local mode. Saving
+and closing the editor validates that the temporary copy contains exactly one
+valid item, then submits that item through the ordinary revision-checked
+`PUT /api/items/id/{id}` route. The `remote:<host>` label is never used as a
+filesystem path, the server's path and credentials are never placed in the
+temporary file, and a semantic no-change makes no request. If the server
+revision changed while the editor was open, the PUT is rejected as a conflict
+without retry; reload before editing again. Editor-backed writes are also
+refused while an offline cached view is active.
+
 **Automatic refresh.** Once connected, the TUI polls the server every 1.5
 seconds using a single cheap `GET /api/revision` call -- far lighter than
 re-fetching every item -- and only reloads the full item list when that

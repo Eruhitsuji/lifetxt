@@ -338,6 +338,7 @@ CATEGORIES = OrderedDict(
                 "generate reports.",
                 "commands": (
                     "import",
+                    "export",
                     "import-ics",
                     "sync-ics",
                     "to-json",

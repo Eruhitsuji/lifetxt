@@ -8670,3 +8670,53 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-import-export-format-expansion
+    name: Unified export dispatcher and expanded interchange formats
+    summary: >-
+      A single `lifetxt export --format ...` routing dispatcher over the
+      existing JSON/JSONL/CSV/Markdown exporters (#688), extended with
+      first-class native life.txt round-trip support (#689), a versioned
+      SQLite relational interchange (`lifetxt-sqlite-v1`, #690/#691), and a
+      versioned compressed native archive (`lifetxtz-v1`, #692/#693). SQLite
+      and `.lifetxtz` are explicitly interchange/archive representations,
+      never authoritative stores; plain life.txt remains authoritative.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-export-unified-dispatcher
+    implementation_locations:
+      - lifetxt/cli.py
+      - tests/test_lifetxt.py
+      - docs/en/cli.md
+      - docs/ja/cli.md
+    public_interfaces:
+      - lifetxt export --format json|jsonl|csv|markdown
+      - lifetxt.cli.EXPORT_FORMAT_HANDLERS
+      - lifetxt.cli.register_export_format
+    tests_or_evidence:
+      - "tests/test_lifetxt.py LifeTxtExportCliTests (9 tests): export --format json/jsonl/csv/markdown byte-for-byte matches to-json/to-jsonl/to-csv/share --format markdown for filtered and unfiltered input, output-file parity, unsupported-format/missing-format argparse rejection, --help"
+      - .venv/Scripts/python.exe -m unittest tests.test_lifetxt.LifeTxtExportCliTests -> Ran 9 tests, OK
+      - .venv/Scripts/python.exe -m unittest tests.test_cli_taxonomy tests.test_completion_surfaces tests.test_completion_values -> Ran 97 tests, OK (skipped=1)
+      - .venv/Scripts/python.exe -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - ruff format --check / ruff check on changed files -> clean
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/687
+      - https://github.com/Eruhitsuji/lifetxt/issues/688
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      #687 is an umbrella/planning-only issue (not directly implementable);
+      this entry and its sibling requirement chain entries record its six
+      child issues (#688-#693) as they land. EXPORT_FORMAT_HANDLERS is
+      populated at the bottom of lifetxt/cli.py (after every handler
+      function is defined) via register_export_format calls, avoiding a
+      forward-reference NameError at import time while keeping the registry
+      a single small dict with no duplicated serializer logic. #689's native
+      `life` format, #691's `sqlite` format, and #693's `lifetxtz` format
+      each register into this same dict rather than growing a second export
+      framework, per #688's own scope contract.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

@@ -2359,6 +2359,138 @@ class LifeTxtExportCliTests(unittest.TestCase):
         self.assertIn("--format", stdout)
 
 
+class LifeTxtNativeLifeFormatTests(unittest.TestCase):
+    """`export --format life` / `import --preset life` (#689)."""
+
+    _FIXTURE = (
+        '[ ] T "Repeated tags" id:t1 tag:alpha tag:beta project:work '
+        "custom_field:value1 custom_field:value2\n"
+        "[N] J Multiline_Note id:t2\n"
+        "| first line\n"
+        "| second line\n"
+        "[ ] T Child id:t3 parent:t1\n"
+    )
+
+    def test_export_life_matches_filter_native_output(self):
+        stdout_a, _, code_a = run_cli(
+            "export", "--format", "life", input_text=self._FIXTURE
+        )
+        stdout_b, _, code_b = run_cli("filter", input_text=self._FIXTURE)
+        self.assertEqual(0, code_a)
+        self.assertEqual(0, code_b)
+        self.assertEqual(normalize_newlines(stdout_b), normalize_newlines(stdout_a))
+
+    def test_export_life_canonical_matches_filter_canonical(self):
+        stdout_a, _, code_a = run_cli(
+            "export",
+            "--format",
+            "life",
+            "--canonical",
+            input_text=self._FIXTURE,
+        )
+        stdout_b, _, code_b = run_cli("filter", "--canonical", input_text=self._FIXTURE)
+        self.assertEqual(0, code_a)
+        self.assertEqual(0, code_b)
+        self.assertEqual(normalize_newlines(stdout_b), normalize_newlines(stdout_a))
+
+    def test_export_then_import_life_round_trips_multiline_and_repeated_details(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = os.path.join(temp_dir, "life.txt")
+            with open(input_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write(self._FIXTURE)
+            subset_path = os.path.join(temp_dir, "subset.life.txt")
+            restored_path = os.path.join(temp_dir, "restored.life.txt")
+
+            _, stderr_a, code_a = run_cli(
+                "export", input_path, "--format", "life", "-o", subset_path
+            )
+            self.assertEqual(0, code_a, stderr_a)
+            with open(subset_path, encoding="utf-8") as handle:
+                subset_text = handle.read()
+            self.assertEqual(
+                normalize_newlines(self._FIXTURE), normalize_newlines(subset_text)
+            )
+
+            _, stderr_b, code_b = run_cli(
+                "import", subset_path, "--preset", "life", "-o", restored_path
+            )
+            self.assertEqual(0, code_b, stderr_b)
+            with open(restored_path, encoding="utf-8") as handle:
+                restored_text = handle.read()
+            self.assertEqual(
+                normalize_newlines(subset_text), normalize_newlines(restored_text)
+            )
+
+    def test_import_life_extension_inference_for_compound_extension(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = os.path.join(temp_dir, "subset.life.txt")
+            output_path = os.path.join(temp_dir, "restored.life.txt")
+            with open(input_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Task id:t1\n")
+            _, stderr, code = run_cli("import", input_path, "-o", output_path)
+            self.assertEqual(0, code, stderr)
+            with open(output_path, encoding="utf-8") as handle:
+                self.assertIn("Task", handle.read())
+
+    def test_import_plain_txt_is_never_guessed_as_native(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = os.path.join(temp_dir, "plain.txt")
+            with open(input_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Task id:t1\n")
+            _, stderr, code = run_cli("import", input_path, "-o", "out.life.txt")
+            self.assertNotEqual(0, code)
+            self.assertIn("--preset", stderr)
+
+    def test_import_life_refuses_invalid_syntax_before_writing(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = os.path.join(temp_dir, "broken.life.txt")
+            output_path = os.path.join(temp_dir, "out.life.txt")
+            with open(input_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write('[ ] T "Unterminated quote\n')
+            _, stderr, code = run_cli(
+                "import", input_path, "--preset", "life", "-o", output_path
+            )
+            self.assertEqual(1, code)
+            self.assertTrue(stderr.strip())
+            self.assertFalse(os.path.exists(output_path))
+
+    def test_import_life_append_merges_into_existing_output(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_path = os.path.join(temp_dir, "life.txt")
+            with open(output_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T Existing id:e1\n")
+            input_path = os.path.join(temp_dir, "subset.life.txt")
+            with open(input_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("[ ] T New id:n1\n")
+            _, stderr, code = run_cli(
+                "import",
+                input_path,
+                "--preset",
+                "life",
+                "-o",
+                output_path,
+                "--append",
+            )
+            self.assertEqual(0, code, stderr)
+            with open(output_path, encoding="utf-8") as handle:
+                text = handle.read()
+            self.assertIn("Existing", text)
+            self.assertIn("New", text)
+
+    def test_import_life_warns_about_dropped_directives(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = os.path.join(temp_dir, "with_directive.life.txt")
+            output_path = os.path.join(temp_dir, "out.life.txt")
+            with open(input_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("#! timezone: Asia/Tokyo\n\n[ ] T Task id:t1\n")
+            _, stderr, code = run_cli(
+                "import", input_path, "--preset", "life", "-o", output_path
+            )
+            self.assertEqual(0, code, stderr)
+            self.assertIn("directive", stderr.lower())
+            self.assertIn("timezone", stderr)
+
+
 class LifeTxtDirectiveTests(unittest.TestCase):
     def test_parse_directives_extracts_block(self):
         from lifetxt.parser import parse_directives

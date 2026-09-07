@@ -1,6 +1,7 @@
 from __future__ import unicode_literals
 
 import argparse
+import os
 import unittest
 import unittest.mock
 
@@ -157,6 +158,119 @@ class RemoteTuiBackendMutationTests(unittest.TestCase):
         grouped = {source: [{"status": "[x]"}]}
         with self.assertRaises(ValueError):
             self.backend.apply_semantic_changes(grouped, {}, id_key="id")
+
+
+class RemoteTuiBackendEditorTests(unittest.TestCase):
+    def setUp(self):
+        self.connection = _StubConnection(
+            {"items": [_item_payload("t1", 1, status="[ ]")]}
+        )
+        self.backend = RemoteTuiBackend(self.connection)
+        self.backend.load_items()
+        self.record = {
+            "id": "t1",
+            "source": remote_source_label(self.connection),
+            "line": 1,
+        }
+
+    def _edit_with(self, replacement, editor="nvim", return_code=0):
+        seen = {}
+
+        def run(command):
+            seen["command"] = list(command)
+            seen["path"] = command[-1]
+            self.assertNotEqual(command[-1], self.record["source"])
+            with open(command[-1], "r", encoding="utf-8") as handle:
+                seen["initial_text"] = handle.read()
+            seen["mode"] = os.stat(command[-1]).st_mode & 0o777
+            if replacement is not None:
+                with open(command[-1], "w", encoding="utf-8") as handle:
+                    handle.write(replacement)
+            return return_code
+
+        with unittest.mock.patch.dict(os.environ, {"EDITOR": editor}, clear=False):
+            with unittest.mock.patch("subprocess.call", side_effect=run):
+                result = self.backend.edit_item(self.record, config={})
+        seen["result"] = result
+        return seen
+
+    def test_edit_uses_private_temporary_copy_and_sends_semantic_put(self):
+        self.connection.password = "remote-password-must-not-leak"
+        seen = self._edit_with("[x] T Changed id:t1 priority:high\n")
+
+        self.assertFalse(os.path.exists(seen["path"]))
+        self.assertNotIn(self.connection.password, seen["initial_text"])
+        self.assertNotIn(self.connection.password, " ".join(seen["command"]))
+        if os.name != "nt":
+            self.assertEqual(seen["mode"] & 0o077, 0)
+        self.assertEqual(os.path.basename(seen["command"][0]), "nvim")
+        self.assertEqual(seen["command"][-2], "+1")
+        method, path, body, if_match = self.connection.calls[-1]
+        self.assertEqual((method, path), ("PUT", "/api/items/id/t1"))
+        self.assertEqual(body["status"], "[x]")
+        self.assertEqual(body["title"], "Changed")
+        self.assertEqual(body["details"]["priority"], ["high"])
+        self.assertEqual(if_match, "rev0")
+
+    def test_vim_and_nvim_use_client_editor_line_argument(self):
+        for editor in ("vim", "nvim"):
+            with self.subTest(editor=editor):
+                connection = _StubConnection(
+                    {"items": [_item_payload("t1", 1, status="[ ]")]}
+                )
+                backend = RemoteTuiBackend(connection)
+                backend.load_items()
+                self.backend = backend
+                seen = self._edit_with("[ ] T Buy_milk id:t1\n", editor=editor)
+                self.assertEqual(os.path.basename(seen["command"][0]), editor)
+                self.assertEqual(seen["command"][-2], "+1")
+
+    def test_no_semantic_change_makes_no_remote_write(self):
+        self._edit_with("# harmless comment\n[ ] T Buy_milk id:t1\n")
+        self.assertFalse(any(call[0] == "PUT" for call in self.connection.calls))
+
+    def test_invalid_or_multiple_items_are_rejected_before_write(self):
+        for replacement in ("not life text\n", "[ ] T A id:a\n[ ] T B id:b\n"):
+            with self.subTest(replacement=replacement):
+                before = len(self.connection.calls)
+                with self.assertRaises(ValueError):
+                    self._edit_with(replacement)
+                self.assertFalse(
+                    any(call[0] == "PUT" for call in self.connection.calls[before:])
+                )
+
+    def test_stale_revision_conflict_is_visible_and_not_retried(self):
+        from lifetxt.tui_remote_client import RemoteMutationConflict
+
+        original_revision = self.connection.file_revision
+
+        def run(command):
+            with open(command[-1], "w", encoding="utf-8") as handle:
+                handle.write("[x] T Changed id:t1\n")
+            self.connection.server_revision = "rev-concurrent"
+            self.connection.raise_next(RemoteMutationConflict("stale"))
+            return 0
+
+        with unittest.mock.patch.dict(os.environ, {"EDITOR": "vim"}, clear=False):
+            with unittest.mock.patch("subprocess.call", side_effect=run):
+                with self.assertRaises(RemoteMutationConflict):
+                    self.backend.edit_item(self.record, config={})
+        puts = [call for call in self.connection.calls if call[0] == "PUT"]
+        self.assertEqual(len(puts), 1)
+        self.assertEqual(puts[0][3], original_revision)
+
+    def test_editor_failure_leaves_remote_data_unchanged(self):
+        with self.assertRaises(ValueError):
+            self._edit_with(None, return_code=7)
+        self.assertFalse(any(call[0] == "PUT" for call in self.connection.calls))
+
+    def test_offline_cache_refuses_before_launching_editor(self):
+        self.backend.serving_cache = True
+        with unittest.mock.patch("subprocess.call") as call:
+            with self.assertRaises(ValueError) as caught:
+                self.backend.edit_item(self.record, config={"editor": "vim"})
+        call.assert_not_called()
+        self.assertIn("offline cached data", str(caught.exception))
 
 
 class WorkspaceStateRemoteWiringTests(unittest.TestCase):

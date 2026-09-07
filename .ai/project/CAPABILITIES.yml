@@ -1047,7 +1047,8 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/388
       - https://github.com/Eruhitsuji/lifetxt/issues/389
       - https://github.com/Eruhitsuji/lifetxt/issues/390
-    related_pull_requests: []
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/686
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       These safeguards are non-blocking maintainability work. They do not
@@ -6492,8 +6493,11 @@ capabilities:
       - TUI live filter input
       - TUI slash-command arguments
     tests_or_evidence:
-      - "tests/test_cui_extensions.py: Japanese characters remain intact in the input buffer and drive the existing live filter"
-      - "tests/test_cui_extensions.py: wide-character reads, timeout-to-idle mapping, special/control-key normalization, and getch fallback"
+      - "python -m unittest tests.test_cui_extensions -> Ran 179 tests, OK; includes Japanese input-buffer/live-filter, wide-character reads, timeout-to-idle mapping, special/control-key normalization, and getch fallback"
+      - "python -m unittest tests.test_tui_backend tests.test_tui_remote_client tests.test_tui_remote_backend tests.test_tui_remote_cache tests.test_tui_bindings tests.test_surface_runtime -> Ran 115 tests, OK (skipped=8)"
+      - "MPLBACKEND=Agg python -m unittest discover -> Ran 3918 tests, OK (skipped=197)"
+      - "python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)"
+      - "python -m ruff format --check lifetxt/tui_app.py tests/test_cui_extensions.py; python -m ruff check lifetxt tests scripts; git diff --check -> clean"
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/685
     related_pull_requests: []
@@ -6503,7 +6507,10 @@ capabilities:
     notes: >-
       This capability changes only the terminal input boundary. TUI labels,
       command names, life.txt grammar, and terminal/OS-owned IME candidate UI
-      remain unchanged.
+      remain unchanged. A repository-wide Ruff format check also identified 14
+      pre-existing files outside #685's write scope that the installed Ruff
+      0.16.6 would reformat; the two changed Python files pass format checks,
+      and repository-wide lint passes.
     replacement:
       replaces: []
       replaced_by: null

@@ -11247,7 +11247,7 @@ traceability:
       capability_id: cap-import-export-format-expansion
       epic: https://github.com/Eruhitsuji/lifetxt/issues/687
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/688
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/694
       changed_files_or_scope:
         - Add `lifetxt export --format json|jsonl|csv|markdown`, a routing-only dispatcher over the existing to-json/to-jsonl/to-csv/share implementations via an extensible EXPORT_FORMAT_HANDLERS registry
         - lifetxt/cli.py
@@ -11274,14 +11274,14 @@ traceability:
         every handler function is defined, avoiding a forward-reference
         NameError while keeping "add a new format" a single registration call
         for #689/#691/#693 rather than a second export framework.
-        pull_request is filled in once the final integration PR is opened.
+        pull_request is now filled in (PR #694).
       status: implemented
 
     - requirement_id: req-native-life-import-export
       capability_id: cap-import-export-format-expansion
       epic: https://github.com/Eruhitsuji/lifetxt/issues/687
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/689
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/694
       changed_files_or_scope:
         - Extract copy_item/canonical_hierarchy_items/items_to_life_text from cli.py into lifetxt/native_codec.py as the shared native payload boundary; delegate cli.py's private wrappers to it unchanged
         - Register `life` as a lifetxt export format (reusing command_filter's existing native-output branch) and as an import preset (parse+validate through the authoritative parser before any write, reusing item.source_text for round-trip fidelity)
@@ -11313,14 +11313,14 @@ traceability:
         codebase already has. A directive-specific warning was added since
         directives (e.g. #!timezone:) carry semantic configuration that
         would otherwise be silently lost with no diagnostic at all.
-        pull_request is filled in once the final integration PR is opened.
+        pull_request is now filled in (PR #694).
       status: implemented
 
     - requirement_id: req-sqlite-interchange-spec
       capability_id: cap-import-export-format-expansion
       epic: https://github.com/Eruhitsuji/lifetxt/issues/687
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/690
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/694
       changed_files_or_scope:
         - Define the lifetxt-sqlite-v1 schema (metadata/items/details), round-trip contract, determinism boundary, import refusal order, export transaction/atomic-write safety, and extension-recognition rules
         - docs/en/format-sqlite-interchange-v1.md
@@ -11349,7 +11349,7 @@ traceability:
       capability_id: cap-import-export-format-expansion
       epic: https://github.com/Eruhitsuji/lifetxt/issues/687
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/691
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/694
       changed_files_or_scope:
         - Add lifetxt/sqlite_codec.py implementing lifetxt-sqlite-v1 (metadata/items/details schema, transactional export via atomic_write_bytes, validated import refusing foreign/corrupt/version-mismatched databases before returning any item)
         - Register `sqlite` as an export format and an import preset (.db/.sqlite/.sqlite3 extension inference)
@@ -11390,14 +11390,14 @@ traceability:
         surface exposes, per this project's Horizontal Review Scope
         Discipline; the same fix also protects the upcoming lifetxtz preset
         (#693), which is equally binary.
-        pull_request is filled in once the final integration PR is opened.
+        pull_request is now filled in (PR #694).
       status: implemented
 
     - requirement_id: req-lifetxtz-format-spec
       capability_id: cap-import-export-format-expansion
       epic: https://github.com/Eruhitsuji/lifetxt/issues/687
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/692
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/694
       changed_files_or_scope:
         - Define lifetxtz-v1 (ZIP container, exactly manifest.json + data.life.txt, SHA-256 integrity, deterministic normalized ZIP metadata, decompression resource limits, refusal order, extension recognition)
         - docs/en/format-lifetxtz-v1.md
@@ -11422,14 +11422,14 @@ traceability:
         declared (not inflated) size before any decompression, so a
         zip-bomb cannot force unbounded allocation regardless of
         compression ratio.
-        pull_request is filled in once the final integration PR is opened.
+        pull_request is now filled in (PR #694).
       status: implemented
 
     - requirement_id: req-lifetxtz-implementation
       capability_id: cap-import-export-format-expansion
       epic: https://github.com/Eruhitsuji/lifetxt/issues/687
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/693
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/694
       changed_files_or_scope:
         - Add lifetxt/lifetxtz_codec.py implementing lifetxtz-v1 (exactly manifest.json + data.life.txt, SHA-256 integrity, deterministic normalized ZIP metadata, declared-size resource limits checked before decompression, read()-only member access)
         - Register `lifetxtz` as an export format and an import preset (.lifetxtz extension inference)
@@ -11464,7 +11464,43 @@ traceability:
         binary .lifetxtz paths with no further change needed here,
         confirmed by LifeTxtLifetxtzCliTests passing unmodified on first
         run. This entry closes all six #687 child issues (#688-#693);
-        pull_request is filled in once the final integration PR is opened.
+        pull_request is now filled in (PR #694).
+      status: implemented
+
+    - requirement_id: req-687-693-import-export-formats-batch-integration
+      capability_id: cap-import-export-format-expansion
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/687
+      task_issue: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/694
+      changed_files_or_scope:
+        - Record the #687 batch's integration into main as its own traceable step
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - "MPLBACKEND=Agg python -W ignore::ResourceWarning -m unittest discover -> Ran 3972 tests, FAILED (failures=6, skipped=11), run on the fully consolidated feature/687-693-import-export-formats branch after all six sub-branches (#688-#693) merged"
+        - "all 6 failures are in tests.test_tui_remote_backend.RemoteTuiBackendEditorTests (Windows nvim.EXE/vim.EXE PATHEXT resolution); confirmed pre-existing by checking out tests/test_tui_remote_backend.py from origin/main unmodified and re-running -- the identical 3 failures reproduce there, and this branch's own diff never touches tests/test_tui_remote_backend.py, lifetxt/tui_backend.py, or lifetxt/fzf_helper.py"
+        - python -m unittest tests.test_traceability_gate tests.test_change_package_closeout -> Ran 17 tests, OK
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - 'scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> {"errors": 0, "ok": true}'
+        - ruff format --check / ruff check on every changed file -> clean (repository-wide format check shows only pre-existing, unrelated drift in 13 files this branch never touches, confirmed present on origin/main already)
+        - "live end-to-end smoke: export/import round trip for json/life/sqlite/lifetxtz against a fixture with repeated tags, multiline body: continuation, and a parent: link; each restored file individually re-checked with zero warnings"
+      release_or_deployment: >-
+        This entry documents PR #694 itself: feature/687-693-import-export-formats
+        (Issues #688, #689, #690, #691, #692, #693, each on its own child
+        branch merged locally into the integration branch before this final
+        PR; #687 is the planning-only umbrella epic with no independent
+        implementation) merging into main.
+      notes: >-
+        Follows the multi-PR integration-branch pattern established
+        throughout this project (see req-remote-batch-integration and every
+        subsequent batch-integration entry in this file): every requirement
+        entry above correctly names its own child branch's work, and none
+        of them named this final PR before it existed. Self-scoped and
+        implemented autonomously per repository owner instruction to
+        implement #687-693 on one integration branch ending in one final
+        PR, with each child issue's own branch merged locally into the
+        integration branch before the final PR was opened. No epic issue
+        beyond #687 itself exists for this batch.
       status: implemented
 
 required_chain:

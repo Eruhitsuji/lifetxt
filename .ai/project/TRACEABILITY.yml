@@ -11425,6 +11425,48 @@ traceability:
         pull_request is filled in once the final integration PR is opened.
       status: implemented
 
+    - requirement_id: req-lifetxtz-implementation
+      capability_id: cap-import-export-format-expansion
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/687
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/693
+      pull_request: null
+      changed_files_or_scope:
+        - Add lifetxt/lifetxtz_codec.py implementing lifetxtz-v1 (exactly manifest.json + data.life.txt, SHA-256 integrity, deterministic normalized ZIP metadata, declared-size resource limits checked before decompression, read()-only member access)
+        - Register `lifetxtz` as an export format and an import preset (.lifetxtz extension inference)
+        - lifetxt/lifetxtz_codec.py
+        - lifetxt/cli.py
+        - tests/test_lifetxtz_codec.py
+        - tests/test_lifetxt.py
+        - docs/en/cli.md
+      tests_or_evidence:
+        - "tests/test_lifetxtz_codec.py (14 tests): exactly the two required members, manifest field shape/checksum/byte-count, byte-identical archives given the same created_at, indentation canonicalized into parent: links, failed export leaves no partial destination, round trip recovers the exact payload, refusal of a non-zip file / foreign zip / extra member / path-traversal member name / mismatched container version / checksum mismatch / oversized declared payload (rejected before decompression) / a missing manifest field"
+        - .venv/Scripts/python.exe -m unittest tests.test_lifetxtz_codec -> Ran 14 tests, OK
+        - "tests/test_lifetxt.py LifeTxtLifetxtzCliTests (4 tests): export-then-import CLI round trip including a `check` pass on the restored file, --format lifetxtz requires -o, a corrupt archive refused before any write, --type filtering applies to lifetxtz export"
+        - .venv/Scripts/python.exe -m unittest tests.test_lifetxt.LifeTxtLifetxtzCliTests -> Ran 4 tests, OK
+        - 'scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> {"errors": 0, "ok": true}'
+        - .venv/Scripts/python.exe -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on every changed file -> clean
+      release_or_deployment: null
+      notes: >-
+        Sixth and final implementation task of the #687 batch, implementing
+        the lifetxtz-v1 container #692 froze unmodified: no container/
+        fidelity/security decision was reopened during implementation. High
+        assurance per #692/#693's own recommendation (durable serialized
+        container consuming untrusted compressed input); repository owner
+        authorized this entire #687 batch's autonomous implementation on
+        one integration branch. The oversized-declared-payload resource-
+        limit test confirms the codec never attempts to decompress a
+        member whose central-directory-declared size exceeds its ceiling,
+        so a zip-bomb-style archive cannot force unbounded memory
+        allocation regardless of compression ratio. The #691 timezone-
+        bootstrap fix (catching UnicodeDecodeError alongside OSError around
+        the CLI-wide candidate-path scan) already covers this codec's own
+        binary .lifetxtz paths with no further change needed here,
+        confirmed by LifeTxtLifetxtzCliTests passing unmodified on first
+        run. This entry closes all six #687 child issues (#688-#693);
+        pull_request is filled in once the final integration PR is opened.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

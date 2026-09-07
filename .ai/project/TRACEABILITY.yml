@@ -11393,6 +11393,38 @@ traceability:
         pull_request is filled in once the final integration PR is opened.
       status: implemented
 
+    - requirement_id: req-lifetxtz-format-spec
+      capability_id: cap-import-export-format-expansion
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/687
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/692
+      pull_request: null
+      changed_files_or_scope:
+        - Define lifetxtz-v1 (ZIP container, exactly manifest.json + data.life.txt, SHA-256 integrity, deterministic normalized ZIP metadata, decompression resource limits, refusal order, extension recognition)
+        - docs/en/format-lifetxtz-v1.md
+      tests_or_evidence:
+        - manual review against every #692 acceptance-criterion bullet (manifest schema, deterministic archive requirements, refusal behavior, decompression limits, path-traversal-impossible-by-construction member rules)
+        - the schema is reused verbatim, unmodified, by #693's implementation (see that entry's own evidence)
+      release_or_deployment: null
+      notes: >-
+        Design/specification only, per #692's own forbidden scope (no
+        runtime implementation code, no CLI changes). High assurance per
+        the issue's own recommendation (durable serialized container plus
+        untrusted compressed-input boundary); repository owner authorized
+        this entire #687 batch's autonomous implementation, including
+        treating this contract as frozen for #693 to implement against in
+        the same session. The payload reuses #689's native rendering
+        boundary directly (canonical=True), so this format has no second
+        item-serialization implementation. Import never calls
+        ZipFile.extract()/extractall(); only ZipFile.read() against the two
+        literal, fixed member names is used, which makes path traversal
+        impossible by construction rather than merely checked for. Member
+        size ceilings are checked against the ZIP central directory's
+        declared (not inflated) size before any decompression, so a
+        zip-bomb cannot force unbounded allocation regardless of
+        compression ratio.
+        pull_request is filled in once the final integration PR is opened.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

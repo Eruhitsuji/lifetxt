@@ -8699,6 +8699,7 @@ capabilities:
       - docs/en/cli.md
       - docs/ja/cli.md
       - docs/en/format-sqlite-interchange-v1.md
+      - docs/en/format-lifetxtz-v1.md
     public_interfaces:
       - lifetxt export --format json|jsonl|csv|markdown|life|sqlite
       - lifetxt import --preset life|sqlite
@@ -8732,6 +8733,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/689
       - https://github.com/Eruhitsuji/lifetxt/issues/690
       - https://github.com/Eruhitsuji/lifetxt/issues/691
+      - https://github.com/Eruhitsuji/lifetxt/issues/692
     related_pull_requests: []
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-

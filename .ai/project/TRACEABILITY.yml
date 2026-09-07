@@ -11277,6 +11277,45 @@ traceability:
         pull_request is filled in once the final integration PR is opened.
       status: implemented
 
+    - requirement_id: req-native-life-import-export
+      capability_id: cap-import-export-format-expansion
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/687
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/689
+      pull_request: null
+      changed_files_or_scope:
+        - Extract copy_item/canonical_hierarchy_items/items_to_life_text from cli.py into lifetxt/native_codec.py as the shared native payload boundary; delegate cli.py's private wrappers to it unchanged
+        - Register `life` as a lifetxt export format (reusing command_filter's existing native-output branch) and as an import preset (parse+validate through the authoritative parser before any write, reusing item.source_text for round-trip fidelity)
+        - Infer --preset life only for the unambiguous *.life.txt compound extension; a plain .txt is never guessed
+        - "Warn (not silently drop) when #!directive lines are present in life-preset import input, since they are not part of the Item model and cannot round-trip"
+        - lifetxt/native_codec.py
+        - lifetxt/cli.py
+        - tests/test_lifetxt.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - "tests/test_lifetxt.py LifeTxtNativeLifeFormatTests (8 tests): export --format life matches filter (plain and --canonical), export-then-import round-trips repeated detail keys and multiline body continuation byte-for-byte, *.life.txt extension inference, plain .txt never guessed, invalid syntax refused before any write (destination file never created), --append merges into an existing file, dropped directive lines produce an explicit stderr warning naming them"
+        - .venv/Scripts/python.exe -m unittest tests.test_lifetxt.LifeTxtNativeLifeFormatTests -> Ran 8 tests, OK
+        - .venv/Scripts/python.exe -m unittest tests.test_lifetxt.LifeTxtExportCliTests tests.test_lifetxt.LifeTxtFilterCliTests tests.test_lifetxt.LifeTxtIcsImportCliTests -> Ran 45 tests, OK
+        - .venv/Scripts/python.exe -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check lifetxt/cli.py lifetxt/native_codec.py tests/test_lifetxt.py -> clean
+      release_or_deployment: null
+      notes: >-
+        Second implementation task of the #687 batch, depending on #688's
+        EXPORT_FORMAT_HANDLERS registry. native_codec.py has no dependency on
+        cli.py, so the sqlite (#691) and lifetxtz (#693) codec modules can
+        import it directly without a circular import through cli.py, which
+        both import to register their own export/import formats. Item
+        records round-trip exactly (source_text, including `|` continuation
+        lines, is reused verbatim); blank lines, `#` comments, and
+        `#!KEY:VALUE` directives are not part of the Item model
+        parse_text returns and are therefore not carried through import --
+        the same limitation every other item-based command in this
+        codebase already has. A directive-specific warning was added since
+        directives (e.g. #!timezone:) carry semantic configuration that
+        would otherwise be silently lost with no diagnostic at all.
+        pull_request is filled in once the final integration PR is opened.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

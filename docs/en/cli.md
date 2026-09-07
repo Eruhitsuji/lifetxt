@@ -118,6 +118,7 @@ python -m lifetxt vm run program.life.txt --entry s1
 | `to-json` | Convert life.txt to a JSON array |
 | `to-jsonl` | Convert life.txt to JSONL |
 | `to-csv` | Convert life.txt to CSV |
+| `export` | Unified `--format json\|jsonl\|csv\|markdown\|life\|sqlite\|lifetxtz` entry point |
 | `demo` | Generate valid demo life.txt records for demos, tests, and screenshots |
 | `markdown` | Render safe Markdown fields as HTML, text, JSON, or JSONL |
 | `import-ics` | Convert iCalendar `.ics` events to life.txt event items |
@@ -224,7 +225,7 @@ including its `--json` machine-readable form for scripts and AI clients.
 | Query / Explore | `filter`, `search`, `find`, `query`, `view`, `summary`, `inbox`, `health`, `temporal`, `freebusy`, `count`, `status`, `recent` |
 | Projects / People / Collaboration | `project`, `portfolio`, `area`, `person`, `group`, `who`, `message`, `proposal`, `ticket`, `version`, `sprint` |
 | Structure / Data Integrity | `check`, `integrity`, `ids`, `links`, `backlinks`, `sources`, `tag`, `lint`, `deps`, `diff`, `snapshot`, `undo`, `cleanup`, `files` |
-| Import / Export / Reports | `import`, `import-ics`, `sync-ics`, `to-json`, `to-jsonl`, `to-csv`, `from-json`, `from-jsonl`, `from-csv`, `from-markdown`, `from-todo`, `to-ics`, `markdown`, `stats`, `plot`, `export-heatmap`, `standup`, `invoice`, `share`, `digest`, `report` |
+| Import / Export / Reports | `import`, `export`, `import-ics`, `sync-ics`, `to-json`, `to-jsonl`, `to-csv`, `from-json`, `from-jsonl`, `from-csv`, `from-markdown`, `from-todo`, `to-ics`, `markdown`, `stats`, `plot`, `export-heatmap`, `standup`, `invoice`, `share`, `digest`, `report` |
 | Interfaces / Integration | `tui`, `fzf`, `web`, `serve`, `mcp`, `ai`, `completion`, `git-hook`, `watch`, `remote` |
 | Workspace / Configuration / Safety | `config`, `workspace`, `path`, `doctor`, `format`, `safety`, `capabilities`, `attachment`, `update`, `update-check`, `server-init`, `server-update`, `server-report` |
 | Personal Context | `context`, `memory`, `decisions` |
@@ -1284,6 +1285,41 @@ python -m lifetxt to-json "projects/**/*.life.txt" --team research --tag-all urg
 python -m lifetxt to-json life.txt --occurrences --after 2026-06-01 --before 2026-06-30 --pretty
 python -m lifetxt to-csv life.txt --occurrences --after 2026-06-01 --before 2026-06-30 -o occurrences.csv
 ```
+
+### 4.10 `export`: the unified export entry point
+
+```sh
+python -m lifetxt export life.txt --format json -o life.json
+python -m lifetxt export life.txt --format jsonl -o life.jsonl
+python -m lifetxt export life.txt --format csv -o life.csv
+python -m lifetxt export life.txt --format markdown -o life.md
+python -m lifetxt export life.txt --format life -o subset.life.txt
+python -m lifetxt export life.txt --format sqlite -o life.db
+python -m lifetxt export life.txt --format lifetxtz -o life.lifetxtz
+```
+
+`export` is a routing-only dispatcher over the existing `to-json`, `to-jsonl`,
+`to-csv`, and `share --format markdown` implementations, plus the native
+`life`, `sqlite`, and `lifetxtz` formats below -- it contains no second
+serializer. `--format` is required; every filter option from
+[4.9](#49-export-filter-options) is accepted for every format. `--pretty`
+applies to `json`; `--canonical` applies to `life` (rewrite indentation as
+explicit `parent:` links, matching `filter --canonical`); `--title`, `--week`,
+and `--month` apply to `markdown` (matching `share`'s own range-label
+options).
+
+| `--format` | Equivalent to | Fidelity |
+|---|---|---|
+| `json` | `to-json` | machine-readable, filtered |
+| `jsonl` | `to-jsonl` | machine-readable, filtered |
+| `csv` | `to-csv` | machine-readable, filtered |
+| `markdown` | `share --format markdown` | human-readable report |
+| `life` | `filter` (native output) | native Format 1.0 semantics; see [5.2](#52-native-life-import-and-export) |
+| `sqlite` | -- | semantic item/detail round-trip; see [5.3](#53-sqlite-interchange) |
+| `lifetxtz` | -- | verified native payload fidelity; see [5.4](#54-lifetxtz-compressed-archive) |
+
+`sqlite` and `lifetxtz` are binary formats and require an explicit
+`-o`/`--output` file; they cannot be written to stdout.
 
 ## 5. iCalendar Import And Sync
 

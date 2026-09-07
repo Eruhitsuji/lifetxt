@@ -2242,6 +2242,123 @@ class LifeTxtFilterCliTests(unittest.TestCase):
         )
 
 
+class LifeTxtExportCliTests(unittest.TestCase):
+    """`lifetxt export` is a routing-only dispatcher: it must produce output
+    byte-for-byte identical to the equivalent existing command (#688)."""
+
+    _FIXTURE = (
+        "[ ] T Open_Task due:2026-06-08 project:work\n"
+        "[x] T Done_Task due:2026-06-08 done:2026-06-08 project:work\n"
+        "[ ] E Meeting from:2026-06-08T10:00 to:2026-06-08T11:00\n"
+    )
+
+    def test_export_json_matches_to_json(self):
+        stdout_a, stderr_a, code_a = run_cli(
+            "export", "--format", "json", "--pretty", input_text=self._FIXTURE
+        )
+        stdout_b, stderr_b, code_b = run_cli(
+            "to-json", "--pretty", input_text=self._FIXTURE
+        )
+        self.assertEqual(0, code_a)
+        self.assertEqual(0, code_b)
+        self.assertEqual("", stderr_a)
+        self.assertEqual(normalize_newlines(stdout_b), normalize_newlines(stdout_a))
+
+    def test_export_jsonl_matches_to_jsonl(self):
+        stdout_a, _, code_a = run_cli(
+            "export", "--format", "jsonl", input_text=self._FIXTURE
+        )
+        stdout_b, _, code_b = run_cli("to-jsonl", input_text=self._FIXTURE)
+        self.assertEqual(0, code_a)
+        self.assertEqual(0, code_b)
+        self.assertEqual(normalize_newlines(stdout_b), normalize_newlines(stdout_a))
+
+    def test_export_csv_matches_to_csv(self):
+        stdout_a, _, code_a = run_cli(
+            "export", "--format", "csv", input_text=self._FIXTURE
+        )
+        stdout_b, _, code_b = run_cli("to-csv", input_text=self._FIXTURE)
+        self.assertEqual(0, code_a)
+        self.assertEqual(0, code_b)
+        self.assertEqual(normalize_newlines(stdout_b), normalize_newlines(stdout_a))
+
+    def test_export_json_applies_filters_like_to_json(self):
+        stdout_a, _, code_a = run_cli(
+            "export",
+            "--format",
+            "json",
+            "--open",
+            "--type",
+            "task",
+            input_text=self._FIXTURE,
+        )
+        stdout_b, _, code_b = run_cli(
+            "to-json", "--open", "--type", "task", input_text=self._FIXTURE
+        )
+        self.assertEqual(0, code_a)
+        self.assertEqual(0, code_b)
+        self.assertEqual(normalize_newlines(stdout_b), normalize_newlines(stdout_a))
+        self.assertIn("Open_Task", stdout_a)
+        self.assertNotIn("Done_Task", stdout_a)
+
+    def test_export_markdown_matches_share(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = os.path.join(temp_dir, "life.txt")
+            with open(input_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write(self._FIXTURE)
+            out_a = os.path.join(temp_dir, "a.md")
+            out_b = os.path.join(temp_dir, "b.md")
+            _, _, code_a = run_cli(
+                "export", input_path, "--format", "markdown", "-o", out_a
+            )
+            _, _, code_b = run_cli(
+                "share", input_path, "--format", "markdown", "-o", out_b
+            )
+            self.assertEqual(0, code_a)
+            self.assertEqual(0, code_b)
+            with open(out_a, encoding="utf-8") as handle:
+                text_a = handle.read()
+            with open(out_b, encoding="utf-8") as handle:
+                text_b = handle.read()
+            self.assertEqual(text_b, text_a)
+
+    def test_export_output_file_matches_to_csv_output_file(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            out_a = os.path.join(temp_dir, "a.csv")
+            out_b = os.path.join(temp_dir, "b.csv")
+            run_cli(
+                "export",
+                "--format",
+                "csv",
+                "-o",
+                out_a,
+                input_text=self._FIXTURE,
+            )
+            run_cli("to-csv", "-o", out_b, input_text=self._FIXTURE)
+            with open(out_a, encoding="utf-8") as handle:
+                text_a = handle.read()
+            with open(out_b, encoding="utf-8") as handle:
+                text_b = handle.read()
+            self.assertEqual(text_b, text_a)
+
+    def test_export_unsupported_format_rejected_by_argparse(self):
+        _, stderr, code = run_cli(
+            "export", "--format", "not-a-real-format", input_text=self._FIXTURE
+        )
+        self.assertNotEqual(0, code)
+        self.assertIn("invalid choice", stderr)
+
+    def test_export_requires_format(self):
+        _, stderr, code = run_cli("export", input_text=self._FIXTURE)
+        self.assertNotEqual(0, code)
+        self.assertIn("--format", stderr)
+
+    def test_export_help(self):
+        stdout, stderr, code = run_cli("export", "--help")
+        self.assertEqual(0, code)
+        self.assertIn("--format", stdout)
+
+
 class LifeTxtDirectiveTests(unittest.TestCase):
     def test_parse_directives_extracts_block(self):
         from lifetxt.parser import parse_directives

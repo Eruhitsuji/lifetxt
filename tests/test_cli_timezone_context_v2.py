@@ -151,6 +151,30 @@ class CliTimezoneContextWorkspaceIntegrationTests(unittest.TestCase):
         self.assertEqual(1, exit_code)
         self.assertIn("Unknown workspace", stderr.getvalue())
 
+    def test_a_binary_candidate_path_does_not_crash_the_bootstrap(self):
+        """#691: cli_timezone_candidate_paths has no extension filter, so a
+        binary interchange file (sqlite, lifetxtz, ...) named on the command
+        line is scanned the same as any other existing path. Reading it as
+        UTF-8 text must not raise; it simply carries no #!timezone: directive."""
+        binary_path = os.path.join(self.root, "life.db")
+        with open(binary_path, "wb") as handle:
+            handle.write(b"SQLite format 3\x00\x89 not really a database\xff")
+        # An explicit config default makes the resolved timezone deterministic
+        # regardless of the host's own timezone detection (which differs
+        # between local Windows dev hosts and Linux CI runners) -- this test
+        # is about the binary candidate path not crashing the scan, not about
+        # timezone precedence, which other tests in this class already cover.
+        config = self.config_path({"defaults": {"timezone": "Asia/Tokyo"}})
+        seen = {}
+        module = self.probe_module(seen)
+        runtime_safety_v2.install_cli_timezone_context(module)
+        with self.env_config(config):
+            exit_code = module.main(
+                ["import", binary_path, "--preset", "sqlite", "tui", "--plain"]
+            )
+        self.assertEqual(0, exit_code)
+        self.assertEqual("Asia/Tokyo", seen["timezone"])
+
 
 class TuiAndNotifierInheritAmbientTimezoneContextTests(unittest.TestCase):
     """Requirement 2: neither the TUI nor the notifier establishes its own

@@ -92,6 +92,20 @@
       "classification": "operational-recovery",
       "reason": "Records the offline Remote TUI read-cache's own save timestamp (#681) so a disconnected session can report how stale the cached view is; it is cache freshness metadata, not a life.txt workflow date choice.",
       "removal_condition": "Route through a shared operational UTC clock if one is introduced for cache/recovery evidence generally."
+    },
+    {
+      "path": "lifetxt/sqlite_codec.py",
+      "call": "datetime.datetime.now",
+      "classification": "operational-audit",
+      "reason": "Timestamps metadata.exported_at (#691) so an external SQL client can see when the interchange database was produced; it is export provenance, not a life.txt workflow date choice, and the lifetxt-sqlite-v1 contract explicitly documents this field as non-deterministic.",
+      "removal_condition": "Route through a shared operational UTC clock if one is introduced for interchange/export provenance generally."
+    },
+    {
+      "path": "lifetxt/lifetxtz_codec.py",
+      "call": "datetime.datetime.now",
+      "classification": "operational-audit",
+      "reason": "Timestamps manifest.created_at (#693) as archive export provenance; it is not a life.txt workflow date choice, and the lifetxtz-v1 contract explicitly excludes this field from its determinism promise while callers may inject a fixed value for deterministic tests.",
+      "removal_condition": "Route through a shared operational UTC clock if one is introduced for interchange/export provenance generally."
     }
   ]
 }

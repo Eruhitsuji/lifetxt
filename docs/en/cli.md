@@ -1314,9 +1314,9 @@ options).
 | `jsonl` | `to-jsonl` | machine-readable, filtered |
 | `csv` | `to-csv` | machine-readable, filtered |
 | `markdown` | `share --format markdown` | human-readable report |
-| `life` | `filter` (native output) | native Format 1.0 semantics; see [5.2](#52-native-life-import-and-export) |
-| `sqlite` | -- | semantic item/detail round-trip; see [5.3](#53-sqlite-interchange) |
-| `lifetxtz` | -- | verified native payload fidelity; see [5.4](#54-lifetxtz-compressed-archive) |
+| `life` | `filter` (native output) | native Format 1.0 semantics; see [5.3](#53-native-life-import-and-export) |
+| `sqlite` | -- | semantic item/detail round-trip; see [5.4](#54-sqlite-interchange) |
+| `lifetxtz` | -- | verified native payload fidelity; see [5.5](#55-lifetxtz-compressed-archive) |
 
 `sqlite` and `lifetxtz` are binary formats and require an explicit
 `-o`/`--output` file; they cannot be written to stdout.
@@ -1527,6 +1527,48 @@ as `agenda`, `filter`, `to-json`, and `check`.
 When using `--merge-existing`, comments and unmatched hand-written lines in the
 generated output are preserved. Matching records are replaced by UID-backed
 generated events, and missing `source:ics` events can be soft-deleted.
+
+### 5.3 Native `life` import and export
+
+```sh
+python -m lifetxt export life.txt --format life -o subset.life.txt
+python -m lifetxt import subset.life.txt --preset life -o restored.life.txt
+python -m lifetxt import subset.life.txt --preset life -o life.txt --append
+```
+
+`--format life`/`--preset life` treat lifetxt's own native representation as
+an explicit, first-class conversion format so native data can be moved,
+filtered, validated, and merged through the same discoverable surface used
+for JSON/CSV/Markdown, instead of only through direct file editing.
+
+- **Export** (`export --format life`, equivalent to `filter` with the
+  default/native output) reuses the existing parser, filter, and native
+  rendering path. Items keep their exact original text, including repeated
+  detail keys, custom fields, `\|`-continuation multiline `body:`/`note:`
+  values, `id:`/link details, and mixed item types. Pass `--canonical` to
+  flatten indentation into explicit `parent:` links instead (matching
+  `filter --canonical`).
+- **Import** (`import --preset life`, or `import-ics --preset life`) parses
+  and validates the source through the authoritative parser *before* writing
+  or appending anything; a syntax error refuses the write entirely rather
+  than producing a partially-imported file. A `*.life.txt` input infers
+  `--preset life` automatically; a plain `.txt` is never guessed, because it
+  may hold other text content.
+- **Fidelity boundary**: item records round-trip losslessly (their exact
+  original line/continuation text is reused). Blank lines, `#` comments, and
+  file-level `#!KEY: VALUE` directives are **not** carried through import,
+  the same limitation every other item-based command in this CLI already has
+  (comments/directives are not part of the `Item` model `parse_text` returns).
+  If the source has directives, `import --preset life` prints a warning
+  naming them instead of dropping them silently.
+
+Examples:
+
+```sh
+python -m lifetxt export life.txt --format life --project research -o research.life.txt
+python -m lifetxt export life.txt --format life --canonical -o flattened.life.txt
+python -m lifetxt import research.life.txt --preset life -o archive/research.life.txt
+```
 
 ## 6. `filter`
 

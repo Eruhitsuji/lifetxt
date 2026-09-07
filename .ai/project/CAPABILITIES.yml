@@ -8685,24 +8685,34 @@ capabilities:
     owner: Eruhitsuji
     source_requirements:
       - req-export-unified-dispatcher
+      - req-native-life-import-export
     implementation_locations:
       - lifetxt/cli.py
+      - lifetxt/native_codec.py
       - tests/test_lifetxt.py
       - docs/en/cli.md
       - docs/ja/cli.md
     public_interfaces:
-      - lifetxt export --format json|jsonl|csv|markdown
+      - lifetxt export --format json|jsonl|csv|markdown|life
+      - lifetxt import --preset life
       - lifetxt.cli.EXPORT_FORMAT_HANDLERS
       - lifetxt.cli.register_export_format
+      - lifetxt.cli.register_import_preset
+      - lifetxt.native_codec.items_to_life_text
+      - lifetxt.native_codec.canonical_hierarchy_items
     tests_or_evidence:
       - "tests/test_lifetxt.py LifeTxtExportCliTests (9 tests): export --format json/jsonl/csv/markdown byte-for-byte matches to-json/to-jsonl/to-csv/share --format markdown for filtered and unfiltered input, output-file parity, unsupported-format/missing-format argparse rejection, --help"
       - .venv/Scripts/python.exe -m unittest tests.test_lifetxt.LifeTxtExportCliTests -> Ran 9 tests, OK
       - .venv/Scripts/python.exe -m unittest tests.test_cli_taxonomy tests.test_completion_surfaces tests.test_completion_values -> Ran 97 tests, OK (skipped=1)
       - .venv/Scripts/python.exe -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
       - ruff format --check / ruff check on changed files -> clean
+      - "tests/test_lifetxt.py LifeTxtNativeLifeFormatTests (8 tests): export --format life matches filter (both plain and --canonical), export-then-import round-trips repeated detail keys and multiline body: continuation byte-for-byte, *.life.txt extension inference, plain .txt never guessed, invalid syntax refused before any write, --append merges into an existing file, dropped #!directive lines produce an explicit warning naming them"
+      - .venv/Scripts/python.exe -m unittest tests.test_lifetxt.LifeTxtNativeLifeFormatTests -> Ran 8 tests, OK
+      - .venv/Scripts/python.exe -m unittest tests.test_lifetxt.LifeTxtExportCliTests tests.test_lifetxt.LifeTxtFilterCliTests tests.test_lifetxt.LifeTxtIcsImportCliTests -> Ran 45 tests, OK
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/687
       - https://github.com/Eruhitsuji/lifetxt/issues/688
+      - https://github.com/Eruhitsuji/lifetxt/issues/689
     related_pull_requests: []
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-

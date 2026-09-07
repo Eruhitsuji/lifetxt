@@ -34,9 +34,7 @@ _RECORD_OWNED_KEYS = {
     "issue": frozenset(
         ("record", "id", "project", "severity", "state", "owner", "assignee")
     ),
-    "decision": frozenset(
-        ("record", "id", "project", "on", "at", "owner", "assignee")
-    ),
+    "decision": frozenset(("record", "id", "project", "on", "at", "owner", "assignee")),
     "meeting": frozenset(
         (
             "record",
@@ -308,7 +306,11 @@ def _patch_cli_timezone_installer():
                     try:
                         text, _raw, _bom = read_text_exact(path)
                         break
-                    except OSError:
+                    except (OSError, UnicodeDecodeError):
+                        # A binary interchange path (sqlite, lifetxtz, ...) can
+                        # legitimately be a candidate here since this scan has
+                        # no extension filter; it simply carries no
+                        # #!timezone: directive to read (#691).
                         continue
             name = resolve_timezone_name(config, text=text)
             with timezone_context(name):
@@ -447,7 +449,9 @@ def _patch_capture_commands(cli_module):
 
     def command_quick(args):
         config = cli_module._config(args)
-        destination = getattr(args, "append", None) or cli_module.config_write_file(config)
+        destination = getattr(args, "append", None) or cli_module.config_write_file(
+            config
+        )
         known_ids = _configured_item_ids(cli_module, args, [destination])
         token = _QUICK_KNOWN_IDS.set(known_ids)
         try:

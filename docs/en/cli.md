@@ -1570,6 +1570,45 @@ python -m lifetxt export life.txt --format life --canonical -o flattened.life.tx
 python -m lifetxt import research.life.txt --preset life -o archive/research.life.txt
 ```
 
+### 5.4 SQLite interchange
+
+```sh
+python -m lifetxt export life.txt --format sqlite -o life.db
+python -m lifetxt import life.db --preset sqlite -o restored.life.txt
+```
+
+`--format sqlite` / `--preset sqlite` write and read a versioned relational
+interchange database (schema `lifetxt-sqlite-v1`, defined in
+[format-sqlite-interchange-v1.md](format-sqlite-interchange-v1.md)) using
+only the Python standard library `sqlite3` module -- no new dependency.
+
+- **SQLite is an interchange representation, not lifetxt's authoritative
+  store.** Plain `life.txt` remains authoritative; there is no live sync
+  and no watch mode.
+- The database has three tables -- `metadata`, `items`, `details` -- and can
+  be queried directly with any SQL client:
+
+  ```sh
+  sqlite3 life.db "SELECT status, kind, title FROM items ORDER BY item_seq;"
+  sqlite3 life.db "SELECT i.title, d.key, d.value FROM items i JOIN details d ON d.item_seq = i.item_seq WHERE i.kind = 'T';"
+  ```
+
+- Export is transactional: the database is built at a private temporary
+  path and only committed to `-o`/`--output` on success, so a failure never
+  leaves a partial `.db` file. `-o`/`--output` is required -- SQLite is a
+  binary format and cannot be written to stdout.
+- Import refuses a foreign/corrupt database, a missing or mismatched
+  `schema_version`, or a missing `items`/`details` table, before returning
+  any item -- see the schema document's own validation order.
+- `.db`, `.sqlite`, and `.sqlite3` all infer `--preset sqlite` for `import`.
+- Item order, every detail key (including custom/repeated keys and their
+  value order), and multiline `body:` values round-trip semantically; the
+  original file's indentation is flattened into explicit `parent:` links
+  (the same normalization `filter --canonical` already performs), and
+  blank lines/comments/`#!` directives are not part of the item model and
+  do not round-trip. See the schema document for the full contract,
+  including its determinism boundary.
+
 ## 6. `filter`
 
 Filter parsed life.txt items and output the result as life.txt, JSON, or JSONL.

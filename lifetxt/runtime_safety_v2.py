@@ -235,7 +235,11 @@ def install_cli_timezone_context(cli_module):
                 try:
                     text, _raw, _bom = read_text_exact(path)
                     break
-                except OSError:
+                except (OSError, UnicodeDecodeError):
+                    # A binary interchange path (sqlite, lifetxtz, ...) can
+                    # legitimately be a candidate here since this scan has no
+                    # extension filter; it simply carries no #!timezone:
+                    # directive to read (#691).
                     continue
         name = resolve_timezone_name(config, text=text)
         with timezone_context(name):

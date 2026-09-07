@@ -105,6 +105,7 @@ from .links import (
 from .markdown import markdown_to_html, markdown_to_plain
 from .model import Diagnostic, Item
 from . import native_codec
+from . import sqlite_codec
 from .timezone_policy import local_now_naive, today as timezone_today
 from .timeutil import format_datetime, parse_date_or_datetime, relative_time
 from .notifier import (
@@ -5126,6 +5127,33 @@ def command_export(args):
     return handler(args)
 
 
+def _export_sqlite(args):
+    """`lifetxt export --format sqlite` handler (#691).
+
+    Reuses the item loading/filtering path every other export format shares
+    and delegates the actual database construction to
+    lifetxt.sqlite_codec.export_sqlite(), which implements the
+    lifetxt-sqlite-v1 contract frozen by #690.
+    """
+    items, diagnostics = _parse_or_exit(args.paths, _config(args))
+    items = _filter_items_from_args(items, args)
+    if not args.output:
+        raise ValueError(
+            "--format sqlite requires -o/--output: SQLite is a binary "
+            "format and cannot be written to stdout."
+        )
+    id_key = id_key_from_config(_config(args))
+    sqlite_codec.export_sqlite(items, args.output, key=id_key)
+    _print_warnings(diagnostics)
+    return 0
+
+
+def _import_sqlite_preset(path, args):
+    """`import --preset sqlite` handler (#691), registered into
+    IMPORT_PRESET_HANDLERS below."""
+    return sqlite_codec.import_sqlite(path)
+
+
 def command_demo(args):
     if args.count < 0:
         raise ValueError("--count must be zero or greater.")
@@ -5461,6 +5489,9 @@ _IMPORT_EXTENSION_PRESETS = {
     ".ics": "ics",
     ".md": "markdown",
     ".markdown": "markdown",
+    ".db": "sqlite",
+    ".sqlite": "sqlite",
+    ".sqlite3": "sqlite",
 }
 
 #: Every supported --preset value, in the order shown to users. Extended by
@@ -17025,3 +17056,5 @@ register_export_format("jsonl", command_to_jsonl)
 register_export_format("csv", command_to_csv)
 register_export_format("markdown", command_share)
 register_export_format("life", command_filter)
+register_export_format("sqlite", _export_sqlite)
+register_import_preset("sqlite", _import_sqlite_preset)

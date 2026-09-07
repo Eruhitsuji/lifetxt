@@ -2585,6 +2585,82 @@ class LifeTxtSqliteCliTests(unittest.TestCase):
             self.assertNotIn("Journal_Entry", text)
 
 
+class LifeTxtLifetxtzCliTests(unittest.TestCase):
+    """`export --format lifetxtz` / `import` (.lifetxtz) (#693)."""
+
+    _FIXTURE = (
+        '[ ] T "Write report" id:t1 due:2026-06-08 tag:urgent tag:review project:work\n'
+        "[N] J Journal_Entry id:t2\n"
+        "| first line\n"
+        "| second line\n"
+    )
+
+    def test_export_then_import_round_trips_status_kind_title_and_details(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = os.path.join(temp_dir, "life.txt")
+            with open(input_path, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write(self._FIXTURE)
+            archive_path = os.path.join(temp_dir, "life.lifetxtz")
+            restored_path = os.path.join(temp_dir, "restored.life.txt")
+
+            _, stderr_a, code_a = run_cli(
+                "export", input_path, "--format", "lifetxtz", "-o", archive_path
+            )
+            self.assertEqual(0, code_a, stderr_a)
+            self.assertTrue(os.path.exists(archive_path))
+
+            _, stderr_b, code_b = run_cli("import", archive_path, "-o", restored_path)
+            self.assertEqual(0, code_b, stderr_b)
+            with open(restored_path, encoding="utf-8") as handle:
+                restored = handle.read()
+            self.assertIn("id:t1", restored)
+            self.assertIn("tag:urgent", restored)
+            self.assertIn("tag:review", restored)
+            self.assertIn("Journal_Entry", restored)
+            self.assertIn("first line", restored)
+            self.assertIn("second line", restored)
+
+            _, stderr_c, code_c = run_cli("check", restored_path)
+            self.assertEqual(0, code_c, stderr_c)
+
+    def test_export_lifetxtz_requires_output(self):
+        _, stderr, code = run_cli(
+            "export", "--format", "lifetxtz", input_text=self._FIXTURE
+        )
+        self.assertNotEqual(0, code)
+        self.assertIn("--output", stderr)
+
+    def test_import_refuses_a_corrupt_archive_before_writing(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            bad_archive = os.path.join(temp_dir, "bad.lifetxtz")
+            with open(bad_archive, "wb") as handle:
+                handle.write(b"not a real zip archive")
+            out_path = os.path.join(temp_dir, "out.life.txt")
+            _, stderr, code = run_cli("import", bad_archive, "-o", out_path)
+            self.assertNotEqual(0, code)
+            self.assertFalse(os.path.exists(out_path))
+
+    def test_export_lifetxtz_applies_filters(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            archive_path = os.path.join(temp_dir, "filtered.lifetxtz")
+            restored_path = os.path.join(temp_dir, "restored.life.txt")
+            run_cli(
+                "export",
+                "--format",
+                "lifetxtz",
+                "--type",
+                "task",
+                "-o",
+                archive_path,
+                input_text=self._FIXTURE,
+            )
+            run_cli("import", archive_path, "-o", restored_path)
+            with open(restored_path, encoding="utf-8") as handle:
+                text = handle.read()
+            self.assertIn("id:t1", text)
+            self.assertNotIn("Journal_Entry", text)
+
+
 class LifeTxtDirectiveTests(unittest.TestCase):
     def test_parse_directives_extracts_block(self):
         from lifetxt.parser import parse_directives

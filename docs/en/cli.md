@@ -1609,6 +1609,40 @@ only the Python standard library `sqlite3` module -- no new dependency.
   do not round-trip. See the schema document for the full contract,
   including its determinism boundary.
 
+### 5.5 `.lifetxtz` compressed archive
+
+```sh
+python -m lifetxt export life.txt --format lifetxtz -o life.lifetxtz
+python -m lifetxt import life.lifetxtz -o restored.life.txt
+```
+
+`--format lifetxtz`/`.lifetxtz` inputs to `import` write and read a
+versioned, compressed, integrity-checked native archive (container
+`lifetxtz-v1`, defined in
+[format-lifetxtz-v1.md](format-lifetxtz-v1.md)), using only the standard
+library `zipfile`/`hashlib` -- no new dependency.
+
+- **`.lifetxtz` is a compact storage/transfer container, not lifetxt's
+  authoritative store.** Plain `life.txt` remains authoritative; the
+  archive holds exactly one canonicalized native payload and nothing else
+  (no attachments, config, or history).
+- The archive is a standard ZIP containing exactly `manifest.json` (a
+  small integrity/identity record with a SHA-256 of the payload) and
+  `data.life.txt` (the canonical native payload) -- any other member set,
+  including duplicates or extras, is refused.
+- Import verifies the container version, manifest structure, and payload
+  checksum, and enforces bounded decompression size limits *before*
+  decompressing anything, so a corrupt or maliciously crafted archive is
+  refused rather than partially processed. It never extracts a member to
+  the filesystem by path -- only the two fixed member names are ever read
+  into memory -- so path traversal is not possible.
+- `-o`/`--output` is required for export; `.lifetxtz` is a binary format
+  and cannot be written to stdout.
+- Given the same filtered item set and options, the payload -- and
+  therefore its checksum -- is always byte-identical; the full archive is
+  byte-identical too when the export timestamp is held equal. See the
+  format document for the exact determinism contract.
+
 ## 6. `filter`
 
 Filter parsed life.txt items and output the result as life.txt, JSON, or JSONL.

@@ -11535,7 +11535,7 @@ traceability:
       capability_id: cap-progress-standard-key
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/695
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/700
       changed_files_or_scope:
         - Add surface-neutral authoritative progress period-boundary delta semantics
         - Add stats --progress-delta ID text and JSON output over the existing date range

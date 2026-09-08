@@ -7780,6 +7780,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/695
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/698
+      - https://github.com/Eruhitsuji/lifetxt/pull/700
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       #645 is the parent/epic issue decomposed into #646-652, each with its

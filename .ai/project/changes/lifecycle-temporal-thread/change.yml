@@ -9,7 +9,7 @@ change:
   owner: Eruhitsuji
   accountable_owner: Eruhitsuji
   related_issue: https://github.com/Eruhitsuji/lifetxt/issues/699
-  related_pull_request: pending
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/705
   base_commit: 59a1608
   target_release: next normal maintenance release
 

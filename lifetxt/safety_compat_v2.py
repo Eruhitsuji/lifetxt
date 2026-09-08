@@ -128,6 +128,21 @@ _RECORD_OWNED_KEYS = {
             "corrects",
         )
     ),
+    "progress_event": frozenset(
+        (
+            "record",
+            "id",
+            "parent",
+            "at",
+            "sequence",
+            "transaction",
+            "source_revision",
+            "operation",
+            "before_progress",
+            "before_missing",
+            "after_progress",
+        )
+    ),
 }
 _RECORD_LIFECYCLE_STATE_MARKERS = frozenset(("project", "risk", "issue"))
 _W106_KEY_RE = re.compile(r"^Detail key '([^']+)' is custom for type ")

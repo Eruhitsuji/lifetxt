@@ -3484,6 +3484,7 @@ class LifeTxtProgressCliTests(unittest.TestCase):
                 content = f.read()
             self.assertIn("progress:3/10", content)
             self.assertNotIn("progress:4/10", content)
+            self.assertNotIn("record:progress_event", content)
 
     def test_a_tiny_percentage_delta_is_not_rounded_away(self):
         # A CodeX review finding: %g formatting defaults to 6 significant
@@ -3588,8 +3589,11 @@ class LifeTxtProgressCliTests(unittest.TestCase):
             self.assertEqual(0, code, stderr)
             with open(path, encoding="utf-8") as f:
                 content = f.read()
-            self.assertIn("progress:75%", content)
-            self.assertNotIn("progress:40%", content)
+            item_line, event_line = content.splitlines()
+            self.assertIn("progress:75%", item_line)
+            self.assertNotIn("progress:40%", item_line)
+            self.assertIn("before_progress:40%", event_line)
+            self.assertIn("after_progress:75%", event_line)
 
     def test_set_replaces_a_fraction_value(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -3602,8 +3606,11 @@ class LifeTxtProgressCliTests(unittest.TestCase):
             self.assertEqual(0, code, stderr)
             with open(path, encoding="utf-8") as f:
                 content = f.read()
-            self.assertIn("progress:8/10", content)
-            self.assertNotIn("progress:3/10", content)
+            item_line, event_line = content.splitlines()
+            self.assertIn("progress:8/10", item_line)
+            self.assertNotIn("progress:3/10", item_line)
+            self.assertIn("before_progress:3/10", event_line)
+            self.assertIn("after_progress:8/10", event_line)
 
     def test_set_works_when_the_item_has_no_existing_progress(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -3613,6 +3620,8 @@ class LifeTxtProgressCliTests(unittest.TestCase):
             with open(path, encoding="utf-8") as f:
                 content = f.read()
             self.assertIn("progress:0%", content)
+            self.assertIn("record:progress_event", content)
+            self.assertIn("before_missing:true", content)
 
     def test_set_rejects_an_out_of_range_value_before_any_write(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -3661,6 +3670,46 @@ class LifeTxtProgressCliTests(unittest.TestCase):
                 content = f.read()
             self.assertIn("progress:40%", content)
             self.assertNotIn("progress:75%", content)
+            self.assertNotIn("record:progress_event", content)
+
+    def test_progress_write_requires_a_stable_item_id_for_history(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task progress:40%\n")
+            stdout, stderr, code = run_cli(
+                "progress", path, "--line", "1", "--set", "75%"
+            )
+            self.assertEqual(1, code)
+            self.assertIn("requires a stable id:", stderr)
+            with open(path, encoding="utf-8") as f:
+                self.assertEqual("[ ] T Task progress:40%\n", f.read())
+
+    def test_progress_dry_run_does_not_require_an_id(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(temp_dir, "[ ] T Task progress:40%\n")
+            stdout, stderr, code = run_cli(
+                "progress", path, "--line", "1", "--set", "75%", "--dry-run"
+            )
+            self.assertEqual(0, code, stderr)
+            self.assertIn("Would change progress:40% to progress:75%", stdout)
+            with open(path, encoding="utf-8") as f:
+                self.assertEqual("[ ] T Task progress:40%\n", f.read())
+
+    def test_check_reports_incomplete_progress_history(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self._write(
+                temp_dir,
+                "[ ] T Task id:task_1 progress:50%\n"
+                "[N] N Progress_task_1_000001 record:progress_event "
+                "id:PE-task_1-000001 parent:task_1 at:2026-09-08T09:00:00Z "
+                "sequence:1 transaction:PTX-task_1-000001 "
+                "source_revision:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa "
+                "operation:set before_progress:25% after_progress:40%\n",
+            )
+            stdout, stderr, code = run_cli("check", path)
+            self.assertEqual("", stderr)
+            self.assertEqual(0, code)
+            self.assertIn("WARNING W243", stdout)
+            self.assertIn("current progress does not match", stdout)
 
     def test_set_resolves_by_unique_id_prefix(self):
         with tempfile.TemporaryDirectory() as temp_dir:

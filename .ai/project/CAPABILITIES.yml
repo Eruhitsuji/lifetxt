@@ -7760,7 +7760,7 @@ capabilities:
       - record:progress_event append-only history contract
     tests_or_evidence:
       - "python -m unittest tests.test_progress tests.test_check_progress tests.test_query tests.test_life_hub tests.test_cui_extensions tests.test_web_i18n -> Ran 396 tests, OK (skipped=1, unrelated)"
-      - "#697: focused progress-event/CLI/compat/privacy/traceability suite -> Ran 72 tests, OK; full unittest discover -> Ran 3988 tests, OK (skipped=197)"
+      - "#697: focused progress-event/CLI/compat/privacy/traceability suite -> Ran 72 tests, OK; full unittest discover -> Ran 3989 tests, OK (skipped=197)"
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/645
       - https://github.com/Eruhitsuji/lifetxt/issues/646
@@ -7771,7 +7771,8 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/651
       - https://github.com/Eruhitsuji/lifetxt/issues/652
       - https://github.com/Eruhitsuji/lifetxt/issues/697
-    related_pull_requests: []
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/698
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       #645 is the parent/epic issue decomposed into #646-652, each with its

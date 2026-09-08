@@ -22,7 +22,7 @@ verification:
       command: MPLBACKEND=Agg python -W ignore::ResourceWarning -m unittest discover
       requirement_ids:
         - req-progress-event-history
-      result: Ran 3988 tests in 213.297s -- OK (skipped=197)
+      result: Ran 3989 tests in 212.861s -- OK (skipped=197)
       commit: working-tree
       executed_at: '2026-09-08'
       status: passed

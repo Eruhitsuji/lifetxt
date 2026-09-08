@@ -11507,7 +11507,7 @@ traceability:
       capability_id: cap-progress-standard-key
       epic: https://github.com/Eruhitsuji/lifetxt/issues/695
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/697
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/698
       changed_files_or_scope:
         - Add append-only record:progress_event evidence for explicit CLI progress writes
         - Couple current-value update and event append in one exact-revision mutation
@@ -11519,7 +11519,7 @@ traceability:
         - tests/test_progress_history.py
       tests_or_evidence:
         - "Focused progress/history/compat/privacy plus traceability/closeout suite -> Ran 72 tests, OK"
-        - "MPLBACKEND=Agg python -W ignore::ResourceWarning -m unittest discover -> Ran 3988 tests, OK (skipped=197)"
+        - "MPLBACKEND=Agg python -W ignore::ResourceWarning -m unittest discover -> Ran 3989 tests, OK (skipped=197)"
         - "python scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> errors 0, ok true"
       release_or_deployment: next normal maintenance release
       notes: >-

@@ -5,7 +5,7 @@ links:
     capability_id: cap-progress-standard-key
     epic: https://github.com/Eruhitsuji/lifetxt/issues/695
     task_issue: https://github.com/Eruhitsuji/lifetxt/issues/697
-    pull_request: null
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/698
     tests_or_evidence:
       - "tests/test_progress_history.py: record construction, atomic sequential mutation, raw representation, missing-before, conflicts, manual gaps, integrity diagnostics, and authoritative availability"
       - "tests/test_lifetxt.py LifeTxtProgressCliTests: CLI set/delta/dry-run/selection/stable-ID behavior"

@@ -1,0 +1,56 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/progress-delta-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {"properties": {"available": {"const": true}}},
+      "then": {
+        "properties": {
+          "delta_percentage_points": {"type": "number"},
+          "delta_ratio": {"type": "number"},
+          "end_at": {"type": "string"},
+          "end_ratio": {"type": "number"},
+          "end_raw": {"type": "string"},
+          "reason": {"type": "null"},
+          "start_at": {"type": "string"},
+          "start_ratio": {"type": "number"},
+          "start_raw": {"type": "string"}
+        }
+      },
+      "else": {
+        "properties": {
+          "delta_percentage_points": {"type": "null"},
+          "delta_ratio": {"type": "null"},
+          "reason": {"type": "string"}
+        }
+      }
+    }
+  ],
+  "properties": {
+    "available": {"type": "boolean"},
+    "delta_percentage_points": {"type": ["number", "null"]},
+    "delta_ratio": {"type": ["number", "null"]},
+    "end_at": {"format": "date-time", "type": ["string", "null"]},
+    "end_ratio": {"maximum": 1, "minimum": 0, "type": ["number", "null"]},
+    "end_raw": {"type": ["string", "null"]},
+    "from": {"format": "date-time", "type": "string"},
+    "item_id": {"minLength": 1, "type": "string"},
+    "key": {"const": "progress"},
+    "reason": {
+      "enum": [null, "no_history", "history_incomplete", "start_unavailable", "end_unavailable"]
+    },
+    "schema": {"const": "lifetxt-progress-delta-v1"},
+    "start_at": {"format": "date-time", "type": ["string", "null"]},
+    "start_ratio": {"maximum": 1, "minimum": 0, "type": ["number", "null"]},
+    "start_raw": {"type": ["string", "null"]},
+    "to": {"format": "date-time", "type": "string"}
+  },
+  "required": [
+    "schema", "key", "item_id", "from", "to", "available", "reason",
+    "start_raw", "start_ratio", "start_at", "end_raw", "end_ratio",
+    "end_at", "delta_ratio", "delta_percentage_points"
+  ],
+  "title": "lifetxt progress period delta v1",
+  "type": "object"
+}

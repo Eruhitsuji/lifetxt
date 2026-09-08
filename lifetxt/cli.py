@@ -2277,13 +2277,18 @@ def build_parser():
 
     stats = subparsers.add_parser(
         "stats",
-        help="Show task, habit, mood, and project statistics.",
+        help="Show task, habit, mood, project, and progress-delta statistics.",
     )
     _add_input_paths(stats)
     stats.add_argument(
         "--from", dest="start", help="Start date. Defaults to 29 days before --to."
     )
     stats.add_argument("--to", dest="end", help="End date. Defaults to today.")
+    stats.add_argument(
+        "--progress-delta",
+        metavar="ID",
+        help="Show authoritative progress change between --from/--to boundaries.",
+    )
     _add_item_filter_arguments(stats)
     stats.add_argument(
         "--group",
@@ -15137,10 +15142,12 @@ def command_timer(args):
 
 
 def command_stats(args):
+    config = _config(args)
     args.paths = _normalize_paths(
-        args.paths, _config(args), stdin_when_empty=False
+        args.paths, config, stdin_when_empty=False
     ) or ["life.txt"]
     args.filter_items_func = _filter_items_from_args
+    args.id_key = id_key_from_config(config)
     from .stats import cmd_stats
 
     return cmd_stats(args)

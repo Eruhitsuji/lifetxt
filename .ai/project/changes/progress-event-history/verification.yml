@@ -1,0 +1,53 @@
+schema_version: 1
+
+verification:
+  executed:
+    - type: unit
+      command: python -m unittest tests.test_progress_history tests.test_lifetxt.LifeTxtProgressCliTests tests.test_generated_record_capture_compat.GeneratedRecordValidationTests tests.test_remote_backend_v20.RemoteTicketHistoryPrivacyTests
+      requirement_ids:
+        - req-progress-event-history
+      result: Ran 52 tests -- OK before final validation additions; superseded by the focused and full reruns below
+      commit: working-tree
+      executed_at: '2026-09-08'
+      status: passed
+    - type: unit
+      command: python -m unittest tests.test_progress_history tests.test_lifetxt.LifeTxtProgressCliTests tests.test_generated_record_capture_compat.GeneratedRecordValidationTests tests.test_remote_backend_v20.RemoteTicketHistoryPrivacyTests tests.test_traceability_gate tests.test_change_package_closeout
+      requirement_ids:
+        - req-progress-event-history
+      result: Ran 72 tests -- OK
+      commit: working-tree
+      executed_at: '2026-09-08'
+      status: passed
+    - type: regression
+      command: MPLBACKEND=Agg python -W ignore::ResourceWarning -m unittest discover
+      requirement_ids:
+        - req-progress-event-history
+      result: Ran 3988 tests in 213.297s -- OK (skipped=197)
+      commit: working-tree
+      executed_at: '2026-09-08'
+      status: passed
+    - type: documentation
+      command: python scripts/validate_release_docs.py --output .cache/release-doc-validation.json
+      requirement_ids:
+        - req-progress-event-history
+      result: '{"errors": 0, "ok": true}; 104 internal links and all CLI help commands checked'
+      commit: working-tree
+      executed_at: '2026-09-08'
+      status: passed
+    - type: smoke
+      command: python -m lifetxt check examples/minimal_life.txt
+      requirement_ids:
+        - req-progress-event-history
+      result: 'OK: 10 item(s), exit 0'
+      commit: working-tree
+      executed_at: '2026-09-08'
+      status: passed
+    - type: whitespace
+      command: git diff --check
+      requirement_ids: []
+      result: clean
+      commit: working-tree
+      executed_at: '2026-09-08'
+      status: passed
+  gaps:
+    - Ruff was not installed in the execution environment and unavailable from the offline uv/pip caches; changed Python was compiled, manually checked against the configured 88-column boundary, and will receive the repository's Ruff checks in final CI.

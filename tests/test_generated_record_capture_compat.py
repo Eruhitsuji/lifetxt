@@ -8,6 +8,7 @@ import unittest
 from lifetxt import entrypoint
 from lifetxt.ids import id_audit
 from lifetxt.parser import parse_text
+from lifetxt.progress_history import build_progress_event
 from lifetxt.serializer import item_to_line
 from lifetxt.ticket_activity import build_ticket_event, build_time_entry
 from lifetxt.ticket_revision_writes import ticket_file_revision
@@ -82,6 +83,19 @@ class GeneratedRecordValidationTests(unittest.TestCase):
         )
         codes = self._codes(item_to_line(entry) + "\n")
         self.assertNotIn("W106", codes)
+
+    def test_progress_event_owned_fields_do_not_emit_w106(self):
+        event = build_progress_event(
+            "task-1",
+            "25%",
+            "40%",
+            "set",
+            "2026-09-08T09:00:00Z",
+            1,
+            "PTX-task-1-000001",
+            "a" * 64,
+        )
+        self.assertNotIn("W106", self._codes(item_to_line(event) + "\n"))
 
     def test_ticket_history_unknown_custom_key_still_warns(self):
         event = build_ticket_event(

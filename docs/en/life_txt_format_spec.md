@@ -267,6 +267,8 @@ not globally unique, such as `id:todoist-123` or `id:github-42`.
 | `related` | Looser related item | `related:note_001` |
 | `duplicate_of` | This item duplicates another item | `duplicate_of:task_001` |
 | `replaced_by` | This item has been superseded by another item | `replaced_by:task_002` |
+| `follows` | This item is an explicit lifecycle successor of another item | `follows:visit_001` |
+| `realizes` | This actual item realizes a plan or intention | `realizes:visit_plan` |
 
 `duplicate_of:` and `replaced_by:` are independent, one-directional
 assertions, matching `depends_on:`/`blocks:`: writing one side never implies
@@ -277,6 +279,18 @@ Reference values point to the selected ID key, normally `id:`. Tools should
 warn when a reference has no target, points to the same item, or creates a
 cycle. Parsing stays permissive regardless: an unresolved or cyclic
 reference is a validator warning, never a parse error.
+
+Lifecycle direction is authoritative and never inferred from dates:
+
+- `current follows:previous` stores the newer-to-older assertion; its
+  `followed_by` inverse is derived only for display/query results.
+- `actual realizes:plan` stores the actual-to-plan assertion; `realized_by`
+  is a derived inverse and is never written automatically.
+- `old replaced_by:new` remains the replacement/supersession vocabulary;
+  there is no duplicate `supersedes:` key.
+- A nearby or later date does not imply any of these relations. The
+  `temporal-context-v1` `before`/`after`/`same_day` edges are derived,
+  read-only evidence and remain separate from this explicit graph.
 
 Dependency semantics:
 
@@ -303,8 +317,10 @@ errors:
 | `W227` | A cycle through the combined `depends_on:`/inverse-`blocks:` graph |
 | `W228` | A cycle through `duplicate_of:` |
 | `W229` | A cycle through `replaced_by:` |
+| `W230` | A cycle through `follows:` |
+| `W231` | A cycle through `realizes:` |
 
-`W227`, `W228`, and `W229` are evaluated independently: for example, an item
+`W227` through `W231` are evaluated independently: for example, an item
 `A` with `duplicate_of:B` where `B` has `replaced_by:A` does not trigger
 either code, because it mixes two different relations rather than forming a
 cycle within one of them. `W227` treats `depends_on:A->B` and `blocks:B->A`

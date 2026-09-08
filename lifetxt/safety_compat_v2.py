@@ -80,6 +80,8 @@ _RECORD_OWNED_KEYS = {
             "related",
             "duplicate_of",
             "replaced_by",
+            "follows",
+            "realizes",
         )
     ),
     "ticket_event": frozenset(

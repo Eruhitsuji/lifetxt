@@ -132,6 +132,8 @@ REFERENCE_KEYS = (
     "related",
     "duplicate_of",
     "replaced_by",
+    "follows",
+    "realizes",
 )
 #: Keys whose value is a filesystem path, optionally with a #sha256= fragment.
 ATTACHMENT_KEYS = ("file", "dir")

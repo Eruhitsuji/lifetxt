@@ -184,6 +184,7 @@ python -m lifetxt vm run program.life.txt --entry s1
 | `area` | task と project を `area:` でグループ化する ([life-hub.md](life-hub.md) 参照) |
 | `backlinks` | 指定 ID を参照している item (incoming link) を表示する ([life-hub.md](life-hub.md) 参照) |
 | `temporal` | 1 item の派生 temporal context (overdue/due/staleness と近接する日付付き item) を表示する ([life-hub.md](life-hub.md) 参照) |
+| `thread` | 1 item の明示的 lifecycle thread と派生 temporal context を統合表示する ([life-hub.md](life-hub.md) 参照) |
 | `freebusy` | 期間内の `E`/`R` items について busy/free time interval と重複 conflict を表示する ([life-hub.md](life-hub.md) 参照) |
 | `query` | 共通 query 言語で item を絞り込む ([query.md](query.md) 参照) |
 | `view` | saved view (名前付き query) を list / 検査 / 実行する ([query.md](query.md) 参照) |
@@ -227,7 +228,7 @@ audience、そしてこの表と同じカテゴリ分類を表示します。
 | カテゴリ | コマンド |
 |---|---|
 | Getting Started / Daily | `tour`、`help`、`init`、`quick` (`add`)、`today`、`next`、`agenda`、`show`、`edit`、`done`、`complete`、`progress`、`clone`、`reopen`、`due`、`review`、`assist`、`state`、`start`、`stop`、`assign`、`timer`、`notify` |
-| Query / Explore | `filter`、`search`、`find`、`query`、`view`、`summary`、`inbox`、`health`、`temporal`、`freebusy`、`count`、`status`、`recent` |
+| Query / Explore | `filter`、`search`、`find`、`query`、`view`、`summary`、`inbox`、`health`、`temporal`、`thread`、`freebusy`、`count`、`status`、`recent` |
 | Projects / People / Collaboration | `project`、`portfolio`、`area`、`person`、`group`、`who`、`message`、`proposal`、`ticket`、`version`、`sprint` |
 | Structure / Data Integrity | `check`、`integrity`、`ids`、`links`、`backlinks`、`sources`、`tag`、`lint`、`deps`、`diff`、`snapshot`、`undo`、`cleanup`、`files` |
 | Import / Export / Reports | `import`、`export`、`import-ics`、`sync-ics`、`to-json`、`to-jsonl`、`to-csv`、`from-json`、`from-jsonl`、`from-csv`、`from-markdown`、`from-todo`、`to-ics`、`markdown`、`stats`、`plot`、`export-heatmap`、`standup`、`invoice`、`share`、`digest`、`report` |
@@ -889,7 +890,7 @@ python -m lifetxt ids "projects/**/*.life.txt" --assign --prefix item --dry-run
 
 ### 3.2 `links`
 
-`parent:`、`ref:`、`depends_on:`、`blocks:`、`related:`、`duplicate_of:`、`replaced_by:` など、item ID を指す関係を表示します。
+`parent:`、`ref:`、`depends_on:`、`blocks:`、`related:`、`duplicate_of:`、`replaced_by:`、`follows:`、`realizes:` など、item ID を指す関係を表示します。
 
 ```sh
 python -m lifetxt links [path ...]
@@ -927,7 +928,7 @@ field があり、勝った chain 上の全 item が単純な数値の `estimate
 hop との `relation` と `direction`（`incoming`/`outgoing`）を持ちます
 （先頭 hop のみどちらも持ちません）。
 
-`check` は存在しない参照 (`W215`)、自己参照 (`W216`)、`parent:` cycle (`W217`)、曖昧な参照 (`W218`)、完了済み item の `depends_on:` prerequisite がまだ open な場合 (`W224`)、`depends_on:`/`blocks:` の複合 cycle (`W227`)、`duplicate_of:` cycle (`W228`)、`replaced_by:` cycle (`W229`) も報告します。
+`check` は存在しない参照 (`W215`)、自己参照 (`W216`)、`parent:` cycle (`W217`)、曖昧な参照 (`W218`)、完了済み item の `depends_on:` prerequisite がまだ open な場合 (`W224`)、`depends_on:`/`blocks:` の複合 cycle (`W227`)、`duplicate_of:` cycle (`W228`)、`replaced_by:` cycle (`W229`)、`follows:` cycle (`W230`)、`realizes:` cycle (`W231`) も報告します。
 
 依存関係の動作:
 
@@ -2187,6 +2188,7 @@ shell completion script・Web UI・MCP の `complete` tool と同一です。
 | `/export md\|csv\|json [PATH]` | 現在表示中の row を file に書き出す |
 | `/stats` | status / type / project 別の内訳を表示切り替え |
 | `/detail` | inspector panel の表示切り替え |
+| `/thread [ID]` | 選択中または指定 ID の明示的 lifecycle と派生 temporal context を inspector に表示 |
 | `/reload` | 全 file を即時読み直す |
 | `/theme auto\|dark\|light\|mono` | 配色を即時変更 |
 | `/limit N` | section ごとの保持 row 数 |

@@ -26,7 +26,7 @@ def has_draft_2020_validator():
 class SchemaExtensionsV2Tests(unittest.TestCase):
     def test_bundle_contains_seventy_nine_generated_and_published_documents(self):
         bundle = schema_bundle()
-        self.assertEqual(79, len(bundle))
+        self.assertEqual(80, len(bundle))
         for name, generated in bundle.items():
             path = os.path.join(ROOT, "dist", "schemas", name)
             self.assertTrue(os.path.exists(path), name)

@@ -382,6 +382,27 @@ zero-or-negative fraction total, a negative fraction current, or a fraction
 current exceeding its total as `W230`; the original percentage-or-fraction
 representation is preserved unchanged on serialization.
 
+An explicit `lifetxt progress` write also appends an immutable history Note:
+
+```txt
+[N] N Progress_task-1_000001 record:progress_event id:PE-task-1-000001 parent:task-1 at:2026-09-08T09:00:00Z sequence:1 transaction:PTX-task-1-000001-20260908-090000 source_revision:<64-lowercase-hex> operation:set before_progress:25% after_progress:3/10
+```
+
+`record`, `id`, `parent`, `at`, `sequence`, `transaction`,
+`source_revision`, `operation`, and `after_progress` occur exactly once.
+Exactly one of `before_progress` or `before_missing:true` is required;
+`before_missing:true` is valid only for sequence 1 and never for `delta`.
+`operation` is `set` or `delta`. `at` is an offset-aware instant normalized
+to UTC (`Z`). `source_revision` is the exact pre-write file SHA-256. The
+before/after values retain their raw percentage or fraction representation.
+IDs and per-parent sequences are unique, sequences begin at 1 without gaps,
+adjacent before/after values are identical strings, and timestamps do not go
+backwards. A history chain is authoritative only when these rules hold and
+its final `after_progress` equals the parent's current `progress:` value.
+There is no historical backfill; a parent with no event records has no
+authoritative progress history. Progress events inherit their parent's
+access policy on remote reads.
+
 ### 7.6 Recurrence Keys
 
 | Key | Meaning | Example |

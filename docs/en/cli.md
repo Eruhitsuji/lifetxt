@@ -3324,6 +3324,23 @@ accepts a unique ID prefix (see [Short ID prefix selection](#short-id-prefix-sel
 `--line`/`--text` select an item the same way as `done`. `--dry-run` shows
 the resulting value without writing.
 
+Every non-dry-run `progress` write requires the target's configured stable
+ID key (normally `id:`). The command changes the item and appends one
+`record:progress_event` Note in the same exact-revision mutation. This
+append-only record preserves the exact old and new representations, the
+operation (`set` or `delta`), a normalized UTC timestamp, sequence and
+transaction identifiers, and the SHA-256 revision that was read before the
+write. An initially absent value is stored as `before_missing:true`; it is
+never rewritten as zero.
+
+Direct text edits and generic write commands remain valid but do not create
+events. Consequently, they can make the event chain incomplete. `lifetxt
+check` reports malformed records, sequence gaps, discontinuities, backwards
+timestamps, or a latest event that disagrees with the current item as
+`W231`-`W243`; consumers must not treat such a chain as authoritative. No
+events are backfilled for writes made before this contract was introduced.
+Remote reads apply the parent item's access policy to its progress events.
+
 ### 13.12 `clone`
 
 `lifetxt clone PATH [ID]` creates a new item derived from an existing one,

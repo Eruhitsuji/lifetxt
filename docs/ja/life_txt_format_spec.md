@@ -345,6 +345,27 @@ parse 可能だが canonical でない duration は `W222`、`elapsed:1d` や `e
 fraction current、total を超える fraction current を `W230` として報告し、serialize 時に元の
 percentage/fraction 表記はそのまま保持されます。
 
+`lifetxt progress` による明示的な write は immutable history Note も append
+します:
+
+```txt
+[N] N Progress_task-1_000001 record:progress_event id:PE-task-1-000001 parent:task-1 at:2026-09-08T09:00:00Z sequence:1 transaction:PTX-task-1-000001-20260908-090000 source_revision:<64-lowercase-hex> operation:set before_progress:25% after_progress:3/10
+```
+
+`record`、`id`、`parent`、`at`、`sequence`、`transaction`、
+`source_revision`、`operation`、`after_progress` はそれぞれ 1 回だけ記録します。
+`before_progress` または `before_missing:true` のどちらか一方が必須です。
+`before_missing:true` は sequence 1 だけで有効で、`delta` には使用できません。
+`operation` は `set` または `delta`、`at` は offset-aware instant を UTC（`Z`）
+に正規化した値、`source_revision` は write 前の file の正確な SHA-256 です。
+変更前後の percentage/fraction 表記はそのまま保持します。ID と parent ごとの
+sequence は一意で、sequence は gap なしの 1 始まり、隣接 event の before/after
+は同じ文字列、timestamp は逆行不可です。これらの条件を満たし、最後の
+`after_progress` が親の現在の `progress:` と一致する場合だけ history chain を
+authoritative とします。過去の backfill は行わず、event がない親には
+authoritative な progress history はありません。remote read では親の access
+policy を progress event に継承します。
+
 ### 7.6 Recurrence keys
 
 | Key | 意味 | 例 |

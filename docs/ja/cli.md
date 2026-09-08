@@ -2759,6 +2759,22 @@ numerator）は書き込み前に拒否されます。`progress:` を持たな�
 参照）。`--line`/`--text` は `done` と同じ方法で item を選択します。
 `--dry-run` は書き込まずに結果の値だけ表示します。
 
+dry-run でない `progress` write では、対象に設定済みの stable ID key（通常
+は `id:`）が必要です。command は exact-revision mutation 1 回の中で item
+を更新し、`record:progress_event` Note を 1 件 append します。この append-only
+record は変更前後の表記をそのまま保持し、operation（`set` / `delta`）、UTC
+に正規化した timestamp、sequence、transaction ID、write 前に読んだ revision
+の SHA-256 を記録します。変更前の値が無い場合は `before_missing:true` とし、
+0 に置き換えません。
+
+直接の text edit や generic write command は引き続き有効ですが event を作り
+ません。そのため event chain が不完全になる場合があります。`lifetxt check`
+は malformed record、sequence gap、値の不連続、逆行 timestamp、最新 event と
+現在の item の不一致を `W231`-`W243` として報告します。この場合、consumer
+は chain を authoritative として扱ってはいけません。この contract より前の
+write は backfill しません。remote read では progress event に親 item の access
+policy を適用します。
+
 ### 13.12 `clone`
 
 `lifetxt clone PATH [ID]` は、既存の item を元に、identity や history を

@@ -366,6 +366,14 @@ authoritative とします。過去の backfill は行わず、event がない�
 authoritative な progress history はありません。remote read では親の access
 policy を progress event に継承します。
 
+period delta consumer は complete で authoritative な event chain だけを使用
+します。inclusive な `[from, to]` interval の各 boundary value は、その instant
+以前の最後の event の `after_progress` です。結果は
+`end.ratio - start.ratio` とし、authoritative unit は percentage change や raw
+numerator 差ではなく ratio（表示時は percentage points）です。負の結果も保持
+します。boundary が不足する場合は 0 ではなく unavailable とし、現在の item
+や後続 event の `before_progress` から推測しません。
+
 ### 7.6 Recurrence keys
 
 | Key | 意味 | 例 |

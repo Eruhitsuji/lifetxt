@@ -3,9 +3,10 @@ import sys
 from collections import OrderedDict
 from datetime import date, timedelta
 
+from .ids import resolve_item_by_id
 from .model import normalize_type
 from .parser import parse_text
-from .timezone_policy import today as timezone_today
+from .timezone_policy import date_boundaries, today as timezone_today
 from .timeutil import parse_date, parse_date_or_datetime
 
 
@@ -17,6 +18,33 @@ MOOD_VALUES = {"bad": 1, "neutral": 2, "ok": 2, "good": 3, "great": 4}
 def cmd_stats(args):
     start, end = stats_range(args.start, args.end)
     items = load_items(args.paths)
+    progress_item_id = getattr(args, "progress_delta", None)
+    if progress_item_id:
+        candidates = [
+            item
+            for item in items
+            if "progress_event" not in item.details.get("record", [])
+        ]
+        filter_func = getattr(args, "filter_items_func", None)
+        if filter_func is not None:
+            candidates = filter_func(candidates, args)
+        id_key = getattr(args, "id_key", "id")
+        target = resolve_item_by_id(candidates, progress_item_id, key=id_key)
+        target_id = str(target.details[id_key][0])
+        from .progress_delta import format_progress_delta, progress_delta
+
+        result = progress_delta(
+            items,
+            target_id,
+            date_boundaries(start)[0],
+            date_boundaries(end)[1],
+            id_key=id_key,
+        )
+        if args.format == "json":
+            sys.stdout.write(json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+        else:
+            sys.stdout.write(format_progress_delta(result))
+        return 0
     filter_func = getattr(args, "filter_items_func", None)
     if filter_func is not None:
         items = filter_func(items, args)

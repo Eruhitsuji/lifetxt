@@ -7713,9 +7713,12 @@ capabilities:
       - req-progress-web-display
       - req-progress-sort-filter-integration
       - req-progress-event-history
+      - req-progress-period-delta
     implementation_locations:
       - lifetxt/progress.py
       - lifetxt/progress_history.py
+      - lifetxt/progress_delta.py
+      - lifetxt/stats.py
       - lifetxt/model.py
       - lifetxt/validator.py
       - lifetxt/interactive.py
@@ -7733,6 +7736,7 @@ capabilities:
       - lifetxt/web_read_service.py
       - tests/test_progress.py
       - tests/test_progress_history.py
+      - tests/test_progress_delta.py
       - tests/test_check_progress.py
       - tests/test_query.py
       - tests/test_life_hub.py
@@ -7758,6 +7762,8 @@ capabilities:
       - TUI progress column
       - Web UI progress bar+label
       - record:progress_event append-only history contract
+      - lifetxt stats --progress-delta ID
+      - lifetxt-progress-delta-v1 JSON result
     tests_or_evidence:
       - "python -m unittest tests.test_progress tests.test_check_progress tests.test_query tests.test_life_hub tests.test_cui_extensions tests.test_web_i18n -> Ran 396 tests, OK (skipped=1, unrelated)"
       - "#697: focused progress-event/CLI/compat/privacy/traceability suite -> Ran 72 tests, OK; full unittest discover -> Ran 3989 tests, OK (skipped=197)"
@@ -7771,6 +7777,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/651
       - https://github.com/Eruhitsuji/lifetxt/issues/652
       - https://github.com/Eruhitsuji/lifetxt/issues/697
+      - https://github.com/Eruhitsuji/lifetxt/issues/695
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/698
     reuse_policy: prefer_reuse_or_extension_before_new_implementation

@@ -2932,6 +2932,8 @@ python -m lifetxt stats life.txt --project research --format json
 python -m lifetxt stats life.txt --tag focus --assignee alice --format json
 python -m lifetxt stats "projects/**/*.life.txt" --group weekly
 python -m lifetxt stats life.txt --width 60
+python -m lifetxt stats life.txt --progress-delta task_1 --from 2026-09-01 --to 2026-09-08
+python -m lifetxt stats life.txt --progress-delta task_1 --from 2026-09-01 --to 2026-09-08 --format json
 ```
 
 Options:
@@ -2944,9 +2946,26 @@ Options:
 | `--group daily|weekly|monthly` | Bucket mood trend output |
 | `--format text|json` | Output format |
 | `--width N` | Use compact text output for narrow terminal widths |
+| `--progress-delta ID` | Show one item's authoritative progress change over the date range |
 
 For `weekly` and `monthly`, task buckets are shown with done / total / overdue
 counts, and habit sparklines are bucketed by completion count.
+
+`--progress-delta ID` switches `stats` to the progress period-delta view. At
+each inclusive date boundary, it selects the last valid
+`record:progress_event` at or before that instant and subtracts normalized
+ratios through the shared `progress:` parser. Thus `25% -> 40%` is `+15 pp`,
+`70% -> 55%` remains `-15 pp`, and `3/10 -> 12/20` is `+30 pp` even though
+the denominator changed. Percentage/fraction mixtures are compared the same
+way. The raw boundary values remain in both text and JSON output.
+
+The start boundary is local midnight at `--from`; the end boundary is the
+inclusive end of `--to`, using the CLI's resolved timezone policy. An event
+exactly on a boundary is included. If the authoritative chain is absent or
+invalid, or no event establishes the start boundary, the result is `n/a` /
+`available:false`; current progress and a later event's `before_progress` are
+never used as inferred baseline values. JSON follows
+[`progress-delta-v1.schema.json`](../../dist/schemas/progress-delta-v1.schema.json).
 
 ### 13.5 Reports, Charts, Batch, And Encryption
 

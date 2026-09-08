@@ -3,6 +3,14 @@ schema_version: 1
 verification:
   executed:
     - type: focused
+      command: python -m unittest tests.test_schema_extensions_v2 tests.test_safety_foundation tests.test_safety_cli tests.test_ticket_custom_field_public_contract tests.test_ticket_workflow_surfaces
+      requirement_ids:
+        - req-temporal-thread-v1
+      result: Ran 40 tests -- OK (strict jsonschema validator installed)
+      commit: working-tree
+      executed_at: '2026-09-08'
+      status: passed
+    - type: focused
       command: python -m unittest tests.test_links tests.test_temporal_thread tests.test_temporal_cli tests.test_mcp_expansion tests.test_schema_extensions_v2 tests.test_safety_foundation tests.test_safety_cli tests.test_ticket_custom_field_public_contract tests.test_ticket_workflow_surfaces tests.test_lifetxt.LifeTxtWebApiTests.test_temporal_thread_api_uses_the_shared_lifecycle_contract tests.test_lifetxt.LifeTxtWebApiTests.test_temporal_thread_api_rejects_invalid_bounds tests.test_web_commands tests.test_surface_runtime tests.test_cli_taxonomy tests.test_completion_surfaces
       requirement_ids:
         - req-explicit-lifecycle-temporal-relations

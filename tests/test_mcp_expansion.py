@@ -65,6 +65,23 @@ class McpTestCase(unittest.TestCase):
         )
         return context, path
 
+    def test_temporal_thread_tool_is_read_only_and_revision_aware(self):
+        context, _path = self._context(
+            content=(
+                "[ ] E Plan id:plan on:2026-09-08\n"
+                "[x] E Actual id:actual on:2026-09-08 realizes:plan\n"
+            )
+        )
+        result = call_tool("get_temporal_thread", {"id": "actual"}, context)
+        self.assertEqual("temporal-thread-v1", result["schema"])
+        self.assertEqual(
+            ["plan"], [r["id"] for r in result["relations"]["realized_plans"]]
+        )
+        self.assertIn("revision", result)
+        self.assertIn("get_temporal_thread", READ_ONLY_TOOLS)
+        schema = next(s for s in tool_schemas() if s["name"] == "get_temporal_thread")
+        self.assertTrue(schema["annotations"]["readOnlyHint"])
+
     def _read(self, path):
         with open(path, "r", encoding="utf-8") as handle:
             return handle.read()

@@ -183,6 +183,7 @@ python -m lifetxt vm run program.life.txt --entry s1
 | `area` | Group tasks and projects by `area:` (see [life-hub.md](life-hub.md)) |
 | `backlinks` | Show items that reference a given ID (incoming links) (see [life-hub.md](life-hub.md)) |
 | `temporal` | Show one item's derived temporal context: overdue/due/staleness and nearby dated items (see [life-hub.md](life-hub.md)) |
+| `thread` | Show one item's explicit lifecycle thread composed with derived temporal context (see [life-hub.md](life-hub.md)) |
 | `freebusy` | Show busy/free time intervals and overlap conflicts for `E`/`R` items within a datetime range (see [life-hub.md](life-hub.md)) |
 | `query` | Filter items with the shared query language (see [query.md](query.md)) |
 | `view` | List, inspect, and run saved views (named queries) (see [query.md](query.md)) |
@@ -222,7 +223,7 @@ including its `--json` machine-readable form for scripts and AI clients.
 | Category | Commands |
 |---|---|
 | Getting Started / Daily | `tour`, `help`, `init`, `quick` (`add`), `today`, `next`, `agenda`, `show`, `edit`, `done`, `complete`, `progress`, `clone`, `reopen`, `due`, `review`, `assist`, `state`, `start`, `stop`, `assign`, `timer`, `notify` |
-| Query / Explore | `filter`, `search`, `find`, `query`, `view`, `summary`, `inbox`, `health`, `temporal`, `freebusy`, `count`, `status`, `recent` |
+| Query / Explore | `filter`, `search`, `find`, `query`, `view`, `summary`, `inbox`, `health`, `temporal`, `thread`, `freebusy`, `count`, `status`, `recent` |
 | Projects / People / Collaboration | `project`, `portfolio`, `area`, `person`, `group`, `who`, `message`, `proposal`, `ticket`, `version`, `sprint` |
 | Structure / Data Integrity | `check`, `integrity`, `ids`, `links`, `backlinks`, `sources`, `tag`, `lint`, `deps`, `diff`, `snapshot`, `undo`, `cleanup`, `files` |
 | Import / Export / Reports | `import`, `export`, `import-ics`, `sync-ics`, `to-json`, `to-jsonl`, `to-csv`, `from-json`, `from-jsonl`, `from-csv`, `from-markdown`, `from-todo`, `to-ics`, `markdown`, `stats`, `plot`, `export-heatmap`, `standup`, `invoice`, `share`, `digest`, `report` |
@@ -923,7 +924,7 @@ python -m lifetxt ids "projects/**/*.life.txt" --assign --prefix item --dry-run
 
 Inspect relationships that point to item IDs. The command understands
 `parent:`, `ref:`, `depends_on:`, `blocks:`, `related:`, `duplicate_of:`,
-and `replaced_by:`.
+and `replaced_by:`, `follows:`, and `realizes:`.
 
 ```sh
 python -m lifetxt links [path ...]
@@ -966,7 +967,8 @@ list of hops, each carrying the connecting `relation` and `direction`
 `parent:` cycles (`W217`), ambiguous references (`W218`), completed items
 whose `depends_on:` prerequisite is still open (`W224`), combined
 `depends_on:`/`blocks:` cycles (`W227`), `duplicate_of:` cycles (`W228`),
-and `replaced_by:` cycles (`W229`).
+and `replaced_by:` (`W229`), `follows:` (`W230`), and `realizes:` (`W231`)
+cycles.
 For duration fields such as `est:` and `elapsed:`, `check` reports
 non-canonical but parseable values as `W222` and unrecognized values such as
 `elapsed:1d` as `W226`.
@@ -2691,6 +2693,7 @@ row when nothing is marked.
 | `/export md\|csv\|json [PATH]` | Write the currently visible rows to a file |
 | `/stats` | Toggle a breakdown of visible rows by status, type, and project |
 | `/detail` | Toggle the inspector panel |
+| `/thread [ID]` | Show the selected or named item's explicit lifecycle and derived temporal context in the inspector |
 | `/reload` | Re-read every file now |
 | `/theme auto\|dark\|light\|mono` | Change the color theme, applied immediately |
 | `/limit N` | Rows kept per section |
@@ -4060,7 +4063,7 @@ warrant a dedicated guide:
 | `query`, `view` (saved queries) | [query.md](query.md) |
 | `person`, `message`, `group` | [people.md](people.md), [messaging.md](messaging.md) |
 | `proposal` (Unified Inbox) | [inbox.md](inbox.md) |
-| `today`, `area`, `backlinks`, `temporal`, `freebusy` | [life-hub.md](life-hub.md) |
+| `today`, `area`, `backlinks`, `temporal`, `thread`, `freebusy` | [life-hub.md](life-hub.md) |
 | `ticket`, `version`, `sprint` | [§19](#19-development-tickets-ticket), [tickets.md](tickets.md) |
 | `remote` | [§20](#20-remote-safe-mode-client-remote), [remote.md](remote.md), [remote-client-writes.md](remote-client-writes.md) |
 | `vm` (opt-in Turing-complete VM) | [vm.md](vm.md) |

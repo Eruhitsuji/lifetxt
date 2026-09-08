@@ -1,0 +1,43 @@
+schema_version: 1
+
+requirements:
+  - id: req-explicit-lifecycle-temporal-relations
+    kind: ADDED
+    statement: "Store follows:/realizes: as one-directional authoritative references in the existing link graph and reuse replaced_by: for supersession."
+    acceptance_criteria:
+      - Shared missing, self, ambiguous, backlink, and link behavior applies.
+      - follows and realizes cycles are independently diagnosed as W230 and W231.
+      - Dates never create an authoritative relation.
+    constraints:
+      - Keep unknown custom-key parsing permissive.
+      - "Do not add supersedes: or another graph engine."
+    owner: Eruhitsuji
+  - id: req-temporal-thread-v1
+    kind: ADDED
+    statement: Return a deterministic bounded lifecycle read model composed from shared explicit links and temporal-context-v1.
+    acceptance_criteria:
+      - Direct semantic groups, explicit traversal, provenance, cycle paths, and truncation are returned.
+      - Duplicate IDs and invalid bounds fail deterministically.
+      - The JSON Schema and representative sample validate offline.
+    constraints:
+      - Caller values remain subject to hard ceilings.
+    owner: Eruhitsuji
+  - id: req-historical-as-of-semantics
+    kind: ADDED
+    statement: Define which existing evidence can authoritatively support historical as-of output and defer unsupported reconstruction.
+    acceptance_criteria:
+      - Git and typed event evidence and their limits are documented in EN/JA.
+      - Current item dates are explicitly rejected as proof of historical existence.
+    constraints:
+      - No general as-of surface until provenance and completeness contracts exist.
+    owner: Eruhitsuji
+  - id: req-temporal-thread-surfaces
+    kind: ADDED
+    statement: Expose temporal-thread-v1 through CLI, TUI, Web API/UI, and read-only revision-aware MCP without duplicating domain logic.
+    acceptance_criteria:
+      - Each surface delegates to lifetxt.temporal_thread.temporal_thread.
+      - Bounds, errors, and authoritative/derived distinctions remain compatible.
+    constraints: []
+    owner: Eruhitsuji
+
+open_questions: []

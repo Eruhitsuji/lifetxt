@@ -1,0 +1,48 @@
+schema_version: 1
+
+change:
+  id: lifecycle-temporal-thread
+  title: Lifecycle-aware temporal relations and temporal-thread-v1
+  status: implemented
+  change_type: Feature
+  assurance_level: Standard
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/699
+  related_pull_request: pending
+  base_commit: 59a1608
+  target_release: next normal maintenance release
+
+scope:
+  in_scope:
+    - "Add follows:/realizes: to the shared authoritative reference graph and reuse replaced_by: for supersession."
+    - Compose those links with temporal-context-v1 as bounded temporal-thread-v1.
+    - Expose the shared result through CLI, TUI, Web API/UI, and read-only MCP.
+    - Document authoritative historical as-of evidence and the unsafe general-command boundary.
+  out_of_scope:
+    - Inferring lifecycle or causal relations from dates.
+    - Persisting derived edges or AI guesses.
+    - A general as-of command without complete historical evidence.
+    - A second relation or temporal engine.
+  write_scope:
+    - lifetxt/** lifecycle relation, temporal thread, and thin surface files
+    - tests/** focused graph, contract, surface, schema, and asset tests
+    - docs/en/** and docs/ja/** temporal documentation
+    - dist/schemas/temporal-thread-v1.schema.json
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+    - .ai/project/changes/lifecycle-temporal-thread/**
+  forbidden_scope:
+    - .ai/managed/**
+    - unrelated graph/time/history refactors
+    - historical state inference or backfill
+  shared_files:
+    - lifetxt/cli.py
+    - lifetxt/mcp.py
+    - lifetxt/webapp.py
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+
+human_approvals_required:
+  - Independent review of the latest commit.
+  - Merge Authority approval; the implementing AI must not merge the pull request.

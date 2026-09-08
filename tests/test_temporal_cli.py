@@ -14,6 +14,13 @@ SAMPLE = (
     "[ ] T Review_draft due:2000-01-02 id:t2\n"
 )
 
+THREAD_SAMPLE = (
+    "#! timezone: UTC\n"
+    "[ ] E Plan id:plan on:2000-01-01\n"
+    "[x] E Actual id:actual on:2000-01-01 realizes:plan\n"
+    "[ ] E Next id:next on:2000-02-01 follows:actual\n"
+)
+
 
 class TemporalCliTests(unittest.TestCase):
     def _write_source(self, temp_dir, text=SAMPLE):
@@ -59,6 +66,29 @@ class TemporalCliTests(unittest.TestCase):
             data = json.loads(stdout)
             # t2 is one day away; a zero-day window excludes it.
             self.assertEqual([], data["related"])
+
+    def test_thread_json_exposes_the_shared_contract(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            src = self._write_source(temp_dir, THREAD_SAMPLE)
+            stdout, stderr, code = run_cli("thread", "actual", src, "--json")
+            self.assertEqual(0, code, stderr)
+            data = json.loads(stdout)
+            self.assertEqual("temporal-thread-v1", data["schema"])
+            self.assertEqual(
+                ["plan"], [r["id"] for r in data["relations"]["realized_plans"]]
+            )
+            self.assertEqual(
+                ["next"], [r["id"] for r in data["relations"]["successors"]]
+            )
+
+    def test_thread_human_output_names_lifecycle_groups(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            src = self._write_source(temp_dir, THREAD_SAMPLE)
+            stdout, stderr, code = run_cli("thread", "actual", src)
+            self.assertEqual(0, code, stderr)
+            self.assertIn("Temporal thread for actual", stdout)
+            self.assertIn("Realized plans", stdout)
+            self.assertIn("Successors", stdout)
 
 
 if __name__ == "__main__":

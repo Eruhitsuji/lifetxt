@@ -107,6 +107,16 @@ def reference_diagnostics(items, key="id", reference_keys=None):
             items, index, key, "replaced_by", "W229", "replaced_by"
         )
     )
+    diagnostics.extend(
+        _single_relation_cycle_diagnostics(
+            items, index, key, "follows", "W230", "follows"
+        )
+    )
+    diagnostics.extend(
+        _single_relation_cycle_diagnostics(
+            items, index, key, "realizes", "W231", "realizes"
+        )
+    )
     diagnostics.extend(_completed_dependency_diagnostics(items, index, key))
     return diagnostics
 
@@ -973,6 +983,25 @@ def _cycle_diagnostics(edges, owners, code, message_fmt):
     ``"A -> B -> A"`` cycle path and returns the diagnostic message.
     """
     diagnostics = []
+    for cycle in _cycle_paths(edges):
+        node = cycle[0]
+        item = owners.get(node)
+        diagnostics.append(
+            Diagnostic(
+                "warning",
+                code,
+                message_fmt(" -> ".join(cycle)),
+                item.line if item else None,
+                None,
+                getattr(item, "source", None) if item else None,
+            )
+        )
+    return diagnostics
+
+
+def _cycle_paths(edges):
+    """Return deterministic directed cycle paths, closing each path at its root."""
+    cycles = []
     visiting = set()
     visited = set()
     path = []
@@ -987,17 +1016,7 @@ def _cycle_diagnostics(edges, owners, code, message_fmt):
             key_value = frozenset(cycle)
             if key_value not in reported:
                 reported.add(key_value)
-                item = owners.get(node)
-                diagnostics.append(
-                    Diagnostic(
-                        "warning",
-                        code,
-                        message_fmt(" -> ".join(cycle)),
-                        item.line if item else None,
-                        None,
-                        getattr(item, "source", None) if item else None,
-                    )
-                )
+                cycles.append(cycle)
             return
         visiting.add(node)
         path.append(node)
@@ -1009,7 +1028,30 @@ def _cycle_diagnostics(edges, owners, code, message_fmt):
 
     for node in edges:
         visit(node)
-    return diagnostics
+    return cycles
+
+
+def relation_cycle_paths(items, key="id", relations=None):
+    """Return structured cycles for one-directional reference relations.
+
+    The same unique-ID directed graph feeds the W228-W231 diagnostics and the
+    temporal-thread read model, keeping cycle semantics in one engine.
+    """
+    wanted = tuple(relations or ("duplicate_of", "replaced_by", "follows", "realizes"))
+    index = build_id_index(items, key)
+    owners = _owners_by_unique_id(index)
+    records = []
+    for relation in wanted:
+        edges = OrderedDict()
+        for value, item in owners.items():
+            edges[value] = [
+                str(target)
+                for target in item.details.get(relation, [])
+                if str(target) in owners
+            ]
+        for path in _cycle_paths(edges):
+            records.append(OrderedDict((("relation", relation), ("path", path))))
+    return records
 
 
 def _parent_cycle_diagnostics(items, index, key):

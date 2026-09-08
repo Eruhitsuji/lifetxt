@@ -1595,6 +1595,39 @@ def build_parser():
     temporal_command.add_argument("--json", action="store_true", help="Emit JSON.")
     temporal_command.set_defaults(func=command_temporal)
 
+    thread_command = subparsers.add_parser(
+        "thread",
+        help="Show one item's explicit lifecycle thread plus derived temporal context.",
+    )
+    thread_command.add_argument("id", help="Target item ID.")
+    _add_input_paths(thread_command)
+    thread_command.add_argument(
+        "--depth",
+        type=int,
+        default=8,
+        help="Maximum explicit traversal depth. Default 8.",
+    )
+    thread_command.add_argument(
+        "--nodes",
+        type=int,
+        default=50,
+        help="Maximum explicit nodes returned. Default 50.",
+    )
+    thread_command.add_argument(
+        "--window", type=int, default=7, help="Derived date window in days. Default 7."
+    )
+    thread_command.add_argument(
+        "--limit", type=int, default=20, help="Maximum derived neighbors. Default 20."
+    )
+    thread_command.add_argument(
+        "--stale-after",
+        type=int,
+        default=None,
+        help="Staleness threshold in days. Default 14.",
+    )
+    thread_command.add_argument("--json", action="store_true", help="Emit JSON.")
+    thread_command.set_defaults(func=command_thread)
+
     freebusy_command = subparsers.add_parser(
         "freebusy",
         help="Show busy/free time intervals and overlap conflicts for "
@@ -2047,6 +2080,8 @@ def build_parser():
             "related",
             "duplicate_of",
             "replaced_by",
+            "follows",
+            "realizes",
         ],
     )
     tk_link.add_argument("target", help="Target id.")
@@ -2066,6 +2101,8 @@ def build_parser():
             "related",
             "duplicate_of",
             "replaced_by",
+            "follows",
+            "realizes",
         ],
     )
     tk_unlink.add_argument("target", help="Target id to remove.")
@@ -8020,8 +8057,7 @@ def command_progress(args):
     target_ids = target.details.get(id_key) or []
     if not target_ids:
         raise ValueError(
-            "progress history requires a stable %s: detail on the target item."
-            % id_key
+            "progress history requires a stable %s: detail on the target item." % id_key
         )
     target_id = target_ids[0]
 
@@ -13602,6 +13638,83 @@ def command_temporal(args):
     return 0
 
 
+def command_thread(args):
+    from .temporal_thread import DEFAULT_STALE_DAYS, temporal_thread
+    from .web_read_service import find_item_by_id
+
+    items, _diagnostics = _parse_or_exit(
+        _normalize_paths(
+            getattr(args, "paths", None), _config(args), stdin_when_empty=False
+        )
+        or ["life.txt"],
+        _config(args),
+    )
+    key = id_key_from_config(_config(args))
+    try:
+        target = find_item_by_id(items, args.id, key=key)
+    except ValueError as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
+    if target is None:
+        sys.stderr.write("ERROR: No item with id %r.\n" % args.id)
+        return 1
+    stale_after = getattr(args, "stale_after", None)
+    try:
+        result = temporal_thread(
+            items,
+            target,
+            _project_today(),
+            key=key,
+            max_depth=getattr(args, "depth", 8),
+            max_nodes=getattr(args, "nodes", 50),
+            window_days=getattr(args, "window", 7),
+            temporal_limit=getattr(args, "limit", 20),
+            stale_after_days=(
+                stale_after if stale_after is not None else DEFAULT_STALE_DAYS
+            ),
+        )
+    except ValueError as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
+    if getattr(args, "json", False):
+        write_text(None, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+        return 0
+    write_text(None, "Temporal thread for %s (%s):\n" % (args.id, target.title))
+    labels = (
+        ("predecessors", "Predecessors"),
+        ("successors", "Successors"),
+        ("realized_plans", "Realized plans"),
+        ("realized_by", "Realized by"),
+        ("replacement_predecessors", "Replaced predecessors"),
+        ("replacement_successors", "Replacement successors"),
+    )
+    any_explicit = False
+    for name, label in labels:
+        rows = result["relations"][name]
+        if not rows:
+            continue
+        any_explicit = True
+        write_text(None, "  %s:\n" % label)
+        for row in rows:
+            write_text(None, "    %s %s\n" % (row["id"], row["title"]))
+    if not any_explicit:
+        write_text(None, "  No explicit lifecycle relations.\n")
+    derived = result["derived"]
+    write_text(
+        None,
+        "  Derived temporal context: %d fact(s), %d nearby item(s).\n"
+        % (len(derived["facts"]), len(derived["related"])),
+    )
+    if result["explicit"]["cycles"]:
+        write_text(
+            None,
+            "  Warning: %d lifecycle cycle(s).\n" % len(result["explicit"]["cycles"]),
+        )
+    if result["explicit"]["truncated"]:
+        write_text(None, "  Result truncated by explicit traversal bounds.\n")
+    return 0
+
+
 def command_freebusy(args):
     from .freebusy import compute_freebusy
     from .timeutil import parse_time
@@ -15143,9 +15256,9 @@ def command_timer(args):
 
 def command_stats(args):
     config = _config(args)
-    args.paths = _normalize_paths(
-        args.paths, config, stdin_when_empty=False
-    ) or ["life.txt"]
+    args.paths = _normalize_paths(args.paths, config, stdin_when_empty=False) or [
+        "life.txt"
+    ]
     args.filter_items_func = _filter_items_from_args
     args.id_key = id_key_from_config(config)
     from .stats import cmd_stats

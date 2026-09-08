@@ -863,7 +863,10 @@ text              = ? 行末までの任意の文字 ? ;
 この節は英語版の追加内容に合わせた要約です。
 
 - `record:` はシステム用途の detail key です。外部システム、remote ticket、または処理済みレコードを識別するために使い、通常の利用者向け分類には使いません。
-- `duplicate_of:` と `replaced_by:` は ID 参照です。`depends_on:`、`blocks:`、`parent:` と同様にリンクグラフへ反映され、循環や存在しない参照は診断対象になります。
+- `duplicate_of:`、`replaced_by:`、`follows:`、`realizes:` は ID 参照です。`depends_on:`、`blocks:`、`parent:` と同様に共有リンクグラフへ反映され、存在しない参照・自己参照・曖昧な参照は共通診断の対象になります。
+- `current follows:previous` は「current が previous の明示的な後続」、`actual realizes:plan` は「actual が plan を実現した実績」を表します。逆向きの `followed_by` / `realized_by` は表示・query 時のみ導出され、自動保存されません。
+- 置換は既存の `old replaced_by:new` を再利用し、`supersedes:` は追加しません。`follows:` cycle は `W230`、`realizes:` cycle は `W231` です。
+- 日時が近い／後であることから lifecycle relation を推測しません。`temporal-context-v1` の `before` / `after` / `same_day` は read-only の派生結果で、authoritative relation とは分離されます。
 - JSON/JSONL では、同じ detail key の複数値を配列として扱えます。life.txt へ戻すときは、同じ key を複数回出力して順序を保持します。
 - 複数行 body は item の直後に続く `|` 行として表します。JSON/CSV から戻す場合、複数行の `body` は continuation line に展開されます。
 - bare string に空白、二重引用符、制御文字が必要な場合は quoted string を使います。serializer は roundtrip できる表現を優先します。

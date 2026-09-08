@@ -6733,6 +6733,40 @@ class LifeTxtWebApiTests(unittest.TestCase):
                 ["msg_001", "msg_002"], [item["id"] for item in thread["items"]]
             )
 
+    def test_temporal_thread_api_uses_the_shared_lifecycle_contract(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                "[ ] E Plan id:plan on:2026-09-08\n"
+                "[x] E Actual id:actual on:2026-09-08 realizes:plan\n"
+                "[ ] E Next id:next follows:actual\n",
+                encoding="utf-8",
+            )
+            client = self._client([path], writable_path=path)
+
+            response = client.get("/api/temporal-thread/actual?depth=1&nodes=2")
+
+            self.assertEqual(200, response.status_code)
+            data = response.json()
+            self.assertEqual("temporal-thread-v1", data["schema"])
+            self.assertEqual(
+                ["plan"], [r["id"] for r in data["relations"]["realized_plans"]]
+            )
+            self.assertEqual(
+                ["next"], [r["id"] for r in data["relations"]["successors"]]
+            )
+            self.assertTrue(data["explicit"]["truncated"])
+
+    def test_temporal_thread_api_rejects_invalid_bounds(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text("[ ] N Item id:item\n", encoding="utf-8")
+            client = self._client([path], writable_path=path)
+
+            response = client.get("/api/temporal-thread/item?depth=-1")
+
+            self.assertEqual(422, response.status_code)
+
     def test_agenda_api_marks_recurrence_occurrences_generated(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = os.path.join(temp_dir, "life.txt")

@@ -37,6 +37,76 @@ capabilities:
       replaced_by: null
       deprecation_issue: null
 
+  - id: cap-lifecycle-temporal-thread
+    name: Lifecycle-aware temporal relations and temporal-thread-v1
+    summary: >-
+      Authoritative follows:/realizes:/replaced_by: lifecycle assertions in
+      the existing shared reference graph, composed with the unchanged
+      derived temporal-context-v1 contract as one bounded
+      temporal-thread-v1 read model. The shared result is exposed through
+      CLI, TUI, Web API/UI, and read-only MCP. Historical as-of remains
+      evidence-bound: current item dates and lifecycle links are never
+      relabeled as historical truth.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-explicit-lifecycle-temporal-relations
+      - req-temporal-thread-v1
+      - req-historical-as-of-semantics
+      - req-temporal-thread-surfaces
+    implementation_locations:
+      - lifetxt/model.py
+      - lifetxt/links.py
+      - lifetxt/temporal_thread.py
+      - lifetxt/schema_extensions_v26.py
+      - lifetxt/cli.py
+      - lifetxt/tui_app.py
+      - lifetxt/webapp.py
+      - lifetxt/web_assets_js_10.js
+      - lifetxt/web_assets_js_11.js
+      - lifetxt/mcp.py
+      - dist/schemas/temporal-thread-v1.schema.json
+      - docs/en/historical-as-of-semantics.md
+      - docs/ja/historical-as-of-semantics.md
+    public_interfaces:
+      - follows:ID
+      - realizes:ID
+      - lifetxt.temporal_thread.temporal_thread
+      - temporal-thread-v1.schema.json
+      - lifetxt thread ID [--depth N] [--nodes N] [--window N] [--limit N] [--stale-after N] [--json]
+      - TUI /thread [ID]
+      - GET /api/temporal-thread/{id}
+      - MCP tool get_temporal_thread
+    tests_or_evidence:
+      - tests/test_links.py lifecycle relation reference and cycle coverage
+      - tests/test_temporal_thread.py bounded domain model and TUI delegation coverage
+      - tests/test_temporal_cli.py CLI text/JSON coverage
+      - tests/test_lifetxt.py Web API coverage
+      - tests/test_mcp_expansion.py read-only revision-aware MCP coverage
+      - dist/schemas/temporal-thread-v1.schema.json release-schema validation
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/699
+      - https://github.com/Eruhitsuji/lifetxt/issues/701
+      - https://github.com/Eruhitsuji/lifetxt/issues/702
+      - https://github.com/Eruhitsuji/lifetxt/issues/703
+      - https://github.com/Eruhitsuji/lifetxt/issues/704
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/705
+    reuse_policy: >-
+      Reuse lifetxt.links for authoritative edges and diagnostics, and
+      lifetxt.temporal_context for all derived date facts; never infer or
+      persist semantic lifecycle edges from dates.
+    notes: >-
+      The explicit graph uses source follows:predecessor and actual
+      realizes:plan. followed_by and realized_by are display/query inverses
+      only. Replacement reuses old replaced_by:new; no supersedes key was
+      added. The Phase 3 investigation documents the missing evidence
+      contract rather than shipping an unsafe general as-of command.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
   - id: cap-data-integrity-readonly-report
     name: Read-only data integrity report
     summary: >-

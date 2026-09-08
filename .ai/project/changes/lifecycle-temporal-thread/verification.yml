@@ -1,0 +1,79 @@
+schema_version: 1
+
+verification:
+  executed:
+    - type: focused
+      command: python -m unittest tests.test_schema_extensions_v2 tests.test_safety_foundation tests.test_safety_cli tests.test_ticket_custom_field_public_contract tests.test_ticket_workflow_surfaces
+      requirement_ids:
+        - req-temporal-thread-v1
+      result: Ran 40 tests -- OK (strict jsonschema validator installed)
+      commit: working-tree
+      executed_at: '2026-09-08'
+      status: passed
+    - type: focused
+      command: python -m unittest tests.test_links tests.test_temporal_thread tests.test_temporal_cli tests.test_mcp_expansion tests.test_schema_extensions_v2 tests.test_safety_foundation tests.test_safety_cli tests.test_ticket_custom_field_public_contract tests.test_ticket_workflow_surfaces tests.test_lifetxt.LifeTxtWebApiTests.test_temporal_thread_api_uses_the_shared_lifecycle_contract tests.test_lifetxt.LifeTxtWebApiTests.test_temporal_thread_api_rejects_invalid_bounds tests.test_web_commands tests.test_surface_runtime tests.test_cli_taxonomy tests.test_completion_surfaces
+      requirement_ids:
+        - req-explicit-lifecycle-temporal-relations
+        - req-temporal-thread-v1
+        - req-temporal-thread-surfaces
+      result: Ran 415 tests -- OK (skipped=4)
+      commit: working-tree
+      executed_at: '2026-09-08'
+      status: passed
+    - type: regression
+      command: MPLBACKEND=Agg python -m unittest discover
+      requirement_ids:
+        - req-explicit-lifecycle-temporal-relations
+        - req-temporal-thread-v1
+        - req-temporal-thread-surfaces
+      result: Ran 4034 tests in 226.222s -- OK (skipped=33)
+      commit: working-tree
+      executed_at: '2026-09-08'
+      status: passed
+    - type: static
+      command: python -m ruff check lifetxt tests scripts
+      requirement_ids:
+        - req-explicit-lifecycle-temporal-relations
+        - req-temporal-thread-v1
+        - req-temporal-thread-surfaces
+      result: All checks passed
+      commit: working-tree
+      executed_at: '2026-09-08'
+      status: passed
+    - type: documentation
+      command: python scripts/validate_release_docs.py --output .cache/release-doc-validation.json
+      requirement_ids:
+        - req-historical-as-of-semantics
+        - req-temporal-thread-surfaces
+      result: '{"errors": 0, "ok": true}'
+      commit: working-tree
+      executed_at: '2026-09-08'
+      status: passed
+    - type: smoke
+      command: python -m lifetxt check examples/minimal_life.txt
+      requirement_ids:
+        - req-explicit-lifecycle-temporal-relations
+      result: 'OK: 10 item(s)'
+      commit: working-tree
+      executed_at: '2026-09-08'
+      status: passed
+    - type: whitespace
+      command: git diff --check
+      requirement_ids: []
+      result: clean
+      commit: working-tree
+      executed_at: '2026-09-08'
+      status: passed
+
+review_ledger:
+  - reviewer: Codex implementer self-review
+    review_type: implementation/design/security/compatibility pre-PR review
+    target_commit: working-tree
+    result: passed-with-human-final-review-required
+    finding_count: 1
+    completed_at: '2026-09-08'
+
+release_evidence:
+  migration_notes: Additive keys and read-only contracts; no migration or backfill.
+  rollback_plan: Revert the PR; user-authored follows/realizes details remain preserved as custom keys for older readers.
+  operations_evidence: []

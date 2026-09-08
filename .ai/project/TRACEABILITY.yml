@@ -11557,6 +11557,81 @@ traceability:
         never inferred from current progress or later before_progress values.
       status: implemented
 
+    - requirement_id: req-explicit-lifecycle-temporal-relations
+      capability_id: cap-lifecycle-temporal-thread
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/699
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/703
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/705
+      changed_files_or_scope:
+        - Register follows and realizes in the shared reference graph
+        - Reuse old replaced_by:new for supersession without adding supersedes
+        - Add W230/W231 cycle diagnostics and EN/JA semantics
+      tests_or_evidence:
+        - tests/test_links.py lifecycle missing/self/ambiguous/backlink/cycle coverage
+      release_or_deployment: next normal maintenance release
+      notes: >-
+        Standard-assurance additive grammar/reference change. Parsing remains
+        permissive and every diagnostic/backlink/link path reuses lifetxt.links.
+      status: implemented
+
+    - requirement_id: req-temporal-thread-v1
+      capability_id: cap-lifecycle-temporal-thread
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/699
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/701
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/705
+      changed_files_or_scope:
+        - Add bounded temporal-thread-v1 domain model and JSON Schema
+        - Compose explicit shared links with unchanged temporal-context-v1
+        - Report provenance, reachable cycles, and truncation deterministically
+      tests_or_evidence:
+        - tests/test_temporal_thread.py domain contract coverage
+        - dist/schemas/temporal-thread-v1.schema.json
+      release_or_deployment: next normal maintenance release
+      notes: >-
+        The read model delegates stored edges and cycle paths to lifetxt.links
+        and all date derivation to lifetxt.temporal_context. It never derives
+        authoritative semantic edges from date proximity.
+      status: implemented
+
+    - requirement_id: req-historical-as-of-semantics
+      capability_id: cap-lifecycle-temporal-thread
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/699
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/702
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/705
+      changed_files_or_scope:
+        - Inventory Git, typed event-chain, recovery, and current-file evidence
+        - Define safe Git-revision and typed-event subsets
+        - Defer general as-of until provenance/completeness/storage contracts exist
+      tests_or_evidence:
+        - docs/en/historical-as-of-semantics.md
+        - docs/ja/historical-as-of-semantics.md
+      release_or_deployment: null
+      notes: >-
+        Investigation result. A general command is intentionally not shipped:
+        current domain dates do not prove when an assertion entered history.
+      status: investigated
+
+    - requirement_id: req-temporal-thread-surfaces
+      capability_id: cap-lifecycle-temporal-thread
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/699
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/704
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/705
+      changed_files_or_scope:
+        - Add lifetxt thread text/JSON CLI
+        - Add TUI /thread inspector integration
+        - Add GET /api/temporal-thread/{id} and Web item-drawer rendering
+        - Add read-only revision-aware MCP get_temporal_thread
+      tests_or_evidence:
+        - tests/test_temporal_cli.py CLI contract coverage
+        - tests/test_temporal_thread.py TUI shared-model delegation coverage
+        - tests/test_lifetxt.py Web API coverage
+        - tests/test_mcp_expansion.py MCP classification/revision coverage
+      release_or_deployment: next normal maintenance release
+      notes: >-
+        Every surface is a thin consumer of lifetxt.temporal_thread; no surface
+        implements its own lifecycle or date rules.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

@@ -30,8 +30,7 @@ from lifetxt.links import (
 
 
 class ReferenceKeysCoverageTests(unittest.TestCase):
-    """duplicate_of/replaced_by must get the same reference-graph treatment
-    as the other REFERENCE_KEYS relations (#161)."""
+    """Lifecycle relations use the same shared reference graph (#161/#703)."""
 
     def test_duplicate_of_missing_target_warns(self):
         _items, diagnostics = parse_text(
@@ -94,6 +93,40 @@ class ReferenceKeysCoverageTests(unittest.TestCase):
         diagnostics = reference_diagnostics(items)
         self.assertTrue(any(d.code == "W215" for d in diagnostics))
 
+    def test_follows_and_realizes_share_reference_diagnostics_and_backlinks(self):
+        text = (
+            "[ ] E Plan id:plan\n[x] E Actual id:actual realizes:plan follows:missing\n"
+        )
+        items, diagnostics = parse_text(text)
+        self.assertTrue(
+            any(
+                d.code == "W215" and "follows:missing" in d.message for d in diagnostics
+            )
+        )
+        records = link_records(items)
+        self.assertIn(
+            ("realizes", "actual", "plan", "ok"),
+            [
+                (r["relation"], r["source_id"], r["target_id"], r["status"])
+                for r in records
+            ],
+        )
+        self.assertEqual("actual", backlink_records(items, "plan")[0]["source_id"])
+
+    def test_follows_and_realizes_self_and_ambiguous_targets_warn(self):
+        text = (
+            "[ ] N First id:dup\n"
+            "[ ] N Second id:dup\n"
+            "[ ] N Self id:self follows:self realizes:dup\n"
+        )
+        _items, diagnostics = parse_text(text)
+        self.assertTrue(
+            any(d.code == "W216" and "follows:self" in d.message for d in diagnostics)
+        )
+        self.assertTrue(
+            any(d.code == "W218" and "realizes:dup" in d.message for d in diagnostics)
+        )
+
 
 class ExtendedCycleDetectionTests(unittest.TestCase):
     """Cycle detection beyond parent: (#162)."""
@@ -141,6 +174,12 @@ class ExtendedCycleDetectionTests(unittest.TestCase):
         _items, diagnostics = parse_text(text)
         self.assertTrue(any(d.code == "W229" for d in diagnostics))
 
+    def test_lifecycle_relation_cycles_are_detected_independently(self):
+        text = "[ ] N A id:a follows:b\n[ ] N B id:b realizes:a follows:a\n[ ] N C id:c realizes:b\n[ ] N D id:d realizes:c realizes:d\n"
+        _items, diagnostics = parse_text(text)
+        self.assertTrue(any(d.code == "W230" for d in diagnostics))
+        self.assertTrue(any(d.code == "W231" for d in diagnostics))
+
     def test_duplicate_of_and_replaced_by_cycles_are_independent(self):
         # A duplicate_of B, B replaced_by A -- not a cycle in either single
         # relation, so neither W228 nor W229 should fire.
@@ -153,7 +192,7 @@ class ExtendedCycleDetectionTests(unittest.TestCase):
         from lifetxt.diagnostic_contract import diagnostic_category
         from lifetxt.model import Diagnostic
 
-        for code in ("W227", "W228", "W229"):
+        for code in ("W227", "W228", "W229", "W230", "W231"):
             diagnostic = Diagnostic("warning", code, "x")
             self.assertEqual("reference", diagnostic_category(diagnostic))
 

@@ -323,18 +323,42 @@
       }
       try {
         const data = await api(`/api/links?id=${encodeURIComponent(itemId)}&direction=both`);
+        let temporalThread = null;
+        try {
+          temporalThread = await api(`/api/temporal-thread/${encodeURIComponent(itemId)}`);
+        } catch(_) {}
         const records = data.records || [];
         let graphData = null;
         try {
           graphData = await api(`/api/graph?root=${encodeURIComponent(itemId)}&depth=2`);
         } catch(_) {}
+        const groups = [
+          ["predecessors", "Previous"], ["successors", "Next"],
+          ["realized_plans", "Realizes"], ["realized_by", "Realized by"],
+          ["replacement_predecessors", "Replaces"],
+          ["replacement_successors", "Replaced by"],
+        ];
+        let lifecycleHtml = `<div class="drawer-section-title">Temporal Thread</div><div class="dep-graph">`;
+        let lifecycleCount = 0;
+        for (const [key, label] of groups) {
+          for (const row of temporalThread?.relations?.[key] || []) {
+            lifecycleCount += 1;
+            const nav = escapeHtml(jsLiteral(row.id || ""));
+            lifecycleHtml += `<div class="dep-row"><span class="dep-rel">${escapeHtml(label)}</span>` +
+              `<a class="drawer-link" onclick="drawerNavigate(${nav})">${escapeHtml(row.title || row.id)}</a></div>`;
+          }
+        }
+        if (!lifecycleCount) lifecycleHtml += `<div class="empty">No explicit lifecycle relations.</div>`;
+        const derivedCount = (temporalThread?.derived?.related || []).length;
+        lifecycleHtml += `</div><div class="note">${derivedCount} derived nearby item(s)` +
+          `${temporalThread?.explicit?.truncated ? "; explicit thread truncated" : ""}.</div>`;
         if (!records.length) {
-          container.innerHTML = `<div class="drawer-section-title">Dependencies &amp; Links</div><div class="empty">No links.</div>`;
+          container.innerHTML = lifecycleHtml + `<div class="drawer-section-title">Dependencies &amp; Links</div><div class="empty">No links.</div>`;
           return;
         }
         const outgoing = records.filter(r => r.source_id === itemId);
         const incoming = records.filter(r => r.target_id === itemId && r.source_id !== itemId);
-        let html = `<div class="drawer-section-title">Dependencies &amp; Links (${records.length})</div>` +
+        let html = lifecycleHtml + `<div class="drawer-section-title">Dependencies &amp; Links (${records.length})</div>` +
           renderDependencyMiniGraph(records, itemId, graphData) +
           `<div class="dep-graph">`;
 

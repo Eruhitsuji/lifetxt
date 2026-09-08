@@ -56,6 +56,8 @@ RELATION_FIELDS = (
     "related",
     "duplicate_of",
     "replaced_by",
+    "follows",
+    "realizes",
 )
 
 # Default detailed statuses and the coarse life.txt status each maps to. Users

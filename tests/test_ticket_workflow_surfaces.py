@@ -71,7 +71,7 @@ class TicketWorkflowSurfaceTests(unittest.TestCase):
         self.assertEqual("same authoritative life.txt file", contract["compound_scope"])
         self.assertTrue(SCHEMAS.issubset(set(contract["schemas"])))
 
-    def test_schema_bundle_contains_seventy_nine_documents_and_new_contracts(self):
+    def test_schema_bundle_contains_eighty_documents_and_new_contracts(self):
         bundle = schema_bundle()
         self.assertEqual(80, len(bundle))
         self.assertTrue(SCHEMAS.issubset(set(bundle)))

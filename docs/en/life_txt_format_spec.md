@@ -403,6 +403,15 @@ There is no historical backfill; a parent with no event records has no
 authoritative progress history. Progress events inherit their parent's
 access policy on remote reads.
 
+Period delta consumers use only a complete authoritative event chain. For an
+inclusive `[from, to]` interval, the value at each boundary is the
+`after_progress` of the last event at or before that instant; the result is
+`end.ratio - start.ratio`. The authoritative unit is ratio (and percentage
+points for display), not percentage change or raw numerator difference.
+Negative results are preserved. A missing boundary is unavailable rather
+than zero, and neither the current item nor a later event's `before_progress`
+may be used to infer it.
+
 ### 7.6 Recurrence Keys
 
 | Key | Meaning | Example |

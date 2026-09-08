@@ -158,6 +158,28 @@ and delegating entirely to the same engine; it returns the identical
 `temporal-context-v1` object `lifetxt temporal --json` prints, plus a
 `revision` field (see [ai-integration.md](ai-integration.md#context-revision)).
 
+## Temporal thread
+
+`thread` composes authoritative lifecycle links with the unchanged derived
+temporal context. It never infers a plan/result or lifecycle order from dates:
+
+```console
+$ lifetxt thread visit-actual
+$ lifetxt thread visit-actual --depth 4 --nodes 25 --window 14 --limit 10
+$ lifetxt thread visit-actual --json
+```
+
+The `temporal-thread-v1` result groups direct `predecessors`/`successors`
+(`follows:`), `realized_plans`/`realized_by` (`realizes:`), and
+`replacement_predecessors`/`replacement_successors` (`replaced_by:`). It also
+returns a bounded explicit traversal with source provenance, reachable cycle
+paths, and a `truncated` flag, plus the complete `temporal-context-v1` under
+`derived`. Hard ceilings still apply to caller-supplied bounds.
+
+The same domain result is exposed by TUI `/thread [ID]`, Web
+`GET /api/temporal-thread/{id}` and the item drawer, and read-only MCP
+`get_temporal_thread`. MCP adds the normal workspace `revision` field.
+
 ## Freebusy
 
 `freebusy` answers "when am I actually free, and do any of my scheduled items

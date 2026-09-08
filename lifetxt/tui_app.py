@@ -20,6 +20,7 @@ from collections import OrderedDict
 
 from .command_center import command_center
 from .config import config_section
+from .ids import id_key_from_config
 from .timezone_policy import today as timezone_today
 from .tui import (
     TUI_SECTIONS,
@@ -429,6 +430,9 @@ class WorkspaceState(object):
         self.load_count = 0
         self._model = None
         self._today = None
+        self._items = []
+        self._temporal_thread = None
+        self._temporal_thread_target = None
         # Remote connection status (#680). Meaningless for a local backend;
         # "connected" is the default so a local session never shows a
         # spurious disconnected indicator.
@@ -493,6 +497,7 @@ class WorkspaceState(object):
             # for Command Center, instead of dashboard_model() and this
             # method each re-reading the source(s) independently.
             backend_items, backend_error = self.backend.load_items()
+            self._items = list(backend_items or [])
             self._model = dashboard_model(
                 self.args,
                 project_filter=None,
@@ -1021,6 +1026,36 @@ def _cmd_mark(state, argument):
 def _cmd_detail(state, argument):
     state.show_detail = not state.show_detail
     return ("info", "Inspector %s." % ("shown" if state.show_detail else "hidden"))
+
+
+def _cmd_thread(state, argument):
+    """Show the selected or named item's shared temporal-thread read model."""
+    from .temporal_thread import temporal_thread
+    from .web_read_service import find_item_by_id
+
+    row = state.selected_row()
+    item_id = (argument or "").strip() or (row.get("id") if row else "")
+    if not item_id:
+        raise ValueError("Usage: /thread ID (or select a row with an ID)")
+    config = getattr(state.args, "config_data", None) or {}
+    key = id_key_from_config(config)
+    target = find_item_by_id(state._items, item_id, key=key)
+    if target is None:
+        raise ValueError("No item with id %r." % item_id)
+    state._temporal_thread = temporal_thread(
+        state._items, target, timezone_today(), key=key
+    )
+    state._temporal_thread_target = item_id
+    state.show_detail = True
+    return (
+        "info",
+        "Temporal thread: %s (%d explicit node(s), %d derived neighbor(s))."
+        % (
+            item_id,
+            len(state._temporal_thread["explicit"]["nodes"]),
+            len(state._temporal_thread["derived"]["related"]),
+        ),
+    )
 
 
 def _cmd_done(state, argument):
@@ -1731,6 +1766,13 @@ COMMANDS = (
     ),
     Command("stats", "", "Toggle a summary of the visible rows", _cmd_stats),
     Command("detail", "", "Toggle the inspector panel", _cmd_detail),
+    Command(
+        "thread",
+        "[ID]",
+        "Show explicit lifecycle and derived temporal context",
+        _cmd_thread,
+        values="id",
+    ),
     Command("reload", "", "Re-read every file now", _cmd_reload),
     Command(
         "theme",
@@ -2725,6 +2767,45 @@ def _build_inspector(state, width, height):
         for value in body:
             for text in str(value).splitlines():
                 content.append([(fit(text, inner - 2, glyphs), "detail_value")])
+        thread = getattr(state, "_temporal_thread", None)
+        if thread and getattr(state, "_temporal_thread_target", None) == row.get("id"):
+            content.append([("TEMPORAL THREAD", "panel_title")])
+            groups = (
+                ("predecessors", "previous"),
+                ("successors", "next"),
+                ("realized_plans", "realizes"),
+                ("realized_by", "realized by"),
+                ("replacement_predecessors", "replaces"),
+                ("replacement_successors", "replaced by"),
+            )
+            shown = False
+            for group, label in groups:
+                for related in thread["relations"][group]:
+                    shown = True
+                    content.append(
+                        [
+                            (pad(label, 12), "detail_key"),
+                            (
+                                fit(
+                                    "%s %s" % (related["id"], related["title"]),
+                                    inner - 15,
+                                    glyphs,
+                                ),
+                                "detail_value",
+                            ),
+                        ]
+                    )
+            if not shown:
+                content.append([("no explicit lifecycle relations", "hint")])
+            content.append(
+                [
+                    ("derived ", "detail_key"),
+                    (
+                        "%d nearby item(s)" % len(thread["derived"]["related"]),
+                        "detail_value",
+                    ),
+                ]
+            )
     for line in content[: height - 2]:
         lines.append(_panel_row(glyphs, line, inner))
     while len(lines) < height - 1:

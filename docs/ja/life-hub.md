@@ -118,6 +118,29 @@ MCP: `get_temporal_context`（`id`、`window`、`limit`、`stale_after`）。rea
 `temporal-context-v1` object に加えて `revision` field を返します
 （[ai-integration.md](ai-integration.md#context-revision) を参照）。
 
+## Temporal thread
+
+`thread` は authoritative な lifecycle link と既存の派生 temporal context
+を合成します。日時から plan/result や lifecycle 順序を推測しません。
+
+```console
+$ lifetxt thread visit-actual
+$ lifetxt thread visit-actual --depth 4 --nodes 25 --window 14 --limit 10
+$ lifetxt thread visit-actual --json
+```
+
+`temporal-thread-v1` は `follows:` を `predecessors` / `successors`、
+`realizes:` を `realized_plans` / `realized_by`、`replaced_by:` を
+`replacement_predecessors` / `replacement_successors` として直接 group
+化します。また source provenance、到達可能な cycle path、`truncated` flag
+を伴う bounded な explicit traversal と、完全な `temporal-context-v1` を
+`derived` に格納します。大きな境界値にも hard ceiling を適用します。
+
+同じ domain result を TUI `/thread [ID]`、Web
+`GET /api/temporal-thread/{id}` と item drawer、read-only MCP
+`get_temporal_thread` から利用できます。MCP は workspace `revision` field
+を追加します。
+
 ## Freebusy
 
 `freebusy` は「実際にいつ空いているか、scheduled items 同士が重複していないか」を期間で答えます。`agenda` が既に使っている occurrence-timing engine（`from:`/`to:`/`at:`/`on:` の解決）をそのまま再利用し、別の実装は作りません。

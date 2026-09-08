@@ -247,7 +247,8 @@ client can decide what needs confirmation.
 | `get_workload` | Open, actionable, due-soon, overdue counts per assignee |
 | `get_graph` | Dependency graph nodes and edges |
 | `get_blockers` | What is blocking an item |
-| `list_links` | `parent:`, `ref:`, `depends_on:`, `blocks:`, `related:`, `duplicate_of:`, `replaced_by:` |
+| `list_links` | `parent:`, `ref:`, `depends_on:`, `blocks:`, `related:`, `duplicate_of:`, `replaced_by:`, `follows:`, `realizes:` |
+| `get_temporal_thread` | Bounded authoritative lifecycle links composed with derived `temporal-context-v1` |
 | `get_status` | Presence records and which one is open |
 | `list_notifications` | Due message notifications |
 | `list_messages` | `M` records |
@@ -264,7 +265,7 @@ client can decide what needs confirmation.
 
 ### Context revision
 
-`get_command_center`, `get_temporal_context`, `get_next_actions`,
+`get_command_center`, `get_temporal_context`, `get_temporal_thread`, `get_next_actions`,
 `get_backlinks`, `get_ticket`, and `get_project` each carry a `revision`
 field: a SHA-256 over every source file's path and bytes, computed the same
 way Remote Safe Mode already computes it for every resource read (reusing

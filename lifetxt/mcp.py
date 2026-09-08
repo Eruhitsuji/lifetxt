@@ -339,6 +339,7 @@ READ_ONLY_TOOLS = frozenset(
         "get_areas",
         "get_backlinks",
         "get_temporal_context",
+        "get_temporal_thread",
         "get_clock_status",
         "run_query",
         "list_saved_views",
@@ -1016,6 +1017,22 @@ def _tool_schemas():
                 "stale_after": _integer(
                     "Days of inactivity before stale_since applies. Default 14."
                 ),
+            },
+            required=["id"],
+            read_only=True,
+        ),
+        _tool(
+            "get_temporal_thread",
+            "Bounded temporal-thread-v1 lifecycle relations from explicit "
+            "follows/realizes/replaced_by edges, composed with the unchanged "
+            "derived temporal-context-v1 result.",
+            {
+                "id": _string("Target item ID."),
+                "depth": _integer("Maximum explicit traversal depth. Default 8."),
+                "nodes": _integer("Maximum explicit nodes returned. Default 50."),
+                "window": _integer("Derived date window in days. Default 7."),
+                "limit": _integer("Maximum derived neighbors. Default 20."),
+                "stale_after": _integer("Staleness threshold in days. Default 14."),
             },
             required=["id"],
             read_only=True,
@@ -3018,6 +3035,39 @@ def _tool_get_temporal_context(args, context):
     return _attach_revision(result, context)
 
 
+def _tool_get_temporal_thread(args, context):
+    """Thin MCP bridge to the shared temporal-thread-v1 domain function."""
+    from .temporal_thread import (
+        DEFAULT_MAX_DEPTH,
+        DEFAULT_MAX_NODES,
+        DEFAULT_PAIR_LIMIT,
+        DEFAULT_STALE_DAYS,
+        DEFAULT_WINDOW_DAYS,
+        temporal_thread,
+    )
+
+    items, _diagnostics = _read_items(context)
+    item_id = str(args.get("id") or "")
+    if not item_id:
+        raise ValueError("get_temporal_thread requires 'id'.")
+    key = _id_key(context)
+    target = find_item_by_id(items, item_id, key=key)
+    if target is None:
+        raise ValueError("Item id:%s was not found." % item_id)
+    result = temporal_thread(
+        items,
+        target,
+        timezone_today(),
+        key=key,
+        max_depth=_bounded_int(args, "depth", DEFAULT_MAX_DEPTH),
+        max_nodes=_bounded_int(args, "nodes", DEFAULT_MAX_NODES),
+        window_days=_bounded_int(args, "window", DEFAULT_WINDOW_DAYS),
+        temporal_limit=_bounded_int(args, "limit", DEFAULT_PAIR_LIMIT),
+        stale_after_days=_bounded_int(args, "stale_after", DEFAULT_STALE_DAYS),
+    )
+    return _attach_revision(result, context)
+
+
 def _tool_get_clock_status(args, context):
     from .clock_skew import clock_skew_report
 
@@ -3389,6 +3439,7 @@ TOOL_HANDLERS = OrderedDict(
         ("get_areas", _tool_get_areas),
         ("get_backlinks", _tool_get_backlinks),
         ("get_temporal_context", _tool_get_temporal_context),
+        ("get_temporal_thread", _tool_get_temporal_thread),
         ("run_query", _tool_run_query),
         ("list_saved_views", _tool_list_saved_views),
         ("run_saved_view", _tool_run_saved_view),

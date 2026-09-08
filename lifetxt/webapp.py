@@ -115,6 +115,7 @@ WEB_COMMAND_NOTES = {
     "quit": "Close the browser tab.",
     "limit": "The browser paginates instead; use the filter bar.",
     "window": "Use the Agenda range controls.",
+    "thread": "Open a record; its detail drawer shows the Temporal Thread.",
     "undo": "Use the undo toast or the undo history panel.",
     "mark": "Selects rows; the browser uses checkboxes and the x key.",
     "detail": "Opens the detail drawer for the selected record.",
@@ -569,6 +570,51 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
                 nodes, edges, items, root, id_key, temporal_window
             )
         return {"nodes": nodes, "edges": edges}
+
+    @app.get("/api/temporal-thread/{item_id}")
+    def get_temporal_thread(
+        item_id,
+        depth=Query(None),
+        nodes=Query(None),
+        window=Query(None),
+        limit=Query(None),
+        stale_after=Query(None),
+    ):
+        from .temporal_thread import (
+            DEFAULT_MAX_DEPTH,
+            DEFAULT_MAX_NODES,
+            DEFAULT_PAIR_LIMIT,
+            DEFAULT_STALE_DAYS,
+            DEFAULT_WINDOW_DAYS,
+            temporal_thread,
+        )
+
+        items, _diagnostics = read_life_inputs(app.state.paths, app.state.config)
+        key = id_key_from_config(app.state.config)
+        try:
+            target = find_item_by_id(items, item_id, key=key)
+            if target is None:
+                raise HTTPException(
+                    status_code=404, detail=f"No item with id {item_id!r}."
+                )
+            result = temporal_thread(
+                items,
+                target,
+                timezone_today(),
+                key=key,
+                max_depth=depth if depth is not None else DEFAULT_MAX_DEPTH,
+                max_nodes=nodes if nodes is not None else DEFAULT_MAX_NODES,
+                window_days=window if window is not None else DEFAULT_WINDOW_DAYS,
+                temporal_limit=limit if limit is not None else DEFAULT_PAIR_LIMIT,
+                stale_after_days=(
+                    stale_after if stale_after is not None else DEFAULT_STALE_DAYS
+                ),
+            )
+        except HTTPException:
+            raise
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        return result
 
     @app.get("/api/blockers")
     def get_blockers(

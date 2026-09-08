@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/temporal-thread-v1.schema.json",
+  "title": "lifetxt temporal thread v1",
+  "type": "object",
+  "$defs": {
+    "itemRef": {
+      "type": "object",
+      "required": ["id", "title", "kind", "status", "source", "line"],
+      "properties": {
+        "id": {"type": "string"},
+        "title": {"type": "string"},
+        "kind": {"type": "string"},
+        "status": {"type": "string"},
+        "source": {"type": ["string", "null"]},
+        "line": {"type": ["integer", "null"]},
+        "provenance": {"type": "object"}
+      },
+      "additionalProperties": true
+    }
+  },
+  "required": [
+    "schema", "reference_date", "target_id", "target", "bounds",
+    "relations", "explicit", "derived"
+  ],
+  "properties": {
+    "schema": {"const": "temporal-thread-v1"},
+    "reference_date": {"type": ["string", "null"]},
+    "target_id": {"type": "string"},
+    "target": {"$ref": "#/$defs/itemRef"},
+    "bounds": {
+      "type": "object",
+      "required": ["max_depth", "max_nodes", "window_days", "temporal_limit"],
+      "properties": {
+        "max_depth": {"type": "integer", "minimum": 0},
+        "max_nodes": {"type": "integer", "minimum": 1},
+        "window_days": {"type": "integer", "minimum": 0},
+        "temporal_limit": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "relations": {
+      "type": "object",
+      "required": [
+        "predecessors", "successors", "realized_plans", "realized_by",
+        "replacement_predecessors", "replacement_successors"
+      ],
+      "properties": {
+        "predecessors": {"type": "array", "items": {"$ref": "#/$defs/itemRef"}},
+        "successors": {"type": "array", "items": {"$ref": "#/$defs/itemRef"}},
+        "realized_plans": {"type": "array", "items": {"$ref": "#/$defs/itemRef"}},
+        "realized_by": {"type": "array", "items": {"$ref": "#/$defs/itemRef"}},
+        "replacement_predecessors": {"type": "array", "items": {"$ref": "#/$defs/itemRef"}},
+        "replacement_successors": {"type": "array", "items": {"$ref": "#/$defs/itemRef"}}
+      },
+      "additionalProperties": false
+    },
+    "explicit": {
+      "type": "object",
+      "required": ["nodes", "edges", "cycles", "truncated"],
+      "properties": {
+        "nodes": {"type": "array", "items": {"$ref": "#/$defs/itemRef"}},
+        "edges": {"type": "array", "items": {"type": "object"}},
+        "cycles": {"type": "array", "items": {"type": "object"}},
+        "truncated": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "derived": {"type": "object"},
+    "revision": {"type": ["string", "null"]}
+  },
+  "additionalProperties": true
+}

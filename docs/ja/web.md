@@ -64,8 +64,9 @@ MCP tool は `list_items`、`get_item`、`create_item`、`update_item`、
 | `GET` | `/api/items/id/{id}` | exact `id:` で item を取得 |
 | `PUT` | `/api/items/id/{id}` | writable file 内の exact `id:` 一致 item を更新 |
 | `DELETE` | `/api/items/id/{id}` | writable file 内の exact `id:` 一致 item を削除 |
-| `GET` | `/api/links` | `parent:` / `ref:` / `depends_on:` / `blocks:` / `related:` / `duplicate_of:` / `replaced_by:` の ID link を表示 |
+| `GET` | `/api/links` | `parent:` / `ref:` / `depends_on:` / `blocks:` / `related:` / `duplicate_of:` / `replaced_by:` / `follows:` / `realizes:` の ID link を表示 |
 | `GET` | `/api/graph` | Graph UI 用の `nodes` / `edges` を返す。参照先が見つからない node は `missing: true`。任意の `relations`（comma 区切りの relation key）は `/api/links?relation=` と同じ方法で edge を絞り込む。`root` 指定時は任意の `include_temporal=true` で root の `same_day`/`before`/`after` temporal neighbor（境界付き）を追加 edge として重ねられる（`temporal_window`、既定 7 日）。この場合すべての edge に `kind`（`structural` または `temporal`）が付与される -- `include_temporal` を指定しなければ応答は変わらない。 |
+| `GET` | `/api/temporal-thread/{id}` | 共通の bounded `temporal-thread-v1` を返す。任意の `depth`、`nodes`、`window`、`limit`、`stale_after` は CLI/MCP と同じ境界。item drawer に lifecycle group を表示する。 |
 | `GET` | `/api/blockers` | `?id=ID` の推移的 blocker chain を返す(level 1..N、`depth` で深さ制限、既定 5) |
 | `GET` | `/api/messages` | type `M` message item を一覧表示。message filter 指定可能 |
 | `GET` | `/api/messages/id/{id}` | exact `id:` で Message を取得 |

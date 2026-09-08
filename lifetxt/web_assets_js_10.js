@@ -384,7 +384,8 @@
 
     const DEP_RELATION_LABEL = {
       depends_on: "depends on", blocks: "blocks", parent: "child of",
-      related: "related", ref: "ref",
+      related: "related", ref: "ref", follows: "follows",
+      realizes: "realizes", replaced_by: "replaced by",
     };
     const STATUS_ICON = {"[ ]": "○", "[x]": "✓", "[-]": "✕", "[/]": "◑", "[>]": "→", "[?]": "?", "[!]": "!"};
 

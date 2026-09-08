@@ -78,7 +78,7 @@ def _list(details, *keys):
     return values
 
 
-_HISTORY_RECORD_KINDS = ("ticket_event", "time_entry")
+_HISTORY_RECORD_KINDS = ("ticket_event", "time_entry", "progress_event")
 
 
 def _access_tuple(details):
@@ -93,13 +93,12 @@ def _access_tuple(details):
 def _access_for_item(item, id_index=None):
     """Return the access tuple used for a Remote Safe Mode permission check.
 
-    A ticket_event/time_entry Note carries no visibility/owner of its own
-    (confirmed by reading lifetxt.ticket_activity.build_ticket_event /
-    build_time_entry), so without this it always fell back to the default
-    ("shared", no owner) regardless of its parent ticket's privacy. It
-    inherits the parent's tuple instead, one hop only, and only when parent:
-    resolves to exactly one item in the read set -- an ambiguous or missing
-    parent falls back to the Note's own default rather than guessing.
+    A ticket_event/time_entry/progress_event Note carries no visibility or
+    owner of its own, so without this it falls back to the default ("shared",
+    no owner) regardless of its parent's privacy. It inherits the parent's
+    tuple instead, one hop only, and only when parent: resolves to exactly one
+    item in the read set -- an ambiguous or missing parent falls back to the
+    Note's own default rather than guessing.
     """
     details = getattr(item, "details", {}) or {}
     if id_index is not None and _first(details, "record") in _HISTORY_RECORD_KINDS:

@@ -4601,6 +4601,11 @@ _W225_GUIDANCE = (
 def command_check(args):
     config = _config(args)
     items, diagnostics = _parse_life_inputs(args.paths, config)
+    from .progress_history import progress_history_diagnostics
+
+    diagnostics = diagnostics + progress_history_diagnostics(
+        items, id_key=id_key_from_config(config)
+    )
     diagnostics = diagnostics + _attachment_diagnostics_for_check(items, config, args)
     ignore_codes = getattr(args, "ignore_codes", None)
     filtered_diagnostics = filter_diagnostics(
@@ -7950,7 +7955,10 @@ def command_progress(args):
     if not path or path == "-":
         raise ValueError("progress requires a file path, not stdin.")
     id_key = id_key_from_config(config)
-    text = read_text(path)
+    from .mutation import read_text_snapshot
+
+    snapshot = read_text_snapshot(path)
+    text = snapshot.text
     items, _ = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
     target, aborted = _resolve_target_item(
         items, id_key, args, prompt_verb="Update progress:"
@@ -8004,30 +8012,28 @@ def command_progress(args):
         )
         return 0
 
-    update_args = types.SimpleNamespace(
-        line=target.line,
-        match_id=None,
-        status=None,
-        kind=None,
-        title=None,
-        add_detail=["progress:%s" % new_raw],
-        detail=None,
-        remove_detail=["progress"],
-    )
-    for flag in DETAIL_FLAGS:
-        dest = "from_" if flag == "from" else flag
-        if not hasattr(update_args, dest):
-            setattr(update_args, dest, None)
-
-    updated_text, updated_line, diagnostics = update_text(text, update_args)
-    if _has_error(diagnostics):
-        _print_diagnostics(diagnostics)
-        return 1
+    target_ids = target.details.get(id_key) or []
+    if not target_ids:
+        raise ValueError(
+            "progress history requires a stable %s: detail on the target item."
+            % id_key
+        )
+    target_id = target_ids[0]
 
     _ensure_writable_path(path, config, "progress")
     _pre_write_backup(path, config, "progress")
-    atomic_write_text(path, updated_text)
-    sys.stdout.write("Updated: %s\n" % updated_line)
+    from .progress_history import apply_progress_mutation
+
+    result = apply_progress_mutation(
+        path,
+        target_id,
+        new_raw,
+        "set" if set_value is not None else "delta",
+        snapshot.content_hash,
+        id_key=id_key,
+        expected_before=current_raw,
+    )
+    sys.stdout.write("Updated: %s\n" % item_to_line(result.item))
     if sys.stdout.isatty():
         sys.stdout.write(_render_success_guidance("progress", path=path))
     return 0

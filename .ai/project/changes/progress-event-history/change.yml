@@ -1,0 +1,57 @@
+schema_version: 1
+
+change:
+  id: progress-event-history
+  title: Append-only progress event history contract
+  status: implemented
+  change_type: Feature
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/697
+  related_pull_request: []
+  base_commit: 833a84c
+  target_release: null
+
+scope:
+  in_scope:
+    - Define record:progress_event as the append-only evidence contract for explicit lifetxt progress writes.
+    - Update the item and append its event in one exact-revision mutation.
+    - Validate structure, ordering, continuity, and agreement with the current item without inventing backfill.
+    - Make Remote Safe Mode reads inherit the parent item's access tuple for progress events.
+    - Document the contract in English and Japanese and register its capability/traceability links.
+  out_of_scope:
+    - Period aggregation, grouping, or display requested by issue 695; that work remains blocked until this contract lands.
+    - Backfilling events for historical or generic/manual progress edits.
+    - Capturing progress writes made by generic editors, TUI, Web, MCP, import, or direct file edits.
+    - Automatically reconciling an incomplete event chain.
+  write_scope:
+    - lifetxt/progress_history.py
+    - lifetxt/cli.py
+    - lifetxt/safety_compat_v2.py
+    - lifetxt/remote_backend.py
+    - tests/test_progress_history.py
+    - tests/test_lifetxt.py
+    - tests/test_generated_record_capture_compat.py
+    - tests/test_remote_backend_v20.py
+    - docs/en/cli.md
+    - docs/ja/cli.md
+    - docs/en/life_txt_format_spec.md
+    - docs/ja/life_txt_format_spec.md
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+    - .ai/project/changes/progress-event-history/**
+  forbidden_scope:
+    - lifetxt/progress.py
+    - .ai/managed/**
+    - .kiro/settings/**
+  shared_files:
+    - lifetxt/cli.py
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+
+human_approvals_required:
+  - Independent implementation and integration review for this High-assurance public data contract.
+  - Security review of parent access-policy inheritance before merge.
+  - Merge Authority approval; Codex must not merge this pull request.
+  - Rollback and no-backfill migration plan confirmation before merge.

@@ -11503,6 +11503,34 @@ traceability:
         beyond #687 itself exists for this batch.
       status: implemented
 
+    - requirement_id: req-progress-event-history
+      capability_id: cap-progress-standard-key
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/695
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/697
+      pull_request: null
+      changed_files_or_scope:
+        - Add append-only record:progress_event evidence for explicit CLI progress writes
+        - Couple current-value update and event append in one exact-revision mutation
+        - Validate chain integrity and return no authoritative history for incomplete chains
+        - Inherit parent access policy for progress events in Remote Safe Mode
+        - lifetxt/progress_history.py
+        - lifetxt/cli.py
+        - lifetxt/remote_backend.py
+        - tests/test_progress_history.py
+      tests_or_evidence:
+        - "Focused progress/history/compat/privacy plus traceability/closeout suite -> Ran 72 tests, OK"
+        - "MPLBACKEND=Agg python -W ignore::ResourceWarning -m unittest discover -> Ran 3988 tests, OK (skipped=197)"
+        - "python scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> errors 0, ok true"
+      release_or_deployment: next normal maintenance release
+      notes: >-
+        Implements prerequisite #697 after investigation #696 established
+        that existing undo/snapshot/revision sources cannot reconstruct the
+        exact history required by #695. No backfill and no aggregation are
+        included; #695 remains blocked until this contract merges. High
+        assurance because this is durable authoritative data and extends a
+        remote permission-filtering rule. Human review and merge required.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

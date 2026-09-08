@@ -7712,8 +7712,10 @@ capabilities:
       - req-progress-tui-display
       - req-progress-web-display
       - req-progress-sort-filter-integration
+      - req-progress-event-history
     implementation_locations:
       - lifetxt/progress.py
+      - lifetxt/progress_history.py
       - lifetxt/model.py
       - lifetxt/validator.py
       - lifetxt/interactive.py
@@ -7730,6 +7732,7 @@ capabilities:
       - lifetxt/web_assets_js_05.js
       - lifetxt/web_read_service.py
       - tests/test_progress.py
+      - tests/test_progress_history.py
       - tests/test_check_progress.py
       - tests/test_query.py
       - tests/test_life_hub.py
@@ -7754,8 +7757,10 @@ capabilities:
       - --progress flag on quick/add/assist
       - TUI progress column
       - Web UI progress bar+label
+      - record:progress_event append-only history contract
     tests_or_evidence:
       - "python -m unittest tests.test_progress tests.test_check_progress tests.test_query tests.test_life_hub tests.test_cui_extensions tests.test_web_i18n -> Ran 396 tests, OK (skipped=1, unrelated)"
+      - "#697: focused progress-event/CLI/compat/privacy/traceability suite -> Ran 72 tests, OK; full unittest discover -> Ran 3988 tests, OK (skipped=197)"
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/645
       - https://github.com/Eruhitsuji/lifetxt/issues/646
@@ -7765,6 +7770,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/650
       - https://github.com/Eruhitsuji/lifetxt/issues/651
       - https://github.com/Eruhitsuji/lifetxt/issues/652
+      - https://github.com/Eruhitsuji/lifetxt/issues/697
     related_pull_requests: []
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-

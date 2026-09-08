@@ -11531,6 +11531,32 @@ traceability:
         remote permission-filtering rule. Human review and merge required.
       status: implemented
 
+    - requirement_id: req-progress-period-delta
+      capability_id: cap-progress-standard-key
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/695
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/700
+      changed_files_or_scope:
+        - Add surface-neutral authoritative progress period-boundary delta semantics
+        - Add stats --progress-delta ID text and JSON output over the existing date range
+        - Publish the lifetxt-progress-delta-v1 JSON schema
+        - lifetxt/progress_delta.py
+        - lifetxt/stats.py
+        - lifetxt/cli.py
+        - dist/schemas/progress-delta-v1.schema.json
+        - tests/test_progress_delta.py
+      tests_or_evidence:
+        - "Focused progress delta/history/stats suite -> Ran 49 tests, OK"
+        - "MPLBACKEND=Agg python -W ignore::ResourceWarning -m unittest discover -> Ran 4000 tests, OK (skipped=197)"
+        - "python scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> errors 0, ok true"
+      release_or_deployment: next normal maintenance release
+      notes: >-
+        Implements the bounded aggregation slice after prerequisite #697
+        landed in PR #698. Boundary values come only from a complete
+        authoritative progress_event chain; missing baselines are unavailable,
+        never inferred from current progress or later before_progress values.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

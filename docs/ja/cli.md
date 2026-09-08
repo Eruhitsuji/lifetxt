@@ -2409,6 +2409,8 @@ python -m lifetxt stats life.txt --project research --format json
 python -m lifetxt stats life.txt --tag focus --assignee alice --format json
 python -m lifetxt stats "projects/**/*.life.txt" --group weekly
 python -m lifetxt stats life.txt --width 60
+python -m lifetxt stats life.txt --progress-delta task_1 --from 2026-09-01 --to 2026-09-08
+python -m lifetxt stats life.txt --progress-delta task_1 --from 2026-09-01 --to 2026-09-08 --format json
 ```
 
 | Option | 意味 |
@@ -2419,9 +2421,26 @@ python -m lifetxt stats life.txt --width 60
 | `--group daily|weekly|monthly` | mood trend の集計単位 |
 | `--format text|json` | 出力形式 |
 | `--width N` | 狭い terminal 向けの compact text 出力 |
+| `--progress-delta ID` | 指定 item の date range 内の authoritative progress 差分を表示 |
 
 `weekly` / `monthly` では task bucket ごとの done / total / overdue と、
 bucket ごとの habit sparkline も表示します。
+
+`--progress-delta ID` は `stats` を progress period-delta view に切り替えます。
+各 inclusive date boundary 以前の最後の valid な `record:progress_event` を
+選び、共有 `progress:` parser の normalized ratio 同士を減算します。そのため
+`25% -> 40%` は `+15 pp`、`70% -> 55%` は clamp せず `-15 pp`、denominator
+が変わる `3/10 -> 12/20` も `+30 pp` です。percentage/fraction が混在しても
+同じ semantic で比較し、boundary の raw value は text/JSON の両方に残します。
+
+start boundary は `--from` の local midnight、end boundary は `--to` の
+inclusive end-of-day で、CLI が解決した timezone policy を使用します。boundary
+上の event は含みます。authoritative chain が無い／invalid、または start
+boundary を確定する event が無い場合、結果は `n/a` / `available:false` です。
+現在値や、後の event の `before_progress` を baseline として推測しません。
+JSON contract は
+[`progress-delta-v1.schema.json`](../../dist/schemas/progress-delta-v1.schema.json)
+に従います。
 
 ### 13.5 report / chart / batch / encryption
 

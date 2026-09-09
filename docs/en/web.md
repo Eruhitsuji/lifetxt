@@ -67,7 +67,7 @@ tools.
 | `DELETE` | `/api/items/id/{id}` | Delete an item by exact `id:` in the writable file |
 | `GET` | `/api/links` | List ID-based links such as `parent:`, `ref:`, `depends_on:`, `blocks:`, `related:`, `duplicate_of:`, `replaced_by:`, `follows:`, and `realizes:` |
 | `GET` | `/api/graph` | Return `nodes` and `edges` for ID references used by the graph UI; nodes referenced but not found carry `missing: true`. Optional `relations` (comma-separated relation keys) narrows edges the same way `/api/links?relation=` does. When `root` is set, optional `include_temporal=true` overlays that root's bounded `same_day`/`before`/`after` temporal neighbors as additional edges (`temporal_window`, default 7 days); every edge then carries a `kind` of `structural` or `temporal` -- omitting `include_temporal` leaves the response unchanged. |
-| `GET` | `/api/temporal-thread/{id}` | Return the shared bounded `temporal-thread-v1` result. Optional `depth`, `nodes`, `window`, `limit`, and `stale_after` bounds match the CLI/MCP contract. The item drawer renders its lifecycle groups. |
+| `GET` | `/api/temporal-thread/{id}` | Return the shared bounded `temporal-thread-v1` result, including read-only lifecycle consistency warnings. Optional `depth`, `nodes`, `window`, `limit`, and `stale_after` bounds match the CLI/MCP contract. The item drawer renders its lifecycle groups and warning count. |
 | `GET` | `/api/blockers` | Return the transitive blocker chain for `?id=ID` (levels 1..N, `depth` caps traversal, default 5) |
 | `GET` | `/api/messages` | List type `M` message items with message filters |
 | `GET` | `/api/messages/id/{id}` | Get a message by exact `id:` |

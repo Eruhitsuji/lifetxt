@@ -176,9 +176,19 @@ returns a bounded explicit traversal with source provenance, reachable cycle
 paths, and a `truncated` flag, plus the complete `temporal-context-v1` under
 `derived`. Hard ceilings still apply to caller-supplied bounds.
 
+Its additive `consistency.warnings` section compares resolved `follows:` and
+`replaced_by:` edges with the same comparable calendar-date extraction used by
+`temporal-context-v1`. It reports only a clearly reversed order, with explicit
+and derived provenance; it never edits an edge. Same-day, missing, invalid, or
+ambiguous evidence is not guessed, and `realizes:` has no chronological rule.
+The warning list is bounded with the explicit thread and reports
+`consistency.truncated` when the thread bounds limit its evidence.
+
 The same domain result is exposed by TUI `/thread [ID]`, Web
 `GET /api/temporal-thread/{id}` and the item drawer, and read-only MCP
 `get_temporal_thread`. MCP adds the normal workspace `revision` field.
+
+`lifetxt check` reports the same shared contradiction as `W244`.
 
 ## Freebusy
 

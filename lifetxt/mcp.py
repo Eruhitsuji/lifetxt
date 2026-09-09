@@ -1025,7 +1025,8 @@ def _tool_schemas():
             "get_temporal_thread",
             "Bounded temporal-thread-v1 lifecycle relations from explicit "
             "follows/realizes/replaced_by edges, composed with the unchanged "
-            "derived temporal-context-v1 result.",
+            "derived temporal-context-v1 result and read-only consistency "
+            "warnings for contradictory follows/replaced_by date order.",
             {
                 "id": _string("Target item ID."),
                 "depth": _integer("Maximum explicit traversal depth. Default 8."),

@@ -136,10 +136,19 @@ $ lifetxt thread visit-actual --json
 を伴う bounded な explicit traversal と、完全な `temporal-context-v1` を
 `derived` に格納します。大きな境界値にも hard ceiling を適用します。
 
+additive な `consistency.warnings` は、解決済み `follows:` / `replaced_by:`
+と、`temporal-context-v1` と同じ比較可能な暦日抽出を照合します。明確に逆転した
+順序だけを explicit/derived provenance 付きで報告し、relation は変更しません。
+同一日、欠損・不正日付、曖昧な evidence は推測せず、`realizes:` に時系列ruleは
+設けません。warning list は explicit thread とともに bounded で、制限された場合は
+`consistency.truncated` が true になります。
+
 同じ domain result を TUI `/thread [ID]`、Web
 `GET /api/temporal-thread/{id}` と item drawer、read-only MCP
 `get_temporal_thread` から利用できます。MCP は workspace `revision` field
 を追加します。
+
+`lifetxt check` も同じ共有判定を `W244` として報告します。
 
 ## Freebusy
 

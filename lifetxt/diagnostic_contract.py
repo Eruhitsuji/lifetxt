@@ -35,7 +35,7 @@ def diagnostic_category(diagnostic: Any) -> str:
         return "message"
     if code in ("W105", "W106"):
         return "style"
-    if code in ("W201", "W202", "W203", "W204", "W206"):
+    if code in ("W201", "W202", "W203", "W204", "W206", "W244"):
         return "time"
     if code in ("W205", "W219", "W223"):
         return "recurrence"

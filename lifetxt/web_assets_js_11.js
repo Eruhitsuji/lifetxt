@@ -349,9 +349,19 @@
           }
         }
         if (!lifecycleCount) lifecycleHtml += `<div class="empty">No explicit lifecycle relations.</div>`;
+        const consistencyWarnings = temporalThread?.consistency?.warnings || [];
+        for (const warning of consistencyWarnings) {
+          const evidence = warning.evidence || {};
+          lifecycleHtml += `<div class="dep-row"><span class="dep-rel">Warning</span>` +
+            `<span>${escapeHtml(warning.relation || "relation")}: ` +
+            `${escapeHtml(evidence.successor_id || "?")} is dated before ` +
+            `${escapeHtml(evidence.predecessor_id || "?")}</span></div>`;
+        }
         const derivedCount = (temporalThread?.derived?.related || []).length;
         lifecycleHtml += `</div><div class="note">${derivedCount} derived nearby item(s)` +
-          `${temporalThread?.explicit?.truncated ? "; explicit thread truncated" : ""}.</div>`;
+          `; ${consistencyWarnings.length} consistency warning(s)` +
+          `${temporalThread?.explicit?.truncated ? "; explicit thread truncated" : ""}` +
+          `${temporalThread?.consistency?.truncated ? "; consistency evidence truncated" : ""}.</div>`;
         if (!records.length) {
           container.innerHTML = lifecycleHtml + `<div class="drawer-section-title">Dependencies &amp; Links</div><div class="empty">No links.</div>`;
           return;

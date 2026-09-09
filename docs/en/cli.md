@@ -183,7 +183,7 @@ python -m lifetxt vm run program.life.txt --entry s1
 | `area` | Group tasks and projects by `area:` (see [life-hub.md](life-hub.md)) |
 | `backlinks` | Show items that reference a given ID (incoming links) (see [life-hub.md](life-hub.md)) |
 | `temporal` | Show one item's derived temporal context: overdue/due/staleness and nearby dated items (see [life-hub.md](life-hub.md)) |
-| `thread` | Show one item's explicit lifecycle thread composed with derived temporal context (see [life-hub.md](life-hub.md)) |
+| `thread` | Show one item's explicit lifecycle thread, derived temporal context, and read-only consistency warnings (see [life-hub.md](life-hub.md)) |
 | `freebusy` | Show busy/free time intervals and overlap conflicts for `E`/`R` items within a datetime range (see [life-hub.md](life-hub.md)) |
 | `query` | Filter items with the shared query language (see [query.md](query.md)) |
 | `view` | List, inspect, and run saved views (named queries) (see [query.md](query.md)) |
@@ -968,7 +968,9 @@ list of hops, each carrying the connecting `relation` and `direction`
 whose `depends_on:` prerequisite is still open (`W224`), combined
 `depends_on:`/`blocks:` cycles (`W227`), `duplicate_of:` cycles (`W228`),
 and `replaced_by:` (`W229`), `follows:` (`W230`), and `realizes:` (`W231`)
-cycles.
+cycles. `W244` reports a resolved `follows:` or `replaced_by:` edge whose
+expected lifecycle successor has a clearly earlier comparable calendar date;
+it is evidence only and never rewrites the relation.
 For duration fields such as `est:` and `elapsed:`, `check` reports
 non-canonical but parseable values as `W222` and unrecognized values such as
 `elapsed:1d` as `W226`.

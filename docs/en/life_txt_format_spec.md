@@ -291,6 +291,11 @@ Lifecycle direction is authoritative and never inferred from dates:
 - A nearby or later date does not imply any of these relations. The
   `temporal-context-v1` `before`/`after`/`same_day` edges are derived,
   read-only evidence and remain separate from this explicit graph.
+- A read-only consistency check reports `W244` when `current follows:previous`
+  has a comparable current date before `previous`, or when the target of
+  `old replaced_by:new` has a comparable date before `old`. The stored edge
+  remains authoritative and is never changed. Equal calendar dates, missing or
+  invalid dates, ambiguous targets, and `realizes:` do not produce this warning.
 
 Dependency semantics:
 
@@ -319,6 +324,7 @@ errors:
 | `W229` | A cycle through `replaced_by:` |
 | `W230` | A cycle through `follows:` |
 | `W231` | A cycle through `realizes:` |
+| `W244` | A `follows:` or `replaced_by:` lifecycle order clearly conflicts with comparable current item dates |
 
 `W227` through `W231` are evaluated independently: for example, an item
 `A` with `duplicate_of:B` where `B` has `replaced_by:A` does not trigger

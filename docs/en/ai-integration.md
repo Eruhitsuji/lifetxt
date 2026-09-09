@@ -248,7 +248,7 @@ client can decide what needs confirmation.
 | `get_graph` | Dependency graph nodes and edges |
 | `get_blockers` | What is blocking an item |
 | `list_links` | `parent:`, `ref:`, `depends_on:`, `blocks:`, `related:`, `duplicate_of:`, `replaced_by:`, `follows:`, `realizes:` |
-| `get_temporal_thread` | Bounded authoritative lifecycle links composed with derived `temporal-context-v1` |
+| `get_temporal_thread` | Bounded authoritative lifecycle links composed with derived `temporal-context-v1` and read-only consistency evidence |
 | `get_status` | Presence records and which one is open |
 | `list_notifications` | Due message notifications |
 | `list_messages` | `M` records |

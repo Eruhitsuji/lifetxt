@@ -196,6 +196,52 @@ class ExtendedCycleDetectionTests(unittest.TestCase):
             diagnostic = Diagnostic("warning", code, "x")
             self.assertEqual("reference", diagnostic_category(diagnostic))
 
+    def test_temporal_consistency_diagnostic_reuses_thread_warning(self):
+        from lifetxt.temporal_thread import temporal_consistency
+
+        items, diagnostics = parse_text(
+            "[ ] E Old id:old on:2026-09-10\n"
+            "[ ] E New id:new on:2026-09-01 follows:old\n"
+        )
+        warning = temporal_consistency(items)["warnings"][0]
+        diagnostic = next(row for row in diagnostics if row.code == "W244")
+        self.assertEqual(warning["relation"], "follows")
+        self.assertIn(warning["source_id"], diagnostic.message)
+        self.assertIn(warning["target_id"], diagnostic.message)
+
+    def test_w244_is_a_time_diagnostic(self):
+        from lifetxt.diagnostic_contract import diagnostic_category
+        from lifetxt.model import Diagnostic
+
+        self.assertEqual(
+            "time", diagnostic_category(Diagnostic("warning", "W244", "x"))
+        )
+
+    def test_no_w244_for_valid_same_day_realizes_or_ambiguous_edges(self):
+        cases = (
+            "[ ] E Old id:old on:2026-09-01\n"
+            "[ ] E New id:new on:2026-09-10 follows:old\n",
+            "[ ] E Old id:old on:2026-09-01\n"
+            "[ ] E New id:new on:2026-09-01 follows:old\n",
+            "[ ] E Plan id:plan on:2026-09-10\n"
+            "[ ] E Actual id:actual on:2026-09-01 realizes:plan\n",
+            "[ ] E A id:old on:2026-09-10\n"
+            "[ ] E B id:old on:2026-09-11\n"
+            "[ ] E New id:new on:2026-09-01 follows:old\n",
+        )
+        for text in cases:
+            with self.subTest(text=text):
+                _items, diagnostics = parse_text(text)
+                self.assertFalse(any(row.code == "W244" for row in diagnostics))
+
+    def test_w244_respects_reference_key_filtering(self):
+        items, _ = parse_text(
+            "[ ] E Old id:old on:2026-09-10\n"
+            "[ ] E New id:new on:2026-09-01 follows:old\n"
+        )
+        diagnostics = reference_diagnostics(items, reference_keys=("realizes",))
+        self.assertFalse(any(row.code == "W244" for row in diagnostics))
+
 
 class DependencyBlockerRecordsTests(unittest.TestCase):
     """dependency_blocker_records / dependency_blockers_by_item (#163)."""

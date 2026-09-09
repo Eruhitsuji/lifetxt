@@ -6739,7 +6739,9 @@ class LifeTxtWebApiTests(unittest.TestCase):
             Path(path).write_text(
                 "[ ] E Plan id:plan on:2026-09-08\n"
                 "[x] E Actual id:actual on:2026-09-08 realizes:plan\n"
-                "[ ] E Next id:next follows:actual\n",
+                "[ ] E Next id:next follows:actual\n"
+                "[ ] E Old id:old on:2026-09-10\n"
+                "[ ] E Conflict id:conflict on:2026-09-01 follows:old\n",
                 encoding="utf-8",
             )
             client = self._client([path], writable_path=path)
@@ -6756,6 +6758,9 @@ class LifeTxtWebApiTests(unittest.TestCase):
                 ["next"], [r["id"] for r in data["relations"]["successors"]]
             )
             self.assertTrue(data["explicit"]["truncated"])
+
+            conflict = client.get("/api/temporal-thread/conflict").json()
+            self.assertEqual("follows", conflict["consistency"]["warnings"][0]["relation"])
 
     def test_temporal_thread_api_rejects_invalid_bounds(self):
         with tempfile.TemporaryDirectory() as temp_dir:

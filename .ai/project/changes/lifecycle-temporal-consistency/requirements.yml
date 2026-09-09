@@ -1,0 +1,19 @@
+schema_version: 1
+
+requirements:
+  - id: req-lifecycle-temporal-consistency
+    kind: ADDED
+    statement: Report deterministic read-only evidence when resolved follows or replaced_by lifecycle order clearly conflicts with canonical comparable calendar dates.
+    acceptance_criteria:
+      - A follows source dated before its target produces a warning.
+      - A replaced_by target dated before its source produces a warning.
+      - Valid, same-day, missing, invalid, ambiguous, and realizes-only cases do not produce a warning.
+      - temporal-thread-v1 evidence is bounded, explainable, and provenance-bearing.
+      - lifetxt check and every temporal-thread surface reuse one shared helper.
+    constraints:
+      - Explicit relations remain authoritative and are never changed.
+      - Reuse temporal-context-v1 date extraction and the existing link graph.
+      - Do not infer historical existence or introduce a realizes chronological rule.
+    owner: Eruhitsuji
+
+open_questions: []

@@ -1049,11 +1049,13 @@ def _cmd_thread(state, argument):
     state.show_detail = True
     return (
         "info",
-        "Temporal thread: %s (%d explicit node(s), %d derived neighbor(s))."
+        "Temporal thread: %s (%d explicit node(s), %d derived neighbor(s), "
+        "%d consistency warning(s))."
         % (
             item_id,
             len(state._temporal_thread["explicit"]["nodes"]),
             len(state._temporal_thread["derived"]["related"]),
+            len(state._temporal_thread["consistency"]["warnings"]),
         ),
     )
 
@@ -2806,6 +2808,26 @@ def _build_inspector(state, width, height):
                     ),
                 ]
             )
+            for warning in thread["consistency"]["warnings"]:
+                evidence = warning["evidence"]
+                content.append(
+                    [
+                        ("warning ", "detail_key"),
+                        (
+                            fit(
+                                "%s: %s before %s"
+                                % (
+                                    warning["relation"],
+                                    evidence["successor_id"],
+                                    evidence["predecessor_id"],
+                                ),
+                                inner - 11,
+                                glyphs,
+                            ),
+                            "detail_value",
+                        ),
+                    ]
+                )
     for line in content[: height - 2]:
         lines.append(_panel_row(glyphs, line, inner))
     while len(lines) < height - 1:

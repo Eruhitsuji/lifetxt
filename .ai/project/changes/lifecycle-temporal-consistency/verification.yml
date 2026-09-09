@@ -1,0 +1,72 @@
+schema_version: 1
+
+verification:
+  executed:
+    - type: focused
+      command: python -m unittest tests.test_temporal_context tests.test_temporal_thread tests.test_links tests.test_temporal_cli tests.test_mcp_expansion tests.test_schema_extensions_v2 tests.test_safety_foundation tests.test_safety_cli tests.test_ticket_custom_field_public_contract tests.test_ticket_workflow_surfaces selected Web API tests tests.test_web_assets tests.test_traceability_gate tests.test_change_package_closeout
+      requirement_ids:
+        - req-lifecycle-temporal-consistency
+      result: Ran 364 tests -- OK
+      commit: working-tree
+      executed_at: '2026-09-09'
+      status: passed
+    - type: regression
+      command: MPLBACKEND=Agg python -m unittest discover
+      requirement_ids:
+        - req-lifecycle-temporal-consistency
+      result: Ran 4064 tests in 218.831s -- OK (skipped=18)
+      commit: working-tree
+      executed_at: '2026-09-09'
+      status: passed
+    - type: schema
+      command: python -m unittest tests.test_schema_extensions_v2
+      requirement_ids:
+        - req-lifecycle-temporal-consistency
+      result: Ran 5 tests -- OK (skipped=2; strict jsonschema validation executed)
+      commit: working-tree
+      executed_at: '2026-09-09'
+      status: passed
+    - type: static
+      command: python -m ruff check lifetxt tests scripts
+      requirement_ids:
+        - req-lifecycle-temporal-consistency
+      result: All checks passed
+      commit: working-tree
+      executed_at: '2026-09-09'
+      status: passed
+    - type: documentation
+      command: python scripts/validate_release_docs.py --output .cache/release-doc-validation.json
+      requirement_ids:
+        - req-lifecycle-temporal-consistency
+      result: '{"errors": 0, "ok": true}'
+      commit: working-tree
+      executed_at: '2026-09-09'
+      status: passed
+    - type: smoke
+      command: python -m lifetxt check examples/minimal_life.txt
+      requirement_ids:
+        - req-lifecycle-temporal-consistency
+      result: 'OK: 10 item(s)'
+      commit: working-tree
+      executed_at: '2026-09-09'
+      status: passed
+    - type: whitespace
+      command: git diff --check
+      requirement_ids: []
+      result: clean
+      commit: working-tree
+      executed_at: '2026-09-09'
+      status: passed
+
+review_ledger:
+  - reviewer: Codex implementer self-review
+    review_type: implementation/design/security/compatibility pre-PR review
+    target_commit: working-tree
+    result: passed-with-human-final-review-required
+    finding_count: 0
+    completed_at: '2026-09-09'
+
+release_evidence:
+  migration_notes: Additive read-only result and warning; no migration or backfill.
+  rollback_plan: Revert the PR; authoritative lifecycle relations and user data remain unchanged.
+  operations_evidence: []

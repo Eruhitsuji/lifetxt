@@ -98,6 +98,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/706
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/705
+      - https://github.com/Eruhitsuji/lifetxt/pull/710
     reuse_policy: >-
       Reuse lifetxt.links for authoritative edges and diagnostics, and
       lifetxt.temporal_context for all derived date facts; never infer or

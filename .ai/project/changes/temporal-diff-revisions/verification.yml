@@ -1,0 +1,81 @@
+schema_version: 1
+
+verification:
+  executed:
+    - type: focused
+      command: python -m unittest tests.test_historical_temporal tests.test_temporal_diff tests.test_temporal_cli tests.test_schema_extensions_v2
+      requirement_ids:
+        - req-temporal-diff-between-revisions
+      result: Ran 31 tests -- OK
+      commit: working-tree
+      executed_at: '2026-09-09'
+      status: passed
+    - type: regression
+      command: MPLBACKEND=Agg python -m unittest discover
+      requirement_ids:
+        - req-temporal-diff-between-revisions
+      result: Ran 4082 tests in 221.746s -- OK (skipped=18)
+      commit: working-tree
+      executed_at: '2026-09-09'
+      status: passed
+    - type: schema
+      command: python -m unittest tests.test_schema_extensions_v2
+      requirement_ids:
+        - req-temporal-diff-between-revisions
+      result: Ran 5 tests -- OK
+      commit: working-tree
+      executed_at: '2026-09-09'
+      status: passed
+    - type: static
+      command: python -m ruff check lifetxt tests scripts
+      requirement_ids:
+        - req-temporal-diff-between-revisions
+      result: All checks passed
+      commit: working-tree
+      executed_at: '2026-09-09'
+      status: passed
+
+    - type: formatting
+      command: python -m ruff format --check changed Python files
+      requirement_ids:
+        - req-temporal-diff-between-revisions
+      result: Changed Python files already formatted
+      commit: working-tree
+      executed_at: '2026-09-09'
+      status: passed
+    - type: documentation
+      command: python scripts/validate_release_docs.py --output .cache/release-doc-validation.json
+      requirement_ids:
+        - req-temporal-diff-between-revisions
+      result: '{"errors": 0, "ok": true}'
+      commit: working-tree
+      executed_at: '2026-09-09'
+      status: passed
+    - type: smoke
+      command: python -m lifetxt check examples/minimal_life.txt
+      requirement_ids:
+        - req-temporal-diff-between-revisions
+      result: 'OK: 10 item(s)'
+      commit: working-tree
+      executed_at: '2026-09-09'
+      status: passed
+    - type: whitespace
+      command: git diff --check
+      requirement_ids: []
+      result: clean
+      commit: working-tree
+      executed_at: '2026-09-09'
+      status: passed
+
+review_ledger:
+  - reviewer: Codex implementer self-review
+    review_type: implementation/design/security/compatibility pre-PR review
+    target_commit: working-tree
+    result: passed-with-human-final-review-required
+    finding_count: 0
+    completed_at: '2026-09-09'
+
+release_evidence:
+  migration_notes: New read-only temporal-diff-v1 contract; no migration.
+  rollback_plan: Revert the PR; no history or user data is modified.
+  operations_evidence: []

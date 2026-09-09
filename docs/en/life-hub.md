@@ -167,6 +167,9 @@ temporal context. It never infers a plan/result or lifecycle order from dates:
 $ lifetxt thread visit-actual
 $ lifetxt thread visit-actual --depth 4 --nodes 25 --window 14 --limit 10
 $ lifetxt thread visit-actual --json
+$ lifetxt thread visit-actual --revision a7805b4
+$ lifetxt thread visit-actual --diff a7805b4..eb87484
+$ lifetxt thread visit-actual --as-of 2026-06-01T09:00:00Z --ref main
 ```
 
 The `temporal-thread-v1` result groups direct `predecessors`/`successors`
@@ -189,6 +192,25 @@ The same domain result is exposed by TUI `/thread [ID]`, Web
 `get_temporal_thread`. MCP adds the normal workspace `revision` field.
 
 `lifetxt check` reports the same shared contradiction as `W244`.
+
+Historical modes use only Git-tracked bytes and never mix in the working tree.
+`--revision REV` resolves one commit-ish to a full commit SHA and reconstructs
+the same thread model from the input paths present in that commit.
+`--diff REV_A..REV_B` returns the bounded `temporal-diff-v1` semantic change
+set: item membership and stable state changes, explicit edge changes,
+introduced/resolved consistency warnings, and stable derived fact/edge
+changes. Serialization order alone is ignored. A missing target on one side is
+reported through `availability` rather than filled from current data.
+
+`--as-of RFC3339 [--ref REF]` selects, from commits reachable from the explicit
+ref or `HEAD`, the commit with the greatest **committer timestamp** at or before
+the offset-aware cutoff. Equal timestamps use maximum full SHA as the stable
+tie-break. No matching commit is an error. Shallow history and missing paths
+are exposed through completeness flags and limitations. See
+[historical-as-of-semantics.md](historical-as-of-semantics.md).
+
+These historical options are currently CLI-only. Current TUI, Web, and MCP
+thread surfaces retain their existing current-state behavior.
 
 ## Freebusy
 

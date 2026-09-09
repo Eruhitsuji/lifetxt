@@ -1,0 +1,18 @@
+schema_version: 1
+
+requirements:
+  - id: req-historical-temporal-thread-exact-revision
+    kind: ADDED
+    statement: Reconstruct a temporal thread solely from tracked inputs at an exact Git commit.
+    acceptance_criteria:
+      - Commit-ish input resolves to a full commit SHA.
+      - Working-tree-only changes never enter the historical result.
+      - Missing revisions, paths, and targets have deterministic no-fallback behavior.
+      - Historical provenance and evidence limitations are explicit.
+      - Existing lifecycle, temporal-context, and consistency engines are reused.
+    constraints:
+      - Read-only Git access with bounded input size and execution time.
+      - No inference from current item dates.
+    owner: Eruhitsuji
+
+open_questions: []

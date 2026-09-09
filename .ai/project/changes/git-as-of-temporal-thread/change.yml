@@ -1,0 +1,43 @@
+schema_version: 1
+
+change:
+  id: git-as-of-temporal-thread
+  title: Git-backed as-of selection for Historical Temporal Thread
+  status: implemented
+  change_type: Feature
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/709
+  related_pull_request: pending
+  base_commit: eb8748474915a43875e154ee9a9caefc9e7055c7
+  target_release: next normal maintenance release
+
+scope:
+  in_scope:
+    - Parse offset-aware RFC3339 cutoffs.
+    - Select a reachable commit by committer timestamp and stable SHA tie-break.
+    - Reuse exact-revision reconstruction and expose completeness limitations.
+    - Add CLI, schema, tests, docs, capability, and traceability evidence.
+  out_of_scope:
+    - Author-time, bare-date, fuzzy-time, reflog, or non-Git policies.
+    - Temporal Diff implementation, which belongs to issue 708.
+    - Mutation or restore.
+  write_scope:
+    - lifetxt/historical_temporal.py
+    - lifetxt/cli.py
+    - lifetxt/schema_extensions_v27.py
+    - dist/schemas/temporal-thread-v1.schema.json
+    - focused tests, EN/JA docs, capability, traceability, and this package
+  forbidden_scope:
+    - .ai/managed/**
+    - non-Git history engine
+    - authoritative mutation
+  shared_files:
+    - lifetxt/cli.py
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+
+human_approvals_required:
+  - Independent review of the latest commit.
+  - Merge Authority approval; the implementing AI must not merge the pull request.

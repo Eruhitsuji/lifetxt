@@ -148,8 +148,8 @@ class SafetyCliTests(unittest.TestCase):
         )
         self.assertEqual(0, code, stderr)
         report = json.loads(stdout)
-        self.assertEqual(80, len(report["files"]))
-        self.assertEqual(80, len(os.listdir(directory)))
+        self.assertEqual(81, len(report["files"]))
+        self.assertEqual(81, len(os.listdir(directory)))
         for name in (
             "release-manifest-v1.schema.json",
             "revision-metrics-v1.schema.json",
@@ -173,6 +173,7 @@ class SafetyCliTests(unittest.TestCase):
             "ticket-planning-v1.schema.json",
             "ticket-v1.schema.json",
             "ticket-project-report-v1.schema.json",
+            "temporal-diff-v1.schema.json",
         ):
             self.assertIn(name, report["files"])
         with open(

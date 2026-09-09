@@ -11658,6 +11658,67 @@ traceability:
         existence inference is introduced.
       status: implemented
 
+    - requirement_id: req-historical-temporal-thread-exact-revision
+      capability_id: cap-lifecycle-temporal-thread
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/699
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/707
+      pull_request: pending
+      changed_files_or_scope:
+        - Read only tracked input bytes from an exact resolved Git commit
+        - Reuse temporal-thread-v1 lifecycle, context, and consistency engines
+        - Add explicit historical provenance and partial-path limitations
+        - Add CLI text/JSON and an additive temporal-thread-v1 schema field
+      tests_or_evidence:
+        - tests/test_historical_temporal.py
+        - tests/test_temporal_cli.py
+        - dist/schemas/temporal-thread-v1.schema.json
+        - docs/en/historical-as-of-semantics.md
+        - docs/ja/historical-as-of-semantics.md
+      release_or_deployment: next normal maintenance release
+      notes: >-
+        High-assurance, read-only Git evidence extension. Current or untracked
+        bytes never fill historical gaps.
+      status: implemented
+
+    - requirement_id: req-temporal-diff-between-revisions
+      capability_id: cap-temporal-diff
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/699
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/708
+      pull_request: pending
+      changed_files_or_scope:
+        - Compare two exact-revision historical temporal-thread read models
+        - Report normalized item, state, edge, consistency, and derived changes
+        - Expose bounded temporal-diff-v1 through CLI text/JSON
+      tests_or_evidence:
+        - tests/test_temporal_diff.py
+        - tests/test_temporal_cli.py
+        - dist/schemas/temporal-diff-v1.schema.json
+      release_or_deployment: next normal maintenance release
+      notes: >-
+        Serialization order is ignored. Missing targets and incomplete bounded
+        evidence remain explicit and are never backfilled.
+      status: implemented
+
+    - requirement_id: req-git-as-of-temporal-thread
+      capability_id: cap-lifecycle-temporal-thread
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/699
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/709
+      pull_request: pending
+      changed_files_or_scope:
+        - Select a reachable commit by offset-aware cutoff and committer timestamp
+        - Use explicit ref or HEAD and deterministic full-SHA tie-breaking
+        - Reuse the exact-revision reconstruction path without current fallback
+        - Report shallow-history and path completeness limitations
+      tests_or_evidence:
+        - tests/test_historical_temporal.py
+        - tests/test_temporal_cli.py
+        - dist/schemas/temporal-thread-v1.schema.json
+      release_or_deployment: next normal maintenance release
+      notes: >-
+        Git-only V1. Domain dates, author timestamps, reflogs, and non-Git
+        history are not selection evidence.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

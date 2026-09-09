@@ -1,13 +1,13 @@
 # Historical `as-of` semantics
 
-Status: Phase 3 investigation result for #699 / #702.
+Status: implemented Git-backed subset for #707 / #708 / #709.
 
 ## Decision
 
-lifetxt cannot yet expose a general `lifetxt as-of DATE` command from the
-current file alone. The current file is authoritative for **now**, but it does
-not prove which values or future plans existed at an earlier date. A date in an
-item is domain time, not evidence that the item was already recorded then.
+lifetxt does not reconstruct history from current item dates. The current file
+is authoritative for **now**, but it does not prove which values or future
+plans existed earlier. Git-backed historical thread modes are available only
+when tracked bytes and their exact revision provenance supply that evidence.
 
 Historical output is authoritative only when it is reconstructed from one of
 the evidence sources below and names that source and revision explicitly.
@@ -23,28 +23,32 @@ the evidence sources below and names that source and revision explicitly.
 | undo snapshots, current revision hashes, transaction journal | Conflict/recovery evidence for their documented retention window | Not a durable historical database and not a supported general as-of source |
 | current life.txt dates (`on:`, `due:`, `created:`, etc.) | Domain dates currently asserted | Do not prove that the assertion existed at the requested historical time |
 
-## Safe implementable subsets
+## Implemented Git subset
 
-1. **Git-revision view**: parse the exact life.txt bytes from a caller-selected
-   commit and label the result with repository, ref/commit SHA, selected time
-   policy, and completeness caveats. This is a future feature and must not
-   silently fall back to the working tree.
-2. **Typed event-history views**: reconstruct only the fields whose validated
+1. **Exact revision**: `lifetxt thread ID --revision REV` resolves the
+   commit-ish, reads only the requested paths present in its tree, and returns
+   `temporal-thread-v1.historical` provenance. Missing paths make evidence
+   incomplete; a missing target or revision is an error without fallback.
+2. **Semantic diff**: `--diff REV_A..REV_B` compares two normalized historical
+   threads as `temporal-diff-v1`. It distinguishes item/state, explicit edge,
+   consistency, and derived changes and ignores serialization order.
+3. **Git as-of selection**: `--as-of OFFSET_RFC3339 [--ref REF]` chooses the
+   reachable commit whose committer timestamp is greatest and no later than
+   the cutoff. `HEAD` is the default root; equal timestamps use maximum full
+   SHA. Shallow history is explicitly incomplete.
+4. **Typed event-history views**: reconstruct only the fields whose validated
    append-only event contract defines a complete chain, as progress delta does
    today. Missing baselines are reported as unavailable.
-3. **Current temporal thread**: `temporal-thread-v1` describes current
+5. **Current temporal thread**: `temporal-thread-v1` describes current
    authoritative lifecycle assertions plus current derived date context. It is
    not historical reconstruction.
 
-## Required contract before a general command
+## Remaining boundary
 
-A future implementation issue must define: evidence-source selection; Git
-repository/ref and timestamp policy; multi-file membership at a revision;
-history completeness and retention flags; timezone/cutoff semantics; behavior
-for untracked/generated/external files; output provenance; and deterministic
-errors when evidence is missing. If non-Git historical reconstruction is
-required, a new append-only item-change history contract is needed first.
-
-Until that contract exists, there is deliberately no general `as-of` CLI/API/
-MCP surface. Consumers must not infer historical state from current items or
-from `follows:`/`realizes:`/`replaced_by:` edges.
+The implemented contract is intentionally Git-only and CLI-only. Current input
+resolution supplies the requested path manifest; untracked, generated, and
+external sources are never inferred into a historical result. Git history
+rewrite is not treated as independently verifiable truth, and a shallow clone
+cannot claim complete selection history. Non-Git reconstruction still requires
+a separately reviewed append-only history contract. TUI/API/MCP historical
+surfaces remain future work.

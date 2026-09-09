@@ -2,6 +2,7 @@
 
 import json
 import os
+import subprocess
 import tempfile
 import unittest
 
@@ -114,6 +115,117 @@ class TemporalCliTests(unittest.TestCase):
             self.assertIn("WARNING W244", stdout)
             self.assertIn("conflict", stdout)
             self.assertIn("previous", stdout)
+
+    def _git(self, repo, *args, env=None):
+        result = subprocess.run(
+            ["git"] + list(args),
+            cwd=repo,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+            env=env,
+            check=False,
+        )
+        self.assertEqual(0, result.returncode, result.stderr)
+        return result.stdout.strip()
+
+    def _historical_repo(self, temp_dir):
+        self._git(temp_dir, "init", "-b", "main")
+        self._git(temp_dir, "config", "user.name", "Test User")
+        self._git(temp_dir, "config", "user.email", "test@example.invalid")
+        src = self._write_source(
+            temp_dir,
+            "[ ] E Old id:old on:2026-09-10\n"
+            "[ ] E Target id:target on:2026-09-01 follows:old\n",
+        )
+        self._git(temp_dir, "add", "life.txt")
+        env = os.environ.copy()
+        env["GIT_AUTHOR_DATE"] = "2026-01-01T00:00:00+00:00"
+        env["GIT_COMMITTER_DATE"] = "2026-01-01T00:00:00+00:00"
+        self._git(temp_dir, "commit", "-m", "before", env=env)
+        before = self._git(temp_dir, "rev-parse", "HEAD")
+        self._write_source(
+            temp_dir,
+            "[ ] E Target id:target on:2026-09-11\n"
+            "[ ] E Next id:next on:2026-09-12 follows:target\n",
+        )
+        self._git(temp_dir, "add", "life.txt")
+        env["GIT_AUTHOR_DATE"] = "2026-01-02T00:00:00+00:00"
+        env["GIT_COMMITTER_DATE"] = "2026-01-02T00:00:00+00:00"
+        self._git(temp_dir, "commit", "-m", "after", env=env)
+        after = self._git(temp_dir, "rev-parse", "HEAD")
+        return src, before, after
+
+    def test_thread_exact_revision_text_and_json_use_historical_bytes(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            src, before, _after = self._historical_repo(temp_dir)
+            stdout, stderr, code = run_cli(
+                "thread", "target", src, "--revision", before[:12], "--json"
+            )
+            self.assertEqual(0, code, stderr)
+            data = json.loads(stdout)
+            self.assertEqual(before, data["historical"]["resolved_commit"])
+            self.assertEqual("Old", data["explicit"]["nodes"][1]["title"])
+
+            stdout, stderr, code = run_cli(
+                "thread", "target", src, "--revision", before[:12]
+            )
+            self.assertEqual(0, code, stderr)
+            self.assertIn("Historical revision", stdout)
+            self.assertIn("git-exact-revision", stdout)
+
+    def test_thread_semantic_diff_text_and_json(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            src, before, after = self._historical_repo(temp_dir)
+            spec = "%s..%s" % (before, after)
+            stdout, stderr, code = run_cli(
+                "thread", "target", src, "--diff", spec, "--json"
+            )
+            self.assertEqual(0, code, stderr)
+            data = json.loads(stdout)
+            self.assertEqual("temporal-diff-v1", data["schema"])
+            self.assertEqual(["next"], [item["id"] for item in data["items"]["added"]])
+            self.assertEqual(1, len(data["consistency"]["resolved_warnings"]))
+
+            stdout, stderr, code = run_cli("thread", "target", src, "--diff", spec)
+            self.assertEqual(0, code, stderr)
+            self.assertIn("Temporal diff for target", stdout)
+            self.assertIn("Relations added", stdout)
+
+    def test_thread_as_of_reuses_selected_exact_revision(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            src, before, _after = self._historical_repo(temp_dir)
+            stdout, stderr, code = run_cli(
+                "thread",
+                "target",
+                src,
+                "--as-of",
+                "2026-01-01T09:00:00+09:00",
+                "--ref",
+                "main",
+                "--json",
+            )
+            self.assertEqual(0, code, stderr)
+            data = json.loads(stdout)
+            self.assertEqual("git_as_of", data["historical"]["mode"])
+            self.assertEqual(before, data["historical"]["selected_commit"])
+            self.assertEqual("committer", data["historical"]["time_policy"])
+
+    def test_thread_historical_argument_errors_fail_loudly(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            src, _before, _after = self._historical_repo(temp_dir)
+            _stdout, stderr, code = run_cli(
+                "thread", "target", src, "--as-of", "2026-01-01"
+            )
+            self.assertNotEqual(0, code)
+            self.assertIn("offset-aware", stderr)
+
+            _stdout, stderr, code = run_cli(
+                "thread", "target", src, "--revision", "HEAD", "--ref", "main"
+            )
+            self.assertNotEqual(0, code)
+            self.assertIn("--ref is only valid", stderr)
 
 
 if __name__ == "__main__":

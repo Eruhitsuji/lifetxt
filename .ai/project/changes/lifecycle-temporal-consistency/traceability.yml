@@ -5,7 +5,7 @@ links:
     capability_id: cap-lifecycle-temporal-thread
     epic: https://github.com/Eruhitsuji/lifetxt/issues/699
     task_issue: https://github.com/Eruhitsuji/lifetxt/issues/706
-    pull_request: pending
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/710
     tests_or_evidence:
       - tests/test_temporal_thread.py
       - tests/test_links.py

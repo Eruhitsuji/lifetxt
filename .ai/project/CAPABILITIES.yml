@@ -109,6 +109,7 @@ capabilities:
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/705
       - https://github.com/Eruhitsuji/lifetxt/pull/710
+      - https://github.com/Eruhitsuji/lifetxt/pull/711
     reuse_policy: >-
       Reuse lifetxt.links for authoritative edges and diagnostics, and
       lifetxt.temporal_context for all derived date facts; never infer or
@@ -156,7 +157,8 @@ capabilities:
       - dist/schemas/temporal-diff-v1.schema.json release-schema validation
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/708
-    related_pull_requests: []
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/711
     reuse_policy: >-
       Compare only normalized outputs from the exact-revision historical
       temporal-thread path; do not reimplement Git loading, parsing, lifecycle,

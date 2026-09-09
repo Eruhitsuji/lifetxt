@@ -1,0 +1,18 @@
+schema_version: 1
+
+requirements:
+  - id: req-git-as-of-temporal-thread
+    kind: ADDED
+    statement: Select an exact historical thread revision from reachable Git history at an offset-aware cutoff.
+    acceptance_criteria:
+      - Selection uses committer timestamp at or before the cutoff.
+      - Explicit ref or HEAD root and full selected SHA are reported.
+      - Timestamp ties have a deterministic full-SHA rule.
+      - Invalid input, missing commits, non-Git inputs, and shallow history are safe.
+      - Selected reconstruction reuses the exact-revision path.
+    constraints:
+      - Git-only V1 with offset-aware RFC3339 input.
+      - No current-state or oldest-commit fallback.
+    owner: Eruhitsuji
+
+open_questions: []

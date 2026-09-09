@@ -259,6 +259,141 @@
       ],
       "type": "object"
     },
+    "historical": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "evidence_complete": {
+              "type": "boolean"
+            },
+            "limitations": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "loaded_paths": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "missing_paths": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "mode": {
+              "const": "git_exact_revision"
+            },
+            "requested_paths": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "requested_revision": {
+              "type": "string"
+            },
+            "resolved_commit": {
+              "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "mode",
+            "requested_revision",
+            "resolved_commit",
+            "requested_paths",
+            "loaded_paths",
+            "missing_paths",
+            "evidence_complete",
+            "limitations"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "cutoff": {
+              "type": "string"
+            },
+            "evidence_complete": {
+              "type": "boolean"
+            },
+            "history_complete": {
+              "type": "boolean"
+            },
+            "limitations": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "loaded_paths": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "missing_paths": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "mode": {
+              "const": "git_as_of"
+            },
+            "requested_paths": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "requested_ref": {
+              "type": "string"
+            },
+            "selected_commit": {
+              "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$",
+              "type": "string"
+            },
+            "selected_committer_time": {
+              "type": "string"
+            },
+            "selection_root": {
+              "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$",
+              "type": "string"
+            },
+            "tie_break": {
+              "const": "maximum_full_sha"
+            },
+            "time_policy": {
+              "const": "committer"
+            }
+          },
+          "required": [
+            "mode",
+            "cutoff",
+            "time_policy",
+            "requested_ref",
+            "selection_root",
+            "selected_commit",
+            "selected_committer_time",
+            "tie_break",
+            "history_complete",
+            "requested_paths",
+            "loaded_paths",
+            "missing_paths",
+            "evidence_complete",
+            "limitations"
+          ],
+          "type": "object"
+        }
+      ]
+    },
     "reference_date": {
       "type": [
         "string",

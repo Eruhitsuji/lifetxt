@@ -335,6 +335,7 @@ class SafetyFoundationTests(unittest.TestCase):
             "archive-plan-v1.schema.json",
             "temporal-context-v1.schema.json",
             "temporal-thread-v1.schema.json",
+            "temporal-diff-v1.schema.json",
             "freebusy-v1.schema.json",
         }
         self.assertEqual(expected, set(bundle))

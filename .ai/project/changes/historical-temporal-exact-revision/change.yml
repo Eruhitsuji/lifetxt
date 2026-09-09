@@ -1,0 +1,43 @@
+schema_version: 1
+
+change:
+  id: historical-temporal-exact-revision
+  title: Historical Temporal Thread from an exact Git revision
+  status: implemented
+  change_type: Feature
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/707
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/711
+  base_commit: eb8748474915a43875e154ee9a9caefc9e7055c7
+  target_release: next normal maintenance release
+
+scope:
+  in_scope:
+    - Resolve a caller-supplied commit-ish to an exact commit.
+    - Read only requested tracked life.txt paths from that commit.
+    - Reuse the temporal-thread-v1 engine and expose historical provenance.
+    - Add CLI, schema, tests, documentation, capability, and traceability evidence.
+  out_of_scope:
+    - Date-based revision selection except through issue 709.
+    - Current-state fallback or non-Git reconstruction.
+    - Historical mutation or restore.
+  write_scope:
+    - lifetxt/historical_temporal.py
+    - lifetxt/cli.py
+    - lifetxt/schema_extensions_v27.py
+    - dist/schemas/temporal-thread-v1.schema.json
+    - focused tests, EN/JA docs, capability, traceability, and this package
+  forbidden_scope:
+    - .ai/managed/**
+    - authoritative mutation
+    - unrelated Git or temporal refactors
+  shared_files:
+    - lifetxt/cli.py
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+
+human_approvals_required:
+  - Independent review of the latest commit.
+  - Merge Authority approval; the implementing AI must not merge the pull request.

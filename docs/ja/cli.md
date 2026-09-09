@@ -184,7 +184,7 @@ python -m lifetxt vm run program.life.txt --entry s1
 | `area` | task と project を `area:` でグループ化する ([life-hub.md](life-hub.md) 参照) |
 | `backlinks` | 指定 ID を参照している item (incoming link) を表示する ([life-hub.md](life-hub.md) 参照) |
 | `temporal` | 1 item の派生 temporal context (overdue/due/staleness と近接する日付付き item) を表示する ([life-hub.md](life-hub.md) 参照) |
-| `thread` | 1 item の明示的 lifecycle thread、派生 temporal context、read-only consistency warning を統合表示する ([life-hub.md](life-hub.md) 参照) |
+| `thread` | currentまたはGit-backed historical lifecycle thread、revision diff、派生 temporal context、consistency warningを表示する ([life-hub.md](life-hub.md) 参照) |
 | `freebusy` | 期間内の `E`/`R` items について busy/free time interval と重複 conflict を表示する ([life-hub.md](life-hub.md) 参照) |
 | `query` | 共通 query 言語で item を絞り込む ([query.md](query.md) 参照) |
 | `view` | saved view (名前付き query) を list / 検査 / 実行する ([query.md](query.md) 参照) |

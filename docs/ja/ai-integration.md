@@ -241,7 +241,7 @@ Docs、Sheets、Slides、PDF、CSV に限定されており、lifetxt の連携�
 | `get_graph` | dependency graph の nodes と edges |
 | `get_blockers` | item を block しているもの |
 | `list_links` | `parent:`、`ref:`、`depends_on:`、`blocks:`、`related:`、`duplicate_of:`、`replaced_by:`、`follows:`、`realizes:` |
-| `get_temporal_thread` | bounded な authoritative lifecycle link と派生 `temporal-context-v1` の合成結果 |
+| `get_temporal_thread` | bounded な authoritative lifecycle link、派生 `temporal-context-v1`、read-only consistency evidence の合成結果 |
 | `get_status` | presence records と open record |
 | `list_notifications` | due message notifications |
 | `list_messages` | `M` records |

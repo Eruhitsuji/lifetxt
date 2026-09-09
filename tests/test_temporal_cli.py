@@ -17,8 +17,10 @@ SAMPLE = (
 THREAD_SAMPLE = (
     "#! timezone: UTC\n"
     "[ ] E Plan id:plan on:2000-01-01\n"
-    "[x] E Actual id:actual on:2000-01-01 realizes:plan\n"
+    "[x] E Actual id:actual on:1999-12-31 realizes:plan\n"
     "[ ] E Next id:next on:2000-02-01 follows:actual\n"
+    "[ ] E Previous id:previous on:2000-01-02\n"
+    "[ ] E Conflict id:conflict on:2000-01-01 follows:previous\n"
 )
 
 
@@ -89,6 +91,29 @@ class TemporalCliTests(unittest.TestCase):
             self.assertIn("Temporal thread for actual", stdout)
             self.assertIn("Realized plans", stdout)
             self.assertIn("Successors", stdout)
+
+    def test_thread_text_and_json_share_consistency_warnings(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            src = self._write_source(temp_dir, THREAD_SAMPLE)
+            stdout, stderr, code = run_cli("thread", "conflict", src, "--json")
+            self.assertEqual(0, code, stderr)
+            warning = json.loads(stdout)["consistency"]["warnings"][0]
+            self.assertEqual("follows", warning["relation"])
+
+            stdout, stderr, code = run_cli("thread", "conflict", src)
+            self.assertEqual(0, code, stderr)
+            self.assertIn("Consistency warnings", stdout)
+            self.assertIn(warning["source_id"], stdout)
+            self.assertIn(warning["target_id"], stdout)
+
+    def test_check_reports_the_shared_consistency_warning(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            src = self._write_source(temp_dir, THREAD_SAMPLE)
+            stdout, stderr, code = run_cli("check", src)
+            self.assertEqual(0, code, stderr)
+            self.assertIn("WARNING W244", stdout)
+            self.assertIn("conflict", stdout)
+            self.assertIn("previous", stdout)
 
 
 if __name__ == "__main__":

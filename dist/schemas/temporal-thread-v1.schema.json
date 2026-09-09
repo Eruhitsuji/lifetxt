@@ -1,73 +1,347 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/temporal-thread-v1.schema.json",
-  "title": "lifetxt temporal thread v1",
-  "type": "object",
   "$defs": {
-    "itemRef": {
-      "type": "object",
-      "required": ["id", "title", "kind", "status", "source", "line"],
+    "consistencyWarning": {
+      "additionalProperties": false,
       "properties": {
-        "id": {"type": "string"},
-        "title": {"type": "string"},
-        "kind": {"type": "string"},
-        "status": {"type": "string"},
-        "source": {"type": ["string", "null"]},
-        "line": {"type": ["integer", "null"]},
-        "provenance": {"type": "object"}
+        "evidence": {
+          "additionalProperties": false,
+          "properties": {
+            "predecessor_id": {
+              "type": "string"
+            },
+            "source_field": {
+              "type": "string"
+            },
+            "source_value": {
+              "type": "string"
+            },
+            "successor_id": {
+              "type": "string"
+            },
+            "target_field": {
+              "type": "string"
+            },
+            "target_value": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "source_field",
+            "source_value",
+            "target_field",
+            "target_value",
+            "successor_id",
+            "predecessor_id"
+          ],
+          "type": "object"
+        },
+        "expected_order": {
+          "const": "after"
+        },
+        "observed_order": {
+          "const": "before"
+        },
+        "provenance": {
+          "additionalProperties": false,
+          "properties": {
+            "explicit": {
+              "additionalProperties": false,
+              "properties": {
+                "authority": {
+                  "const": "life.txt"
+                },
+                "kind": {
+                  "const": "explicit"
+                },
+                "source": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "source_field": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "authority",
+                "source_field",
+                "source"
+              ],
+              "type": "object"
+            },
+            "temporal": {
+              "additionalProperties": false,
+              "properties": {
+                "authority": {
+                  "const": "temporal-context-v1"
+                },
+                "granularity": {
+                  "const": "date"
+                },
+                "kind": {
+                  "const": "derived"
+                },
+                "rule": {
+                  "const": "before"
+                }
+              },
+              "required": [
+                "kind",
+                "authority",
+                "rule",
+                "granularity"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "explicit",
+            "temporal"
+          ],
+          "type": "object"
+        },
+        "reason": {
+          "const": "explicit_order_conflicts_with_time_order"
+        },
+        "relation": {
+          "enum": [
+            "follows",
+            "replaced_by"
+          ]
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "target_id": {
+          "type": "string"
+        }
       },
-      "additionalProperties": true
+      "required": [
+        "relation",
+        "source_id",
+        "target_id",
+        "reason",
+        "observed_order",
+        "expected_order",
+        "evidence",
+        "provenance"
+      ],
+      "type": "object"
+    },
+    "itemRef": {
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "line": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "provenance": {
+          "type": "object"
+        },
+        "source": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "kind",
+        "status",
+        "source",
+        "line"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/temporal-thread-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "bounds": {
+      "additionalProperties": false,
+      "properties": {
+        "max_depth": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_nodes": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "temporal_limit": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "window_days": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "max_depth",
+        "max_nodes",
+        "window_days",
+        "temporal_limit"
+      ],
+      "type": "object"
+    },
+    "consistency": {
+      "additionalProperties": false,
+      "properties": {
+        "truncated": {
+          "type": "boolean"
+        },
+        "warnings": {
+          "items": {
+            "$ref": "#/$defs/consistencyWarning"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "warnings",
+        "truncated"
+      ],
+      "type": "object"
+    },
+    "derived": {
+      "type": "object"
+    },
+    "explicit": {
+      "additionalProperties": false,
+      "properties": {
+        "cycles": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "edges": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "nodes": {
+          "items": {
+            "$ref": "#/$defs/itemRef"
+          },
+          "type": "array"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "nodes",
+        "edges",
+        "cycles",
+        "truncated"
+      ],
+      "type": "object"
+    },
+    "reference_date": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "relations": {
+      "additionalProperties": false,
+      "properties": {
+        "predecessors": {
+          "items": {
+            "$ref": "#/$defs/itemRef"
+          },
+          "type": "array"
+        },
+        "realized_by": {
+          "items": {
+            "$ref": "#/$defs/itemRef"
+          },
+          "type": "array"
+        },
+        "realized_plans": {
+          "items": {
+            "$ref": "#/$defs/itemRef"
+          },
+          "type": "array"
+        },
+        "replacement_predecessors": {
+          "items": {
+            "$ref": "#/$defs/itemRef"
+          },
+          "type": "array"
+        },
+        "replacement_successors": {
+          "items": {
+            "$ref": "#/$defs/itemRef"
+          },
+          "type": "array"
+        },
+        "successors": {
+          "items": {
+            "$ref": "#/$defs/itemRef"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "predecessors",
+        "successors",
+        "realized_plans",
+        "realized_by",
+        "replacement_predecessors",
+        "replacement_successors"
+      ],
+      "type": "object"
+    },
+    "revision": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "schema": {
+      "const": "temporal-thread-v1"
+    },
+    "target": {
+      "$ref": "#/$defs/itemRef"
+    },
+    "target_id": {
+      "type": "string"
     }
   },
   "required": [
-    "schema", "reference_date", "target_id", "target", "bounds",
-    "relations", "explicit", "derived"
+    "schema",
+    "reference_date",
+    "target_id",
+    "target",
+    "bounds",
+    "relations",
+    "explicit",
+    "consistency",
+    "derived"
   ],
-  "properties": {
-    "schema": {"const": "temporal-thread-v1"},
-    "reference_date": {"type": ["string", "null"]},
-    "target_id": {"type": "string"},
-    "target": {"$ref": "#/$defs/itemRef"},
-    "bounds": {
-      "type": "object",
-      "required": ["max_depth", "max_nodes", "window_days", "temporal_limit"],
-      "properties": {
-        "max_depth": {"type": "integer", "minimum": 0},
-        "max_nodes": {"type": "integer", "minimum": 1},
-        "window_days": {"type": "integer", "minimum": 0},
-        "temporal_limit": {"type": "integer", "minimum": 0}
-      },
-      "additionalProperties": false
-    },
-    "relations": {
-      "type": "object",
-      "required": [
-        "predecessors", "successors", "realized_plans", "realized_by",
-        "replacement_predecessors", "replacement_successors"
-      ],
-      "properties": {
-        "predecessors": {"type": "array", "items": {"$ref": "#/$defs/itemRef"}},
-        "successors": {"type": "array", "items": {"$ref": "#/$defs/itemRef"}},
-        "realized_plans": {"type": "array", "items": {"$ref": "#/$defs/itemRef"}},
-        "realized_by": {"type": "array", "items": {"$ref": "#/$defs/itemRef"}},
-        "replacement_predecessors": {"type": "array", "items": {"$ref": "#/$defs/itemRef"}},
-        "replacement_successors": {"type": "array", "items": {"$ref": "#/$defs/itemRef"}}
-      },
-      "additionalProperties": false
-    },
-    "explicit": {
-      "type": "object",
-      "required": ["nodes", "edges", "cycles", "truncated"],
-      "properties": {
-        "nodes": {"type": "array", "items": {"$ref": "#/$defs/itemRef"}},
-        "edges": {"type": "array", "items": {"type": "object"}},
-        "cycles": {"type": "array", "items": {"type": "object"}},
-        "truncated": {"type": "boolean"}
-      },
-      "additionalProperties": false
-    },
-    "derived": {"type": "object"},
-    "revision": {"type": ["string", "null"]}
-  },
-  "additionalProperties": true
+  "title": "lifetxt temporal thread v1",
+  "type": "object"
 }

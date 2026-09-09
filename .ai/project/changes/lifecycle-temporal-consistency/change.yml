@@ -1,0 +1,52 @@
+schema_version: 1
+
+change:
+  id: lifecycle-temporal-consistency
+  title: Read-only temporal consistency evidence for lifecycle relations
+  status: implemented
+  change_type: Feature
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/706
+  related_pull_request: pending
+  base_commit: a7805b4711866b13a7161c102dd255a6a415265e
+  target_release: next normal maintenance release
+
+scope:
+  in_scope:
+    - Compare resolved follows and replaced_by lifecycle order with canonical comparable calendar dates.
+    - Add bounded read-only consistency evidence to temporal-thread-v1.
+    - Reuse the same helper for W244 and all temporal-thread surfaces.
+    - Update the public schema, tests, EN/JA docs, capability, and traceability records.
+  out_of_scope:
+    - Automatic relation mutation or inference.
+    - Chronological validation of realizes.
+    - Historical existence, fuzzy time, or a second date/graph engine.
+  write_scope:
+    - lifetxt/temporal_context.py
+    - lifetxt/temporal_thread.py
+    - lifetxt/links.py
+    - lifetxt/diagnostic_contract.py
+    - lifetxt/schema_extensions_v26.py
+    - lifetxt/cli.py
+    - lifetxt/tui_app.py
+    - lifetxt/web_assets_js_11.js
+    - lifetxt/mcp.py
+    - dist/schemas/temporal-thread-v1.schema.json
+    - focused tests and EN/JA temporal documentation
+    - .ai/project capability, traceability, and this change package
+  forbidden_scope:
+    - .ai/managed/**
+    - unrelated graph/date/history refactors
+    - authoritative mutation or migration
+  shared_files:
+    - lifetxt/cli.py
+    - lifetxt/links.py
+    - lifetxt/mcp.py
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+
+human_approvals_required:
+  - Independent review of the latest commit.
+  - Merge Authority approval; the implementing AI must not merge the pull request.

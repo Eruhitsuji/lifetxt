@@ -82,6 +82,19 @@ class McpTestCase(unittest.TestCase):
         schema = next(s for s in tool_schemas() if s["name"] == "get_temporal_thread")
         self.assertTrue(schema["annotations"]["readOnlyHint"])
 
+    def test_temporal_thread_mcp_returns_shared_consistency_evidence(self):
+        context, _path = self._context(
+            content=(
+                "[ ] E Old id:old on:2026-09-10\n"
+                "[ ] E New id:new on:2026-09-01 follows:old\n"
+            )
+        )
+        result = call_tool("get_temporal_thread", {"id": "new"}, context)
+        warning = result["consistency"]["warnings"][0]
+        self.assertEqual("follows", warning["relation"])
+        self.assertEqual("temporal-context-v1", warning["provenance"]["temporal"]["authority"])
+        self.assertIn("revision", result)
+
     def _read(self, path):
         with open(path, "r", encoding="utf-8") as handle:
             return handle.read()

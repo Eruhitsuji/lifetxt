@@ -15,6 +15,7 @@ from .temporal_context import (
     DEFAULT_PAIR_LIMIT,
     DEFAULT_STALE_DAYS,
     DEFAULT_WINDOW_DAYS,
+    comparable_time_evidence,
     temporal_context,
 )
 
@@ -25,6 +26,8 @@ DEFAULT_MAX_NODES = 50
 HARD_MAX_DEPTH = 32
 HARD_MAX_NODES = 500
 HARD_TEMPORAL_LIMIT = 500
+CONSISTENCY_RELATIONS = ("follows", "replaced_by")
+CONSISTENCY_REASON = "explicit_order_conflicts_with_time_order"
 
 
 def _bounded(value, name, default, hard_max):
@@ -84,6 +87,113 @@ def _relation_ref(record, other_id, item):
         )
     )
     return result
+
+
+def _consistency_warning(record, index):
+    relation = record["relation"]
+    if relation not in CONSISTENCY_RELATIONS:
+        return None
+    source_id = record["source_id"]
+    target_id = record["target_id"]
+    source_matches = index.get(source_id, [])
+    target_matches = index.get(target_id, [])
+    if len(source_matches) != 1 or len(target_matches) != 1:
+        return None
+
+    source_evidence = comparable_time_evidence(source_matches[0])
+    target_evidence = comparable_time_evidence(target_matches[0])
+    if source_evidence is None or target_evidence is None:
+        return None
+
+    if relation == "follows":
+        successor_id = source_id
+        successor_evidence = source_evidence
+        predecessor_id = target_id
+        predecessor_evidence = target_evidence
+    else:
+        successor_id = target_id
+        successor_evidence = target_evidence
+        predecessor_id = source_id
+        predecessor_evidence = source_evidence
+
+    if successor_evidence["date"] >= predecessor_evidence["date"]:
+        return None
+
+    return OrderedDict(
+        (
+            ("relation", relation),
+            ("source_id", source_id),
+            ("target_id", target_id),
+            ("reason", CONSISTENCY_REASON),
+            ("observed_order", "before"),
+            ("expected_order", "after"),
+            (
+                "evidence",
+                OrderedDict(
+                    (
+                        ("source_field", source_evidence["field"]),
+                        ("source_value", source_evidence["value"]),
+                        ("target_field", target_evidence["field"]),
+                        ("target_value", target_evidence["value"]),
+                        ("successor_id", successor_id),
+                        ("predecessor_id", predecessor_id),
+                    )
+                ),
+            ),
+            (
+                "provenance",
+                OrderedDict(
+                    (
+                        (
+                            "explicit",
+                            OrderedDict(
+                                (
+                                    ("kind", "explicit"),
+                                    ("authority", "life.txt"),
+                                    ("source_field", relation),
+                                    ("source", record.get("source_location")),
+                                )
+                            ),
+                        ),
+                        (
+                            "temporal",
+                            OrderedDict(
+                                (
+                                    ("kind", "derived"),
+                                    ("authority", "temporal-context-v1"),
+                                    ("rule", "before"),
+                                    ("granularity", "date"),
+                                )
+                            ),
+                        ),
+                    )
+                ),
+            ),
+        )
+    )
+
+
+def temporal_consistency(items, key="id", records=None, limit=None):
+    """Return read-only contradictions between explicit and temporal order.
+
+    Only resolved ``follows`` and ``replaced_by`` edges participate. The
+    result never mutates or reverses authoritative relations, and absence of
+    comparable evidence produces no warning rather than a guessed result.
+    """
+    index = build_id_index(items, key)
+    if records is None:
+        records = link_records(items, key=key, relations=CONSISTENCY_RELATIONS)
+    warnings = []
+    for record in records:
+        if record.get("status") != "ok":
+            continue
+        warning = _consistency_warning(record, index)
+        if warning is not None:
+            warnings.append(warning)
+    truncated = limit is not None and len(warnings) > limit
+    if limit is not None:
+        warnings = warnings[:limit]
+    return OrderedDict((("warnings", warnings), ("truncated", truncated)))
 
 
 def temporal_thread(
@@ -215,6 +325,16 @@ def temporal_thread(
         if any(node in visible for node in cycle["path"]):
             cycles.append(cycle)
 
+    visible_records = [
+        record
+        for record in raw
+        if record["source_id"] in visible and record["target_id"] in visible
+    ]
+    consistency = temporal_consistency(
+        items, key=key, records=visible_records, limit=max_nodes
+    )
+    consistency["truncated"] = consistency["truncated"] or truncated
+
     derived = temporal_context(
         items,
         target,
@@ -260,6 +380,7 @@ def temporal_thread(
                     )
                 ),
             ),
+            ("consistency", consistency),
             ("derived", derived),
         )
     )

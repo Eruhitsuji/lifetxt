@@ -13710,6 +13710,30 @@ def command_thread(args):
             None,
             "  Warning: %d lifecycle cycle(s).\n" % len(result["explicit"]["cycles"]),
         )
+    warnings = result["consistency"]["warnings"]
+    if warnings:
+        write_text(None, "  Consistency warnings:\n")
+        for warning in warnings:
+            evidence = warning["evidence"]
+            write_text(
+                None,
+                "    %s:%s says %s follows %s, but comparable dates say "
+                "%s is before %s (%s:%s; %s:%s).\n"
+                % (
+                    warning["relation"],
+                    warning["target_id"],
+                    evidence["successor_id"],
+                    evidence["predecessor_id"],
+                    evidence["successor_id"],
+                    evidence["predecessor_id"],
+                    evidence["source_field"],
+                    evidence["source_value"],
+                    evidence["target_field"],
+                    evidence["target_value"],
+                ),
+            )
+    if result["consistency"]["truncated"]:
+        write_text(None, "  Consistency evidence truncated by thread bounds.\n")
     if result["explicit"]["truncated"]:
         write_text(None, "  Result truncated by explicit traversal bounds.\n")
     return 0

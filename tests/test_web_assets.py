@@ -12,7 +12,7 @@ from lifetxt import web_assets, webapp
 
 
 REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
-LEGACY_PRISTINE_GIT_BLOB_SHA = "5ae1325e89b250c71332cc95ace59bf74dc4da91"
+LEGACY_PRISTINE_GIT_BLOB_SHA = "e4d1383b4c9f0da5a8911e73fd4e041e06faf673"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )
@@ -28,6 +28,7 @@ class WebAssetExtractionTests(unittest.TestCase):
         self.assertTrue(web_assets.HTML_PAGE.startswith("<!doctype html>"))
         self.assertTrue(web_assets.HTML_PAGE.endswith("</html>"))
         self.assertIn("/api/temporal-thread/", web_assets.HTML_PAGE)
+        self.assertIn("consistencyWarnings", web_assets.HTML_PAGE)
 
     def test_split_resources_assemble_the_legacy_pristine_page(self):
         package = resources.files("lifetxt")

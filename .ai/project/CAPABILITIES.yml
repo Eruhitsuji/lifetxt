@@ -54,9 +54,11 @@ capabilities:
       - req-temporal-thread-v1
       - req-historical-as-of-semantics
       - req-temporal-thread-surfaces
+      - req-lifecycle-temporal-consistency
     implementation_locations:
       - lifetxt/model.py
       - lifetxt/links.py
+      - lifetxt/temporal_context.py
       - lifetxt/temporal_thread.py
       - lifetxt/schema_extensions_v26.py
       - lifetxt/cli.py
@@ -77,12 +79,15 @@ capabilities:
       - TUI /thread [ID]
       - GET /api/temporal-thread/{id}
       - MCP tool get_temporal_thread
+      - lifetxt check diagnostic W244
     tests_or_evidence:
       - tests/test_links.py lifecycle relation reference and cycle coverage
       - tests/test_temporal_thread.py bounded domain model and TUI delegation coverage
       - tests/test_temporal_cli.py CLI text/JSON coverage
       - tests/test_lifetxt.py Web API coverage
       - tests/test_mcp_expansion.py read-only revision-aware MCP coverage
+      - tests/test_temporal_thread.py lifecycle temporal consistency coverage
+      - tests/test_links.py W244 diagnostic parity coverage
       - dist/schemas/temporal-thread-v1.schema.json release-schema validation
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/699
@@ -90,8 +95,10 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/702
       - https://github.com/Eruhitsuji/lifetxt/issues/703
       - https://github.com/Eruhitsuji/lifetxt/issues/704
+      - https://github.com/Eruhitsuji/lifetxt/issues/706
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/705
+      - https://github.com/Eruhitsuji/lifetxt/pull/710
     reuse_policy: >-
       Reuse lifetxt.links for authoritative edges and diagnostics, and
       lifetxt.temporal_context for all derived date facts; never infer or
@@ -102,6 +109,10 @@ capabilities:
       only. Replacement reuses old replaced_by:new; no supersedes key was
       added. The Phase 3 investigation documents the missing evidence
       contract rather than shipping an unsafe general as-of command.
+      Issue #706 adds read-only, date-granularity consistency evidence for
+      clearly reversed follows/replaced_by order. It reuses temporal-context-v1
+      date extraction, never mutates an edge, and deliberately defines no
+      chronological rule for realizes.
     replacement:
       replaces: []
       replaced_by: null

@@ -32,13 +32,84 @@ def temporal_thread_v1_schema():
         "replacement_predecessors",
         "replacement_successors",
     ]
+    consistency_warning = {
+        "type": "object",
+        "required": [
+            "relation",
+            "source_id",
+            "target_id",
+            "reason",
+            "observed_order",
+            "expected_order",
+            "evidence",
+            "provenance",
+        ],
+        "properties": {
+            "relation": {"enum": ["follows", "replaced_by"]},
+            "source_id": {"type": "string"},
+            "target_id": {"type": "string"},
+            "reason": {"const": "explicit_order_conflicts_with_time_order"},
+            "observed_order": {"const": "before"},
+            "expected_order": {"const": "after"},
+            "evidence": {
+                "type": "object",
+                "required": [
+                    "source_field",
+                    "source_value",
+                    "target_field",
+                    "target_value",
+                    "successor_id",
+                    "predecessor_id",
+                ],
+                "properties": {
+                    "source_field": {"type": "string"},
+                    "source_value": {"type": "string"},
+                    "target_field": {"type": "string"},
+                    "target_value": {"type": "string"},
+                    "successor_id": {"type": "string"},
+                    "predecessor_id": {"type": "string"},
+                },
+                "additionalProperties": False,
+            },
+            "provenance": {
+                "type": "object",
+                "required": ["explicit", "temporal"],
+                "properties": {
+                    "explicit": {
+                        "type": "object",
+                        "required": ["kind", "authority", "source_field", "source"],
+                        "properties": {
+                            "kind": {"const": "explicit"},
+                            "authority": {"const": "life.txt"},
+                            "source_field": {"type": "string"},
+                            "source": {"type": ["string", "null"]},
+                        },
+                        "additionalProperties": False,
+                    },
+                    "temporal": {
+                        "type": "object",
+                        "required": ["kind", "authority", "rule", "granularity"],
+                        "properties": {
+                            "kind": {"const": "derived"},
+                            "authority": {"const": "temporal-context-v1"},
+                            "rule": {"const": "before"},
+                            "granularity": {"const": "date"},
+                        },
+                        "additionalProperties": False,
+                    },
+                },
+                "additionalProperties": False,
+            },
+        },
+        "additionalProperties": False,
+    }
     item_ref_use = {"$ref": "#/$defs/itemRef"}
     return {
         "$schema": DRAFT,
         "$id": BASE + NAME,
         "title": "lifetxt temporal thread v1",
         "type": "object",
-        "$defs": {"itemRef": item_ref},
+        "$defs": {"itemRef": item_ref, "consistencyWarning": consistency_warning},
         "required": [
             "schema",
             "reference_date",
@@ -47,6 +118,7 @@ def temporal_thread_v1_schema():
             "bounds",
             "relations",
             "explicit",
+            "consistency",
             "derived",
         ],
         "properties": {
@@ -91,6 +163,18 @@ def temporal_thread_v1_schema():
                 },
                 "additionalProperties": False,
             },
+            "consistency": {
+                "type": "object",
+                "required": ["warnings", "truncated"],
+                "properties": {
+                    "warnings": {
+                        "type": "array",
+                        "items": {"$ref": "#/$defs/consistencyWarning"},
+                    },
+                    "truncated": {"type": "boolean"},
+                },
+                "additionalProperties": False,
+            },
             "derived": {"type": "object"},
             "revision": {"type": ["string", "null"]},
         },
@@ -105,10 +189,11 @@ def temporal_thread_v1_sample():
     import datetime
 
     items, _ = parse_text(
+        "[ ] E Previous_visit id:previous on:2026-09-10\n"
         "[ ] E Planned_visit id:plan on:2026-09-08\n"
-        "[x] E Visit id:actual on:2026-09-08 realizes:plan\n"
+        "[x] E Visit id:actual on:2026-09-01 realizes:plan follows:previous\n"
     )
-    result = temporal_thread(items, items[1], datetime.date(2026, 9, 8))
+    result = temporal_thread(items, items[2], datetime.date(2026, 9, 8))
     result["revision"] = (
         "3f1c2b9a4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c5d6e7f8"
     )

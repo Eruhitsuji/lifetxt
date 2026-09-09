@@ -867,6 +867,7 @@ text              = ? 行末までの任意の文字 ? ;
 - `current follows:previous` は「current が previous の明示的な後続」、`actual realizes:plan` は「actual が plan を実現した実績」を表します。逆向きの `followed_by` / `realized_by` は表示・query 時のみ導出され、自動保存されません。
 - 置換は既存の `old replaced_by:new` を再利用し、`supersedes:` は追加しません。`follows:` cycle は `W230`、`realizes:` cycle は `W231` です。
 - 日時が近い／後であることから lifecycle relation を推測しません。`temporal-context-v1` の `before` / `after` / `same_day` は read-only の派生結果で、authoritative relation とは分離されます。
+- read-only consistency check は、`current follows:previous` の current が比較可能な日付で previous より前、または `old replaced_by:new` の new が old より前の場合に `W244` を報告します。保存済み relation は変更しません。同一日、欠損・不正日付、曖昧な target、`realizes:` は警告対象外です。
 - JSON/JSONL では、同じ detail key の複数値を配列として扱えます。life.txt へ戻すときは、同じ key を複数回出力して順序を保持します。
 - 複数行 body は item の直後に続く `|` 行として表します。JSON/CSV から戻す場合、複数行の `body` は continuation line に展開されます。
 - bare string に空白、二重引用符、制御文字が必要な場合は quoted string を使います。serializer は roundtrip できる表現を優先します。

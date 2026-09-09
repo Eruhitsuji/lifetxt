@@ -64,12 +64,34 @@ def _date_of(value):
     return getattr(parsed, "date", lambda: parsed)()
 
 
-def _item_date(item):
+def comparable_time_evidence(item):
+    """Return the canonical comparable calendar date and its source detail.
+
+    Temporal consistency checks reuse this exact extraction instead of
+    introducing another date parser or field-priority rule. Datetimes are
+    deliberately reduced to the calendar-date granularity already used by
+    ``temporal-context-v1``; equal dates therefore remain ``same_day`` rather
+    than implying an ordering that the stored evidence cannot prove.
+    """
     for detail_key in DATE_KEYS:
-        date = _date_of(_first(item, detail_key))
+        raw_value = _first(item, detail_key)
+        date = _date_of(raw_value)
         if date is not None:
-            return date, detail_key
-    return None, None
+            return OrderedDict(
+                (
+                    ("date", date),
+                    ("field", detail_key),
+                    ("value", str(raw_value)),
+                )
+            )
+    return None
+
+
+def _item_date(item):
+    evidence = comparable_time_evidence(item)
+    if evidence is None:
+        return None, None
+    return evidence["date"], evidence["field"]
 
 
 def _ref(item):

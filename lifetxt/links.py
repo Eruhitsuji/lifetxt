@@ -117,6 +117,40 @@ def reference_diagnostics(items, key="id", reference_keys=None):
             items, index, key, "realizes", "W231", "realizes"
         )
     )
+    from .temporal_thread import temporal_consistency
+
+    consistency_records = link_records(
+        items,
+        key=key,
+        reference_keys=reference_keys,
+        relations=("follows", "replaced_by"),
+    )
+    for warning in temporal_consistency(
+        items, key=key, records=consistency_records
+    )["warnings"]:
+        evidence = warning["evidence"]
+        source = index[warning["source_id"]][0]
+        diagnostics.append(
+            Diagnostic(
+                "warning",
+                "W244",
+                "Temporal relation %s:%s conflicts with comparable item date "
+                "ordering: %s is before %s (%s:%s; %s:%s)."
+                % (
+                    warning["relation"],
+                    warning["target_id"],
+                    evidence["successor_id"],
+                    evidence["predecessor_id"],
+                    evidence["source_field"],
+                    evidence["source_value"],
+                    evidence["target_field"],
+                    evidence["target_value"],
+                ),
+                source.line,
+                None,
+                getattr(source, "source", None),
+            )
+        )
     diagnostics.extend(_completed_dependency_diagnostics(items, index, key))
     return diagnostics
 

@@ -11632,6 +11632,32 @@ traceability:
         implements its own lifecycle or date rules.
       status: implemented
 
+    - requirement_id: req-lifecycle-temporal-consistency
+      capability_id: cap-lifecycle-temporal-thread
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/699
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/706
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/710
+      changed_files_or_scope:
+        - Reuse temporal-context-v1 comparable calendar-date extraction
+        - Add bounded consistency evidence to temporal-thread-v1
+        - Report shared follows/replaced_by contradictions as W244
+        - Reuse the shared result in CLI, TUI, Web API/UI, and MCP
+        - Update the public schema and EN/JA documentation
+      tests_or_evidence:
+        - tests/test_temporal_thread.py conflict, valid, same-day, missing, ambiguous, realizes, replacement, and bounds coverage
+        - tests/test_links.py W244 shared-helper parity and category coverage
+        - tests/test_temporal_cli.py text/JSON parity coverage
+        - tests/test_lifetxt.py Web API shared-result coverage
+        - tests/test_mcp_expansion.py read-only MCP shared-result coverage
+        - dist/schemas/temporal-thread-v1.schema.json
+      release_or_deployment: next normal maintenance release
+      notes: >-
+        High-assurance additive public-contract extension. Explicit relations
+        remain authoritative and unchanged; only clearly reversed comparable
+        calendar dates produce evidence. No realizes rule or historical
+        existence inference is introduced.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

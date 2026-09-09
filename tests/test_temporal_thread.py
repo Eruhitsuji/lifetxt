@@ -3,7 +3,7 @@ import unittest
 from types import SimpleNamespace
 
 from lifetxt.parser import parse_text
-from lifetxt.temporal_thread import temporal_thread
+from lifetxt.temporal_thread import temporal_consistency, temporal_thread
 from lifetxt import tui_app
 
 
@@ -64,6 +64,88 @@ class TemporalThreadTests(unittest.TestCase):
             result["explicit"]["cycles"][0]["path"][0],
             result["explicit"]["cycles"][0]["path"][-1],
         )
+
+    def test_follows_conflict_reports_explainable_shared_evidence(self):
+        items, _ = parse_text(
+            "[ ] E Previous id:previous on:2026-09-10\n"
+            "[ ] E Current id:current on:2026-09-01 follows:previous\n"
+        )
+        result = temporal_thread(items, _item(items, "current"), TODAY)
+        warning = result["consistency"]["warnings"][0]
+        self.assertEqual("follows", warning["relation"])
+        self.assertEqual("before", warning["observed_order"])
+        self.assertEqual("after", warning["expected_order"])
+        self.assertEqual("current", warning["evidence"]["successor_id"])
+        self.assertEqual("previous", warning["evidence"]["predecessor_id"])
+        self.assertEqual("on", warning["evidence"]["source_field"])
+        self.assertEqual("2026-09-01", warning["evidence"]["source_value"])
+        self.assertEqual(
+            "temporal-context-v1", warning["provenance"]["temporal"]["authority"]
+        )
+
+    def test_replaced_by_conflict_uses_target_as_the_successor(self):
+        items, _ = parse_text(
+            "[ ] E Old id:old on:2026-09-10 replaced_by:new\n"
+            "[ ] E New id:new on:2026-09-01\n"
+        )
+        warning = temporal_consistency(items)["warnings"][0]
+        self.assertEqual("replaced_by", warning["relation"])
+        self.assertEqual("old", warning["source_id"])
+        self.assertEqual("new", warning["target_id"])
+        self.assertEqual("new", warning["evidence"]["successor_id"])
+        self.assertEqual("old", warning["evidence"]["predecessor_id"])
+
+    def test_valid_same_day_missing_and_realizes_cases_do_not_warn(self):
+        cases = (
+            (
+                "valid follows",
+                "[ ] E Old id:old on:2026-09-01\n"
+                "[ ] E New id:new on:2026-09-10 follows:old\n",
+            ),
+            (
+                "same day",
+                "[ ] E Old id:old on:2026-09-01\n"
+                "[ ] E New id:new on:2026-09-01 follows:old\n",
+            ),
+            (
+                "missing evidence",
+                "[ ] E Old id:old\n[ ] E New id:new on:2026-09-01 follows:old\n",
+            ),
+            (
+                "incomparable evidence",
+                "[ ] E Old id:old on:not-a-date\n"
+                "[ ] E New id:new on:2026-09-01 follows:old\n",
+            ),
+            (
+                "realizes has no chronological rule",
+                "[ ] E Plan id:plan on:2026-09-10\n"
+                "[ ] E Actual id:actual on:2026-09-01 realizes:plan\n",
+            ),
+        )
+        for label, text in cases:
+            with self.subTest(label=label):
+                items, _ = parse_text(text)
+                self.assertEqual([], temporal_consistency(items)["warnings"])
+
+    def test_ambiguous_target_does_not_produce_a_consistency_guess(self):
+        items, _ = parse_text(
+            "[ ] E OldA id:old on:2026-09-10\n"
+            "[ ] E OldB id:old on:2026-09-11\n"
+            "[ ] E New id:new on:2026-09-01 follows:old\n"
+        )
+        self.assertEqual([], temporal_consistency(items)["warnings"])
+
+    def test_consistency_output_is_bounded_with_the_explicit_thread(self):
+        items, _ = parse_text(
+            "[ ] E Root id:root on:2026-09-01 follows:a follows:b\n"
+            "[ ] E A id:a on:2026-09-10\n"
+            "[ ] E B id:b on:2026-09-11\n"
+        )
+        result = temporal_thread(
+            items, _item(items, "root"), TODAY, max_depth=1, max_nodes=2
+        )
+        self.assertLessEqual(len(result["consistency"]["warnings"]), 2)
+        self.assertTrue(result["consistency"]["truncated"])
 
     def test_target_id_must_be_unique(self):
         items, _ = parse_text("[ ] N A id:dup\n[ ] N B id:dup\n")

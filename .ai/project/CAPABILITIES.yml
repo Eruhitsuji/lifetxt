@@ -55,12 +55,16 @@ capabilities:
       - req-historical-as-of-semantics
       - req-temporal-thread-surfaces
       - req-lifecycle-temporal-consistency
+      - req-historical-temporal-thread-exact-revision
+      - req-git-as-of-temporal-thread
     implementation_locations:
       - lifetxt/model.py
       - lifetxt/links.py
       - lifetxt/temporal_context.py
       - lifetxt/temporal_thread.py
+      - lifetxt/historical_temporal.py
       - lifetxt/schema_extensions_v26.py
+      - lifetxt/schema_extensions_v27.py
       - lifetxt/cli.py
       - lifetxt/tui_app.py
       - lifetxt/webapp.py
@@ -80,6 +84,8 @@ capabilities:
       - GET /api/temporal-thread/{id}
       - MCP tool get_temporal_thread
       - lifetxt check diagnostic W244
+      - lifetxt thread ID --revision REV
+      - lifetxt thread ID --as-of RFC3339 [--ref REF]
     tests_or_evidence:
       - tests/test_links.py lifecycle relation reference and cycle coverage
       - tests/test_temporal_thread.py bounded domain model and TUI delegation coverage
@@ -88,6 +94,8 @@ capabilities:
       - tests/test_mcp_expansion.py read-only revision-aware MCP coverage
       - tests/test_temporal_thread.py lifecycle temporal consistency coverage
       - tests/test_links.py W244 diagnostic parity coverage
+      - tests/test_historical_temporal.py exact-revision and as-of Git evidence coverage
+      - tests/test_temporal_cli.py historical CLI text/JSON coverage
       - dist/schemas/temporal-thread-v1.schema.json release-schema validation
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/699
@@ -96,9 +104,12 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/703
       - https://github.com/Eruhitsuji/lifetxt/issues/704
       - https://github.com/Eruhitsuji/lifetxt/issues/706
+      - https://github.com/Eruhitsuji/lifetxt/issues/707
+      - https://github.com/Eruhitsuji/lifetxt/issues/709
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/705
       - https://github.com/Eruhitsuji/lifetxt/pull/710
+      - https://github.com/Eruhitsuji/lifetxt/pull/711
     reuse_policy: >-
       Reuse lifetxt.links for authoritative edges and diagnostics, and
       lifetxt.temporal_context for all derived date facts; never infer or
@@ -112,7 +123,50 @@ capabilities:
       Issue #706 adds read-only, date-granularity consistency evidence for
       clearly reversed follows/replaced_by order. It reuses temporal-context-v1
       date extraction, never mutates an edge, and deliberately defines no
-      chronological rule for realizes.
+      chronological rule for realizes. Issues #707/#709 add bounded Git-only
+      historical reconstruction by exact revision or committer-time cutoff;
+      neither path falls back to current bytes.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-temporal-diff
+    name: Semantic temporal diff between exact Git revisions
+    summary: >-
+      Deterministic temporal-diff-v1 comparison of two historical lifecycle
+      thread read models, separating item/state, explicit edge, consistency,
+      and derived changes while ignoring serialization-only ordering.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-temporal-diff-between-revisions
+    implementation_locations:
+      - lifetxt/historical_temporal.py
+      - lifetxt/temporal_diff.py
+      - lifetxt/cli.py
+      - lifetxt/schema_extensions_v27.py
+      - dist/schemas/temporal-diff-v1.schema.json
+    public_interfaces:
+      - lifetxt.temporal_diff.temporal_diff
+      - temporal-diff-v1.schema.json
+      - lifetxt thread ID --diff REV_A..REV_B
+    tests_or_evidence:
+      - tests/test_temporal_diff.py semantic normalization and change coverage
+      - tests/test_temporal_cli.py temporal diff text/JSON coverage
+      - dist/schemas/temporal-diff-v1.schema.json release-schema validation
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/708
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/711
+    reuse_policy: >-
+      Compare only normalized outputs from the exact-revision historical
+      temporal-thread path; do not reimplement Git loading, parsing, lifecycle,
+      temporal-context, or consistency rules.
+    notes: >-
+      The first slice is read-only and bounded. Missing targets are explicit
+      availability states, and any source or traversal limitation prevents a
+      claim of complete comparison.
     replacement:
       replaces: []
       replaced_by: null

@@ -1,0 +1,18 @@
+schema_version: 1
+
+requirements:
+  - id: req-temporal-diff-between-revisions
+    kind: ADDED
+    statement: Explain bounded semantic Temporal Thread changes between two exact Git revisions.
+    acceptance_criteria:
+      - Item membership and stable status changes are deterministic.
+      - Lifecycle edge additions and removals are reported.
+      - Shared consistency warnings are classified as introduced or resolved.
+      - Serialization order alone produces no semantic change.
+      - Missing targets and bounded evidence never produce a false completeness claim.
+    constraints:
+      - Reuse exact-revision historical reconstruction.
+      - Remain read-only and avoid generic detail diff.
+    owner: Eruhitsuji
+
+open_questions: []

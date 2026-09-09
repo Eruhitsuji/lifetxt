@@ -127,6 +127,9 @@ MCP: `get_temporal_context`（`id`、`window`、`limit`、`stale_after`）。rea
 $ lifetxt thread visit-actual
 $ lifetxt thread visit-actual --depth 4 --nodes 25 --window 14 --limit 10
 $ lifetxt thread visit-actual --json
+$ lifetxt thread visit-actual --revision a7805b4
+$ lifetxt thread visit-actual --diff a7805b4..eb87484
+$ lifetxt thread visit-actual --as-of 2026-06-01T09:00:00Z --ref main
 ```
 
 `temporal-thread-v1` は `follows:` を `predecessors` / `successors`、
@@ -149,6 +152,23 @@ additive な `consistency.warnings` は、解決済み `follows:` / `replaced_by
 を追加します。
 
 `lifetxt check` も同じ共有判定を `W244` として報告します。
+
+historical mode は Git でtrackされたbytesだけを使用し、working treeを混在
+させません。`--revision REV` はcommit-ishをfull commit SHAへ解決し、その
+commitに存在する入力pathから同じthread modelを再構築します。
+`--diff REV_A..REV_B` はboundedな`temporal-diff-v1`を返し、itemの追加・削除と
+stable state変更、explicit edge変更、consistency warningの発生・解消、stableな
+derived fact/edge変更を比較します。serialization orderだけの違いは無視し、片側に
+targetがない場合はcurrent dataで補完せず`availability`で表します。
+
+`--as-of RFC3339 [--ref REF]` は、明示refまたは`HEAD`から到達可能なcommitのうち、
+offset付きcutoff以前で**committer timestamp**が最大のcommitを選択します。同一
+timestampはfull SHA最大をstable tie-breakとし、該当commitがなければerrorです。
+shallow historyとrevision内のpath欠損はcompleteness flag/limitationへ明示します。
+詳細は[historical-as-of-semantics.md](historical-as-of-semantics.md)を参照してください。
+
+historical optionは現在CLI限定です。TUI、Web、MCPのthread surfaceは従来どおり
+current stateを返します。
 
 ## Freebusy
 

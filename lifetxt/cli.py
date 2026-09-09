@@ -1625,6 +1625,27 @@ def build_parser():
         default=None,
         help="Staleness threshold in days. Default 14.",
     )
+    historical_mode = thread_command.add_mutually_exclusive_group()
+    historical_mode.add_argument(
+        "--revision",
+        metavar="REV",
+        help="Read tracked inputs from one exact Git commit-ish.",
+    )
+    historical_mode.add_argument(
+        "--diff",
+        metavar="REV_A..REV_B",
+        help="Compare the target's temporal thread between two exact Git revisions.",
+    )
+    historical_mode.add_argument(
+        "--as-of",
+        metavar="RFC3339",
+        help="Select the newest reachable commit at or before an offset-aware timestamp.",
+    )
+    thread_command.add_argument(
+        "--ref",
+        metavar="REF",
+        help="Git history root for --as-of. Defaults to HEAD.",
+    )
     thread_command.add_argument("--json", action="store_true", help="Emit JSON.")
     thread_command.set_defaults(func=command_thread)
 
@@ -13642,44 +13663,99 @@ def command_thread(args):
     from .temporal_thread import DEFAULT_STALE_DAYS, temporal_thread
     from .web_read_service import find_item_by_id
 
-    items, _diagnostics = _parse_or_exit(
-        _normalize_paths(
-            getattr(args, "paths", None), _config(args), stdin_when_empty=False
-        )
-        or ["life.txt"],
-        _config(args),
-    )
     key = id_key_from_config(_config(args))
-    try:
-        target = find_item_by_id(items, args.id, key=key)
-    except ValueError as exc:
-        sys.stderr.write("ERROR: %s\n" % exc)
-        return 1
-    if target is None:
-        sys.stderr.write("ERROR: No item with id %r.\n" % args.id)
-        return 1
+    paths = _normalize_paths(
+        getattr(args, "paths", None), _config(args), stdin_when_empty=False
+    ) or ["life.txt"]
     stale_after = getattr(args, "stale_after", None)
+    bounds = {
+        "max_depth": getattr(args, "depth", 8),
+        "max_nodes": getattr(args, "nodes", 50),
+        "window_days": getattr(args, "window", 7),
+        "temporal_limit": getattr(args, "limit", 20),
+        "stale_after_days": (
+            stale_after if stale_after is not None else DEFAULT_STALE_DAYS
+        ),
+    }
+    revision = getattr(args, "revision", None)
+    diff_spec = getattr(args, "diff", None)
+    as_of = getattr(args, "as_of", None)
+    requested_ref = getattr(args, "ref", None)
+    if requested_ref and not as_of:
+        sys.stderr.write("ERROR: --ref is only valid together with --as-of.\n")
+        return 1
+
     try:
-        result = temporal_thread(
-            items,
-            target,
-            _project_today(),
-            key=key,
-            max_depth=getattr(args, "depth", 8),
-            max_nodes=getattr(args, "nodes", 50),
-            window_days=getattr(args, "window", 7),
-            temporal_limit=getattr(args, "limit", 20),
-            stale_after_days=(
-                stale_after if stale_after is not None else DEFAULT_STALE_DAYS
-            ),
-        )
+        if diff_spec:
+            result = _historical_temporal_diff(
+                paths, args.id, diff_spec, key=key, bounds=bounds
+            )
+            if getattr(args, "json", False):
+                write_text(
+                    None, json.dumps(result, ensure_ascii=False, indent=2) + "\n"
+                )
+            else:
+                _write_temporal_diff(result)
+            return 0
+        if revision or as_of:
+            from .historical_temporal import (
+                historical_temporal_thread,
+                historical_temporal_thread_as_of,
+            )
+
+            if revision:
+                result = historical_temporal_thread(
+                    paths, args.id, _project_today(), revision, key=key, **bounds
+                )
+            else:
+                result = historical_temporal_thread_as_of(
+                    paths,
+                    args.id,
+                    _project_today(),
+                    as_of,
+                    ref=requested_ref,
+                    key=key,
+                    **bounds,
+                )
+            target = None
+        else:
+            items, _diagnostics = _parse_or_exit(paths, _config(args))
+            target = find_item_by_id(items, args.id, key=key)
+            if target is None:
+                sys.stderr.write("ERROR: No item with id %r.\n" % args.id)
+                return 1
+            result = temporal_thread(items, target, _project_today(), key=key, **bounds)
     except ValueError as exc:
         sys.stderr.write("ERROR: %s\n" % exc)
         return 1
     if getattr(args, "json", False):
         write_text(None, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
         return 0
-    write_text(None, "Temporal thread for %s (%s):\n" % (args.id, target.title))
+    write_text(
+        None,
+        "Temporal thread for %s (%s):\n" % (args.id, result["target"]["title"]),
+    )
+    historical = result.get("historical")
+    if historical:
+        if historical["mode"] == "git_exact_revision":
+            write_text(
+                None, "  Historical revision: %s\n" % historical["resolved_commit"]
+            )
+            write_text(None, "  Evidence: git-exact-revision\n")
+        else:
+            write_text(None, "  As of: %s\n" % historical["cutoff"])
+            write_text(None, "  Git ref: %s\n" % historical["requested_ref"])
+            write_text(None, "  Time policy: committer\n")
+            write_text(
+                None, "  Selected revision: %s\n" % historical["selected_commit"]
+            )
+            write_text(None, "  Evidence: git-history\n")
+        if not historical["evidence_complete"]:
+            write_text(
+                None,
+                "  Historical evidence incomplete: %s\n"
+                % ", ".join(historical["limitations"]),
+            )
     labels = (
         ("predecessors", "Predecessors"),
         ("successors", "Successors"),
@@ -13737,6 +13813,123 @@ def command_thread(args):
     if result["explicit"]["truncated"]:
         write_text(None, "  Result truncated by explicit traversal bounds.\n")
     return 0
+
+
+def _split_temporal_diff_spec(value):
+    text = str(value or "")
+    if text.count("..") != 1:
+        raise ValueError("--diff must use exactly REV_A..REV_B.")
+    before, after = text.split("..", 1)
+    if not before or not after:
+        raise ValueError("--diff requires both REV_A and REV_B.")
+    return before, after
+
+
+def _historical_temporal_diff(paths, target_id, diff_spec, key, bounds):
+    from .historical_temporal import historical_snapshot, thread_from_snapshot
+    from .temporal_diff import temporal_diff
+
+    before_revision, after_revision = _split_temporal_diff_spec(diff_spec)
+    before_snapshot = historical_snapshot(paths, before_revision, key=key)
+    after_snapshot = historical_snapshot(paths, after_revision, key=key)
+    before_thread = thread_from_snapshot(
+        before_snapshot,
+        target_id,
+        _project_today(),
+        key=key,
+        allow_missing_target=True,
+        **bounds,
+    )
+    after_thread = thread_from_snapshot(
+        after_snapshot,
+        target_id,
+        _project_today(),
+        key=key,
+        allow_missing_target=True,
+        **bounds,
+    )
+    return temporal_diff(
+        before_thread,
+        after_thread,
+        before_snapshot["historical"],
+        after_snapshot["historical"],
+        target_id,
+    )
+
+
+def _write_temporal_diff(result):
+    write_text(None, "Temporal diff for %s:\n" % result["target_id"])
+    write_text(None, "  From: %s\n" % result["from"]["resolved_commit"])
+    write_text(None, "  To:   %s\n" % result["to"]["resolved_commit"])
+    write_text(
+        None,
+        "  Target available: from=%s, to=%s\n"
+        % (
+            str(result["availability"]["from"]).lower(),
+            str(result["availability"]["to"]).lower(),
+        ),
+    )
+    sections = (
+        ("Items added", result["items"]["added"], lambda row: row["id"]),
+        ("Items removed", result["items"]["removed"], lambda row: row["id"]),
+        (
+            "Item changes",
+            result["items"]["changed"],
+            lambda row: (
+                "%s %s"
+                % (
+                    row["id"],
+                    ", ".join(
+                        "%s:%s->%s" % (name, change["from"], change["to"])
+                        for name, change in row["changes"].items()
+                    ),
+                )
+            ),
+        ),
+        (
+            "Relations added",
+            result["explicit"]["added_edges"],
+            lambda row: (
+                "%s %s:%s" % (row["source_id"], row["relation"], row["target_id"])
+            ),
+        ),
+        (
+            "Relations removed",
+            result["explicit"]["removed_edges"],
+            lambda row: (
+                "%s %s:%s" % (row["source_id"], row["relation"], row["target_id"])
+            ),
+        ),
+        (
+            "Consistency introduced",
+            result["consistency"]["introduced_warnings"],
+            lambda row: (
+                "%s %s:%s" % (row["source_id"], row["relation"], row["target_id"])
+            ),
+        ),
+        (
+            "Consistency resolved",
+            result["consistency"]["resolved_warnings"],
+            lambda row: (
+                "%s %s:%s" % (row["source_id"], row["relation"], row["target_id"])
+            ),
+        ),
+    )
+    any_change = False
+    for label, rows, render in sections:
+        if not rows:
+            continue
+        any_change = True
+        write_text(None, "  %s:\n" % label)
+        for row in rows:
+            write_text(None, "    %s\n" % render(row))
+    if not any_change:
+        write_text(None, "  No semantic lifecycle changes.\n")
+    if not result["complete"]:
+        write_text(
+            None,
+            "  Comparison incomplete: %s\n" % ", ".join(result["limitations"]),
+        )
 
 
 def command_freebusy(args):

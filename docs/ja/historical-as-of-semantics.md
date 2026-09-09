@@ -1,13 +1,13 @@
 # Historical `as-of` semantics
 
-Status: #699 / #702 Phase 3 の調査結果。
+Status: #707 / #708 / #709 のGit-backed subsetを実装済み。
 
 ## 決定
 
-現在の life.txt だけを使う一般的な `lifetxt as-of DATE` command はまだ公開
-できません。現在の file は**現在**について authoritative ですが、過去の
-時点にどの値や future plan が既に存在したかは証明しません。item 内の日付は
-domain time であり、その時点で記録済みだったことの evidence ではありません。
+current itemの日付からhistoryを復元しません。現在のfileは**現在**について
+authoritativeですが、過去にどの値やfuture planが存在したかは証明しません。
+Git-backed historical thread modeは、tracked bytesとexact revision provenanceが
+evidenceを提供できる場合だけ利用できます。
 
 historical output は、次の evidence source から復元し、その source と revision
 を明示した場合だけ authoritative とします。
@@ -23,26 +23,31 @@ historical output は、次の evidence source から復元し、その source �
 | undo snapshot/current revision hash/transaction journal | 定義済み retention 内の conflict/recovery evidence | durable な historical DB や一般 as-of source ではない |
 | 現在の life.txt の日付 (`on:`、`due:`、`created:` など) | 現在主張されている domain date | requested historical time にその主張が存在したことを証明しない |
 
-## 安全に実装可能な subset
+## 実装済みGit subset
 
-1. **Git-revision view**: caller が選択した exact commit の life.txt bytes を parse
-   し、repository、ref/commit SHA、time policy、completeness caveat を付ける。
-   将来機能であり、working tree へ暗黙 fallback しない。
-2. **Typed event-history view**: 検証済み append-only contract が完全な chain を
+1. **Exact revision**: `lifetxt thread ID --revision REV`はcommit-ishを解決し、
+   tree内に存在するrequested pathだけを読み、`temporal-thread-v1.historical`
+   provenanceを返します。path欠損はincomplete、target/revision欠損はfallbackなしの
+   errorです。
+2. **Semantic diff**: `--diff REV_A..REV_B`は2つのnormalized historical threadを
+   `temporal-diff-v1`として比較します。item/state、explicit edge、consistency、
+   derived変更を分離し、serialization orderは無視します。
+3. **Git as-of selection**: `--as-of OFFSET_RFC3339 [--ref REF]`は到達可能な
+   commitからcutoff以前でcommitter timestamp最大のものを選びます。既定rootは
+   `HEAD`、同一timestampはfull SHA最大でtie-breakし、shallow historyは
+   incompleteと明示します。
+4. **Typed event-history view**: 検証済み append-only contract が完全な chain を
    定義する field だけを復元する。progress delta と同様、baseline 不明は
    unavailable とする。
-3. **Current temporal thread**: `temporal-thread-v1` は現在の authoritative
+5. **Current temporal thread**: `temporal-thread-v1` は現在の authoritative
    lifecycle assertion と現在の派生 date context を表し、historical reconstruction
    ではない。
 
-## 一般 command より前に必要な contract
+## 残る境界
 
-将来の実装 Issue では evidence-source selection、Git repository/ref と timestamp
-policy、revision ごとの multi-file membership、history completeness/retention flag、
-timezone/cutoff semantics、untracked/generated/external file、output provenance、
-evidence 不足時の deterministic error を定義する必要があります。Git 以外から
-一般的に復元する場合は、まず append-only item-change history contract が必要です。
-
-この contract ができるまでは一般的な `as-of` CLI/API/MCP surface を追加しません。
-current item や `follows:`/`realizes:`/`replaced_by:` から historical state を推測しては
-なりません。
+実装contractは意図的にGit-onlyかつCLI-onlyです。current input resolutionが
+requested path manifestを供給し、untracked/generated/external sourceをhistorical
+resultへ推測で混ぜません。Git history rewriteを独立検証済みの真実とは扱わず、
+shallow cloneはcomplete selection historyを主張しません。Git以外の復元には、
+別途reviewされたappend-only history contractが必要です。TUI/API/MCPのhistorical
+surfaceはfuture workです。

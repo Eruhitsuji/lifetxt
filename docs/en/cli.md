@@ -183,7 +183,7 @@ python -m lifetxt vm run program.life.txt --entry s1
 | `area` | Group tasks and projects by `area:` (see [life-hub.md](life-hub.md)) |
 | `backlinks` | Show items that reference a given ID (incoming links) (see [life-hub.md](life-hub.md)) |
 | `temporal` | Show one item's derived temporal context: overdue/due/staleness and nearby dated items (see [life-hub.md](life-hub.md)) |
-| `thread` | Show one item's explicit lifecycle thread, derived temporal context, and read-only consistency warnings (see [life-hub.md](life-hub.md)) |
+| `thread` | Show current or Git-backed historical lifecycle threads, revision diffs, derived temporal context, and consistency warnings (see [life-hub.md](life-hub.md)) |
 | `freebusy` | Show busy/free time intervals and overlap conflicts for `E`/`R` items within a datetime range (see [life-hub.md](life-hub.md)) |
 | `query` | Filter items with the shared query language (see [query.md](query.md)) |
 | `view` | List, inspect, and run saved views (named queries) (see [query.md](query.md)) |

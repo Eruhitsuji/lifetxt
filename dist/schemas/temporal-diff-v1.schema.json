@@ -1,0 +1,442 @@
+{
+  "$defs": {
+    "edge": {
+      "additionalProperties": false,
+      "properties": {
+        "relation": {
+          "enum": [
+            "follows",
+            "realizes",
+            "replaced_by"
+          ]
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "target_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "relation",
+        "source_id",
+        "target_id"
+      ],
+      "type": "object"
+    },
+    "historicalExact": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_complete": {
+          "type": "boolean"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "loaded_paths": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "missing_paths": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "mode": {
+          "const": "git_exact_revision"
+        },
+        "requested_paths": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "requested_revision": {
+          "type": "string"
+        },
+        "resolved_commit": {
+          "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "mode",
+        "requested_revision",
+        "resolved_commit",
+        "requested_paths",
+        "loaded_paths",
+        "missing_paths",
+        "evidence_complete",
+        "limitations"
+      ],
+      "type": "object"
+    },
+    "item": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "kind",
+        "status"
+      ],
+      "type": "object"
+    },
+    "warning": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence": {
+          "additionalProperties": false,
+          "properties": {
+            "predecessor_id": {
+              "type": "string"
+            },
+            "source_field": {
+              "type": "string"
+            },
+            "source_value": {
+              "type": "string"
+            },
+            "successor_id": {
+              "type": "string"
+            },
+            "target_field": {
+              "type": "string"
+            },
+            "target_value": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "source_field",
+            "source_value",
+            "target_field",
+            "target_value",
+            "successor_id",
+            "predecessor_id"
+          ],
+          "type": "object"
+        },
+        "expected_order": {
+          "const": "after"
+        },
+        "observed_order": {
+          "const": "before"
+        },
+        "provenance": {
+          "additionalProperties": false,
+          "properties": {
+            "explicit": {
+              "additionalProperties": false,
+              "properties": {
+                "authority": {
+                  "const": "life.txt"
+                },
+                "kind": {
+                  "const": "explicit"
+                },
+                "source": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "source_field": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "authority",
+                "source_field",
+                "source"
+              ],
+              "type": "object"
+            },
+            "temporal": {
+              "additionalProperties": false,
+              "properties": {
+                "authority": {
+                  "const": "temporal-context-v1"
+                },
+                "granularity": {
+                  "const": "date"
+                },
+                "kind": {
+                  "const": "derived"
+                },
+                "rule": {
+                  "const": "before"
+                }
+              },
+              "required": [
+                "kind",
+                "authority",
+                "rule",
+                "granularity"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "explicit",
+            "temporal"
+          ],
+          "type": "object"
+        },
+        "reason": {
+          "const": "explicit_order_conflicts_with_time_order"
+        },
+        "relation": {
+          "enum": [
+            "follows",
+            "replaced_by"
+          ]
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "target_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "relation",
+        "source_id",
+        "target_id",
+        "reason",
+        "observed_order",
+        "expected_order",
+        "evidence",
+        "provenance"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/temporal-diff-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "availability": {
+      "additionalProperties": false,
+      "properties": {
+        "from": {
+          "type": "boolean"
+        },
+        "to": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "type": "object"
+    },
+    "complete": {
+      "type": "boolean"
+    },
+    "consistency": {
+      "additionalProperties": false,
+      "properties": {
+        "introduced_warnings": {
+          "items": {
+            "$ref": "#/$defs/warning"
+          },
+          "type": "array"
+        },
+        "resolved_warnings": {
+          "items": {
+            "$ref": "#/$defs/warning"
+          },
+          "type": "array"
+        },
+        "unchanged_warning_count": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "introduced_warnings",
+        "resolved_warnings",
+        "unchanged_warning_count"
+      ],
+      "type": "object"
+    },
+    "derived": {
+      "additionalProperties": false,
+      "properties": {
+        "added_edges": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "added_facts": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "removed_edges": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "removed_facts": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "added_facts",
+        "removed_facts",
+        "added_edges",
+        "removed_edges"
+      ],
+      "type": "object"
+    },
+    "explicit": {
+      "additionalProperties": false,
+      "properties": {
+        "added_edges": {
+          "items": {
+            "$ref": "#/$defs/edge"
+          },
+          "type": "array"
+        },
+        "removed_edges": {
+          "items": {
+            "$ref": "#/$defs/edge"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "added_edges",
+        "removed_edges"
+      ],
+      "type": "object"
+    },
+    "from": {
+      "$ref": "#/$defs/historicalExact"
+    },
+    "items": {
+      "additionalProperties": false,
+      "properties": {
+        "added": {
+          "items": {
+            "$ref": "#/$defs/item"
+          },
+          "type": "array"
+        },
+        "changed": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "changes": {
+                "additionalProperties": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "from": {
+                      "type": "string"
+                    },
+                    "to": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "from",
+                    "to"
+                  ],
+                  "type": "object"
+                },
+                "type": "object"
+              },
+              "id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "changes"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "removed": {
+          "items": {
+            "$ref": "#/$defs/item"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "added",
+        "removed",
+        "changed"
+      ],
+      "type": "object"
+    },
+    "limitations": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "reference_date": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "schema": {
+      "const": "temporal-diff-v1"
+    },
+    "target_id": {
+      "type": "string"
+    },
+    "to": {
+      "$ref": "#/$defs/historicalExact"
+    }
+  },
+  "required": [
+    "schema",
+    "reference_date",
+    "target_id",
+    "availability",
+    "from",
+    "to",
+    "complete",
+    "limitations",
+    "items",
+    "explicit",
+    "consistency",
+    "derived"
+  ],
+  "title": "lifetxt temporal diff v1",
+  "type": "object"
+}

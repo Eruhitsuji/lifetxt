@@ -49,5 +49,7 @@ historical output は、次の evidence source から復元し、その source �
 requested path manifestを供給し、untracked/generated/external sourceをhistorical
 resultへ推測で混ぜません。Git history rewriteを独立検証済みの真実とは扱わず、
 shallow cloneはcomplete selection historyを主張しません。Git以外の復元には、
-別途reviewされたappend-only history contractが必要です。TUI/API/MCPのhistorical
-surfaceはfuture workです。
+[native-semantic-history.md](native-semantic-history.md)でreviewされたnative-history
+designのruntime実装が必要です。このdesignのfirst native read modelはtimelineに限定し、
+general semantic as-of reconstructionを許可しません。TUI/API/MCPのhistorical surfaceは
+future workです。

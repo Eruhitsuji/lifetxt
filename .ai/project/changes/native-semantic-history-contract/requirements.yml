@@ -1,0 +1,28 @@
+schema_version: 1
+
+requirements:
+  - id: req-lifetxt-native-temporal-history-contract
+    kind: ADDED
+    statement: >-
+      Define human-readable native semantic history as lifetxt's primary
+      evidence of captured domain operations while preserving current life.txt
+      as current-state authority and Git as exact revision evidence.
+    acceptance_criteria:
+      - Native semantic history and Git exact revision history have an explicit authority boundary.
+      - The human-readable and portable plain-text principle is documented in English and Japanese.
+      - Generic, typed, and hybrid event models are compared and one is selected.
+      - Existing progress and ticket event contracts have a non-breaking compatibility path.
+      - First-slice captured and excluded changes are explicit.
+      - Provenance, ordering, append-only, malformed-event, and completeness semantics are explicit.
+      - Git-free and Git-backed experiences are defined without implicit source switching.
+      - Timeline and Historical Temporal Thread responsibilities do not overlap.
+      - Existing files require no migration or inferred backfill.
+      - Implementation is decomposed into one to three small follow-up issues.
+    constraints:
+      - Do not implement runtime behavior in this investigation.
+      - Do not change or migrate record:progress_event.
+      - Do not treat generic custom-detail or raw text changes as semantic events.
+      - Human approval is required before the proposed vocabulary becomes an implemented public contract.
+    owner: Eruhitsuji
+
+open_questions: []

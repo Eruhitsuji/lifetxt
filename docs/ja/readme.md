@@ -47,6 +47,7 @@
 | Daily hub, areas, backlinks | [life-hub.md](./life-hub.md) |
 | Messaging and notifications | [messaging.md](./messaging.md) |
 | New CLI workflows | [new-cli-workflows.md](./new-cli-workflows.md) |
+| Native semantic history design | [native-semantic-history.md](./native-semantic-history.md) |
 | People, teams, groups | [people.md](./people.md) |
 | Philosophy and long-term vision | [philosophy.md](./philosophy.md) |
 | Process boundaries and transaction admin | [process-boundaries-attachments-and-transaction-admin.md](./process-boundaries-attachments-and-transaction-admin.md) |

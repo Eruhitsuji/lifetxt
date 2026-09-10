@@ -1,0 +1,22 @@
+schema_version: 1
+change:
+  id: native-timeline-mcp-read
+  title: Read-only Native Temporal Timeline MCP surface
+  status: implemented
+  change_type: Feature
+  assurance_level: Standard
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/719
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/722
+  base_commit: 9f59273
+  target_release: next normal maintenance release
+scope:
+  in_scope:
+    - Expose the shared Native Timeline reader through a bounded read-only MCP tool.
+    - Preserve diagnostics, completeness, limitations, provenance, and revision awareness.
+  out_of_scope: [writes, Git composition, history schema replacement, migration, backfill]
+  write_scope: [lifetxt/**, tests/**, docs/**, dist/schemas/**, .ai/project/**]
+  forbidden_scope: [.ai/managed/**]
+human_approvals_required:
+  - Repository owner review and Merge Authority approval; Codex must not merge.

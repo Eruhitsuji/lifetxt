@@ -46,6 +46,21 @@ class SchemaExtensionsV2Tests(unittest.TestCase):
                 strict["reference_resolution"],
             )
 
+    def test_temporal_timeline_schema_accepts_optional_mcp_revision(self):
+        schema = schema_bundle()["temporal-timeline-v1.schema.json"]
+        self.assertEqual(
+            ["string", "null"], schema["properties"]["revision"]["type"]
+        )
+        if has_draft_2020_validator():
+            from jsonschema import Draft202012Validator
+            from lifetxt.schema_extensions_v29 import temporal_timeline_v1_sample
+
+            value = temporal_timeline_v1_sample()
+            value["revision"] = "a" * 64
+            self.assertEqual(
+                [], list(Draft202012Validator(schema).iter_errors(value))
+            )
+
     @unittest.skipUnless(
         has_draft_2020_validator(), "Draft 2020-12 jsonschema validation not available"
     )

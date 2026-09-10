@@ -11829,6 +11829,60 @@ traceability:
         backfill, Git mutation, raw text comparison, or Timeline composition.
       status: implemented
 
+    - requirement_id: req-native-timeline-mcp-read
+      capability_id: cap-native-semantic-history
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/719
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/722
+      changed_files_or_scope:
+        - Read-only get_native_timeline MCP tool over the shared domain reader
+        - Bounded filters, completeness, limitations, diagnostics, provenance, and source revision
+        - Additive optional revision in temporal-timeline-v1 for revision-aware read surfaces
+      tests_or_evidence:
+        - tests/test_mcp_expansion.py
+        - dist/schemas/temporal-timeline-v1.schema.json
+        - docs/en/ai-integration.md
+        - docs/ja/ai-integration.md
+      release_or_deployment: next normal maintenance release
+      notes: Git remains optional and the MCP tool does not write or reimplement Timeline semantics.
+      status: implemented
+
+    - requirement_id: req-native-timeline-bounded-filtering
+      capability_id: cap-native-semantic-history
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/720
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/722
+      changed_files_or_scope:
+        - Inclusive offset-aware since and until filters
+        - Closed normalized event filter with AND semantics
+        - Deterministic filter-before-limit behavior shared by CLI and MCP
+      tests_or_evidence:
+        - tests/test_native_timeline.py
+        - tests/test_mcp_expansion.py
+        - docs/en/native-timeline.md
+        - docs/ja/native-timeline.md
+      release_or_deployment: next normal maintenance release
+      notes: Diagnostics and completeness continue to describe the unfiltered input evidence.
+      status: implemented
+
+    - requirement_id: req-native-history-relation-mutation-capture
+      capability_id: cap-native-semantic-history
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/721
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/722
+      changed_files_or_scope:
+        - Existing CLI ticket link and unlink relation mutation route
+        - Atomic relation_added and relation_removed item events for follows, realizes, and replaced_by
+        - Exact source revision, no-op suppression, and stale/failure orphan prevention
+      tests_or_evidence:
+        - tests/test_ticket_revision_writes.py
+        - tests/test_native_timeline.py
+        - docs/en/native-semantic-history.md
+        - docs/ja/native-semantic-history.md
+      release_or_deployment: next normal maintenance release
+      notes: Other relation mutation surfaces remain a coverage limitation; no migration or backfill.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

@@ -340,6 +340,7 @@ READ_ONLY_TOOLS = frozenset(
         "get_backlinks",
         "get_temporal_context",
         "get_temporal_thread",
+        "get_native_timeline",
         "get_clock_status",
         "run_query",
         "list_saved_views",
@@ -1034,6 +1035,25 @@ def _tool_schemas():
                 "window": _integer("Derived date window in days. Default 7."),
                 "limit": _integer("Maximum derived neighbors. Default 20."),
                 "stale_after": _integer("Staleness threshold in days. Default 14."),
+            },
+            required=["id"],
+            read_only=True,
+        ),
+        _tool(
+            "get_native_timeline",
+            "Bounded temporal-timeline-v1 native semantic history for one item. "
+            "Filters are inclusive, combined with AND, and applied before limit; "
+            "completeness, limitations, diagnostics, and provenance are retained.",
+            {
+                "id": _string("Target item ID."),
+                "limit": _integer("Maximum matching valid events. Default 100."),
+                "since": _string(
+                    "Inclusive lower bound as an offset-aware ISO 8601 timestamp."
+                ),
+                "until": _string(
+                    "Inclusive upper bound as an offset-aware ISO 8601 timestamp."
+                ),
+                "event": _string("One normalized native event type."),
             },
             required=["id"],
             read_only=True,
@@ -3069,6 +3089,26 @@ def _tool_get_temporal_thread(args, context):
     return _attach_revision(result, context)
 
 
+def _tool_get_native_timeline(args, context):
+    """Thin read-only MCP bridge to the shared temporal-timeline-v1 reader."""
+    from .native_timeline import DEFAULT_LIMIT, native_timeline
+
+    items, _diagnostics = _read_items(context)
+    item_id = str(args.get("id") or "")
+    if not item_id:
+        raise ValueError("get_native_timeline requires 'id'.")
+    result = native_timeline(
+        items,
+        item_id,
+        id_key=_id_key(context),
+        limit=_bounded_int(args, "limit", DEFAULT_LIMIT),
+        since=args.get("since"),
+        until=args.get("until"),
+        event=args.get("event"),
+    )
+    return _attach_revision(result, context)
+
+
 def _tool_get_clock_status(args, context):
     from .clock_skew import clock_skew_report
 
@@ -3441,6 +3481,7 @@ TOOL_HANDLERS = OrderedDict(
         ("get_backlinks", _tool_get_backlinks),
         ("get_temporal_context", _tool_get_temporal_context),
         ("get_temporal_thread", _tool_get_temporal_thread),
+        ("get_native_timeline", _tool_get_native_timeline),
         ("run_query", _tool_run_query),
         ("list_saved_views", _tool_list_saved_views),
         ("run_saved_view", _tool_run_saved_view),

@@ -149,6 +149,7 @@ def _apply_ticket_transform(
     require_revision=False,
     dry_run=False,
     operation="ticket.patch",
+    native_event=None,
 ):
     supplied = expected_revision is not None
     expected = normalize_revision(expected_revision, supplied=supplied)
@@ -183,19 +184,39 @@ def _apply_ticket_transform(
             True,
         )
 
+    effective_expected = expected
+    if native_event is not None and effective_expected is None:
+        effective_expected = mutation.read_text_snapshot(
+            path, allow_missing=False
+        ).content_hash
+
     holder = {}
 
     def transform(current):
         replacement, updated = _replace_ticket_text(
             current, ticket_id, key, update_item
         )
+        if native_event is not None and replacement != current:
+            from .native_history_mutation import augment_item_mutation_with_event
+
+            replacement, updated, _event = augment_item_mutation_with_event(
+                current,
+                replacement,
+                ticket_id,
+                native_event["event"],
+                effective_expected,
+                id_key=key,
+                source=operation,
+                field=native_event["relation"],
+                target=native_event["target"],
+            )
         holder["item"] = updated
         return replacement
 
     result = mutation.mutate_text(
         path,
         transform,
-        expected_hash=expected,
+        expected_hash=effective_expected,
         operation=operation,
     )
     return _decorate_result(
@@ -280,6 +301,16 @@ def apply_ticket_relation(
             else:
                 item.details.pop(relation, None)
 
+    lifecycle_relation = relation in ("follows", "realizes", "replaced_by")
+    resolved_operation = operation or ("ticket.link" if add else "ticket.unlink")
+    native_event = None
+    if lifecycle_relation:
+        native_event = {
+            "event": "relation_added" if add else "relation_removed",
+            "relation": relation,
+            "target": target_id,
+        }
+
     return _apply_ticket_transform(
         path,
         ticket_id,
@@ -288,7 +319,8 @@ def apply_ticket_relation(
         expected_revision=expected_revision,
         require_revision=require_revision,
         dry_run=dry_run,
-        operation=operation or ("ticket.link" if add else "ticket.unlink"),
+        operation=resolved_operation,
+        native_event=native_event,
     )
 
 

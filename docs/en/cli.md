@@ -89,6 +89,8 @@ python -m lifetxt today [path ...]
 python -m lifetxt area list [path ...]
 python -m lifetxt backlinks ID [path ...]
 python -m lifetxt temporal ID [path ...]
+python -m lifetxt timeline ID [path ...] [--limit N] [--json]
+python -m lifetxt history-check [path ...] [--id ID] [--commit-limit N] [--json]
 python -m lifetxt freebusy [path ...] --from START --to END
 python -m lifetxt query "QUERY" [path ...] [--explain]
 python -m lifetxt view list
@@ -223,7 +225,7 @@ including its `--json` machine-readable form for scripts and AI clients.
 | Category | Commands |
 |---|---|
 | Getting Started / Daily | `tour`, `help`, `init`, `quick` (`add`), `today`, `next`, `agenda`, `show`, `edit`, `done`, `complete`, `progress`, `clone`, `reopen`, `due`, `review`, `assist`, `state`, `start`, `stop`, `assign`, `timer`, `notify` |
-| Query / Explore | `filter`, `search`, `find`, `query`, `view`, `summary`, `inbox`, `health`, `temporal`, `thread`, `freebusy`, `count`, `status`, `recent` |
+| Query / Explore | `filter`, `search`, `find`, `query`, `view`, `summary`, `inbox`, `health`, `temporal`, `timeline`, `history-check`, `thread`, `freebusy`, `count`, `status`, `recent` |
 | Projects / People / Collaboration | `project`, `portfolio`, `area`, `person`, `group`, `who`, `message`, `proposal`, `ticket`, `version`, `sprint` |
 | Structure / Data Integrity | `check`, `integrity`, `ids`, `links`, `backlinks`, `sources`, `tag`, `lint`, `deps`, `diff`, `snapshot`, `undo`, `cleanup`, `files` |
 | Import / Export / Reports | `import`, `export`, `import-ics`, `sync-ics`, `to-json`, `to-jsonl`, `to-csv`, `from-json`, `from-jsonl`, `from-csv`, `from-markdown`, `from-todo`, `to-ics`, `markdown`, `stats`, `plot`, `export-heatmap`, `standup`, `invoice`, `share`, `digest`, `report` |
@@ -4066,6 +4068,8 @@ warrant a dedicated guide:
 | `person`, `message`, `group` | [people.md](people.md), [messaging.md](messaging.md) |
 | `proposal` (Unified Inbox) | [inbox.md](inbox.md) |
 | `today`, `area`, `backlinks`, `temporal`, `thread`, `freebusy` | [life-hub.md](life-hub.md) |
+| `timeline` | [native-timeline.md](native-timeline.md) |
+| `history-check` | [native-git-history-consistency.md](native-git-history-consistency.md) |
 | `ticket`, `version`, `sprint` | [§19](#19-development-tickets-ticket), [tickets.md](tickets.md) |
 | `remote` | [§20](#20-remote-safe-mode-client-remote), [remote.md](remote.md), [remote-client-writes.md](remote-client-writes.md) |
 | `vm` (opt-in Turing-complete VM) | [vm.md](vm.md) |

@@ -1,0 +1,41 @@
+schema_version: 1
+
+change:
+  id: native-item-event-v1
+  title: Shared native item-event contract and compatibility adapters
+  status: implemented
+  change_type: Feature
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/713
+  related_pull_request: null
+  base_commit: a7c138d8c25aeb98543061451441a3635b9eec6d
+  target_release: next normal maintenance release
+
+scope:
+  in_scope:
+    - Add a closed record:item_event v1 envelope and typed payload vocabulary.
+    - Diagnose malformed, duplicate, gapped, backwards, and discontinuous streams.
+    - Normalize item, progress, ticket, and time-entry records without migration.
+    - Publish item-event-v1 and inherit parent access in Remote Safe Mode.
+  out_of_scope:
+    - Mutation capture and Timeline presentation.
+    - Migration, inferred history, title/type/custom-field events, or Git reconstruction.
+  write_scope:
+    - lifetxt/**
+    - tests/**
+    - docs/en/item-events.md
+    - docs/ja/item-events.md
+    - dist/schemas/item-event-v1.schema.json
+    - .ai/project/**
+  forbidden_scope:
+    - .ai/managed/**
+  shared_files:
+    - lifetxt/__init__.py
+    - lifetxt/cli.py
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+
+human_approvals_required:
+  - Repository owner review and Merge Authority approval; Codex must not merge.

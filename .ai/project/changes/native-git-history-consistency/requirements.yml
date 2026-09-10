@@ -1,0 +1,25 @@
+schema_version: 1
+
+requirements:
+  - id: req-native-git-history-consistency
+    kind: ADDED
+    statement: >-
+      Provide a bounded read-only semantic consistency verifier between Native
+      History declarations and Git-observed item transitions without elevating
+      either source over the other.
+    acceptance_criteria:
+      - Semantic projections, not raw line diffs or commit/event count equality, are compared.
+      - Results distinguish verified, native_only, git_only, conflict, and unverifiable.
+      - One commit may verify multiple Native events.
+      - Git-only changes are coverage gaps and Native-only changes remain valid evidence.
+      - Conflicts expose both Native and Git before/after evidence.
+      - Git-free, shallow, missing, truncated, malformed, and unsupported cases are explicit and never overstate completeness.
+      - Stable provenance is preferred where available and matching never relies only on timestamps.
+      - Text/JSON use the same result and no repair, backfill, or mutation occurs.
+      - Existing Timeline and historical thread semantics remain unchanged.
+    constraints:
+      - Do not make Git mandatory or infer Native events from Git.
+      - Do not add a merged Timeline or semantic as-of reconstruction.
+    owner: Eruhitsuji
+
+open_questions: []

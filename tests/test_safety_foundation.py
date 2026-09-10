@@ -257,6 +257,9 @@ class SafetyFoundationTests(unittest.TestCase):
         bundle = schema_bundle()
         expected = {
             "item-v1.schema.json",
+            "item-event-v1.schema.json",
+            "temporal-timeline-v1.schema.json",
+            "native-git-history-consistency-v1.schema.json",
             "diagnostic-v1.schema.json",
             "capability-v1.schema.json",
             "conflict-v1.schema.json",

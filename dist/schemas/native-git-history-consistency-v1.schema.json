@@ -1,0 +1,262 @@
+{
+  "$defs": {
+    "comparison": {
+      "additionalProperties": false,
+      "properties": {
+        "after": {},
+        "before": {},
+        "classification": {
+          "enum": [
+            "verified",
+            "native_only",
+            "git_only",
+            "conflict",
+            "unverifiable"
+          ]
+        },
+        "domain": {
+          "type": "string"
+        },
+        "field": {
+          "type": "string"
+        },
+        "git": {
+          "additionalProperties": false,
+          "properties": {
+            "after": {},
+            "after_commit": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "before": {},
+            "before_commit": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "source_path": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "source_revision": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "target": {}
+          },
+          "required": [
+            "before_commit",
+            "after_commit",
+            "source_path",
+            "source_revision",
+            "before",
+            "after",
+            "target"
+          ],
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "item_id": {
+          "type": "string"
+        },
+        "native": {
+          "additionalProperties": false,
+          "properties": {
+            "at": {
+              "type": "string"
+            },
+            "record_id": {
+              "type": "string"
+            },
+            "record_kind": {
+              "type": "string"
+            },
+            "sequence": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "source_revision": {
+              "type": "string"
+            },
+            "transaction": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "record_kind",
+            "record_id",
+            "transaction",
+            "source_revision",
+            "at",
+            "sequence"
+          ],
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "target": {}
+      },
+      "required": [
+        "classification",
+        "item_id",
+        "domain",
+        "field",
+        "before",
+        "after",
+        "target",
+        "native",
+        "git",
+        "reason"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/native-git-history-consistency-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "comparisons": {
+      "items": {
+        "$ref": "#/$defs/comparison"
+      },
+      "type": "array"
+    },
+    "complete": {
+      "type": "boolean"
+    },
+    "git_evidence": {
+      "additionalProperties": false,
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "commits_examined": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "head": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "history_complete": {
+          "type": "boolean"
+        },
+        "repo_root": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "available",
+        "repo_root",
+        "head",
+        "commits_examined",
+        "history_complete"
+      ],
+      "type": "object"
+    },
+    "item_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "limitations": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "native_evidence": {
+      "additionalProperties": false,
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "event_count": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "source": {
+          "const": "native_life_txt"
+        }
+      },
+      "required": [
+        "available",
+        "event_count",
+        "source"
+      ],
+      "type": "object"
+    },
+    "schema": {
+      "const": "native-git-history-consistency-v1"
+    },
+    "summary": {
+      "additionalProperties": false,
+      "properties": {
+        "conflict": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "git_only": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "native_only": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "unverifiable": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "verified": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "verified",
+        "native_only",
+        "git_only",
+        "conflict",
+        "unverifiable"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "schema",
+    "item_id",
+    "complete",
+    "limitations",
+    "native_evidence",
+    "git_evidence",
+    "summary",
+    "comparisons"
+  ],
+  "title": "lifetxt Native History and Git consistency v1",
+  "type": "object"
+}

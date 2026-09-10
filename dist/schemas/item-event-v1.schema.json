@@ -1,0 +1,236 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/item-event-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "event": {
+          "const": "created"
+        }
+      },
+      "required": [
+        "item_kind",
+        "item_title",
+        "after_status"
+      ]
+    },
+    {
+      "properties": {
+        "event": {
+          "const": "status_changed"
+        }
+      },
+      "required": [
+        "before_status",
+        "after_status"
+      ]
+    },
+    {
+      "properties": {
+        "event": {
+          "const": "completed"
+        }
+      },
+      "required": [
+        "before_status",
+        "after_status"
+      ]
+    },
+    {
+      "properties": {
+        "event": {
+          "const": "reopened"
+        }
+      },
+      "required": [
+        "before_status",
+        "after_status"
+      ]
+    },
+    {
+      "properties": {
+        "event": {
+          "const": "canceled"
+        }
+      },
+      "required": [
+        "before_status",
+        "after_status"
+      ]
+    },
+    {
+      "properties": {
+        "event": {
+          "const": "relation_added"
+        }
+      },
+      "required": [
+        "relation",
+        "target"
+      ]
+    },
+    {
+      "properties": {
+        "event": {
+          "const": "relation_removed"
+        }
+      },
+      "required": [
+        "relation",
+        "target"
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "oneOf": [
+            {
+              "required": [
+                "before"
+              ]
+            },
+            {
+              "required": [
+                "before_missing"
+              ]
+            }
+          ]
+        },
+        {
+          "oneOf": [
+            {
+              "required": [
+                "after"
+              ]
+            },
+            {
+              "required": [
+                "after_missing"
+              ]
+            }
+          ]
+        }
+      ],
+      "properties": {
+        "event": {
+          "const": "schedule_changed"
+        }
+      },
+      "required": [
+        "field"
+      ]
+    }
+  ],
+  "properties": {
+    "actor": {
+      "type": "string"
+    },
+    "after": {
+      "type": "string"
+    },
+    "after_missing": {
+      "const": true
+    },
+    "after_status": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "at": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "before": {
+      "type": "string"
+    },
+    "before_missing": {
+      "const": true
+    },
+    "before_status": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "completed_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "event": {
+      "enum": [
+        "created",
+        "status_changed",
+        "completed",
+        "reopened",
+        "canceled",
+        "relation_added",
+        "relation_removed",
+        "schedule_changed"
+      ]
+    },
+    "field": {
+      "enum": [
+        "on",
+        "due",
+        "from",
+        "to",
+        "at"
+      ]
+    },
+    "id": {
+      "pattern": "^IE-.+-[0-9]{6}$",
+      "type": "string"
+    },
+    "item_kind": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "item_title": {
+      "type": "string"
+    },
+    "parent": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "record": {
+      "const": "item_event"
+    },
+    "relation": {
+      "enum": [
+        "follows",
+        "realizes",
+        "replaced_by"
+      ]
+    },
+    "sequence": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "source": {
+      "type": "string"
+    },
+    "source_revision": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "target": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "transaction": {
+      "minLength": 1,
+      "type": "string"
+    }
+  },
+  "required": [
+    "record",
+    "id",
+    "parent",
+    "event",
+    "at",
+    "sequence",
+    "transaction",
+    "source_revision"
+  ],
+  "title": "lifetxt native item event v1",
+  "type": "object"
+}

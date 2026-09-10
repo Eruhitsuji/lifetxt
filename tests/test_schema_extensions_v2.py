@@ -24,9 +24,9 @@ def has_draft_2020_validator():
 
 
 class SchemaExtensionsV2Tests(unittest.TestCase):
-    def test_bundle_contains_eighty_one_generated_and_published_documents(self):
+    def test_bundle_contains_eighty_four_generated_and_published_documents(self):
         bundle = schema_bundle()
-        self.assertEqual(81, len(bundle))
+        self.assertEqual(84, len(bundle))
         for name, generated in bundle.items():
             path = os.path.join(ROOT, "dist", "schemas", name)
             self.assertTrue(os.path.exists(path), name)
@@ -39,8 +39,8 @@ class SchemaExtensionsV2Tests(unittest.TestCase):
         if optional["validator_available"]:
             strict = schema_validation_report(ROOT, require_validator=True)
             self.assertTrue(strict["ok"], strict)
-            self.assertEqual(81, strict["schema_count"])
-            self.assertEqual(81, strict["sample_count"])
+            self.assertEqual(84, strict["schema_count"])
+            self.assertEqual(84, strict["sample_count"])
             self.assertEqual(
                 "network-free referencing.Registry over published bundle",
                 strict["reference_resolution"],

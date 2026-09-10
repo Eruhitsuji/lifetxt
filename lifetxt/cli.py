@@ -1595,6 +1595,40 @@ def build_parser():
     temporal_command.add_argument("--json", action="store_true", help="Emit JSON.")
     temporal_command.set_defaults(func=command_temporal)
 
+    timeline_command = subparsers.add_parser(
+        "timeline",
+        help="Show one item's bounded native semantic history without Git composition.",
+    )
+    timeline_command.add_argument("id", help="Target item ID.")
+    _add_input_paths(timeline_command)
+    timeline_command.add_argument(
+        "--limit",
+        type=int,
+        default=100,
+        help="Maximum valid events returned (0-500). Default 100.",
+    )
+    timeline_command.add_argument("--json", action="store_true", help="Emit JSON.")
+    timeline_command.set_defaults(func=command_timeline)
+
+    history_check_command = subparsers.add_parser(
+        "history-check",
+        help="Verify Native History against bounded Git semantic evidence.",
+    )
+    _add_input_paths(history_check_command)
+    history_check_command.add_argument(
+        "--id", dest="item_id", help="Limit verification to one item ID."
+    )
+    history_check_command.add_argument(
+        "--commit-limit",
+        type=int,
+        default=100,
+        help="Maximum path-affecting Git commits examined (1-500). Default 100.",
+    )
+    history_check_command.add_argument(
+        "--json", action="store_true", help="Emit JSON."
+    )
+    history_check_command.set_defaults(func=command_history_check)
+
     thread_command = subparsers.add_parser(
         "thread",
         help="Show one item's explicit lifecycle thread plus derived temporal context.",
@@ -4665,8 +4699,12 @@ def command_check(args):
     config = _config(args)
     items, diagnostics = _parse_life_inputs(args.paths, config)
     from .progress_history import progress_history_diagnostics
+    from .native_history import item_event_history_diagnostics
 
     diagnostics = diagnostics + progress_history_diagnostics(
+        items, id_key=id_key_from_config(config)
+    )
+    diagnostics = diagnostics + item_event_history_diagnostics(
         items, id_key=id_key_from_config(config)
     )
     diagnostics = diagnostics + _attachment_diagnostics_for_check(items, config, args)
@@ -7356,14 +7394,37 @@ def command_quick(args):
 
     _ensure_writable_path(dest, config, "quick")
     _pre_write_backup(dest, config, "quick")
+    from .mutation import read_text_snapshot
+    from .native_history_mutation import commit_item_mutation_with_event
     from .write_operations import append_life_records
 
-    append_life_records(
-        dest,
-        line + "\n",
-        expected_revision=getattr(args, "revision", None),
-        operation="quick.capture",
-    )
+    item_ids = item.details.get(id_key_from_config(config)) or []
+    if item_ids:
+        snapshot = read_text_snapshot(dest, allow_missing=True)
+        expected = getattr(args, "revision", None) or snapshot.content_hash
+        prefix = (
+            ""
+            if not snapshot.text or snapshot.text.endswith(("\n", "\r"))
+            else snapshot.newline
+        )
+        replacement = snapshot.text + prefix + line + snapshot.newline
+        commit_item_mutation_with_event(
+            dest,
+            item_ids[0],
+            "created",
+            replacement,
+            expected,
+            id_key=id_key_from_config(config),
+            actor="local",
+            source="cli.quick",
+        )
+    else:
+        append_life_records(
+            dest,
+            line + "\n",
+            expected_revision=getattr(args, "revision", None),
+            operation="quick.capture",
+        )
     sys.stdout.write("%s\n" % line)
     if sys.stdout.isatty():
         sys.stdout.write(_render_success_guidance("quick", path=dest))
@@ -8178,6 +8239,38 @@ def command_clone(args):
 _REOPEN_RESET_DETAIL_KEYS = ("done",)
 
 
+def _commit_native_cli_replacement(
+    path,
+    original_text,
+    replacement_text,
+    target,
+    event_type,
+    id_key,
+    field=None,
+    relation_target=None,
+):
+    """Use native capture when stable identity exists; preserve legacy fallback."""
+    target_ids = target.details.get(id_key) or []
+    if not target_ids:
+        atomic_write_text(path, replacement_text)
+        return None
+    from .mutation import hash_text
+    from .native_history_mutation import commit_item_mutation_with_event
+
+    return commit_item_mutation_with_event(
+        path,
+        target_ids[0],
+        event_type,
+        replacement_text,
+        hash_text(original_text),
+        id_key=id_key,
+        actor="local",
+        source="cli",
+        field=field,
+        target=relation_target,
+    )
+
+
 def command_reopen(args):
     """Undo an item's completion (#664): remove completion-only metadata
     and restore the item to its existing kind-aware open/default status.
@@ -8251,7 +8344,9 @@ def command_reopen(args):
 
     _ensure_writable_path(path, config, "reopen")
     _pre_write_backup(path, config, "reopen")
-    atomic_write_text(path, updated_text)
+    _commit_native_cli_replacement(
+        path, text, updated_text, target, "reopened", id_key
+    )
     sys.stdout.write("Reopened: %s\n" % updated_line)
     if sys.stdout.isatty():
         sys.stdout.write(_render_success_guidance("reopen", path=path))
@@ -8345,7 +8440,9 @@ def command_due(args):
 
     _ensure_writable_path(path, config, "due")
     _pre_write_backup(path, config, "due")
-    atomic_write_text(path, updated_text)
+    _commit_native_cli_replacement(
+        path, text, updated_text, target, "schedule_changed", id_key, field="due"
+    )
     sys.stdout.write("Updated: %s\n" % updated_line)
     if sys.stdout.isatty():
         sys.stdout.write(_render_success_guidance("due", path=path))
@@ -8393,7 +8490,9 @@ def command_done(args):
 
     _ensure_writable_path(path, config, "done")
     _pre_write_backup(path, config, "done")
-    atomic_write_text(path, updated_text)
+    _commit_native_cli_replacement(
+        path, text, updated_text, target, "completed", id_key
+    )
     sys.stdout.write(_t("done.done", line=updated_line) + "\n")
     if sys.stdout.isatty():
         sys.stdout.write(_render_success_guidance("done", path=path))
@@ -8526,7 +8625,9 @@ def command_complete(args):
             return 0
         _ensure_writable_path(path, config, "complete")
         _pre_write_backup(path, config, "complete")
-        atomic_write_text(path, updated_text)
+        _commit_native_cli_replacement(
+            path, text, updated_text, target, "completed", id_key
+        )
         sys.stdout.write(_t("done.done", line=updated_line) + "\n")
         if sys.stdout.isatty():
             sys.stdout.write(_render_success_guidance("complete", path=path))
@@ -8552,7 +8653,9 @@ def command_complete(args):
             return 0
         _ensure_writable_path(path, config, "complete")
         _pre_write_backup(path, config, "complete")
-        atomic_write_text(path, updated_text)
+        _commit_native_cli_replacement(
+            path, text, updated_text, target, "completed", id_key
+        )
         sys.stdout.write("Completed (series ended): %s\n" % updated_line)
         return 0
 
@@ -8601,7 +8704,34 @@ def command_complete(args):
 
     _ensure_writable_path(path, config, "complete")
     _pre_write_backup(path, config, "complete")
-    atomic_write_text(path, final_text)
+    target_ids = target.details.get(id_key) or []
+    new_ids = new_item.details.get(id_key) or []
+    if target_ids and new_ids:
+        from .mutation import hash_text
+        from .native_history_mutation import commit_item_mutations_with_events
+
+        commit_item_mutations_with_events(
+            path,
+            final_text,
+            hash_text(text),
+            [
+                {
+                    "item_id": target_ids[0],
+                    "event_type": "completed",
+                    "actor": "local",
+                    "source": "cli.complete",
+                },
+                {
+                    "item_id": new_ids[0],
+                    "event_type": "created",
+                    "actor": "local",
+                    "source": "cli.complete",
+                },
+            ],
+            id_key=id_key,
+        )
+    else:
+        atomic_write_text(path, final_text)
     sys.stdout.write("Completed: %s\n" % updated_line)
     sys.stdout.write("Next: %s\n" % new_line)
     return 0
@@ -13656,6 +13786,150 @@ def command_temporal(args):
                     edge["target"]["title"],
                 ),
             )
+    return 0
+
+
+def command_timeline(args):
+    from .native_timeline import native_timeline
+
+    config = _config(args)
+    paths = _normalize_paths(
+        getattr(args, "paths", None), config, stdin_when_empty=False
+    ) or ["life.txt"]
+    items, _diagnostics = _parse_or_exit(paths, config)
+    try:
+        result = native_timeline(
+            items,
+            args.id,
+            id_key=id_key_from_config(config),
+            limit=getattr(args, "limit", 100),
+        )
+    except ValueError as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
+    if getattr(args, "json", False):
+        write_text(None, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+        return 0
+    write_text(
+        None,
+        "Native Timeline for %s (%s):\n"
+        % (result["target_id"], result["target"]["title"]),
+    )
+    write_text(
+        None,
+        "  Coverage: %s; complete:%s; events:%d/%d\n"
+        % (
+            result["completeness"]["item"]["coverage"],
+            str(result["complete"]).lower(),
+            result["bounds"]["returned_events"],
+            result["bounds"]["total_valid_events"],
+        ),
+    )
+    for event in result["events"]:
+        write_text(
+            None,
+            "  %s  %s  %s:%s  seq:%s\n"
+            % (
+                event["at"] or "(no time)",
+                event["event"],
+                event["record_kind"],
+                event["record_id"],
+                event["sequence"] if event["sequence"] is not None else "?",
+            ),
+        )
+    if result["invalid_events"]:
+        write_text(
+            None,
+            "  Invalid events excluded: %d\n" % len(result["invalid_events"]),
+        )
+    for diagnostic in result["diagnostics"]:
+        write_text(
+            None,
+            "  Warning %s: %s\n" % (diagnostic["code"], diagnostic["message"]),
+        )
+    if result["limitations"]:
+        write_text(None, "  Limitations: %s\n" % ", ".join(result["limitations"]))
+    return 0
+
+
+def command_history_check(args):
+    from .history_consistency import verify_history_consistency
+
+    config = _config(args)
+    paths = _normalize_paths(
+        getattr(args, "paths", None), config, stdin_when_empty=False
+    ) or ["life.txt"]
+    items, _diagnostics = _parse_or_exit(paths, config)
+    try:
+        result = verify_history_consistency(
+            items,
+            paths,
+            id_key=id_key_from_config(config),
+            item_id=getattr(args, "item_id", None),
+            commit_limit=getattr(args, "commit_limit", 100),
+        )
+    except ValueError as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
+    if getattr(args, "json", False):
+        write_text(None, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+        return 0
+    write_text(
+        None,
+        "History consistency%s:\n"
+        % (" for %s" % result["item_id"] if result["item_id"] else ""),
+    )
+    write_text(
+        None,
+        "  Native history: %s (%d event(s))\n"
+        % (
+            "available" if result["native_evidence"]["available"] else "unavailable",
+            result["native_evidence"]["event_count"],
+        ),
+    )
+    write_text(
+        None,
+        "  Git evidence: %s (%d commit(s); complete:%s)\n"
+        % (
+            "available" if result["git_evidence"]["available"] else "unavailable",
+            result["git_evidence"]["commits_examined"],
+            str(result["git_evidence"]["history_complete"]).lower(),
+        ),
+    )
+    for name in (
+        "verified",
+        "native_only",
+        "git_only",
+        "conflict",
+        "unverifiable",
+    ):
+        write_text(None, "  %-13s %d\n" % (name + ":", result["summary"][name]))
+    for row in result["comparisons"]:
+        write_text(
+            None,
+            "  [%s] %s %s.%s %s -> %s%s\n"
+            % (
+                row["classification"],
+                row["item_id"],
+                row["domain"],
+                row["field"],
+                row["before"],
+                row["after"],
+                " (%s)" % row["reason"] if row["reason"] else "",
+            ),
+        )
+        if row["classification"] == "conflict" and row["git"]:
+            write_text(
+                None,
+                "    Git: %s -> %s at %s\n"
+                % (
+                    row["git"]["before"],
+                    row["git"]["after"],
+                    row["git"]["after_commit"],
+                ),
+            )
+    if result["limitations"]:
+        write_text(None, "  Limitations: %s\n" % ", ".join(result["limitations"]))
     return 0
 
 

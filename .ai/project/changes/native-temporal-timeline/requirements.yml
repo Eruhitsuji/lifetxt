@@ -1,0 +1,22 @@
+schema_version: 1
+
+requirements:
+  - id: req-native-temporal-timeline
+    kind: ADDED
+    statement: >-
+      Provide a bounded Git-independent Timeline over the normalized Native
+      History contract with explicit validity and completeness.
+    acceptance_criteria:
+      - All four native record kinds retain original kind, ID, meaning, time, sequence, provenance, and validity.
+      - Ordering and bounds are deterministic and truncation is explicit.
+      - Malformed evidence is separated with diagnostics and never completes a claim.
+      - Missing creation and domain coverage remain readable partial evidence.
+      - CLI text and JSON use the same surface-neutral result.
+      - temporal-timeline-v1 is published and documented in English and Japanese.
+      - Git availability does not change Timeline output or existing thread command semantics.
+    constraints:
+      - Do not compose Git or add write behavior.
+      - Do not add TUI, Web, API, or MCP surfaces.
+    owner: Eruhitsuji
+
+open_questions: []

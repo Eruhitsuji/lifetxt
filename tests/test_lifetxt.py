@@ -4071,7 +4071,7 @@ class LifeTxtReopenCliTests(unittest.TestCase):
             self.assertEqual(0, code, stderr)
             stdout, stderr, code = run_cli("check", path)
             self.assertEqual(0, code, stderr)
-            self.assertIn("OK: 1 item(s)", stdout)
+            self.assertIn("OK: 2 item(s)", stdout)
 
 
 class LifeTxtDueCliTests(unittest.TestCase):
@@ -4261,7 +4261,7 @@ class LifeTxtDueCliTests(unittest.TestCase):
             self.assertEqual(0, code, stderr)
             stdout, stderr, code = run_cli("check", path)
             self.assertEqual(0, code, stderr)
-            self.assertIn("OK: 1 item(s)", stdout)
+            self.assertIn("OK: 2 item(s)", stdout)
 
 
 class LifeTxtDoneHabitCliTests(unittest.TestCase):
@@ -4340,7 +4340,11 @@ class LifeTxtCompleteCliTests(unittest.TestCase):
             self.assertIn("Next:", stdout)
             with open(path, encoding="utf-8") as f:
                 content = f.read()
-            lines = [line for line in content.splitlines() if line.strip()]
+            lines = [
+                line
+                for line in content.splitlines()
+                if line.strip() and "record:item_event" not in line
+            ]
             self.assertEqual(2, len(lines))
             self.assertIn("[x] T Water_plants", lines[0])
             self.assertIn("done:2026-07-08", lines[0])
@@ -4371,7 +4375,11 @@ class LifeTxtCompleteCliTests(unittest.TestCase):
             self.assertEqual(0, code, stderr)
             with open(path, encoding="utf-8") as f:
                 content = f.read()
-            lines = [line for line in content.splitlines() if line.strip()]
+            lines = [
+                line
+                for line in content.splitlines()
+                if line.strip() and "record:item_event" not in line
+            ]
             self.assertEqual(1, len(lines))
             self.assertIn("[x] T Standalone", lines[0])
 
@@ -4388,7 +4396,11 @@ class LifeTxtCompleteCliTests(unittest.TestCase):
             self.assertIn("series ended", stdout.lower())
             with open(path, encoding="utf-8") as f:
                 content = f.read()
-            lines = [line for line in content.splitlines() if line.strip()]
+            lines = [
+                line
+                for line in content.splitlines()
+                if line.strip() and "record:item_event" not in line
+            ]
             self.assertEqual(1, len(lines))
             self.assertIn("[x] T Series", lines[0])
 

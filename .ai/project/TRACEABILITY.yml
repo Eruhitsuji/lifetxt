@@ -11745,6 +11745,90 @@ traceability:
         into #713 (contract/adapters), #714 (atomic capture), and #715 (timeline).
       status: investigated
 
+    - requirement_id: req-native-item-event-v1
+      capability_id: cap-native-semantic-history
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/713
+      pull_request: null
+      changed_files_or_scope:
+        - Closed record:item_event v1 builder and validators
+        - Per-parent ordering, chronology, continuity, and completeness diagnostics
+        - Non-migrating progress, ticket, and time-entry normalization adapters
+        - Remote parent access inheritance and item-event-v1 schema
+      tests_or_evidence:
+        - tests/test_native_history.py
+        - tests/test_generated_record_capture_compat.py
+        - tests/test_remote_backend_v20.py
+        - dist/schemas/item-event-v1.schema.json
+      release_or_deployment: next normal maintenance release
+      notes: >-
+        Additive Note records only. No migration, backfill, mutation capture,
+        Timeline surface, or Git history behavior is included in #713.
+      status: implemented
+
+    - requirement_id: req-atomic-native-history-capture
+      capability_id: cap-native-semantic-history
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/714
+      pull_request: null
+      changed_files_or_scope:
+        - Shared exact-revision before/after event producer
+        - Atomic quick/start/done/complete/reopen/due capture for stable-ID items
+        - Typed cancellation and relation producer routes
+        - Preserved dry-run/stale refusal and specialized ticket/progress histories
+      tests_or_evidence:
+        - tests/test_native_history_mutation.py
+        - tests/test_work_session_v4.py
+        - tests/test_progress_history.py
+        - tests/test_ticket_workflow_history.py
+      release_or_deployment: next normal maintenance release
+      notes: >-
+        ID-less and unsupported generic/manual changes remain valid with partial
+        history; no inferred event or migration is introduced.
+      status: implemented
+
+    - requirement_id: req-native-temporal-timeline
+      capability_id: cap-native-semantic-history
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/715
+      pull_request: null
+      changed_files_or_scope:
+        - Deterministic bounded Timeline over four normalized native record kinds
+        - Separate invalid evidence, diagnostics, limitations, and per-domain completeness
+        - Shared lifetxt timeline text/JSON result and temporal-timeline-v1 schema
+        - Explicitly no Git composition or change to historical thread commands
+      tests_or_evidence:
+        - tests/test_native_timeline.py
+        - dist/schemas/temporal-timeline-v1.schema.json
+        - docs/en/native-timeline.md
+        - docs/ja/native-timeline.md
+      release_or_deployment: next normal maintenance release
+      notes: >-
+        Bounded read-only CLI slice. TUI/Web/API/MCP and semantic native-event
+        as-of reconstruction remain outside scope.
+      status: implemented
+
+    - requirement_id: req-native-git-history-consistency
+      capability_id: cap-native-semantic-history
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/717
+      pull_request: null
+      changed_files_or_scope:
+        - Bounded semantic transition projection from adjacent Git revisions
+        - Native/Git verified, native-only, git-only, conflict, and unverifiable classification
+        - Git-free/shallow/missing/truncated evidence limitations
+        - Shared history-check text/JSON and versioned public schema
+      tests_or_evidence:
+        - tests/test_history_consistency.py
+        - dist/schemas/native-git-history-consistency-v1.schema.json
+        - docs/en/native-git-history-consistency.md
+        - docs/ja/native-git-history-consistency.md
+      release_or_deployment: next normal maintenance release
+      notes: >-
+        Read-only verifier only. It performs no source replacement, repair,
+        backfill, Git mutation, raw text comparison, or Timeline composition.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

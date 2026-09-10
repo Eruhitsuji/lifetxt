@@ -94,6 +94,7 @@ def start_work_transaction(
     def life_transform(text):
         replacement = text
         current = find_item_in_text(replacement, item_id, key, path)
+        status_changed = current.status == "[ ]"
         if current.status == "[ ]":
             replacement = transform_items_text(
                 replacement, [{"id": item_id, "status": "[/]"}], id_key=key
@@ -112,6 +113,20 @@ def start_work_transaction(
             opened["line"] = transition.opened
             opened["closed"] = list(transition.closed or [])
             replacement = transition.text
+        if status_changed:
+            from .native_history_mutation import augment_item_mutation_with_event
+
+            replacement, _after, _event = augment_item_mutation_with_event(
+                text,
+                replacement,
+                item_id,
+                "status_changed",
+                item_expected,
+                id_key=key,
+                actor="local",
+                source="work.start",
+                at=timezone_now(),
+            )
         return replacement
 
     plans.append(
@@ -215,6 +230,20 @@ def stop_work_transaction(
             )
             closed["rows"] = list(transition.closed or [])
             replacement = transition.text
+        if done and item.status != "[x]":
+            from .native_history_mutation import augment_item_mutation_with_event
+
+            replacement, _after, _event = augment_item_mutation_with_event(
+                text,
+                replacement,
+                item_id,
+                "completed",
+                item_expected,
+                id_key=key,
+                actor="local",
+                source="work.stop",
+                at=timezone_now(),
+            )
         return replacement
 
     result = apply_multi_target(

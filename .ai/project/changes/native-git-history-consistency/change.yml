@@ -1,0 +1,30 @@
+schema_version: 1
+
+change:
+  id: native-git-history-consistency
+  title: Native History and Git semantic consistency verifier
+  status: implemented
+  change_type: Feature
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/717
+  related_pull_request: null
+  base_commit: 674f71e
+  target_release: next normal maintenance release
+
+scope:
+  in_scope:
+    - Compare normalized Native events with bounded adjacent Git semantic transitions.
+    - Classify verified, native_only, git_only, conflict, and unverifiable evidence.
+    - Support creation, status, progress, lifecycle relations, and schedule fields.
+    - Expose shared text/JSON through history-check with an explicit commit bound.
+    - Report Git-free, shallow, missing-path, malformed, and unsupported limitations.
+  out_of_scope:
+    - Source replacement, repair, backfill, Git mutation, raw text comparison, or merged Timeline.
+  write_scope: [lifetxt/**, tests/**, docs/**, dist/schemas/**, .ai/project/**]
+  forbidden_scope: [.ai/managed/**]
+  shared_files: [lifetxt/cli.py, lifetxt/__init__.py, .ai/project/CAPABILITIES.yml, .ai/project/TRACEABILITY.yml]
+
+human_approvals_required:
+  - Repository owner review and Merge Authority approval; Codex must not merge.

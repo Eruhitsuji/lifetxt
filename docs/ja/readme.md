@@ -48,6 +48,8 @@
 | Messaging and notifications | [messaging.md](./messaging.md) |
 | New CLI workflows | [new-cli-workflows.md](./new-cli-workflows.md) |
 | Native semantic history design | [native-semantic-history.md](./native-semantic-history.md) |
+| Native Temporal Timeline | [native-timeline.md](./native-timeline.md) |
+| Native History / Git consistency | [native-git-history-consistency.md](./native-git-history-consistency.md) |
 | People, teams, groups | [people.md](./people.md) |
 | Philosophy and long-term vision | [philosophy.md](./philosophy.md) |
 | Process boundaries and transaction admin | [process-boundaries-attachments-and-transaction-admin.md](./process-boundaries-attachments-and-transaction-admin.md) |

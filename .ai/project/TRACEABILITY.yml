@@ -11719,6 +11719,32 @@ traceability:
         history are not selection evidence.
       status: implemented
 
+    - requirement_id: req-lifetxt-native-temporal-history-contract
+      capability_id: cap-native-semantic-history
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/712
+      pull_request: null
+      changed_files_or_scope:
+        - Adopt native semantic history as a core concept with optional evidence
+        - Select record:item_event common envelope plus closed typed payloads
+        - Preserve progress/ticket event contracts through normalization adapters
+        - Define source-specific authority, ordering, completeness, and disagreement behavior
+        - Keep native Temporal Timeline distinct from Git-backed Historical Temporal Thread
+        - docs/en/native-semantic-history.md
+        - docs/ja/native-semantic-history.md
+      tests_or_evidence:
+        - docs/en/native-semantic-history.md
+        - docs/ja/native-semantic-history.md
+        - .ai/project/changes/native-semantic-history-contract/decisions.md
+      release_or_deployment: null
+      notes: >-
+        High-assurance design investigation only. No runtime format, writer,
+        schema, command, migration, or backfill is added. The repository owner
+        must approve the proposed vocabulary and authority model before follow-up
+        implementation freezes a public contract. Implementation is decomposed
+        into #713 (contract/adapters), #714 (atomic capture), and #715 (timeline).
+      status: investigated
+
 required_chain:
   - Requirement
   - Capability

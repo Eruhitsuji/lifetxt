@@ -1,0 +1,56 @@
+schema_version: 1
+
+verification:
+  executed:
+    - type: documentation
+      command: python scripts/validate_release_docs.py --output .cache/release-doc-validation.json
+      requirement_ids:
+        - req-lifetxt-native-temporal-history-contract
+      result: '{"errors": 0, "ok": true}'
+      commit: working-tree
+      executed_at: '2026-09-10'
+      status: passed
+    - type: registry
+      command: python -m unittest tests.test_schema_extensions_v2.RealCapabilitySchemaTests tests.test_traceability_gate tests.test_change_package_closeout
+      requirement_ids:
+        - req-lifetxt-native-temporal-history-contract
+      result: Ran 19 tests, OK (skipped=2 optional Web/schema dependency tests)
+      commit: working-tree
+      executed_at: '2026-09-10'
+      status: passed
+    - type: smoke
+      command: python -m lifetxt check examples/minimal_life.txt
+      requirement_ids:
+        - req-lifetxt-native-temporal-history-contract
+      result: 'OK: 10 item(s)'
+      commit: working-tree
+      executed_at: '2026-09-10'
+      status: passed
+    - type: regression
+      command: MPLBACKEND=Agg python -m unittest discover
+      requirement_ids:
+        - req-lifetxt-native-temporal-history-contract
+      result: Ran 4082 tests in 193.447s, OK (skipped=199)
+      commit: working-tree
+      executed_at: '2026-09-10'
+      status: passed
+    - type: whitespace
+      command: git diff --check
+      requirement_ids: []
+      result: clean
+      commit: working-tree
+      executed_at: '2026-09-10'
+      status: passed
+
+review_ledger:
+  - reviewer: Codex investigator self-review
+    review_type: requirements/design/data-integrity/compatibility/security pre-PR review
+    target_commit: working-tree
+    result: passed-with-human-contract-approval-required
+    finding_count: 0
+    completed_at: '2026-09-10'
+
+release_evidence:
+  migration_notes: Design-only change; existing files and records are unchanged.
+  rollback_plan: Revert the documentation and project records; no user data changes.
+  operations_evidence: []

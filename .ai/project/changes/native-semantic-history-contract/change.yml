@@ -1,0 +1,48 @@
+schema_version: 1
+
+change:
+  id: native-semantic-history-contract
+  title: lifetxt-native semantic history authority and contract
+  status: proposed
+  change_type: Investigation
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/712
+  related_pull_request: []
+  base_commit: 17d8fcb
+  target_release: null
+
+scope:
+  in_scope:
+    - Define the role boundary between native semantic events, current state, and Git revision evidence.
+    - Compare generic, typed, and hybrid event models and select a compatible direction.
+    - Define first-slice event boundaries, completeness, provenance, ordering, and malformed-event behavior.
+    - Define the non-overlapping direction for Temporal Timeline and Historical Temporal Thread.
+    - Decompose implementation into small follow-up issues.
+  out_of_scope:
+    - Runtime implementation, schemas, commands, or mutation writers.
+    - Migration or backfill of existing files and event records.
+    - Replacement of Git-backed historical reconstruction.
+  write_scope:
+    - docs/en/native-semantic-history.md
+    - docs/ja/native-semantic-history.md
+    - docs/en/readme.md
+    - docs/ja/readme.md
+    - docs/en/historical-as-of-semantics.md
+    - docs/ja/historical-as-of-semantics.md
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+    - .ai/project/changes/native-semantic-history-contract/**
+  forbidden_scope:
+    - lifetxt/**
+    - tests/**
+    - dist/schemas/**
+    - .ai/managed/**
+  shared_files:
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+
+human_approvals_required:
+  - Repository owner approval of the item_event vocabulary and authority model through pull-request review.
+  - Merge Authority approval; the investigating AI must not merge this pull request.

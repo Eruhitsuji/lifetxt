@@ -50,5 +50,7 @@ resolution supplies the requested path manifest; untracked, generated, and
 external sources are never inferred into a historical result. Git history
 rewrite is not treated as independently verifiable truth, and a shallow clone
 cannot claim complete selection history. Non-Git reconstruction still requires
-a separately reviewed append-only history contract. TUI/API/MCP historical
-surfaces remain future work.
+runtime implementation of the separately reviewed native-history design in
+[native-semantic-history.md](native-semantic-history.md). That design keeps the
+first native read model timeline-only; it does not authorize general semantic
+as-of reconstruction. TUI/API/MCP historical surfaces remain future work.

@@ -1,0 +1,29 @@
+schema_version: 1
+
+change:
+  id: native-temporal-timeline
+  title: Bounded native Temporal Timeline
+  status: implemented
+  change_type: Feature
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/715
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/718
+  base_commit: 554eea9
+  target_release: next normal maintenance release
+
+scope:
+  in_scope:
+    - Build a bounded deterministic Timeline from all normalized Native History kinds.
+    - Preserve original identity, meaning, time, sequence, provenance, validity, and per-domain completeness.
+    - Expose one surface-neutral result through CLI text and temporal-timeline-v1 JSON.
+    - Separate malformed records with diagnostics and explicit limitations.
+  out_of_scope:
+    - Git composition, as-of reconstruction, mutation, TUI, Web, API, or MCP surfaces.
+  write_scope: [lifetxt/**, tests/**, docs/**, dist/schemas/**, .ai/project/**]
+  forbidden_scope: [.ai/managed/**]
+  shared_files: [lifetxt/cli.py, lifetxt/__init__.py, .ai/project/CAPABILITIES.yml, .ai/project/TRACEABILITY.yml]
+
+human_approvals_required:
+  - Repository owner review and Merge Authority approval; Codex must not merge.

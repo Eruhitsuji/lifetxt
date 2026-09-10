@@ -285,6 +285,12 @@ class RemoteTicketHistoryPrivacyTests(unittest.TestCase):
                 "transaction:PTX-TK-2-000001 source_revision:"
                 + "a" * 64
                 + " operation:set before_missing:true after_progress:25%\n"
+                "[N] N Private_item_event record:item_event "
+                "id:IE-TK-2-000001 parent:TK-2 event:created "
+                "at:2026-01-01T00:00:00Z sequence:1 transaction:ITX-TK-2-000001 "
+                "source_revision:"
+                + "b" * 64
+                + " item_kind:T item_title:Private_ticket after_status:[ ]\n"
                 "[N] N Orphan_event record:ticket_event id:EV-3 "
                 "parent:TK-DOES-NOT-EXIST event:created author:local "
                 "at:2026-01-01T00:00:00Z sequence:1 transaction:tx3 "
@@ -324,6 +330,7 @@ class RemoteTicketHistoryPrivacyTests(unittest.TestCase):
         self.assertNotIn("EV-2", ids)
         self.assertNotIn("TIME-2", ids)
         self.assertNotIn("PE-TK-2-000001", ids)
+        self.assertNotIn("IE-TK-2-000001", ids)
 
     def test_private_tickets_history_is_visible_to_its_owner(self):
         result = read_resource("items", [self.path], self.config, self.bob)
@@ -332,6 +339,7 @@ class RemoteTicketHistoryPrivacyTests(unittest.TestCase):
         self.assertIn("EV-2", ids)
         self.assertIn("TIME-2", ids)
         self.assertIn("PE-TK-2-000001", ids)
+        self.assertIn("IE-TK-2-000001", ids)
 
     def test_unresolved_parent_falls_back_to_the_notes_own_default(self):
         # EV-3's parent: does not exist; it must not be silently dropped

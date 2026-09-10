@@ -179,9 +179,10 @@ capabilities:
       human-meaningful operations captured in append-only life.txt Notes as
       native semantic history, current life.txt as present-state authority,
       and Git as independent exact-revision evidence. Existing progress and
-      ticket history remain typed specializations; a common item-event
-      envelope and native Temporal Timeline are approved design targets but
-      are not yet implemented.
+      ticket history remain typed specializations. The common item-event
+      envelope, compatibility adapters, and selected atomic capture routes are
+      implemented together with a bounded native Temporal Timeline and an
+      optional read-only Git semantic consistency verifier.
     status: active
     owner: Eruhitsuji
     source_requirements:
@@ -192,17 +193,32 @@ capabilities:
       - docs/ja/native-semantic-history.md
       - lifetxt/progress_history.py
       - lifetxt/ticket_activity.py
+      - lifetxt/native_history.py
+      - lifetxt/native_history_mutation.py
+      - lifetxt/native_timeline.py
+      - lifetxt/history_consistency.py
       - docs/en/historical-as-of-semantics.md
       - docs/ja/historical-as-of-semantics.md
     public_interfaces:
       - record:progress_event append-only history contract
       - record:ticket_event append-only history contract
       - native semantic history authority and compatibility design
+      - record:item_event v1 append-only history contract
+      - item-event-v1 JSON Schema
+      - exact-revision compound item mutation and event capture
+      - lifetxt timeline bounded text/JSON read surface
+      - temporal-timeline-v1 JSON Schema
+      - lifetxt history-check bounded text/JSON verifier
+      - native-git-history-consistency-v1 JSON Schema
     tests_or_evidence:
       - docs/en/native-semantic-history.md authority, compatibility, completeness, and read-model decision
       - docs/ja/native-semantic-history.md equivalent Japanese decision
       - tests/test_progress_history.py existing progress-chain validation evidence
       - tests/test_ticket_workflow_history.py existing ticket-event validation evidence
+      - tests/test_native_history.py item-event validation, completeness, and adapter evidence
+      - tests/test_native_history_mutation.py atomic capture and refusal evidence
+      - tests/test_native_timeline.py deterministic bounds, diagnostics, and CLI evidence
+      - tests/test_history_consistency.py semantic match/conflict/gap/Git limitation evidence
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/697
       - https://github.com/Eruhitsuji/lifetxt/issues/702
@@ -216,6 +232,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/pull/698
       - https://github.com/Eruhitsuji/lifetxt/pull/705
       - https://github.com/Eruhitsuji/lifetxt/pull/711
+      - https://github.com/Eruhitsuji/lifetxt/pull/718
     reuse_policy: >-
       Reuse normal Note records, existing exact-revision mutation paths,
       specialized progress/ticket validators, parent access inheritance, and
@@ -223,10 +240,13 @@ capabilities:
       inferred backfill, or duplicate Git revision reconstruction.
     notes: >-
       Investigation #712 selects a common record:item_event envelope with a
-      closed typed payload registry for future ordinary-item lifecycle events.
-      History remains optional, and completeness is evaluated per item and
-      semantic domain. Implementation is intentionally deferred to #713-#715,
-      which require High-assurance data-integrity review.
+      closed typed payload registry for ordinary-item lifecycle events; #713
+      implements that envelope, validators, adapters, and access inheritance;
+      #714 implements selected atomic capture routes. History remains optional,
+      and completeness is evaluated per item and semantic domain. #715 adds a
+      bounded Git-independent Timeline without changing exact-revision thread
+      commands. #717 composes Native normalization with bounded Git semantic
+      transitions only for verification; neither source replaces the other.
     replacement:
       replaces: []
       replaced_by: null

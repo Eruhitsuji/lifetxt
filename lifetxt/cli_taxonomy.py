@@ -278,6 +278,8 @@ CATEGORIES = OrderedDict(
                     "inbox",
                     "health",
                     "temporal",
+                    "timeline",
+                    "history-check",
                     "thread",
                     "freebusy",
                     "count",

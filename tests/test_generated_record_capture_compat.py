@@ -7,6 +7,7 @@ import unittest
 
 from lifetxt import entrypoint
 from lifetxt.ids import id_audit
+from lifetxt.native_history import build_item_event
 from lifetxt.parser import parse_text
 from lifetxt.progress_history import build_progress_event
 from lifetxt.serializer import item_to_line
@@ -94,6 +95,20 @@ class GeneratedRecordValidationTests(unittest.TestCase):
             1,
             "PTX-task-1-000001",
             "a" * 64,
+        )
+        self.assertNotIn("W106", self._codes(item_to_line(event) + "\n"))
+
+    def test_item_event_owned_fields_do_not_emit_w106(self):
+        event = build_item_event(
+            "task-1",
+            "schedule_changed",
+            "2026-09-10T09:00:00Z",
+            1,
+            "ITX-task-1-000001",
+            "a" * 64,
+            field="due",
+            before_missing=True,
+            after="2026-09-11",
         )
         self.assertNotIn("W106", self._codes(item_to_line(event) + "\n"))
 

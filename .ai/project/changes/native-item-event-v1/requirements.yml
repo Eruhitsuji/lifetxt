@@ -1,0 +1,24 @@
+schema_version: 1
+
+requirements:
+  - id: req-native-item-event-v1
+    kind: ADDED
+    statement: >-
+      Provide a closed, human-readable native event contract and non-migrating
+      adapters for all existing semantic history record kinds.
+    acceptance_criteria:
+      - Builders emit stable identity, ordering, transaction, time, and revision provenance.
+      - Only the approved event, relation, schedule, and payload vocabularies are accepted.
+      - Invalid identities, sequences, chronology, continuity, and current-state agreement are diagnosed.
+      - Streams without creation evidence remain readable but cannot claim completeness.
+      - Adapters retain original record kind and ID for item, progress, ticket, and time-entry records.
+      - Existing files and specialized record formats remain byte-compatible and require no migration.
+      - Remote Safe Mode history records inherit the resolved parent's access tuple.
+      - The public schema and English/Japanese format documentation are published.
+    constraints:
+      - Do not synthesize or backfill history.
+      - Do not capture mutations or add Timeline presentation in this slice.
+      - Do not add arbitrary title, type, or custom-field event payloads.
+    owner: Eruhitsuji
+
+open_questions: []

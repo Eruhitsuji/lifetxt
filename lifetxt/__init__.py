@@ -213,6 +213,24 @@ from .schema_extensions_v27 import (
 
 _install_schema_extensions_v27()
 del _install_schema_extensions_v27
+from .schema_extensions_v28 import (
+    install_schema_extensions_v28 as _install_schema_extensions_v28,
+)
+
+_install_schema_extensions_v28()
+del _install_schema_extensions_v28
+from .schema_extensions_v29 import (
+    install_schema_extensions_v29 as _install_schema_extensions_v29,
+)
+
+_install_schema_extensions_v29()
+del _install_schema_extensions_v29
+from .schema_extensions_v30 import (
+    install_schema_extensions_v30 as _install_schema_extensions_v30,
+)
+
+_install_schema_extensions_v30()
+del _install_schema_extensions_v30
 from .remote_web import install_remote_web as _install_remote_web
 
 _install_remote_web()

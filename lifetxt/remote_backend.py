@@ -78,7 +78,12 @@ def _list(details, *keys):
     return values
 
 
-_HISTORY_RECORD_KINDS = ("ticket_event", "time_entry", "progress_event")
+_HISTORY_RECORD_KINDS = (
+    "ticket_event",
+    "time_entry",
+    "progress_event",
+    "item_event",
+)
 
 
 def _access_tuple(details):
@@ -93,7 +98,7 @@ def _access_tuple(details):
 def _access_for_item(item, id_index=None):
     """Return the access tuple used for a Remote Safe Mode permission check.
 
-    A ticket_event/time_entry/progress_event Note carries no visibility or
+    A ticket_event/time_entry/progress_event/item_event Note carries no visibility or
     owner of its own, so without this it falls back to the default ("shared",
     no owner) regardless of its parent's privacy. It inherits the parent's
     tuple instead, one hop only, and only when parent: resolves to exactly one

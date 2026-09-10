@@ -1,0 +1,22 @@
+schema_version: 1
+
+links:
+  - requirement_id: req-lifetxt-native-temporal-history-contract
+    capability_id: cap-native-semantic-history
+    epic: null
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/712
+    pull_request: null
+    tests_or_evidence:
+      - docs/en/native-semantic-history.md
+      - docs/ja/native-semantic-history.md
+      - .ai/project/changes/native-semantic-history-contract/decisions.md
+    release_or_deployment: null
+    status: investigated
+
+gaps:
+  - description: The generic item-event contract and normalization adapters are not implemented by the investigation.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/713
+  - description: Selected lifecycle mutation capture is not implemented by the investigation.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/714
+  - description: The bounded native Temporal Timeline is not implemented by the investigation.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/715

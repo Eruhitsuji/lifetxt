@@ -172,6 +172,66 @@ capabilities:
       replaced_by: null
       deprecation_issue: null
 
+  - id: cap-native-semantic-history
+    name: Native human-readable semantic history
+    summary: >-
+      A source-specific authority and compatibility contract that treats
+      human-meaningful operations captured in append-only life.txt Notes as
+      native semantic history, current life.txt as present-state authority,
+      and Git as independent exact-revision evidence. Existing progress and
+      ticket history remain typed specializations; a common item-event
+      envelope and native Temporal Timeline are approved design targets but
+      are not yet implemented.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-lifetxt-native-temporal-history-contract
+      - req-progress-event-history
+    implementation_locations:
+      - docs/en/native-semantic-history.md
+      - docs/ja/native-semantic-history.md
+      - lifetxt/progress_history.py
+      - lifetxt/ticket_activity.py
+      - docs/en/historical-as-of-semantics.md
+      - docs/ja/historical-as-of-semantics.md
+    public_interfaces:
+      - record:progress_event append-only history contract
+      - record:ticket_event append-only history contract
+      - native semantic history authority and compatibility design
+    tests_or_evidence:
+      - docs/en/native-semantic-history.md authority, compatibility, completeness, and read-model decision
+      - docs/ja/native-semantic-history.md equivalent Japanese decision
+      - tests/test_progress_history.py existing progress-chain validation evidence
+      - tests/test_ticket_workflow_history.py existing ticket-event validation evidence
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/697
+      - https://github.com/Eruhitsuji/lifetxt/issues/702
+      - https://github.com/Eruhitsuji/lifetxt/issues/707
+      - https://github.com/Eruhitsuji/lifetxt/issues/709
+      - https://github.com/Eruhitsuji/lifetxt/issues/712
+      - https://github.com/Eruhitsuji/lifetxt/issues/713
+      - https://github.com/Eruhitsuji/lifetxt/issues/714
+      - https://github.com/Eruhitsuji/lifetxt/issues/715
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/698
+      - https://github.com/Eruhitsuji/lifetxt/pull/705
+      - https://github.com/Eruhitsuji/lifetxt/pull/711
+    reuse_policy: >-
+      Reuse normal Note records, existing exact-revision mutation paths,
+      specialized progress/ticket validators, parent access inheritance, and
+      temporal readers. Do not add a second grammar, generic event database,
+      inferred backfill, or duplicate Git revision reconstruction.
+    notes: >-
+      Investigation #712 selects a common record:item_event envelope with a
+      closed typed payload registry for future ordinary-item lifecycle events.
+      History remains optional, and completeness is evaluated per item and
+      semantic domain. Implementation is intentionally deferred to #713-#715,
+      which require High-assurance data-integrity review.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
   - id: cap-data-integrity-readonly-report
     name: Read-only data integrity report
     summary: >-

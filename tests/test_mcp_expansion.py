@@ -24,6 +24,7 @@ from lifetxt.mcp import (
     prompt_list,
     tool_schemas,
 )
+from lifetxt.native_timeline import native_timeline
 from lifetxt.parser import parse_text
 
 
@@ -94,6 +95,55 @@ class McpTestCase(unittest.TestCase):
         self.assertEqual("follows", warning["relation"])
         self.assertEqual("temporal-context-v1", warning["provenance"]["temporal"]["authority"])
         self.assertIn("revision", result)
+
+    def test_native_timeline_tool_is_read_only_revision_aware_and_shared(self):
+        content = (
+            "[x] T Finished id:t1\n"
+            "[-] N event record:item_event event_id:e1 parent:t1 "
+            "event:completed at:2026-09-10T10:00:00Z sequence:1 "
+            "transaction:tx1 source_revision:%s source:test\n" % ("a" * 64)
+        )
+        context, path = self._context(content=content)
+        before = file_hash(path)
+        result = call_tool(
+            "get_native_timeline",
+            {
+                "id": "t1",
+                "event": "completed",
+                "since": "2026-09-10T10:00:00+00:00",
+                "limit": 1,
+            },
+            context,
+        )
+        direct_items, _diagnostics = parse_text(content)
+        direct = native_timeline(
+            direct_items,
+            "t1",
+            event="completed",
+            since="2026-09-10T10:00:00+00:00",
+            limit=1,
+        )
+        self.assertEqual(direct, {k: v for k, v in result.items() if k != "revision"})
+        self.assertEqual(before, file_hash(path))
+        self.assertIn("revision", result)
+        self.assertIn("get_native_timeline", READ_ONLY_TOOLS)
+        schema = next(s for s in tool_schemas() if s["name"] == "get_native_timeline")
+        self.assertTrue(schema["annotations"]["readOnlyHint"])
+
+    def test_native_timeline_mcp_rejects_invalid_filters(self):
+        context, _path = self._context()
+        with self.assertRaisesRegex(ValueError, "UTC offset"):
+            call_tool(
+                "get_native_timeline",
+                {"id": "t1", "since": "2026-09-10T10:00:00"},
+                context,
+            )
+        with self.assertRaisesRegex(ValueError, "Unknown Timeline event"):
+            call_tool(
+                "get_native_timeline",
+                {"id": "t1", "event": "invented"},
+                context,
+            )
 
     def _read(self, path):
         with open(path, "r", encoding="utf-8") as handle:

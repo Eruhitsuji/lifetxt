@@ -1,0 +1,14 @@
+schema_version: 1
+requirements:
+  - id: req-native-timeline-bounded-filtering
+    kind: ADDED
+    statement: Provide bounded time and normalized-event filters on the shared Native Timeline reader.
+    acceptance_criteria:
+      - Since and until are inclusive offset-aware timestamps.
+      - Event accepts only a known normalized event type.
+      - Multiple filters use AND semantics and preserve deterministic order.
+      - Filtering occurs before limit and no-filter behavior is unchanged.
+      - Diagnostics, limitations, provenance, and completeness remain available.
+    constraints: [No new stored fields, no Git composition]
+    owner: Eruhitsuji
+open_questions: []

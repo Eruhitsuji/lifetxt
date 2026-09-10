@@ -112,6 +112,10 @@ def temporal_timeline_v1_schema():
             },
             "source": {"const": "native_life_txt"},
             "git_composed": {"const": False},
+            "revision": {
+                "type": ["string", "null"],
+                "description": "Optional source-set revision added by revision-aware read surfaces.",
+            },
             "bounds": {
                 "type": "object",
                 "required": [

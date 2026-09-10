@@ -1,0 +1,20 @@
+schema_version: 1
+change:
+  id: native-timeline-bounded-filtering
+  title: Bounded filtering for Native Temporal Timeline
+  status: implemented
+  change_type: Feature
+  assurance_level: Standard
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/720
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/722
+  base_commit: 9f59273
+  target_release: next normal maintenance release
+scope:
+  in_scope: [Shared inclusive time filtering, normalized event filtering, CLI and MCP arguments]
+  out_of_scope: [pagination, Git filtering, stored-format changes]
+  write_scope: [lifetxt/**, tests/**, docs/**, dist/schemas/**, .ai/project/**]
+  forbidden_scope: [.ai/managed/**]
+human_approvals_required:
+  - Repository owner review and Merge Authority approval; Codex must not merge.

@@ -1,0 +1,10 @@
+schema_version: 1
+links:
+  - requirement_id: req-native-timeline-bounded-filtering
+    capability_id: cap-native-semantic-history
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/720
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/722
+    tests_or_evidence: [tests/test_native_timeline.py, docs/en/native-timeline.md, docs/ja/native-timeline.md]
+    release_or_deployment: next normal maintenance release
+    status: implemented
+gaps: []

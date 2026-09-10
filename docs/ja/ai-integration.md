@@ -242,6 +242,7 @@ Docs、Sheets、Slides、PDF、CSV に限定されており、lifetxt の連携�
 | `get_blockers` | item を block しているもの |
 | `list_links` | `parent:`、`ref:`、`depends_on:`、`blocks:`、`related:`、`duplicate_of:`、`replaced_by:`、`follows:`、`realizes:` |
 | `get_temporal_thread` | bounded な authoritative lifecycle link、派生 `temporal-context-v1`、read-only consistency evidence の合成結果 |
+| `get_native_timeline` | inclusiveな時刻/event filter、completeness、diagnostic、provenance、source revision付きのbounded native semantic history |
 | `get_status` | presence records と open record |
 | `list_notifications` | due message notifications |
 | `list_messages` | `M` records |
@@ -258,7 +259,7 @@ Docs、Sheets、Slides、PDF、CSV に限定されており、lifetxt の連携�
 
 ### Context revision
 
-`get_command_center`、`get_temporal_context`、`get_temporal_thread`、`get_next_actions`、
+`get_command_center`、`get_temporal_context`、`get_temporal_thread`、`get_native_timeline`、`get_next_actions`、
 `get_backlinks`、`get_ticket`、`get_project` はそれぞれ `revision` field を
 持つ。これは全 source file の path と bytes に対する SHA-256 で、Remote Safe
 Mode が各 resource read に既に付与している方法をそのまま再利用したもの

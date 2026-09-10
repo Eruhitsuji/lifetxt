@@ -1,0 +1,37 @@
+schema_version: 1
+verification:
+  executed:
+    - type: focused
+      command: python -m unittest tests.test_ticket_revision_writes tests.test_native_timeline tests.test_mcp_expansion tests.test_schema_extensions_v2
+      requirement_ids: [req-native-timeline-bounded-filtering]
+      result: Ran 250 tests -- OK (skipped=3)
+      commit: working-tree
+      executed_at: '2026-09-10'
+      status: passed
+    - type: regression
+      command: MPLBACKEND=Agg python -m unittest discover
+      requirement_ids: [req-native-timeline-bounded-filtering]
+      result: Ran 4163 tests in 204.362s -- OK (skipped=199)
+      commit: working-tree
+      executed_at: '2026-09-10'
+      status: passed
+    - type: smoke
+      command: python -m lifetxt check examples/minimal_life.txt
+      requirement_ids: [req-native-timeline-bounded-filtering]
+      result: 'OK: 10 item(s)'
+      commit: working-tree
+      executed_at: '2026-09-10'
+      status: passed
+  gaps:
+    - Ruff is unavailable locally; final repository CI installs the development toolchain.
+review_ledger:
+  - reviewer: Codex implementer self-review
+    review_type: requirements/design/data-integrity/compatibility pre-PR review
+    target_commit: working-tree
+    result: passed-with-human-final-review-required
+    finding_count: 0
+    completed_at: '2026-09-10'
+release_evidence:
+  migration_notes: Read-only filtering; no stored data migration.
+  rollback_plan: Remove filter arguments and shared filter helpers.
+  operations_evidence: []

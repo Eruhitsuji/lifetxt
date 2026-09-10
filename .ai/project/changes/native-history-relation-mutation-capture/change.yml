@@ -1,0 +1,20 @@
+schema_version: 1
+change:
+  id: native-history-relation-mutation-capture
+  title: Native History capture for lifecycle relation mutations
+  status: implemented
+  change_type: Feature
+  assurance_level: Standard
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/721
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/722
+  base_commit: 9f59273
+  target_release: next normal maintenance release
+scope:
+  in_scope: [CLI ticket link and unlink for follows, realizes, and replaced_by]
+  out_of_scope: [other mutation surfaces, migration, backfill, inferred history]
+  write_scope: [lifetxt/**, tests/**, docs/**, .ai/project/**]
+  forbidden_scope: [.ai/managed/**]
+human_approvals_required:
+  - Repository owner review and Merge Authority approval; Codex must not merge.

@@ -1,8 +1,8 @@
 # Native Semantic History
 
-Status: Investigation #712で承認対象となる設計方針です。提案する
-`record:item_event`と`lifetxt timeline`はまだ未実装であり、実装は#712から
-分解したfollow-up Issuesで行います。
+Status: Investigation #712で承認された設計を段階的に実装済みです。Native historyは
+意図的にpartialであり、document済みのmutation経路だけがeventを記録します。既存fileや
+手動編集したfileへのbackfillは行いません。
 
 ## 決定
 
@@ -147,6 +147,13 @@ Gitなしでは、current stateとnative eventを直接読め、native timeline�
 exact historical revisionとGit diffは利用できません。Gitありでも同じnative behaviorを
 historical thread/diff commandと並行して利用します。repositoryの有無によってcommandが
 暗黙にsourceを変えることはありません。
+
+既存CLIの`ticket link` / `ticket unlink`経路は、lifecycle fieldの`follows`、
+`realizes`、`replaced_by`について`relation_added` / `relation_removed` item eventを
+記録します。relation state変更とevent追記は1回のexact-revision mutationで行われます。
+重複addはno-op、失敗またはstale writeではorphan eventを残さず、他のrelation fieldは
+従来の動作を維持します。他のmutation surfaceはcoverage gapのままで、migrationや
+backfillは行いません。
 
 ## 実装への影響
 

@@ -232,6 +232,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/pull/698
       - https://github.com/Eruhitsuji/lifetxt/pull/705
       - https://github.com/Eruhitsuji/lifetxt/pull/711
+      - https://github.com/Eruhitsuji/lifetxt/pull/718
     reuse_policy: >-
       Reuse normal Note records, existing exact-revision mutation paths,
       specialized progress/ticket validators, parent access inheritance, and

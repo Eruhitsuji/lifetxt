@@ -5,7 +5,7 @@ links:
     capability_id: cap-native-semantic-history
     epic: null
     task_issue: https://github.com/Eruhitsuji/lifetxt/issues/713
-    pull_request: null
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/718
     tests_or_evidence:
       - tests/test_native_history.py
       - tests/test_generated_record_capture_compat.py

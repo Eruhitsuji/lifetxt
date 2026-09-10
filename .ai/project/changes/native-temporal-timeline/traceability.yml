@@ -5,7 +5,7 @@ links:
     capability_id: cap-native-semantic-history
     epic: null
     task_issue: https://github.com/Eruhitsuji/lifetxt/issues/715
-    pull_request: null
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/718
     tests_or_evidence:
       - tests/test_native_timeline.py
       - dist/schemas/temporal-timeline-v1.schema.json

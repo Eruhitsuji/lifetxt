@@ -11749,7 +11749,7 @@ traceability:
       capability_id: cap-native-semantic-history
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/713
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/718
       changed_files_or_scope:
         - Closed record:item_event v1 builder and validators
         - Per-parent ordering, chronology, continuity, and completeness diagnostics
@@ -11770,7 +11770,7 @@ traceability:
       capability_id: cap-native-semantic-history
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/714
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/718
       changed_files_or_scope:
         - Shared exact-revision before/after event producer
         - Atomic quick/start/done/complete/reopen/due capture for stable-ID items
@@ -11791,7 +11791,7 @@ traceability:
       capability_id: cap-native-semantic-history
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/715
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/718
       changed_files_or_scope:
         - Deterministic bounded Timeline over four normalized native record kinds
         - Separate invalid evidence, diagnostics, limitations, and per-domain completeness
@@ -11812,7 +11812,7 @@ traceability:
       capability_id: cap-native-semantic-history
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/717
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/718
       changed_files_or_scope:
         - Bounded semantic transition projection from adjacent Git revisions
         - Native/Git verified, native-only, git-only, conflict, and unverifiable classification

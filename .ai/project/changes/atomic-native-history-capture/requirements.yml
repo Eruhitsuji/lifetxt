@@ -1,0 +1,22 @@
+schema_version: 1
+
+requirements:
+  - id: req-atomic-native-history-capture
+    kind: ADDED
+    statement: >-
+      Selected typed mutations must commit current state and their native event
+      as one exact-revision operation using a shared producer.
+    acceptance_criteria:
+      - Creation, lifecycle status, completion, reopen, cancellation, relation, and schedule routes have typed producer support.
+      - CLI quick/start/done/complete/reopen/due reuse the producer where a stable item ID exists.
+      - State and event are committed atomically with exact pre-write revision provenance.
+      - Dry-run, stale revision, invalid transition, and payload disagreement write nothing.
+      - Repeating completion captures completion and next-instance creation together.
+      - Existing ticket and progress writers do not double-record item events.
+      - Items without stable identity retain compatible behavior with partial history coverage.
+    constraints:
+      - Do not capture generic/manual title, type, or arbitrary custom-field changes.
+      - Do not add Timeline presentation or backfill.
+    owner: Eruhitsuji
+
+open_questions: []

@@ -1,0 +1,254 @@
+{
+  "$defs": {
+    "coverage": {
+      "additionalProperties": false,
+      "properties": {
+        "complete": {
+          "type": "boolean"
+        },
+        "coverage": {
+          "type": "string"
+        },
+        "diagnostic_codes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "coverage",
+        "complete"
+      ],
+      "type": "object"
+    },
+    "diagnostic": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "line": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "message": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string"
+        },
+        "source": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "severity",
+        "code",
+        "message",
+        "source",
+        "line"
+      ],
+      "type": "object"
+    },
+    "event": {
+      "additionalProperties": false,
+      "properties": {
+        "at": {
+          "type": "string"
+        },
+        "event": {
+          "type": "string"
+        },
+        "parent": {
+          "type": "string"
+        },
+        "payload": {
+          "additionalProperties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "type": "object"
+        },
+        "record_id": {
+          "type": "string"
+        },
+        "record_kind": {
+          "enum": [
+            "item_event",
+            "progress_event",
+            "ticket_event",
+            "time_entry"
+          ]
+        },
+        "sequence": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "source_revision": {
+          "type": "string"
+        },
+        "transaction": {
+          "type": "string"
+        },
+        "valid": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "record_kind",
+        "record_id",
+        "parent",
+        "event",
+        "at",
+        "sequence",
+        "transaction",
+        "source_revision",
+        "payload",
+        "valid"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/temporal-timeline-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "bounds": {
+      "additionalProperties": false,
+      "properties": {
+        "limit": {
+          "maximum": 500,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "returned_events": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "total_valid_events": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "limit",
+        "total_valid_events",
+        "returned_events",
+        "truncated"
+      ],
+      "type": "object"
+    },
+    "complete": {
+      "type": "boolean"
+    },
+    "completeness": {
+      "additionalProperties": false,
+      "properties": {
+        "item": {
+          "$ref": "#/$defs/coverage"
+        },
+        "progress": {
+          "$ref": "#/$defs/coverage"
+        },
+        "ticket": {
+          "$ref": "#/$defs/coverage"
+        },
+        "time_entry": {
+          "$ref": "#/$defs/coverage"
+        }
+      },
+      "required": [
+        "item",
+        "progress",
+        "ticket",
+        "time_entry"
+      ],
+      "type": "object"
+    },
+    "diagnostics": {
+      "items": {
+        "$ref": "#/$defs/diagnostic"
+      },
+      "type": "array"
+    },
+    "events": {
+      "items": {
+        "$ref": "#/$defs/event"
+      },
+      "type": "array"
+    },
+    "git_composed": {
+      "const": false
+    },
+    "invalid_events": {
+      "items": {
+        "$ref": "#/$defs/event"
+      },
+      "type": "array"
+    },
+    "limitations": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "schema": {
+      "const": "temporal-timeline-v1"
+    },
+    "source": {
+      "const": "native_life_txt"
+    },
+    "target": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "kind",
+        "status"
+      ],
+      "type": "object"
+    },
+    "target_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema",
+    "target_id",
+    "target",
+    "source",
+    "git_composed",
+    "bounds",
+    "complete",
+    "limitations",
+    "completeness",
+    "events",
+    "invalid_events",
+    "diagnostics"
+  ],
+  "title": "lifetxt native temporal timeline v1",
+  "type": "object"
+}

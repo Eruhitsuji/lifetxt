@@ -1,0 +1,17 @@
+schema_version: 1
+
+links:
+  - requirement_id: req-native-temporal-timeline
+    capability_id: cap-native-semantic-history
+    epic: null
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/715
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/718
+    tests_or_evidence:
+      - tests/test_native_timeline.py
+      - dist/schemas/temporal-timeline-v1.schema.json
+      - docs/en/native-timeline.md
+      - docs/ja/native-timeline.md
+    release_or_deployment: next normal maintenance release
+    status: implemented
+
+gaps: []

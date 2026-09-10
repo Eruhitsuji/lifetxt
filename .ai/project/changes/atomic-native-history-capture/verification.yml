@@ -1,0 +1,54 @@
+schema_version: 1
+
+verification:
+  executed:
+    - type: focused
+      command: python -m unittest tests.test_native_history_mutation tests.test_work_session_v4 tests.test_progress_history tests.test_ticket_creation_event tests.test_ticket_workflow_history
+      requirement_ids: [req-atomic-native-history-capture]
+      result: Ran 40 tests -- OK
+      commit: working-tree
+      executed_at: '2026-09-10'
+      status: passed
+    - type: regression
+      command: MPLBACKEND=Agg python -m unittest discover
+      requirement_ids: [req-atomic-native-history-capture]
+      result: Ran 4116 tests in 205.679s -- OK (skipped=199)
+      commit: working-tree
+      executed_at: '2026-09-10'
+      status: passed
+    - type: documentation
+      command: python scripts/validate_release_docs.py --output /tmp/lifetxt-docs-validation.json
+      requirement_ids: [req-atomic-native-history-capture]
+      result: '{"errors": 0, "ok": true}'
+      commit: working-tree
+      executed_at: '2026-09-10'
+      status: passed
+    - type: smoke
+      command: python -m lifetxt check examples/minimal_life.txt
+      requirement_ids: [req-atomic-native-history-capture]
+      result: 'OK: 10 item(s)'
+      commit: working-tree
+      executed_at: '2026-09-10'
+      status: passed
+    - type: whitespace
+      command: git diff --check
+      requirement_ids: []
+      result: clean
+      commit: working-tree
+      executed_at: '2026-09-10'
+      status: passed
+  gaps:
+    - Ruff is unavailable locally; final repository CI installs the development toolchain.
+
+review_ledger:
+  - reviewer: Codex implementer self-review
+    review_type: requirements/design/data-integrity/compatibility/security pre-PR review
+    target_commit: working-tree
+    result: passed-with-human-final-review-required
+    finding_count: 0
+    completed_at: '2026-09-10'
+
+release_evidence:
+  migration_notes: No migration; event Notes are appended only on supported future mutations.
+  rollback_plan: Revert producer wiring; appended Notes remain readable and removable manually.
+  operations_evidence: []

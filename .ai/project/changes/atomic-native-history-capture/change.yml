@@ -1,0 +1,29 @@
+schema_version: 1
+
+change:
+  id: atomic-native-history-capture
+  title: Atomic native lifecycle mutation capture
+  status: implemented
+  change_type: Feature
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/714
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/718
+  base_commit: 2752a6b
+  target_release: next normal maintenance release
+
+scope:
+  in_scope:
+    - Add a surface-neutral producer that derives typed payloads from before/after state.
+    - Atomically append events with creation, lifecycle status, completion, reopen, cancellation, relation, and schedule mutations.
+    - Connect existing CLI quick/start/done/complete/reopen/due typed routes.
+    - Preserve dry-run, stale-revision, refusal, and specialized writer behavior.
+  out_of_scope:
+    - Generic title/type/custom-field capture, manual edit capture, Timeline, or backfill.
+  write_scope: [lifetxt/**, tests/**, docs/**, .ai/project/**]
+  forbidden_scope: [.ai/managed/**]
+  shared_files: [lifetxt/cli.py, lifetxt/work_session.py, .ai/project/CAPABILITIES.yml, .ai/project/TRACEABILITY.yml]
+
+human_approvals_required:
+  - Repository owner review and Merge Authority approval; Codex must not merge.

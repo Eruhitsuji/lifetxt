@@ -1607,6 +1607,18 @@ def build_parser():
         default=100,
         help="Maximum valid events returned (0-500). Default 100.",
     )
+    timeline_command.add_argument(
+        "--since",
+        help="Include events at/after this offset-aware ISO date-time.",
+    )
+    timeline_command.add_argument(
+        "--until",
+        help="Include events at/before this offset-aware ISO date-time.",
+    )
+    timeline_command.add_argument(
+        "--event",
+        help="Include only this normalized event type.",
+    )
     timeline_command.add_argument("--json", action="store_true", help="Emit JSON.")
     timeline_command.set_defaults(func=command_timeline)
 
@@ -13803,6 +13815,9 @@ def command_timeline(args):
             args.id,
             id_key=id_key_from_config(config),
             limit=getattr(args, "limit", 100),
+            since=getattr(args, "since", None),
+            until=getattr(args, "until", None),
+            event=getattr(args, "event", None),
         )
     except ValueError as exc:
         sys.stderr.write("ERROR: %s\n" % exc)

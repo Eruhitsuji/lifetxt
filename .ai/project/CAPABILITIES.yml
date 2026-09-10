@@ -188,6 +188,9 @@ capabilities:
     source_requirements:
       - req-lifetxt-native-temporal-history-contract
       - req-progress-event-history
+      - req-native-timeline-mcp-read
+      - req-native-timeline-bounded-filtering
+      - req-native-history-relation-mutation-capture
     implementation_locations:
       - docs/en/native-semantic-history.md
       - docs/ja/native-semantic-history.md
@@ -196,6 +199,8 @@ capabilities:
       - lifetxt/native_history.py
       - lifetxt/native_history_mutation.py
       - lifetxt/native_timeline.py
+      - lifetxt/mcp.py
+      - lifetxt/ticket_revision_writes.py
       - lifetxt/history_consistency.py
       - docs/en/historical-as-of-semantics.md
       - docs/ja/historical-as-of-semantics.md
@@ -208,6 +213,9 @@ capabilities:
       - exact-revision compound item mutation and event capture
       - lifetxt timeline bounded text/JSON read surface
       - temporal-timeline-v1 JSON Schema
+      - get_native_timeline read-only MCP tool
+      - bounded Timeline since/until/event filters
+      - CLI ticket lifecycle relation atomic event capture
       - lifetxt history-check bounded text/JSON verifier
       - native-git-history-consistency-v1 JSON Schema
     tests_or_evidence:
@@ -218,6 +226,8 @@ capabilities:
       - tests/test_native_history.py item-event validation, completeness, and adapter evidence
       - tests/test_native_history_mutation.py atomic capture and refusal evidence
       - tests/test_native_timeline.py deterministic bounds, diagnostics, and CLI evidence
+      - tests/test_mcp_expansion.py read-only shared-reader and revision evidence
+      - tests/test_ticket_revision_writes.py lifecycle relation atomicity evidence
       - tests/test_history_consistency.py semantic match/conflict/gap/Git limitation evidence
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/697
@@ -228,11 +238,15 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/713
       - https://github.com/Eruhitsuji/lifetxt/issues/714
       - https://github.com/Eruhitsuji/lifetxt/issues/715
+      - https://github.com/Eruhitsuji/lifetxt/issues/719
+      - https://github.com/Eruhitsuji/lifetxt/issues/720
+      - https://github.com/Eruhitsuji/lifetxt/issues/721
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/698
       - https://github.com/Eruhitsuji/lifetxt/pull/705
       - https://github.com/Eruhitsuji/lifetxt/pull/711
       - https://github.com/Eruhitsuji/lifetxt/pull/718
+      - https://github.com/Eruhitsuji/lifetxt/pull/722
     reuse_policy: >-
       Reuse normal Note records, existing exact-revision mutation paths,
       specialized progress/ticket validators, parent access inheritance, and

@@ -205,6 +205,13 @@
       },
       "type": "array"
     },
+    "revision": {
+      "description": "Optional source-set revision added by revision-aware read surfaces.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "schema": {
       "const": "temporal-timeline-v1"
     },

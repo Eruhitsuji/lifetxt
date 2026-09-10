@@ -1,0 +1,13 @@
+schema_version: 1
+requirements:
+  - id: req-native-history-relation-mutation-capture
+    kind: ADDED
+    statement: Atomically capture lifecycle relation changes from the existing CLI ticket relation route.
+    acceptance_criteria:
+      - Add and remove emit typed item events for follows, realizes, and replaced_by.
+      - State and event are committed in one exact-revision mutation.
+      - No-op, failed, stale, and unsupported changes leave no orphan event.
+      - The shared Native Timeline reads captured relation events.
+    constraints: [One existing mutation surface only, no migration or backfill]
+    owner: Eruhitsuji
+open_questions: []

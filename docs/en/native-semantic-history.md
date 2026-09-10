@@ -1,8 +1,8 @@
 # Native semantic history
 
-Status: approved design direction from investigation #712. The proposed
-`record:item_event` and `lifetxt timeline` contracts are not implemented yet;
-the follow-up issues linked from #712 own implementation.
+Status: implemented incrementally from the design approved in investigation
+#712. Native history remains intentionally partial: only documented mutation
+routes capture events, and existing or manually edited files are not backfilled.
 
 ## Decision
 
@@ -157,6 +157,14 @@ native timeline; exact historical revisions and Git diffs are unavailable.
 With Git, the same native behavior remains available alongside historical
 thread and diff commands. No command silently changes source based on whether a
 repository happens to exist.
+
+The existing CLI `ticket link` / `ticket unlink` route captures
+`relation_added` / `relation_removed` item events for the lifecycle fields
+`follows`, `realizes`, and `replaced_by`. The relation state change and event
+append share one exact-revision mutation: duplicate adds are no-ops, failed or
+stale writes leave no orphan event, and other relation fields retain their
+existing behavior. Other mutation surfaces remain a documented coverage gap;
+there is no migration or backfill.
 
 ## Implementation impacts
 

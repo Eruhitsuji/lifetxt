@@ -1,0 +1,13 @@
+schema_version: 1
+requirements:
+  - id: req-native-timeline-mcp-read
+    kind: ADDED
+    statement: Expose the shared bounded Native Temporal Timeline through a read-only revision-aware MCP tool.
+    acceptance_criteria:
+      - The tool accepts a target ID and shared bounded filters.
+      - The result preserves Timeline meaning, diagnostics, completeness, limitations, and provenance.
+      - MCP adds the standard source-set revision without writing or requiring Git.
+      - Tool annotations and permission profiles classify it as read-only.
+    constraints: [No write behavior, no duplicate Timeline implementation, no Git composition]
+    owner: Eruhitsuji
+open_questions: []

@@ -6,13 +6,19 @@ import datetime
 from collections import OrderedDict
 
 from .native_history import (
+    ITEM_EVENT_TYPES,
     is_item_event,
     item_event_history_diagnostics,
     native_history_completeness,
     normalize_native_events,
 )
-from .progress_history import is_progress_event, progress_history_diagnostics
+from .progress_history import (
+    PROGRESS_EVENT_OPERATIONS,
+    is_progress_event,
+    progress_history_diagnostics,
+)
 from .ticket_activity import (
+    EVENT_TYPES as TICKET_EVENT_TYPES,
     is_ticket_event,
     is_time_entry,
     validate_ticket_history,
@@ -28,6 +34,12 @@ _KIND_ORDER = {
     "ticket_event": 2,
     "time_entry": 3,
 }
+KNOWN_EVENT_FILTERS = frozenset(
+    list(ITEM_EVENT_TYPES)
+    + ["progress_" + operation for operation in PROGRESS_EVENT_OPERATIONS]
+    + list(TICKET_EVENT_TYPES)
+    + ["time_entry"]
+)
 
 
 def _values(item, key):
@@ -72,6 +84,50 @@ def _sort_key(row):
     )
 
 
+def _filter_instant(value, name):
+    if value in (None, ""):
+        return None
+    parsed = parse_iso_datetime(str(value).strip())
+    if parsed is None or parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ValueError(
+            "Timeline %s must be an ISO date-time with a UTC offset." % name
+        )
+    return parsed.astimezone(datetime.timezone.utc)
+
+
+def _event_instant(row):
+    parsed = parse_iso_datetime(str(row.get("at") or ""))
+    if parsed is None or parsed.tzinfo is None or parsed.utcoffset() is None:
+        return None
+    return parsed.astimezone(datetime.timezone.utc)
+
+
+def _filter_events(rows, since=None, until=None, event=None):
+    since_value = _filter_instant(since, "since")
+    until_value = _filter_instant(until, "until")
+    if (
+        since_value is not None
+        and until_value is not None
+        and since_value > until_value
+    ):
+        raise ValueError("Timeline since must not be after until.")
+    event_value = str(event).strip() if event not in (None, "") else None
+    if event_value is not None and event_value not in KNOWN_EVENT_FILTERS:
+        raise ValueError("Unknown Timeline event filter %r." % event_value)
+
+    selected = []
+    for row in rows:
+        instant = _event_instant(row)
+        if since_value is not None and (instant is None or instant < since_value):
+            continue
+        if until_value is not None and (instant is None or instant > until_value):
+            continue
+        if event_value is not None and row.get("event") != event_value:
+            continue
+        selected.append(row)
+    return selected
+
+
 def _diagnostic_value(row):
     return OrderedDict(
         (
@@ -84,7 +140,15 @@ def _diagnostic_value(row):
     )
 
 
-def native_timeline(items, target_id, id_key="id", limit=DEFAULT_LIMIT):
+def native_timeline(
+    items,
+    target_id,
+    id_key="id",
+    limit=DEFAULT_LIMIT,
+    since=None,
+    until=None,
+    event=None,
+):
     """Build one bounded read model without consulting or composing Git."""
     try:
         limit = int(limit)
@@ -121,8 +185,9 @@ def native_timeline(items, target_id, id_key="id", limit=DEFAULT_LIMIT):
     normalized = sorted(normalize_native_events(history, target_id), key=_sort_key)
     valid = [row for row in normalized if row["valid"]]
     invalid = [row for row in normalized if not row["valid"]]
-    total_valid = len(valid)
-    selected = valid[:limit]
+    filtered = _filter_events(valid, since=since, until=until, event=event)
+    total_valid = len(filtered)
+    selected = filtered[:limit]
     truncated = total_valid > len(selected)
     completeness = native_history_completeness(relevant, target_id, id_key=id_key)
     limitations = []

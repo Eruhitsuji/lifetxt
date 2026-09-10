@@ -91,7 +91,7 @@ python -m lifetxt today [path ...]
 python -m lifetxt area list [path ...]
 python -m lifetxt backlinks ID [path ...]
 python -m lifetxt temporal ID [path ...]
-python -m lifetxt timeline ID [path ...] [--limit N] [--json]
+python -m lifetxt timeline ID [path ...] [--since ISO] [--until ISO] [--event TYPE] [--limit N] [--json]
 python -m lifetxt history-check [path ...] [--id ID] [--commit-limit N] [--json]
 python -m lifetxt freebusy [path ...] --from START --to END
 python -m lifetxt query "QUERY" [path ...] [--explain]

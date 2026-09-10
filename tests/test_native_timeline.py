@@ -83,6 +83,38 @@ class NativeTimelineTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             native_timeline(_fixture(), "task-1", limit=MAX_LIMIT + 1)
 
+    def test_filters_are_inclusive_anded_and_run_before_limit(self):
+        result = native_timeline(
+            _fixture(),
+            "task-1",
+            since="2026-09-10T10:30:00+00:00",
+            until="2026-09-10T12:00:00Z",
+            limit=1,
+        )
+        self.assertEqual(["progress_set"], [row["event"] for row in result["events"]])
+        self.assertEqual(2, result["bounds"]["total_valid_events"])
+        self.assertTrue(result["bounds"]["truncated"])
+        self.assertTrue(result["completeness"]["item"]["complete"])
+
+    def test_event_filter_keeps_original_chronological_order(self):
+        result = native_timeline(_fixture(), "task-1", event="completed")
+        self.assertEqual(["completed"], [row["event"] for row in result["events"]])
+        self.assertEqual(1, result["bounds"]["total_valid_events"])
+        self.assertTrue(result["complete"])
+
+    def test_invalid_filter_values_are_rejected_deterministically(self):
+        with self.assertRaisesRegex(ValueError, "UTC offset"):
+            native_timeline(_fixture(), "task-1", since="2026-09-10T10:00:00")
+        with self.assertRaisesRegex(ValueError, "Unknown Timeline event"):
+            native_timeline(_fixture(), "task-1", event="invented")
+        with self.assertRaisesRegex(ValueError, "since must not be after until"):
+            native_timeline(
+                _fixture(),
+                "task-1",
+                since="2026-09-11T00:00:00Z",
+                until="2026-09-10T00:00:00Z",
+            )
+
     def test_malformed_event_is_separated_with_diagnostics(self):
         items = _fixture()
         malformed = build_item_event(
@@ -159,3 +191,29 @@ class NativeTimelineCliTests(unittest.TestCase):
             self.assertNotEqual(0, code)
             self.assertIn("Expected exactly one item", stderr)
 
+    def test_cli_filters_share_the_domain_result_and_reject_invalid_input(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "life.txt")
+            with open(path, "w", encoding="utf-8") as handle:
+                for item in _fixture():
+                    handle.write(item_to_line(item) + "\n")
+            stdout, stderr, code = run_cli(
+                "timeline",
+                "task-1",
+                path,
+                "--since",
+                "2026-09-10T10:30:00Z",
+                "--event",
+                "progress_set",
+                "--json",
+            )
+            self.assertEqual(0, code, stderr)
+            self.assertEqual(
+                ["progress_set"],
+                [row["event"] for row in json.loads(stdout)["events"]],
+            )
+            _stdout, stderr, code = run_cli(
+                "timeline", "task-1", path, "--event", "unknown"
+            )
+            self.assertNotEqual(0, code)
+            self.assertIn("Unknown Timeline event", stderr)

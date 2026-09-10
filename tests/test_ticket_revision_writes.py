@@ -5,11 +5,12 @@ import os
 import tempfile
 import unittest
 
-from lifetxt import cli, tickets
+from lifetxt import cli, surface_runtime, tickets
 from lifetxt.mutation import MutationConflict
+from lifetxt.native_history import item_event_diagnostics, iter_item_events
+from lifetxt.native_timeline import native_timeline
 from lifetxt.parser import parse_text
 from lifetxt.safe_ops import ExpectedRevisionRequired
-from lifetxt import surface_runtime
 from lifetxt.ticket_revision_writes import (
     apply_ticket_relation,
     ticket_file_revision,
@@ -50,6 +51,10 @@ class TicketRevisionWriteTests(unittest.TestCase):
             if ticket_id in item.details.get("id", []):
                 return item
         self.fail("ticket not found: %s" % ticket_id)
+
+    def _events(self, ticket_id="BUG-1"):
+        items, _diagnostics = parse_text(self._text())
+        return iter_item_events(items, parent_id=ticket_id)
 
     def _cli(self, argv):
         stdout = io.StringIO()
@@ -155,6 +160,105 @@ class TicketRevisionWriteTests(unittest.TestCase):
         )
         self.assertFalse(item.revision_changed)
         self.assertEqual(revision, item.revision_after)
+
+    def test_lifecycle_relation_add_and_remove_capture_atomic_native_events(self):
+        for relation in ("follows", "realizes", "replaced_by"):
+            with self.subTest(relation=relation):
+                before = ticket_file_revision(self.path)
+                linked = apply_ticket_relation(
+                    self.path,
+                    "BUG-1",
+                    relation,
+                    "BUG-2",
+                    expected_revision=before,
+                    require_revision=True,
+                )
+                added = self._events()[-1]
+                self.assertEqual([], item_event_diagnostics(added))
+                self.assertEqual(["relation_added"], added.details["event"])
+                self.assertEqual([relation], added.details["relation"])
+                self.assertEqual(["BUG-2"], added.details["target"])
+                self.assertEqual([before], added.details["source_revision"])
+                self.assertEqual(
+                    linked.revision_after, ticket_file_revision(self.path)
+                )
+
+                before_remove = linked.revision_after
+                unlinked = apply_ticket_relation(
+                    self.path,
+                    "BUG-1",
+                    relation,
+                    "BUG-2",
+                    add=False,
+                    expected_revision=before_remove,
+                    require_revision=True,
+                )
+                removed = self._events()[-1]
+                self.assertEqual([], item_event_diagnostics(removed))
+                self.assertEqual(["relation_removed"], removed.details["event"])
+                self.assertEqual([relation], removed.details["relation"])
+                self.assertEqual(["BUG-2"], removed.details["target"])
+                self.assertEqual(
+                    [before_remove], removed.details["source_revision"]
+                )
+                self.assertEqual(
+                    unlinked.revision_after, ticket_file_revision(self.path)
+                )
+
+    def test_lifecycle_relation_noop_and_stale_write_leave_no_orphan_event(self):
+        first = apply_ticket_relation(
+            self.path, "BUG-1", "follows", "BUG-2"
+        )
+        after_first = self._text()
+        event_count = len(self._events())
+        duplicate = apply_ticket_relation(
+            self.path,
+            "BUG-1",
+            "follows",
+            "BUG-2",
+            expected_revision=first.revision_after,
+        )
+        self.assertFalse(duplicate.revision_changed)
+        self.assertEqual(after_first, self._text())
+        self.assertEqual(event_count, len(self._events()))
+
+        with self.assertRaises(ValueError):
+            apply_ticket_relation(
+                self.path, "BUG-1", "realizes", "BUG-2", add=False
+            )
+        with self.assertRaisesRegex(ValueError, "Unknown ticket relation"):
+            apply_ticket_relation(
+                self.path, "BUG-1", "invented", "BUG-2"
+            )
+        self.assertEqual(after_first, self._text())
+        self.assertEqual(event_count, len(self._events()))
+
+        with self.assertRaises(MutationConflict):
+            apply_ticket_relation(
+                self.path,
+                "BUG-1",
+                "realizes",
+                "BUG-2",
+                expected_revision="0" * 64,
+            )
+        self.assertEqual(after_first, self._text())
+        self.assertEqual(event_count, len(self._events()))
+
+    def test_lifecycle_relation_event_is_visible_in_native_timeline(self):
+        apply_ticket_relation(self.path, "BUG-1", "replaced_by", "BUG-2")
+        items, _diagnostics = parse_text(self._text())
+        result = native_timeline(items, "BUG-1", event="relation_added")
+        self.assertEqual(1, len(result["events"]))
+        self.assertEqual(
+            "replaced_by", result["events"][0]["payload"]["relation"][0]
+        )
+
+    def test_cli_lifecycle_relation_route_captures_native_event(self):
+        code, _stdout, stderr = self._cli(
+            ["ticket", "link", "BUG-1", "follows", "BUG-2"]
+        )
+        self.assertEqual(0, code, stderr)
+        self.assertEqual(["relation_added"], self._events()[0].details["event"])
 
     def test_cli_revision_and_stale_edit_contract(self):
         code, stdout, stderr = self._cli(["ticket", "revision", "BUG-1", "--json"])

@@ -93,7 +93,7 @@ $ lifetxt query 'open project:research due<2026-10-01' --explain
 $ lifetxt query 'open project:research due<2026-10-01' --explain --format json
 ```
 
-## Historical revision-scoped query (#726/#730)
+## Historical revision-scoped query (#726/#730/#760)
 
 `--revision REV` evaluates the query against the tracked bytes at an exact
 Git revision instead of the current working tree, reusing the shared
@@ -106,17 +106,30 @@ $ lifetxt query "status:todo project:lifetxt" --revision a1b2c3d
 $ lifetxt query "tag:research" --revision a1b2c3d --format json
 ```
 
-Uncommitted working-tree changes never enter a `--revision` result, and a
-source or item missing at the selected revision is never filled in from the
-current state. `--format json` wraps the matching items in a
-`{"historical": {...}, "items": [...]}` envelope carrying the requested
-revision, resolved full commit SHA, evidence mode, and completeness/
-limitations; every other format prints the same provenance as one line ahead
-of the results. An invalid revision, or a workspace with no Git repository,
-fails loudly rather than falling back to the current query. This first slice
-is exact-revision only; whole-history search and `--as-of` remain
-unimplemented follow-up work. Default `query` behavior without `--revision`
-is completely unchanged.
+`--as-of RFC3339 [--ref REF]` selects the newest commit at or before the
+given offset-aware timestamp on `REF` (default `HEAD`) and evaluates the
+query against that commit's tracked bytes, reusing the exact same
+committer-time selector `show --as-of` already uses
+(`lifetxt.historical_temporal.read_historical_snapshot`) -- there is no
+second cutoff-time resolution policy. `--revision` and `--as-of` are
+mutually exclusive; `--ref` is only meaningful together with `--as-of`.
+
+```console
+$ lifetxt query "status:todo project:lifetxt" --as-of 2026-06-01T00:00:00Z
+$ lifetxt query "tag:research" --as-of 2026-06-01T00:00:00Z --ref release --format json
+```
+
+Uncommitted working-tree changes never enter a `--revision`/`--as-of`
+result, and a source or item missing at the selected revision is never
+filled in from the current state. `--format json` wraps the matching items
+in a `{"historical": {...}, "items": [...]}` envelope carrying the request
+(exact revision or as-of cutoff/ref), resolved full commit SHA, evidence
+mode, and completeness/limitations; every other format prints the same
+provenance as one line ahead of the results. An invalid revision or cutoff,
+or a workspace with no Git repository, fails loudly rather than falling back
+to the current query. Whole-history search remains unimplemented follow-up
+work. Default `query` behavior without `--revision`/`--as-of` is completely
+unchanged.
 
 ## Saved views
 

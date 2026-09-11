@@ -9070,6 +9070,79 @@ capabilities:
       replaced_by: null
       deprecation_issue: null
 
+  - id: cap-remote-historical-evidence-read
+    name: Remote Safe Mode bounded Git historical evidence read
+    summary: >-
+      An opt-in, bounded, permission-filtered `GET /api/remote/v1/historical`
+      Remote Safe Mode route exposing
+      `lifetxt.historical_temporal.read_historical_snapshot` (#725/#726) as a
+      server resource, implementing the #727 disclosure-policy investigation
+      exactly: conjunctive current+historical authorization, exact-revision/
+      as-of-only selectors resolved only against server-configured source
+      paths, no parallel authorization engine (reuses
+      `lifetxt.remote_access` role/scope/visibility/redaction/audit
+      mechanisms unmodified), a server-level item-count bound on top of the
+      reader's own existing limits, and fail-closed behavior with no
+      fallback to current state.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-remote-historical-evidence-read
+    implementation_locations:
+      - lifetxt/remote_historical.py
+      - lifetxt/remote_web.py
+      - lifetxt/config_registry.py
+      - tests/test_remote_historical.py
+      - docs/en/remote.md
+      - docs/ja/remote.md
+      - .ai/project/changes/remote-historical-evidence-read/
+    public_interfaces:
+      - GET /api/remote/v1/historical
+      - lifetxt.remote_historical.read_historical_resource
+      - remote.historical_reads_enabled
+      - "principal scope: historical"
+    tests_or_evidence:
+      - "tests/test_remote_historical.py RemoteHistoricalReadTests (10 tests, real disposable git repository): authorized bounded read matches the exact-revision snapshot, historically-private record denied, currently-private-though-historically-shared record denied (conjunctive/#727 Section 7), missing historical scope raises even with reads enabled, disabled-by-default config raises REMOTE_HISTORICAL_DISABLED, limit param bounds and reports truncated, an invalid limit is rejected, an unknown/invalid revision raises REMOTE_HISTORICAL_UNAVAILABLE with no fallback, results never contain raw local paths, the audit log never contains raw content/secret-shaped values"
+      - "tests/test_remote_historical.py GitFreeWorkspaceTests: a workspace with no Git repository fails closed with REMOTE_HISTORICAL_UNAVAILABLE"
+      - python -m unittest tests.test_remote_historical -> Ran 11 tests, OK
+      - python -m unittest tests.test_remote_backend_v20 tests.test_remote_web_v20 tests.test_remote_pagination tests.test_config_validation tests.test_surface_runtime -> Ran 121 tests, OK (skipped=2)
+      - "live: real lifetxt serve process, real disposable git repository, GET /api/remote/v1/historical?revision=<sha> with a real bearer token and X-Lifetxt-Remote-Version: 2 returned the exact historical item, matching resolved_commit/loaded_paths"
+      - "live: the same server, an invalid --as-of value returned REMOTE_HISTORICAL_UNAVAILABLE (422), confirming fail-closed behavior over real HTTP"
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - ruff format --check / ruff check on every changed file -> clean
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/724
+      - https://github.com/Eruhitsuji/lifetxt/issues/727
+      - https://github.com/Eruhitsuji/lifetxt/issues/728
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Security/High assurance per #728's own escalation (new authenticated
+      remote-exposure surface over historically-sensitive data); full change
+      package at
+      .ai/project/changes/remote-historical-evidence-read/. Implements the
+      #727 disclosure policy's Definition of Ready checklist item by item
+      (see that capability's notes and docs/en/git-historical-disclosure-policy.md):
+      both selectors it allows (exact revision, bounded as-of) are exposed
+      and no others; the server never accepts a caller-supplied path or Git
+      object ID, since `paths` is always `app.state.paths`; every existing
+      Remote Safe Mode mechanism named in Section 4 is reused verbatim, with
+      zero parallel policy engine. A best-effort self-review of this
+      remote-exposure surface was performed (informed by the security-review
+      skill's checklist: fail-closed defaults, no caller-controlled Git
+      object/path input, redaction/audit coverage, and the two-independent-
+      opt-in gate); it does not substitute for the required independent
+      human security review and Merge Authority approval before merge to
+      main. No JSON Schema was published for the response shape in this
+      slice (see decisions.md), matching this project's precedent for
+      similarly-scoped additive config/response surfaces; recorded as a
+      candidate follow-up. Web UI/TUI/MCP rollout of this resource remains
+      an explicit, unimplemented follow-up per #728's own forbidden scope.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
   - id: cap-git-historical-read
     name: Shared Git historical workspace snapshot reader
     summary: >-

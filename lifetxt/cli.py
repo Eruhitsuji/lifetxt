@@ -15910,7 +15910,8 @@ def command_lifecycle_stats(args):
     result = workspace_lifecycle_stats(items, id_key=id_key_from_config(config), limit=args.limit, since=args.since, until=args.until, duration=args.duration)
     if args.coverage:
         result["analysis"] = "native_history_coverage"
-        result["coverage"] = {state: sum(1 for row in result["summaries"] if ("complete" if row["complete"] else "partial" if row["observed_event_count"] else "none") == state) for state in ("complete", "partial", "none")}
+        counts = {state: sum(1 for row in result["coverage"] if row["state"] == state) for state in ("complete", "partial", "none")}
+        result["coverage_counts"] = counts
     if args.json:
         write_text(None, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
     else:

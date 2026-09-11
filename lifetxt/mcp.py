@@ -1064,7 +1064,7 @@ def _tool_schemas():
             "Deterministic read-only lifecycle analytics over the filtered Native Timeline.",
             {
                 "id": _string("Target item ID."),
-                "analysis": _string("summary, duration, transitions, gaps, cadence, or provenance."),
+                "analysis": _string("summary, duration, status_dwell, schedule, relation, completion_cycles, transitions, gaps, cadence, oscillation, provenance, progress, effort, schedule_lead_time, or due_variance."),
                 "limit": _integer("Maximum matching valid events. Default 100."),
                 "since": _string("Inclusive offset-aware ISO timestamp."),
                 "until": _string("Inclusive offset-aware ISO timestamp."),

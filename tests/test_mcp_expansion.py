@@ -83,6 +83,16 @@ class McpTestCase(unittest.TestCase):
         schema = next(s for s in tool_schemas() if s["name"] == "get_temporal_thread")
         self.assertTrue(schema["annotations"]["readOnlyHint"])
 
+    def test_lifecycle_analytics_tool_uses_shared_read_only_projection(self):
+        context, _path = self._context()
+        result = call_tool("get_lifecycle_analytics", {"id": "t1", "analysis": "summary"}, context)
+        self.assertEqual("lifecycle-analytics-v1", result["analysis_schema"])
+        self.assertEqual("t1", result["target_id"])
+        self.assertIn("limitations", result)
+        self.assertIn("get_lifecycle_analytics", READ_ONLY_TOOLS)
+        schema = next(s for s in tool_schemas() if s["name"] == "get_lifecycle_analytics")
+        self.assertTrue(schema["annotations"]["readOnlyHint"])
+
     def test_temporal_thread_mcp_returns_shared_consistency_evidence(self):
         context, _path = self._context(
             content=(

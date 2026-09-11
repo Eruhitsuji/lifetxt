@@ -43,6 +43,7 @@ python -m lifetxt timer resume
 python -m lifetxt timer stop
 python -m lifetxt timer summary [path ...]
 python -m lifetxt stats [path ...]
+python -m lifetxt lifecycle-stats [path ...]
 python -m lifetxt git-hook install
 python -m lifetxt completion bash
 python -m lifetxt serve [path ...]

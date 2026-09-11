@@ -201,17 +201,29 @@ def temporal_thread_metrics(thread):
     nodes = thread.get("explicit", {}).get("nodes", [])
     edges = thread.get("explicit", {}).get("edges", [])
     follows = [edge for edge in edges if edge.get("relation") == "follows"]
-    degrees = Counter()
+    outgoing, incoming = {}, {}
     for edge in follows:
-        degrees[edge["source_id"]] += 1
-        degrees[edge["target_id"]] += 1
+        outgoing.setdefault(edge["source_id"], []).append(edge["target_id"])
+        incoming.setdefault(edge["target_id"], []).append(edge["source_id"])
+    depths = {thread.get("target_id"): 0}
+    queue = deque([thread.get("target_id")])
+    while queue:
+        current = queue.popleft()
+        for neighbor in outgoing.get(current, []) + incoming.get(current, []):
+            if neighbor not in depths:
+                depths[neighbor] = depths[current] + 1
+                queue.append(neighbor)
+    branch_points = sorted({node for node, values in outgoing.items() if len(values) > 1})
+    merge_points = sorted({node for node, values in incoming.items() if len(values) > 1})
     return OrderedDict((
         ("analysis", "temporal_thread_metrics"), ("observed_node_count", len(nodes)),
         ("observed_edge_count", len(edges)),
         ("edge_counts", OrderedDict((relation, sum(e.get("relation") == relation for e in edges)) for relation in EXPLICIT_RELATIONS)),
         ("predecessor_count", len(thread.get("relations", {}).get("predecessors", []))),
         ("successor_count", len(thread.get("relations", {}).get("successors", []))),
-        ("branch_points", sum(value > 1 for value in degrees.values())),
+        ("max_follows_depth", max(depths.values()) if depths else 0),
+        ("branch_points", branch_points),
+        ("merge_points", merge_points),
         ("truncated", bool(thread.get("explicit", {}).get("truncated"))),
         ("limitations", ["bounded_graph_truncated"] if thread.get("explicit", {}).get("truncated") else []),
     ))
@@ -221,10 +233,60 @@ def replacement_chain_analysis(thread):
     relations = thread.get("relations", {})
     predecessors = relations.get("replacement_predecessors", [])
     successors = relations.get("replacement_successors", [])
+    edges = [edge for edge in thread.get("explicit", {}).get("edges", []) if edge.get("relation") == "replaced_by"]
+    forward = {}
+    backward = {}
+    for edge in edges:
+        forward.setdefault(edge["source_id"], []).append(edge["target_id"])
+        backward.setdefault(edge["target_id"], []).append(edge["source_id"])
+    target = thread.get("target_id")
+    observed = {target}
+    for direction in (forward, backward):
+        current, seen = [target], set()
+        while current:
+            node = current.pop(0)
+            if node in seen:
+                continue
+            seen.add(node)
+            for neighbor in direction.get(node, []):
+                observed.add(neighbor)
+                current.append(neighbor)
     endpoints = [row.get("id") for row in predecessors + successors if row.get("id")]
     limitations = ["bounded_graph_truncated"] if thread.get("explicit", {}).get("truncated") else []
     if thread.get("explicit", {}).get("cycles"): limitations.append("replacement_cycle_detected")
-    return OrderedDict((("analysis", "replacement_chain"), ("predecessor_count", len(predecessors)), ("successor_count", len(successors)), ("observed_chain_length", len(endpoints) + 1), ("observed_item_ids", sorted(set([thread.get("target_id")] + endpoints))), ("limitations", limitations)))
+    return OrderedDict((("analysis", "replacement_chain"), ("predecessor_count", len(predecessors)), ("successor_count", len(successors)), ("observed_chain_length", len(observed)), ("observed_item_ids", sorted(observed)), ("predecessor_ids", sorted(row.get("id") for row in predecessors)), ("successor_ids", sorted(row.get("id") for row in successors)), ("limitations", limitations)))
+
+
+def temporal_consistency_summary(thread):
+    """Aggregate existing warnings without creating additional consistency rules."""
+    warnings = thread.get("consistency", {}).get("warnings", [])
+    by_relation = Counter(row.get("relation", "unknown") for row in warnings)
+    by_source = Counter(row.get("source_id", "unknown") for row in warnings)
+    by_target = Counter(row.get("target_id", "unknown") for row in warnings)
+    timestamps = [row.get("evidence", {}).get("source_value") for row in warnings if row.get("evidence", {}).get("source_value")]
+    return OrderedDict((("analysis", "temporal_consistency_summary"), ("warning_count", len(warnings)), ("by_relation", OrderedDict((key, by_relation[key]) for key in sorted(by_relation))), ("by_source_id", OrderedDict((key, by_source[key]) for key in sorted(by_source))), ("by_target_id", OrderedDict((key, by_target[key]) for key in sorted(by_target))), ("earliest_evidence", min(timestamps) if timestamps else None), ("latest_evidence", max(timestamps) if timestamps else None), ("warnings", warnings), ("truncated", bool(thread.get("consistency", {}).get("truncated")))))
+
+
+def realization_timing_analysis(items, thread, key="id"):
+    """Compare explicit realizes pairs using canonical temporal evidence only."""
+    index = build_id_index(items, key)
+    rows = []
+    for ref in thread.get("relations", {}).get("realized_plans", []):
+        plan_id = ref.get("id")
+        actual_id = thread.get("target_id")
+        plan = index.get(plan_id, [])
+        actual = index.get(actual_id, [])
+        plan_evidence = comparable_time_evidence(plan[0]) if len(plan) == 1 else None
+        actual_evidence = comparable_time_evidence(actual[0]) if len(actual) == 1 else None
+        row = OrderedDict((("plan_id", plan_id), ("actual_id", actual_id), ("plan_evidence", plan_evidence), ("actual_evidence", actual_evidence)))
+        if plan_evidence and actual_evidence and plan_evidence.get("date") and actual_evidence.get("date"):
+            row["classification"] = "before_plan_time" if actual_evidence["date"] < plan_evidence["date"] else "after_plan_time" if actual_evidence["date"] > plan_evidence["date"] else "same_time_or_day"
+            row["delta_days"] = (actual_evidence["date"] - plan_evidence["date"]).days
+        else:
+            row["classification"] = "incomparable"
+            row["delta_days"] = None
+        rows.append(row)
+    return OrderedDict((("analysis", "realizes_timing"), ("results", rows), ("limitations", ["incomparable_evidence"] if any(row["classification"] == "incomparable" for row in rows) else [])))
 
 
 def temporal_thread(

@@ -11883,6 +11883,28 @@ traceability:
       notes: Other relation mutation surfaces remain a coverage limitation; no migration or backfill.
       status: implemented
 
+    - requirement_id: req-native-lifecycle-analytics-batch
+      capability_id: cap-native-semantic-history
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/755
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/723
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/pending
+      changed_files_or_scope:
+        - Shared deterministic lifecycle analytics over filtered valid Native Timeline events
+        - Bounded Temporal Thread metrics, replacement-chain and consistency summaries
+        - Read-only MCP lifecycle analytics and bounded workspace lifecycle statistics
+        - Progress velocity, time-entry effort, and schedule lead-time projections
+      tests_or_evidence:
+        - tests/test_native_timeline.py
+        - tests/test_mcp_expansion.py
+        - Python 3.12 py_compile for changed modules
+      release_or_deployment: next normal maintenance release
+      notes: >-
+        Covers the read-only analytics batch rooted at #723. Filters precede
+        aggregation, invalid events are excluded, and completeness and
+        limitations remain attached to every projection. The final integration
+        PR URL must replace the pending placeholder before merge.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

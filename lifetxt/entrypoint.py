@@ -462,6 +462,10 @@ def _dispatch(argv):
             from .server_report_cli import main as server_report_main
 
             return server_report_main(cleaned)
+        if command == "git-commit-worker":
+            from .git_commit_worker_cli import main as git_commit_worker_main
+
+            return git_commit_worker_main(cleaned)
         if command in _PERSONAL_CONTEXT_COMMANDS:
             from .personal_context_cli import main as personal_context_main
 

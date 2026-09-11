@@ -12032,42 +12032,146 @@ traceability:
         not completed in this batch, not fabricated as done.
       status: implemented
 
-    - requirement_id: req-git-historical-evidence-server-disclosure
-      capability_id: cap-git-historical-disclosure-policy
+    - requirement_id: req-remote-historical-evidence-read
+      capability_id: cap-remote-historical-evidence-read
       epic: https://github.com/Eruhitsuji/lifetxt/issues/724
-      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/728
-      pull_request: null
-      changed_files_or_scope: []
-      tests_or_evidence: []
+      task_issue: "https://github.com/Eruhitsuji/lifetxt/issues/728"
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/758
+      changed_files_or_scope:
+        - "Add GET /api/remote/v1/historical, exposing read_historical_snapshot
+          (#725/#726) as a bounded, permission-filtered Remote Safe Mode
+          resource implementing the #727 disclosure policy (conjunctive
+          current+historical authorization, exact-revision/as-of-only
+          selectors, server-configured-sources-only path boundary, reuse of
+          existing role/scope/redaction/audit mechanisms, fail-closed with
+          no fallback to current state)"
+        - lifetxt/remote_historical.py
+        - lifetxt/remote_web.py
+        - lifetxt/config_registry.py
+        - tests/test_remote_historical.py
+        - docs/en/remote.md
+        - docs/ja/remote.md
+        - .ai/project/changes/remote-historical-evidence-read/
+      tests_or_evidence:
+        - "tests/test_remote_historical.py (11 tests): authorized bounded read, historically-private denial, currently-private-though-historically-shared denial (conjunctive), missing-scope denial, disabled-by-default denial, limit bounding/truncation, invalid-limit rejection, unknown-revision fail-closed, no-raw-path leakage, audit log never contains raw content, Git-free-workspace fail-closed"
+        - E:\project\lifetxt\.claude\worktrees\agent-a409e25fe05027723\.venv\Scripts\python.exe -m unittest tests.test_remote_historical -> Ran 11 tests, OK
+        - E:\project\lifetxt\.claude\worktrees\agent-a409e25fe05027723\.venv\Scripts\python.exe -m unittest tests.test_remote_backend_v20 tests.test_remote_web_v20 tests.test_remote_pagination tests.test_config_validation tests.test_surface_runtime -> Ran 121 tests, OK (skipped=2)
+        - "live: real lifetxt serve process, real disposable git repository, GET /api/remote/v1/historical?revision=<sha> with a real bearer token and X-Lifetxt-Remote-Version: 2 returned the exact historical item"
+        - "live: the same server, an invalid --as-of value returned REMOTE_HISTORICAL_UNAVAILABLE (422)"
+        - E:\project\lifetxt\.claude\worktrees\agent-a409e25fe05027723\.venv\Scripts\python.exe -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check lifetxt/remote_historical.py lifetxt/remote_web.py lifetxt/config_registry.py tests/test_remote_historical.py -> clean
       release_or_deployment: null
       notes: >-
-        Not implemented in this batch. #728 (server/Remote Safe Mode
-        historical read endpoint) is blocked-but-now-unblocked by #726
-        (reader) and #727 (disclosure policy investigation), both
-        implemented in PR #756, but the endpoint itself requires its own
-        change package, independent security review, and Merge Authority
-        approval per its High/Security task contract -- left as a genuine,
-        explicitly tracked follow-up rather than fabricated as done.
-      status: planned
+        Security/High assurance. Full change package at
+        .ai/project/changes/remote-historical-evidence-read/. Implements
+        #727's disclosure policy item by item; see
+        cap-remote-historical-evidence-read's own notes for the full
+        account. A best-effort self-review (informed by the security-review
+        skill's checklist) was performed and is recorded in the change
+        package; independent human security review and Merge Authority
+        approval remain required before merge to main and have not
+        happened yet.
+      status: implemented
 
     - requirement_id: req-server-init-git-commit-worker
-      capability_id: cap-ubuntu-server-deployment
+      capability_id: cap-server-init-git-commit-worker
+      capability_remap_reason: >-
+        The prior placeholder entry recorded this requirement under the
+        broad cap-ubuntu-server-deployment umbrella since #731 was not yet
+        implemented. Now that it is, it gets its own dedicated capability
+        (cap-server-init-git-commit-worker), matching this project's
+        established convention of a focused capability entry per
+        implemented feature (e.g. cap-remote-historical-evidence-read
+        alongside cap-git-historical-disclosure-policy) rather than every
+        server-init-related requirement sharing one umbrella capability.
       epic: https://github.com/Eruhitsuji/lifetxt/issues/724
-      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/731
-      pull_request: null
-      changed_files_or_scope: []
-      tests_or_evidence: []
+      task_issue: "https://github.com/Eruhitsuji/lifetxt/issues/731"
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/758
+      changed_files_or_scope:
+        - "Add lifetxt.git_commit_worker (run_commit()) and `lifetxt
+          git-commit-worker run`, an opt-in periodic Git-commit worker
+          requiring an already-existing repository, staging only an
+          explicit path allowlist, fail-closed on detached HEAD/branch
+          mismatch/missing identity/pre-existing unrelated staged changes,
+          concurrency-locked via the existing server_update.UpdateLock,
+          and wired into server-init's plan-first idempotent systemd unit
+          generation alongside a server-update coordination check"
+        - lifetxt/git_commit_worker.py
+        - lifetxt/git_commit_worker_cli.py
+        - lifetxt/server_init.py
+        - lifetxt/server_update.py
+        - lifetxt/entrypoint.py
+        - lifetxt/cli_taxonomy.py
+        - tests/test_git_commit_worker.py
+        - tests/test_git_commit_worker_cli.py
+        - tests/test_server_init.py
+        - tests/test_server_update.py
+        - docs/deployment/ubuntu-server.md
+        - docs/en/cli.md
+        - docs/ja/cli.md
+        - .ai/project/changes/git-commit-worker/
+      tests_or_evidence:
+        - "tests/test_git_commit_worker.py (13 tests): no-op success, allowed-path change committed then a repeat run is a no-op, unrelated unstaged changes ignored, unrelated pre-existing staged changes refused with the index left untouched, detached HEAD refused, branch mismatch refused, missing Git identity refused, no-allowlist/path-escaping-repository/not-a-git-repository all raise, concurrent-run lock refuses while held and releases on completion"
+        - "tests/test_git_commit_worker_cli.py (4 tests, real subprocess): no-op JSON output, a real committed change with the fixed lifetxt-auto-commit: message confirmed via git log, non-zero exit on refusal, --help"
+        - "tests/test_server_init.py GitCommitWorkerConfigGenerationTests (7 tests): disabled-by-default generates no units, enabled generates correct service+timer content, plan idempotency on a second run, invalid config rejected before any write, generator-function identity"
+        - "tests/test_server_update.py (3 new tests): refuses while a configured git_commit_worker_lock_path file exists, proceeds normally when unset or when the file does not currently exist"
+        - E:\project\lifetxt\.claude\worktrees\agent-a409e25fe05027723\.venv\Scripts\python.exe -m unittest tests.test_git_commit_worker tests.test_git_commit_worker_cli tests.test_server_init tests.test_server_update tests.test_cli_taxonomy tests.test_completion_surfaces tests.test_completion_values -> Ran 279 tests, OK (skipped=2)
+        - "live: a real disposable git repository -- first run no_op, then a real change committed with the exact fixed message format confirmed via git log; a subsequent unrelated staged file caused the next run to refuse with unrelated_staged_changes, leaving the allowlisted path's own pending modification unstaged and untouched"
+        - "live: a real build_plan() call with git_commit_worker.enabled=true generated the exact designed systemd unit content (ExecStart=/--path/--branch/OnUnitActiveSec=)"
+        - E:\project\lifetxt\.claude\worktrees\agent-a409e25fe05027723\.venv\Scripts\python.exe -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on every changed file -> clean
+        - E:\project\lifetxt\.claude\worktrees\agent-a409e25fe05027723\.venv\Scripts\python.exe scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> {"errors":0,"ok":true}
       release_or_deployment: null
       notes: >-
-        Not implemented in this batch due to time constraints. #731 (an
-        opt-in periodic Git-commit worker for server-init-managed
-        deployments, requiring an existing repository, explicit path
-        allowlist, fail-closed-on-unrelated-staged-changes, local-commit-
-        only semantics, and reuse of server_init.py's existing plan-first
-        systemd unit generation) remains independent of #725-#730/#727 and
-        is left as an explicitly tracked follow-up rather than fabricated
-        as done.
-      status: planned
+        Security/High assurance. Full change package at
+        .ai/project/changes/git-commit-worker/. See
+        cap-server-init-git-commit-worker's own notes for the full
+        account, including the found-and-fixed "repository top level, not
+        merely inside an ancestor repository" correctness gap discovered
+        during live testing on a host whose home directory is itself a
+        tracked repository. A standalone `server-git-commit
+        plan|install|remove` command for an already-running deployment
+        remains an explicit, unimplemented follow-up, not silently
+        dropped. A best-effort self-review of the Git-mutation surface was
+        performed and is recorded in the change package; independent
+        human security review and Merge Authority approval remain
+        required before merge to main and have not happened yet.
+      status: implemented
+
+    - requirement_id: req-728-731-remote-historical-read-and-periodic-commit-batch-integration
+      capability_id: cap-remote-historical-evidence-read
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/724
+      task_issue: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/758
+      changed_files_or_scope:
+        - Record the 728-731 batch's integration into main as its own
+          traceable step
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - "python -m unittest tests.test_remote_historical tests.test_git_commit_worker tests.test_git_commit_worker_cli tests.test_server_init tests.test_server_update tests.test_cli_taxonomy tests.test_completion_surfaces tests.test_completion_values -> Ran 279 tests, OK (skipped=2)"
+        - python -m unittest tests.test_traceability_gate tests.test_change_package_closeout -> Ran 17 tests, OK
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on every changed file -> clean
+        - python scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> {"errors":0,"ok":true}
+      release_or_deployment: >-
+        This entry documents PR #758 itself:
+        feature/728-731-remote-historical-read-and-periodic-commit (Issues
+        #728, #731, each on its own child branch --
+        task/728-remote-historical-read, task/731-git-commit-worker --
+        merged locally into the integration branch before this final PR; no
+        separate sub-PR was opened for either, matching this repo's
+        no-separate-sub-PR batch-integration precedent) merging into main,
+        on top of PR #756's already-merged #725/#726/#727/#729/#730 work.
+        This completes the #724 umbrella epic's proposed child
+        decomposition.
+      notes: >-
+        Follows the multi-PR integration-branch pattern established
+        throughout this project. Both child requirement entries above
+        (req-remote-historical-evidence-read, req-server-init-git-commit-worker)
+        correctly name this PR (#758) once it existed; this entry documents
+        the integration step itself.
+      status: implemented
 
     - requirement_id: req-724-731-git-historical-evidence-batch-integration
       capability_id: cap-git-historical-read

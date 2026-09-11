@@ -139,6 +139,9 @@ _EXTRA_SUMMARIES = {
     "report": "Run or preview a named periodic Markdown/JSON/HTML report profile.",
     "server-report": "Install, remove, or plan a scheduled report job on "
     "an already-running server deployment.",
+    "git-commit-worker": "Opt-in periodic Git-commit worker: stage and "
+    "commit only a configured path allowlist in an already-existing "
+    "repository. Disabled unless explicitly configured.",
 }
 
 
@@ -155,7 +158,7 @@ def all_commands():
     names = set(_canonical_names_and_aliases())
     names |= set(_EXTRA_COMMANDS)
     names |= set(_PERSONAL_CONTEXT_COMMANDS)
-    names |= {"report", "server-report"}
+    names |= {"report", "server-report", "git-commit-worker"}
     return tuple(sorted(names))
 
 
@@ -406,6 +409,7 @@ CATEGORIES = OrderedDict(
                     "server-init",
                     "server-update",
                     "server-report",
+                    "git-commit-worker",
                 ),
             },
         ),
@@ -764,6 +768,7 @@ WRITE_COMMANDS = frozenset(
         "server-init",
         "server-update",
         "server-report",
+        "git-commit-worker",
         "memory",
         "archive",
         "batch",

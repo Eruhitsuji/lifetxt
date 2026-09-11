@@ -110,7 +110,7 @@ class CategoryCoverageTests(unittest.TestCase):
                 prog_last if prog_last in names else sorted(names, key=len)[-1]
             )
         expected = canonical | set(_EXTRA_COMMANDS) | set(_PERSONAL_CONTEXT_COMMANDS)
-        expected |= {"report", "server-report"}
+        expected |= {"report", "server-report", "git-commit-worker"}
         self.assertEqual(expected, set(cli_taxonomy.all_commands()))
 
 

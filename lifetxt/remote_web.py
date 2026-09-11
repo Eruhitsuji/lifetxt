@@ -31,6 +31,7 @@ from .remote_access import (
     validate_remote_storage,
 )
 from .remote_backend import read_resource, resource_catalog, snapshot, source_revision
+from .remote_historical import read_historical_resource
 from .remote_sessions import (
     BrowserSessionStore,
     browser_enabled,
@@ -439,6 +440,17 @@ def install_remote_web():
             require_scope(current, "read")
             return read_resource(
                 resource_name,
+                app.state.paths,
+                app.state.config,
+                current,
+                request.query_params,
+            )
+
+        @app.get("/api/remote/v1/historical")
+        def remote_historical(request: Request):
+            _require_v2(request)
+            current = principal(request)
+            return read_historical_resource(
                 app.state.paths,
                 app.state.config,
                 current,

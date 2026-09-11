@@ -9075,6 +9075,162 @@ capabilities:
       replaced_by: null
       deprecation_issue: null
 
+  - id: cap-remote-historical-evidence-read
+    name: Remote Safe Mode bounded Git historical evidence read
+    summary: >-
+      An opt-in, bounded, permission-filtered `GET /api/remote/v1/historical`
+      Remote Safe Mode route exposing
+      `lifetxt.historical_temporal.read_historical_snapshot` (#725/#726) as a
+      server resource, implementing the #727 disclosure-policy investigation
+      exactly: conjunctive current+historical authorization, exact-revision/
+      as-of-only selectors resolved only against server-configured source
+      paths, no parallel authorization engine (reuses
+      `lifetxt.remote_access` role/scope/visibility/redaction/audit
+      mechanisms unmodified), a server-level item-count bound on top of the
+      reader's own existing limits, and fail-closed behavior with no
+      fallback to current state.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-remote-historical-evidence-read
+    implementation_locations:
+      - lifetxt/remote_historical.py
+      - lifetxt/remote_web.py
+      - lifetxt/config_registry.py
+      - tests/test_remote_historical.py
+      - docs/en/remote.md
+      - docs/ja/remote.md
+      - .ai/project/changes/remote-historical-evidence-read/
+    public_interfaces:
+      - GET /api/remote/v1/historical
+      - lifetxt.remote_historical.read_historical_resource
+      - remote.historical_reads_enabled
+      - "principal scope: historical"
+    tests_or_evidence:
+      - "tests/test_remote_historical.py RemoteHistoricalReadTests (10 tests, real disposable git repository): authorized bounded read matches the exact-revision snapshot, historically-private record denied, currently-private-though-historically-shared record denied (conjunctive/#727 Section 7), missing historical scope raises even with reads enabled, disabled-by-default config raises REMOTE_HISTORICAL_DISABLED, limit param bounds and reports truncated, an invalid limit is rejected, an unknown/invalid revision raises REMOTE_HISTORICAL_UNAVAILABLE with no fallback, results never contain raw local paths, the audit log never contains raw content/secret-shaped values"
+      - "tests/test_remote_historical.py GitFreeWorkspaceTests: a workspace with no Git repository fails closed with REMOTE_HISTORICAL_UNAVAILABLE"
+      - python -m unittest tests.test_remote_historical -> Ran 11 tests, OK
+      - python -m unittest tests.test_remote_backend_v20 tests.test_remote_web_v20 tests.test_remote_pagination tests.test_config_validation tests.test_surface_runtime -> Ran 121 tests, OK (skipped=2)
+      - "live: real lifetxt serve process, real disposable git repository, GET /api/remote/v1/historical?revision=<sha> with a real bearer token and X-Lifetxt-Remote-Version: 2 returned the exact historical item, matching resolved_commit/loaded_paths"
+      - "live: the same server, an invalid --as-of value returned REMOTE_HISTORICAL_UNAVAILABLE (422), confirming fail-closed behavior over real HTTP"
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - ruff format --check / ruff check on every changed file -> clean
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/724
+      - https://github.com/Eruhitsuji/lifetxt/issues/727
+      - https://github.com/Eruhitsuji/lifetxt/issues/728
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Security/High assurance per #728's own escalation (new authenticated
+      remote-exposure surface over historically-sensitive data); full change
+      package at
+      .ai/project/changes/remote-historical-evidence-read/. Implements the
+      #727 disclosure policy's Definition of Ready checklist item by item
+      (see that capability's notes and docs/en/git-historical-disclosure-policy.md):
+      both selectors it allows (exact revision, bounded as-of) are exposed
+      and no others; the server never accepts a caller-supplied path or Git
+      object ID, since `paths` is always `app.state.paths`; every existing
+      Remote Safe Mode mechanism named in Section 4 is reused verbatim, with
+      zero parallel policy engine. A best-effort self-review of this
+      remote-exposure surface was performed (informed by the security-review
+      skill's checklist: fail-closed defaults, no caller-controlled Git
+      object/path input, redaction/audit coverage, and the two-independent-
+      opt-in gate); it does not substitute for the required independent
+      human security review and Merge Authority approval before merge to
+      main. No JSON Schema was published for the response shape in this
+      slice (see decisions.md), matching this project's precedent for
+      similarly-scoped additive config/response surfaces; recorded as a
+      candidate follow-up. Web UI/TUI/MCP rollout of this resource remains
+      an explicit, unimplemented follow-up per #728's own forbidden scope.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-server-init-git-commit-worker
+    name: Opt-in periodic Git-commit worker for server-managed data
+    summary: >-
+      A disabled-by-default `lifetxt.git_commit_worker` module and
+      `lifetxt git-commit-worker run` CLI command periodically staging and
+      committing an explicit path allowlist inside an already-existing Git
+      repository, never running `git init`, never creating a remote, and
+      never configuring global Git identity. Fails closed on detached
+      HEAD, a branch mismatch, missing Git identity, and pre-existing
+      unrelated staged changes; a no-change run is a successful no-op.
+      Wired into `server-init`'s opt-in `git_commit_worker` config section,
+      generating a plan-first, idempotent systemd oneshot+timer pair
+      through the same unit-generation pattern already established for
+      scheduled report jobs. `server-update` can be configured to avoid
+      racing the worker's own lock file.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-server-init-git-commit-worker
+    implementation_locations:
+      - lifetxt/git_commit_worker.py
+      - lifetxt/git_commit_worker_cli.py
+      - lifetxt/server_init.py
+      - lifetxt/server_update.py
+      - lifetxt/entrypoint.py
+      - lifetxt/cli_taxonomy.py
+      - tests/test_git_commit_worker.py
+      - tests/test_git_commit_worker_cli.py
+      - tests/test_server_init.py
+      - tests/test_server_update.py
+      - docs/deployment/ubuntu-server.md
+      - .ai/project/changes/git-commit-worker/
+    public_interfaces:
+      - lifetxt git-commit-worker run
+      - lifetxt.git_commit_worker.run_commit
+      - server-init.json git_commit_worker section
+      - server-update.json git_commit_worker_lock_path
+      - lifetxt.server_init.git_commit_worker_service_unit_text
+      - lifetxt.server_init.git_commit_worker_timer_unit_text
+    tests_or_evidence:
+      - "tests/test_git_commit_worker.py (13 tests, real disposable git repository): no-op success, allowed-path change committed then a second run is a no-op, unrelated unstaged changes ignored, unrelated pre-existing staged changes refused (index left untouched), detached HEAD refused, branch mismatch refused, missing Git identity refused (deterministic via mocked _identity_configured, since a real global identity is common on developer hosts), no-allowlist-configured raises, a path escaping the repository raises, not-a-git-repository raises (including a repository nested under an unrelated ancestor repo), concurrent-run lock refuses while held and releases on completion"
+      - "tests/test_git_commit_worker_cli.py (4 tests, real subprocess CLI invocations): no-op JSON output, a real committed change with the fixed lifetxt-auto-commit: <UTC ISO8601> message confirmed via git log, non-zero exit on refusal, --help"
+      - "tests/test_server_init.py GitCommitWorkerConfigGenerationTests (7 tests): disabled-by-default generates no units, enabled generates correct service+timer content (ExecStart=/--path/--branch/OnUnitActiveSec=), plan idempotency on a second run (no-op action), empty-paths/missing-branch/invalid-interval config all rejected before any write, generator-function identity check"
+      - "tests/test_server_update.py (3 new tests): refuses to start while a configured git_commit_worker_lock_path file exists, proceeds normally when the key is unset, proceeds normally when the configured lock file does not currently exist"
+      - python -m unittest tests.test_git_commit_worker tests.test_git_commit_worker_cli tests.test_server_init tests.test_server_update tests.test_cli_taxonomy tests.test_completion_surfaces tests.test_completion_values -> Ran 279 tests, OK (skipped=2)
+      - "live: a real disposable git repository -- first run no_op, then a real change committed with the exact fixed message format, confirmed via git log; a second, unrelated staged file caused the next run to refuse with unrelated_staged_changes and left the allowlisted path's own pending modification unstaged and untouched"
+      - "live: a real build_plan() call with git_commit_worker.enabled=true generated the exact designed systemd unit content"
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - ruff format --check / ruff check on every changed file -> clean
+      - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/724
+      - https://github.com/Eruhitsuji/lifetxt/issues/731
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Security/High assurance per #731's own escalation (a new,
+      opt-in Git-mutation surface on server-managed data); full change
+      package at .ai/project/changes/git-commit-worker/. Reuses
+      lifetxt.server_update.UpdateLock directly for the concurrency lock
+      rather than a second O_CREAT|O_EXCL implementation, and
+      server_init.py's git_commit_worker_service_unit_text/
+      git_commit_worker_timer_unit_text follow the exact structural
+      pattern already established by report_service_unit_text/
+      report_timer_unit_text, wired into build_plan() so the generated
+      units share the same generic idempotency/conflict classification
+      every other build_plan() step already gets. A best-effort self-
+      review of the Git-mutation surface was performed (fail-closed
+      defaults, no whole-repository staging, no auto-init/auto-identity,
+      lock-protected concurrency); it does not substitute for the required
+      independent human security review and Merge Authority approval
+      before merge to main. A standalone `server-git-commit plan|install|
+      remove` command mirroring `server-report`'s already-running-
+      deployment install pattern was not implemented in this first slice
+      (server-init's own opt-in section already satisfies the core
+      "same plan-first idempotent pattern" requirement) and is recorded as
+      an explicit, unimplemented follow-up in the change package's
+      requirements.yml and in docs/deployment/ubuntu-server.md.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
   - id: cap-git-historical-read
     name: Shared Git historical workspace snapshot reader
     summary: >-

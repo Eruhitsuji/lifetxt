@@ -1,0 +1,40 @@
+schema_version: 1
+
+requirements:
+  - id: req-server-init-git-commit-worker
+    kind: ADDED
+    statement: Add an opt-in periodic Git-commit worker for server-managed
+      lifetxt data, requiring an already-existing Git repository, an
+      explicit path allowlist, and fail-closed refusal on any state the
+      worker cannot safely reconcile.
+    acceptance_criteria:
+      - Disabled by default; requires explicit config to enable.
+      - Never runs `git init`, never creates a remote, never configures
+        global Git identity.
+      - Fails closed if the Git index already has unrelated pre-existing
+        staged changes.
+      - Only ever stages the configured allowlist paths, never
+        `git add -A` at the repository root.
+      - Commits only if the allowlist paths actually changed; a no-change
+        run is a successful no-op, not an error.
+      - Refuses on detached HEAD and on a branch mismatch against the
+        configured expected branch.
+      - Refuses on missing Git executable, missing repository, or missing
+        Git identity, with clear diagnostics.
+      - Uses a concurrency lock so overlapping runs cannot race.
+      - Commit messages use a fixed, documented machine-generated prefix
+        plus timestamp format.
+      - The systemd oneshot service and timer are generated through the
+        same plan-first, idempotent pattern `server-init` already uses for
+        other units.
+      - server-update is aware of the worker's lock file and can be
+        configured to avoid racing it.
+    constraints:
+      - No second Git commit implementation; one module, one entry point.
+    owner: Eruhitsuji
+
+open_questions:
+  - "A standalone `server-git-commit plan|install|remove` command for an
+    already-running deployment (mirroring `server-report`) remains an
+    explicit, unimplemented follow-up if operators need to add this worker
+    without re-running `server-init`."

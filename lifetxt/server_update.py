@@ -1099,6 +1099,26 @@ def run_server_update(config, yes=False, approve=None, server_config_path=None):
         github_latest_release_or_tag,
     ) = _git_helpers()
 
+    # #731 coordination: the opt-in periodic Git-commit worker
+    # (lifetxt.git_commit_worker) holds its own lock file while it stages
+    # and commits into the deployment's data repository. If the operator
+    # has configured server-update with that same lock file's path (via
+    # git_commit_worker_lock_path), refuse to start while the worker is
+    # mid-run, rather than racing an update's own git operations against
+    # it. This is a best-effort, opt-in check: the worker's repository is
+    # normally the *data* root, independent of server-update's own
+    # source-checkout install_root, so no coordination is required unless
+    # an operator's deployment genuinely shares state between the two and
+    # configures this key explicitly.
+    worker_lock_path = config.get("git_commit_worker_lock_path")
+    if worker_lock_path and os.path.exists(worker_lock_path):
+        raise ServerUpdateError(
+            "Refusing to start: the git-commit-worker lock file %s exists, "
+            "indicating a periodic commit may be in progress. Wait for it "
+            "to finish, or confirm it is stale before retrying." % worker_lock_path,
+            step="preflight",
+        )
+
     git_timeout = config.get("git_timeout", 10)
     service_timeout = config.get("service_timeout", 30)
     health_timeout = config.get("health_timeout", 10)

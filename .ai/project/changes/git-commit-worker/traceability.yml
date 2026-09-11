@@ -1,0 +1,8 @@
+schema_version: 1
+
+traceability:
+  - requirement_id: req-server-init-git-commit-worker
+    capability_id: cap-server-init-git-commit-worker
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/731
+    pull_request: null
+    status: implemented

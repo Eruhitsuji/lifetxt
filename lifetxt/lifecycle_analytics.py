@@ -154,6 +154,35 @@ def lifecycle_analytics(timeline, analysis="summary"):
             else: directions["changed"] += 1
         result.update((("analysis", "schedule_revision"), ("field_change_counts", OrderedDict((k, fields[k]) for k in sorted(fields))), ("change_categories", OrderedDict((k, directions[k]) for k in sorted(directions)))))
         return result
+    if analysis == "schedule_lead_time":
+        completed = next((row for row in rows if row.get("event") == "completed"), None)
+        changes = [row for row in rows if row.get("event") == "schedule_changed" and _instant(row.get("at")) and completed and _instant(row.get("at")) <= _instant(completed.get("at"))]
+        result["analysis"] = "schedule_completion_lead_time"
+        result["completion_at"] = completed.get("at") if completed else None
+        result["last_schedule_change"] = changes[-1].get("at") if changes else None
+        result["lead_time_seconds"] = ((_instant(completed.get("at")) - _instant(changes[-1].get("at"))).total_seconds() if changes and completed else None)
+        result["schedule_change_state"] = "observed" if changes else "none_observed"
+        return result
+    if analysis == "progress":
+        values = []
+        for row in rows:
+            if row.get("record_kind") != "progress_event": continue
+            raw = _payload(row, "after_progress")
+            try: values.append((float(raw.rstrip("%")) / (100 if raw.endswith("%") else 1), row))
+            except (TypeError, ValueError): pass
+        deltas = [b[0] - a[0] for a, b in zip(values, values[1:])]
+        result.update((("analysis", "progress_velocity"), ("first_progress", values[0][0] if values else None), ("last_progress", values[-1][0] if values else None), ("total_delta", values[-1][0] - values[0][0] if len(values) > 1 else 0), ("positive_delta_count", sum(value > 0 for value in deltas)), ("negative_delta_count", sum(value < 0 for value in deltas)), ("zero_delta_count", sum(value == 0 for value in deltas))))
+        return result
+    if analysis == "effort":
+        from .ticket_activity import normalize_duration
+        entries = []
+        for row in rows:
+            if row.get("record_kind") != "time_entry": continue
+            try: entries.append((normalize_duration(_payload(row, "elapsed"))[1], row))
+            except ValueError: pass
+        activities = Counter(_payload(row, "activity") for _, row in entries)
+        result.update((("analysis", "ticket_effort"), ("entry_count", len(entries)), ("total_elapsed_seconds", sum(value for value, _ in entries)), ("shortest_entry_seconds", min((value for value, _ in entries), default=None)), ("longest_entry_seconds", max((value for value, _ in entries), default=None)), ("activity_seconds", OrderedDict((key, sum(value for value, row in entries if _payload(row, "activity") == key)) for key in sorted(activities)))))
+        return result
     if analysis == "relation":
         added, removed = Counter(), Counter()
         for row in rows:

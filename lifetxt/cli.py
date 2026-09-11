@@ -1633,6 +1633,9 @@ def build_parser():
         ("cadence", "Analyze captured-event cadence."),
         ("oscillation", "Analyze status oscillations."),
         ("provenance-analysis", "Analyze event provenance."),
+        ("progress-analysis", "Analyze progress velocity."),
+        ("effort", "Analyze recorded ticket effort."),
+        ("schedule-lead-time", "Analyze schedule-change lead time."),
     ):
         timeline_command.add_argument("--" + _flag, action="store_true", help=_help)
     timeline_command.add_argument("--json", action="store_true", help="Emit JSON.")
@@ -13866,6 +13869,8 @@ def command_timeline(args):
         ("completion_cycles", "completion_cycles"), ("transitions", "transitions"),
         ("gaps", "gaps"), ("cadence", "cadence"), ("oscillation", "oscillation"),
         ("provenance_analysis", "provenance"),
+        ("progress_analysis", "progress"), ("effort", "effort"),
+        ("schedule_lead_time", "schedule_lead_time"),
     )
     selected_analysis = next((name for attr, name in analysis_flags if getattr(args, attr, False)), None)
     if selected_analysis or getattr(args, "summary", False):

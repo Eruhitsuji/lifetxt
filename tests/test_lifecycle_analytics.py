@@ -71,6 +71,7 @@ class LifecycleAnalyticsTests(unittest.TestCase):
         self.assertIn("total_valid_event_count", result)
         self.assertEqual(1, result["duration_distribution"]["eligible_count"])
         self.assertIn("example_item_ids", result["duration_distribution"])
+        self.assertEqual(2, len(result["coverage"]))
 
 
 if __name__ == "__main__":

@@ -188,7 +188,11 @@ def workspace_lifecycle_stats(items, id_key="id", limit=500, since=None, until=N
     summaries = [lifecycle_analytics(native_timeline(items, item_id, id_key=id_key, limit=500, since=since, until=until, include_all_valid=True), "duration" if duration else "summary") for item_id in targets]
     event_counts = Counter(); total = 0
     for summary in summaries: total += summary["observed_event_count"]; event_counts.update(summary["event_counts"])
-    result = OrderedDict((("analysis", "workspace_lifecycle_stats"), ("scanned_item_count", len(targets)), ("items_with_native_history_count", sum(row["observed_event_count"] > 0 for row in summaries)), ("total_valid_event_count", total), ("event_type_counts", OrderedDict((key, event_counts[key]) for key in sorted(event_counts))), ("incomplete_item_count", sum(not row["complete"] for row in summaries)), ("summaries", summaries), ("truncated", len(targets) >= int(limit))))
+    coverage = []
+    for summary in summaries:
+        state = "complete" if summary["complete"] else "partial" if summary["observed_event_count"] else "none"
+        coverage.append(OrderedDict((("item_id", summary["target_id"]), ("state", state), ("event_count", summary["observed_event_count"]), ("reasons", list(summary["limitations"])))) )
+    result = OrderedDict((("analysis", "workspace_lifecycle_stats"), ("scanned_item_count", len(targets)), ("items_with_native_history_count", sum(row["observed_event_count"] > 0 for row in summaries)), ("total_valid_event_count", total), ("event_type_counts", OrderedDict((key, event_counts[key]) for key in sorted(event_counts))), ("incomplete_item_count", sum(not row["complete"] for row in summaries)), ("coverage", coverage), ("summaries", summaries), ("truncated", len(targets) >= int(limit))))
     if duration:
         values = sorted((row["duration_seconds"], row["target_id"]) for row in summaries if row.get("duration_seconds") is not None); seconds = [value for value, _ in values]
         result["duration_distribution"] = OrderedDict((("eligible_count", len(seconds)), ("unavailable_count", len(summaries) - len(seconds)), ("min_seconds", min(seconds) if seconds else None), ("median_seconds", _median(seconds)), ("mean_seconds", sum(seconds) / len(seconds) if seconds else None), ("max_seconds", max(seconds) if seconds else None), ("example_item_ids", [item_id for _, item_id in values[:10]])))

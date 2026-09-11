@@ -1859,6 +1859,18 @@ def build_parser():
         "revision instead of the current working tree (#726/#730). Never "
         "falls back to current state.",
     )
+    query_command.add_argument(
+        "--as-of",
+        dest="as_of",
+        help="Evaluate the query against the newest commit at or before this "
+        "offset-aware RFC3339 timestamp, reusing the shared committer-time "
+        "selector (#760). Mutually exclusive with --revision.",
+    )
+    query_command.add_argument(
+        "--ref",
+        help="Branch/ref to select --as-of history from (default HEAD). "
+        "Only valid together with --as-of.",
+    )
     query_command.set_defaults(func=command_query)
 
     view_command = subparsers.add_parser(
@@ -14595,11 +14607,12 @@ def command_query(args):
         return 0
 
     revision = getattr(args, "revision", None)
+    as_of = getattr(args, "as_of", None)
     historical = None
-    if revision:
-        # Historical revision-scoped query (#726/#730): the shared read-only
-        # snapshot reader is the only Git historical input path, and its
-        # items feed the existing, unmodified Query engine unchanged.
+    if revision or as_of:
+        # Historical revision/as-of-scoped query (#726/#730/#760): the shared
+        # read-only snapshot reader is the only Git historical input path,
+        # and its items feed the existing, unmodified Query engine unchanged.
         from .historical_temporal import read_historical_snapshot
 
         key = id_key_from_config(config)
@@ -14607,7 +14620,13 @@ def command_query(args):
             getattr(args, "paths", None), config, stdin_when_empty=False
         ) or ["life.txt"]
         try:
-            snapshot = read_historical_snapshot(paths, key=key, revision=revision)
+            snapshot = read_historical_snapshot(
+                paths,
+                key=key,
+                revision=revision,
+                as_of=as_of,
+                ref=getattr(args, "ref", None),
+            )
         except ValueError as exc:
             sys.stderr.write("ERROR: %s\n" % exc)
             return 1
@@ -14678,11 +14697,22 @@ def command_query(args):
                         "WARNING: %s %s\n" % (row.get("code"), row.get("message"))
                     )
             return 0
-        write_text(
-            None,
-            "Historical revision: %s (resolved %s)\n"
-            % (historical["requested_revision"], historical["resolved_commit"]),
-        )
+        if historical["mode"] == "git_exact_revision":
+            write_text(
+                None,
+                "Historical revision: %s (resolved %s)\n"
+                % (historical["requested_revision"], historical["resolved_commit"]),
+            )
+        else:
+            write_text(
+                None,
+                "Historical as of: %s (ref %s, resolved %s)\n"
+                % (
+                    historical["cutoff"],
+                    historical["requested_ref"],
+                    historical["selected_commit"],
+                ),
+            )
         if not historical["evidence_complete"]:
             write_text(
                 None,

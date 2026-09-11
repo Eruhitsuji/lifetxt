@@ -327,6 +327,10 @@
         try {
           temporalThread = await api(`/api/temporal-thread/${encodeURIComponent(itemId)}`);
         } catch(_) {}
+        let nativeTimeline = null;
+        try {
+          nativeTimeline = await api(`/api/native-timeline/${encodeURIComponent(itemId)}`);
+        } catch(_) {}
         const records = data.records || [];
         let graphData = null;
         try {
@@ -362,13 +366,32 @@
           `; ${consistencyWarnings.length} consistency warning(s)` +
           `${temporalThread?.explicit?.truncated ? "; explicit thread truncated" : ""}` +
           `${temporalThread?.consistency?.truncated ? "; consistency evidence truncated" : ""}.</div>`;
+        let timelineHtml = `<div class="drawer-section-title">Native Timeline</div>`;
+        const timelineEvents = nativeTimeline?.events || [];
+        if (!timelineEvents.length) {
+          timelineHtml += `<div class="empty">No native history events.</div>`;
+        } else {
+          timelineHtml += `<div class="dep-graph">`;
+          for (const evt of timelineEvents.slice(0, 20)) {
+            timelineHtml += `<div class="dep-row"><span class="dep-rel">${escapeHtml(evt.record_kind || "")}</span>` +
+              `<span>${escapeHtml(evt.at || "")} — ${escapeHtml(evt.event || "")}</span></div>`;
+          }
+          timelineHtml += `</div>`;
+        }
+        if (nativeTimeline) {
+          const bounds = nativeTimeline.bounds || {};
+          timelineHtml += `<div class="note">${bounds.returned_events ?? 0}/${bounds.total_valid_events ?? 0} event(s) returned` +
+            `${bounds.truncated ? "; truncated" : ""}` +
+            `${(nativeTimeline.invalid_events || []).length ? `; ${nativeTimeline.invalid_events.length} invalid event(s) excluded` : ""}` +
+            `${(nativeTimeline.limitations || []).length ? `; limitations: ${escapeHtml(nativeTimeline.limitations.join(", "))}` : ""}.</div>`;
+        }
         if (!records.length) {
-          container.innerHTML = lifecycleHtml + `<div class="drawer-section-title">Dependencies &amp; Links</div><div class="empty">No links.</div>`;
+          container.innerHTML = lifecycleHtml + timelineHtml + `<div class="drawer-section-title">Dependencies &amp; Links</div><div class="empty">No links.</div>`;
           return;
         }
         const outgoing = records.filter(r => r.source_id === itemId);
         const incoming = records.filter(r => r.target_id === itemId && r.source_id !== itemId);
-        let html = lifecycleHtml + `<div class="drawer-section-title">Dependencies &amp; Links (${records.length})</div>` +
+        let html = lifecycleHtml + timelineHtml + `<div class="drawer-section-title">Dependencies &amp; Links (${records.length})</div>` +
           renderDependencyMiniGraph(records, itemId, graphData) +
           `<div class="dep-graph">`;
 

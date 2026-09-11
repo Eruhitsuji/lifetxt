@@ -148,6 +148,7 @@ def native_timeline(
     since=None,
     until=None,
     event=None,
+    include_all_valid=False,
 ):
     """Build one bounded read model without consulting or composing Git."""
     try:
@@ -203,7 +204,7 @@ def native_timeline(
     if truncated:
         limitations.append("event_limit_truncated")
     limitations = sorted(set(limitations))
-    return OrderedDict(
+    result = OrderedDict(
         (
             ("schema", "temporal-timeline-v1"),
             ("target_id", target_id),
@@ -238,3 +239,9 @@ def native_timeline(
             ("diagnostics", [_diagnostic_value(row) for row in diagnostics]),
         )
     )
+    if include_all_valid:
+        # Private hand-off for analytics.  It is removed before public
+        # temporal-timeline-v1 serialization and therefore cannot alter the
+        # existing bounded read contract.
+        result["_all_valid_events"] = filtered
+    return result

@@ -1619,6 +1619,36 @@ def build_parser():
         "--event",
         help="Include only this normalized event type.",
     )
+    timeline_command.add_argument(
+        "--compare-window",
+        metavar="START..END",
+        help="Compare this inclusive window with --to-window.",
+    )
+    timeline_command.add_argument(
+        "--to-window",
+        metavar="START..END",
+        help="Second inclusive window for lifecycle comparison.",
+    )
+    timeline_command.add_argument(
+        "--summary", action="store_true", help="Summarize filtered valid lifecycle events."
+    )
+    for _flag, _help in (
+        ("duration", "Analyze created-to-completed duration."),
+        ("status-dwell", "Analyze closed status dwell intervals."),
+        ("schedule-analysis", "Analyze schedule revisions."),
+        ("relation-analysis", "Analyze lifecycle relation churn."),
+        ("completion-cycles", "Analyze completion and reopen cycles."),
+        ("transitions", "Analyze status transition pairs."),
+        ("gaps", "Analyze captured-event gaps."),
+        ("cadence", "Analyze captured-event cadence."),
+        ("oscillation", "Analyze status oscillations."),
+        ("provenance-analysis", "Analyze event provenance."),
+        ("progress-analysis", "Analyze progress velocity."),
+        ("effort", "Analyze recorded ticket effort."),
+        ("schedule-lead-time", "Analyze schedule-change lead time."),
+        ("due-variance", "Analyze due-versus-completion variance."),
+    ):
+        timeline_command.add_argument("--" + _flag, action="store_true", help=_help)
     timeline_command.add_argument("--json", action="store_true", help="Emit JSON.")
     timeline_command.set_defaults(func=command_timeline)
 
@@ -1690,6 +1720,10 @@ def build_parser():
         metavar="REF",
         help="Git history root for --as-of. Defaults to HEAD.",
     )
+    thread_command.add_argument("--metrics", action="store_true", help="Summarize bounded explicit graph metrics.")
+    thread_command.add_argument("--replacement-analysis", action="store_true", help="Summarize bounded replacement relations.")
+    thread_command.add_argument("--consistency-summary", action="store_true", help="Summarize existing consistency warnings.")
+    thread_command.add_argument("--realization-analysis", action="store_true", help="Compare realizes plan and actual temporal evidence.")
     thread_command.add_argument("--json", action="store_true", help="Emit JSON.")
     thread_command.set_defaults(func=command_thread)
 
@@ -2411,6 +2445,16 @@ def build_parser():
         "--width", type=int, help="Render text output for a specific terminal width."
     )
     stats.set_defaults(func=command_stats)
+
+    lifecycle_stats = subparsers.add_parser("lifecycle-stats", help="Summarize bounded Native lifecycle analytics across workspace items.")
+    _add_input_paths(lifecycle_stats)
+    lifecycle_stats.add_argument("--since")
+    lifecycle_stats.add_argument("--until")
+    lifecycle_stats.add_argument("--duration", action="store_true")
+    lifecycle_stats.add_argument("--coverage", action="store_true")
+    lifecycle_stats.add_argument("--limit", type=int, default=500)
+    lifecycle_stats.add_argument("--json", action="store_true")
+    lifecycle_stats.set_defaults(func=command_lifecycle_stats)
 
     git_hook = subparsers.add_parser(
         "git-hook",
@@ -13805,12 +13849,19 @@ def command_temporal(args):
 
 def command_timeline(args):
     from .native_timeline import native_timeline
+    from .lifecycle_analytics import lifecycle_analytics, lifecycle_summary
+    from .timezone_policy import resolve_timezone_name
 
     config = _config(args)
     paths = _normalize_paths(
         getattr(args, "paths", None), config, stdin_when_empty=False
     ) or ["life.txt"]
     items, _diagnostics = _parse_or_exit(paths, config)
+    def _window(value):
+        if not value or str(value).count("..") != 1:
+            raise ValueError("Timeline comparison windows must use START..END.")
+        return tuple(str(value).split("..", 1))
+
     try:
         result = native_timeline(
             items,
@@ -13820,12 +13871,75 @@ def command_timeline(args):
             since=getattr(args, "since", None),
             until=getattr(args, "until", None),
             event=getattr(args, "event", None),
+            include_all_valid=bool(
+                getattr(args, "summary", False)
+                or any(
+                    getattr(args, name, False)
+                    for name in (
+                        "duration", "status_dwell", "schedule_analysis",
+                        "relation_analysis", "completion_cycles", "transitions",
+                        "gaps", "cadence", "oscillation", "provenance_analysis",
+                        "progress_analysis", "effort", "schedule_lead_time",
+                        "due_variance",
+                    )
+                )
+            ),
         )
+        if getattr(args, "compare_window", None) or getattr(args, "to_window", None):
+            if not getattr(args, "compare_window", None) or not getattr(args, "to_window", None):
+                raise ValueError("--compare-window and --to-window must be provided together.")
+            from .lifecycle_analytics import compare_lifecycle_windows
+            first_start, first_end = _window(args.compare_window)
+            second_start, second_end = _window(args.to_window)
+            first = native_timeline(items, args.id, id_key=id_key_from_config(config), limit=getattr(args, "limit", 100), since=first_start, until=first_end, event=getattr(args, "event", None), include_all_valid=True)
+            second = native_timeline(items, args.id, id_key=id_key_from_config(config), limit=getattr(args, "limit", 100), since=second_start, until=second_end, event=getattr(args, "event", None), include_all_valid=True)
+            result = compare_lifecycle_windows(first, second)
     except ValueError as exc:
         sys.stderr.write("ERROR: %s\n" % exc)
         return 1
+    analysis_flags = (
+        ("duration", "duration"), ("status_dwell", "status_dwell"),
+        ("schedule_analysis", "schedule"), ("relation_analysis", "relation"),
+        ("completion_cycles", "completion_cycles"), ("transitions", "transitions"),
+        ("gaps", "gaps"), ("cadence", "cadence"), ("oscillation", "oscillation"),
+        ("provenance_analysis", "provenance"),
+        ("progress_analysis", "progress"), ("effort", "effort"),
+        ("schedule_lead_time", "schedule_lead_time"),
+        ("due_variance", "due_variance"),
+    )
+    selected_analysis = next((name for attr, name in analysis_flags if getattr(args, attr, False)), None)
+    if getattr(args, "compare_window", None) or getattr(args, "to_window", None):
+        if getattr(args, "json", False):
+            write_text(None, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+        else:
+            write_text(None, "Lifecycle window comparison for %s:\n" % args.id)
+            for key, value in result["absolute_deltas"].items():
+                write_text(None, "  %s: %s\n" % (key, value))
+            if result["limitations"]:
+                write_text(None, "  Limitations: %s\n" % ", ".join(result["limitations"]))
+        return 0
+    if selected_analysis or getattr(args, "summary", False):
+        result = lifecycle_analytics(result, selected_analysis or "summary", timezone_name=resolve_timezone_name(config))
     if getattr(args, "json", False):
         write_text(None, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+        return 0
+    if selected_analysis or getattr(args, "summary", False):
+        write_text(None, "Lifecycle Summary for %s:\n" % result["target_id"])
+        write_text(None, "  Analysis: %s\n" % result.get("analysis", "lifecycle_summary"))
+        write_text(None, "  Events: %d\n" % result["observed_event_count"])
+        write_text(None, "  First: %s\n" % (result["first_event_at"] or "(none)"))
+        write_text(None, "  Last:  %s\n" % (result["last_event_at"] or "(none)"))
+        write_text(None, "  Status transitions: %d\n" % result["status_transition_count"])
+        write_text(None, "  Schedule changes: %d\n" % result["schedule_change_count"])
+        write_text(None, "  Relation changes: %d\n" % result["relation_change_count"])
+        write_text(None, "  Completed: %d\n" % result["completed_count"])
+        write_text(None, "  Reopened: %d\n" % result["reopened_count"])
+        base_keys = {"analysis_schema", "target_id", "observed_event_count", "event_counts", "first_event_at", "last_event_at", "status_transition_count", "schedule_change_count", "relation_change_count", "completed_count", "reopened_count", "complete", "limitations", "diagnostics", "analysis"}
+        for key, value in result.items():
+            if key not in base_keys:
+                write_text(None, "  %s: %s\n" % (key, value))
+        if result["limitations"]:
+            write_text(None, "  Limitations: %s\n" % ", ".join(result["limitations"]))
         return 0
     write_text(
         None,
@@ -13972,6 +14086,7 @@ def command_thread(args):
     diff_spec = getattr(args, "diff", None)
     as_of = getattr(args, "as_of", None)
     requested_ref = getattr(args, "ref", None)
+    analysis_items = None
     if requested_ref and not as_of:
         sys.stderr.write("ERROR: --ref is only valid together with --as-of.\n")
         return 1
@@ -14011,6 +14126,7 @@ def command_thread(args):
             target = None
         else:
             items, _diagnostics = _parse_or_exit(paths, _config(args))
+            analysis_items = items
             target = find_item_by_id(items, args.id, key=key)
             if target is None:
                 sys.stderr.write("ERROR: No item with id %r.\n" % args.id)
@@ -14019,9 +14135,33 @@ def command_thread(args):
     except ValueError as exc:
         sys.stderr.write("ERROR: %s\n" % exc)
         return 1
+    if getattr(args, "metrics", False) or getattr(args, "replacement_analysis", False) or getattr(args, "consistency_summary", False) or getattr(args, "realization_analysis", False):
+        from .temporal_thread import realization_timing_analysis, replacement_chain_analysis, temporal_consistency_summary, temporal_thread_metrics
+        if getattr(args, "metrics", False):
+            result["analysis"] = temporal_thread_metrics(result)
+        elif getattr(args, "replacement_analysis", False):
+            result["analysis"] = replacement_chain_analysis(result)
+        else:
+            if getattr(args, "realization_analysis", False):
+                if analysis_items is None:
+                    raise ValueError("--realization-analysis is only available for current workspace reads.")
+                result["analysis"] = realization_timing_analysis(analysis_items, result, key=key)
+                if getattr(args, "json", False):
+                    write_text(None, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+                    return 0
+                write_text(None, "Realizes timing analysis for %s:\n" % args.id)
+                for row in result["analysis"]["results"]:
+                    write_text(None, "  %s -> %s: %s\n" % (row["actual_id"], row["plan_id"], row["classification"]))
+                return 0
+            result["analysis"] = temporal_consistency_summary(result)
     if getattr(args, "json", False):
         write_text(None, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
         return 0
+    if result.get("analysis"):
+        write_text(None, "Thread analysis for %s (%s):\n" % (args.id, result["analysis"].get("analysis", "unknown")))
+        for key, value in result["analysis"].items():
+            if key != "analysis":
+                write_text(None, "  %s: %s\n" % (key, value))
     write_text(
         None,
         "Temporal thread for %s (%s):\n" % (args.id, result["target"]["title"]),
@@ -15849,6 +15989,26 @@ def command_stats(args):
     from .stats import cmd_stats
 
     return cmd_stats(args)
+
+
+def command_lifecycle_stats(args):
+    from .lifecycle_analytics import workspace_lifecycle_stats
+    from .timezone_policy import resolve_timezone_name
+    config = _config(args)
+    paths = _normalize_paths(getattr(args, "paths", None), config, stdin_when_empty=False) or ["life.txt"]
+    items, _diagnostics = _parse_or_exit(paths, config)
+    result = workspace_lifecycle_stats(items, id_key=id_key_from_config(config), limit=args.limit, since=args.since, until=args.until, duration=args.duration, timezone_name=resolve_timezone_name(config))
+    if args.coverage:
+        result["analysis"] = "native_history_coverage"
+        counts = {state: sum(1 for row in result["coverage"] if row["state"] == state) for state in ("complete", "partial", "none")}
+        result["coverage_counts"] = counts
+    if args.json:
+        write_text(None, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+    else:
+        write_text(None, "Workspace Lifecycle Stats: %d item(s), %d with history\n" % (result["scanned_item_count"], result["items_with_native_history_count"]))
+        if args.duration:
+            write_text(None, "  Duration distribution: %s\n" % result["duration_distribution"])
+    return 0
 
 
 def command_git_hook(args):

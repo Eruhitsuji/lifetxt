@@ -22,3 +22,22 @@ verification:
       security review and Merge Authority approval remain required before
       merge to main; this verification record does not assert that review
       happened.
+
+      Full-suite triage: `python -m unittest discover` on this branch ->
+      Ran 4215 tests in 988.394s, FAILED (failures=9, errors=1, skipped=37).
+      All 10 are confirmed unrelated to this PR's diff (neither #728 nor
+      #731 changed files are implicated in any of them): 4 are the exact
+      same pre-existing failures already triaged and documented on `main`
+      by commit 66c5d03 (test_non_git_and_option_like_refs_fail_loudly,
+      test_done_appends_done_date_today, test_done_marks_item_done_by_id,
+      test_undo_restores_previous_content -- a historical_temporal
+      ref-parsing edge case plus a MutationConflict/content-hash race in
+      mutation.write_text via native_history_mutation, unrelated code
+      paths); 3 are a Windows PATHEXT editor-resolution quirk in
+      tests/test_tui_remote_backend.py (nvim.EXE/vim.BAT vs. nvim/vim),
+      a file this PR does not touch; 1 is a Windows file-locking
+      PermissionError during shutil.rmtree teardown of a git pack file in
+      tests/test_history_consistency.py, also untouched by this PR; 2 are
+      tests/test_today_cli.py date-rollover flakes (the host's system
+      clock advanced from 2026-09-11 to 2026-09-12 partway through the
+      ~988s run), in a file this PR does not touch.

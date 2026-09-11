@@ -391,7 +391,10 @@ def normalize_native_events(items, parent_id=None):
         if parent_id is not None and parent != str(parent_id):
             continue
         if is_item_event(item):
-            excluded = set(_COMMON_FIELDS + _OPTIONAL_COMMON_FIELDS)
+            # Keep actor/source provenance in the normalized read model.  They
+            # are common envelope fields, but analytics consumers must not lose
+            # the original field/value when adapting an event.
+            excluded = set(_COMMON_FIELDS)
             payload = OrderedDict((key, list(_values(item, key))) for key in item.details if key not in excluded)
             rows.append(_normalized(item, ITEM_EVENT_MARKER, _first(item, "event", ""), _first(item, "at", ""), _int_or_none(_first(item, "sequence")), _first(item, "transaction", ""), _first(item, "source_revision", ""), payload, not item_event_diagnostics(item)))
         elif is_progress_event(item):

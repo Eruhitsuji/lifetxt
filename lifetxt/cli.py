@@ -1622,6 +1622,19 @@ def build_parser():
     timeline_command.add_argument(
         "--summary", action="store_true", help="Summarize filtered valid lifecycle events."
     )
+    for _flag, _help in (
+        ("duration", "Analyze created-to-completed duration."),
+        ("status-dwell", "Analyze closed status dwell intervals."),
+        ("schedule-analysis", "Analyze schedule revisions."),
+        ("relation-analysis", "Analyze lifecycle relation churn."),
+        ("completion-cycles", "Analyze completion and reopen cycles."),
+        ("transitions", "Analyze status transition pairs."),
+        ("gaps", "Analyze captured-event gaps."),
+        ("cadence", "Analyze captured-event cadence."),
+        ("oscillation", "Analyze status oscillations."),
+        ("provenance-analysis", "Analyze event provenance."),
+    ):
+        timeline_command.add_argument("--" + _flag, action="store_true", help=_help)
     timeline_command.add_argument("--json", action="store_true", help="Emit JSON.")
     timeline_command.set_defaults(func=command_timeline)
 
@@ -13806,7 +13819,7 @@ def command_temporal(args):
 
 def command_timeline(args):
     from .native_timeline import native_timeline
-    from .lifecycle_analytics import lifecycle_summary
+    from .lifecycle_analytics import lifecycle_analytics, lifecycle_summary
 
     config = _config(args)
     paths = _normalize_paths(
@@ -13826,12 +13839,20 @@ def command_timeline(args):
     except ValueError as exc:
         sys.stderr.write("ERROR: %s\n" % exc)
         return 1
+    analysis_flags = (
+        ("duration", "duration"), ("status_dwell", "status_dwell"),
+        ("schedule_analysis", "schedule"), ("relation_analysis", "relation"),
+        ("completion_cycles", "completion_cycles"), ("transitions", "transitions"),
+        ("gaps", "gaps"), ("cadence", "cadence"), ("oscillation", "oscillation"),
+        ("provenance_analysis", "provenance"),
+    )
+    selected_analysis = next((name for attr, name in analysis_flags if getattr(args, attr, False)), None)
+    if selected_analysis or getattr(args, "summary", False):
+        result = lifecycle_analytics(result, selected_analysis or "summary")
     if getattr(args, "json", False):
-        if getattr(args, "summary", False):
-            result = lifecycle_summary(result)
         write_text(None, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
         return 0
-    if getattr(args, "summary", False):
+    if selected_analysis or getattr(args, "summary", False):
         summary = lifecycle_summary(result)
         write_text(None, "Lifecycle Summary for %s:\n" % result["target_id"])
         write_text(None, "  Events: %d\n" % summary["observed_event_count"])

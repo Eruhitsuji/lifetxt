@@ -231,7 +231,7 @@ including its `--json` machine-readable form for scripts and AI clients.
 | Structure / Data Integrity | `check`, `integrity`, `ids`, `links`, `backlinks`, `sources`, `tag`, `lint`, `deps`, `diff`, `snapshot`, `undo`, `cleanup`, `files` |
 | Import / Export / Reports | `import`, `export`, `import-ics`, `sync-ics`, `to-json`, `to-jsonl`, `to-csv`, `from-json`, `from-jsonl`, `from-csv`, `from-markdown`, `from-todo`, `to-ics`, `markdown`, `stats`, `plot`, `export-heatmap`, `standup`, `invoice`, `share`, `digest`, `report` |
 | Interfaces / Integration | `tui`, `fzf`, `web`, `serve`, `mcp`, `ai`, `completion`, `git-hook`, `watch`, `remote` |
-| Workspace / Configuration / Safety | `config`, `workspace`, `path`, `doctor`, `format`, `safety`, `capabilities`, `attachment`, `update`, `update-check`, `server-init`, `server-update`, `server-report` |
+| Workspace / Configuration / Safety | `config`, `workspace`, `path`, `doctor`, `format`, `safety`, `capabilities`, `attachment`, `update`, `update-check`, `server-init`, `server-update`, `server-report`, `git-commit-worker` |
 | Personal Context | `context`, `memory`, `decisions` |
 | Advanced / Experimental | `archive`, `batch`, `encrypt`, `decrypt`, `migrate`, `template`, `demo`, `vm`, `rrule` |
 

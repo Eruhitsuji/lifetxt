@@ -1,0 +1,32 @@
+schema_version: 1
+
+verification:
+  - requirement_id: req-server-init-git-commit-worker
+    result: passed
+    commands:
+      - command: .venv/Scripts/python.exe -m unittest tests.test_git_commit_worker
+        result: "Ran 13 tests, OK"
+      - command: .venv/Scripts/python.exe -m unittest tests.test_git_commit_worker_cli
+        result: "Ran 4 tests, OK (real subprocess CLI invocations)"
+      - command: .venv/Scripts/python.exe -m unittest tests.test_server_init
+        result: "Ran 40 tests, OK"
+      - command: .venv/Scripts/python.exe -m unittest tests.test_server_update
+        result: "Ran 125 tests, OK (skipped=1)"
+      - command: .venv/Scripts/python.exe -m unittest tests.test_cli_taxonomy tests.test_completion_surfaces tests.test_completion_values
+        result: "OK"
+      - command: .venv/Scripts/python.exe -m ruff check / ruff format --check on every changed file
+        result: "clean"
+      - command: real disposable Git repository, `python -m lifetxt git-commit-worker run --repo-root ... --path data.txt --branch main`
+        result: "first run no_op, then a real committed run with commit sha and 'lifetxt-auto-commit: <UTC ISO8601>' message, confirmed via git log"
+      - command: same repo, unrelated file staged then run again
+        result: "refused with reason unrelated_staged_changes; the allowlisted path's own modification was left unstaged and untouched"
+      - command: real build_plan() call with git_commit_worker.enabled=true
+        result: "generated lifetxt-git-commit-worker.service/.timer with correct ExecStart=/OnUnitActiveSec= content"
+      - command: .venv/Scripts/python.exe scripts/validate_release_docs.py --output .cache/release-doc-validation.json
+        result: '{"errors": 0, "ok": true}'
+    notes: >-
+      Live verification used a disposable Git repository and the real
+      installed CLI dispatch path on this Windows sandbox. Independent
+      human security review and Merge Authority approval remain required
+      before merge to main; this verification record does not assert that
+      review happened.

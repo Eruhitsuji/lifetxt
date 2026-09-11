@@ -1,0 +1,8 @@
+schema_version: 1
+
+traceability:
+  - requirement_id: req-remote-historical-evidence-read
+    capability_id: cap-remote-historical-evidence-read
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/728
+    pull_request: null
+    status: implemented

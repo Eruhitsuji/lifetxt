@@ -206,6 +206,7 @@ python -m lifetxt vm run program.life.txt --entry s1
 | `server-init` | 本番運用向け Ubuntu Server bootstrap の plan-first コマンド ([§19](#19-最近追加されたコマンド範囲) 参照) |
 | `server-update` | systemd 管理された install の guarded な本番更新コマンド ([§19](#19-最近追加されたコマンド範囲) 参照) |
 | `server-report` | 稼働中の deployment に対する scheduled report job の plan/install/remove ([§19](#19-最近追加されたコマンド範囲) 参照) |
+| `git-commit-worker` | opt-in の periodic Git-commit worker（既定で無効、[§19](#19-最近追加されたコマンド範囲) 参照） |
 | `remote` | CLI から認証済み Remote Safe Mode を利用する: profile、読み取り、ticket 書き込み ([§19](#19-最近追加されたコマンド範囲) 参照) |
 | `vm` | opt-in の Turing-complete VM: 有効な life.txt record を 2-counter machine として実行する ([vm.md](vm.md) 参照) |
 | `context`、`memory`、`decisions` | Personal Context の決定論的な参照・修正コマンド ([personal-context-toolkit.md](personal-context-toolkit.md) 参照) |
@@ -238,7 +239,7 @@ audience、そしてこの表と同じカテゴリ分類を表示します。
 | Structure / Data Integrity | `check`、`integrity`、`ids`、`links`、`backlinks`、`sources`、`tag`、`lint`、`deps`、`diff`、`snapshot`、`undo`、`cleanup`、`files` |
 | Import / Export / Reports | `import`、`export`、`import-ics`、`sync-ics`、`to-json`、`to-jsonl`、`to-csv`、`from-json`、`from-jsonl`、`from-csv`、`from-markdown`、`from-todo`、`to-ics`、`markdown`、`stats`、`plot`、`export-heatmap`、`standup`、`invoice`、`share`、`digest`、`report` |
 | Interfaces / Integration | `tui`、`fzf`、`web`、`serve`、`mcp`、`ai`、`completion`、`git-hook`、`watch`、`remote` |
-| Workspace / Configuration / Safety | `config`、`workspace`、`path`、`doctor`、`format`、`safety`、`capabilities`、`attachment`、`update`、`update-check`、`server-init`、`server-update`、`server-report` |
+| Workspace / Configuration / Safety | `config`、`workspace`、`path`、`doctor`、`format`、`safety`、`capabilities`、`attachment`、`update`、`update-check`、`server-init`、`server-update`、`server-report`、`git-commit-worker` |
 | Personal Context | `context`、`memory`、`decisions` |
 | Advanced / Experimental | `archive`、`batch`、`encrypt`、`decrypt`、`migrate`、`template`、`demo`、`vm`、`rrule` |
 

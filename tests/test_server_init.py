@@ -703,6 +703,118 @@ class ReportingConfigGenerationTests(unittest.TestCase):
         )
 
 
+def _git_commit_worker_config(**overrides):
+    data = {
+        "enabled": True,
+        "paths": ["generated/data.json"],
+        "branch": "main",
+        "interval_minutes": 30,
+    }
+    data.update(overrides)
+    return data
+
+
+class GitCommitWorkerConfigGenerationTests(unittest.TestCase):
+    def test_disabled_by_default_generates_no_units(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = server_init.load_config(_write_json(tmp, _config(tmp)))
+            plan = server_init.build_plan(config)
+            self.assertFalse(
+                any(
+                    "git-commit-worker" in (step.get("path") or "")
+                    for step in plan["steps"]
+                )
+            )
+
+    def test_enabled_generates_service_and_timer_units(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = server_init.load_config(
+                _write_json(
+                    tmp,
+                    _config(tmp, git_commit_worker=_git_commit_worker_config()),
+                )
+            )
+            plan = server_init.build_plan(config)
+            paths = [step.get("path") or "" for step in plan["steps"]]
+            self.assertTrue(
+                any(p.endswith("lifetxt-git-commit-worker.service") for p in paths)
+            )
+            self.assertTrue(
+                any(p.endswith("lifetxt-git-commit-worker.timer") for p in paths)
+            )
+            service_step = next(
+                s
+                for s in plan["steps"]
+                if s["path"].endswith(".service") and "git-commit-worker" in s["path"]
+            )
+            self.assertIn("--branch main", service_step["content"])
+            self.assertIn("--path generated/data.json", service_step["content"])
+            self.assertIn("ExecStart=", service_step["content"])
+            timer_step = next(
+                s
+                for s in plan["steps"]
+                if s["path"].endswith(".timer") and "git-commit-worker" in s["path"]
+            )
+            self.assertIn("OnUnitActiveSec=30m", timer_step["content"])
+
+    def test_plan_is_idempotent_on_a_second_run(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = server_init.load_config(
+                _write_json(
+                    tmp,
+                    _config(tmp, git_commit_worker=_git_commit_worker_config()),
+                )
+            )
+            with mock.patch("lifetxt.server_update._run", return_value=_Completed()):
+                with mock.patch(
+                    "lifetxt.server_update.check_health",
+                    return_value={"ok": True, "status_code": 200},
+                ):
+                    first = server_init.run_server_init(config, yes=True)
+                    second = server_init.run_server_init(config, yes=True)
+            self.assertEqual(first["status"], "ready")
+            self.assertEqual(second["status"], "ready")
+            git_worker_steps = [
+                s
+                for s in second["steps"]
+                if "git-commit-worker" in (s.get("path") or "")
+            ]
+            self.assertTrue(git_worker_steps)
+            self.assertTrue(all(s["action"] == "no-op" for s in git_worker_steps))
+
+    def test_empty_paths_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            bad = _git_commit_worker_config(paths=[])
+            with self.assertRaisesRegex(server_init.ServerInitError, "paths"):
+                server_init.load_config(
+                    _write_json(tmp, _config(tmp, git_commit_worker=bad))
+                )
+
+    def test_missing_branch_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            bad = _git_commit_worker_config(branch="")
+            with self.assertRaisesRegex(server_init.ServerInitError, "branch"):
+                server_init.load_config(
+                    _write_json(tmp, _config(tmp, git_commit_worker=bad))
+                )
+
+    def test_invalid_interval_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            bad = _git_commit_worker_config(interval_minutes=0)
+            with self.assertRaisesRegex(
+                server_init.ServerInitError, "interval_minutes"
+            ):
+                server_init.load_config(
+                    _write_json(tmp, _config(tmp, git_commit_worker=bad))
+                )
+
+    def test_shared_generator_functions_are_the_single_implementation(self):
+        from lifetxt import git_commit_worker_cli  # noqa: F401 (import-only smoke)
+
+        self.assertTrue(callable(server_init.git_commit_worker_service_unit_text))
+        self.assertTrue(callable(server_init.git_commit_worker_timer_unit_text))
+
+
 def _write_json(root, data):
     path = os.path.join(root, "server-init.json")
     with open(path, "w", encoding="utf-8") as handle:

@@ -1,0 +1,43 @@
+schema_version: 1
+
+requirements:
+  - id: req-remote-historical-evidence-read
+    kind: ADDED
+    statement: Expose lifetxt.historical_temporal.read_historical_snapshot
+      through a new, opt-in, bounded, permission-filtered Remote Safe Mode
+      read resource, reusing existing role/scope/visibility/redaction/audit
+      mechanisms unmodified and implementing the #727 disclosure policy
+      exactly.
+    acceptance_criteria:
+      - GET /api/remote/v1/historical is disabled unless
+        remote.historical_reads_enabled is true in configuration.
+      - The route additionally requires an explicit historical scope on the
+        principal; read/write/admin/audit alone never grant it.
+      - Only revision (exact commit) and as_of (+ optional ref) selectors
+        are accepted; no revision-listing endpoint exists.
+      - Only the server's own already-configured source paths are ever
+        read; no caller-supplied path or Git object ID is accepted.
+      - A historical record is returned only when both its own historical
+        access tuple and (when a same-ID current record exists) that
+        current record's access tuple grant access to the requesting
+        principal.
+      - Result size is bounded by a server-level limit parameter (default
+        200, maximum 1000) on top of the existing reader's own bounds.
+      - A Git-free workspace, unknown/invalid revision, or missing
+        historical source fails the request (422) and never falls back to
+        current state.
+      - Every read is audited via the existing append_audit mechanism,
+        recording selector kind, resolved commit, returned/denied counts,
+        and classification; never raw content, secret-shaped values, or
+        local paths.
+      - No parallel authorization engine is introduced; role/scope checks,
+        visibility/ownership access checks, and redaction reuse
+        lifetxt.remote_access unmodified.
+    constraints:
+      - Read-only; no Git mutation.
+      - No Web UI/TUI/MCP rollout in this slice.
+    owner: Eruhitsuji
+
+open_questions:
+  - "A future revision-listing/history-browsing endpoint remains explicitly
+    out of scope pending its own review, per #727 Section 2."

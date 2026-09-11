@@ -162,3 +162,18 @@ def lifecycle_analytics(timeline, analysis="summary"):
         result.update((("analysis", "relation_churn"), ("added", OrderedDict((k, added[k]) for k in sorted(added))), ("removed", OrderedDict((k, removed[k]) for k in sorted(removed)))))
         return result
     raise ValueError("Unknown lifecycle analytics %r." % analysis)
+
+
+def workspace_lifecycle_stats(items, id_key="id", limit=500, since=None, until=None, duration=False):
+    """Compose per-item summaries; never scans or invents history independently."""
+    from .native_timeline import _is_history, _values, native_timeline
+    targets = sorted({str(value) for item in items if not _is_history(item) for value in _values(item, id_key)})[:int(limit)]
+    summaries = []
+    for item_id in targets:
+        timeline = native_timeline(items, item_id, id_key=id_key, limit=500, since=since, until=until)
+        summaries.append(lifecycle_analytics(timeline, "duration" if duration else "summary"))
+    result = OrderedDict((("analysis", "workspace_lifecycle_stats"), ("scanned_item_count", len(targets)), ("items_with_native_history_count", sum(row["observed_event_count"] > 0 for row in summaries)), ("summaries", summaries), ("truncated", len(targets) >= int(limit))))
+    if duration:
+        values = sorted(row["duration_seconds"] for row in summaries if row.get("duration_seconds") is not None)
+        result["duration_distribution"] = OrderedDict((("eligible_count", len(values)), ("unavailable_count", len(summaries) - len(values)), ("min_seconds", values[0] if values else None), ("median_seconds", values[len(values)//2] if values else None), ("mean_seconds", sum(values) / len(values) if values else None), ("max_seconds", values[-1] if values else None)))
+    return result

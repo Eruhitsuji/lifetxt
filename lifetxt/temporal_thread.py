@@ -223,7 +223,9 @@ def temporal_thread_metrics(thread):
         ("successor_count", len(thread.get("relations", {}).get("successors", []))),
         ("max_follows_depth", max(depths.values()) if depths else 0),
         ("branch_points", branch_points),
+        ("branch_point_count", len(branch_points)),
         ("merge_points", merge_points),
+        ("merge_point_count", len(merge_points)),
         ("truncated", bool(thread.get("explicit", {}).get("truncated"))),
         ("limitations", ["bounded_graph_truncated"] if thread.get("explicit", {}).get("truncated") else []),
     ))
@@ -284,7 +286,8 @@ def temporal_consistency_summary(thread):
             return (0, date.toordinal())
         return (2, str(value))
     ordered_timestamps = sorted(timestamps, key=timestamp_key)
-    return OrderedDict((("analysis", "temporal_consistency_summary"), ("warning_count", len(warnings)), ("by_relation", OrderedDict((key, by_relation[key]) for key in sorted(by_relation))), ("by_source_id", OrderedDict((key, by_source[key]) for key in sorted(by_source))), ("by_target_id", OrderedDict((key, by_target[key]) for key in sorted(by_target))), ("earliest_evidence", ordered_timestamps[0] if ordered_timestamps else None), ("latest_evidence", ordered_timestamps[-1] if ordered_timestamps else None), ("warnings", warnings), ("truncated", bool(thread.get("consistency", {}).get("truncated")))))
+    truncated = bool(thread.get("consistency", {}).get("truncated"))
+    return OrderedDict((("analysis", "temporal_consistency_summary"), ("warning_count", len(warnings)), ("by_relation", OrderedDict((key, by_relation[key]) for key in sorted(by_relation))), ("by_source_id", OrderedDict((key, by_source[key]) for key in sorted(by_source))), ("by_target_id", OrderedDict((key, by_target[key]) for key in sorted(by_target))), ("earliest_evidence", ordered_timestamps[0] if ordered_timestamps else None), ("latest_evidence", ordered_timestamps[-1] if ordered_timestamps else None), ("warnings", warnings), ("truncated", truncated), ("limitations", ["consistency_warnings_truncated"] if truncated else [])))
 
 
 def realization_timing_analysis(items, thread, key="id"):

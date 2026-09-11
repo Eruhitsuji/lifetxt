@@ -2195,6 +2195,7 @@ shell completion script・Web UI・MCP の `complete` tool と同一です。
 | `/stats` | status / type / project 別の内訳を表示切り替え |
 | `/detail` | inspector panel の表示切り替え |
 | `/thread [ID]` | 選択中または指定 ID の明示的 lifecycle と派生 temporal context を inspector に表示 |
+| `/timeline [ID] [since=..] [until=..] [event=..]` | 選択中または指定 ID の bounded Native Temporal Timeline を inspector に表示 |
 | `/reload` | 全 file を即時読み直す |
 | `/theme auto\|dark\|light\|mono` | 配色を即時変更 |
 | `/limit N` | section ごとの保持 row 数 |

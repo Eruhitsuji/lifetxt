@@ -215,11 +215,13 @@ def lifecycle_analytics(timeline, analysis="summary", timezone_name="UTC"):
                 sources[source] += 1
                 source_bounds.setdefault(source, [row, row]); source_bounds[source][1] = row
             kinds[row.get("record_kind")] += 1
-            if actor_field or source:
-                evidence.append(OrderedDict((("record_id", row.get("record_id")), ("record_kind", row.get("record_kind")), ("field", actor_field or "source"), ("value", actor or source), ("at", row.get("at")))))
+            if actor_field:
+                evidence.append(OrderedDict((("record_id", row.get("record_id")), ("record_kind", row.get("record_kind")), ("field", actor_field), ("value", actor), ("at", row.get("at")))))
+            if source:
+                evidence.append(OrderedDict((("record_id", row.get("record_id")), ("record_kind", row.get("record_kind")), ("field", "source"), ("value", source), ("at", row.get("at")))))
         source_first_last = OrderedDict()
         for key in sorted(source_bounds):
-            source_first_last[key] = OrderedDict((("first", source_bounds[key][0].get("at")), ("last", source_bounds[key][1].get("at"))))
+            source_first_last[key] = OrderedDict((("first", _evidence(source_bounds[key][0])), ("last", _evidence(source_bounds[key][1])), ("count", sources[key])))
         actor_first_last = OrderedDict()
         for key in sorted(actor_bounds):
             field = next((name for name in ("actor", "author", "user") if _payload(actor_bounds[key][0], name)), None)

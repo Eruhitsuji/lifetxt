@@ -9025,6 +9025,51 @@ capabilities:
       replaced_by: null
       deprecation_issue: null
 
+  - id: cap-git-historical-disclosure-policy
+    name: Historical Git evidence disclosure policy (investigation)
+    summary: >-
+      Security/disclosure investigation defining the boundary between
+      current-state Remote Safe Mode read permission and historical Git
+      evidence disclosure: a conjunctive (current AND historical must both
+      permit) authorization model, exact-revision/as-of-only v1 selectors,
+      a server-configured-sources-only path boundary, reuse of every
+      existing Remote Safe Mode role/scope/redaction/audit mechanism with
+      no parallel policy engine, an audit contract, deterministic bounds,
+      and a fail-closed rule for current/historical policy conflicts. No
+      endpoint or runtime code is implemented; this is the Definition of
+      Ready input for a future server implementation.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-git-historical-disclosure-policy-investigation
+    implementation_locations:
+      - docs/en/git-historical-disclosure-policy.md
+      - docs/ja/git-historical-disclosure-policy.md
+    public_interfaces: []
+    tests_or_evidence:
+      - "investigation deliverable: authorization model, allowed selectors, path boundary, reuse plan, audit contract, bounds, and fail-closed conflict rule are all explicitly decided in docs/en/git-historical-disclosure-policy.md's numbered sections, matching every #727 acceptance-criterion bullet"
+      - "Definition of Ready checklist for the follow-up server implementation issue (#728) is recorded at the end of the document"
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/724
+      - https://github.com/Eruhitsuji/lifetxt/issues/727
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Investigation only, per #727's own forbidden scope (no endpoint, no
+      Git mutation, no runtime code). No human was available to
+      synchronously answer #727's design questions; per this batch's task
+      instruction, the design call was made autonomously and recorded here.
+      Explicitly reuses cap-mcp-permission-profiles's established
+      "never infer a broader grant from a narrower one" precedent for why a
+      plain read role must not imply historical access. #728 (the server/
+      Remote Safe Mode implementation itself) remains a separate, not-yet-
+      implemented, High-assurance follow-up issue; this capability records
+      only the completed disclosure-policy investigation.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
   - id: cap-git-historical-read
     name: Shared Git historical workspace snapshot reader
     summary: >-

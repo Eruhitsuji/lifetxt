@@ -667,6 +667,71 @@ report content. See
 [`reports.md`](../en/reports.md#validating-and-inspecting-a-profile) for the
 full contract.
 
+## 11. Opt-in periodic Git-commit worker (#731)
+
+If your `data_root` is itself a Git repository (for example, to keep a
+history of `life.txt` or generated report output alongside your own backup
+strategy), `server-init` can optionally generate a systemd oneshot+timer
+pair that periodically stages and commits a configured allowlist of paths.
+
+This worker is disabled by default and requires an already-existing Git
+repository at `data_root` — it never runs `git init`, never creates a
+remote, and never configures a global `user.name`/`user.email`. Configure
+your own Git identity for that repository (`git -C /srv/lifetxt/data config
+user.name ...` / `user.email ...`) before enabling it; the worker refuses
+to run with no identity configured rather than guessing one.
+
+Add a `git_commit_worker` section to `server-init.json`:
+
+```json
+{
+  "git_commit_worker": {
+    "enabled": true,
+    "paths": ["life.txt", "reports"],
+    "branch": "main",
+    "interval_minutes": 60
+  }
+}
+```
+
+- `paths` is an explicit allowlist — the worker only ever stages these
+  paths (`git add -A -- <path>` per entry, never a whole-repository
+  `git add -A`). A path with no change since the last commit is simply
+  never staged; a run whose configured paths do not change is a
+  successful no-op, not an error.
+- `branch` must match the repository's current branch exactly; a detached
+  `HEAD` or a different branch refuses the run rather than committing to
+  the wrong place.
+- The worker refuses to start (leaving the index untouched) if the Git
+  index already has staged changes unrelated to this worker when it
+  starts, so it never interferes with a change you are preparing by hand.
+- Each run is protected by its own lock file
+  (`data_root/.locks/git-commit-worker.lock`) so overlapping runs cannot
+  race each other.
+- Commit messages use the fixed, documented format `lifetxt-auto-commit:
+  <UTC ISO8601 timestamp>`.
+
+Running `server-init` with this section enabled (and `systemd.enabled`/
+`systemd.install_units`, both true by default) generates
+`lifetxt-git-commit-worker.service`/`.timer` the same plan-first, idempotent
+way it already generates the report-scheduling and web-service units —
+reusing the identical unit-generation approach, not a second
+implementation. There is no separate `server-git-commit` install command
+for an already-running deployment in this first slice; re-run `server-init`
+to add, change, or remove this worker's units. A standalone install command
+mirroring `server-report plan|install|remove` is a recorded, unimplemented
+follow-up if operators need to add this worker without re-running
+`server-init`.
+
+**Coordination with `server-update`:** the commit worker's repository is
+normally your *data* root, independent of `server-update`'s own *source
+checkout* (`install_root`), so the two do not usually interact. If your
+deployment shares state between them, set `server-update.json`'s
+`git_commit_worker_lock_path` to the same
+`data_root/.locks/git-commit-worker.lock` path; `server-update` then
+refuses to start while that lock file exists, rather than racing its own
+git operations against the worker's commit.
+
 ## Also see
 
 - [`contrib/systemd/`](../../contrib/systemd/) — the unit/timer/environment

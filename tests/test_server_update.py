@@ -1306,6 +1306,57 @@ class RunServerUpdateApplyTests(unittest.TestCase):
         self.assertEqual(["systemctl", "stop", "lifetxt.service"], sub.calls[1])
         self.assertEqual(["systemctl", "start", "lifetxt.service"], sub.calls[-1])
 
+    def test_refuses_to_start_while_git_commit_worker_lock_is_held(self):
+        worker_lock = os.path.join(self.tmp, "git-commit-worker.lock")
+        with open(worker_lock, "w", encoding="utf-8") as handle:
+            handle.write("12345")
+        git = _FakeGit()
+        sub = _FakeSubprocess()
+        with _patch_git(git), _patch_subprocess(sub):
+            with self.assertRaises(server_update.ServerUpdateError) as ctx:
+                server_update.run_server_update(
+                    self._config(git_commit_worker_lock_path=worker_lock), yes=True
+                )
+        self.assertEqual("preflight", ctx.exception.step)
+        self.assertIn("git-commit-worker", str(ctx.exception))
+        # No git/service commands should have been attempted.
+        self.assertEqual([], sub.calls)
+
+    def test_proceeds_normally_when_worker_lock_path_is_unset(self):
+        git = _FakeGit()
+        sub = _FakeSubprocess()
+        response = mock.MagicMock()
+        response.read.return_value = b"ok"
+        response.status = 200
+        response.__enter__.return_value = response
+        response.__exit__.return_value = False
+        with (
+            _patch_git(git),
+            _patch_subprocess(sub),
+            mock.patch("urllib.request.urlopen", return_value=response),
+        ):
+            report = server_update.run_server_update(self._config(), yes=True)
+        self.assertEqual("updated", report["status"])
+
+    def test_proceeds_normally_when_worker_lock_file_does_not_exist(self):
+        worker_lock = os.path.join(self.tmp, "not-currently-held.lock")
+        git = _FakeGit()
+        sub = _FakeSubprocess()
+        response = mock.MagicMock()
+        response.read.return_value = b"ok"
+        response.status = 200
+        response.__enter__.return_value = response
+        response.__exit__.return_value = False
+        with (
+            _patch_git(git),
+            _patch_subprocess(sub),
+            mock.patch("urllib.request.urlopen", return_value=response),
+        ):
+            report = server_update.run_server_update(
+                self._config(git_commit_worker_lock_path=worker_lock), yes=True
+            )
+        self.assertEqual("updated", report["status"])
+
     def test_uv_installer_supports_pip_less_virtualenvs(self):
         git = _FakeGit()
         sub = _FakeSubprocess()

@@ -11883,6 +11883,231 @@ traceability:
       notes: Other relation mutation surfaces remain a coverage limitation; no migration or backfill.
       status: implemented
 
+    - requirement_id: req-git-historical-evidence-contract-investigation
+      capability_id: cap-git-historical-read
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/724
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/725
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/756
+      changed_files_or_scope:
+        - Investigate lifetxt/historical_temporal.py's existing Git evidence
+          primitives against the shared HistoricalSnapshot contract question
+          set; no runtime code changed
+        - .ai/project/changes/git-historical-evidence-contract/design.md
+        - .ai/project/changes/git-historical-evidence-contract/decisions.md
+        - .ai/project/changes/git-historical-evidence-contract/requirements.yml
+      tests_or_evidence:
+        - "code reading confirmed historical_snapshot()/select_revision_as_of() already satisfy the shared contract (repository identity, requested selector, resolved full SHA, evidence mode, tracked-path membership, no working-tree fallback, shallow/incomplete-history limitations); confirmed command_thread's own --diff path already calls historical_snapshot()/thread_from_snapshot() directly rather than a second Git-loading path"
+        - design.md records answers to all five #725 questions, the disclosure-risk list, and the selected first consumer (show, followed by query as a second bounded consumer)
+      release_or_deployment: null
+      notes: >-
+        Standard assurance investigation, no human available to answer
+        synchronously; per this task's own explicit instruction, the design
+        call was made autonomously and recorded in design.md/decisions.md.
+        Blocks #726/#729/#730, all implemented in the same pass. #727/#728
+        (server/Remote Safe Mode disclosure) and #731 (Git-commit worker)
+        remain separate, not implemented here.
+      status: implemented
+
+    - requirement_id: req-reusable-git-historical-snapshot-reader
+      capability_id: cap-git-historical-read
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/724
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/726
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/756
+      changed_files_or_scope:
+        - Add lifetxt.historical_temporal.read_historical_snapshot, a thin
+          unified wrapper composing the existing historical_snapshot()/
+          select_revision_as_of() primitives unchanged
+        - lifetxt/historical_temporal.py
+        - tests/test_historical_read_seam.py
+        - docs/en/git-historical-evidence-contract.md
+        - docs/ja/git-historical-evidence-contract.md
+      tests_or_evidence:
+        - "tests/test_historical_read_seam.py ReadHistoricalSnapshotTests (4 tests): exactly-one-of revision/as_of enforced, --ref rejected without --as-of, exact-revision path matches historical_snapshot() directly, as-of path matches select_revision_as_of()+historical_snapshot() directly"
+        - "tests/test_historical_temporal.py and tests/test_temporal_diff.py re-run unmodified -> 13/14 pass; the sole pre-existing failure (test_non_git_and_option_like_refs_fail_loudly) confirmed via git stash to be pre-existing and environment-dependent (this worktree is itself nested inside a git checkout), not a regression"
+        - E:\project\lifetxt\.venv\Scripts\python.exe -m unittest tests.test_historical_temporal tests.test_temporal_diff tests.test_historical_read_seam -> 13 pre-existing pass, 1 pre-existing unrelated failure, 14 new tests OK
+        - E:\project\lifetxt\.venv\Scripts\python.exe -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check lifetxt/historical_temporal.py -> clean
+      release_or_deployment: next normal maintenance release
+      notes: >-
+        Historical Temporal Thread's own call sites
+        (historical_temporal_thread/historical_temporal_thread_as_of, and
+        cli.py's thread/--diff wiring) were left completely untouched --
+        they already used the shared primitives, so the "zero regression"
+        compatibility requirement needed only regression testing, not a
+        migration. No capability entry for cap-lifecycle-temporal-thread was
+        edited since its own implementation is unchanged; a new capability
+        cap-git-historical-read was created instead, since #729/#730
+        demonstrate the reader is now genuinely public beyond Temporal
+        Thread. High/Security assurance is not applicable (Standard, S-sized
+        per the issue's own task contract); change package at
+        .ai/project/changes/git-historical-evidence-contract/ per that
+        contract's explicit "required change package" write-scope item.
+      status: implemented
+
+    - requirement_id: req-historical-item-show
+      capability_id: cap-git-historical-read
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/724
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/729
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/756
+      changed_files_or_scope:
+        - Add --revision/--as-of/--ref to lifetxt show, reusing
+          read_historical_snapshot as the sole historical input path and the
+          existing item lookup/rendering logic unmodified
+        - lifetxt/extra_cli.py
+        - lifetxt/extra_core.py
+        - tests/test_historical_read_seam.py
+        - docs/en/new-cli-workflows.md
+        - docs/ja/new-cli-workflows.md
+      tests_or_evidence:
+        - "tests/test_historical_read_seam.py HistoricalShowCliTests (6 tests, real subprocess + real disposable git fixture): --revision reads only tracked bytes at that commit with no working-tree leakage, current show is byte-for-byte unaffected with no selector, missing target at the selected revision fails loudly instead of falling back, invalid revision fails loudly, --revision/--as-of mutually exclusive, --as-of resolves the newest commit at or before the cutoff"
+        - "live: real disposable git fixture -- show t1 life.txt --revision REV showed the open (pre-done) historical state while show t1 life.txt (no selector) showed the current done state unchanged; show t2 life.txt --revision REV (item added in a later commit) failed with 'Item ID not found: t2' rather than showing the current item"
+        - E:\project\lifetxt\.venv\Scripts\python.exe -m unittest tests.test_extra_cli tests.test_historical_read_seam -> full pass
+        - E:\project\lifetxt\.venv\Scripts\python.exe -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check lifetxt/extra_cli.py lifetxt/extra_core.py -> clean
+      release_or_deployment: next normal maintenance release
+      notes: >-
+        First non-Temporal-Thread consumer of the shared reader, per #725's
+        own recommendation. No second Git historical input path was added;
+        command_show's json/text/life output shapes are extended additively
+        (a "historical" field in json, informational lines in text) only
+        when a selector is given.
+      status: implemented
+
+    - requirement_id: req-revision-scoped-historical-query
+      capability_id: cap-git-historical-read
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/724
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/730
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/756
+      changed_files_or_scope:
+        - Add --revision to lifetxt query, reusing read_historical_snapshot
+          to produce historical parsed items that feed the existing,
+          unmodified Query Language engine (lifetxt.query.run_query)
+        - lifetxt/cli.py
+        - tests/test_historical_read_seam.py
+        - docs/en/query.md
+        - docs/ja/query.md
+      tests_or_evidence:
+        - "tests/test_historical_read_seam.py HistoricalQueryCliTests (4 tests, real subprocess + real disposable git fixture): --revision evaluates only the historical snapshot through the unmodified Query engine, --format json includes a historical provenance envelope (resolved_commit) alongside items, current query is unaffected without --revision, invalid revision fails loudly"
+        - "live: real disposable git fixture -- query 'id:t1' --revision REV returned only the historical (pre-done) match; query 'id:t1' (no selector) was unaffected and still showed the current done state"
+        - E:\project\lifetxt\.venv\Scripts\python.exe -m unittest tests.test_query tests.test_historical_read_seam -> full pass
+        - E:\project\lifetxt\.venv\Scripts\python.exe -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check lifetxt/cli.py -> clean
+      release_or_deployment: next normal maintenance release
+      notes: >-
+        Exact-revision only per #730's own v1 scope; --as-of was not added
+        to query in this pass. No second query engine was introduced --
+        run_query() is called unmodified against the historical item list.
+        --format json wraps output in a historical/items envelope only when
+        --revision is given; every other format and the no-selector default
+        are byte-for-byte unchanged, locked in by a dedicated regression
+        test.
+      status: implemented
+
+    - requirement_id: req-git-historical-disclosure-policy-investigation
+      capability_id: cap-git-historical-disclosure-policy
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/724
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/727
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/756
+      changed_files_or_scope:
+        - Investigate the boundary between current-state Remote Safe Mode
+          read permission and historical Git evidence disclosure; no
+          runtime code changed
+        - docs/en/git-historical-disclosure-policy.md
+        - docs/ja/git-historical-disclosure-policy.md
+      tests_or_evidence:
+        - "docs/en/git-historical-disclosure-policy.md's 7 numbered sections directly answer #727's 7 numbered investigation questions: authorization model (conjunctive current+historical), allowed v1 selectors (exact revision + as-of only, no listing/browsing/arbitrary-path), path/workspace boundary (server-configured sources only), reuse of existing Remote Safe Mode role/scope/redaction/audit/provenance/bounded-result mechanisms with no parallel policy engine, audit contract (what must/must not be recorded), deterministic bounds (reuse existing reader limits plus a server item-count bound), and the fail-closed conflict rule (more restrictive side wins)"
+        - "Definition of Ready checklist for the follow-up server implementation issue (#728) is recorded at the end of the document, satisfying #727's own 'server implementation child Definition of Ready' deliverable"
+      release_or_deployment: null
+      notes: >-
+        Standard-assurance-executed investigation for a High-assurance-
+        recommended topic (the issue itself flags High as recommended, not
+        mandatory, for the investigation phase; the follow-up server
+        implementation #728 remains High/Security assurance and is not
+        implemented by this entry). No human was available to synchronously
+        answer #727's design questions; per this batch's own task
+        instruction, the design call was made autonomously and recorded.
+        #728 (server/Remote Safe Mode endpoint implementation) remains a
+        separate, not-yet-implemented follow-up issue blocked on this
+        investigation plus #726 (already implemented); it is recorded as
+        not completed in this batch, not fabricated as done.
+      status: implemented
+
+    - requirement_id: req-git-historical-evidence-server-disclosure
+      capability_id: cap-git-historical-disclosure-policy
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/724
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/728
+      pull_request: null
+      changed_files_or_scope: []
+      tests_or_evidence: []
+      release_or_deployment: null
+      notes: >-
+        Not implemented in this batch. #728 (server/Remote Safe Mode
+        historical read endpoint) is blocked-but-now-unblocked by #726
+        (reader) and #727 (disclosure policy investigation), both
+        implemented in PR #756, but the endpoint itself requires its own
+        change package, independent security review, and Merge Authority
+        approval per its High/Security task contract -- left as a genuine,
+        explicitly tracked follow-up rather than fabricated as done.
+      status: planned
+
+    - requirement_id: req-server-init-git-commit-worker
+      capability_id: cap-ubuntu-server-deployment
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/724
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/731
+      pull_request: null
+      changed_files_or_scope: []
+      tests_or_evidence: []
+      release_or_deployment: null
+      notes: >-
+        Not implemented in this batch due to time constraints. #731 (an
+        opt-in periodic Git-commit worker for server-init-managed
+        deployments, requiring an existing repository, explicit path
+        allowlist, fail-closed-on-unrelated-staged-changes, local-commit-
+        only semantics, and reuse of server_init.py's existing plan-first
+        systemd unit generation) remains independent of #725-#730/#727 and
+        is left as an explicitly tracked follow-up rather than fabricated
+        as done.
+      status: planned
+
+    - requirement_id: req-724-731-git-historical-evidence-batch-integration
+      capability_id: cap-git-historical-read
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/724
+      task_issue: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/756
+      changed_files_or_scope:
+        - Record the 724-731 batch's integration into main as its own
+          traceable step
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - "python -m unittest tests.test_lifetxt tests.test_extra_cli tests.test_query tests.test_completion_surfaces tests.test_completion_values tests.test_surface_runtime tests.test_historical_temporal tests.test_temporal_diff tests.test_historical_read_seam tests.test_cli_taxonomy -> Ran 1063 tests, FAILED (failures=4, skipped=2); all 4 identified by name and confirmed unrelated to this PR's diff: tests.test_historical_temporal.HistoricalTemporalTests.test_non_git_and_option_like_refs_fail_loudly (confirmed pre-existing via git stash), tests.test_lifetxt.LifeTxtUndoCliTests.test_undo_restores_previous_content and tests.test_lifetxt.LifeTxtDoneTests.test_done_appends_done_date_today/test_done_marks_item_done_by_id (all three reproduce via a MutationConflict/content-hash race in lifetxt/mutation.py's write_text through lifetxt/native_history_mutation.py's commit_item_mutations_with_events -- a code path this PR's diff never touches; reproduces in isolation, ruled out as a PR regression by inspection of the traceback, which never enters historical_temporal.py/extra_cli.py/extra_core.py/the touched region of cli.py)"
+        - python -m unittest tests.test_historical_read_seam -> Ran 14 tests, OK
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on every changed file -> clean
+      release_or_deployment: >-
+        This entry documents PR #756 itself: feature/724-731-git-historical-evidence
+        (Issues #725, #726, #729, #730, #727, each on its own child branch
+        merged locally into the integration branch before this final PR; no
+        separate sub-PR was opened for any of them, matching this repo's
+        "no-separate-sub-PR" batch-integration precedent already used for
+        req-676-680-681-batch-integration and
+        req-687-693-import-export-formats-batch-integration) merging into
+        main. #728 and #731 remain open, unimplemented follow-up issues
+        (see their own `status: planned` entries above); #724 itself is a
+        planning-only umbrella issue with no independent implementation.
+      notes: >-
+        Follows the multi-PR integration-branch pattern established
+        throughout this project. Every requirement entry above correctly
+        names its own child-branch work; only this entry and the five
+        implemented-requirement entries name PR #756, since none of the
+        five child branches (task/725-726-729-730-git-historical-evidence,
+        task/727-historical-disclosure-policy) were opened as their own
+        GitHub PRs. Priority order followed the task's own instruction
+        (#725 -> #726 -> #729 -> #730 -> #727 -> #731 -> #728); #731 and
+        #728 were not reached within the available time budget and are
+        recorded honestly as planned rather than claimed complete.
+      status: implemented
+
     - requirement_id: req-native-lifecycle-analytics-batch
       capability_id: cap-native-semantic-history
       epic: https://github.com/Eruhitsuji/lifetxt/issues/755
@@ -11890,10 +12115,9 @@ traceability:
       pull_request: https://github.com/Eruhitsuji/lifetxt/pull/757
       changed_files_or_scope:
         - Shared deterministic lifecycle analytics over filtered valid Native Timeline events
-        - Bounded Temporal Thread metrics, replacement-chain and consistency summaries
+        - Bounded Temporal Thread metrics, replacement-chain, realizes timing, and consistency summaries
         - Read-only MCP lifecycle analytics and bounded workspace lifecycle statistics
-        - Progress velocity, time-entry effort, and schedule lead-time projections
-        - Lifecycle duration, dwell, transitions, gaps, cadence, oscillation, provenance, relation churn, due variance, window comparison, and realizes timing
+        - Duration, dwell, transitions, gaps, cadence, oscillation, provenance, relation churn, due variance, window comparison, progress velocity, effort, and schedule lead-time projections
       tests_or_evidence:
         - tests/test_lifecycle_analytics.py
         - tests/test_native_timeline.py
@@ -11928,10 +12152,9 @@ traceability:
         - https://github.com/Eruhitsuji/lifetxt/issues/755
       release_or_deployment: next normal maintenance release
       notes: >-
-        Covers the read-only analytics batch rooted at #723. Filters precede
-        aggregation, invalid events are excluded, and completeness and
-        limitations remain attached to every projection. Issue #755 is an
-        umbrella completion record and has no second analytics engine.
+        Filters precede aggregation, invalid events are excluded, and every
+        projection retains completeness, limitations, and provenance. Issue
+        #755 is an umbrella completion record and has no second analytics engine.
       status: implemented
 
 required_chain:

@@ -139,6 +139,24 @@ def _build_parser(command):
         )
         parser.add_argument("--pretty", action="store_true")
         parser.add_argument("-o", "--output")
+        parser.add_argument(
+            "--revision",
+            help="Show the item as it existed at this exact Git revision "
+            "instead of the current working tree (#726/#729). Never falls "
+            "back to the current item.",
+        )
+        parser.add_argument(
+            "--as-of",
+            dest="as_of",
+            help="Show the item as of the newest commit at or before this "
+            "offset-aware RFC3339 timestamp, reusing the shared committer-"
+            "time selector. Mutually exclusive with --revision.",
+        )
+        parser.add_argument(
+            "--ref",
+            help="Branch/ref to select --as-of history from (default HEAD). "
+            "Only valid together with --as-of.",
+        )
     elif command == "edit":
         parser.add_argument("id")
         parser.add_argument("paths", nargs="*")

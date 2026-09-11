@@ -2699,6 +2699,7 @@ row when nothing is marked.
 | `/stats` | Toggle a breakdown of visible rows by status, type, and project |
 | `/detail` | Toggle the inspector panel |
 | `/thread [ID]` | Show the selected or named item's explicit lifecycle and derived temporal context in the inspector |
+| `/timeline [ID] [since=..] [until=..] [event=..]` | Show the selected or named item's bounded Native Temporal Timeline in the inspector |
 | `/reload` | Re-read every file now |
 | `/theme auto\|dark\|light\|mono` | Change the color theme, applied immediately |
 | `/limit N` | Rows kept per section |

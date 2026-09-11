@@ -433,6 +433,8 @@ class WorkspaceState(object):
         self._items = []
         self._temporal_thread = None
         self._temporal_thread_target = None
+        self._native_timeline = None
+        self._native_timeline_target = None
         # Remote connection status (#680). Meaningless for a local backend;
         # "connected" is the default so a local session never shows a
         # spurious disconnected indicator.
@@ -1056,6 +1058,63 @@ def _cmd_thread(state, argument):
             len(state._temporal_thread["explicit"]["nodes"]),
             len(state._temporal_thread["derived"]["related"]),
             len(state._temporal_thread["consistency"]["warnings"]),
+        ),
+    )
+
+
+def _cmd_timeline(state, argument):
+    """Show the selected or named item's shared Native Temporal Timeline.
+
+    Delegates entirely to the existing shared read model
+    (:func:`lifetxt.native_timeline.native_timeline`); this command adds no
+    history/filtering/analytics logic of its own (#761), mirroring how
+    ``/thread`` delegates to :mod:`lifetxt.temporal_thread`. Supports the
+    smallest useful subset of the existing ``since``/``until``/``event``
+    filters as trailing ``key=value`` tokens, e.g. ``/timeline t1
+    since=2026-01-01T00:00:00Z event=relation_added``.
+    """
+    from .native_timeline import native_timeline
+
+    tokens = (argument or "").split()
+    filters = {}
+    item_id = None
+    for token in tokens:
+        if "=" in token:
+            key, _, value = token.partition("=")
+            key = key.strip().lower()
+            if key in ("since", "until", "event"):
+                filters[key] = value.strip()
+                continue
+        if item_id is None:
+            item_id = token
+    row = state.selected_row()
+    item_id = item_id or (row.get("id") if row else "")
+    if not item_id:
+        raise ValueError(
+            "Usage: /timeline ID [since=TIMESTAMP] [until=TIMESTAMP] "
+            "[event=TYPE] (or select a row with an ID)"
+        )
+    config = getattr(state.args, "config_data", None) or {}
+    key = id_key_from_config(config)
+    state._native_timeline = native_timeline(
+        state._items,
+        item_id,
+        id_key=key,
+        since=filters.get("since"),
+        until=filters.get("until"),
+        event=filters.get("event"),
+    )
+    state._native_timeline_target = item_id
+    state.show_detail = True
+    result = state._native_timeline
+    return (
+        "info",
+        "Native Timeline: %s (%d event(s), %d invalid, %s)."
+        % (
+            item_id,
+            len(result["events"]),
+            len(result["invalid_events"]),
+            "complete" if result["complete"] else "incomplete",
         ),
     )
 
@@ -1773,6 +1832,13 @@ COMMANDS = (
         "[ID]",
         "Show explicit lifecycle and derived temporal context",
         _cmd_thread,
+        values="id",
+    ),
+    Command(
+        "timeline",
+        "[ID] [since=..] [until=..] [event=..]",
+        "Show the item's bounded Native Temporal Timeline",
+        _cmd_timeline,
         values="id",
     ),
     Command("reload", "", "Re-read every file now", _cmd_reload),
@@ -2826,6 +2892,79 @@ def _build_inspector(state, width, height):
                             ),
                             "detail_value",
                         ),
+                    ]
+                )
+        timeline = getattr(state, "_native_timeline", None)
+        if timeline and getattr(state, "_native_timeline_target", None) == row.get(
+            "id"
+        ):
+            content.append([("NATIVE TIMELINE", "panel_title")])
+            events = timeline["events"]
+            if not events:
+                content.append([("no native history events", "hint")])
+            for event in events[:20]:
+                content.append(
+                    [
+                        (pad(str(event.get("record_kind") or "?"), 16), "detail_key"),
+                        (
+                            fit(
+                                "%s %s"
+                                % (
+                                    event.get("at") or "?",
+                                    event.get("event") or "",
+                                ),
+                                inner - 19,
+                                glyphs,
+                            ),
+                            "detail_value",
+                        ),
+                    ]
+                )
+            bounds = timeline["bounds"]
+            content.append(
+                [
+                    ("bounds ", "detail_key"),
+                    (
+                        "%d/%d returned%s"
+                        % (
+                            bounds["returned_events"],
+                            bounds["total_valid_events"],
+                            "; truncated" if bounds["truncated"] else "",
+                        ),
+                        "detail_value",
+                    ),
+                ]
+            )
+            if timeline["invalid_events"]:
+                content.append(
+                    [
+                        (
+                            "%d invalid event(s) excluded"
+                            % len(timeline["invalid_events"]),
+                            "hint",
+                        )
+                    ]
+                )
+            if timeline["limitations"]:
+                content.append(
+                    [
+                        (
+                            fit(
+                                "limitations: %s" % ", ".join(timeline["limitations"]),
+                                inner - 2,
+                                glyphs,
+                            ),
+                            "hint",
+                        )
+                    ]
+                )
+            if timeline["diagnostics"]:
+                content.append(
+                    [
+                        (
+                            "%d history diagnostic(s)" % len(timeline["diagnostics"]),
+                            "hint",
+                        )
                     ]
                 )
     for line in content[: height - 2]:

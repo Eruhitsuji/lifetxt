@@ -12262,6 +12262,146 @@ traceability:
         #755 is an umbrella completion record and has no second analytics engine.
       status: implemented
 
+    - requirement_id: req-query-as-of-selection
+      capability_id: cap-git-historical-read
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/724
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/760
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/766
+      changed_files_or_scope:
+        - Add `lifetxt query QUERY --as-of RFC3339 [--ref REF]`, reusing the
+          existing `read_historical_snapshot()` shared reader unmodified
+          (the same call `show --as-of` already makes)
+        - Make `--revision` and `--as-of` mutually exclusive on `query`
+        - lifetxt/cli.py
+        - tests/test_historical_read_seam.py
+        - docs/en/query.md
+        - docs/ja/query.md
+      tests_or_evidence:
+        - "tests/test_historical_read_seam.py HistoricalQueryCliTests: --as-of resolves the newest commit at or before the cutoff (text output includes the requested commit's content and a 'Historical as of:' line), --format json includes the mode:git_as_of provenance envelope, --revision/--as-of are mutually exclusive, --ref alone (no --as-of) has no effect matching the pre-existing show --ref precedent"
+        - .venv/Scripts/python.exe -m unittest tests.test_historical_read_seam -> Ran 18 tests, OK
+        - .venv/Scripts/python.exe -m unittest tests.test_cui_extensions tests.test_completion_surfaces tests.test_completion_values tests.test_release_policy -> Ran 251 tests, OK (skipped=1)
+        - .venv/Scripts/ruff.exe format --check lifetxt/cli.py tests/test_historical_read_seam.py -> clean
+        - .venv/Scripts/ruff.exe check lifetxt/cli.py tests/test_historical_read_seam.py -> All checks passed
+        - '.venv/Scripts/python.exe scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> {"errors": 0, "ok": true}'
+        - .venv/Scripts/python.exe -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      release_or_deployment: null
+      notes: >-
+        No Git traversal is reimplemented: `command_query`'s historical
+        branch now accepts `revision` or `as_of`/`ref` and passes them
+        straight through to `read_historical_snapshot()`, mirroring
+        `command_show`'s existing branch structure exactly, including the
+        mode-dependent text-output line (`Historical revision: ...` for
+        exact revisions, `Historical as of: ...` for cutoff selection).
+        `--format json` needed no change: the historical envelope is
+        embedded unchanged regardless of which selector produced it.
+      status: implemented
+
+    - requirement_id: req-tui-native-timeline
+      capability_id: cap-native-semantic-history
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/761
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/766
+      changed_files_or_scope:
+        - "Add TUI /timeline [ID] [since=..] [until=..] [event=..], delegating entirely to the existing shared lifetxt.native_timeline.native_timeline reader (mirroring how /thread delegates to lifetxt.temporal_thread)"
+        - Render events/bounds/invalid-event-count/limitations/diagnostics in the inspector panel from the unmodified result
+        - lifetxt/tui_app.py
+        - tests/test_tui_native_timeline.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - "tests/test_tui_native_timeline.py (7 tests): delegates to the shared timeline model with correct message/schema, explicit id argument overrides the selected row, since/until/event filters parsed from trailing key=value tokens, missing id with no selection fails loudly, unknown id fails loudly, command registration and values=id completion"
+        - .venv/Scripts/python.exe -m unittest tests.test_tui_native_timeline -> Ran 7 tests, OK
+        - .venv/Scripts/python.exe -m unittest tests.test_surface_runtime.TuiDocumentationDriftTests -> Ran 1 test, OK (docs/en/cli.md's TUI command table matches tui_app.COMMANDS after adding /timeline)
+        - .venv/Scripts/python.exe -m unittest tests.test_cui_extensions tests.test_completion_surfaces tests.test_completion_values tests.test_release_policy -> Ran 251 tests, OK (skipped=1)
+        - .venv/Scripts/ruff.exe format --check lifetxt/tui_app.py tests/test_tui_native_timeline.py -> clean
+        - .venv/Scripts/ruff.exe check lifetxt/tui_app.py tests/test_tui_native_timeline.py -> All checks passed
+        - node --check on the assembled 18-fragment Web UI JavaScript is unaffected (this issue touches only tui_app.py, no Web asset)
+        - .venv/Scripts/python.exe -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      release_or_deployment: null
+      notes: >-
+        No history/filtering/analytics logic is duplicated in
+        lifetxt/tui_app.py: `_cmd_timeline` parses only the trailing
+        `since=`/`until=`/`event=` tokens and an optional leading id, then
+        calls `native_timeline()` unmodified. `docs/en/cli.md`'s and
+        `docs/ja/cli.md`'s TUI command tables were updated with the exact
+        registered usage string so the existing TUI documentation drift
+        gate (`tests.test_surface_runtime.TuiDocumentationDriftTests`)
+        stays green.
+      status: implemented
+
+    - requirement_id: req-web-native-timeline
+      capability_id: cap-native-semantic-history
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/762
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/766
+      changed_files_or_scope:
+        - "Add GET /api/native-timeline/{id} (bounded since/until/event/limit query parameters), delegating entirely to the existing shared lifetxt.native_timeline.native_timeline reader, mirroring GET /api/temporal-thread/{id} (#704)"
+        - Add a minimal Native Timeline section to the item drawer's dependency-links panel
+        - lifetxt/webapp.py
+        - lifetxt/web_assets_js_11.js
+        - tests/test_web_native_timeline.py
+        - tests/test_web_assets.py
+        - docs/en/web.md
+        - docs/ja/web.md
+      tests_or_evidence:
+        - "tests/test_web_native_timeline.py (8 tests): matches a direct native_timeline() call field for field, since/until/event filters forwarded, limit forwarded and bounded (truncated flag), unknown item returns 404, invalid limit/event returns 422 (not a crash), an HTML-special-character-laden unknown id is escaped rather than reflected raw, existing routes (including /api/temporal-thread/{id}) are unaffected"
+        - .venv/Scripts/python.exe -m unittest tests.test_web_native_timeline -> Ran 8 tests, OK
+        - .venv/Scripts/python.exe -m unittest tests.test_web_assets -> Ran 9 tests, OK (LEGACY_PRISTINE_GIT_BLOB_SHA updated to the new, intentionally changed served-page content)
+        - .venv/Scripts/python.exe -m unittest tests.test_web_i18n tests.test_web_commands tests.test_surface_runtime tests.test_release_policy tests.test_lifetxt.LifeTxtWebApiTests -> Ran 137 tests, OK
+        - "node --check on the assembled Web UI <script> content (all 18 fragments concatenated via lifetxt.web_assets.HTML_PAGE) -> no syntax error"
+        - .venv/Scripts/ruff.exe format --check lifetxt/webapp.py tests/test_web_native_timeline.py tests/test_web_assets.py -> clean
+        - .venv/Scripts/ruff.exe check lifetxt/webapp.py tests/test_web_native_timeline.py tests/test_web_assets.py -> All checks passed
+        - '.venv/Scripts/python.exe scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> {"errors": 0, "ok": true}'
+        - .venv/Scripts/python.exe -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      release_or_deployment: null
+      notes: >-
+        The route pre-checks item existence via `find_item_by_id` for a
+        clean 404, then delegates the actual bounded read to
+        `native_timeline()` unmodified, catching its `ValueError` as 422 --
+        no temporal derivation logic is duplicated in `lifetxt/webapp.py`.
+        The Web UI addition reuses the existing `loadDependencyLinks()`
+        fetch-and-render pattern already established for `/api/temporal-
+        thread/{id}`, with the same `escapeHtml`/best-effort-fetch
+        conventions; no new rendering framework or Web-specific temporal
+        logic was introduced.
+      status: implemented
+
+    - requirement_id: req-native-semantic-as-of-investigation
+      capability_id: cap-native-semantic-history
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/759
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/766
+      changed_files_or_scope:
+        - Investigate whether/how Native Semantic History can safely
+          reconstruct "what was true at time T" per field/domain, without
+          falling back to current state and without inventing new history
+          semantics
+        - docs/en/native-semantic-as-of-investigation.md
+      tests_or_evidence:
+        - "docs/en/native-semantic-as-of-investigation.md: reconstructability matrix (lifecycle status, completion/reopen/cancellation, due: schedule field, on:/from:/to:/at: schedule fields, follows:/realizes:/replaced_by: lifecycle relations, progress), each classified complete/partial/not-reconstructable-today against the actual capture/validation code in lifetxt/native_history.py, lifetxt/native_history_mutation.py, lifetxt/native_timeline.py, lifetxt/progress_history.py, and lifetxt/progress_delta.py"
+        - "baseline/unknown-field rule and replay semantics reusing native_timeline()/normalize_native_events()/item_event_completeness()/native_history_completeness()/historical_temporal.parse_cutoff unmodified -- no second validator or cutoff-parsing policy proposed"
+        - "proposed minimal semantic-as-of-v1 result contract (per-field known/partial/unavailable projection), distinct from the existing temporal-timeline-v1 event list and Git temporal-thread-v1.historical byte-level revision"
+        - "native-vs-Git authority boundary reconfirmed unchanged from docs/en/historical-as-of-semantics.md; no merge of the two sources is recommended"
+        - "https://github.com/Eruhitsuji/lifetxt/issues/759#issuecomment-5641515211 -- summary comment posted to the investigation issue"
+        - "three follow-up issues filed: https://github.com/Eruhitsuji/lifetxt/issues/763 (projection engine), https://github.com/Eruhitsuji/lifetxt/issues/764 (CLI --as-of exposure), https://github.com/Eruhitsuji/lifetxt/issues/765 (schema + EN/JA docs)"
+        - .venv/Scripts/python.exe -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      release_or_deployment: null
+      notes: >-
+        Investigation only, per #759's own scope: no runtime code, Format
+        key, or schema was changed. The key finding is that `due:` is the
+        only schedule field with an atomic `schedule_changed` capture route
+        wired today (`field="due"` at the single call site in
+        `lifetxt/cli.py`); `on:`/`from:`/`to:`/`at:` and any lifecycle
+        relation never mutated through the ticket link/unlink route (#721)
+        have no event evidence and must report `unavailable`, never a
+        current-state guess. Progress (`progress:`) is confirmed already
+        complete via the existing shipped progress-delta contract
+        (#697/#700) and is out of this investigation's new scope. The three
+        follow-up issues intentionally decompose the engine, its first
+        (CLI-only) consumer, and its schema/docs into separate XS/S issues
+        rather than filing one combined issue.
+      status: investigated
+
 required_chain:
   - Requirement
   - Capability

@@ -1636,9 +1636,7 @@ def build_parser():
         default=100,
         help="Maximum path-affecting Git commits examined (1-500). Default 100.",
     )
-    history_check_command.add_argument(
-        "--json", action="store_true", help="Emit JSON."
-    )
+    history_check_command.add_argument("--json", action="store_true", help="Emit JSON.")
     history_check_command.set_defaults(func=command_history_check)
 
     thread_command = subparsers.add_parser(
@@ -1820,6 +1818,12 @@ def build_parser():
     query_command.add_argument("--width", type=int, default=0, help="Table width.")
     query_command.add_argument(
         "-o", "--output", help="Write to a file instead of stdout."
+    )
+    query_command.add_argument(
+        "--revision",
+        help="Evaluate the query against the tracked bytes at this exact Git "
+        "revision instead of the current working tree (#726/#730). Never "
+        "falls back to current state.",
     )
     query_command.set_defaults(func=command_query)
 
@@ -8356,9 +8360,7 @@ def command_reopen(args):
 
     _ensure_writable_path(path, config, "reopen")
     _pre_write_backup(path, config, "reopen")
-    _commit_native_cli_replacement(
-        path, text, updated_text, target, "reopened", id_key
-    )
+    _commit_native_cli_replacement(path, text, updated_text, target, "reopened", id_key)
     sys.stdout.write("Reopened: %s\n" % updated_line)
     if sys.stdout.isatty():
         sys.stdout.write(_render_success_guidance("reopen", path=path))
@@ -14452,11 +14454,45 @@ def command_query(args):
             return 1
         return 0
 
-    items, _diagnostics = _parse_or_exit(
-        _normalize_paths(getattr(args, "paths", None), config, stdin_when_empty=False)
-        or ["life.txt"],
-        config,
-    )
+    revision = getattr(args, "revision", None)
+    historical = None
+    if revision:
+        # Historical revision-scoped query (#726/#730): the shared read-only
+        # snapshot reader is the only Git historical input path, and its
+        # items feed the existing, unmodified Query engine unchanged.
+        from .historical_temporal import read_historical_snapshot
+
+        key = id_key_from_config(config)
+        paths = _normalize_paths(
+            getattr(args, "paths", None), config, stdin_when_empty=False
+        ) or ["life.txt"]
+        try:
+            snapshot = read_historical_snapshot(paths, key=key, revision=revision)
+        except ValueError as exc:
+            sys.stderr.write("ERROR: %s\n" % exc)
+            return 1
+        errors = [
+            diagnostic
+            for diagnostic in snapshot["diagnostics"]
+            if getattr(diagnostic, "severity", "") == "error"
+        ]
+        if errors:
+            first = errors[0]
+            sys.stderr.write(
+                "ERROR: historical input has %s at %s:%s.\n"
+                % (first.code, first.source or "(unknown source)", first.line or "?")
+            )
+            return 1
+        items = snapshot["items"]
+        historical = snapshot["historical"]
+    else:
+        items, _diagnostics = _parse_or_exit(
+            _normalize_paths(
+                getattr(args, "paths", None), config, stdin_when_empty=False
+            )
+            or ["life.txt"],
+            config,
+        )
     filtered, query_diags = run_query(
         items,
         args.query,
@@ -14470,6 +14506,49 @@ def command_query(args):
             if d["severity"] == "error":
                 sys.stderr.write("ERROR: %s %s\n" % (d["code"], d["message"]))
         return 1
+    if historical is not None:
+        fmt = getattr(args, "format", "life")
+        if fmt == "json":
+            payload = OrderedDict(
+                (
+                    ("historical", historical),
+                    (
+                        "items",
+                        json.loads(items_to_json(filtered, pretty=False)),
+                    ),
+                )
+            )
+            write_text(
+                args.output,
+                json.dumps(
+                    payload,
+                    ensure_ascii=False,
+                    indent=2 if getattr(args, "pretty", False) else None,
+                    separators=(None if getattr(args, "pretty", False) else (",", ":")),
+                )
+                + "\n",
+            )
+            for row in query_diags or []:
+                if row.get("severity") == "error":
+                    sys.stderr.write(
+                        "ERROR: %s %s\n" % (row.get("code"), row.get("message"))
+                    )
+                else:
+                    sys.stderr.write(
+                        "WARNING: %s %s\n" % (row.get("code"), row.get("message"))
+                    )
+            return 0
+        write_text(
+            None,
+            "Historical revision: %s (resolved %s)\n"
+            % (historical["requested_revision"], historical["resolved_commit"]),
+        )
+        if not historical["evidence_complete"]:
+            write_text(
+                None,
+                "Historical evidence incomplete: %s\n"
+                % ", ".join(historical["limitations"]),
+            )
     _emit_query_items(args, filtered, query_diags)
     return 0
 

@@ -9024,3 +9024,112 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-git-historical-read
+    name: Shared Git historical workspace snapshot reader
+    summary: >-
+      A surface-neutral, read-only historical workspace snapshot reader
+      (`lifetxt.historical_temporal.read_historical_snapshot`) composing the
+      pre-existing exact-revision (`historical_snapshot`) and committer-time
+      as-of (`select_revision_as_of`) Git evidence primitives into one shared
+      entry point, reused unmodified by every non-Temporal-Thread historical
+      read surface: `lifetxt show --revision/--as-of` and
+      `lifetxt query --revision`. Never falls back to the current working
+      tree; always returns requested selector, resolved full commit SHA,
+      evidence mode, tracked-path membership, and shallow/incomplete-history
+      limitations.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-git-historical-evidence-contract-investigation
+      - req-reusable-git-historical-snapshot-reader
+      - req-historical-item-show
+      - req-revision-scoped-historical-query
+    implementation_locations:
+      - lifetxt/historical_temporal.py
+      - lifetxt/cli.py
+      - lifetxt/extra_cli.py
+      - lifetxt/extra_core.py
+      - tests/test_historical_read_seam.py
+      - docs/en/git-historical-evidence-contract.md
+      - docs/ja/git-historical-evidence-contract.md
+      - docs/en/query.md
+      - docs/ja/query.md
+      - docs/en/new-cli-workflows.md
+      - docs/ja/new-cli-workflows.md
+      - .ai/project/changes/git-historical-evidence-contract/
+    public_interfaces:
+      - lifetxt.historical_temporal.read_historical_snapshot
+      - lifetxt show ID --revision REV
+      - lifetxt show ID --as-of RFC3339 [--ref REF]
+      - lifetxt query QUERY --revision REV
+    tests_or_evidence:
+      - "tests/test_historical_read_seam.py ReadHistoricalSnapshotTests (4 tests): exactly-one-of revision/as_of required, --ref rejected without --as-of, exact-revision result matches historical_snapshot() directly, as-of result matches select_revision_as_of()+historical_snapshot() directly"
+      - "tests/test_historical_read_seam.py HistoricalShowCliTests (6 tests, real subprocess + real disposable git fixture): --revision reads only tracked bytes at that commit (working-tree-only changes never leak in), current show is byte-for-byte unaffected with no selector, missing target at the selected revision fails loudly rather than falling back to the current item, invalid revision fails loudly, --revision/--as-of are mutually exclusive, --as-of resolves the newest commit at or before the cutoff"
+      - "tests/test_historical_read_seam.py HistoricalQueryCliTests (4 tests, real subprocess + real disposable git fixture): --revision evaluates only the historical snapshot through the unmodified Query engine, --format json includes a historical provenance envelope (resolved_commit) alongside items, current query is unaffected with no --revision, an invalid revision fails loudly"
+      - "tests/test_historical_temporal.py and tests/test_temporal_diff.py re-run unmodified -> 13/14 pass; the one pre-existing failure (test_non_git_and_option_like_refs_fail_loudly) is confirmed via git stash to be pre-existing and environment-dependent (this worktree is itself nested inside a git checkout), not a regression introduced by this change"
+      - "python -m unittest tests.test_lifetxt tests.test_extra_cli tests.test_query tests.test_completion_surfaces tests.test_completion_values tests.test_surface_runtime tests.test_cli_taxonomy -> full pass, confirming zero regression to non-historical show/query/CLI-taxonomy behavior"
+      - "live: real disposable git fixture -- show ID --revision REV, show ID --as-of RFC3339, query QUERY --revision REV --format json, mutual-exclusion refusal, invalid-revision refusal, and missing-target-at-revision refusal all verified against real git commits"
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - ruff format --check / ruff check on every changed file -> clean
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/724
+      - https://github.com/Eruhitsuji/lifetxt/issues/725
+      - https://github.com/Eruhitsuji/lifetxt/issues/726
+      - https://github.com/Eruhitsuji/lifetxt/issues/729
+      - https://github.com/Eruhitsuji/lifetxt/issues/730
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      #725 (investigation, no runtime code) confirmed that `lifetxt/
+      historical_temporal.py`'s pre-existing `historical_snapshot()` (exact
+      revision) and `select_revision_as_of()` (committer-time cutoff) already
+      satisfy the shared HistoricalSnapshot contract this project's
+      historical-evidence roadmap called for: repository identity, requested
+      selector, resolved full commit SHA, evidence mode
+      (`git_exact_revision`/`git_as_of`), tracked-path membership, no
+      working-tree fallback, and shallow/incomplete-history limitations were
+      all already present, confirmed by reading the existing #707/#709
+      implementation and its test coverage before writing any code. The one
+      genuine gap was a unified entry point: a caller wanting either an exact
+      revision or an as-of cutoff had to know to call two different
+      functions in sequence. #726 closes that gap with
+      `read_historical_snapshot()`, a thin wrapper introducing no second
+      repository/ref/as-of resolution policy -- it delegates to the exact
+      same two primitives Historical Temporal Thread (#707/#709) already
+      uses, which is why Temporal Thread's own call sites
+      (`historical_temporal_thread`/`historical_temporal_thread_as_of` and
+      `cli.py`'s existing `thread`/`--diff` wiring) were left completely
+      untouched: they were already built on the shared reader, so "migrate
+      onto the shared reader with zero regression" required no code change
+      to Temporal Thread itself, only regression-testing it (see
+      tests_or_evidence). Revision-metadata/history-listing was decided
+      unnecessary for this slice (#725's question 3): no consumer selected
+      here needs to browse history, only to resolve one exact revision or
+      one as-of cutoff, so no `git log`-style listing helper was added.
+      Multi-file/workspace semantics are unchanged from the existing
+      primitives: only tracked bytes at the selected commit are read, a
+      source missing at that commit is reported via `missing_paths`/
+      `limitations` rather than silently filled from the working tree or
+      omitted, and multiple repositories remain rejected
+      (`resolve_git_inputs` already refuses mixed-repository input sets).
+      #725's selected first non-Temporal-Thread consumer was `show`
+      (#729, cheapest and highest-value); #730 (`query --revision`) was
+      implemented in the same pass as a second, equally bounded consumer
+      since the shared seam made it trivial once `show` was done, matching
+      #730's own allowance to add `--as-of` only "if the reusable selector
+      is small enough to safely reuse in the same issue" -- `query` v1 is
+      deliberately exact-revision-only per its own scope, so `--as-of` was
+      not added there. `query --revision`'s `--format json` output is
+      additive: it wraps the existing bare item array in a
+      `{"historical": {...}, "items": [...]}` envelope only when
+      `--revision` is given; every other format and the no-`--revision`
+      case are byte-for-byte unchanged, confirmed by a dedicated regression
+      test. Server/Remote Safe Mode disclosure (#727/#728) and the
+      opt-in Git-commit worker (#731) are tracked separately and were not
+      completed in this pass; see the umbrella epic #724 and this batch's
+      own integration PR for the current status of each.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

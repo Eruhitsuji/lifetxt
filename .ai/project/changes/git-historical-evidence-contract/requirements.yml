@@ -1,0 +1,93 @@
+schema_version: 1
+
+requirements:
+  - id: req-git-historical-evidence-contract-investigation
+    kind: ADDED
+    statement: Document a surface-neutral shared Git historical evidence
+      contract, its reuse boundary against lifetxt/historical_temporal.py,
+      and select the first non-Temporal-Thread consumer, without any Git
+      mutation or server/API implementation.
+    acceptance_criteria:
+      - "Responsibility boundary against #707/#708/#709 exact-revision/diff/
+        as-of behavior is documented and does not duplicate it."
+      - The shared snapshot contract preserves no-working-tree-fallback.
+      - Requested selector, resolved SHA, provenance, completeness, and
+        limitations are part of the shared contract.
+      - Multi-file/workspace historical membership semantics are defined.
+      - Revision-listing necessity is decided (decided unnecessary here).
+      - Disclosure risk for remote/server historical exposure is documented.
+      - Exactly one first non-Temporal-Thread consumer is selected.
+      - Follow-up implementation is decomposed into XS/S issues.
+    constraints:
+      - No runtime code, Git mutation, or .ai/managed/** change.
+    owner: Eruhitsuji
+
+  - id: req-reusable-git-historical-snapshot-reader
+    kind: ADDED
+    statement: Add a surface-neutral, read-only historical workspace snapshot
+      reader reusing the existing exact-revision and as-of Git evidence
+      primitives, with zero regression to Historical Temporal Thread.
+    acceptance_criteria:
+      - "Exact revision resolution matches existing #707 behavior."
+      - "As-of revision selection matches existing #709 behavior."
+      - Only tracked bytes at the selected commit are returned; no
+        working-tree fallback.
+      - Requested revision/ref, resolved full SHA, evidence mode, and
+        provenance are returned.
+      - Shallow/incomplete history is never reported as complete.
+      - Missing source/path is handled deterministically.
+      - thread --revision / thread --as-of text/JSON behavior is unchanged.
+      - The reader itself never mutates Git or the workspace.
+    constraints:
+      - No second repository/ref/as-of resolution policy.
+      - No Temporal-Thread-specific parser/graph logic in the reader itself.
+    owner: Eruhitsuji
+
+  - id: req-historical-item-show
+    kind: ADDED
+    statement: Let `lifetxt show` inspect an item as of an exact Git revision
+      or a bounded as-of cutoff, reusing the shared snapshot reader and the
+      existing item lookup/rendering logic unmodified.
+    acceptance_criteria:
+      - "`show ID --revision REV` shows the item as of the selected commit."
+      - "`show ID --as-of RFC3339 [--ref REF]` reuses the same snapshot path."
+      - The historical result is built only from the selected commit's
+        tracked bytes; working-tree-only changes never leak in.
+      - A target missing at the selected revision never falls back to the
+        current item.
+      - Requested selector, resolved SHA, evidence mode, and completeness/
+        limitations are visible.
+      - Current `show ID` behavior (no selector) is unchanged.
+      - Git-free workspace / invalid revision / missing path are handled
+        deterministically.
+      - text/JSON use the same shared domain result.
+    constraints:
+      - No second Git historical input path outside read_historical_snapshot.
+    owner: Eruhitsuji
+
+  - id: req-revision-scoped-historical-query
+    kind: ADDED
+    statement: Let `lifetxt query` evaluate the existing Query Language
+      against an exact Git revision's tracked workspace, reusing the shared
+      snapshot reader and the existing unmodified Query engine.
+    acceptance_criteria:
+      - "`query QUERY --revision REV` evaluates only the selected commit's
+        tracked lifetxt data."
+      - Uncommitted working-tree changes never enter the historical result.
+      - The existing Query Language grammar/evaluator is reused unchanged.
+      - Requested revision and resolved full SHA are explicit in the result.
+      - Evidence mode/completeness/limitations are preserved.
+      - A source/item missing at the selected revision never falls back to
+        current state.
+      - Git-free workspace / invalid revision / missing source are handled
+        deterministically.
+      - Default `query` behavior (no --revision) is unchanged.
+      - text/JSON use the same shared query result.
+    constraints:
+      - Exact-revision scope only for this slice; no whole-history search.
+      - No second query engine.
+    owner: Eruhitsuji
+
+open_questions:
+  - "Server/Remote Safe Mode historical disclosure policy (#727/#728) is
+    explicitly out of scope for this package and remains open."

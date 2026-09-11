@@ -12125,6 +12125,7 @@ traceability:
         - docs/en/lifecycle-analytics.md
         - docs/ja/lifecycle-analytics.md
         - Python 3.12 py_compile for changed modules
+        - "Review follow-up at PR #757: 321 focused regression tests passed, covering text/JSON parity, A->B->A oscillation, event-type window deltas, partial-history schedule safety, timezone-aware cadence, workspace/domain coverage, thread analysis text, and deterministic duration examples"
       related_issues:
         - https://github.com/Eruhitsuji/lifetxt/issues/732
         - https://github.com/Eruhitsuji/lifetxt/issues/733

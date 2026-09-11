@@ -1708,6 +1708,9 @@ def build_parser():
         metavar="REF",
         help="Git history root for --as-of. Defaults to HEAD.",
     )
+    thread_command.add_argument("--metrics", action="store_true", help="Summarize bounded explicit graph metrics.")
+    thread_command.add_argument("--replacement-analysis", action="store_true", help="Summarize bounded replacement relations.")
+    thread_command.add_argument("--consistency-summary", action="store_true", help="Summarize existing consistency warnings.")
     thread_command.add_argument("--json", action="store_true", help="Emit JSON.")
     thread_command.set_defaults(func=command_thread)
 
@@ -12796,6 +12799,15 @@ def command_project_show(args):
     except ValueError as exc:
         sys.stderr.write("ERROR: %s\n" % exc)
         return 1
+    if getattr(args, "metrics", False) or getattr(args, "replacement_analysis", False) or getattr(args, "consistency_summary", False):
+        from .temporal_thread import replacement_chain_analysis, temporal_thread_metrics
+        if getattr(args, "metrics", False):
+            result["analysis"] = temporal_thread_metrics(result)
+        elif getattr(args, "replacement_analysis", False):
+            result["analysis"] = replacement_chain_analysis(result)
+        else:
+            warnings = result.get("consistency", {}).get("warnings", [])
+            result["analysis"] = {"analysis": "temporal_consistency_summary", "warning_count": len(warnings), "by_relation": {relation: sum(row.get("relation") == relation for row in warnings) for relation in ("follows", "replaced_by")}, "warnings": warnings, "truncated": result.get("consistency", {}).get("truncated", False)}
     if getattr(args, "json", False):
         write_text(None, json.dumps(hub, ensure_ascii=False, indent=2) + "\n")
         return 0

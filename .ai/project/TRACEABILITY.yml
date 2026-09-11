@@ -12075,6 +12075,15 @@ traceability:
 
     - requirement_id: req-server-init-git-commit-worker
       capability_id: cap-server-init-git-commit-worker
+      capability_remap_reason: >-
+        The prior placeholder entry recorded this requirement under the
+        broad cap-ubuntu-server-deployment umbrella since #731 was not yet
+        implemented. Now that it is, it gets its own dedicated capability
+        (cap-server-init-git-commit-worker), matching this project's
+        established convention of a focused capability entry per
+        implemented feature (e.g. cap-remote-historical-evidence-read
+        alongside cap-git-historical-disclosure-policy) rather than every
+        server-init-related requirement sharing one umbrella capability.
       epic: https://github.com/Eruhitsuji/lifetxt/issues/724
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/731
       pull_request: null

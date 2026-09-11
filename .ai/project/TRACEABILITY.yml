@@ -12035,7 +12035,7 @@ traceability:
     - requirement_id: req-remote-historical-evidence-read
       capability_id: cap-remote-historical-evidence-read
       epic: https://github.com/Eruhitsuji/lifetxt/issues/724
-      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/728
+      task_issue: "https://github.com/Eruhitsuji/lifetxt/issues/728"
       pull_request: null
       changed_files_or_scope:
         - "Add GET /api/remote/v1/historical, exposing read_historical_snapshot
@@ -12085,7 +12085,7 @@ traceability:
         alongside cap-git-historical-disclosure-policy) rather than every
         server-init-related requirement sharing one umbrella capability.
       epic: https://github.com/Eruhitsuji/lifetxt/issues/724
-      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/731
+      task_issue: "https://github.com/Eruhitsuji/lifetxt/issues/731"
       pull_request: null
       changed_files_or_scope:
         - "Add lifetxt.git_commit_worker (run_commit()) and `lifetxt

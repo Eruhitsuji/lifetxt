@@ -284,6 +284,7 @@ CATEGORIES = OrderedDict(
                     "timeline",
                     "history-check",
                     "thread",
+                    "lifecycle-stats",
                     "freebusy",
                     "count",
                     "status",

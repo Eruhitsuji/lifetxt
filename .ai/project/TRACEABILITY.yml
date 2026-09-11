@@ -12212,6 +12212,56 @@ traceability:
         recorded honestly as planned rather than claimed complete.
       status: implemented
 
+    - requirement_id: req-native-lifecycle-analytics-batch
+      capability_id: cap-native-semantic-history
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/755
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/723
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/757
+      changed_files_or_scope:
+        - Shared deterministic lifecycle analytics over filtered valid Native Timeline events
+        - Bounded Temporal Thread metrics, replacement-chain, realizes timing, and consistency summaries
+        - Read-only MCP lifecycle analytics and bounded workspace lifecycle statistics
+        - Duration, dwell, transitions, gaps, cadence, oscillation, provenance, relation churn, due variance, window comparison, progress velocity, effort, and schedule lead-time projections
+      tests_or_evidence:
+        - tests/test_lifecycle_analytics.py
+        - tests/test_native_timeline.py
+        - tests/test_mcp_expansion.py
+        - docs/en/lifecycle-analytics.md
+        - docs/ja/lifecycle-analytics.md
+        - Python 3.12 py_compile for changed modules
+        - "Review follow-up at PR #757: focused regression suites pass, covering text/JSON parity, gap-safe status dwell and progress rate suppression, field-scoped datetime schedule shifts, unavailable partial due variance, provenance field identity, sequence-based relation round trips with unknown partial-history net, workspace/domain completeness diagnostics, timezone-aware due dates and MCP parity, directed replacement endpoints, mixed date/datetime ordering, explicit aggregate counts, and deterministic duration eligibility"
+      related_issues:
+        - https://github.com/Eruhitsuji/lifetxt/issues/732
+        - https://github.com/Eruhitsuji/lifetxt/issues/733
+        - https://github.com/Eruhitsuji/lifetxt/issues/734
+        - https://github.com/Eruhitsuji/lifetxt/issues/735
+        - https://github.com/Eruhitsuji/lifetxt/issues/736
+        - https://github.com/Eruhitsuji/lifetxt/issues/737
+        - https://github.com/Eruhitsuji/lifetxt/issues/738
+        - https://github.com/Eruhitsuji/lifetxt/issues/739
+        - https://github.com/Eruhitsuji/lifetxt/issues/740
+        - https://github.com/Eruhitsuji/lifetxt/issues/741
+        - https://github.com/Eruhitsuji/lifetxt/issues/742
+        - https://github.com/Eruhitsuji/lifetxt/issues/743
+        - https://github.com/Eruhitsuji/lifetxt/issues/744
+        - https://github.com/Eruhitsuji/lifetxt/issues/745
+        - https://github.com/Eruhitsuji/lifetxt/issues/746
+        - https://github.com/Eruhitsuji/lifetxt/issues/747
+        - https://github.com/Eruhitsuji/lifetxt/issues/748
+        - https://github.com/Eruhitsuji/lifetxt/issues/749
+        - https://github.com/Eruhitsuji/lifetxt/issues/750
+        - https://github.com/Eruhitsuji/lifetxt/issues/751
+        - https://github.com/Eruhitsuji/lifetxt/issues/752
+        - https://github.com/Eruhitsuji/lifetxt/issues/753
+        - https://github.com/Eruhitsuji/lifetxt/issues/754
+        - https://github.com/Eruhitsuji/lifetxt/issues/755
+      release_or_deployment: next normal maintenance release
+      notes: >-
+        Filters precede aggregation, invalid events are excluded, and every
+        projection retains completeness, limitations, and provenance. Issue
+        #755 is an umbrella completion record and has no second analytics engine.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

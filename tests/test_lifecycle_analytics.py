@@ -85,6 +85,7 @@ class LifecycleAnalyticsTests(unittest.TestCase):
         self.assertEqual(1, result["duration_distribution"]["eligible_count"])
         self.assertIn("example_item_ids", result["duration_distribution"])
         self.assertEqual(2, len(result["coverage"]))
+        self.assertIn("item", result["coverage_by_domain"])
 
     def test_window_comparison_includes_event_type_deltas(self):
         first = {"target_id": "T-1", "complete": True, "limitations": [], "events": [{"event": "created", "record_id": "a", "at": "2026-09-01T00:00:00Z", "valid": True}], "diagnostics": []}
@@ -95,6 +96,31 @@ class LifecycleAnalyticsTests(unittest.TestCase):
     def test_schedule_lead_time_distinguishes_unknown_from_no_observation(self):
         timeline = {"target_id": "T-1", "complete": False, "limitations": ["history_partial"], "diagnostics": [], "events": [{"event": "completed", "record_id": "c", "at": "2026-09-02T00:00:00Z", "valid": True}]}
         self.assertEqual("unknown", lifecycle_analytics(timeline, "schedule_lead_time")["schedule_change_state"])
+
+    def test_relation_round_trips_are_sequence_pairs_and_partial_net_is_unknown(self):
+        rows = []
+        for index, event in enumerate(("relation_added", "relation_removed", "relation_added", "relation_removed"), 1):
+            rows.append({"record_id": str(index), "event": event, "at": "2026-09-01T%02d:00:00Z" % index, "sequence": index, "valid": True, "payload": {"relation": ["blocks"], "target": ["T-2"]}})
+        complete = lifecycle_analytics({"target_id": "T-1", "complete": True, "limitations": [], "diagnostics": [], "events": rows}, "relation")
+        self.assertEqual(2, complete["round_trip_count"])
+        self.assertEqual(4, complete["target_net"][0]["change_count"])
+        partial = lifecycle_analytics({"target_id": "T-1", "complete": False, "limitations": ["history_incomplete"], "diagnostics": [], "events": rows}, "relation")
+        self.assertIsNone(partial["target_net"][0]["net"])
+        self.assertFalse(partial["net_available"])
+
+    def test_due_date_uses_workspace_calendar_date(self):
+        timeline = {"target_id": "T-1", "complete": True, "limitations": [], "diagnostics": [], "events": [
+            {"record_id": "s", "event": "schedule_changed", "at": "2026-09-01T12:00:00Z", "valid": True, "payload": {"field": ["due"], "after": ["2026-09-02"]}},
+            {"record_id": "c", "event": "completed", "at": "2026-09-01T15:30:00Z", "valid": True, "payload": {"before_status": ["[/]"], "after_status": ["[x]"]}},
+        ]}
+        self.assertEqual("at_due", lifecycle_analytics(timeline, "due_variance", timezone_name="Asia/Tokyo")["classification"])
+
+    def test_gap_does_not_create_oscillation(self):
+        timeline = {"target_id": "T-1", "complete": True, "limitations": ["item_history_incomplete"], "diagnostics": [], "events": [
+            {"record_id": "a", "event": "status_changed", "at": "2026-09-01T00:00:00Z", "sequence": 1, "valid": True, "payload": {"before_status": ["A"], "after_status": ["B"]}},
+            {"record_id": "b", "event": "status_changed", "at": "2026-09-01T02:00:00Z", "sequence": 3, "valid": True, "payload": {"before_status": ["B"], "after_status": ["A"]}},
+        ]}
+        self.assertEqual(0, lifecycle_analytics(timeline, "oscillation")["oscillation_count"])
 
 
 if __name__ == "__main__":

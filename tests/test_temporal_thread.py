@@ -3,7 +3,12 @@ import unittest
 from types import SimpleNamespace
 
 from lifetxt.parser import parse_text
-from lifetxt.temporal_thread import temporal_consistency, temporal_thread
+from lifetxt.temporal_thread import (
+    replacement_chain_analysis,
+    temporal_consistency,
+    temporal_consistency_summary,
+    temporal_thread,
+)
 from lifetxt import tui_app
 
 
@@ -180,6 +185,41 @@ class TemporalThreadTests(unittest.TestCase):
         self.assertIn("Temporal thread", message)
         self.assertEqual("temporal-thread-v1", state._temporal_thread["schema"])
         self.assertTrue(state.show_detail)
+
+    def test_replacement_endpoints_follow_edge_direction(self):
+        thread = {
+            "target_id": "middle",
+            "relations": {
+                "replacement_predecessors": [{"id": "z-middle"}],
+                "replacement_successors": [{"id": "a-next"}],
+            },
+            "explicit": {
+                "truncated": False,
+                "cycles": [],
+                "edges": [
+                    {"relation": "replaced_by", "source_id": "older", "target_id": "z-middle"},
+                    {"relation": "replaced_by", "source_id": "z-middle", "target_id": "middle"},
+                    {"relation": "replaced_by", "source_id": "middle", "target_id": "a-next"},
+                    {"relation": "replaced_by", "source_id": "a-next", "target_id": "newer"},
+                ],
+            },
+        }
+        result = replacement_chain_analysis(thread)
+        self.assertEqual("older", result["oldest_endpoint_id"])
+        self.assertEqual("newer", result["newest_endpoint_id"])
+
+    def test_consistency_summary_orders_date_and_datetime_by_calendar_date(self):
+        thread = {
+            "consistency": {
+                "warnings": [
+                    {"relation": "follows", "evidence": {"source_value": "2030-01-01T00:00:00Z"}},
+                    {"relation": "follows", "evidence": {"source_value": "2020-01-01"}},
+                ]
+            }
+        }
+        result = temporal_consistency_summary(thread)
+        self.assertEqual("2020-01-01", result["earliest_evidence"])
+        self.assertEqual("2030-01-01T00:00:00Z", result["latest_evidence"])
 
 
 if __name__ == "__main__":

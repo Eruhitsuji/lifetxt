@@ -256,7 +256,15 @@ def replacement_chain_analysis(thread):
     if thread.get("explicit", {}).get("cycles"): limitations.append("replacement_cycle_detected")
     predecessor_ids = sorted(row.get("id") for row in predecessors)
     successor_ids = sorted(row.get("id") for row in successors)
-    return OrderedDict((("analysis", "replacement_chain"), ("predecessor_count", len(predecessors)), ("successor_count", len(successors)), ("observed_chain_length", len(observed)), ("observed_item_ids", sorted(observed)), ("predecessor_ids", predecessor_ids), ("successor_ids", successor_ids), ("oldest_endpoint_id", predecessor_ids[0] if predecessor_ids else thread.get("target_id")), ("newest_endpoint_id", successor_ids[-1] if successor_ids else thread.get("target_id")), ("limitations", limitations)))
+    def endpoint(mapping):
+        current, seen = target, set()
+        while current not in seen and mapping.get(current):
+            seen.add(current)
+            current = mapping[current][0]
+        return current
+    oldest_endpoint = endpoint(backward)
+    newest_endpoint = endpoint(forward)
+    return OrderedDict((("analysis", "replacement_chain"), ("predecessor_count", len(predecessors)), ("successor_count", len(successors)), ("observed_chain_length", len(observed)), ("observed_item_ids", sorted(observed)), ("predecessor_ids", predecessor_ids), ("successor_ids", successor_ids), ("oldest_endpoint_id", oldest_endpoint), ("newest_endpoint_id", newest_endpoint), ("limitations", limitations)))
 
 
 def temporal_consistency_summary(thread):
@@ -270,10 +278,10 @@ def temporal_consistency_summary(thread):
         from .timeutil import parse_iso_date, parse_iso_datetime
         instant = parse_iso_datetime(value)
         if instant is not None:
-            return (0, instant.timestamp())
+            return (0, instant.date().toordinal())
         date = parse_iso_date(value)
         if date is not None:
-            return (1, date.toordinal())
+            return (0, date.toordinal())
         return (2, str(value))
     ordered_timestamps = sorted(timestamps, key=timestamp_key)
     return OrderedDict((("analysis", "temporal_consistency_summary"), ("warning_count", len(warnings)), ("by_relation", OrderedDict((key, by_relation[key]) for key in sorted(by_relation))), ("by_source_id", OrderedDict((key, by_source[key]) for key in sorted(by_source))), ("by_target_id", OrderedDict((key, by_target[key]) for key in sorted(by_target))), ("earliest_evidence", ordered_timestamps[0] if ordered_timestamps else None), ("latest_evidence", ordered_timestamps[-1] if ordered_timestamps else None), ("warnings", warnings), ("truncated", bool(thread.get("consistency", {}).get("truncated")))))

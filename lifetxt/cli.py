@@ -1619,6 +1619,9 @@ def build_parser():
         "--event",
         help="Include only this normalized event type.",
     )
+    timeline_command.add_argument(
+        "--summary", action="store_true", help="Summarize filtered valid lifecycle events."
+    )
     timeline_command.add_argument("--json", action="store_true", help="Emit JSON.")
     timeline_command.set_defaults(func=command_timeline)
 
@@ -13803,6 +13806,7 @@ def command_temporal(args):
 
 def command_timeline(args):
     from .native_timeline import native_timeline
+    from .lifecycle_analytics import lifecycle_summary
 
     config = _config(args)
     paths = _normalize_paths(
@@ -13823,7 +13827,23 @@ def command_timeline(args):
         sys.stderr.write("ERROR: %s\n" % exc)
         return 1
     if getattr(args, "json", False):
+        if getattr(args, "summary", False):
+            result = lifecycle_summary(result)
         write_text(None, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+        return 0
+    if getattr(args, "summary", False):
+        summary = lifecycle_summary(result)
+        write_text(None, "Lifecycle Summary for %s:\n" % result["target_id"])
+        write_text(None, "  Events: %d\n" % summary["observed_event_count"])
+        write_text(None, "  First: %s\n" % (summary["first_event_at"] or "(none)"))
+        write_text(None, "  Last:  %s\n" % (summary["last_event_at"] or "(none)"))
+        write_text(None, "  Status transitions: %d\n" % summary["status_transition_count"])
+        write_text(None, "  Schedule changes: %d\n" % summary["schedule_change_count"])
+        write_text(None, "  Relation changes: %d\n" % summary["relation_change_count"])
+        write_text(None, "  Completed: %d\n" % summary["completed_count"])
+        write_text(None, "  Reopened: %d\n" % summary["reopened_count"])
+        if summary["limitations"]:
+            write_text(None, "  Limitations: %s\n" % ", ".join(summary["limitations"]))
         return 0
     write_text(
         None,

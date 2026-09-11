@@ -63,6 +63,19 @@ class LifecycleAnalyticsTests(unittest.TestCase):
         self.assertEqual("at_due", lifecycle_analytics(timeline, "due_variance")["classification"])
         self.assertEqual(20, lifecycle_analytics(timeline, "progress")["total_delta"])
         self.assertEqual(1800, lifecycle_analytics(timeline, "effort")["total_elapsed_seconds"])
+        self.assertEqual(1, lifecycle_analytics(timeline, "schedule")["earlier_count"])
+        self.assertEqual(-1, lifecycle_analytics(timeline, "schedule")["net_shift_days"])
+        self.assertEqual(0, lifecycle_analytics(timeline, "relation")["target_net"][0]["net"])
+        self.assertEqual(1, len(lifecycle_analytics(timeline, "progress")["largest_deltas"]))
+
+    def test_oscillation_is_two_contiguous_reverse_transitions(self):
+        timeline = {"target_id": "T-1", "complete": True, "limitations": [], "diagnostics": [], "events": [
+            {"record_id": "a", "event": "status_changed", "at": "2026-09-01T00:00:00Z", "valid": True, "payload": {"before_status": ["A"], "after_status": ["B"]}},
+            {"record_id": "b", "event": "status_changed", "at": "2026-09-01T01:00:00Z", "valid": True, "payload": {"before_status": ["B"], "after_status": ["A"]}},
+        ]}
+        result = lifecycle_analytics(timeline, "oscillation")
+        self.assertEqual(1, result["oscillation_count"])
+        self.assertEqual(["a", "b"], result["oscillations"][0]["event_ids"])
 
     def test_workspace_stats_contains_global_counts_and_bounded_distribution(self):
         items = _items() + parse_text("[x] T Other id:T-2\n")[0]
@@ -72,6 +85,16 @@ class LifecycleAnalyticsTests(unittest.TestCase):
         self.assertEqual(1, result["duration_distribution"]["eligible_count"])
         self.assertIn("example_item_ids", result["duration_distribution"])
         self.assertEqual(2, len(result["coverage"]))
+
+    def test_window_comparison_includes_event_type_deltas(self):
+        first = {"target_id": "T-1", "complete": True, "limitations": [], "events": [{"event": "created", "record_id": "a", "at": "2026-09-01T00:00:00Z", "valid": True}], "diagnostics": []}
+        second = {"target_id": "T-1", "complete": True, "limitations": [], "events": [{"event": "created", "record_id": "a", "at": "2026-09-01T00:00:00Z", "valid": True}, {"event": "completed", "record_id": "b", "at": "2026-09-02T00:00:00Z", "valid": True}], "diagnostics": []}
+        result = __import__("lifetxt.lifecycle_analytics", fromlist=["compare_lifecycle_windows"]).compare_lifecycle_windows(first, second)
+        self.assertEqual(1, result["event_type_deltas"]["completed"])
+
+    def test_schedule_lead_time_distinguishes_unknown_from_no_observation(self):
+        timeline = {"target_id": "T-1", "complete": False, "limitations": ["history_partial"], "diagnostics": [], "events": [{"event": "completed", "record_id": "c", "at": "2026-09-02T00:00:00Z", "valid": True}]}
+        self.assertEqual("unknown", lifecycle_analytics(timeline, "schedule_lead_time")["schedule_change_state"])
 
 
 if __name__ == "__main__":

@@ -12813,15 +12813,6 @@ def command_project_show(args):
     except ValueError as exc:
         sys.stderr.write("ERROR: %s\n" % exc)
         return 1
-    if getattr(args, "metrics", False) or getattr(args, "replacement_analysis", False) or getattr(args, "consistency_summary", False):
-        from .temporal_thread import replacement_chain_analysis, temporal_thread_metrics
-        if getattr(args, "metrics", False):
-            result["analysis"] = temporal_thread_metrics(result)
-        elif getattr(args, "replacement_analysis", False):
-            result["analysis"] = replacement_chain_analysis(result)
-        else:
-            warnings = result.get("consistency", {}).get("warnings", [])
-            result["analysis"] = {"analysis": "temporal_consistency_summary", "warning_count": len(warnings), "by_relation": {relation: sum(row.get("relation") == relation for row in warnings) for relation in ("follows", "replaced_by")}, "warnings": warnings, "truncated": result.get("consistency", {}).get("truncated", False)}
     if getattr(args, "json", False):
         write_text(None, json.dumps(hub, ensure_ascii=False, indent=2) + "\n")
         return 0
@@ -13861,6 +13852,19 @@ def command_timeline(args):
             since=getattr(args, "since", None),
             until=getattr(args, "until", None),
             event=getattr(args, "event", None),
+            include_all_valid=bool(
+                getattr(args, "summary", False)
+                or any(
+                    getattr(args, name, False)
+                    for name in (
+                        "duration", "status_dwell", "schedule_analysis",
+                        "relation_analysis", "completion_cycles", "transitions",
+                        "gaps", "cadence", "oscillation", "provenance_analysis",
+                        "progress_analysis", "effort", "schedule_lead_time",
+                        "due_variance",
+                    )
+                )
+            ),
         )
     except ValueError as exc:
         sys.stderr.write("ERROR: %s\n" % exc)
@@ -14087,6 +14091,15 @@ def command_thread(args):
     except ValueError as exc:
         sys.stderr.write("ERROR: %s\n" % exc)
         return 1
+    if getattr(args, "metrics", False) or getattr(args, "replacement_analysis", False) or getattr(args, "consistency_summary", False):
+        from .temporal_thread import replacement_chain_analysis, temporal_thread_metrics
+        if getattr(args, "metrics", False):
+            result["analysis"] = temporal_thread_metrics(result)
+        elif getattr(args, "replacement_analysis", False):
+            result["analysis"] = replacement_chain_analysis(result)
+        else:
+            warnings = result.get("consistency", {}).get("warnings", [])
+            result["analysis"] = {"analysis": "temporal_consistency_summary", "warning_count": len(warnings), "by_relation": {relation: sum(row.get("relation") == relation for row in warnings) for relation in ("follows", "replaced_by")}, "warnings": warnings, "truncated": result.get("consistency", {}).get("truncated", False)}
     if getattr(args, "json", False):
         write_text(None, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
         return 0

@@ -1,6 +1,6 @@
-"""Tests for the shared historical read seam (#725/#726) and its first two
+"""Tests for the shared historical read seam (#725/#726) and its
 non-Temporal-Thread consumers: ``show --revision``/``--as-of`` (#729) and
-``query --revision`` (#730).
+``query --revision``/``--as-of`` (#730/#760).
 
 ``lifetxt.historical_temporal.read_historical_snapshot`` is a thin wrapper
 composing the pre-existing ``historical_snapshot``/``select_revision_as_of``
@@ -218,6 +218,75 @@ class HistoricalQueryCliTests(_GitFixture):
         )
         self.assertNotEqual(0, code)
         self.assertIn("Unknown or non-commit Git revision", stderr)
+
+    def test_query_as_of_resolves_the_newest_commit_at_or_before_cutoff(self):
+        first = self._commit(
+            "[ ] T Buy_milk id:t1 tag:groceries\n", "2026-01-01T00:00:00+00:00"
+        )
+        self._commit(
+            "[x] T Buy_milk id:t1 tag:groceries done:2026-02-01\n"
+            "[ ] T Buy_bread id:t2 tag:groceries\n",
+            "2026-02-01T00:00:00+00:00",
+        )
+        stdout, stderr, code = run_cli(
+            "query",
+            "tag:groceries",
+            "life.txt",
+            "--as-of",
+            "2026-01-15T00:00:00Z",
+            cwd=self.repo,
+        )
+        self.assertEqual(0, code, stderr)
+        self.assertIn("Buy_milk", stdout)
+        self.assertNotIn("Buy_bread", stdout)
+        self.assertIn(first, stdout)
+        self.assertIn("Historical as of:", stdout)
+
+    def test_query_as_of_json_includes_provenance_envelope(self):
+        self._commit("[ ] T Buy_milk id:t1\n", "2026-01-01T00:00:00+00:00")
+        stdout, stderr, code = run_cli(
+            "query",
+            "id:t1",
+            "life.txt",
+            "--as-of",
+            "2026-01-15T00:00:00Z",
+            "--format",
+            "json",
+            cwd=self.repo,
+        )
+        self.assertEqual(0, code, stderr)
+        import json
+
+        payload = json.loads(stdout)
+        self.assertEqual("git_as_of", payload["historical"]["mode"])
+        self.assertEqual(1, len(payload["items"]))
+
+    def test_query_revision_and_as_of_are_mutually_exclusive(self):
+        revision = self._commit("[ ] T Buy_milk id:t1\n", "2026-01-01T00:00:00+00:00")
+        stdout, stderr, code = run_cli(
+            "query",
+            "id:t1",
+            "life.txt",
+            "--revision",
+            revision,
+            "--as-of",
+            "2026-01-01T00:00:00Z",
+            cwd=self.repo,
+        )
+        self.assertNotEqual(0, code)
+        self.assertIn("Exactly one of --revision or --as-of", stderr)
+
+    def test_query_ref_alone_has_no_effect_matching_show_precedent(self):
+        # --ref is only meaningful together with --as-of (enforced inside
+        # read_historical_snapshot). Passing --ref with neither --revision
+        # nor --as-of never reaches that reader at all, matching the
+        # pre-existing `show --ref` behavior this reuses.
+        self._commit("[ ] T Buy_milk id:t1\n", "2026-01-01T00:00:00+00:00")
+        stdout, stderr, code = run_cli(
+            "query", "id:t1", "life.txt", "--ref", "main", cwd=self.repo
+        )
+        self.assertEqual(0, code, stderr)
+        self.assertNotIn("Historical", stdout)
 
 
 if __name__ == "__main__":

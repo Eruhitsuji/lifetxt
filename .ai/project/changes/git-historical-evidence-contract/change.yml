@@ -1,0 +1,69 @@
+schema_version: 1
+
+change:
+  id: git-historical-evidence-contract
+  title: Shared Git historical workspace snapshot reader and its first two
+    non-Temporal-Thread consumers
+  status: implemented
+  change_type: Investigation + Feature
+  assurance_level: Standard
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/724
+  related_pull_request: null
+  base_commit: 78e39717d09f5aa3c3d1b1a75c8a0b7c9e6cbdd0
+  target_release: next normal maintenance release
+
+scope:
+  in_scope:
+    - "#725: investigate and document the shared HistoricalSnapshot contract, its
+      reuse boundary against lifetxt/historical_temporal.py, and select the
+      first non-Temporal-Thread consumer."
+    - "#726: implement lifetxt.historical_temporal.read_historical_snapshot, a
+      thin unified entry point composing the existing exact-revision
+      (historical_snapshot) and committer-time as-of (select_revision_as_of)
+      primitives, with zero regression to Historical Temporal Thread
+      (#707/#709)."
+    - "#729: add lifetxt show ID --revision REV / --as-of RFC3339 [--ref REF],
+      reusing read_historical_snapshot and the existing show item lookup/
+      rendering logic unchanged."
+    - "#730: add lifetxt query QUERY --revision REV, reusing
+      read_historical_snapshot and the existing, unmodified Query engine."
+  out_of_scope:
+    - "#727/#728: server/Remote Safe Mode historical disclosure and endpoint
+      (separate, higher-assurance follow-up; not implemented in this package)."
+    - "#731: opt-in periodic Git-commit worker for server-init (independent
+      scope; not implemented in this package)."
+    - Bounded revision/history listing (decided unnecessary for this slice;
+      no consumer selected here needs to browse history).
+    - Git mutation, commit, push, branch, restore, or rollback of any kind.
+    - Merging Native Semantic History with Git evidence.
+    - Web/TUI/MCP rollout of show/query historical selectors.
+  write_scope:
+    - lifetxt/historical_temporal.py
+    - lifetxt/cli.py
+    - lifetxt/extra_cli.py
+    - lifetxt/extra_core.py
+    - tests/test_historical_read_seam.py
+    - docs/en/git-historical-evidence-contract.md
+    - docs/ja/git-historical-evidence-contract.md
+    - docs/en/query.md
+    - docs/ja/query.md
+    - docs/en/new-cli-workflows.md
+    - docs/ja/new-cli-workflows.md
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+    - this package
+  forbidden_scope:
+    - .ai/managed/**
+    - Git mutation of any kind
+    - server/API/Remote Safe Mode surface (#727/#728)
+    - unrelated Historical Temporal Thread refactor
+  shared_files:
+    - lifetxt/cli.py
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+
+human_approvals_required:
+  - Independent review of the latest commit.
+  - Merge Authority approval; the implementing AI must not merge the pull request.

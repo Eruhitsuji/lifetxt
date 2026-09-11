@@ -73,6 +73,21 @@ lifetxt edit task_report life.txt --dry-run
 
 `show` は source location、hierarchy context、incoming references を含めます。`edit` は `--editor`、top-level `editor` config key、`VISUAL`、`EDITOR` の順に editor を解決します。
 
+### Historical item inspection (#726/#729)
+
+```sh
+lifetxt show task_report life.txt --revision a1b2c3d
+lifetxt show task_report life.txt --as-of 2026-09-01T12:00:00+09:00 --ref main
+```
+
+`--revision`/`--as-of` は共有の
+[Git historical evidence contract](git-historical-evidence-contract.md) を
+再利用し、その commit 時点に存在した item をそのまま表示します。current
+working tree は決して混入しません。選択した revision にその item が存在
+しない場合、`show` は current item へフォールバックせず失敗します。
+`--revision` と `--as-of` は互いに排他で、`--ref`（既定 `HEAD`）は `--as-of`
+と併用する場合のみ有効です。selector を指定しない `show` は無変更です。
+
 ## Resolved paths
 
 ```sh

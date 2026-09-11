@@ -288,6 +288,42 @@ def historical_temporal_thread(paths, target_id, today, revision, key="id", **bo
     return thread_from_snapshot(snapshot, target_id, today, key=key, **bounds)
 
 
+def read_historical_snapshot(paths, key="id", revision=None, as_of=None, ref=None):
+    """Shared, surface-neutral historical workspace snapshot reader (#725/#726).
+
+    This is the single reusable entry point non-Temporal-Thread read models
+    (``show --revision``/``--as-of``, ``query --revision``) use to obtain a
+    HistoricalSnapshot. It composes the existing exact-revision
+    (:func:`historical_snapshot`) and committer-time as-of
+    (:func:`select_revision_as_of`) primitives unchanged -- it introduces no
+    second repository/ref/as-of resolution policy and no working-tree
+    fallback. Exactly one of ``revision``/``as_of`` must be given; ``ref`` is
+    only meaningful together with ``as_of``, matching the existing
+    ``thread --revision``/``thread --as-of --ref`` CLI convention.
+    """
+    has_revision = bool(revision)
+    has_as_of = bool(as_of)
+    if has_revision == has_as_of:
+        raise ValueError(
+            "Exactly one of --revision or --as-of is required for a historical read."
+        )
+    if ref and not has_as_of:
+        raise ValueError("--ref is only valid together with --as-of.")
+    if has_revision:
+        return historical_snapshot(paths, revision, key=key)
+    selection = select_revision_as_of(paths, as_of, ref=ref)
+    metadata = OrderedDict(
+        (name, value) for name, value in selection.items() if name != "repo_root"
+    )
+    return historical_snapshot(
+        paths,
+        selection["selected_commit"],
+        key=key,
+        resolved_commit=selection["selected_commit"],
+        metadata=metadata,
+    )
+
+
 def parse_cutoff(value):
     text = str(value or "").strip()
     if not text:

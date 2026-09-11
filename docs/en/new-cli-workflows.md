@@ -77,6 +77,21 @@ lifetxt edit task_report life.txt --dry-run
 
 `show` includes source location, hierarchy context, and incoming references. `edit` resolves the editor from `--editor`, the top-level `editor` config key, `VISUAL`, or `EDITOR`.
 
+### Historical item inspection (#726/#729)
+
+```sh
+lifetxt show task_report life.txt --revision a1b2c3d
+lifetxt show task_report life.txt --as-of 2026-09-01T12:00:00+09:00 --ref main
+```
+
+`--revision`/`--as-of` reuse the shared
+[Git historical evidence contract](git-historical-evidence-contract.md) to
+show the item exactly as it existed at that commit, never mixing in the
+current working tree. If the item does not exist at the selected revision,
+`show` fails rather than falling back to the current item. `--revision` and
+`--as-of` are mutually exclusive; `--ref` (default `HEAD`) is only valid
+together with `--as-of`. `show` with no selector is unchanged.
+
 ## Resolved paths
 
 ```sh

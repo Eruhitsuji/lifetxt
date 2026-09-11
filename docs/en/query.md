@@ -93,6 +93,31 @@ $ lifetxt query 'open project:research due<2026-10-01' --explain
 $ lifetxt query 'open project:research due<2026-10-01' --explain --format json
 ```
 
+## Historical revision-scoped query (#726/#730)
+
+`--revision REV` evaluates the query against the tracked bytes at an exact
+Git revision instead of the current working tree, reusing the shared
+[Git historical evidence contract](git-historical-evidence-contract.md) and
+the exact same, unmodified Query Language engine -- there is no second query
+implementation for historical input.
+
+```console
+$ lifetxt query "status:todo project:lifetxt" --revision a1b2c3d
+$ lifetxt query "tag:research" --revision a1b2c3d --format json
+```
+
+Uncommitted working-tree changes never enter a `--revision` result, and a
+source or item missing at the selected revision is never filled in from the
+current state. `--format json` wraps the matching items in a
+`{"historical": {...}, "items": [...]}` envelope carrying the requested
+revision, resolved full commit SHA, evidence mode, and completeness/
+limitations; every other format prints the same provenance as one line ahead
+of the results. An invalid revision, or a workspace with no Git repository,
+fails loudly rather than falling back to the current query. This first slice
+is exact-revision only; whole-history search and `--as-of` remain
+unimplemented follow-up work. Default `query` behavior without `--revision`
+is completely unchanged.
+
 ## Saved views
 
 Save common queries under `saved_views` in configuration:

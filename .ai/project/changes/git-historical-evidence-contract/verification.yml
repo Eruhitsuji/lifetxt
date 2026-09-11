@@ -1,0 +1,30 @@
+schema_version: 1
+
+verification:
+  - command: E:\project\lifetxt\.venv\Scripts\python.exe -m unittest tests.test_historical_read_seam -v
+    result: "Ran 14 tests in 30.376s, OK"
+    commit: working_tree_at_change_time
+  - command: E:\project\lifetxt\.venv\Scripts\python.exe -m unittest tests.test_historical_temporal tests.test_temporal_diff
+    result: "Ran 14 tests, FAILED (failures=1): test_non_git_and_option_like_refs_fail_loudly; confirmed via git stash to be a pre-existing, environment-dependent failure (worktree nested inside a git checkout) unrelated to this change"
+    commit: working_tree_at_change_time
+  - command: E:\project\lifetxt\.venv\Scripts\python.exe -m unittest tests.test_extra_cli tests.test_query tests.test_completion_surfaces tests.test_completion_values
+    result: "Ran 140 tests, OK"
+    commit: working_tree_at_change_time
+  - command: E:\project\lifetxt\.venv\Scripts\python.exe -m lifetxt check examples\minimal_life.txt
+    result: "OK: 10 item(s)"
+    commit: working_tree_at_change_time
+  - command: E:\project\lifetxt\.venv\Scripts\ruff.exe check lifetxt\cli.py lifetxt\extra_cli.py lifetxt\extra_core.py lifetxt\historical_temporal.py tests\test_historical_read_seam.py
+    result: "All checks passed!"
+    commit: working_tree_at_change_time
+  - command: E:\project\lifetxt\.venv\Scripts\ruff.exe format --check lifetxt\cli.py lifetxt\extra_cli.py lifetxt\extra_core.py lifetxt\historical_temporal.py tests\test_historical_read_seam.py
+    result: "clean after applying ruff format to the touched files"
+    commit: working_tree_at_change_time
+  - command: "live: real disposable git fixture -- show ID --revision REV / --as-of / query 'id:t1' --revision REV / mutual-exclusion / invalid-revision / missing-target-at-revision"
+    result: "all behaved exactly as designed (see PR description and tests/test_historical_read_seam.py for the exact commands and expected output)"
+    commit: working_tree_at_change_time
+
+open_items:
+  - "Full-repository `python -m unittest discover` was run as part of the
+    final integration-branch verification pass; see the integration PR
+    description for its exact result rather than re-stating a partial run
+    here."

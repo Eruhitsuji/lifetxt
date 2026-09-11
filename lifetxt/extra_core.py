@@ -284,10 +284,43 @@ def _next_action_explanation(item, rank=False, today=None):
 
 
 def command_show(args, config_data):
-    items = _load_items(args.paths, config_data)
-    item = _find_item(items, args.id)
+    revision = getattr(args, "revision", None)
+    as_of = getattr(args, "as_of", None)
+    historical = None
+    if revision or as_of:
+        # Historical item inspection (#726/#729): the shared read-only
+        # snapshot reader is the only Git historical input path, feeding the
+        # existing item lookup/rendering logic unchanged. Never falls back
+        # to the current working tree.
+        from .historical_temporal import read_historical_snapshot
+
+        paths = _resolved_input_paths(args.paths, config_data)
+        snapshot = read_historical_snapshot(
+            paths, revision=revision, as_of=as_of, ref=getattr(args, "ref", None)
+        )
+        errors = [
+            diagnostic
+            for diagnostic in snapshot["diagnostics"]
+            if getattr(diagnostic, "severity", "") == "error"
+        ]
+        if errors:
+            first = errors[0]
+            raise ValueError(
+                "Historical input has %s at %s:%s."
+                % (first.code, first.source or "(unknown source)", first.line or "?")
+            )
+        items = snapshot["items"]
+        historical = snapshot["historical"]
+        item = _find_item(items, args.id)
+    else:
+        items = _load_items(args.paths, config_data)
+        item = _find_item(items, args.id)
     if args.format == "json":
-        return _emit(_json_text(_item_record(item), args.pretty), args.output)
+        record = _item_record(item)
+        if historical is not None:
+            record = OrderedDict(record)
+            record["historical"] = historical
+        return _emit(_json_text(record, args.pretty), args.output)
     if args.format == "life":
         return _emit(item_to_line(item) + "\n", args.output)
     id_map = dict(
@@ -321,6 +354,26 @@ def command_show(args, config_data):
         "ID: %s" % (args.id,),
         "Source: %s:%s" % (item.source, item.line),
     ]
+    if historical is not None:
+        if historical["mode"] == "git_exact_revision":
+            lines.append(
+                "Historical revision: %s (resolved %s)"
+                % (historical["requested_revision"], historical["resolved_commit"])
+            )
+        else:
+            lines.append(
+                "Historical as of: %s (ref %s, resolved %s)"
+                % (
+                    historical["cutoff"],
+                    historical["requested_ref"],
+                    historical["selected_commit"],
+                )
+            )
+        if not historical["evidence_complete"]:
+            lines.append(
+                "Historical evidence incomplete: %s"
+                % ", ".join(historical["limitations"])
+            )
     if parent_chain:
         lines.append("Hierarchy: " + " <- ".join(parent_chain))
     if item.details:

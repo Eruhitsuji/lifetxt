@@ -11883,6 +11883,126 @@ traceability:
       notes: Other relation mutation surfaces remain a coverage limitation; no migration or backfill.
       status: implemented
 
+    - requirement_id: req-git-historical-evidence-contract-investigation
+      capability_id: cap-git-historical-read
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/724
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/725
+      pull_request: null
+      changed_files_or_scope:
+        - Investigate lifetxt/historical_temporal.py's existing Git evidence
+          primitives against the shared HistoricalSnapshot contract question
+          set; no runtime code changed
+        - .ai/project/changes/git-historical-evidence-contract/design.md
+        - .ai/project/changes/git-historical-evidence-contract/decisions.md
+        - .ai/project/changes/git-historical-evidence-contract/requirements.yml
+      tests_or_evidence:
+        - "code reading confirmed historical_snapshot()/select_revision_as_of() already satisfy the shared contract (repository identity, requested selector, resolved full SHA, evidence mode, tracked-path membership, no working-tree fallback, shallow/incomplete-history limitations); confirmed command_thread's own --diff path already calls historical_snapshot()/thread_from_snapshot() directly rather than a second Git-loading path"
+        - design.md records answers to all five #725 questions, the disclosure-risk list, and the selected first consumer (show, followed by query as a second bounded consumer)
+      release_or_deployment: null
+      notes: >-
+        Standard assurance investigation, no human available to answer
+        synchronously; per this task's own explicit instruction, the design
+        call was made autonomously and recorded in design.md/decisions.md.
+        Blocks #726/#729/#730, all implemented in the same pass. #727/#728
+        (server/Remote Safe Mode disclosure) and #731 (Git-commit worker)
+        remain separate, not implemented here.
+      status: implemented
+
+    - requirement_id: req-reusable-git-historical-snapshot-reader
+      capability_id: cap-git-historical-read
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/724
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/726
+      pull_request: null
+      changed_files_or_scope:
+        - Add lifetxt.historical_temporal.read_historical_snapshot, a thin
+          unified wrapper composing the existing historical_snapshot()/
+          select_revision_as_of() primitives unchanged
+        - lifetxt/historical_temporal.py
+        - tests/test_historical_read_seam.py
+        - docs/en/git-historical-evidence-contract.md
+        - docs/ja/git-historical-evidence-contract.md
+      tests_or_evidence:
+        - "tests/test_historical_read_seam.py ReadHistoricalSnapshotTests (4 tests): exactly-one-of revision/as_of enforced, --ref rejected without --as-of, exact-revision path matches historical_snapshot() directly, as-of path matches select_revision_as_of()+historical_snapshot() directly"
+        - "tests/test_historical_temporal.py and tests/test_temporal_diff.py re-run unmodified -> 13/14 pass; the sole pre-existing failure (test_non_git_and_option_like_refs_fail_loudly) confirmed via git stash to be pre-existing and environment-dependent (this worktree is itself nested inside a git checkout), not a regression"
+        - E:\project\lifetxt\.venv\Scripts\python.exe -m unittest tests.test_historical_temporal tests.test_temporal_diff tests.test_historical_read_seam -> 13 pre-existing pass, 1 pre-existing unrelated failure, 14 new tests OK
+        - E:\project\lifetxt\.venv\Scripts\python.exe -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check lifetxt/historical_temporal.py -> clean
+      release_or_deployment: next normal maintenance release
+      notes: >-
+        Historical Temporal Thread's own call sites
+        (historical_temporal_thread/historical_temporal_thread_as_of, and
+        cli.py's thread/--diff wiring) were left completely untouched --
+        they already used the shared primitives, so the "zero regression"
+        compatibility requirement needed only regression testing, not a
+        migration. No capability entry for cap-lifecycle-temporal-thread was
+        edited since its own implementation is unchanged; a new capability
+        cap-git-historical-read was created instead, since #729/#730
+        demonstrate the reader is now genuinely public beyond Temporal
+        Thread. High/Security assurance is not applicable (Standard, S-sized
+        per the issue's own task contract); change package at
+        .ai/project/changes/git-historical-evidence-contract/ per that
+        contract's explicit "required change package" write-scope item.
+      status: implemented
+
+    - requirement_id: req-historical-item-show
+      capability_id: cap-git-historical-read
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/724
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/729
+      pull_request: null
+      changed_files_or_scope:
+        - Add --revision/--as-of/--ref to lifetxt show, reusing
+          read_historical_snapshot as the sole historical input path and the
+          existing item lookup/rendering logic unmodified
+        - lifetxt/extra_cli.py
+        - lifetxt/extra_core.py
+        - tests/test_historical_read_seam.py
+        - docs/en/new-cli-workflows.md
+        - docs/ja/new-cli-workflows.md
+      tests_or_evidence:
+        - "tests/test_historical_read_seam.py HistoricalShowCliTests (6 tests, real subprocess + real disposable git fixture): --revision reads only tracked bytes at that commit with no working-tree leakage, current show is byte-for-byte unaffected with no selector, missing target at the selected revision fails loudly instead of falling back, invalid revision fails loudly, --revision/--as-of mutually exclusive, --as-of resolves the newest commit at or before the cutoff"
+        - "live: real disposable git fixture -- show t1 life.txt --revision REV showed the open (pre-done) historical state while show t1 life.txt (no selector) showed the current done state unchanged; show t2 life.txt --revision REV (item added in a later commit) failed with 'Item ID not found: t2' rather than showing the current item"
+        - E:\project\lifetxt\.venv\Scripts\python.exe -m unittest tests.test_extra_cli tests.test_historical_read_seam -> full pass
+        - E:\project\lifetxt\.venv\Scripts\python.exe -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check lifetxt/extra_cli.py lifetxt/extra_core.py -> clean
+      release_or_deployment: next normal maintenance release
+      notes: >-
+        First non-Temporal-Thread consumer of the shared reader, per #725's
+        own recommendation. No second Git historical input path was added;
+        command_show's json/text/life output shapes are extended additively
+        (a "historical" field in json, informational lines in text) only
+        when a selector is given.
+      status: implemented
+
+    - requirement_id: req-revision-scoped-historical-query
+      capability_id: cap-git-historical-read
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/724
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/730
+      pull_request: null
+      changed_files_or_scope:
+        - Add --revision to lifetxt query, reusing read_historical_snapshot
+          to produce historical parsed items that feed the existing,
+          unmodified Query Language engine (lifetxt.query.run_query)
+        - lifetxt/cli.py
+        - tests/test_historical_read_seam.py
+        - docs/en/query.md
+        - docs/ja/query.md
+      tests_or_evidence:
+        - "tests/test_historical_read_seam.py HistoricalQueryCliTests (4 tests, real subprocess + real disposable git fixture): --revision evaluates only the historical snapshot through the unmodified Query engine, --format json includes a historical provenance envelope (resolved_commit) alongside items, current query is unaffected without --revision, invalid revision fails loudly"
+        - "live: real disposable git fixture -- query 'id:t1' --revision REV returned only the historical (pre-done) match; query 'id:t1' (no selector) was unaffected and still showed the current done state"
+        - E:\project\lifetxt\.venv\Scripts\python.exe -m unittest tests.test_query tests.test_historical_read_seam -> full pass
+        - E:\project\lifetxt\.venv\Scripts\python.exe -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check lifetxt/cli.py -> clean
+      release_or_deployment: next normal maintenance release
+      notes: >-
+        Exact-revision only per #730's own v1 scope; --as-of was not added
+        to query in this pass. No second query engine was introduced --
+        run_query() is called unmodified against the historical item list.
+        --format json wraps output in a historical/items envelope only when
+        --revision is given; every other format and the no-selector default
+        are byte-for-byte unchanged, locked in by a dedicated regression
+        test.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

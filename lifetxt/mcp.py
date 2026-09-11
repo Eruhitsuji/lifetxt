@@ -3129,7 +3129,7 @@ def _tool_get_lifecycle_analytics(args, context):
     item_id = str(args.get("id") or "")
     if not item_id:
         raise ValueError("get_lifecycle_analytics requires 'id'.")
-    timeline = native_timeline(items, item_id, id_key=_id_key(context), limit=_bounded_int(args, "limit", DEFAULT_LIMIT), since=args.get("since"), until=args.get("until"), event=args.get("event"))
+    timeline = native_timeline(items, item_id, id_key=_id_key(context), limit=_bounded_int(args, "limit", DEFAULT_LIMIT), since=args.get("since"), until=args.get("until"), event=args.get("event"), include_all_valid=True)
     return _attach_revision(lifecycle_analytics(timeline, args.get("analysis") or "summary"), context)
 
 

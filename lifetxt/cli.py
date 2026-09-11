@@ -1620,6 +1620,16 @@ def build_parser():
         help="Include only this normalized event type.",
     )
     timeline_command.add_argument(
+        "--compare-window",
+        metavar="START..END",
+        help="Compare this inclusive window with --to-window.",
+    )
+    timeline_command.add_argument(
+        "--to-window",
+        metavar="START..END",
+        help="Second inclusive window for lifecycle comparison.",
+    )
+    timeline_command.add_argument(
         "--summary", action="store_true", help="Summarize filtered valid lifecycle events."
     )
     for _flag, _help in (
@@ -1715,6 +1725,7 @@ def build_parser():
     thread_command.add_argument("--metrics", action="store_true", help="Summarize bounded explicit graph metrics.")
     thread_command.add_argument("--replacement-analysis", action="store_true", help="Summarize bounded replacement relations.")
     thread_command.add_argument("--consistency-summary", action="store_true", help="Summarize existing consistency warnings.")
+    thread_command.add_argument("--realization-analysis", action="store_true", help="Compare realizes plan and actual temporal evidence.")
     thread_command.add_argument("--json", action="store_true", help="Emit JSON.")
     thread_command.set_defaults(func=command_thread)
 
@@ -13843,6 +13854,11 @@ def command_timeline(args):
         getattr(args, "paths", None), config, stdin_when_empty=False
     ) or ["life.txt"]
     items, _diagnostics = _parse_or_exit(paths, config)
+    def _window(value):
+        if not value or str(value).count("..") != 1:
+            raise ValueError("Timeline comparison windows must use START..END.")
+        return tuple(str(value).split("..", 1))
+
     try:
         result = native_timeline(
             items,
@@ -13866,6 +13882,15 @@ def command_timeline(args):
                 )
             ),
         )
+        if getattr(args, "compare_window", None) or getattr(args, "to_window", None):
+            if not getattr(args, "compare_window", None) or not getattr(args, "to_window", None):
+                raise ValueError("--compare-window and --to-window must be provided together.")
+            from .lifecycle_analytics import compare_lifecycle_windows
+            first_start, first_end = _window(args.compare_window)
+            second_start, second_end = _window(args.to_window)
+            first = native_timeline(items, args.id, id_key=id_key_from_config(config), limit=getattr(args, "limit", 100), since=first_start, until=first_end, event=getattr(args, "event", None), include_all_valid=True)
+            second = native_timeline(items, args.id, id_key=id_key_from_config(config), limit=getattr(args, "limit", 100), since=second_start, until=second_end, event=getattr(args, "event", None), include_all_valid=True)
+            result = compare_lifecycle_windows(first, second)
     except ValueError as exc:
         sys.stderr.write("ERROR: %s\n" % exc)
         return 1
@@ -13880,6 +13905,16 @@ def command_timeline(args):
         ("due_variance", "due_variance"),
     )
     selected_analysis = next((name for attr, name in analysis_flags if getattr(args, attr, False)), None)
+    if getattr(args, "compare_window", None) or getattr(args, "to_window", None):
+        if getattr(args, "json", False):
+            write_text(None, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+        else:
+            write_text(None, "Lifecycle window comparison for %s:\n" % args.id)
+            for key, value in result["absolute_deltas"].items():
+                write_text(None, "  %s: %s\n" % (key, value))
+            if result["limitations"]:
+                write_text(None, "  Limitations: %s\n" % ", ".join(result["limitations"]))
+        return 0
     if selected_analysis or getattr(args, "summary", False):
         result = lifecycle_analytics(result, selected_analysis or "summary")
     if getattr(args, "json", False):
@@ -14044,6 +14079,7 @@ def command_thread(args):
     diff_spec = getattr(args, "diff", None)
     as_of = getattr(args, "as_of", None)
     requested_ref = getattr(args, "ref", None)
+    analysis_items = None
     if requested_ref and not as_of:
         sys.stderr.write("ERROR: --ref is only valid together with --as-of.\n")
         return 1
@@ -14083,6 +14119,7 @@ def command_thread(args):
             target = None
         else:
             items, _diagnostics = _parse_or_exit(paths, _config(args))
+            analysis_items = items
             target = find_item_by_id(items, args.id, key=key)
             if target is None:
                 sys.stderr.write("ERROR: No item with id %r.\n" % args.id)
@@ -14091,15 +14128,25 @@ def command_thread(args):
     except ValueError as exc:
         sys.stderr.write("ERROR: %s\n" % exc)
         return 1
-    if getattr(args, "metrics", False) or getattr(args, "replacement_analysis", False) or getattr(args, "consistency_summary", False):
-        from .temporal_thread import replacement_chain_analysis, temporal_thread_metrics
+    if getattr(args, "metrics", False) or getattr(args, "replacement_analysis", False) or getattr(args, "consistency_summary", False) or getattr(args, "realization_analysis", False):
+        from .temporal_thread import realization_timing_analysis, replacement_chain_analysis, temporal_consistency_summary, temporal_thread_metrics
         if getattr(args, "metrics", False):
             result["analysis"] = temporal_thread_metrics(result)
         elif getattr(args, "replacement_analysis", False):
             result["analysis"] = replacement_chain_analysis(result)
         else:
-            warnings = result.get("consistency", {}).get("warnings", [])
-            result["analysis"] = {"analysis": "temporal_consistency_summary", "warning_count": len(warnings), "by_relation": {relation: sum(row.get("relation") == relation for row in warnings) for relation in ("follows", "replaced_by")}, "warnings": warnings, "truncated": result.get("consistency", {}).get("truncated", False)}
+            if getattr(args, "realization_analysis", False):
+                if analysis_items is None:
+                    raise ValueError("--realization-analysis is only available for current workspace reads.")
+                result["analysis"] = realization_timing_analysis(analysis_items, result, key=key)
+                if getattr(args, "json", False):
+                    write_text(None, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+                    return 0
+                write_text(None, "Realizes timing analysis for %s:\n" % args.id)
+                for row in result["analysis"]["results"]:
+                    write_text(None, "  %s -> %s: %s\n" % (row["actual_id"], row["plan_id"], row["classification"]))
+                return 0
+            result["analysis"] = temporal_consistency_summary(result)
     if getattr(args, "json", False):
         write_text(None, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
         return 0

@@ -8,7 +8,7 @@ kind into the other.
 
 from __future__ import unicode_literals
 
-from collections import OrderedDict, deque
+from collections import Counter, OrderedDict, deque
 
 from .links import build_id_index, link_records, relation_cycle_paths
 from .temporal_context import (
@@ -194,6 +194,37 @@ def temporal_consistency(items, key="id", records=None, limit=None):
     if limit is not None:
         warnings = warnings[:limit]
     return OrderedDict((("warnings", warnings), ("truncated", truncated)))
+
+
+def temporal_thread_metrics(thread):
+    """Summarize only the bounded explicit graph already present in a thread."""
+    nodes = thread.get("explicit", {}).get("nodes", [])
+    edges = thread.get("explicit", {}).get("edges", [])
+    follows = [edge for edge in edges if edge.get("relation") == "follows"]
+    degrees = Counter()
+    for edge in follows:
+        degrees[edge["source_id"]] += 1
+        degrees[edge["target_id"]] += 1
+    return OrderedDict((
+        ("analysis", "temporal_thread_metrics"), ("observed_node_count", len(nodes)),
+        ("observed_edge_count", len(edges)),
+        ("edge_counts", OrderedDict((relation, sum(e.get("relation") == relation for e in edges)) for relation in EXPLICIT_RELATIONS)),
+        ("predecessor_count", len(thread.get("relations", {}).get("predecessors", []))),
+        ("successor_count", len(thread.get("relations", {}).get("successors", []))),
+        ("branch_points", sum(value > 1 for value in degrees.values())),
+        ("truncated", bool(thread.get("explicit", {}).get("truncated"))),
+        ("limitations", ["bounded_graph_truncated"] if thread.get("explicit", {}).get("truncated") else []),
+    ))
+
+
+def replacement_chain_analysis(thread):
+    relations = thread.get("relations", {})
+    predecessors = relations.get("replacement_predecessors", [])
+    successors = relations.get("replacement_successors", [])
+    endpoints = [row.get("id") for row in predecessors + successors if row.get("id")]
+    limitations = ["bounded_graph_truncated"] if thread.get("explicit", {}).get("truncated") else []
+    if thread.get("explicit", {}).get("cycles"): limitations.append("replacement_cycle_detected")
+    return OrderedDict((("analysis", "replacement_chain"), ("predecessor_count", len(predecessors)), ("successor_count", len(successors)), ("observed_chain_length", len(endpoints) + 1), ("observed_item_ids", sorted(set([thread.get("target_id")] + endpoints))), ("limitations", limitations)))
 
 
 def temporal_thread(

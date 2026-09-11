@@ -341,6 +341,7 @@ READ_ONLY_TOOLS = frozenset(
         "get_temporal_context",
         "get_temporal_thread",
         "get_native_timeline",
+        "get_lifecycle_analytics",
         "get_clock_status",
         "run_query",
         "list_saved_views",
@@ -1057,6 +1058,18 @@ def _tool_schemas():
             },
             required=["id"],
             read_only=True,
+        ),
+        _tool(
+            "get_lifecycle_analytics",
+            "Deterministic read-only lifecycle analytics over the filtered Native Timeline.",
+            {
+                "id": _string("Target item ID."),
+                "analysis": _string("summary, duration, transitions, gaps, cadence, or provenance."),
+                "limit": _integer("Maximum matching valid events. Default 100."),
+                "since": _string("Inclusive offset-aware ISO timestamp."),
+                "until": _string("Inclusive offset-aware ISO timestamp."),
+                "event": _string("Normalized event filter."),
+            }, required=["id"], read_only=True,
         ),
         _tool(
             "run_query",
@@ -3109,6 +3122,17 @@ def _tool_get_native_timeline(args, context):
     return _attach_revision(result, context)
 
 
+def _tool_get_lifecycle_analytics(args, context):
+    from .lifecycle_analytics import lifecycle_analytics
+    from .native_timeline import DEFAULT_LIMIT, native_timeline
+    items, _diagnostics = _read_items(context)
+    item_id = str(args.get("id") or "")
+    if not item_id:
+        raise ValueError("get_lifecycle_analytics requires 'id'.")
+    timeline = native_timeline(items, item_id, id_key=_id_key(context), limit=_bounded_int(args, "limit", DEFAULT_LIMIT), since=args.get("since"), until=args.get("until"), event=args.get("event"))
+    return _attach_revision(lifecycle_analytics(timeline, args.get("analysis") or "summary"), context)
+
+
 def _tool_get_clock_status(args, context):
     from .clock_skew import clock_skew_report
 
@@ -3482,6 +3506,7 @@ TOOL_HANDLERS = OrderedDict(
         ("get_temporal_context", _tool_get_temporal_context),
         ("get_temporal_thread", _tool_get_temporal_thread),
         ("get_native_timeline", _tool_get_native_timeline),
+        ("get_lifecycle_analytics", _tool_get_lifecycle_analytics),
         ("run_query", _tool_run_query),
         ("list_saved_views", _tool_list_saved_views),
         ("run_saved_view", _tool_run_saved_view),

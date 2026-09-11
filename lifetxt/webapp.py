@@ -616,6 +616,35 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         return result
 
+    @app.get("/api/native-timeline/{item_id}")
+    def get_native_timeline(
+        item_id,
+        since=Query(None),
+        until=Query(None),
+        event=Query(None),
+        limit=Query(None),
+    ):
+        from .native_timeline import DEFAULT_LIMIT, native_timeline
+
+        items, _diagnostics = read_life_inputs(app.state.paths, app.state.config)
+        key = id_key_from_config(app.state.config)
+        target = find_item_by_id(items, item_id, key=key)
+        if target is None:
+            raise HTTPException(status_code=404, detail=f"No item with id {item_id!r}.")
+        try:
+            result = native_timeline(
+                items,
+                item_id,
+                id_key=key,
+                limit=limit if limit is not None else DEFAULT_LIMIT,
+                since=since,
+                until=until,
+                event=event,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        return result
+
     @app.get("/api/blockers")
     def get_blockers(
         item_id=Query(None, alias="id"),

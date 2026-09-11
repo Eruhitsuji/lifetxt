@@ -183,6 +183,22 @@ def lifecycle_analytics(timeline, analysis="summary"):
         activities = Counter(_payload(row, "activity") for _, row in entries)
         result.update((("analysis", "ticket_effort"), ("entry_count", len(entries)), ("total_elapsed_seconds", sum(value for value, _ in entries)), ("shortest_entry_seconds", min((value for value, _ in entries), default=None)), ("longest_entry_seconds", max((value for value, _ in entries), default=None)), ("activity_seconds", OrderedDict((key, sum(value for value, row in entries if _payload(row, "activity") == key)) for key in sorted(activities)))))
         return result
+    if analysis == "due_variance":
+        completed = next((row for row in rows if row.get("event") == "completed"), None)
+        due = None
+        for row in rows:
+            if row.get("event") == "schedule_changed" and _payload(row, "field") == "due":
+                due = _payload(row, "after") or None
+        result["analysis"] = "due_completion_variance"
+        result["due_at_completion"] = due
+        result["completion_at"] = completed.get("at") if completed else None
+        due_time, completion_time = _instant(due), _instant(completed.get("at")) if completed else None
+        if due_time and completion_time:
+            result["variance_seconds"] = (completion_time - due_time).total_seconds()
+            result["classification"] = "before_due" if completion_time < due_time else "at_due" if completion_time == due_time else "after_due"
+        else:
+            result["variance_seconds"] = None; result["classification"] = "unavailable"; result["limitations"].append("due_at_completion_unavailable")
+        return result
     if analysis == "relation":
         added, removed = Counter(), Counter()
         for row in rows:
@@ -207,3 +223,10 @@ def workspace_lifecycle_stats(items, id_key="id", limit=500, since=None, until=N
         values = sorted(row["duration_seconds"] for row in summaries if row.get("duration_seconds") is not None)
         result["duration_distribution"] = OrderedDict((("eligible_count", len(values)), ("unavailable_count", len(summaries) - len(values)), ("min_seconds", values[0] if values else None), ("median_seconds", values[len(values)//2] if values else None), ("mean_seconds", sum(values) / len(values) if values else None), ("max_seconds", values[-1] if values else None)))
     return result
+
+
+def compare_lifecycle_windows(timeline_a, timeline_b):
+    """Compare two independently filtered summaries using absolute deltas."""
+    a, b = lifecycle_summary(timeline_a), lifecycle_summary(timeline_b)
+    metrics = ("observed_event_count", "status_transition_count", "schedule_change_count", "relation_change_count", "completed_count", "reopened_count")
+    return OrderedDict((("analysis", "lifecycle_window_comparison"), ("window_a", a), ("window_b", b), ("absolute_deltas", OrderedDict((key, b[key] - a[key]) for key in metrics)), ("limitations", sorted(set(a["limitations"] + b["limitations"])))) )

@@ -1636,6 +1636,7 @@ def build_parser():
         ("progress-analysis", "Analyze progress velocity."),
         ("effort", "Analyze recorded ticket effort."),
         ("schedule-lead-time", "Analyze schedule-change lead time."),
+        ("due-variance", "Analyze due-versus-completion variance."),
     ):
         timeline_command.add_argument("--" + _flag, action="store_true", help=_help)
     timeline_command.add_argument("--json", action="store_true", help="Emit JSON.")
@@ -2435,6 +2436,7 @@ def build_parser():
     lifecycle_stats.add_argument("--since")
     lifecycle_stats.add_argument("--until")
     lifecycle_stats.add_argument("--duration", action="store_true")
+    lifecycle_stats.add_argument("--coverage", action="store_true")
     lifecycle_stats.add_argument("--limit", type=int, default=500)
     lifecycle_stats.add_argument("--json", action="store_true")
     lifecycle_stats.set_defaults(func=command_lifecycle_stats)
@@ -13871,6 +13873,7 @@ def command_timeline(args):
         ("provenance_analysis", "provenance"),
         ("progress_analysis", "progress"), ("effort", "effort"),
         ("schedule_lead_time", "schedule_lead_time"),
+        ("due_variance", "due_variance"),
     )
     selected_analysis = next((name for attr, name in analysis_flags if getattr(args, attr, False)), None)
     if selected_analysis or getattr(args, "summary", False):
@@ -15845,6 +15848,9 @@ def command_lifecycle_stats(args):
     paths = _normalize_paths(getattr(args, "paths", None), config, stdin_when_empty=False) or ["life.txt"]
     items, _diagnostics = _parse_or_exit(paths, config)
     result = workspace_lifecycle_stats(items, id_key=id_key_from_config(config), limit=args.limit, since=args.since, until=args.until, duration=args.duration)
+    if args.coverage:
+        result["analysis"] = "native_history_coverage"
+        result["coverage"] = {state: sum(1 for row in result["summaries"] if ("complete" if row["complete"] else "partial" if row["observed_event_count"] else "none") == state) for state in ("complete", "partial", "none")}
     if args.json:
         write_text(None, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
     else:

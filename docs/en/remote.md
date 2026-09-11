@@ -160,6 +160,58 @@ X-Lifetxt-Remote-Version: 2
 
 This pagination contract currently applies only to `tickets`; every other resource above keeps its existing unbounded-unless-`limit`-is-given behavior.
 
+## Historical Git evidence (opt-in, #728)
+
+`GET /api/remote/v1/historical` exposes a bounded, read-only view of the
+same Git historical evidence `lifetxt show --revision`/`--as-of` and
+`lifetxt query --revision` already read locally
+(`lifetxt.historical_temporal.read_historical_snapshot`). It reuses that
+reader unmodified -- there is no second Git revision/as-of resolution here.
+
+This route is disabled by default and requires two independent opt-ins:
+
+- `remote.historical_reads_enabled: true` in the deployment configuration.
+- The requesting principal's `scopes` must explicitly include `historical`.
+  A plain `read` role/scope never implies historical access; every built-in
+  role must add `historical` explicitly, mirroring how MCP's `read`/
+  `assist`/`full` permission profiles never infer a broader grant from a
+  narrower one.
+
+Only two selectors are exposed, matching the #727 disclosure-policy
+investigation's decision:
+
+```http
+GET /api/remote/v1/historical?revision=<full-commit-sha>
+GET /api/remote/v1/historical?as_of=2026-01-01T00:00:00Z&ref=main&limit=200
+Authorization: Bearer <token>
+X-Lifetxt-Remote-Version: 2
+```
+
+`revision` (exact commit) and `as_of` (bounded, deterministic committer-time
+cutoff, with an optional `ref`) are mutually exclusive, matching
+`read_historical_snapshot`'s own contract. `limit` bounds the returned item
+count (default 200, maximum 1000). There is no revision-listing/history-
+browsing endpoint and no way to pass an arbitrary Git object ID or path --
+only the server's own already-configured source files are ever read.
+
+**Disclosure is conjunctive.** A historical record is only returned when
+both (a) its own historical `project`/`visibility`/`owner`/`groups`
+metadata grants access under the requesting principal, using the same
+`project`/`visibility`/`owner`/`groups` checks every other resource above
+uses, and (b) a currently-existing record with the same ID, if any, also
+grants access under current policy. When the two disagree, the more
+restrictive one wins -- a record that was shared historically but is
+private now stays denied, and a record that is private historically but
+shared now also stays denied.
+
+A Git-free workspace, an unknown/invalid revision, or a source missing at
+the selected commit fails the request with `REMOTE_HISTORICAL_UNAVAILABLE`
+(422); it never falls back to current state. Every historical read is
+recorded through the existing `remote.audit_log` mechanism (never raw
+historical content, secret-shaped values, or local paths), naming the
+selector, the resolved commit, the returned/denied counts, and the
+classification (`served`/`denied`).
+
 ## Dependency-free client
 
 Profiles are stored with `remote-profile-v3`. A version-2 profile is migrated in memory to version 3 by adding TLS verification and protocol-version defaults. Profiles contain only the URL, TLS preference, protocol version, and token environment-variable name.

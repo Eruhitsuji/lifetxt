@@ -454,6 +454,18 @@ CONFIG_REGISTRY = OrderedDict(
             ),
         ),
         (
+            "remote.historical_reads_enabled",
+            _entry(
+                "boolean",
+                False,
+                "Enable the bounded, read-only Git historical evidence resource "
+                "(GET /api/remote/v1/historical). Disabled by default; a "
+                "principal also needs the explicit historical scope, never "
+                "implied by read/write/admin/audit alone (#728).",
+                restart_required=True,
+            ),
+        ),
+        (
             "remote.browser_ui",
             _entry(
                 "boolean", False, "Expose a remote browser UI. Disabled by default."

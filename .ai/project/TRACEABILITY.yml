@@ -12032,23 +12032,46 @@ traceability:
         not completed in this batch, not fabricated as done.
       status: implemented
 
-    - requirement_id: req-git-historical-evidence-server-disclosure
-      capability_id: cap-git-historical-disclosure-policy
+    - requirement_id: req-remote-historical-evidence-read
+      capability_id: cap-remote-historical-evidence-read
       epic: https://github.com/Eruhitsuji/lifetxt/issues/724
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/728
       pull_request: null
-      changed_files_or_scope: []
-      tests_or_evidence: []
+      changed_files_or_scope:
+        - "Add GET /api/remote/v1/historical, exposing read_historical_snapshot
+          (#725/#726) as a bounded, permission-filtered Remote Safe Mode
+          resource implementing the #727 disclosure policy (conjunctive
+          current+historical authorization, exact-revision/as-of-only
+          selectors, server-configured-sources-only path boundary, reuse of
+          existing role/scope/redaction/audit mechanisms, fail-closed with
+          no fallback to current state)"
+        - lifetxt/remote_historical.py
+        - lifetxt/remote_web.py
+        - lifetxt/config_registry.py
+        - tests/test_remote_historical.py
+        - docs/en/remote.md
+        - docs/ja/remote.md
+        - .ai/project/changes/remote-historical-evidence-read/
+      tests_or_evidence:
+        - "tests/test_remote_historical.py (11 tests): authorized bounded read, historically-private denial, currently-private-though-historically-shared denial (conjunctive), missing-scope denial, disabled-by-default denial, limit bounding/truncation, invalid-limit rejection, unknown-revision fail-closed, no-raw-path leakage, audit log never contains raw content, Git-free-workspace fail-closed"
+        - E:\project\lifetxt\.claude\worktrees\agent-a409e25fe05027723\.venv\Scripts\python.exe -m unittest tests.test_remote_historical -> Ran 11 tests, OK
+        - E:\project\lifetxt\.claude\worktrees\agent-a409e25fe05027723\.venv\Scripts\python.exe -m unittest tests.test_remote_backend_v20 tests.test_remote_web_v20 tests.test_remote_pagination tests.test_config_validation tests.test_surface_runtime -> Ran 121 tests, OK (skipped=2)
+        - "live: real lifetxt serve process, real disposable git repository, GET /api/remote/v1/historical?revision=<sha> with a real bearer token and X-Lifetxt-Remote-Version: 2 returned the exact historical item"
+        - "live: the same server, an invalid --as-of value returned REMOTE_HISTORICAL_UNAVAILABLE (422)"
+        - E:\project\lifetxt\.claude\worktrees\agent-a409e25fe05027723\.venv\Scripts\python.exe -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check lifetxt/remote_historical.py lifetxt/remote_web.py lifetxt/config_registry.py tests/test_remote_historical.py -> clean
       release_or_deployment: null
       notes: >-
-        Not implemented in this batch. #728 (server/Remote Safe Mode
-        historical read endpoint) is blocked-but-now-unblocked by #726
-        (reader) and #727 (disclosure policy investigation), both
-        implemented in PR #756, but the endpoint itself requires its own
-        change package, independent security review, and Merge Authority
-        approval per its High/Security task contract -- left as a genuine,
-        explicitly tracked follow-up rather than fabricated as done.
-      status: planned
+        Security/High assurance. Full change package at
+        .ai/project/changes/remote-historical-evidence-read/. Implements
+        #727's disclosure policy item by item; see
+        cap-remote-historical-evidence-read's own notes for the full
+        account. A best-effort self-review (informed by the security-review
+        skill's checklist) was performed and is recorded in the change
+        package; independent human security review and Merge Authority
+        approval remain required before merge to main and have not
+        happened yet.
+      status: implemented
 
     - requirement_id: req-server-init-git-commit-worker
       capability_id: cap-ubuntu-server-deployment

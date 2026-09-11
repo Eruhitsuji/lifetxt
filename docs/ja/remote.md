@@ -158,6 +158,57 @@ X-Lifetxt-Remote-Version: 2
 
 このpagination契約は現時点で`tickets`のみに適用されます。他のresourceは上記のとおり、`limit`未指定時は無制限のままです。
 
+## Historical Git evidence（opt-in、#728）
+
+`GET /api/remote/v1/historical`は、`lifetxt show --revision`/`--as-of`や
+`lifetxt query --revision`がlocalで既に読んでいるのと同じGit historical
+evidence（`lifetxt.historical_temporal.read_historical_snapshot`）への、
+bounded read-only viewを公開します。このreaderをそのまま再利用しており、
+第二のGit revision/as-of解決ロジックは存在しません。
+
+このrouteはdefaultで無効化されており、独立した2つのopt-inを要求します：
+
+- deployment configurationで`remote.historical_reads_enabled: true`。
+- requestを行うprincipalの`scopes`に明示的に`historical`が含まれること。
+  単なる`read` role/scopeはhistorical accessを暗黙に許可しません。組み込みの
+  すべてのroleは`historical`を明示的に追加する必要があり、これはMCPの
+  `read`/`assist`/`full` permission profileが狭いgrantから広いgrantを
+  決して推論しないのと同じ原則です。
+
+#727のdisclosure policy investigationの決定どおり、公開されるselectorは
+2つだけです：
+
+```http
+GET /api/remote/v1/historical?revision=<full-commit-sha>
+GET /api/remote/v1/historical?as_of=2026-01-01T00:00:00Z&ref=main&limit=200
+Authorization: Bearer <token>
+X-Lifetxt-Remote-Version: 2
+```
+
+`revision`（exact commit）と`as_of`（bounded・deterministicなcommitter-time
+cutoff、任意で`ref`）は互いに排他的で、`read_historical_snapshot`自身の
+契約と一致します。`limit`は返却item数を制限します（default 200、最大
+1000）。revisionの一覧表示/history-browsing endpointは存在せず、任意の
+Git object IDやpathを渡す方法もありません -- serverが既に設定済みの
+source fileのみが読まれます。
+
+**disclosureは連言（conjunctive）です。** historical recordが返されるのは、
+(a) そのrecord自身のhistorical `project`/`visibility`/`owner`/`groups`
+metadataがrequest元のprincipalに対してaccessを許可し、かつ(b)同じIDを持つ
+current recordが存在する場合はそのcurrent recordも現在のpolicy下で
+accessを許可する、という両方を満たす場合のみです。両者が食い違う場合は
+より制限の強い方が勝ちます -- historicalにはsharedだったが現在は
+privateなrecordは拒否されたままとなり、historicalにはprivateだったが
+現在はsharedなrecordも拒否されたままとなります。
+
+Git-freeなworkspace、unknown/invalidなrevision、選択したcommit時点で
+sourceが欠落している場合は`REMOTE_HISTORICAL_UNAVAILABLE`（422）で
+requestが失敗します -- current stateへのfallbackは一切行いません。
+すべてのhistorical readは既存の`remote.audit_log`機構を通じて記録され
+（生のhistorical content、secret-shapedな値、local pathは決して記録
+されません）、selector、解決済みcommit、返却/拒否件数、classification
+（`served`/`denied`）を記録します。
+
 ## Dependency-free client
 
 profile storeは`remote-profile-v3`です。version 2 profileは、TLS verificationとprotocol versionのdefaultを補ってmemory上でversion 3へmigrationします。保存する値はURL、TLS preference、protocol version、token環境変数名だけです。

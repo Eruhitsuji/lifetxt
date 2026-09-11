@@ -1,0 +1,78 @@
+schema_version: 1
+
+change:
+  id: remote-historical-evidence-read
+  title: Expose bounded Git historical reads through server / Remote Safe Mode
+  status: implemented
+  change_type: Feature
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/728
+  related_pull_request: null
+  base_commit: 2d5561a
+  target_release: next normal maintenance release
+
+scope:
+  in_scope:
+    - "#728: a new GET /api/remote/v1/historical Remote Safe Mode route
+      exposing lifetxt.historical_temporal.read_historical_snapshot
+      (#725/#726) as a bounded, permission-filtered, read-only server
+      resource, gated by the #727 disclosure-policy investigation."
+    - Two opt-ins required before any historical data can be read:
+      remote.historical_reads_enabled (config, off by default) and an
+      explicit historical scope on the requesting principal (never implied
+      by read/write/admin/audit).
+    - Conjunctive current+historical authorization (#727 Section 1/7),
+      reusing lifetxt.remote_access.can_access/require_scope and
+      lifetxt.remote_backend._access_for_item unmodified.
+    - Only the two v1-allowed selectors (exact revision, bounded as-of),
+      resolved only against the server's own already-configured source
+      paths -- never a caller-supplied path or Git object ID.
+    - A bounded server-level item-count limit (default 200, max 1000) on
+      top of read_historical_snapshot's own existing byte/commit-count
+      bounds.
+    - Audit-log append via the existing lifetxt.remote_access.append_audit
+      mechanism (selector, resolved commit, counts, classification --
+      never raw content or secret-shaped values).
+    - Fail-closed on a Git-free workspace, invalid/unknown revision, or
+      missing historical source; never falls back to current state.
+  out_of_scope:
+    - Bounded revision-list/history-browsing endpoint (explicitly rejected
+      by #727 Section 2).
+    - Arbitrary Git object ID or path traversal.
+    - Web UI, TUI, or MCP rollout of this resource.
+    - Any unrelated Remote Safe Mode auth refactor.
+    - Native Semantic History merge, rollback/restore, or AI inference over
+      historical content.
+    - "#731 (opt-in periodic Git-commit worker) -- independent scope,
+      implemented as its own change package."
+  write_scope:
+    - lifetxt/remote_historical.py
+    - lifetxt/remote_web.py
+    - lifetxt/config_registry.py
+    - tests/test_remote_historical.py
+    - docs/en/remote.md
+    - docs/ja/remote.md
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+    - this package
+  forbidden_scope:
+    - .ai/managed/**
+    - Git mutation of any kind
+    - Arbitrary Git object ID/path acceptance from a caller
+    - A parallel disclosure/authorization engine duplicating
+      lifetxt.remote_access
+  shared_files:
+    - lifetxt/remote_web.py
+    - lifetxt/config_registry.py
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+
+human_approvals_required:
+  - Independent security review of the new remote-exposure surface (a
+    best-effort self-review was performed with the security-review skill;
+    it does not substitute for independent human review).
+  - Independent implementation review of the latest commit.
+  - Merge Authority approval; the implementing AI must not merge the pull
+    request.

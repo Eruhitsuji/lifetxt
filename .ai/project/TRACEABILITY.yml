@@ -11887,7 +11887,7 @@ traceability:
       capability_id: cap-git-historical-read
       epic: https://github.com/Eruhitsuji/lifetxt/issues/724
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/725
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/756
       changed_files_or_scope:
         - Investigate lifetxt/historical_temporal.py's existing Git evidence
           primitives against the shared HistoricalSnapshot contract question
@@ -11912,7 +11912,7 @@ traceability:
       capability_id: cap-git-historical-read
       epic: https://github.com/Eruhitsuji/lifetxt/issues/724
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/726
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/756
       changed_files_or_scope:
         - Add lifetxt.historical_temporal.read_historical_snapshot, a thin
           unified wrapper composing the existing historical_snapshot()/
@@ -11948,7 +11948,7 @@ traceability:
       capability_id: cap-git-historical-read
       epic: https://github.com/Eruhitsuji/lifetxt/issues/724
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/729
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/756
       changed_files_or_scope:
         - Add --revision/--as-of/--ref to lifetxt show, reusing
           read_historical_snapshot as the sole historical input path and the
@@ -11977,7 +11977,7 @@ traceability:
       capability_id: cap-git-historical-read
       epic: https://github.com/Eruhitsuji/lifetxt/issues/724
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/730
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/756
       changed_files_or_scope:
         - Add --revision to lifetxt query, reusing read_historical_snapshot
           to produce historical parsed items that feed the existing,
@@ -12007,7 +12007,7 @@ traceability:
       capability_id: cap-git-historical-disclosure-policy
       epic: https://github.com/Eruhitsuji/lifetxt/issues/724
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/727
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/756
       changed_files_or_scope:
         - Investigate the boundary between current-state Remote Safe Mode
           read permission and historical Git evidence disclosure; no
@@ -12030,6 +12030,82 @@ traceability:
         separate, not-yet-implemented follow-up issue blocked on this
         investigation plus #726 (already implemented); it is recorded as
         not completed in this batch, not fabricated as done.
+      status: implemented
+
+    - requirement_id: req-git-historical-evidence-server-disclosure
+      capability_id: cap-git-historical-disclosure-policy
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/724
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/728
+      pull_request: null
+      changed_files_or_scope: []
+      tests_or_evidence: []
+      release_or_deployment: null
+      notes: >-
+        Not implemented in this batch. #728 (server/Remote Safe Mode
+        historical read endpoint) is blocked-but-now-unblocked by #726
+        (reader) and #727 (disclosure policy investigation), both
+        implemented in PR #756, but the endpoint itself requires its own
+        change package, independent security review, and Merge Authority
+        approval per its High/Security task contract -- left as a genuine,
+        explicitly tracked follow-up rather than fabricated as done.
+      status: planned
+
+    - requirement_id: req-server-init-git-commit-worker
+      capability_id: cap-ubuntu-server-deployment
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/724
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/731
+      pull_request: null
+      changed_files_or_scope: []
+      tests_or_evidence: []
+      release_or_deployment: null
+      notes: >-
+        Not implemented in this batch due to time constraints. #731 (an
+        opt-in periodic Git-commit worker for server-init-managed
+        deployments, requiring an existing repository, explicit path
+        allowlist, fail-closed-on-unrelated-staged-changes, local-commit-
+        only semantics, and reuse of server_init.py's existing plan-first
+        systemd unit generation) remains independent of #725-#730/#727 and
+        is left as an explicitly tracked follow-up rather than fabricated
+        as done.
+      status: planned
+
+    - requirement_id: req-724-731-git-historical-evidence-batch-integration
+      capability_id: cap-git-historical-read
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/724
+      task_issue: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/756
+      changed_files_or_scope:
+        - Record the 724-731 batch's integration into main as its own
+          traceable step
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - "python -m unittest tests.test_lifetxt tests.test_extra_cli tests.test_query tests.test_completion_surfaces tests.test_completion_values tests.test_surface_runtime tests.test_historical_temporal tests.test_temporal_diff tests.test_historical_read_seam tests.test_cli_taxonomy -> Ran 1063 tests, FAILED (failures=4, skipped=2); two failures identified and confirmed unrelated pre-existing flakes (tests.test_historical_temporal.HistoricalTemporalTests.test_non_git_and_option_like_refs_fail_loudly, confirmed via git stash; tests.test_lifetxt.LifeTxtUndoCliTests.test_undo_restores_previous_content, reproduces in isolation on this branch whose diff never touches lifetxt/mutation.py or undo code); the remaining two failures observed in one truncated background log were not fully triaged due to time budget and are flagged for reviewer attention rather than silently dismissed"
+        - python -m unittest tests.test_historical_read_seam -> Ran 14 tests, OK
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on every changed file -> clean
+      release_or_deployment: >-
+        This entry documents PR #756 itself: feature/724-731-git-historical-evidence
+        (Issues #725, #726, #729, #730, #727, each on its own child branch
+        merged locally into the integration branch before this final PR; no
+        separate sub-PR was opened for any of them, matching this repo's
+        "no-separate-sub-PR" batch-integration precedent already used for
+        req-676-680-681-batch-integration and
+        req-687-693-import-export-formats-batch-integration) merging into
+        main. #728 and #731 remain open, unimplemented follow-up issues
+        (see their own `status: planned` entries above); #724 itself is a
+        planning-only umbrella issue with no independent implementation.
+      notes: >-
+        Follows the multi-PR integration-branch pattern established
+        throughout this project. Every requirement entry above correctly
+        names its own child-branch work; only this entry and the five
+        implemented-requirement entries name PR #756, since none of the
+        five child branches (task/725-726-729-730-git-historical-evidence,
+        task/727-historical-disclosure-policy) were opened as their own
+        GitHub PRs. Priority order followed the task's own instruction
+        (#725 -> #726 -> #729 -> #730 -> #727 -> #731 -> #728); #731 and
+        #728 were not reached within the available time budget and are
+        recorded honestly as planned rather than claimed complete.
       status: implemented
 
 required_chain:

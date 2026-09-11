@@ -12036,7 +12036,7 @@ traceability:
       capability_id: cap-remote-historical-evidence-read
       epic: https://github.com/Eruhitsuji/lifetxt/issues/724
       task_issue: "https://github.com/Eruhitsuji/lifetxt/issues/728"
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/758
       changed_files_or_scope:
         - "Add GET /api/remote/v1/historical, exposing read_historical_snapshot
           (#725/#726) as a bounded, permission-filtered Remote Safe Mode
@@ -12086,7 +12086,7 @@ traceability:
         server-init-related requirement sharing one umbrella capability.
       epic: https://github.com/Eruhitsuji/lifetxt/issues/724
       task_issue: "https://github.com/Eruhitsuji/lifetxt/issues/731"
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/758
       changed_files_or_scope:
         - "Add lifetxt.git_commit_worker (run_commit()) and `lifetxt
           git-commit-worker run`, an opt-in periodic Git-commit worker
@@ -12136,6 +12136,41 @@ traceability:
         performed and is recorded in the change package; independent
         human security review and Merge Authority approval remain
         required before merge to main and have not happened yet.
+      status: implemented
+
+    - requirement_id: req-728-731-remote-historical-read-and-periodic-commit-batch-integration
+      capability_id: cap-remote-historical-evidence-read
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/724
+      task_issue: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/758
+      changed_files_or_scope:
+        - Record the 728-731 batch's integration into main as its own
+          traceable step
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - "python -m unittest tests.test_remote_historical tests.test_git_commit_worker tests.test_git_commit_worker_cli tests.test_server_init tests.test_server_update tests.test_cli_taxonomy tests.test_completion_surfaces tests.test_completion_values -> Ran 279 tests, OK (skipped=2)"
+        - python -m unittest tests.test_traceability_gate tests.test_change_package_closeout -> Ran 17 tests, OK
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on every changed file -> clean
+        - python scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> {"errors":0,"ok":true}
+      release_or_deployment: >-
+        This entry documents PR #758 itself:
+        feature/728-731-remote-historical-read-and-periodic-commit (Issues
+        #728, #731, each on its own child branch --
+        task/728-remote-historical-read, task/731-git-commit-worker --
+        merged locally into the integration branch before this final PR; no
+        separate sub-PR was opened for either, matching this repo's
+        no-separate-sub-PR batch-integration precedent) merging into main,
+        on top of PR #756's already-merged #725/#726/#727/#729/#730 work.
+        This completes the #724 umbrella epic's proposed child
+        decomposition.
+      notes: >-
+        Follows the multi-PR integration-branch pattern established
+        throughout this project. Both child requirement entries above
+        (req-remote-historical-evidence-read, req-server-init-git-commit-worker)
+        correctly name this PR (#758) once it existed; this entry documents
+        the integration step itself.
       status: implemented
 
     - requirement_id: req-724-731-git-historical-evidence-batch-integration

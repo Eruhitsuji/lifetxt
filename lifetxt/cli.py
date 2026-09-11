@@ -2427,6 +2427,15 @@ def build_parser():
     )
     stats.set_defaults(func=command_stats)
 
+    lifecycle_stats = subparsers.add_parser("lifecycle-stats", help="Summarize bounded Native lifecycle analytics across workspace items.")
+    _add_input_paths(lifecycle_stats)
+    lifecycle_stats.add_argument("--since")
+    lifecycle_stats.add_argument("--until")
+    lifecycle_stats.add_argument("--duration", action="store_true")
+    lifecycle_stats.add_argument("--limit", type=int, default=500)
+    lifecycle_stats.add_argument("--json", action="store_true")
+    lifecycle_stats.set_defaults(func=command_lifecycle_stats)
+
     git_hook = subparsers.add_parser(
         "git-hook",
         help="Install, uninstall, or inspect lifetxt Git hooks.",
@@ -15823,6 +15832,21 @@ def command_stats(args):
     from .stats import cmd_stats
 
     return cmd_stats(args)
+
+
+def command_lifecycle_stats(args):
+    from .lifecycle_analytics import workspace_lifecycle_stats
+    config = _config(args)
+    paths = _normalize_paths(getattr(args, "paths", None), config, stdin_when_empty=False) or ["life.txt"]
+    items, _diagnostics = _parse_or_exit(paths, config)
+    result = workspace_lifecycle_stats(items, id_key=id_key_from_config(config), limit=args.limit, since=args.since, until=args.until, duration=args.duration)
+    if args.json:
+        write_text(None, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+    else:
+        write_text(None, "Workspace Lifecycle Stats: %d item(s), %d with history\n" % (result["scanned_item_count"], result["items_with_native_history_count"]))
+        if args.duration:
+            write_text(None, "  Duration distribution: %s\n" % result["duration_distribution"])
+    return 0
 
 
 def command_git_hook(args):

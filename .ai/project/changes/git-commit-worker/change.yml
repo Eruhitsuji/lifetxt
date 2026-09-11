@@ -1,0 +1,82 @@
+schema_version: 1
+
+change:
+  id: git-commit-worker
+  title: Add opt-in periodic Git commits for server-managed lifetxt data
+  status: implemented
+  change_type: Feature
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/731
+  related_pull_request: null
+  base_commit: 2d5561a
+  target_release: next normal maintenance release
+
+scope:
+  in_scope:
+    - "#731: a new lifetxt.git_commit_worker module implementing one
+      periodic-commit attempt (run_commit()), reusing
+      lifetxt.server_update.UpdateLock for concurrency control."
+    - A new `lifetxt git-commit-worker run` CLI command (the oneshot action
+      the generated systemd service's ExecStart= invokes).
+    - An opt-in `git_commit_worker` config section in `server-init`
+      (disabled by default), generating a plan-first, idempotent
+      systemd oneshot+timer pair the same way server-init already
+      generates the reporting/web-service units.
+    - Fail-closed refusal on detached HEAD, branch mismatch, missing Git
+      identity, and pre-existing unrelated staged changes.
+    - Staging only an explicit path allowlist (never `git add -A` at the
+      repository root).
+    - A no-change run is a successful no-op, not an error.
+    - A lightweight, opt-in coordination check in server_update.py
+      (git_commit_worker_lock_path) so `server-update` refuses to start
+      while the worker's lock file is held, when an operator configures
+      the two to share state.
+  out_of_scope:
+    - Auto-`git init`, remote creation, or global Git identity
+      configuration -- v1 requires an already-existing repository and
+      already-configured identity.
+    - A standalone `server-git-commit plan|install|remove` command for an
+      already-running deployment (mirroring server-report) -- recorded as
+      an explicit, unimplemented follow-up; this slice wires the worker
+      through server-init's own opt-in section only.
+    - "#728 (Remote Safe Mode historical read) -- independent scope,
+      implemented as its own change package."
+  write_scope:
+    - lifetxt/git_commit_worker.py
+    - lifetxt/git_commit_worker_cli.py
+    - lifetxt/server_init.py
+    - lifetxt/server_update.py
+    - lifetxt/entrypoint.py
+    - lifetxt/cli_taxonomy.py
+    - tests/test_git_commit_worker.py
+    - tests/test_git_commit_worker_cli.py
+    - tests/test_server_init.py
+    - tests/test_server_update.py
+    - tests/test_cli_taxonomy.py
+    - docs/deployment/ubuntu-server.md
+    - docs/en/cli.md
+    - docs/ja/cli.md
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+    - this package
+  forbidden_scope:
+    - .ai/managed/**
+    - "`git init`, remote creation, or global Git identity configuration"
+    - Whole-repository staging (`git add -A` with no path scope)
+  shared_files:
+    - lifetxt/server_init.py
+    - lifetxt/server_update.py
+    - lifetxt/entrypoint.py
+    - lifetxt/cli_taxonomy.py
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+
+human_approvals_required:
+  - Independent security review of the new Git-mutation surface (a
+    best-effort self-review was performed; it does not substitute for
+    independent human review).
+  - Independent implementation review of the latest commit.
+  - Merge Authority approval; the implementing AI must not merge the pull
+    request.

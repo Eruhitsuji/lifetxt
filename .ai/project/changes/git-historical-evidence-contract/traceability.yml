@@ -1,0 +1,28 @@
+schema_version: 1
+
+traceability:
+  - requirement_id: req-git-historical-evidence-contract-investigation
+    capability_id: cap-git-historical-read
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/725
+    pull_request: null
+    status: implemented
+  - requirement_id: req-reusable-git-historical-snapshot-reader
+    capability_id: cap-git-historical-read
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/726
+    pull_request: null
+    status: implemented
+  - requirement_id: req-historical-item-show
+    capability_id: cap-git-historical-read
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/729
+    pull_request: null
+    status: implemented
+  - requirement_id: req-revision-scoped-historical-query
+    capability_id: cap-git-historical-read
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/730
+    pull_request: null
+    status: implemented
+
+notes: >-
+  pull_request fields are updated to the final integration PR URL once it is
+  opened; see the repository-level .ai/project/TRACEABILITY.yml entries for
+  the same requirements, which carry the authoritative record.

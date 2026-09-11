@@ -1,0 +1,24 @@
+schema_version: 1
+
+verification:
+  - requirement_id: req-remote-historical-evidence-read
+    result: passed
+    commands:
+      - command: .venv/Scripts/python.exe -m unittest tests.test_remote_historical
+        result: "Ran 11 tests, OK"
+      - command: .venv/Scripts/python.exe -m unittest tests.test_remote_backend_v20 tests.test_remote_web_v20 tests.test_remote_pagination tests.test_config_validation tests.test_surface_runtime
+        result: "Ran 121 tests, OK (skipped=2)"
+      - command: .venv/Scripts/python.exe -m ruff check lifetxt/remote_historical.py lifetxt/remote_web.py lifetxt/config_registry.py tests/test_remote_historical.py
+        result: "All checks passed!"
+      - command: .venv/Scripts/python.exe -m ruff format --check lifetxt/remote_historical.py tests/test_remote_historical.py
+        result: "already formatted"
+      - command: real `lifetxt serve` process, GET /api/remote/v1/historical?revision=<sha> with Authorization Bearer + X-Lifetxt-Remote-Version 2
+        result: "served, returned the correct historical item shape with resolved_commit/loaded_paths matching the real Git repo"
+      - command: same server, GET /api/remote/v1/historical?as_of=not-a-timestamp
+        result: "REMOTE_HISTORICAL_UNAVAILABLE, no fallback to current state"
+    notes: >-
+      Live verification used a disposable Git repository and a real
+      `lifetxt serve` process on this Windows sandbox. Independent human
+      security review and Merge Authority approval remain required before
+      merge to main; this verification record does not assert that review
+      happened.

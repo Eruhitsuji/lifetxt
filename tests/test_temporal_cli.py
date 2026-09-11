@@ -7,6 +7,8 @@ import tempfile
 import unittest
 
 from tests.test_lifetxt import run_cli
+from lifetxt.native_history import build_item_event
+from lifetxt.serializer import item_to_line
 
 
 SAMPLE = (
@@ -106,6 +108,25 @@ class TemporalCliTests(unittest.TestCase):
             self.assertIn("Consistency warnings", stdout)
             self.assertIn(warning["source_id"], stdout)
             self.assertIn(warning["target_id"], stdout)
+
+    def test_lifecycle_analysis_text_keeps_aggregate_and_projection(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            revision = "a" * 64
+            created = build_item_event("t1", "created", "2026-09-01T00:00:00Z", 1, "x", revision, item_kind="T", item_title="Task", after_status="[ ]")
+            completed = build_item_event("t1", "completed", "2026-09-01T01:00:00Z", 2, "y", revision, before_status="[ ]", after_status="[x]")
+            src = self._write_source(temp_dir, "#! timezone: UTC\n[ ] T Task id:t1\n" + item_to_line(created) + "\n" + item_to_line(completed))
+            stdout, stderr, code = run_cli("timeline", "t1", src, "--summary")
+            self.assertEqual(0, code, stderr)
+            self.assertIn("Events: 2", stdout)
+            self.assertIn("Analysis: lifecycle_summary", stdout)
+
+    def test_thread_analysis_text_is_rendered(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            src = self._write_source(temp_dir, THREAD_SAMPLE)
+            stdout, stderr, code = run_cli("thread", "actual", src, "--metrics")
+            self.assertEqual(0, code, stderr)
+            self.assertIn("Thread analysis for actual", stdout)
+            self.assertIn("max_follows_depth", stdout)
 
     def test_check_reports_the_shared_consistency_warning(self):
         with tempfile.TemporaryDirectory() as temp_dir:

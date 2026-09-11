@@ -13850,6 +13850,7 @@ def command_temporal(args):
 def command_timeline(args):
     from .native_timeline import native_timeline
     from .lifecycle_analytics import lifecycle_analytics, lifecycle_summary
+    from .timezone_policy import resolve_timezone_name
 
     config = _config(args)
     paths = _normalize_paths(
@@ -13918,23 +13919,27 @@ def command_timeline(args):
                 write_text(None, "  Limitations: %s\n" % ", ".join(result["limitations"]))
         return 0
     if selected_analysis or getattr(args, "summary", False):
-        result = lifecycle_analytics(result, selected_analysis or "summary")
+        result = lifecycle_analytics(result, selected_analysis or "summary", timezone_name=resolve_timezone_name(config))
     if getattr(args, "json", False):
         write_text(None, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
         return 0
     if selected_analysis or getattr(args, "summary", False):
-        summary = lifecycle_summary(result)
         write_text(None, "Lifecycle Summary for %s:\n" % result["target_id"])
-        write_text(None, "  Events: %d\n" % summary["observed_event_count"])
-        write_text(None, "  First: %s\n" % (summary["first_event_at"] or "(none)"))
-        write_text(None, "  Last:  %s\n" % (summary["last_event_at"] or "(none)"))
-        write_text(None, "  Status transitions: %d\n" % summary["status_transition_count"])
-        write_text(None, "  Schedule changes: %d\n" % summary["schedule_change_count"])
-        write_text(None, "  Relation changes: %d\n" % summary["relation_change_count"])
-        write_text(None, "  Completed: %d\n" % summary["completed_count"])
-        write_text(None, "  Reopened: %d\n" % summary["reopened_count"])
-        if summary["limitations"]:
-            write_text(None, "  Limitations: %s\n" % ", ".join(summary["limitations"]))
+        write_text(None, "  Analysis: %s\n" % result.get("analysis", "lifecycle_summary"))
+        write_text(None, "  Events: %d\n" % result["observed_event_count"])
+        write_text(None, "  First: %s\n" % (result["first_event_at"] or "(none)"))
+        write_text(None, "  Last:  %s\n" % (result["last_event_at"] or "(none)"))
+        write_text(None, "  Status transitions: %d\n" % result["status_transition_count"])
+        write_text(None, "  Schedule changes: %d\n" % result["schedule_change_count"])
+        write_text(None, "  Relation changes: %d\n" % result["relation_change_count"])
+        write_text(None, "  Completed: %d\n" % result["completed_count"])
+        write_text(None, "  Reopened: %d\n" % result["reopened_count"])
+        base_keys = {"analysis_schema", "target_id", "observed_event_count", "event_counts", "first_event_at", "last_event_at", "status_transition_count", "schedule_change_count", "relation_change_count", "completed_count", "reopened_count", "complete", "limitations", "diagnostics", "analysis"}
+        for key, value in result.items():
+            if key not in base_keys:
+                write_text(None, "  %s: %s\n" % (key, value))
+        if result["limitations"]:
+            write_text(None, "  Limitations: %s\n" % ", ".join(result["limitations"]))
         return 0
     write_text(
         None,
@@ -14152,6 +14157,11 @@ def command_thread(args):
     if getattr(args, "json", False):
         write_text(None, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
         return 0
+    if result.get("analysis"):
+        write_text(None, "Thread analysis for %s (%s):\n" % (args.id, result["analysis"].get("analysis", "unknown")))
+        for key, value in result["analysis"].items():
+            if key != "analysis":
+                write_text(None, "  %s: %s\n" % (key, value))
     write_text(
         None,
         "Temporal thread for %s (%s):\n" % (args.id, result["target"]["title"]),
@@ -15983,10 +15993,11 @@ def command_stats(args):
 
 def command_lifecycle_stats(args):
     from .lifecycle_analytics import workspace_lifecycle_stats
+    from .timezone_policy import resolve_timezone_name
     config = _config(args)
     paths = _normalize_paths(getattr(args, "paths", None), config, stdin_when_empty=False) or ["life.txt"]
     items, _diagnostics = _parse_or_exit(paths, config)
-    result = workspace_lifecycle_stats(items, id_key=id_key_from_config(config), limit=args.limit, since=args.since, until=args.until, duration=args.duration)
+    result = workspace_lifecycle_stats(items, id_key=id_key_from_config(config), limit=args.limit, since=args.since, until=args.until, duration=args.duration, timezone_name=resolve_timezone_name(config))
     if args.coverage:
         result["analysis"] = "native_history_coverage"
         counts = {state: sum(1 for row in result["coverage"] if row["state"] == state) for state in ("complete", "partial", "none")}

@@ -23,12 +23,15 @@ def _payload(row, key, default=None):
 def _valid_rows(timeline):
     # native_timeline already filters invalid records.  Keep this guard so the
     # helper remains safe when called with a saved/externally supplied result.
-    return [row for row in timeline.get("events", []) if row.get("valid", True)]
+    return [row for row in timeline.get("_all_valid_events", timeline.get("events", [])) if row.get("valid", True)]
 
 
 def _base(timeline, rows):
     types = Counter(str(row.get("event", "")) for row in rows)
     times = sorted(((_instant(row.get("at")), row) for row in rows if _instant(row.get("at"))), key=lambda pair: (pair[0], pair[1].get("record_id", "")))
+    limitations = list(timeline.get("limitations", []))
+    if "_all_valid_events" in timeline:
+        limitations = [value for value in limitations if value != "event_limit_truncated"]
     return OrderedDict((
         ("analysis_schema", "lifecycle-analytics-v1"),
         ("target_id", timeline.get("target_id")),
@@ -41,8 +44,8 @@ def _base(timeline, rows):
         ("relation_change_count", sum(row.get("event") in ("relation_added", "relation_removed") for row in rows)),
         ("completed_count", sum(row.get("event") == "completed" for row in rows)),
         ("reopened_count", sum(row.get("event") == "reopened" for row in rows)),
-        ("complete", bool(timeline.get("complete"))),
-        ("limitations", list(timeline.get("limitations", []))),
+        ("complete", bool(timeline.get("complete")) or ("_all_valid_events" in timeline and not limitations)),
+        ("limitations", limitations),
         ("diagnostics", list(timeline.get("diagnostics", []))),
     ))
 

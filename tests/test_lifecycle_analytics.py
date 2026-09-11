@@ -122,6 +122,50 @@ class LifecycleAnalyticsTests(unittest.TestCase):
         ]}
         self.assertEqual(0, lifecycle_analytics(timeline, "oscillation")["oscillation_count"])
 
+    def test_incomplete_status_dwell_is_unknown_not_authoritative(self):
+        timeline = {"target_id": "T-1", "complete": False, "limitations": ["item_history_incomplete"], "diagnostics": [], "events": [
+            {"event": "created", "at": "2026-09-01T00:00:00Z", "sequence": 1, "valid": True, "payload": {"after_status": ["[ ]"]}},
+            {"event": "status_changed", "at": "2026-09-01T02:00:00Z", "sequence": 3, "valid": True, "payload": {"after_status": ["[/]"]}},
+        ]}
+        result = lifecycle_analytics(timeline, "status_dwell")
+        self.assertEqual({}, dict(result["dwell_seconds"]))
+        self.assertGreater(result["unknown_dwell_seconds"], 0)
+
+    def test_schedule_datetime_shift_is_field_scoped(self):
+        timeline = {"target_id": "T-1", "complete": True, "limitations": [], "diagnostics": [], "events": [
+            {"event": "schedule_changed", "at": "2026-09-01T00:00:00Z", "valid": True, "payload": {"field": ["due"], "before": ["2026-09-01T10:00:00Z"], "after": ["2026-09-01T12:00:00Z"]}},
+            {"event": "schedule_changed", "at": "2026-09-02T00:00:00Z", "valid": True, "payload": {"field": ["on"], "before": ["2026-09-02"], "after": ["2026-09-01"]}},
+        ]}
+        result = lifecycle_analytics(timeline, "schedule")
+        self.assertEqual(7200, result["field_shifts"]["due"]["net_shift_seconds"])
+        self.assertEqual(-1, result["field_shifts"]["on"]["net_shift_days"])
+        self.assertEqual("2026-09-01T00:00:00Z", result["field_shifts"]["due"]["first_change"]["at"])
+
+    def test_progress_partial_history_hides_rate_and_keeps_both_extremes(self):
+        events = []
+        for index, percent in enumerate((10, 40, 20), 1):
+            events.append({"record_kind": "progress_event", "event": "progress_set", "at": "2026-09-%02dT00:00:00Z" % index, "sequence": index, "valid": True, "payload": {"after_progress": ["%d%%" % percent]}})
+        result = lifecycle_analytics({"target_id": "T-1", "complete": False, "limitations": ["item_history_incomplete"], "diagnostics": [], "events": events}, "progress")
+        self.assertIsNone(result["rate_per_day"])
+        self.assertEqual(30, result["largest_positive_delta"]["delta"])
+        self.assertEqual(-20, result["largest_negative_delta"]["delta"])
+
+    def test_partial_due_and_provenance_preserve_uncertainty_and_identity(self):
+        timeline = {"target_id": "T-1", "complete": False, "limitations": ["item_history_incomplete"], "diagnostics": [], "events": [
+            {"record_id": "s", "event": "schedule_changed", "at": "2026-09-01T00:00:00Z", "valid": True, "payload": {"field": ["due"], "after": ["2026-09-02"]}},
+            {"record_id": "c", "event": "completed", "at": "2026-09-02T00:00:00Z", "valid": True, "payload": {"actor": ["alice"], "source": ["import"]}},
+        ]}
+        due = lifecycle_analytics(timeline, "due_variance")
+        provenance = lifecycle_analytics(timeline, "provenance")
+        self.assertEqual("unavailable", due["classification"])
+        self.assertEqual("due", due["affected_field"])
+        self.assertEqual("actor", provenance["actor_first_last"]["alice"]["field"])
+        self.assertEqual("c", provenance["provenance_evidence"][0]["record_id"])
+
+    def test_workspace_limit_must_be_positive(self):
+        with self.assertRaises(ValueError):
+            workspace_lifecycle_stats(_items(), limit=0)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -12125,7 +12125,7 @@ traceability:
         - docs/en/lifecycle-analytics.md
         - docs/ja/lifecycle-analytics.md
         - Python 3.12 py_compile for changed modules
-        - "Review follow-up at PR #757: focused regression suites pass, covering text/JSON parity, A->B->A oscillation, sequence-based relation round trips with unknown partial-history net, workspace/domain completeness diagnostics, timezone-aware due dates and MCP parity, gap-safe oscillation, directed replacement endpoints, mixed date/datetime ordering, event-type window deltas, thread analysis text, and deterministic duration examples"
+        - "Review follow-up at PR #757: focused regression suites pass, covering text/JSON parity, gap-safe status dwell and progress rate suppression, field-scoped datetime schedule shifts, unavailable partial due variance, provenance field identity, sequence-based relation round trips with unknown partial-history net, workspace/domain completeness diagnostics, timezone-aware due dates and MCP parity, directed replacement endpoints, mixed date/datetime ordering, explicit aggregate counts, and deterministic duration eligibility"
       related_issues:
         - https://github.com/Eruhitsuji/lifetxt/issues/732
         - https://github.com/Eruhitsuji/lifetxt/issues/733

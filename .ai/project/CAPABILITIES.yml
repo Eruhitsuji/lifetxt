@@ -223,6 +223,8 @@ capabilities:
       - lifecycle-stats workspace aggregation
       - get_lifecycle_analytics read-only MCP tool
       - temporal thread metrics, replacement-chain, realizes timing, and consistency summaries
+      - TUI /timeline [ID] [since=..] [until=..] [event=..] command
+      - GET /api/native-timeline/{id}
     tests_or_evidence:
       - docs/en/native-semantic-history.md authority, compatibility, completeness, and read-model decision
       - docs/ja/native-semantic-history.md equivalent Japanese decision
@@ -234,6 +236,12 @@ capabilities:
       - tests/test_mcp_expansion.py read-only shared-reader and revision evidence
       - tests/test_ticket_revision_writes.py lifecycle relation atomicity evidence
       - tests/test_history_consistency.py semantic match/conflict/gap/Git limitation evidence
+      - "tests/test_tui_native_timeline.py (7 tests): /timeline delegates entirely to the unmodified native_timeline() reader, explicit id argument overrides the selected row, since/until/event filters parsed from trailing key=value tokens, missing id with no selection fails loudly, unknown id fails loudly, command registration/values=id completion"
+      - "tests/test_web_native_timeline.py (8 tests): GET /api/native-timeline/{id} matches a direct native_timeline() call field for field, since/until/event filters forwarded, limit forwarded and bounded, unknown item 404, invalid limit/event 422 (not a crash), HTML-special-character id is escaped not executed, existing routes (including /api/temporal-thread/{id}) are unaffected"
+      - "docs/en/native-semantic-as-of-investigation.md (#759): reconstructability matrix, baseline/unknown-field rule, replay semantics reusing native_timeline()/item_event_completeness()/historical_temporal.parse_cutoff, proposed semantic-as-of-v1 contract, native-vs-Git authority boundary confirmation"
+      - python -m unittest tests.test_tui_native_timeline tests.test_web_native_timeline tests.test_cui_extensions tests.test_web_assets tests.test_surface_runtime.TuiDocumentationDriftTests -> all pass
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - ruff format --check / ruff check on every changed file -> clean
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/697
       - https://github.com/Eruhitsuji/lifetxt/issues/702
@@ -246,6 +254,12 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/719
       - https://github.com/Eruhitsuji/lifetxt/issues/720
       - https://github.com/Eruhitsuji/lifetxt/issues/721
+      - https://github.com/Eruhitsuji/lifetxt/issues/759
+      - https://github.com/Eruhitsuji/lifetxt/issues/761
+      - https://github.com/Eruhitsuji/lifetxt/issues/762
+      - https://github.com/Eruhitsuji/lifetxt/issues/763
+      - https://github.com/Eruhitsuji/lifetxt/issues/764
+      - https://github.com/Eruhitsuji/lifetxt/issues/765
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/698
       - https://github.com/Eruhitsuji/lifetxt/pull/705
@@ -266,6 +280,23 @@ capabilities:
       bounded Git-independent Timeline without changing exact-revision thread
       commands. #717 composes Native normalization with bounded Git semantic
       transitions only for verification; neither source replaces the other.
+      #761 exposes the existing, unmodified native_timeline() reader through
+      a new TUI /timeline command (mirroring how /thread already delegates
+      to lifetxt.temporal_thread): no history/filtering/analytics logic is
+      duplicated in lifetxt/tui_app.py, and the inspector panel renders
+      events/bounds/invalid-event-count/limitations/diagnostics directly
+      from the unmodified result. #762 adds GET /api/native-timeline/{id}
+      (bounded since/until/event/limit query parameters matching the
+      CLI/MCP contract) mirroring the existing GET /api/temporal-thread/{id}
+      route (#704), plus a minimal Native Timeline section in the item
+      drawer's dependency-links panel -- no new Web-specific temporal logic.
+      #759 is an investigation only (no runtime code): it produced
+      docs/en/native-semantic-as-of-investigation.md's reconstructability
+      matrix for a proposed, separate semantic-as-of-v1 contract (per-field
+      known/partial/unavailable projection at a point in time, distinct
+      from this capability's existing temporal-timeline-v1 event list) and
+      filed three follow-up issues (#763 engine, #764 CLI exposure, #765
+      schema/docs) rather than building it unscoped in this pass.
     replacement:
       replaces: []
       replaced_by: null
@@ -9240,10 +9271,10 @@ capabilities:
       as-of (`select_revision_as_of`) Git evidence primitives into one shared
       entry point, reused unmodified by every non-Temporal-Thread historical
       read surface: `lifetxt show --revision/--as-of` and
-      `lifetxt query --revision`. Never falls back to the current working
-      tree; always returns requested selector, resolved full commit SHA,
-      evidence mode, tracked-path membership, and shallow/incomplete-history
-      limitations.
+      `lifetxt query --revision/--as-of`. Never falls back to the current
+      working tree; always returns requested selector, resolved full commit
+      SHA, evidence mode, tracked-path membership, and shallow/incomplete-
+      history limitations.
     status: active
     owner: Eruhitsuji
     source_requirements:
@@ -9269,13 +9300,14 @@ capabilities:
       - lifetxt show ID --revision REV
       - lifetxt show ID --as-of RFC3339 [--ref REF]
       - lifetxt query QUERY --revision REV
+      - lifetxt query QUERY --as-of RFC3339 [--ref REF]
     tests_or_evidence:
       - "tests/test_historical_read_seam.py ReadHistoricalSnapshotTests (4 tests): exactly-one-of revision/as_of required, --ref rejected without --as-of, exact-revision result matches historical_snapshot() directly, as-of result matches select_revision_as_of()+historical_snapshot() directly"
       - "tests/test_historical_read_seam.py HistoricalShowCliTests (6 tests, real subprocess + real disposable git fixture): --revision reads only tracked bytes at that commit (working-tree-only changes never leak in), current show is byte-for-byte unaffected with no selector, missing target at the selected revision fails loudly rather than falling back to the current item, invalid revision fails loudly, --revision/--as-of are mutually exclusive, --as-of resolves the newest commit at or before the cutoff"
-      - "tests/test_historical_read_seam.py HistoricalQueryCliTests (4 tests, real subprocess + real disposable git fixture): --revision evaluates only the historical snapshot through the unmodified Query engine, --format json includes a historical provenance envelope (resolved_commit) alongside items, current query is unaffected with no --revision, an invalid revision fails loudly"
+      - "tests/test_historical_read_seam.py HistoricalQueryCliTests (9 tests, real subprocess + real disposable git fixture): --revision evaluates only the historical snapshot through the unmodified Query engine, --format json includes a historical provenance envelope (resolved_commit) alongside items, current query is unaffected with no --revision, an invalid revision fails loudly, --as-of resolves the newest commit at or before the cutoff (text and --format json, mode git_as_of), --revision/--as-of are mutually exclusive, --ref alone (no --as-of) has no effect, matching the pre-existing show --ref precedent"
       - "tests/test_historical_temporal.py and tests/test_temporal_diff.py re-run unmodified -> 13/14 pass; the one pre-existing failure (test_non_git_and_option_like_refs_fail_loudly) is confirmed via git stash to be pre-existing and environment-dependent (this worktree is itself nested inside a git checkout), not a regression introduced by this change"
       - "python -m unittest tests.test_lifetxt tests.test_extra_cli tests.test_query tests.test_completion_surfaces tests.test_completion_values tests.test_surface_runtime tests.test_cli_taxonomy -> full pass, confirming zero regression to non-historical show/query/CLI-taxonomy behavior"
-      - "live: real disposable git fixture -- show ID --revision REV, show ID --as-of RFC3339, query QUERY --revision REV --format json, mutual-exclusion refusal, invalid-revision refusal, and missing-target-at-revision refusal all verified against real git commits"
+      - "live: real disposable git fixture -- show ID --revision REV, show ID --as-of RFC3339, query QUERY --revision REV --format json, query QUERY --as-of RFC3339, mutual-exclusion refusal, invalid-revision refusal, and missing-target-at-revision refusal all verified against real git commits"
       - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
       - ruff format --check / ruff check on every changed file -> clean
     related_issues:
@@ -9284,6 +9316,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/726
       - https://github.com/Eruhitsuji/lifetxt/issues/729
       - https://github.com/Eruhitsuji/lifetxt/issues/730
+      - https://github.com/Eruhitsuji/lifetxt/issues/760
     related_pull_requests: []
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
@@ -9334,7 +9367,16 @@ capabilities:
       test. Server/Remote Safe Mode disclosure (#727/#728) and the
       opt-in Git-commit worker (#731) are tracked separately and were not
       completed in this pass; see the umbrella epic #724 and this batch's
-      own integration PR for the current status of each.
+      own integration PR for the current status of each. #760 completes
+      `query`'s deferred `--as-of` slice by reusing
+      `read_historical_snapshot()` unmodified (the same call `show --as-of`
+      already makes), threading `as_of`/`ref` through exactly like
+      `revision` already was; `--revision` and `--as-of` are mutually
+      exclusive, matching `show`'s existing convention, and `--ref` alone
+      (with neither `--revision` nor `--as-of`) has no effect, matching
+      `show --ref`'s own pre-existing, undocumented-but-consistent
+      behavior (both never reach `read_historical_snapshot()` at all in
+      that case). No second cutoff-time resolution policy was introduced.
     replacement:
       replaces: []
       replaced_by: null

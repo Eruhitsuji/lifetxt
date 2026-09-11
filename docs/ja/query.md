@@ -83,7 +83,7 @@ $ lifetxt query 'open project:research due<2026-10-01' --explain
 $ lifetxt query 'open project:research due<2026-10-01' --explain --format json
 ```
 
-## Historical revision-scoped query (#726/#730)
+## Historical revision-scoped query (#726/#730/#760)
 
 `--revision REV` は current working tree ではなく、exact な Git revision の
 tracked bytes に対して query を評価します。[共有 Git historical evidence
@@ -96,16 +96,29 @@ $ lifetxt query "status:todo project:lifetxt" --revision a1b2c3d
 $ lifetxt query "tag:research" --revision a1b2c3d --format json
 ```
 
-未commit の working-tree 変更は `--revision` の結果に決して混入せず、選択した
-revision に存在しない source/item が current state から補完されることもあり
-ません。`--format json` は requested revision、resolved full commit SHA、
-evidence mode、completeness/limitations を含む
-`{"historical": {...}, "items": [...]}` envelope で結果を包みます。それ以外の
-format では同じ provenance を結果の直前に 1 行出力します。invalid revision や
-Git repository が存在しないワークスペースは current query へフォールバックせず
-明示的に失敗します。この最初の slice は exact revision のみを対象とし、
-whole-history search と `--as-of` は未実装のフォローアップです。`--revision`
-を指定しない場合の既定挙動は完全に無変更です。
+`--as-of RFC3339 [--ref REF]` は、`REF`（既定は `HEAD`）上で指定した
+offset-aware timestamp 以前の最新 commit を選択し、その commit の tracked
+bytes に対して query を評価します。`show --as-of` が既に使っている
+committer-time selector
+（`lifetxt.historical_temporal.read_historical_snapshot`）をそのまま再利用し、
+第二の cutoff-time 解決ポリシーは存在しません。`--revision` と `--as-of` は
+相互排他であり、`--ref` は `--as-of` と併用する場合にのみ意味を持ちます。
+
+```console
+$ lifetxt query "status:todo project:lifetxt" --as-of 2026-06-01T00:00:00Z
+$ lifetxt query "tag:research" --as-of 2026-06-01T00:00:00Z --ref release --format json
+```
+
+未commit の working-tree 変更は `--revision`/`--as-of` の結果に決して混入せ
+ず、選択した revision に存在しない source/item が current state から補完さ
+れることもありません。`--format json` は requested revision（もしくは as-of
+cutoff/ref）、resolved full commit SHA、evidence mode、
+completeness/limitations を含む `{"historical": {...}, "items": [...]}`
+envelope で結果を包みます。それ以外の format では同じ provenance を結果の直
+前に 1 行出力します。invalid revision/cutoff や Git repository が存在しない
+ワークスペースは current query へフォールバックせず明示的に失敗します。
+whole-history search は未実装のフォローアップのままです。`--revision`/
+`--as-of` を指定しない場合の既定挙動は完全に無変更です。
 
 ## Saved views
 

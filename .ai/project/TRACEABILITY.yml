@@ -12003,6 +12003,35 @@ traceability:
         test.
       status: implemented
 
+    - requirement_id: req-git-historical-disclosure-policy-investigation
+      capability_id: cap-git-historical-disclosure-policy
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/724
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/727
+      pull_request: null
+      changed_files_or_scope:
+        - Investigate the boundary between current-state Remote Safe Mode
+          read permission and historical Git evidence disclosure; no
+          runtime code changed
+        - docs/en/git-historical-disclosure-policy.md
+        - docs/ja/git-historical-disclosure-policy.md
+      tests_or_evidence:
+        - "docs/en/git-historical-disclosure-policy.md's 7 numbered sections directly answer #727's 7 numbered investigation questions: authorization model (conjunctive current+historical), allowed v1 selectors (exact revision + as-of only, no listing/browsing/arbitrary-path), path/workspace boundary (server-configured sources only), reuse of existing Remote Safe Mode role/scope/redaction/audit/provenance/bounded-result mechanisms with no parallel policy engine, audit contract (what must/must not be recorded), deterministic bounds (reuse existing reader limits plus a server item-count bound), and the fail-closed conflict rule (more restrictive side wins)"
+        - "Definition of Ready checklist for the follow-up server implementation issue (#728) is recorded at the end of the document, satisfying #727's own 'server implementation child Definition of Ready' deliverable"
+      release_or_deployment: null
+      notes: >-
+        Standard-assurance-executed investigation for a High-assurance-
+        recommended topic (the issue itself flags High as recommended, not
+        mandatory, for the investigation phase; the follow-up server
+        implementation #728 remains High/Security assurance and is not
+        implemented by this entry). No human was available to synchronously
+        answer #727's design questions; per this batch's own task
+        instruction, the design call was made autonomously and recorded.
+        #728 (server/Remote Safe Mode endpoint implementation) remains a
+        separate, not-yet-implemented follow-up issue blocked on this
+        investigation plus #726 (already implemented); it is recorded as
+        not completed in this batch, not fabricated as done.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

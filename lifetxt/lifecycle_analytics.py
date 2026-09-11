@@ -85,17 +85,80 @@ def lifecycle_analytics(timeline, analysis="summary"):
         result["transitions"] = OrderedDict((key, pairs[key]) for key in sorted(pairs))
         result["transition_events"] = [row.get("record_id") for _, row in sequence]
         return result
+    if analysis == "status_dwell":
+        intervals = Counter(); open_status = None; open_at = None
+        for row in rows:
+            if row.get("event") not in ("created", "status_changed", "completed", "reopened", "canceled"): continue
+            before, after = _payload(row, "before_status"), _payload(row, "after_status")
+            if row.get("event") == "created": after = after or ""
+            current = _instant(row.get("at"))
+            if open_status is not None and open_at and current and current >= open_at:
+                intervals[open_status] += (current - open_at).total_seconds()
+            if after: open_status, open_at = after, current
+        result["analysis"] = "status_dwell"; result["dwell_seconds"] = OrderedDict((key, intervals[key]) for key in sorted(intervals)); result["open_interval"] = bool(open_status)
+        if open_status: result["limitations"].append("open_status_interval")
+        return result
     if analysis == "completion_cycles":
         state, cycles, recoveries = None, 0, 0
         for row in rows:
-            if row.get("event") == "completed": state = "completed"
+            if row.get("event") == "completed":
+                if state == "reopened": recoveries += 1
+                state = "completed"
             elif row.get("event") == "reopened":
                 if state == "completed": cycles += 1
                 state = "reopened"
-            elif row.get("event") == "completed" and state == "reopened": recoveries += 1
         result["analysis"] = "completion_reopen_cycles"; result["cycle_count"] = cycles; result["recovery_count"] = recoveries
         result["first_completion_at"] = next((r.get("at") for r in rows if r.get("event") == "completed"), None)
         result["latest_completion_at"] = next((r.get("at") for r in reversed(rows) if r.get("event") == "completed"), None)
         result["latest_reopen_at"] = next((r.get("at") for r in reversed(rows) if r.get("event") == "reopened"), None)
+        return result
+    if analysis == "gaps":
+        ordered = sorted(((value, row) for row in rows if (value := _instant(row.get("at")))), key=lambda pair: (pair[0], pair[1].get("record_id", "")))
+        gaps = [(b[0] - a[0]).total_seconds() for a, b in zip(ordered, ordered[1:])]
+        result.update((("analysis", "event_gaps"), ("gap_count", len(gaps)), ("shortest_gap_seconds", min(gaps) if gaps else None), ("longest_gap_seconds", max(gaps) if gaps else None), ("median_gap_seconds", sorted(gaps)[len(gaps)//2] if gaps else None)))
+        result["analysis"] = "event_gaps"
+        return result
+    if analysis == "cadence":
+        instants = [_instant(row.get("at")) for row in rows]; instants = [v for v in instants if v]
+        span = (max(instants) - min(instants)).total_seconds() if len(instants) > 1 else 0
+        days = Counter(value.date().isoformat() for value in instants)
+        result.update((("analysis", "event_cadence"), ("observed_span_seconds", span), ("events_per_day", len(rows) / (span / 86400) if span > 0 else None), ("events_per_hour", len(rows) / (span / 3600) if span > 0 else None), ("active_day_count", len(days)), ("max_events_on_active_day", max(days.values()) if days else 0), ("first_active_day", min(days) if days else None), ("last_active_day", max(days) if days else None)))
+        return result
+    if analysis == "oscillation":
+        transitions = []
+        for row in rows:
+            if row.get("event") in ("status_changed", "completed", "reopened", "canceled"):
+                before, after = _payload(row, "before_status"), _payload(row, "after_status")
+                if before and after and before != after: transitions.append((before, after, row))
+        matches = [((a[0], a[1]), (a[2].get("record_id"), b[2].get("record_id"), c[2].get("record_id"))) for a, b, c in zip(transitions, transitions[1:], transitions[2:]) if a[1] == c[0] and a[0] == c[1]]
+        result.update((("analysis", "status_oscillation"), ("oscillation_count", len(matches)), ("oscillations", [OrderedDict((("pair", list(pair)), ("event_ids", list(ids)))) for pair, ids in matches])))
+        return result
+    if analysis == "provenance":
+        counts, sources, missing = Counter(), Counter(), 0
+        for row in rows:
+            payload = row.get("payload") or {}; actor = _payload(row, "actor") or _payload(row, "author") or _payload(row, "user")
+            source = _payload(row, "source")
+            if actor: counts[actor] += 1
+            else: missing += 1
+            if source: sources[source] += 1
+        result.update((("analysis", "provenance"), ("actor_counts", OrderedDict((k, counts[k]) for k in sorted(counts))), ("source_counts", OrderedDict((k, sources[k]) for k in sorted(sources))), ("missing_provenance_count", missing)))
+        return result
+    if analysis == "schedule":
+        fields, directions = Counter(), Counter()
+        for row in rows:
+            if row.get("event") != "schedule_changed": continue
+            field = _payload(row, "field"); fields[field] += 1
+            before, after = _payload(row, "before"), _payload(row, "after")
+            if not before and after: directions["set"] += 1
+            elif before and not after: directions["cleared"] += 1
+            else: directions["changed"] += 1
+        result.update((("analysis", "schedule_revision"), ("field_change_counts", OrderedDict((k, fields[k]) for k in sorted(fields))), ("change_categories", OrderedDict((k, directions[k]) for k in sorted(directions)))))
+        return result
+    if analysis == "relation":
+        added, removed = Counter(), Counter()
+        for row in rows:
+            if row.get("event") == "relation_added": added[_payload(row, "relation")] += 1
+            elif row.get("event") == "relation_removed": removed[_payload(row, "relation")] += 1
+        result.update((("analysis", "relation_churn"), ("added", OrderedDict((k, added[k]) for k in sorted(added))), ("removed", OrderedDict((k, removed[k]) for k in sorted(removed)))))
         return result
     raise ValueError("Unknown lifecycle analytics %r." % analysis)

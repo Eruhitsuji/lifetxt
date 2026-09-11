@@ -93,6 +93,15 @@ class McpTestCase(unittest.TestCase):
         schema = next(s for s in tool_schemas() if s["name"] == "get_lifecycle_analytics")
         self.assertTrue(schema["annotations"]["readOnlyHint"])
 
+    def test_lifecycle_analytics_tool_passes_workspace_timezone(self):
+        context, _path = self._context(config={"defaults": {"timezone": "Asia/Tokyo"}})
+        with mock.patch(
+            "lifetxt.lifecycle_analytics.lifecycle_analytics",
+            return_value={"analysis_schema": "lifecycle-analytics-v1"},
+        ) as analytics:
+            call_tool("get_lifecycle_analytics", {"id": "t1"}, context)
+        self.assertEqual("Asia/Tokyo", analytics.call_args.kwargs["timezone_name"])
+
     def test_temporal_thread_mcp_returns_shared_consistency_evidence(self):
         context, _path = self._context(
             content=(

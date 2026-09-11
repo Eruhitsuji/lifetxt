@@ -26,6 +26,23 @@ def _date(value):
     return instant.date() if instant else None
 
 
+def _policy_date(value, timezone_name):
+    """Return the calendar date under the workspace policy."""
+    if not value:
+        return None
+    parsed_date = parse_iso_date(str(value))
+    if parsed_date is not None:
+        return parsed_date
+    instant = _instant(value)
+    if instant is None:
+        return None
+    try:
+        from zoneinfo import ZoneInfo
+        return instant.astimezone(ZoneInfo(timezone_name or "UTC")).date()
+    except (KeyError, TypeError):
+        return instant.date()
+
+
 def _payload(row, key, default=None):
     values = (row.get("payload") or {}).get(key) or []
     return str(values[0]) if values else default
@@ -59,6 +76,7 @@ def _limit(result, value):
 def lifecycle_summary(timeline):
     result = _base(timeline, _rows(timeline))
     result["analysis"] = "lifecycle_summary"
+    result["completeness"] = timeline.get("completeness", OrderedDict())
     return result
 
 
@@ -135,8 +153,11 @@ def lifecycle_analytics(timeline, analysis="summary", timezone_name="UTC"):
         return result
     if analysis == "oscillation":
         transitions = _transitions(rows); matches = []
+        unsafe_history = any(value in result["limitations"] for value in ("item_history_incomplete", "history_diagnostics_present", "malformed_events_excluded"))
         for first, second in zip(transitions, transitions[1:]):
-            if first[0] == second[1] and first[1] == second[0]:
+            first_sequence, second_sequence = first[2].get("sequence"), second[2].get("sequence")
+            sequence_is_contiguous = first_sequence is None or second_sequence is None or int(second_sequence) - int(first_sequence) <= 1
+            if not unsafe_history and sequence_is_contiguous and first[0] == second[1] and first[1] == second[0]:
                 matches.append(OrderedDict((("pair", [first[0], first[1]]), ("event_ids", [first[2].get("record_id"), second[2].get("record_id")]), ("evidence", [_evidence(first[2]), _evidence(second[2])]))))
         result.update((("analysis", "status_oscillation"), ("oscillation_count", len(matches)), ("oscillations", matches))); return result
     if analysis == "provenance":
@@ -167,7 +188,7 @@ def lifecycle_analytics(timeline, analysis="summary", timezone_name="UTC"):
         if analysis == "schedule_lead_time":
             state = "observed" if last else "none_observed" if result["complete"] else "unknown"
             result.update((("analysis", "schedule_completion_lead_time"), ("completion_at", completed.get("at") if completed else None), ("last_schedule_change", last.get("at") if last else None), ("lead_time_seconds", (completion_at - _instant(last.get("at"))).total_seconds() if last and completion_at else None), ("schedule_change_state", state))); return result
-        due_rows = [row for row in prior if _payload(row, "field") == "due"]; due = _payload(due_rows[-1], "after") if due_rows else None; due_date = _date(due); completion_date = completion_at.date() if completion_at else None; classification = "before_due" if due_date and completion_date and completion_date < due_date else "at_due" if due_date and completion_date == due_date else "after_due" if due_date and completion_date else "unavailable"
+        due_rows = [row for row in prior if _payload(row, "field") == "due"]; due = _payload(due_rows[-1], "after") if due_rows else None; due_date = _policy_date(due, timezone_name); completion_date = _policy_date(completed.get("at") if completed else None, timezone_name); classification = "before_due" if due_date and completion_date and completion_date < due_date else "at_due" if due_date and completion_date == due_date else "after_due" if due_date and completion_date else "unavailable"
         result.update((("analysis", "due_completion_variance"), ("due_at_completion", due), ("completion_at", completed.get("at") if completed else None), ("variance_days", (completion_date - due_date).days if due_date and completion_date else None), ("classification", classification)))
         if classification == "unavailable": _limit(result, "due_at_completion_unavailable")
         return result
@@ -194,12 +215,29 @@ def lifecycle_analytics(timeline, analysis="summary", timezone_name="UTC"):
         result.update((("analysis", "ticket_effort"), ("entry_count", len(entries)), ("total_elapsed_seconds", sum(values)), ("average_entry_seconds", sum(values) / len(values) if values else None), ("shortest_entry_seconds", min(values) if values else None), ("longest_entry_seconds", max(values) if values else None), ("activity_seconds", OrderedDict((key, sum(value for value, row in entries if (_payload(row, "activity") or "unknown") == key)) for key in sorted(activities))), ("user_entry_counts", OrderedDict((key, users[key]) for key in sorted(users))), ("user_seconds", OrderedDict((key, sum(value for value, row in entries if (_payload(row, "user") or _payload(row, "author") or "unknown") == key)) for key in sorted(users))), ("entry_dates", sorted(set(_payload(row, "on") for _, row in entries if _payload(row, "on")))))); return result
     if analysis == "relation":
         added, removed, targets = Counter(), Counter(), Counter()
+        changes = {}
+        active = set()
+        round_trips = 0
         for row in rows:
-            relation, target = _payload(row, "relation") or "unknown", _payload(row, "target") or "unknown"; key = (relation, target)
-            if row.get("event") == "relation_added": added[relation] += 1; targets[key] += 1
-            elif row.get("event") == "relation_removed": removed[relation] += 1; targets[key] -= 1
-        target_rows = [OrderedDict((("relation", key[0]), ("target", key[1]), ("net", targets[key]))) for key in sorted(targets)]
-        result.update((("analysis", "relation_churn"), ("added", OrderedDict((key, added[key]) for key in sorted(added))), ("removed", OrderedDict((key, removed[key]) for key in sorted(removed))), ("net_by_relation", OrderedDict((key, added[key] - removed[key]) for key in sorted(set(added) | set(removed)))), ("target_net", target_rows), ("round_trip_count", sum(1 for row in target_rows if row["net"] == 0 and row["target"] != "unknown")))); return result
+            if row.get("event") not in ("relation_added", "relation_removed"):
+                continue
+            relation = _payload(row, "relation") or "unknown"; target = _payload(row, "target") or "unknown"; key = (relation, target)
+            changes.setdefault(key, []).append(row)
+            if row.get("event") == "relation_added":
+                added[relation] += 1; targets[key] += 1
+                active.add(key)
+            elif row.get("event") == "relation_removed":
+                removed[relation] += 1
+                if key in active:
+                    round_trips += 1
+                    active.remove(key)
+                targets[key] -= 1
+        target_rows = []
+        for key in sorted(changes):
+            evidence = changes[key]
+            target_rows.append(OrderedDict((("relation", key[0]), ("target", key[1]), ("change_count", len(evidence)), ("net", targets[key] if result["complete"] else None), ("first", _evidence(evidence[0])), ("last", _evidence(evidence[-1])))))
+        relation_net = OrderedDict((key, added[key] - removed[key] if result["complete"] else None) for key in sorted(set(added) | set(removed)))
+        result.update((("analysis", "relation_churn"), ("added", OrderedDict((key, added[key]) for key in sorted(added))), ("removed", OrderedDict((key, removed[key]) for key in sorted(removed))), ("net_by_relation", relation_net), ("target_net", target_rows), ("round_trip_count", round_trips), ("net_available", result["complete"]))); return result
     raise ValueError("Unknown lifecycle analytics %r." % analysis)
 
 
@@ -207,24 +245,30 @@ def workspace_lifecycle_stats(items, id_key="id", limit=500, since=None, until=N
     from .native_timeline import _is_history, _values, native_timeline
     all_targets = sorted({str(value) for item in items if not _is_history(item) for value in _values(item, id_key)})
     targets = all_targets[:int(limit)]
-    summaries = [lifecycle_analytics(native_timeline(items, item_id, id_key=id_key, limit=500, since=since, until=until, include_all_valid=True), "duration" if duration else "summary", timezone_name) for item_id in targets]
+    summaries = []
+    for item_id in targets:
+        timeline = native_timeline(items, item_id, id_key=id_key, limit=500, since=since, until=until, include_all_valid=True)
+        summary = lifecycle_analytics(timeline, "duration" if duration else "summary", timezone_name)
+        summary["completeness"] = timeline.get("completeness", {})
+        summaries.append(summary)
     event_counts = Counter(); total = 0
     for summary in summaries: total += summary["observed_event_count"]; event_counts.update(summary["event_counts"])
     coverage = []
     for summary in summaries:
         state = "complete" if summary["complete"] else "partial" if summary["observed_event_count"] else "none"
         coverage.append(OrderedDict((("item_id", summary["target_id"]), ("state", state), ("event_count", summary["observed_event_count"]), ("reasons", list(summary["limitations"])))) )
-    domains = {}
-    for item in items:
-        if _is_history(item): continue
-        item_ids = [str(value) for value in _values(item, id_key)]
-        domain = _values(item, "domain") or _values(item, "project") or ["(unspecified)"]
-        for item_id in item_ids:
-            if item_id in targets: domains[item_id] = str(domain[0])
-    by_domain = {}
-    for row in coverage:
-        by_domain.setdefault(domains.get(row["item_id"], "(unspecified)"), []).append(row)
-    result = OrderedDict((("analysis", "workspace_lifecycle_stats"), ("scanned_item_count", len(targets)), ("items_with_native_history_count", sum(row["observed_event_count"] > 0 for row in summaries)), ("total_valid_event_count", total), ("event_type_counts", OrderedDict((key, event_counts[key]) for key in sorted(event_counts))), ("incomplete_item_count", sum(not row["complete"] for row in summaries)), ("coverage", coverage), ("coverage_by_domain", OrderedDict((domain, OrderedDict(((state, sum(row["state"] == state for row in rows)) for state in ("complete", "partial", "none")))) for domain, rows in sorted(by_domain.items()))), ("summaries", summaries), ("truncated", len(all_targets) > int(limit))))
+    domain_states = {}
+    reason_counts = {}
+    for summary in summaries:
+        for domain, report in (summary.get("completeness") or {}).items():
+            state = "none" if report.get("coverage") in (None, "none") else "complete" if report.get("complete") else "partial"
+            domain_states.setdefault(domain, Counter())[state] += 1
+            for reason in report.get("diagnostic_codes", []) + summary.get("limitations", []):
+                reason_counts.setdefault(domain, Counter())[str(reason)] += 1
+    completeness_by_domain = OrderedDict()
+    for domain in sorted(domain_states):
+        completeness_by_domain[domain] = OrderedDict((("complete", domain_states[domain]["complete"]), ("partial", domain_states[domain]["partial"]), ("none", domain_states[domain]["none"]), ("reason_counts", OrderedDict((key, reason_counts.get(domain, Counter())[key]) for key in sorted(reason_counts.get(domain, {}))))))
+    result = OrderedDict((("analysis", "workspace_lifecycle_stats"), ("scanned_item_count", len(targets)), ("items_with_native_history_count", sum(row["observed_event_count"] > 0 for row in summaries)), ("total_valid_event_count", total), ("event_type_counts", OrderedDict((key, event_counts[key]) for key in sorted(event_counts))), ("incomplete_item_count", sum(not row["complete"] for row in summaries)), ("coverage", coverage), ("coverage_by_domain", completeness_by_domain), ("summaries", summaries), ("truncated", len(all_targets) > int(limit))))
     if duration:
         values = sorted((row["duration_seconds"], row["target_id"]) for row in summaries if row.get("duration_seconds") is not None); seconds = [value for value, _ in values]
         min_value = min(seconds) if seconds else None

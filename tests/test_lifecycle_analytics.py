@@ -160,7 +160,8 @@ class LifecycleAnalyticsTests(unittest.TestCase):
         self.assertEqual("unavailable", due["classification"])
         self.assertEqual("due", due["affected_field"])
         self.assertEqual("actor", provenance["actor_first_last"]["alice"]["field"])
-        self.assertEqual("c", provenance["provenance_evidence"][0]["record_id"])
+        self.assertEqual({"actor", "source"}, {row["field"] for row in provenance["provenance_evidence"]})
+        self.assertEqual("2026-09-02T00:00:00Z", provenance["source_first_last"]["import"]["first"]["at"])
 
     def test_workspace_limit_must_be_positive(self):
         with self.assertRaises(ValueError):

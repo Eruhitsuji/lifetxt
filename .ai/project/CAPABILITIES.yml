@@ -191,6 +191,7 @@ capabilities:
       - req-native-timeline-mcp-read
       - req-native-timeline-bounded-filtering
       - req-native-history-relation-mutation-capture
+      - req-native-lifecycle-analytics-batch
     implementation_locations:
       - docs/en/native-semantic-history.md
       - docs/ja/native-semantic-history.md
@@ -218,6 +219,10 @@ capabilities:
       - CLI ticket lifecycle relation atomic event capture
       - lifetxt history-check bounded text/JSON verifier
       - native-git-history-consistency-v1 JSON Schema
+      - lifecycle-analytics-v1 deterministic projections
+      - lifecycle-stats workspace aggregation
+      - get_lifecycle_analytics read-only MCP tool
+      - temporal thread metrics, replacement-chain, realizes timing, and consistency summaries
     tests_or_evidence:
       - docs/en/native-semantic-history.md authority, compatibility, completeness, and read-model decision
       - docs/ja/native-semantic-history.md equivalent Japanese decision

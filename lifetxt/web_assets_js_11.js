@@ -312,6 +312,213 @@
       }
     }
 
+    // ── Native Timeline visual explorer (#769) ──────────────────────────
+    // Pure presentation over the existing temporal-timeline-v1 read model
+    // returned by GET /api/native-timeline/{id} (#762 / lifetxt.native_timeline).
+    // No history parsing, ordering, or completeness computation happens
+    // here: every fact rendered below is read directly from the shared
+    // result, and filters delegate to the same since/until/event/limit
+    // query parameters the API and TUI /timeline command already accept.
+    let _ntCurrentItemId = null;
+    let _ntFilters = { since: "", until: "", event: "", limit: "" };
+
+    const NATIVE_TIMELINE_EVENT_LABELS = {
+      created: "Created", status_changed: "Status changed", completed: "Completed",
+      reopened: "Reopened", canceled: "Canceled",
+      relation_added: "Relation added", relation_removed: "Relation removed",
+      schedule_changed: "Schedule changed", time_entry: "Time entry",
+    };
+    const NATIVE_TIMELINE_KIND_ICON = {
+      item_event: "●", progress_event: "◐", ticket_event: "▣", time_entry: "⏱",
+    };
+    const NATIVE_TIMELINE_KIND_LABEL = {
+      item_event: "Item", progress_event: "Progress", ticket_event: "Ticket", time_entry: "Time",
+    };
+
+    function nativeTimelineEventLabel(row) {
+      const event = row?.event || "";
+      const kind = row?.record_kind || "";
+      if (NATIVE_TIMELINE_EVENT_LABELS[event]) return NATIVE_TIMELINE_EVENT_LABELS[event];
+      if (kind === "progress_event") return "Progress " + event.replace(/^progress_/, "");
+      if (kind === "ticket_event") return event ? ("Ticket: " + event.replace(/_/g, " ")) : "Ticket event";
+      return event || kind || "event";
+    }
+
+    function nativeTimelineTransitionHtml(payload) {
+      if (!payload || typeof payload !== "object") return "";
+      if ("before_status" in payload || "after_status" in payload) {
+        return `<span class="nt-transition">${escapeHtml(String(payload.before_status ?? "—"))} → ${escapeHtml(String(payload.after_status ?? "—"))}</span>`;
+      }
+      if ("before_progress" in payload || "after_progress" in payload) {
+        const before = payload.before_missing ? "—" : escapeHtml(String(payload.before_progress ?? ""));
+        return `<span class="nt-transition">${before} → ${escapeHtml(String(payload.after_progress ?? ""))}</span>`;
+      }
+      if ("field" in payload && ("before" in payload || "after" in payload)) {
+        const before = payload.before_missing ? "—" : escapeHtml(String(payload.before ?? ""));
+        const after = payload.after_missing ? "—" : escapeHtml(String(payload.after ?? ""));
+        return `<span class="nt-transition">${escapeHtml(String(payload.field || ""))}: ${before} → ${after}</span>`;
+      }
+      if ("relation" in payload && "target" in payload) {
+        return `<span class="nt-transition">${escapeHtml(String(payload.relation))} → ${escapeHtml(String(payload.target))}</span>`;
+      }
+      return "";
+    }
+
+    function nativeTimelineProgressTrendHtml(eventsNewestFirst) {
+      const points = [];
+      for (const row of eventsNewestFirst) {
+        if (row.record_kind !== "progress_event") continue;
+        const raw = row?.payload?.after_progress;
+        if (!raw) continue;
+        const match = /^(\d+(?:\.\d+)?)%$/.exec(String(raw).trim());
+        if (!match) continue;
+        points.push(parseFloat(match[1]));
+      }
+      if (points.length < 2) return "";
+      const ordered = points.slice().reverse(); // oldest -> newest for the trend
+      const bars = ordered.map(v => {
+        const height = Math.max(2, Math.round((Math.max(0, Math.min(100, v)) / 100) * 14));
+        return `<span style="height:${height}px" title="${escapeHtml(String(v))}%"></span>`;
+      }).join("");
+      return `<span class="nt-progress-trend" title="Progress trend across ${ordered.length} valid percentage event(s)">${bars}</span>`;
+    }
+
+    function nativeTimelineDetailsHtml(row) {
+      const rows = [
+        ["Record", row.record_kind],
+        ["Transaction", row.transaction],
+        ["Source revision", row.source_revision],
+        ["Sequence", row.sequence != null ? String(row.sequence) : ""],
+      ];
+      let html = `<div class="nt-details-body">`;
+      for (const [label, value] of rows) {
+        if (!value) continue;
+        html += `<div class="row"><span class="k">${escapeHtml(label)}</span><span>${escapeHtml(String(value))}</span></div>`;
+      }
+      const payload = row.payload || {};
+      for (const [key, value] of Object.entries(payload)) {
+        const text = Array.isArray(value) ? value.join(", ") : String(value);
+        html += `<div class="row"><span class="k">${escapeHtml(key)}</span><span>${escapeHtml(text)}</span></div>`;
+      }
+      html += `</div>`;
+      return html;
+    }
+
+    function nativeTimelineEventRowHtml(row) {
+      const icon = NATIVE_TIMELINE_KIND_ICON[row.record_kind] || "○";
+      const kindLabel = NATIVE_TIMELINE_KIND_LABEL[row.record_kind] || row.record_kind || "event";
+      const transition = nativeTimelineTransitionHtml(row.payload);
+      const invalid = row.valid === false;
+      return `<div class="nt-event${invalid ? " nt-invalid" : ""}">
+        <span class="nt-marker nt-marker-${escapeHtml(row.record_kind || "")}" aria-hidden="true">${icon}</span>
+        <div class="nt-body">
+          <div class="nt-head">
+            <span class="nt-time">${escapeHtml(String(row.at || ""))}</span>
+            <span class="nt-kind-badge">${escapeHtml(kindLabel)}</span>
+            <span class="nt-event-label">${escapeHtml(nativeTimelineEventLabel(row))}${invalid ? " (invalid)" : ""}</span>
+            ${transition}
+          </div>
+          <details class="nt-details">
+            <summary>Details</summary>
+            ${nativeTimelineDetailsHtml(row)}
+          </details>
+        </div>
+      </div>`;
+    }
+
+    function nativeTimelineDateKey(at) {
+      const value = String(at || "");
+      const match = /^(\d{4}-\d{2}-\d{2})/.exec(value);
+      return match ? match[1] : (value || "Unknown date");
+    }
+
+    function renderNativeTimelineFiltersHtml() {
+      return `<div class="nt-filters">
+        <input id="nt-filter-since" type="text" placeholder="since (ISO datetime)" value="${escapeHtml(_ntFilters.since)}" aria-label="Since">
+        <input id="nt-filter-until" type="text" placeholder="until (ISO datetime)" value="${escapeHtml(_ntFilters.until)}" aria-label="Until">
+        <input id="nt-filter-event" type="text" placeholder="event type" value="${escapeHtml(_ntFilters.event)}" aria-label="Event type">
+        <input id="nt-filter-limit" type="text" placeholder="limit" style="width:5rem" value="${escapeHtml(_ntFilters.limit)}" aria-label="Limit">
+        <button class="secondary" type="button" onclick="applyNativeTimelineFilters()">Apply</button>
+        <button class="secondary" type="button" onclick="clearNativeTimelineFilters()">Clear</button>
+      </div>`;
+    }
+
+    function renderNativeTimelinePanel(nativeTimeline) {
+      let html = `<div class="drawer-section-title">Native Timeline</div>`;
+      html += renderNativeTimelineFiltersHtml();
+      if (!nativeTimeline) {
+        html += `<div class="empty">Native Timeline unavailable for this item.</div>`;
+        return html;
+      }
+      const complete = !!nativeTimeline.complete;
+      const bounds = nativeTimeline.bounds || {};
+      const limitations = nativeTimeline.limitations || [];
+      const invalidEvents = nativeTimeline.invalid_events || [];
+      const diagnostics = nativeTimeline.diagnostics || [];
+      html += `<div><span class="nt-coverage ${complete ? "nt-coverage-complete" : "nt-coverage-partial"}">` +
+        `${complete ? "Complete history" : "Partial / limited history"}</span></div>`;
+      if (limitations.length || invalidEvents.length || diagnostics.length) {
+        const parts = [];
+        if (limitations.length) parts.push(`limitations: ${limitations.join(", ")}`);
+        if (invalidEvents.length) parts.push(`${invalidEvents.length} invalid event(s) excluded`);
+        if (diagnostics.length) parts.push(`${diagnostics.length} diagnostic(s)`);
+        html += `<div class="nt-limitations">⚠ ${escapeHtml(parts.join("; "))}.</div>`;
+      }
+      const events = (nativeTimeline.events || []).slice().reverse(); // newest first for scanning
+      if (!events.length) {
+        html += `<div class="empty">No native history events${limitations.length ? " match these filters" : " yet"}.</div>`;
+      } else {
+        const trend = nativeTimelineProgressTrendHtml(events);
+        if (trend) html += `<div class="note">Progress trend ${trend}</div>`;
+        let currentDay = null;
+        html += `<div class="nt-axis">`;
+        for (const row of events) {
+          const day = nativeTimelineDateKey(row.at);
+          if (day !== currentDay) {
+            if (currentDay !== null) html += `</div>`;
+            currentDay = day;
+            html += `<div class="nt-day-group"><div class="nt-day-heading">${escapeHtml(day)}</div>`;
+          }
+          html += nativeTimelineEventRowHtml(row);
+        }
+        html += `</div></div>`;
+      }
+      html += `<div class="note">${bounds.returned_events ?? 0}/${bounds.total_valid_events ?? 0} event(s) returned` +
+        `${bounds.truncated ? "; truncated" : ""}.</div>`;
+      return html;
+    }
+
+    async function reloadNativeTimelinePanel() {
+      const container = document.getElementById("drawer-native-timeline");
+      if (!container || !_ntCurrentItemId) return;
+      _ntFilters = {
+        since: (document.getElementById("nt-filter-since")?.value || "").trim(),
+        until: (document.getElementById("nt-filter-until")?.value || "").trim(),
+        event: (document.getElementById("nt-filter-event")?.value || "").trim(),
+        limit: (document.getElementById("nt-filter-limit")?.value || "").trim(),
+      };
+      const params = new URLSearchParams();
+      if (_ntFilters.since) params.set("since", _ntFilters.since);
+      if (_ntFilters.until) params.set("until", _ntFilters.until);
+      if (_ntFilters.event) params.set("event", _ntFilters.event);
+      if (_ntFilters.limit) params.set("limit", _ntFilters.limit);
+      container.innerHTML = `<div class="drawer-section-title">Native Timeline</div>${renderNativeTimelineFiltersHtml()}<div class="empty">Loading…</div>`;
+      try {
+        const query = params.toString();
+        const data = await api(`/api/native-timeline/${encodeURIComponent(_ntCurrentItemId)}${query ? "?" + query : ""}`);
+        container.innerHTML = renderNativeTimelinePanel(data);
+      } catch(e) {
+        container.innerHTML = `<div class="drawer-section-title">Native Timeline</div>${renderNativeTimelineFiltersHtml()}<div class="diagnostic">Timeline error: ${escapeHtml(e.message)}</div>`;
+      }
+    }
+
+    function applyNativeTimelineFilters() { reloadNativeTimelinePanel(); }
+
+    function clearNativeTimelineFilters() {
+      _ntFilters = { since: "", until: "", event: "", limit: "" };
+      reloadNativeTimelinePanel();
+    }
+
     async function loadDependencyLinks(item) {
       const idKey = appConfig?.ids?.key || "id";
       const itemId = item?.id || (item?.details?.[idKey]?.[0]);
@@ -366,25 +573,8 @@
           `; ${consistencyWarnings.length} consistency warning(s)` +
           `${temporalThread?.explicit?.truncated ? "; explicit thread truncated" : ""}` +
           `${temporalThread?.consistency?.truncated ? "; consistency evidence truncated" : ""}.</div>`;
-        let timelineHtml = `<div class="drawer-section-title">Native Timeline</div>`;
-        const timelineEvents = nativeTimeline?.events || [];
-        if (!timelineEvents.length) {
-          timelineHtml += `<div class="empty">No native history events.</div>`;
-        } else {
-          timelineHtml += `<div class="dep-graph">`;
-          for (const evt of timelineEvents.slice(0, 20)) {
-            timelineHtml += `<div class="dep-row"><span class="dep-rel">${escapeHtml(evt.record_kind || "")}</span>` +
-              `<span>${escapeHtml(evt.at || "")} — ${escapeHtml(evt.event || "")}</span></div>`;
-          }
-          timelineHtml += `</div>`;
-        }
-        if (nativeTimeline) {
-          const bounds = nativeTimeline.bounds || {};
-          timelineHtml += `<div class="note">${bounds.returned_events ?? 0}/${bounds.total_valid_events ?? 0} event(s) returned` +
-            `${bounds.truncated ? "; truncated" : ""}` +
-            `${(nativeTimeline.invalid_events || []).length ? `; ${nativeTimeline.invalid_events.length} invalid event(s) excluded` : ""}` +
-            `${(nativeTimeline.limitations || []).length ? `; limitations: ${escapeHtml(nativeTimeline.limitations.join(", "))}` : ""}.</div>`;
-        }
+        _ntCurrentItemId = itemId;
+        const timelineHtml = `<div id="drawer-native-timeline">${renderNativeTimelinePanel(nativeTimeline)}</div>`;
         if (!records.length) {
           container.innerHTML = lifecycleHtml + timelineHtml + `<div class="drawer-section-title">Dependencies &amp; Links</div><div class="empty">No links.</div>`;
           return;

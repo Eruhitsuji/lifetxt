@@ -67,7 +67,7 @@ MCP tool は `list_items`、`get_item`、`create_item`、`update_item`、
 | `GET` | `/api/links` | `parent:` / `ref:` / `depends_on:` / `blocks:` / `related:` / `duplicate_of:` / `replaced_by:` / `follows:` / `realizes:` の ID link を表示 |
 | `GET` | `/api/graph` | Graph UI 用の `nodes` / `edges` を返す。参照先が見つからない node は `missing: true`。任意の `relations`（comma 区切りの relation key）は `/api/links?relation=` と同じ方法で edge を絞り込む。`root` 指定時は任意の `include_temporal=true` で root の `same_day`/`before`/`after` temporal neighbor（境界付き）を追加 edge として重ねられる（`temporal_window`、既定 7 日）。この場合すべての edge に `kind`（`structural` または `temporal`）が付与される -- `include_temporal` を指定しなければ応答は変わらない。 |
 | `GET` | `/api/temporal-thread/{id}` | read-only lifecycle consistency warning を含む共通の bounded `temporal-thread-v1` を返す。任意の `depth`、`nodes`、`window`、`limit`、`stale_after` は CLI/MCP と同じ境界。item drawer に lifecycle group と warning count を表示する。 |
-| `GET` | `/api/native-timeline/{id}` | 共通の bounded `temporal-timeline-v1` を返す（#761/#762）。`lifetxt.native_timeline.native_timeline` にそのまま委譲し、Web 固有の temporal logic は持たない。任意の `since`、`until`、`event`、`limit` query parameter は CLI/MCP と同じ契約。未知の `id` は 404、invalid な filter/bound は 422 を返す。item drawer に bounded Native Timeline セクション（event、bounds、invalid event 数、limitations）を表示する。 |
+| `GET` | `/api/native-timeline/{id}` | 共通の bounded `temporal-timeline-v1` を返す（#761/#762）。`lifetxt.native_timeline.native_timeline` にそのまま委譲し、Web 固有の temporal logic は持たない。任意の `since`、`until`、`event`、`limit` query parameter は CLI/MCP と同じ契約。未知の `id` は 404、invalid な filter/bound は 422 を返す。item drawer はこの結果を視覚的にグループ化した Native Timeline Explorer として表示する（event、bounds、invalid event 数、limitations、diagnostics）。詳細は下記「Native Timeline Explorer」（#769）を参照。 |
 | `GET` | `/api/blockers` | `?id=ID` の推移的 blocker chain を返す(level 1..N、`depth` で深さ制限、既定 5) |
 | `GET` | `/api/messages` | type `M` message item を一覧表示。message filter 指定可能 |
 | `GET` | `/api/messages/id/{id}` | exact `id:` で Message を取得 |
@@ -570,6 +570,64 @@ node をクリックすると該当 record を detail modal で開けます。mo
 Message item (`type:M`) で `id:` がある場合、detail modal に thread section を表示します。
 modal には返信 form も表示されます。返信は root message の `id:` を `parent:` に
 持つ record として扱います。
+
+## Native Timeline Explorer
+
+item detail drawer の Native Timeline セクション（#769）は、`GET
+/api/native-timeline/{id}` が返す既存の `temporal-timeline-v1` 結果
+（#762）を、単なる event の一覧ではなく、視覚的にグループ化された
+scannable な履歴表示へと変換します。この panel は既存の結果に対する
+純粋な表示層であり、JavaScript 側で history record を parse したり、
+順序や completeness を再計算したりすることはありません。
+
+- event は日単位でグループ化され、新しい順に表示されます。各 event
+  には record 種別（item lifecycle / progress / ticket / time entry）
+  を示す marker と短い label が付きます。
+- 既知の transition payload（status/progress/schedule の変更、および
+  relation の `added`/`removed`）はコンパクトな `before → after` 表示
+  になります。それ以外の payload field はすべて、展開可能な
+  「Details」内にテキストの key/value として表示され、transaction id
+  と source revision も併記されます。
+- completeness badge（「Complete history」/「Partial / limited
+  history」）と、limitations・invalid event 数・diagnostics は filter
+  control のすぐ下に目立つ形で表示され、完全な履歴と誤認されることは
+  ありません。
+- 有効な整数パーセントの `progress:` event が十分な数ある場合、label
+  の隣に小さな bounded trend bar を表示します。正確な数値は常にテキ
+  ストとして併記されるため、trend はあくまで補助的な表示です。
+- `since` / `until` / `event` / `limit` の filter 入力は、REST route
+  や TUI `/timeline` command が既に受け付けているものと同じ query
+  parameter にそのまま委譲します。第二の filtering engine はありませ
+  ん。
+- panel はキーボード操作可能（標準の `<input>`/`<button>`/`<details>`
+  要素のみを使用）で、色だけに依存した情報表示はありません。あらゆる
+  transition・coverage 状態・warning にはテキストの label が伴います。
+
+これは既存の #762 Web UI/API 基盤を拡張したものであり、
+`/api/native-timeline/{id}` 自体の契約・filter・後方互換性は変更さ
+れていません。
+
+## 文脈に応じた関連 item 作成
+
+record detail drawer の `Edit` の隣にある `+ Related` button（#770）を
+使うと、現在開いている record への relation を提案済みの状態で新規
+record を作成できます。押すと使用する relation（`parent`・
+`related`・`ref` -- いずれも Format が既に定義している field）を尋ね
+られ、その後、通常の「New Record」editor が開き、その relation と、
+開いている record が `project:` を持っていればその値も、details の
+plain text 欄に完全に編集可能な行として prefill されます。作成される
+のはユーザーが prefill された内容を確認し **Create** を押した後だけ
+で、prefill された行の削除・変更は他の detail 行の編集と同じです。
+`id:` を持たない record は relation の対象にできず、その場合は何かを
+代わりに黙って提案するのではなく、button 側でその旨を報告します。
+
+Dashboard の Projects card の各 project 行にも小さな `+` button があ
+り、これを押すと `project:` のみが prefill された同じ「New Record」
+editor が開き、その project 内に直接新規 record を作成できます。
+
+どちらの入口も既存の `POST /api/items` 作成 route をそのまま再利用し
+ます。文脈に応じた作成は第二の作成 engine ではなく、文脈が選択されて
+いない通常の `+ New` の挙動には影響しません。
 
 ## Chart
 

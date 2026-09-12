@@ -122,7 +122,7 @@ def _assemble_html() -> str:
     template = _apply_brand_assets(template)
     styles = "".join(_read_resource(name) for name in _CSS_RESOURCE_NAMES)
     script = "".join(_read_resource(name) for name in _JS_RESOURCE_NAMES)
-    return template.replace(_STYLE_MARKER, styles).replace(_SCRIPT_MARKER, script)
+    return template.replace(_STYLE_MARKER, styles).replace(_SCRIPT_MARKER, script).rstrip("\r\n")
 
 
 HTML_PAGE = _assemble_html()

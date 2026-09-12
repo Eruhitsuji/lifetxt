@@ -519,6 +519,20 @@
       reloadNativeTimelinePanel();
     }
 
+    function switchDrawerTab(name) {
+      const allowed = new Set(["overview", "timeline", "relations"]);
+      const selected = allowed.has(name) ? name : "overview";
+      document.querySelectorAll("#drawer-body .drawer-tab").forEach(button => {
+        const active = button.getAttribute("aria-controls") === "drawer-tab-" + selected;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-selected", active ? "true" : "false");
+      });
+      document.querySelectorAll("#drawer-body .drawer-tab-panel").forEach(panel => {
+        panel.hidden = panel.id !== "drawer-tab-" + selected;
+      });
+      if (selected === "timeline" && _ntCurrentItemId) reloadNativeTimelinePanel();
+    }
+
     async function loadDependencyLinks(item) {
       const idKey = appConfig?.ids?.key || "id";
       const itemId = item?.id || (item?.details?.[idKey]?.[0]);
@@ -533,10 +547,6 @@
         let temporalThread = null;
         try {
           temporalThread = await api(`/api/temporal-thread/${encodeURIComponent(itemId)}`);
-        } catch(_) {}
-        let nativeTimeline = null;
-        try {
-          nativeTimeline = await api(`/api/native-timeline/${encodeURIComponent(itemId)}`);
         } catch(_) {}
         const records = data.records || [];
         let graphData = null;
@@ -574,14 +584,14 @@
           `${temporalThread?.explicit?.truncated ? "; explicit thread truncated" : ""}` +
           `${temporalThread?.consistency?.truncated ? "; consistency evidence truncated" : ""}.</div>`;
         _ntCurrentItemId = itemId;
-        const timelineHtml = `<div id="drawer-native-timeline">${renderNativeTimelinePanel(nativeTimeline)}</div>`;
         if (!records.length) {
-          container.innerHTML = lifecycleHtml + timelineHtml + `<div class="drawer-section-title">Dependencies &amp; Links</div><div class="empty">No links.</div>`;
+          container.innerHTML = lifecycleHtml + `<div class="drawer-section-title">Dependencies &amp; Links</div><div class="empty">No links.</div>`;
+          reloadNativeTimelinePanel();
           return;
         }
         const outgoing = records.filter(r => r.source_id === itemId);
         const incoming = records.filter(r => r.target_id === itemId && r.source_id !== itemId);
-        let html = lifecycleHtml + timelineHtml + `<div class="drawer-section-title">Dependencies &amp; Links (${records.length})</div>` +
+        let html = lifecycleHtml + `<div class="drawer-section-title">Dependencies &amp; Links (${records.length})</div>` +
           renderDependencyMiniGraph(records, itemId, graphData) +
           `<div class="dep-graph">`;
 
@@ -617,6 +627,13 @@
         }
         html += `</div>`;
         container.innerHTML = html;
+        const timeline = document.getElementById("drawer-native-timeline");
+        if (timeline) {
+          timeline.innerHTML = renderNativeTimelinePanel(null);
+          api(`/api/native-timeline/${encodeURIComponent(itemId)}`)
+            .then(data => { if (_ntCurrentItemId === itemId) timeline.innerHTML = renderNativeTimelinePanel(data); })
+            .catch(e => { timeline.innerHTML = `<div class="drawer-section-title">Native Timeline</div><div class="diagnostic">Timeline error: ${escapeHtml(e.message)}</div>`; });
+        }
       } catch(e) {
         if (container) container.innerHTML = `<div class="drawer-section-title">Dependencies &amp; Links</div><div class="empty">Error: ${escapeHtml(e.message)}</div>`;
       }

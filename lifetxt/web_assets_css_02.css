@@ -134,6 +134,11 @@
     .drawer-head .drawer-close-btn { order: 1; }
     #drawer-head-btns { order: 2; flex: 1 1 100%; }
     .drawer-body { padding: 1rem 1.1rem; display: grid; gap: 1rem; overflow-y: auto; min-height: 0; }
+    .drawer-tabs { display:flex; gap:.2rem; border-bottom:1px solid var(--line); position:sticky; top:-1rem; background:var(--panel); z-index:2; padding:.2rem 0 .35rem; }
+    .drawer-tab { border:0; border-bottom:2px solid transparent; background:transparent; color:var(--muted); cursor:pointer; padding:.35rem .65rem; font-weight:600; }
+    .drawer-tab:hover, .drawer-tab.active { color:var(--text); border-bottom-color:var(--accent); }
+    .drawer-tab-panel[hidden] { display:none; }
+    .drawer-tab-panel { min-width:0; }
     .drawer-fields { display: grid; gap: .4rem; }
     .drawer-field { display: grid; grid-template-columns: 7rem 1fr; gap: .5rem; font-size: .88rem; }
     .drawer-field .key { color: var(--muted); }

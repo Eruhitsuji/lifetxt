@@ -77,3 +77,11 @@ event から再現する lifecycle relation）、および `on`/`from`/`to`/`at`
 これは既存の `native_timeline()`/`normalize_native_events()` reader と
 `item_event_completeness()` をそのまま再利用しており、現在の life.txt
 state へフォールバックせず、Git も合成しません。
+
+JSON result の `semantic_as_of` field は
+[`semantic-as-of-v1.schema.json`](../../dist/schemas/semantic-as-of-v1.schema.json)
+に従います。これは `temporal-timeline-v1` の event list や、Git-backed の
+`historical`/`as of` revision snapshot を返す `temporal-thread-v1` とは
+別の bounded contract です。Git は一切読み込まず、cutoff 以前に capture
+された `record:item_event` stream が実際に裏付ける以上の field state は
+主張しません。

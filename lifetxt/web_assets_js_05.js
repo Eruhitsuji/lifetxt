@@ -350,6 +350,57 @@
       setEditorDisabled(false);
       renderItems(currentItems);
     }
+    // ── Context-aware related-item creation (#770) ──────────────────────
+    // The selected project/item context only supplies visible initial
+    // detail lines in the plain-text editor; it never bypasses the
+    // existing create/validation/mutation path (saveItem() below still
+    // does the real POST /api/items), and every prefilled line stays
+    // fully visible and editable/removable before the user presses
+    // Create. No new relation vocabulary is introduced: only fields the
+    // Format already documents (project/parent/related/ref) are ever
+    // prefilled.
+    const RELATED_FIELD_CHOICES = ["parent", "related", "ref"];
+    function newItemWithContext(context) {
+      newItem();
+      const lines = [];
+      if (context && context.project) lines.push(`project:${context.project}`);
+      if (context && context.relationField && context.relationTarget) {
+        lines.push(`${context.relationField}:${context.relationTarget}`);
+      }
+      if (lines.length) {
+        document.getElementById("edit-details").value = lines.join("\n");
+        const note = document.getElementById("editor-note");
+        if (note) {
+          note.textContent = "Create a new record. The field(s) below were prefilled from your current context — review, edit, or remove them before creating.";
+        }
+      }
+    }
+    function newRelatedItemFromProject(project) {
+      if (!project) return;
+      newItemWithContext({ project: project });
+    }
+    function drawerCreateRelated() {
+      if (!drawerItem) { showToast("No record selected.", "error"); return; }
+      const idKey = (typeof appConfig !== "undefined" && appConfig?.ids?.key) || "id";
+      const targetId = drawerItem.id || drawerItem.details?.[idKey]?.[0];
+      if (!targetId) {
+        showToast("This record has no id: value, so a relation cannot be created. Add an id first.", "error");
+        return;
+      }
+      const choice = prompt(
+        `Relation to "${drawerItem.title}" (${RELATED_FIELD_CHOICES.join("/")}):`,
+        "related"
+      );
+      if (choice === null) return; // user cancelled -- no stale/implicit relation
+      const field = choice.trim().toLowerCase() || "related";
+      if (!RELATED_FIELD_CHOICES.includes(field)) {
+        showToast(`Unknown relation "${field}". Use one of: ${RELATED_FIELD_CHOICES.join(", ")}.`, "error");
+        return;
+      }
+      const project = drawerItem.details?.project?.[0];
+      closeDrawer();
+      newItemWithContext({ relationField: field, relationTarget: targetId, project: project });
+    }
     // ── Beginner authoring mode (#634) ──────────────────────────────
     // Progressive disclosure over the Beginner / Minimal Profile (#558):
     // beginner mode hides advanced Type/Status options by default, but

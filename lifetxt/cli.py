@@ -1599,7 +1599,15 @@ def build_parser():
         "timeline",
         help="Show one item's bounded native semantic history without Git composition.",
     )
-    timeline_command.add_argument("id", help="Target item ID.")
+    timeline_command.add_argument("id", nargs="?", help="Target item ID.")
+    timeline_command.add_argument(
+        "--workspace-timeline",
+        action="store_true",
+        help="Show one bounded chronological stream across workspace items.",
+    )
+    timeline_command.add_argument(
+        "--project", help="Workspace Timeline project filter (current evidence only)."
+    )
     _add_input_paths(timeline_command)
     timeline_command.add_argument(
         "--limit",
@@ -13875,10 +13883,64 @@ def command_timeline(args):
     from .timezone_policy import resolve_timezone_name
 
     config = _config(args)
-    paths = _normalize_paths(
-        getattr(args, "paths", None), config, stdin_when_empty=False
-    ) or ["life.txt"]
+    raw_paths = getattr(args, "paths", None)
+    workspace_target = getattr(args, "id", None)
+    # With the shared positional path convention, `timeline --workspace path`
+    # is parsed as the optional id. Treat that sole token as an input path; an
+    # explicit workspace target can still be written as `--workspace ID path`.
+    if getattr(args, "workspace_timeline", False) and not raw_paths and workspace_target:
+        raw_paths = [workspace_target]
+        workspace_target = None
+    paths = _normalize_paths(raw_paths, config, stdin_when_empty=False) or ["life.txt"]
     items, _diagnostics = _parse_or_exit(paths, config)
+    if getattr(args, "workspace_timeline", False):
+        from .workspace_timeline import workspace_timeline
+
+        try:
+            result = workspace_timeline(
+                items,
+                id_key=id_key_from_config(config),
+                limit=getattr(args, "limit", 100),
+                since=getattr(args, "since", None),
+                until=getattr(args, "until", None),
+                event=getattr(args, "event", None),
+                target_id=workspace_target,
+                project=getattr(args, "project", None),
+            )
+        except ValueError as exc:
+            sys.stderr.write("ERROR: %s\n" % exc)
+            return 1
+        if getattr(args, "json", False):
+            write_text(None, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+            return 0
+        write_text(None, "Workspace Life Timeline:\n")
+        write_text(
+            None,
+            "  Coverage: complete:%s; events:%d/%d\n"
+            % (
+                str(result["complete"]).lower(),
+                result["bounds"]["returned_events"],
+                result["bounds"]["total_valid_events"],
+            ),
+        )
+        for event in result["events"]:
+            write_text(
+                None,
+                "  %s  %s  %s:%s  target:%s\n"
+                % (
+                    event["at"] or "(no time)",
+                    event["event"],
+                    event["record_kind"],
+                    event["record_id"],
+                    event["target_id"],
+                ),
+            )
+        if result["limitations"]:
+            write_text(None, "  Limitations: %s\n" % ", ".join(result["limitations"]))
+        return 0
+    if not getattr(args, "id", None):
+        sys.stderr.write("ERROR: timeline requires an item ID or --workspace-timeline.\n")
+        return 1
     def _window(value):
         if not value or str(value).count("..") != 1:
             raise ValueError("Timeline comparison windows must use START..END.")

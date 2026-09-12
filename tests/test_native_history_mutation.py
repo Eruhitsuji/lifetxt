@@ -9,6 +9,7 @@ from lifetxt import entrypoint, mutation
 from lifetxt.native_history import iter_item_events
 from lifetxt.native_history_mutation import commit_item_mutation_with_event
 from lifetxt.parser import parse_text
+from lifetxt.write_operations import mutate_item_files, mutate_items
 
 
 class NativeHistoryMutationTests(unittest.TestCase):
@@ -283,3 +284,61 @@ class InferItemEventSpecsTests(unittest.TestCase):
         self.assertEqual(2, len(specs))
         self.assertIn({"event_type": "completed"}, specs)
         self.assertIn({"event_type": "schedule_changed", "field": "due"}, specs)
+
+
+class SharedMutationNativeHistoryTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def path(self, name="life.txt"):
+        return os.path.join(self.temp.name, name)
+
+    def write(self, path, text):
+        with open(path, "w", encoding="utf-8", newline="") as handle:
+            handle.write(text)
+
+    def read_items(self, path):
+        with open(path, encoding="utf-8", newline="") as handle:
+            return parse_text(handle.read())[0]
+
+    def test_mutate_items_captures_supported_changes(self):
+        path = self.path()
+        self.write(path, "[ ] T Task id:task-1 due:2026-09-20\n")
+        result = mutate_items(
+            path,
+            [{"id": "task-1", "status": "[x]", "set_details": {"due": ["2026-09-25"]}}],
+        )
+        self.assertTrue(result.changed)
+        events = iter_item_events(self.read_items(path))
+        self.assertEqual(
+            ["completed", "schedule_changed"],
+            [event.details["event"][0] for event in events],
+        )
+
+    def test_mutate_items_noop_does_not_capture_history(self):
+        path = self.path()
+        self.write(path, "[ ] T Task id:task-1\n")
+        mutate_items(path, [{"id": "task-1", "status": "[ ]"}])
+        self.assertEqual([], iter_item_events(self.read_items(path)))
+
+    def test_mutate_item_files_captures_each_file_inside_journal_plan(self):
+        first, second = self.path("one.txt"), self.path("two.txt")
+        self.write(first, "[ ] T One id:one\n")
+        self.write(second, "[ ] T Two id:two\n")
+        mutate_item_files(
+            {
+                first: {"changes": [{"id": "one", "status": "[x]"}]},
+                second: {"changes": [{"id": "two", "status": "[-]"}]},
+            }
+        )
+        self.assertEqual(
+            ["completed"],
+            [event.details["event"][0] for event in iter_item_events(self.read_items(first))],
+        )
+        self.assertEqual(
+            ["canceled"],
+            [event.details["event"][0] for event in iter_item_events(self.read_items(second))],
+        )

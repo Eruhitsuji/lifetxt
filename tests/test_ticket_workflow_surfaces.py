@@ -73,7 +73,7 @@ class TicketWorkflowSurfaceTests(unittest.TestCase):
 
     def test_schema_bundle_contains_eighty_four_documents_and_new_contracts(self):
         bundle = schema_bundle()
-        self.assertEqual(84, len(bundle))
+        self.assertEqual(85, len(bundle))
         self.assertTrue(SCHEMAS.issubset(set(bundle)))
         self.assertIn("activity", bundle["ticket-v1.schema.json"]["properties"])
         self.assertIn("planning", bundle["ticket-v1.schema.json"]["properties"])

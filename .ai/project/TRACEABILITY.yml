@@ -12402,6 +12402,209 @@ traceability:
         rather than filing one combined issue.
       status: investigated
 
+    - requirement_id: req-native-semantic-as-of-projection-engine
+      capability_id: cap-native-semantic-as-of
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/759
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/763
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/778
+      changed_files_or_scope:
+        - Add lifetxt/native_semantic_as_of.py implementing the #759 investigation's proposed replay semantics for status/due/relations
+        - lifetxt/native_semantic_as_of.py
+        - tests/test_native_semantic_as_of.py
+      tests_or_evidence:
+        - "tests/test_native_semantic_as_of.py (14 tests): status known/partial/unavailable across creation/completion/reopen transitions, due schedule_changed known/unavailable-before-capture/unavailable-never-captured/cleared-to-none, follows/realizes/replaced_by relation replay (add/remove/known-empty), on/from/to/at always unavailable with no_schedule_changed_capture, cutoff accepts a raw string via parse_cutoff and rejects a naive datetime, unknown target raises"
+        - python -m unittest tests.test_native_semantic_as_of -> Ran 14 tests, OK
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check lifetxt/native_semantic_as_of.py tests/test_native_semantic_as_of.py -> clean
+      release_or_deployment: null
+      notes: >-
+        Reuses lifetxt.native_timeline.native_timeline() (via its private
+        include_all_valid hand-off), item_event_completeness(), and
+        historical_temporal.parse_cutoff() unmodified -- no second event-
+        normalization, completeness, or timestamp-parsing policy. Scoped
+        to exactly the domains the #759 investigation identified as
+        reconstructable: lifecycle status, the due: schedule field, and
+        follows:/realizes:/replaced_by: relations; on:/from:/to:/at: and any
+        relation with no capture route always report unavailable rather
+        than falling back to current life.txt state.
+      status: implemented
+
+    - requirement_id: req-native-semantic-as-of-cli-exposure
+      capability_id: cap-native-semantic-as-of
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/759
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/764
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/778
+      changed_files_or_scope:
+        - Add lifetxt timeline ID --as-of TIMESTAMP, rendering semantic-as-of-v1 alongside (not replacing) the existing bounded event-list output
+        - lifetxt/cli.py
+        - tests/test_native_timeline.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+        - docs/en/native-timeline.md
+        - docs/ja/native-timeline.md
+      tests_or_evidence:
+        - "tests/test_native_timeline.py NativeTimelineAsOfCliTests (5 tests): --as-of renders alongside the bounded event list in both text and --json, an invalid/malformed cutoff fails loudly with the same message convention as show --as-of/query --as-of, a domain with no event coverage reports unavailable rather than current state, --as-of is rejected when combined with --summary/an analysis flag/--compare-window, omitting --as-of leaves output byte-for-byte unaffected (no semantic_as_of key at all)"
+        - python -m unittest tests.test_native_timeline -> Ran 16 tests, OK
+        - "live: real disposable fixture -- lifetxt timeline t1 life.txt --as-of TIMESTAMP (text and --json) rendered the exact designed status/due/relation/on-from-to-at fields; --as-of not-a-date failed loudly; --as-of + --summary was rejected"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - ruff format --check / ruff check lifetxt/cli.py tests/test_native_timeline.py -> clean
+      release_or_deployment: null
+      notes: >-
+        Reuses historical_temporal.parse_cutoff indirectly through
+        semantic_as_of() itself for the timestamp -- no second cutoff-
+        parsing policy in cli.py. No TUI/Web/MCP exposure was added in this
+        pass, per #764's own explicit scope.
+      status: implemented
+
+    - requirement_id: req-native-semantic-as-of-schema-and-docs
+      capability_id: cap-native-semantic-as-of
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/759
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/765
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/778
+      changed_files_or_scope:
+        - Add lifetxt/schema_extensions_v31.py generating semantic-as-of-v1.schema.json, following this project's schema-generator convention
+        - lifetxt/schema_extensions_v31.py
+        - lifetxt/__init__.py
+        - dist/schemas/semantic-as-of-v1.schema.json
+        - tests/test_schema_extensions_v2.py
+        - tests/test_ticket_custom_field_public_contract.py
+        - tests/test_ticket_workflow_surfaces.py
+        - docs/en/native-timeline.md
+        - docs/ja/native-timeline.md
+      tests_or_evidence:
+        - "tests/test_schema_extensions_v2.py: semantic-as-of-v1 schema validates its own published sample and a real semantic_as_of() result produced against a real fixture, via Draft202012Validator; schema-bundle-completeness test bumped 84 -> 85 documents, confirmed byte-for-byte against the checked-in dist/schemas file"
+        - python -m unittest tests.test_schema_extensions_v2 tests.test_ticket_custom_field_public_contract tests.test_ticket_workflow_surfaces -> Ran 12 tests, OK
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on every changed file -> clean
+      release_or_deployment: null
+      notes: >-
+        No behavior change to #763/#764's already-shipped code. dist/schemas/
+        semantic-as-of-v1.schema.json is generated (indent=2, sort_keys=True,
+        trailing newline) to match the schema_extensions_v31.py generator
+        byte-for-byte, matching this project's established schema-file
+        convention.
+      status: implemented
+
+    - requirement_id: req-tui-remote-native-timeline
+      capability_id: cap-remote-tui
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/677
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/768
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/778
+      changed_files_or_scope:
+        - Add TuiBackend.native_timeline(), routing both LocalTuiBackend (unchanged direct call) and RemoteTuiBackend (server's existing GET /api/native-timeline/{id} route) through one shared seam
+        - lifetxt/tui_backend.py
+        - lifetxt/tui_app.py
+        - tests/test_tui_backend.py
+        - tests/test_tui_native_timeline.py
+        - tests/test_tui_remote_backend.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - "tests/test_tui_backend.py (2 new tests): LocalTuiBackend.native_timeline() matches a direct native_timeline() call exactly; since/until/event/limit are forwarded correctly"
+        - "tests/test_tui_remote_backend.py RemoteTuiBackendNativeTimelineTests (8 tests): a normal read hits GET /api/native-timeline/{id} verbatim with no client-side history parsing; since/until/event/limit are forwarded as query parameters; no-history, malformed-filter, unknown-target, auth, and network errors all propagate the server's own error unchanged with no local fallback; the backend refuses outright (zero network calls) while serving offline cached data; local and remote rendering produce equivalent event ordering/meaning for identical server data"
+        - "tests/test_tui_native_timeline.py updated with a minimal fake backend so /timeline command tests keep exercising the exact shared reader now that _cmd_timeline delegates to state.backend.native_timeline() instead of calling native_timeline() directly"
+        - python -m unittest tests.test_tui_backend tests.test_tui_native_timeline tests.test_tui_remote_backend tests.test_tui_remote_client tests.test_cui_extensions tests.test_shared_surface_mutation_routing -> Ran 264 tests, 3 failures (pre-existing Windows nvim.EXE/vim.EXE PATHEXT editor-resolution flakes; confirmed via git stash to reproduce identically on the pre-change baseline, unrelated to this change), skipped=1
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - ruff format --check / ruff check lifetxt/tui_backend.py lifetxt/tui_app.py and the touched test files -> clean
+      release_or_deployment: null
+      notes: >-
+        Extends cap-remote-tui rather than creating a new capability, since
+        this is the same TuiBackend seam #678/#679/#680/#683 already
+        established. No server route in lifetxt/webapp.py changed --
+        RemoteTuiBackend.native_timeline() reuses the exact
+        GET /api/native-timeline/{id} route #762 already shipped. Refuses
+        while serving_cache is set, matching #768's own "do not invent
+        history from current cached items" requirement.
+      status: implemented
+
+    - requirement_id: req-native-history-cross-surface-auto-capture
+      capability_id: cap-native-semantic-history
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/767
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/778
+      changed_files_or_scope:
+        - Investigate cross-surface Native History capture parity; add a pure, unwired classifier (infer_item_event_specs) reusing the exact event vocabulary augment_item_mutation_with_event already emits
+        - lifetxt/native_history_mutation.py
+        - tests/test_native_history_mutation.py
+        - docs/en/native-semantic-history.md
+        - docs/ja/native-semantic-history.md
+      tests_or_evidence:
+        - "investigation confirmed via grep that only lifetxt/cli.py, lifetxt/inbox.py, lifetxt/native_history_mutation.py, lifetxt/ticket_activity.py, lifetxt/ticket_revision_writes.py, and lifetxt/work_session.py call native_history_mutation/commit_item_mutations_with_events today; lifetxt/webapp.py and lifetxt/tui_app.py/tui_backend.py do not"
+        - "tests/test_native_history_mutation.py InferItemEventSpecsTests (9 tests): no-change infers nothing; completion/reopen(both [x]->[/] and [x]->[ ])/cancellation/other-status-change classified correctly; due schedule_changed classified when changed, on/from/to/at changes are never classified; relation add and remove classified independently per relation (follows/realizes/replaced_by); multiple simultaneous changes (status + due) produce multiple independent specs"
+        - python -m unittest tests.test_native_history_mutation -> Ran 16 tests, OK
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - ruff format --check / ruff check lifetxt/native_history_mutation.py tests/test_native_history_mutation.py -> clean
+      release_or_deployment: null
+      notes: >-
+        High-assurance-recommended investigation (per #767's own task
+        contract) delivered at Standard rigor for the safe, non-write-path
+        piece: a pure classifier with no behavior risk, since it is not
+        wired into any live write path. #767's remaining acceptance
+        criteria (actual cross-surface parity for Web UI/API, local TUI,
+        and Remote TUI mutations) require extending this project's shared,
+        heavily-used mutation primitives (lifetxt.write_operations.
+        mutate_items/mutate_item_files, lifetxt.webapp.update_item_in_file)
+        to build a replacement text and commit it together with the
+        classifier's inferred event(s) in one atomic write -- the same
+        one-write guarantee #714 already established for CLI's dedicated
+        commands. Given the blast radius across every mutation surface
+        this project has (CLI generic paths, Web UI, local TUI, Remote
+        TUI), this project's own Task Decomposition Standard guidance to
+        split a task when independent write paths cannot be safely
+        reviewed together in one pass was applied: the classifier is
+        delivered and tested now; the write-path wiring is recorded as an
+        explicit, documented follow-up in docs/en+ja/
+        native-semantic-history.md rather than attempted unscoped or
+        silently dropped. #767 is therefore recorded here as `partial`,
+        not `implemented`: the investigation is complete and one concrete,
+        reusable, safe deliverable landed, but the acceptance criteria's
+        cross-surface parity itself remains open.
+      status: partial
+
+    - requirement_id: req-763-768-native-history-as-of-batch-integration
+      capability_id: cap-native-semantic-as-of
+      epic: null
+      task_issue: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/778
+      changed_files_or_scope:
+        - Record the #763-#768 batch's integration into main as its own traceable step
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - "python -m unittest tests.test_native_semantic_as_of tests.test_native_timeline tests.test_schema_extensions_v2 tests.test_ticket_custom_field_public_contract tests.test_ticket_workflow_surfaces tests.test_native_history_mutation tests.test_tui_backend tests.test_tui_native_timeline tests.test_tui_remote_backend tests.test_tui_remote_client tests.test_cui_extensions tests.test_shared_surface_mutation_routing tests.test_safety_cli tests.test_safety_foundation tests.test_traceability_gate tests.test_change_package_closeout -> Ran 370 tests, 3 failures (pre-existing Windows nvim.EXE/vim.EXE PATHEXT editor-resolution flakes, confirmed via git stash to reproduce identically on the unmodified baseline), skipped=1"
+        - "MPLBACKEND=Agg python -W ignore::ResourceWarning -m unittest discover -> Ran 4331 tests in 819.752s, FAILED (failures=10, errors=1, skipped=11) before the two real schema-count-related regressions were found and fixed; every remaining failure/error confirmed pre-existing and environment-dependent (3 Windows editor-resolution flakes, 1 Git-nested-worktree flake already documented elsewhere in this file, 3 MutationConflict content-hash-race flakes reproduced identically with this branch's commits stashed away, 1 traceability-gate failure that resolved once CAPABILITIES.yml/TRACEABILITY.yml were committed) -- none attributable to this batch's code changes"
+        - "found and fixed: tests/test_safety_foundation.py's schema_bundle expected-set and tests/test_safety_cli.py's doctor --format-schemas file-count assertions were not updated for the new semantic-as-of-v1.schema.json (84 -> 85 documents); both fixed and re-verified green"
+        - python -m unittest tests.test_traceability_gate tests.test_change_package_closeout -> Ran 17 tests, OK (confirms the gate passes once traceability/capability records are committed)
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - ruff format --check / ruff check on every changed file -> clean
+      release_or_deployment: >-
+        This entry documents PR #778 itself: feature/763-770-batch (Issues
+        #763, #764, #765, #767, #768, each on its own child branch merged
+        locally into the integration branch before this final PR) merging
+        into main. #759 was found already complete before this batch
+        started and was not redone. #769 and #770 were investigated as
+        candidates for this batch and deliberately deferred -- both are
+        genuinely larger, multi-surface product-design features (a visual
+        Timeline explorer; contextual related-item creation) that need a
+        human product/UX decision rather than a safe autonomous XS/S
+        scoping, and are recorded here as explicit, unimplemented
+        follow-up candidates rather than silently dropped.
+      notes: >-
+        Follows the multi-PR integration-branch pattern established
+        throughout this project (see req-remote-batch-integration and every
+        subsequent batch-integration entry in this file): every requirement
+        entry above correctly names its own child branch's work, and none
+        of them named this final PR before it existed. Self-scoped and
+        implemented autonomously per repository owner instruction to
+        implement #759-#770 on one integration branch ending in one final
+        PR, with each implemented issue's own child branch merged locally
+        into the integration branch before the final PR was opened.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

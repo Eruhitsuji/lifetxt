@@ -90,7 +90,7 @@ python -m lifetxt today [path ...]
 python -m lifetxt area list [path ...]
 python -m lifetxt backlinks ID [path ...]
 python -m lifetxt temporal ID [path ...]
-python -m lifetxt timeline ID [path ...] [--since ISO] [--until ISO] [--event TYPE] [--limit N] [--json]
+python -m lifetxt timeline ID [path ...] [--since ISO] [--until ISO] [--event TYPE] [--limit N] [--as-of TIMESTAMP] [--json]
 python -m lifetxt history-check [path ...] [--id ID] [--commit-limit N] [--json]
 python -m lifetxt freebusy [path ...] --from START --to END
 python -m lifetxt query "QUERY" [path ...] [--explain]
@@ -2553,6 +2553,16 @@ temporary file, and a semantic no-change makes no request. If the server
 revision changed while the editor was open, the PUT is rejected as a conflict
 without retry; reload before editing again. Editor-backed writes are also
 refused while an offline cached view is active.
+
+**Native Timeline (`/timeline`).** `/timeline ID [since=..] [until=..]
+[event=..]` works identically in remote mode, reusing the server's existing
+read-only `GET /api/native-timeline/{id}` route (the same one `lifetxt
+serve`'s Web UI already uses) instead of parsing or normalizing history
+records on the client. No server filesystem path or raw `life.txt` is ever
+required locally; connection/auth failures surface through the same
+connection UX as every other remote read. Timeline reads are disabled while
+an offline cached view is active, since a cached item snapshot carries no
+history evidence to reconstruct a Timeline from.
 
 **Automatic refresh.** Once connected, the TUI polls the server every 1.5
 seconds using a single cheap `GET /api/revision` call -- far lighter than

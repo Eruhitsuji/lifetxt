@@ -26,6 +26,7 @@ class _StubConnection(object):
         self.calls = []
         self._items_payload = items_payload or {"items": []}
         self._raise_on_next = None
+        self._timeline_payload = None
 
     def describe(self):
         return "https://example.internal as alice"
@@ -41,6 +42,8 @@ class _StubConnection(object):
             raise exc
         if method == "GET" and path == "/api/items":
             return self._items_payload
+        if method == "GET" and path.startswith("/api/native-timeline/"):
+            return self._timeline_payload
         self.server_revision = "rev-%d" % (len(self.calls) + 1)
         self.file_revision = self.server_revision
         return {"ok": True}
@@ -613,6 +616,185 @@ class WorkspaceStatePollReconnectAfterCacheTests(unittest.TestCase):
         self.assertTrue(dirty)
         self.assertEqual(state.remote_status, "connected")
         self.assertFalse(backend.serving_cache)
+
+
+class RemoteTuiBackendNativeTimelineTests(unittest.TestCase):
+    """#768: Remote TUI reads Native Timeline through the server's own
+    GET /api/native-timeline/{id} route (#762) rather than parsing/
+    normalizing history client-side."""
+
+    def _timeline_payload(self):
+        return {
+            "schema": "temporal-timeline-v1",
+            "target_id": "t1",
+            "target": {"title": "Buy_milk", "kind": "T", "status": "[ ]"},
+            "source": "native_life_txt",
+            "git_composed": False,
+            "bounds": {
+                "limit": 100,
+                "total_valid_events": 1,
+                "returned_events": 1,
+                "truncated": False,
+            },
+            "complete": True,
+            "limitations": [],
+            "completeness": {
+                "item": {
+                    "coverage": "from_creation",
+                    "complete": True,
+                    "diagnostic_codes": [],
+                },
+                "progress": {"coverage": "none", "complete": False},
+                "ticket": {"coverage": "none", "complete": False},
+                "time_entry": {"coverage": "none", "complete": False},
+            },
+            "events": [
+                {
+                    "record_kind": "item_event",
+                    "record_id": "IE-t1-000001",
+                    "parent": "t1",
+                    "event": "created",
+                    "at": "2026-09-10T10:00:00Z",
+                    "sequence": 1,
+                    "transaction": "ITX-1",
+                    "source_revision": "a" * 64,
+                    "payload": {},
+                    "valid": True,
+                }
+            ],
+            "invalid_events": [],
+            "diagnostics": [],
+        }
+
+    def test_normal_read_hits_the_shared_server_route_verbatim(self):
+        connection = _StubConnection()
+        connection._timeline_payload = self._timeline_payload()
+        backend = RemoteTuiBackend(connection)
+        result = backend.native_timeline("t1")
+        self.assertEqual(connection._timeline_payload, result)
+        method, path, body, if_match = connection.calls[-1]
+        self.assertEqual("GET", method)
+        self.assertEqual("/api/native-timeline/t1", path)
+        self.assertIsNone(body)
+
+    def test_since_until_event_and_limit_are_forwarded_as_query_parameters(self):
+        connection = _StubConnection()
+        connection._timeline_payload = self._timeline_payload()
+        backend = RemoteTuiBackend(connection)
+        backend.native_timeline(
+            "t1",
+            since="2026-09-10T11:00:00Z",
+            until="2026-09-11T00:00:00Z",
+            event="completed",
+            limit=5,
+        )
+        _method, path, _body, _if_match = connection.calls[-1]
+        self.assertTrue(path.startswith("/api/native-timeline/t1?"))
+        self.assertIn("since=2026-09-10T11%3A00%3A00Z", path)
+        self.assertIn("until=2026-09-11T00%3A00%3A00Z", path)
+        self.assertIn("event=completed", path)
+        self.assertIn("limit=5", path)
+
+    def test_no_history_reports_the_server_shape_unmodified(self):
+        payload = self._timeline_payload()
+        payload["events"] = []
+        payload["bounds"]["returned_events"] = 0
+        payload["bounds"]["total_valid_events"] = 0
+        payload["limitations"] = ["no_native_history"]
+        payload["complete"] = False
+        connection = _StubConnection()
+        connection._timeline_payload = payload
+        backend = RemoteTuiBackend(connection)
+        result = backend.native_timeline("t1")
+        self.assertEqual([], result["events"])
+        self.assertIn("no_native_history", result["limitations"])
+
+    def test_malformed_target_or_filter_propagates_the_server_error(self):
+        from lifetxt.tui_remote_client import RemoteConnectionError
+
+        connection = _StubConnection()
+
+        def raising_request(method, path, json_body=None, if_match=None):
+            connection.calls.append((method, path, json_body, if_match))
+            raise RemoteConnectionError("Unknown Timeline event filter 'bogus'.")
+
+        connection.request = raising_request
+        backend = RemoteTuiBackend(connection)
+        with self.assertRaisesRegex(RemoteConnectionError, "Unknown Timeline event"):
+            backend.native_timeline("t1", event="bogus")
+
+    def test_invalid_target_id_propagates_a_not_found_error(self):
+        from lifetxt.tui_remote_client import RemoteConnectionError
+
+        connection = _StubConnection()
+
+        def raising_request(method, path, json_body=None, if_match=None):
+            connection.calls.append((method, path, json_body, if_match))
+            raise RemoteConnectionError("No item with id 'nope'.")
+
+        connection.request = raising_request
+        backend = RemoteTuiBackend(connection)
+        with self.assertRaisesRegex(RemoteConnectionError, "No item with id"):
+            backend.native_timeline("nope")
+
+    def test_auth_and_network_errors_surface_without_local_fallback(self):
+        from lifetxt.tui_remote_client import RemoteAuthError, RemoteConnectionError
+
+        connection = _StubConnection()
+        backend = RemoteTuiBackend(connection)
+        connection.raise_next(RemoteAuthError("Authentication failed."))
+        with self.assertRaises(RemoteAuthError):
+            backend.native_timeline("t1")
+        connection.raise_next(RemoteConnectionError("Could not reach host."))
+        with self.assertRaises(RemoteConnectionError):
+            backend.native_timeline("t1")
+
+    def test_refuses_while_serving_offline_cached_data(self):
+        connection = _StubConnection()
+        backend = RemoteTuiBackend(connection, cache_enabled=True)
+        backend.serving_cache = True
+        backend.cache_saved_at = 0
+        with self.assertRaisesRegex(ValueError, "offline cached data"):
+            backend.native_timeline("t1")
+        # Never even attempted the network call.
+        self.assertEqual(0, len(connection.calls))
+
+    def test_local_and_remote_rendering_share_equivalent_event_ordering(self):
+        """Local and Remote TUI show equivalent event ordering/meaning for
+        the same server data (#768's own parity acceptance criterion),
+        since both ultimately render the identical temporal-timeline-v1
+        shape -- the remote path just fetches it over HTTP instead of
+        computing it from local items."""
+        from lifetxt.native_history import build_item_event
+        from lifetxt.native_timeline import native_timeline
+        from lifetxt.parser import parse_text
+        from lifetxt.serializer import item_to_line
+
+        created = build_item_event(
+            "t1",
+            "created",
+            "2026-09-10T10:00:00Z",
+            1,
+            "ITX-1",
+            "a" * 64,
+            item_kind="T",
+            item_title="Buy_milk",
+            after_status="[ ]",
+        )
+        text = "[ ] T Buy_milk id:t1\n" + item_to_line(created) + "\n"
+        items = parse_text(text)[0]
+        expected = native_timeline(items, "t1")
+
+        connection = _StubConnection()
+        connection._timeline_payload = expected
+        remote_backend = RemoteTuiBackend(connection)
+        remote_result = remote_backend.native_timeline("t1")
+
+        self.assertEqual(
+            [row["event"] for row in expected["events"]],
+            [row["event"] for row in remote_result["events"]],
+        )
+        self.assertEqual(expected["complete"], remote_result["complete"])
 
 
 if __name__ == "__main__":

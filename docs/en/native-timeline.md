@@ -43,3 +43,47 @@ Timeline document plus the standard source-set `revision`; it does not write
 the file or require Git.
 For exact Git revisions, continue to use `thread --revision`, `thread --as-of`,
 or `thread --diff`; those commands are unchanged.
+
+## Semantic as-of reconstruction
+
+`--as-of TIMESTAMP` reconstructs known/partial/unavailable per-field state at
+an offset-aware RFC3339 timestamp, alongside (not instead of) the bounded
+event list:
+
+```bash
+lifetxt timeline task-1 life.txt --as-of 2026-09-10T11:00:00Z
+lifetxt timeline task-1 life.txt --as-of 2026-09-10T11:00:00Z --json
+```
+
+`--as-of` uses the same offset-aware RFC3339 cutoff parser as
+`show --as-of`/`query --as-of` and rejects a naive or malformed timestamp
+with the same message. It cannot be combined with `--summary`, an analysis
+flag, or `--compare-window`/`--to-window`.
+
+Each field reports one of three states:
+
+- `known` -- reconstructed from a complete, gap-free item-event chain.
+- `partial` -- reconstructed from an applicable event, but the item's event
+  chain is not verified complete from creation, so an earlier gap could
+  still change the answer.
+- `unavailable` -- no applicable event exists at or before the cutoff, or
+  this field has no atomic capture route today. **This never falls back to
+  the item's current state.**
+
+The projected fields are `status` (lifecycle status), `due` (the `due:`
+schedule field, the only schedule field with an atomic capture route today),
+`follows`/`realizes`/`replaced_by` (lifecycle relations, replayed from
+`relation_added`/`relation_removed` events), and `on`/`from`/`to`/`at`
+(always `unavailable` -- these schedule fields have no capture route yet).
+
+This reuses the existing `native_timeline()`/`normalize_native_events()`
+reader and `item_event_completeness()` unmodified; it never falls back to
+current `life.txt` state and never composes Git.
+
+The `semantic_as_of` field in the JSON result uses
+[`semantic-as-of-v1.schema.json`](../../dist/schemas/semantic-as-of-v1.schema.json).
+This is a distinct, bounded contract from `temporal-timeline-v1`'s event
+list and from `temporal-thread-v1`'s Git-backed `historical`/`as of`
+revision snapshot: it never reads Git, and it never claims a field's state
+beyond what the captured `record:item_event` stream at or before the
+cutoff actually supports.

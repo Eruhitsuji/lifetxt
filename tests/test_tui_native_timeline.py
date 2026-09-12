@@ -13,11 +13,36 @@ from types import SimpleNamespace
 
 from lifetxt import tui_app
 from lifetxt.native_history import build_item_event
+from lifetxt.native_timeline import DEFAULT_LIMIT, native_timeline
 from lifetxt.parser import parse_text
 from lifetxt.serializer import item_to_line
 
 
 REVISION = "a" * 64
+
+
+class _FakeLocalBackend(object):
+    """Minimal stand-in for :class:`lifetxt.tui_backend.LocalTuiBackend`'s
+    ``native_timeline`` method (#768), so these tests keep exercising the
+    exact shared reader without constructing a real backend/args pair.
+    """
+
+    is_remote = False
+
+    def __init__(self, items):
+        self.items = items
+
+    def native_timeline(
+        self, target_id, since=None, until=None, event=None, limit=None
+    ):
+        return native_timeline(
+            self.items,
+            target_id,
+            limit=limit if limit is not None else DEFAULT_LIMIT,
+            since=since,
+            until=until,
+            event=event,
+        )
 
 
 def _fixture():
@@ -60,6 +85,7 @@ class TuiTimelineCommandTests(unittest.TestCase):
         row = {"id": "task-1"} if row is None else row
         return SimpleNamespace(
             args=SimpleNamespace(config_data={}),
+            backend=_FakeLocalBackend(self.items),
             _items=self.items,
             rows=[row],
             selected=0,

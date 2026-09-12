@@ -12721,6 +12721,34 @@ traceability:
         the integration branch before the final PR was opened.
       status: implemented
 
+  - requirement_id: req-771-777-batch-integration
+    capability_id: cap-native-timeline-cross-surface-ux
+    epic: https://github.com/Eruhitsuji/lifetxt/issues/775
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/771
+    pull_request: null
+    changed_files_or_scope:
+      - Web item drawer Timeline tab and bounded filter controls (#771/#772)
+      - TUI selected-item Timeline action and event cursor/detail view (#773/#774)
+      - Web/TUI structured common-field authoring (#776/#777)
+      - docs/en/cli.md
+      - docs/ja/cli.md
+      - .ai/project/CAPABILITIES.yml
+    tests_or_evidence:
+      - tests.test_web_native_timeline_visual
+      - tests.test_web_assets
+      - tests.test_tui_native_timeline
+      - tests.test_cui_extensions
+      - tests.test_surface_runtime
+      - tests.test_completion_surfaces
+      - python -m lifetxt check examples/minimal_life.txt
+    release_or_deployment: null
+    notes: >-
+      Implemented on feature/771-777-batch, with one child branch per issue
+      merged locally into the parent branch. No pull request was created per
+      the repository owner's request; human review and merge into main remain
+      outside this autonomous batch.
+    status: implemented
+
 required_chain:
   - Requirement
   - Capability

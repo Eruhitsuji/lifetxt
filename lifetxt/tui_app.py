@@ -1460,7 +1460,9 @@ def _cmd_add(state, argument):
     return ("success", "Added to %s: %s" % (os.path.basename(path), line))
 
 
-GUIDED_COMMON_KEYS = frozenset(("due", "do", "on", "from", "to", "at", "project", "priority", "tag", "progress"))
+GUIDED_COMMON_KEYS = frozenset(
+    ("due", "do", "on", "from", "to", "at", "project", "priority", "tag", "progress")
+)
 
 
 def _parse_guided_authoring(argument):
@@ -1483,7 +1485,10 @@ def _parse_guided_authoring(argument):
         key = key.strip().lower()
         value = value.strip()
         if key not in GUIDED_COMMON_KEYS:
-            raise ValueError("Unknown guided field %r. Use: %s" % (key, ", ".join(sorted(GUIDED_COMMON_KEYS))))
+            raise ValueError(
+                "Unknown guided field %r. Use: %s"
+                % (key, ", ".join(sorted(GUIDED_COMMON_KEYS)))
+            )
         if not value:
             continue
         if key in ("due", "do", "on"):
@@ -1493,25 +1498,39 @@ def _parse_guided_authoring(argument):
                 raise ValueError(str(exc))
         details[key] = [part.strip() for part in value.split(",") if part.strip()]
     if not title:
-        raise ValueError("Usage: /guided TITLE [due=DATE] [project=NAME] [priority=VALUE]")
+        raise ValueError(
+            "Usage: /guided TITLE [due=DATE] [project=NAME] [priority=VALUE]"
+        )
     return " ".join(title), details
 
 
 def _cmd_guided(state, argument):
     title, details = _parse_guided_authoring(argument)
     if state.backend.is_remote:
-        state.backend.create_item({"status": "[ ]", "type": "T", "title": title, "details": details})
+        state.backend.create_item(
+            {"status": "[ ]", "type": "T", "title": title, "details": details}
+        )
         state.reload()
         return ("success", "Added guided item: %s" % title)
     path = _write_target(state)
     existing = set(row.get("id") for row in state.rows if row.get("id"))
-    line = _quick_add_line(title, state.options["id_key"], existing_ids=existing, shorthand=False, extra_details=details)
+    line = _quick_add_line(
+        title,
+        state.options["id_key"],
+        existing_ids=existing,
+        shorthand=False,
+        extra_details=details,
+    )
     from . import mutation
     from .write_operations import append_life_records
 
     before = mutation.read_text_snapshot(path, allow_missing=True)
-    result = append_life_records(path, line + "\n", expected_revision=before.content_hash, operation="tui.guided")
-    _remember_undo(state, {path: before}, {path: result.after_hash}, "guided %s" % title)
+    result = append_life_records(
+        path, line + "\n", expected_revision=before.content_hash, operation="tui.guided"
+    )
+    _remember_undo(
+        state, {path: before}, {path: result.after_hash}, "guided %s" % title
+    )
     state.reload()
     return ("success", "Added guided item: %s" % title)
 
@@ -3087,12 +3106,29 @@ def _build_inspector(state, width, height):
             events = timeline["events"]
             if not events:
                 content.append([("no native history events", "hint")])
-            cursor = max(0, min(int(getattr(state, "_native_timeline_cursor", 0)), len(events) - 1)) if events else 0
+            cursor = (
+                max(
+                    0,
+                    min(
+                        int(getattr(state, "_native_timeline_cursor", 0)),
+                        len(events) - 1,
+                    ),
+                )
+                if events
+                else 0
+            )
             state._native_timeline_cursor = cursor
             for index, event in enumerate(events[:20]):
                 content.append(
                     [
-                        (pad(("> " if index == cursor else "  ") + str(event.get("record_kind") or "?"), 16), "row_selected" if index == cursor else "detail_key"),
+                        (
+                            pad(
+                                ("> " if index == cursor else "  ")
+                                + str(event.get("record_kind") or "?"),
+                                16,
+                            ),
+                            "row_selected" if index == cursor else "detail_key",
+                        ),
                         (
                             fit(
                                 "%s %s"
@@ -3117,14 +3153,31 @@ def _build_inspector(state, width, height):
                     ("sequence", selected_event.get("sequence")),
                 ]
                 payload = selected_event.get("payload") or {}
-                for key in ("before_status", "after_status", "before_progress", "after_progress", "field", "before", "after", "relation", "target"):
+                for key in (
+                    "before_status",
+                    "after_status",
+                    "before_progress",
+                    "after_progress",
+                    "field",
+                    "before",
+                    "after",
+                    "relation",
+                    "target",
+                ):
                     if key in payload:
                         detail_values.append((key, payload.get(key)))
                 for key, value in detail_values:
                     if value in (None, ""):
                         continue
-                    content.append([(pad(str(key), 12), "detail_key"), (fit(str(value), inner - 15, glyphs), "detail_value")])
-                content.append([("[ / ]", "hint"), ("previous / next timeline event", "hint")])
+                    content.append(
+                        [
+                            (pad(str(key), 12), "detail_key"),
+                            (fit(str(value), inner - 15, glyphs), "detail_value"),
+                        ]
+                    )
+                content.append(
+                    [("[ / ]", "hint"), ("previous / next timeline event", "hint")]
+                )
             bounds = timeline["bounds"]
             content.append(
                 [
@@ -3601,7 +3654,9 @@ def _timeline_cursor_move(state, delta):
     if not events:
         state.notify("Timeline has no returned events.", "info")
         return True
-    current = max(0, min(int(getattr(state, "_native_timeline_cursor", 0)), len(events) - 1))
+    current = max(
+        0, min(int(getattr(state, "_native_timeline_cursor", 0)), len(events) - 1)
+    )
     state._native_timeline_cursor = max(0, min(current + delta, len(events) - 1))
     return True
 

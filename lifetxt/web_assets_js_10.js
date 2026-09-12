@@ -340,8 +340,8 @@
       body.innerHTML =
         `<div class="drawer-tabs" role="tablist" aria-label="Item detail sections">` +
           `<button type="button" class="drawer-tab active" role="tab" aria-selected="true" aria-controls="drawer-tab-overview" onclick="switchDrawerTab('overview')">Overview</button>` +
-          `<button type="button" class="drawer-tab" role="tab" aria-selected="false" aria-controls="drawer-tab-timeline" onclick="switchDrawerTab('timeline')">Timeline</button>` +
-          `<button type="button" class="drawer-tab" role="tab" aria-selected="false" aria-controls="drawer-tab-relations" onclick="switchDrawerTab('relations')">Relations</button>` +
+          `<button type="button" class="drawer-tab help-target" role="tab" aria-selected="false" aria-controls="drawer-tab-timeline" data-help="See how this item changed over time." onclick="switchDrawerTab('timeline')">Timeline</button>` +
+          `<button type="button" class="drawer-tab help-target" role="tab" aria-selected="false" aria-controls="drawer-tab-relations" data-help="See items connected to this one." onclick="switchDrawerTab('relations')">Relations</button>` +
         `</div>` +
         `<section id="drawer-tab-overview" class="drawer-tab-panel" role="tabpanel">` +
           fieldsHtml + progressHtml + dueQuickHtml + bodyHtml +

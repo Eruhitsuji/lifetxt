@@ -388,6 +388,7 @@
     .nav-more[open] > summary { color: var(--accent-ink); background: var(--accent); }
     .nav-advanced { padding: .45rem; margin-top: .25rem; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow-2); }
     .nav-advanced .workspace-tab { white-space: nowrap; }
+    .field-help-text { display: block; color: var(--muted); font-size: .75rem; font-weight: 400; }
     .skip-link {
       position: fixed;
       top: .75rem;

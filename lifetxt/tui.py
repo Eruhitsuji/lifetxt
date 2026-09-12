@@ -842,21 +842,80 @@ def _clip_display_width(text, max_columns):
         return ""
     used = 0
     clipped = []
-    for char in text:
-        width = _char_display_width(char)
+    for cluster, width in _display_clusters(text):
         if used + width > max_columns:
             break
-        clipped.append(char)
+        clipped.append(cluster)
         used += width
     return "".join(clipped)
 
 
 def _char_display_width(char):
+    """Return the conservative cell width used by every TUI surface.
+
+    Ambiguous-width symbols are measured as two cells. This may leave a gap on
+    terminals configured for narrow ambiguous glyphs, but it cannot place the
+    next span inside a glyph rendered wide. Controls, combining marks, ZWJ,
+    and variation selectors do not consume an independent cell.
+    """
     if unicodedata.combining(char):
         return 0
+    if unicodedata.category(char) in ("Cf", "Mn", "Me"):
+        return 0
+    # Curses' box-drawing glyphs are part of the frame contract and are
+    # intentionally kept one cell wide; the frame builder repeats them to a
+    # measured width. Other ambiguous symbols use the conservative two-cell
+    # policy so adjacent user text cannot overlap.
+    if unicodedata.east_asian_width(char) == "A" and not (0x2500 <= ord(char) <= 0x257F):
+        return 2
     if unicodedata.east_asian_width(char) in ("F", "W"):
         return 2
+    if 0x1F000 <= ord(char) <= 0x1FAFF:
+        return 2
     return 1
+
+
+def _display_clusters(text):
+    """Yield ``(text, cells)`` without splitting terminal-style sequences."""
+    value = str(text or "")
+    index = 0
+    while index < len(value):
+        cluster = [value[index]]
+        index += 1
+        while index < len(value) and (
+            unicodedata.combining(value[index])
+            or unicodedata.category(value[index]) in ("Cf", "Mn", "Me")
+        ):
+            cluster.append(value[index])
+            index += 1
+        # Keep ZWJ emoji sequences together under a bounded two-cell policy.
+        while index < len(value) and cluster[-1] == "\u200d":
+            cluster.append(value[index])
+            index += 1
+            while index < len(value) and (
+                unicodedata.combining(value[index])
+                or unicodedata.category(value[index]) in ("Cf", "Mn", "Me")
+            ):
+                cluster.append(value[index])
+                index += 1
+        if cluster[0] == "\ufe0f" or "\u200d" in cluster:
+            width = 2
+        elif (
+            len(cluster) == 1
+            and 0x1F1E6 <= ord(cluster[0]) <= 0x1F1FF
+            and index < len(value)
+            and 0x1F1E6 <= ord(value[index]) <= 0x1F1FF
+        ):
+            cluster.append(value[index])
+            index += 1
+            width = 2
+        else:
+            width = max(_char_display_width(char) for char in cluster)
+        yield "".join(cluster), width
+
+
+def _display_width(text):
+    return sum(width for _cluster, width in _display_clusters(text))
 
 
 def render_dashboard(

@@ -2696,6 +2696,7 @@ row when nothing is marked.
 | `/due DATE` | Set `due:` using `today`, `tomorrow`, a weekday, `+3d`, or `-1w` |
 | `/assign USER` | Set `assignee:` |
 | `/add TITLE` | Append a new open task; capture sigils (`@ # ! ^`) are expanded |
+| `/related [parent\|related\|ref] TITLE` | Create a task related to the selected row, with its `id:`/`project:` prefilled (#770) |
 | `/delete yes` | Delete rows; refuses without the explicit `yes` |
 | `/edit` | Open the selected row in `$EDITOR` |
 | `/timer start\|stop\|status\|cancel` | Track elapsed time and write `elapsed:` on stop |

@@ -13891,6 +13891,11 @@ def command_timeline(args):
     if getattr(args, "workspace_timeline", False) and not raw_paths and workspace_target:
         raw_paths = [workspace_target]
         workspace_target = None
+    if not getattr(args, "workspace_timeline", False) and not getattr(args, "id", None):
+        sys.stderr.write(
+            "ERROR: timeline requires an item ID or --workspace-timeline.\n"
+        )
+        return 1
     paths = _normalize_paths(raw_paths, config, stdin_when_empty=False) or ["life.txt"]
     items, _diagnostics = _parse_or_exit(paths, config)
     if getattr(args, "workspace_timeline", False):
@@ -13938,9 +13943,7 @@ def command_timeline(args):
         if result["limitations"]:
             write_text(None, "  Limitations: %s\n" % ", ".join(result["limitations"]))
         return 0
-    if not getattr(args, "id", None):
-        sys.stderr.write("ERROR: timeline requires an item ID or --workspace-timeline.\n")
-        return 1
+
     def _window(value):
         if not value or str(value).count("..") != 1:
             raise ValueError("Timeline comparison windows must use START..END.")

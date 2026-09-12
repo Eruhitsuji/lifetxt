@@ -796,3 +796,10 @@ lifetxt serve life.txt --port 8080
 - Dashboard、Items、Team、Timeline の各表示は、同じ parse 結果と link graph を共有します。`duplicate_of:`、`replaced_by:`、`depends_on:`、`blocks:` の関係は Link API と GUI の両方で確認できます。
 - 古い Calendar 連携の説明は、実装済み機能として扱いません。現在の Web 画面で確認できるのは、life.txt ファイルから読み込んだ item、通知、リンク、補完、MCP/REST API です。
 - `/api/items`、`/api/agenda`、`/api/links` は UI と同じ workspace 解決を使います。設定や入力ファイルを切り替えた場合は、Web UI の表示と言語設定も同じ対象を見ていることを確認します。
+# 初心者向けの使い方
+
+まず「Today」で今必要なことを確認し、「Items」で記録を探し、「Create」
+からタスク・イベント・メモを追加します。空の画面ではデータがない場合と
+検索結果がない場合を区別して、次に行える安全な操作を示します。「More」
+からTimeline、Graph、Statsなどの専門画面を開けます。直接リンクも引き続き
+利用できます。

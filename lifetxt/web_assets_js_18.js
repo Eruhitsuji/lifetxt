@@ -101,6 +101,19 @@
     if (_structuredContainer) _structuredContainer.addEventListener("input", syncStructuredFieldsIntoDetails);
     refreshStructuredFields();
 
+    const _beginnerTodaySubsection = _todaySubsection;
+    _todaySubsection = function(title, rows, emptyText) {
+      rows = rows || [];
+      if (rows.length || !/^(Today|Due today|Next actions)$/i.test(title)) {
+        return _beginnerTodaySubsection(title, rows, emptyText);
+      }
+      const cta = title === "Today" || title === "Due today"
+        ? `<button type="button" class="secondary empty-cta" onclick="newItem()">＋ Add a task</button>`
+        : `<button type="button" class="secondary empty-cta" onclick="switchWorkspace('')">View all items</button>`;
+      return `<div class="today-subsection"><div class="today-subsection-title">${escapeHtml(title)} (0)</div>` +
+        `<div class="empty-state compact-empty"><div class="empty-title">${escapeHtml(emptyText)}</div>${cta}</div></div>`;
+    };
+
     // Keep advanced destinations discoverable without giving them equal first-
     // run prominence. Direct URLs still open the More group automatically.
     const _beginnerNavSyncViewTabs = syncViewTabs;

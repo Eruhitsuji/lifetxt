@@ -62,6 +62,8 @@
         "Items": "アイテム",
         "Agenda": "予定",
         "Timeline": "タイムライン",
+        "See how this item changed over time.": "この項目が時間とともにどう変化したかを確認します。",
+        "See items connected to this one.": "この項目に関連する項目を確認します。",
         "Calendar": "カレンダー",
         "Focus": "フォーカス",
         "Review": "レビュー",

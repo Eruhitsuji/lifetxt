@@ -1458,6 +1458,92 @@ def _cmd_add(state, argument):
     return ("success", "Added to %s: %s" % (os.path.basename(path), line))
 
 
+NEW_RELATED_FIELD_CHOICES = ("parent", "related", "ref")
+
+
+def _cmd_new_related(state, argument):
+    """Create a new item related to the currently selected row (#770).
+
+    ``/related [parent|related|ref] TITLE`` reuses exactly the same
+    local/remote create path ``/add`` already uses -- no second create
+    engine -- and only supplies visible initial detail values (the
+    selected row's id: as the relation target, and its project: when it
+    has one) before the new line is written, mirroring the Web UI's
+    ``+ Related`` button (#770).
+    """
+    tokens = (argument or "").split(None, 1)
+    field = "related"
+    rest = argument or ""
+    if tokens and tokens[0].strip().lower() in NEW_RELATED_FIELD_CHOICES:
+        field = tokens[0].strip().lower()
+        rest = tokens[1] if len(tokens) > 1 else ""
+    title = rest.strip()
+    if not title:
+        raise ValueError(
+            "Usage: /related [%s] TITLE (uses the selected row as context)"
+            % "|".join(NEW_RELATED_FIELD_CHOICES)
+        )
+    row = state.selected_row()
+    if not row:
+        raise ValueError("No row selected to use as context.")
+    target_id = row.get("id")
+    if not target_id:
+        raise ValueError("Selected row has no id: value; cannot create a related item.")
+    prefill_details = {field: [target_id]}
+    project_values = (row.get("details") or {}).get("project")
+    if project_values:
+        prefill_details["project"] = [project_values[0]]
+
+    if state.backend.is_remote:
+        from .shorthand import ShorthandError, parse_capture
+
+        try:
+            parsed_title, parsed_details = parse_capture(title, strict_dates=True)
+        except ShorthandError as exc:
+            raise ValueError(str(exc))
+        merged_details = {key: list(values) for key, values in prefill_details.items()}
+        for key, values in parsed_details.items():
+            merged_details[key] = list(values)
+        payload = {
+            "status": "[ ]",
+            "type": "T",
+            "title": parsed_title,
+            "details": merged_details,
+        }
+        state.backend.create_item(payload)
+        state.reload()
+        return (
+            "success",
+            "Added: %s (%s:%s)" % (parsed_title, field, target_id),
+        )
+    path = _write_target(state)
+    existing = set(r.get("id") for r in state.rows if r.get("id"))
+    line = _quick_add_line(
+        title,
+        state.options["id_key"],
+        existing_ids=existing,
+        extra_details=prefill_details,
+    )
+    from . import mutation
+    from .write_operations import append_life_records
+
+    before = mutation.read_text_snapshot(path, allow_missing=True)
+    result = append_life_records(
+        path,
+        line + "\n",
+        expected_revision=before.content_hash,
+        operation="tui.new_related",
+    )
+    _remember_undo(
+        state, {path: before}, {path: result.after_hash}, "related %s" % title
+    )
+    state.reload()
+    return (
+        "success",
+        "Added to %s: %s" % (os.path.basename(path), line),
+    )
+
+
 def _cmd_export(state, argument):
     parts = (argument or "").strip().split(None, 1)
     fmt = (parts[0] if parts else "md").lower()
@@ -1799,6 +1885,13 @@ COMMANDS = (
         "add", "TITLE", "Append a new open task to the write file", _cmd_add, alias="a"
     ),
     Command(
+        "related",
+        "[parent|related|ref] TITLE",
+        "Create a task related to the selected row",
+        _cmd_new_related,
+        values=("parent", "related", "ref"),
+    ),
+    Command(
         "delete",
         "yes",
         "Delete the marked or selected rows (needs confirmation)",
@@ -2115,7 +2208,15 @@ def _write_target(state):
     return paths[0]
 
 
-def _quick_add_line(title, id_key, existing_ids=None, shorthand=True):
+def _quick_add_line(
+    title, id_key, existing_ids=None, shorthand=True, extra_details=None
+):
+    """Build a new task line, optionally with context-supplied detail
+    values (#770) layered underneath whatever the capture shorthand
+    itself parses. ``extra_details`` never overrides a key the shorthand
+    already produced -- an explicit ``@project`` sigil, for example, still
+    wins over a caller-supplied ``project`` prefill.
+    """
     from .ids import generate_item_id
     from .model import Item
     from .serializer import item_to_line
@@ -2131,6 +2232,10 @@ def _quick_add_line(title, id_key, existing_ids=None, shorthand=True):
             if not parsed_title:
                 raise ValueError("Capture shorthand consumed the whole title.")
             title = parsed_title
+    if extra_details:
+        for key, values in extra_details.items():
+            if key not in details:
+                details[key] = list(values)
 
     item = Item("[ ]", "T", title, details or None, 0)
     item.details[id_key] = [generate_item_id(item, existing_ids=existing_ids)]

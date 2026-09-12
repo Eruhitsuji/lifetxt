@@ -66,6 +66,30 @@ class McpTestCase(unittest.TestCase):
         )
         return context, path
 
+    def test_semantic_as_of_tool_reuses_projection_and_is_read_only(self):
+        context, path = self._context(
+            content="[x] T Task id:t1\n", read_only=True
+        )
+        result = call_tool(
+            "get_semantic_as_of",
+            {"id": "t1", "as_of": "2026-09-10T00:00:00Z"},
+            context,
+        )
+        self.assertEqual("semantic-as-of-v1", result["schema"])
+        self.assertIn("status", result["fields"])
+        self.assertEqual("read", context.profile)
+        with open(path, encoding="utf-8") as handle:
+            self.assertEqual("[x] T Task id:t1\n", handle.read())
+
+    def test_semantic_as_of_rejects_invalid_cutoff_without_current_fallback(self):
+        context, _path = self._context()
+        with self.assertRaisesRegex(ValueError, "offset-aware"):
+            call_tool(
+                "get_semantic_as_of",
+                {"id": "t1", "as_of": "2026-09-10T00:00:00"},
+                context,
+            )
+
     def test_temporal_thread_tool_is_read_only_and_revision_aware(self):
         context, _path = self._context(
             content=(

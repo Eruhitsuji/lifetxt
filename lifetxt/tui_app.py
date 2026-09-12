@@ -435,6 +435,7 @@ class WorkspaceState(object):
         self._temporal_thread_target = None
         self._native_timeline = None
         self._native_timeline_target = None
+        self._native_timeline_cursor = 0
         # Remote connection status (#680). Meaningless for a local backend;
         # "connected" is the default so a local session never shows a
         # spurious disconnected indicator.
@@ -1103,6 +1104,7 @@ def _cmd_timeline(state, argument):
         event=filters.get("event"),
     )
     state._native_timeline_target = item_id
+    state._native_timeline_cursor = 0
     state.show_detail = True
     result = state._native_timeline
     return (
@@ -3005,10 +3007,12 @@ def _build_inspector(state, width, height):
             events = timeline["events"]
             if not events:
                 content.append([("no native history events", "hint")])
-            for event in events[:20]:
+            cursor = max(0, min(int(getattr(state, "_native_timeline_cursor", 0)), len(events) - 1)) if events else 0
+            state._native_timeline_cursor = cursor
+            for index, event in enumerate(events[:20]):
                 content.append(
                     [
-                        (pad(str(event.get("record_kind") or "?"), 16), "detail_key"),
+                        (pad(("> " if index == cursor else "  ") + str(event.get("record_kind") or "?"), 16), "row_selected" if index == cursor else "detail_key"),
                         (
                             fit(
                                 "%s %s"
@@ -3023,6 +3027,24 @@ def _build_inspector(state, width, height):
                         ),
                     ]
                 )
+            if events:
+                selected_event = events[cursor]
+                content.append([("EVENT DETAIL", "panel_title")])
+                detail_values = [
+                    ("at", selected_event.get("at")),
+                    ("event", selected_event.get("event")),
+                    ("source", selected_event.get("record_kind")),
+                    ("sequence", selected_event.get("sequence")),
+                ]
+                payload = selected_event.get("payload") or {}
+                for key in ("before_status", "after_status", "before_progress", "after_progress", "field", "before", "after", "relation", "target"):
+                    if key in payload:
+                        detail_values.append((key, payload.get(key)))
+                for key, value in detail_values:
+                    if value in (None, ""):
+                        continue
+                    content.append([(pad(str(key), 12), "detail_key"), (fit(str(value), inner - 15, glyphs), "detail_value")])
+                content.append([("[ / ]", "hint"), ("previous / next timeline event", "hint")])
             bounds = timeline["bounds"]
             content.append(
                 [
@@ -3327,6 +3349,8 @@ def _key_reference(state):
         ("ctrl-u / ctrl-k", "delete before or after the cursor"),
         ("ctrl-c", "quit"),
     ]
+    if getattr(state, "_native_timeline", None):
+        shared.insert(0, ("[ / ]", "previous / next event in the open timeline"))
     if state.keymap == "prompt":
         return shared
     return _effective_binding_rows(state) + shared
@@ -3491,6 +3515,17 @@ def _action_timeline(state, page):
     return True
 
 
+def _timeline_cursor_move(state, delta):
+    timeline = getattr(state, "_native_timeline", None) or {}
+    events = timeline.get("events") or []
+    if not events:
+        state.notify("Timeline has no returned events.", "info")
+        return True
+    current = max(0, min(int(getattr(state, "_native_timeline_cursor", 0)), len(events) - 1))
+    state._native_timeline_cursor = max(0, min(current + delta, len(events) - 1))
+    return True
+
+
 def _action_toggle_mark(state, page):
     _safe_command(state, "/mark toggle")
     return True
@@ -3564,6 +3599,8 @@ def _resolve_bindings_or_fallback(keymap, overrides):
 
 
 def _handle_nav_key(state, key, page):
+    if key in ("[", "]") and getattr(state, "_native_timeline", None):
+        return _timeline_cursor_move(state, -1 if key == "[" else 1)
     action = (getattr(state, "action_by_key", None) or {}).get(key)
     if action is not None:
         handler = _ACTION_HANDLERS.get(action)

@@ -9513,3 +9513,169 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-native-timeline-web-visual-explorer
+    name: Visual Native Timeline explorer in the Web UI
+    summary: >-
+      A pure-presentation Web UI panel (item detail drawer) turning the
+      existing temporal-timeline-v1 result from GET
+      /api/native-timeline/{id} (#762) into a day-grouped, scannable
+      chronological view, replacing the prior flat 20-row event list.
+      Reuses the shared reader/API unmodified: no history parsing,
+      ordering, or completeness computation lives in JavaScript.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-native-timeline-web-visual-explorer
+    implementation_locations:
+      - lifetxt/web_assets_js_11.js
+      - lifetxt/web_assets_css_04.css
+      - tests/test_web_native_timeline_visual.py
+      - docs/en/web.md
+      - docs/ja/web.md
+    public_interfaces:
+      - Web UI item detail drawer, Native Timeline section
+      - lifetxt.web_assets_js_11 renderNativeTimelinePanel/reloadNativeTimelinePanel (client-side)
+    tests_or_evidence:
+      - "tests/test_web_native_timeline_visual.py (13 Node.js-driven tests, real assembled Web UI script extracted from lifetxt.web_assets.HTML_PAGE): event-domain labels, before/after transition rendering for status/progress/schedule/relation payloads (and escaping of hostile payload text), date-grouping key, bounded progress-percentage trend indicator (ignoring fraction-form values), missing-result/empty-state handling, completeness badge, day grouping, prominent limitations/invalid-event/diagnostics display, bounds summary, HTML escaping of event/payload text, and that filter controls are always present"
+      - python -m unittest tests.test_web_native_timeline_visual -> Ran 13 tests, OK
+      - python -m unittest tests.test_web_native_timeline tests.test_web_assets tests.test_web_i18n tests.test_web_commands tests.test_surface_runtime tests.test_release_policy -> all pass (LEGACY_PRISTINE_GIT_BLOB_SHA updated to the intentionally changed served page; 2 new dictionary entries added for translation-coverage parity)
+      - "node --check on the full assembled Web UI script body (all fragments concatenated) -> no syntax error"
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - ruff format --check / ruff check on changed Python files -> clean
+      - "scripts/validate_release_docs.py -> errors 0, ok true"
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/769
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Self-scoped and implemented per explicit repository owner instruction
+      to build a bounded first version rather than defer further. Design
+      decisions made without a synchronous human round-trip, recorded here
+      rather than left implicit: (1) the visual explorer replaces the
+      existing minimal "Native Timeline" list in the same drawer section
+      rather than adding a wholly separate page/route, since #769 itself
+      frames this as visualizing the same #762 foundation, not a new
+      surface; (2) events are displayed newest first (reversing the API's
+      chronological-ascending order) purely as a presentation choice
+      matching the issue's own example, with no change to the underlying
+      ordering contract; (3) known before/after payload shapes
+      (before_status/after_status, before_progress/after_progress,
+      field+before/after, relation+target) get a compact transition chip;
+      any other payload shape falls back to a generic expandable key/value
+      list rather than hardcoding every ticket-event shape, so a payload
+      shape this pass did not anticipate still renders safely as text
+      instead of being silently dropped; (4) the bounded progress trend
+      only considers whole-percentage progress values (matching
+      lifetxt.progress's percentage representation) and is omitted
+      entirely below two data points or for fraction-form values -- the
+      exact value is always available via the event's own transition
+      chip/details regardless. TUI/MCP timeline surfaces (#761/#719) and
+      the underlying /api/native-timeline/{id} route (#762) are
+      unchanged; a future analytics/summary layer remains explicitly out
+      of scope per #769's own text. Landed on child branch
+      issue-769-native-timeline-visual-explorer, merged locally into
+      feature/769-770-batch.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-context-aware-related-item-create
+    name: Context-aware related-item creation (Web UI and TUI)
+    summary: >-
+      Create-time prefill of project: and an explicit
+      parent:/related:/ref: relation from the currently selected
+      item/project context, in both the Web UI (a "+ Related" button in
+      the item drawer, plus a per-project "+" button on the Dashboard)
+      and the local/Remote TUI (/related [parent|related|ref] TITLE). The
+      prefilled fields are always a visible, fully editable/removable
+      proposal -- never hidden semantics -- and every path reuses the
+      exact existing create/validation/mutation engine unchanged.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-context-aware-related-item-create
+    implementation_locations:
+      - lifetxt/web_assets_js_05.js
+      - lifetxt/web_assets_js_10.js
+      - lifetxt/web_assets_js_16.js
+      - lifetxt/web_assets.html
+      - lifetxt/web_assets_js_01.js
+      - lifetxt/tui_app.py
+      - tests/test_web_context_create_js.py
+      - tests/test_cui_extensions.py
+      - tests/test_tui_remote_backend.py
+      - docs/en/web.md
+      - docs/ja/web.md
+      - docs/en/cli.md
+      - docs/ja/cli.md
+    public_interfaces:
+      - Web UI item drawer "+ Related" button
+      - Web UI Dashboard Projects card per-row "+" button
+      - lifetxt.web_assets_js_05 newItemWithContext/drawerCreateRelated/newRelatedItemFromProject (client-side)
+      - TUI /related [parent|related|ref] TITLE
+      - lifetxt.tui_app._cmd_new_related
+      - lifetxt.tui_app._quick_add_line (extra_details parameter)
+    tests_or_evidence:
+      - "tests/test_web_context_create_js.py (11 Node.js-driven tests): project-only/relation-only/combined prefill, no-context leaves the create form byte-unchanged, project-dashboard-button prefill and its documented empty-project no-op, missing-drawer-item and missing-id failures reported visibly (never a silent guess), happy-path relation+inherited-project prefill with the drawer closing, explicit non-default relation choice honored, cancelling the relation prompt performs no mutation and never opens the editor, an invalid relation choice fails visibly with no silent rebind"
+      - python -m unittest tests.test_web_context_create_js -> Ran 11 tests, OK
+      - "tests/test_cui_extensions.py WorkspaceStateTests (6 new tests): /related prefills relation+inherited project from the selected row through the real guarded write path, explicit field choice, missing-id-context failure with the file left byte-unchanged, missing-title usage error, an explicit capture-shorthand override winning over the prefilled project, and /undo reverting the new line"
+      - "tests/test_tui_remote_backend.py WorkspaceStateRemoteWiringTests (2 new tests): /related creates the item through a real POST /api/items call against the Remote TUI backend (never a local write target), and a missing context id fails before any request is made"
+      - python -m unittest tests.test_cui_extensions.WorkspaceStateTests tests.test_tui_remote_backend.WorkspaceStateRemoteWiringTests -> Ran 36 tests, OK
+      - python -m unittest tests.test_tui_backend tests.test_tui_remote_client tests.test_tui_remote_cache tests.test_completion_surfaces tests.test_completion_values tests.test_surface_runtime tests.test_cli_taxonomy -> all pass (the TUI documentation drift gate confirms docs/en/cli.md's command table matches tui_app.COMMANDS after adding /related)
+      - "confirmed pre-existing, unrelated to this change: tests.test_tui_remote_backend.RemoteTuiBackendEditorTests's 3 vim/nvim PATHEXT-resolution failures reproduce identically via git stash against the unmodified #769-merged baseline"
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - ruff format --check / ruff check on changed Python files -> clean
+      - "scripts/validate_release_docs.py -> errors 0, ok true"
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/770
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Self-scoped and implemented per explicit repository owner instruction
+      to build a bounded first version rather than defer further,
+      following #770's own "Design principle" section closely: the
+      selected context is always a visible, reviewable, editable prefill,
+      never inferred or auto-committed. Design/UX decisions made without a
+      synchronous human round-trip, recorded here: (1) only project: plus
+      one explicit parent:/related:/ref: choice are ever prefilled -- the
+      exact bounded relation subset #770 names -- with no new relation
+      vocabulary and no combination beyond those two concerns; (2) the Web
+      "+ Related" action lives in the item drawer's existing head-button
+      row (next to Edit) and reuses the existing plain-text edit-details
+      textarea as the review/edit surface, since that textarea is already
+      the project's own visible-and-editable mechanism for every other
+      detail value -- no new modal or richer relation-picker UI was
+      introduced; the relation field choice itself is collected via the
+      existing prompt() pattern already used elsewhere in this codebase
+      (e.g. bulk "Set project..."), not a new custom widget; (3) the
+      Dashboard's per-project "+" button is the chosen project-scoped Web
+      UI context entry point, since this Web UI's Items view filter bar
+      has no dedicated single-project-scoped page of its own to attach a
+      create action to; (4) the TUI command was named /related rather than
+      the issue's own suggested /new-related, because the existing
+      _TUI_DOC_ROW documentation-drift-gate regex
+      (tests.test_surface_runtime.TuiDocumentationDriftTests) only accepts
+      [a-z_]+ command names and no existing TUI command uses a hyphen --
+      /related avoids introducing the first hyphenated command name while
+      keeping the same [parent|related|ref] TITLE argument shape the
+      issue itself proposes; (5) an explicit capture-shorthand token (e.g.
+      an @project sigil) always wins over a context-supplied prefill for
+      the same key, satisfying #770's own "can be reviewed, changed, or
+      removed" requirement for the TUI path the same way the Web textarea
+      already does for its path. Remote TUI parity is achieved with zero
+      new server-side code: _cmd_new_related branches on the pre-existing
+      state.backend.is_remote/state.backend.create_item() seam _cmd_add
+      (#677/#679) already established, so the authoritative create/
+      validation/mutation and revision/conflict contract is identical to
+      every other TUI-initiated create. Native History created-event
+      emission (#714/#767) is automatic and unmodified, since contextual
+      creation is not a separate code path from the ordinary create route
+      it wraps. Landed on child branch
+      issue-770-context-aware-related-item-create, merged locally into
+      feature/769-770-batch.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

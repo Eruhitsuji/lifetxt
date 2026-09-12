@@ -181,3 +181,49 @@ event emissionを停止します。旧parserはpermissive custom-key parsingに�
    lifecycle mutationをatomicにcaptureします。
 3. [#715](https://github.com/Eruhitsuji/lifetxt/issues/715): #713の後、boundedな
    native Temporal Timelineを追加します。#714とは独立して進行できます。
+
+## Surface横断の capture parity（#767）
+
+自動 Native History capture は現在 CLI 限定です。`lifetxt done`、`complete`、
+`reopen`、`due` はそれぞれ `native_history_mutation.
+commit_item_mutation_with_event`/`augment_item_mutation_with_event` を直接
+呼び出すため、対応する CLI mutation は必ず state 変更と同じ atomic write の
+中で対応する typed `record:item_event` を生成します。
+
+Web UI/API（`PUT /api/items/id/{id}` -- Remote TUI もこれを authoritative な
+write route として使用）、local TUI の row edit
+（`lifetxt.tui_backend.LocalTuiBackend.apply_semantic_changes`）、および
+Remote TUI 自身の edit は、今日時点でどの Native History producer も呼び出し
+ません。これらの surface から status/due/relation を変更しても
+`record:item_event` は一切生成されません -- これは設計上の選択ではなく、
+#767 の investigation が見つけた実際の gap です。
+
+この gap を安全に閉じられるようにするため、
+`lifetxt.native_history_mutation.infer_item_event_specs(before, after)` を
+新しく追加しました。これは `augment_item_mutation_with_event` がすでに
+発行しているのと全く同じ event vocabulary と field scope（status family、
+`due:` schedule field、`follows`/`realizes`/`replaced_by` relation）を、
+before/after の `Item` pair から純粋に file I/O なしで分類する pure
+classifier です。event 形状のロジックは一切重複させておらず、完全に
+unit test されています
+（`tests/test_native_history_mutation.py::InferItemEventSpecsTests`）が、
+まだどの live write path にも組み込まれていません。
+
+これを安全に組み込むには、Web UI/API の `update_item_in_file`、
+（CLI の generic path と local TUI がすでに共有している）
+`lifetxt.write_operations.mutate_items`/`mutate_item_files`、Remote TUI の
+edit route のそれぞれが、置換 text を組み立て、推論された event を
+#714 が CLI の専用コマンドですでに確立した「1回の write」保証と同じ形で
+一緒に commit する必要があります。これはこのプロジェクトの共有された、
+広く使われている mutation の primitive 自体への変更であり、局所的な修正
+ではないため、このプロジェクト自身の
+[Task Decomposition Standard](../../.ai/managed/core/TASK_DECOMPOSITION.md)
+が示す「独立した write path を安全にまとめてレビューできない場合は task を
+分割する」という指針に従い、意図的にこの回では実施していません。これは
+黙って落とした requirement ではなく、記録された明示的な follow-up です。
+
+その follow-up が着地するまで、Web UI・local TUI・Remote TUI から item を
+編集することは従来どおり有効な workflow です -- ただ、その変更についての
+Native History evidence はまだ（今のところ）生成されません。これは
+直接の手動 text edit がすでに持っている、推測しない partial-completeness
+の挙動と同じです。

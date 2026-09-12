@@ -837,6 +837,14 @@ class TuiTests(unittest.TestCase):
         self.assertEqual("あい", tui._clip_display_width("あいう", 4))
         self.assertEqual("ab", tui._clip_display_width("abc", 2))
 
+    def test_shared_width_policy_handles_ambiguous_and_unicode_sequences(self):
+        self.assertEqual(2, tui._char_display_width("●"))
+        self.assertEqual(1, tui._display_width("e\u0301"))
+        self.assertEqual(2, tui._display_width("🇯🇵"))
+        self.assertEqual(2, tui._display_width("👩\u200d💻"))
+        self.assertEqual("e\u0301", tui._clip_display_width("e\u0301x", 1))
+        self.assertEqual("👩\u200d💻", tui._clip_display_width("👩\u200d💻x", 2))
+
     def test_section_navigation(self):
         self.assertEqual("agenda", tui.next_section("tasks"))
         self.assertEqual("status", tui.previous_section("tasks"))
@@ -2356,8 +2364,8 @@ class WorkspaceFrameTests(unittest.TestCase):
         state = self._state()
         line = tui_app.build_frame(state, 92, 30)[3]
         text = tui_app.spans_to_text(line)
-        self.assertIn(">all", text)
-        marker_start = text.index(">all")
+        self.assertIn("> all", text)
+        marker_start = text.index("> all")
         self.assertEqual(1, tui_app.display_width(text[marker_start:marker_start + 1]))
         self.assertLessEqual(tui_app.display_width(text), 92)
 

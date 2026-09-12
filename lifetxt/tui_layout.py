@@ -1,10 +1,10 @@
 """Pure display-width and frame-text helpers for the interactive TUI."""
 
-from .tui import _char_display_width, _clip_display_width
+from .tui import _clip_display_width, _display_width
 
 
 def display_width(text):
-    return sum(_char_display_width(char) for char in str(text or ""))
+    return _display_width(text)
 
 
 def fit(text, width, glyphs=None):

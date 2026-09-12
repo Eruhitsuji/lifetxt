@@ -435,6 +435,7 @@ class WorkspaceState(object):
         self._temporal_thread_target = None
         self._native_timeline = None
         self._native_timeline_target = None
+        self._native_timeline_cursor = 0
         # Remote connection status (#680). Meaningless for a local backend;
         # "connected" is the default so a local session never shows a
         # spurious disconnected indicator.
@@ -1103,6 +1104,7 @@ def _cmd_timeline(state, argument):
         event=filters.get("event"),
     )
     state._native_timeline_target = item_id
+    state._native_timeline_cursor = 0
     state.show_detail = True
     result = state._native_timeline
     return (
@@ -1456,6 +1458,93 @@ def _cmd_add(state, argument):
     _remember_undo(state, {path: before}, {path: result.after_hash}, "add %s" % title)
     state.reload()
     return ("success", "Added to %s: %s" % (os.path.basename(path), line))
+
+
+GUIDED_COMMON_KEYS = frozenset(
+    ("due", "do", "on", "from", "to", "at", "project", "priority", "tag", "progress")
+)
+
+
+def _parse_guided_authoring(argument):
+    """Parse ``title key=value`` tokens without making key:value syntax
+    necessary for common fields.  Values still flow through the normal
+    shorthand/date validation and the canonical mutation serializer.
+    """
+    import shlex
+
+    tokens = shlex.split(argument or "")
+    title = []
+    details = {}
+    from .shorthand import ShorthandError, resolve_date_token
+
+    for token in tokens:
+        if "=" not in token:
+            title.append(token)
+            continue
+        key, value = token.split("=", 1)
+        key = key.strip().lower()
+        value = value.strip()
+        if key not in GUIDED_COMMON_KEYS:
+            raise ValueError(
+                "Unknown guided field %r. Use: %s"
+                % (key, ", ".join(sorted(GUIDED_COMMON_KEYS)))
+            )
+        if not value:
+            continue
+        if key in ("due", "do", "on"):
+            try:
+                value = resolve_date_token(value, strict=True)
+            except ShorthandError as exc:
+                raise ValueError(str(exc))
+        details[key] = [part.strip() for part in value.split(",") if part.strip()]
+    if not title:
+        raise ValueError(
+            "Usage: /guided TITLE [due=DATE] [project=NAME] [priority=VALUE]"
+        )
+    return " ".join(title), details
+
+
+def _cmd_guided(state, argument):
+    title, details = _parse_guided_authoring(argument)
+    if state.backend.is_remote:
+        state.backend.create_item(
+            {"status": "[ ]", "type": "T", "title": title, "details": details}
+        )
+        state.reload()
+        return ("success", "Added guided item: %s" % title)
+    path = _write_target(state)
+    existing = set(row.get("id") for row in state.rows if row.get("id"))
+    line = _quick_add_line(
+        title,
+        state.options["id_key"],
+        existing_ids=existing,
+        shorthand=False,
+        extra_details=details,
+    )
+    from . import mutation
+    from .write_operations import append_life_records
+
+    before = mutation.read_text_snapshot(path, allow_missing=True)
+    result = append_life_records(
+        path, line + "\n", expected_revision=before.content_hash, operation="tui.guided"
+    )
+    _remember_undo(
+        state, {path: before}, {path: result.after_hash}, "guided %s" % title
+    )
+    state.reload()
+    return ("success", "Added guided item: %s" % title)
+
+
+def _cmd_guided_edit(state, argument):
+    """Apply common fields to the selected item using the same write path."""
+    _title, details = _parse_guided_authoring("placeholder " + (argument or ""))
+    if not details:
+        raise ValueError("Usage: /guided-edit key=value [key=value ...]")
+    rows = state.target_rows()
+    if not rows:
+        raise ValueError("Select an item before using /guided-edit.")
+    count = _set_row_details(state, rows, details, "guided edit")
+    return ("success", "Updated guided fields on %d item(s)." % count)
 
 
 NEW_RELATED_FIELD_CHOICES = ("parent", "related", "ref")
@@ -1883,6 +1972,18 @@ COMMANDS = (
     ),
     Command(
         "add", "TITLE", "Append a new open task to the write file", _cmd_add, alias="a"
+    ),
+    Command(
+        "guided",
+        "TITLE [key=value ...]",
+        "Create a task with guided common fields (due/project/priority/tag/progress)",
+        _cmd_guided,
+    ),
+    Command(
+        "guided_edit",
+        "key=value [key=value ...]",
+        "Edit common fields on the selected item without raw key:value syntax",
+        _cmd_guided_edit,
     ),
     Command(
         "related",
@@ -3005,10 +3106,29 @@ def _build_inspector(state, width, height):
             events = timeline["events"]
             if not events:
                 content.append([("no native history events", "hint")])
-            for event in events[:20]:
+            cursor = (
+                max(
+                    0,
+                    min(
+                        int(getattr(state, "_native_timeline_cursor", 0)),
+                        len(events) - 1,
+                    ),
+                )
+                if events
+                else 0
+            )
+            state._native_timeline_cursor = cursor
+            for index, event in enumerate(events[:20]):
                 content.append(
                     [
-                        (pad(str(event.get("record_kind") or "?"), 16), "detail_key"),
+                        (
+                            pad(
+                                ("> " if index == cursor else "  ")
+                                + str(event.get("record_kind") or "?"),
+                                16,
+                            ),
+                            "row_selected" if index == cursor else "detail_key",
+                        ),
                         (
                             fit(
                                 "%s %s"
@@ -3022,6 +3142,41 @@ def _build_inspector(state, width, height):
                             "detail_value",
                         ),
                     ]
+                )
+            if events:
+                selected_event = events[cursor]
+                content.append([("EVENT DETAIL", "panel_title")])
+                detail_values = [
+                    ("at", selected_event.get("at")),
+                    ("event", selected_event.get("event")),
+                    ("source", selected_event.get("record_kind")),
+                    ("sequence", selected_event.get("sequence")),
+                ]
+                payload = selected_event.get("payload") or {}
+                for key in (
+                    "before_status",
+                    "after_status",
+                    "before_progress",
+                    "after_progress",
+                    "field",
+                    "before",
+                    "after",
+                    "relation",
+                    "target",
+                ):
+                    if key in payload:
+                        detail_values.append((key, payload.get(key)))
+                for key, value in detail_values:
+                    if value in (None, ""):
+                        continue
+                    content.append(
+                        [
+                            (pad(str(key), 12), "detail_key"),
+                            (fit(str(value), inner - 15, glyphs), "detail_value"),
+                        ]
+                    )
+                content.append(
+                    [("[ / ]", "hint"), ("previous / next timeline event", "hint")]
                 )
             bounds = timeline["bounds"]
             content.append(
@@ -3327,6 +3482,8 @@ def _key_reference(state):
         ("ctrl-u / ctrl-k", "delete before or after the cursor"),
         ("ctrl-c", "quit"),
     ]
+    if getattr(state, "_native_timeline", None):
+        shared.insert(0, ("[ / ]", "previous / next event in the open timeline"))
     if state.keymap == "prompt":
         return shared
     return _effective_binding_rows(state) + shared
@@ -3486,6 +3643,24 @@ def _action_open(state, page):
     return True
 
 
+def _action_timeline(state, page):
+    _safe_command(state, "/timeline")
+    return True
+
+
+def _timeline_cursor_move(state, delta):
+    timeline = getattr(state, "_native_timeline", None) or {}
+    events = timeline.get("events") or []
+    if not events:
+        state.notify("Timeline has no returned events.", "info")
+        return True
+    current = max(
+        0, min(int(getattr(state, "_native_timeline_cursor", 0)), len(events) - 1)
+    )
+    state._native_timeline_cursor = max(0, min(current + delta, len(events) - 1))
+    return True
+
+
 def _action_toggle_mark(state, page):
     _safe_command(state, "/mark toggle")
     return True
@@ -3538,6 +3713,7 @@ _ACTION_HANDLERS = {
     "first": _action_first,
     "last": _action_last,
     "open": _action_open,
+    "timeline": _action_timeline,
     "toggle_mark": _action_toggle_mark,
     "done": _action_done,
     "search": _action_search,
@@ -3558,6 +3734,8 @@ def _resolve_bindings_or_fallback(keymap, overrides):
 
 
 def _handle_nav_key(state, key, page):
+    if key in ("[", "]") and getattr(state, "_native_timeline", None):
+        return _timeline_cursor_move(state, -1 if key == "[" else 1)
     action = (getattr(state, "action_by_key", None) or {}).get(key)
     if action is not None:
         handler = _ACTION_HANDLERS.get(action)

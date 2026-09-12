@@ -60,10 +60,18 @@
         `<label>Status<select id="drawer-edit-status">${statusOpts}</select></label>` +
         `<label>Type<select id="drawer-edit-type">${typeOpts}</select></label>` +
         `<label>Title<input id="drawer-edit-title" value="${escapeHtml(item.title)}" required autocomplete="off"></label>` +
+        `<div id="drawer-edit-structured-fields" class="structured-fields">${renderStructuredFields("drawer-edit", item.details || {}, item.type)}</div>` +
         `<label>Details<textarea id="drawer-edit-details" rows="7" placeholder="due:2026-01-01&#10;project:work">${escapeHtml(detailsToText(item.details))}</textarea></label>` +
         `</form>`;
       // Freshly built markup, so its completion has to be wired up again.
       setupCompletion();
+      document.getElementById("drawer-edit-type").addEventListener("change", () => {
+        const details = _structuredDetails("drawer-edit-details", "drawer-edit");
+        document.getElementById("drawer-edit-structured-fields").innerHTML = renderStructuredFields("drawer-edit", details, document.getElementById("drawer-edit-type").value);
+      });
+      document.getElementById("drawer-edit-structured-fields").addEventListener("input", () => {
+        document.getElementById("drawer-edit-details").value = detailsToText(_structuredDetails("drawer-edit-details", "drawer-edit"));
+      });
       document.getElementById("drawer-edit-title").focus();
     }
 
@@ -81,7 +89,7 @@
         status: document.getElementById("drawer-edit-status").value,
         type: document.getElementById("drawer-edit-type").value,
         title: titleEl.value.trim(),
-        details: parseDetails(document.getElementById("drawer-edit-details").value),
+        details: _structuredDetails("drawer-edit-details", "drawer-edit"),
       };
       try {
         await api(`/api/items/${saveLine}`, {

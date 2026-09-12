@@ -131,7 +131,13 @@
       const more = document.getElementById("nav-more");
       const advanced = new Set(["agenda", "timeline", "calendar", "focus", "review", "messages", "team", "status", "notifications", "stats", "graph", "display", "kiosk"]);
       if (more && advanced.has(currentView())) more.open = true;
+      const summary = document.getElementById("nav-more-summary");
+      if (summary && more) summary.setAttribute("aria-expanded", more.open ? "true" : "false");
     };
+    const _moreNav = document.getElementById("nav-more");
+    if (_moreNav) _moreNav.addEventListener("toggle", () => {
+      document.getElementById("nav-more-summary")?.setAttribute("aria-expanded", _moreNav.open ? "true" : "false");
+    });
       applyPresetToUrl();
       applyUrlToControls();
       updateNotifPermissionDisplay();

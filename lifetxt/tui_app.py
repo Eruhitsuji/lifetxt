@@ -1065,16 +1065,18 @@ def _cmd_thread(state, argument):
 def _cmd_timeline(state, argument):
     """Show the selected or named item's shared Native Temporal Timeline.
 
-    Delegates entirely to the existing shared read model
-    (:func:`lifetxt.native_timeline.native_timeline`); this command adds no
-    history/filtering/analytics logic of its own (#761), mirroring how
+    Delegates entirely to ``state.backend.native_timeline()`` (#678/#768):
+    locally that is the exact same shared read model
+    (:func:`lifetxt.native_timeline.native_timeline`) this command always
+    called directly (#761); against a Remote TUI connection it is the
+    server's own read-only ``GET /api/native-timeline/{id}`` route (#762)
+    instead of parsing/normalizing history client-side. This command adds
+    no history/filtering/analytics logic of its own, mirroring how
     ``/thread`` delegates to :mod:`lifetxt.temporal_thread`. Supports the
     smallest useful subset of the existing ``since``/``until``/``event``
     filters as trailing ``key=value`` tokens, e.g. ``/timeline t1
     since=2026-01-01T00:00:00Z event=relation_added``.
     """
-    from .native_timeline import native_timeline
-
     tokens = (argument or "").split()
     filters = {}
     item_id = None
@@ -1094,12 +1096,8 @@ def _cmd_timeline(state, argument):
             "Usage: /timeline ID [since=TIMESTAMP] [until=TIMESTAMP] "
             "[event=TYPE] (or select a row with an ID)"
         )
-    config = getattr(state.args, "config_data", None) or {}
-    key = id_key_from_config(config)
-    state._native_timeline = native_timeline(
-        state._items,
+    state._native_timeline = state.backend.native_timeline(
         item_id,
-        id_key=key,
         since=filters.get("since"),
         until=filters.get("until"),
         event=filters.get("event"),

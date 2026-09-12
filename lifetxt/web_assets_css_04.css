@@ -616,3 +616,32 @@
       .nt-filters input { width: 100%; }
       .nt-head { flex-direction: column; gap: .1rem; }
     }
+
+    /* #791: surface rollout of the shared control geometry.  These selectors
+       deliberately affect presentation only; semantic variants retain their
+       colors while sharing the same row height. */
+    button.secondary, button.danger, button.filter-btn, button.workspace-tab,
+    button.review-range-btn, button.chart-tab, button.chart-group-btn,
+    button.graph-layout-btn, button.graph-export-btn {
+      min-height: var(--control-height);
+      box-sizing: border-box;
+      line-height: var(--control-line-height);
+    }
+    .filter-btn, .review-range-btn, .chart-tab, .chart-group-btn,
+    .graph-layout-btn, .graph-export-btn {
+      min-height: var(--control-height-compact);
+    }
+    .workspace-tab { min-height: var(--control-height); }
+    .toolbar > input, .toolbar > select, .toolbar > button,
+    .actions > input, .actions > select, .actions > button,
+    .form-row > input, .form-row > select, .form-row > button {
+      align-self: stretch;
+    }
+    .icon-only, .control-icon { border-radius: 50%; }
+    @media (max-width: 560px) {
+      button.secondary, button.danger, button.filter-btn,
+      button.workspace-tab, button.review-range-btn, button.chart-tab,
+      button.chart-group-btn, button.graph-layout-btn, button.graph-export-btn {
+        min-height: var(--control-height);
+      }
+    }

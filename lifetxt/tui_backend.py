@@ -101,6 +101,23 @@ class TuiBackend(object):
         """
         return False
 
+    def native_timeline(
+        self, target_id, since=None, until=None, event=None, limit=None
+    ):
+        """Return one target item's bounded ``temporal-timeline-v1`` result
+        (#768).
+
+        Local and remote backends both delegate entirely to the exact same
+        shared reader this contract already exists to keep off presentation
+        code: :class:`LocalTuiBackend` calls
+        :func:`lifetxt.native_timeline.native_timeline` directly over its own
+        loaded items (mirroring the pre-#768 local-only ``/timeline``
+        command), while :class:`RemoteTuiBackend` calls the server's
+        existing read-only ``GET /api/native-timeline/{id}`` route (#762)
+        rather than parsing/normalizing history client-side.
+        """
+        raise NotImplementedError
+
 
 class LocalTuiBackend(TuiBackend):
     """Wraps today's existing local-file TUI read/write behavior unchanged."""
@@ -154,6 +171,26 @@ class LocalTuiBackend(TuiBackend):
 
     def connection_label(self):
         return "local"
+
+    def native_timeline(
+        self, target_id, since=None, until=None, event=None, limit=None
+    ):
+        from .ids import id_key_from_config
+        from .native_timeline import DEFAULT_LIMIT
+        from .native_timeline import native_timeline as _native_timeline
+
+        items, _diagnostics = self.load_items()
+        config = getattr(self.args, "config_data", None) or {}
+        key = id_key_from_config(config)
+        return _native_timeline(
+            items,
+            target_id,
+            id_key=key,
+            limit=limit if limit is not None else DEFAULT_LIMIT,
+            since=since,
+            until=until,
+            event=event,
+        )
 
 
 #: Stable virtual "source" every item fetched from one remote connection
@@ -430,6 +467,38 @@ class RemoteTuiBackend(TuiBackend):
         previous = self.connection.file_revision
         current = self.connection.get_revision()
         return previous is not None and current != previous
+
+    def native_timeline(
+        self, target_id, since=None, until=None, event=None, limit=None
+    ):
+        """Fetch one target item's bounded Native Timeline through the
+        server's existing read-only ``GET /api/native-timeline/{id}`` route
+        (#762) -- never by parsing/normalizing history client-side (#768).
+
+        Refuses outright while serving offline-cached data: a cached item
+        snapshot has no history Notes to derive a Timeline from, and #768
+        explicitly forbids inventing history from current cached items.
+        """
+        if self.serving_cache:
+            raise ValueError(
+                "Cannot show the Native Timeline while showing offline cached "
+                "data (last known as of %s). Reconnect and reload first."
+                % self._cache_age_label()
+            )
+        params = {}
+        if since:
+            params["since"] = since
+        if until:
+            params["until"] = until
+        if event:
+            params["event"] = event
+        if limit is not None:
+            params["limit"] = limit
+        query = urllib.parse.urlencode(params)
+        path = "/api/native-timeline/%s" % urllib.parse.quote(str(target_id), safe="")
+        if query:
+            path = path + "?" + query
+        return self.connection.request("GET", path)
 
 
 def _merged_update_payload(item, change):

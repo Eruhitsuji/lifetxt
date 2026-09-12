@@ -12609,7 +12609,7 @@ traceability:
       capability_id: cap-native-timeline-web-visual-explorer
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/769
-      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/779
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/787
       changed_files_or_scope:
         - Turn the item drawer's existing minimal Native Timeline event
           list into a day-grouped, scannable visual explorer over the
@@ -12643,7 +12643,7 @@ traceability:
       capability_id: cap-context-aware-related-item-create
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/770
-      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/779
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/787
       changed_files_or_scope:
         - Add contextual project/relation prefill to the Web UI's item
           drawer create action and Dashboard project rows, and a local/
@@ -12688,7 +12688,7 @@ traceability:
       capability_id: cap-native-timeline-web-visual-explorer
       epic: null
       task_issue: null
-      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/779
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/787
       changed_files_or_scope:
         - Record the #769-#770 batch's integration into main as its own traceable step
         - .ai/project/CAPABILITIES.yml
@@ -12699,7 +12699,7 @@ traceability:
         - ruff format --check / ruff check on every changed file -> clean (pre-existing, unrelated formatting drift in 34 other repository files confirmed present on origin/main already via git stash, not introduced by this batch)
         - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
       release_or_deployment: >-
-        This entry documents PR #779 itself: feature/769-770-batch (Issues
+        This entry documents PR #787 itself: feature/769-770-batch (Issues
         #769, #770, each on its own child branch merged locally into the
         integration branch before this final PR) merging into main. Both
         issues were previously deferred as candidates needing a human

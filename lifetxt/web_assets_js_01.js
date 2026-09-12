@@ -77,6 +77,8 @@
         "Save": "保存",
         "Delete": "削除",
         "Edit": "編集",
+        "+ Related": "＋ 関連",
+        "Create a new record related to this one (#770)": "この記録に関連する新しいレコードを作成 (#770)",
         "Done": "完了",
         "Open": "未完了",
         "In Progress": "進行中",

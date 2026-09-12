@@ -22,7 +22,16 @@
 
     async function api(path, options) {
       const response = await fetch(path, options);
-      if (!response.ok) throw new Error(await response.text());
+      if (!response.ok) {
+        const raw = await response.text();
+        let detail = null;
+        try { detail = JSON.parse(raw); } catch (_) { /* retain plain server text */ }
+        const error = new Error(detail?.message || detail?.detail || raw || response.statusText || "Request failed");
+        error.status = response.status;
+        error.code = detail?.code || detail?.error_code || "";
+        error.detail = detail;
+        throw error;
+      }
       return response.json();
     }
     function cssVarName(configKey) {

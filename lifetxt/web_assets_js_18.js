@@ -138,6 +138,31 @@
     if (_moreNav) _moreNav.addEventListener("toggle", () => {
       document.getElementById("nav-more-summary")?.setAttribute("aria-expanded", _moreNav.open ? "true" : "false");
     });
+
+    function actionableErrorText(error) {
+      const status = Number(error?.status);
+      if (status === 409 || /conflict|revision|changed/i.test(error?.message || "")) {
+        return "This item changed after you opened it. Your changes were not silently overwritten.";
+      }
+      if (status === 401 || status === 403) return "This workspace is read-only or you do not have permission to change it.";
+      if (status >= 500 || !status) return "Check the connection and try again.";
+      return error?.message || "Check the highlighted fields and try again.";
+    }
+    function showActionableError(title, error, options = {}) {
+      const detail = escapeHtml(error?.message || error || "Unknown error");
+      if (options.retry) renderActionableError(document.getElementById("toast-container"), title, error, options.retry);
+      else showToast(`${title} ${actionableErrorText(error)} Technical details: ${detail}`, "error", 7000);
+    }
+    function renderActionableError(container, title, error, retry) {
+      if (!container) return;
+      const id = "error-details-" + Date.now();
+      container.innerHTML = `<div class="actionable-error" role="alert" tabindex="-1"><strong>${escapeHtml(title)}</strong>` +
+        `<span>${escapeHtml(actionableErrorText(error))}</span>` +
+        `<button type="button" class="secondary" data-retry>Try again</button>` +
+        `<details><summary>Technical details</summary><code id="${id}">${escapeHtml(error?.message || error || "")}</code></details></div>`;
+      container.querySelector("[data-retry]")?.addEventListener("click", retry);
+      container.querySelector(".actionable-error")?.focus();
+    }
       applyPresetToUrl();
       applyUrlToControls();
       updateNotifPermissionDisplay();

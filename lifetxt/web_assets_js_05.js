@@ -489,7 +489,7 @@
           showToast("Record created.", "success");
         }
       } catch(e) {
-        showToast("Save failed: " + (e.message || e), "error");
+        showActionableError("Could not save this record.", e, {retry: () => saveItem(event)});
         return;
       }
       closeEditorModal();

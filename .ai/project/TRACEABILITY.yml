@@ -12776,6 +12776,133 @@ traceability:
         branch; see PR #788 for final review and merge into main.
       status: implemented
 
+    - requirement_id: req-native-history-shared-local-mutation-capture
+      capability_id: cap-native-semantic-history
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/767
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/779
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/792
+      changed_files_or_scope:
+        - lifetxt/write_operations.py
+        - tests/test_native_history_mutation.py
+      tests_or_evidence:
+        - .venv/Scripts/python.exe -m unittest tests.test_native_history_mutation
+      release_or_deployment: null
+      notes: Integrated from child issue-779 into local parent issue-779-786; no PR by request.
+      status: implemented
+
+    - requirement_id: req-native-history-server-mutation-capture
+      capability_id: cap-native-semantic-history
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/767
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/780
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/792
+      changed_files_or_scope:
+        - lifetxt/webapp.py
+      tests_or_evidence:
+        - .venv/Scripts/python.exe -m unittest tests.test_lifetxt tests.test_native_history_mutation
+      release_or_deployment: null
+      notes: Server-side classification preserves the existing revision middleware.
+      status: implemented
+
+    - requirement_id: req-workspace-native-life-timeline
+      capability_id: cap-native-semantic-history
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/781
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/792
+      changed_files_or_scope:
+        - lifetxt/workspace_timeline.py
+        - lifetxt/cli.py
+        - docs/en/workspace-life-timeline.md
+        - docs/ja/workspace-life-timeline.md
+      tests_or_evidence:
+        - .venv/Scripts/python.exe -m unittest tests.test_workspace_timeline tests.test_native_timeline
+      release_or_deployment: null
+      notes: Composes existing per-item Native Timeline results without Git or inferred history.
+      status: implemented
+
+    - requirement_id: req-mcp-native-semantic-as-of-read
+      capability_id: cap-native-semantic-history
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/783
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/792
+      changed_files_or_scope:
+        - lifetxt/mcp.py
+        - docs/en/mcp-semantic-as-of.md
+        - docs/ja/mcp-semantic-as-of.md
+      tests_or_evidence:
+        - .venv/Scripts/python.exe -m unittest tests.test_mcp_expansion
+      release_or_deployment: null
+      notes: Thin read-only adapter over semantic_as_of(); unavailable fields are not replaced by current state.
+      status: implemented
+
+    - requirement_id: req-tui-header-cell-width-stability
+      capability_id: cap-tui-wide-character-input
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/784
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/785
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/792
+      changed_files_or_scope:
+        - lifetxt/tui_app.py
+        - tests/test_cui_extensions.py
+      tests_or_evidence:
+        - .venv/Scripts/python.exe -m unittest tests.test_cui_extensions
+      release_or_deployment: null
+      notes: Active marker is now width-stable ASCII.
+      status: implemented
+
+    - requirement_id: req-tui-shared-unicode-cell-width-policy
+      capability_id: cap-tui-wide-character-input
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/784
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/786
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/792
+      changed_files_or_scope:
+        - lifetxt/tui.py
+        - lifetxt/tui_layout.py
+        - lifetxt/tui_app.py
+        - docs/en/tui-unicode-width.md
+        - docs/ja/tui-unicode-width.md
+      tests_or_evidence:
+        - .venv/Scripts/python.exe -m unittest tests.test_cui_extensions tests.test_tui_native_timeline tests.test_tui_backend
+      release_or_deployment: null
+      notes: Shared cluster-aware width, clipping, span placement, and cursor policy.
+      status: implemented
+
+    - requirement_id: req-779-786-batch-integration
+      capability_id: cap-native-semantic-history
+      epic: null
+      task_issue: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/792
+      changed_files_or_scope:
+        - Record the review-and-fix pass and final PR for the issue-779-786 branch
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - python -m unittest tests.test_lifetxt tests.test_native_history_mutation tests.test_workspace_timeline tests.test_mcp_expansion tests.test_cui_extensions tests.test_tui_backend tests.test_tui_native_timeline tests.test_native_history tests.test_native_timeline tests.test_ticket_workflow_history tests.test_remote_backend_v20 tests.test_surface_runtime tests.test_today_cli -> pass after fixes
+        - python -m unittest tests.test_traceability_gate tests.test_change_package_closeout -> Ran 17 tests, OK
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on every changed file -> clean (pre-existing drift confirmed present on main already via a real worktree diff)
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - "confirmed via a real `main` worktree checkout that LifeTxtDoneTests.test_done_marks_item_done_by_id, LifeTxtUndoCliTests.test_undo_restores_previous_content, and RemoteTuiBackendEditorTests's nvim.EXE/vim.EXE PATHEXT mismatches reproduce identically without this branch's changes, confirming they are pre-existing and unrelated"
+        - "full python -m unittest discover (4432 tests) run twice, before and after the fixes: the only remaining failures after fixing are the four confirmed pre-existing/environment items above plus tests.test_historical_temporal.test_non_git_and_option_like_refs_fail_loudly (this checkout is itself nested inside a Git worktree) and tests.test_history_consistency.test_shallow_history_is_never_complete (a Windows PermissionError cleaning up a temporary shallow clone's .git/objects/pack/*.idx file), neither of which touches any file this PR changes"
+      release_or_deployment: >-
+        This entry documents PR #792 itself: review and fix pass over the
+        issue-779-786 branch (Issues #779, #780, #781, #783, #785, #786;
+        each landed directly on the branch with no separate sub-PR, matching
+        this project's established no-separate-sub-PR batch pattern) merging
+        into main.
+      notes: >-
+        This review found and fixed four real regressions introduced by
+        routing update_item_in_file (#780) and mutate_items/mutate_item_files
+        (#779) through native-history capture (see PR #792's description for
+        the full account), plus one unrelated pre-existing test-clock flake
+        in tests/test_today_cli.py. Issue #782's own commits on this branch
+        ("Record investigation boundary for issue #782") are empty
+        placeholders with no findings anywhere (no doc, no comment, no
+        traceability entry); this PR does not claim #782 as resolved, and it
+        remains a separate, open investigation. Issue #784's own
+        investigation content lives in its GitHub issue body (already a
+        thorough root-cause writeup); its empty boundary commit is a
+        checkpoint before #785/#786 implemented the fix, not a missing
+        deliverable.
+      status: implemented
+
   required_chain:
     - Requirement
     - Capability

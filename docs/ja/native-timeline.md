@@ -85,3 +85,10 @@ JSON result の `semantic_as_of` field は
 別の bounded contract です。Git は一切読み込まず、cutoff 以前に capture
 された `record:item_event` stream が実際に裏付ける以上の field state は
 主張しません。
+
+## ワークスペース Life Timeline
+
+`lifetxt timeline --workspace-timeline [path ...]` は、上記の bounded な
+per-item Native Timeline を、選択したワークスペース内の全アイテムに対する
+1つの決定的な read-only 時系列ストリームへ合成します。
+[workspace-life-timeline.md](workspace-life-timeline.md) を参照してください。

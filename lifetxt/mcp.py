@@ -341,6 +341,7 @@ READ_ONLY_TOOLS = frozenset(
         "get_temporal_context",
         "get_temporal_thread",
         "get_native_timeline",
+        "get_semantic_as_of",
         "get_lifecycle_analytics",
         "get_clock_status",
         "run_query",
@@ -1070,6 +1071,18 @@ def _tool_schemas():
                 "until": _string("Inclusive offset-aware ISO timestamp."),
                 "event": _string("Normalized event filter."),
             }, required=["id"], read_only=True,
+        ),
+        _tool(
+            "get_semantic_as_of",
+            "Read-only semantic-as-of-v1 evidence for one item at an explicit "
+            "offset-aware cutoff. Unavailable historical fields remain unavailable; "
+            "the current item is never used as a fallback.",
+            {
+                "id": _string("Target item ID."),
+                "as_of": _string("Required offset-aware ISO 8601 cutoff."),
+            },
+            required=["id", "as_of"],
+            read_only=True,
         ),
         _tool(
             "run_query",
@@ -3122,6 +3135,21 @@ def _tool_get_native_timeline(args, context):
     return _attach_revision(result, context)
 
 
+def _tool_get_semantic_as_of(args, context):
+    """Read-only MCP bridge to the shared semantic-as-of-v1 projection."""
+    from .native_semantic_as_of import semantic_as_of
+
+    items, _diagnostics = _read_items(context)
+    item_id = str(args.get("id") or "")
+    cutoff = args.get("as_of")
+    if not item_id:
+        raise ValueError("get_semantic_as_of requires 'id'.")
+    if not cutoff:
+        raise ValueError("get_semantic_as_of requires 'as_of'.")
+    result = semantic_as_of(items, item_id, cutoff, id_key=_id_key(context))
+    return _attach_revision(result, context)
+
+
 def _tool_get_lifecycle_analytics(args, context):
     from .lifecycle_analytics import lifecycle_analytics
     from .native_timeline import DEFAULT_LIMIT, native_timeline
@@ -3507,6 +3535,7 @@ TOOL_HANDLERS = OrderedDict(
         ("get_temporal_context", _tool_get_temporal_context),
         ("get_temporal_thread", _tool_get_temporal_thread),
         ("get_native_timeline", _tool_get_native_timeline),
+        ("get_semantic_as_of", _tool_get_semantic_as_of),
         ("get_lifecycle_analytics", _tool_get_lifecycle_analytics),
         ("run_query", _tool_run_query),
         ("list_saved_views", _tool_list_saved_views),

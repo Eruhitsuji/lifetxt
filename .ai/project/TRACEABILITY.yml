@@ -12605,6 +12605,122 @@ traceability:
         into the integration branch before the final PR was opened.
       status: implemented
 
+    - requirement_id: req-native-timeline-web-visual-explorer
+      capability_id: cap-native-timeline-web-visual-explorer
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/769
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/779
+      changed_files_or_scope:
+        - Turn the item drawer's existing minimal Native Timeline event
+          list into a day-grouped, scannable visual explorer over the
+          unmodified #762 temporal-timeline-v1 result
+        - lifetxt/web_assets_js_11.js
+        - lifetxt/web_assets_css_04.css
+        - lifetxt/web_assets_js_01.js
+        - tests/test_web_native_timeline_visual.py
+        - tests/test_web_assets.py
+        - docs/en/web.md
+        - docs/ja/web.md
+      tests_or_evidence:
+        - "tests/test_web_native_timeline_visual.py (13 Node.js-driven tests): event-domain labels, before/after transition rendering (status/progress/schedule/relation payloads) and escaping of hostile payload text, date-grouping key, bounded progress-percentage trend indicator (correctly ignoring fraction-form values), missing-result and empty-state handling, completeness badge text, day grouping, prominent limitations/invalid-event/diagnostics display, bounds summary, general HTML escaping, and that filter controls are always present"
+        - python -m unittest tests.test_web_native_timeline_visual -> Ran 13 tests, OK
+        - "node --check against the full assembled Web UI script (all fragments concatenated via lifetxt.web_assets.HTML_PAGE) -> no syntax error, both before and after each edit"
+        - python -m unittest tests.test_web_native_timeline tests.test_web_assets tests.test_web_i18n tests.test_web_commands tests.test_surface_runtime tests.test_release_policy -> all pass (LEGACY_PRISTINE_GIT_BLOB_SHA updated twice to match the intentionally changed served page; two new UI_STRINGS dictionary entries close the translation-coverage gap the new "+ Related" button and its title text introduced)
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed Python files -> clean
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: null
+      notes: >-
+        See cap-native-timeline-web-visual-explorer's own notes for the
+        full design rationale (self-scoped autonomously per explicit
+        repository owner instruction not to defer this issue further).
+        `GET /api/native-timeline/{id}` itself (#762) is completely
+        unchanged; this is a pure client-side presentation layer over the
+        existing, already-tested API contract.
+      status: implemented
+
+    - requirement_id: req-context-aware-related-item-create
+      capability_id: cap-context-aware-related-item-create
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/770
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/779
+      changed_files_or_scope:
+        - Add contextual project/relation prefill to the Web UI's item
+          drawer create action and Dashboard project rows, and a local/
+          Remote TUI /related command, all reusing the exact existing
+          create/validation/mutation engine
+        - lifetxt/web_assets_js_05.js
+        - lifetxt/web_assets_js_10.js
+        - lifetxt/web_assets_js_16.js
+        - lifetxt/web_assets.html
+        - lifetxt/tui_app.py
+        - tests/test_web_context_create_js.py
+        - tests/test_cui_extensions.py
+        - tests/test_tui_remote_backend.py
+        - docs/en/web.md
+        - docs/ja/web.md
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - "tests/test_web_context_create_js.py (11 Node.js-driven tests): project-only/relation-only/combined-context prefill, no-context leaves the create form byte-unchanged, project-dashboard-button prefill and its documented empty-project no-op, missing-drawer-item and missing-id failures reported visibly rather than guessed, happy-path relation+inherited-project prefill with the drawer closing, an explicit non-default relation choice honored, cancelling the relation prompt performs no mutation and never opens the editor, and an invalid relation choice fails visibly with no silent rebind"
+        - python -m unittest tests.test_web_context_create_js -> Ran 11 tests, OK
+        - "tests/test_cui_extensions.py WorkspaceStateTests (6 new tests): /related prefills relation+inherited project from the selected row through the real guarded write path, an explicit field choice, a missing-id-context failure leaving the file byte-unchanged, a missing-title usage error, an explicit capture-shorthand override winning over the prefilled project, and /undo reverting the new line"
+        - "tests/test_tui_remote_backend.py WorkspaceStateRemoteWiringTests (2 new tests): /related creates the item through a real POST /api/items call against the Remote TUI backend (never a local write target), and a missing context id fails before any request is made"
+        - python -m unittest tests.test_cui_extensions.WorkspaceStateTests tests.test_tui_remote_backend.WorkspaceStateRemoteWiringTests -> Ran 36 tests, OK
+        - python -m unittest tests.test_tui_backend tests.test_tui_remote_client tests.test_tui_remote_cache tests.test_completion_surfaces tests.test_completion_values tests.test_surface_runtime tests.test_cli_taxonomy -> all pass (the TUI documentation drift gate confirms docs/en/cli.md's command table matches tui_app.COMMANDS after adding /related)
+        - "confirmed pre-existing, unrelated to this change: tests.test_tui_remote_backend.RemoteTuiBackendEditorTests's 3 vim/nvim PATHEXT-resolution failures (vim.EXE/nvim.EXE vs vim/nvim) reproduce identically via git stash against the unmodified #769-merged baseline"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed Python files -> clean
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: null
+      notes: >-
+        See cap-context-aware-related-item-create's own notes for the full
+        design/UX rationale (self-scoped autonomously per explicit
+        repository owner instruction not to defer this issue further,
+        including why the TUI command is named `/related` rather than the
+        issue's own suggested `/new-related`). No server-side change was
+        needed for Remote TUI parity: `_cmd_new_related` reuses the exact
+        `state.backend.create_item()` seam `_cmd_add` (#677/#679) already
+        established.
+      status: implemented
+
+    - requirement_id: req-769-770-batch-integration
+      capability_id: cap-native-timeline-web-visual-explorer
+      epic: null
+      task_issue: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/779
+      changed_files_or_scope:
+        - Record the #769-#770 batch's integration into main as its own traceable step
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - "python -m unittest tests.test_web_native_timeline_visual tests.test_web_context_create_js tests.test_web_native_timeline tests.test_web_assets tests.test_web_i18n tests.test_web_commands tests.test_cui_extensions tests.test_tui_backend tests.test_tui_remote_backend tests.test_tui_remote_client tests.test_tui_remote_cache tests.test_completion_surfaces tests.test_completion_values tests.test_surface_runtime tests.test_cli_taxonomy tests.test_release_policy tests.test_traceability_gate tests.test_change_package_closeout -> all pass except the 3 pre-existing, environment-dependent Windows vim/nvim PATHEXT-resolution flakes in tests.test_tui_remote_backend.RemoteTuiBackendEditorTests, confirmed via git stash to reproduce identically on the unmodified pre-batch baseline"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on every changed file -> clean (pre-existing, unrelated formatting drift in 34 other repository files confirmed present on origin/main already via git stash, not introduced by this batch)
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: >-
+        This entry documents PR #779 itself: feature/769-770-batch (Issues
+        #769, #770, each on its own child branch merged locally into the
+        integration branch before this final PR) merging into main. Both
+        issues were previously deferred as candidates needing a human
+        product/UX decision (see req-763-768-native-history-as-of-batch-
+        integration's own notes); the repository owner explicitly asked
+        for them to be implemented now rather than deferred again, so this
+        batch makes the necessary product/UX judgment calls itself and
+        records them in cap-native-timeline-web-visual-explorer's and
+        cap-context-aware-related-item-create's own notes.
+      notes: >-
+        Follows the multi-PR integration-branch pattern established
+        throughout this project (see req-remote-batch-integration and every
+        subsequent batch-integration entry in this file): every requirement
+        entry above correctly names its own child branch's work, and none
+        of them named this final PR before it existed. Self-scoped and
+        implemented autonomously per repository owner instruction to
+        implement #769 and #770 on one integration branch ending in one
+        final PR, with each issue's own child branch merged locally into
+        the integration branch before the final PR was opened.
+      status: implemented
+
 required_chain:
   - Requirement
   - Capability

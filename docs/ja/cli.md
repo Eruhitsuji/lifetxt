@@ -2092,6 +2092,8 @@ plain HTTP 上での Basic Auth がここで許容されるのは、WireGuard �
 
 **client editor での編集。** `/edit` は選択した remote item だけを client 上の private な一時 `life.txt` copy に出力し、local mode と同じ `EDITOR`、`VISUAL`、または config の `editor` 設定で開きます。保存して editor を閉じると、一時 copy が正しい item をちょうど1件だけ含むことを検証し、通常の revision-checked `PUT /api/items/id/{id}` route へ送信します。`remote:<host>` label を filesystem path として使うことはなく、server path や credential が一時 file に入ることもありません。semantic な変更がなければ request は送信しません。editor を開いている間に server revision が変化した場合、PUT は retry なしで conflict となるため、reload 後に編集し直してください。offline cache view の表示中は editor 経由の write も拒否されます。
 
+**Native Timeline（`/timeline`）。** `/timeline ID [since=..] [until=..] [event=..]` は remote mode でも同じように動作し、`lifetxt serve` の Web UI がすでに使っている既存の read-only `GET /api/native-timeline/{id}` route を再利用します。history record を client 側で parse・normalize することはありません。server 側の filesystem path や生の `life.txt` が local に必要になることも一切ありません。接続・認証の失敗は他の remote read と同じ connection UX で表示されます。offline cache view の表示中は Timeline の読み取りも無効です -- cached な item snapshot には Timeline を再構築できるだけの history evidence が含まれていないためです。
+
 **自動 refresh。** 接続後、TUI は 1.5 秒ごとに軽量な `GET /api/revision` 呼び出し 1 回だけで server を poll します（全 item を再取得するより大幅に軽量です）。この revision が実際に変化した場合のみ、item 一覧全体を reload します。選択中の item が引き続き存在する限り、background reload をまたいで active view・選択・search/filter の状態は維持されます。`/reload` はいつでも手動 fallback として利用できます。これは意図的にシンプルな bounded polling であり、push protocol（SSE/WebSocket）ではありません。計測によって正当化されれば、将来的な最適化として追加される可能性があります。
 
 **接続状態。** header には `remote:<host> as <user> (connected)` または `(disconnected)` が表示されます（password は表示されません）。接続の喪失・復旧は toast で通知されます。一時的な network 障害では、status word のみが変化し、直前まで表示していた view はそのまま残ります。startup 時の接続失敗は、local file への fallback ではなく、明確な error で終了します。

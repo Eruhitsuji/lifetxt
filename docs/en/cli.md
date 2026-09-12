@@ -2554,6 +2554,16 @@ revision changed while the editor was open, the PUT is rejected as a conflict
 without retry; reload before editing again. Editor-backed writes are also
 refused while an offline cached view is active.
 
+**Native Timeline (`/timeline`).** `/timeline ID [since=..] [until=..]
+[event=..]` works identically in remote mode, reusing the server's existing
+read-only `GET /api/native-timeline/{id}` route (the same one `lifetxt
+serve`'s Web UI already uses) instead of parsing or normalizing history
+records on the client. No server filesystem path or raw `life.txt` is ever
+required locally; connection/auth failures surface through the same
+connection UX as every other remote read. Timeline reads are disabled while
+an offline cached view is active, since a cached item snapshot carries no
+history evidence to reconstruct a Timeline from.
+
 **Automatic refresh.** Once connected, the TUI polls the server every 1.5
 seconds using a single cheap `GET /api/revision` call -- far lighter than
 re-fetching every item -- and only reloads the full item list when that

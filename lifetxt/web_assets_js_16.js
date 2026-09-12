@@ -341,7 +341,10 @@
           ? projects.map(p =>
               `<div class="dash-row"><span class="dash-row-title">${escapeHtml(p.project)}</span>` +
               `<span style="color:var(--muted);font-size:.78rem;font-variant-numeric:tabular-nums">${p.done}/${p.total}</span>` +
-              `<span class="proj-stats-bar" style="width:${Math.round(p.total / maxTotal * 70)}px;opacity:${(0.4 + 0.6 * (p.done / Math.max(p.total, 1))).toFixed(2)}"></span></div>`
+              `<span class="proj-stats-bar" style="width:${Math.round(p.total / maxTotal * 70)}px;opacity:${(0.4 + 0.6 * (p.done / Math.max(p.total, 1))).toFixed(2)}"></span>` +
+              `<button class="secondary" style="font-size:.7rem;padding:.05rem .35rem;margin-left:.3rem" ` +
+              `onclick="newRelatedItemFromProject(${escapeHtml(jsLiteral(p.project))})" ` +
+              `title="Create a new record in project:${escapeHtml(p.project)} (#770)">+</button></div>`
             ).join("")
           : `<div class="empty">No project data.</div>`;
       }

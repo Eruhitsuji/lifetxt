@@ -3486,6 +3486,11 @@ def _action_open(state, page):
     return True
 
 
+def _action_timeline(state, page):
+    _safe_command(state, "/timeline")
+    return True
+
+
 def _action_toggle_mark(state, page):
     _safe_command(state, "/mark toggle")
     return True
@@ -3538,6 +3543,7 @@ _ACTION_HANDLERS = {
     "first": _action_first,
     "last": _action_last,
     "open": _action_open,
+    "timeline": _action_timeline,
     "toggle_mark": _action_toggle_mark,
     "done": _action_done,
     "search": _action_search,

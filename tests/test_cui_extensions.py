@@ -1047,6 +1047,78 @@ class WorkspaceStateTests(unittest.TestCase):
         self.assertEqual([], [d for d in diagnostics if d.severity == "error"])
         self.assertEqual(4, len(items))
 
+    def test_related_creates_a_task_with_relation_and_project_prefilled(self):
+        # #770: /related uses the currently selected row (Write_Report,
+        # id:t1, project:work) as context, defaulting to the "related"
+        # field, and inherits the selected row's project the same way the
+        # Web UI's "+ Related" button does.
+        state, path = self._state()
+        self.assertEqual(0, state.selected)
+
+        level, message = tui_app.run_command(state, "/related Follow up on report")
+
+        self.assertEqual("success", level)
+        self.assertIn("related:t1", message)
+        with open(path, "r", encoding="utf-8") as handle:
+            content = handle.read()
+        self.assertIn("related:t1", content)
+        self.assertIn("project:work", content.splitlines()[-1])
+        items, diagnostics = parse_text(content)
+        self.assertEqual([], [d for d in diagnostics if d.severity == "error"])
+        self.assertEqual(4, len(items))
+
+    def test_related_explicit_field_choice_is_honored(self):
+        state, path = self._state()
+
+        level, _message = tui_app.run_command(state, "/related parent Sub task")
+
+        self.assertEqual("success", level)
+        with open(path, "r", encoding="utf-8") as handle:
+            content = handle.read()
+        self.assertIn("parent:t1", content)
+        self.assertNotIn("related:t1", content)
+
+    def test_related_with_no_selected_row_context_id_fails_loudly(self):
+        state, path = self._state("[ ] T No_Id project:work\n")
+
+        with self.assertRaises(ValueError) as caught:
+            tui_app.run_command(state, "/related Follow up")
+
+        self.assertIn("id", str(caught.exception))
+        with open(path, "r", encoding="utf-8") as handle:
+            self.assertEqual("[ ] T No_Id project:work\n", handle.read())
+
+    def test_related_requires_a_title(self):
+        state, _path = self._state()
+
+        with self.assertRaises(ValueError) as caught:
+            tui_app.run_command(state, "/related")
+
+        self.assertIn("Usage", str(caught.exception))
+
+    def test_related_explicit_shorthand_wins_over_prefilled_project(self):
+        # An explicit capture shorthand/detail always takes precedence over
+        # the context-supplied prefill, matching #770's own "the prefilled
+        # project/relation can be reviewed, changed" requirement.
+        state, path = self._state()
+
+        tui_app.run_command(state, "/related Follow up @elsewhere")
+
+        with open(path, "r", encoding="utf-8") as handle:
+            content = handle.read()
+        last_line = content.splitlines()[-1]
+        self.assertIn("project:elsewhere", last_line)
+        self.assertNotIn("project:work", last_line)
+
+    def test_related_undo_reverts_the_new_line(self):
+        state, path = self._state()
+
+        tui_app.run_command(state, "/related Follow up on report")
+        tui_app.run_command(state, "/undo")
+
+        with open(path, "r", encoding="utf-8") as handle:
+            self.assertEqual(self.SAMPLE, handle.read())
+
     def test_project_filter_and_clear_round_trip(self):
         state, _path = self._state()
 

@@ -334,6 +334,46 @@ class WorkspaceStateRemoteWiringTests(unittest.TestCase):
         self.assertEqual(post_calls[0][1], "/api/items")
         self.assertEqual(post_calls[0][2]["title"], "Buy milk")
 
+    def test_cmd_new_related_creates_a_remote_item_through_the_backend(self):
+        # #770: Remote TUI parity -- /related must create the new item
+        # through the authoritative server backend (a real POST /api/items
+        # against the connection, the same route _cmd_add already uses),
+        # never a local write target.
+        connection = _StubConnection(
+            {
+                "items": [
+                    _item_payload("t1", 1, text="[ ] T Write_Report id:t1 project:work")
+                ]
+            }
+        )
+        state = self._state(connection)
+        state.load()
+        state.refresh()
+        self.assertEqual(1, len(state.rows))
+
+        level, message = tui_app._cmd_new_related(state, "Follow up on report")
+
+        self.assertEqual("success", level)
+        self.assertIn("related:t1", message)
+        post_calls = [c for c in connection.calls if c[0] == "POST"]
+        self.assertEqual(len(post_calls), 1)
+        self.assertEqual(post_calls[0][1], "/api/items")
+        payload_details = post_calls[0][2]["details"]
+        self.assertEqual(["t1"], payload_details["related"])
+        self.assertEqual(["work"], payload_details["project"])
+
+    def test_cmd_new_related_with_no_context_id_fails_without_a_request(self):
+        connection = _StubConnection(
+            {"items": [_item_payload("t1", 1, text="[ ] T No_Id")]}
+        )
+        state = self._state(connection)
+        state.load()
+        state.refresh()
+
+        with self.assertRaises(ValueError):
+            tui_app._cmd_new_related(state, "Follow up")
+        self.assertEqual([], [c for c in connection.calls if c[0] == "POST"])
+
     def test_header_shows_remote_connection_label_without_credentials(self):
         connection = _StubConnection({"items": []})
         state = self._state(connection)

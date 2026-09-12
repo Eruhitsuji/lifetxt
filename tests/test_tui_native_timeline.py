@@ -9,6 +9,7 @@ the unmodified shared reader.
 """
 
 import unittest
+import unittest.mock
 from types import SimpleNamespace
 
 from lifetxt import tui_app
@@ -133,6 +134,69 @@ class TuiTimelineCommandTests(unittest.TestCase):
         command = tui_app.COMMANDS_BY_NAME["timeline"]
         self.assertIs(tui_app._cmd_timeline, command.handler)
         self.assertEqual("id", command.values)
+
+
+class TuiTimelineCursorTests(unittest.TestCase):
+    """[ / ] step through an open Native Timeline's event list (#774)."""
+
+    def _state_with_timeline(self, event_count, cursor=0):
+        return SimpleNamespace(
+            _native_timeline={"events": [{"n": i} for i in range(event_count)]},
+            _native_timeline_cursor=cursor,
+        )
+
+    def test_move_forward_advances_the_cursor(self):
+        state = self._state_with_timeline(3, cursor=0)
+        tui_app._timeline_cursor_move(state, 1)
+        self.assertEqual(1, state._native_timeline_cursor)
+
+    def test_move_backward_retreats_the_cursor(self):
+        state = self._state_with_timeline(3, cursor=2)
+        tui_app._timeline_cursor_move(state, -1)
+        self.assertEqual(1, state._native_timeline_cursor)
+
+    def test_cursor_does_not_move_past_the_last_event(self):
+        state = self._state_with_timeline(3, cursor=2)
+        tui_app._timeline_cursor_move(state, 1)
+        self.assertEqual(2, state._native_timeline_cursor)
+
+    def test_cursor_does_not_move_before_the_first_event(self):
+        state = self._state_with_timeline(3, cursor=0)
+        tui_app._timeline_cursor_move(state, -1)
+        self.assertEqual(0, state._native_timeline_cursor)
+
+    def test_no_events_reports_info_and_does_not_raise(self):
+        state = SimpleNamespace(
+            _native_timeline={"events": []}, _native_timeline_cursor=0
+        )
+        notified = []
+        state.notify = lambda message, level: notified.append((message, level))
+        result = tui_app._timeline_cursor_move(state, 1)
+        self.assertTrue(result)
+        self.assertEqual(1, len(notified))
+
+    def test_bracket_keys_move_the_cursor_only_while_a_timeline_is_open(self):
+        state = self._state_with_timeline(3, cursor=0)
+        state.action_by_key = {}
+        self.assertTrue(tui_app._handle_nav_key(state, "]", "tasks"))
+        self.assertEqual(1, state._native_timeline_cursor)
+        self.assertTrue(tui_app._handle_nav_key(state, "[", "tasks"))
+        self.assertEqual(0, state._native_timeline_cursor)
+
+    def test_bracket_keys_fall_through_to_the_ordinary_binding_when_no_timeline_is_open(
+        self,
+    ):
+        seen = []
+        state = SimpleNamespace(
+            _native_timeline=None,
+            action_by_key={"]": "move_down"},
+        )
+        with unittest.mock.patch.dict(
+            tui_app._ACTION_HANDLERS,
+            {"move_down": lambda state, page: seen.append((state, page)) or True},
+        ):
+            self.assertTrue(tui_app._handle_nav_key(state, "]", "tasks"))
+        self.assertEqual([(state, "tasks")], seen)
 
 
 if __name__ == "__main__":

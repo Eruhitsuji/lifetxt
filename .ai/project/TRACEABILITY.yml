@@ -12721,51 +12721,78 @@ traceability:
         the integration branch before the final PR was opened.
       status: implemented
 
-  - requirement_id: req-771-777-batch-integration
-    capability_id: cap-native-timeline-cross-surface-ux
-    epic: https://github.com/Eruhitsuji/lifetxt/issues/775
-    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/771
-    pull_request: null
-    changed_files_or_scope:
-      - Web item drawer Timeline tab and bounded filter controls (#771/#772)
-      - TUI selected-item Timeline action and event cursor/detail view (#773/#774)
-      - Web/TUI structured common-field authoring (#776/#777)
-      - docs/en/cli.md
-      - docs/ja/cli.md
-      - .ai/project/CAPABILITIES.yml
-    tests_or_evidence:
-      - tests.test_web_native_timeline_visual
-      - tests.test_web_assets
-      - tests.test_tui_native_timeline
-      - tests.test_cui_extensions
-      - tests.test_surface_runtime
-      - tests.test_completion_surfaces
-      - python -m lifetxt check examples/minimal_life.txt
-    release_or_deployment: null
-    notes: >-
-      Implemented on feature/771-777-batch, with one child branch per issue
-      merged locally into the parent branch. No pull request was created per
-      the repository owner's request; human review and merge into main remain
-      outside this autonomous batch.
-    status: implemented
+    - requirement_id: req-771-777-batch-integration
+      capability_id: cap-native-timeline-cross-surface-ux
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/775
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/771
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/788
+      changed_files_or_scope:
+        - Web item drawer Timeline tab and bounded filter controls (#771/#772)
+        - TUI selected-item Timeline action and event cursor/detail view (#773/#774)
+        - Web/TUI structured common-field authoring (#776/#777)
+        - lifetxt/web_assets_js_18.js
+        - tests/test_web_assets.py
+        - tests/test_cui_extensions.py
+        - tests/test_tui_native_timeline.py
+        - tests/test_web_structured_authoring_js.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+        - .ai/project/CAPABILITIES.yml
+      tests_or_evidence:
+        - tests.test_web_native_timeline_visual
+        - tests.test_web_assets (10 tests, including a new node --check regression guard over the whole assembled script)
+        - tests.test_web_structured_authoring_js (new, 6 Node-driven tests for renderStructuredFields/_structuredDetails)
+        - tests.test_tui_native_timeline (13 tests, including 7 new for the [ / ] event-cursor action)
+        - tests.test_cui_extensions (9 new tests for /guided and /guided_edit)
+        - tests.test_surface_runtime
+        - tests.test_completion_surfaces
+        - tests.test_web_i18n
+        - tests.test_web_commands
+        - tests.test_release_policy
+        - "MPLBACKEND=Agg python -m unittest discover -> full repository suite, see PR for the recorded count"
+        - python -m ruff format --check / ruff check on every changed file -> clean
+        - python -m lifetxt check examples/minimal_life.txt
+      release_or_deployment: null
+      notes: >-
+        Implemented on feature/771-777-batch, with one child branch per issue
+        merged locally into the parent branch. This review pass found and fixed
+        a real regression the branch's own tests never caught: web_assets_js_18.js
+        declared `const _structuredDetails = document.getElementById(...)` at
+        the same top-level scope as an earlier `function _structuredDetails(...)`
+        -- every JS fragment concatenates into one shared-scope <script>, so this
+        was a fatal SyntaxError breaking the entire served Web UI, confirmed via
+        `node --check` against the real assembled script before any fix. Fixed
+        by renaming the variable to `_structuredDetailsTextarea`, updated
+        `LEGACY_PRISTINE_GIT_BLOB_SHA` in tests/test_web_assets.py to match the
+        corrected served page, and added a permanent `node --check` regression
+        test over the full assembled script so a future name collision in any
+        fragment fails loudly instead of silently shipping a broken page (no
+        other test in this suite parses the assembled script as JavaScript).
+        Also closed a real test-coverage gap: #773/#774's TUI selected-item
+        Timeline action/event cursor and #776/#777's Web/TUI structured
+        common-field authoring had zero automated coverage before this pass
+        (confirmed by grep); added targeted unit and Node-driven tests for both.
+        Full suite, ruff, and the CLI smoke check all pass on the resulting
+        branch; see PR #788 for final review and merge into main.
+      status: implemented
 
-required_chain:
-  - Requirement
-  - Capability
-  - Epic
-  - Task
-  - Pull Request
-  - Test/Evidence
-  - Release
+  required_chain:
+    - Requirement
+    - Capability
+    - Epic
+    - Task
+    - Pull Request
+    - Test/Evidence
+    - Release
 
-gap_policy:
-  missing_link_action: create_follow_up_issue_or_approved_exception
+  gap_policy:
+    missing_link_action: create_follow_up_issue_or_approved_exception
 
-exceptions:
-  - exception_type: traceability_not_applicable
-    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/575
-    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/576
-    scope: assets/brand plus existing Web favicon/header branding, Tauri Desktop icon derivatives, and focused validation
-    reason: Presentation-only brand integration; no runtime behavior, data model, public interface, or independently callable capability changed
-    approved_by: Eruhitsuji
-    status: accepted
+  exceptions:
+    - exception_type: traceability_not_applicable
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/575
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/576
+      scope: assets/brand plus existing Web favicon/header branding, Tauri Desktop icon derivatives, and focused validation
+      reason: Presentation-only brand integration; no runtime behavior, data model, public interface, or independently callable capability changed
+      approved_by: Eruhitsuji
+      status: accepted

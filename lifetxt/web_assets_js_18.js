@@ -92,8 +92,8 @@
 
     const _structuredTypeSelect = document.getElementById("edit-type");
     if (_structuredTypeSelect) _structuredTypeSelect.addEventListener("change", _structuredTypeChanged);
-    const _structuredDetails = document.getElementById("edit-details");
-    if (_structuredDetails) _structuredDetails.addEventListener("input", () => {
+    const _structuredDetailsTextarea = document.getElementById("edit-details");
+    if (_structuredDetailsTextarea) _structuredDetailsTextarea.addEventListener("input", () => {
       syncStructuredFieldsIntoDetails();
       refreshStructuredFields();
     });

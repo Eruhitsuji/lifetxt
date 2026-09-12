@@ -60,15 +60,16 @@ capabilities:
       - TUI Timeline event cursor ([ / ])
     tests_or_evidence:
       - tests.test_web_native_timeline_visual
-      - tests.test_web_assets
-      - tests.test_tui_native_timeline
+      - tests.test_web_assets (includes a node --check regression guard over the whole assembled script)
+      - tests.test_tui_native_timeline (including the [ / ] event-cursor action)
       - tests.test_cui_extensions
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/771
       - https://github.com/Eruhitsuji/lifetxt/issues/772
       - https://github.com/Eruhitsuji/lifetxt/issues/773
       - https://github.com/Eruhitsuji/lifetxt/issues/774
-    related_pull_requests: []
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/788
     reuse_policy: Reuse the existing native_timeline result and Web API; do not duplicate temporal parsing, ordering, completeness, or semantics.
 
   - id: cap-structured-common-field-authoring
@@ -92,15 +93,17 @@ capabilities:
       - TUI /guided TITLE [key=value ...]
       - TUI /guided_edit key=value [key=value ...]
     tests_or_evidence:
-      - tests.test_web_context_create_js
+      - tests.test_web_structured_authoring_js
       - tests.test_web_assets
+      - tests.test_cui_extensions (guided/guided_edit TUI commands)
       - tests.test_surface_runtime
       - tests.test_completion_surfaces
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/775
       - https://github.com/Eruhitsuji/lifetxt/issues/776
       - https://github.com/Eruhitsuji/lifetxt/issues/777
-    related_pull_requests: []
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/788
     reuse_policy: Map UI values to canonical keys and reuse existing parser, shorthand/date, validation, revision, and mutation paths; never add a second persisted model.
 
   - id: cap-lifecycle-temporal-thread

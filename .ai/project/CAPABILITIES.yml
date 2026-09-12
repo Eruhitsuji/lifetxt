@@ -261,6 +261,10 @@ capabilities:
       - req-native-timeline-bounded-filtering
       - req-native-history-relation-mutation-capture
       - req-native-lifecycle-analytics-batch
+      - req-native-history-shared-local-mutation-capture
+      - req-native-history-server-mutation-capture
+      - req-workspace-native-life-timeline
+      - req-mcp-native-semantic-as-of-read
     implementation_locations:
       - docs/en/native-semantic-history.md
       - docs/ja/native-semantic-history.md
@@ -294,6 +298,8 @@ capabilities:
       - temporal thread metrics, replacement-chain, realizes timing, and consistency summaries
       - TUI /timeline [ID] [since=..] [until=..] [event=..] command
       - GET /api/native-timeline/{id}
+      - workspace-life-timeline-v1 via lifetxt timeline --workspace-timeline
+      - get_semantic_as_of read-only MCP tool
     tests_or_evidence:
       - docs/en/native-semantic-history.md authority, compatibility, completeness, and read-model decision
       - docs/ja/native-semantic-history.md equivalent Japanese decision
@@ -311,6 +317,8 @@ capabilities:
       - python -m unittest tests.test_tui_native_timeline tests.test_web_native_timeline tests.test_cui_extensions tests.test_web_assets tests.test_surface_runtime.TuiDocumentationDriftTests -> all pass
       - "tests/test_native_history_mutation.py InferItemEventSpecsTests (9 tests, #767): no-change infers nothing; completion/reopen/cancellation/other-status classified correctly; due schedule_changed classified, on/from/to/at never classified; relation add/remove classified independently per relation; multiple simultaneous changes produce multiple specs"
       - python -m unittest tests.test_native_history_mutation -> Ran 16 tests, OK
+      - tests/test_workspace_timeline.py bounded multi-target ordering/filter/provenance evidence
+      - tests/test_mcp_expansion.py get_semantic_as_of read-only evidence
       - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
       - ruff format --check / ruff check on every changed file -> clean
     related_issues:
@@ -332,6 +340,10 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/764
       - https://github.com/Eruhitsuji/lifetxt/issues/765
       - https://github.com/Eruhitsuji/lifetxt/issues/767
+      - https://github.com/Eruhitsuji/lifetxt/issues/779
+      - https://github.com/Eruhitsuji/lifetxt/issues/780
+      - https://github.com/Eruhitsuji/lifetxt/issues/781
+      - https://github.com/Eruhitsuji/lifetxt/issues/783
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/698
       - https://github.com/Eruhitsuji/lifetxt/pull/705

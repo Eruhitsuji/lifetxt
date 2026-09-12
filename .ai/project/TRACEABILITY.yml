@@ -12776,6 +12776,95 @@ traceability:
         branch; see PR #788 for final review and merge into main.
       status: implemented
 
+    - requirement_id: req-native-history-shared-local-mutation-capture
+      capability_id: cap-native-semantic-history
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/767
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/779
+      pull_request: null
+      changed_files_or_scope:
+        - lifetxt/write_operations.py
+        - tests/test_native_history_mutation.py
+      tests_or_evidence:
+        - .venv/Scripts/python.exe -m unittest tests.test_native_history_mutation
+      release_or_deployment: null
+      notes: Integrated from child issue-779 into local parent issue-779-786; no PR by request.
+      status: implemented
+
+    - requirement_id: req-native-history-server-mutation-capture
+      capability_id: cap-native-semantic-history
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/767
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/780
+      pull_request: null
+      changed_files_or_scope:
+        - lifetxt/webapp.py
+      tests_or_evidence:
+        - .venv/Scripts/python.exe -m unittest tests.test_lifetxt tests.test_native_history_mutation
+      release_or_deployment: null
+      notes: Server-side classification preserves the existing revision middleware.
+      status: implemented
+
+    - requirement_id: req-workspace-native-life-timeline
+      capability_id: cap-native-semantic-history
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/781
+      pull_request: null
+      changed_files_or_scope:
+        - lifetxt/workspace_timeline.py
+        - lifetxt/cli.py
+        - docs/en/workspace-life-timeline.md
+        - docs/ja/workspace-life-timeline.md
+      tests_or_evidence:
+        - .venv/Scripts/python.exe -m unittest tests.test_workspace_timeline tests.test_native_timeline
+      release_or_deployment: null
+      notes: Composes existing per-item Native Timeline results without Git or inferred history.
+      status: implemented
+
+    - requirement_id: req-mcp-native-semantic-as-of-read
+      capability_id: cap-native-semantic-history
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/783
+      pull_request: null
+      changed_files_or_scope:
+        - lifetxt/mcp.py
+        - docs/en/mcp-semantic-as-of.md
+        - docs/ja/mcp-semantic-as-of.md
+      tests_or_evidence:
+        - .venv/Scripts/python.exe -m unittest tests.test_mcp_expansion
+      release_or_deployment: null
+      notes: Thin read-only adapter over semantic_as_of(); unavailable fields are not replaced by current state.
+      status: implemented
+
+    - requirement_id: req-tui-header-cell-width-stability
+      capability_id: cap-tui-wide-character-input
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/784
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/785
+      pull_request: null
+      changed_files_or_scope:
+        - lifetxt/tui_app.py
+        - tests/test_cui_extensions.py
+      tests_or_evidence:
+        - .venv/Scripts/python.exe -m unittest tests.test_cui_extensions
+      release_or_deployment: null
+      notes: Active marker is now width-stable ASCII.
+      status: implemented
+
+    - requirement_id: req-tui-shared-unicode-cell-width-policy
+      capability_id: cap-tui-wide-character-input
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/784
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/786
+      pull_request: null
+      changed_files_or_scope:
+        - lifetxt/tui.py
+        - lifetxt/tui_layout.py
+        - lifetxt/tui_app.py
+        - docs/en/tui-unicode-width.md
+        - docs/ja/tui-unicode-width.md
+      tests_or_evidence:
+        - .venv/Scripts/python.exe -m unittest tests.test_cui_extensions tests.test_tui_native_timeline tests.test_tui_backend
+      release_or_deployment: null
+      notes: Shared cluster-aware width, clipping, span placement, and cursor policy.
+      status: implemented
+
   required_chain:
     - Requirement
     - Capability

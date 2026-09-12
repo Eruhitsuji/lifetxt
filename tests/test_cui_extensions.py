@@ -1119,6 +1119,108 @@ class WorkspaceStateTests(unittest.TestCase):
         with open(path, "r", encoding="utf-8") as handle:
             self.assertEqual(self.SAMPLE, handle.read())
 
+    def test_guided_creates_a_task_with_common_fields(self):
+        # #777: /guided lets a user set common fields as key=value tokens
+        # without knowing raw key:value line syntax.
+        state, path = self._state()
+
+        level, message = tui_app.run_command(
+            state, "/guided Renew_passport due=2099-01-15 project=admin priority=high"
+        )
+
+        self.assertEqual("success", level)
+        self.assertIn("Renew_passport", message)
+        with open(path, "r", encoding="utf-8") as handle:
+            content = handle.read()
+        self.assertIn("Renew_passport", content)
+        items, diagnostics = parse_text(content)
+        self.assertEqual([], [d for d in diagnostics if d.severity == "error"])
+        added = [item for item in items if item.title == "Renew_passport"][0]
+        self.assertEqual(["2099-01-15"], added.details.get("due"))
+        self.assertEqual(["admin"], added.details.get("project"))
+        self.assertEqual(["high"], added.details.get("priority"))
+
+    def test_guided_resolves_relative_date_shorthand(self):
+        state, path = self._state()
+
+        tui_app.run_command(state, "/guided Water_plants do=tomorrow")
+
+        with open(path, "r", encoding="utf-8") as handle:
+            content = handle.read()
+        items, _diagnostics = parse_text(content)
+        added = [item for item in items if item.title == "Water_plants"][0]
+        due_value = added.details.get("do")[0]
+        # A relative token always resolves to a concrete ISO date rather
+        # than being written verbatim.
+        self.assertRegex(due_value, r"^\d{4}-\d{2}-\d{2}$")
+        self.assertNotEqual("tomorrow", due_value)
+
+    def test_guided_rejects_an_unknown_field(self):
+        state, _path = self._state()
+
+        with self.assertRaises(ValueError) as caught:
+            tui_app.run_command(state, "/guided Task bogus=1")
+
+        self.assertIn("bogus", str(caught.exception))
+
+    def test_guided_requires_a_title(self):
+        state, _path = self._state()
+
+        with self.assertRaises(ValueError) as caught:
+            tui_app.run_command(state, "/guided due=2099-01-01")
+
+        self.assertIn("Usage:", str(caught.exception))
+
+    def test_guided_undo_reverts_the_new_line(self):
+        state, path = self._state()
+
+        tui_app.run_command(state, "/guided Renew_passport due=2099-01-15")
+        tui_app.run_command(state, "/undo")
+
+        with open(path, "r", encoding="utf-8") as handle:
+            self.assertEqual(self.SAMPLE, handle.read())
+
+    def test_guided_edit_updates_common_fields_on_the_selected_item(self):
+        state, path = self._state()
+        state.selected = 0  # Write_Report / t1
+
+        level, message = tui_app.run_command(state, "/guided_edit priority=low")
+
+        self.assertEqual("success", level)
+        self.assertIn("1", message)
+        with open(path, "r", encoding="utf-8") as handle:
+            content = handle.read()
+        items, diagnostics = parse_text(content)
+        self.assertEqual([], [d for d in diagnostics if d.severity == "error"])
+        edited = [item for item in items if item.details.get("id") == ["t1"]][0]
+        self.assertEqual(["low"], edited.details.get("priority"))
+
+    def test_guided_edit_requires_at_least_one_field(self):
+        state, _path = self._state()
+        state.selected = 0
+
+        with self.assertRaises(ValueError) as caught:
+            tui_app.run_command(state, "/guided_edit")
+
+        self.assertIn("Usage:", str(caught.exception))
+
+    def test_guided_edit_requires_a_selected_row(self):
+        state, _path = self._state("")
+
+        with self.assertRaises(ValueError) as caught:
+            tui_app.run_command(state, "/guided_edit priority=low")
+
+        self.assertIn("Select an item", str(caught.exception))
+
+    def test_guided_edit_requires_the_row_to_have_an_id(self):
+        state, _path = self._state("[ ] T Loose_task project:home\n")
+        state.selected = 0
+
+        with self.assertRaises(ValueError) as caught:
+            tui_app.run_command(state, "/guided_edit priority=low")
+
+        self.assertIn("id:", str(caught.exception))
+
     def test_project_filter_and_clear_round_trip(self):
         state, _path = self._state()
 

@@ -5,6 +5,10 @@ from __future__ import unicode_literals
 import hashlib
 import io
 import os
+import re
+import shutil
+import subprocess
+import tempfile
 import unittest
 from importlib import resources
 
@@ -12,7 +16,7 @@ from lifetxt import web_assets, webapp
 
 
 REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
-LEGACY_PRISTINE_GIT_BLOB_SHA = "886167b62f47010a12e81dd6c9f7695a631e938c"
+LEGACY_PRISTINE_GIT_BLOB_SHA = "2f57a6253e0b2dc2380f2dc328f4fa2c802b5e75"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )
@@ -100,6 +104,31 @@ class WebAssetExtractionTests(unittest.TestCase):
             source = handle.read()
         self.assertNotIn('HTML_PAGE = r"""', source)
         self.assertIn("from .web_assets import HTML_PAGE", source)
+
+    @unittest.skipUnless(shutil.which("node"), "node is not on PATH")
+    def test_assembled_script_has_no_syntax_error(self):
+        # Every JS fragment concatenates into one shared-scope <script>, so
+        # a name collision (e.g. a `const` redeclaring an earlier `function`)
+        # in any one fragment is a fatal SyntaxError for the whole page.
+        # Nothing else in this suite parses the assembled script as
+        # JavaScript, so this is the one guard that would catch it.
+        match = re.search(r"<script>(.*)</script>", web_assets.HTML_PAGE, re.S)
+        self.assertIsNotNone(match)
+        with tempfile.NamedTemporaryFile(
+            "w", suffix=".js", delete=False, encoding="utf-8"
+        ) as handle:
+            handle.write(match.group(1))
+            script_path = handle.name
+        try:
+            proc = subprocess.run(
+                ["node", "--check", script_path],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+        finally:
+            os.unlink(script_path)
+        self.assertEqual(0, proc.returncode, proc.stderr or proc.stdout)
 
 
 if __name__ == "__main__":

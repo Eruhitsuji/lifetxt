@@ -163,6 +163,10 @@ def transform_items_text(text, changes, id_key="id"):
             updated = copy.deepcopy(item)
             if change.get("status") is not None:
                 updated.status = str(change["status"])
+            if change.get("type") is not None:
+                updated.kind = str(change["type"])
+            if change.get("title") is not None:
+                updated.title = str(change["title"])
             for key, values in (change.get("set_details") or {}).items():
                 if values is None or values == []:
                     updated.details.pop(str(key), None)
@@ -504,6 +508,8 @@ def _normalize_changes(changes):
             {
                 "id": item_id,
                 "status": raw.get("status"),
+                "type": raw.get("type", raw.get("kind")),
+                "title": raw.get("title"),
                 "set_details": raw.get("set_details") or {},
                 "delete": bool(raw.get("delete")),
             }

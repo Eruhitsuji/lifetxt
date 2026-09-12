@@ -12,6 +12,7 @@ import lifetxt
 from lifetxt import mcp, mutation, webapp
 from lifetxt.mcp import McpContext
 from lifetxt.mutation import MutationConflict, MutationOperation, read_text_snapshot
+from lifetxt.native_history import is_item_event
 from lifetxt.review import resolve_named_review_range
 from lifetxt.surface_runtime import (
     UnsupportedFormatVersion,
@@ -585,9 +586,14 @@ class SurfaceRuntimeTests(unittest.TestCase):
         self.assertNotIn("error", result)
         items, diagnostics = lifetxt.parse_text(self.read(path))
         self.assertFalse([d for d in diagnostics if d.severity == "error"])
-        self.assertEqual(len(items), 2)
-        self.assertEqual(items[0].status, "[x]")
-        self.assertEqual(items[1].status, "[ ]")
+        # complete_item now also emits an append-only native-history event
+        # for the status transition (#779/#780); exclude it here so this
+        # test keeps asserting the underlying repeat-materialization
+        # business logic rather than the exact record count.
+        non_history = [item for item in items if not is_item_event(item)]
+        self.assertEqual(len(non_history), 2)
+        self.assertEqual(non_history[0].status, "[x]")
+        self.assertEqual(non_history[1].status, "[ ]")
         self.assertEqual(result["revision"], read_text_snapshot(path).content_hash)
 
     def test_mcp_capability_tool_resource_and_named_review(self):
@@ -724,9 +730,14 @@ class WebSurfaceRuntimeTests(unittest.TestCase):
         with open(self.path, "r", encoding="utf-8") as handle:
             items, diagnostics = lifetxt.parse_text(handle.read())
         self.assertFalse([d for d in diagnostics if d.severity == "error"])
-        self.assertEqual(len(items), 2)
-        self.assertEqual(items[0].status, "[x]")
-        self.assertEqual(items[1].status, "[ ]")
+        # Web /complete now also emits an append-only native-history event
+        # for the status transition (#779/#780); exclude it here so this
+        # test keeps asserting the underlying repeat-materialization
+        # business logic rather than the exact record count.
+        non_history = [item for item in items if not is_item_event(item)]
+        self.assertEqual(len(non_history), 2)
+        self.assertEqual(non_history[0].status, "[x]")
+        self.assertEqual(non_history[1].status, "[ ]")
 
     def test_web_named_review_range_is_rewritten_before_route_binding(self):
         client = self.client()

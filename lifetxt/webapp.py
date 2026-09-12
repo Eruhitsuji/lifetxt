@@ -2578,26 +2578,51 @@ def update_item_in_file(path, line_no, payload, key="id"):
         diagnostics.append(Diagnostic("error", "E301", "Updated item did not parse."))
     if _has_error(diagnostics):
         raise ValueError(diagnostics_to_output(diagnostics))
-    from .write_operations import transform_items_text_with_native_history
 
     id_values = original_item.details.get(key) or []
-    if not id_values:
-        raise ValueError("Web item updates require an id field.")
-    replacement_text = transform_items_text_with_native_history(
-        text,
-        [
-            {
-                "id": str(id_values[0]),
-                "status": updated.status,
-                "type": updated.kind,
-                "title": updated.title,
-                "set_details": updated.details,
-            }
-        ],
-        id_key=key,
-        source_revision=mutation.hash_text(text),
-    )
-    write_text(path, replacement_text)
+    if id_values:
+        from .write_operations import transform_items_text_with_native_history
+
+        # ``updated.details`` is the caller's complete desired detail set
+        # (merge_item_payload() fully replaces details when the payload
+        # supplies one). The id-addressed mutation contract's set_details
+        # is a partial patch: an absent key leaves the original value
+        # untouched. Explicitly null out every original key that the
+        # desired set no longer carries so a full-replace update actually
+        # removes stale details instead of silently keeping them.
+        set_details = dict(updated.details)
+        for detail_key in original_item.details:
+            if detail_key not in set_details:
+                set_details[detail_key] = None
+        replacement_text = transform_items_text_with_native_history(
+            text,
+            [
+                {
+                    "id": str(id_values[0]),
+                    "status": updated.status,
+                    "type": updated.kind,
+                    "title": updated.title,
+                    "set_details": set_details,
+                }
+            ],
+            id_key=key,
+            source_revision=mutation.hash_text(text),
+        )
+        write_text(path, replacement_text)
+    else:
+        # No stable id to address: fall back to the plain line replacement
+        # this command used before native-history capture existed. There is
+        # no id to attach a semantic event to, so this remains an ordinary
+        # edit.
+        start = original_item.line - 1
+        end = (
+            getattr(original_item, "end_line", original_item.line) or original_item.line
+        )
+        _body, ending = split_line_ending(raw_lines[end - 1])
+        replacement = _with_line_ending(line, ending).splitlines(True)
+        raw_lines[start:end] = replacement
+        write_text(path, "".join(raw_lines))
+
     updated.line = line_no
     updated.end_line = line_no + len(line.splitlines()) - 1
     updated.source_text = line

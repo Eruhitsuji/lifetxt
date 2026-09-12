@@ -79,3 +79,11 @@ schedule field, the only schedule field with an atomic capture route today),
 This reuses the existing `native_timeline()`/`normalize_native_events()`
 reader and `item_event_completeness()` unmodified; it never falls back to
 current `life.txt` state and never composes Git.
+
+The `semantic_as_of` field in the JSON result uses
+[`semantic-as-of-v1.schema.json`](../../dist/schemas/semantic-as-of-v1.schema.json).
+This is a distinct, bounded contract from `temporal-timeline-v1`'s event
+list and from `temporal-thread-v1`'s Git-backed `historical`/`as of`
+revision snapshot: it never reads Git, and it never claims a field's state
+beyond what the captured `record:item_event` stream at or before the
+cutoff actually supports.

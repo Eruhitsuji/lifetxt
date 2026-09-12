@@ -20,13 +20,22 @@
 
     function renderStructuredFields(prefix, details, type) {
       const values = details || {};
+      const help = {
+        due: "When this task should be finished.",
+        project: "Group this record with related work.",
+        priority: "How important this item is compared with other work.",
+        progress: "Completion percentage, from 0 to 100.",
+      };
       return structuredFieldsForType(type).map(field => {
         const value = Array.isArray(values[field.key]) ? values[field.key].join(", ") : (values[field.key] || "");
         const inputId = prefix + "-" + field.key;
         const wide = field.key === "tag" || field.key === "project";
+        const helpId = inputId + "-help";
+        const helpText = help[field.key] || "Optional details for this record.";
         return `<label class="structured-field${wide ? " wide-field" : ""}" for="${inputId}">` +
           `<span>${escapeHtml(field.label)} <small>(${escapeHtml(field.key)}:)</small></span>` +
-          `<input id="${inputId}" data-structured-key="${escapeHtml(field.key)}" value="${escapeHtml(String(value))}" autocomplete="off">` +
+          `<input id="${inputId}" aria-describedby="${helpId}" data-structured-key="${escapeHtml(field.key)}" value="${escapeHtml(String(value))}" autocomplete="off">` +
+          `<small id="${helpId}" class="field-help-text">${escapeHtml(helpText)}</small>` +
           `</label>`;
       }).join("");
     }

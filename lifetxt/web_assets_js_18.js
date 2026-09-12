@@ -100,6 +100,16 @@
     const _structuredContainer = document.getElementById("structured-fields");
     if (_structuredContainer) _structuredContainer.addEventListener("input", syncStructuredFieldsIntoDetails);
     refreshStructuredFields();
+
+    // Keep advanced destinations discoverable without giving them equal first-
+    // run prominence. Direct URLs still open the More group automatically.
+    const _beginnerNavSyncViewTabs = syncViewTabs;
+    syncViewTabs = function() {
+      _beginnerNavSyncViewTabs();
+      const more = document.getElementById("nav-more");
+      const advanced = new Set(["agenda", "timeline", "calendar", "focus", "review", "messages", "team", "status", "notifications", "stats", "graph", "display", "kiosk"]);
+      if (more && advanced.has(currentView())) more.open = true;
+    };
       applyPresetToUrl();
       applyUrlToControls();
       updateNotifPermissionDisplay();

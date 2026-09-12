@@ -337,11 +337,24 @@
           (item?.details?.due?.length ? `<button type="button" class="secondary" onclick="drawerPostpone('clear')" title="Remove due date">Clear</button>` : "") +
           `</div>`
         : "";
-      body.innerHTML = fieldsHtml + progressHtml + dueQuickHtml + bodyHtml +
-        `<div id="drawer-blockers"></div>` +
-        `<div id="drawer-deps"><div class="drawer-section-title">Dependencies &amp; Links</div><div class="empty dep-loading">Loading…</div></div>` +
-        threadHtml + replyHtml +
-        sourceHtml + rawHtml;
+      body.innerHTML =
+        `<div class="drawer-tabs" role="tablist" aria-label="Item detail sections">` +
+          `<button type="button" class="drawer-tab active" role="tab" aria-selected="true" aria-controls="drawer-tab-overview" onclick="switchDrawerTab('overview')">Overview</button>` +
+          `<button type="button" class="drawer-tab" role="tab" aria-selected="false" aria-controls="drawer-tab-timeline" onclick="switchDrawerTab('timeline')">Timeline</button>` +
+          `<button type="button" class="drawer-tab" role="tab" aria-selected="false" aria-controls="drawer-tab-relations" onclick="switchDrawerTab('relations')">Relations</button>` +
+        `</div>` +
+        `<section id="drawer-tab-overview" class="drawer-tab-panel" role="tabpanel">` +
+          fieldsHtml + progressHtml + dueQuickHtml + bodyHtml +
+          sourceHtml + rawHtml +
+        `</section>` +
+        `<section id="drawer-tab-timeline" class="drawer-tab-panel" role="tabpanel" hidden>` +
+          `<div id="drawer-native-timeline"><div class="drawer-section-title">Native Timeline</div><div class="empty dep-loading">Loading…</div></div>` +
+        `</section>` +
+        `<section id="drawer-tab-relations" class="drawer-tab-panel" role="tabpanel" hidden>` +
+          `<div id="drawer-blockers"></div>` +
+          `<div id="drawer-deps"><div class="drawer-section-title">Dependencies &amp; Links</div><div class="empty dep-loading">Loading…</div></div>` +
+          threadHtml + replyHtml +
+        `</section>`;
       rememberRecentItem(item);
       openManagedModal(drawer, ".drawer-close-btn");
       loadDependencyLinks(item);

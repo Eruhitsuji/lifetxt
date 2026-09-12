@@ -388,6 +388,8 @@
     .empty-state .empty-icon { font-size: 2rem; opacity: .75; }
     .empty-state .empty-title { font-weight: 700; color: var(--ink); }
     .empty-state .empty-hint { font-size: .84rem; max-width: 26rem; }
+    .compact-empty { padding: .7rem; align-items: flex-start; }
+    .empty-cta { margin-top: .35rem; }
     .empty-actions {
       display: flex;
       justify-content: center;

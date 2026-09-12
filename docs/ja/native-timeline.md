@@ -40,3 +40,40 @@ JSON result は
 に標準のsource-set `revision`を加えたもので、fileを書き換えずGitも要求しません。
 Git の exact revision には引き続き `thread --revision`、
 `thread --as-of`、`thread --diff` を使用でき、これらの意味は変更しません。
+
+## Semantic as-of reconstruction
+
+`--as-of TIMESTAMP` は、offset 付き RFC3339 timestamp における各 field の
+known/partial/unavailable state を再構築し、bounded event list に加えて
+（置き換えではなく）表示します。
+
+```bash
+lifetxt timeline task-1 life.txt --as-of 2026-09-10T11:00:00Z
+lifetxt timeline task-1 life.txt --as-of 2026-09-10T11:00:00Z --json
+```
+
+`--as-of` は `show --as-of`/`query --as-of` と同じ offset 付き RFC3339
+cutoff parser を使い、naive または malformed な timestamp を同じ message で
+拒否します。`--summary`、analysis flag、`--compare-window`/`--to-window`
+とは併用できません。
+
+各 field は次の3状態のいずれかを報告します。
+
+- `known` -- creation から欠落のない item-event chain から再構築できた。
+- `partial` -- 適用可能な event から再構築できたが、item の event chain が
+  creation から完全であると検証されていないため、未知の gap が答えを
+  変える可能性がある。
+- `unavailable` -- cutoff 以前に適用可能な event が存在しない、または
+  この field には今日時点で atomic capture route がない。**現在の item
+  state へのフォールバックは一切行いません。**
+
+対象 field は `status`（lifecycle status）、`due`（`due:` schedule field、
+今日 atomic capture route を持つ唯一の schedule field）、
+`follows`/`realizes`/`replaced_by`（`relation_added`/`relation_removed`
+event から再現する lifecycle relation）、および `on`/`from`/`to`/`at`
+（常に `unavailable` -- これらの schedule field はまだ capture route が
+ありません）です。
+
+これは既存の `native_timeline()`/`normalize_native_events()` reader と
+`item_event_completeness()` をそのまま再利用しており、現在の life.txt
+state へフォールバックせず、Git も合成しません。

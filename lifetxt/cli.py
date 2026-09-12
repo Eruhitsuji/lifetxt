@@ -1620,6 +1620,16 @@ def build_parser():
         help="Include only this normalized event type.",
     )
     timeline_command.add_argument(
+        "--as-of",
+        metavar="TIMESTAMP",
+        help=(
+            "Reconstruct known/partial/unavailable field state at this "
+            "offset-aware RFC3339 timestamp (semantic-as-of-v1), alongside "
+            "the bounded event list. Cannot be combined with --summary, "
+            "an analysis flag, or --compare-window/--to-window."
+        ),
+    )
+    timeline_command.add_argument(
         "--compare-window",
         metavar="START..END",
         help="Compare this inclusive window with --to-window.",
@@ -13900,12 +13910,36 @@ def command_timeline(args):
         if getattr(args, "compare_window", None) or getattr(args, "to_window", None):
             if not getattr(args, "compare_window", None) or not getattr(args, "to_window", None):
                 raise ValueError("--compare-window and --to-window must be provided together.")
+            if getattr(args, "as_of", None):
+                raise ValueError(
+                    "--as-of cannot be combined with --compare-window/--to-window."
+                )
             from .lifecycle_analytics import compare_lifecycle_windows
             first_start, first_end = _window(args.compare_window)
             second_start, second_end = _window(args.to_window)
             first = native_timeline(items, args.id, id_key=id_key_from_config(config), limit=getattr(args, "limit", 100), since=first_start, until=first_end, event=getattr(args, "event", None), include_all_valid=True)
             second = native_timeline(items, args.id, id_key=id_key_from_config(config), limit=getattr(args, "limit", 100), since=second_start, until=second_end, event=getattr(args, "event", None), include_all_valid=True)
             result = compare_lifecycle_windows(first, second)
+        as_of_result = None
+        if getattr(args, "as_of", None):
+            if getattr(args, "summary", False) or any(
+                getattr(args, name, False)
+                for name in (
+                    "duration", "status_dwell", "schedule_analysis",
+                    "relation_analysis", "completion_cycles", "transitions",
+                    "gaps", "cadence", "oscillation", "provenance_analysis",
+                    "progress_analysis", "effort", "schedule_lead_time",
+                    "due_variance",
+                )
+            ):
+                raise ValueError(
+                    "--as-of cannot be combined with --summary or an analysis flag."
+                )
+            from .native_semantic_as_of import semantic_as_of
+
+            as_of_result = semantic_as_of(
+                items, args.id, args.as_of, id_key=id_key_from_config(config)
+            )
     except ValueError as exc:
         sys.stderr.write("ERROR: %s\n" % exc)
         return 1
@@ -13932,6 +13966,9 @@ def command_timeline(args):
         return 0
     if selected_analysis or getattr(args, "summary", False):
         result = lifecycle_analytics(result, selected_analysis or "summary", timezone_name=resolve_timezone_name(config))
+    if as_of_result is not None:
+        result = dict(result)
+        result["semantic_as_of"] = as_of_result
     if getattr(args, "json", False):
         write_text(None, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
         return 0
@@ -13992,6 +14029,25 @@ def command_timeline(args):
         )
     if result["limitations"]:
         write_text(None, "  Limitations: %s\n" % ", ".join(result["limitations"]))
+    if as_of_result is not None:
+        write_text(None, "  As of %s:\n" % as_of_result["as_of"])
+        for field_name, field_result in as_of_result["fields"].items():
+            state = field_result["state"]
+            if state == "unavailable":
+                write_text(
+                    None,
+                    "    %s: unavailable (%s)\n" % (field_name, field_result["reason"]),
+                )
+            elif "values" in field_result:
+                write_text(
+                    None,
+                    "    %s: %s [%s]\n" % (field_name, field_result["values"], state),
+                )
+            else:
+                write_text(
+                    None,
+                    "    %s: %s [%s]\n" % (field_name, field_result["value"], state),
+                )
     return 0
 
 

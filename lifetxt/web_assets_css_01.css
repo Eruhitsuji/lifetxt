@@ -390,6 +390,10 @@
     .empty-state .empty-hint { font-size: .84rem; max-width: 26rem; }
     .compact-empty { padding: .7rem; align-items: flex-start; }
     .empty-cta { margin-top: .35rem; }
+    .actionable-error { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; padding: .8rem; color: var(--danger); background: var(--danger-soft); border: 1px solid var(--danger); border-radius: var(--r-sm); }
+    .actionable-error strong, .actionable-error span { flex: 1 1 100%; }
+    .actionable-error details { flex: 1 1 100%; font-size: .75rem; }
+    .actionable-error code { white-space: pre-wrap; overflow-wrap: anywhere; }
     .empty-actions {
       display: flex;
       justify-content: center;

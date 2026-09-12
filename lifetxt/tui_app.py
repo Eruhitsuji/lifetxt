@@ -101,7 +101,9 @@ UNICODE_GLYPHS = {
     "prompt": "›",
     "flag": "⚑",
     "ellipsis": "…",
-    "bullet": "●",
+    # U+25CF is East Asian Ambiguous and may occupy two terminal cells in CJK
+    # locales. An ASCII marker keeps the header contract stable everywhere.
+    "bullet": ">",
 }
 
 ASCII_GLYPHS = {

@@ -87,3 +87,10 @@ list and from `temporal-thread-v1`'s Git-backed `historical`/`as of`
 revision snapshot: it never reads Git, and it never claims a field's state
 beyond what the captured `record:item_event` stream at or before the
 cutoff actually supports.
+
+## Workspace Life Timeline
+
+`lifetxt timeline --workspace-timeline [path ...]` merges the bounded
+per-item Native Timelines above into one deterministic, read-only
+chronological stream across every current item in the selected workspace.
+See [workspace-life-timeline.md](workspace-life-timeline.md).

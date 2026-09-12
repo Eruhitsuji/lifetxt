@@ -65,8 +65,14 @@ class TodayCliTicketAttentionTests(unittest.TestCase):
 
 def _hub_sample():
     """Build a fixture relative to the real "today" `lifetxt today` sees, so
-    these tests stay correct regardless of the wall-clock date they run on."""
-    today = datetime.date.today()
+    these tests stay correct regardless of the wall-clock date they run on.
+
+    The fixture declares ``#! timezone: UTC``, so "today" must be computed
+    in UTC too -- using the host's local calendar date here would drift by
+    one day whenever the local date and UTC date differ (e.g. late-evening
+    JST), the same class of boundary bug already fixed in #508.
+    """
+    today = datetime.datetime.now(datetime.timezone.utc).date()
     overdue = (today - datetime.timedelta(days=5)).isoformat()
     return (
         "#! timezone: UTC\n"

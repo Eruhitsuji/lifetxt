@@ -7253,7 +7253,15 @@ class LifeTxtMcpTests(unittest.TestCase):
             self.assertEqual("[x]", done["item"]["status"])
             self.assertEqual(["2026-06-12"], done["item"]["details"]["done"])
             self.assertIn("Draft updated", deleted["deleted"])
-            self.assertEqual("", Path(path).read_text(encoding="utf-8"))
+            # Deleting the item removes its own record, but the append-only
+            # native-history event `mark_done` captured (#780) is audit
+            # evidence and is not deleted along with the item it describes.
+            content = Path(path).read_text(encoding="utf-8")
+            lines = [line for line in content.splitlines() if line.strip()]
+            self.assertEqual(1, len(lines))
+            self.assertIn("record:item_event", lines[0])
+            self.assertIn("parent:%s" % item_id, lines[0])
+            self.assertIn("event:completed", lines[0])
 
     def test_mcp_complete_item_materializes_next_repeat_occurrence(self):
         from lifetxt.mcp import McpContext, call_tool
@@ -7280,7 +7288,11 @@ class LifeTxtMcpTests(unittest.TestCase):
             self.assertNotEqual("t1", result["next"]["id"])
 
             content = Path(path).read_text(encoding="utf-8")
-            lines = [line for line in content.splitlines() if line.strip()]
+            lines = [
+                line
+                for line in content.splitlines()
+                if line.strip() and "record:item_event" not in line
+            ]
             self.assertEqual(2, len(lines))
 
     def test_mcp_complete_item_no_repeat_behaves_like_mark_done(self):

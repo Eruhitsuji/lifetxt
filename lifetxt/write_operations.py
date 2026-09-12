@@ -113,7 +113,12 @@ def mutate_items(
     )
 
     def transform(text):
-        return transform_items_text(text, normalized, id_key=id_key)
+        return transform_items_text_with_native_history(
+            text,
+            normalized,
+            id_key=id_key,
+            source_revision=expected,
+        )
 
     return mutation.write_text(
         path,
@@ -158,6 +163,10 @@ def transform_items_text(text, changes, id_key="id"):
             updated = copy.deepcopy(item)
             if change.get("status") is not None:
                 updated.status = str(change["status"])
+            if change.get("type") is not None:
+                updated.kind = str(change["type"])
+            if change.get("title") is not None:
+                updated.title = str(change["title"])
             for key, values in (change.get("set_details") or {}).items():
                 if values is None or values == []:
                     updated.details.pop(str(key), None)
@@ -184,6 +193,83 @@ def transform_items_text(text, changes, id_key="id"):
     return result
 
 
+def transform_items_text_with_native_history(
+    text, changes, id_key="id", source_revision=None
+):
+    """Apply item changes and capture supported semantic events in one transform.
+
+    This is deliberately a transform helper rather than a second write path:
+    callers still commit the returned text through the existing CAS or journal
+    transaction.  Unsupported changes remain ordinary edits, while supported
+    before/after differences are appended through the canonical Native History
+    event builder.
+    """
+    normalized = _normalize_changes(changes)
+    before_items, diagnostics = parse_text(
+        text, id_key=id_key, check_ids=False, check_references=False
+    )
+    _raise_parse_errors(diagnostics)
+    replacement = transform_items_text(text, normalized, id_key=id_key)
+    after_items, diagnostics = parse_text(
+        replacement, id_key=id_key, check_ids=False, check_references=False
+    )
+    _raise_parse_errors(diagnostics)
+
+    before_by_id = _items_by_id(before_items, id_key)
+    after_by_id = _items_by_id(after_items, id_key)
+    event_specs = []
+    for change in normalized:
+        if change.get("delete"):
+            continue
+        before = before_by_id.get(change["id"])
+        after = after_by_id.get(change["id"])
+        if before is None or after is None:
+            continue
+        from .native_history_mutation import infer_item_event_specs
+
+        for spec in infer_item_event_specs(before, after):
+            event_specs.append(dict(spec, item_id=change["id"]))
+    if not event_specs:
+        return replacement
+
+    from .native_history_mutation import augment_item_mutation_with_event
+
+    current = text
+    final = replacement
+    revision = source_revision or mutation.hash_text(text)
+    for spec in event_specs:
+        final, _after, event = augment_item_mutation_with_event(
+            current,
+            final,
+            spec["item_id"],
+            spec["event_type"],
+            revision,
+            id_key=id_key,
+            field=spec.get("field"),
+            target=spec.get("target"),
+        )
+        # Keep the original item state in ``current`` for every semantic
+        # comparison, while carrying already-appended events so sequences are
+        # allocated monotonically for multiple changes to one item.
+        event_line = item_to_line(event).replace("\n", _preferred_newline(current))
+        prefix = (
+            ""
+            if not current or current.endswith(("\n", "\r"))
+            else _preferred_newline(current)
+        )
+        current += prefix + event_line + _preferred_newline(current)
+    return final
+
+
+def _items_by_id(items, id_key):
+    result = {}
+    for item in items:
+        values = getattr(item, "details", {}).get(id_key) or []
+        if len(values) == 1:
+            result[str(values[0])] = item
+    return result
+
+
 def mutate_item_files(
     file_changes, id_key="id", operation="items.multi_file", journal_dir=None
 ):
@@ -199,8 +285,13 @@ def mutate_item_files(
         plans.append(
             text_plan(
                 path,
-                lambda text, _changes=changes: transform_items_text(
-                    text, _changes, id_key=id_key
+                lambda text, _changes=changes, _expected=expected: (
+                    transform_items_text_with_native_history(
+                        text,
+                        _changes,
+                        id_key=id_key,
+                        source_revision=_expected,
+                    )
                 ),
                 expected,
                 validate=lambda replacement: _parse_or_raise(replacement),
@@ -423,6 +514,8 @@ def _normalize_changes(changes):
             {
                 "id": item_id,
                 "status": raw.get("status"),
+                "type": raw.get("type", raw.get("kind")),
+                "title": raw.get("title"),
                 "set_details": raw.get("set_details") or {},
                 "delete": bool(raw.get("delete")),
             }

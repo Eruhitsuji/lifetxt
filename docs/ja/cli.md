@@ -2184,6 +2184,7 @@ shell completion script・Web UI・MCP の `complete` tool と同一です。
 | `/due DATE` | `today`、`tomorrow`、曜日、`+3d`、`-1w` で `due:` を設定 |
 | `/assign USER` | `assignee:` を設定 |
 | `/add TITLE` | write file に未完了 task を追記。記号 (`@ # ! ^`) を展開 |
+| `/related [parent\|related\|ref] TITLE` | 選択中の行に関連する task を作成し、その `id:`/`project:` を prefill する（#770） |
 | `/delete yes` | row を削除。`yes` がないと拒否 |
 | `/edit` | 選択行を `$EDITOR` で開く |
 | `/timer start\|stop\|status\|cancel` | 経過時間を計測し、stop 時に `elapsed:` を書き込む |

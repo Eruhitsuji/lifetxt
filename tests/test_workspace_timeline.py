@@ -16,18 +16,32 @@ REVISION = "a" * 64
 
 def _items():
     first = build_item_event(
-        "one", "completed", "2026-09-10T10:00:00Z", 1, "TX-1", REVISION,
-        before_status="[ ]", after_status="[x]",
+        "one",
+        "completed",
+        "2026-09-10T10:00:00Z",
+        1,
+        "TX-1",
+        REVISION,
+        before_status="[ ]",
+        after_status="[x]",
     )
     second = build_item_event(
-        "two", "completed", "2026-09-10T09:00:00Z", 1, "TX-2", REVISION,
-        before_status="[ ]", after_status="[x]",
+        "two",
+        "completed",
+        "2026-09-10T09:00:00Z",
+        1,
+        "TX-2",
+        REVISION,
+        before_status="[ ]",
+        after_status="[x]",
     )
     items, _ = parse_text(
         "[x] T One id:one project:p\n"
         "[x] T Two id:two project:p\n"
-        + item_to_line(first) + "\n"
-        + item_to_line(second) + "\n"
+        + item_to_line(first)
+        + "\n"
+        + item_to_line(second)
+        + "\n"
     )
     items[0].source = "one.txt"
     items[1].source = "two.txt"
@@ -58,6 +72,8 @@ class WorkspaceTimelineTests(unittest.TestCase):
             with open(path, "w", encoding="utf-8") as handle:
                 for item in _items():
                     handle.write(item_to_line(item) + "\n")
-            stdout, stderr, code = run_cli("timeline", "--workspace-timeline", path, "--json")
+            stdout, stderr, code = run_cli(
+                "timeline", "--workspace-timeline", path, "--json"
+            )
             self.assertEqual(0, code, stderr)
             self.assertEqual("workspace-life-timeline-v1", json.loads(stdout)["schema"])

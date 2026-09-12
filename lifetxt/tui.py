@@ -866,7 +866,9 @@ def _char_display_width(char):
     # intentionally kept one cell wide; the frame builder repeats them to a
     # measured width. Other ambiguous symbols use the conservative two-cell
     # policy so adjacent user text cannot overlap.
-    if unicodedata.east_asian_width(char) == "A" and not (0x2500 <= ord(char) <= 0x257F):
+    if unicodedata.east_asian_width(char) == "A" and not (
+        0x2500 <= ord(char) <= 0x257F
+    ):
         return 2
     if unicodedata.east_asian_width(char) in ("F", "W"):
         return 2

@@ -35,10 +35,16 @@ def workspace_timeline(
     except (TypeError, ValueError):
         raise ValueError("Workspace Timeline limit must be an integer.")
     if limit < 0 or limit > MAX_LIMIT:
-        raise ValueError("Workspace Timeline limit must be between 0 and %d." % MAX_LIMIT)
+        raise ValueError(
+            "Workspace Timeline limit must be between 0 and %d." % MAX_LIMIT
+        )
     since_value = _filter_instant(since, "since")
     until_value = _filter_instant(until, "until")
-    if since_value is not None and until_value is not None and since_value > until_value:
+    if (
+        since_value is not None
+        and until_value is not None
+        and since_value > until_value
+    ):
         raise ValueError("Workspace Timeline since must not be after until.")
     event_value = str(event).strip() if event not in (None, "") else None
     if event_value is not None and event_value not in KNOWN_EVENT_FILTERS:
@@ -57,7 +63,8 @@ def workspace_timeline(
         targets = [
             item
             for item in targets
-            if project_value in [str(value) for value in item.details.get("project", [])]
+            if project_value
+            in [str(value) for value in item.details.get("project", [])]
         ]
 
     rows = []
@@ -93,13 +100,21 @@ def workspace_timeline(
             enriched.update(row)
             rows.append(enriched)
 
-    rows.sort(key=lambda row: (_sort_key(row), row.get("target_id") or "", row.get("source") or ""))
+    rows.sort(
+        key=lambda row: (
+            _sort_key(row),
+            row.get("target_id") or "",
+            row.get("source") or "",
+        )
+    )
     total_valid = len(rows)
     selected = rows[:limit]
     truncated = total_valid > len(selected)
     if truncated:
         limitations.add("event_limit_truncated")
-    complete = bool(target_reports) and all(report.get("complete") for report in target_reports)
+    complete = bool(target_reports) and all(
+        report.get("complete") for report in target_reports
+    )
     if not complete:
         limitations.add("workspace_history_incomplete")
     return OrderedDict(
@@ -107,10 +122,40 @@ def workspace_timeline(
             ("schema", "workspace-life-timeline-v1"),
             ("source", "native_life_txt"),
             ("git_composed", False),
-            ("filters", OrderedDict((("since", since), ("until", until), ("event", event_value), ("target_id", target_id), ("project", project)))),
-            ("bounds", OrderedDict((("limit", limit), ("total_valid_events", total_valid), ("returned_events", len(selected)), ("truncated", truncated)))),
+            (
+                "filters",
+                OrderedDict(
+                    (
+                        ("since", since),
+                        ("until", until),
+                        ("event", event_value),
+                        ("target_id", target_id),
+                        ("project", project),
+                    )
+                ),
+            ),
+            (
+                "bounds",
+                OrderedDict(
+                    (
+                        ("limit", limit),
+                        ("total_valid_events", total_valid),
+                        ("returned_events", len(selected)),
+                        ("truncated", truncated),
+                    )
+                ),
+            ),
             ("complete", complete and not limitations),
-            ("completeness", OrderedDict((("target_count", len(targets)), ("target_reports", len(target_reports)), ("complete", complete)))),
+            (
+                "completeness",
+                OrderedDict(
+                    (
+                        ("target_count", len(targets)),
+                        ("target_reports", len(target_reports)),
+                        ("complete", complete),
+                    )
+                ),
+            ),
             ("limitations", sorted(limitations)),
             ("diagnostics", diagnostics),
             ("events", selected),

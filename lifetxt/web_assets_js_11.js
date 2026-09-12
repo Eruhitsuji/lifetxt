@@ -334,6 +334,12 @@
     const NATIVE_TIMELINE_KIND_LABEL = {
       item_event: "Item", progress_event: "Progress", ticket_event: "Ticket", time_entry: "Time",
     };
+    const NATIVE_TIMELINE_EVENT_VALUES = [
+      ["", "All events"], ["created", "Created"], ["status_changed", "Status changed"],
+      ["completed", "Completed"], ["reopened", "Reopened"], ["canceled", "Canceled"],
+      ["relation_added", "Relation added"], ["relation_removed", "Relation removed"],
+      ["schedule_changed", "Schedule changed"], ["progress_increment", "Progress increment"],
+    ];
 
     function nativeTimelineEventLabel(row) {
       const event = row?.event || "";
@@ -433,14 +439,48 @@
     }
 
     function renderNativeTimelineFiltersHtml() {
-      return `<div class="nt-filters">
+      const eventOptions = NATIVE_TIMELINE_EVENT_VALUES.map(([value, label]) =>
+        `<option value="${escapeHtml(value)}"${value === _ntFilters.event ? " selected" : ""}>${escapeHtml(label)}</option>`
+      ).join("");
+      return `<div class="nt-filters" role="group" aria-label="Timeline filters">
+        <div class="nt-filter-presets" role="group" aria-label="Time range">
+          <button type="button" class="secondary" onclick="setNativeTimelineRange('all')">All</button>
+          <button type="button" class="secondary" onclick="setNativeTimelineRange('7d')">7d</button>
+          <button type="button" class="secondary" onclick="setNativeTimelineRange('30d')">30d</button>
+          <button type="button" class="secondary" onclick="setNativeTimelineRange('custom')">Custom</button>
+        </div>
         <input id="nt-filter-since" type="text" placeholder="since (ISO datetime)" value="${escapeHtml(_ntFilters.since)}" aria-label="Since">
         <input id="nt-filter-until" type="text" placeholder="until (ISO datetime)" value="${escapeHtml(_ntFilters.until)}" aria-label="Until">
-        <input id="nt-filter-event" type="text" placeholder="event type" value="${escapeHtml(_ntFilters.event)}" aria-label="Event type">
+        <select id="nt-filter-event" aria-label="Event type">${eventOptions}</select>
         <input id="nt-filter-limit" type="text" placeholder="limit" style="width:5rem" value="${escapeHtml(_ntFilters.limit)}" aria-label="Limit">
         <button class="secondary" type="button" onclick="applyNativeTimelineFilters()">Apply</button>
         <button class="secondary" type="button" onclick="clearNativeTimelineFilters()">Clear</button>
       </div>`;
+    }
+
+    function setNativeTimelineRange(range) {
+      if (range === "all") {
+        _ntFilters.since = "";
+        _ntFilters.until = "";
+      } else if (range === "custom") {
+        const since = prompt("Since (ISO datetime)", _ntFilters.since || "");
+        if (since === null) return;
+        const until = prompt("Until (ISO datetime, optional)", _ntFilters.until || "");
+        if (until === null) return;
+        _ntFilters.since = since.trim();
+        _ntFilters.until = until.trim();
+      } else {
+        const days = range === "7d" ? 7 : 30;
+        const now = new Date();
+        const start = new Date(now.getTime() - days * 86400000);
+        _ntFilters.since = start.toISOString();
+        _ntFilters.until = now.toISOString();
+      }
+      const sinceInput = document.getElementById("nt-filter-since");
+      const untilInput = document.getElementById("nt-filter-until");
+      if (sinceInput) sinceInput.value = _ntFilters.since;
+      if (untilInput) untilInput.value = _ntFilters.until;
+      reloadNativeTimelinePanel();
     }
 
     function renderNativeTimelinePanel(nativeTimeline) {
@@ -516,7 +556,25 @@
 
     function clearNativeTimelineFilters() {
       _ntFilters = { since: "", until: "", event: "", limit: "" };
+      ["nt-filter-since", "nt-filter-until", "nt-filter-event", "nt-filter-limit"].forEach(id => {
+        const field = document.getElementById(id);
+        if (field) field.value = "";
+      });
       reloadNativeTimelinePanel();
+    }
+
+    function switchDrawerTab(name) {
+      const allowed = new Set(["overview", "timeline", "relations"]);
+      const selected = allowed.has(name) ? name : "overview";
+      document.querySelectorAll("#drawer-body .drawer-tab").forEach(button => {
+        const active = button.getAttribute("aria-controls") === "drawer-tab-" + selected;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-selected", active ? "true" : "false");
+      });
+      document.querySelectorAll("#drawer-body .drawer-tab-panel").forEach(panel => {
+        panel.hidden = panel.id !== "drawer-tab-" + selected;
+      });
+      if (selected === "timeline" && _ntCurrentItemId) reloadNativeTimelinePanel();
     }
 
     async function loadDependencyLinks(item) {
@@ -533,10 +591,6 @@
         let temporalThread = null;
         try {
           temporalThread = await api(`/api/temporal-thread/${encodeURIComponent(itemId)}`);
-        } catch(_) {}
-        let nativeTimeline = null;
-        try {
-          nativeTimeline = await api(`/api/native-timeline/${encodeURIComponent(itemId)}`);
         } catch(_) {}
         const records = data.records || [];
         let graphData = null;
@@ -574,14 +628,14 @@
           `${temporalThread?.explicit?.truncated ? "; explicit thread truncated" : ""}` +
           `${temporalThread?.consistency?.truncated ? "; consistency evidence truncated" : ""}.</div>`;
         _ntCurrentItemId = itemId;
-        const timelineHtml = `<div id="drawer-native-timeline">${renderNativeTimelinePanel(nativeTimeline)}</div>`;
         if (!records.length) {
-          container.innerHTML = lifecycleHtml + timelineHtml + `<div class="drawer-section-title">Dependencies &amp; Links</div><div class="empty">No links.</div>`;
+          container.innerHTML = lifecycleHtml + `<div class="drawer-section-title">Dependencies &amp; Links</div><div class="empty">No links.</div>`;
+          reloadNativeTimelinePanel();
           return;
         }
         const outgoing = records.filter(r => r.source_id === itemId);
         const incoming = records.filter(r => r.target_id === itemId && r.source_id !== itemId);
-        let html = lifecycleHtml + timelineHtml + `<div class="drawer-section-title">Dependencies &amp; Links (${records.length})</div>` +
+        let html = lifecycleHtml + `<div class="drawer-section-title">Dependencies &amp; Links (${records.length})</div>` +
           renderDependencyMiniGraph(records, itemId, graphData) +
           `<div class="dep-graph">`;
 
@@ -617,6 +671,13 @@
         }
         html += `</div>`;
         container.innerHTML = html;
+        const timeline = document.getElementById("drawer-native-timeline");
+        if (timeline) {
+          timeline.innerHTML = renderNativeTimelinePanel(null);
+          api(`/api/native-timeline/${encodeURIComponent(itemId)}`)
+            .then(data => { if (_ntCurrentItemId === itemId) timeline.innerHTML = renderNativeTimelinePanel(data); })
+            .catch(e => { timeline.innerHTML = `<div class="drawer-section-title">Native Timeline</div><div class="diagnostic">Timeline error: ${escapeHtml(e.message)}</div>`; });
+        }
       } catch(e) {
         if (container) container.innerHTML = `<div class="drawer-section-title">Dependencies &amp; Links</div><div class="empty">Error: ${escapeHtml(e.message)}</div>`;
       }

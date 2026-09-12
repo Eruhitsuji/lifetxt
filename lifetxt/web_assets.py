@@ -112,7 +112,7 @@ def _apply_brand_assets(template: str) -> str:
         '<span class="brand-mark" data-lifetxt-brand="mark" aria-hidden="true">'
         + _BRAND_MARK_SVG
         + "</span>",
-    )
+    ).rstrip("\r\n")
 
 
 def _assemble_html() -> str:

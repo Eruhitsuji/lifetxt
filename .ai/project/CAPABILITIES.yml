@@ -37,6 +37,75 @@ capabilities:
       replaced_by: null
       deprecation_issue: null
 
+  - id: cap-native-timeline-cross-surface-ux
+    name: Native Timeline cross-surface UX
+    summary: First-class Web item-drawer Timeline navigation, bounded Web filters, and local TUI selected-item/event inspection over the shared temporal-timeline-v1 reader.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-web-item-timeline-first-class-view
+      - req-web-native-timeline-filter-controls
+      - req-tui-selected-item-timeline-action
+      - req-tui-native-timeline-event-navigation
+    implementation_locations:
+      - lifetxt/web_assets_js_10.js
+      - lifetxt/web_assets_js_11.js
+      - lifetxt/web_assets_css_02.css
+      - lifetxt/tui_app.py
+      - lifetxt/tui_bindings.py
+    public_interfaces:
+      - Web item drawer Overview / Timeline / Relations tabs
+      - bounded Native Timeline Web filter controls
+      - TUI selected-item Timeline action (L)
+      - TUI Timeline event cursor ([ / ])
+    tests_or_evidence:
+      - tests.test_web_native_timeline_visual
+      - tests.test_web_assets (includes a node --check regression guard over the whole assembled script)
+      - tests.test_tui_native_timeline (including the [ / ] event-cursor action)
+      - tests.test_cui_extensions
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/771
+      - https://github.com/Eruhitsuji/lifetxt/issues/772
+      - https://github.com/Eruhitsuji/lifetxt/issues/773
+      - https://github.com/Eruhitsuji/lifetxt/issues/774
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/788
+    reuse_policy: Reuse the existing native_timeline result and Web API; do not duplicate temporal parsing, ordering, completeness, or semantics.
+
+  - id: cap-structured-common-field-authoring
+    name: Structured common-field authoring
+    summary: Beginner-friendly Web and local TUI authoring controls for common canonical life.txt fields while preserving raw/custom authoring and the existing validation/mutation paths.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-beginner-structured-common-field-authoring
+      - req-web-structured-common-field-authoring
+      - req-tui-structured-common-field-authoring
+    implementation_locations:
+      - lifetxt/web_assets.html
+      - lifetxt/web_assets_js_12.js
+      - lifetxt/web_assets_js_18.js
+      - lifetxt/tui_app.py
+      - docs/en/cli.md
+      - docs/ja/cli.md
+    public_interfaces:
+      - Web structured common fields for create/edit
+      - TUI /guided TITLE [key=value ...]
+      - TUI /guided_edit key=value [key=value ...]
+    tests_or_evidence:
+      - tests.test_web_structured_authoring_js
+      - tests.test_web_assets
+      - tests.test_cui_extensions (guided/guided_edit TUI commands)
+      - tests.test_surface_runtime
+      - tests.test_completion_surfaces
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/775
+      - https://github.com/Eruhitsuji/lifetxt/issues/776
+      - https://github.com/Eruhitsuji/lifetxt/issues/777
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/788
+    reuse_policy: Map UI values to canonical keys and reuse existing parser, shorthand/date, validation, revision, and mutation paths; never add a second persisted model.
+
   - id: cap-lifecycle-temporal-thread
     name: Lifecycle-aware temporal relations and temporal-thread-v1
     summary: >-

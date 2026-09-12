@@ -240,6 +240,8 @@ capabilities:
       - "tests/test_web_native_timeline.py (8 tests): GET /api/native-timeline/{id} matches a direct native_timeline() call field for field, since/until/event filters forwarded, limit forwarded and bounded, unknown item 404, invalid limit/event 422 (not a crash), HTML-special-character id is escaped not executed, existing routes (including /api/temporal-thread/{id}) are unaffected"
       - "docs/en/native-semantic-as-of-investigation.md (#759): reconstructability matrix, baseline/unknown-field rule, replay semantics reusing native_timeline()/item_event_completeness()/historical_temporal.parse_cutoff, proposed semantic-as-of-v1 contract, native-vs-Git authority boundary confirmation"
       - python -m unittest tests.test_tui_native_timeline tests.test_web_native_timeline tests.test_cui_extensions tests.test_web_assets tests.test_surface_runtime.TuiDocumentationDriftTests -> all pass
+      - "tests/test_native_history_mutation.py InferItemEventSpecsTests (9 tests, #767): no-change infers nothing; completion/reopen/cancellation/other-status classified correctly; due schedule_changed classified, on/from/to/at never classified; relation add/remove classified independently per relation; multiple simultaneous changes produce multiple specs"
+      - python -m unittest tests.test_native_history_mutation -> Ran 16 tests, OK
       - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
       - ruff format --check / ruff check on every changed file -> clean
     related_issues:
@@ -260,6 +262,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/763
       - https://github.com/Eruhitsuji/lifetxt/issues/764
       - https://github.com/Eruhitsuji/lifetxt/issues/765
+      - https://github.com/Eruhitsuji/lifetxt/issues/767
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/698
       - https://github.com/Eruhitsuji/lifetxt/pull/705
@@ -296,7 +299,32 @@ capabilities:
       known/partial/unavailable projection at a point in time, distinct
       from this capability's existing temporal-timeline-v1 event list) and
       filed three follow-up issues (#763 engine, #764 CLI exposure, #765
-      schema/docs) rather than building it unscoped in this pass.
+      schema/docs) rather than building it unscoped in this pass. #763/#764/
+      #765 are recorded under the new, separate `cap-native-semantic-as-of`
+      capability rather than extended into this one, matching this
+      project's own precedent of a dedicated capability entry for a new
+      bounded contract (e.g. `cap-temporal-context`/`cap-lifecycle-temporal-
+      thread`/`cap-temporal-diff` alongside this capability).
+      #767 investigated cross-surface Native History capture parity and
+      found a real, evidenced gap: only CLI (done/complete/reopen/due) calls
+      a Native History producer today. Web UI/API's `update_item_in_file`
+      (also Remote TUI's authoritative write route), `write_operations.
+      mutate_items`/`mutate_item_files` (shared by CLI's own generic paths
+      and local TUI), and Remote TUI's own edit route never emit a
+      `record:item_event`. #767 adds `lifetxt.native_history_mutation.
+      infer_item_event_specs(before, after)`, a pure, file-I/O-free
+      classifier reusing the exact event vocabulary/field scope
+      `augment_item_mutation_with_event` already emits, fully unit-tested
+      but deliberately not yet wired into any live write path: doing so
+      safely requires each write path to build its replacement text and
+      commit it together with the inferred event(s) in one atomic write --
+      a change to this project's shared, heavily-used mutation primitives
+      themselves, which this project's Task Decomposition Standard's own
+      "split when independent write paths cannot be safely reviewed
+      together" guidance argues against attempting unscoped in one pass.
+      Recorded as an explicit, documented follow-up in
+      docs/en+ja/native-semantic-history.md rather than silently dropped or
+      claimed complete.
     replacement:
       replaces: []
       replaced_by: null
@@ -8731,6 +8759,7 @@ capabilities:
       - req-tui-remote-polling-and-ux
       - req-tui-remote-offline-cache
       - req-tui-remote-editor
+      - req-tui-remote-native-timeline
     implementation_locations:
       - lifetxt/tui_backend.py
       - lifetxt/tui_remote_client.py
@@ -8762,6 +8791,9 @@ capabilities:
       - lifetxt.tui_app.WorkspaceState (backend= parameter, remote_status/remote_status_detail fields)
       - lifetxt.tui_app.REMOTE_POLL_SECONDS
       - lifetxt tui --remote-url URL [--remote-user NAME] [--remote-password-env VAR] [--allow-insecure-remote-http] [--remote-cache] [--remote-clear-cache]
+      - lifetxt.tui_backend.TuiBackend.native_timeline
+      - lifetxt.tui_backend.LocalTuiBackend.native_timeline
+      - lifetxt.tui_backend.RemoteTuiBackend.native_timeline
     tests_or_evidence:
       - "tests/test_tui_backend.py (7 tests): base contract raises NotImplementedError, LocalTuiBackend.load_items() matches lifetxt.tui.load_items() exactly, apply_semantic_changes() writes a single file through the same mutate_items() call _mutate_rows used directly before, WorkspaceState defaults to LocalTuiBackend, WorkspaceState.load() uses the injected backend, an injected backend is used instead of the default"
       - "tests/test_tui_remote_client.py (13 tests): loopback plain HTTP allowed, non-loopback plain HTTP refused without --allow-insecure-remote-http and allowed with it, invalid scheme rejected, connection.describe() never includes the password, Basic Auth header sent only when a username is configured (and never leaks the raw password), If-Match forwarded, a successful response updates the tracked file_revision, 401 raises RemoteAuthError, 409 raises RemoteMutationConflict carrying current_revision/current_item, a network failure raises RemoteConnectionError"
@@ -8790,6 +8822,14 @@ capabilities:
       - "#683 live: a real 127.0.0.1 lifetxt serve process accepted the validated temporary-editor PUT; an intervening server PUT while a second editor was open caused RemoteMutationConflict and preserved the concurrent authoritative value"
       - "#683: MPLBACKEND=Agg python -m unittest discover -> Ran 3914 tests, OK (skipped=197) before optional web dependencies were installed"
       - '#683: scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> {"errors": 0, "ok": true}'
+      - "#768: tests/test_tui_backend.py 2 new tests (native_timeline matches a direct native_timeline() call; since/until/event/limit forwarded correctly)"
+      - "#768: tests/test_tui_remote_backend.py RemoteTuiBackendNativeTimelineTests (8 tests): normal read hits GET /api/native-timeline/{id} verbatim, since/until/event/limit forwarded as query parameters, no-history/malformed-filter/unknown-target/auth/network errors all propagate the server's own error without local fallback, refuses outright while serving offline cached data with zero network calls, local and remote rendering share equivalent event ordering for identical server data"
+      - "#768: tests/test_tui_native_timeline.py updated to inject a fake backend (state.backend) instead of calling native_timeline() directly, since _cmd_timeline now delegates to state.backend.native_timeline() uniformly for both local and remote sessions"
+      - "python -m unittest tests.test_tui_backend tests.test_tui_native_timeline tests.test_tui_remote_backend tests.test_tui_remote_client tests.test_cui_extensions tests.test_shared_surface_mutation_routing -> Ran 264 tests, 3 failures (pre-existing Windows nvim.EXE/vim.EXE PATHEXT flakes, confirmed via git stash to reproduce identically before this change), skipped=1"
+      - "live: real disposable fixture -- /timeline t1 in a local session renders identically to before the change (confirmed by construction, since LocalTuiBackend.native_timeline() calls the exact same native_timeline() function the command called directly before)"
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - ruff format --check / ruff check on lifetxt/tui_backend.py lifetxt/tui_app.py and the touched test files -> clean
+      - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/677
       - https://github.com/Eruhitsuji/lifetxt/issues/678
@@ -8797,10 +8837,28 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/680
       - https://github.com/Eruhitsuji/lifetxt/issues/681
       - https://github.com/Eruhitsuji/lifetxt/issues/683
+      - https://github.com/Eruhitsuji/lifetxt/issues/768
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/684
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
+      #768 adds `TuiBackend.native_timeline(target_id, since=, until=,
+      event=, limit=)` to the shared backend contract, reused by
+      `tui_app._cmd_timeline` (#761) instead of that command calling
+      `lifetxt.native_timeline.native_timeline()` directly. `LocalTuiBackend`
+      delegates to the exact same call the command made before this change
+      (zero behavior change for local sessions); `RemoteTuiBackend` fetches
+      through the server's existing read-only `GET /api/native-timeline/{id}`
+      route (#762) instead of parsing/normalizing history client-side --
+      no server route changed for this. Refuses outright with a named
+      `ValueError` while `serving_cache` is set (#681's offline read cache
+      carries no history evidence to reconstruct a Timeline from), matching
+      #768's own explicit "do not invent history from current cached
+      items" requirement, and never even attempts the network call in that
+      state. Connection/auth failures (`RemoteAuthError`/
+      `RemoteConnectionError`) propagate unchanged through the existing
+      `_safe_command`/`except Exception` TUI error-surfacing path, with no
+      new error-handling code needed.
       #678 and #679 are the first two of three bounded #677 children (#678
       boundary, #679 remote Web backend, #680 polling/UX/docs) implemented
       on their own child branches into one integration branch. #678 is
@@ -9377,6 +9435,80 @@ capabilities:
       `show --ref`'s own pre-existing, undocumented-but-consistent
       behavior (both never reach `read_historical_snapshot()` at all in
       that case). No second cutoff-time resolution policy was introduced.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-native-semantic-as-of
+    name: Semantic as-of reconstruction over Native History
+    summary: >-
+      A small, pure per-field/domain "what was true at time T" projection
+      engine (`lifetxt.native_semantic_as_of.semantic_as_of`) reconstructing
+      known/partial/unavailable field state from the existing, unmodified
+      `record:item_event` stream at an offset-aware RFC3339 cutoff, exposed
+      through `lifetxt timeline ID --as-of TIMESTAMP` and published as
+      `semantic-as-of-v1`. Never falls back to current life.txt state for a
+      field with no applicable event evidence at or before the cutoff.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-native-semantic-as-of-projection-engine
+      - req-native-semantic-as-of-cli-exposure
+      - req-native-semantic-as-of-schema-and-docs
+    implementation_locations:
+      - lifetxt/native_semantic_as_of.py
+      - lifetxt/schema_extensions_v31.py
+      - lifetxt/cli.py
+      - dist/schemas/semantic-as-of-v1.schema.json
+      - tests/test_native_semantic_as_of.py
+      - tests/test_native_timeline.py
+      - tests/test_schema_extensions_v2.py
+      - docs/en/native-timeline.md
+      - docs/ja/native-timeline.md
+      - docs/en/cli.md
+      - docs/ja/cli.md
+    public_interfaces:
+      - lifetxt.native_semantic_as_of.semantic_as_of
+      - lifetxt timeline ID --as-of TIMESTAMP [--json]
+      - semantic-as-of-v1.schema.json
+    tests_or_evidence:
+      - "tests/test_native_semantic_as_of.py (14 tests): status known/partial/unavailable transitions, due schedule_changed known/unavailable/cleared, follows/realizes/replaced_by relation replay, on/from/to/at always unavailable, cutoff parsing/naive-datetime rejection, unknown target"
+      - "tests/test_native_timeline.py NativeTimelineAsOfCliTests (5 tests): --as-of renders alongside the event list in text/json, invalid --as-of fails loudly like show/query, a domain with no coverage reports unavailable not current state, --as-of rejected combined with --summary/--compare-window, omitting --as-of leaves output byte-for-byte unaffected"
+      - "python -m unittest tests.test_native_semantic_as_of tests.test_native_timeline -> Ran 30 tests, OK"
+      - "tests/test_schema_extensions_v2.py: semantic-as-of-v1 schema validates its own published sample and a real CLI-produced result via Draft202012Validator; schema-bundle-completeness test bumped 84 -> 85"
+      - "python -m unittest tests.test_schema_extensions_v2 tests.test_ticket_custom_field_public_contract tests.test_ticket_workflow_surfaces -> Ran 12 tests, OK"
+      - "live: real disposable fixture -- lifetxt timeline t1 life.txt --as-of 2026-09-10T11:00:00Z (text and --json) showed status known:[ ] and due/follows/realizes/replaced_by/on/from/to/at all unavailable with the correct reason; --as-of not-a-date failed loudly; --as-of combined with --summary was rejected"
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - ruff format --check / ruff check on every changed file -> clean
+      - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/759
+      - https://github.com/Eruhitsuji/lifetxt/issues/763
+      - https://github.com/Eruhitsuji/lifetxt/issues/764
+      - https://github.com/Eruhitsuji/lifetxt/issues/765
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Implements the #759 investigation's proposed semantic-as-of-v1
+      contract (docs/en/native-semantic-as-of-investigation.md) for exactly
+      the reconstructable domains it identified: lifecycle status (via
+      created/status_changed/completed/reopened/canceled events), the
+      due: schedule field (the only schedule field with an atomic capture
+      route today, per #714/#767's own findings), and the follows:/
+      realizes:/replaced_by: lifecycle relations. on:/from:/to:/at: and
+      any relation never captured through the ticket link/unlink route
+      always report unavailable with a named reason -- there is no atomic
+      capture route for them today. Reuses native_timeline()/
+      normalize_native_events() (via its private include_all_valid hand-
+      off), item_event_completeness(), and historical_temporal.
+      parse_cutoff() unmodified; no second event-normalization,
+      completeness, or timestamp-parsing policy was introduced. --as-of
+      is rejected in combination with --summary, an analysis flag, or
+      --compare-window/--to-window, keeping this a strictly additive
+      output alongside the existing bounded event list. No TUI/Web/MCP
+      exposure was added in this pass (#763's own scope explicitly
+      excludes it); recorded as an unimplemented follow-up candidate.
     replacement:
       replaces: []
       replaced_by: null

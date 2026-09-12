@@ -12,9 +12,7 @@ from .timezone_policy import utcnow
 from .write_operations import SemanticWriteError
 
 
-NativeMutationResult = namedtuple(
-    "NativeMutationResult", ("mutation", "item", "event")
-)
+NativeMutationResult = namedtuple("NativeMutationResult", ("mutation", "item", "event"))
 
 
 def _values(item, key):
@@ -40,8 +38,7 @@ def _find(items, item_id, id_key, required=True):
     matches = [
         item
         for item in items
-        if not iter_item_events([item])
-        and str(item_id) in _values(item, id_key)
+        if not iter_item_events([item]) and str(item_id) in _values(item, id_key)
     ]
     if len(matches) != (1 if required else 0):
         expected = "exactly one" if required else "no"
@@ -70,10 +67,7 @@ def _sequence(items, item_id):
 
 def _transaction(item_id, sequence, timestamp):
     stamp = (
-        timestamp.replace("-", "")
-        .replace(":", "")
-        .replace("T", "-")
-        .replace("Z", "")
+        timestamp.replace("-", "").replace(":", "").replace("T", "-").replace("Z", "")
     )
     return "ITX-%s-%06d-%s" % (str(item_id), int(sequence), stamp)
 
@@ -86,7 +80,9 @@ def _append(text, event):
     return prefix + item_to_line(event).replace("\n", newline) + newline
 
 
-def _derived_payload(event_type, before, after, field=None, target=None, completed_at=None):
+def _derived_payload(
+    event_type, before, after, field=None, target=None, completed_at=None
+):
     if event_type == "created":
         return {
             "item_kind": after.kind,
@@ -127,6 +123,85 @@ def _derived_payload(event_type, before, after, field=None, target=None, complet
             "after_missing": not after_values,
         }
     raise ValueError("Unsupported item event %r." % event_type)
+
+
+_STATUS_EVENT_FOR = {
+    # (before.status, after.status) -> event_type, mirroring the exact
+    # transitions CLI's own done/complete/reopen commands already emit
+    # (#714). Anything not covered here (e.g. "[ ]" -> "[/]") is a
+    # supported status_changed, since it does not represent completion,
+    # reopening, or cancellation specifically.
+    ("[x]", "[/]"): "reopened",
+    ("[x]", "[ ]"): "reopened",
+}
+
+
+def _classify_status_transition(before_status, after_status):
+    if before_status == after_status:
+        return None
+    if after_status == "[x]":
+        return "completed"
+    if after_status == "[-]":
+        return "canceled"
+    mapped = _STATUS_EVENT_FOR.get((before_status, after_status))
+    if mapped is not None:
+        return mapped
+    return "status_changed"
+
+
+def infer_item_event_specs(before, after):
+    """Classify a before/after item pair into zero or more supported
+    ``record:item_event`` specs (#767).
+
+    Pure, file-I/O-free diff over two already-parsed
+    :class:`lifetxt.model.Item` objects, reusing exactly the same event
+    vocabulary and field scope CLI's dedicated done/complete/reopen/due
+    commands already emit through
+    :func:`augment_item_mutation_with_event`/:func:`build_item_event`
+    (#714) -- ``status`` family transitions, the ``due:`` schedule field
+    (the only schedule field with an atomic capture route today, per the
+    #759 investigation), and the ``follows``/``realizes``/``replaced_by``
+    lifecycle relations.
+
+    Returns a list of ``{"event_type": ..., "field": ..., "target": ...}``
+    dicts suitable for :func:`commit_item_mutations_with_events`'s
+    ``event_specs``/``augment_item_mutation_with_event``'s ``field``/
+    ``target`` arguments (each entry omits ``field``/``target`` when not
+    applicable). An empty list means no supported semantic change was
+    detected -- the caller should commit the plain mutation with no
+    Native History event, exactly as an unsupported generic edit already
+    does; this function never guesses at an unsupported change.
+    """
+    specs = []
+    status_event = _classify_status_transition(before.status, after.status)
+    if status_event is not None:
+        specs.append({"event_type": status_event})
+    before_due = _values(before, "due")
+    after_due = _values(after, "due")
+    if before_due != after_due and len(before_due) <= 1 and len(after_due) <= 1:
+        specs.append({"event_type": "schedule_changed", "field": "due"})
+    for relation in ("follows", "realizes", "replaced_by"):
+        before_values = _values(before, relation)
+        after_values = _values(after, relation)
+        for target in after_values:
+            if target not in before_values:
+                specs.append(
+                    {
+                        "event_type": "relation_added",
+                        "field": relation,
+                        "target": target,
+                    }
+                )
+        for target in before_values:
+            if target not in after_values:
+                specs.append(
+                    {
+                        "event_type": "relation_removed",
+                        "field": relation,
+                        "target": target,
+                    }
+                )
+    return specs
 
 
 def commit_item_mutation_with_event(
@@ -254,7 +329,7 @@ def augment_item_mutation_with_event(
         revision,
         actor=actor,
         source=source,
-        **payload
+        **payload,
     )
     final_text = _append(replacement_text, event)
     _parse(final_text, id_key)

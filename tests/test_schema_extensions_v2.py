@@ -24,9 +24,9 @@ def has_draft_2020_validator():
 
 
 class SchemaExtensionsV2Tests(unittest.TestCase):
-    def test_bundle_contains_eighty_four_generated_and_published_documents(self):
+    def test_bundle_contains_eighty_five_generated_and_published_documents(self):
         bundle = schema_bundle()
-        self.assertEqual(84, len(bundle))
+        self.assertEqual(85, len(bundle))
         for name, generated in bundle.items():
             path = os.path.join(ROOT, "dist", "schemas", name)
             self.assertTrue(os.path.exists(path), name)
@@ -39,8 +39,8 @@ class SchemaExtensionsV2Tests(unittest.TestCase):
         if optional["validator_available"]:
             strict = schema_validation_report(ROOT, require_validator=True)
             self.assertTrue(strict["ok"], strict)
-            self.assertEqual(84, strict["schema_count"])
-            self.assertEqual(84, strict["sample_count"])
+            self.assertEqual(85, strict["schema_count"])
+            self.assertEqual(85, strict["sample_count"])
             self.assertEqual(
                 "network-free referencing.Registry over published bundle",
                 strict["reference_resolution"],
@@ -48,18 +48,54 @@ class SchemaExtensionsV2Tests(unittest.TestCase):
 
     def test_temporal_timeline_schema_accepts_optional_mcp_revision(self):
         schema = schema_bundle()["temporal-timeline-v1.schema.json"]
-        self.assertEqual(
-            ["string", "null"], schema["properties"]["revision"]["type"]
-        )
+        self.assertEqual(["string", "null"], schema["properties"]["revision"]["type"])
         if has_draft_2020_validator():
             from jsonschema import Draft202012Validator
             from lifetxt.schema_extensions_v29 import temporal_timeline_v1_sample
 
             value = temporal_timeline_v1_sample()
             value["revision"] = "a" * 64
-            self.assertEqual(
-                [], list(Draft202012Validator(schema).iter_errors(value))
-            )
+            self.assertEqual([], list(Draft202012Validator(schema).iter_errors(value)))
+
+    @unittest.skipUnless(
+        has_draft_2020_validator(), "Draft 2020-12 jsonschema validation not available"
+    )
+    def test_semantic_as_of_v1_schema_validates_the_published_sample(self):
+        from jsonschema import Draft202012Validator
+        from lifetxt.schema_extensions_v31 import semantic_as_of_v1_sample
+
+        schema = schema_bundle()["semantic-as-of-v1.schema.json"]
+        self.assertEqual(
+            [],
+            list(Draft202012Validator(schema).iter_errors(semantic_as_of_v1_sample())),
+        )
+
+    @unittest.skipUnless(
+        has_draft_2020_validator(), "Draft 2020-12 jsonschema validation not available"
+    )
+    def test_semantic_as_of_v1_schema_validates_a_real_cli_result(self):
+        from jsonschema import Draft202012Validator
+        from lifetxt.native_history import build_item_event
+        from lifetxt.native_semantic_as_of import semantic_as_of
+        from lifetxt.parser import parse_text
+        from lifetxt.serializer import item_to_line
+
+        created = build_item_event(
+            "task-1",
+            "created",
+            "2026-09-10T10:00:00Z",
+            1,
+            "ITX-1",
+            "a" * 64,
+            item_kind="T",
+            item_title="Task",
+            after_status="[ ]",
+        )
+        text = "[ ] T Task id:task-1\n" + item_to_line(created) + "\n"
+        items = parse_text(text)[0]
+        result = semantic_as_of(items, "task-1", "2026-09-10T11:00:00Z")
+        schema = schema_bundle()["semantic-as-of-v1.schema.json"]
+        self.assertEqual([], list(Draft202012Validator(schema).iter_errors(result)))
 
     @unittest.skipUnless(
         has_draft_2020_validator(), "Draft 2020-12 jsonschema validation not available"

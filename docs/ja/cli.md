@@ -92,7 +92,7 @@ python -m lifetxt today [path ...]
 python -m lifetxt area list [path ...]
 python -m lifetxt backlinks ID [path ...]
 python -m lifetxt temporal ID [path ...]
-python -m lifetxt timeline ID [path ...] [--since ISO] [--until ISO] [--event TYPE] [--limit N] [--json]
+python -m lifetxt timeline ID [path ...] [--since ISO] [--until ISO] [--event TYPE] [--limit N] [--as-of TIMESTAMP] [--json]
 python -m lifetxt history-check [path ...] [--id ID] [--commit-limit N] [--json]
 python -m lifetxt freebusy [path ...] --from START --to END
 python -m lifetxt query "QUERY" [path ...] [--explain]
@@ -2091,6 +2091,8 @@ plain HTTP 上での Basic Auth がここで許容されるのは、WireGuard �
 **操作と revision safety。** remote mode は server の既存の REST API（`GET /api/items`、`PUT`/`DELETE .../api/items/id/{id}`、`POST /api/items`）と、既存の file 全体の `If-Match`/`X-Lifetxt-Revision` precondition contract を再利用します。TUI 専用に新しい protocol を発明したものではなく、`lifetxt serve` deployment がすでに持っている contract そのものです。session が最後に読み込んで以降 file が変更されていた場合、write は conflict として拒否され、黙って上書きされたり自動的に retry されたりすることはありません。conflict message と reload が回復手段です。remote mode に local な write target はありません: まだ remote 対応のないコマンド（現時点では presence status を扱う `/state` と `/now`）は local file への書き込みではなく明確な error を報告します。
 
 **client editor での編集。** `/edit` は選択した remote item だけを client 上の private な一時 `life.txt` copy に出力し、local mode と同じ `EDITOR`、`VISUAL`、または config の `editor` 設定で開きます。保存して editor を閉じると、一時 copy が正しい item をちょうど1件だけ含むことを検証し、通常の revision-checked `PUT /api/items/id/{id}` route へ送信します。`remote:<host>` label を filesystem path として使うことはなく、server path や credential が一時 file に入ることもありません。semantic な変更がなければ request は送信しません。editor を開いている間に server revision が変化した場合、PUT は retry なしで conflict となるため、reload 後に編集し直してください。offline cache view の表示中は editor 経由の write も拒否されます。
+
+**Native Timeline（`/timeline`）。** `/timeline ID [since=..] [until=..] [event=..]` は remote mode でも同じように動作し、`lifetxt serve` の Web UI がすでに使っている既存の read-only `GET /api/native-timeline/{id}` route を再利用します。history record を client 側で parse・normalize することはありません。server 側の filesystem path や生の `life.txt` が local に必要になることも一切ありません。接続・認証の失敗は他の remote read と同じ connection UX で表示されます。offline cache view の表示中は Timeline の読み取りも無効です -- cached な item snapshot には Timeline を再構築できるだけの history evidence が含まれていないためです。
 
 **自動 refresh。** 接続後、TUI は 1.5 秒ごとに軽量な `GET /api/revision` 呼び出し 1 回だけで server を poll します（全 item を再取得するより大幅に軽量です）。この revision が実際に変化した場合のみ、item 一覧全体を reload します。選択中の item が引き続き存在する限り、background reload をまたいで active view・選択・search/filter の状態は維持されます。`/reload` はいつでも手動 fallback として利用できます。これは意図的にシンプルな bounded polling であり、push protocol（SSE/WebSocket）ではありません。計測によって正当化されれば、将来的な最適化として追加される可能性があります。
 

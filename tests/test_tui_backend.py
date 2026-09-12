@@ -26,6 +26,8 @@ class TuiBackendContractTests(unittest.TestCase):
             backend.apply_semantic_changes({}, {}, id_key="id")
         with self.assertRaises(NotImplementedError):
             backend.edit_item({})
+        with self.assertRaises(NotImplementedError):
+            backend.native_timeline("t1")
 
 
 class LocalTuiBackendTests(unittest.TestCase):
@@ -69,6 +71,71 @@ class LocalTuiBackendTests(unittest.TestCase):
             result = LocalTuiBackend(self.args).edit_item(record, config=config)
         self.assertEqual(result, 0)
         editor.assert_called_once_with(record, config=config)
+
+    def test_native_timeline_matches_a_direct_native_timeline_call(self):
+        from lifetxt.native_history import build_item_event
+        from lifetxt.native_timeline import native_timeline
+        from lifetxt.serializer import item_to_line
+
+        created = build_item_event(
+            "t1",
+            "created",
+            "2026-09-10T10:00:00Z",
+            1,
+            "ITX-1",
+            "a" * 64,
+            item_kind="T",
+            item_title="Buy_milk",
+            after_status="[ ]",
+        )
+        _write(
+            self.path,
+            "[ ] T Buy_milk id:t1\n" + item_to_line(created) + "\n",
+        )
+        backend = LocalTuiBackend(self.args)
+        result = backend.native_timeline("t1")
+        expected = native_timeline(backend.load_items()[0], "t1")
+        self.assertEqual(expected, result)
+
+    def test_native_timeline_forwards_since_until_event_and_limit(self):
+        from lifetxt.native_history import build_item_event
+        from lifetxt.serializer import item_to_line
+
+        created = build_item_event(
+            "t1",
+            "created",
+            "2026-09-10T10:00:00Z",
+            1,
+            "ITX-1",
+            "a" * 64,
+            item_kind="T",
+            item_title="Buy_milk",
+            after_status="[ ]",
+        )
+        completed = build_item_event(
+            "t1",
+            "completed",
+            "2026-09-10T12:00:00Z",
+            2,
+            "ITX-2",
+            "a" * 64,
+            before_status="[ ]",
+            after_status="[x]",
+        )
+        _write(
+            self.path,
+            "[x] T Buy_milk id:t1\n"
+            + item_to_line(created)
+            + "\n"
+            + item_to_line(completed)
+            + "\n",
+        )
+        backend = LocalTuiBackend(self.args)
+        result = backend.native_timeline(
+            "t1", since="2026-09-10T11:00:00Z", event="completed", limit=1
+        )
+        self.assertEqual(1, len(result["events"]))
+        self.assertEqual("completed", result["events"][0]["event"])
 
 
 class WorkspaceStateBackendWiringTests(unittest.TestCase):

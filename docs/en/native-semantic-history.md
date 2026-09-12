@@ -193,3 +193,49 @@ to accept the Notes through permissive custom-key parsing.
    lifecycle mutations atomically after #713.
 3. [#715](https://github.com/Eruhitsuji/lifetxt/issues/715) adds the bounded
    native Temporal Timeline after #713; it can proceed independently of #714.
+
+## Cross-surface capture parity (#767)
+
+Automatic Native History capture is currently CLI-only. `lifetxt done`,
+`complete`, `reopen`, and `due` each call
+`native_history_mutation.commit_item_mutation_with_event`/
+`augment_item_mutation_with_event` directly, so a supported CLI mutation
+always produces its matching typed `record:item_event` in the same atomic
+write as the state change.
+
+Web UI/API (`PUT /api/items/id/{id}`, which Remote TUI also uses as its
+authoritative write route), local TUI row edits
+(`lifetxt.tui_backend.LocalTuiBackend.apply_semantic_changes`), and Remote
+TUI's own edits do **not** call any Native History producer today. A
+status/due/relation change made from any of those surfaces currently
+produces no `record:item_event` at all -- this is a real gap, not a design
+choice, and it is the concrete finding of the #767 investigation.
+
+To make closing this gap safe rather than speculative,
+`lifetxt.native_history_mutation.infer_item_event_specs(before, after)` is a
+new, pure, file-I/O-free classifier reusing the exact same event vocabulary
+and field scope `augment_item_mutation_with_event` already emits (status
+family, the `due:` schedule field, and the `follows`/`realizes`/
+`replaced_by` relations) over a before/after `Item` pair. It duplicates no
+event-shape logic and is fully unit-tested
+(`tests/test_native_history_mutation.py::InferItemEventSpecsTests`), but it
+is not yet wired into any live write path.
+
+Wiring it in safely requires each of Web UI/API's `update_item_in_file`,
+`lifetxt.write_operations.mutate_items`/`mutate_item_files` (which both CLI
+generic paths and local TUI already use), and Remote TUI's edit route to
+build their replacement text and commit it together with any inferred
+event(s) in one atomic write -- the same one-write guarantee #714 already
+established for CLI's dedicated commands. That is a change to this
+project's shared, heavily-used mutation primitives themselves, not a
+localized fix, and is deliberately **not** attempted in this pass per this
+project's own [Task Decomposition Standard](../../.ai/managed/core/TASK_DECOMPOSITION.md)
+guidance to split a task when independent write paths cannot be safely
+reviewed together. It remains a recorded, explicit follow-up rather than a
+silently dropped requirement.
+
+Until that follow-up lands, editing an item from the Web UI, local TUI, or
+Remote TUI is exactly as valid a workflow as it always was -- it simply
+does not (yet) produce Native History evidence for that change, the same
+documented, non-inferred partial-completeness behavior direct/manual text
+edits already have.

@@ -177,3 +177,109 @@ class NativeHistoryCliCaptureTests(unittest.TestCase):
         self.assertEqual(1, len(events))
         self.assertEqual(["created"], events[0].details["event"])
         self.assertEqual(["cli.quick"], events[0].details["source"])
+
+
+class InferItemEventSpecsTests(unittest.TestCase):
+    """#767: pure classifier a future Web UI/local TUI/Remote TUI write-path
+    integration can reuse to close the cross-surface Native History parity
+    gap this investigation found (see the #767 traceability entry). No
+    write path calls this yet; it duplicates no logic from
+    ``augment_item_mutation_with_event``/``build_item_event``, which remain
+    the sole event-shape authority.
+    """
+
+    def _item(self, status, **details):
+        text_details = "".join(
+            " %s:%s" % (key, value) for key, value in details.items()
+        )
+        text = "%s T Task%s\n" % (status, text_details)
+        return parse_text(text)[0][0]
+
+    def test_no_change_infers_nothing(self):
+        from lifetxt.native_history_mutation import infer_item_event_specs
+
+        before = self._item("[ ]")
+        after = self._item("[ ]")
+        self.assertEqual([], infer_item_event_specs(before, after))
+
+    def test_completion_is_classified_completed(self):
+        from lifetxt.native_history_mutation import infer_item_event_specs
+
+        before = self._item("[ ]")
+        after = self._item("[x]")
+        self.assertEqual(
+            [{"event_type": "completed"}], infer_item_event_specs(before, after)
+        )
+
+    def test_undo_from_done_is_classified_reopened(self):
+        from lifetxt.native_history_mutation import infer_item_event_specs
+
+        before = self._item("[x]")
+        after = self._item("[ ]")
+        self.assertEqual(
+            [{"event_type": "reopened"}], infer_item_event_specs(before, after)
+        )
+
+    def test_cancellation_is_classified_canceled(self):
+        from lifetxt.native_history_mutation import infer_item_event_specs
+
+        before = self._item("[ ]")
+        after = self._item("[-]")
+        self.assertEqual(
+            [{"event_type": "canceled"}], infer_item_event_specs(before, after)
+        )
+
+    def test_other_status_transition_is_classified_status_changed(self):
+        from lifetxt.native_history_mutation import infer_item_event_specs
+
+        before = self._item("[ ]")
+        after = self._item("[/]")
+        self.assertEqual(
+            [{"event_type": "status_changed"}], infer_item_event_specs(before, after)
+        )
+
+    def test_due_change_is_classified_schedule_changed(self):
+        from lifetxt.native_history_mutation import infer_item_event_specs
+
+        before = self._item("[ ]", due="2026-09-20")
+        after = self._item("[ ]", due="2026-09-25")
+        self.assertEqual(
+            [{"event_type": "schedule_changed", "field": "due"}],
+            infer_item_event_specs(before, after),
+        )
+
+    def test_relation_add_and_remove_are_classified_independently(self):
+        from lifetxt.native_history_mutation import infer_item_event_specs
+
+        before = self._item("[ ]", follows="task-0")
+        after = self._item("[ ]", realizes="plan-1")
+        specs = infer_item_event_specs(before, after)
+        self.assertIn(
+            {"event_type": "relation_added", "field": "realizes", "target": "plan-1"},
+            specs,
+        )
+        self.assertIn(
+            {
+                "event_type": "relation_removed",
+                "field": "follows",
+                "target": "task-0",
+            },
+            specs,
+        )
+
+    def test_on_from_to_at_changes_are_never_classified(self):
+        from lifetxt.native_history_mutation import infer_item_event_specs
+
+        before = self._item("[ ]", on="2026-09-20")
+        after = self._item("[ ]", on="2026-09-25")
+        self.assertEqual([], infer_item_event_specs(before, after))
+
+    def test_multiple_simultaneous_changes_produce_multiple_specs(self):
+        from lifetxt.native_history_mutation import infer_item_event_specs
+
+        before = self._item("[ ]", due="2026-09-20")
+        after = self._item("[x]", due="2026-09-25")
+        specs = infer_item_event_specs(before, after)
+        self.assertEqual(2, len(specs))
+        self.assertIn({"event_type": "completed"}, specs)
+        self.assertIn({"event_type": "schedule_changed", "field": "due"}, specs)

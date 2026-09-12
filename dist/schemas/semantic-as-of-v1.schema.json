@@ -1,0 +1,391 @@
+{
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/semantic-as-of-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "as_of": {
+      "type": "string"
+    },
+    "fields": {
+      "additionalProperties": false,
+      "properties": {
+        "at": {
+          "additionalProperties": false,
+          "properties": {
+            "as_of_event": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "reason": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "state": {
+              "enum": [
+                "known",
+                "partial",
+                "unavailable"
+              ]
+            },
+            "value": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "state",
+            "value",
+            "reason",
+            "as_of_event"
+          ],
+          "type": "object"
+        },
+        "due": {
+          "additionalProperties": false,
+          "properties": {
+            "as_of_event": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "reason": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "state": {
+              "enum": [
+                "known",
+                "partial",
+                "unavailable"
+              ]
+            },
+            "value": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "state",
+            "value",
+            "reason",
+            "as_of_event"
+          ],
+          "type": "object"
+        },
+        "follows": {
+          "additionalProperties": false,
+          "properties": {
+            "as_of_event": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "reason": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "state": {
+              "enum": [
+                "known",
+                "partial",
+                "unavailable"
+              ]
+            },
+            "values": {
+              "items": {
+                "type": "string"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "state",
+            "values",
+            "reason",
+            "as_of_event"
+          ],
+          "type": "object"
+        },
+        "from": {
+          "additionalProperties": false,
+          "properties": {
+            "as_of_event": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "reason": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "state": {
+              "enum": [
+                "known",
+                "partial",
+                "unavailable"
+              ]
+            },
+            "value": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "state",
+            "value",
+            "reason",
+            "as_of_event"
+          ],
+          "type": "object"
+        },
+        "on": {
+          "additionalProperties": false,
+          "properties": {
+            "as_of_event": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "reason": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "state": {
+              "enum": [
+                "known",
+                "partial",
+                "unavailable"
+              ]
+            },
+            "value": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "state",
+            "value",
+            "reason",
+            "as_of_event"
+          ],
+          "type": "object"
+        },
+        "realizes": {
+          "additionalProperties": false,
+          "properties": {
+            "as_of_event": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "reason": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "state": {
+              "enum": [
+                "known",
+                "partial",
+                "unavailable"
+              ]
+            },
+            "values": {
+              "items": {
+                "type": "string"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "state",
+            "values",
+            "reason",
+            "as_of_event"
+          ],
+          "type": "object"
+        },
+        "replaced_by": {
+          "additionalProperties": false,
+          "properties": {
+            "as_of_event": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "reason": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "state": {
+              "enum": [
+                "known",
+                "partial",
+                "unavailable"
+              ]
+            },
+            "values": {
+              "items": {
+                "type": "string"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "state",
+            "values",
+            "reason",
+            "as_of_event"
+          ],
+          "type": "object"
+        },
+        "status": {
+          "additionalProperties": false,
+          "properties": {
+            "as_of_event": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "reason": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "state": {
+              "enum": [
+                "known",
+                "partial",
+                "unavailable"
+              ]
+            },
+            "value": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "state",
+            "value",
+            "reason",
+            "as_of_event"
+          ],
+          "type": "object"
+        },
+        "to": {
+          "additionalProperties": false,
+          "properties": {
+            "as_of_event": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "reason": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "state": {
+              "enum": [
+                "known",
+                "partial",
+                "unavailable"
+              ]
+            },
+            "value": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "state",
+            "value",
+            "reason",
+            "as_of_event"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "status",
+        "due",
+        "follows",
+        "realizes",
+        "replaced_by",
+        "on",
+        "from",
+        "to",
+        "at"
+      ],
+      "type": "object"
+    },
+    "git_composed": {
+      "const": false
+    },
+    "schema": {
+      "const": "semantic-as-of-v1"
+    },
+    "source": {
+      "const": "native_life_txt"
+    },
+    "target_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema",
+    "target_id",
+    "as_of",
+    "source",
+    "git_composed",
+    "fields"
+  ],
+  "title": "lifetxt semantic as-of reconstruction v1",
+  "type": "object"
+}

@@ -217,3 +217,91 @@ class NativeTimelineCliTests(unittest.TestCase):
             )
             self.assertNotEqual(0, code)
             self.assertIn("Unknown Timeline event", stderr)
+
+
+class NativeTimelineAsOfCliTests(unittest.TestCase):
+    def test_as_of_renders_alongside_the_event_list_in_text_and_json(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "life.txt")
+            with open(path, "w", encoding="utf-8") as handle:
+                for item in _fixture():
+                    handle.write(item_to_line(item) + "\n")
+            stdout, stderr, code = run_cli(
+                "timeline",
+                "task-1",
+                path,
+                "--as-of",
+                "2026-09-10T11:00:00Z",
+                "--json",
+            )
+            self.assertEqual(0, code, stderr)
+            result = json.loads(stdout)
+            self.assertEqual("temporal-timeline-v1", result["schema"])
+            self.assertIn("events", result)
+            as_of = result["semantic_as_of"]
+            self.assertEqual("semantic-as-of-v1", as_of["schema"])
+            self.assertEqual("known", as_of["fields"]["status"]["state"])
+            self.assertEqual("[ ]", as_of["fields"]["status"]["value"])
+            self.assertEqual("unavailable", as_of["fields"]["due"]["state"])
+            stdout, stderr, code = run_cli(
+                "timeline", "task-1", path, "--as-of", "2026-09-10T11:00:00Z"
+            )
+            self.assertEqual(0, code, stderr)
+            self.assertIn("Native Timeline for task-1", stdout)
+            self.assertIn("As of 2026-09-10T11:00:00Z:", stdout)
+            self.assertIn("status: [ ] [known]", stdout)
+
+    def test_invalid_as_of_fails_loudly_like_show_and_query(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "life.txt")
+            with open(path, "w", encoding="utf-8") as handle:
+                handle.write("[ ] T Task id:task-1\n")
+            _stdout, stderr, code = run_cli(
+                "timeline", "task-1", path, "--as-of", "not-a-timestamp"
+            )
+            self.assertNotEqual(0, code)
+            self.assertIn("--as-of must be an offset-aware RFC3339 timestamp", stderr)
+
+    def test_domain_with_no_event_coverage_reports_unavailable_not_current_state(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "life.txt")
+            with open(path, "w", encoding="utf-8") as handle:
+                handle.write("[x] T Task id:task-1 due:2026-09-20\n")
+            stdout, stderr, code = run_cli(
+                "timeline",
+                "task-1",
+                path,
+                "--as-of",
+                "2026-09-10T11:00:00Z",
+                "--json",
+            )
+            self.assertEqual(0, code, stderr)
+            due = json.loads(stdout)["semantic_as_of"]["fields"]["due"]
+            self.assertEqual("unavailable", due["state"])
+            self.assertIsNone(due["value"])
+
+    def test_as_of_cannot_combine_with_summary_or_compare_window(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "life.txt")
+            with open(path, "w", encoding="utf-8") as handle:
+                handle.write("[ ] T Task id:task-1\n")
+            _stdout, stderr, code = run_cli(
+                "timeline",
+                "task-1",
+                path,
+                "--as-of",
+                "2026-09-10T11:00:00Z",
+                "--summary",
+            )
+            self.assertNotEqual(0, code)
+            self.assertIn("--as-of cannot be combined", stderr)
+
+    def test_omitting_as_of_leaves_output_unaffected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "life.txt")
+            with open(path, "w", encoding="utf-8") as handle:
+                for item in _fixture():
+                    handle.write(item_to_line(item) + "\n")
+            stdout, stderr, code = run_cli("timeline", "task-1", path, "--json")
+            self.assertEqual(0, code, stderr)
+            self.assertNotIn("semantic_as_of", json.loads(stdout))

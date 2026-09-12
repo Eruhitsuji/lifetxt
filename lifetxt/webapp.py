@@ -5,6 +5,7 @@ from collections import OrderedDict
 from datetime import datetime, time
 
 from .atomic import atomic_write_text
+from . import mutation
 from .completion import (
     VALUE_KINDS as _COMPLETION_KINDS,
     candidates as completion_candidates,
@@ -2561,7 +2562,7 @@ def append_item_to_file(path, item):
     return len(existing.splitlines()) + 1
 
 
-def update_item_in_file(path, line_no, payload):
+def update_item_in_file(path, line_no, payload, key="id"):
     text = read_text(path)
     raw_lines = text.splitlines(True)
     if line_no < 1 or line_no > len(raw_lines):
@@ -2577,12 +2578,26 @@ def update_item_in_file(path, line_no, payload):
         diagnostics.append(Diagnostic("error", "E301", "Updated item did not parse."))
     if _has_error(diagnostics):
         raise ValueError(diagnostics_to_output(diagnostics))
-    start = original_item.line - 1
-    end = getattr(original_item, "end_line", original_item.line) or original_item.line
-    _body, ending = split_line_ending(raw_lines[end - 1])
-    replacement = _with_line_ending(line, ending).splitlines(True)
-    raw_lines[start:end] = replacement
-    write_text(path, "".join(raw_lines))
+    from .write_operations import transform_items_text_with_native_history
+
+    id_values = original_item.details.get(key) or []
+    if not id_values:
+        raise ValueError("Web item updates require an id field.")
+    replacement_text = transform_items_text_with_native_history(
+        text,
+        [
+            {
+                "id": str(id_values[0]),
+                "status": updated.status,
+                "type": updated.kind,
+                "title": updated.title,
+                "set_details": updated.details,
+            }
+        ],
+        id_key=key,
+        source_revision=mutation.hash_text(text),
+    )
+    write_text(path, replacement_text)
     updated.line = line_no
     updated.end_line = line_no + len(line.splitlines()) - 1
     updated.source_text = line
@@ -2591,7 +2606,7 @@ def update_item_in_file(path, line_no, payload):
 
 def update_item_by_id_in_file(path, item_id, payload, kind=None, key="id"):
     line_no, _item = find_item_line_by_id(path, item_id, kind=kind, key=key)
-    return update_item_in_file(path, line_no, payload)
+    return update_item_in_file(path, line_no, payload, key=key)
 
 
 def ack_message_in_file(path, message_id, payload=None, now=None, key="id"):

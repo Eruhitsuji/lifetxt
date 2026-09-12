@@ -252,7 +252,11 @@ def transform_items_text_with_native_history(
         # comparison, while carrying already-appended events so sequences are
         # allocated monotonically for multiple changes to one item.
         event_line = item_to_line(event).replace("\n", _preferred_newline(current))
-        prefix = "" if not current or current.endswith(("\n", "\r")) else _preferred_newline(current)
+        prefix = (
+            ""
+            if not current or current.endswith(("\n", "\r"))
+            else _preferred_newline(current)
+        )
         current += prefix + event_line + _preferred_newline(current)
     return final
 
@@ -281,11 +285,13 @@ def mutate_item_files(
         plans.append(
             text_plan(
                 path,
-                lambda text, _changes=changes, _expected=expected: transform_items_text_with_native_history(
-                    text,
-                    _changes,
-                    id_key=id_key,
-                    source_revision=_expected,
+                lambda text, _changes=changes, _expected=expected: (
+                    transform_items_text_with_native_history(
+                        text,
+                        _changes,
+                        id_key=id_key,
+                        source_revision=_expected,
+                    )
                 ),
                 expected,
                 validate=lambda replacement: _parse_or_raise(replacement),

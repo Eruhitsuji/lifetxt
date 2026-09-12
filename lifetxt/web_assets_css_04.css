@@ -536,3 +536,83 @@
     .display-mode .mobile-fab,
     .kiosk-mode .mobile-fab-menu,
     .display-mode .mobile-fab-menu { display: none !important; }
+
+    /* Native Timeline visual explorer (#769) -- pure presentation over the
+       existing temporal-timeline-v1 read model; no semantics live here. */
+    .nt-filters {
+      display: flex; flex-wrap: wrap; gap: .4rem; align-items: center;
+      margin: .3rem 0 .5rem;
+    }
+    .nt-filters input {
+      font-size: .78rem; padding: .2rem .4rem; width: 9.5rem;
+    }
+    .nt-filters select { font-size: .78rem; padding: .2rem .4rem; }
+    .nt-coverage {
+      display: inline-block; font-size: .72rem; font-weight: 600;
+      padding: .1rem .45rem; border-radius: var(--r-sm);
+      border: 1px solid var(--line-strong);
+    }
+    .nt-coverage-complete { color: var(--ok, #2e7d32); border-color: var(--ok, #2e7d32); }
+    .nt-coverage-partial { color: var(--warn, #b26a00); border-color: var(--warn, #b26a00); }
+    .nt-limitations {
+      font-size: .74rem; color: var(--muted); margin: .2rem 0 .4rem;
+    }
+    .nt-day-group { margin-top: .5rem; }
+    .nt-day-heading {
+      font-size: .74rem; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .03em;
+      margin: .3rem 0 .15rem;
+    }
+    .nt-axis {
+      display: flex; flex-direction: column;
+    }
+    .nt-event {
+      display: flex; gap: .5rem; align-items: flex-start;
+      padding: .2rem 0; position: relative;
+    }
+    .nt-marker {
+      flex: none; width: 1.2rem; text-align: center; font-size: .9rem;
+      line-height: 1.4rem;
+    }
+    .nt-marker-item_event { color: var(--accent, #3a6df0); }
+    .nt-marker-progress_event { color: #b26a00; }
+    .nt-marker-ticket_event { color: #2e7d32; }
+    .nt-marker-time_entry { color: #7a4fbf; }
+    .nt-body { flex: 1 1 auto; min-width: 0; }
+    .nt-head {
+      display: flex; flex-wrap: wrap; gap: .35rem; align-items: baseline;
+      font-size: .82rem;
+    }
+    .nt-time { color: var(--muted); font-variant-numeric: tabular-nums; }
+    .nt-kind-badge {
+      font-size: .68rem; padding: .05rem .35rem; border-radius: var(--r-sm);
+      border: 1px solid var(--line-strong); color: var(--muted);
+    }
+    .nt-event-label { font-weight: 600; }
+    .nt-transition {
+      font-family: var(--mono, monospace); font-size: .78rem;
+      background: var(--panel-2, rgba(127,127,127,.08));
+      padding: .05rem .35rem; border-radius: var(--r-sm);
+    }
+    .nt-invalid .nt-event-label { color: var(--danger, #b3261e); }
+    .nt-progress-trend {
+      display: inline-flex; align-items: flex-end; gap: 1px;
+      height: .9rem; margin-left: .3rem; vertical-align: bottom;
+    }
+    .nt-progress-trend span {
+      display: inline-block; width: 3px; background: #b26a00;
+      border-radius: 1px;
+    }
+    .nt-details summary {
+      cursor: pointer; font-size: .74rem; color: var(--muted);
+      margin-top: .1rem;
+    }
+    .nt-details-body {
+      font-size: .74rem; margin: .25rem 0 .1rem .1rem;
+    }
+    .nt-details-body .row { display: flex; gap: .35rem; }
+    .nt-details-body .k { color: var(--muted); min-width: 8rem; }
+    @media (max-width: 560px) {
+      .nt-filters input { width: 100%; }
+      .nt-head { flex-direction: column; gap: .1rem; }
+    }

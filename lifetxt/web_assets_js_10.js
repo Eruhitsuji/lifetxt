@@ -272,6 +272,7 @@
           ? `<button class="secondary" onclick="drawerComplete()" id="drawer-complete-btn" title="Complete this instance and materialize the next occurrence"${!item.editable || isDone ? " disabled" : ""}>✓ Complete + repeat</button>`
           : "") +
         `<button class="secondary" id="drawer-edit-btn" onclick="drawerEdit()"${!item.editable ? " disabled" : ""}>Edit</button>` +
+        `<button class="secondary" id="drawer-create-related-btn" onclick="drawerCreateRelated()" title="Create a new record related to this one (#770)"${hasId ? "" : " disabled"}>+ Related</button>` +
         `<button class="secondary" id="drawer-copy-id" onclick="drawerCopyId()" title="Copy item ID to clipboard"${hasId ? "" : ' style="display:none"'}>Copy ID</button>` +
         `<button class="secondary" id="drawer-share-btn" onclick="drawerShareLink()" title="Copy deep link to this item">Share</button>` +
         `<button class="secondary" onclick="drawerCopyMarkdown()" title="Copy item as Markdown">MD</button>` +

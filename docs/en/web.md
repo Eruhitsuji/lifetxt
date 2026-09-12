@@ -68,7 +68,7 @@ tools.
 | `GET` | `/api/links` | List ID-based links such as `parent:`, `ref:`, `depends_on:`, `blocks:`, `related:`, `duplicate_of:`, `replaced_by:`, `follows:`, and `realizes:` |
 | `GET` | `/api/graph` | Return `nodes` and `edges` for ID references used by the graph UI; nodes referenced but not found carry `missing: true`. Optional `relations` (comma-separated relation keys) narrows edges the same way `/api/links?relation=` does. When `root` is set, optional `include_temporal=true` overlays that root's bounded `same_day`/`before`/`after` temporal neighbors as additional edges (`temporal_window`, default 7 days); every edge then carries a `kind` of `structural` or `temporal` -- omitting `include_temporal` leaves the response unchanged. |
 | `GET` | `/api/temporal-thread/{id}` | Return the shared bounded `temporal-thread-v1` result, including read-only lifecycle consistency warnings. Optional `depth`, `nodes`, `window`, `limit`, and `stale_after` bounds match the CLI/MCP contract. The item drawer renders its lifecycle groups and warning count. |
-| `GET` | `/api/native-timeline/{id}` | Return the shared bounded `temporal-timeline-v1` result (#761/#762), delegating entirely to `lifetxt.native_timeline.native_timeline` -- no Web-specific temporal logic. Optional `since`, `until`, `event`, and `limit` query parameters match the CLI/MCP contract. Unknown `id` returns 404; an invalid filter or bound returns 422. The item drawer renders a bounded Native Timeline section (events, bounds, invalid-event count, and limitations). |
+| `GET` | `/api/native-timeline/{id}` | Return the shared bounded `temporal-timeline-v1` result (#761/#762), delegating entirely to `lifetxt.native_timeline.native_timeline` -- no Web-specific temporal logic. Optional `since`, `until`, `event`, and `limit` query parameters match the CLI/MCP contract. Unknown `id` returns 404; an invalid filter or bound returns 422. The item drawer renders a visually grouped Native Timeline explorer over this result (events, bounds, invalid-event count, limitations, and diagnostics); see "Native Timeline Explorer" (#769) below. |
 | `GET` | `/api/blockers` | Return the transitive blocker chain for `?id=ID` (levels 1..N, `depth` caps traversal, default 5) |
 | `GET` | `/api/messages` | List type `M` message items with message filters |
 | `GET` | `/api/messages/id/{id}` | Get a message by exact `id:` |
@@ -669,6 +669,65 @@ points at the root message ID and are also available from:
 ```sh
 curl "http://127.0.0.1:8000/api/messages/thread/msg_001"
 ```
+
+## Native Timeline Explorer
+
+The item detail drawer's Native Timeline section (#769) turns `GET
+/api/native-timeline/{id}`'s existing `temporal-timeline-v1` result (#762)
+into a visually grouped, scannable history view instead of a flat event
+list. The panel is pure presentation over that shared result -- it never
+parses history records, recalculates ordering, or recomputes completeness
+in JavaScript:
+
+- events are grouped by day, newest first, with a marker and a short label
+  for each event's record kind (item lifecycle, progress, ticket, time
+  entry);
+- known transition payloads (status/progress/schedule changes, and
+  relation `added`/`removed` events) render a compact `before -> after`
+  chip; every other payload field remains visible as plain key/value text
+  through an expandable "Details" disclosure, together with the event's
+  transaction id and source revision;
+- a completeness badge ("Complete history" / "Partial / limited history")
+  and any limitations, invalid-event counts, or diagnostics are shown
+  prominently, immediately below the filter controls, and can never be
+  mistaken for a complete record;
+- when enough valid whole-percentage `progress:` events exist, a small
+  bounded bar-height trend is shown next to the label; the exact
+  percentage remains available as text regardless, since the trend is
+  purely an additional visual aid;
+- bounded `since` / `until` / `event` / `limit` filter fields delegate
+  directly to the same query parameters the REST route and the TUI
+  `/timeline` command already accept -- there is no second filtering
+  engine;
+- the panel is keyboard-accessible (native `<input>`/`<button>`/
+  `<details>` elements only) and does not rely on color alone: every
+  transition, coverage state, and warning also carries a text label.
+
+This is an extension of the existing #762 Web UI/API foundation; the
+underlying `/api/native-timeline/{id}` contract, its filters, and its
+backward compatibility are unchanged.
+
+## Context-Aware Related-Item Creation
+
+From the record detail drawer, a `+ Related` button (#770) next to `Edit`
+lets you create a new record with a relation to the currently open record
+already proposed. Clicking it asks which relation to use (`parent`,
+`related`, or `ref` -- the same fields the Format already documents), then
+opens the ordinary "New Record" editor with that relation, and the open
+record's `project:` when it has one, prefilled as plain, fully editable
+lines in the details textarea. Nothing is created until you review the
+prefilled fields and press **Create**; removing or changing a prefilled
+line before saving is the same as editing any other detail line. A record
+with no `id:` cannot be used as a relation target and the button reports
+this rather than silently prefilling something else.
+
+Each project row on the Dashboard's Projects card also has a small `+`
+button that opens the same "New Record" editor with only `project:`
+prefilled, for creating a new record directly in that project.
+
+Both entry points reuse the existing `POST /api/items` create route
+unchanged -- contextual creation is not a second create engine, and a
+plain `+ New` with no selected context is completely unaffected.
 
 ## Charts
 

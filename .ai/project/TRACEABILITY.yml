@@ -12880,6 +12880,7 @@ traceability:
         - ruff format --check / ruff check on every changed file -> clean (pre-existing drift confirmed present on main already via a real worktree diff)
         - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
         - "confirmed via a real `main` worktree checkout that LifeTxtDoneTests.test_done_marks_item_done_by_id, LifeTxtUndoCliTests.test_undo_restores_previous_content, and RemoteTuiBackendEditorTests's nvim.EXE/vim.EXE PATHEXT mismatches reproduce identically without this branch's changes, confirming they are pre-existing and unrelated"
+        - "full python -m unittest discover (4432 tests) run twice, before and after the fixes: the only remaining failures after fixing are the four confirmed pre-existing/environment items above plus tests.test_historical_temporal.test_non_git_and_option_like_refs_fail_loudly (this checkout is itself nested inside a Git worktree) and tests.test_history_consistency.test_shallow_history_is_never_complete (a Windows PermissionError cleaning up a temporary shallow clone's .git/objects/pack/*.idx file), neither of which touches any file this PR changes"
       release_or_deployment: >-
         This entry documents PR #792 itself: review and fix pass over the
         issue-779-786 branch (Issues #779, #780, #781, #783, #785, #786;

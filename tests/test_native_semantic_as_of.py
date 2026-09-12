@@ -13,7 +13,7 @@ def _events(rows):
     return "".join(item_to_line(row) + "\n" for row in rows)
 
 
-def _fixture(extra_events=()):
+def _fixture(extra_events=(), current_status="[ ]"):
     created = build_item_event(
         "task-1",
         "created",
@@ -26,7 +26,8 @@ def _fixture(extra_events=()):
         after_status="[ ]",
     )
     text = (
-        "[x] T Task id:task-1 due:2026-09-20\n"
+        current_status
+        + " T Task id:task-1\n"
         + item_to_line(created)
         + "\n"
         + _events(extra_events)
@@ -57,7 +58,7 @@ class SemanticAsOfStatusTests(unittest.TestCase):
             before_status="[ ]",
             after_status="[x]",
         )
-        items = _fixture(extra_events=[completed])
+        items = _fixture(extra_events=[completed], current_status="[x]")
         before = semantic_as_of(items, "task-1", "2026-09-10T11:00:00Z")
         self.assertEqual("[ ]", before["fields"]["status"]["value"])
         after = semantic_as_of(items, "task-1", "2026-09-10T13:00:00Z")
@@ -135,7 +136,7 @@ class SemanticAsOfDueTests(unittest.TestCase):
             REVISION,
             field="due",
             before="2026-09-20",
-            after_missing="true",
+            after_missing=True,
         )
         items = _fixture(extra_events=[cleared])
         result = semantic_as_of(items, "task-1", "2026-09-12T00:00:00Z")
@@ -149,7 +150,9 @@ class SemanticAsOfRelationTests(unittest.TestCase):
         result = semantic_as_of(_fixture(), "task-1", "2026-09-10T11:00:00Z")
         for relation in ("follows", "realizes", "replaced_by"):
             self.assertEqual("unavailable", result["fields"][relation]["state"])
-            self.assertEqual("no_relation_capture", result["fields"][relation]["reason"])
+            self.assertEqual(
+                "no_relation_capture", result["fields"][relation]["reason"]
+            )
 
     def test_relation_replays_add_and_remove_up_to_cutoff(self):
         added = build_item_event(
@@ -217,9 +220,7 @@ class SemanticAsOfCutoffTests(unittest.TestCase):
         import datetime
 
         with self.assertRaises(ValueError):
-            semantic_as_of(
-                _fixture(), "task-1", datetime.datetime(2026, 9, 10, 10, 30)
-            )
+            semantic_as_of(_fixture(), "task-1", datetime.datetime(2026, 9, 10, 10, 30))
 
     def test_unknown_target_raises(self):
         with self.assertRaises(ValueError):

@@ -2184,6 +2184,8 @@ shell completion script・Web UI・MCP の `complete` tool と同一です。
 | `/due DATE` | `today`、`tomorrow`、曜日、`+3d`、`-1w` で `due:` を設定 |
 | `/assign USER` | `assignee:` を設定 |
 | `/add TITLE` | write file に未完了 task を追記。記号 (`@ # ! ^`) を展開 |
+| `/guided TITLE [key=value ...]` | `due=tomorrow`、`project=work`、`priority=A`、`tag=next`、`progress=40%` などの common field を案内形式で指定して作成 |
+| `/guided_edit key=value [key=value ...]` | 選択中の項目を同じ canonical write path で common field 編集 |
 | `/related [parent\|related\|ref] TITLE` | 選択中の行に関連する task を作成し、その `id:`/`project:` を prefill する（#770） |
 | `/delete yes` | row を削除。`yes` がないと拒否 |
 | `/edit` | 選択行を `$EDITOR` で開く |

@@ -2696,6 +2696,8 @@ row when nothing is marked.
 | `/due DATE` | Set `due:` using `today`, `tomorrow`, a weekday, `+3d`, or `-1w` |
 | `/assign USER` | Set `assignee:` |
 | `/add TITLE` | Append a new open task; capture sigils (`@ # ! ^`) are expanded |
+| `/guided TITLE [key=value ...]` | Create a task with guided common fields such as `due=tomorrow`, `project=work`, `priority=A`, `tag=next`, or `progress=40%` |
+| `/guided_edit key=value [key=value ...]` | Edit common fields on the selected item through the same canonical write path |
 | `/related [parent\|related\|ref] TITLE` | Create a task related to the selected row, with its `id:`/`project:` prefilled (#770) |
 | `/delete yes` | Delete rows; refuses without the explicit `yes` |
 | `/edit` | Open the selected row in `$EDITOR` |

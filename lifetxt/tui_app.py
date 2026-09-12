@@ -1460,6 +1460,74 @@ def _cmd_add(state, argument):
     return ("success", "Added to %s: %s" % (os.path.basename(path), line))
 
 
+GUIDED_COMMON_KEYS = frozenset(("due", "do", "on", "from", "to", "at", "project", "priority", "tag", "progress"))
+
+
+def _parse_guided_authoring(argument):
+    """Parse ``title key=value`` tokens without making key:value syntax
+    necessary for common fields.  Values still flow through the normal
+    shorthand/date validation and the canonical mutation serializer.
+    """
+    import shlex
+
+    tokens = shlex.split(argument or "")
+    title = []
+    details = {}
+    from .shorthand import ShorthandError, resolve_date_token
+
+    for token in tokens:
+        if "=" not in token:
+            title.append(token)
+            continue
+        key, value = token.split("=", 1)
+        key = key.strip().lower()
+        value = value.strip()
+        if key not in GUIDED_COMMON_KEYS:
+            raise ValueError("Unknown guided field %r. Use: %s" % (key, ", ".join(sorted(GUIDED_COMMON_KEYS))))
+        if not value:
+            continue
+        if key in ("due", "do", "on"):
+            try:
+                value = resolve_date_token(value, strict=True)
+            except ShorthandError as exc:
+                raise ValueError(str(exc))
+        details[key] = [part.strip() for part in value.split(",") if part.strip()]
+    if not title:
+        raise ValueError("Usage: /guided TITLE [due=DATE] [project=NAME] [priority=VALUE]")
+    return " ".join(title), details
+
+
+def _cmd_guided(state, argument):
+    title, details = _parse_guided_authoring(argument)
+    if state.backend.is_remote:
+        state.backend.create_item({"status": "[ ]", "type": "T", "title": title, "details": details})
+        state.reload()
+        return ("success", "Added guided item: %s" % title)
+    path = _write_target(state)
+    existing = set(row.get("id") for row in state.rows if row.get("id"))
+    line = _quick_add_line(title, state.options["id_key"], existing_ids=existing, shorthand=False, extra_details=details)
+    from . import mutation
+    from .write_operations import append_life_records
+
+    before = mutation.read_text_snapshot(path, allow_missing=True)
+    result = append_life_records(path, line + "\n", expected_revision=before.content_hash, operation="tui.guided")
+    _remember_undo(state, {path: before}, {path: result.after_hash}, "guided %s" % title)
+    state.reload()
+    return ("success", "Added guided item: %s" % title)
+
+
+def _cmd_guided_edit(state, argument):
+    """Apply common fields to the selected item using the same write path."""
+    _title, details = _parse_guided_authoring("placeholder " + (argument or ""))
+    if not details:
+        raise ValueError("Usage: /guided-edit key=value [key=value ...]")
+    rows = state.target_rows()
+    if not rows:
+        raise ValueError("Select an item before using /guided-edit.")
+    count = _set_row_details(state, rows, details, "guided edit")
+    return ("success", "Updated guided fields on %d item(s)." % count)
+
+
 NEW_RELATED_FIELD_CHOICES = ("parent", "related", "ref")
 
 
@@ -1885,6 +1953,18 @@ COMMANDS = (
     ),
     Command(
         "add", "TITLE", "Append a new open task to the write file", _cmd_add, alias="a"
+    ),
+    Command(
+        "guided",
+        "TITLE [key=value ...]",
+        "Create a task with guided common fields (due/project/priority/tag/progress)",
+        _cmd_guided,
+    ),
+    Command(
+        "guided_edit",
+        "key=value [key=value ...]",
+        "Edit common fields on the selected item without raw key:value syntax",
+        _cmd_guided_edit,
     ),
     Command(
         "related",

@@ -13108,6 +13108,37 @@ traceability:
         conventions.
       status: implemented
 
+    - requirement_id: req-personal-context-currentness-consumer-integration
+      capability_id: cap-personal-context-currentness
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/782
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/801
+      pull_request: null
+      changed_files_or_scope:
+        - Wire the #800 resolver into context_health/explain_personal_context_item/context_capsule; decision_memory inherits the same filtering since it already delegates to context_capsule
+        - lifetxt/personal_context.py
+        - lifetxt/personal_context_cli.py
+        - tests/test_personal_context.py
+        - docs/en/personal-context-toolkit.md
+        - docs/ja/personal-context-toolkit.md
+      tests_or_evidence:
+        - "tests/test_personal_context.py (7 new tests, 8 pre-existing re-run unmodified): context health reports future-effective/expired/conflicting counts alongside the existing current/stale/superseded/missing_source/broken_reference counts; context why exposes the resolved state's reasons and valid_from/valid_to; context capsule excludes future-effective/expired/conflicting/historical-only even when --include-stale is set, and still includes only stale records through that opt-in"
+        - python -m unittest tests.test_personal_context tests.test_personal_context_cli tests.test_personal_context_correction -> Ran 15 tests, OK
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: null
+      notes: >-
+        No validity/supersession/staleness logic is duplicated in
+        personal_context.py or personal_context_cli.py: every state comes
+        from resolve_currentness(); the pre-existing _stale_fact() helper
+        is kept only to surface the raw node_facts() evidence for display
+        (the "stale_fact" field), not to re-derive the classification.
+        decision_memory needed no code change since it already calls
+        context_capsule() internally and therefore inherits the new
+        filtering automatically. Second implementation task of the
+        #800-#802 batch, landing on its own child branch merged locally
+        into feature/800-802-personal-context-currentness. pull_request is
+        filled in once the final integration PR is opened.
+      status: implemented
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

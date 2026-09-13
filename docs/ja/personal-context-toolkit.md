@@ -19,11 +19,7 @@ lifetxt context health
 lifetxt context health --format json --pretty
 ```
 
-ライフサイクル状態は次の3つです。
-
-- `current` — stale でも superseded でもない
-- `stale` — 既存 Temporal Context の `stale_since` 判定に該当する
-- `superseded` — 別の authoritative record が `corrects:<このID>` を持つ
+レポートは各recordを下記の7つのcurrentness state（`current`/`future-effective`/`stale`/`superseded`/`expired`/`conflicting`/`historical-only`）のいずれかに分類します。これは共有のcurrentness resolverが計算し、`context health` 自体は独立した分類ruleを持ちません。
 
 加えて、独立した品質上の問題として以下を報告します。
 
@@ -47,7 +43,7 @@ lifetxt context why pref-editor
 lifetxt context why pref-editor --format json --pretty
 ```
 
-`source:` / `updated:`、person/tag、current/stale/superseded状態、incoming/outgoing ID linkを表示します。これはLLMによる説明ではなく、モデルのchain-of-thoughtを生成・公開する機能でもありません。
+`source:` / `updated:`、person/tag、解決されたcurrentness stateとbounded evidence/reasons（後述）、incoming/outgoing ID linkを表示します。これはLLMによる説明ではなく、モデルのchain-of-thoughtを生成・公開する機能でもありません。
 
 ## 過去を削除せずに記憶を訂正する
 
@@ -118,7 +114,7 @@ lifetxt context capsule --tag goal --limit 20 --pretty
 - person/tag/bounds
 - 決定的順序のitem records
 
-入力とオプションが同じならrevisionも同じです。supersededとstaleな記憶は既定で除外します。古いcontextも明示的に必要な場合だけ `--include-stale` を指定します。
+入力とオプションが同じならrevisionも同じです。既定では `current` なrecordのみを含みます。`--include-stale` は `stale` なrecordのみを追加します -- `future-effective`、`superseded`、`expired`、`conflicting`、`historical-only` は `--include-stale` を指定しても暗黙に含まれることはありません。
 
 Capsuleは **生成されたread-only projection** であり、新しいsource of truthではありません。ChatGPT、Claude、Gemini、ローカルLLM、IDE agent、scriptなどが利用しても、authoritative storageは引き続きlifetxt側です。
 
@@ -140,7 +136,7 @@ lifetxt decisions --project demo
 lifetxt decisions --format json --pretty
 ```
 
-既定ではstaleとsupersededなdecisionを除外し、Capsuleと同じPersonal Context lifecycle判定を利用します。
+Capsuleと同じ共有currentness filteringを利用します。既定では `current` なrecordのみを含み、`--include-stale` は `stale` なrecordのみを追加します。
 
 ## Workspace・複数ファイル
 

@@ -20,13 +20,22 @@
 
     function renderStructuredFields(prefix, details, type) {
       const values = details || {};
+      const help = {
+        due: "When this task should be finished.",
+        project: "Group this record with related work.",
+        priority: "How important this item is compared with other work.",
+        progress: "Completion percentage, from 0 to 100.",
+      };
       return structuredFieldsForType(type).map(field => {
         const value = Array.isArray(values[field.key]) ? values[field.key].join(", ") : (values[field.key] || "");
         const inputId = prefix + "-" + field.key;
         const wide = field.key === "tag" || field.key === "project";
+        const helpId = inputId + "-help";
+        const helpText = help[field.key] || "Optional details for this record.";
         return `<label class="structured-field${wide ? " wide-field" : ""}" for="${inputId}">` +
           `<span>${escapeHtml(field.label)} <small>(${escapeHtml(field.key)}:)</small></span>` +
-          `<input id="${inputId}" data-structured-key="${escapeHtml(field.key)}" value="${escapeHtml(String(value))}" autocomplete="off">` +
+          `<input id="${inputId}" aria-describedby="${helpId}" data-structured-key="${escapeHtml(field.key)}" value="${escapeHtml(String(value))}" autocomplete="off">` +
+          `<small id="${helpId}" class="field-help-text">${escapeHtml(helpText)}</small>` +
           `</label>`;
       }).join("");
     }
@@ -100,6 +109,60 @@
     const _structuredContainer = document.getElementById("structured-fields");
     if (_structuredContainer) _structuredContainer.addEventListener("input", syncStructuredFieldsIntoDetails);
     refreshStructuredFields();
+
+    const _beginnerTodaySubsection = _todaySubsection;
+    _todaySubsection = function(title, rows, emptyText) {
+      rows = rows || [];
+      if (rows.length || !/^(Today|Due today|Next actions)$/i.test(title)) {
+        return _beginnerTodaySubsection(title, rows, emptyText);
+      }
+      const cta = title === "Today" || title === "Due today"
+        ? `<button type="button" class="secondary empty-cta" onclick="newItem()">＋ Add a task</button>`
+        : `<button type="button" class="secondary empty-cta" onclick="switchWorkspace('')">View all items</button>`;
+      return `<div class="today-subsection"><div class="today-subsection-title">${escapeHtml(title)} (0)</div>` +
+        `<div class="empty-state compact-empty"><div class="empty-title">${escapeHtml(emptyText)}</div>${cta}</div></div>`;
+    };
+
+    // Keep advanced destinations discoverable without giving them equal first-
+    // run prominence. Direct URLs still open the More group automatically.
+    const _beginnerNavSyncViewTabs = syncViewTabs;
+    syncViewTabs = function() {
+      _beginnerNavSyncViewTabs();
+      const more = document.getElementById("nav-more");
+      const advanced = new Set(["agenda", "timeline", "calendar", "focus", "review", "messages", "team", "status", "notifications", "stats", "graph", "display", "kiosk"]);
+      if (more && advanced.has(currentView())) more.open = true;
+      const summary = document.getElementById("nav-more-summary");
+      if (summary && more) summary.setAttribute("aria-expanded", more.open ? "true" : "false");
+    };
+    const _moreNav = document.getElementById("nav-more");
+    if (_moreNav) _moreNav.addEventListener("toggle", () => {
+      document.getElementById("nav-more-summary")?.setAttribute("aria-expanded", _moreNav.open ? "true" : "false");
+    });
+
+    function actionableErrorText(error) {
+      const status = Number(error?.status);
+      if (status === 409 || /conflict|revision|changed/i.test(error?.message || "")) {
+        return "This item changed after you opened it. Your changes were not silently overwritten.";
+      }
+      if (status === 401 || status === 403) return "This workspace is read-only or you do not have permission to change it.";
+      if (status >= 500 || !status) return "Check the connection and try again.";
+      return error?.message || "Check the highlighted fields and try again.";
+    }
+    function showActionableError(title, error, options = {}) {
+      const detail = escapeHtml(error?.message || error || "Unknown error");
+      if (options.retry) renderActionableError(document.getElementById("toast-container"), title, error, options.retry);
+      else showToast(`${title} ${actionableErrorText(error)} Technical details: ${detail}`, "error", 7000);
+    }
+    function renderActionableError(container, title, error, retry) {
+      if (!container) return;
+      const id = "error-details-" + Date.now();
+      container.innerHTML = `<div class="actionable-error" role="alert" tabindex="-1"><strong>${escapeHtml(title)}</strong>` +
+        `<span>${escapeHtml(actionableErrorText(error))}</span>` +
+        `<button type="button" class="secondary" data-retry>Try again</button>` +
+        `<details><summary>Technical details</summary><code id="${id}">${escapeHtml(error?.message || error || "")}</code></details></div>`;
+      container.querySelector("[data-retry]")?.addEventListener("click", retry);
+      container.querySelector(".actionable-error")?.focus();
+    }
       applyPresetToUrl();
       applyUrlToControls();
       updateNotifPermissionDisplay();

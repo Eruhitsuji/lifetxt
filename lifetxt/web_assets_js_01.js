@@ -22,7 +22,16 @@
 
     async function api(path, options) {
       const response = await fetch(path, options);
-      if (!response.ok) throw new Error(await response.text());
+      if (!response.ok) {
+        const raw = await response.text();
+        let detail = null;
+        try { detail = JSON.parse(raw); } catch (_) { /* retain plain server text */ }
+        const error = new Error(detail?.message || detail?.detail || raw || response.statusText || "Request failed");
+        error.status = response.status;
+        error.code = detail?.code || detail?.error_code || "";
+        error.detail = detail;
+        throw error;
+      }
       return response.json();
     }
     function cssVarName(configKey) {
@@ -53,6 +62,8 @@
         "Items": "アイテム",
         "Agenda": "予定",
         "Timeline": "タイムライン",
+        "See how this item changed over time.": "この項目が時間とともにどう変化したかを確認します。",
+        "See items connected to this one.": "この項目に関連する項目を確認します。",
         "Calendar": "カレンダー",
         "Focus": "フォーカス",
         "Review": "レビュー",
@@ -202,6 +213,7 @@
         "Summarize completed, carried, blocked, and planned work for a chosen period.": "指定期間の完了・繰り越し・ブロック中・予定の作業を要約します。",
         "Month/week calendar grid of dated records": "日付付きレコードの月/週カレンダー",
         "Views": "ビュー",
+        "More views": "その他のビュー",
         "Actions": "操作",
         "Quick actions": "クイック操作",
         "Statistics": "統計",

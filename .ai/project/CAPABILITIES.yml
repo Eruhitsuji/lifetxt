@@ -9760,3 +9760,122 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-web-shared-control-sizing
+    name: Shared Web UI control sizing
+    summary: >-
+      One shared control-geometry token set (--control-height,
+      --control-height-compact, --control-icon-size, --control-line-height)
+      applied horizontally across every semantic button/input/select variant
+      in the Web UI (secondary/danger buttons, filter/workspace/chart/review/
+      graph controls, icon-only buttons), so controls sharing an interaction
+      row align to the same intended height without making every control
+      visually identical.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-web-shared-control-sizing-tokens
+      - req-web-shared-control-sizing-rollout
+    implementation_locations:
+      - lifetxt/web_assets_css_01.css
+      - lifetxt/web_assets_css_02.css
+      - lifetxt/web_assets_css_04.css
+    public_interfaces:
+      - CSS custom properties --control-height/--control-height-compact/--control-icon-size/--control-line-height
+      - .control-compact / .control-icon utility classes
+    tests_or_evidence:
+      - "manual CSS specificity review found and fixed a real bug: the initial compact-height rule for .filter-btn/.review-range-btn/.chart-tab/.chart-group-btn/.graph-layout-btn/.graph-export-btn used bare class selectors, which lost to the earlier button.filter-btn-style selector on actual <button> elements (higher specificity), so the compact height was never applied; fixed by matching the button.<class> selector form so the later, intended rule wins"
+      - python -m unittest tests.test_web_assets tests.test_web_i18n tests.test_web_commands tests.test_surface_runtime tests.test_release_policy -> Ran 87 tests, OK
+      - node --check against the full assembled Web UI script -> no syntax error
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/789
+      - https://github.com/Eruhitsuji/lifetxt/issues/790
+      - https://github.com/Eruhitsuji/lifetxt/issues/791
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Presentation-only: no semantic color, focus, or behavior changed for
+      any control variant. #790 introduced the shared tokens; #791 rolled
+      them out across the remaining surfaces named in #789's horizontal
+      audit (filter bars, chart tabs, review range, graph layout/export,
+      workspace tabs, mobile breakpoint). Landed on child branches
+      issue-790/issue-791 merged locally into
+      feature/issues-782-789-798.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-web-beginner-first-ux
+    name: Beginner-first Web UI information architecture
+    summary: >-
+      A progressive-disclosure navigation contract for the Web UI: a small
+      primary tab group (Today/Items/Dashboard/Create) always visible, every
+      other view collapsed behind a "More" disclosure that auto-expands when
+      a direct URL or #view= link targets one of them; contextual empty-state
+      guidance distinguishing "no data yet" from "no matching result", each
+      with a safe next action; inline contextual help for common workflows;
+      and actionable, retryable error presentation reusing the existing
+      api()/showToast() error path instead of a bare "Save failed: <message>"
+      string.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-web-beginner-navigation-hierarchy
+      - req-web-beginner-empty-state-guidance
+      - req-web-beginner-contextual-help
+      - req-web-progressive-advanced-navigation
+      - req-web-actionable-retryable-errors
+    implementation_locations:
+      - lifetxt/web_assets.html
+      - lifetxt/web_assets_css_01.css
+      - lifetxt/web_assets_css_02.css
+      - lifetxt/web_assets_js_01.js
+      - lifetxt/web_assets_js_04.js
+      - lifetxt/web_assets_js_05.js
+      - lifetxt/web_assets_js_10.js
+      - lifetxt/web_assets_js_12.js
+      - lifetxt/web_assets_js_18.js
+      - docs/en/web.md
+      - docs/ja/web.md
+    public_interfaces:
+      - Web UI primary nav group (Today/Items/Dashboard/Create) plus <details id="nav-more"> advanced group
+      - lifetxt.web_assets_js_18 actionableErrorText/showActionableError/renderActionableError (client-side)
+      - lifetxt.web_assets_js_18 beginner-mode _todaySubsection empty-state override
+    tests_or_evidence:
+      - tests/test_web_actionable_errors_js.py (4 Node.js-driven tests, added during review): status-based error-message classification (409/401/403/5xx/network/generic), toast fallback when no retry is offered, actionable block rendered into #toast-container with a wired retry button and focus, and a null-container call never throws
+      - python -m unittest tests.test_web_actionable_errors_js -> Ran 4 tests, OK
+      - python -m unittest tests.test_web_assets tests.test_web_i18n tests.test_web_commands tests.test_surface_runtime tests.test_release_policy -> Ran 87 tests, OK
+      - node --check against the full assembled Web UI script -> no syntax error
+      - "review found and fixed a real translation-coverage gap: the new <details id=\"nav-more\"> group's aria-label \"More views\" had no Japanese dictionary entry, confirmed by tests.test_release_policy failing with new_missing=['More views'] before the fix"
+      - "review found and fixed a documentation-formatting defect: the new Beginner path / 初心者向けの使い方 sections in docs/en/web.md and docs/ja/web.md used a top-level # heading (document-title level) instead of ## (matching every other section in both files) and had no blank line before the heading; fixed to ## with a preceding blank line"
+      - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/793
+      - https://github.com/Eruhitsuji/lifetxt/issues/794
+      - https://github.com/Eruhitsuji/lifetxt/issues/795
+      - https://github.com/Eruhitsuji/lifetxt/issues/796
+      - https://github.com/Eruhitsuji/lifetxt/issues/797
+      - https://github.com/Eruhitsuji/lifetxt/issues/798
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      #793 is the umbrella feature; #794 (primary nav hierarchy), #795
+      (empty daily-view guidance), #796 (contextual help), #797 (progressive
+      disclosure of advanced views behind "More"), and #798 (actionable/
+      retryable errors) are its implementing children, each landed on its
+      own child branch merged locally into feature/issues-782-789-798.
+      showActionableError/renderActionableError reuse the existing
+      showToast() system for the no-retry case and only add a small
+      dismiss-by-retry block for the retry case; no second error-reporting
+      framework was introduced, and only lifetxt/web_assets_js_04.js
+      (items list load) and js_05/js_12 (record save) were wired to it in
+      this batch -- other call sites keep their existing error handling
+      and are recorded as candidate follow-up wiring, not silently
+      claimed complete.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

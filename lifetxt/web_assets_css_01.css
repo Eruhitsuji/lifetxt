@@ -40,6 +40,11 @@
       --t-med: .2s ease;
       /* layout */
       --topbar-h: 3.6rem;
+      /* Shared control geometry. Semantic variants inherit these tokens. */
+      --control-height: 2.35rem;
+      --control-height-compact: 1.9rem;
+      --control-icon-size: 2.35rem;
+      --control-line-height: 1.25;
       /* legacy aliases (older rules reference these names) */
       --text: var(--ink);
       --text-muted: var(--muted);
@@ -168,11 +173,36 @@
       max-width: 100%;
       border: 1px solid var(--line-strong);
       border-radius: var(--r-sm);
-      padding: .5rem .65rem;
+      padding: 0 .65rem;
       background: var(--panel);
       color: var(--ink);
       font: inherit;
       transition: border-color var(--t-fast), box-shadow var(--t-fast), background var(--t-fast);
+    }
+    input, select, button {
+      box-sizing: border-box;
+      min-height: var(--control-height);
+      line-height: var(--control-line-height);
+    }
+    button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .control-compact,
+    button.compact,
+    input.compact,
+    select.compact {
+      min-height: var(--control-height-compact);
+      font-size: .86em;
+    }
+    .control-icon,
+    button.icon-only {
+      width: var(--control-icon-size);
+      height: var(--control-icon-size);
+      min-height: var(--control-icon-size);
+      padding: 0;
+      flex: 0 0 var(--control-icon-size);
     }
     input:focus, select:focus, textarea:focus {
       outline: none;
@@ -186,6 +216,7 @@
     select { cursor: pointer; }
     textarea {
       width: 100%;
+      padding: .5rem .65rem;
       min-height: 8rem;
       resize: vertical;
       font-family: var(--font-mono);
@@ -357,6 +388,12 @@
     .empty-state .empty-icon { font-size: 2rem; opacity: .75; }
     .empty-state .empty-title { font-weight: 700; color: var(--ink); }
     .empty-state .empty-hint { font-size: .84rem; max-width: 26rem; }
+    .compact-empty { padding: .7rem; align-items: flex-start; }
+    .empty-cta { margin-top: .35rem; }
+    .actionable-error { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; padding: .8rem; color: var(--danger); background: var(--danger-soft); border: 1px solid var(--danger); border-radius: var(--r-sm); }
+    .actionable-error strong, .actionable-error span { flex: 1 1 100%; }
+    .actionable-error details { flex: 1 1 100%; font-size: .75rem; }
+    .actionable-error code { white-space: pre-wrap; overflow-wrap: anywhere; }
     .empty-actions {
       display: flex;
       justify-content: center;

@@ -6148,6 +6148,78 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-personal-context-currentness
+    name: Personal Context currentness resolver
+    summary: >-
+      A pure, bounded resolver classifying Personal AI Memory records into
+      seven derived read states (current/future-effective/stale/superseded/
+      expired/conflicting/historical-only) without deleting history or
+      introducing mandatory Format metadata. Reuses the existing Temporal
+      Context staleness rule, the existing corrects:/replaced_by:
+      supersession conventions, and the existing lifetxt.timeutil date
+      parser; introduces valid_from:/valid_to: only as optional
+      custom-detail conventions. Wired into the existing Personal Context
+      toolkit (Context Health/Why/Capsule/Decision Memory) and exposed
+      read-only through MCP so ordinary AI retrieval sees current records
+      only by default.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-personal-context-currentness-resolver
+      - req-personal-context-currentness-consumer-integration
+      - req-personal-context-currentness-mcp-read
+    implementation_locations:
+      - lifetxt/personal_context_currentness.py
+      - lifetxt/personal_context.py
+      - lifetxt/personal_context_cli.py
+      - lifetxt/mcp.py
+      - tests/test_personal_context_currentness.py
+      - tests/test_personal_context.py
+      - tests/test_personal_context_cli.py
+      - tests/test_mcp_expansion.py
+      - docs/en/personal-context-toolkit.md
+      - docs/ja/personal-context-toolkit.md
+      - docs/en/ai-integration.md
+      - docs/ja/ai-integration.md
+    public_interfaces:
+      - lifetxt.personal_context_currentness.resolve_currentness
+      - lifetxt context health (all seven states)
+      - lifetxt context why <id> (resolved state + reasons)
+      - lifetxt context capsule (current-only by default)
+      - lifetxt decisions (current-only by default)
+      - MCP tool get_personal_context
+    tests_or_evidence:
+      - tests/test_personal_context_currentness.py
+      - "tests/test_personal_context.py (7 new tests: future-effective/expired/conflicting counts in context health, why exposes reasons and validity bounds, capsule excludes future-effective/expired/conflicting even with --include-stale)"
+      - tests/test_personal_context_cli.py
+      - "tests/test_mcp_expansion.py GetPersonalContextToolTests (7 tests): current-only default, byte-for-byte match against a direct context_capsule() call, include_stale adds only stale, person/tags/limit forwarding, tags-must-be-a-list validation, and a read-only no-write guarantee"
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/782
+      - https://github.com/Eruhitsuji/lifetxt/issues/800
+      - https://github.com/Eruhitsuji/lifetxt/issues/801
+      - https://github.com/Eruhitsuji/lifetxt/issues/802
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Extends cap-personal-context-toolkit rather than replacing it: no
+      validity/supersession/staleness logic is duplicated in
+      personal_context.py, personal_context_cli.py, or lifetxt/mcp.py --
+      every consumer calls resolve_currentness() and filters/reports on its
+      result. corrects:/replaced_by: storage conventions are unchanged; a
+      linear supersession chain resolves to one current terminal record,
+      while a cycle or competing replacements of the same predecessor
+      resolve every record involved to conflicting rather than guessing a
+      winner. valid_from:/valid_to: remain custom-detail conventions, not
+      new Format 1.x or Query vocabulary, and no last_confirmed clock or
+      automatic conflict resolution was added. Historical-currentness
+      reconstruction (composing this resolver with Native semantic-as-of-v1)
+      remains an explicit, unimplemented follow-up.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
   - id: cap-periodic-markdown-reports
     name: Named periodic Markdown report profiles
     summary: >-

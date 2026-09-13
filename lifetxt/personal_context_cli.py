@@ -53,7 +53,9 @@ def _build_parser():
     capsule.add_argument("--include-stale", action="store_true")
     capsule.add_argument("--limit", type=int, default=DEFAULT_LIMIT)
 
-    memory = subparsers.add_parser("memory", help="Reviewable Personal Context mutation")
+    memory = subparsers.add_parser(
+        "memory", help="Reviewable Personal Context mutation"
+    )
     memory_sub = memory.add_subparsers(dest="memory_action")
     correct = memory_sub.add_parser("correct", help="Stage a correction proposal")
     correct.add_argument("id")
@@ -83,17 +85,24 @@ def _require_action(parser, args):
 
 def _health_text(report):
     counts = report["counts"]
+    summary_states = (
+        "current",
+        "future-effective",
+        "stale",
+        "superseded",
+        "expired",
+        "conflicting",
+        "historical-only",
+    )
     lines = [
         "Personal Context Health (person:%s)" % report["person"],
-        "total=%d current=%d stale=%d superseded=%d missing_source=%d broken_reference=%d"
-        % (
-            counts["total"],
-            counts["current"],
-            counts["stale"],
-            counts["superseded"],
-            counts["missing_source"],
-            counts["broken_reference"],
-        ),
+        "total=%d " % counts["total"]
+        + " ".join(
+            "%s=%d" % (state.replace("-", "_"), counts.get(state, 0))
+            for state in summary_states
+        )
+        + " missing_source=%d broken_reference=%d"
+        % (counts["missing_source"], counts["broken_reference"]),
         "",
     ]
     rows = []
@@ -129,6 +138,12 @@ def _why_text(report):
         "source: %s" % (", ".join(item["source"]) or "-"),
         "updated: %s" % (", ".join(item["updated"]) or "-"),
     ]
+    if report.get("reasons"):
+        lines.append("reasons: %s" % ", ".join(report["reasons"]))
+    if report.get("valid_from"):
+        lines.append("valid_from: %s" % report["valid_from"])
+    if report.get("valid_to"):
+        lines.append("valid_to: %s" % report["valid_to"])
     for fact in report["temporal_facts"]:
         lines.append(
             "temporal: %s (%s=%s)"

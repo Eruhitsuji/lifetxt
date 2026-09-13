@@ -13083,6 +13083,92 @@ traceability:
         filled in once the final integration PR is opened.
       status: implemented
 
+    - requirement_id: req-personal-context-currentness-resolver
+      capability_id: cap-personal-context-currentness
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/782
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/800
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/803
+      changed_files_or_scope:
+        - "Add lifetxt/personal_context_currentness.py: a pure resolver classifying items into current/future-effective/stale/superseded/expired/conflicting/historical-only, reusing node_facts() staleness, corrects:/replaced_by: supersession, and timeutil.parse_date_or_datetime for optional valid_from:/valid_to:"
+        - lifetxt/personal_context_currentness.py
+        - tests/test_personal_context_currentness.py
+        - docs/en/personal-context-toolkit.md
+        - docs/ja/personal-context-toolkit.md
+      tests_or_evidence:
+        - "tests/test_personal_context_currentness.py (20 tests): all seven states, open/closed/bounded validity intervals, malformed and reversed ranges never resolving to current, items with no id, linear supersession chains, competing-replacement conflicts, and supersession cycles"
+        - python -m unittest tests.test_personal_context_currentness -> Ran 20 tests, OK
+      release_or_deployment: null
+      notes: >-
+        First implementation task of the #800-#802 personal-context-
+        currentness batch, landing on its own child branch merged locally
+        into feature/800-802-personal-context-currentness, merged via PR #803.
+        No new record kind, mandatory Format metadata, or second
+        timestamp parser was introduced; valid_from:/valid_to: remain
+        optional custom-detail conventions.
+      status: implemented
+
+    - requirement_id: req-personal-context-currentness-consumer-integration
+      capability_id: cap-personal-context-currentness
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/782
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/801
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/803
+      changed_files_or_scope:
+        - Wire the #800 resolver into context_health/explain_personal_context_item/context_capsule; decision_memory inherits the same filtering since it already delegates to context_capsule
+        - lifetxt/personal_context.py
+        - lifetxt/personal_context_cli.py
+        - tests/test_personal_context.py
+        - docs/en/personal-context-toolkit.md
+        - docs/ja/personal-context-toolkit.md
+      tests_or_evidence:
+        - "tests/test_personal_context.py (7 new tests, 8 pre-existing re-run unmodified): context health reports future-effective/expired/conflicting counts alongside the existing current/stale/superseded/missing_source/broken_reference counts; context why exposes the resolved state's reasons and valid_from/valid_to; context capsule excludes future-effective/expired/conflicting/historical-only even when --include-stale is set, and still includes only stale records through that opt-in"
+        - python -m unittest tests.test_personal_context tests.test_personal_context_cli tests.test_personal_context_correction -> Ran 15 tests, OK
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: null
+      notes: >-
+        No validity/supersession/staleness logic is duplicated in
+        personal_context.py or personal_context_cli.py: every state comes
+        from resolve_currentness(); the pre-existing _stale_fact() helper
+        is kept only to surface the raw node_facts() evidence for display
+        (the "stale_fact" field), not to re-derive the classification.
+        decision_memory needed no code change since it already calls
+        context_capsule() internally and therefore inherits the new
+        filtering automatically. Second implementation task of the
+        #800-#802 batch, landing on its own child branch merged locally
+        into feature/800-802-personal-context-currentness, merged via PR #803.
+      status: implemented
+
+    - requirement_id: req-personal-context-currentness-mcp-read
+      capability_id: cap-personal-context-currentness
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/782
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/802
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/803
+      changed_files_or_scope:
+        - "Add a read-only MCP tool get_personal_context delegating entirely to lifetxt.personal_context.context_capsule; register it in READ_ONLY_TOOLS and TOOL_HANDLERS"
+        - lifetxt/mcp.py
+        - tests/test_mcp_expansion.py
+        - docs/en/ai-integration.md
+        - docs/ja/ai-integration.md
+      tests_or_evidence:
+        - "tests/test_mcp_expansion.py GetPersonalContextToolTests (7 tests): default returns only current records, matches a direct context_capsule() call field for field, include_stale adds only stale (never future-effective/superseded/expired/conflicting/historical-only), person/tags forwarding, limit forwarding, tags-must-be-a-list validation, read-only registration and no-write guarantee against a real disposable file"
+        - python -m unittest tests.test_mcp_expansion tests.test_surface_runtime -> Ran 330 tests, OK
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - manually verified the get_personal_context slug anchor added to docs/en+ja/ai-integration.md resolves against docs/en+ja/personal-context-toolkit.md's actual Currentness heading, since ai-integration.md and personal-context-toolkit.md are both outside validate_release_docs.py's checked-document set
+      release_or_deployment: null
+      notes: >-
+        No validity/supersession/staleness logic exists in lifetxt/mcp.py:
+        the tool is a thin argument-forwarding wrapper over context_capsule()
+        and does not call _attach_revision(), since context_capsule() already
+        provides its own deterministic SHA-256 revision field and attaching a
+        second, differently-scoped revision under the same key would silently
+        clobber it. Generic list_items/get_item are completely unchanged and
+        remain plain record access; Operation Policy (--profile) and
+        Disclosure Policy (workspace/source selection) are unaffected, since
+        this tool reads through the same _read_items(context) every other
+        read-only tool uses. Third and final implementation task of the
+        #800-#802 batch, landing on its own child branch merged locally into
+        feature/800-802-personal-context-currentness, merged via PR #803.
+      status: implemented
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

@@ -808,7 +808,8 @@ different port.
 
 **Ports below 1024.** These need elevated privileges on macOS and Linux. Use a
 port above 1024.
-# Beginner path
+
+## Beginner path
 
 Start with Today to see what needs attention, Items to find records, and Create
 to add a task, event, or note. Empty views explain whether there is no data or

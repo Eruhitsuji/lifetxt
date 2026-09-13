@@ -213,6 +213,7 @@
         "Summarize completed, carried, blocked, and planned work for a chosen period.": "指定期間の完了・繰り越し・ブロック中・予定の作業を要約します。",
         "Month/week calendar grid of dated records": "日付付きレコードの月/週カレンダー",
         "Views": "ビュー",
+        "More views": "その他のビュー",
         "Actions": "操作",
         "Quick actions": "クイック操作",
         "Statistics": "統計",

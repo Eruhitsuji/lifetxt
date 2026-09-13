@@ -12903,6 +12903,32 @@ traceability:
         deliverable.
       status: implemented
 
+    - requirement_id: req-release-v1-0-3-version-bump
+      capability_id: cap-stable-release-governance
+      epic: null
+      task_issue: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/804
+      changed_files_or_scope:
+        - Bump authoritative package version 1.0.2 -> 1.0.3 per direct user request
+        - pyproject.toml
+        - lifetxt/__init__.py
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - "python -c \"import lifetxt; print(lifetxt.__version__)\" -> 1.0.3"
+        - "python -c \"import lifetxt.mcp as m; print(m.SERVER_VERSION)\" -> 1.0.3 (derives from lifetxt.__version__, unchanged since #464's era fix)"
+      release_or_deployment: >-
+        Version-metadata-only change preparing v1.0.3. Tag creation, CI
+        re-confirmation on the merge commit, and artifact/release publication
+        are separate, human-authorized release-authority actions performed
+        after this PR merges, matching the precedent of every prior patch
+        release in this file.
+      notes: >-
+        No new capability: reuses cap-stable-release-governance, the same
+        capability the v1.0.0/v1.0.1/v1.0.2 version-bump/release-preparation
+        work was recorded under. No feature/behavior change accompanies this
+        release; it packages whatever had already merged to main.
+      status: implemented
+
   required_chain:
     - Requirement
     - Capability

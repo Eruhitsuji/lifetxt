@@ -808,3 +808,10 @@ different port.
 
 **Ports below 1024.** These need elevated privileges on macOS and Linux. Use a
 port above 1024.
+
+## Beginner path
+
+Start with Today to see what needs attention, Items to find records, and Create
+to add a task, event, or note. Empty views explain whether there is no data or
+only no matching result and provide a safe next action. Select More to reach
+specialist views such as Timeline, Graph, and Stats; direct links remain valid.

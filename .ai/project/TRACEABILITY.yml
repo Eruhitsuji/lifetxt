@@ -12912,6 +12912,177 @@ traceability:
     - Test/Evidence
     - Release
 
+    - requirement_id: req-web-shared-control-sizing-tokens
+      capability_id: cap-web-shared-control-sizing
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/789
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/790
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/799
+      changed_files_or_scope:
+        - Add shared control-geometry CSS custom properties and apply them to the base input/select/button rules and .compact/.icon-only utility classes
+        - lifetxt/web_assets_css_01.css
+      tests_or_evidence:
+        - python -m unittest tests.test_web_assets tests.test_web_i18n tests.test_web_commands tests.test_surface_runtime tests.test_release_policy -> Ran 87 tests, OK
+        - node --check against the full assembled Web UI script -> no syntax error
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      release_or_deployment: null
+      notes: >-
+        First implementation task of the #789 shared-control-sizing bug,
+        landing on its own child branch merged locally into
+        feature/issues-782-789-798. pull_request is filled in once the
+        final integration PR is opened.
+      status: implemented
+
+    - requirement_id: req-web-shared-control-sizing-rollout
+      capability_id: cap-web-shared-control-sizing
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/789
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/791
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/799
+      changed_files_or_scope:
+        - Apply the shared control-geometry tokens across filter/workspace/chart/review-range/graph-layout/graph-export buttons and the mobile-width breakpoint
+        - lifetxt/web_assets_css_02.css
+        - lifetxt/web_assets_css_04.css
+      tests_or_evidence:
+        - "review found and fixed a real CSS specificity bug during this pass: the compact-height rule for .filter-btn/.review-range-btn/.chart-tab/.chart-group-btn/.graph-layout-btn/.graph-export-btn used bare class selectors, which lost to the earlier, more specific button.<class> selector on the actual buttons those classes are applied to, so the intended compact height was never applied; fixed by matching the button.<class> selector form so the later rule wins on equal specificity"
+        - python -m unittest tests.test_web_assets tests.test_web_i18n tests.test_web_commands tests.test_surface_runtime tests.test_release_policy -> Ran 87 tests, OK
+        - node --check against the full assembled Web UI script -> no syntax error
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      release_or_deployment: null
+      notes: >-
+        Second and final implementation task of the #789 batch, landing on
+        its own child branch merged locally into
+        feature/issues-782-789-798. pull_request is filled in once the
+        final integration PR is opened.
+      status: implemented
+
+    - requirement_id: req-web-beginner-navigation-hierarchy
+      capability_id: cap-web-beginner-first-ux
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/793
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/794
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/799
+      changed_files_or_scope:
+        - Reduce the always-visible workspace nav to Today/Items/Dashboard/Create and move every other view behind a collapsed More group
+        - lifetxt/web_assets.html
+        - lifetxt/web_assets_css_02.css
+      tests_or_evidence:
+        - python -m unittest tests.test_web_assets tests.test_web_commands tests.test_surface_runtime -> pass (syncViewTabs's existing .workspace-tab[data-view] selector correctly ignores the new data-view-less Create button)
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      release_or_deployment: null
+      notes: >-
+        First implementation task of the #793 beginner-first Web UI IA
+        batch, landing on its own child branch merged locally into
+        feature/issues-782-789-798. pull_request is filled in once the
+        final integration PR is opened.
+      status: implemented
+
+    - requirement_id: req-web-progressive-advanced-navigation
+      capability_id: cap-web-beginner-first-ux
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/793
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/797
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/799
+      changed_files_or_scope:
+        - Auto-expand the More nav group when the active view is one of its advanced destinations (direct URL/#view= links remain valid); sync aria-expanded on toggle
+        - lifetxt/web_assets_js_18.js
+      tests_or_evidence:
+        - python -m unittest tests.test_web_assets tests.test_surface_runtime -> pass
+        - node --check against the full assembled Web UI script -> no syntax error
+      release_or_deployment: null
+      notes: >-
+        Wraps the existing syncViewTabs() function (function-declaration
+        reassignment, the same pattern already used elsewhere in this
+        codebase) rather than a second navigation-sync implementation.
+        Landed on its own child branch merged locally into
+        feature/issues-782-789-798. pull_request is filled in once the
+        final integration PR is opened.
+      status: implemented
+
+    - requirement_id: req-web-beginner-empty-state-guidance
+      capability_id: cap-web-beginner-first-ux
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/793
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/795
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/799
+      changed_files_or_scope:
+        - Give Today's Today/Due today/Next actions empty subsections a beginner-friendly message and a safe next action (Add a task / View all items)
+        - lifetxt/web_assets_js_18.js
+        - lifetxt/web_assets_css_01.css
+      tests_or_evidence:
+        - python -m unittest tests.test_web_assets tests.test_surface_runtime -> pass
+        - node --check against the full assembled Web UI script -> no syntax error
+      release_or_deployment: null
+      notes: >-
+        Wraps the existing _todaySubsection() renderer (function-declaration
+        reassignment) so a non-empty section, or any section outside the
+        three named titles, renders exactly as before; only the specific
+        empty-Today-related-subsection case is replaced. Landed on its own
+        child branch merged locally into feature/issues-782-789-798.
+        pull_request is filled in once the final integration PR is opened.
+      status: implemented
+
+    - requirement_id: req-web-beginner-contextual-help
+      capability_id: cap-web-beginner-first-ux
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/793
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/796
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/799
+      changed_files_or_scope:
+        - Add contextual help text (data-help/aria-describedby) to the item drawer's Timeline/Relations tabs and to structured common-field editor inputs
+        - lifetxt/web_assets_js_01.js
+        - lifetxt/web_assets_js_10.js
+        - lifetxt/web_assets_js_18.js
+        - lifetxt/web_assets_css_02.css
+        - docs/en/web.md
+        - docs/ja/web.md
+      tests_or_evidence:
+        - python -m unittest tests.test_web_assets tests.test_web_i18n tests.test_release_policy -> Ran 87 tests, OK
+        - "review found and fixed a real translation-coverage gap: the new nav-more group's aria-label More views (added by #797, caught here since it shares this batch's i18n gate) had no Japanese dictionary entry; added the missing dictionary entry"
+        - "review found and fixed a documentation-formatting defect in the accompanying beginner-path doc section: a top-level # heading with no preceding blank line was used instead of ## with a blank line, inconsistent with every other section in docs/en/web.md and docs/ja/web.md"
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - node --check against the full assembled Web UI script -> no syntax error
+      release_or_deployment: null
+      notes: >-
+        Reuses the existing help-target/data-help/showUiHelp() contextual
+        tooltip mechanism (established under cap-web-i18n-dynamic-content-fidelity,
+        #224) rather than a second tooltip implementation. Also adds new
+        aria-describedby help text to each structured common-field input
+        (extending the #776/#777 structured authoring feature). Landed on
+        its own child branch merged locally into
+        feature/issues-782-789-798. pull_request is filled in once the
+        final integration PR is opened.
+      status: implemented
+
+    - requirement_id: req-web-actionable-retryable-errors
+      capability_id: cap-web-beginner-first-ux
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/793
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/798
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/799
+      changed_files_or_scope:
+        - Classify a failed api() call by HTTP status/message and either reuse the existing toast system or render a dismissible, retryable error block
+        - Attach api() error responses' HTTP status/parsed JSON detail to the thrown Error (status/code/detail fields) so callers can classify failures without re-parsing the response
+        - Wire item-list loading and record save/edit failures to the new actionable error path
+        - lifetxt/web_assets_js_01.js
+        - lifetxt/web_assets_js_04.js
+        - lifetxt/web_assets_js_05.js
+        - lifetxt/web_assets_js_12.js
+        - lifetxt/web_assets_js_18.js
+        - lifetxt/web_assets_css_01.css
+        - tests/test_web_actionable_errors_js.py
+      tests_or_evidence:
+        - tests/test_web_actionable_errors_js.py (4 tests, added during review; no test existed for this feature before): status-based classification (409/401/403/5xx/network/generic-message/no-message), no-retry falls back to showToast, retry option renders an actionable block into #toast-container with a wired, focused retry button, and a null-container call never throws
+        - python -m unittest tests.test_web_actionable_errors_js -> Ran 4 tests, OK
+        - python -m unittest tests.test_web_assets tests.test_web_i18n tests.test_web_commands tests.test_surface_runtime tests.test_release_policy -> Ran 87 tests, OK
+        - node --check against the full assembled Web UI script -> no syntax error
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      release_or_deployment: null
+      notes: >-
+        No second error-reporting framework: showActionableError delegates
+        to the existing showToast() for the no-retry case, and
+        renderActionableError only replaces the innerHTML of the container
+        it is given (the items list container on load failure, or the
+        shared toast container for a retryable save/edit failure), matching
+        the existing convention that a failed list-load already overwrites
+        its own container with a diagnostic. Landed on its own child branch
+        merged locally into feature/issues-782-789-798. pull_request is
+        filled in once the final integration PR is opened.
+      status: implemented
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

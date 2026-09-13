@@ -103,7 +103,7 @@
         const updated = (currentItems || []).find(i => i.line === saveLine && i.editable);
         if (updated) openDrawer(updated);
       } catch(e) {
-        showToast("Save failed: " + (e.message || e), "error");
+        showActionableError("Could not save this record.", e, {retry: () => drawerSaveEdit()});
       }
     }
 

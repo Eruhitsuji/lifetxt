@@ -12916,7 +12916,7 @@ traceability:
       capability_id: cap-web-shared-control-sizing
       epic: https://github.com/Eruhitsuji/lifetxt/issues/789
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/790
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/799
       changed_files_or_scope:
         - Add shared control-geometry CSS custom properties and apply them to the base input/select/button rules and .compact/.icon-only utility classes
         - lifetxt/web_assets_css_01.css
@@ -12936,7 +12936,7 @@ traceability:
       capability_id: cap-web-shared-control-sizing
       epic: https://github.com/Eruhitsuji/lifetxt/issues/789
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/791
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/799
       changed_files_or_scope:
         - Apply the shared control-geometry tokens across filter/workspace/chart/review-range/graph-layout/graph-export buttons and the mobile-width breakpoint
         - lifetxt/web_assets_css_02.css
@@ -12958,7 +12958,7 @@ traceability:
       capability_id: cap-web-beginner-first-ux
       epic: https://github.com/Eruhitsuji/lifetxt/issues/793
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/794
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/799
       changed_files_or_scope:
         - Reduce the always-visible workspace nav to Today/Items/Dashboard/Create and move every other view behind a collapsed More group
         - lifetxt/web_assets.html
@@ -12978,7 +12978,7 @@ traceability:
       capability_id: cap-web-beginner-first-ux
       epic: https://github.com/Eruhitsuji/lifetxt/issues/793
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/797
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/799
       changed_files_or_scope:
         - Auto-expand the More nav group when the active view is one of its advanced destinations (direct URL/#view= links remain valid); sync aria-expanded on toggle
         - lifetxt/web_assets_js_18.js
@@ -12999,7 +12999,7 @@ traceability:
       capability_id: cap-web-beginner-first-ux
       epic: https://github.com/Eruhitsuji/lifetxt/issues/793
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/795
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/799
       changed_files_or_scope:
         - Give Today's Today/Due today/Next actions empty subsections a beginner-friendly message and a safe next action (Add a task / View all items)
         - lifetxt/web_assets_js_18.js
@@ -13021,7 +13021,7 @@ traceability:
       capability_id: cap-web-beginner-first-ux
       epic: https://github.com/Eruhitsuji/lifetxt/issues/793
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/796
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/799
       changed_files_or_scope:
         - Add contextual help text (data-help/aria-describedby) to the item drawer's Timeline/Relations tabs and to structured common-field editor inputs
         - lifetxt/web_assets_js_01.js
@@ -13052,7 +13052,7 @@ traceability:
       capability_id: cap-web-beginner-first-ux
       epic: https://github.com/Eruhitsuji/lifetxt/issues/793
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/798
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/799
       changed_files_or_scope:
         - Classify a failed api() call by HTTP status/message and either reuse the existing toast system or render a dismissible, retryable error block
         - Attach api() error responses' HTTP status/parsed JSON detail to the thrown Error (status/code/detail fields) so callers can classify failures without re-parsing the response

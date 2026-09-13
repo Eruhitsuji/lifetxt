@@ -108,6 +108,18 @@ class LayoutTests(unittest.TestCase):
         self.assertIn("overflow-x: auto", narrow)
         self.assertIn("flex-wrap: nowrap", narrow)
 
+    def test_global_navigation_has_independent_one_row_mobile_strips(self):
+        narrow = _media_block("@media (max-width: 680px)")
+
+        self.assertIn(".header-workspace-tabs > .nav-primary", narrow)
+        self.assertIn(".header-workspace-tabs > .nav-more", narrow)
+        self.assertIn(".nav-advanced", narrow)
+        self.assertIn("max-width: calc(100vw - 1.5rem)", narrow)
+        self.assertIn(".nav-advanced .workspace-tab", narrow)
+        self.assertIn("width: auto", narrow)
+        self.assertIn("overflow-x: auto", narrow)
+        self.assertIn("flex-wrap: nowrap", narrow)
+
     def test_bulk_actions_sit_within_thumb_reach(self):
         narrow = _media_block("@media (max-width: 680px)")
 

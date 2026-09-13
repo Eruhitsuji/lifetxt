@@ -1,0 +1,11 @@
+schema_version: 1
+
+verification:
+  - command: .venv/Scripts/python.exe -m unittest tests.test_server_init
+    result: passed
+    notes: 41 tests passed.
+  - command: .venv/Scripts/python.exe -m unittest tests.test_server_update
+    result: passed
+    notes: 125 tests passed, 1 skipped.
+  - command: .venv/Scripts/ruff.exe check lifetxt/server_init.py tests/test_server_init.py
+    result: passed

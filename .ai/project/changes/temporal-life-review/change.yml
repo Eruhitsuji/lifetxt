@@ -1,0 +1,32 @@
+schema_version: 1
+
+change:
+  id: temporal-life-review
+  title: Add deterministic Temporal Life Review over the workspace timeline
+  status: implemented
+  change_type: Feature
+  assurance_level: Standard
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/808
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/820
+  base_commit: 98b2f217c289adbd55bbddfbb100e6140e6b221a
+
+scope:
+  in_scope:
+    - Compose a bounded retrospective review from Workspace Life Timeline events.
+    - Expose deterministic text and JSON CLI output.
+    - Preserve explicit limitations and completeness diagnostics.
+  out_of_scope:
+    - AI-generated explanations, causal inference, or historical backfill.
+    - Changes to the underlying timeline engines.
+    - .ai/managed/**
+  write_scope:
+    - lifetxt/temporal_review.py
+    - lifetxt/cli.py
+    - tests/test_temporal_review.py
+    - docs/en/ai-integration.md
+    - docs/ja/ai-integration.md
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+    - .ai/project/changes/temporal-life-review/**

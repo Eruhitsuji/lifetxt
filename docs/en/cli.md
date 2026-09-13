@@ -233,7 +233,7 @@ including its `--json` machine-readable form for scripts and AI clients.
 | Import / Export / Reports | `import`, `export`, `import-ics`, `sync-ics`, `to-json`, `to-jsonl`, `to-csv`, `from-json`, `from-jsonl`, `from-csv`, `from-markdown`, `from-todo`, `to-ics`, `markdown`, `stats`, `plot`, `export-heatmap`, `standup`, `invoice`, `share`, `digest`, `report` |
 | Interfaces / Integration | `tui`, `fzf`, `web`, `serve`, `mcp`, `ai`, `completion`, `git-hook`, `watch`, `remote` |
 | Workspace / Configuration / Safety | `config`, `workspace`, `path`, `doctor`, `format`, `safety`, `capabilities`, `attachment`, `update`, `update-check`, `server-init`, `server-update`, `server-report`, `git-commit-worker` |
-| Personal Context | `context`, `memory`, `decisions` |
+| Personal Context | `context`, `memory`, `decisions`, `decision-review`, `change-feed`, `future-intent` |
 | Advanced / Experimental | `archive`, `batch`, `encrypt`, `decrypt`, `migrate`, `template`, `demo`, `vm`, `rrule` |
 
 Guided paths (`python -m lifetxt help AUDIENCE`):
@@ -4092,6 +4092,8 @@ warrant a dedicated guide:
 | `report list\|preview\|run\|send\|validate\|inspect` (named periodic reports) | [reports.md](reports.md) |
 | `server-report plan\|install\|remove` (scheduled report jobs) | [§24](#24-server-report), [reports.md](reports.md) |
 | `context`, `memory`, `decisions` (Personal Context) | [personal-context-toolkit.md](personal-context-toolkit.md) |
+| `context history`, `decision-review`, `change-feed` (bounded temporal review reads) | [temporal-review-reads.md](temporal-review-reads.md) |
+| `future-intent` (bounded future intent snapshot) | [future-intent-snapshot.md](future-intent-snapshot.md) |
 
 `python -m lifetxt --help` lists every command; each subcommand's own
 `--help` is always authoritative for its exact flags.

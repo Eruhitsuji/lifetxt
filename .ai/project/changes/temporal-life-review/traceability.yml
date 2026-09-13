@@ -1,0 +1,13 @@
+schema_version: 1
+
+requirement_id: req-temporal-life-review
+capability_id: cap-temporal-life-review
+task_issue: https://github.com/Eruhitsuji/lifetxt/issues/815
+changed_files:
+  - lifetxt/temporal_review.py
+  - lifetxt/cli.py
+  - tests/test_temporal_review.py
+  - docs/en/ai-integration.md
+evidence:
+  - .venv/Scripts/python.exe -m unittest tests.test_temporal_review
+status: implemented

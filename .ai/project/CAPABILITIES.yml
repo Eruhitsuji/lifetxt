@@ -37,6 +37,156 @@ capabilities:
       replaced_by: null
       deprecation_issue: null
 
+  - id: cap-temporal-life-review
+    name: Deterministic Temporal Life Review
+    summary: >-
+      Bounded retrospective composition over Workspace Life Timeline events,
+      with explicit completeness and limitation reporting.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-temporal-life-review
+    implementation_locations:
+      - lifetxt/temporal_review.py
+      - lifetxt/cli.py
+      - tests/test_temporal_review.py
+    public_interfaces:
+      - lifetxt review --temporal
+    tests_or_evidence:
+      - tests.test_temporal_review
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/808
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-temporal-review-read-surfaces
+    name: Temporal review read surfaces
+    summary: >-
+      Bounded read-only decision outcome, meaningful change, and future
+      intent projections exposed through the Personal Context CLI.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-decision-outcome-review
+      - req-temporal-change-feed
+      - req-future-intent-snapshot
+    implementation_locations:
+      - lifetxt/decision_outcome_review.py
+      - lifetxt/temporal_change_feed.py
+      - lifetxt/future_intent.py
+      - lifetxt/personal_context_cli.py
+      - docs/en/temporal-review-reads.md
+      - docs/ja/temporal-review-reads.md
+      - docs/en/future-intent-snapshot.md
+      - docs/ja/future-intent-snapshot.md
+    public_interfaces:
+      - decision-review
+      - change-feed
+      - future-intent
+    tests_or_evidence:
+      - tests.test_batch_followups
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/812
+      - https://github.com/Eruhitsuji/lifetxt/issues/817
+      - https://github.com/Eruhitsuji/lifetxt/issues/818
+      - https://github.com/Eruhitsuji/lifetxt/issues/819
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Review found `decision-review`/`change-feed`/`future-intent` all
+      accepted `--person`/`--stale-after-days` (inherited from the shared
+      `_add_common_read` helper) while silently never applying either --
+      none of the three underlying engines is person-scoped or has a
+      staleness concept. Fixed by giving these three a narrower
+      `_add_bounded_read` helper that only registers the flags they
+      actually consume; the flags are now rejected rather than silently
+      ignored.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-personal-context-historical-field-reconstruction
+    name: Historical Personal Context field reconstruction
+    summary: >-
+      Bounded, read-only field-level ``historical-personal-context-v1``
+      projection composing the existing Personal Context Currentness
+      resolver with the shared ``semantic-as-of-v1`` engine, so an item's
+      per-field state (status/due/relations/on/from/to/at) can be
+      reconstructed as of an explicit cutoff without ever falling back to
+      current life.txt state. Exposed as `lifetxt context history --as-of`.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-historical-personal-context-projection
+    implementation_locations:
+      - lifetxt/historical_context.py
+      - lifetxt/personal_context_cli.py
+      - tests/test_batch_followups.py
+      - tests/test_personal_context_cli.py
+    public_interfaces:
+      - lifetxt context history --as-of
+    tests_or_evidence:
+      - tests.test_batch_followups
+      - tests.test_personal_context_cli.PersonalContextCliTests.test_context_history_reconstructs_fields_as_of_cutoff
+      - tests.test_personal_context_cli.PersonalContextCliTests.test_context_history_requires_as_of
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/816
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Reuses lifetxt.personal_context_currentness.resolve_currentness/
+      item_currentness and lifetxt.native_semantic_as_of.semantic_as_of
+      unmodified; no second currentness or replay implementation. Found
+      during review that the engine module had landed with tests but no
+      CLI/MCP/Web surface at all (a real gap against this project's
+      CLI-first pattern) and that its own limitation reporting was dead
+      code (`if not as_of.get("source")` could never be true, since
+      semantic_as_of() always returns the literal string
+      "native_life_txt"); both were fixed in the same review pass -- the
+      limitation check now inspects each field's own state, and
+      `lifetxt context history` wires the engine into the existing
+      Personal Context CLI (`context health|why|capsule|history`).
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-ai-prompt-profile
+    name: Provider-independent AI Prompt Profile
+    summary: >-
+      A directly linkable, no-install prompt contract for converting,
+      explaining, and reviewing common lifetxt text without workspace access,
+      provider-specific behavior, or automatic writes.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-provider-independent-ai-prompt-profile
+    implementation_locations:
+      - prompts/lifetxt-assistant.md
+      - examples/lifetxt_ai_prompt_conformance.json
+      - docs/en/ai-integration.md
+      - docs/ja/ai-integration.md
+      - readme.md
+      - tests/test_ai_prompt_profile.py
+    public_interfaces:
+      - prompts/lifetxt-assistant.md
+    tests_or_evidence:
+      - tests/test_ai_prompt_profile.py
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/500
+      - https://github.com/Eruhitsuji/lifetxt/issues/813
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
   - id: cap-native-timeline-cross-surface-ux
     name: Native Timeline cross-surface UX
     summary: First-class Web item-drawer Timeline navigation, bounded Web filters, and local TUI selected-item/event inspection over the shared temporal-timeline-v1 reader.
@@ -7720,10 +7870,13 @@ capabilities:
       - lifetxt.i18n.resolve_locale
       - lifetxt.i18n.register_messages
       - lifetxt.i18n.translate
+      - lifetxt.i18n.has_message
       - lifetxt.i18n.locale_context
     tests_or_evidence:
-      - "python -m unittest tests.test_i18n tests.test_cli_taxonomy -> Ran 60 tests, OK"
+      - "python -m unittest tests.test_i18n tests.test_cli_taxonomy -> Ran 62 tests, OK"
       - "locale precedence (explicit > LIFETXT_LANG > OS locale > English), normalization (ja/ja_JP/ja-JP -> ja, unsupported -> None), missing-translation/missing-message-id fallback, and structured-output invariance are all directly unit-tested"
+      - "tests.test_i18n.CatalogTests.test_has_message_distinguishes_registered_from_unknown"
+      - "tests.test_cli_taxonomy.CliHelpCommandTests.test_help_command_topic_never_leaks_a_raw_message_id"
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/631
     related_pull_requests: []
@@ -7742,6 +7895,26 @@ capabilities:
       re-verified against the issue's own precedence-list wording and the
       existing, deliberately-named test before concluding this was a false
       positive, not a bug).
+
+      A later review (during the #806-819 batch's own review pass) found a
+      real, pre-existing bug affecting most of `cli_taxonomy.py`'s
+      locale-aware rendering: `category_title`/`category_description`/
+      `audience_title`/`audience_description`/the per-step goal lookup/
+      `localized_command_summary` all used the idiom
+      `translate(message_id) or default`, but `translate()` deliberately
+      returns the raw `message_id` (never a falsy value) when the id has no
+      catalog entry at all -- so `or default` could never fall through for
+      any id outside the fully-covered category/audience sets. In
+      practice this was invisible for categories/audiences (every one of
+      those has a registered translation) but broke `lifetxt help NAME`'s
+      text form for the large majority of commands: `localized_command_summary`
+      only has explicit translations for a small hand-picked set (~8
+      commands), so `lifetxt help check` (and nearly every other command)
+      printed the literal placeholder `command.summary.check` instead of
+      its real summary. Fixed by adding `lifetxt.i18n.has_message()` (does
+      the catalog have any entry for this id at all) and a local
+      `_localized_or()` helper in `cli_taxonomy.py` that checks it before
+      falling back, applied at all six affected call sites.
     replacement:
       replaces: []
       replaced_by: null
@@ -9433,6 +9606,7 @@ capabilities:
       - "tests/test_git_commit_worker.py (13 tests, real disposable git repository): no-op success, allowed-path change committed then a second run is a no-op, unrelated unstaged changes ignored, unrelated pre-existing staged changes refused (index left untouched), detached HEAD refused, branch mismatch refused, missing Git identity refused (deterministic via mocked _identity_configured, since a real global identity is common on developer hosts), no-allowlist-configured raises, a path escaping the repository raises, not-a-git-repository raises (including a repository nested under an unrelated ancestor repo), concurrent-run lock refuses while held and releases on completion"
       - "tests/test_git_commit_worker_cli.py (4 tests, real subprocess CLI invocations): no-op JSON output, a real committed change with the fixed lifetxt-auto-commit: <UTC ISO8601> message confirmed via git log, non-zero exit on refusal, --help"
       - "tests/test_server_init.py GitCommitWorkerConfigGenerationTests (7 tests): disabled-by-default generates no units, enabled generates correct service+timer content (ExecStart=/--path/--branch/OnUnitActiveSec=), plan idempotency on a second run (no-op action), empty-paths/missing-branch/invalid-interval config all rejected before any write, generator-function identity check"
+      - "tests/test_server_init.py GitCommitWorkerConfigGenerationTests: enabled worker server-update config includes timer then oneshot service, generated wrapper authorizes both units, and disabled worker adds no coordination"
       - "tests/test_server_update.py (3 new tests): refuses to start while a configured git_commit_worker_lock_path file exists, proceeds normally when the key is unset, proceeds normally when the configured lock file does not currently exist"
       - python -m unittest tests.test_git_commit_worker tests.test_git_commit_worker_cli tests.test_server_init tests.test_server_update tests.test_cli_taxonomy tests.test_completion_surfaces tests.test_completion_values -> Ran 279 tests, OK (skipped=2)
       - "live: a real disposable git repository -- first run no_op, then a real change committed with the exact fixed message format, confirmed via git log; a second, unrelated staged file caused the next run to refuse with unrelated_staged_changes and left the allowlisted path's own pending modification unstaged and untouched"
@@ -9443,6 +9617,7 @@ capabilities:
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/724
       - https://github.com/Eruhitsuji/lifetxt/issues/731
+      - https://github.com/Eruhitsuji/lifetxt/issues/806
     related_pull_requests: []
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-

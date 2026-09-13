@@ -56,7 +56,16 @@ _EXTRA_COMMANDS = frozenset(
     )
 )
 
-_PERSONAL_CONTEXT_COMMANDS = frozenset(("context", "memory", "decisions"))
+_PERSONAL_CONTEXT_COMMANDS = frozenset(
+    (
+        "context",
+        "memory",
+        "decisions",
+        "decision-review",
+        "change-feed",
+        "future-intent",
+    )
+)
 
 _DOCTOR_SAFETY_FLAGS = frozenset(
     (
@@ -260,7 +269,8 @@ def _print_help():
         "  report list|preview|run|send\n"
         "  server-report plan|install|remove NAME --app-config PATH\n"
         "Personal Context commands:\n"
-        "  context health|why|capsule, memory correct, decisions\n"
+        "  context health|why|capsule|history, memory correct, decisions\n"
+        "  decision-review, change-feed, future-intent\n"
         "Release-safety and Format 1.0 commands:\n"
         "  safety locks|serve-target|timezone|revisions|transactions|write-routes|release-gate\n"
         "  attachment put|reference|delete|status\n"

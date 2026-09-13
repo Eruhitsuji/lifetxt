@@ -74,6 +74,26 @@ def _build_parser():
     decisions.add_argument("--include-stale", action="store_true")
     decisions.add_argument("--limit", type=int, default=DEFAULT_LIMIT)
 
+    decision_review = subparsers.add_parser(
+        "decision-review", help="Review explicit decision evidence"
+    )
+    _add_common_read(decision_review)
+    decision_review.add_argument("--limit", type=int, default=DEFAULT_LIMIT)
+    change_feed = subparsers.add_parser(
+        "change-feed", help="Show bounded historical changes"
+    )
+    _add_common_read(change_feed)
+    change_feed.add_argument("--since", required=True)
+    change_feed.add_argument("--until")
+    change_feed.add_argument("--limit", type=int, default=DEFAULT_LIMIT)
+    future_intent = subparsers.add_parser(
+        "future-intent", help="Show explicit future intent"
+    )
+    _add_common_read(future_intent)
+    future_intent.add_argument("--cutoff", required=True)
+    future_intent.add_argument("--until")
+    future_intent.add_argument("--limit", type=int, default=DEFAULT_LIMIT)
+
     return parser
 
 
@@ -281,6 +301,38 @@ def _dispatch(args, config_data):
             stale_after_days=args.stale_after_days,
         )
         return _render(report, args, _decisions_text)
+
+    if args.command == "decision-review":
+        from .decision_outcome_review import decision_outcome_review
+
+        report = decision_outcome_review(
+            _load_items(args.paths, config_data), limit=args.limit
+        )
+        return _render(
+            report,
+            args,
+            lambda value: "Decision Outcome Review (%d)\n" % len(value["decisions"]),
+        )
+    if args.command == "change-feed":
+        from .temporal_change_feed import temporal_change_feed
+
+        report = temporal_change_feed(
+            _load_items(args.paths, config_data), args.since, args.until, args.limit
+        )
+        return _render(
+            report,
+            args,
+            lambda value: "Temporal Change Feed (%d)\n" % len(value["events"]),
+        )
+    if args.command == "future-intent":
+        from .future_intent import future_intent_snapshot
+
+        report = future_intent_snapshot(
+            _load_items(args.paths, config_data), args.cutoff, args.until, args.limit
+        )
+        return _render(
+            report, args, lambda value: "Future Intent Snapshot (%d)\n" % value["count"]
+        )
 
     raise ValueError("Unsupported Personal Context command.")
 

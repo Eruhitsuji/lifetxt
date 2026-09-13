@@ -499,6 +499,9 @@
       }
       .quick-add-bar > *, .filter-bar > * { flex: 0 0 auto; }
       .quick-add-bar input { flex: 1 1 12rem; min-width: 10rem; }
+      .presence-quick-bar { flex-wrap: wrap; overflow-x: visible; }
+      .presence-quick-bar #presence-state-custom { flex: 1 1 9rem; min-width: 7.5rem; }
+      .presence-quick-bar #presence-title { flex: 1 1 12rem; min-width: 10rem; }
 
       .kpi-row { grid-template-columns: repeat(2, 1fr); }
       table { font-size: .82rem; }

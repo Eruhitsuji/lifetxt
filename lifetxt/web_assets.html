@@ -131,8 +131,11 @@ __LIFETXT_WEB_STYLES__  </style>
         <span class="hint" style="font-size:.73rem;color:var(--muted)">Ctrl+↵</span>
         <span class="hint">q or Escape to close</span>
       </div>
-      <div class="quick-add-bar" id="presence-bar" style="display:none">
-        <input id="presence-input" placeholder="busy  or  focus Deep work" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();setPresence();}">
+      <div class="quick-add-bar presence-quick-bar" id="presence-bar" style="display:none" aria-label="Quick Status">
+        <span class="presence-quick-label">Quick Status</span>
+        <select id="presence-state-select" aria-label="Status state" onchange="quickPresenceStateChanged()"></select>
+        <input id="presence-state-custom" placeholder="Custom status" aria-label="Custom status" autocomplete="off" hidden disabled onkeydown="if(event.key==='Enter'){event.preventDefault();setPresence();}">
+        <input id="presence-title" placeholder="Activity / title (optional)" aria-label="Activity or title (optional)" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();setPresence();}">
         <span id="presence-current" class="check-msg"></span>
         <button onclick="setPresence()">Set</button>
         <button onclick="endPresence()">End</button>

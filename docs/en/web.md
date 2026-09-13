@@ -611,11 +611,16 @@ with the shared relative date tokens (`today`, `tomorrow`, weekday names,
 `+3d`). A live preview under the input shows exactly what will be written, and
 the expansion happens on the server so it cannot drift from `lifetxt quick`.
 
-Press `p` to open the presence bar. Type a state (`busy`, or `focus Deep work`
-to add a title) and press Enter to record it; the previously open status is
-closed in the same request. `End` closes the current status without opening a
-new one. Repeating the state that is already open writes nothing and reports it.
-Both actions are also in the command palette as `Set status` and `End status`.
+Press `p` to open the Quick Status bar. Choose a common state from the selector,
+or choose **Custom…** and enter any other state. The separate activity/title
+field is optional, so selecting `focus` and entering `Deep work` is equivalent
+to the earlier `focus Deep work` input. Press Enter from the custom-state or
+activity/title field, or choose `Set`, to record it; the previously open status
+is closed in the same request. Switching away from and back to **Custom…** keeps
+the typed custom state until a successful submission. `End` closes the current
+status without requiring or opening a new one. Repeating the state that is
+already open writes nothing and reports it. Both actions are also in the command
+palette as `Set status` and `End status`.
 
 There is no browser-side "save view" feature: shareable views are plain URLs
 (every filter, sort, and view choice is reflected in the query string), and

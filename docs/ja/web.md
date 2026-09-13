@@ -537,11 +537,15 @@ Buy milk @home #errand !high ^tomorrow
 入力欄の下に実際に書き込まれる内容がリアルタイムで表示されます。
 展開はサーバ側で行われるため `lifetxt quick` と挙動がずれることはありません。
 
-`p` で presence バーを開きます。状態 (`busy`、タイトルを付けるなら `focus Deep work`)
-を入力して Enter で記録され、直前の open な status は同じ request 内で閉じられます。
-`End` は新しい status を開かずに現在の status を閉じます。
-すでに開いている状態と同じ状態を指定した場合は何も書き込まず、その旨を表示します。
-どちらも command palette の `Set status` / `End status` からも実行できます。
+`p` で Quick Status バーを開きます。共通の状態を selector から選ぶか、**Custom…**
+を選んで任意の状態を入力します。activity/title 欄は任意で、`focus` を選択して
+`Deep work` と入力すると、従来の `focus Deep work` と同じ内容になります。
+Custom 状態欄または activity/title 欄で Enter を押すか `Set` を選ぶと記録され、
+直前の open な status は同じ request 内で閉じられます。**Custom…** から別の状態へ
+切り替えて戻っても、送信に成功するまでは入力した Custom 状態が保持されます。
+`End` は状態の選択や入力を必要とせず、新しい status を開かずに現在の status を
+閉じます。すでに開いている状態と同じ状態を指定した場合は何も書き込まず、その旨を
+表示します。どちらも command palette の `Set status` / `End status` からも実行できます。
 
 
 browser 側の「Save View」機能はありません。共有したい view はそのまま URL として

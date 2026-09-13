@@ -101,6 +101,14 @@ class CatalogTests(unittest.TestCase):
         self.assertEqual(i18n.translate("test.merge", locale="en"), "English")
         self.assertEqual(i18n.translate("test.merge", locale="ja"), "日本語")
 
+    def test_has_message_distinguishes_registered_from_unknown(self):
+        # translate() deliberately returns the raw message_id for an unknown
+        # id, so `translate(x) or default` can never detect "unregistered"
+        # -- has_message() is what callers needing a real default must use.
+        i18n.register_messages({"test.has_message": {"en": "Registered"}})
+        self.assertTrue(i18n.has_message("test.has_message"))
+        self.assertFalse(i18n.has_message("test.has_message.unknown"))
+
 
 class ExtractLangArgTests(unittest.TestCase):
     def test_no_lang_flag_returns_argv_unchanged(self):

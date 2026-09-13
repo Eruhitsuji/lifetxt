@@ -38,8 +38,8 @@ def historical_personal_context(
         else:
             as_of = semantic_as_of(items, ids[0], cutoff, id_key=id_key)
             fields = as_of["fields"]
-            if not as_of.get("source"):
-                limitations.add("semantic_as_of_source_unavailable")
+            if any(field.get("state") != "known" for field in fields.values()):
+                limitations.add("semantic_as_of_field_unavailable")
         rows.append(
             OrderedDict(
                 (

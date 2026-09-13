@@ -14,6 +14,21 @@ class BatchFollowupTests(unittest.TestCase):
         self.assertEqual("unavailable", result["items"][0]["fields"]["status"]["state"])
         self.assertFalse(result["items"][0]["provenance"]["semantic_as_of"])
 
+    def test_historical_context_with_unique_id_reports_field_unavailability(self):
+        items, _ = parse_text(
+            '[ ] N "Preference" person:self id:p1 updated:2020-01-01\n'
+        )
+        result = historical_personal_context(items, "2020-02-01T00:00:00+00:00")
+        self.assertTrue(result["items"][0]["provenance"]["semantic_as_of"])
+        self.assertTrue(
+            all(
+                field["state"] == "unavailable"
+                for field in result["items"][0]["fields"].values()
+            )
+        )
+        self.assertIn("semantic_as_of_field_unavailable", result["limitations"])
+        self.assertFalse(result["complete"])
+
     def test_context_capsule_cutoff_is_explicit(self):
         from lifetxt.personal_context import context_capsule
 

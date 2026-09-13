@@ -71,6 +71,72 @@ class PersonalContextCliTests(unittest.TestCase):
                 self.assertEqual(code, 0, stderr)
                 self.assertEqual(json.loads(stdout)["schema"], schema)
 
+    def test_context_history_reconstructs_fields_as_of_cutoff(self):
+        with tempfile.TemporaryDirectory() as directory:
+            _life, _proposals, config = self.workspace(directory)
+            code, stdout, stderr = self.run_command(
+                [
+                    "context",
+                    "history",
+                    "--as-of",
+                    "2020-01-01T00:00:00+00:00",
+                    "--format",
+                    "json",
+                    "--config",
+                    config,
+                ]
+            )
+            self.assertEqual(code, 0, stderr)
+            report = json.loads(stdout)
+            self.assertEqual(report["schema"], "historical-personal-context-v1")
+            self.assertEqual(report["cutoff"], "2020-01-01T00:00:00+00:00")
+            self.assertTrue(report["items"])
+
+    def test_context_history_requires_as_of(self):
+        with tempfile.TemporaryDirectory() as directory:
+            _life, _proposals, config = self.workspace(directory)
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                with self.assertRaises(SystemExit) as ctx:
+                    main(["context", "history", "--config", config])
+            self.assertEqual(ctx.exception.code, 2)
+            self.assertIn("--as-of", stderr.getvalue())
+
+    def test_bounded_read_commands_reject_person_and_stale_after_days(self):
+        # decision-review, change-feed, and future-intent operate over the
+        # whole workspace and have no person-scoping or staleness concept;
+        # silently accepting --person/--stale-after-days without honoring
+        # them would be misleading, so these flags must be rejected.
+        with tempfile.TemporaryDirectory() as directory:
+            _life, _proposals, config = self.workspace(directory)
+            for command in (
+                ["decision-review", "--person", "self", "--config", config],
+                [
+                    "change-feed",
+                    "--since",
+                    "2020-01-01T00:00:00+00:00",
+                    "--person",
+                    "self",
+                    "--config",
+                    config,
+                ],
+                [
+                    "future-intent",
+                    "--cutoff",
+                    "2020-01-01T00:00:00+00:00",
+                    "--person",
+                    "self",
+                    "--config",
+                    config,
+                ],
+            ):
+                stderr = io.StringIO()
+                with contextlib.redirect_stderr(stderr):
+                    with self.assertRaises(SystemExit) as ctx:
+                        main(command)
+                self.assertEqual(ctx.exception.code, 2)
+                self.assertIn("--person", stderr.getvalue())
+
     def test_capsule_revision_is_stable_for_unchanged_workspace(self):
         clock = datetime.datetime(2026, 8, 24, 12, 0, tzinfo=UTC)
         with tempfile.TemporaryDirectory() as directory, clock_context(clock):

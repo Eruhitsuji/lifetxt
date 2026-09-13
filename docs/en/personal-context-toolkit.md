@@ -19,11 +19,7 @@ lifetxt context health
 lifetxt context health --format json --pretty
 ```
 
-The report has mutually exclusive lifecycle states:
-
-- `current` — not stale and not superseded;
-- `stale` — the existing Temporal Context staleness rule reports `stale_since`;
-- `superseded` — another authoritative record carries `corrects:<this-id>`.
+The report classifies every record into one of the seven currentness states described below (`current`/`future-effective`/`stale`/`superseded`/`expired`/`conflicting`/`historical-only`), computed by the shared currentness resolver -- `context health` never runs a separate classification rule.
 
 It also reports independent quality findings:
 
@@ -47,7 +43,7 @@ lifetxt context why pref-editor
 lifetxt context why pref-editor --format json --pretty
 ```
 
-The report shows the stored provenance/time metadata, Personal Context tags/subject, current/stale/superseded state, and incoming/outgoing ID links. It is **not** an LLM explanation and does not expose or generate model chain-of-thought.
+The report shows the stored provenance/time metadata, Personal Context tags/subject, the resolved currentness state plus bounded evidence/reasons (see below), and incoming/outgoing ID links. It is **not** an LLM explanation and does not expose or generate model chain-of-thought.
 
 ## Correct a memory without deleting history
 
@@ -77,6 +73,30 @@ After acceptance, Context Health, Context Why, and Context Capsule treat the old
 
 `corrects:` is deliberately a **custom-detail convention** in this slice. It is not a new Format 1.0 key or Query field, and validators may report the normal non-blocking unknown-custom-key diagnostic. The value is preserved by the Format parser/serializer.
 
+## Currentness (derived read states)
+
+Beyond the three lifecycle states above, a deterministic **currentness resolver** classifies every Personal Context record into one of seven derived *read* states, computed at query time and never persisted as a status field:
+
+- `current` — usable now;
+- `future-effective` — `valid_from:` is later than the evaluation time;
+- `stale` — the existing Temporal Context staleness rule reports `stale_since`;
+- `superseded` — a unique authoritative replacement exists (`corrects:` or `replaced_by:`);
+- `expired` — `valid_to:` is earlier than the evaluation time;
+- `conflicting` — malformed/reversed validity evidence, a supersession cycle, or competing replacements of the same record that cannot be auto-resolved;
+- `historical-only` — explicitly requested as historical context by the caller.
+
+`valid_from:`/`valid_to:` are optional **custom-detail conventions** in this slice, not new Format 1.0 or Query vocabulary:
+
+```text
+[ ] N "Q3 hiring freeze is in effect" id:policy-q3 person:self tag:policy valid_from:2026-07-01 valid_to:2026-09-30
+```
+
+Neither key is required. A file with no validity metadata keeps today's behavior unchanged. A malformed value, or `valid_from` later than `valid_to`, resolves to `conflicting` rather than silently to `current`.
+
+Supersession reuses the existing `corrects:`/`replaced_by:` conventions unchanged: a linear chain resolves to one current terminal record with every predecessor marked `superseded`; a cycle, or more than one record correcting/replacing the same predecessor, resolves every record involved to `conflicting` rather than guessing a winner. Superseded, expired, and conflicting records are never deleted -- they remain fully inspectable through `context health` and `context why`.
+
+Ordinary retrieval (Context Capsule, Decision Memory) returns `current` records only by default; `stale` may be included only through an explicit opt-in, and `future-effective`/`superseded`/`expired`/`conflicting`/`historical-only` records are never silently presented as current truth.
+
 ## Portable Context Capsule
 
 Export a bounded provider-independent snapshot:
@@ -94,7 +114,7 @@ JSON is the default output. The capsule contains:
 - the selected person/tags and bounds;
 - deterministic item records.
 
-Unchanged input plus unchanged options produces the same capsule revision. Superseded and stale memories are excluded by default; add `--include-stale` when historical/stale context is intentionally needed.
+Unchanged input plus unchanged options produces the same capsule revision. Only `current` records are included by default; `--include-stale` adds `stale` records only -- `future-effective`, `superseded`, `expired`, `conflicting`, and `historical-only` records are never silently included, even with `--include-stale`.
 
 The capsule is a **generated read-only projection**, not another source of truth. ChatGPT, Claude, Gemini, local LLMs, IDE agents, or scripts may consume it without becoming authoritative storage for lifetxt.
 
@@ -116,7 +136,7 @@ lifetxt decisions --project demo
 lifetxt decisions --format json --pretty
 ```
 
-The view excludes stale and superseded decisions by default and uses the same Personal Context lifecycle rules as the capsule.
+The view uses the same shared currentness filtering as the capsule: only `current` records by default, with `--include-stale` adding `stale` records only.
 
 ## Workspaces and multiple files
 
@@ -135,8 +155,10 @@ Explicit paths remain supported as well. `memory correct` resolves the target fr
 This first toolkit intentionally does **not** add:
 
 - a Personal Context record kind;
-- `subject:`, `assertion:`, `confidence:`, `valid_from:`, or `valid_to:` contracts;
+- `subject:`, `assertion:`, or `confidence:` contracts;
+- Format 1.x/Query promotion of `valid_from:`/`valid_to:` (they remain custom-detail conventions);
 - Query syntax for `corrects:`;
+- automatic conflict resolution or a `last_confirmed` freshness clock;
 - embeddings/vector storage/RAG corpora;
 - provider-specific memory APIs;
 - automatic AI writes to authoritative Personal Context.

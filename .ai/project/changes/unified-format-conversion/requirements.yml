@@ -1,0 +1,20 @@
+schema_version: 1
+requirements:
+  - id: req-unified-format-conversion
+    kind: ADDED
+    statement: >-
+      Provide one explicit, stateless, discoverable text conversion capability
+      reusable by local CLI and future service adapters.
+    acceptance_criteria:
+      - lifetxt convert accepts explicit --from and --to formats plus paths or stdin.
+      - Canonical formats and supported pairs come from one machine-readable source.
+      - Conversion code is callable without argparse or HTTP.
+      - Existing equivalent commands retain their established behavior.
+      - Unknown formats, unsupported pairs, malformed input, and lossy ICS output fail explicitly.
+      - Documentation distinguishes conversion from convenience and synchronization workflows.
+    constraints:
+      - Plain life.txt remains authoritative.
+      - No network, synchronization, delivery, or workspace-mutation policy in the core.
+      - Do not promise every possible format pair.
+    owner: Eruhitsuji
+open_questions: []

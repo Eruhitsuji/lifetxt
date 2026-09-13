@@ -9336,9 +9336,11 @@ capabilities:
       deprecation_issue: null
 
   - id: cap-import-export-format-expansion
-    name: Unified export dispatcher and expanded interchange formats
+    name: Unified conversion, export dispatcher, and expanded interchange formats
     summary: >-
-      A single `lifetxt export --format ...` routing dispatcher over the
+      A surface-neutral text conversion core and explicit `lifetxt convert
+      --from ... --to ...` interface (#826), plus the existing single
+      `lifetxt export --format ...` routing dispatcher over the
       existing JSON/JSONL/CSV/Markdown exporters (#688), extended with
       first-class native life.txt round-trip support (#689), a versioned
       SQLite relational interchange (`lifetxt-sqlite-v1`, #690/#691), and a
@@ -9352,8 +9354,14 @@ capabilities:
       - req-native-life-import-export
       - req-sqlite-interchange-implementation
       - req-lifetxtz-implementation
+      - req-unified-format-conversion
     implementation_locations:
+      - lifetxt/conversion.py
       - lifetxt/cli.py
+      - lifetxt/_extra_convert_impl.py
+      - lifetxt/cli_taxonomy.py
+      - lifetxt/completion.py
+      - lifetxt/ics.py
       - lifetxt/native_codec.py
       - lifetxt/sqlite_codec.py
       - lifetxt/lifetxtz_codec.py
@@ -9362,12 +9370,20 @@ capabilities:
       - tests/test_lifetxt.py
       - tests/test_sqlite_codec.py
       - tests/test_lifetxtz_codec.py
+      - tests/test_conversion.py
       - tests/test_cli_timezone_context_v2.py
       - docs/en/cli.md
       - docs/ja/cli.md
       - docs/en/format-sqlite-interchange-v1.md
       - docs/en/format-lifetxtz-v1.md
     public_interfaces:
+      - lifetxt convert --from FORMAT --to FORMAT [path ...]
+      - lifetxt convert --capabilities
+      - lifetxt.conversion.convert_text
+      - lifetxt.conversion.decode_text
+      - lifetxt.conversion.encode_items
+      - lifetxt.conversion.ensure_supported_pair
+      - lifetxt.conversion.conversion_capabilities
       - lifetxt export --format json|jsonl|csv|markdown|life|sqlite|lifetxtz
       - lifetxt import --preset life|sqlite|lifetxtz
       - lifetxt.cli.EXPORT_FORMAT_HANDLERS
@@ -9410,7 +9426,9 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/692
       - https://github.com/Eruhitsuji/lifetxt/issues/693
       - https://github.com/Eruhitsuji/lifetxt/issues/692
-    related_pull_requests: []
+      - https://github.com/Eruhitsuji/lifetxt/issues/826
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/828
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       #687 is an umbrella/planning-only issue (not directly implementable);

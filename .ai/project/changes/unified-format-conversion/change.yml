@@ -1,0 +1,34 @@
+schema_version: 1
+change:
+  id: unified-format-conversion
+  title: Unified format conversion core and CLI
+  status: implemented
+  change_type: Feature
+  assurance_level: Standard
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/826
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/828
+  base_commit: 6b69d24
+  target_release: next normal maintenance release
+scope:
+  in_scope:
+    - Surface-neutral text conversion core and capability matrix
+    - Explicit lifetxt convert CLI adapter
+    - Compatible delegation from equivalent existing conversion commands
+    - English and Japanese CLI documentation
+  out_of_scope:
+    - Public Utility API endpoint or deployment
+    - Remote fetch, synchronization, delivery, or authoritative storage
+    - Binary sqlite and lifetxtz conversion through the text-only core
+    - Automatic format detection
+  write_scope: [lifetxt/**, tests/**, docs/**, .ai/project/**]
+  forbidden_scope: [.ai/managed/**, sync-ics network behavior]
+task_size:
+  size: M
+  split_justification: >-
+    Registry/core, CLI adapter, compatibility delegation, tests, and docs form
+    one public contract; splitting them would temporarily create divergent
+    conversion semantics while each edit remains tightly bounded.
+human_approvals_required:
+  - Repository owner review and Merge Authority approval; Codex must not merge.

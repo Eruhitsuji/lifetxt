@@ -10093,17 +10093,23 @@ capabilities:
       - req-web-progressive-advanced-navigation
       - req-web-actionable-retryable-errors
       - req-web-status-standard-custom-authoring
+      - req-web-quick-status-standard-custom-authoring
     implementation_locations:
       - lifetxt/web_assets.html
       - lifetxt/web_assets_css_01.css
       - lifetxt/web_assets_css_02.css
+      - lifetxt/web_assets_css_04.css
       - lifetxt/web_assets_js_01.js
       - lifetxt/web_assets_js_04.js
       - lifetxt/web_assets_js_05.js
+      - lifetxt/web_assets_js_07.js
+      - lifetxt/web_assets_js_08.js
       - lifetxt/web_assets_js_10.js
       - lifetxt/web_assets_js_12.js
+      - lifetxt/web_assets_js_16.js
       - lifetxt/web_assets_js_18.js
       - lifetxt/webapp.py
+      - tests/test_web_quick_status_js.py
       - docs/en/web.md
       - docs/ja/web.md
     public_interfaces:
@@ -10111,6 +10117,7 @@ capabilities:
       - lifetxt.web_assets_js_18 actionableErrorText/showActionableError/renderActionableError (client-side)
       - lifetxt.web_assets_js_18 beginner-mode _todaySubsection empty-state override
       - Web Status (`S`) standard/custom `state:` authoring controls backed by `lifetxt.presence.COMMON_STATES`
+      - Web Quick Status standard/custom state picker plus optional activity/title field, delegating to POST /api/status
     tests_or_evidence:
       - tests/test_web_actionable_errors_js.py (4 Node.js-driven tests, added during review): status-based error-message classification (409/401/403/5xx/network/generic), toast fallback when no retry is offered, actionable block rendered into #toast-container with a wired retry button and focus, and a null-container call never throws
       - python -m unittest tests.test_web_actionable_errors_js -> Ran 4 tests, OK
@@ -10120,6 +10127,8 @@ capabilities:
       - "review found and fixed a documentation-formatting defect: the new Beginner path / 初心者向けの使い方 sections in docs/en/web.md and docs/ja/web.md used a top-level # heading (document-title level) instead of ## (matching every other section in both files) and had no blank line before the heading; fixed to ## with a preceding blank line"
       - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
       - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - tests/test_web_quick_status_js.py covers config-backed standard options, Custom precedence and retention, optional title, empty validation, same-state no-op, End, failure retention, accessible labels, and Enter submission
+      - MPLBACKEND=Agg python -m unittest discover -> Ran 4523 tests, OK (skipped=210), after merging origin/main at 1eb56eb
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/793
       - https://github.com/Eruhitsuji/lifetxt/issues/794
@@ -10128,7 +10137,10 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/797
       - https://github.com/Eruhitsuji/lifetxt/issues/798
       - https://github.com/Eruhitsuji/lifetxt/issues/821
-    related_pull_requests: []
+      - https://github.com/Eruhitsuji/lifetxt/issues/829
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/822
+      - https://github.com/Eruhitsuji/lifetxt/pull/830
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       #793 is the umbrella feature; #794 (primary nav hierarchy), #795
@@ -10144,6 +10156,10 @@ capabilities:
       this batch -- other call sites keep their existing error handling
       and are recorded as candidate follow-up wiring, not silently
       claimed complete.
+      #829 extends the same config-backed standard/custom state contract to
+      Quick Status while retaining POST /api/status as the only presence
+      mutation path; the separate title field preserves the earlier compact
+      `focus Deep work` capability without parsing state and title together.
     replacement:
       replaces: []
       replaced_by: null

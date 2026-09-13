@@ -5817,6 +5817,18 @@ class LifeTxtWebConfigAndCheckLineTests(unittest.TestCase):
         self.assertEqual(200, response.status_code)
         self.assertEqual(timezone_today().isoformat(), response.json()["today"])
 
+    def test_config_api_reuses_shared_status_state_vocabulary(self):
+        try:
+            from fastapi.testclient import TestClient
+        except Exception as exc:
+            self.skipTest(f"FastAPI test client is unavailable: {exc}")
+        from lifetxt.presence import COMMON_STATES
+        from lifetxt.webapp import create_app
+
+        response = TestClient(create_app(paths=[])).get("/api/config")
+        self.assertEqual(200, response.status_code)
+        self.assertEqual(list(COMMON_STATES), response.json()["status_states"])
+
     def test_index_page_includes_calendar_view(self):
         try:
             from fastapi.testclient import TestClient

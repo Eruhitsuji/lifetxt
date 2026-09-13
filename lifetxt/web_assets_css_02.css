@@ -343,7 +343,14 @@
     .structured-field { display:grid; gap:.2rem; font-size:.82rem; color:var(--muted); }
     .structured-field input, .structured-field select { width:100%; box-sizing:border-box; }
     .structured-fields .wide-field { grid-column:1 / -1; }
+    .status-state-fields { margin:0; padding:.65rem; border:1px solid var(--line); border-radius:.4rem; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.55rem .75rem; }
+    .status-state-fields legend { padding:0 .25rem; font-size:.82rem; color:var(--muted); }
+    .status-state-fields label { display:grid; gap:.2rem; font-size:.82rem; color:var(--muted); }
+    .status-state-fields select, .status-state-fields input { width:100%; box-sizing:border-box; }
+    .status-state-fields .field-help-text { grid-column:1 / -1; }
+    .status-state-fields [hidden] { display:none; }
     @media (max-width: 520px) { .structured-fields { grid-template-columns:1fr; } .structured-fields .wide-field { grid-column:auto; } }
+    @media (max-width: 520px) { .status-state-fields { grid-template-columns:1fr; } .status-state-fields .field-help-text { grid-column:auto; } }
     /* ── Single-content pages: exactly one visible at a time ────── */
     .page { display: none; }
     .page.page-active { display: block; animation: fadeSlideIn .14s ease; }

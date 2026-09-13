@@ -13218,6 +13218,26 @@ traceability:
         model call.
       status: implemented
 
+    - requirement_id: req-temporal-life-review
+      capability_id: cap-temporal-life-review
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/808
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/815
+      pull_request: null
+      changed_files_or_scope:
+        - lifetxt/temporal_review.py
+        - lifetxt/cli.py
+        - tests/test_temporal_review.py
+        - docs/en/ai-integration.md
+      tests_or_evidence:
+        - tests.test_temporal_review -> 2 tests passed
+        - ruff check and git diff --check passed
+      release_or_deployment: null
+      notes: >-
+        Uses Workspace Life Timeline as the sole historical source. Current
+        open tasks are explicitly labeled carry-forward context and no history
+        is synthesized.
+      status: implemented
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

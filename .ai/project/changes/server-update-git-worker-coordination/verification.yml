@@ -3,7 +3,7 @@ schema_version: 1
 verification:
   - command: .venv/Scripts/python.exe -m unittest tests.test_server_init
     result: passed
-    notes: 42 tests passed.
+    notes: 41 tests passed.
   - command: .venv/Scripts/python.exe -m unittest tests.test_server_update
     result: passed
     notes: 125 tests passed, 1 skipped.

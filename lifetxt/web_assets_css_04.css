@@ -627,8 +627,8 @@
       box-sizing: border-box;
       line-height: var(--control-line-height);
     }
-    .filter-btn, .review-range-btn, .chart-tab, .chart-group-btn,
-    .graph-layout-btn, .graph-export-btn {
+    button.filter-btn, button.review-range-btn, button.chart-tab,
+    button.chart-group-btn, button.graph-layout-btn, button.graph-export-btn {
       min-height: var(--control-height-compact);
     }
     .workspace-tab { min-height: var(--control-height); }

@@ -343,6 +343,7 @@ READ_ONLY_TOOLS = frozenset(
         "get_native_timeline",
         "get_semantic_as_of",
         "get_lifecycle_analytics",
+        "get_personal_context",
         "get_clock_status",
         "run_query",
         "list_saved_views",
@@ -1196,6 +1197,28 @@ def _tool_schemas():
                 ),
             },
             required=["term"],
+            read_only=True,
+        ),
+        _tool(
+            "get_personal_context",
+            "Read-only Personal AI Memory retrieval: returns only records the "
+            "shared currentness resolver classifies as current by default. "
+            "future-effective/superseded/expired/conflicting/historical-only "
+            "records are never silently returned as current truth; use "
+            "include_stale to also include records classified stale. This is "
+            "the safe, provider-independent retrieval contract for Personal "
+            "Context -- generic list_items/get_item remain plain record access "
+            "and are unaffected.",
+            {
+                "person": _string("Scope to one person. Default self."),
+                "tags": _array("Require all of these tags."),
+                "limit": _integer("Maximum records returned. Default 100."),
+                "include_stale": _bool(
+                    "Also include records classified stale. Never includes "
+                    "future-effective/superseded/expired/conflicting/"
+                    "historical-only records. Default false."
+                ),
+            },
             read_only=True,
         ),
         _tool(
@@ -3390,6 +3413,37 @@ def _tool_global_search(args, context):
     )
 
 
+def _tool_get_personal_context(args, context):
+    """Current-only Personal AI Memory retrieval via the shared Context Capsule.
+
+    Delegates entirely to :func:`lifetxt.personal_context.context_capsule`,
+    the same currentness-filtered projection ``lifetxt context capsule``
+    already uses -- no validity/supersession/staleness logic is duplicated
+    here. Historical or non-current records remain reachable only through
+    the existing ``context health``/``context why`` surfaces, never through
+    this tool's default output.
+    """
+    from .personal_context import DEFAULT_LIMIT, context_capsule
+
+    items, _diagnostics = _read_items(context)
+    person = args.get("person")
+    if person is None:
+        person = "self"
+    tags = args.get("tags")
+    if tags is not None:
+        if not isinstance(tags, list):
+            raise ValueError("get_personal_context 'tags' must be a list.")
+        tags = [str(tag) for tag in tags]
+    limit = _bounded_int(args, "limit", DEFAULT_LIMIT)
+    return context_capsule(
+        items,
+        person=person,
+        tags=tags,
+        include_stale=_truthy(args.get("include_stale")),
+        limit=limit,
+    )
+
+
 def _tool_list_proposals(args, context):
     """List Unified Inbox proposals, optionally filtered by status."""
     from .inbox import inbox_summary, list_proposals
@@ -3550,6 +3604,7 @@ TOOL_HANDLERS = OrderedDict(
         ("get_ticket", _tool_get_ticket),
         ("validate_tickets", _tool_validate_tickets),
         ("global_search", _tool_global_search),
+        ("get_personal_context", _tool_get_personal_context),
         ("list_proposals", _tool_list_proposals),
         ("stage_proposal", _tool_stage_proposal),
         ("get_clock_status", _tool_get_clock_status),

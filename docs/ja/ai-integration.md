@@ -257,6 +257,7 @@ Docs、Sheets、Slides、PDF、CSV に限定されており、lifetxt の連携�
 | `remote_test_connection` | 1 profile の connectivity と capability negotiation |
 | `remote_list_resources` | remote lifetxt server が publish する read-only resources |
 | `remote_get_resource` | `next`、`tickets`、`agenda`、`search` などの permission-filtered remote resource |
+| `get_personal_context` | current のみのPersonal AI Memory retrieval（[section 10](#10-personal-ai-memory)参照）。共有Context Capsule projectionへ全面的に委譲 |
 
 ### Context revision
 
@@ -592,6 +593,35 @@ surfaceでどう再利用するかという、より広いprovider-independent�
   無改変で再利用します。`updated:` detail を持つ任意の item に対し既に
   「まだ current か?」を答える `stale_since` fact が、personal-context の
   Note に対しても他の item と全く同様に使えます。
+- **Currentness**: 共有の決定的resolverが各Personal Context recordを7つの
+  derived read state（`current`/`future-effective`/`stale`/`superseded`/
+  `expired`/`conflicting`/`historical-only`）へ分類します。precedence rule
+  と任意の`valid_from:`/`valid_to:` custom-detail規約の詳細は
+  [Currentness](./personal-context-toolkit.md#currentness派生read-state)
+  を参照してください。
+
+### MCPでPersonal Contextを取得する
+
+「AIが現在ユーザーについて何を知っているか」には、`list_items`/`get_item`
+ではなく専用の`get_personal_context` toolを使ってください。汎用toolは
+currentnessでfilterされない、通常のrecord accessのままです。
+`get_personal_context`は共有Context Capsule projection
+（`lifetxt.personal_context.context_capsule`）へ全面的に委譲しており、
+MCP層に別のvalidity/supersession/staleness実装はありません。
+
+既定では`current`なrecordのみを返します。
+
+```json
+{"tool": "get_personal_context", "arguments": {"person": "self"}}
+```
+
+`future-effective`、`superseded`、`expired`、`conflicting`、
+`historical-only` なrecordが暗黙にcurrentな真実として返されることは
+**ありません**。`include_stale: true` を指定すると `stale` なrecordのみが
+追加されます -- 他の非currentなstateへ含める範囲が広がることはありません。
+historicalまたは非currentなrecordは `lifetxt context health`/`context why`
+から検査できますが、このtoolの既定出力には現れません。このtool自体は
+historical-currentness reconstructionを一切行いません。
 
 ### Lifecycle
 

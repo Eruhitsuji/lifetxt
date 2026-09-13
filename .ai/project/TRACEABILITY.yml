@@ -13139,6 +13139,39 @@ traceability:
         filled in once the final integration PR is opened.
       status: implemented
 
+    - requirement_id: req-personal-context-currentness-mcp-read
+      capability_id: cap-personal-context-currentness
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/782
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/802
+      pull_request: null
+      changed_files_or_scope:
+        - "Add a read-only MCP tool get_personal_context delegating entirely to lifetxt.personal_context.context_capsule; register it in READ_ONLY_TOOLS and TOOL_HANDLERS"
+        - lifetxt/mcp.py
+        - tests/test_mcp_expansion.py
+        - docs/en/ai-integration.md
+        - docs/ja/ai-integration.md
+      tests_or_evidence:
+        - "tests/test_mcp_expansion.py GetPersonalContextToolTests (7 tests): default returns only current records, matches a direct context_capsule() call field for field, include_stale adds only stale (never future-effective/superseded/expired/conflicting/historical-only), person/tags forwarding, limit forwarding, tags-must-be-a-list validation, read-only registration and no-write guarantee against a real disposable file"
+        - python -m unittest tests.test_mcp_expansion tests.test_surface_runtime -> Ran 330 tests, OK
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - manually verified the get_personal_context slug anchor added to docs/en+ja/ai-integration.md resolves against docs/en+ja/personal-context-toolkit.md's actual Currentness heading, since ai-integration.md and personal-context-toolkit.md are both outside validate_release_docs.py's checked-document set
+      release_or_deployment: null
+      notes: >-
+        No validity/supersession/staleness logic exists in lifetxt/mcp.py:
+        the tool is a thin argument-forwarding wrapper over context_capsule()
+        and does not call _attach_revision(), since context_capsule() already
+        provides its own deterministic SHA-256 revision field and attaching a
+        second, differently-scoped revision under the same key would silently
+        clobber it. Generic list_items/get_item are completely unchanged and
+        remain plain record access; Operation Policy (--profile) and
+        Disclosure Policy (workspace/source selection) are unaffected, since
+        this tool reads through the same _read_items(context) every other
+        read-only tool uses. Third and final implementation task of the
+        #800-#802 batch, landing on its own child branch merged locally into
+        feature/800-802-personal-context-currentness. pull_request is filled
+        in once the final integration PR is opened.
+      status: implemented
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

@@ -18,6 +18,22 @@ from .temporal_context import DEFAULT_STALE_DAYS
 from .timezone_policy import resolve_timezone_name, timezone_context
 
 
+def _add_bounded_read(parser, default_format="text"):
+    """Register only the flags every bounded read command actually consumes.
+
+    Unlike :func:`_add_common_read`, this deliberately omits ``--person`` and
+    ``--stale-after-days``: commands using this helper (``decision-review``,
+    ``change-feed``, ``future-intent``) operate over the whole workspace and
+    have no person-scoping or staleness concept, so accepting those flags
+    without honoring them would silently do nothing.
+    """
+    parser.add_argument("paths", nargs="*")
+    parser.add_argument("--format", choices=("text", "json"), default=default_format)
+    parser.add_argument("--pretty", action="store_true")
+    parser.add_argument("-o", "--output")
+    parser.add_argument("--timezone")
+
+
 def _add_common_read(parser, default_format="text"):
     parser.add_argument("paths", nargs="*")
     parser.add_argument("--person", default="self")
@@ -52,6 +68,24 @@ def _build_parser():
     capsule.add_argument("--tag", dest="tags", action="append", default=[])
     capsule.add_argument("--include-stale", action="store_true")
     capsule.add_argument("--limit", type=int, default=DEFAULT_LIMIT)
+    capsule.add_argument("--as-of", help="Evaluate context at an offset-aware cutoff.")
+
+    history = context_sub.add_parser(
+        "history", help="Reconstruct Personal Context fields as of a cutoff"
+    )
+    history.add_argument("paths", nargs="*")
+    history.add_argument(
+        "--as-of",
+        required=True,
+        help="Reconstruct fields as of this offset-aware cutoff.",
+    )
+    history.add_argument("--person", default="self")
+    history.add_argument("--tag", dest="tags", action="append", default=[])
+    history.add_argument("--limit", type=int, default=DEFAULT_LIMIT)
+    history.add_argument("--format", choices=("text", "json"), default="json")
+    history.add_argument("--pretty", action="store_true")
+    history.add_argument("-o", "--output")
+    history.add_argument("--timezone")
 
     memory = subparsers.add_parser(
         "memory", help="Reviewable Personal Context mutation"
@@ -73,12 +107,32 @@ def _build_parser():
     decisions.add_argument("--include-stale", action="store_true")
     decisions.add_argument("--limit", type=int, default=DEFAULT_LIMIT)
 
+    decision_review = subparsers.add_parser(
+        "decision-review", help="Review explicit decision evidence"
+    )
+    _add_bounded_read(decision_review)
+    decision_review.add_argument("--limit", type=int, default=DEFAULT_LIMIT)
+    change_feed = subparsers.add_parser(
+        "change-feed", help="Show bounded historical changes"
+    )
+    _add_bounded_read(change_feed)
+    change_feed.add_argument("--since", required=True)
+    change_feed.add_argument("--until")
+    change_feed.add_argument("--limit", type=int, default=DEFAULT_LIMIT)
+    future_intent = subparsers.add_parser(
+        "future-intent", help="Show explicit future intent"
+    )
+    _add_bounded_read(future_intent)
+    future_intent.add_argument("--cutoff", required=True)
+    future_intent.add_argument("--until")
+    future_intent.add_argument("--limit", type=int, default=DEFAULT_LIMIT)
+
     return parser
 
 
 def _require_action(parser, args):
     if args.command == "context" and not args.context_action:
-        parser.error("context requires health, why, or capsule")
+        parser.error("context requires health, why, capsule, or history")
     if args.command == "memory" and not args.memory_action:
         parser.error("memory requires correct")
 
@@ -190,6 +244,32 @@ def _capsule_text(report):
     return "\n".join(lines) + "\n"
 
 
+def _history_text(report):
+    lines = [
+        "Personal Context History (as of %s)" % report["cutoff"],
+        "count: %d" % report["count"],
+        "",
+    ]
+    for row in report["items"]:
+        lines.append(
+            "- %s%s [currentness: %s]"
+            % (
+                ("[%s] " % row["id"]) if row.get("id") else "",
+                row["title"],
+                row["currentness"]["state"],
+            )
+        )
+        for field, state in row["fields"].items():
+            lines.append(
+                "    %s: %s (%s)"
+                % (field, state.get("value", state.get("values")), state["state"])
+            )
+    if report["limitations"]:
+        lines.append("")
+        lines.append("Limitations: %s" % ", ".join(report["limitations"]))
+    return "\n".join(lines) + "\n"
+
+
 def _decisions_text(report):
     rows = []
     for item in report["items"]:
@@ -254,8 +334,22 @@ def _dispatch(args, config_data):
             include_stale=args.include_stale,
             limit=args.limit,
             stale_after_days=args.stale_after_days,
+            evaluation_time=args.as_of,
         )
         return _render(report, args, _capsule_text)
+
+    if args.command == "context" and args.context_action == "history":
+        from .historical_context import historical_personal_context
+
+        items = _load_items(args.paths, config_data)
+        report = historical_personal_context(
+            items,
+            args.as_of,
+            person=args.person,
+            tags=args.tags,
+            limit=args.limit,
+        )
+        return _render(report, args, _history_text)
 
     if args.command == "memory" and args.memory_action == "correct":
         items = _load_items(args.paths, config_data, allow_stdin=False)
@@ -279,6 +373,38 @@ def _dispatch(args, config_data):
             stale_after_days=args.stale_after_days,
         )
         return _render(report, args, _decisions_text)
+
+    if args.command == "decision-review":
+        from .decision_outcome_review import decision_outcome_review
+
+        report = decision_outcome_review(
+            _load_items(args.paths, config_data), limit=args.limit
+        )
+        return _render(
+            report,
+            args,
+            lambda value: "Decision Outcome Review (%d)\n" % len(value["decisions"]),
+        )
+    if args.command == "change-feed":
+        from .temporal_change_feed import temporal_change_feed
+
+        report = temporal_change_feed(
+            _load_items(args.paths, config_data), args.since, args.until, args.limit
+        )
+        return _render(
+            report,
+            args,
+            lambda value: "Temporal Change Feed (%d)\n" % len(value["events"]),
+        )
+    if args.command == "future-intent":
+        from .future_intent import future_intent_snapshot
+
+        report = future_intent_snapshot(
+            _load_items(args.paths, config_data), args.cutoff, args.until, args.limit
+        )
+        return _render(
+            report, args, lambda value: "Future Intent Snapshot (%d)\n" % value["count"]
+        )
 
     raise ValueError("Unsupported Personal Context command.")
 

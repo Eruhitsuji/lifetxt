@@ -732,6 +732,16 @@ deployment shares state between them, set `server-update.json`'s
 refuses to start while that lock file exists, rather than racing its own
 git operations against the worker's commit.
 
+When the worker is enabled, re-run `server-init` against the existing
+deployment configuration to adopt the update coordination. The generated
+`server-update.json` will then include both
+`lifetxt-git-commit-worker.timer` and
+`lifetxt-git-commit-worker.service`; the generated service-control wrapper
+will allow only the same bounded `is-active`, `stop`, and `start` operations
+for those units. Review the plan and existing files before applying it. This
+adoption step does not require rebuilding the source checkout or manually
+editing the generated wrapper/sudoers file.
+
 ## Also see
 
 - [`contrib/systemd/`](../../contrib/systemd/) — the unit/timer/environment

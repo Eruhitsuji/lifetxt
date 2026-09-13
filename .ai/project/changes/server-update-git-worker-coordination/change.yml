@@ -1,0 +1,38 @@
+schema_version: 1
+
+change:
+  id: server-update-git-worker-coordination
+  title: Coordinate the periodic Git commit worker during server updates
+  status: implemented
+  change_type: Bug
+  assurance_level: Standard
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/806
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/820
+  base_commit: 98b2f217c289adbd55bbddfbb100e6140e6b221a
+  target_release: next normal maintenance release
+
+scope:
+  in_scope:
+    - Add enabled Git commit worker units to server-update service coordination.
+    - Keep generated service-control authorization in sync with that list.
+    - Document adoption for existing/manual Ubuntu deployments.
+  out_of_scope:
+    - Changes to worker Git behavior or lock semantics.
+    - Automatic deployment or mutation of an existing server.
+    - .ai/managed/**
+  write_scope:
+    - lifetxt/server_init.py
+    - tests/test_server_init.py
+    - docs/deployment/ubuntu-server.md
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+    - .ai/project/changes/server-update-git-worker-coordination/**
+  forbidden_scope:
+    - .ai/managed/**
+    - lifetxt/server_update.py
+
+human_approvals_required:
+  - Independent implementation/security review before release.
+  - Merge Authority approval before merging to main.

@@ -415,6 +415,30 @@
       .workspace-tabs::-webkit-scrollbar { display: none; }
       .workspace-tab { flex: 0 0 auto; }
 
+      /* Keep the global workspace navigation as two independently reachable
+         one-row strips.  The parent scrolls the primary controls; the open
+         More menu scrolls its own long action list. */
+      .header-workspace-tabs > .nav-primary {
+        flex-wrap: nowrap;
+        flex: 0 0 auto;
+      }
+      .header-workspace-tabs > .nav-more {
+        flex: 0 0 auto;
+      }
+      .nav-advanced {
+        display: flex;
+        flex-wrap: nowrap;
+        max-width: calc(100vw - 1.5rem);
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+      }
+      .nav-advanced::-webkit-scrollbar { display: none; }
+      .nav-advanced .workspace-tab {
+        width: auto;
+        flex: 0 0 auto;
+      }
+
       /* Selection must work here, so undo the desktop rule that hid it. */
       .item-check { display: block; }
       .item {

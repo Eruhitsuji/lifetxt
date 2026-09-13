@@ -28,7 +28,7 @@ from __future__ import unicode_literals
 import json
 from collections import OrderedDict
 
-from .i18n import register_messages, translate as _t
+from .i18n import has_message as _has_message, register_messages, translate as _t
 
 
 #: Cache of `cli.build_parser()` itself (not just its subparser map), because
@@ -132,10 +132,17 @@ _EXTRA_SUMMARIES = {
     "capabilities": "Report which operations this build supports across "
     "CLI, Web, and MCP.",
     "attachment": "Attach, reference, delete, or inspect file: and dir: attachments.",
-    "context": "Deterministic Personal Context views: health, why, and capsule.",
+    "context": "Deterministic Personal Context views: health, why, "
+    "capsule, and history (field state as of a cutoff).",
     "memory": "Stage a reviewable correction to a Personal AI Memory "
     "record through Unified Inbox.",
     "decisions": "List recorded decisions (tag:decision items).",
+    "decision-review": "Review explicit decision outcomes: follows only "
+    "recorded realizes: links, never infers causality.",
+    "change-feed": "Show bounded, meaningful historical changes over a "
+    "since/until window, distinct from current attention state.",
+    "future-intent": "Show only explicitly authored future time fields "
+    "(do:/on:/at:/due:/from:/to:) as of a cutoff.",
     "report": "Run or preview a named periodic Markdown/JSON/HTML report profile.",
     "server-report": "Install, remove, or plan a scheduled report job on "
     "an already-running server deployment.",
@@ -419,7 +426,14 @@ CATEGORIES = OrderedDict(
                 "title": "Personal Context",
                 "description": "Deterministic views over your own "
                 "recorded preferences and decisions.",
-                "commands": ("context", "memory", "decisions"),
+                "commands": (
+                    "context",
+                    "memory",
+                    "decisions",
+                    "decision-review",
+                    "change-feed",
+                    "future-intent",
+                ),
             },
         ),
         (
@@ -683,26 +697,41 @@ register_messages(
 )
 
 
+def _localized_or(message_id, default):
+    """Return the translation for ``message_id`` if one is registered.
+
+    ``translate()`` deliberately returns the raw ``message_id`` (never a
+    falsy value) when the catalog has no entry at all, so a plain
+    ``_t(message_id) or default`` can never fall through to ``default`` for
+    an id that was never registered. This checks catalog membership first.
+    """
+    return _t(message_id) if _has_message(message_id) else default
+
+
 def category_title(category_id):
     """Locale-aware category title, falling back to the English default."""
-    return _t("category.%s.title" % category_id) or CATEGORIES[category_id]["title"]
+    return _localized_or(
+        "category.%s.title" % category_id, CATEGORIES[category_id]["title"]
+    )
 
 
 def category_description(category_id):
-    return (
-        _t("category.%s.description" % category_id)
-        or CATEGORIES[category_id]["description"]
+    return _localized_or(
+        "category.%s.description" % category_id,
+        CATEGORIES[category_id]["description"],
     )
 
 
 def audience_title(audience_id):
-    return _t("audience.%s.title" % audience_id) or AUDIENCES[audience_id]["title"]
+    return _localized_or(
+        "audience.%s.title" % audience_id, AUDIENCES[audience_id]["title"]
+    )
 
 
 def audience_description(audience_id):
-    return (
-        _t("audience.%s.description" % audience_id)
-        or AUDIENCES[audience_id]["description"]
+    return _localized_or(
+        "audience.%s.description" % audience_id,
+        AUDIENCES[audience_id]["description"],
     )
 
 
@@ -1230,7 +1259,7 @@ def audience_step_goal(audience_id, command, default_goal):
     ``AUDIENCES``) when no translation is registered, so an untranslated
     audience/step never renders blank.
     """
-    return _t("audience.%s.goal.%s" % (audience_id, command)) or default_goal
+    return _localized_or("audience.%s.goal.%s" % (audience_id, command), default_goal)
 
 
 def render_audience_text(audience_id):
@@ -1258,7 +1287,7 @@ def localized_command_summary(name, default_summary):
     only for the plain-text renderer, and only overrides the small set of
     beginner-facing commands with a registered translation.
     """
-    return _t("command.summary.%s" % name) or default_summary
+    return _localized_or("command.summary.%s" % name, default_summary)
 
 
 def render_command_text(name):

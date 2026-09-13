@@ -585,16 +585,38 @@ def _install_args(config):
     return ["-e", target]
 
 
-def _server_update_config(config):
+def _managed_service_units(config):
+    """Return systemd units that ``server-update`` must coordinate.
+
+    Keep this list shared with the generated least-privilege wrapper so an
+    enabled optional worker cannot be omitted from either update coordination
+    or its service-control authorization.
+    """
     systemd = config.get("systemd") or {}
     service_control = config.get("service_control") or {}
     calendar = config.get("calendar_sync") or {}
     web = config.get("web") or {}
-    services = []
+    worker = config.get("git_commit_worker") or {}
+    units = []
     if systemd.get("enabled") and web.get("enabled"):
-        services.append("lifetxt.service")
+        units.append("lifetxt.service")
     if systemd.get("enabled") and calendar.get("enabled"):
-        services.append("lifetxt-sync-ics.timer")
+        units.append("lifetxt-sync-ics.timer")
+    if systemd.get("enabled") and worker.get("enabled"):
+        units.extend(
+            [
+                "lifetxt-git-commit-worker.timer",
+                "lifetxt-git-commit-worker.service",
+            ]
+        )
+    return units
+
+
+def _server_update_config(config):
+    systemd = config.get("systemd") or {}
+    service_control = config.get("service_control") or {}
+    web = config.get("web") or {}
+    services = _managed_service_units(config)
     service_command = (
         ["sudo", "-n", service_control["wrapper_path"]]
         if service_control.get("enabled") and service_control.get("wrapper_path")
@@ -924,9 +946,7 @@ def report_timer_unit_text(job, profile_period):
 
 
 def _service_wrapper(config):
-    units = ["lifetxt.service"]
-    if config["calendar_sync"].get("enabled"):
-        units.append("lifetxt-sync-ics.timer")
+    units = _managed_service_units(config)
     cases = []
     for unit in units:
         cases.extend(

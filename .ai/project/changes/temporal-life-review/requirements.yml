@@ -1,0 +1,14 @@
+schema_version: 1
+
+requirements:
+  - id: req-temporal-life-review
+    kind: ADDED
+    statement: >-
+      A bounded Temporal Life Review must summarize observed workspace timeline
+      events and carry forward currently open tasks without inventing history.
+    acceptance_criteria:
+      - Explicit since/until or week bounds are required and surfaced in output.
+      - Text and JSON output are deterministic.
+      - Completion, changes, reopening/rescheduling, and carry-forward are counted.
+      - Incomplete history and truncation remain visible as limitations.
+    owner: Eruhitsuji

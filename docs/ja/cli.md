@@ -19,6 +19,7 @@ python -m lifetxt integrity [path ...]
 python -m lifetxt ids [path ...]
 python -m lifetxt links [path ...]
 python -m lifetxt sources [path ...]
+python -m lifetxt convert --from FORMAT --to FORMAT [path ...]
 python -m lifetxt to-json [path ...]
 python -m lifetxt to-jsonl [path ...]
 python -m lifetxt to-csv [path ...]
@@ -120,6 +121,7 @@ python -m lifetxt vm run program.life.txt --entry s1
 | `ids` | item ID の存在、欠落、重複を監査 |
 | `links` | item 間の ID 参照を表示 |
 | `sources` | 各 item を所有する入力ファイルを表示 |
+| `convert` | 共有item modelを経由して入力・出力formatを明示的に変換 |
 | `to-json` | life.txt を JSON 配列へ変換 |
 | `to-jsonl` | life.txt を JSONL へ変換 |
 | `to-csv` | life.txt を CSV へ変換 |
@@ -240,7 +242,7 @@ audience、そしてこの表と同じカテゴリ分類を表示します。
 | Query / Explore | `filter`、`search`、`find`、`query`、`view`、`summary`、`inbox`、`health`、`temporal`、`timeline`、`history-check`、`thread`、`lifecycle-stats`、`freebusy`、`count`、`status`、`recent` |
 | Projects / People / Collaboration | `project`、`portfolio`、`area`、`person`、`group`、`who`、`message`、`proposal`、`ticket`、`version`、`sprint` |
 | Structure / Data Integrity | `check`、`integrity`、`ids`、`links`、`backlinks`、`sources`、`tag`、`lint`、`deps`、`diff`、`snapshot`、`undo`、`cleanup`、`files` |
-| Import / Export / Reports | `import`、`export`、`import-ics`、`sync-ics`、`to-json`、`to-jsonl`、`to-csv`、`from-json`、`from-jsonl`、`from-csv`、`from-markdown`、`from-todo`、`to-ics`、`markdown`、`stats`、`plot`、`export-heatmap`、`standup`、`invoice`、`share`、`digest`、`report` |
+| Import / Export / Reports | `convert`、`import`、`export`、`import-ics`、`sync-ics`、`to-json`、`to-jsonl`、`to-csv`、`from-json`、`from-jsonl`、`from-csv`、`from-markdown`、`from-todo`、`to-ics`、`markdown`、`stats`、`plot`、`export-heatmap`、`standup`、`invoice`、`share`、`digest`、`report` |
 | Interfaces / Integration | `tui`、`fzf`、`web`、`serve`、`mcp`、`ai`、`completion`、`git-hook`、`watch`、`remote` |
 | Workspace / Configuration / Safety | `config`、`workspace`、`path`、`doctor`、`format`、`safety`、`capabilities`、`attachment`、`update`、`update-check`、`server-init`、`server-update`、`server-report`、`git-commit-worker` |
 | Personal Context | `context`、`memory`、`decisions`、`decision-review`、`change-feed`、`future-intent` |
@@ -1035,6 +1037,50 @@ unsupported repair class は書き込み前に fail closed します。成功時
 before/after revision と assignment records を含む `integrity-apply-v1` result を返します。
 
 ## 4. 変換と rendering
+
+### 4.0 `convert`
+
+`convert` は、入力形式と出力形式を明示する標準の変換インターフェースです。
+1つ以上のpath（省略時は標準入力）からUTF-8テキストを読み、共有lifetxt item
+modelを経由して、1つの変換結果を標準出力または`-o`へ書き出します。
+
+```sh
+python -m lifetxt convert --from life --to json life.txt --pretty
+python -m lifetxt convert --from json --to life data.json
+python -m lifetxt convert --from csv --to jsonl data.csv
+cat tasks.md | python -m lifetxt convert --from markdown-task-list --to life
+python -m lifetxt convert --from ics --to life calendar.ics
+```
+
+初期のcanonical format名は`life`、`json`、`jsonl`、`csv`、`ics`、
+`markdown-task-list`、`todo`です。すべての組合せを暗黙に保証せず、次の
+matrixだけをサポートします。
+
+| 入力 | 対応する出力 |
+| --- | --- |
+| `life` | `life`、`json`、`jsonl`、`csv`、`ics` |
+| `json`、`jsonl`、`csv` | `life`、`json`、`jsonl`、`csv` |
+| `ics`、`markdown-task-list`、`todo` | `life`、`json`、`jsonl`、`csv` |
+
+`ics`はevent専用の出力形式です。ICSで表現できず破棄されるitemがlife.txt
+入力に含まれる場合、`convert`は黙って情報を落とさず明示的に失敗します。
+未知のformat、非対応の組合せ、不正な入力も明示的に失敗します。life出力の
+正規化には`--canonical`、ICSのカレンダー名には`--calendar-name`を使います。
+
+scriptや将来のstateless APIは、同じcapability sourceをJSONで取得できます。
+
+```sh
+python -m lifetxt convert --capabilities
+```
+
+両方のformatを明示したい場合や、CSVからJSONLのような安全なcross-format
+変換には`convert`を使います。従来の`to-*`、`from-*`、`import`、`export`は、
+filter、append、format推論、binary archiveなど既存契約を持つconvenience/
+workflow entry pointとして引き続き利用できます。特に
+`from-markdown --preset github`はGitHub固有のassignee、ref、ID、階層metadataを
+追加しますが、標準の`markdown-task-list` decoderはそれらを推測しません。
+`sync-ics`は変換ではなく、
+network・同期workflowのため、共有変換coreの対象外です。
 
 ### 4.1 `to-json`
 

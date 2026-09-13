@@ -56,6 +56,12 @@ from .assist import (
     update_text,
 )
 from .csvio import items_from_csv_text, items_to_csv
+from .conversion import (
+    conversion_capabilities,
+    decode_text as decode_conversion_text,
+    encode_items as encode_conversion_items,
+    ensure_supported_pair as ensure_supported_conversion_pair,
+)
 from .demo import DEFAULT_COUNT as DEMO_DEFAULT_COUNT
 from .demo import demo_text, parse_demo_base_datetime, parse_demo_types
 from .diagnostic_contract import (
@@ -834,6 +840,46 @@ def build_parser():
     _add_item_filter_arguments(export_command)
     _add_occurrence_export_arguments(export_command)
     export_command.set_defaults(func=command_export)
+
+    convert_command = subparsers.add_parser(
+        "convert",
+        help="Convert explicitly between supported text formats.",
+        description=(
+            "Stateless source-to-target conversion through the shared lifetxt "
+            "item model. Use --capabilities for the machine-readable format matrix."
+        ),
+    )
+    convert_command.add_argument(
+        "--from", dest="source_format", help="Explicit source format."
+    )
+    convert_command.add_argument(
+        "--to", dest="target_format", help="Explicit target format."
+    )
+    convert_command.add_argument(
+        "paths", nargs="*", help="Input path(s); defaults to stdin."
+    )
+    convert_command.add_argument(
+        "-o", "--output", help="Output file; defaults to stdout."
+    )
+    convert_command.add_argument(
+        "--pretty", action="store_true", help="Pretty-print JSON output."
+    )
+    convert_command.add_argument(
+        "--canonical",
+        action="store_true",
+        help="For life output, render explicit parent: links and remove indentation.",
+    )
+    convert_command.add_argument(
+        "--calendar-name",
+        default="lifetxt",
+        help="For ICS output, set X-WR-CALNAME.",
+    )
+    convert_command.add_argument(
+        "--capabilities",
+        action="store_true",
+        help="Print the conversion capability matrix as JSON and exit.",
+    )
+    convert_command.set_defaults(func=command_convert)
 
     sync_ics = subparsers.add_parser(
         "sync-ics",
@@ -5293,7 +5339,7 @@ def command_to_json(args):
         output = agenda_records_to_json(records, pretty=args.pretty)
     else:
         items = _filter_items_from_args(items, args)
-        output = items_to_json(items, pretty=args.pretty)
+        output = encode_conversion_items(items, "json", pretty=args.pretty).rstrip("\n")
     write_text(args.output, output + "\n")
     _print_warnings(diagnostics)
     return 0
@@ -5306,7 +5352,7 @@ def command_to_jsonl(args):
         output = agenda_records_to_jsonl(records)
     else:
         items = _filter_items_from_args(items, args)
-        output = items_to_jsonl(items)
+        output = encode_conversion_items(items, "jsonl").rstrip("\n")
     if output:
         output += "\n"
     write_text(args.output, output)
@@ -5321,7 +5367,7 @@ def command_to_csv(args):
         output = occurrence_records_to_csv(records)
     else:
         items = _filter_items_from_args(items, args)
-        output = items_to_csv(items)
+        output = encode_conversion_items(items, "csv")
     write_text(args.output, output)
     _print_warnings(diagnostics)
     return 0
@@ -5357,6 +5403,48 @@ def command_export(args):
             % (args.format, ", ".join(sorted(EXPORT_FORMAT_HANDLERS)))
         )
     return handler(args)
+
+
+def command_convert(args):
+    """Thin file/stdin adapter over :mod:`lifetxt.conversion`."""
+    if args.capabilities:
+        write_text(
+            args.output,
+            json.dumps(
+                conversion_capabilities(), ensure_ascii=False, separators=(",", ":")
+            )
+            + "\n",
+        )
+        return 0
+    if not args.source_format or not args.target_format:
+        raise ValueError(
+            "convert requires --from FORMAT and --to FORMAT. "
+            "Use --capabilities to inspect supported pairs."
+        )
+    ensure_supported_conversion_pair(args.source_format, args.target_format)
+
+    items = []
+    diagnostics = []
+    for path in _normalize_paths(args.paths):
+        decoded, path_diagnostics = decode_conversion_text(
+            args.source_format,
+            read_text(path),
+            source_name="stdin" if path == "-" else os.path.abspath(path),
+            id_key=id_key_from_config(_config(args)),
+        )
+        items.extend(decoded)
+        diagnostics.extend(path_diagnostics)
+    output = encode_conversion_items(
+        items,
+        args.target_format,
+        pretty=args.pretty,
+        canonical=args.canonical,
+        id_key=id_key_from_config(_config(args)),
+        calendar_name=args.calendar_name,
+    )
+    write_text(args.output, output)
+    _print_warnings(diagnostics)
+    return 0
 
 
 def _export_sqlite(args):
@@ -5849,9 +5937,11 @@ def command_import_ics(args):
             continue
         if preset == "life":
             text = read_text(path)
-            id_key = id_key_from_config(_config(args))
-            path_items, path_diagnostics = parse_text(
-                text, id_key=id_key, check_ids=False, check_references=False
+            path_items, path_diagnostics = decode_conversion_text(
+                "life",
+                text,
+                id_key=id_key_from_config(_config(args)),
+                validate=False,
             )
             if _has_error(path_diagnostics):
                 _print_diagnostics(path_diagnostics)
@@ -5869,16 +5959,26 @@ def command_import_ics(args):
             continue
         text = read_text(path)
         if preset == "ics":
-            items.extend(
-                items_from_ics_text(
+            if getattr(args, "expand_rrule", False):
+                items.extend(
+                    items_from_ics_text(
+                        text,
+                        project=args.project,
+                        tags=args.tag,
+                        expand=True,
+                        expand_until=_expand_horizon(args),
+                        expand_count=getattr(args, "expand_count", None),
+                    )
+                )
+            else:
+                decoded, _ = decode_conversion_text(
+                    "ics",
                     text,
                     project=args.project,
                     tags=args.tag,
-                    expand=bool(getattr(args, "expand_rrule", False)),
-                    expand_until=_expand_horizon(args),
-                    expand_count=getattr(args, "expand_count", None),
+                    validate=False,
                 )
-            )
+                items.extend(decoded)
         elif preset == "markdown":
             items.extend(
                 _items_from_markdown_task_text(
@@ -5934,44 +6034,16 @@ def command_import_ics(args):
 def _items_from_markdown_task_text(
     text, project=None, kind="T", tags=None, source=None, github_refs=False
 ):
-    import re as _re
+    from .conversion import items_from_markdown_task_list_text
 
-    status_map = {
-        " ": "[ ]",
-        "x": "[x]",
-        "X": "[x]",
-        "-": "[-]",
-        "/": "[/]",
-    }
-    task_re = _re.compile(
-        r"^(?P<indent>\s*)[-*+]\s+\[(?P<check>[xX \-/])\]\s+(?P<title>.+)$"
+    return items_from_markdown_task_list_text(
+        text,
+        project=project,
+        kind=kind,
+        tags=tags,
+        source=source,
+        github_refs=github_refs,
     )
-    github_ref_re = _re.compile(r"#(\d+)")
-    items = []
-    for line in text.splitlines():
-        match = task_re.match(line)
-        if not match:
-            continue
-        raw_title = match.group("title").strip()
-        title = raw_title
-        details = OrderedDict()
-        _add_preset_detail(details, "source", source)
-        if project:
-            _add_preset_detail(details, "project", project)
-        for tag in tags or []:
-            _add_preset_detail(details, "tag", tag)
-        if github_refs:
-            refs = github_ref_re.findall(raw_title)
-            title = github_ref_re.sub("", raw_title).strip()
-            for ref in refs:
-                _add_preset_detail(
-                    details, "ref", "github-%s" % ref if source == "github" else ref
-                )
-        slug = title.replace(" ", "_") if title else raw_title.replace(" ", "_")
-        items.append(
-            Item(status_map.get(match.group("check"), "[ ]"), kind, slug, details)
-        )
-    return items
 
 
 def _items_from_todoist_csv_text(text, project=None, tags=None):
@@ -12557,7 +12629,10 @@ def _agenda_range_texts(args):
 
 
 def command_from_json(args):
-    items = _items_from_json_paths(args.paths)
+    items = []
+    for path in _normalize_paths(args.paths):
+        decoded, _ = decode_conversion_text("json", read_text(path), validate=False)
+        items.extend(decoded)
     return _write_life_items(
         items,
         args.output,
@@ -12567,7 +12642,10 @@ def command_from_json(args):
 
 
 def command_from_jsonl(args):
-    items = _items_from_jsonl_paths(args.paths)
+    items = []
+    for path in _normalize_paths(args.paths):
+        decoded, _ = decode_conversion_text("jsonl", read_text(path), validate=False)
+        items.extend(decoded)
     return _write_life_items(
         items,
         args.output,
@@ -12577,7 +12655,10 @@ def command_from_jsonl(args):
 
 
 def command_from_csv(args):
-    items = _items_from_csv_paths(args.paths)
+    items = []
+    for path in _normalize_paths(args.paths):
+        decoded, _ = decode_conversion_text("csv", read_text(path), validate=False)
+        items.extend(decoded)
     return _write_life_items(
         items,
         args.output,

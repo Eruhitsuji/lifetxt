@@ -2,14 +2,14 @@
 
 from collections import OrderedDict
 
-from .timeutil import parse_iso_datetime
+from .timeutil import parse_date_or_datetime, parse_iso_datetime
 
 
 def future_intent_snapshot(items, cutoff, until=None, limit=100, id_key="id"):
-    start = parse_iso_datetime(str(cutoff))
+    start = parse_date_or_datetime(str(cutoff))
     if start is None or start.tzinfo is None or start.utcoffset() is None:
         raise ValueError("cutoff must be an offset-aware ISO timestamp")
-    end = parse_iso_datetime(str(until)) if until else None
+    end = parse_date_or_datetime(str(until), is_end=True) if until else None
     if end and (end.tzinfo is None or end.utcoffset() is None):
         raise ValueError("until must be an offset-aware ISO timestamp")
     rows = []

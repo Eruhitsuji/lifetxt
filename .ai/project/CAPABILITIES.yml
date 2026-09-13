@@ -64,6 +64,38 @@ capabilities:
       deprecation_issue: null
 
   - id: cap-ai-prompt-profile
+  - id: cap-temporal-review-read-surfaces
+    name: Temporal review read surfaces
+    summary: >-
+      Bounded read-only decision outcome and meaningful change projections
+      exposed through the Personal Context CLI.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-decision-outcome-review
+      - req-temporal-change-feed
+    implementation_locations:
+      - lifetxt/decision_outcome_review.py
+      - lifetxt/temporal_change_feed.py
+      - lifetxt/personal_context_cli.py
+      - docs/en/temporal-review-reads.md
+      - docs/ja/temporal-review-reads.md
+    public_interfaces:
+      - decision-review
+      - change-feed
+    tests_or_evidence:
+      - tests.test_batch_followups
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/817
+      - https://github.com/Eruhitsuji/lifetxt/issues/818
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-ai-prompt-profile
     name: Provider-independent AI Prompt Profile
     summary: >-
       A directly linkable, no-install prompt contract for converting,

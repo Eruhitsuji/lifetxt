@@ -757,6 +757,30 @@ class GitCommitWorkerConfigGenerationTests(unittest.TestCase):
             )
             self.assertIn("OnUnitActiveSec=30m", timer_step["content"])
 
+            update_config = server_init._server_update_config(config)
+            self.assertEqual(
+                [
+                    "lifetxt.service",
+                    "lifetxt-git-commit-worker.timer",
+                    "lifetxt-git-commit-worker.service",
+                ],
+                update_config["services"],
+            )
+            wrapper = server_init._service_wrapper(config)
+            self.assertIn("is-active:lifetxt-git-commit-worker.timer", wrapper)
+            self.assertIn("stop:lifetxt-git-commit-worker.service", wrapper)
+            self.assertIn("start:lifetxt-git-commit-worker.service", wrapper)
+
+    def test_worker_service_coordination_is_disabled_with_worker(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = server_init.load_config(_write_json(tmp, _config(tmp)))
+
+            self.assertEqual(
+                ["lifetxt.service"],
+                server_init._server_update_config(config)["services"],
+            )
+            self.assertNotIn("git-commit-worker", server_init._service_wrapper(config))
+
     def test_plan_is_idempotent_on_a_second_run(self):
         with tempfile.TemporaryDirectory() as tmp:
             config = server_init.load_config(

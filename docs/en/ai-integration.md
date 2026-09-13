@@ -597,6 +597,26 @@ want a client sandboxed to the local workspace with no network reach at all.
 
 MCP is not required. The CLI composes well with any model that can run commands:
 
+For the lightest-weight workflow, use the provider-independent [lifetxt
+Assistant Prompt Profile](../../prompts/lifetxt-assistant.md). It can be pasted
+or linked into ChatGPT, Claude, Gemini, a local model, or another AI service
+without installing lifetxt, configuring MCP, or granting workspace access. It
+supports Convert, Explain, and Review modes and treats generated text as a
+draft until you validate it.
+
+The integration levels are intentionally separate:
+
+| Path | Access and purpose |
+| --- | --- |
+| Prompt Profile | Text assistance only; no workspace access or automatic writes |
+| CLI/API | Local validation, conversion, and explicit automation |
+| MCP | Connected typed workspace read/proposal/mutation workflows |
+
+The profile references the Format specification rather than duplicating it. In
+particular, it teaches `do:` as intended execution time and `due:` as a
+deadline, resolves relative dates from the actual conversation date/timezone,
+and tells an AI not to invent IDs or metadata.
+
 ```sh
 # hand a filtered slice to a model
 lifetxt filter life.txt --open --project work --format json | llm "what should I do first?"

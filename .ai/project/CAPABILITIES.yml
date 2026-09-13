@@ -37,6 +37,37 @@ capabilities:
       replaced_by: null
       deprecation_issue: null
 
+  - id: cap-ai-prompt-profile
+    name: Provider-independent AI Prompt Profile
+    summary: >-
+      A directly linkable, no-install prompt contract for converting,
+      explaining, and reviewing common lifetxt text without workspace access,
+      provider-specific behavior, or automatic writes.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-provider-independent-ai-prompt-profile
+    implementation_locations:
+      - prompts/lifetxt-assistant.md
+      - examples/lifetxt_ai_prompt_conformance.json
+      - docs/en/ai-integration.md
+      - docs/ja/ai-integration.md
+      - readme.md
+      - tests/test_ai_prompt_profile.py
+    public_interfaces:
+      - prompts/lifetxt-assistant.md
+    tests_or_evidence:
+      - tests/test_ai_prompt_profile.py
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/500
+      - https://github.com/Eruhitsuji/lifetxt/issues/813
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
   - id: cap-native-timeline-cross-surface-ux
     name: Native Timeline cross-surface UX
     summary: First-class Web item-drawer Timeline navigation, bounded Web filters, and local TUI selected-item/event inspection over the shared temporal-timeline-v1 reader.

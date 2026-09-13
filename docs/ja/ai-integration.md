@@ -542,6 +542,24 @@ sandbox し、network への到達を一切許可したくない場合は、`--p
 
 MCP は必須ではありません。command を実行できる model なら CLI と組み合わせられます。
 
+最も軽い使い方として、provider-independent な [lifetxt Assistant Prompt
+Profile](../../prompts/lifetxt-assistant.md) を使えます。ChatGPT、Claude、
+Gemini、local model などに貼り付けるか link を渡すだけで、lifetxt の
+install、MCP 設定、workspace access は不要です。Convert、Explain、Review
+を提供し、生成結果は validation と保存まで draft として扱います。
+
+役割は分かれています。
+
+| Path | 用途 |
+| --- | --- |
+| Prompt Profile | text assistance のみ。workspace access と自動 write はない |
+| CLI/API | local validation、conversion、明示的な automation |
+| MCP | 接続した workspace の typed read/proposal/mutation |
+
+Profile は Format specification を複製せず参照します。`do:` は実行予定時刻、
+`due:` は deadline と区別し、relative date は実際の会話日時・timezone から解決し、
+ID や未提示の metadata を勝手に追加しないよう指示します。
+
 ```sh
 # filtered slice を model に渡す
 lifetxt filter life.txt --open --project work --format json | llm "what should I do first?"

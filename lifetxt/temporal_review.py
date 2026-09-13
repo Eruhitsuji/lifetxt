@@ -56,6 +56,23 @@ def build_temporal_review(
         for row in events
         if row.get("event") in ("reopened", "canceled", "schedule_changed")
     ]
+    upcoming = []
+    if until:
+        for item in items:
+            for field in ("do", "on", "at", "due"):
+                for value in item.details.get(field, []):
+                    if str(value) > str(until):
+                        upcoming.append(
+                            OrderedDict(
+                                (
+                                    ("id", (item.details.get(id_key) or [""])[0]),
+                                    ("title", item.title),
+                                    ("field", field),
+                                    ("when", str(value)),
+                                )
+                            )
+                        )
+        upcoming.sort(key=lambda row: (row["when"], row["id"] or "", row["field"]))
     carry_forward = []
     for item in items:
         if item.kind == "T" and item.status in ("[ ]", "[/]", "[>]", "[?]"):
@@ -97,6 +114,7 @@ def build_temporal_review(
             ("changed", changed),
             ("reopened_or_rescheduled", reopened),
             ("carry_forward", carry_forward),
+            ("upcoming", upcoming[:limit]),
         )
     )
     return result

@@ -26,7 +26,7 @@
         priority: "How important this item is compared with other work.",
         progress: "Completion percentage, from 0 to 100.",
       };
-      return structuredFieldsForType(type).map(field => {
+      const fields = structuredFieldsForType(type).map(field => {
         const value = Array.isArray(values[field.key]) ? values[field.key].join(", ") : (values[field.key] || "");
         const inputId = prefix + "-" + field.key;
         const wide = field.key === "tag" || field.key === "project";
@@ -38,6 +38,54 @@
           `<small id="${helpId}" class="field-help-text">${escapeHtml(helpText)}</small>` +
           `</label>`;
       }).join("");
+      return renderStatusStateField(prefix, values, type) + fields;
+    }
+
+    function standardStatusStates() {
+      const states = appConfig && Array.isArray(appConfig.status_states)
+        ? appConfig.status_states : [];
+      return states.filter(state => typeof state === "string" && state.trim());
+    }
+
+    function renderStatusStateField(prefix, details, type) {
+      if (type !== "S") return "";
+      const values = Array.isArray(details.state) ? details.state : [];
+      const current = values.length ? String(values[0]) : "";
+      const standards = standardStatusStates();
+      const isStandard = standards.includes(current);
+      const mode = isStandard ? current : "__custom__";
+      const options = standards.map(state =>
+        `<option value="${escapeHtml(state)}"${state === mode ? " selected" : ""}>${escapeHtml(state)}</option>`
+      ).join("");
+      const customId = prefix + "-status-state-custom";
+      const selectId = prefix + "-status-state";
+      const helpId = prefix + "-status-state-help";
+      return `<fieldset class="status-state-fields wide-field" data-status-state-fields>` +
+        `<legend>Status / presence value</legend>` +
+        `<label for="${selectId}"><span>Standard status</span>` +
+        `<select id="${selectId}" data-status-state-select aria-describedby="${helpId}">` +
+        options + `<option value="__custom__"${mode === "__custom__" ? " selected" : ""}>Custom…</option></select></label>` +
+        `<label for="${customId}" data-status-state-custom-row>` +
+        `<span>Custom status</span><input id="${customId}" data-status-state-custom value="${escapeHtml(isStandard ? "" : current)}" autocomplete="off">` +
+        `</label><small id="${helpId}" class="field-help-text">Choose a common value or enter any custom status.</small>` +
+        `</fieldset>`;
+    }
+
+    function syncStatusStateMode(container) {
+      const select = container && container.querySelector("[data-status-state-select]");
+      const input = container && container.querySelector("[data-status-state-custom]");
+      const row = container && container.querySelector("[data-status-state-custom-row]");
+      if (!select || !input || !row) return;
+      const custom = select.value === "__custom__";
+      row.hidden = !custom;
+      input.disabled = !custom;
+      input.required = custom;
+      input.setAttribute("aria-required", custom ? "true" : "false");
+    }
+
+    function statusStateChanged(container) {
+      syncStatusStateMode(container);
+      syncStructuredFieldsIntoDetails();
     }
 
     function _structuredDetails(textareaId, prefix) {
@@ -50,6 +98,15 @@
         if (value) details[field.key] = value.split(",").map(v => v.trim()).filter(Boolean);
         else delete details[field.key];
       }
+      const container = document.getElementById(prefix === "edit" ? "structured-fields" : prefix + "-structured-fields");
+      const type = document.getElementById(prefix + "-type")?.value || document.getElementById("edit-type")?.value;
+      const stateSelect = container && container.querySelector("[data-status-state-select]");
+      const customInput = container && container.querySelector("[data-status-state-custom]");
+      if (type === "S" && stateSelect) {
+        const value = stateSelect.value === "__custom__" ? (customInput?.value || "").trim() : stateSelect.value;
+        if (value) details.state = [value];
+        else delete details.state;
+      }
       return details;
     }
 
@@ -57,6 +114,11 @@
       const container = document.getElementById(prefix === "edit" ? "structured-fields" : prefix + "-structured-fields");
       if (!container) return;
       container.innerHTML = renderStructuredFields(prefix, details, type);
+      syncStatusStateMode(container);
+      if (prefix === "edit" && document.getElementById("edit-type")?.disabled) {
+        const fields = container.querySelector("[data-status-state-fields]");
+        if (fields) fields.disabled = true;
+      }
     }
 
     function refreshStructuredFields() {
@@ -107,7 +169,12 @@
       refreshStructuredFields();
     });
     const _structuredContainer = document.getElementById("structured-fields");
-    if (_structuredContainer) _structuredContainer.addEventListener("input", syncStructuredFieldsIntoDetails);
+    if (_structuredContainer) {
+      _structuredContainer.addEventListener("input", syncStructuredFieldsIntoDetails);
+      _structuredContainer.addEventListener("change", event => {
+        if (event.target.matches("[data-status-state-select]")) statusStateChanged(_structuredContainer);
+      });
+    }
     refreshStructuredFields();
 
     const _beginnerTodaySubsection = _todaySubsection;

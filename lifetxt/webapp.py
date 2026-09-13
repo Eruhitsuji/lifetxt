@@ -312,6 +312,8 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
 
     @app.get("/api/config")
     def get_config():
+        from .presence import COMMON_STATES
+
         return {
             "paths": app.state.paths,
             "writable_path": app.state.writable_path,
@@ -321,6 +323,10 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             # CLI/TUI already use, rather than the browser's own local date
             # -- a CodeX review finding against #658.
             "today": timezone_today().isoformat(),
+            # Shared Status/presence authoring vocabulary.  ``state:`` remains
+            # free-form; the Web editor presents these values as suggestions
+            # and keeps an explicit Custom path for every other value.
+            "status_states": list(COMMON_STATES),
             "user": config_user_name(app.state.config),
             "notifications": public_notification_config(app.state.config),
             "ids": public_id_config(app.state.config),

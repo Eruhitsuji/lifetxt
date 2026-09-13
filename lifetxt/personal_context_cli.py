@@ -52,6 +52,7 @@ def _build_parser():
     capsule.add_argument("--tag", dest="tags", action="append", default=[])
     capsule.add_argument("--include-stale", action="store_true")
     capsule.add_argument("--limit", type=int, default=DEFAULT_LIMIT)
+    capsule.add_argument("--as-of", help="Evaluate context at an offset-aware cutoff.")
 
     memory = subparsers.add_parser(
         "memory", help="Reviewable Personal Context mutation"
@@ -254,6 +255,7 @@ def _dispatch(args, config_data):
             include_stale=args.include_stale,
             limit=args.limit,
             stale_after_days=args.stale_after_days,
+            evaluation_time=args.as_of,
         )
         return _render(report, args, _capsule_text)
 

@@ -1,5 +1,6 @@
 """Tests for the expanded MCP server: parity tools, write safety, and prompts."""
 
+import datetime
 import json
 import os
 import tempfile
@@ -1679,6 +1680,103 @@ class CommandCenterScopeToolTests(McpTestCase):
             {"Home_task", "Work_task"},
             {r["title"] for r in result["next_actions"]},
         )
+
+
+class GetPersonalContextToolTests(McpTestCase):
+    """get_personal_context (#802): current-only Personal Context retrieval.
+
+    Delegates entirely to lifetxt.personal_context.context_capsule -- no
+    validity/supersession/staleness logic is duplicated in the MCP layer.
+    """
+
+    _NOW = datetime.datetime.now(datetime.timezone.utc)
+    _RECENT = (_NOW - datetime.timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%S+00:00")
+    _ANCIENT = (_NOW - datetime.timedelta(days=1000)).strftime(
+        "%Y-%m-%dT%H:%M:%S+00:00"
+    )
+
+    PERSONAL_CONTEXT_SAMPLE = (
+        "[ ] N Current_pref id:pref-1 person:self tag:preference source:user "
+        "updated:%(recent)s\n"
+        "[ ] N Stale_pref id:pref-2 person:self tag:preference source:user "
+        "updated:%(ancient)s\n"
+        "[ ] N Old_pref id:pref-3 person:self tag:preference source:user "
+        "updated:%(recent)s\n"
+        "[ ] N New_pref id:pref-4 person:self tag:preference source:user "
+        "corrects:pref-3 updated:%(recent)s\n"
+        "[ ] N Future_pref id:pref-5 person:self tag:preference source:user "
+        "valid_from:2999-01-01 updated:%(recent)s\n"
+        "[ ] N Other_person id:pref-6 person:someone-else tag:preference "
+        "source:user updated:%(recent)s\n"
+    ) % {"recent": _RECENT, "ancient": _ANCIENT}
+
+    def test_default_returns_only_current_records(self):
+        context, _path = self._context(content=self.PERSONAL_CONTEXT_SAMPLE)
+
+        result = call_tool("get_personal_context", {}, context)
+
+        self.assertEqual("personal-context-capsule-v1", result["schema"])
+        ids = {row["id"] for row in result["items"]}
+        self.assertIn("pref-1", ids)
+        self.assertIn("pref-4", ids)
+        self.assertNotIn("pref-2", ids)
+        self.assertNotIn("pref-3", ids)
+        self.assertNotIn("pref-5", ids)
+        self.assertNotIn("pref-6", ids)
+
+    def test_matches_a_direct_capsule_call(self):
+        from lifetxt.personal_context import context_capsule
+
+        context, path = self._context(content=self.PERSONAL_CONTEXT_SAMPLE)
+        items = parse_text(self._read(path))[0]
+        expected = context_capsule(items)
+
+        result = call_tool("get_personal_context", {}, context)
+
+        self.assertEqual(expected, result)
+
+    def test_include_stale_adds_only_stale_never_other_states(self):
+        context, _path = self._context(content=self.PERSONAL_CONTEXT_SAMPLE)
+
+        result = call_tool("get_personal_context", {"include_stale": True}, context)
+
+        ids = {row["id"] for row in result["items"]}
+        self.assertIn("pref-2", ids)
+        self.assertNotIn("pref-3", ids)
+        self.assertNotIn("pref-5", ids)
+        self.assertNotIn("pref-6", ids)
+
+    def test_person_and_tags_are_forwarded(self):
+        context, _path = self._context(content=self.PERSONAL_CONTEXT_SAMPLE)
+
+        result = call_tool("get_personal_context", {"person": "someone-else"}, context)
+
+        self.assertEqual(["pref-6"], [row["id"] for row in result["items"]])
+
+    def test_limit_is_forwarded(self):
+        context, _path = self._context(content=self.PERSONAL_CONTEXT_SAMPLE)
+
+        result = call_tool("get_personal_context", {"limit": 1}, context)
+
+        self.assertEqual(1, result["count"])
+        self.assertEqual(1, len(result["items"]))
+
+    def test_tags_must_be_a_list(self):
+        context, _path = self._context(content=self.PERSONAL_CONTEXT_SAMPLE)
+
+        with self.assertRaises(ValueError):
+            call_tool("get_personal_context", {"tags": "preference"}, context)
+
+    def test_is_read_only_and_writes_nothing(self):
+        context, path = self._context(
+            content=self.PERSONAL_CONTEXT_SAMPLE, read_only=True
+        )
+
+        call_tool("get_personal_context", {}, context)
+
+        self.assertIn("get_personal_context", READ_ONLY_TOOLS)
+        with open(path, encoding="utf-8") as handle:
+            self.assertEqual(self.PERSONAL_CONTEXT_SAMPLE, handle.read())
 
 
 if __name__ == "__main__":

@@ -1,0 +1,18 @@
+schema_version: 1
+
+verification:
+  - command: python -m unittest tests.test_server_update tests.test_server_init
+    result: passed
+    notes: 170 tests passed; 1 skipped because symlink support was unavailable.
+  - command: python -m unittest discover
+    result: passed
+    notes: 4498 tests passed; 210 skipped after editable development setup.
+  - command: ruff check lifetxt tests scripts
+    result: passed
+    notes: All checks passed.
+  - command: ruff format --check lifetxt/server_update.py lifetxt/server_init.py tests/test_server_update.py tests/test_server_init.py
+    result: passed
+    notes: All four changed Python files are formatted.
+  - command: python -m lifetxt check examples/minimal_life.txt
+    result: passed
+    notes: 'OK: 10 item(s).'

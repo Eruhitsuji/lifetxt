@@ -1,0 +1,22 @@
+schema_version: 1
+
+requirements:
+  - id: req-server-update-quiescent-shutdown
+    kind: CHANGED
+    statement: >-
+      server-update must establish and verify a quiescent managed-unit state
+      before backup, hashing, package, or code mutation while restoring only
+      units active in the original snapshot.
+    acceptance_criteria:
+      - Every configured managed unit is stopped in configured order.
+      - Every configured managed unit is confirmed inactive before backup or mutation.
+      - A timer-started oneshot cannot continue into the update window.
+      - Originally inactive units are never restarted by the updater.
+      - Pre-code failures restore original active units.
+      - Post-code validation failures leave managed units stopped.
+      - server-init emits timer-before-service order for known pairs.
+    constraints:
+      - Keep configured order as the operator contract.
+      - Preserve existing fail-closed update semantics.
+    owner: Eruhitsuji
+

@@ -2,6 +2,39 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-server-update-quiescent-shutdown
+      capability_id: cap-ubuntu-server-deployment
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/824
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/825
+      changed_files_or_scope:
+        - Separate the original active-unit restore state from the unconditional stop set
+        - Verify every managed unit inactive before backup, hashing, or code mutation
+        - Preserve timer-before-oneshot order for generated Calendar and Git worker pairs
+        - lifetxt/server_update.py
+        - lifetxt/server_init.py
+        - tests/test_server_update.py
+        - tests/test_server_init.py
+        - docs/deployment/ubuntu-server.md
+        - .ai/project/changes/server-update-quiescent-shutdown/
+      tests_or_evidence:
+        - python -m unittest tests.test_server_update tests.test_server_init -> 170 tests passed (1 skipped)
+        - deterministic mocked timer/oneshot transition proves a service activated while its timer is stopped is subsequently stopped and not restored
+        - inactive-verification failure occurs before backup or git mutation and restores the original active set
+        - python -m unittest discover -> 4498 tests passed (210 skipped)
+        - ruff check lifetxt tests scripts -> All checks passed
+        - ruff format --check on the four changed Python files -> all formatted
+        - python -m lifetxt check examples/minimal_life.txt -> 'OK: 10 item(s)'
+      release_or_deployment: >-
+        Maintenance bug fix for guarded Ubuntu server updates; no live deployment
+        was mutated. Existing deployments should list each timer immediately before
+        its oneshot service and authorize is-active/stop/start for both units.
+      notes: >-
+        Bug/High assurance because this changes production service shutdown and
+        recovery sequencing. Independent implementation and integration/security
+        review plus Merge Authority approval are required before merge. Rollback is
+        a normal PR revert; post-code failures retain the existing stopped-service
+        recovery contract.
+      status: implemented
     - requirement_id: req-tui-wide-character-input
       capability_id: cap-tui-wide-character-input
       epic: null

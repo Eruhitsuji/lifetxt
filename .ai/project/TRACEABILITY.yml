@@ -12138,6 +12138,42 @@ traceability:
         required before merge to main and have not happened yet.
       status: implemented
 
+    - requirement_id: req-server-update-git-worker-coordination
+      capability_id: cap-server-init-git-commit-worker
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/806
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/814
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/820
+      changed_files_or_scope:
+        - Fix server-update to stop/restore the opt-in Git-commit worker's
+          systemd units (timer + oneshot service) alongside the existing
+          calendar-sync/web units, sourced from one shared
+          _managed_service_units() helper reused by both
+          _server_update_config() and the generated least-privilege
+          service-control wrapper, so an enabled worker cannot be silently
+          omitted from either.
+        - lifetxt/server_init.py
+        - tests/test_server_init.py
+        - docs/deployment/ubuntu-server.md
+        - .ai/project/changes/server-update-git-worker-coordination/
+      tests_or_evidence:
+        - ".venv/Scripts/python.exe -m unittest tests.test_server_init -> 41 tests passed"
+        - ".venv/Scripts/python.exe -m unittest tests.test_server_update -> 125 tests passed, 1 skipped"
+        - ".venv/Scripts/ruff.exe check lifetxt/server_init.py tests/test_server_init.py -> clean"
+      notes: >-
+        Before this fix, server-update's stop-before-update/restore-after-
+        update sequence and the generated service-control wrapper's
+        authorized systemctl operations both derived their unit list
+        independently of the worker, so an enabled worker's timer/service
+        could keep running (and racing its own git operations against
+        server-update's own checkout) during an update, or the wrapper
+        could refuse to grant the sudoers-scoped is-active/stop/start calls
+        server-update needs for those units. _managed_service_units() is
+        now the single source both call sites read from. Review found this
+        requirement had a per-package traceability.yml
+        (.ai/project/changes/server-update-git-worker-coordination/) but no
+        entry in the central TRACEABILITY.yml; added here.
+      status: implemented
+
     - requirement_id: req-728-731-remote-historical-read-and-periodic-commit-batch-integration
       capability_id: cap-remote-historical-evidence-read
       epic: https://github.com/Eruhitsuji/lifetxt/issues/724
@@ -13021,6 +13057,32 @@ traceability:
         final integration PR is opened.
       status: implemented
 
+    - requirement_id: req-mobile-navigation-independent-scroll-strips
+      capability_id: cap-web-beginner-first-ux
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/807
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/820
+      changed_files_or_scope:
+        - Fix the mobile (<=680px) global workspace navigation so
+          .header-workspace-tabs > .nav-primary and > .nav-more each stay
+          a fixed-size, independently horizontally-scrollable one-row
+          strip (with the .nav-advanced panel inside the open More group
+          scrolling on its own), instead of the whole nav overflowing or
+          wrapping off-screen once #797's collapsed More group was added.
+        - lifetxt/web_assets_css_04.css
+        - tests/test_web_mobile.py
+      tests_or_evidence:
+        - "tests.test_web_mobile.LayoutTests.test_global_navigation_has_independent_one_row_mobile_strips -> passed"
+        - "python -m unittest tests.test_web_mobile tests.test_web_assets -> Ran 80 tests, OK (LEGACY_PRISTINE_GIT_BLOB_SHA updated to match)"
+      notes: >-
+        Reuses the existing .header-workspace-tabs/.nav-primary/.nav-more/
+        .nav-advanced markup #797 (req-web-progressive-advanced-navigation)
+        already added; this is a presentation-only CSS fix layered on that
+        structure, not a new navigation mechanism. Review found this
+        requirement had no central TRACEABILITY.yml entry at all; added
+        here.
+      status: implemented
+
     - requirement_id: req-web-beginner-empty-state-guidance
       capability_id: cap-web-beginner-first-ux
       epic: https://github.com/Eruhitsuji/lifetxt/issues/793
@@ -13199,7 +13261,7 @@ traceability:
       capability_id: cap-ai-prompt-profile
       epic: https://github.com/Eruhitsuji/lifetxt/issues/500
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/813
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/820
       changed_files_or_scope:
         - prompts/lifetxt-assistant.md
         - examples/lifetxt_ai_prompt_conformance.json
@@ -13222,7 +13284,7 @@ traceability:
       capability_id: cap-temporal-life-review
       epic: https://github.com/Eruhitsuji/lifetxt/issues/808
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/815
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/820
       changed_files_or_scope:
         - lifetxt/temporal_review.py
         - lifetxt/cli.py
@@ -13241,7 +13303,7 @@ traceability:
     - requirement_id: req-decision-outcome-review
       capability_id: cap-temporal-review-read-surfaces
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/817
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/820
       changed_files_or_scope:
         - lifetxt/decision_outcome_review.py
         - lifetxt/personal_context_cli.py
@@ -13259,7 +13321,7 @@ traceability:
     - requirement_id: req-temporal-change-feed
       capability_id: cap-temporal-review-read-surfaces
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/818
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/820
       changed_files_or_scope:
         - lifetxt/temporal_change_feed.py
         - lifetxt/personal_context_cli.py
@@ -13275,7 +13337,7 @@ traceability:
     - requirement_id: req-future-intent-snapshot
       capability_id: cap-temporal-review-read-surfaces
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/819
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/820
       changed_files_or_scope:
         - lifetxt/future_intent.py
         - lifetxt/personal_context_cli.py
@@ -13293,7 +13355,7 @@ traceability:
     - requirement_id: req-historical-personal-context-projection
       capability_id: cap-personal-context-historical-field-reconstruction
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/816
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/820
       changed_files_or_scope:
         - lifetxt/historical_context.py
         - lifetxt/personal_context_cli.py
@@ -13321,7 +13383,7 @@ traceability:
       capability_id: cap-cli-localization-foundation
       epic: null
       task_issue: null
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/820
       changed_files_or_scope:
         - lifetxt/i18n.py
         - lifetxt/cli_taxonomy.py

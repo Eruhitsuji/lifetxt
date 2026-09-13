@@ -798,3 +798,12 @@ No `subject:` field, no structured provenance model beyond the existing
 fact -- every Personal AI Memory candidate passes through the same human
 review every other Unified Inbox proposal does. See #503 for the full
 investigation this convention was distilled from.
+
+### Temporal Life Review
+
+`lifetxt review --temporal --since YYYY-MM-DD --until YYYY-MM-DD` composes a
+bounded, deterministic retrospective from the workspace Life Timeline. Add
+`--format json` for machine-readable output. It reports observed events and
+currently open tasks; it does not infer causes, invent history, or call an AI
+provider. Incomplete history and event truncation remain visible in
+`limitations` and `diagnostics`.

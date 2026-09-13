@@ -56,7 +56,16 @@ _EXTRA_COMMANDS = frozenset(
     )
 )
 
-_PERSONAL_CONTEXT_COMMANDS = frozenset(("context", "memory", "decisions"))
+_PERSONAL_CONTEXT_COMMANDS = frozenset(
+    (
+        "context",
+        "memory",
+        "decisions",
+        "decision-review",
+        "change-feed",
+        "future-intent",
+    )
+)
 
 _DOCTOR_SAFETY_FLAGS = frozenset(
     (

@@ -202,26 +202,75 @@
       bar.style.display = visible ? "" : "none";
       if (visible) {
         loadPresence();
-        focusBarInput("presence-input", false);
+        focusBarInput("presence-state-select", false);
       }
     }
 
+    function standardStatusStates() {
+      const states = appConfig && Array.isArray(appConfig.status_states)
+        ? appConfig.status_states : [];
+      return states.filter(state => typeof state === "string" && state.trim());
+    }
+
+    function setupQuickPresencePicker() {
+      const select = document.getElementById("presence-state-select");
+      if (!select) return;
+      const states = standardStatusStates();
+      select.innerHTML = states.map(state =>
+        `<option value="${escapeHtml(state)}">${escapeHtml(state)}</option>`
+      ).join("") + `<option value="__custom__">${escapeHtml(t("Custom…"))}</option>`;
+      select.value = states.length ? states[0] : "__custom__";
+      syncQuickPresenceStateMode();
+    }
+
+    function syncQuickPresenceStateMode() {
+      const select = document.getElementById("presence-state-select");
+      const custom = document.getElementById("presence-state-custom");
+      if (!select || !custom) return;
+      const customMode = select.value === "__custom__";
+      custom.hidden = !customMode;
+      custom.disabled = !customMode;
+      custom.required = customMode;
+      custom.setAttribute("aria-required", customMode ? "true" : "false");
+    }
+
+    function quickPresenceStateChanged() {
+      syncQuickPresenceStateMode();
+      if (document.getElementById("presence-state-select")?.value === "__custom__") {
+        document.getElementById("presence-state-custom")?.focus();
+      }
+    }
+
+    function quickPresencePayload() {
+      const select = document.getElementById("presence-state-select");
+      const custom = document.getElementById("presence-state-custom");
+      const title = document.getElementById("presence-title");
+      const state = select?.value === "__custom__"
+        ? (custom?.value || "").trim()
+        : (select?.value || "").trim();
+      if (!state) return null;
+      const body = {state};
+      const titleValue = (title?.value || "").trim();
+      if (titleValue) body.title = titleValue;
+      return body;
+    }
+
     async function setPresence() {
-      const input = document.getElementById("presence-input");
-      const raw = (input.value || "").trim();
-      if (!raw) { showToast("Type a state such as busy.", "error"); return; }
-      const parts = raw.split(/\s+/);
-      const body = {state: parts[0]};
-      if (parts.length > 1) body.title = parts.slice(1).join(" ");
+      const body = quickPresencePayload();
+      if (!body) { showToast("Enter a custom status.", "error"); return; }
       try {
         const data = await api("/api/status", {
           method: "POST",
           headers: {"Content-Type": "application/json"},
           body: JSON.stringify(body),
         });
-        input.value = "";
+        const custom = document.getElementById("presence-state-custom");
+        const title = document.getElementById("presence-title");
+        if (custom) custom.value = "";
+        if (title) title.value = "";
         const closed = (data.closed || []).length;
-        showToast("Status: " + body.state + (closed ? " (closed " + closed + " previous)" : ""), "success");
+        if (data.unchanged) showToast("Already " + data.unchanged + ".", "info");
+        else showToast("Status: " + body.state + (closed ? " (closed " + closed + " previous)" : ""), "success");
         await loadPresence();
         await refreshAll();
       } catch (err) {

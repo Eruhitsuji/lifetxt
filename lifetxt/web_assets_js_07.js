@@ -353,6 +353,7 @@
       applyLanguage();
       startLanguageObserver();
       setupCompletion();
+      setupQuickPresencePicker();
     }
     async function loadNotifications() {
       if (appConfig?.notifications?.enabled === false || appConfig?.notifications?.web === false) {

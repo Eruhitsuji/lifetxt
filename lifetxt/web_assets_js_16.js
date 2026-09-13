@@ -147,13 +147,6 @@
       return {kind: "key", prefix: typed, start: word.start, end: word.end};
     }
 
-    /** `busy` or `focus Deep work`: only the leading state word completes. */
-    function cplPresenceToken(value, caret) {
-      const word = cplWordAt(value, caret);
-      if (word.start !== 0) return null;
-      return {kind: "state", prefix: word.text, start: 0, end: word.end};
-    }
-
     /** A field holding exactly one value of a known kind. */
     function cplWholeValue(kind) {
       return (value, caret) => ({
@@ -168,7 +161,7 @@
     function setupCompletion() {
       const byId = (id, resolver) => attachCompletion(document.getElementById(id), resolver);
       byId("quick-line", cplCaptureToken);
-      byId("presence-input", cplPresenceToken);
+      byId("presence-state-custom", cplWholeValue("state"));
       byId("import-raw-input", cplCaptureToken);
       byId("focus-quick-title", cplCaptureToken);
       byId("edit-details", cplCaptureToken);

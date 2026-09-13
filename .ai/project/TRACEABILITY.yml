@@ -13083,6 +13083,31 @@ traceability:
         filled in once the final integration PR is opened.
       status: implemented
 
+    - requirement_id: req-personal-context-currentness-resolver
+      capability_id: cap-personal-context-currentness
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/782
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/800
+      pull_request: null
+      changed_files_or_scope:
+        - "Add lifetxt/personal_context_currentness.py: a pure resolver classifying items into current/future-effective/stale/superseded/expired/conflicting/historical-only, reusing node_facts() staleness, corrects:/replaced_by: supersession, and timeutil.parse_date_or_datetime for optional valid_from:/valid_to:"
+        - lifetxt/personal_context_currentness.py
+        - tests/test_personal_context_currentness.py
+        - docs/en/personal-context-toolkit.md
+        - docs/ja/personal-context-toolkit.md
+      tests_or_evidence:
+        - "tests/test_personal_context_currentness.py (20 tests): all seven states, open/closed/bounded validity intervals, malformed and reversed ranges never resolving to current, items with no id, linear supersession chains, competing-replacement conflicts, and supersession cycles"
+        - python -m unittest tests.test_personal_context_currentness -> Ran 20 tests, OK
+      release_or_deployment: null
+      notes: >-
+        First implementation task of the #800-#802 personal-context-
+        currentness batch, landing on its own child branch merged locally
+        into feature/800-802-personal-context-currentness. pull_request is
+        filled in once the final integration PR is opened. No new record
+        kind, mandatory Format metadata, or second timestamp parser was
+        introduced; valid_from:/valid_to: remain optional custom-detail
+        conventions.
+      status: implemented
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

@@ -12906,7 +12906,7 @@ traceability:
     - requirement_id: req-release-v1-0-3-version-bump
       capability_id: cap-stable-release-governance
       epic: null
-      task_issue: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/805
       pull_request: https://github.com/Eruhitsuji/lifetxt/pull/804
       changed_files_or_scope:
         - Bump authoritative package version 1.0.2 -> 1.0.3 per direct user request

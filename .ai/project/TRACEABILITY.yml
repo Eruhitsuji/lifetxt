@@ -13238,6 +13238,31 @@ traceability:
         is synthesized.
       status: implemented
 
+    - requirement_id: req-decision-outcome-review
+      capability_id: cap-temporal-review-read-surfaces
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/817
+      pull_request: null
+      changed_files_or_scope:
+        - lifetxt/decision_outcome_review.py
+        - lifetxt/personal_context_cli.py
+        - docs/en/temporal-review-reads.md
+        - docs/ja/temporal-review-reads.md
+      tests_or_evidence:
+        - tests.test_batch_followups -> passed
+      status: implemented
+    - requirement_id: req-temporal-change-feed
+      capability_id: cap-temporal-review-read-surfaces
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/818
+      pull_request: null
+      changed_files_or_scope:
+        - lifetxt/temporal_change_feed.py
+        - lifetxt/personal_context_cli.py
+        - docs/en/temporal-review-reads.md
+        - docs/ja/temporal-review-reads.md
+      tests_or_evidence:
+        - tests.test_batch_followups -> passed
+      status: implemented
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

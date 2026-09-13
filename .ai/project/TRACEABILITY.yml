@@ -13195,6 +13195,29 @@ traceability:
         feature/800-802-personal-context-currentness, merged via PR #803.
       status: implemented
 
+    - requirement_id: req-provider-independent-ai-prompt-profile
+      capability_id: cap-ai-prompt-profile
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/813
+      pull_request: null
+      changed_files_or_scope:
+        - prompts/lifetxt-assistant.md
+        - examples/lifetxt_ai_prompt_conformance.json
+        - docs/en/ai-integration.md
+        - docs/ja/ai-integration.md
+        - readme.md
+        - tests/test_ai_prompt_profile.py
+      tests_or_evidence:
+        - tests.test_ai_prompt_profile -> focused conformance/profile tests passed
+        - tests.test_web_mobile and tests.test_web_assets -> 32 tests passed on batch base
+      release_or_deployment: null
+      notes: >-
+        Provider-independent prompt assistance complements the existing stdio
+        MCP integration. The profile references the Format specification,
+        prohibits invented metadata and standalone IDs, and makes no external
+        model call.
+      status: implemented
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

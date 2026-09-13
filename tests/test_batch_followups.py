@@ -11,6 +11,8 @@ class BatchFollowupTests(unittest.TestCase):
         items, _ = parse_text('[ ] N "Preference" person:self updated:2020-01-01\n')
         result = historical_personal_context(items, "2020-02-01T00:00:00+00:00")
         self.assertEqual("historical-personal-context-v1", result["schema"])
+        self.assertEqual("unavailable", result["items"][0]["fields"]["status"]["state"])
+        self.assertFalse(result["items"][0]["provenance"]["semantic_as_of"])
 
     def test_context_capsule_cutoff_is_explicit(self):
         from lifetxt.personal_context import context_capsule

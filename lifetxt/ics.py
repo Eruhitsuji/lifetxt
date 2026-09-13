@@ -1,8 +1,10 @@
 import re
+import hashlib
 from collections import OrderedDict, namedtuple
 from datetime import datetime, timedelta, timezone
 
 from .model import Item
+from .timezone_policy import utcnow
 
 
 Property = namedtuple("Property", "name params value")
@@ -39,6 +41,132 @@ DEFAULT_EXPAND_DAYS = 365
 #: A hard ceiling so a daily rule cannot fill a file with tens of thousands
 #: of records because a window was left wide.
 MAX_EXPAND_OCCURRENCES = 500
+
+
+def _ics_escape(value):
+    return (
+        str(value)
+        .replace("\\", "\\\\")
+        .replace(";", "\\;")
+        .replace(",", "\\,")
+        .replace("\r\n", "\\n")
+        .replace("\n", "\\n")
+        .replace("\r", "\\n")
+    )
+
+
+def _ics_fold(line):
+    chunks = []
+    current = ""
+    current_bytes = 0
+    limit = 75
+    for char in line:
+        size = len(char.encode("utf-8"))
+        if current and current_bytes + size > limit:
+            chunks.append(current)
+            current = " " + char
+            current_bytes = 1 + size
+            limit = 74
+        else:
+            current += char
+            current_bytes += size
+    chunks.append(current)
+    return "\r\n".join(chunks)
+
+
+def _ics_datetime(value):
+    text = str(value)
+    normalized = text
+    if normalized.endswith("Z"):
+        normalized = normalized[:-1] + "+0000"
+    elif (
+        len(normalized) >= 6 and normalized[-6] in ("+", "-") and normalized[-3] == ":"
+    ):
+        normalized = normalized[:-3] + normalized[-2:]
+    formats = (
+        "%Y-%m-%dT%H:%M",
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%dT%H:%M:%S.%f",
+        "%Y-%m-%dT%H:%M%z",
+        "%Y-%m-%dT%H:%M:%S%z",
+        "%Y-%m-%dT%H:%M:%S.%f%z",
+    )
+    parsed = None
+    for fmt in formats:
+        try:
+            parsed = datetime.strptime(normalized, fmt)
+            break
+        except ValueError:
+            continue
+    if parsed is None:
+        raise ValueError("Invalid event datetime for ICS export: %s" % value)
+    if parsed.tzinfo is not None:
+        return parsed.astimezone(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    return parsed.strftime("%Y%m%dT%H%M%S")
+
+
+def items_to_ics_text(items, calendar_name="lifetxt", generated_at=None):
+    """Render the established event-only iCalendar representation."""
+    generated_at = generated_at or utcnow()
+    now = generated_at.strftime("%Y%m%dT%H%M%SZ")
+    lines = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//lifetxt//EN",
+        "CALSCALE:GREGORIAN",
+        "METHOD:PUBLISH",
+        "X-WR-CALNAME:%s" % _ics_escape(calendar_name),
+    ]
+    for item in items:
+        if item.kind != "E" or item.status in ("[-]", "[>]"):
+            continue
+        on = (item.details.get("on") or [None])[0]
+        start = (item.details.get("from") or [None])[0]
+        end = (item.details.get("to") or [None])[0]
+        if not on and not start:
+            continue
+        uid = (item.details.get("uid") or item.details.get("id") or [None])[
+            0
+        ] or hashlib.sha256(
+            (item.title + str(item.source) + str(item.line)).encode("utf-8")
+        ).hexdigest()[:20] + "@lifetxt"
+        lines.extend(
+            (
+                "BEGIN:VEVENT",
+                "UID:%s" % _ics_escape(uid),
+                "DTSTAMP:%s" % now,
+                "SUMMARY:%s" % _ics_escape(item.title),
+            )
+        )
+        if on:
+            on_date = datetime.strptime(str(on), "%Y-%m-%d")
+            lines.append("DTSTART;VALUE=DATE:%s" % on_date.strftime("%Y%m%d"))
+            lines.append(
+                "DTEND;VALUE=DATE:%s" % (on_date + timedelta(days=1)).strftime("%Y%m%d")
+            )
+        else:
+            lines.append("DTSTART:%s" % _ics_datetime(start))
+            if end:
+                lines.append("DTEND:%s" % _ics_datetime(end))
+        location = (item.details.get("loc") or [None])[0]
+        if location:
+            lines.append("LOCATION:%s" % _ics_escape(location))
+        description = "\n".join(
+            item.details.get("body", []) + item.details.get("note", [])
+        )
+        if description:
+            lines.append("DESCRIPTION:%s" % _ics_escape(description))
+        for attendee in item.details.get("attendee", []):
+            if "@" in attendee and " " not in attendee:
+                lines.append("ATTENDEE:mailto:%s" % _ics_escape(attendee))
+            else:
+                lines.append("X-LIFETXT-ATTENDEE:%s" % _ics_escape(attendee))
+        repeat = (item.details.get("repeat") or [""])[0]
+        if repeat.upper().startswith("RRULE:"):
+            lines.append(repeat)
+        lines.append("END:VEVENT")
+    lines.append("END:VCALENDAR")
+    return "\r\n".join(_ics_fold(line) for line in lines) + "\r\n"
 
 
 def _expanded_occurrences(item, event=None, until=None, count=None):

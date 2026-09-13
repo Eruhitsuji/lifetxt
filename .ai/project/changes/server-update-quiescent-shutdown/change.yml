@@ -1,0 +1,41 @@
+schema_version: 1
+
+change:
+  id: server-update-quiescent-shutdown
+  title: Make server-update shutdown quiescent
+  status: implemented
+  change_type: Bug
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/824
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/825
+  base_commit: 0898b8063df2656f42ff7df1e4c5504655e13071
+  target_release: next normal maintenance release
+
+scope:
+  in_scope:
+    - Separate the original active-state snapshot from the unconditional stop set.
+    - Confirm every managed unit inactive before backup, hashing, or code mutation.
+    - Preserve timer-before-oneshot ordering in generated deployment configuration.
+    - Document ordering and restoration semantics.
+  out_of_scope:
+    - Inferring arbitrary systemd unit relationships.
+    - Changing post-code-update fail-closed behavior.
+    - Mutating a live deployment.
+    - .ai/managed/**
+  write_scope:
+    - lifetxt/server_update.py
+    - lifetxt/server_init.py
+    - tests/test_server_update.py
+    - tests/test_server_init.py
+    - docs/deployment/ubuntu-server.md
+    - .ai/project/TRACEABILITY.yml
+    - .ai/project/changes/server-update-quiescent-shutdown/**
+  forbidden_scope:
+    - .ai/managed/**
+
+human_approvals_required:
+  - Independent implementation and integration/security review before merge.
+  - Merge Authority approval before merging to main.
+

@@ -46,6 +46,28 @@ def _config(root, **overrides):
 
 
 class ServerInitTests(unittest.TestCase):
+    def test_managed_timer_units_precede_their_oneshot_services(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = server_init.load_config(
+                _write_json(
+                    tmp,
+                    _config(
+                        tmp,
+                        calendar_sync={
+                            "enabled": True,
+                            "url_env": "CALENDAR_URL",
+                        },
+                    ),
+                )
+            )
+
+            units = server_init._server_update_config(config)["services"]
+
+        self.assertLess(
+            units.index("lifetxt-sync-ics.timer"),
+            units.index("lifetxt-sync-ics.service"),
+        )
+
     def test_dry_run_does_not_mutate_filesystem(self):
         with tempfile.TemporaryDirectory() as tmp:
             config = server_init.load_config(_write_json(tmp, _config(tmp)))

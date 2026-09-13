@@ -1,0 +1,13 @@
+schema_version: 1
+
+requirement_id: req-server-update-git-worker-coordination
+capability_id: cap-server-init-git-commit-worker
+task_issue: https://github.com/Eruhitsuji/lifetxt/issues/814
+changed_files:
+  - lifetxt/server_init.py
+  - tests/test_server_init.py
+  - docs/deployment/ubuntu-server.md
+evidence:
+  - .venv/Scripts/python.exe -m unittest tests.test_server_init
+  - .venv/Scripts/python.exe -m unittest tests.test_server_update
+status: implemented

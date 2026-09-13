@@ -1,0 +1,18 @@
+schema_version: 1
+
+requirements:
+  - id: req-server-update-git-worker-coordination
+    kind: ADDED
+    statement: >-
+      An enabled periodic Git commit worker must be included in the generated
+      server-update service coordination and least-privilege controls.
+    acceptance_criteria:
+      - Worker timer and service appear in generated server-update services.
+      - Worker units are present in the generated service-control wrapper.
+      - Disabled workers add no service handling.
+      - Existing update active-state restoration remains unchanged.
+      - Existing/manual deployments have documented adoption guidance.
+    constraints:
+      - Stop the timer before the oneshot service in generated order.
+      - Reuse one service-unit list for update config and wrapper generation.
+    owner: Eruhitsuji

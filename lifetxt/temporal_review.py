@@ -4,6 +4,8 @@ from collections import OrderedDict
 import datetime
 
 from .review import resolve_review_range
+from .agenda import agenda_records
+from .timeutil import parse_date_or_datetime
 from .workspace_timeline import workspace_timeline
 
 
@@ -58,21 +60,18 @@ def build_temporal_review(
     ]
     upcoming = []
     if until:
-        for item in items:
-            for field in ("do", "on", "at", "due"):
-                for value in item.details.get(field, []):
-                    if str(value) > str(until):
-                        upcoming.append(
-                            OrderedDict(
-                                (
-                                    ("id", (item.details.get(id_key) or [""])[0]),
-                                    ("title", item.title),
-                                    ("field", field),
-                                    ("when", str(value)),
-                                )
-                            )
-                        )
-        upcoming.sort(key=lambda row: (row["when"], row["id"] or "", row["field"]))
+        boundary = parse_date_or_datetime(until, is_end=True)
+        for row in agenda_records(items, boundary, None):
+            upcoming.append(
+                OrderedDict(
+                    (
+                        ("id", row.get("source_id")),
+                        ("title", row["title"]),
+                        ("when", row["when"]),
+                        ("field", row["key"]),
+                    )
+                )
+            )
     carry_forward = []
     for item in items:
         if item.kind == "T" and item.status in ("[ ]", "[/]", "[>]", "[?]"):

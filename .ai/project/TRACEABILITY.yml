@@ -13414,6 +13414,32 @@ traceability:
         fallback-to-raw-id behavior, which other callers may still rely on.
       status: implemented
 
+    - requirement_id: req-web-status-standard-custom-authoring
+      capability_id: cap-web-beginner-first-ux
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/793
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/821
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/822
+      changed_files_or_scope:
+        - Expose lifetxt.presence.COMMON_STATES through /api/config instead of maintaining a Web-only status vocabulary
+        - Add Status (`S`)-only standard/custom `state:` controls to both Web create/edit surfaces while preserving the existing Details and mutation paths
+        - lifetxt/webapp.py
+        - lifetxt/web_assets_js_12.js
+        - lifetxt/web_assets_js_18.js
+        - lifetxt/web_assets_css_02.css
+        - docs/en/web.md
+        - docs/ja/web.md
+      tests_or_evidence:
+        - python -m unittest tests.test_web_structured_authoring_js tests.test_web_assets tests.test_lifetxt.LifeTxtWebConfigAndCheckLineTests -> Ran 45 tests, OK (skipped=16)
+        - MPLBACKEND=Agg python -m unittest discover -> Ran 4494 tests, OK (skipped=216)
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      release_or_deployment: null
+      notes: >-
+        The selector is a presentation adapter for the existing free-form
+        state: detail. Standard mode wins deterministically; Custom mode uses
+        the custom field exactly, and switching modes retains the in-session
+        custom input. Workflow markers and canonical serialization are unchanged.
+      status: implemented
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

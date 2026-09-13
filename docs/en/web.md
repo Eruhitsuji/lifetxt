@@ -305,6 +305,9 @@ The browser GUI supports:
   and follows browser Back/Forward URL state.
 - Showing near-current agenda records with a blocked-item filter
 - Showing active status / presence records
+- Status (`S`) authoring offers the shared common presence states in a selector.
+  Choose **Custom…** to enter any other `state:` value; existing custom values
+  reopen unchanged and remain free-form Format data.
 - Team cards include a `View items` action that opens the shared Items view
   filtered with `user=PERSON&open_only=true`, so presence, assignments,
   sent messages, and received messages can be inspected from one place.

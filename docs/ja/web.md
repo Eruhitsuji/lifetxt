@@ -292,6 +292,11 @@ Beginner mode 中でも、既存 record が beginner subset 外の Type/Status
 共有されません）、既定は Full mode のため、明示的に切り替えるまで既存ユーザーの
 挙動は変わりません。
 
+type `S` を選ぶと、共有の標準 presence state を selector から選べます。
+標準外の `state:` は **Custom…** を選んでそのまま入力でき、既存の custom 値も
+編集時に変更されず再表示されます。これは workflow status (`[ ]`、`[/]`、`[x]` 等)
+とは別の入力欄です。
+
 ## Web UI configuration
 
 `/api/config` は browser に公開してよい `web.*` 設定だけを返します。GUI は

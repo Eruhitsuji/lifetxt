@@ -67,11 +67,20 @@
       setupCompletion();
       document.getElementById("drawer-edit-type").addEventListener("change", () => {
         const details = _structuredDetails("drawer-edit-details", "drawer-edit");
-        document.getElementById("drawer-edit-structured-fields").innerHTML = renderStructuredFields("drawer-edit", details, document.getElementById("drawer-edit-type").value);
+        const fields = document.getElementById("drawer-edit-structured-fields");
+        fields.innerHTML = renderStructuredFields("drawer-edit", details, document.getElementById("drawer-edit-type").value);
+        syncStatusStateMode(fields);
       });
       document.getElementById("drawer-edit-structured-fields").addEventListener("input", () => {
         document.getElementById("drawer-edit-details").value = detailsToText(_structuredDetails("drawer-edit-details", "drawer-edit"));
       });
+      document.getElementById("drawer-edit-structured-fields").addEventListener("change", event => {
+        if (event.target.matches("[data-status-state-select]")) {
+          syncStatusStateMode(document.getElementById("drawer-edit-structured-fields"));
+          document.getElementById("drawer-edit-details").value = detailsToText(_structuredDetails("drawer-edit-details", "drawer-edit"));
+        }
+      });
+      syncStatusStateMode(document.getElementById("drawer-edit-structured-fields"));
       document.getElementById("drawer-edit-title").focus();
     }
 

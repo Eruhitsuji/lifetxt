@@ -13473,6 +13473,41 @@ traceability:
         custom input. Workflow markers and canonical serialization are unchanged.
       status: implemented
 
+    - requirement_id: req-web-quick-status-standard-custom-authoring
+      capability_id: cap-web-beginner-first-ux
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/793
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/829
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/830
+      changed_files_or_scope:
+        - Populate Quick Status options from the existing /api/config status_states projection of lifetxt.presence.COMMON_STATES
+        - Separate standard/custom state selection from the optional activity/title while retaining the existing POST /api/status transition path
+        - lifetxt/web_assets.html
+        - lifetxt/web_assets_js_07.js
+        - lifetxt/web_assets_js_08.js
+        - lifetxt/web_assets_js_16.js
+        - lifetxt/web_assets_css_02.css
+        - lifetxt/web_assets_css_04.css
+        - tests/test_web_quick_status_js.py
+        - docs/en/web.md
+        - docs/ja/web.md
+      tests_or_evidence:
+        - tests/test_web_quick_status_js.py covers shared config options, standard/custom/title payloads, switching retention, empty Custom validation, same-state no-op, End, API failure retention, accessible labels, and Enter submission
+        - python -m unittest tests.test_web_quick_status_js tests.test_web_structured_authoring_js tests.test_web_assets tests.test_web_i18n tests.test_release_policy tests.test_traceability_gate tests.test_change_package_closeout -> Ran 79 tests, OK (skipped=1), after merging origin/main at 1eb56eb
+        - MPLBACKEND=Agg python -m unittest discover -> Ran 4523 tests, OK (skipped=210), after merging origin/main at 1eb56eb
+        - python -m ruff check tests/test_web_quick_status_js.py tests/test_web_structured_authoring_js.py tests/test_web_assets.py -> passed
+        - python -m ruff format --check tests/test_web_quick_status_js.py tests/test_web_structured_authoring_js.py tests/test_web_assets.py -> passed
+        - 'python scripts/validate_release_docs.py --output .cache/issue829-release-docs.json -> {"errors": 0, "ok": true}'
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      release_or_deployment: null
+      notes: >-
+        Quick Status and normal Status authoring now call the same
+        standardStatusStates() adapter over /api/config.status_states; no
+        JavaScript-only vocabulary or parallel mutation path was introduced.
+        Standard mode ignores retained hidden custom text, Custom mode makes
+        that text authoritative, and fields clear only after a successful API
+        response. End remains independent from picker state.
+      status: implemented
+
     - requirement_id: req-unified-format-conversion
       capability_id: cap-import-export-format-expansion
       epic: https://github.com/Eruhitsuji/lifetxt/issues/823

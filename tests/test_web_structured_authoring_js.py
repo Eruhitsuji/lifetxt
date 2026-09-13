@@ -38,12 +38,27 @@ def _extract_functions_under_test(full_script):
     escapeHtml = _extract_block(
         full_script, "function escapeHtml", "function jsLiteral"
     )
+    statusStates = _extract_block(
+        full_script,
+        "function standardStatusStates",
+        "function setupQuickPresencePicker",
+    )
     structured = _extract_block(
         full_script,
         "const STRUCTURED_COMMON_FIELDS",
         "function _populateStructuredFields",
     )
-    return detailsToText + "\n" + parseDetails + "\n" + escapeHtml + "\n" + structured
+    return (
+        detailsToText
+        + "\n"
+        + parseDetails
+        + "\n"
+        + escapeHtml
+        + "\n"
+        + statusStates
+        + "\n"
+        + structured
+    )
 
 
 def _extract_block(full_script, start_marker, end_marker):

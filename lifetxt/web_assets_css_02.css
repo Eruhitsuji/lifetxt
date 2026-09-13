@@ -82,6 +82,12 @@
     .quick-add-bar input {
       flex: 1;
     }
+    .presence-quick-bar { align-items: center; flex-wrap: wrap; }
+    .presence-quick-label { font-size: .82rem; font-weight: 700; white-space: nowrap; }
+    .presence-quick-bar select { flex: 0 1 9rem; min-width: 7.5rem; }
+    .presence-quick-bar #presence-state-custom { flex: 1 1 9rem; min-width: 7.5rem; }
+    .presence-quick-bar #presence-title { flex: 2 1 14rem; min-width: 10rem; }
+    .presence-quick-bar [hidden] { display: none; }
     .quick-add-bar .hint {
       color: var(--muted);
       font-size: .78rem;

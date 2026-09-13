@@ -41,12 +41,6 @@
       return renderStatusStateField(prefix, values, type) + fields;
     }
 
-    function standardStatusStates() {
-      const states = appConfig && Array.isArray(appConfig.status_states)
-        ? appConfig.status_states : [];
-      return states.filter(state => typeof state === "string" && state.trim());
-    }
-
     function renderStatusStateField(prefix, details, type) {
       if (type !== "S") return "";
       const values = Array.isArray(details.state) ? details.state : [];

@@ -217,6 +217,7 @@ sudo install -o root -g root -m 0755 /dev/stdin /usr/local/sbin/lifetxt-systemct
 case "$1:$2" in
   is-active:lifetxt.service|stop:lifetxt.service|start:lifetxt.service) ;;
   is-active:lifetxt-sync-ics.timer|stop:lifetxt-sync-ics.timer|start:lifetxt-sync-ics.timer) ;;
+  is-active:lifetxt-sync-ics.service|stop:lifetxt-sync-ics.service|start:lifetxt-sync-ics.service) ;;
   *) echo "refusing service action: $1 $2" >&2; exit 64 ;;
 esac
 exec /bin/systemctl --no-ask-password "$1" "$2"
@@ -334,16 +335,21 @@ See [`cli.md` section 23](../en/cli.md#23-server-update) for the full flag
 reference, the `--server-config` JSON contract, and every failure mode. In
 short:
 
-- A normal update backs up production files, stops whichever configured
-  services/timers are currently active, fast-forwards to the exact SHA it
+- A normal update records which configured services/timers are active, then
+  explicitly stops every configured unit and confirms all of them inactive
+  before taking its backup or initial hashes. The `services` array order is
+  significant for timer/oneshot pairs: list the timer immediately before its
+  service so the timer cannot launch new work after the service is stopped.
+  `server-init` generates this safe order for Calendar sync and the Git commit
+  worker. The updater then fast-forwards to the exact SHA it
   already resolved and inspected, reinstalls the package with either the
   default pip backend, a configured `uv` backend, or a configured
   `conda-pip` backend for conda-managed environments, verifies your
   data/config hashes are unchanged by the code update, runs `lifetxt check`
   / `lifetxt workspace validate` / `lifetxt ids` /
   `lifetxt ticket validate-history` against the configured per-check
-  files/config/workspace, runs any optional validation command, restarts
-  the services it stopped, and checks `/api/health`.
+  files/config/workspace, runs any optional validation command, restarts only
+  the units that were active in the original snapshot, and checks `/api/health`.
 - A failure before any mutation restores whatever service state existed
   before the attempt. A failure after the code update but before validation
   completes leaves services **stopped** rather than restarting a

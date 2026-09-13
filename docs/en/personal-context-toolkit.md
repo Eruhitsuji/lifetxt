@@ -77,6 +77,30 @@ After acceptance, Context Health, Context Why, and Context Capsule treat the old
 
 `corrects:` is deliberately a **custom-detail convention** in this slice. It is not a new Format 1.0 key or Query field, and validators may report the normal non-blocking unknown-custom-key diagnostic. The value is preserved by the Format parser/serializer.
 
+## Currentness (derived read states)
+
+Beyond the three lifecycle states above, a deterministic **currentness resolver** classifies every Personal Context record into one of seven derived *read* states, computed at query time and never persisted as a status field:
+
+- `current` — usable now;
+- `future-effective` — `valid_from:` is later than the evaluation time;
+- `stale` — the existing Temporal Context staleness rule reports `stale_since`;
+- `superseded` — a unique authoritative replacement exists (`corrects:` or `replaced_by:`);
+- `expired` — `valid_to:` is earlier than the evaluation time;
+- `conflicting` — malformed/reversed validity evidence, a supersession cycle, or competing replacements of the same record that cannot be auto-resolved;
+- `historical-only` — explicitly requested as historical context by the caller.
+
+`valid_from:`/`valid_to:` are optional **custom-detail conventions** in this slice, not new Format 1.0 or Query vocabulary:
+
+```text
+[ ] N "Q3 hiring freeze is in effect" id:policy-q3 person:self tag:policy valid_from:2026-07-01 valid_to:2026-09-30
+```
+
+Neither key is required. A file with no validity metadata keeps today's behavior unchanged. A malformed value, or `valid_from` later than `valid_to`, resolves to `conflicting` rather than silently to `current`.
+
+Supersession reuses the existing `corrects:`/`replaced_by:` conventions unchanged: a linear chain resolves to one current terminal record with every predecessor marked `superseded`; a cycle, or more than one record correcting/replacing the same predecessor, resolves every record involved to `conflicting` rather than guessing a winner. Superseded, expired, and conflicting records are never deleted -- they remain fully inspectable through `context health` and `context why`.
+
+Ordinary retrieval (Context Capsule, Decision Memory) returns `current` records only by default; `stale` may be included only through an explicit opt-in, and `future-effective`/`superseded`/`expired`/`conflicting`/`historical-only` records are never silently presented as current truth.
+
 ## Portable Context Capsule
 
 Export a bounded provider-independent snapshot:
@@ -135,8 +159,10 @@ Explicit paths remain supported as well. `memory correct` resolves the target fr
 This first toolkit intentionally does **not** add:
 
 - a Personal Context record kind;
-- `subject:`, `assertion:`, `confidence:`, `valid_from:`, or `valid_to:` contracts;
+- `subject:`, `assertion:`, or `confidence:` contracts;
+- Format 1.x/Query promotion of `valid_from:`/`valid_to:` (they remain custom-detail conventions);
 - Query syntax for `corrects:`;
+- automatic conflict resolution or a `last_confirmed` freshness clock;
 - embeddings/vector storage/RAG corpora;
 - provider-specific memory APIs;
 - automatic AI writes to authoritative Personal Context.

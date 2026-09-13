@@ -1,0 +1,29 @@
+[
+  {
+    "id": "scheduled-action",
+    "intent": "tomorrow's execution",
+    "relative_date": "tomorrow",
+    "expected_semantics": "do",
+    "valid_lifetxt": "[ ] T \"Buy milk\" do:2030-01-02"
+  },
+  {
+    "id": "deadline",
+    "intent": "finish by tomorrow",
+    "relative_date": "tomorrow",
+    "expected_semantics": "due",
+    "valid_lifetxt": "[ ] T \"Submit form\" due:2030-01-02"
+  },
+  {
+    "id": "event-time",
+    "intent": "meeting tomorrow at ten",
+    "relative_date": "tomorrow",
+    "expected_semantics": "event at",
+    "valid_lifetxt": "[ ] E \"Meeting\" at:2030-01-02T10:00"
+  },
+  {
+    "id": "no-invented-metadata",
+    "intent": "standalone conversion",
+    "expected_semantics": "omit id/project/tag/priority unless supplied",
+    "valid_lifetxt": "[ ] T \"Buy milk\""
+  }
+]

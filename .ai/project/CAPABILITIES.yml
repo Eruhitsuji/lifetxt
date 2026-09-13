@@ -9428,7 +9428,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/692
       - https://github.com/Eruhitsuji/lifetxt/issues/826
     related_pull_requests:
-      - https://github.com/Eruhitsuji/lifetxt/pull/827
+      - https://github.com/Eruhitsuji/lifetxt/pull/828
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       #687 is an umbrella/planning-only issue (not directly implementable);

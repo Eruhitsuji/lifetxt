@@ -191,6 +191,37 @@ class PersonalContextTests(unittest.TestCase):
         self.assertIn("valid_from_in_future", report["reasons"])
         self.assertIsNotNone(report["valid_from"])
 
+    def test_why_reports_validity_bounds_even_when_item_has_links(self):
+        # Regression: explain_personal_context_item once reused the
+        # currentness record's variable name as the link-normalization loop
+        # variable, silently clobbering valid_from/valid_to with None for
+        # any item that has at least one incoming/outgoing link.
+        items = self.items() + [
+            self.note(
+                "Future with link",
+                id="future-linked",
+                person="self",
+                tag="preference",
+                source="user",
+                updated="2026-08-23T00:00:00+00:00",
+                valid_from="2999-01-01",
+            ),
+            self.note(
+                "Referrer",
+                id="referrer",
+                person="self",
+                tag="preference",
+                source="user",
+                updated="2026-08-23T00:00:00+00:00",
+                ref="future-linked",
+            ),
+        ]
+        with timezone_context("UTC"), clock_context(self.clock()):
+            report = explain_personal_context_item(items, "future-linked")
+        self.assertTrue(report["links"])
+        self.assertEqual(report["state"], "future-effective")
+        self.assertIsNotNone(report["valid_from"])
+
     def test_capsule_excludes_future_effective_expired_and_conflicting(self):
         items = self.items() + [
             self.note(

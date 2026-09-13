@@ -283,10 +283,12 @@ def explain_personal_context_item(
         reference_keys=PERSONAL_REFERENCE_KEYS,
     )
     normalized_links = []
-    for record in links:
-        row = OrderedDict(record)
+    for link_record in links:
+        row = OrderedDict(link_record)
         row["direction"] = (
-            "outgoing" if str(record.get("source_id")) == str(item_id) else "incoming"
+            "outgoing"
+            if str(link_record.get("source_id")) == str(item_id)
+            else "incoming"
         )
         normalized_links.append(row)
     normalized_links.sort(

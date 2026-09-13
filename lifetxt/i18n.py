@@ -127,6 +127,19 @@ def register_messages(entries):
         _CATALOG.setdefault(message_id, {}).update(translations)
 
 
+def has_message(message_id):
+    """Return whether ``message_id`` has at least one registered translation.
+
+    :func:`translate` deliberately returns the raw ``message_id`` (never an
+    empty/falsy value) when the catalog has no entry for it at all, so a
+    caller cannot distinguish "translated" from "unknown id" with
+    ``translate(message_id) or default``. Use this check first when a
+    caller wants a real fallback for a message id that is only registered
+    for a subset of its possible values (e.g. one command out of many).
+    """
+    return message_id in _CATALOG
+
+
 def translate(message_id, locale=None, **kwargs):
     """Render ``message_id`` in ``locale`` (default: the active locale).
 

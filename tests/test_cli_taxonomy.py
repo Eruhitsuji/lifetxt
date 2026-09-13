@@ -251,6 +251,17 @@ class CliHelpCommandTests(unittest.TestCase):
         self.assertTrue(data["read_only"])
         self.assertIn("examples", data)
 
+    def test_help_command_topic_never_leaks_a_raw_message_id(self):
+        # `localized_command_summary()` used `_t(id) or default`, which
+        # never falls through to `default` for an unregistered id because
+        # `translate()` returns the raw id itself, not a falsy value. Every
+        # command not in the small hand-translated set showed the literal
+        # "command.summary.<name>" placeholder instead of its real summary.
+        for name in ("check", "decision-review", "change-feed", "future-intent"):
+            stdout, stderr, code = run_cli("help", name)
+            self.assertEqual(0, code, stderr)
+            self.assertNotIn("command.summary.%s" % name, stdout)
+
     def test_help_unknown_topic_fails_loudly(self):
         stdout, stderr, code = run_cli("help", "not-a-real-thing")
         self.assertEqual(1, code)

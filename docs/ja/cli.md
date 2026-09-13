@@ -211,6 +211,8 @@ python -m lifetxt vm run program.life.txt --entry s1
 | `remote` | CLI から認証済み Remote Safe Mode を利用する: profile、読み取り、ticket 書き込み ([§19](#19-最近追加されたコマンド範囲) 参照) |
 | `vm` | opt-in の Turing-complete VM: 有効な life.txt record を 2-counter machine として実行する ([vm.md](vm.md) 参照) |
 | `context`、`memory`、`decisions` | Personal Context の決定論的な参照・修正コマンド ([personal-context-toolkit.md](personal-context-toolkit.md) 参照) |
+| `context history`、`decision-review`、`change-feed` | 期間・上限付きの temporal review read コマンド ([temporal-review-reads.md](temporal-review-reads.md) 参照) |
+| `future-intent` | 明示された未来時刻のみを返す bounded snapshot ([future-intent-snapshot.md](future-intent-snapshot.md) 参照) |
 
 lifetxt にはこの file で詳しく説明していない小さな workflow / format-1.0
 コマンド群もあります。[§19](#19-最近追加されたコマンド範囲) を参照して
@@ -241,7 +243,7 @@ audience、そしてこの表と同じカテゴリ分類を表示します。
 | Import / Export / Reports | `import`、`export`、`import-ics`、`sync-ics`、`to-json`、`to-jsonl`、`to-csv`、`from-json`、`from-jsonl`、`from-csv`、`from-markdown`、`from-todo`、`to-ics`、`markdown`、`stats`、`plot`、`export-heatmap`、`standup`、`invoice`、`share`、`digest`、`report` |
 | Interfaces / Integration | `tui`、`fzf`、`web`、`serve`、`mcp`、`ai`、`completion`、`git-hook`、`watch`、`remote` |
 | Workspace / Configuration / Safety | `config`、`workspace`、`path`、`doctor`、`format`、`safety`、`capabilities`、`attachment`、`update`、`update-check`、`server-init`、`server-update`、`server-report`、`git-commit-worker` |
-| Personal Context | `context`、`memory`、`decisions` |
+| Personal Context | `context`、`memory`、`decisions`、`decision-review`、`change-feed`、`future-intent` |
 | Advanced / Experimental | `archive`、`batch`、`encrypt`、`decrypt`、`migrate`、`template`、`demo`、`vm`、`rrule` |
 
 ガイド付きパス (`python -m lifetxt help AUDIENCE`):

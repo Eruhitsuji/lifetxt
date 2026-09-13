@@ -16,7 +16,6 @@ def decision_outcome_review(items, id_key="id", limit=100):
         if item.kind == "N"
         and "decision" in {str(v) for v in item.details.get("tag", [])}
     ]
-    decision_ids = {value for item in decisions for value in _ids(item, id_key)}
     rows = []
     for decision in decisions:
         dids = sorted(_ids(decision, id_key))

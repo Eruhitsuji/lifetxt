@@ -9,12 +9,6 @@ from .timeutil import parse_date_or_datetime
 from .workspace_timeline import workspace_timeline
 
 
-def _bound(value, end=False):
-    if value:
-        return value
-    return None
-
-
 def _date_bound(value, end=False):
     parsed = datetime.date.fromisoformat(value)
     clock = datetime.time.max if end else datetime.time.min

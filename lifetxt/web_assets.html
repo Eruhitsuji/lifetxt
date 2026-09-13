@@ -37,22 +37,30 @@ __LIFETXT_WEB_STYLES__  </style>
       <button id="kiosk-exit-btn" class="secondary" style="display:none" onclick="toggleKioskMode()" title="Exit kiosk mode (Esc)">✕ Exit</button>
     </div>
     <nav class="workspace-tabs header-workspace-tabs" id="workspace-tabs" aria-label="Views" role="tablist">
-      <button type="button" class="workspace-tab" data-view="dashboard" onclick="switchWorkspace('dashboard')">🏠 Dashboard</button>
-      <button type="button" class="workspace-tab" data-view="today" onclick="switchWorkspace('today')" title="Daily Command Center: now, attention, inbox, upcoming">🌅 Today</button>
-      <button type="button" class="workspace-tab" data-view="" onclick="switchWorkspace('')">📋 Items</button>
-      <button type="button" class="workspace-tab" data-view="agenda" onclick="switchWorkspace('agenda')">📅 Agenda</button>
-      <button type="button" class="workspace-tab" data-view="timeline" onclick="switchWorkspace('timeline')">🕒 Timeline</button>
-      <button type="button" class="workspace-tab" data-view="calendar" onclick="switchWorkspace('calendar')" title="Month/week calendar grid of dated records">📆 Calendar</button>
-      <button type="button" class="workspace-tab" data-view="focus" onclick="switchWorkspace('focus')">🎯 Focus</button>
-      <button type="button" class="workspace-tab" data-view="review" onclick="switchWorkspace('review')">📝 Review</button>
-      <button type="button" class="workspace-tab" data-view="messages" onclick="switchWorkspace('messages')">💬 Messages</button>
-      <button type="button" class="workspace-tab" data-view="team" onclick="switchWorkspace('team')">🟢 Team</button>
-      <button type="button" class="workspace-tab" data-view="status" onclick="switchWorkspace('status')">👥 Status</button>
-      <button type="button" class="workspace-tab" data-view="notifications" onclick="switchWorkspace('notifications')">🔔 Notifications</button>
-      <button type="button" class="workspace-tab" data-view="stats" onclick="switchWorkspace('stats')">📊 Stats</button>
-      <button type="button" class="workspace-tab" data-view="graph" onclick="switchWorkspace('graph')">🕸️ Graph</button>
-      <button type="button" class="workspace-tab" data-view="display" onclick="switchWorkspace('display')" title="Open a read-focused wall display mode">🪧 Display</button>
-      <button type="button" class="workspace-tab" data-view="kiosk" onclick="switchWorkspace('kiosk')">🖥️ Kiosk</button>
+      <div class="nav-primary" aria-label="Primary">
+        <button type="button" class="workspace-tab" data-view="today" onclick="switchWorkspace('today')" title="Daily Command Center: now, attention, inbox, upcoming">🌅 Today</button>
+        <button type="button" class="workspace-tab" data-view="" onclick="switchWorkspace('')">📋 Items</button>
+        <button type="button" class="workspace-tab" data-view="dashboard" onclick="switchWorkspace('dashboard')">🏠 Dashboard</button>
+        <button type="button" class="workspace-tab" onclick="newItem()">＋ Create</button>
+      </div>
+      <details class="nav-more" id="nav-more">
+        <summary id="nav-more-summary" class="workspace-tab" aria-controls="nav-advanced" aria-expanded="false">More <span aria-hidden="true">▾</span></summary>
+        <div class="nav-advanced" id="nav-advanced" aria-label="More views">
+          <button type="button" class="workspace-tab" data-view="agenda" onclick="switchWorkspace('agenda')">📅 Agenda</button>
+          <button type="button" class="workspace-tab" data-view="timeline" onclick="switchWorkspace('timeline')">🕒 Timeline</button>
+          <button type="button" class="workspace-tab" data-view="calendar" onclick="switchWorkspace('calendar')" title="Month/week calendar grid of dated records">📆 Calendar</button>
+          <button type="button" class="workspace-tab" data-view="focus" onclick="switchWorkspace('focus')">🎯 Focus</button>
+          <button type="button" class="workspace-tab" data-view="review" onclick="switchWorkspace('review')">📝 Review</button>
+          <button type="button" class="workspace-tab" data-view="messages" onclick="switchWorkspace('messages')">💬 Messages</button>
+          <button type="button" class="workspace-tab" data-view="team" onclick="switchWorkspace('team')">🟢 Team</button>
+          <button type="button" class="workspace-tab" data-view="status" onclick="switchWorkspace('status')">👥 Status</button>
+          <button type="button" class="workspace-tab" data-view="notifications" onclick="switchWorkspace('notifications')">🔔 Notifications</button>
+          <button type="button" class="workspace-tab" data-view="stats" onclick="switchWorkspace('stats')">📊 Stats</button>
+          <button type="button" class="workspace-tab" data-view="graph" onclick="switchWorkspace('graph')">🕸️ Graph</button>
+          <button type="button" class="workspace-tab" data-view="display" onclick="switchWorkspace('display')" title="Open a read-focused wall display mode">🪧 Display</button>
+          <button type="button" class="workspace-tab" data-view="kiosk" onclick="switchWorkspace('kiosk')">🖥️ Kiosk</button>
+        </div>
+      </details>
     </nav>
   </header>
   <div id="view-guide" class="view-guide" aria-live="polite"></div>

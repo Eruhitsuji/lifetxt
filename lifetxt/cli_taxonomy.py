@@ -351,6 +351,7 @@ CATEGORIES = OrderedDict(
                 "description": "Move data in and out of life.txt, and "
                 "generate reports.",
                 "commands": (
+                    "convert",
                     "import",
                     "export",
                     "import-ics",

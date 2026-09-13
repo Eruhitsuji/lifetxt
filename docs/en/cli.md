@@ -19,6 +19,7 @@ python -m lifetxt integrity [path ...]
 python -m lifetxt ids [path ...]
 python -m lifetxt links [path ...]
 python -m lifetxt sources [path ...]
+python -m lifetxt convert --from FORMAT --to FORMAT [path ...]
 python -m lifetxt to-json [path ...]
 python -m lifetxt to-jsonl [path ...]
 python -m lifetxt to-csv [path ...]
@@ -119,6 +120,7 @@ python -m lifetxt vm run program.life.txt --entry s1
 | `ids` | Audit present, missing, and duplicate item IDs |
 | `links` | Inspect ID-based references between items |
 | `sources` | Report which input file owns each parsed item |
+| `convert` | Explicit stateless conversion through the shared item model |
 | `to-json` | Convert life.txt to a JSON array |
 | `to-jsonl` | Convert life.txt to JSONL |
 | `to-csv` | Convert life.txt to CSV |
@@ -230,7 +232,7 @@ including its `--json` machine-readable form for scripts and AI clients.
 | Query / Explore | `filter`, `search`, `find`, `query`, `view`, `summary`, `inbox`, `health`, `temporal`, `timeline`, `history-check`, `thread`, `lifecycle-stats`, `freebusy`, `count`, `status`, `recent` |
 | Projects / People / Collaboration | `project`, `portfolio`, `area`, `person`, `group`, `who`, `message`, `proposal`, `ticket`, `version`, `sprint` |
 | Structure / Data Integrity | `check`, `integrity`, `ids`, `links`, `backlinks`, `sources`, `tag`, `lint`, `deps`, `diff`, `snapshot`, `undo`, `cleanup`, `files` |
-| Import / Export / Reports | `import`, `export`, `import-ics`, `sync-ics`, `to-json`, `to-jsonl`, `to-csv`, `from-json`, `from-jsonl`, `from-csv`, `from-markdown`, `from-todo`, `to-ics`, `markdown`, `stats`, `plot`, `export-heatmap`, `standup`, `invoice`, `share`, `digest`, `report` |
+| Import / Export / Reports | `convert`, `import`, `export`, `import-ics`, `sync-ics`, `to-json`, `to-jsonl`, `to-csv`, `from-json`, `from-jsonl`, `from-csv`, `from-markdown`, `from-todo`, `to-ics`, `markdown`, `stats`, `plot`, `export-heatmap`, `standup`, `invoice`, `share`, `digest`, `report` |
 | Interfaces / Integration | `tui`, `fzf`, `web`, `serve`, `mcp`, `ai`, `completion`, `git-hook`, `watch`, `remote` |
 | Workspace / Configuration / Safety | `config`, `workspace`, `path`, `doctor`, `format`, `safety`, `capabilities`, `attachment`, `update`, `update-check`, `server-init`, `server-update`, `server-report`, `git-commit-worker` |
 | Personal Context | `context`, `memory`, `decisions`, `decision-review`, `change-feed`, `future-intent` |
@@ -1083,6 +1085,52 @@ closed before writing. The command reports an `integrity-apply-v1` result with
 before/after revisions and assignment records.
 
 ## 4. Conversion And Rendering
+
+### 4.0 `convert`
+
+`convert` is the canonical explicit source-to-target interface. It reads UTF-8
+text from one or more paths (or stdin when paths are omitted), decodes every
+input through the shared lifetxt item model, and writes one target payload to
+stdout or `-o`:
+
+```sh
+python -m lifetxt convert --from life --to json life.txt --pretty
+python -m lifetxt convert --from json --to life data.json
+python -m lifetxt convert --from csv --to jsonl data.csv
+cat tasks.md | python -m lifetxt convert --from markdown-task-list --to life
+python -m lifetxt convert --from ics --to life calendar.ics
+```
+
+The initial canonical format vocabulary is `life`, `json`, `jsonl`, `csv`,
+`ics`, `markdown-task-list`, and `todo`. The supported matrix is deliberately
+smaller than every possible pair:
+
+| Source | Supported targets |
+| --- | --- |
+| `life` | `life`, `json`, `jsonl`, `csv`, `ics` |
+| `json`, `jsonl`, `csv` | `life`, `json`, `jsonl`, `csv` |
+| `ics`, `markdown-task-list`, `todo` | `life`, `json`, `jsonl`, `csv` |
+
+`ics` is an event-only target. `convert` rejects life.txt input containing
+items that ICS would discard instead of silently losing them. Unknown formats,
+unsupported pairs, and malformed source content also fail explicitly. Use
+`--canonical` to normalize life output and `--calendar-name` for ICS output.
+
+The capability source can be consumed by scripts and the future stateless API:
+
+```sh
+python -m lifetxt convert --capabilities
+```
+
+Use `convert` when both formats should be explicit or when performing a safe
+cross-format conversion such as CSV to JSONL. Existing `to-*`, `from-*`,
+`import`, and `export` commands remain supported convenience/workflow entry
+points with their established filters, append behavior, format inference, and
+binary archive formats. In particular, `from-markdown --preset github` adds
+GitHub-specific assignee, reference, ID, and hierarchy metadata, while the
+canonical `markdown-task-list` decoder does not invent those semantics.
+`sync-ics` is not conversion: it remains a separate
+network and synchronization workflow.
 
 ### 4.1 `to-json`
 

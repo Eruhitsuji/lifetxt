@@ -28,6 +28,7 @@ COMMANDS = (
     "ids",
     "links",
     "sources",
+    "convert",
     "to-json",
     "to-jsonl",
     "to-csv",

@@ -1,0 +1,15 @@
+schema_version: 1
+links:
+  - requirement_id: req-unified-format-conversion
+    capability_id: cap-import-export-format-expansion
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/826
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/828
+    tests_or_evidence:
+      - tests/test_conversion.py
+      - tests/test_lifetxt.py compatibility suites
+      - tests/test_extra_cli.py
+      - docs/en/cli.md
+      - docs/ja/cli.md
+    release_or_deployment: next normal maintenance release
+    status: implemented
+gaps: []

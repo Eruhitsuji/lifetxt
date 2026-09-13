@@ -1,0 +1,57 @@
+schema_version: 1
+verification:
+  executed:
+    - type: focused
+      command: python -m unittest tests.test_conversion tests.test_extra_cli tests.test_cli_taxonomy tests.test_completion_surfaces tests.test_completion_values tests.test_lifetxt.LifeTxtExportCliTests tests.test_lifetxt.LifeTxtNativeLifeFormatTests tests.test_lifetxt.LifeTxtIcsImportCliTests tests.test_traceability_gate tests.test_change_package_closeout
+      requirement_ids: [req-unified-format-conversion]
+      result: Ran 198 tests -- OK (skipped=9)
+      commit: working-tree
+      executed_at: '2026-09-13'
+      status: passed
+    - type: regression
+      command: MPLBACKEND=Agg python -m unittest discover
+      requirement_ids: [req-unified-format-conversion]
+      result: Ran 4513 tests in 206.232s -- OK (skipped=216)
+      commit: working-tree
+      executed_at: '2026-09-13'
+      status: passed
+    - type: static
+      command: ruff check lifetxt tests scripts
+      requirement_ids: [req-unified-format-conversion]
+      result: All checks passed
+      commit: working-tree
+      executed_at: '2026-09-13'
+      status: passed
+    - type: documentation
+      command: python scripts/validate_release_docs.py --output .cache/issue826-release-docs.json
+      requirement_ids: [req-unified-format-conversion]
+      result: '{"errors": 0, "ok": true}'
+      commit: working-tree
+      executed_at: '2026-09-13'
+      status: passed
+    - type: integration
+      command: python -m lifetxt check examples/minimal_life.txt
+      requirement_ids: [req-unified-format-conversion]
+      result: 'OK: 10 item(s)'
+      commit: working-tree
+      executed_at: '2026-09-13'
+      status: passed
+    - type: whitespace
+      command: git diff --check
+      requirement_ids: [req-unified-format-conversion]
+      result: clean
+      commit: working-tree
+      executed_at: '2026-09-13'
+      status: passed
+  gaps: []
+review_ledger:
+  - reviewer: Codex implementer self-review
+    review_type: requirements/design/compatibility/security pre-PR review
+    target_commit: working-tree
+    result: passed-with-human-final-review-required
+    finding_count: 0
+    completed_at: '2026-09-13'
+release_evidence:
+  migration_notes: Additive CLI and Python APIs; existing commands remain supported.
+  rollback_plan: Revert the feature commit; no data or configuration migration is required.
+  operations_evidence: []

@@ -264,6 +264,7 @@ client can decide what needs confirmation.
 | `remote_test_connection` | Connectivity and capability negotiation for one remote profile |
 | `remote_list_resources` | The read-only resources published by a remote lifetxt server |
 | `remote_get_resource` | One permission-filtered remote resource such as `next`, `tickets`, `agenda`, or `search` |
+| `get_personal_context` | Current-only Personal AI Memory retrieval (see [section 10](#10-personal-ai-memory)); delegates entirely to the shared Context Capsule projection |
 
 ### Context revision
 
@@ -649,6 +650,35 @@ covers `Bootstrap -> Maintain -> Consume` and does not require MCP.
   unchanged. Its `stale_since` fact already answers "is this still current?"
   for any item carrying an `updated:` detail -- a personal-context Note is no
   different from any other item in this respect.
+- **Currentness**: a shared deterministic resolver classifies every
+  Personal Context record into one of seven derived read states
+  (`current`/`future-effective`/`stale`/`superseded`/`expired`/`conflicting`/
+  `historical-only`); see [Currentness](./personal-context-toolkit.md#currentness-derived-read-states)
+  for the full precedence rules and the optional `valid_from:`/`valid_to:`
+  custom-detail conventions.
+
+### Retrieving Personal Context through MCP
+
+Use the dedicated `get_personal_context` tool rather than `list_items`/
+`get_item` for "what does the AI currently know about the user" -- the
+generic tools remain plain record access and are not filtered by
+currentness. `get_personal_context` delegates entirely to the shared Context
+Capsule projection (`lifetxt.personal_context.context_capsule`); the MCP
+layer contains no separate validity/supersession/staleness logic.
+
+By default it returns only `current` records:
+
+```json
+{"tool": "get_personal_context", "arguments": {"person": "self"}}
+```
+
+`future-effective`, `superseded`, `expired`, `conflicting`, and
+`historical-only` records are **never** silently returned as current truth.
+Pass `include_stale: true` to also include records resolved as `stale` --
+it never widens inclusion to any other non-current state. Historical or
+non-current records remain inspectable through `lifetxt context health`/
+`context why`, never through this tool's default output; this tool
+performs no historical-currentness reconstruction of its own.
 
 ### Lifecycle
 

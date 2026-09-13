@@ -13087,7 +13087,7 @@ traceability:
       capability_id: cap-personal-context-currentness
       epic: https://github.com/Eruhitsuji/lifetxt/issues/782
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/800
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/803
       changed_files_or_scope:
         - "Add lifetxt/personal_context_currentness.py: a pure resolver classifying items into current/future-effective/stale/superseded/expired/conflicting/historical-only, reusing node_facts() staleness, corrects:/replaced_by: supersession, and timeutil.parse_date_or_datetime for optional valid_from:/valid_to:"
         - lifetxt/personal_context_currentness.py
@@ -13101,18 +13101,17 @@ traceability:
       notes: >-
         First implementation task of the #800-#802 personal-context-
         currentness batch, landing on its own child branch merged locally
-        into feature/800-802-personal-context-currentness. pull_request is
-        filled in once the final integration PR is opened. No new record
-        kind, mandatory Format metadata, or second timestamp parser was
-        introduced; valid_from:/valid_to: remain optional custom-detail
-        conventions.
+        into feature/800-802-personal-context-currentness, merged via PR #803.
+        No new record kind, mandatory Format metadata, or second
+        timestamp parser was introduced; valid_from:/valid_to: remain
+        optional custom-detail conventions.
       status: implemented
 
     - requirement_id: req-personal-context-currentness-consumer-integration
       capability_id: cap-personal-context-currentness
       epic: https://github.com/Eruhitsuji/lifetxt/issues/782
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/801
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/803
       changed_files_or_scope:
         - Wire the #800 resolver into context_health/explain_personal_context_item/context_capsule; decision_memory inherits the same filtering since it already delegates to context_capsule
         - lifetxt/personal_context.py
@@ -13135,15 +13134,14 @@ traceability:
         context_capsule() internally and therefore inherits the new
         filtering automatically. Second implementation task of the
         #800-#802 batch, landing on its own child branch merged locally
-        into feature/800-802-personal-context-currentness. pull_request is
-        filled in once the final integration PR is opened.
+        into feature/800-802-personal-context-currentness, merged via PR #803.
       status: implemented
 
     - requirement_id: req-personal-context-currentness-mcp-read
       capability_id: cap-personal-context-currentness
       epic: https://github.com/Eruhitsuji/lifetxt/issues/782
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/802
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/803
       changed_files_or_scope:
         - "Add a read-only MCP tool get_personal_context delegating entirely to lifetxt.personal_context.context_capsule; register it in READ_ONLY_TOOLS and TOOL_HANDLERS"
         - lifetxt/mcp.py
@@ -13168,8 +13166,7 @@ traceability:
         this tool reads through the same _read_items(context) every other
         read-only tool uses. Third and final implementation task of the
         #800-#802 batch, landing on its own child branch merged locally into
-        feature/800-802-personal-context-currentness. pull_request is filled
-        in once the final integration PR is opened.
+        feature/800-802-personal-context-currentness, merged via PR #803.
       status: implemented
 
   gap_policy:

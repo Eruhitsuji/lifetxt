@@ -37,6 +37,32 @@ capabilities:
       replaced_by: null
       deprecation_issue: null
 
+  - id: cap-temporal-life-review
+    name: Deterministic Temporal Life Review
+    summary: >-
+      Bounded retrospective composition over Workspace Life Timeline events,
+      with explicit completeness and limitation reporting.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-temporal-life-review
+    implementation_locations:
+      - lifetxt/temporal_review.py
+      - lifetxt/cli.py
+      - tests/test_temporal_review.py
+    public_interfaces:
+      - lifetxt review --temporal
+    tests_or_evidence:
+      - tests.test_temporal_review
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/808
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
   - id: cap-ai-prompt-profile
     name: Provider-independent AI Prompt Profile
     summary: >-

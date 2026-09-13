@@ -1,0 +1,18 @@
+schema_version: 1
+
+requirement_id: req-server-update-quiescent-shutdown
+capability_id: cap-ubuntu-server-deployment
+task_issue: https://github.com/Eruhitsuji/lifetxt/issues/824
+pull_request: https://github.com/Eruhitsuji/lifetxt/pull/825
+changed_files:
+  - lifetxt/server_update.py
+  - lifetxt/server_init.py
+  - tests/test_server_update.py
+  - tests/test_server_init.py
+  - docs/deployment/ubuntu-server.md
+evidence:
+  - python -m unittest tests.test_server_update tests.test_server_init
+  - python -m unittest discover
+  - ruff check lifetxt tests scripts
+status: implemented
+

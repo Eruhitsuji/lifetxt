@@ -569,6 +569,21 @@ def _service_is_active(manager, service_command, unit, timeout):
     return (result.stdout or "").strip() == "active"
 
 
+def _service_is_confirmed_inactive(manager, service_command, unit, timeout):
+    """True only when systemctl positively reports a non-active state."""
+    if manager == "none":
+        return True
+    result = _run(
+        service_command + ["is-active", unit],
+        step="service_is_active",
+        timeout=timeout,
+    )
+    if result is None:
+        return False
+    state = (result.stdout or "").strip()
+    return result.returncode != 0 and bool(state) and state != "active"
+
+
 def _conda_run_prefix(config):
     cmd = [config.get("conda_executable") or "conda", "run"]
     if config.get("conda_env_prefix"):
@@ -1317,21 +1332,17 @@ def run_server_update(config, yes=False, approve=None, server_config_path=None):
     lock = UpdateLock(config.get("lock_path"))
     lock.acquire()
     stopped_services = []
+    active_services = []
     code_update_applied = False
     try:
-        timestamp = _timestamp()
-        backup_dir = create_backup(backup_paths, config.get("backup_dir"), timestamp)
-        report["backup_dir"] = backup_dir
-        pre_hashes = hash_paths(backup_paths)
-        report["pre_update_hashes"] = pre_hashes
-
         active_services = [
             unit
             for unit in services
             if _service_is_active(manager, service_command, unit, service_timeout)
         ]
         report["services_active_before_update"] = active_services
-        for unit in active_services:
+        stop_targets = services if manager != "none" else []
+        for unit in stop_targets:
             ok, message = _service_action(
                 manager, service_command, "stop", unit, service_timeout
             )
@@ -1341,6 +1352,27 @@ def run_server_update(config, yes=False, approve=None, server_config_path=None):
                 )
             stopped_services.append(unit)
         report["services_stopped"] = stopped_services
+
+        not_inactive = [
+            unit
+            for unit in stop_targets
+            if not _service_is_confirmed_inactive(
+                manager, service_command, unit, service_timeout
+            )
+        ]
+        if not_inactive:
+            raise ServerUpdateError(
+                "Failed to confirm managed units inactive before code update: %s"
+                % ", ".join(not_inactive),
+                step="verify_services_inactive",
+            )
+        report["services_confirmed_inactive"] = stop_targets
+
+        timestamp = _timestamp()
+        backup_dir = create_backup(backup_paths, config.get("backup_dir"), timestamp)
+        report["backup_dir"] = backup_dir
+        pre_hashes = hash_paths(backup_paths)
+        report["pre_update_hashes"] = pre_hashes
 
         merge = run_git(
             ["merge", "--ff-only", "FETCH_HEAD"], cwd=repo_root, timeout=git_timeout
@@ -1388,7 +1420,9 @@ def run_server_update(config, yes=False, approve=None, server_config_path=None):
                 % (exc, report.get("backup_dir"), current)
             )
         else:
-            for unit in reversed(stopped_services):
+            for unit in reversed(active_services):
+                if unit not in stopped_services:
+                    continue
                 _service_action(
                     manager, service_command, "start", unit, service_timeout
                 )
@@ -1400,7 +1434,7 @@ def run_server_update(config, yes=False, approve=None, server_config_path=None):
     # -- validated: restart services and do the final health check --
     started = []
     restart_failures = OrderedDict()
-    for unit in stopped_services:
+    for unit in active_services:
         ok, message = _service_action(
             manager, service_command, "start", unit, service_timeout
         )

@@ -601,7 +601,7 @@ def _managed_service_units(config):
     if systemd.get("enabled") and web.get("enabled"):
         units.append("lifetxt.service")
     if systemd.get("enabled") and calendar.get("enabled"):
-        units.append("lifetxt-sync-ics.timer")
+        units.extend(["lifetxt-sync-ics.timer", "lifetxt-sync-ics.service"])
     if systemd.get("enabled") and worker.get("enabled"):
         units.extend(
             [

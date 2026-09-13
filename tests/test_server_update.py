@@ -196,13 +196,17 @@ class _FakeSubprocess:
         check_failures=None,
         inactive_services=None,
         command_failures=None,
+        activate_on_stop=None,
+        inactive_check_failures=None,
     ):
         self.service_failures = service_failures or set()
         self.pip_fails = pip_fails
         self.sanity_fails = sanity_fails
         self.check_failures = check_failures or set()
-        self.inactive_services = inactive_services or set()
+        self.inactive_services = set(inactive_services or set())
         self.command_failures = command_failures or set()
+        self.activate_on_stop = activate_on_stop or {}
+        self.inactive_check_failures = set(inactive_check_failures or set())
         self.calls = []
 
     def run(self, cmd, cwd=None, timeout=None, **kwargs):
@@ -213,6 +217,8 @@ class _FakeSubprocess:
         systemctl_index = cmd.index("systemctl") if "systemctl" in cmd else -1
         if systemctl_index >= 0 and cmd[systemctl_index + 1] == "is-active":
             unit = cmd[systemctl_index + 2]
+            if unit in self.inactive_services and unit in self.inactive_check_failures:
+                return _FakeCompletedProcess(1, "", "authorization failed")
             if unit in self.inactive_services:
                 return _FakeCompletedProcess(3, "inactive\n", "")
             return _FakeCompletedProcess(0, "active\n", "")
@@ -220,6 +226,13 @@ class _FakeSubprocess:
             action, unit = cmd[systemctl_index + 1], cmd[systemctl_index + 2]
             if (action, unit) in self.service_failures:
                 return _FakeCompletedProcess(1, "", "failed to %s %s" % (action, unit))
+            if action == "stop":
+                self.inactive_services.add(unit)
+                activated = self.activate_on_stop.get(unit)
+                if activated:
+                    self.inactive_services.discard(activated)
+            elif action == "start":
+                self.inactive_services.discard(unit)
             return _FakeCompletedProcess(0, "", "")
         conda_python = cmd[:2] == ["conda", "run"] and "python" in cmd
         conda_tail = cmd[cmd.index("python") + 1 :] if conda_python else []
@@ -1581,11 +1594,8 @@ class RunServerUpdateApplyTests(unittest.TestCase):
         start_calls = [c for c in sub.calls if "systemctl" in c and "start" in c]
         self.assertEqual([], start_calls)
 
-    def test_service_that_was_already_inactive_is_left_alone_and_not_started(self):
-        """Regression test: `systemctl stop` on an already-inactive unit
-        still exits 0, so without an is-active check first, an update would
-        silently start a service the operator had intentionally left
-        stopped. Only units active before the run may be stopped/restarted."""
+    def test_service_that_was_already_inactive_is_stopped_but_not_started(self):
+        """All units are stopped, but only the original active set is restored."""
         git = _FakeGit()
         sub = _FakeSubprocess(inactive_services={"lifetxt-sync-ics.timer"})
         response = mock.MagicMock()
@@ -1606,12 +1616,89 @@ class RunServerUpdateApplyTests(unittest.TestCase):
 
         self.assertEqual("updated", report["status"])
         self.assertEqual(["lifetxt.service"], report["services_active_before_update"])
-        self.assertEqual(["lifetxt.service"], report["services_stopped"])
+        self.assertEqual(
+            ["lifetxt.service", "lifetxt-sync-ics.timer"],
+            report["services_stopped"],
+        )
         self.assertEqual(["lifetxt.service"], report["services_restarted"])
         stop_calls = [c for c in sub.calls if c[:2] == ["systemctl", "stop"]]
         start_calls = [c for c in sub.calls if c[:2] == ["systemctl", "start"]]
-        self.assertEqual([["systemctl", "stop", "lifetxt.service"]], stop_calls)
+        self.assertEqual(
+            [
+                ["systemctl", "stop", "lifetxt.service"],
+                ["systemctl", "stop", "lifetxt-sync-ics.timer"],
+            ],
+            stop_calls,
+        )
         self.assertEqual([["systemctl", "start", "lifetxt.service"]], start_calls)
+
+    def test_timer_race_stops_newly_activated_oneshot_without_restarting_it(self):
+        git = _FakeGit()
+        sub = _FakeSubprocess(
+            inactive_services={"sync.service"},
+            activate_on_stop={"sync.timer": "sync.service"},
+        )
+
+        with _patch_git(git), _patch_subprocess(sub):
+            report = server_update.run_server_update(
+                self._config(
+                    services=["sync.timer", "sync.service", "lifetxt.service"],
+                    health_url=None,
+                ),
+                yes=True,
+            )
+
+        self.assertEqual(
+            ["sync.timer", "lifetxt.service"],
+            report["services_active_before_update"],
+        )
+        self.assertEqual(
+            ["sync.timer", "sync.service", "lifetxt.service"],
+            report["services_stopped"],
+        )
+        self.assertEqual(
+            ["sync.timer", "lifetxt.service"], report["services_restarted"]
+        )
+        stop_calls = [c for c in sub.calls if c[:2] == ["systemctl", "stop"]]
+        self.assertEqual(
+            [
+                ["systemctl", "stop", "sync.timer"],
+                ["systemctl", "stop", "sync.service"],
+                ["systemctl", "stop", "lifetxt.service"],
+            ],
+            stop_calls,
+        )
+
+    def test_active_timer_and_oneshot_are_both_restored(self):
+        git = _FakeGit()
+        sub = _FakeSubprocess()
+
+        with _patch_git(git), _patch_subprocess(sub):
+            report = server_update.run_server_update(
+                self._config(services=["sync.timer", "sync.service"], health_url=None),
+                yes=True,
+            )
+
+        self.assertEqual(
+            ["sync.timer", "sync.service"], report["services_active_before_update"]
+        )
+        self.assertEqual(["sync.timer", "sync.service"], report["services_restarted"])
+
+    def test_inactive_verification_failure_restores_original_state_before_mutation(
+        self,
+    ):
+        git = _FakeGit()
+        sub = _FakeSubprocess(inactive_check_failures={"lifetxt.service"})
+
+        with _patch_git(git), _patch_subprocess(sub):
+            with self.assertRaises(server_update.ServerUpdateError) as ctx:
+                server_update.run_server_update(self._config(), yes=True)
+
+        self.assertEqual("verify_services_inactive", ctx.exception.step)
+        self.assertEqual("failed_before_code_update", ctx.exception.report["status"])
+        self.assertFalse(os.path.isdir(self.backup_dir))
+        self.assertFalse(any(call[:2] == ["merge", "--ff-only"] for call in git.calls))
+        self.assertIn(["systemctl", "start", "lifetxt.service"], sub.calls)
 
     def test_service_manager_none_never_calls_systemctl(self):
         git = _FakeGit()

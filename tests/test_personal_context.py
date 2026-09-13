@@ -136,6 +136,99 @@ class PersonalContextTests(unittest.TestCase):
         self.assertEqual(report["count"], 1)
         self.assertEqual(report["items"][0]["id"], "decision-b")
 
+    def test_health_reports_future_effective_expired_and_conflicting(self):
+        items = self.items() + [
+            self.note(
+                "Future",
+                id="future",
+                person="self",
+                tag="preference",
+                source="user",
+                updated="2026-08-23T00:00:00+00:00",
+                valid_from="2999-01-01",
+            ),
+            self.note(
+                "Expired",
+                id="expired",
+                person="self",
+                tag="preference",
+                source="user",
+                updated="2026-08-23T00:00:00+00:00",
+                valid_to="2000-01-01",
+            ),
+            self.note(
+                "Malformed",
+                id="malformed",
+                person="self",
+                tag="preference",
+                source="user",
+                updated="2026-08-23T00:00:00+00:00",
+                valid_from="not-a-date",
+            ),
+        ]
+        with timezone_context("UTC"), clock_context(self.clock()):
+            report = context_health(items, stale_after_days=14)
+        self.assertEqual(report["counts"]["future-effective"], 1)
+        self.assertEqual(report["counts"]["expired"], 1)
+        self.assertEqual(report["counts"]["conflicting"], 1)
+        self.assertEqual(report["counts"]["total"], 10)
+
+    def test_why_exposes_reasons_and_validity_bounds(self):
+        items = self.items() + [
+            self.note(
+                "Future",
+                id="future",
+                person="self",
+                tag="preference",
+                source="user",
+                updated="2026-08-23T00:00:00+00:00",
+                valid_from="2999-01-01",
+            )
+        ]
+        with timezone_context("UTC"), clock_context(self.clock()):
+            report = explain_personal_context_item(items, "future")
+        self.assertEqual(report["state"], "future-effective")
+        self.assertIn("valid_from_in_future", report["reasons"])
+        self.assertIsNotNone(report["valid_from"])
+
+    def test_capsule_excludes_future_effective_expired_and_conflicting(self):
+        items = self.items() + [
+            self.note(
+                "Future",
+                id="future",
+                person="self",
+                tag="preference",
+                source="user",
+                updated="2026-08-23T00:00:00+00:00",
+                valid_from="2999-01-01",
+            ),
+            self.note(
+                "Expired",
+                id="expired",
+                person="self",
+                tag="preference",
+                source="user",
+                updated="2026-08-23T00:00:00+00:00",
+                valid_to="2000-01-01",
+            ),
+            self.note(
+                "Malformed",
+                id="malformed",
+                person="self",
+                tag="preference",
+                source="user",
+                updated="2026-08-23T00:00:00+00:00",
+                valid_from="not-a-date",
+            ),
+        ]
+        with timezone_context("UTC"), clock_context(self.clock()):
+            capsule = context_capsule(items, stale_after_days=14, include_stale=True)
+        ids = {row["id"] for row in capsule["items"]}
+        self.assertNotIn("future", ids)
+        self.assertNotIn("expired", ids)
+        self.assertNotIn("malformed", ids)
+        self.assertIn("stale", ids)
+
 
 if __name__ == "__main__":
     unittest.main()

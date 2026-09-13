@@ -19,11 +19,7 @@ lifetxt context health
 lifetxt context health --format json --pretty
 ```
 
-The report has mutually exclusive lifecycle states:
-
-- `current` — not stale and not superseded;
-- `stale` — the existing Temporal Context staleness rule reports `stale_since`;
-- `superseded` — another authoritative record carries `corrects:<this-id>`.
+The report classifies every record into one of the seven currentness states described below (`current`/`future-effective`/`stale`/`superseded`/`expired`/`conflicting`/`historical-only`), computed by the shared currentness resolver -- `context health` never runs a separate classification rule.
 
 It also reports independent quality findings:
 
@@ -47,7 +43,7 @@ lifetxt context why pref-editor
 lifetxt context why pref-editor --format json --pretty
 ```
 
-The report shows the stored provenance/time metadata, Personal Context tags/subject, current/stale/superseded state, and incoming/outgoing ID links. It is **not** an LLM explanation and does not expose or generate model chain-of-thought.
+The report shows the stored provenance/time metadata, Personal Context tags/subject, the resolved currentness state plus bounded evidence/reasons (see below), and incoming/outgoing ID links. It is **not** an LLM explanation and does not expose or generate model chain-of-thought.
 
 ## Correct a memory without deleting history
 
@@ -118,7 +114,7 @@ JSON is the default output. The capsule contains:
 - the selected person/tags and bounds;
 - deterministic item records.
 
-Unchanged input plus unchanged options produces the same capsule revision. Superseded and stale memories are excluded by default; add `--include-stale` when historical/stale context is intentionally needed.
+Unchanged input plus unchanged options produces the same capsule revision. Only `current` records are included by default; `--include-stale` adds `stale` records only -- `future-effective`, `superseded`, `expired`, `conflicting`, and `historical-only` records are never silently included, even with `--include-stale`.
 
 The capsule is a **generated read-only projection**, not another source of truth. ChatGPT, Claude, Gemini, local LLMs, IDE agents, or scripts may consume it without becoming authoritative storage for lifetxt.
 
@@ -140,7 +136,7 @@ lifetxt decisions --project demo
 lifetxt decisions --format json --pretty
 ```
 
-The view excludes stale and superseded decisions by default and uses the same Personal Context lifecycle rules as the capsule.
+The view uses the same shared currentness filtering as the capsule: only `current` records by default, with `--include-stale` adding `stale` records only.
 
 ## Workspaces and multiple files
 

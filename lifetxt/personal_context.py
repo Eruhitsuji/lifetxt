@@ -16,6 +16,13 @@ from .ids import collect_item_ids, ensure_item_id, id_prefix_for_item
 from .inbox import proposal_to_line, stage_create
 from .links import build_id_index, link_records
 from .model import Item, REFERENCE_KEYS
+from .personal_context_currentness import (
+    ALL_STATES,
+    STATE_CURRENT,
+    STATE_STALE,
+    item_currentness,
+    resolve_currentness,
+)
 from .temporal_context import DEFAULT_STALE_DAYS, node_facts
 from .timezone_policy import now as timezone_now
 
@@ -145,38 +152,40 @@ def _public_item_record(item):
     )
 
 
-def context_health(items, person="self", stale_after_days=DEFAULT_STALE_DAYS):
+def context_health(
+    items,
+    person="self",
+    stale_after_days=DEFAULT_STALE_DAYS,
+    evaluation_time=None,
+):
     """Return bounded health facts for Personal Context records.
 
-    ``current``/``stale``/``superseded`` are mutually exclusive lifecycle
-    states.  ``missing_source`` and ``broken_reference`` are independent
-    health findings and may overlap those lifecycle states.
+    ``state`` reports one of the seven currentness states resolved by
+    :func:`lifetxt.personal_context_currentness.resolve_currentness`
+    (current/future-effective/stale/superseded/expired/conflicting/
+    historical-only). ``missing_source`` and ``broken_reference`` are
+    independent health findings and may overlap any state.
     """
     selected = select_personal_context(items, person=person)
     corrections = correction_index(items)
     links = _links_by_source(items)
-    findings = []
-    counts = OrderedDict(
-        (
-            ("total", len(selected)),
-            ("current", 0),
-            ("stale", 0),
-            ("superseded", 0),
-            ("missing_source", 0),
-            ("broken_reference", 0),
-        )
+    currentness = resolve_currentness(
+        items,
+        evaluation_time=evaluation_time,
+        stale_after_days=stale_after_days,
     )
+    findings = []
+    counts = OrderedDict([("total", len(selected))])
+    for state in ALL_STATES:
+        counts[state] = 0
+    counts["missing_source"] = 0
+    counts["broken_reference"] = 0
 
     for item in selected:
         item_id = _item_id(item)
-        stale = _stale_fact(item, stale_after_days=stale_after_days)
+        record = item_currentness(item, currentness)
+        state = record["state"] if record else STATE_CURRENT
         correcting = corrections.get(item_id, []) if item_id else []
-        if correcting:
-            state = "superseded"
-        elif stale is not None:
-            state = "stale"
-        else:
-            state = "current"
         counts[state] += 1
 
         missing_source = not bool(_values(item, "source"))
@@ -196,9 +205,13 @@ def context_health(items, person="self", stale_after_days=DEFAULT_STALE_DAYS):
                     ("id", item_id or None),
                     ("title", item.title),
                     ("state", state),
+                    ("reasons", list((record or {}).get("reasons") or [])),
                     ("missing_source", missing_source),
                     ("broken_references", broken),
-                    ("stale_fact", stale),
+                    (
+                        "stale_fact",
+                        _stale_fact(item, stale_after_days=stale_after_days),
+                    ),
                     (
                         "corrected_by",
                         [
@@ -241,14 +254,26 @@ def _unique_item(items, item_id, key="id"):
 
 
 def explain_personal_context_item(
-    items, item_id, stale_after_days=DEFAULT_STALE_DAYS, key="id"
+    items,
+    item_id,
+    stale_after_days=DEFAULT_STALE_DAYS,
+    key="id",
+    evaluation_time=None,
 ):
     """Explain one item from deterministic provenance/temporal/link evidence."""
     target = _unique_item(items, item_id, key=key)
     corrections = correction_index(items)
     correcting = corrections.get(str(item_id), [])
     stale = _stale_fact(target, stale_after_days=stale_after_days)
-    state = "superseded" if correcting else ("stale" if stale else "current")
+    currentness = resolve_currentness(
+        items,
+        key=key,
+        evaluation_time=evaluation_time,
+        stale_after_days=stale_after_days,
+    )
+    record = item_currentness(target, currentness, key=key)
+    state = record["state"] if record else STATE_CURRENT
+    reasons = list((record or {}).get("reasons") or [])
 
     links = link_records(
         items,
@@ -279,15 +304,16 @@ def explain_personal_context_item(
             ("schema", "personal-context-why-v1"),
             ("id", str(item_id)),
             ("state", state),
+            ("reasons", reasons),
+            ("valid_from", (record or {}).get("valid_from")),
+            ("valid_to", (record or {}).get("valid_to")),
             ("item", _public_item_record(target)),
             ("temporal_facts", facts),
             ("links", normalized_links),
             (
                 "corrected_by",
                 [
-                    OrderedDict(
-                        (("id", _item_id(item) or None), ("title", item.title))
-                    )
+                    OrderedDict((("id", _item_id(item) or None), ("title", item.title)))
                     for item in correcting
                 ],
             ),
@@ -321,18 +347,30 @@ def context_capsule(
     include_stale=False,
     limit=DEFAULT_LIMIT,
     stale_after_days=DEFAULT_STALE_DAYS,
+    evaluation_time=None,
 ):
-    """Return a deterministic, read-only Personal Context projection."""
+    """Return a deterministic, read-only Personal Context projection.
+
+    Includes only records the shared currentness resolver classifies as
+    ``current`` by default. ``future-effective``/``superseded``/``expired``/
+    ``conflicting``/``historical-only`` records are never silently included.
+    ``include_stale`` adds only records resolved as ``stale`` -- it does not
+    widen inclusion to any other non-current state.
+    """
     limit = _coerce_limit(limit)
 
-    corrections = correction_index(items)
+    currentness = resolve_currentness(
+        items, evaluation_time=evaluation_time, stale_after_days=stale_after_days
+    )
     selected = []
     for item in select_personal_context(items, person=person, tags=tags):
-        item_id = _item_id(item)
-        if item_id and corrections.get(item_id):
-            continue
-        stale = _stale_fact(item, stale_after_days=stale_after_days)
-        if stale is not None and not include_stale:
+        record = item_currentness(item, currentness)
+        state = record["state"] if record else STATE_CURRENT
+        if state == STATE_CURRENT:
+            pass
+        elif state == STATE_STALE and include_stale:
+            pass
+        else:
             continue
         selected.append(_capsule_item_record(item, stale_after_days=stale_after_days))
 

@@ -3870,7 +3870,8 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/223
       - https://github.com/Eruhitsuji/lifetxt/issues/224
       - https://github.com/Eruhitsuji/lifetxt/issues/831
-    related_pull_requests: []
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/832
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       No existing capability entry covered the i18n translation runtime

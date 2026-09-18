@@ -13512,7 +13512,7 @@ traceability:
       capability_id: cap-web-i18n-dynamic-content-fidelity
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/831
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/832
       changed_files_or_scope:
         - Complete the audited static Japanese Web chrome catalog and remove the known-missing translation baseline debt
         - Correct force-directed layout and Deferred/Pending terminology while preserving canonical syntax, shortcut, and export tokens through data-no-i18n

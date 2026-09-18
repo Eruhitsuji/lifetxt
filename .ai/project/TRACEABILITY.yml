@@ -13550,7 +13550,7 @@ traceability:
       capability_id: cap-web-i18n-dynamic-content-fidelity
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/833
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/834
       changed_files_or_scope:
         - Localize every COMMON_STATES value through one guarded Web presentation helper without translating arbitrary custom state data
         - Keep Quick Status and structured Status option values, API payloads, raw completion, and persistence canonical
@@ -13581,8 +13581,7 @@ traceability:
         Reuses COMMON_STATES through /api/config.status_states as the only
         semantic vocabulary and the existing UI_STRINGS/t() layer for
         presentation. No Format, parser, API, mutation, persistence, CLI, or
-        TUI semantics change. pull_request is filled in when the final PR is
-        opened.
+        TUI semantics change.
       status: implemented
 
     - requirement_id: req-unified-format-conversion

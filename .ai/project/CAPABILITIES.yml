@@ -3840,15 +3840,21 @@ capabilities:
       - req-web-i18n-dynamic-label-translation
       - req-web-i18n-contextual-help-translation
       - req-web-ja-localization-completeness-quality
+      - req-web-status-state-presentation-localization
     implementation_locations:
       - lifetxt/web_assets.py
       - lifetxt/web_assets.html
       - lifetxt/web_assets_js_01.js
       - lifetxt/web_assets_js_02.js
+      - lifetxt/web_assets_js_06.js
       - lifetxt/web_assets_js_08.js
+      - lifetxt/web_assets_js_09.js
+      - lifetxt/web_assets_js_18.js
       - lifetxt/release_policy.py
       - config/release/web-ja-translation-baseline-v1.json
       - tests/test_web_i18n.py
+      - tests/test_web_quick_status_js.py
+      - tests/test_web_structured_authoring_js.py
     public_interfaces:
       - Web UI Notifications button (#notif-btn)
       - Web UI contextual help tooltip (data-help, CONTROL_HELP, showUiHelp)
@@ -3866,10 +3872,16 @@ capabilities:
       - python -m unittest tests.test_web_i18n -> Ran 21 tests, OK
       - python -m unittest tests.test_release_policy tests.test_surface_runtime -> Ran 31 tests, OK (no translation-coverage or drift-gate regression)
       - 'live: real lifetxt serve process; served page confirmed to contain both tooltip.textContent = t(text); and the new Japanese contextual-help strings verbatim'
+      - python -m unittest tests.test_web_quick_status_js tests.test_web_structured_authoring_js tests.test_web_assets tests.test_web_i18n tests.test_release_policy tests.test_traceability_gate tests.test_change_package_closeout -> Ran 93 tests, OK (skipped=1), including full standard-state labels, canonical values/payloads, custom-state protection, and language reapplication
+      - MPLBACKEND=Agg python -m unittest discover -> Ran 4537 tests, OK (skipped=210)
+      - python -m ruff check lifetxt tests scripts -> All checks passed
+      - python -m mypy --follow-imports=skip --ignore-missing-imports lifetxt/diagnostic_contract.py -> Success
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/223
       - https://github.com/Eruhitsuji/lifetxt/issues/224
       - https://github.com/Eruhitsuji/lifetxt/issues/831
+      - https://github.com/Eruhitsuji/lifetxt/issues/833
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/832
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
@@ -3902,6 +3914,13 @@ capabilities:
       the standard Japanese term 力指向, Deferred/deferred consistently use
       延期 while Pending remains 保留, and canonical syntax/tokens use the
       existing semantic data-no-i18n protection instead of literal exceptions.
+      #833 extends the presentation boundary to config-derived standard
+      presence states. A shared statusStateLabel() translates only values in
+      /api/config.status_states, while option values, API payloads, raw
+      completion, persistence, titles, and arbitrary custom states remain
+      canonical/verbatim. Quick Status, structured Status authoring, current
+      presence, Team/Status cards, and slash-command feedback use the same
+      helper, and language reapplication rebuilds labels from option values.
     replacement:
       replaces: []
       replaced_by: null

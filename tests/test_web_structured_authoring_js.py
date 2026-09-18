@@ -71,7 +71,13 @@ _HARNESS = """
 %s
 
 const elements = {};
-const appConfig = {status_states: ["available", "busy", "focus"]};
+const appConfig = {status_states: ["available", "busy", "focus", "meeting", "away", "commuting", "working", "offline", "sleeping"]};
+const jaStateLabels = {
+  available: "対応可能", busy: "取り込み中", focus: "集中", meeting: "会議中",
+  away: "離席中", commuting: "移動中", working: "作業中",
+  offline: "オフライン", sleeping: "睡眠中",
+};
+const t = value => value.startsWith("Status state: ") ? (jaStateLabels[value.slice(14)] || value) : value;
 global.document = {
   getElementById: (id) => elements[id] || null,
 };
@@ -87,6 +93,7 @@ results.render_task_html = renderStructuredFields("edit", {due: ["2026-01-01"]},
 results.render_escapes_hostile_value = renderStructuredFields("edit", {project: ['"><img>']}, "T");
 results.render_standard_status = renderStructuredFields("edit", {state: ["busy"]}, "S");
 results.render_custom_status = renderStructuredFields("edit", {state: ["Deep research"]}, "S");
+results.render_ui_word_custom_status = renderStructuredFields("edit", {state: ["review"]}, "S");
 results.render_non_status = renderStructuredFields("edit", {state: ["busy"]}, "T");
 
 // -- _structuredDetails: input fields win over the textarea, blank clears --
@@ -180,6 +187,28 @@ class StructuredFieldAuthoringJsTests(unittest.TestCase):
         self.assertIn('value="__custom__" selected', custom)
         self.assertIn('value="Deep research"', custom)
         self.assertNotIn("data-status-state-fields", self.results["render_non_status"])
+
+    def test_status_options_localize_labels_but_keep_canonical_values(self):
+        html = self.results["render_standard_status"]
+        labels = {
+            "available": "対応可能",
+            "busy": "取り込み中",
+            "focus": "集中",
+            "meeting": "会議中",
+            "away": "離席中",
+            "commuting": "移動中",
+            "working": "作業中",
+            "offline": "オフライン",
+            "sleeping": "睡眠中",
+        }
+        for state, label in labels.items():
+            self.assertIn(f'value="{state}"', html)
+            self.assertIn(f">{label}</option>", html)
+
+    def test_custom_state_matching_a_ui_word_remains_verbatim(self):
+        html = self.results["render_ui_word_custom_status"]
+        self.assertIn('value="review"', html)
+        self.assertNotIn('value="レビュー"', html)
 
     def test_status_standard_and_custom_precedence_is_deterministic(self):
         self.assertEqual(["focus"], self.results["standard_precedence"]["state"])

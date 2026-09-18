@@ -125,10 +125,10 @@ __LIFETXT_WEB_STYLES__  </style>
           </select>
       </div>
       <div class="quick-add-bar" id="quick-add-bar" style="display:none">
-        <input id="quick-line" placeholder="Buy milk @home #errand !high ^tomorrow   (or a full [ ] T line)" autocomplete="off" oninput="previewShorthand()" onkeydown="if((e=event).key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();quickAddLine();}">
+        <input id="quick-line" placeholder="Buy milk @home #errand !high ^tomorrow   (or a full [ ] T line)" autocomplete="off" data-no-i18n oninput="previewShorthand()" onkeydown="if((e=event).key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();quickAddLine();}">
         <span id="quick-check-msg" class="check-msg"></span>
         <button onclick="quickAddLine()">Add</button>
-        <span class="hint" style="font-size:.73rem;color:var(--muted)">Ctrl+↵</span>
+        <span class="hint" style="font-size:.73rem;color:var(--muted)" data-no-i18n>Ctrl+↵</span>
         <span class="hint">q or Escape to close</span>
       </div>
       <div class="quick-add-bar presence-quick-bar" id="presence-bar" style="display:none" aria-label="Quick Status">
@@ -291,7 +291,7 @@ __LIFETXT_WEB_STYLES__  </style>
             <button class="chart-group-btn active" onclick="setChartGroup('daily',this)">Daily</button>
             <button class="chart-group-btn" onclick="setChartGroup('weekly',this)">Weekly</button>
             <button class="chart-group-btn" onclick="setChartGroup('monthly',this)">Monthly</button>
-            <button class="chart-group-btn" onclick="exportChartCsv()" style="margin-left:auto" title="Download chart data as CSV">&#x2193; CSV</button>
+            <button class="chart-group-btn" onclick="exportChartCsv()" style="margin-left:auto" title="Download chart data as CSV"><span data-no-i18n>&#x2193; CSV</span></button>
           </div>
           <div id="chart-container" style="padding:.75rem 1rem">
             <div class="chart-panel"><canvas id="main-chart"></canvas></div>
@@ -321,8 +321,8 @@ __LIFETXT_WEB_STYLES__  </style>
             <button class="graph-layout-btn" data-layout="tb" onclick="setGraphLayout('tb')" title="Layered top-to-bottom">TB</button>
             <button class="graph-layout-btn" data-layout="force" onclick="setGraphLayout('force')" title="Force-directed layout (physics simulation)">Force</button>
             <span style="flex:1"></span>
-            <button class="graph-export-btn" onclick="exportGraphSvg()" title="Download graph as SVG">⇩ SVG</button>
-            <button class="graph-export-btn" onclick="exportGraphPng()" title="Download graph as PNG">⇩ PNG</button>
+            <button class="graph-export-btn" onclick="exportGraphSvg()" title="Download graph as SVG"><span data-no-i18n>⇩ SVG</span></button>
+            <button class="graph-export-btn" onclick="exportGraphPng()" title="Download graph as PNG"><span data-no-i18n>⇩ PNG</span></button>
           </div>
           <div id="graph-panel" class="graph-panel" data-no-i18n><div class="empty">Open this panel to load the ID graph.</div></div>
         </div>
@@ -438,7 +438,7 @@ __LIFETXT_WEB_STYLES__  </style>
         <div id="editor-note" class="note wide">Create a new record or select an editable row.</div>
         <div id="import-raw-row">
           <label class="wide" style="margin-top:.35rem">Import raw line
-            <input id="import-raw-input" placeholder="[ ] T Task_title due:2026-06-28 project:work" autocomplete="off">
+            <input id="import-raw-input" placeholder="[ ] T Task_title due:2026-06-28 project:work" autocomplete="off" data-no-i18n>
           </label>
           <div id="import-raw-preview" class="parse-preview" style="display:none" data-no-i18n></div>
           <div class="actions" style="margin-top:.25rem">
@@ -518,13 +518,13 @@ __LIFETXT_WEB_STYLES__  </style>
       <table>
         <tr><td>/</td><td>Focus search</td></tr>
         <tr><td>Ctrl+K</td><td>Command palette (actions + jump to item)</td></tr>
-        <tr><td>j / k</td><td>Move keyboard focus down / up in item list</td></tr>
+        <tr><td data-no-i18n>j / k</td><td>Move keyboard focus down / up in item list</td></tr>
         <tr><td>Enter</td><td>Open focused item in detail modal</td></tr>
         <tr><td>x</td><td>Toggle bulk selection on focused item</td></tr>
         <tr><td>n</td><td>New item (opens the record editor)</td></tr>
         <tr><td>q</td><td>Toggle quick-add bar</td></tr>
         <tr><td>p</td><td>Toggle presence status bar</td></tr>
-        <tr><td>Ctrl+K then /</td><td>Run a slash command (same set as the TUI)</td></tr>
+        <tr><td data-no-i18n>Ctrl+K then /</td><td>Run a slash command (same set as the TUI)</td></tr>
         <tr><td>r</td><td>Refresh current view</td></tr>
         <tr><td>s</td><td>Go to Stats view</td></tr>
         <tr><td>d</td><td>Toggle dark mode</td></tr>
@@ -536,7 +536,7 @@ __LIFETXT_WEB_STYLES__  </style>
         <tr><td>[ / ]</td><td>Prev / next item in detail modal</td></tr>
         <tr><td>&lt; / &gt;</td><td>Prev / next status filter</td></tr>
         <tr><td>, / . <em>(Calendar)</em></td><td>Previous / next calendar period</td></tr>
-        <tr><td>t / m <em>(Calendar)</em></td><td>Jump to today / toggle month↔week</td></tr>
+        <tr><td data-no-i18n>t / m <em>(Calendar)</em></td><td>Jump to today / toggle month↔week</td></tr>
         <tr><td>?</td><td>Show / hide this help</td></tr>
       </table>
       <h3 style="margin-top:1.25rem">Commands</h3>

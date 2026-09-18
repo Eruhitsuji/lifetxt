@@ -88,6 +88,14 @@ class _ChromeParser(HTMLParser):
                     self._add(attrs[name])
         if tag not in self.VOID:
             self.stack.append((tag, skip, record))
+        else:
+            # Void elements never emit an end tag. Balance semantic i18n
+            # exclusions here so one protected placeholder cannot hide every
+            # following node from the structural coverage audit.
+            if skip:
+                self.skip_depth = max(0, self.skip_depth - 1)
+            if record:
+                self.record_depth = max(0, self.record_depth - 1)
 
     def handle_startendtag(self, tag, attrs):
         self.handle_starttag(tag, attrs)

@@ -229,13 +229,18 @@
     function applyLanguage() {
       const lang = currentLanguage();
       document.documentElement.setAttribute("lang", lang || "en");
-      if (!i18nDictionary()) return;
-      _i18nApplying = true;
-      try {
-        translateTree(document.body);
-      } finally {
-        _i18nApplying = false;
+      if (i18nDictionary()) {
+        _i18nApplying = true;
+        try {
+          translateTree(document.body);
+        } finally {
+          _i18nApplying = false;
+        }
       }
+      // Runtime/config-derived choices are not static source strings. Reset
+      // their labels from canonical option values on every language pass so
+      // re-applying or switching languages cannot leave stale labels behind.
+      refreshStatusStateLabels();
     }
 
     // Views re-render constantly. Observing the document keeps every rendered

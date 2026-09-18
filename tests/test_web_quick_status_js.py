@@ -22,7 +22,7 @@ _HARNESS = r"""
 %s
 
 const elements = {
-  "presence-state-select": {value: "", innerHTML: ""},
+  "presence-state-select": {value: "", innerHTML: "", options: []},
   "presence-state-custom": {
     value: "", hidden: true, disabled: true, required: false, focused: false,
     setAttribute: function(name, value) { this[name] = value; },
@@ -30,10 +30,26 @@ const elements = {
   },
   "presence-title": {value: ""},
 };
-global.document = {getElementById: id => elements[id] || null};
-let appConfig = {status_states: ["available", "busy", "focus", "", 7]};
+global.document = {
+  getElementById: id => elements[id] || null,
+  querySelectorAll: selector => selector.includes("presence-state-select") ? [elements["presence-state-select"]] : [],
+};
+const standardStates = ["available", "busy", "focus", "meeting", "away", "commuting", "working", "offline", "sleeping"];
+let appConfig = {status_states: [...standardStates, "", 7]};
 const escapeHtml = value => String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
-const t = value => value;
+const jaStateLabels = {
+  available: "対応可能", busy: "取り込み中", focus: "集中", meeting: "会議中",
+  away: "離席中", commuting: "移動中", working: "作業中",
+  offline: "オフライン", sleeping: "睡眠中",
+};
+let currentLocale = "ja";
+const t = value => {
+  if (currentLocale !== "ja") return value;
+  if (value === "Custom…") return "カスタム…";
+  if (value.startsWith("Status state: ")) return jaStateLabels[value.slice(14)] || value;
+  const already = /^Already (.+)\.$/.exec(value);
+  return already ? already[1] + " は設定済みです。" : value;
+};
 let apiCalls = [];
 let apiImpl = async (path, options) => ({closed: [], unchanged: ""});
 const api = async (path, options) => {
@@ -50,12 +66,24 @@ const refreshAll = async () => { refreshes += 1; };
 async function main() {
   const results = {};
   setupQuickPresencePicker();
-  results.shared_options = elements["presence-state-select"].innerHTML;
+  results.localized_options = elements["presence-state-select"].innerHTML;
+  results.standard_labels = Object.fromEntries(standardStates.map(state => [state, statusStateLabel(state)]));
+  results.custom_collision_label = statusStateLabel("review");
   results.initial = {
     value: elements["presence-state-select"].value,
     hidden: elements["presence-state-custom"].hidden,
     disabled: elements["presence-state-custom"].disabled,
   };
+
+  elements["presence-state-select"].options = [
+    ...standardStates.map(value => ({value, textContent: jaStateLabels[value]})),
+    {value: "__custom__", textContent: "カスタム…"},
+  ];
+  currentLocale = "en";
+  refreshStatusStateLabels();
+  results.reapplied_english_labels = elements["presence-state-select"].options.map(option => option.textContent);
+  setupQuickPresencePicker();
+  results.shared_options = elements["presence-state-select"].innerHTML;
 
   elements["presence-state-custom"].value = "Keep-Me";
   elements["presence-state-select"].value = "__custom__";
@@ -148,6 +176,43 @@ class QuickStatusJsTests(unittest.TestCase):
         self.assertEqual("available", self.results["initial"]["value"])
         self.assertTrue(self.results["initial"]["hidden"])
         self.assertTrue(self.results["initial"]["disabled"])
+
+    def test_all_standard_labels_are_localized_without_changing_values(self):
+        labels = {
+            "available": "対応可能",
+            "busy": "取り込み中",
+            "focus": "集中",
+            "meeting": "会議中",
+            "away": "離席中",
+            "commuting": "移動中",
+            "working": "作業中",
+            "offline": "オフライン",
+            "sleeping": "睡眠中",
+        }
+        self.assertEqual(labels, self.results["standard_labels"])
+        html = self.results["localized_options"]
+        for state, label in labels.items():
+            self.assertIn(f'value="{state}">{label}</option>', html)
+
+    def test_custom_ui_word_is_not_translated_as_a_state(self):
+        self.assertEqual("review", self.results["custom_collision_label"])
+
+    def test_reapplying_english_restores_labels_from_canonical_values(self):
+        self.assertEqual(
+            [
+                "available",
+                "busy",
+                "focus",
+                "meeting",
+                "away",
+                "commuting",
+                "working",
+                "offline",
+                "sleeping",
+                "Custom…",
+            ],
+            self.results["reapplied_english_labels"],
+        )
 
     def test_switching_modes_preserves_custom_text_and_precedence(self):
         custom = self.results["custom_mode"]

@@ -233,8 +233,8 @@
           headers: {"Content-Type": "application/json"},
           body: JSON.stringify(body),
         });
-        if (data.unchanged) showToast(`Already ${data.unchanged}.`, "info");
-        else showToast(`Status: ${body.state}`, "success");
+        if (data.unchanged) showToast(t(`Already ${statusStateLabel(data.unchanged)}.`), "info");
+        else showToast(`${t("Status")}: ${statusStateLabel(body.state)}`, "success");
         await loadPresence();
         await refreshAll();
       },
@@ -242,7 +242,7 @@
         const data = await api("/api/status?active=true");
         const open = (data.records || []).filter(r => r.active);
         if (!open.length) { showToast("No open status.", "info"); return; }
-        showToast(open.map(r => `${r.person}: ${r.state} since ${r.from}`).join("  |  "), "info");
+        showToast(open.map(r => `${r.person}: ${statusStateLabel(r.state)} ${t("Since").toLowerCase()} ${r.from}`).join("  |  "), "info");
       },
       timer: async (arg) => {
         const action = (arg || "status").trim().toLowerCase();

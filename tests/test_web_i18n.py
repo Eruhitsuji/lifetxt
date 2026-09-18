@@ -13,6 +13,7 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from lifetxt import webapp
+from lifetxt.presence import COMMON_STATES
 from lifetxt.release_policy import translation_coverage_report
 
 
@@ -102,6 +103,13 @@ class DictionaryTests(unittest.TestCase):
             "Status update failed:",
         ):
             self.assertIn(label, self.dictionary)
+
+    def test_every_backend_standard_state_has_a_dedicated_japanese_label(self):
+        japanese = re.compile(r"[぀-ヿ一-鿿]")
+        for state in COMMON_STATES:
+            key = f"Status state: {state}"
+            self.assertIn(key, self.dictionary)
+            self.assertRegex(self.dictionary[key], japanese)
 
     def test_dictionary_covers_contextual_help_strings(self):
         # CONTROL_HELP, VIEW_HELP, and the inline data-help attributes are
@@ -262,7 +270,7 @@ class DynamicLabelTranslationTests(unittest.TestCase):
         for fragment in (
             't("No open status.")',
             't("Enter a custom status.")',
-            't("Already " + data.unchanged + ".")',
+            't("Already " + statusStateLabel(data.unchanged) + ".")',
             't("Previous status closed")',
             't("Status update failed:")',
             't("Status closed.")',
@@ -270,6 +278,28 @@ class DynamicLabelTranslationTests(unittest.TestCase):
         ):
             self.assertIn(fragment, body)
         self.assertNotIn('el.textContent = "no open status"', body)
+
+    def test_status_values_use_the_guarded_presentation_helper(self):
+        self.assertIn("function statusStateLabel", PAGE)
+        self.assertIn("standardStatusStates().includes(value)", PAGE)
+        for fragment in (
+            "statusStateLabel(r.state)",
+            "statusStateLabel(body.state)",
+            "statusStateLabel(data.unchanged)",
+            "statusStateLabel(record.state)",
+            "escapeHtml(statusStateLabel(state))",
+        ):
+            self.assertIn(fragment, PAGE)
+        # Generic t() must not receive arbitrary state data: a custom state
+        # named "review" is content, not the translated Review view label.
+        self.assertNotIn("t(r.state)", PAGE)
+        self.assertNotIn("t(body.state)", PAGE)
+
+    def test_raw_state_completion_remains_canonical(self):
+        self.assertIn('state: "state"', PAGE)
+        completion = PAGE[PAGE.index("const CPL_KEY_KINDS") :]
+        completion = completion[: completion.index("function setupCompletion")]
+        self.assertNotIn("statusStateLabel", completion)
 
 
 class ContextualHelpTranslationTests(unittest.TestCase):

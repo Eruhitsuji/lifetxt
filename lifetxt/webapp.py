@@ -1737,8 +1737,10 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             ),
         }
 
-    @app.get("/api/items/id/{item_id}")
-    def get_item_by_id(item_id):
+    def _get_item_by_id_response(item_id):
+        # Shared by the canonical GET /api/items/{id} route (#837) and the
+        # pre-existing GET /api/items/id/{id} route: both must reuse the
+        # exact same authoritative lookup/serialization path.
         items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
         raise_for_errors(diagnostics)
         try:
@@ -1760,6 +1762,10 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
                 id_key_from_config(app.state.config),
             )
         }
+
+    @app.get("/api/items/id/{item_id}")
+    def get_item_by_id(item_id):
+        return _get_item_by_id_response(item_id)
 
     @app.put("/api/items/id/{item_id}")
     def update_item_by_id(item_id, payload=Body(...)):
@@ -1886,20 +1892,33 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             raise HTTPException(status_code=400, detail=error_detail(exc))
         return {"id": item_id, "deleted": deleted}
 
-    @app.get("/api/items/{line_no}")
-    def get_item_by_line(line_no: int):
-        items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
-        raise_for_errors(diagnostics)
-        matches = [i for i in items if i.line == line_no]
-        if not matches:
-            raise HTTPException(status_code=404, detail="No item at line %d." % line_no)
-        return {
-            "item": api_item(
-                matches[0],
-                app.state.writable_path,
-                id_key_from_config(app.state.config),
-            )
-        }
+    @app.get("/api/items/{item_id}")
+    def get_item_by_line_or_id(item_id: str):
+        # Canonical exact-ID read route (#837), merged with the
+        # historical by-line-number route into one handler: FastAPI path
+        # parameters typed `int` do not fall through to a sibling string
+        # route on a conversion failure (confirmed: a non-numeric segment
+        # returns 422 immediately), so a purely-numeric segment is
+        # interpreted as a 1-based line number first, exactly like the
+        # original /api/items/{line_no} route did, and everything else is
+        # looked up as a canonical id through the same resolver GET
+        # /api/items/id/{id} already uses. A numeric segment that matches
+        # no line falls back to an id lookup, since an all-digit id is
+        # still a legal canonical id.
+        if item_id.isdigit():
+            line_no = int(item_id)
+            items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
+            raise_for_errors(diagnostics)
+            matches = [i for i in items if i.line == line_no]
+            if matches:
+                return {
+                    "item": api_item(
+                        matches[0],
+                        app.state.writable_path,
+                        id_key_from_config(app.state.config),
+                    )
+                }
+        return _get_item_by_id_response(item_id)
 
     @app.put("/api/items/{line_no}")
     def update_item(line_no, payload=Body(...)):

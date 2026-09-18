@@ -13546,6 +13546,45 @@ traceability:
         is opened.
       status: implemented
 
+    - requirement_id: req-web-status-state-presentation-localization
+      capability_id: cap-web-i18n-dynamic-content-fidelity
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/833
+      pull_request: null
+      changed_files_or_scope:
+        - Localize every COMMON_STATES value through one guarded Web presentation helper without translating arbitrary custom state data
+        - Keep Quick Status and structured Status option values, API payloads, raw completion, and persistence canonical
+        - Apply the same state-label policy to current presence, Status/Team cards, Quick Status feedback, and status slash-command feedback
+        - Rebuild runtime option labels from canonical values when language is reapplied
+        - lifetxt/web_assets_js_01.js
+        - lifetxt/web_assets_js_02.js
+        - lifetxt/web_assets_js_06.js
+        - lifetxt/web_assets_js_08.js
+        - lifetxt/web_assets_js_09.js
+        - lifetxt/web_assets_js_18.js
+        - tests/test_web_assets.py
+        - tests/test_web_i18n.py
+        - tests/test_web_quick_status_js.py
+        - tests/test_web_structured_authoring_js.py
+      tests_or_evidence:
+        - python -m unittest tests.test_web_quick_status_js tests.test_web_structured_authoring_js tests.test_web_assets tests.test_web_i18n tests.test_release_policy tests.test_traceability_gate tests.test_change_package_closeout -> Ran 93 tests, OK (skipped=1)
+        - MPLBACKEND=Agg python -m unittest discover -> Ran 4537 tests, OK (skipped=210)
+        - python -m ruff check lifetxt tests scripts -> All checks passed
+        - python -m mypy --follow-imports=skip --ignore-missing-imports lifetxt/diagnostic_contract.py -> Success
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - "ruff format --check lifetxt tests scripts -> not clean because 36 pre-existing files outside #833 would be reformatted; all four changed Python test files were formatted directly and no unrelated files were changed"
+        - tests/test_web_i18n.py connects every lifetxt.presence.COMMON_STATES value to a dedicated Japanese presentation label and protects raw completion
+        - Node.js-driven Quick Status and structured-authoring tests separate localized labels from canonical option/payload values and cover a custom state named review
+      release_or_deployment: next normal maintenance release
+      notes: >-
+        Standard-assurance, S-sized Web presentation/localization bug fix.
+        Reuses COMMON_STATES through /api/config.status_states as the only
+        semantic vocabulary and the existing UI_STRINGS/t() layer for
+        presentation. No Format, parser, API, mutation, persistence, CLI, or
+        TUI semantics change. pull_request is filled in when the final PR is
+        opened.
+      status: implemented
+
     - requirement_id: req-unified-format-conversion
       capability_id: cap-import-export-format-expansion
       epic: https://github.com/Eruhitsuji/lifetxt/issues/823

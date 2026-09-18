@@ -106,15 +106,15 @@
     }
     function presenceDot(record) {
       const cls = presenceClass(record.state, record.active);
-      const label = record.active === false ? "ended" : (record.state || "unknown");
+      const label = record.active === false ? "ended" : statusStateLabel(record.state || "unknown");
       return `<span class="presence-dot ${cls}" role="img" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}"></span>`;
     }
     function presenceCard(record, extraHtml = "") {
       const cls = presenceClass(record.state, record.active);
       const started = record.from ? relativeTime(record.from) : "";
       const stateLabel = record.active === false
-        ? (record.state ? `${record.state} · ended` : "ended")
-        : (record.state || "—");
+        ? (record.state ? `${statusStateLabel(record.state)} · ended` : "ended")
+        : statusStateLabel(record.state || "—");
       return `<div class="person-card${record.active === false ? " presence-ended" : ""}">` +
         `<div class="person-head">${presenceDot(record)}` +
         `<span class="person-name">${escapeHtml(record.person)}</span>` +

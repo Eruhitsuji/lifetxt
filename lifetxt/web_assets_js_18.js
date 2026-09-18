@@ -49,7 +49,7 @@
       const isStandard = standards.includes(current);
       const mode = isStandard ? current : "__custom__";
       const options = standards.map(state =>
-        `<option value="${escapeHtml(state)}"${state === mode ? " selected" : ""}>${escapeHtml(state)}</option>`
+        `<option value="${escapeHtml(state)}"${state === mode ? " selected" : ""}>${escapeHtml(statusStateLabel(state))}</option>`
       ).join("");
       const customId = prefix + "-status-state-custom";
       const selectId = prefix + "-status-state";

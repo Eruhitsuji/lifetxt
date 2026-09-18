@@ -187,7 +187,7 @@
         const mine = (data.records || []).filter(r => r.active);
         if (!mine.length) { el.textContent = t("No open status."); el.className = "check-msg"; return; }
         const r = mine[0];
-        el.textContent = t("Now") + ": " + t(r.state) + " · " + t("Since") + ": " + (r.from || "");
+        el.textContent = t("Now") + ": " + statusStateLabel(r.state) + " · " + t("Since") + ": " + (r.from || "");
         el.className = "check-msg ok";
       } catch (err) {
         el.textContent = "";
@@ -212,12 +212,33 @@
       return states.filter(state => typeof state === "string" && state.trim());
     }
 
+    /** Localize only config-declared standard states; custom data is verbatim. */
+    function statusStateLabel(state) {
+      const value = String(state == null ? "" : state);
+      if (!standardStatusStates().includes(value)) return value;
+      const key = "Status state: " + value;
+      const translated = t(key);
+      return translated === key ? value : translated;
+    }
+
+    function refreshStatusStateLabels(root) {
+      const scope = root || document;
+      if (!scope || !scope.querySelectorAll) return;
+      scope.querySelectorAll("#presence-state-select, select[data-status-state-select]").forEach(select => {
+        for (const option of select.options || []) {
+          const label = option.value === "__custom__"
+            ? t("Custom…") : statusStateLabel(option.value);
+          if (option.textContent !== label) option.textContent = label;
+        }
+      });
+    }
+
     function setupQuickPresencePicker() {
       const select = document.getElementById("presence-state-select");
       if (!select) return;
       const states = standardStatusStates();
       select.innerHTML = states.map(state =>
-        `<option value="${escapeHtml(state)}">${escapeHtml(state)}</option>`
+        `<option value="${escapeHtml(state)}">${escapeHtml(statusStateLabel(state))}</option>`
       ).join("") + `<option value="__custom__">${escapeHtml(t("Custom…"))}</option>`;
       select.value = states.length ? states[0] : "__custom__";
       syncQuickPresenceStateMode();
@@ -269,8 +290,8 @@
         if (custom) custom.value = "";
         if (title) title.value = "";
         const closed = (data.closed || []).length;
-        if (data.unchanged) showToast(t("Already " + data.unchanged + "."), "info");
-        else showToast(t("Status") + ": " + t(body.state) + (closed ? " (" + t("Previous status closed") + ": " + closed + ")" : ""), "success");
+        if (data.unchanged) showToast(t("Already " + statusStateLabel(data.unchanged) + "."), "info");
+        else showToast(t("Status") + ": " + statusStateLabel(body.state) + (closed ? " (" + t("Previous status closed") + ": " + closed + ")" : ""), "success");
         await loadPresence();
         await refreshAll();
       } catch (err) {

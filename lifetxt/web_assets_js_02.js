@@ -52,11 +52,11 @@
         "Short human-readable record text. Use quotes in raw life.txt if the title contains spaces.":
           "人が読みやすい短いレコード文です。タイトルに空白を含む場合は、生の life.txt では引用符で囲ってください。",
         "One key:value per line. Repeat the same key for multiple values. Use body: or | continuation lines for longer text. progress: accepts a percentage (progress:75%) or a fraction (progress:3/10), independent of status.":
-          "1行につき key:value を1つ。同じキーを繰り返すと複数の値を指定できます。長い文には body: または | の継続行を使います。progress: は percentage（progress:75%）または fraction（progress:3/10）を受け付け、status とは独立しています。",
+          "1行につき key:value を1つ。同じキーを繰り返すと複数の値を指定できます。長い文には body: または | の継続行を使います。progress: はパーセント（progress:75%）または分数（progress:3/10）を受け付け、status とは独立しています。",
         "Show advanced options": "詳細オプションを表示",
         "Hide advanced options": "詳細オプションを隠す",
         "Beginner mode shows only the Task/Event/Note types and the most common statuses; this shows or hides the rest.":
-          "Beginner mode では Task/Event/Note の種類と主要な状態のみを表示します。このボタンで残りの表示・非表示を切り替えます。",
+          "初心者モードでは Task/Event/Note の種類と主要な状態のみを表示します。このボタンで残りの表示・非表示を切り替えます。",
       },
     };
 
@@ -79,6 +79,7 @@
         [/^(\d+) days$/, "$1 日間"],
         [/^occ #(\d+)$/, "第 $1 回"],
         [/^Day (\d+) of (\d+)$/, "$2日間中 $1日目"],
+        [/^Already (.+)\.$/, "$1 は設定済みです。"],
       ],
     };
 

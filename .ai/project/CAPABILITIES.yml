@@ -3839,8 +3839,15 @@ capabilities:
     source_requirements:
       - req-web-i18n-dynamic-label-translation
       - req-web-i18n-contextual-help-translation
+      - req-web-ja-localization-completeness-quality
     implementation_locations:
       - lifetxt/web_assets.py
+      - lifetxt/web_assets.html
+      - lifetxt/web_assets_js_01.js
+      - lifetxt/web_assets_js_02.js
+      - lifetxt/web_assets_js_08.js
+      - lifetxt/release_policy.py
+      - config/release/web-ja-translation-baseline-v1.json
       - tests/test_web_i18n.py
     public_interfaces:
       - Web UI Notifications button (#notif-btn)
@@ -3850,12 +3857,19 @@ capabilities:
       - 'live: real lifetxt serve process; served page confirmed to contain t("Notifications") + indicator verbatim'
       - tests/test_web_i18n.py ContextualHelpTranslationTests -> showUiHelp() translates dataset.help through t() at display time; every data-help/CONTROL_HELP/VIEW_HELP source string (structurally extracted from the served page, 35 total: 5 inline + 15 CONTROL_HELP + 15 VIEW_HELP) has a dictionary entry
       - tests/test_web_i18n.py DictionaryTests.test_dictionary_covers_contextual_help_strings -> the same 35 strings, checked as an explicit hardcoded list independent of the structural extraction
+      - tests/test_web_i18n.py covers zero static/explicit translation debt, sensitive terminology, recent Status authoring/runtime strings, and semantic protection for canonical examples, shortcuts, and export tokens
+      - tests/test_release_policy.py verifies data-no-i18n on a void element cannot mask later missing chrome from the structural audit
+      - python -m unittest tests.test_web_quick_status_js tests.test_web_structured_authoring_js tests.test_web_assets tests.test_web_i18n tests.test_release_policy tests.test_traceability_gate tests.test_change_package_closeout -> Ran 85 tests, OK (skipped=1)
+      - MPLBACKEND=Agg python -m unittest discover -> Ran 4529 tests, OK (skipped=210)
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - python -m ruff check lifetxt tests scripts -> All checks passed
       - python -m unittest tests.test_web_i18n -> Ran 21 tests, OK
       - python -m unittest tests.test_release_policy tests.test_surface_runtime -> Ran 31 tests, OK (no translation-coverage or drift-gate regression)
       - 'live: real lifetxt serve process; served page confirmed to contain both tooltip.textContent = t(text); and the new Japanese contextual-help strings verbatim'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/223
       - https://github.com/Eruhitsuji/lifetxt/issues/224
+      - https://github.com/Eruhitsuji/lifetxt/issues/831
     related_pull_requests: []
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
@@ -3881,6 +3895,12 @@ capabilities:
       textContent assignment in the file for the same defect class; the only
       other match (`Git` panel title with a parenthetical commit count) is a
       proper noun with no dictionary entry and is not itself a bug.
+      #831 extends the same capability with a horizontal static/runtime audit:
+      the known-missing baseline is now empty, recent Status authoring paths
+      translate runtime chrome at construction time, force-directed layout uses
+      the standard Japanese term 力指向, Deferred/deferred consistently use
+      延期 while Pending remains 保留, and canonical syntax/tokens use the
+      existing semantic data-no-i18n protection instead of literal exceptions.
     replacement:
       replaces: []
       replaced_by: null

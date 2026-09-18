@@ -13,6 +13,7 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from lifetxt import webapp
+from lifetxt.release_policy import translation_coverage_report
 
 
 PAGE = webapp.HTML_PAGE
@@ -75,6 +76,32 @@ class DictionaryTests(unittest.TestCase):
 
     def test_dictionary_is_large_enough_to_be_useful(self):
         self.assertGreater(len(self.dictionary), 250)
+
+    def test_all_static_and_explicitly_translated_chrome_is_covered(self):
+        report = translation_coverage_report(PAGE)
+        self.assertTrue(report["ok"], report)
+        self.assertEqual([], report["missing"])
+
+    def test_semantically_sensitive_terms_are_consistent(self):
+        self.assertEqual("力指向", self.dictionary["Force"])
+        self.assertEqual(
+            "力指向レイアウト (物理シミュレーション)",
+            self.dictionary["Force-directed layout (physics simulation)"],
+        )
+        self.assertEqual(self.dictionary["Deferred"], self.dictionary["deferred"])
+        self.assertNotEqual(self.dictionary["Deferred"], self.dictionary["Pending"])
+
+    def test_recent_status_authoring_chrome_is_covered(self):
+        for label in (
+            "Status / presence value",
+            "Standard status",
+            "Choose a common value or enter any custom status.",
+            "No open status.",
+            "Enter a custom status.",
+            "Previous status closed",
+            "Status update failed:",
+        ):
+            self.assertIn(label, self.dictionary)
 
     def test_dictionary_covers_contextual_help_strings(self):
         # CONTROL_HELP, VIEW_HELP, and the inline data-help attributes are
@@ -206,6 +233,17 @@ class CommandTokenProtectionTests(unittest.TestCase):
         # The summary column is ordinary prose and must stay translatable.
         self.assertIn('<span class="help-command-summary">', body)
 
+    def test_canonical_examples_shortcuts_and_export_tokens_are_protected(self):
+        for fragment in (
+            'id="quick-line" placeholder="Buy milk @home #errand !high ^tomorrow   (or a full [ ] T line)" autocomplete="off" data-no-i18n',
+            'id="import-raw-input" placeholder="[ ] T Task_title due:2026-06-28 project:work" autocomplete="off" data-no-i18n',
+            "<td data-no-i18n>Ctrl+K then /</td>",
+            "<td data-no-i18n>j / k</td>",
+            "<span data-no-i18n>⇩ SVG</span>",
+            "<span data-no-i18n>⇩ PNG</span>",
+        ):
+            self.assertIn(fragment, PAGE)
+
 
 class DynamicLabelTranslationTests(unittest.TestCase):
     def test_notif_button_label_is_translated_at_construction(self):
@@ -217,6 +255,21 @@ class DynamicLabelTranslationTests(unittest.TestCase):
         body = body[: body.index("\n    }")]
         self.assertIn('t("Notifications") + indicator', body)
         self.assertNotIn('"Notifications" + indicator', body)
+
+    def test_quick_status_runtime_chrome_is_translated_at_construction(self):
+        body = PAGE[PAGE.index("async function loadPresence") :]
+        body = body[: body.index("// ── Capture shorthand preview")]
+        for fragment in (
+            't("No open status.")',
+            't("Enter a custom status.")',
+            't("Already " + data.unchanged + ".")',
+            't("Previous status closed")',
+            't("Status update failed:")',
+            't("Status closed.")',
+            't("Close failed:")',
+        ):
+            self.assertIn(fragment, body)
+        self.assertNotIn('el.textContent = "no open status"', body)
 
 
 class ContextualHelpTranslationTests(unittest.TestCase):

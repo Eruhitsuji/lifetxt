@@ -13508,6 +13508,44 @@ traceability:
         response. End remains independent from picker state.
       status: implemented
 
+    - requirement_id: req-web-ja-localization-completeness-quality
+      capability_id: cap-web-i18n-dynamic-content-fidelity
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/831
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/832
+      changed_files_or_scope:
+        - Complete the audited static Japanese Web chrome catalog and remove the known-missing translation baseline debt
+        - Correct force-directed layout and Deferred/Pending terminology while preserving canonical syntax, shortcut, and export tokens through data-no-i18n
+        - Translate runtime-generated Quick Status chrome from #829 and cover Status authoring strings from #821
+        - Fix void-element balancing in the structural translation audit so one protected input cannot mask later missing chrome
+        - lifetxt/web_assets.html
+        - lifetxt/web_assets_js_01.js
+        - lifetxt/web_assets_js_02.js
+        - lifetxt/web_assets_js_08.js
+        - lifetxt/release_policy.py
+        - config/release/web-ja-translation-baseline-v1.json
+        - tests/test_web_i18n.py
+        - tests/test_release_policy.py
+        - tests/test_web_assets.py
+      tests_or_evidence:
+        - tests/test_web_i18n.py covers static/explicit catalog completeness, terminology consistency, canonical-token protection, and recent Status runtime localization
+        - tests/test_release_policy.py covers the void-element structural-audit regression and requires an empty repository translation baseline
+        - tests/test_web_quick_status_js.py preserves Quick Status request, success, no-op, failure, and End behavior with English source-language output
+        - python -m unittest tests.test_web_quick_status_js tests.test_web_structured_authoring_js tests.test_web_assets tests.test_web_i18n tests.test_release_policy tests.test_traceability_gate tests.test_change_package_closeout -> Ran 85 tests, OK (skipped=1)
+        - MPLBACKEND=Agg python -m unittest discover -> Ran 4529 tests, OK (skipped=210)
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - python -m ruff check lifetxt tests scripts -> All checks passed
+        - python -m ruff format --check lifetxt/release_policy.py tests/test_web_i18n.py tests/test_release_policy.py tests/test_web_assets.py -> 4 files already formatted
+      release_or_deployment: null
+      notes: >-
+        Standard-assurance, S-sized Web presentation/localization bug fix.
+        Extends the existing UI_STRINGS/t()/translateTree/data-no-i18n system;
+        no Format, parser, API, mutation, persistence, CLI, or TUI semantics
+        change. The issue and pull request carry the reasoning, below the
+        change-package threshold. pull_request is filled in when the final PR
+        is opened.
+      status: implemented
+
     - requirement_id: req-unified-format-conversion
       capability_id: cap-import-export-format-expansion
       epic: https://github.com/Eruhitsuji/lifetxt/issues/823

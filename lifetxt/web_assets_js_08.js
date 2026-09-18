@@ -185,9 +185,9 @@
       try {
         const data = await api("/api/status?active=true");
         const mine = (data.records || []).filter(r => r.active);
-        if (!mine.length) { el.textContent = "no open status"; el.className = "check-msg"; return; }
+        if (!mine.length) { el.textContent = t("No open status."); el.className = "check-msg"; return; }
         const r = mine[0];
-        el.textContent = "now: " + r.state + " since " + (r.from || "");
+        el.textContent = t("Now") + ": " + t(r.state) + " · " + t("Since") + ": " + (r.from || "");
         el.className = "check-msg ok";
       } catch (err) {
         el.textContent = "";
@@ -257,7 +257,7 @@
 
     async function setPresence() {
       const body = quickPresencePayload();
-      if (!body) { showToast("Enter a custom status.", "error"); return; }
+      if (!body) { showToast(t("Enter a custom status."), "error"); return; }
       try {
         const data = await api("/api/status", {
           method: "POST",
@@ -269,12 +269,12 @@
         if (custom) custom.value = "";
         if (title) title.value = "";
         const closed = (data.closed || []).length;
-        if (data.unchanged) showToast("Already " + data.unchanged + ".", "info");
-        else showToast("Status: " + body.state + (closed ? " (closed " + closed + " previous)" : ""), "success");
+        if (data.unchanged) showToast(t("Already " + data.unchanged + "."), "info");
+        else showToast(t("Status") + ": " + t(body.state) + (closed ? " (" + t("Previous status closed") + ": " + closed + ")" : ""), "success");
         await loadPresence();
         await refreshAll();
       } catch (err) {
-        showToast("Status failed: " + (err.message || "error"), "error");
+        showToast(t("Status update failed:") + " " + (err.message || "error"), "error");
       }
     }
 
@@ -285,12 +285,12 @@
           headers: {"Content-Type": "application/json"},
           body: JSON.stringify({end: true}),
         });
-        if (!(data.closed || []).length) { showToast("No open status.", "info"); }
-        else { showToast("Status closed.", "success"); }
+        if (!(data.closed || []).length) { showToast(t("No open status."), "info"); }
+        else { showToast(t("Status closed."), "success"); }
         await loadPresence();
         await refreshAll();
       } catch (err) {
-        showToast("Close failed: " + (err.message || "error"), "error");
+        showToast(t("Close failed:") + " " + (err.message || "error"), "error");
       }
     }
 

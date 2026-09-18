@@ -92,13 +92,25 @@ class ReleasePolicyTests(unittest.TestCase):
         report = translation_coverage_report(html)
         self.assertTrue(report["ok"], report)
 
+    def test_canonical_void_element_does_not_hide_following_chrome(self):
+        html = """
+        <html><body>
+        <input data-no-i18n placeholder="[ ] T Canonical due:2026-01-01">
+        <button>Missing button label</button>
+        <script>const UI_STRINGS = {ja: {}};</script>
+        </body></html>
+        """
+        report = translation_coverage_report(html)
+        self.assertFalse(report["ok"])
+        self.assertEqual(["Missing button label"], report["missing"])
+
     def test_repository_translation_baseline_allows_known_debt_but_no_new_gap(self):
         report = translation_policy_report(ROOT)
         self.assertTrue(report["ok"], report)
         self.assertEqual(report["new_missing"], [])
-        self.assertGreater(len(report["known_missing"]), 0)
+        self.assertEqual(report["known_missing"], [])
         self.assertEqual(report["missing"], [])
-        self.assertEqual(report["all_missing"], report["known_missing"])
+        self.assertEqual(report["all_missing"], [])
 
     def test_write_route_baseline_rejects_new_path_call_pairs(self):
         with tempfile.TemporaryDirectory() as root:

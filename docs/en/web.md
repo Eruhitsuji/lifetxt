@@ -62,6 +62,7 @@ tools.
 | `GET` | `/api/items` | List items with optional filters |
 | `POST` | `/api/items/parse` | Parse a raw life.txt line/body block and return parsed item data without writing |
 | `POST` | `/api/items/raw` | Append a validated raw life.txt line to the writable file |
+| `GET` | `/api/items/{id}` | Canonical exact-ID read (#837): a purely numeric path segment is interpreted as a 1-based line number for backward compatibility, matching the historical `GET /api/items/{line_no}` route; anything else (and any numeric segment matching no line) is resolved as a canonical `id:`, sharing the exact same lookup as `GET /api/items/id/{id}` below. Unknown IDs return `404`. |
 | `GET` | `/api/items/id/{id}` | Get an item by exact `id:` |
 | `PUT` | `/api/items/id/{id}` | Replace an item by exact `id:` in the writable file |
 | `DELETE` | `/api/items/id/{id}` | Delete an item by exact `id:` in the writable file |

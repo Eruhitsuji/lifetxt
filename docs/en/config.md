@@ -391,6 +391,7 @@ re-explained.
 | Core | `config_version`, `default_workspace`, `paths`, `write_file` |
 | Config writes | `config.write.require_revision`, `config.write.audit_log`, `config.write.audit_max_bytes` |
 | Update checks | `update.repository` |
+| Backup | `backup.enabled`, `backup.destination`, `backup.sources`, `backup.source_identity`, `backup.keep_last`, `backup.remote.backend`, `backup.remote.target`, `backup.remote.rclone_bin` (see [backup-format-v1.md](backup-format-v1.md)) |
 | Capture presets | `capture.presets`, `capture.presets.*.type`, `capture.presets.*.status`, `capture.presets.*.project`, `capture.presets.*.tags`, `capture.presets.*.priority` |
 | Workspaces | `workspaces`, `workspaces.*.sources`, `workspaces.*.write_file`, `workspace.max_total_source_bytes` |
 | Profiles | `profiles` |

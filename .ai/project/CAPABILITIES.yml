@@ -10205,3 +10205,113 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-web-stable-item-links
+    name: Stable direct links for records across Web UI and Web API
+    summary: >-
+      A canonical exact-ID GET /api/items/{id} Web API route (merged with
+      the historical by-line-number route), Web UI ?id= deep-link loading
+      with browser Back/Forward history sync, a copy-direct-link action,
+      and a host-independent lifetxt://item/<id> logical URI with a
+      matching `lifetxt item-uri format|parse` CLI command.
+    status: active
+    owner: Eruhitsuji
+    source_requirements: []
+    implementation_locations:
+      - lifetxt/webapp.py
+      - lifetxt/item_uri.py
+      - lifetxt/cli.py
+      - lifetxt/web_assets_js_01.js
+      - lifetxt/web_assets_js_03.js
+      - lifetxt/web_assets_js_10.js
+      - lifetxt/web_assets_js_12.js
+      - lifetxt/web_assets_js_15.js
+      - lifetxt/web_assets_js_18.js
+    public_interfaces:
+      - GET /api/items/{item_id}
+      - Web UI ?id= deep link / copy-direct-link action
+      - lifetxt://item/<id> logical URI
+      - lifetxt item-uri format|parse
+    tests_or_evidence:
+      - tests/test_lifetxt.py LifeTxtWebApiTests canonical-item-id-route tests (7 tests)
+      - tests/test_web_deep_link_js.py (16 tests)
+      - tests/test_item_uri.py (21 tests), tests/test_item_uri_cli.py (9 tests)
+      - python -m unittest tests.test_lifetxt tests.test_web_deep_link_js tests.test_web_assets tests.test_item_uri tests.test_item_uri_cli
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/835
+      - https://github.com/Eruhitsuji/lifetxt/issues/837
+      - https://github.com/Eruhitsuji/lifetxt/issues/838
+      - https://github.com/Eruhitsuji/lifetxt/issues/839
+      - https://github.com/Eruhitsuji/lifetxt/issues/840
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      The by-line-number and canonical-ID routes are merged into one
+      handler rather than relying on FastAPI route registration order,
+      confirmed via live reproduction that a typed-parameter conversion
+      failure does not fall through to an untyped sibling route.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-lifetxt-backup-v1
+    name: Disaster-recovery backup snapshots (lifetxt-backup-v1)
+    summary: >-
+      An atomic ZIP-based backup archive format (create/verify/restore/
+      list/prune) with SHA-256 manifest integrity and resource-limit
+      guards, a provider-independent rclone upload adapter, CLI
+      orchestration (`lifetxt backup create|status|verify|restore|prune|
+      run-scheduled`), registered backup.* configuration keys, and an
+      opt-in server-init scheduled-backup systemd timer/service pair.
+      Distinct from the periodic local Git-commit worker (#731): protects
+      against host loss/disk failure/device loss rather than edit/history
+      mistakes inside the same repository.
+    status: active
+    owner: Eruhitsuji
+    source_requirements: []
+    implementation_locations:
+      - lifetxt/backup.py
+      - lifetxt/backup_remote.py
+      - lifetxt/backup_cli.py
+      - lifetxt/cli.py
+      - lifetxt/config_registry.py
+      - lifetxt/schema_extensions_v5.py
+      - lifetxt/server_init.py
+      - docs/en/backup-format-v1.md
+    public_interfaces:
+      - lifetxt backup create|status|verify|restore|prune|run-scheduled
+      - lifetxt.backup.create_backup/verify_backup/restore_backup/list_backups/prune_backups
+      - backup.* configuration keys
+      - opt-in backup_schedule server-init deployment section
+    tests_or_evidence:
+      - tests/test_backup.py (33 tests)
+      - tests/test_backup_remote.py (11 tests, real fake-rclone-script subprocess)
+      - tests/test_backup_cli.py (19 tests)
+      - tests/test_server_init.py BackupScheduleConfigGenerationTests (8 tests)
+      - python -m unittest tests.test_backup tests.test_backup_cli tests.test_backup_remote tests.test_server_init tests.test_cli_taxonomy tests.test_schema_extensions_v2 tests.test_config_validation
+      - "live: real disposable workspace -- backup create/status/verify/restore/prune/run-scheduled exercised end to end via the installed CLI"
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/836
+      - https://github.com/Eruhitsuji/lifetxt/issues/841
+      - https://github.com/Eruhitsuji/lifetxt/issues/842
+      - https://github.com/Eruhitsuji/lifetxt/issues/843
+      - https://github.com/Eruhitsuji/lifetxt/issues/844
+      - https://github.com/Eruhitsuji/lifetxt/issues/845
+      - https://github.com/Eruhitsuji/lifetxt/issues/846
+      - https://github.com/Eruhitsuji/lifetxt/issues/847
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      docs/en/backups.md (a fuller workflow guide referenced by
+      backup-format-v1.md) and docs/ja translations remain recorded,
+      unimplemented follow-ups rather than silently claimed complete.
+      The scheduled-backup systemd generator mirrors the established
+      git-commit-worker/report-job unit-generation pattern in
+      lifetxt/server_init.py.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

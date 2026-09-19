@@ -1900,6 +1900,75 @@ def build_parser():
     )
     vm_graph_command.set_defaults(func=command_vm_graph)
 
+    backup_command = subparsers.add_parser(
+        "backup",
+        help="Disaster-recovery backup snapshots (lifetxt-backup-v1): "
+        "create/status/verify/restore/prune, distinct from the periodic "
+        "local Git-commit worker.",
+    )
+    backup_subparsers = backup_command.add_subparsers(dest="backup_command")
+
+    backup_create_command = backup_subparsers.add_parser(
+        "create", help="Create one backup snapshot now."
+    )
+    backup_create_command.add_argument(
+        "sources", nargs="*", help="Source paths to back up (or backup.sources)."
+    )
+    backup_create_command.add_argument("--destination", help="Backup directory.")
+    backup_create_command.add_argument("--json", action="store_true")
+    backup_create_command.set_defaults(func=command_backup_create)
+
+    backup_status_command = backup_subparsers.add_parser(
+        "status", help="Report local/remote backup attempt and result history."
+    )
+    backup_status_command.add_argument("--destination", help="Backup directory.")
+    backup_status_command.add_argument("--json", action="store_true")
+    backup_status_command.set_defaults(func=command_backup_status)
+
+    backup_verify_command = backup_subparsers.add_parser(
+        "verify", help="Verify one backup archive's format and integrity."
+    )
+    backup_verify_command.add_argument("path", help="Path to a .ltbackup file.")
+    backup_verify_command.add_argument("--json", action="store_true")
+    backup_verify_command.set_defaults(func=command_backup_verify)
+
+    backup_restore_command = backup_subparsers.add_parser(
+        "restore", help="Restore a backup archive's files to a destination directory."
+    )
+    backup_restore_command.add_argument("path", help="Path to a .ltbackup file.")
+    backup_restore_command.add_argument(
+        "destination_dir", help="Directory to restore files into."
+    )
+    backup_restore_command.add_argument(
+        "--overwrite", action="store_true", help="Allow overwriting existing files."
+    )
+    backup_restore_command.add_argument(
+        "--dry-run", action="store_true", help="Preview without writing."
+    )
+    backup_restore_command.add_argument("--json", action="store_true")
+    backup_restore_command.set_defaults(func=command_backup_restore)
+
+    backup_prune_command = backup_subparsers.add_parser(
+        "prune", help="Delete older backups beyond a retention count."
+    )
+    backup_prune_command.add_argument("--destination", help="Backup directory.")
+    backup_prune_command.add_argument(
+        "--keep-last", type=int, required=True, metavar="N"
+    )
+    backup_prune_command.add_argument(
+        "--dry-run", action="store_true", help="Preview without deleting."
+    )
+    backup_prune_command.add_argument("--json", action="store_true")
+    backup_prune_command.set_defaults(func=command_backup_prune)
+
+    backup_run_scheduled_command = backup_subparsers.add_parser(
+        "run-scheduled",
+        help="Run the unattended backup flow (create, optional remote "
+        "upload, optional prune) guarded by backup.enabled.",
+    )
+    backup_run_scheduled_command.add_argument("--json", action="store_true")
+    backup_run_scheduled_command.set_defaults(func=command_backup_run_scheduled)
+
     item_uri_command = subparsers.add_parser(
         "item-uri",
         help="Format/parse the host-independent lifetxt://item/<id> "
@@ -14959,6 +15028,239 @@ def command_vm_graph(args):
         return 1
 
     write_text(None, output)
+    return 0
+
+
+def _backup_result_json(result):
+    return OrderedDict(
+        (
+            ("path", result.path),
+            ("format", result.manifest.get("format")),
+            ("created_at", result.manifest.get("created_at")),
+            ("file_count", result.manifest.get("file_count")),
+            ("total_bytes", result.manifest.get("total_bytes")),
+        )
+    )
+
+
+def _backup_verify_result_json(result):
+    return OrderedDict(
+        (
+            ("ok", result.ok),
+            ("format", result.manifest.get("format") if result.manifest else None),
+            ("errors", list(result.errors)),
+        )
+    )
+
+
+def command_backup_create(args):
+    from .backup import BackupError
+    from .backup_cli import (
+        BackupCliError,
+        run_create,
+        resolve_destination,
+        resolve_sources,
+    )
+
+    config = _config(args)
+    try:
+        destination = resolve_destination(config, args.destination)
+        sources = resolve_sources(config, args.sources or None)
+        result = run_create(sources, destination)
+    except (BackupCliError, BackupError) as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
+    if getattr(args, "json", False):
+        write_text(
+            None,
+            json.dumps(_backup_result_json(result), ensure_ascii=False, indent=2)
+            + "\n",
+        )
+    else:
+        write_text(None, "Created backup: %s\n" % result.path)
+    return 0
+
+
+def command_backup_status(args):
+    from .backup_cli import BackupCliError, resolve_destination, run_status
+
+    config = _config(args)
+    try:
+        destination = resolve_destination(config, args.destination)
+        status = run_status(destination)
+    except BackupCliError as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
+    if getattr(args, "json", False):
+        write_text(None, json.dumps(status, ensure_ascii=False, indent=2) + "\n")
+        return 0
+    write_text(None, "Backup status for %s:\n" % status["destination"])
+    write_text(None, "  Local backups: %d\n" % status["backup_count"])
+    write_text(
+        None, "  Latest local backup: %s\n" % (status["latest_local_backup"] or "-")
+    )
+    write_text(
+        None,
+        "  Last attempt: %s (ok=%s)\n"
+        % (status["last_attempt_at"] or "-", status["last_attempt_ok"]),
+    )
+    write_text(
+        None,
+        "  Last remote upload: %s (ok=%s)\n"
+        % (status["last_remote_upload_at"] or "-", status["last_remote_upload_ok"]),
+    )
+    if status.get("last_remote_error"):
+        write_text(None, "  Last remote error: %s\n" % status["last_remote_error"])
+    return 0
+
+
+def command_backup_verify(args):
+    from .backup_cli import run_verify
+
+    result = run_verify(args.path)
+    if getattr(args, "json", False):
+        write_text(
+            None,
+            json.dumps(_backup_verify_result_json(result), ensure_ascii=False, indent=2)
+            + "\n",
+        )
+    else:
+        write_text(
+            None, "Backup %s: %s\n" % (args.path, "OK" if result.ok else "INVALID")
+        )
+        for error in result.errors:
+            write_text(None, "  - %s\n" % error)
+    return 0 if result.ok else 1
+
+
+def command_backup_restore(args):
+    from .backup import BackupError
+    from .backup_cli import run_restore
+
+    try:
+        result = run_restore(
+            args.path,
+            args.destination_dir,
+            overwrite=args.overwrite,
+            dry_run=args.dry_run,
+        )
+    except BackupError as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
+    if getattr(args, "json", False):
+        write_text(
+            None,
+            json.dumps(
+                OrderedDict(
+                    (
+                        ("dry_run", result.dry_run),
+                        ("restored", list(result.restored)),
+                        ("conflicts", list(result.conflicts)),
+                        ("errors", list(result.errors)),
+                    )
+                ),
+                ensure_ascii=False,
+                indent=2,
+            )
+            + "\n",
+        )
+    else:
+        write_text(
+            None,
+            "%s %d file(s)%s\n"
+            % (
+                "Would restore" if result.dry_run else "Restored",
+                len(result.restored),
+                " (dry run)" if result.dry_run else "",
+            ),
+        )
+        for conflict in result.conflicts:
+            write_text(None, "  conflict: %s\n" % conflict)
+        for error in result.errors:
+            write_text(None, "  error: %s\n" % error)
+    return 0 if result.ok else 1
+
+
+def command_backup_prune(args):
+    from .backup import BackupError
+    from .backup_cli import BackupCliError, resolve_destination, run_prune
+
+    config = _config(args)
+    try:
+        destination = resolve_destination(config, args.destination)
+        result = run_prune(destination, keep_last=args.keep_last, dry_run=args.dry_run)
+    except (BackupCliError, BackupError) as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
+    if getattr(args, "json", False):
+        write_text(
+            None,
+            json.dumps(
+                OrderedDict(
+                    (
+                        ("dry_run", result.dry_run),
+                        ("kept", list(result.kept)),
+                        ("deleted", list(result.deleted)),
+                        ("ignored", list(result.ignored)),
+                        ("errors", list(result.errors)),
+                    )
+                ),
+                ensure_ascii=False,
+                indent=2,
+            )
+            + "\n",
+        )
+    else:
+        write_text(
+            None,
+            "%s %d, deleted %d, ignored %d\n"
+            % (
+                "Would keep" if result.dry_run else "Kept",
+                len(result.kept),
+                len(result.deleted),
+                len(result.ignored),
+            ),
+        )
+    return 0
+
+
+def command_backup_run_scheduled(args):
+    from .backup import BackupError
+    from .backup_cli import BackupCliError, run_scheduled
+    from .backup_remote import RcloneError
+
+    config = _config(args)
+    try:
+        outcome = run_scheduled(config)
+    except (BackupCliError, BackupError, RcloneError) as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
+    if getattr(args, "json", False):
+        write_text(
+            None,
+            json.dumps(
+                OrderedDict(
+                    (
+                        ("backup", _backup_result_json(outcome["backup"])),
+                        ("remote_uploaded", outcome["remote_uploaded"]),
+                        ("remote_error", outcome["remote_error"]),
+                    )
+                ),
+                ensure_ascii=False,
+                indent=2,
+            )
+            + "\n",
+        )
+    else:
+        write_text(None, "Created backup: %s\n" % outcome["backup"].path)
+        if outcome["remote_uploaded"] is not None:
+            write_text(
+                None,
+                "Remote upload: %s\n"
+                % ("ok" if outcome["remote_uploaded"] else "FAILED"),
+            )
+            if outcome["remote_error"]:
+                write_text(None, "  %s\n" % outcome["remote_error"])
     return 0
 
 

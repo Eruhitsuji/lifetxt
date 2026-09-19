@@ -419,6 +419,7 @@ CATEGORIES = OrderedDict(
                     "server-update",
                     "server-report",
                     "git-commit-worker",
+                    "backup",
                 ),
             },
         ),

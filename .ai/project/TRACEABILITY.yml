@@ -13758,7 +13758,7 @@ traceability:
       capability_id: cap-web-drawer-record-editing
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/850
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/852
       changed_files_or_scope:
         - Move the structured common-key authoring helpers (STRUCTURED_COMMON_FIELDS,
           structuredFieldsForType, renderStructuredFields, renderStatusStateField,

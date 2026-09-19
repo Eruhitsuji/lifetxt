@@ -162,6 +162,7 @@ class QuickStatusJsTests(unittest.TestCase):
             ["node", "-e", _HARNESS % _script_block()],
             capture_output=True,
             text=True,
+            encoding="utf-8",
             timeout=30,
         )
         if proc.returncode != 0:

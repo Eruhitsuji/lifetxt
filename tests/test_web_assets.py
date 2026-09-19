@@ -16,7 +16,7 @@ from lifetxt import web_assets, webapp
 
 
 REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
-LEGACY_PRISTINE_GIT_BLOB_SHA = "66871c80b6c50641deef00ac4b90c59f8ce2cb8d"
+LEGACY_PRISTINE_GIT_BLOB_SHA = "5504180b0c7012d56688f0be948063881aa39d33"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )

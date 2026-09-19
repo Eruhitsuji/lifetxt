@@ -148,6 +148,70 @@ class LayoutTests(unittest.TestCase):
         )
 
 
+class RecordDetailResponsiveTests(unittest.TestCase):
+    """Focused contract for the record-detail drawer at phone widths (#849)."""
+
+    def test_drawer_contains_horizontal_overflow(self):
+        self.assertRegex(
+            STYLE,
+            r"\.drawer-body \{[^}]*overflow-x: hidden;[^}]*overflow-y: auto;",
+        )
+        self.assertRegex(
+            STYLE,
+            r"\.drawer-tab-panel \{[^}]*min-width:0;[^}]*max-width:100%;"
+            r"[^}]*overflow-x:hidden;",
+        )
+        for selector in (
+            ".drawer-field .key",
+            ".drawer-field .val",
+            ".incoming-link-row",
+        ):
+            self.assertRegex(
+                STYLE,
+                re.escape(selector) + r" \{[^}]*overflow-wrap:\s*anywhere;",
+                selector,
+            )
+
+    def test_phone_tabs_share_width_without_losing_labels(self):
+        narrow = _media_block("@media (max-width: 680px)")
+
+        self.assertRegex(narrow, r"\.drawer-tab \{[^}]*flex: 1 1 0;")
+        self.assertRegex(narrow, r"\.drawer-tab \{[^}]*min-width: 0;")
+        self.assertRegex(narrow, r"\.drawer-tab \{[^}]*white-space: normal;")
+        self.assertRegex(narrow, r"\.drawer-tab \{[^}]*overflow-wrap: anywhere;")
+        self.assertRegex(
+            STYLE,
+            r"\.drawer-tab \{[^}]*min-height:var\(--control-height\);",
+        )
+
+    def test_phone_property_rows_stack_key_above_value(self):
+        phone = _media_block("@media (max-width: 560px)")
+
+        self.assertRegex(
+            phone,
+            r"\.drawer-field \{[^}]*grid-template-columns: minmax\(0, 1fr\);",
+        )
+
+    def test_timeline_and_relations_wrap_inside_the_drawer(self):
+        narrow = _media_block("@media (max-width: 680px)")
+        phone = _media_block("@media (max-width: 560px)")
+
+        self.assertIn(".dep-row, .blocker-chain-row", narrow)
+        self.assertIn("flex-wrap: wrap", narrow)
+        self.assertIn(".dep-row .drawer-link, .blocker-chain-row .drawer-link", narrow)
+        self.assertIn("overflow-wrap: anywhere", narrow)
+        self.assertRegex(phone, r"\.nt-transition \{[^}]*overflow-wrap: anywhere;")
+        self.assertRegex(phone, r"\.nt-details-body \.row \{[^}]*display: grid;")
+
+    def test_header_actions_can_wrap_without_hiding_close(self):
+        narrow = _media_block("@media (max-width: 680px)")
+
+        self.assertRegex(STYLE, r"#drawer-head-btns \{[^}]*max-width: 100%;")
+        self.assertIn("#drawer-head-btns > button", narrow)
+        self.assertIn("flex: 1 1 auto", narrow)
+        self.assertIn(".drawer-head .drawer-close-btn", STYLE)
+
+
 class ActionButtonTests(unittest.TestCase):
     def test_button_and_menu_exist(self):
         self.assertIn('id="mobile-fab"', HTML_PAGE)

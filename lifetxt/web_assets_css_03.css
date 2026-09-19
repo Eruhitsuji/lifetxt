@@ -408,7 +408,7 @@
       grid-template-columns: minmax(0, 1fr);
       padding: 0 2rem 2rem;
     }
-    .display-mode section,
+    .display-mode section.page,
     .display-mode .item {
       background: #fffdf6;
       border-color: #decfb7;
@@ -418,7 +418,7 @@
       border-color: #decfb7;
     }
     .display-mode main .toolbar,
-    .display-mode section .toolbar { display: none; }
+    .display-mode section.page .toolbar { display: none; }
     .display-mode header .toolbar > *:not(#display-exit-btn) { display: none; }
     .display-mode #display-exit-btn {
       display: inline-flex !important;
@@ -445,7 +445,7 @@
     [data-theme="dark"] body.display-mode .brand-mark { background: #23322d; }
     [data-theme="dark"] body.display-mode h1 { color: #edf4ef; }
     [data-theme="dark"] body.display-mode .subtitle { color: #aebbb4; }
-    [data-theme="dark"] body.display-mode section,
+    [data-theme="dark"] body.display-mode section.page,
     [data-theme="dark"] body.display-mode .item {
       background: #151c19;
       border-color: #31413b;

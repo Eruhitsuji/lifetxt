@@ -10244,7 +10244,8 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/838
       - https://github.com/Eruhitsuji/lifetxt/issues/839
       - https://github.com/Eruhitsuji/lifetxt/issues/840
-    related_pull_requests: []
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/848
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       The by-line-number and canonical-ID routes are merged into one
@@ -10302,7 +10303,8 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/845
       - https://github.com/Eruhitsuji/lifetxt/issues/846
       - https://github.com/Eruhitsuji/lifetxt/issues/847
-    related_pull_requests: []
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/848
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       docs/en/backups.md (a fuller workflow guide referenced by

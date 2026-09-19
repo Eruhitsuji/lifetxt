@@ -16,7 +16,7 @@ from lifetxt import web_assets, webapp
 
 
 REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
-LEGACY_PRISTINE_GIT_BLOB_SHA = "b20f696e17ac052520bb553c7ff40d086f71c705"
+LEGACY_PRISTINE_GIT_BLOB_SHA = "7fdca93b4c9fbf19e56b0d4c6d3e1d6d68786e4b"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )
@@ -96,14 +96,16 @@ class WebAssetExtractionTests(unittest.TestCase):
                 "web extras unavailable, so the served page cannot be checked"
             )
         client = TestClient(webapp.create_app(paths=[]))
-        body = client.get("/").content
-        self.assertEqual(webapp.HTML_PAGE.encode("utf-8"), body)
+        response = client.get("/")
+        self.assertEqual(webapp.HTML_PAGE.encode("utf-8"), response.content)
+        self.assertEqual("no-store", response.headers.get("cache-control"))
 
     def test_literal_is_not_back_in_webapp(self):
         with io.open(WEBAPP_SOURCE, encoding="utf-8") as handle:
             source = handle.read()
         self.assertNotIn('HTML_PAGE = r"""', source)
         self.assertIn("from .web_assets import HTML_PAGE", source)
+        self.assertIn('headers={"Cache-Control": "no-store"}', source)
 
     @unittest.skipUnless(shutil.which("node"), "node is not on PATH")
     def test_assembled_script_has_no_syntax_error(self):

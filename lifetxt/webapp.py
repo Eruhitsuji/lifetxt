@@ -297,7 +297,10 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
 
     @app.get("/", response_class=HTMLResponse)
     def index():
-        return HTML_PAGE
+        return HTMLResponse(
+            content=HTML_PAGE,
+            headers={"Cache-Control": "no-store"},
+        )
 
     @app.get("/api/health")
     def health():

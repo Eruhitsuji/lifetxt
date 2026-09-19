@@ -2,6 +2,37 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-responsive-record-detail-layout
+      capability_id: cap-web-responsive-record-detail
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/849
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/851
+      changed_files_or_scope:
+        - Preserve the compact desktop drawer while stacking Overview property keys and values at phone widths
+        - Distribute the Overview, Timeline, and Relations tabs across narrow drawers without clipping labels or weakening shared touch-target sizing
+        - Contain long titles, IDs, URLs, Timeline transitions/details, dependency rows, backlinks, and message-thread content inside the drawer
+        - lifetxt/web_assets_css_02.css
+        - lifetxt/web_assets_css_04.css
+        - tests/test_web_mobile.py
+        - tests/test_web_assets.py
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - python -m unittest tests.test_web_mobile tests.test_web_assets tests.test_web_native_timeline_visual tests.test_traceability_gate tests.test_change_package_closeout -> Ran 67 tests, OK (skipped=1)
+        - MPLBACKEND=Agg python -m unittest discover -> Ran 4666 tests, OK (skipped=217)
+        - python -m ruff check lifetxt tests scripts -> All checks passed
+        - python -m ruff format --check tests/test_web_mobile.py tests/test_web_assets.py -> 2 files already formatted
+        - python -m mypy --follow-imports=skip --ignore-missing-imports lifetxt/diagnostic_contract.py -> Success; no issues found in 1 source file
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - git diff --check -> clean
+      release_or_deployment: null
+      notes: >-
+        Bug/Standard assurance. Reuses the #771 record-detail tab architecture
+        and the #790/#799 shared control tokens; no JavaScript behavior, ARIA
+        semantics, data model, API, dependency, or configuration changes. A
+        normal PR revert restores the previous presentation with no migration.
+      status: implemented
+
     - requirement_id: req-server-update-quiescent-shutdown
       capability_id: cap-ubuntu-server-deployment
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/824

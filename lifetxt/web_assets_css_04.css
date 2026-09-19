@@ -477,6 +477,26 @@
         border-radius: var(--r-lg) var(--r-lg) 0 0;
         padding-bottom: calc(1rem + var(--safe-bottom));
       }
+      .drawer-head { padding-inline: .75rem; }
+      .drawer-body { padding: .75rem; }
+      .drawer-tabs { top: -.75rem; }
+      .drawer-tab {
+        flex: 1 1 0;
+        min-width: 0;
+        padding-inline: .35rem;
+        text-align: center;
+        white-space: normal;
+        overflow-wrap: anywhere;
+      }
+      #drawer-head-btns > button { flex: 1 1 auto; }
+      .dep-row, .blocker-chain-row { min-width: 0; flex-wrap: wrap; }
+      .dep-rel { flex: 1 1 5.5rem; min-width: 0; }
+      .dep-row .drawer-link, .blocker-chain-row .drawer-link {
+        flex: 1 1 10rem;
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+      .message-thread-row, .message-thread-meta { overflow-wrap: anywhere; }
       @supports (max-height: 92dvh) {
         .detail-modal, .modal { max-height: 92dvh; }
       }
@@ -640,8 +660,12 @@
     .nt-details-body .row { display: flex; gap: .35rem; }
     .nt-details-body .k { color: var(--muted); min-width: 8rem; }
     @media (max-width: 560px) {
+      .drawer-field { grid-template-columns: minmax(0, 1fr); gap: .1rem; }
       .nt-filters input { width: 100%; }
       .nt-head { flex-direction: column; gap: .1rem; }
+      .nt-transition { max-width: 100%; overflow-wrap: anywhere; }
+      .nt-details-body .row { display: grid; gap: .1rem; }
+      .nt-details-body .k { min-width: 0; overflow-wrap: anywhere; }
     }
 
     /* #791: surface rollout of the shared control geometry.  These selectors

@@ -31,6 +31,11 @@
       "path": "lifetxt/lifetxtz_codec.py",
       "call": "atomic_write_bytes",
       "reason": "The .lifetxtz compressed archive export (#693) is built entirely in memory and committed via the shared atomic-replace primitive, matching sqlite_codec.py's own reviewed rationale above: the destination is a new binary export file, not authoritative life.txt/state, and atomic_write_bytes alone already guarantees no partial destination on failure."
+    },
+    {
+      "path": "lifetxt/backup.py",
+      "call": "atomic_write_bytes",
+      "reason": "Disaster-recovery backup snapshots (lifetxt-backup-v1, #841) and file restores (#846) are built entirely in memory / at a private temporary path first and only committed via the shared atomic-replace primitive, matching sqlite_codec.py's/lifetxtz_codec.py's own reviewed rationale above: the destination is a new backup archive or a restored file the caller directs, never authoritative life.txt/state, and atomic_write_bytes alone already guarantees no partial destination on failure."
     }
   ]
 }

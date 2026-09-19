@@ -10079,6 +10079,7 @@ capabilities:
     owner: Eruhitsuji
     source_requirements:
       - req-web-responsive-record-detail-layout
+      - req-web-responsive-record-detail-touch-spacing-followup
     implementation_locations:
       - lifetxt/web_assets_css_02.css
       - lifetxt/web_assets_css_04.css
@@ -10096,6 +10097,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/791
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/851
+      - https://github.com/Eruhitsuji/lifetxt/pull/853
     reuse_policy: >-
       Reuse the #771 drawer/tab architecture and #790/#799 shared control
       geometry; do not create a second record-detail surface or control-size
@@ -10105,7 +10107,8 @@ capabilities:
       property grid. At phone widths the existing drawer becomes an explicit
       single-column content contract while the three semantic tabs, ARIA roles,
       keyboard focus behavior, bottom-sheet height, and safe-area rules remain
-      unchanged.
+      unchanged. Follow-up #849 removes a class-specific tab height that defeated
+      the coarse-pointer 44px target and adds visible row spacing and grouping.
     replacement:
       replaces: []
       replaced_by: null

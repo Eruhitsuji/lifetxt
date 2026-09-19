@@ -247,7 +247,7 @@ audience、そしてこの表と同じカテゴリ分類を表示します。
 | Structure / Data Integrity | `check`、`integrity`、`ids`、`links`、`backlinks`、`sources`、`tag`、`lint`、`deps`、`diff`、`snapshot`、`undo`、`cleanup`、`files` |
 | Import / Export / Reports | `convert`、`import`、`export`、`import-ics`、`sync-ics`、`to-json`、`to-jsonl`、`to-csv`、`from-json`、`from-jsonl`、`from-csv`、`from-markdown`、`from-todo`、`to-ics`、`markdown`、`stats`、`plot`、`export-heatmap`、`standup`、`invoice`、`share`、`digest`、`report` |
 | Interfaces / Integration | `tui`、`fzf`、`web`、`serve`、`mcp`、`ai`、`completion`、`git-hook`、`watch`、`remote` |
-| Workspace / Configuration / Safety | `config`、`workspace`、`path`、`doctor`、`format`、`safety`、`capabilities`、`attachment`、`update`、`update-check`、`server-init`、`server-update`、`server-report`、`git-commit-worker` |
+| Workspace / Configuration / Safety | `config`、`workspace`、`path`、`doctor`、`format`、`safety`、`capabilities`、`attachment`、`update`、`update-check`、`server-init`、`server-update`、`server-report`、`git-commit-worker`、`backup` |
 | Personal Context | `context`、`memory`、`decisions`、`decision-review`、`change-feed`、`future-intent` |
 | Advanced / Experimental | `archive`、`batch`、`encrypt`、`decrypt`、`migrate`、`template`、`demo`、`vm`、`rrule` |
 

@@ -1,107 +1,6 @@
-    // Structured common-key authoring (#776 / #775).  These controls are a
-    // presentation adapter only: values are merged into the existing Details
-    // object and continue through the established POST/PUT validation path.
-    const STRUCTURED_COMMON_FIELDS = [
-      {key: "due", label: "Deadline", types: ["T", "D", "R", "H"]},
-      {key: "do", label: "Scheduled", types: ["T", "D", "R", "H"]},
-      {key: "on", label: "Date", types: ["E", "J"]},
-      {key: "from", label: "Start", types: ["E", "S"]},
-      {key: "to", label: "End", types: ["E", "S"]},
-      {key: "at", label: "At", types: ["E", "J"]},
-      {key: "project", label: "Project", types: null},
-      {key: "priority", label: "Priority", types: ["T", "D", "R", "H"]},
-      {key: "tag", label: "Tag", types: null},
-      {key: "progress", label: "Progress", types: ["T", "D", "R", "H"]},
-    ];
-
-    function structuredFieldsForType(type) {
-      return STRUCTURED_COMMON_FIELDS.filter(field => !field.types || field.types.includes(type));
-    }
-
-    function renderStructuredFields(prefix, details, type) {
-      const values = details || {};
-      const help = {
-        due: "When this task should be finished.",
-        project: "Group this record with related work.",
-        priority: "How important this item is compared with other work.",
-        progress: "Completion percentage, from 0 to 100.",
-      };
-      const fields = structuredFieldsForType(type).map(field => {
-        const value = Array.isArray(values[field.key]) ? values[field.key].join(", ") : (values[field.key] || "");
-        const inputId = prefix + "-" + field.key;
-        const wide = field.key === "tag" || field.key === "project";
-        const helpId = inputId + "-help";
-        const helpText = help[field.key] || "Optional details for this record.";
-        return `<label class="structured-field${wide ? " wide-field" : ""}" for="${inputId}">` +
-          `<span>${escapeHtml(field.label)} <small>(${escapeHtml(field.key)}:)</small></span>` +
-          `<input id="${inputId}" aria-describedby="${helpId}" data-structured-key="${escapeHtml(field.key)}" value="${escapeHtml(String(value))}" autocomplete="off">` +
-          `<small id="${helpId}" class="field-help-text">${escapeHtml(helpText)}</small>` +
-          `</label>`;
-      }).join("");
-      return renderStatusStateField(prefix, values, type) + fields;
-    }
-
-    function renderStatusStateField(prefix, details, type) {
-      if (type !== "S") return "";
-      const values = Array.isArray(details.state) ? details.state : [];
-      const current = values.length ? String(values[0]) : "";
-      const standards = standardStatusStates();
-      const isStandard = standards.includes(current);
-      const mode = isStandard ? current : "__custom__";
-      const options = standards.map(state =>
-        `<option value="${escapeHtml(state)}"${state === mode ? " selected" : ""}>${escapeHtml(statusStateLabel(state))}</option>`
-      ).join("");
-      const customId = prefix + "-status-state-custom";
-      const selectId = prefix + "-status-state";
-      const helpId = prefix + "-status-state-help";
-      return `<fieldset class="status-state-fields wide-field" data-status-state-fields>` +
-        `<legend>Status / presence value</legend>` +
-        `<label for="${selectId}"><span>Standard status</span>` +
-        `<select id="${selectId}" data-status-state-select aria-describedby="${helpId}">` +
-        options + `<option value="__custom__"${mode === "__custom__" ? " selected" : ""}>Custom…</option></select></label>` +
-        `<label for="${customId}" data-status-state-custom-row>` +
-        `<span>Custom status</span><input id="${customId}" data-status-state-custom value="${escapeHtml(isStandard ? "" : current)}" autocomplete="off">` +
-        `</label><small id="${helpId}" class="field-help-text">Choose a common value or enter any custom status.</small>` +
-        `</fieldset>`;
-    }
-
-    function syncStatusStateMode(container) {
-      const select = container && container.querySelector("[data-status-state-select]");
-      const input = container && container.querySelector("[data-status-state-custom]");
-      const row = container && container.querySelector("[data-status-state-custom-row]");
-      if (!select || !input || !row) return;
-      const custom = select.value === "__custom__";
-      row.hidden = !custom;
-      input.disabled = !custom;
-      input.required = custom;
-      input.setAttribute("aria-required", custom ? "true" : "false");
-    }
-
     function statusStateChanged(container) {
       syncStatusStateMode(container);
       syncStructuredFieldsIntoDetails();
-    }
-
-    function _structuredDetails(textareaId, prefix) {
-      const textarea = document.getElementById(textareaId);
-      const details = parseDetails(textarea ? textarea.value : "");
-      for (const field of STRUCTURED_COMMON_FIELDS) {
-        const input = document.getElementById(prefix + "-" + field.key);
-        if (!input) continue;
-        const value = input.value.trim();
-        if (value) details[field.key] = value.split(",").map(v => v.trim()).filter(Boolean);
-        else delete details[field.key];
-      }
-      const container = document.getElementById(prefix === "edit" ? "structured-fields" : prefix + "-structured-fields");
-      const type = document.getElementById(prefix + "-type")?.value || document.getElementById("edit-type")?.value;
-      const stateSelect = container && container.querySelector("[data-status-state-select]");
-      const customInput = container && container.querySelector("[data-status-state-custom]");
-      if (type === "S" && stateSelect) {
-        const value = stateSelect.value === "__custom__" ? (customInput?.value || "").trim() : stateSelect.value;
-        if (value) details.state = [value];
-        else delete details.state;
-      }
-      return details;
     }
 
     function _populateStructuredFields(prefix, details, type) {
@@ -200,30 +99,6 @@
       document.getElementById("nav-more-summary")?.setAttribute("aria-expanded", _moreNav.open ? "true" : "false");
     });
 
-    function actionableErrorText(error) {
-      const status = Number(error?.status);
-      if (status === 409 || /conflict|revision|changed/i.test(error?.message || "")) {
-        return "This item changed after you opened it. Your changes were not silently overwritten.";
-      }
-      if (status === 401 || status === 403) return "This workspace is read-only or you do not have permission to change it.";
-      if (status >= 500 || !status) return "Check the connection and try again.";
-      return error?.message || "Check the highlighted fields and try again.";
-    }
-    function showActionableError(title, error, options = {}) {
-      const detail = escapeHtml(error?.message || error || "Unknown error");
-      if (options.retry) renderActionableError(document.getElementById("toast-container"), title, error, options.retry);
-      else showToast(`${title} ${actionableErrorText(error)} Technical details: ${detail}`, "error", 7000);
-    }
-    function renderActionableError(container, title, error, retry) {
-      if (!container) return;
-      const id = "error-details-" + Date.now();
-      container.innerHTML = `<div class="actionable-error" role="alert" tabindex="-1"><strong>${escapeHtml(title)}</strong>` +
-        `<span>${escapeHtml(actionableErrorText(error))}</span>` +
-        `<button type="button" class="secondary" data-retry>Try again</button>` +
-        `<details><summary>Technical details</summary><code id="${id}">${escapeHtml(error?.message || error || "")}</code></details></div>`;
-      container.querySelector("[data-retry]")?.addEventListener("click", retry);
-      container.querySelector(".actionable-error")?.focus();
-    }
       applyPresetToUrl();
       applyUrlToControls();
       updateNotifPermissionDisplay();

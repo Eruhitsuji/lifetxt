@@ -13619,7 +13619,7 @@ traceability:
       capability_id: cap-web-stable-item-links
       epic: https://github.com/Eruhitsuji/lifetxt/issues/835
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/837
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/848
       changed_files_or_scope:
         - Add a canonical exact-ID GET /api/items/{item_id} Web API route,
           merged with the historical by-line-number route into one handler
@@ -13671,7 +13671,7 @@ traceability:
       capability_id: cap-lifetxt-backup-v1
       epic: https://github.com/Eruhitsuji/lifetxt/issues/836
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/841
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/848
       changed_files_or_scope:
         - "Add the lifetxt-backup-v1 disaster-recovery snapshot format: atomic
           ZIP-based create/verify/restore/list/prune, a provider-independent

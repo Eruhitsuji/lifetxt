@@ -763,6 +763,85 @@ CONFIG_REGISTRY = OrderedDict(
                 replacement="workspaces.*.sources[].role=generated",
             ),
         ),
+        (
+            "backup",
+            _entry(
+                "object",
+                None,
+                "Disaster-recovery backup snapshot (lifetxt-backup-v1) settings, "
+                "distinct from the periodic local Git-commit worker.",
+            ),
+        ),
+        (
+            "backup.enabled",
+            _entry(
+                "boolean",
+                False,
+                "Required before `lifetxt backup run-scheduled` will run. "
+                "`backup create` works regardless of this flag.",
+            ),
+        ),
+        (
+            "backup.destination",
+            _entry(
+                "string",
+                None,
+                "Local directory backups are written to. Overridden by --destination.",
+            ),
+        ),
+        (
+            "backup.sources",
+            _entry(
+                "array<string>",
+                None,
+                "Source paths to back up. Overridden by explicit CLI source arguments.",
+            ),
+        ),
+        (
+            "backup.source_identity",
+            _entry(
+                "string",
+                None,
+                "Human-diagnostic label recorded in each backup's manifest "
+                "(for example a workspace name). Never a path or credential.",
+            ),
+        ),
+        (
+            "backup.keep_last",
+            _entry(
+                "integer",
+                None,
+                "When set to a positive integer, `run-scheduled` prunes to this "
+                "many most-recent complete backups after each successful run.",
+            ),
+        ),
+        (
+            "backup.remote.backend",
+            _entry(
+                "string",
+                None,
+                "Remote upload backend for `run-scheduled`. Only 'rclone' is "
+                "currently supported.",
+                allowed=["rclone"],
+            ),
+        ),
+        (
+            "backup.remote.target",
+            _entry(
+                "string",
+                None,
+                "rclone remote:path destination backups are uploaded to (upload-only; "
+                "never used to sync/delete on the remote).",
+            ),
+        ),
+        (
+            "backup.remote.rclone_bin",
+            _entry(
+                "string",
+                "rclone",
+                "rclone executable/argv prefix to invoke for uploads.",
+            ),
+        ),
     )
 )
 

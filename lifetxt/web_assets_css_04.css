@@ -483,7 +483,6 @@
         padding: .75rem .75rem 2rem;
         -webkit-overflow-scrolling: touch;
         overscroll-behavior-y: contain;
-        touch-action: pan-y;
       }
       .drawer-tabs { top: -.75rem; }
       .drawer-tab {

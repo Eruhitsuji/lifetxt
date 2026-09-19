@@ -22,6 +22,7 @@ traceability:
       tests_or_evidence:
         - iPhone 12 verification after PR #854 reported unchanged spacing and no vertical scrolling with many keys
         - Regression tests failed before the fix because the sheet had only max-height, touch-scroll ownership was ambiguous, and the root response allowed caching
+        - Review follow-up removed touch-action pan-y because it would block intentional horizontal child scrolling and pinch gestures
         - python -m unittest tests.test_web_mobile tests.test_web_assets tests.test_web_native_timeline_visual tests.test_traceability_gate tests.test_change_package_closeout -> Ran 69 tests, OK
         - MPLBACKEND=Agg python -m unittest discover -> Ran 4677 tests, OK (skipped=35)
         - python -m ruff check lifetxt tests scripts -> All checks passed

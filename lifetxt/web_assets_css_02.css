@@ -144,7 +144,7 @@
     .drawer-tab { box-sizing:border-box; border:0; border-bottom:2px solid transparent; background:transparent; color:var(--muted); cursor:pointer; padding:.35rem .65rem; font-weight:600; }
     .drawer-tab:hover, .drawer-tab.active { color:var(--text); border-bottom-color:var(--accent); }
     .drawer-tab-panel[hidden] { display:none; }
-    .drawer-tab-panel { min-width:0; max-width:100%; overflow-x:hidden; }
+    .drawer-tab-panel { min-width:0; max-width:100%; }
     .drawer-fields { display: grid; gap: .4rem; min-width:0; }
     .drawer-field { display: grid; grid-template-columns: 7rem minmax(0, 1fr); gap: .5rem; min-width:0; font-size: .88rem; }
     .drawer-field .key { min-width:0; color: var(--muted); overflow-wrap:anywhere; }

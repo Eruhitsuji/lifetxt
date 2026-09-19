@@ -2,6 +2,41 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-responsive-record-detail-ios-scroll
+      capability_id: cap-web-responsive-record-detail
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/849
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/855
+      changed_files_or_scope:
+        - Give the iPhone bottom sheet a definite dynamic-viewport height so its grid body can shrink and scroll
+        - Make drawer-body the only vertical scroll owner and enable iOS momentum touch panning
+        - Prevent stale inline Web UI assets from being reused after server updates
+        - Increase phone field-list spacing enough to be visibly distinguishable on the iPhone 12 viewport
+        - lifetxt/web_assets_css_02.css
+        - lifetxt/web_assets_css_04.css
+        - lifetxt/webapp.py
+        - tests/test_web_mobile.py
+        - tests/test_web_assets.py
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - iPhone 12 verification after PR #854 reported unchanged spacing and no vertical scrolling with many keys
+        - Regression tests failed before the fix because the sheet had only max-height, touch-scroll ownership was ambiguous, and the root response allowed caching
+        - Review follow-up removed touch-action pan-y because it would block intentional horizontal child scrolling and pinch gestures
+        - python -m unittest tests.test_web_mobile tests.test_web_assets tests.test_web_native_timeline_visual tests.test_traceability_gate tests.test_change_package_closeout -> Ran 69 tests, OK
+        - MPLBACKEND=Agg python -m unittest discover -> Ran 4677 tests, OK (skipped=35)
+        - python -m ruff check lifetxt tests scripts -> All checks passed
+        - python -m ruff format --check lifetxt/webapp.py tests/test_web_mobile.py tests/test_web_assets.py -> 3 files already formatted
+        - python -m mypy --follow-imports=skip --ignore-missing-imports lifetxt/diagnostic_contract.py -> Success; no issues found in 1 source file
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - git diff --check -> clean
+      release_or_deployment: null
+      notes: >-
+        Bug/Standard assurance iOS follow-up to #854. The response-header change
+        only affects the root HTML cache policy; APIs, data, JavaScript behavior,
+        ARIA semantics, dependencies, and configuration remain unchanged.
+      status: implemented
+
     - requirement_id: req-web-responsive-record-detail-iphone-breathing-room
       capability_id: cap-web-responsive-record-detail
       epic: null

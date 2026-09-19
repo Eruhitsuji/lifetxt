@@ -43,10 +43,26 @@ def _extract_functions_under_test(full_script):
         "function standardStatusStates",
         "function setupQuickPresencePicker",
     )
-    structured = _extract_block(
-        full_script,
-        "const STRUCTURED_COMMON_FIELDS",
-        "function _populateStructuredFields",
+    # STRUCTURED_COMMON_FIELDS/structuredFieldsForType/renderStructuredFields/
+    # renderStatusStateField/syncStatusStateMode/_structuredDetails are
+    # declared at true top level (#850), separately from
+    # _populateStructuredFields/refreshStructuredFields (which stay inside
+    # the loadConfig().then() callback), so they can no longer be pulled out
+    # as one contiguous span the way they could when everything sat next to
+    # each other in the same function scope. Extract each self-contained
+    # declaration by name instead.
+    structured_const = _extract_const(
+        full_script, "const STRUCTURED_COMMON_FIELDS = [", "\n    ];"
+    )
+    structured_fns = "\n".join(
+        _extract_function(full_script, signature)
+        for signature in (
+            "function structuredFieldsForType(",
+            "function renderStructuredFields(",
+            "function renderStatusStateField(",
+            "function syncStatusStateMode(",
+            "function _structuredDetails(",
+        )
     )
     return (
         detailsToText
@@ -57,7 +73,9 @@ def _extract_functions_under_test(full_script):
         + "\n"
         + statusStates
         + "\n"
-        + structured
+        + structured_const
+        + "\n"
+        + structured_fns
     )
 
 
@@ -65,6 +83,44 @@ def _extract_block(full_script, start_marker, end_marker):
     start = full_script.index(start_marker)
     end = full_script.index(end_marker, start)
     return full_script[start:end]
+
+
+def _extract_const(full_script, start_marker, end_marker):
+    start = full_script.index(start_marker)
+    end = full_script.index(end_marker, start) + len(end_marker)
+    return full_script[start:end]
+
+
+def _extract_function(full_script, signature):
+    """Extract one self-contained ``function NAME(...) { ... }`` statement
+    by brace-matching from its signature, wherever it lives in the real
+    source."""
+    start = full_script.index(signature)
+    # Skip past the parameter list first (paren-matching): a default
+    # parameter value such as `options = {}` would otherwise look like the
+    # function body's own (immediately self-closing) opening brace.
+    paren_depth = 0
+    i = full_script.index("(", start)
+    while True:
+        ch = full_script[i]
+        if ch == "(":
+            paren_depth += 1
+        elif ch == ")":
+            paren_depth -= 1
+            if paren_depth == 0:
+                break
+        i += 1
+    depth = 0
+    i = full_script.index("{", i)
+    while True:
+        ch = full_script[i]
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return full_script[start : i + 1]
+        i += 1
 
 
 _HARNESS = """
@@ -154,6 +210,7 @@ class StructuredFieldAuthoringJsTests(unittest.TestCase):
             ["node", "-e", harness],
             capture_output=True,
             text=True,
+            encoding="utf-8",
             timeout=30,
         )
         if proc.returncode != 0:

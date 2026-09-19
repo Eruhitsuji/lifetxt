@@ -3,6 +3,59 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": true,
   "properties": {
+    "backup": {
+      "additionalProperties": true,
+      "properties": {
+        "destination": {
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "keep_last": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "remote": {
+          "additionalProperties": true,
+          "properties": {
+            "backend": {
+              "enum": [
+                "rclone"
+              ],
+              "type": "string"
+            },
+            "rclone_bin": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              ]
+            },
+            "target": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "source_identity": {
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
     "capture": {
       "additionalProperties": true,
       "properties": {

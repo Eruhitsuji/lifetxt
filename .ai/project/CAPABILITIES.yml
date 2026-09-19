@@ -10361,3 +10361,103 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-web-drawer-record-editing
+    name: Reliable Web record-detail drawer editing
+    summary: >-
+      Fixes a regression where the Web UI's record-detail drawer's Edit
+      action threw an uncaught ReferenceError while building the edit form
+      (structured common-key authoring, #776, and actionable-error
+      presentation, #798, were declared inside a nested
+      `loadConfig().then()` callback with no lexical visibility from
+      top-level drawer code), leaving the drawer silently showing the
+      read-only Overview content instead of an editable form. Moves the
+      affected helpers to true top-level scope so both the drawer editor
+      and the main editor form's own save-error path can reach them, with
+      no behavior change to either.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-web-drawer-record-editing-reliability
+    implementation_locations:
+      - lifetxt/web_assets_js_17.js
+      - lifetxt/web_assets_js_18.js
+      - tests/test_web_drawer_edit_js.py
+      - tests/test_web_structured_authoring_js.py
+      - tests/test_web_assets.py
+      - tests/test_web_quick_status_js.py
+    public_interfaces:
+      - Web UI record-detail drawer Edit / Save / Cancel actions
+    tests_or_evidence:
+      - "tests/test_web_drawer_edit_js.py ScopeRegressionGuardTests (2 tests): the structured-field/actionable-error helpers stay declared before loadConfig().then(...), and each is declared exactly once -- confirmed via git-show of the pre-fix commit to fail against the old code (8 of 9 sub-assertions) and pass once the fix is restored"
+      - "tests/test_web_drawer_edit_js.py DrawerEditInteractionTests (7 tests): drawerEdit() renders an enabled, focusable form with the current title/status/structured-field values; drawerSaveEdit() sends exactly one PUT with the edited title and structured field; a custom/raw detail key survives a structured-field-only edit; Type S standard and custom state round-trip through save; Cancel makes no API call and reopens the original record with drawerEditing cleared; a read-only record refuses Edit and leaves drawer-body untouched; a blank title fails loudly before any save request"
+      - "live: real Playwright (Chromium) session against a real running lifetxt serve process and a disposable fixture workspace -- before the fix, clicking Edit left #drawer-edit-title absent (0 elements) with a captured page error 'renderStructuredFields is not defined'; after the fix, the same click renders the real edit form, and a full title change (\"Buy milk\" -> \"Buy milc and eggs\") plus a due: structured-field change save successfully, with the server-side item confirmed updated via a direct GET /api/items call"
+      - python -m unittest tests.test_web_drawer_edit_js tests.test_web_structured_authoring_js tests.test_web_assets tests.test_web_quick_status_js tests.test_web_context_create_js tests.test_web_deep_link_js tests.test_web_native_timeline_visual tests.test_web_actionable_errors_js tests.test_web_mobile tests.test_web_i18n tests.test_web_commands tests.test_surface_runtime tests.test_release_policy tests.test_lifetxt.LifeTxtWebApiTests -> Ran 250 tests, OK
+      - node --check on the full assembled Web UI script -> no syntax error
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - ruff format --check / ruff check on changed Python files -> clean
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/850
+      - https://github.com/Eruhitsuji/lifetxt/issues/776
+      - https://github.com/Eruhitsuji/lifetxt/issues/798
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Root-caused via live reproduction (real Playwright/Chromium session
+      against a real running server) rather than static code reading alone,
+      since the bug's cause -- an accidental JavaScript closure-scoping
+      regression -- was not visible from indentation or file-boundary
+      inspection (the affected functions retained their original 4-space,
+      apparently-top-level indentation despite being lexically nested
+      inside `loadConfig().then(() => { ... })`, which spans from the very
+      last line of web_assets_js_17.js through almost all of
+      web_assets_js_18.js). Confirmed with a small ad hoc acorn-based AST
+      scope walk (network-installed, not a project dependency, used only
+      for this investigation) before writing the fix. Fix is a pure
+      relocation of STRUCTURED_COMMON_FIELDS/structuredFieldsForType/
+      renderStructuredFields/renderStatusStateField/syncStatusStateMode/
+      _structuredDetails and actionableErrorText/showActionableError/
+      renderActionableError to top-level scope; no logic changed. This
+      also incidentally fixes the main (non-drawer) editor's own Save
+      error path, which called showActionableError the same way from
+      web_assets_js_05.js's saveItem() and was equally broken by the same
+      scoping bug -- same root cause, same fix, so it is included here
+      rather than filed separately per this project's Horizontal Review
+      Scope Discipline.
+
+      tests/test_web_drawer_edit_js.py's own module docstring records an
+      explicit, honest limitation: its DrawerEditInteractionTests extract
+      the real function bodies by name and concatenate them as flat
+      top-level siblings in the test harness (matching this project's
+      established Node-snippet testing style), which means those specific
+      tests would still pass even against the pre-fix code -- extraction
+      by name inherently "de-nests" whatever it pulls out, which is
+      exactly the blind spot the issue itself identified in the
+      pre-existing #776 structured-authoring tests. Only
+      ScopeRegressionGuardTests (a small, targeted, zero-dependency textual
+      position check) provides real regression protection against
+      re-introducing this exact bug; the interaction tests are still
+      valuable for verifying the drawer editor's functional correctness
+      (payload construction, structured-field round-trip, Type S
+      standard/custom state, Cancel, read-only guard) once the functions
+      are reachable at all.
+
+      Also fixed two pre-existing, unrelated Windows cp932-locale
+      subprocess encoding gaps found while running the full Web suite on
+      this sandbox (tests/test_web_quick_status_js.py and
+      tests/test_web_structured_authoring_js.py's subprocess.run() calls
+      lacked encoding="utf-8", crashing on Node's Japanese-label stdout on
+      a non-UTF-8-locale host) -- the same defect class already fixed
+      several times elsewhere in this project's history.
+
+      Several deeper acceptance-criteria items from the original issue
+      (deep-link/multi-file-workspace interaction with the drawer editor,
+      full mobile/touch interaction, an explicit reproduction-classification
+      write-up distinguishing every listed failure mode) were exercised
+      live and confirmed by code reading during this fix but are not
+      independently covered by a dedicated automated test in this change;
+      recorded here rather than silently claimed as fully verified.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

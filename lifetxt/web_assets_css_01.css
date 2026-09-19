@@ -138,7 +138,10 @@
       margin: 0 auto;
       padding: 1.1rem clamp(.75rem, 3vw, 1.5rem) 2.5rem;
     }
-    section {
+    /* Scoped to top-level page sections (every one of which carries the
+       shared .page class) so this chrome/clipping rule cannot leak into an
+       unrelated nested <section>, such as a record-detail drawer tab panel. */
+    section.page {
       min-width: 0;
       background: var(--panel);
       border: 1px solid var(--line);
@@ -456,7 +459,7 @@
     }
     [data-contrast="high"] .pill, [data-contrast="high"] .badge,
     [data-contrast="high"] .status, [data-contrast="high"] button,
-    [data-contrast="high"] .item, [data-contrast="high"] section { border: 1px solid var(--line) !important; }
+    [data-contrast="high"] .item, [data-contrast="high"] section.page { border: 1px solid var(--line) !important; }
     .markdown {
       overflow-wrap: anywhere;
     }

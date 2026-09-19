@@ -10082,8 +10082,11 @@ capabilities:
       - req-web-responsive-record-detail-touch-spacing-followup
       - req-web-responsive-record-detail-iphone-breathing-room
       - req-web-responsive-record-detail-ios-scroll
+      - req-web-responsive-record-detail-section-scope-fix
     implementation_locations:
+      - lifetxt/web_assets_css_01.css
       - lifetxt/web_assets_css_02.css
+      - lifetxt/web_assets_css_03.css
       - lifetxt/web_assets_css_04.css
       - lifetxt/webapp.py
       - tests/test_web_mobile.py
@@ -10098,11 +10101,13 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/849
       - https://github.com/Eruhitsuji/lifetxt/issues/771
       - https://github.com/Eruhitsuji/lifetxt/issues/791
+      - https://github.com/Eruhitsuji/lifetxt/issues/856
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/851
       - https://github.com/Eruhitsuji/lifetxt/pull/853
       - https://github.com/Eruhitsuji/lifetxt/pull/854
       - https://github.com/Eruhitsuji/lifetxt/pull/855
+      - https://github.com/Eruhitsuji/lifetxt/pull/857
     reuse_policy: >-
       Reuse the #771 drawer/tab architecture and #790/#799 shared control
       geometry; do not create a second record-detail surface or control-size
@@ -10119,6 +10124,19 @@ capabilities:
       The iOS scroll follow-up makes the sheet height definite, keeps one vertical
       scroll owner, enables momentum touch panning, and prevents stale inline UI
       assets from being reused after an update.
+      #856 found that even after #855, a global, unscoped `section { overflow:
+      hidden; border-radius: var(--r-lg); ...}` page-chrome rule (originally
+      meant for top-level `data-page` panels) still matched every drawer tab
+      panel too, since they are also rendered as plain `<section>` elements.
+      That silently reintroduced a clipping/rounding box nested inside
+      `.drawer-body`'s own scrollport, so content past the fold was clipped
+      instead of scrolled to and the "FIELDS" heading's leading edge was cut by
+      the inherited rounded corner. Fixed by scoping every such rule (in
+      `web_assets_css_01.css`, `web_assets_css_03.css`, and
+      `web_assets_css_04.css`) to `section.page`, the class every real
+      top-level page section already carries, rather than adding a second,
+      narrower `.drawer-tab-panel` override that could drift from the panel
+      element again in the future.
     replacement:
       replaces: []
       replaced_by: null

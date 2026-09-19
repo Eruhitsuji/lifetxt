@@ -2,6 +2,54 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-responsive-record-detail-section-scope-fix
+      capability_id: cap-web-responsive-record-detail
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/856
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/857
+      changed_files_or_scope:
+        - Scope the global page-chrome/clipping `section { ... }` rule (and its
+          high-contrast and print-mode variants) to `section.page`, the class
+          every top-level page section already carries, so it can no longer
+          leak onto the record-detail drawer's `<section class="drawer-tab-panel">`
+          tab panels
+        - Scope the Display Mode `section` background/border overrides to
+          `section.page` for the same reason
+        - Add a cascade-aware regression test that inspects every CSS rule
+          (descending into @media/@supports) for a selector whose final
+          compound is a bare, unqualified `section` element selector, plus a
+          direct positive check that no rule matching a drawer tab panel sets
+          overflow/border/border-radius/box-shadow/background
+        - lifetxt/web_assets_css_01.css
+        - lifetxt/web_assets_css_03.css
+        - lifetxt/web_assets_css_04.css
+        - tests/test_web_mobile.py
+        - tests/test_web_assets.py
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - "iPhone 12, Google Chrome for iOS: swiping inside Overview did not scroll, the F in FIELDS was clipped, and content below the fold (SOURCE onward) was unreachable, reproduced against the #855 merge commit"
+        - "New regression test (test_no_bare_section_selector_leaks_page_chrome_onto_the_drawer) confirmed via git stash to fail against the pre-fix code with the exact offending rule ('section' in rule 'section'), then pass once the fix is restored"
+        - python -m unittest tests.test_web_mobile tests.test_web_assets tests.test_web_native_timeline_visual tests.test_web_i18n tests.test_web_commands tests.test_surface_runtime tests.test_release_policy tests.test_traceability_gate tests.test_change_package_closeout -> Ran 157 tests, OK
+        - "live: real lifetxt serve process; GET / confirmed the served page's global rule reads section.page { ... } (never bare section { ... }), Cache-Control: no-store from #855 is unaffected"
+        - MPLBACKEND=Agg python -m unittest discover -> full suite, OK
+        - python -m ruff check lifetxt tests scripts -> All checks passed
+        - python -m ruff format --check tests/test_web_mobile.py tests/test_web_assets.py -> 2 files already formatted
+        - python -m mypy --follow-imports=skip --ignore-missing-imports lifetxt/diagnostic_contract.py -> Success; no issues found in 1 source file
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - git diff --check -> clean
+      release_or_deployment: null
+      notes: >-
+        Bug/Standard assurance CSS-cascade-scoping follow-up to #855. The
+        symptom (unscrollable drawer, clipped FIELDS heading) is identical to
+        what #855 fixed, but the root cause is different and untouched by
+        that PR: a global, unscoped `section` type selector, not the
+        `.drawer-body` grid height/scroll-owner/momentum-scrolling contract
+        #855 already fixed correctly and which remains unchanged here. No
+        second vertical scroll owner was added, and no drawer/tab markup,
+        ARIA semantics, JavaScript behavior, or desktop layout changed.
+      status: implemented
+
     - requirement_id: req-web-responsive-record-detail-ios-scroll
       capability_id: cap-web-responsive-record-detail
       epic: null

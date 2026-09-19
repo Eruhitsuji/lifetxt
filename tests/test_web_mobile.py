@@ -290,6 +290,26 @@ class RecordDetailResponsiveTests(unittest.TestCase):
                         "%r (matched via %r) declares %r" % (selector, last, hit),
                     )
 
+    def test_drawer_body_rows_never_stretch_past_their_own_content(self):
+        """``.drawer-body`` is a CSS Grid with two auto-sized rows: the tab
+        bar and whichever tab panel is currently visible. Grid's
+        ``align-content`` defaults to "normal", which computes to "stretch"
+        in the block axis whenever the container has a definite height (it
+        does, from #855's ``.detail-modal`` height) and its auto rows don't
+        already fill it. That distributes any leftover vertical space -- on
+        a tab whose content is shorter than the sheet -- into every auto
+        row, including the tab bar's own row, ballooning it far past its
+        button content and separating the active tab's underline from its
+        label by a wide empty gap (#858). ``align-content: start`` keeps
+        every row at its natural content height and leaves leftover space
+        blank below the content, as a scrollable dialog with short content
+        should.
+        """
+        self.assertRegex(
+            STYLE,
+            r"\.drawer-body \{[^}]*align-content: start;",
+        )
+
     def test_phone_tabs_share_width_without_losing_labels(self):
         narrow = _media_block("@media (max-width: 680px)")
 

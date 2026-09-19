@@ -225,8 +225,13 @@ class RecordDetailResponsiveTests(unittest.TestCase):
         self.assertRegex(
             narrow,
             r"\.drawer-body \{[^}]*-webkit-overflow-scrolling: touch;"
-            r"[^}]*overscroll-behavior-y: contain;[^}]*touch-action: pan-y;",
+            r"[^}]*overscroll-behavior-y: contain;",
         )
+        body_rule = re.search(r"\.drawer-body \{([^}]*)\}", narrow)
+        self.assertTrue(body_rule)
+        # Do not restrict gestures at the scroll owner: pan-y would also
+        # disable intentional horizontal child scrollers and pinch gestures.
+        self.assertNotIn("touch-action", body_rule.group(1))
         self.assertRegex(
             narrow,
             r"@supports \(height: 92dvh\) \{[^}]*\.detail-modal \{"

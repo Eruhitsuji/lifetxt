@@ -2,6 +2,37 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-responsive-record-detail-touch-spacing-followup
+      capability_id: cap-web-responsive-record-detail
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/849
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/853
+      changed_files_or_scope:
+        - Let the coarse-pointer button rule set the record-detail tabs to a 44px minimum touch target
+        - Add visible spacing, padding, borders, and background grouping to phone-width Overview property rows
+        - lifetxt/web_assets_css_02.css
+        - lifetxt/web_assets_css_04.css
+        - tests/test_web_mobile.py
+        - tests/test_web_assets.py
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - Regression tests failed before the CSS fix because .drawer-tab overrode the coarse-pointer button height and phone rows lacked padding
+        - python -m unittest tests.test_web_mobile tests.test_web_assets tests.test_web_native_timeline_visual tests.test_traceability_gate tests.test_change_package_closeout -> Ran 67 tests, OK (skipped=1)
+        - MPLBACKEND=Agg python -m unittest discover -> Ran 4675 tests, OK (skipped=217)
+        - python -m ruff check lifetxt tests scripts -> All checks passed
+        - python -m ruff format --check tests/test_web_mobile.py tests/test_web_assets.py -> 2 files already formatted
+        - python -m mypy --follow-imports=skip --ignore-missing-imports lifetxt/diagnostic_contract.py -> Success; no issues found in 1 source file
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - git diff --check -> clean
+      release_or_deployment: null
+      notes: >-
+        Bug/Standard assurance follow-up to #851. CSS-only correction with no
+        JavaScript behavior, ARIA semantics, data model, API, dependency, or
+        configuration changes. A normal PR revert restores the previous
+        presentation with no migration.
+      status: implemented
+
     - requirement_id: req-web-responsive-record-detail-layout
       capability_id: cap-web-responsive-record-detail
       epic: null

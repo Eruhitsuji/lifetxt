@@ -179,10 +179,12 @@ class RecordDetailResponsiveTests(unittest.TestCase):
         self.assertRegex(narrow, r"\.drawer-tab \{[^}]*min-width: 0;")
         self.assertRegex(narrow, r"\.drawer-tab \{[^}]*white-space: normal;")
         self.assertRegex(narrow, r"\.drawer-tab \{[^}]*overflow-wrap: anywhere;")
-        self.assertRegex(
-            STYLE,
-            r"\.drawer-tab \{[^}]*min-height:var\(--control-height\);",
-        )
+        drawer_rule = re.search(r"\.drawer-tab \{([^}]*)\}", STYLE)
+        self.assertTrue(drawer_rule)
+        # The shared `button` rule owns normal control height.  A class-level
+        # override has greater specificity than the later coarse-pointer
+        # `button` rule and would silently keep touch tabs below 44px (#849).
+        self.assertNotIn("min-height", drawer_rule.group(1))
 
     def test_phone_property_rows_stack_key_above_value(self):
         phone = _media_block("@media (max-width: 560px)")
@@ -191,6 +193,11 @@ class RecordDetailResponsiveTests(unittest.TestCase):
             phone,
             r"\.drawer-field \{[^}]*grid-template-columns: minmax\(0, 1fr\);",
         )
+        self.assertRegex(phone, r"\.drawer-field \{[^}]*padding: \.55rem \.65rem;")
+        self.assertRegex(
+            phone, r"\.drawer-field \{[^}]*border: 1px solid var\(--line\);"
+        )
+        self.assertRegex(phone, r"\.drawer-field \.val \{[^}]*line-height: 1\.5;")
 
     def test_timeline_and_relations_wrap_inside_the_drawer(self):
         narrow = _media_block("@media (max-width: 680px)")

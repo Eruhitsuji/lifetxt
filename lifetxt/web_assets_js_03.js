@@ -341,7 +341,7 @@
     window.addEventListener("popstate", () => {
       applyPresetToUrl();
       applyUrlToControls();
-      refreshAll();
+      refreshAll().then(() => syncDrawerFromUrl());
     });
     function applyPresetToUrl() {
       const params = query();

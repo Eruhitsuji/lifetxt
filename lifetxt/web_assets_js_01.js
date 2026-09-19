@@ -153,6 +153,8 @@
         "Commit message": "コミットメッセージ",
         "Copy ID": "IDをコピー",
         "Copy Link": "リンクをコピー",
+        "Link copied:": "リンクをコピーしました:",
+        "Copy failed. Select and copy manually:": "コピーに失敗しました。手動で選択してコピーしてください:",
         "Copy Title": "タイトルをコピー",
         "Copy Markdown": "Markdownをコピー",
         "Copy Line Number": "行番号をコピー",

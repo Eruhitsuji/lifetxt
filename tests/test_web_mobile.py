@@ -193,11 +193,26 @@ class RecordDetailResponsiveTests(unittest.TestCase):
             phone,
             r"\.drawer-field \{[^}]*grid-template-columns: minmax\(0, 1fr\);",
         )
-        self.assertRegex(phone, r"\.drawer-field \{[^}]*padding: \.55rem \.65rem;")
+        self.assertRegex(phone, r"\.drawer-field \{[^}]*padding: \.7rem \.75rem;")
         self.assertRegex(
             phone, r"\.drawer-field \{[^}]*border: 1px solid var\(--line\);"
         )
         self.assertRegex(phone, r"\.drawer-field \.val \{[^}]*line-height: 1\.5;")
+
+    def test_phone_fields_have_outer_and_scroll_end_breathing_room(self):
+        narrow = _media_block("@media (max-width: 680px)")
+        phone = _media_block("@media (max-width: 560px)")
+
+        self.assertRegex(
+            narrow,
+            r"\.drawer-body \{[^}]*padding: \.75rem \.75rem 1\.5rem;",
+        )
+        self.assertRegex(
+            phone,
+            r"\.drawer-fields \{[^}]*gap: \.7rem;"
+            r"[^}]*padding: \.35rem \.25rem \.75rem;",
+        )
+        self.assertRegex(phone, r"\.drawer-field \{[^}]*padding: \.7rem \.75rem;")
 
     def test_timeline_and_relations_wrap_inside_the_drawer(self):
         narrow = _media_block("@media (max-width: 680px)")

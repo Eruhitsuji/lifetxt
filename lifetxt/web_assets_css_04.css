@@ -478,7 +478,7 @@
         padding-bottom: calc(1rem + var(--safe-bottom));
       }
       .drawer-head { padding-inline: .75rem; }
-      .drawer-body { padding: .75rem; }
+      .drawer-body { padding: .75rem .75rem 1.5rem; }
       .drawer-tabs { top: -.75rem; }
       .drawer-tab {
         flex: 1 1 0;
@@ -660,11 +660,11 @@
     .nt-details-body .row { display: flex; gap: .35rem; }
     .nt-details-body .k { color: var(--muted); min-width: 8rem; }
     @media (max-width: 560px) {
-      .drawer-fields { gap: .55rem; }
+      .drawer-fields { gap: .7rem; padding: .35rem .25rem .75rem; }
       .drawer-field {
         grid-template-columns: minmax(0, 1fr);
         gap: .2rem;
-        padding: .55rem .65rem;
+        padding: .7rem .75rem;
         border: 1px solid var(--line);
         border-radius: var(--r-sm);
         background: var(--panel-2);

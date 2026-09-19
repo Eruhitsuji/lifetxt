@@ -1900,6 +1900,43 @@ def build_parser():
     )
     vm_graph_command.set_defaults(func=command_vm_graph)
 
+    item_uri_command = subparsers.add_parser(
+        "item-uri",
+        help="Format/parse the host-independent lifetxt://item/<id> "
+        "logical record link (#840). Pure identity translation only: "
+        "never touches a life.txt file, never checks whether the id "
+        "exists, and never bypasses workspace/authorization boundaries.",
+    )
+    item_uri_subparsers = item_uri_command.add_subparsers(dest="item_uri_command")
+    item_uri_format_command = item_uri_subparsers.add_parser(
+        "format",
+        help="Build the lifetxt://item/<id> URI (and, with --base-url, "
+        "the equivalent #838 Web deep link) for a canonical id.",
+    )
+    item_uri_format_command.add_argument("id", help="Canonical item id.")
+    item_uri_format_command.add_argument(
+        "--base-url",
+        default="",
+        help="Deployment origin (e.g. https://lifetxt.example.invalid) to "
+        "also print the #838 Web deep-link form. Omit for a root-relative "
+        "link.",
+    )
+    item_uri_format_command.add_argument(
+        "--json", action="store_true", help="Emit JSON."
+    )
+    item_uri_format_command.set_defaults(func=command_item_uri_format)
+
+    item_uri_parse_command = item_uri_subparsers.add_parser(
+        "parse",
+        help="Decode a lifetxt://item/<id> URI back to its canonical id, "
+        "rejecting anything malformed.",
+    )
+    item_uri_parse_command.add_argument("uri", help="lifetxt://item/<id> URI.")
+    item_uri_parse_command.add_argument(
+        "--json", action="store_true", help="Emit JSON."
+    )
+    item_uri_parse_command.set_defaults(func=command_item_uri_parse)
+
     query_command = subparsers.add_parser(
         "query", help="Filter items with the shared query language."
     )
@@ -14922,6 +14959,45 @@ def command_vm_graph(args):
         return 1
 
     write_text(None, output)
+    return 0
+
+
+def command_item_uri_format(args):
+    from .item_uri import ItemUriError, format_item_uri, web_deep_link
+
+    try:
+        uri = format_item_uri(args.id)
+    except ItemUriError as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
+    deep_link = (
+        web_deep_link(args.id, base_url=args.base_url) if args.base_url else None
+    )
+    if getattr(args, "json", False):
+        payload = OrderedDict((("id", args.id), ("uri", uri)))
+        if deep_link is not None:
+            payload["web_deep_link"] = deep_link
+        write_text(None, json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+        return 0
+    write_text(None, uri + "\n")
+    if deep_link is not None:
+        write_text(None, deep_link + "\n")
+    return 0
+
+
+def command_item_uri_parse(args):
+    from .item_uri import ItemUriError, parse_item_uri
+
+    try:
+        item_id = parse_item_uri(args.uri)
+    except ItemUriError as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
+    if getattr(args, "json", False):
+        payload = OrderedDict((("uri", args.uri), ("id", item_id)))
+        write_text(None, json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+        return 0
+    write_text(None, item_id + "\n")
     return 0
 
 

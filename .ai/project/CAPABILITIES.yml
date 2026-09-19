@@ -10107,6 +10107,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/pull/853
       - https://github.com/Eruhitsuji/lifetxt/pull/854
       - https://github.com/Eruhitsuji/lifetxt/pull/855
+      - https://github.com/Eruhitsuji/lifetxt/pull/857
     reuse_policy: >-
       Reuse the #771 drawer/tab architecture and #790/#799 shared control
       geometry; do not create a second record-detail surface or control-size

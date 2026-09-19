@@ -54,11 +54,11 @@ def _extract_functions_under_test(full_script):
     )
     build_link_start = full_script.index("function buildItemDeepLink")
     build_link_end_marker = (
-        'function drawerShareLink() { copyItemDeepLink(drawerItem); }'
+        "function drawerShareLink() { copyItemDeepLink(drawerItem); }"
     )
-    build_link_end = full_script.index(
-        build_link_end_marker, build_link_start
-    ) + len(build_link_end_marker)
+    build_link_end = full_script.index(build_link_end_marker, build_link_start) + len(
+        build_link_end_marker
+    )
     build_link = full_script[build_link_start:build_link_end]
     return "\n".join([url_sync, close_drawer, share_and_restore, build_link])
 
@@ -262,7 +262,9 @@ class DeepLinkJsTests(unittest.TestCase):
 
     def test_none_mode_never_touches_the_url(self):
         results = self._run()
-        self.assertEqual("http://example.invalid/?id=unrelated", results["none_mode_url"])
+        self.assertEqual(
+            "http://example.invalid/?id=unrelated", results["none_mode_url"]
+        )
         self.assertTrue(results["none_mode_no_history_calls"])
 
     def test_reopening_the_already_current_id_is_a_no_op(self):

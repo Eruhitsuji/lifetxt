@@ -279,9 +279,41 @@
         `<button class="danger" onclick="drawerDelete()" id="drawer-delete-btn"${!item.editable ? " disabled" : ""}>Delete</button>`;
     }
 
-    function openDrawer(item) {
+    // Canonical record deep links (#838): the id: detail is the stable
+    // identity, so the URL is kept in sync with whichever record the
+    // drawer shows. `urlMode` is "push" for ordinary in-app navigation
+    // (each opened record becomes its own Back/Forward stop), "replace"
+    // for resolving the drawer state a page load or deep link already
+    // implies (no extra history entry), and "none" when the URL is
+    // already correct (restoring drawer state from a popstate event).
+    function _drawerIdFor(item) {
+      const idKey = (typeof appConfig !== "undefined" && appConfig?.ids?.key) || "id";
+      return item?.id || item?.details?.[idKey]?.[0] || "";
+    }
+    function syncDrawerUrlForItem(item, urlMode) {
+      if (urlMode === "none") return;
+      const params = query();
+      const itemId = _drawerIdFor(item);
+      if (itemId) {
+        if (params.get("id") === itemId && !params.get("line")) return;
+        params.set("id", itemId);
+        params.delete("line");
+      } else if (item?.line != null) {
+        if (params.get("line") === String(item.line) && !params.get("id")) return;
+        params.delete("id");
+        params.set("line", String(item.line));
+      } else {
+        return;
+      }
+      const url = `${location.pathname}${params.toString() ? "?" + params.toString() : ""}`;
+      if (urlMode === "replace") history.replaceState(null, "", url);
+      else history.pushState(null, "", url);
+    }
+
+    function openDrawer(item, urlMode = "push") {
       drawerEditing = false;
       drawerItem = item;
+      syncDrawerUrlForItem(item, urlMode);
       const drawer = document.getElementById("detail-drawer");
       const body = document.getElementById("drawer-body");
       const title = document.getElementById("drawer-title");

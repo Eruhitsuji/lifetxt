@@ -6260,6 +6260,96 @@ class LifeTxtWebApiTests(unittest.TestCase):
             self.assertEqual(["Wrote notes"], data["items"][0]["details"]["body"])
             self.assertFalse(data["items"][0]["editable"])
 
+    def test_canonical_item_id_route_returns_exact_match(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                '[ ] T "Write report" id:task-001\n[ ] T Other id:task-002\n',
+                encoding="utf-8",
+            )
+            client = self._client([path], writable_path=path)
+
+            response = client.get("/api/items/task-001")
+
+            self.assertEqual(200, response.status_code)
+            item = response.json()["item"]
+            self.assertEqual("task-001", item["id"])
+            self.assertEqual("Write report", item["title"])
+
+    def test_canonical_item_id_route_matches_the_by_id_route(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text(
+                '[ ] T "Write report" id:task-001\n', encoding="utf-8"
+            )
+            client = self._client([path], writable_path=path)
+
+            canonical = client.get("/api/items/task-001")
+            by_id = client.get("/api/items/id/task-001")
+
+            self.assertEqual(200, canonical.status_code)
+            self.assertEqual(canonical.json(), by_id.json())
+
+    def test_canonical_item_id_route_unknown_id_is_404(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text("[ ] T Task id:task-001\n", encoding="utf-8")
+            client = self._client([path], writable_path=path)
+
+            response = client.get("/api/items/does-not-exist")
+
+            self.assertEqual(404, response.status_code)
+            self.assertIn("does-not-exist", response.json()["message"])
+
+    def test_canonical_item_id_route_url_encoded_id_resolves(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text('[ ] T "Space task" id:"a b"\n', encoding="utf-8")
+            client = self._client([path], writable_path=path)
+
+            response = client.get("/api/items/a%20b")
+
+            self.assertEqual(200, response.status_code)
+            self.assertEqual("a b", response.json()["item"]["id"])
+
+    def test_canonical_item_id_route_numeric_id_prefers_matching_line(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text("[ ] T First\n[ ] T Second id:2\n", encoding="utf-8")
+            client = self._client([path], writable_path=path)
+
+            # Line 2 exists, so the historical by-line-number behavior wins
+            # for a purely-numeric path segment -- matching the pre-#837
+            # /api/items/{line_no} route exactly.
+            response = client.get("/api/items/2")
+
+            self.assertEqual(200, response.status_code)
+            self.assertEqual("Second", response.json()["item"]["title"])
+
+    def test_canonical_item_id_route_numeric_id_falls_back_when_no_line_matches(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text("[ ] T Task id:404\n", encoding="utf-8")
+            client = self._client([path], writable_path=path)
+
+            # Only one line exists, so line 404 does not match: fall back to
+            # treating "404" as a canonical (all-digit) id instead.
+            response = client.get("/api/items/404")
+
+            self.assertEqual(200, response.status_code)
+            self.assertEqual("404", response.json()["item"]["id"])
+
+    def test_existing_by_line_number_route_is_unaffected(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            Path(path).write_text("[ ] T Task\n", encoding="utf-8")
+            client = self._client([path], writable_path=path)
+
+            response = client.get("/api/items/1")
+
+            self.assertEqual(200, response.status_code)
+            self.assertEqual("Task", response.json()["item"]["title"])
+
     def test_read_only_api_allows_parse_but_blocks_writes(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = os.path.join(temp_dir, "life.txt")
@@ -6784,7 +6874,9 @@ class LifeTxtWebApiTests(unittest.TestCase):
             self.assertTrue(data["explicit"]["truncated"])
 
             conflict = client.get("/api/temporal-thread/conflict").json()
-            self.assertEqual("follows", conflict["consistency"]["warnings"][0]["relation"])
+            self.assertEqual(
+                "follows", conflict["consistency"]["warnings"][0]["relation"]
+            )
 
     def test_temporal_thread_api_rejects_invalid_bounds(self):
         with tempfile.TemporaryDirectory() as temp_dir:

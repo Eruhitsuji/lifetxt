@@ -861,6 +861,147 @@ class GitCommitWorkerConfigGenerationTests(unittest.TestCase):
         self.assertTrue(callable(server_init.git_commit_worker_timer_unit_text))
 
 
+def _backup_schedule_config(**overrides):
+    data = {
+        "enabled": True,
+        "destination": "/srv/lifetxt/backups",
+        "sources": ["/srv/lifetxt/data/life.txt"],
+        "interval_minutes": 1440,
+    }
+    data.update(overrides)
+    return data
+
+
+class BackupScheduleConfigGenerationTests(unittest.TestCase):
+    def test_disabled_by_default_generates_no_units(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = server_init.load_config(_write_json(tmp, _config(tmp)))
+            plan = server_init.build_plan(config)
+            self.assertFalse(
+                any(
+                    "lifetxt-backup" in (step.get("path") or "")
+                    for step in plan["steps"]
+                )
+            )
+            app_config = server_init._application_config(config)
+            self.assertNotIn("backup", app_config)
+
+    def test_enabled_generates_service_and_timer_units_and_app_config_section(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = server_init.load_config(
+                _write_json(
+                    tmp,
+                    _config(
+                        tmp,
+                        backup_schedule=_backup_schedule_config(keep_last=7),
+                    ),
+                )
+            )
+            plan = server_init.build_plan(config)
+            paths = [step.get("path") or "" for step in plan["steps"]]
+            self.assertTrue(any(p.endswith("lifetxt-backup.service") for p in paths))
+            self.assertTrue(any(p.endswith("lifetxt-backup.timer") for p in paths))
+            service_step = next(
+                s for s in plan["steps"] if s["path"].endswith("lifetxt-backup.service")
+            )
+            self.assertIn("ExecStart=", service_step["content"])
+            self.assertIn("backup run-scheduled", service_step["content"])
+            timer_step = next(
+                s for s in plan["steps"] if s["path"].endswith("lifetxt-backup.timer")
+            )
+            self.assertIn("OnUnitActiveSec=1440m", timer_step["content"])
+
+            update_config = server_init._server_update_config(config)
+            self.assertIn("lifetxt-backup.timer", update_config["services"])
+            self.assertIn("lifetxt-backup.service", update_config["services"])
+
+            app_config = server_init._application_config(config)
+            self.assertEqual(
+                {
+                    "enabled": True,
+                    "destination": "/srv/lifetxt/backups",
+                    "sources": ["/srv/lifetxt/data/life.txt"],
+                    "keep_last": 7,
+                },
+                dict(app_config["backup"]),
+            )
+
+    def test_remote_section_is_copied_into_app_config_when_set(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = server_init.load_config(
+                _write_json(
+                    tmp,
+                    _config(
+                        tmp,
+                        backup_schedule=_backup_schedule_config(
+                            remote={"backend": "rclone", "target": "r2:bucket/path"}
+                        ),
+                    ),
+                )
+            )
+            app_config = server_init._application_config(config)
+            self.assertEqual(
+                {"backend": "rclone", "target": "r2:bucket/path"},
+                dict(app_config["backup"]["remote"]),
+            )
+
+    def test_missing_destination_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            bad = _backup_schedule_config(destination="")
+            with self.assertRaisesRegex(server_init.ServerInitError, "destination"):
+                server_init.load_config(
+                    _write_json(tmp, _config(tmp, backup_schedule=bad))
+                )
+
+    def test_empty_sources_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            bad = _backup_schedule_config(sources=[])
+            with self.assertRaisesRegex(server_init.ServerInitError, "sources"):
+                server_init.load_config(
+                    _write_json(tmp, _config(tmp, backup_schedule=bad))
+                )
+
+    def test_invalid_interval_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            bad = _backup_schedule_config(interval_minutes=0)
+            with self.assertRaisesRegex(
+                server_init.ServerInitError, "interval_minutes"
+            ):
+                server_init.load_config(
+                    _write_json(tmp, _config(tmp, backup_schedule=bad))
+                )
+
+    def test_invalid_remote_backend_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            bad = _backup_schedule_config(remote={"backend": "dropbox", "target": "x"})
+            with self.assertRaisesRegex(server_init.ServerInitError, "remote"):
+                server_init.load_config(
+                    _write_json(tmp, _config(tmp, backup_schedule=bad))
+                )
+
+    def test_plan_is_idempotent_on_a_second_run(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = server_init.load_config(
+                _write_json(
+                    tmp, _config(tmp, backup_schedule=_backup_schedule_config())
+                )
+            )
+            with mock.patch("lifetxt.server_update._run", return_value=_Completed()):
+                with mock.patch(
+                    "lifetxt.server_update.check_health",
+                    return_value={"ok": True, "status_code": 200},
+                ):
+                    first = server_init.run_server_init(config, yes=True)
+                    second = server_init.run_server_init(config, yes=True)
+            self.assertEqual(first["status"], "ready")
+            self.assertEqual(second["status"], "ready")
+            backup_steps = [
+                s for s in second["steps"] if "lifetxt-backup" in (s.get("path") or "")
+            ]
+            self.assertTrue(backup_steps)
+            self.assertTrue(all(s["action"] == "no-op" for s in backup_steps))
+
+
 def _write_json(root, data):
     path = os.path.join(root, "server-init.json")
     with open(path, "w", encoding="utf-8") as handle:

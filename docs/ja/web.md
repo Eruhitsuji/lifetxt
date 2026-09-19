@@ -61,6 +61,7 @@ MCP tool は `list_items`、`get_item`、`create_item`、`update_item`、
 | `GET` | `/api/items` | item 一覧。filter 指定可能 |
 | `POST` | `/api/items/parse` | raw life.txt 行または body block を解析し、書き込まずに parsed item を返す |
 | `POST` | `/api/items/raw` | 検証済み raw life.txt 行を書き込み先ファイルへ追記 |
+| `GET` | `/api/items/{id}` | 正規の exact-ID 取得 (#837)。数字のみの path segment は下位互換のため 1-based line number として扱われ（旧 `GET /api/items/{line_no}` と同じ）、それ以外（および一致する行が無い数字 ID）は `GET /api/items/id/{id}` と同じ検索で正規 `id:` として解決する。未知の ID は `404` |
 | `GET` | `/api/items/id/{id}` | exact `id:` で item を取得 |
 | `PUT` | `/api/items/id/{id}` | writable file 内の exact `id:` 一致 item を更新 |
 | `DELETE` | `/api/items/id/{id}` | writable file 内の exact `id:` 一致 item を削除 |
@@ -455,6 +456,28 @@ http://127.0.0.1:8000/?mode=display&type=S&person=self&refresh=30
 | `theme=dark` または `theme=light` | theme を強制。`localStorage` を設定できない kiosk / 常時表示ディスプレイ向け |
 | `lang=ja` または `lang=en` | 表示言語。config の `web.language` より優先。レコードは翻訳されません |
 | `graph_root=ID`、`graph_depth=N` | Graph panel の初期 root/depth |
+| `id=VALUE` | 正規の `id:` で解決される record detail drawer を直接開く。REST API の `GET /api/items/{id}` と同じ resolver を使用 (#837/#838)。未知の ID は他の record を静かに開くのではなく、明確な not-found 表示になる |
+| `line=N` | 1-based の行番号で record detail drawer を直接開く。`id:` を持たない record の fallback deep link として自動的に使われる |
+
+### レコードのディープリンク
+
+`http://127.0.0.1:8000/?id=task-001` を開くと、アプリの読み込み完了後に
+その record の detail drawer が自動的に開く。`GET /api/items/task-001` と
+同じ正規 ID 検索を使用する。通常の UI から record を開く（行をクリック、
+command palette、blocker/dependency へのジャンプなど）と URL が
+`?id=<id>` に更新されるため、bookmark や共有ができる。drawer を閉じると
+parameter は削除される。`id:` を持たない record は `?line=N` に fallback
+する（この値は上の行が変わるとずれる。編集後も有効なリンクにしたい場合は
+`id:` detail を追加すること）。Browser の Back/Forward は通常の navigation
+が作ったのと同じ drawer 状態間を移動する。
+
+Record detail drawer の **Share** ボタンは、この同じ URL（現在の
+origin、無関係な既存 query parameter を保持したまま、`id`/`line` を開いて
+いる record に設定したもの）を clipboard へコピーする。
+
+特定のデプロイメントの host/port を埋め込みたくない参照向けに、同じ
+識別子のホスト非依存な形式である `lifetxt://item/<id>` も利用できる。
+詳細は [Item Links](item-links.md) (#840) を参照。
 
 ## Command Palette
 

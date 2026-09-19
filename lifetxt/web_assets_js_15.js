@@ -141,15 +141,37 @@
       );
     }
 
-    // ── Drawer: share deep-link ────────────────────────────────────
-    function drawerShareLink() {
-      if (!drawerItem) return;
-      const url = location.origin + location.pathname + "?line=" + encodeURIComponent(drawerItem.line);
-      navigator.clipboard.writeText(url).then(
-        () => showToast("Link copied: ?line=" + drawerItem.line, "success"),
-        () => showToast("Copy failed.", "error")
-      );
+    // ── Share: canonical record deep link (#839) ───────────────────
+    // Builds the same URL #838's ?id=/?line= deep-link loading resolves
+    // back to, using URL/URLSearchParams rather than manual string
+    // concatenation so the current origin/base path and any unrelated
+    // existing query parameters are preserved. Prefers the stable
+    // canonical id: over the line number, since a line shifts whenever
+    // the file changes above it.
+    function buildItemDeepLink(item) {
+      const itemId = _drawerIdFor(item);
+      const url = new URL(location.href);
+      url.searchParams.delete("id");
+      url.searchParams.delete("line");
+      if (itemId) url.searchParams.set("id", itemId);
+      else if (item?.line != null) url.searchParams.set("line", String(item.line));
+      else return null;
+      return {url: url.toString(), label: itemId ? ("id=" + itemId) : ("line=" + item.line)};
     }
+    function copyItemDeepLink(item) {
+      const built = item ? buildItemDeepLink(item) : null;
+      if (!built) { showToast("No record selected.", "error"); return; }
+      const announce = (ok) => {
+        if (ok) showToast(t("Link copied:") + " " + built.label, "success");
+        else showToast(t("Copy failed. Select and copy manually:") + " " + built.url, "error", 8000);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(built.url).then(() => announce(true), () => announce(false));
+      } else {
+        announce(false);
+      }
+    }
+    function drawerShareLink() { copyItemDeepLink(drawerItem); }
 
     // ── Context menu: copy line number + share link ───────────────
     function ctxCopyLineNumber() {
@@ -162,12 +184,7 @@
     }
     function ctxShareLink() {
       const t = ctxTarget; closeCtxMenu();
-      if (!t) return;
-      const url = location.origin + location.pathname + "?line=" + encodeURIComponent(t.line);
-      navigator.clipboard.writeText(url).then(
-        () => showToast("Link copied: ?line=" + t.line, "success"),
-        () => showToast("Copy failed.", "error")
-      );
+      copyItemDeepLink(t);
     }
 
     // ── Agenda: blocked-item filter (all / only / hide) ───────────
@@ -308,12 +325,49 @@
       const lineNum = parseInt(n.trim(), 10);
       if (!isNaN(lineNum)) openItemByLine(lineNum);
     }
-    async function openItemByLine(lineNum) {
+    async function openItemByLine(lineNum, urlMode = "push") {
       try {
         const data = await api(`/api/items/${lineNum}`);
-        if (data?.item) { openDrawer(data.item); selectItem(data.item); }
+        if (data?.item) { openDrawer(data.item, urlMode); selectItem(data.item); }
         else showToast("No item at line " + lineNum, "error");
       } catch(e) { showToast("Line " + lineNum + ": " + e.message, "error"); }
+    }
+
+    // Open a record directly by its canonical id: (#838), sharing the
+    // #837 exact-ID Web API route. An unknown id shows a clear
+    // not-found state rather than silently opening another record.
+    async function openItemById(itemId, urlMode = "push") {
+      try {
+        const data = await api(`/api/items/${encodeURIComponent(itemId)}`);
+        if (data?.item) { openDrawer(data.item, urlMode); selectItem(data.item); }
+        else showToast(`No record found for id "${itemId}".`, "error");
+      } catch(e) {
+        const status = Number(e?.status);
+        if (status === 404) showToast(`No record found for id "${itemId}".`, "error");
+        else showToast(`Could not load id "${itemId}": ` + (e.message || e), "error");
+      }
+    }
+
+    // Restore (or close) the drawer to match the current ?id=/?line=
+    // state after Back/Forward navigation (#838). The URL is already
+    // correct at this point (the browser just restored it), so drawer
+    // updates here must never themselves push/replace history.
+    function syncDrawerFromUrl() {
+      const params = query();
+      const idParam = params.get("id");
+      const lineParam = params.get("line");
+      if (idParam) {
+        if (_drawerIdFor(drawerItem || {}) !== idParam) openItemById(idParam, "none");
+        return;
+      }
+      if (lineParam) {
+        const lineNum = parseInt(lineParam, 10);
+        if (!isNaN(lineNum) && (!drawerItem || drawerItem.line !== lineNum)) {
+          openItemByLine(lineNum, "none");
+        }
+        return;
+      }
+      if (drawerItem) closeDrawer("none");
     }
 
     // ── Inline completion ─────────────────────────────────────────

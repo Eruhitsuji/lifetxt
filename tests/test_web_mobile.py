@@ -158,9 +158,13 @@ class RecordDetailResponsiveTests(unittest.TestCase):
         )
         self.assertRegex(
             STYLE,
-            r"\.drawer-tab-panel \{[^}]*min-width:0;[^}]*max-width:100%;"
-            r"[^}]*overflow-x:hidden;",
+            r"\.drawer-tab-panel \{[^}]*min-width:0;[^}]*max-width:100%;",
         )
+        panel_rule = re.search(r"\.drawer-tab-panel \{([^}]*)\}", STYLE)
+        self.assertTrue(panel_rule)
+        # The body is the sole scroll owner. Axis-specific overflow on this
+        # child creates a second vertical scroll container on iOS Safari.
+        self.assertNotIn("overflow", panel_rule.group(1))
         for selector in (
             ".drawer-field .key",
             ".drawer-field .val",
@@ -193,7 +197,7 @@ class RecordDetailResponsiveTests(unittest.TestCase):
             phone,
             r"\.drawer-field \{[^}]*grid-template-columns: minmax\(0, 1fr\);",
         )
-        self.assertRegex(phone, r"\.drawer-field \{[^}]*padding: \.7rem \.75rem;")
+        self.assertRegex(phone, r"\.drawer-field \{[^}]*padding: \.9rem 1rem;")
         self.assertRegex(
             phone, r"\.drawer-field \{[^}]*border: 1px solid var\(--line\);"
         )
@@ -205,14 +209,29 @@ class RecordDetailResponsiveTests(unittest.TestCase):
 
         self.assertRegex(
             narrow,
-            r"\.drawer-body \{[^}]*padding: \.75rem \.75rem 1\.5rem;",
+            r"\.drawer-body \{[^}]*padding: \.75rem \.75rem 2rem;",
         )
         self.assertRegex(
             phone,
-            r"\.drawer-fields \{[^}]*gap: \.7rem;"
-            r"[^}]*padding: \.35rem \.25rem \.75rem;",
+            r"\.drawer-fields \{[^}]*gap: 1rem;"
+            r"[^}]*padding: \.75rem \.75rem 2rem;",
         )
-        self.assertRegex(phone, r"\.drawer-field \{[^}]*padding: \.7rem \.75rem;")
+        self.assertRegex(phone, r"\.drawer-field \{[^}]*padding: \.9rem 1rem;")
+
+    def test_phone_drawer_is_a_bounded_ios_scrollport(self):
+        narrow = _media_block("@media (max-width: 680px)")
+
+        self.assertRegex(narrow, r"\.detail-modal \{[^}]*height: 92vh;")
+        self.assertRegex(
+            narrow,
+            r"\.drawer-body \{[^}]*-webkit-overflow-scrolling: touch;"
+            r"[^}]*overscroll-behavior-y: contain;[^}]*touch-action: pan-y;",
+        )
+        self.assertRegex(
+            narrow,
+            r"@supports \(height: 92dvh\) \{[^}]*\.detail-modal \{"
+            r"[^}]*height: 92dvh;[^}]*max-height: 92dvh;",
+        )
 
     def test_timeline_and_relations_wrap_inside_the_drawer(self):
         narrow = _media_block("@media (max-width: 680px)")

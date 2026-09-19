@@ -2,6 +2,44 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-responsive-record-detail-tab-bar-align-content-fix
+      capability_id: cap-web-responsive-record-detail
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/858
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/859
+      changed_files_or_scope:
+        - "Add align-content: start to .drawer-body so its auto-sized grid rows (the tab bar and whichever tab panel is active) always size to their own natural content, instead of stretching into any leftover vertical space in the fixed-height sheet"
+        - lifetxt/web_assets_css_02.css
+        - tests/test_web_mobile.py
+        - tests/test_web_assets.py
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - "Reported after merging #857: the Overview/Timeline/Relations tab-bar band itself changes height when switching tabs"
+        - "Reproduced headlessly (Playwright/Chromium, 390x844) against a real lifetxt serve process: .drawer-tabs measured 47.4px (Overview), 146.9px (Timeline), 49.0px (Relations) before the fix"
+        - "Confirmed NOT caused by #856/#857: reproduced the same defect class (123.9px on Timeline) on the pre-#856 main commit (c590969), and an A/B test re-adding .drawer-tab-panel { overflow: hidden } made no difference to the tab-bar height"
+        - "Root-caused via a live style-injection A/B test: forcing .drawer-body { align-content: start } dropped the Timeline tab's .drawer-tabs height from 146.9px to 47.4px, matching Overview/Relations, confirming CSS Grid's default align-content:normal->stretch behavior was distributing leftover vertical space into the auto-sized rows"
+        - "After the fix: .drawer-tabs measured 47.375px identically across Overview/Timeline/Relations, both at a 390px mobile viewport and a 1280px desktop viewport; screenshots confirm the leftover space is left blank below short content instead"
+        - "New regression test (test_drawer_body_rows_never_stretch_past_their_own_content) confirmed via git stash to fail against the pre-fix code, then pass once the fix is restored"
+        - python -m unittest tests.test_web_mobile tests.test_web_assets tests.test_web_native_timeline_visual tests.test_web_i18n tests.test_web_commands tests.test_surface_runtime tests.test_release_policy tests.test_traceability_gate tests.test_change_package_closeout -> Ran 158 tests, OK
+        - MPLBACKEND=Agg python -m unittest discover -> full suite, OK (see PR for exact count)
+        - python -m ruff check lifetxt tests scripts -> All checks passed
+        - python -m ruff format --check tests/test_web_mobile.py tests/test_web_assets.py -> 2 files already formatted
+        - python -m mypy --follow-imports=skip --ignore-missing-imports lifetxt/diagnostic_contract.py -> Success; no issues found in 1 source file
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - git diff --check -> clean
+      release_or_deployment: null
+      notes: >-
+        Bug/Standard assurance follow-up to #857, but a genuinely different
+        root cause: a pre-existing CSS Grid `align-content` default, present
+        since #855 introduced `.drawer-body`'s definite-height grid layout,
+        unrelated to #856/#857's `section.page` scoping fix (confirmed by
+        reproducing the defect on the pre-#856 commit and by an A/B test
+        showing #856's `overflow` change made no difference). No change to
+        which element owns vertical scrolling, no new nested scroll owner,
+        and no change to `.drawer-tab-panel`'s chrome/clipping contract.
+      status: implemented
+
     - requirement_id: req-web-responsive-record-detail-section-scope-fix
       capability_id: cap-web-responsive-record-detail
       epic: null

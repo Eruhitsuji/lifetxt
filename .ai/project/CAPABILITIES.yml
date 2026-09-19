@@ -10067,6 +10067,50 @@ capabilities:
       replaced_by: null
       deprecation_issue: null
 
+  - id: cap-web-responsive-record-detail
+    name: Responsive Web record-detail layout
+    summary: >-
+      A narrow-viewport contract for the existing Web record-detail drawer:
+      readable and tappable Overview / Timeline / Relations tabs, stacked
+      property keys and values on phone widths, contained long content, and
+      wrapping header, Timeline, and Relations content without page-level
+      horizontal panning.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-web-responsive-record-detail-layout
+    implementation_locations:
+      - lifetxt/web_assets_css_02.css
+      - lifetxt/web_assets_css_04.css
+      - tests/test_web_mobile.py
+      - tests/test_web_assets.py
+    public_interfaces:
+      - Web UI record-detail drawer at narrow and touch viewports
+    tests_or_evidence:
+      - tests.test_web_mobile RecordDetailResponsiveTests
+      - tests.test_web_assets WebAssetExtractionTests
+      - tests.test_web_native_timeline_visual
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/849
+      - https://github.com/Eruhitsuji/lifetxt/issues/771
+      - https://github.com/Eruhitsuji/lifetxt/issues/791
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/851
+    reuse_policy: >-
+      Reuse the #771 drawer/tab architecture and #790/#799 shared control
+      geometry; do not create a second record-detail surface or control-size
+      system.
+    notes: >-
+      Presentation-only responsive bug fix. Desktop keeps the compact two-column
+      property grid. At phone widths the existing drawer becomes an explicit
+      single-column content contract while the three semantic tabs, ARIA roles,
+      keyboard focus behavior, bottom-sheet height, and safe-area rules remain
+      unchanged.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
   - id: cap-web-shared-control-sizing
     name: Shared Web UI control sizing
     summary: >-

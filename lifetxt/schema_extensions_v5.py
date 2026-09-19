@@ -293,6 +293,40 @@ def schema_bundle_v5():
                             },
                             "additionalProperties": True,
                         },
+                        "backup": {
+                            "type": "object",
+                            "properties": {
+                                "enabled": {"type": "boolean"},
+                                "destination": {"type": "string"},
+                                "sources": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                },
+                                "source_identity": {"type": "string"},
+                                "keep_last": {"type": "integer", "minimum": 1},
+                                "remote": {
+                                    "type": "object",
+                                    "properties": {
+                                        "backend": {
+                                            "type": "string",
+                                            "enum": ["rclone"],
+                                        },
+                                        "target": {"type": "string"},
+                                        "rclone_bin": {
+                                            "oneOf": [
+                                                {"type": "string"},
+                                                {
+                                                    "type": "array",
+                                                    "items": {"type": "string"},
+                                                },
+                                            ]
+                                        },
+                                    },
+                                    "additionalProperties": True,
+                                },
+                            },
+                            "additionalProperties": True,
+                        },
                         "profiles": {
                             "type": "object",
                             "additionalProperties": {"type": "object"},

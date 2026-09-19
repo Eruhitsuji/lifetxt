@@ -106,6 +106,13 @@
       "classification": "operational-audit",
       "reason": "Timestamps manifest.created_at (#693) as archive export provenance; it is not a life.txt workflow date choice, and the lifetxtz-v1 contract explicitly excludes this field from its determinism promise while callers may inject a fixed value for deterministic tests.",
       "removal_condition": "Route through a shared operational UTC clock if one is introduced for interchange/export provenance generally."
+    },
+    {
+      "path": "lifetxt/backup.py",
+      "call": "datetime.datetime.now",
+      "classification": "operational-recovery",
+      "reason": "utc_now_iso() timestamps disaster-recovery backup manifests (created_at, #841) and default backup filenames; it is recovery-evidence naming/provenance, not a life.txt workflow date choice, matching server_update.py's and transaction_journal.py's own reviewed rationale for recovery-artifact timestamps. Microsecond precision is deliberate so two run_scheduled invocations within the same second do not collide on a filename; callers may still pass an explicit created_at for deterministic tests.",
+      "removal_condition": "Route through a shared operational UTC clock when a common operational-clock helper is introduced, matching transaction_journal.py."
     }
   ]
 }

@@ -13615,6 +13615,114 @@ traceability:
         for this branch; no child PRs or intermediate CI branches are used.
       status: implemented
 
+    - requirement_id: req-web-stable-direct-item-links
+      capability_id: cap-web-stable-item-links
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/835
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/837
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/848
+      changed_files_or_scope:
+        - Add a canonical exact-ID GET /api/items/{item_id} Web API route,
+          merged with the historical by-line-number route into one handler
+        - Add Web UI ?id= deep-link loading, browser Back/Forward sync,
+          copy-direct-link action, and a host-independent
+          lifetxt://item/<id> logical URI (lifetxt/item_uri.py) with a new
+          `lifetxt item-uri format|parse` CLI command
+        - lifetxt/webapp.py
+        - lifetxt/item_uri.py
+        - lifetxt/cli.py
+        - lifetxt/cli_taxonomy.py
+        - lifetxt/web_assets_js_01.js
+        - lifetxt/web_assets_js_03.js
+        - lifetxt/web_assets_js_10.js
+        - lifetxt/web_assets_js_12.js
+        - lifetxt/web_assets_js_15.js
+        - lifetxt/web_assets_js_18.js
+        - tests/test_lifetxt.py
+        - tests/test_web_deep_link_js.py
+        - tests/test_web_assets.py
+        - tests/test_item_uri.py
+        - tests/test_item_uri_cli.py
+        - docs/en/web.md
+        - docs/ja/web.md
+        - docs/en/item-links.md
+        - docs/ja/item-links.md
+      tests_or_evidence:
+        - tests/test_lifetxt.py LifeTxtWebApiTests canonical-item-id-route tests (7 tests)
+        - tests/test_web_deep_link_js.py (16 Node.js-driven tests covering syncDrawerUrlForItem/closeDrawer/buildItemDeepLink/copyItemDeepLink/syncDrawerFromUrl)
+        - tests/test_item_uri.py (21 tests) and tests/test_item_uri_cli.py (9 tests)
+        - python -m unittest tests.test_lifetxt tests.test_web_deep_link_js tests.test_web_assets tests.test_item_uri tests.test_item_uri_cli
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on every changed file -> clean
+      release_or_deployment: null
+      notes: >-
+        First child of the #835 epic implemented in this batch (#837/#838/
+        #839/#840), landed directly on the feature/835-847-deep-links-and-
+        backups integration branch (child work merged locally via
+        task/837-canonical-item-id-route and
+        task/838-839-840-deep-link-web-ui-and-logical-uri before this
+        integration branch's own final PR). FastAPI route ordering was
+        confirmed via live reproduction to never fall through to an
+        untyped sibling route on a typed-parameter conversion failure, so
+        the by-line-number and canonical-ID routes were merged into one
+        handler rather than relying on registration order.
+      status: implemented
+
+    - requirement_id: req-lifetxt-backup-v1-disaster-recovery
+      capability_id: cap-lifetxt-backup-v1
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/836
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/841
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/848
+      changed_files_or_scope:
+        - "Add the lifetxt-backup-v1 disaster-recovery snapshot format: atomic
+          ZIP-based create/verify/restore/list/prune, a provider-independent
+          rclone upload adapter, and `lifetxt backup
+          create|status|verify|restore|prune|run-scheduled` CLI orchestration"
+        - Register backup.* configuration keys and an opt-in server-init
+          scheduled-backup systemd timer/service generator
+        - lifetxt/backup.py
+        - lifetxt/backup_remote.py
+        - lifetxt/backup_cli.py
+        - lifetxt/cli.py
+        - lifetxt/cli_taxonomy.py
+        - lifetxt/config_registry.py
+        - lifetxt/schema_extensions_v5.py
+        - lifetxt/server_init.py
+        - dist/schemas/config-v1.schema.json
+        - tests/test_backup.py
+        - tests/test_backup_cli.py
+        - tests/test_backup_remote.py
+        - tests/test_server_init.py
+        - docs/en/backup-format-v1.md
+        - docs/en/config.md
+      tests_or_evidence:
+        - tests/test_backup.py (33 tests): create/verify/restore/list/prune, SHA-256 manifest integrity, path-traversal/resource-limit guards, overwrite-guard collision safety
+        - tests/test_backup_remote.py (11 tests, real fake-rclone-script subprocess): copyto/lsjson/deletefile, structured argv only
+        - tests/test_backup_cli.py (19 tests): resolve_destination/sources, run_create/status/verify/restore/prune, run_scheduled including overlap-lock refusal, local-vs-remote independent failure recording
+        - tests/test_server_init.py BackupScheduleConfigGenerationTests (8 tests): disabled-by-default no units, enabled generates service+timer and copies settings into the generated application config's backup section, remote section copy, destination/sources/interval/remote-backend validation, plan idempotency
+        - python -m unittest tests.test_backup tests.test_backup_cli tests.test_backup_remote tests.test_server_init tests.test_cli_taxonomy tests.test_completion_surfaces tests.test_completion_values tests.test_surface_runtime tests.test_schema_extensions_v2 tests.test_config_validation -> 242+ tests, OK
+        - "live: real disposable workspace -- backup create/status/verify/restore/prune/run-scheduled all exercised end to end via the installed CLI, including config-driven backup.enabled/sources/destination resolution"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - ruff format --check / ruff check on every changed file -> clean
+      release_or_deployment: null
+      notes: >-
+        Implements the #836 epic's five children (#841/#842/#843/#844/#845/
+        #846/#847) as one coherent format+CLI+scheduling capability, landed
+        on the feature/835-847-deep-links-and-backups integration branch
+        via three child branches merged locally
+        (task/841-843-845-846-847-backup-core-and-remote,
+        task/842-844-backup-cli-wiring, task/backup-config-registry,
+        task/844-backup-systemd-scheduling) before this integration
+        branch's own final PR, per the user's explicit "1 issue = 1 child
+        branch, merge into the parent yourself, one final PR" instruction.
+        Distinct from #731's periodic local Git-commit worker (protects
+        against edit/history mistakes inside the same repository, not host
+        loss); see docs/en/backup-format-v1.md's own comparison table.
+        docs/en/backups.md (a fuller workflow guide referenced by
+        backup-format-v1.md) and docs/ja translations remain recorded,
+        unimplemented follow-ups rather than silently claimed complete.
+      status: implemented
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

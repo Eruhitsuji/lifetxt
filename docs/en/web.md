@@ -62,6 +62,7 @@ tools.
 | `GET` | `/api/items` | List items with optional filters |
 | `POST` | `/api/items/parse` | Parse a raw life.txt line/body block and return parsed item data without writing |
 | `POST` | `/api/items/raw` | Append a validated raw life.txt line to the writable file |
+| `GET` | `/api/items/{id}` | Canonical exact-ID read (#837): a purely numeric path segment is interpreted as a 1-based line number for backward compatibility, matching the historical `GET /api/items/{line_no}` route; anything else (and any numeric segment matching no line) is resolved as a canonical `id:`, sharing the exact same lookup as `GET /api/items/id/{id}` below. Unknown IDs return `404`. |
 | `GET` | `/api/items/id/{id}` | Get an item by exact `id:` |
 | `PUT` | `/api/items/id/{id}` | Replace an item by exact `id:` in the writable file |
 | `DELETE` | `/api/items/id/{id}` | Delete an item by exact `id:` in the writable file |
@@ -527,6 +528,29 @@ Supported parameters:
 | `theme=dark` or `theme=light` | Force the color theme; useful for kiosks and wall displays where `localStorage` cannot be pre-seeded |
 | `lang=ja` or `lang=en` | Interface language, overriding config `web.language`; records are never translated |
 | `graph_root=ID`, `graph_depth=N` | Initial graph panel root/depth parameters |
+| `id=VALUE` | Open one record's detail drawer directly, resolved by its canonical `id:` through the same `GET /api/items/{id}` route the REST API exposes (#837/#838); an unknown ID shows a clear not-found message instead of silently opening another record |
+| `line=N` | Open one record's detail drawer directly by 1-based line number; used automatically as a fallback deep link for records with no `id:` |
+
+### Record Deep Links
+
+Loading `http://127.0.0.1:8000/?id=task-001` opens that record's detail
+drawer immediately once the app has finished loading, using the same
+canonical-ID lookup as `GET /api/items/task-001`. Opening a record from the
+normal UI (clicking a row, using the command palette, jumping to a
+blocker/dependency) updates the URL to `?id=<id>` so it can be bookmarked or
+shared; closing the drawer removes the parameter again. Records with no
+`id:` fall back to `?line=N`, which shifts if lines above it change -- add
+an `id:` detail for a link that survives edits. Browser Back/Forward moves
+between the drawer states the same way normal navigation created them.
+
+The record detail drawer's **Share** button copies this same URL (current
+origin, current unrelated query parameters preserved, `id`/`line` set to
+the open record) to the clipboard.
+
+A logical, host-independent form of the same identity --
+`lifetxt://item/<id>` -- is also available for references that should not
+embed a specific deployment's host/port; see
+[Item Links](item-links.md) (#840).
 
 ## Command Palette
 

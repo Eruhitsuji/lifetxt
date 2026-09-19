@@ -38,9 +38,16 @@
       }
     }
 
-    function closeDrawer() {
+    function closeDrawer(urlMode = "replace") {
       closeManagedModal(document.getElementById("detail-drawer"));
       drawerItem = null;
+      if (urlMode === "none") return;
+      const params = query();
+      if (!params.has("id") && !params.has("line")) return;
+      params.delete("id");
+      params.delete("line");
+      const url = `${location.pathname}${params.toString() ? "?" + params.toString() : ""}`;
+      history.replaceState(null, "", url);
     }
 
     function drawerEdit() {

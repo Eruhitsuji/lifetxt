@@ -237,11 +237,20 @@
       // Back-compat: ?workspace=new used to open the editor panel
       if (firstParam(query(), ["workspace", "panel"], "").toLowerCase() === "new") newItem();
       return refreshAll().then(() => {
-        // Auto-open detail modal for ?line=N deep links
+        // Auto-open the detail drawer for a deep link (#838). Resolved
+        // only after refreshAll() has loaded config/data, so the initial
+        // open never races the app into showing the wrong record while
+        // still loading. ?id= (canonical id:) takes precedence over the
+        // older ?line= form; both replace, rather than push, this initial
+        // history entry.
+        const idParam = query().get("id");
+        if (idParam) {
+          return openItemById(idParam, "replace");
+        }
         const lineParam = query().get("line");
         if (lineParam) {
           const lineNum = parseInt(lineParam, 10);
-          if (!isNaN(lineNum)) openItemByLine(lineNum);
+          if (!isNaN(lineNum)) return openItemByLine(lineNum, "replace");
         }
       });
     }).catch(error => {

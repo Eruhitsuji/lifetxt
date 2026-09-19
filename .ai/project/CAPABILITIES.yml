@@ -10080,6 +10080,7 @@ capabilities:
     source_requirements:
       - req-web-responsive-record-detail-layout
       - req-web-responsive-record-detail-touch-spacing-followup
+      - req-web-responsive-record-detail-iphone-breathing-room
     implementation_locations:
       - lifetxt/web_assets_css_02.css
       - lifetxt/web_assets_css_04.css
@@ -10098,6 +10099,7 @@ capabilities:
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/851
       - https://github.com/Eruhitsuji/lifetxt/pull/853
+      - https://github.com/Eruhitsuji/lifetxt/pull/854
     reuse_policy: >-
       Reuse the #771 drawer/tab architecture and #790/#799 shared control
       geometry; do not create a second record-detail surface or control-size
@@ -10109,6 +10111,8 @@ capabilities:
       keyboard focus behavior, bottom-sheet height, and safe-area rules remain
       unchanged. Follow-up #849 removes a class-specific tab height that defeated
       the coarse-pointer 44px target and adds visible row spacing and grouping.
+      The iPhone 12 follow-up adds outer list spacing, roomier rows, and scroll-end
+      clearance so the last property does not sit against the sheet boundary.
     replacement:
       replaces: []
       replaced_by: null

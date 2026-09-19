@@ -2,6 +2,37 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-responsive-record-detail-iphone-breathing-room
+      capability_id: cap-web-responsive-record-detail
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/849
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/854
+      changed_files_or_scope:
+        - Add visible outer spacing around the phone-width Overview field list
+        - Increase phone property-row padding and separation based on iPhone 12 evidence
+        - Keep scroll-end clearance after the final drawer property
+        - lifetxt/web_assets_css_04.css
+        - tests/test_web_mobile.py
+        - tests/test_web_assets.py
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - iPhone 12 screenshot after PR #853 showed the field list and final row still lacked sufficient breathing room
+        - Regression test failed before the CSS fix because neither outer list spacing nor scroll-end clearance existed
+        - python -m unittest tests.test_web_mobile tests.test_web_assets tests.test_web_native_timeline_visual tests.test_traceability_gate tests.test_change_package_closeout -> Ran 68 tests, OK (skipped=1)
+        - MPLBACKEND=Agg python -m unittest discover -> Ran 4676 tests, OK (skipped=217)
+        - python -m ruff check lifetxt tests scripts -> All checks passed
+        - python -m ruff format --check tests/test_web_mobile.py tests/test_web_assets.py -> 2 files already formatted
+        - python -m mypy --follow-imports=skip --ignore-missing-imports lifetxt/diagnostic_contract.py -> Success; no issues found in 1 source file
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - git diff --check -> clean
+      release_or_deployment: null
+      notes: >-
+        Bug/Standard assurance visual follow-up to #853. CSS-only phone layout
+        adjustment with no JavaScript behavior, ARIA semantics, data model, API,
+        dependency, or configuration changes. Desktop styling is unchanged.
+      status: implemented
+
     - requirement_id: req-web-responsive-record-detail-touch-spacing-followup
       capability_id: cap-web-responsive-record-detail
       epic: null

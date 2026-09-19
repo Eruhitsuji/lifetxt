@@ -43,6 +43,52 @@ def _media_block(query):
     return "\n".join(bodies)
 
 
+def _iter_css_rules(css_text):
+    """Yield (selector, body) for every plain style rule, descending into
+    @media/@supports blocks so nested rules are inspected too. @keyframes and
+    @font-face bodies are not selector/declaration rule lists and are skipped.
+
+    This is a cascade-aware complement to the literal ``.class { ... }``
+    substring checks elsewhere in this file: it lets a test ask "does any
+    selector matching this element also set this property?" rather than only
+    "does this one specific class rule contain this text?" -- the gap that
+    let #856 slip past #855's own regression test (a global, unscoped
+    ``section { overflow: hidden; ... }`` rule silently clipped every
+    ``<section class="drawer-tab-panel">`` too, and no test asked about that
+    selector).
+    """
+    i = 0
+    n = len(css_text)
+    while i < n:
+        brace = css_text.find("{", i)
+        if brace < 0:
+            break
+        header = css_text[i:brace].strip()
+        depth = 1
+        j = brace + 1
+        while j < n and depth > 0:
+            if css_text[j] == "{":
+                depth += 1
+            elif css_text[j] == "}":
+                depth -= 1
+            j += 1
+        body = css_text[brace + 1 : j - 1]
+        if header.startswith("@media") or header.startswith("@supports"):
+            yield from _iter_css_rules(body)
+        elif header.startswith("@"):
+            pass
+        else:
+            yield header, body
+        i = j
+
+
+def _last_simple_selector(compound):
+    """The final simple selector in a compound selector, e.g. the
+    ``section.drawer-tab-panel`` in ``.detail-drawer section.drawer-tab-panel``.
+    """
+    return re.split(r"\s*[>+~]\s*|\s+", compound.strip())[-1]
+
+
 class ViewportTests(unittest.TestCase):
     def test_viewport_covers_the_display_cutout(self):
         # viewport-fit=cover is what makes env(safe-area-inset-*) non-zero.
@@ -175,6 +221,74 @@ class RecordDetailResponsiveTests(unittest.TestCase):
                 re.escape(selector) + r" \{[^}]*overflow-wrap:\s*anywhere;",
                 selector,
             )
+
+    def test_no_bare_section_selector_leaks_page_chrome_onto_the_drawer(self):
+        """Every ``<section>`` in the page is either a top-level page section
+        (``section.page``, carried by every ``data-page`` panel in main) or a
+        record-detail drawer tab panel (``section.drawer-tab-panel``). A rule
+        whose selector's final compound is a *bare* element selector -- plain
+        ``section``, with no class/id qualifying it -- would apply to both,
+        so a page-chrome rule written that way silently clips and rounds the
+        drawer tab panels too (#856): the panel becomes an ``overflow:hidden``
+        box nested inside ``.drawer-body``'s own scrollport, so content below
+        the fold is clipped rather than scrolled to, and the rounded corner
+        cuts into the leading edge of headings like "FIELDS".
+        """
+        for selector, _body in _iter_css_rules(STYLE):
+            for compound in selector.split(","):
+                last = _last_simple_selector(compound)
+                self.assertFalse(
+                    re.fullmatch(r"section(::?[\w-]+)?", last),
+                    "unscoped element selector %r in rule %r would also "
+                    "match section.drawer-tab-panel" % (last, selector),
+                )
+
+    def test_drawer_tab_panel_is_never_a_clipping_or_chrome_box(self):
+        """Direct, positive check on top of the selector-scoping guard above:
+        no rule matching a drawer tab panel may set overflow, border-radius,
+        box-shadow, background, or border -- those are exactly what the
+        global page-section rule used to leak onto it (#856). The panel's own
+        ``[hidden]`` display toggle is exempt; it is not chrome/clipping.
+        """
+        forbidden = ("overflow", "border-radius", "box-shadow", "background", "border")
+        panel_tags = {
+            "section.drawer-tab-panel",
+            "#drawer-tab-overview",
+            "#drawer-tab-timeline",
+            "#drawer-tab-relations",
+            ".drawer-tab-panel",
+        }
+        for selector, body in _iter_css_rules(STYLE):
+            for compound in selector.split(","):
+                last = _last_simple_selector(compound)
+                base = last.split("[")[0]
+                if base not in panel_tags:
+                    continue
+                if "[hidden]" in last:
+                    continue
+                declared = {
+                    match.group(1).lower()
+                    for match in re.finditer(r"([a-zA-Z-]+)\s*:", body)
+                }
+                # "overflow-wrap" (word-wrapping, not clipping) is a real,
+                # unrelated property that happens to share the "overflow-"
+                # prefix; everything else starting with a forbidden root
+                # (e.g. "border-top", "background-color") is the same kind
+                # of chrome/clipping this test guards against.
+                declared -= {"overflow-wrap"}
+                for prop in forbidden:
+                    hit = next(
+                        (
+                            name
+                            for name in declared
+                            if name == prop or name.startswith(prop + "-")
+                        ),
+                        None,
+                    )
+                    self.assertIsNone(
+                        hit,
+                        "%r (matched via %r) declares %r" % (selector, last, hit),
+                    )
 
     def test_phone_tabs_share_width_without_losing_labels(self):
         narrow = _media_block("@media (max-width: 680px)")

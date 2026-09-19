@@ -269,7 +269,7 @@
       header { position: static; border-bottom: 1px solid #ccc; }
       body { background: #fff; color: #000; font-size: 12px; }
       main { display: block; max-width: none; padding: 0; }
-      section { border: none; }
+      section.page { border: none; }
       .item { border: none; border-bottom: 1px solid #ccc; border-radius: 0; break-inside: avoid; }
       .item.overdue, .item.due-soon { border-left: 3px solid #888; }
     }

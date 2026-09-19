@@ -6293,7 +6293,7 @@ class LifeTxtWebApiTests(unittest.TestCase):
     def test_canonical_item_id_route_unknown_id_is_404(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = os.path.join(temp_dir, "life.txt")
-            Path(path).write_text('[ ] T Task id:task-001\n', encoding="utf-8")
+            Path(path).write_text("[ ] T Task id:task-001\n", encoding="utf-8")
             client = self._client([path], writable_path=path)
 
             response = client.get("/api/items/does-not-exist")
@@ -6304,9 +6304,7 @@ class LifeTxtWebApiTests(unittest.TestCase):
     def test_canonical_item_id_route_url_encoded_id_resolves(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = os.path.join(temp_dir, "life.txt")
-            Path(path).write_text(
-                '[ ] T "Space task" id:"a b"\n', encoding="utf-8"
-            )
+            Path(path).write_text('[ ] T "Space task" id:"a b"\n', encoding="utf-8")
             client = self._client([path], writable_path=path)
 
             response = client.get("/api/items/a%20b")
@@ -6317,9 +6315,7 @@ class LifeTxtWebApiTests(unittest.TestCase):
     def test_canonical_item_id_route_numeric_id_prefers_matching_line(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = os.path.join(temp_dir, "life.txt")
-            Path(path).write_text(
-                '[ ] T First\n[ ] T Second id:2\n', encoding="utf-8"
-            )
+            Path(path).write_text("[ ] T First\n[ ] T Second id:2\n", encoding="utf-8")
             client = self._client([path], writable_path=path)
 
             # Line 2 exists, so the historical by-line-number behavior wins
@@ -6333,7 +6329,7 @@ class LifeTxtWebApiTests(unittest.TestCase):
     def test_canonical_item_id_route_numeric_id_falls_back_when_no_line_matches(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = os.path.join(temp_dir, "life.txt")
-            Path(path).write_text('[ ] T Task id:404\n', encoding="utf-8")
+            Path(path).write_text("[ ] T Task id:404\n", encoding="utf-8")
             client = self._client([path], writable_path=path)
 
             # Only one line exists, so line 404 does not match: fall back to
@@ -6346,7 +6342,7 @@ class LifeTxtWebApiTests(unittest.TestCase):
     def test_existing_by_line_number_route_is_unaffected(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = os.path.join(temp_dir, "life.txt")
-            Path(path).write_text('[ ] T Task\n', encoding="utf-8")
+            Path(path).write_text("[ ] T Task\n", encoding="utf-8")
             client = self._client([path], writable_path=path)
 
             response = client.get("/api/items/1")
@@ -6878,7 +6874,9 @@ class LifeTxtWebApiTests(unittest.TestCase):
             self.assertTrue(data["explicit"]["truncated"])
 
             conflict = client.get("/api/temporal-thread/conflict").json()
-            self.assertEqual("follows", conflict["consistency"]["warnings"][0]["relation"])
+            self.assertEqual(
+                "follows", conflict["consistency"]["warnings"][0]["relation"]
+            )
 
     def test_temporal_thread_api_rejects_invalid_bounds(self):
         with tempfile.TemporaryDirectory() as temp_dir:

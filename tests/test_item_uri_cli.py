@@ -27,20 +27,15 @@ class ItemUriCliTests(unittest.TestCase):
         )
         self.assertEqual(0, code, stderr)
         self.assertEqual(
-            "lifetxt://item/task-001\n"
-            "https://lifetxt.example.invalid/?id=task-001\n",
+            "lifetxt://item/task-001\nhttps://lifetxt.example.invalid/?id=task-001\n",
             stdout.replace("\r\n", "\n"),
         )
 
     def test_format_json_output(self):
-        stdout, stderr, code = run_cli(
-            "item-uri", "format", "task-001", "--json"
-        )
+        stdout, stderr, code = run_cli("item-uri", "format", "task-001", "--json")
         self.assertEqual(0, code, stderr)
         payload = json.loads(stdout)
-        self.assertEqual(
-            {"id": "task-001", "uri": "lifetxt://item/task-001"}, payload
-        )
+        self.assertEqual({"id": "task-001", "uri": "lifetxt://item/task-001"}, payload)
 
     def test_format_rejects_an_empty_id(self):
         stdout, stderr, code = run_cli("item-uri", "format", "")
@@ -48,9 +43,7 @@ class ItemUriCliTests(unittest.TestCase):
         self.assertIn("ERROR", stderr)
 
     def test_parse_recovers_the_canonical_id(self):
-        stdout, stderr, code = run_cli(
-            "item-uri", "parse", "lifetxt://item/task-001"
-        )
+        stdout, stderr, code = run_cli("item-uri", "parse", "lifetxt://item/task-001")
         self.assertEqual(0, code, stderr)
         self.assertEqual("task-001\n", stdout.replace("\r\n", "\n"))
 
@@ -60,14 +53,10 @@ class ItemUriCliTests(unittest.TestCase):
         )
         self.assertEqual(0, code, stderr)
         payload = json.loads(stdout)
-        self.assertEqual(
-            {"uri": "lifetxt://item/task-001", "id": "task-001"}, payload
-        )
+        self.assertEqual({"uri": "lifetxt://item/task-001", "id": "task-001"}, payload)
 
     def test_parse_round_trips_an_id_needing_encoding(self):
-        format_out, format_err, format_code = run_cli(
-            "item-uri", "format", "a b/c"
-        )
+        format_out, format_err, format_code = run_cli("item-uri", "format", "a b/c")
         self.assertEqual(0, format_code, format_err)
         uri = format_out.strip()
         parse_out, parse_err, parse_code = run_cli("item-uri", "parse", uri)

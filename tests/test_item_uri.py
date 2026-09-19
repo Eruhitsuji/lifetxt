@@ -43,9 +43,7 @@ class ParseItemUriTests(unittest.TestCase):
             self.assertEqual(raw_id, parse_item_uri(uri))
 
     def test_strips_surrounding_whitespace(self):
-        self.assertEqual(
-            "task-001", parse_item_uri("  lifetxt://item/task-001  ")
-        )
+        self.assertEqual("task-001", parse_item_uri("  lifetxt://item/task-001  "))
 
     def test_wrong_scheme_is_malformed(self):
         with self.assertRaises(ItemUriError):

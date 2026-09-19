@@ -10083,6 +10083,7 @@ capabilities:
       - req-web-responsive-record-detail-iphone-breathing-room
       - req-web-responsive-record-detail-ios-scroll
       - req-web-responsive-record-detail-section-scope-fix
+      - req-web-responsive-record-detail-tab-bar-align-content-fix
     implementation_locations:
       - lifetxt/web_assets_css_01.css
       - lifetxt/web_assets_css_02.css
@@ -10102,12 +10103,14 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/771
       - https://github.com/Eruhitsuji/lifetxt/issues/791
       - https://github.com/Eruhitsuji/lifetxt/issues/856
+      - https://github.com/Eruhitsuji/lifetxt/issues/858
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/851
       - https://github.com/Eruhitsuji/lifetxt/pull/853
       - https://github.com/Eruhitsuji/lifetxt/pull/854
       - https://github.com/Eruhitsuji/lifetxt/pull/855
       - https://github.com/Eruhitsuji/lifetxt/pull/857
+      - https://github.com/Eruhitsuji/lifetxt/pull/859
     reuse_policy: >-
       Reuse the #771 drawer/tab architecture and #790/#799 shared control
       geometry; do not create a second record-detail surface or control-size
@@ -10137,6 +10140,22 @@ capabilities:
       top-level page section already carries, rather than adding a second,
       narrower `.drawer-tab-panel` override that could drift from the panel
       element again in the future.
+      #858 found a separate, unrelated bug reported right after #856/#857
+      merged: the tab bar itself (the row of Overview/Timeline/Relations
+      buttons) changed height depending on which tab was active. Root-caused
+      to `.drawer-body`'s CSS Grid `align-content` default (`normal`, which
+      resolves to `stretch` in the block axis for a definite-height grid
+      container with auto-sized rows): whenever a tab's content was shorter
+      than the fixed-height sheet, the leftover vertical space was
+      distributed into every auto-sized grid row -- including the tab bar's
+      own row -- stretching its buttons far past their natural size and
+      separating the active tab's underline from its label by a wide gap.
+      Confirmed via reproduction on the pre-#856 commit and an A/B test that
+      #856's `overflow` change made no difference, so this was not a
+      regression from #856/#857 -- an independent, pre-existing defect only
+      now noticed. Fixed with one `align-content: start` declaration on
+      `.drawer-body`, so its rows always size to their own content and any
+      leftover space stays blank below it.
     replacement:
       replaces: []
       replaced_by: null

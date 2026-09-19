@@ -13754,6 +13754,66 @@ traceability:
         unimplemented follow-ups rather than silently claimed complete.
       status: implemented
 
+    - requirement_id: req-web-drawer-record-editing-reliability
+      capability_id: cap-web-drawer-record-editing
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/850
+      pull_request: null
+      changed_files_or_scope:
+        - Move the structured common-key authoring helpers (STRUCTURED_COMMON_FIELDS,
+          structuredFieldsForType, renderStructuredFields, renderStatusStateField,
+          syncStatusStateMode, _structuredDetails) and the actionable-error helpers
+          (actionableErrorText, showActionableError, renderActionableError) from
+          inside loadConfig().then(() => {...}) to true top-level scope, so the
+          record-detail drawer's Edit action (which calls them directly by name
+          from top-level code in web_assets_js_12.js) can reach them
+        - "Add tests/test_web_drawer_edit_js.py: a targeted scope-regression guard
+          plus a behavioral interaction test covering openDrawer -> Edit ->
+          change fields -> Save -> updated detail"
+        - Fix tests/test_web_structured_authoring_js.py's extraction logic for
+          the relocated functions and two pre-existing Windows cp932-locale
+          subprocess encoding gaps found while verifying this fix
+        - lifetxt/web_assets_js_17.js
+        - lifetxt/web_assets_js_18.js
+        - tests/test_web_drawer_edit_js.py
+        - tests/test_web_structured_authoring_js.py
+        - tests/test_web_assets.py
+        - tests/test_web_quick_status_js.py
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - "reproduced live before any fix: a real Playwright (Chromium) session against a real running lifetxt serve process and a disposable fixture workspace -- clicking #drawer-edit-btn left #drawer-edit-title absent (0 elements), drawer-head-btns updated to Save/Cancel but drawer-body unchanged from the read-only Overview content, and a captured page error 'renderStructuredFields is not defined'"
+        - "root-caused with a small ad hoc acorn-based AST scope walk (network-installed for this investigation only, not a project dependency): renderStructuredFields/_structuredDetails/syncStatusStateMode/showActionableError/actionableErrorText/renderActionableError/structuredFieldsForType/renderStatusStateField were all declared inside the ArrowFunctionExpression passed to loadConfig().then() (spanning from the last line of web_assets_js_17.js through nearly all of web_assets_js_18.js), confirmed against a live page load showing typeof window.renderStructuredFields === 'undefined' while typeof window.drawerEdit === 'function'"
+        - "tests/test_web_drawer_edit_js.py ScopeRegressionGuardTests (2 tests, 9 sub-assertions): confirmed via git show of the pre-fix commit (3b701f7~1) to fail 8 of 9 sub-assertions against the old code, then pass once the fix is restored"
+        - "tests/test_web_drawer_edit_js.py DrawerEditInteractionTests (7 tests): edit form renders with current title/status/structured-field values and is enabled/focusable; Save sends exactly one PUT with the edited title and structured field; a custom/raw detail key survives a structured-field-only edit; Type S standard and custom state round-trip through save; Cancel makes no API call, reopens the original record, and clears drawerEditing; a read-only record refuses Edit and leaves drawer-body byte-unchanged; a blank title fails loudly before any save request"
+        - "live re-verification after the fix: the same Playwright session now renders the real edit form (title/status/type/due structured field all present and editable), changing the title to 'Buy milk and eggs' and the due: field to 2026-03-03 then clicking Save produced a 'Record saved.' toast and the server-side item (confirmed via a direct GET /api/items call) shows both changes applied"
+        - python -m unittest tests.test_web_drawer_edit_js tests.test_web_structured_authoring_js tests.test_web_assets tests.test_web_quick_status_js tests.test_web_context_create_js tests.test_web_deep_link_js tests.test_web_native_timeline_visual tests.test_web_actionable_errors_js tests.test_web_mobile tests.test_web_i18n tests.test_web_commands tests.test_surface_runtime tests.test_release_policy tests.test_lifetxt.LifeTxtWebApiTests -> Ran 250 tests, OK
+        - node --check on the full assembled Web UI script -> no syntax error
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed Python files -> clean
+      release_or_deployment: null
+      notes: >-
+        Self-scoped and implemented autonomously per repository owner
+        instruction to implement #850 end to end on its own child branch
+        (task/850-drawer-edit-fix) merged locally into the integration branch
+        feature/850-web-drawer-edit-fix, itself branched from and rebased onto
+        origin/main after PR #851 (#849's responsive record-detail layout
+        fix) merged, before opening the final PR. This also incidentally
+        fixes the main (non-drawer) editor's own Save error path
+        (web_assets_js_05.js's saveItem() calls showActionableError the same
+        way and was equally broken), included here per this project's
+        Horizontal Review Scope Discipline since it shares the identical
+        root cause and fix. See cap-web-drawer-record-editing's own notes
+        for the full account, including the explicit, honest limitation of
+        the interaction-test style used here (it would still pass against
+        the pre-fix code; only ScopeRegressionGuardTests provides real
+        regression protection against reverting this specific fix) and the
+        acceptance-criteria items verified live/by reading but not covered
+        by a dedicated automated test in this change (deep-link/multi-file-
+        workspace drawer-editor interaction, full mobile/touch interaction).
+        pull_request is filled in once the final integration PR is opened.
+      status: implemented
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

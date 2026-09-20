@@ -63,6 +63,11 @@
         description: "Explore dependencies, references, parent-child links, and related records.",
         actions: [["Refresh graph", "refreshGraph"], ["Items", "items"]],
       },
+      server: {
+        label: "Server",
+        description: "Inspect disaster-recovery backup health without exposing server paths or credentials.",
+        actions: [["Refresh", "refresh"], ["Items", "items"]],
+      },
       display: {
         label: "Display",
         description: "Read-focused wall display mode with editing controls hidden.",
@@ -118,6 +123,7 @@
       help: () => openHelpModal(),
       stats: () => switchWorkspace("stats"),
       graph: () => switchWorkspace("graph"),
+      server: () => switchWorkspace("server"),
     };
     const VIEW_HELP = {
       dashboard: "Dashboard: overview KPI tiles, attention list, completions, and project progress.",
@@ -133,6 +139,7 @@
       notifications: "Notifications: due messages/reminders, acknowledge, snooze, and browser alert controls.",
       stats: "Stats: charts, heatmaps, and type/status breakdowns.",
       graph: "Graph: id, parent, ref, depends_on, blocks, and related links.",
+      server: "Server: read-only disaster-recovery backup health and scheduling status.",
       display: "Display: read-focused wall mode that hides editing controls. Use Back or Exit Display to leave.",
       kiosk: "Kiosk: always-on board with clock, auto-refresh, optional kiosk_filter, and auto-scroll.",
     };

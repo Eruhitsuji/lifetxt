@@ -1,0 +1,43 @@
+schema_version: 1
+
+change:
+  id: server-backup-run-now-authorization
+  title: Define the authorization boundary for an on-demand server backup operation
+  status: completed
+  change_type: Security
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/868
+  related_pull_request: []
+  base_commit: 35ea1f10cc593d132c5d803987494dc449ff8055
+  target_release: null
+
+scope:
+  in_scope:
+    - Compare the existing plain Web, Remote Safe Mode, backup CLI, and generated systemd service trust boundaries.
+    - Select one fail-closed authorization and execution design for a future run-now operation.
+    - Define idempotency, admission control, rate limiting, audit, response, and UI-gating requirements.
+    - Split the approved future work into independently reviewable server-operation and authenticated-UI tasks.
+  out_of_scope:
+    - Implementing a run-now HTTP endpoint or browser mutation control.
+    - Changing backup archive, restore, prune, retention, remote-upload, or systemd behavior.
+    - Granting the operation through generic write, admin, owner, or reverse-proxy authentication alone.
+  write_scope:
+    - .ai/project/changes/server-backup-run-now-authorization/
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+    - GitHub issues 868, 870, and 871
+  forbidden_scope:
+    - lifetxt/**
+    - tests/**
+    - docs/**
+    - .ai/managed/**
+  shared_files:
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+
+human_approvals_required:
+  - Product-owner approval of this authorization and execution design before issue 870 is unblocked.
+  - Independent security review of any implementation because it adds an authenticated operational mutation.
+  - Merge Authority approval before any implementation is merged into main.

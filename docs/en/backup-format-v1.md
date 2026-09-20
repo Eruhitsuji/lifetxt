@@ -115,5 +115,5 @@ never guess at how to read a manifest it does not recognize.
 ## CLI
 
 See [`lifetxt backup`](cli.md) for `create`/`status`/`verify`/`restore`/
-`prune`, and [Backups](backups.md) for the full workflow including
-scheduled off-host backup via rclone.
+`prune`, and the [Ubuntu Server production runbook](../deployment/ubuntu-server.md#5-backup-and-restore)
+for scheduled local/off-host operation and a conservative restore drill.

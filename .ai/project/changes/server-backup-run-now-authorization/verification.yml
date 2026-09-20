@@ -1,0 +1,39 @@
+schema_version: 1
+
+verification:
+  executed:
+    - type: inspection
+      command: Inspect lifetxt/remote_access.py and lifetxt/remote_web.py
+      requirement_ids:
+        - req-server-backup-run-now-authorization-design
+      result: Existing Remote Safe Mode supplies authenticated principals, scopes, HTTPS, protocol negotiation, browser CSRF/Origin protection, per-principal rate limiting, request IDs, and structured audit; ordinary Web does not.
+      commit: 35ea1f10cc593d132c5d803987494dc449ff8055
+      executed_at: '2026-09-20'
+      status: passed
+    - type: inspection
+      command: Inspect lifetxt/backup_cli.py and lifetxt/backup_remote.py
+      requirement_ids:
+        - req-server-backup-run-now-authorization-design
+      result: run_scheduled is the canonical orchestration path, uses an exclusive destination lock, and records local creation separately from optional remote upload.
+      commit: 35ea1f10cc593d132c5d803987494dc449ff8055
+      executed_at: '2026-09-20'
+      status: passed
+    - type: inspection
+      command: Inspect lifetxt/server_init.py and docs/en/remote.md
+      requirement_ids:
+        - req-server-backup-run-now-authorization-design
+      result: server-init generates one fixed hardened backup one-shot service; Remote is opt-in, HTTPS-protected, and explicitly single-worker unless overridden.
+      commit: 35ea1f10cc593d132c5d803987494dc449ff8055
+      executed_at: '2026-09-20'
+      status: passed
+    - type: review
+      command: Review design against issue 868 acceptance criteria and abuse/failure matrix
+      requirement_ids:
+        - req-server-backup-run-now-authorization-design
+      result: One fail-closed design selected; implementation split into blocked issues 870 and 871; no runtime mutation added.
+      commit: null
+      executed_at: '2026-09-20'
+      status: passed
+
+  gaps:
+    - Owner approval and independent implementation security review remain pending.

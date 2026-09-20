@@ -1,0 +1,29 @@
+schema_version: 1
+
+requirements:
+  - id: req-server-backup-run-now-authorization-design
+    kind: ADDED
+    statement: >-
+      A future on-demand server backup operation must be admitted only through
+      Remote Safe Mode with an explicit backup:run scope, must dispatch only
+      the existing managed backup service, and must preserve the backup
+      subsystem's overlap, result-separation, sanitization, and audit
+      boundaries.
+    acceptance_criteria:
+      - The ordinary Web application and GET /api/backup/status remain read-only and expose no run-now mutation.
+      - The operation is available only under /api/remote/v1 and requires an authenticated principal with the explicit backup:run scope; generic read, write, admin, owner, or reverse-proxy authentication does not imply it.
+      - Browser-session callers pass the existing CSRF and Origin checks, all callers pass Remote Safe Mode rate limiting, and every accepted or rejected attempt creates the existing structured audit event with principal, request ID, outcome, and sanitized reason.
+      - The request accepts no command, unit name, source path, destination, remote target, retention value, or credential; execution is limited to starting the generated lifetxt-backup.service.
+      - Admission is asynchronous and idempotent, returns 202 for an accepted run, prevents duplicate queued starts, and retains backup_cli.run_scheduled's destination lock as defense in depth.
+      - Operation status and completion report local creation and off-host upload independently without exposing absolute paths, remote names, credentials, raw adapter errors, or journal output.
+      - Restore, prune, delete, arbitrary upload, and arbitrary service control remain CLI/operator-only actions.
+      - Reverse-proxy-only deployments without Remote Safe Mode retain CLI/systemctl as their only run-now path.
+    constraints:
+      - Remote protocol negotiation must fail closed unless the client supports the protocol version that advertises the operation.
+      - The dedicated operation rate limit must be stricter than the generic Remote request limit, initially one admitted run per principal per 15 minutes.
+      - Missing authentication, scope, runner configuration, audit persistence, or operation capability must refuse before dispatch.
+      - Implementation is prohibited until the owner approves this High-assurance design and issue 870 is unblocked.
+    owner: Eruhitsuji
+
+open_questions:
+  - Owner approval of the selected trust boundary and explicit backup:run scope is pending.

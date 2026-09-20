@@ -42,7 +42,3 @@ earlier_attempts:
   result: failed_then_resolved
   notes: Evidence sequence indentation did not match gate; fixed indentation and validated YAML; 17 governance
     tests now pass.
-publication:
-  status: blocked
-  reason: 'Automatic approval review rejected git push: external code disclosure/repository mutation requires
-    explicit user authorization. No push retry or PR creation attempted.'

@@ -89,7 +89,7 @@
     syncViewTabs = function() {
       _beginnerNavSyncViewTabs();
       const more = document.getElementById("nav-more");
-      const advanced = new Set(["agenda", "timeline", "calendar", "focus", "review", "messages", "team", "status", "notifications", "stats", "graph", "display", "kiosk"]);
+      const advanced = new Set(["agenda", "timeline", "calendar", "focus", "review", "messages", "team", "status", "notifications", "stats", "graph", "server", "display", "kiosk"]);
       if (more && advanced.has(currentView())) more.open = true;
       const summary = document.getElementById("nav-more-summary");
       if (summary && more) summary.setAttribute("aria-expanded", more.open ? "true" : "false");
@@ -131,3 +131,78 @@
     }).catch(error => {
       document.body.insertAdjacentHTML("beforeend", `<pre class="diagnostic">${escapeHtml(error.message)}</pre>`);
     });
+
+    function backupStateCopy(state) {
+      return ({
+        unconfigured: ["Backups not configured", "Add an opt-in backup_schedule section to server-init configuration.", "neutral"],
+        disabled: ["Scheduled backups disabled", "Backup settings exist, but unattended backup execution is disabled.", "neutral"],
+        never_run: ["Waiting for first backup", "Backup is enabled, but no completed run has been recorded yet.", "neutral"],
+        local_failure: ["Local backup failed", "The last local backup attempt failed. Inspect server-side backup status and logs.", "danger"],
+        remote_failure: ["Off-host upload failed", "The local backup succeeded, but the latest remote upload failed.", "danger"],
+        healthy: ["Backup healthy", "The latest recorded local backup completed successfully.", "success"],
+        unavailable: ["Backup status unavailable", "The configured backup destination could not be inspected safely.", "danger"],
+      })[state] || ["Backup status unknown", "The server returned an unrecognized backup state.", "neutral"];
+    }
+
+    function backupResultCopy(value) {
+      return ({
+        success: "Success",
+        failure: "Failed",
+        never_run: "Never run",
+        not_configured: "Not configured",
+      })[value] || value;
+    }
+
+    function backupStatusRow(label, value, options = {}) {
+      const shown = value === null || value === undefined || value === "" ? "—" : String(value);
+      const protectedValue = options.data ? " data-no-i18n" : "";
+      return `<div class="backup-status-row"><span>${escapeHtml(label)}</span><strong${protectedValue}>${escapeHtml(shown)}</strong></div>`;
+    }
+
+    function renderServerBackupStatus(data) {
+      const state = backupStateCopy(data?.state);
+      const local = data?.local || {};
+      const remote = data?.remote || {};
+      const remoteState = remote.configured
+        ? (remote.last_upload_result || "never_run")
+        : "not_configured";
+      const guidance = data?.state === "unconfigured"
+        ? `<p class="backup-guidance">See the <a href="https://github.com/Eruhitsuji/lifetxt/blob/main/docs/deployment/ubuntu-server.md#5-backup-and-restore" target="_blank" rel="noopener noreferrer">Ubuntu Server backup guide</a> to configure scheduled disaster-recovery backups.</p>`
+        : "";
+      const remoteError = remote.last_error_summary
+        ? `<p class="backup-warning" role="alert">${escapeHtml(remote.last_error_summary)}</p>`
+        : "";
+      return `<div class="backup-summary backup-state-${escapeHtml(state[2])}" role="status">` +
+        `<div><strong>${escapeHtml(state[0])}</strong><p>${escapeHtml(state[1])}</p></div>` +
+        `<span class="pill">${data?.enabled ? "Backup schedule enabled" : "Backup schedule disabled"}</span></div>` +
+        `<div class="backup-panel-grid">` +
+          `<article class="backup-status-card"><h3>Local backup</h3>` +
+            backupStatusRow("Result", backupResultCopy(local.last_attempt_result)) +
+            backupStatusRow("Last attempt", local.last_attempt_at, {data: true}) +
+            backupStatusRow("Last success", local.last_success_at, {data: true}) +
+            backupStatusRow("Latest artifact", data?.latest_local_backup, {data: true}) +
+            backupStatusRow("Complete backups", data?.backup_count ?? 0, {data: true}) +
+          `</article>` +
+          `<article class="backup-status-card"><h3>Off-host upload</h3>` +
+            backupStatusRow("Configured", remote.configured ? "Yes" : "No") +
+            backupStatusRow("Result", backupResultCopy(remoteState)) +
+            backupStatusRow("Last upload", remote.last_upload_at, {data: true}) +
+            backupStatusRow("Next scheduled run", data?.next_scheduled_run, {data: true}) +
+            remoteError +
+          `</article>` +
+        `</div>${guidance}`;
+    }
+
+    async function loadServerBackupStatus() {
+      const node = document.getElementById("server-backup-status");
+      if (!node) return;
+      node.setAttribute("aria-busy", "true");
+      try {
+        const data = await api("/api/backup/status");
+        node.innerHTML = renderServerBackupStatus(data);
+      } catch (error) {
+        node.innerHTML = `<div class="diagnostic" role="alert">${escapeHtml(t("Backup status could not be loaded:"))} <span data-no-i18n>${escapeHtml(error.message || error)}</span></div>`;
+      } finally {
+        node.setAttribute("aria-busy", "false");
+      }
+    }

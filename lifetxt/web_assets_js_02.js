@@ -39,6 +39,8 @@
           "統計: グラフ、ヒートマップ、種類/ステータス別の内訳です。",
         "Graph: id, parent, ref, depends_on, blocks, and related links.":
           "グラフ: id・parent・ref・depends_on・blocks および related のリンクです。",
+        "Server: read-only disaster-recovery backup health and scheduling status.":
+          "サーバー: 災害復旧バックアップの健全性とスケジュール状態を読み取り専用で確認します。",
         "Display: read-focused wall mode that hides editing controls. Use Back or Exit Display to leave.":
           "表示: 編集操作を隠した閲覧専用の壁掛けモードです。戻る、または「表示を終了」で抜けられます。",
         "Kiosk: always-on board with clock, auto-refresh, optional kiosk_filter, and auto-scroll.":
@@ -398,13 +400,13 @@
     }
     // ── Single-content page router ─────────────────────────────────
     // Each view owns the whole screen: exactly one page section is shown.
-    const PAGE_VIEWS = ["dashboard", "today", "agenda", "timeline", "calendar", "focus", "review", "messages", "team", "status", "notifications", "stats", "graph"];
+    const PAGE_VIEWS = ["dashboard", "today", "agenda", "timeline", "calendar", "focus", "review", "messages", "team", "status", "notifications", "stats", "graph", "server"];
     const VIEW_PAGE = {
       "": "items", "messages": "items", "kiosk": "items", "display": "items",
       "dashboard": "dashboard", "today": "today", "agenda": "agenda", "timeline": "timeline",
       "calendar": "calendar", "focus": "focus", "review": "review", "team": "team",
       "status": "status", "notifications": "notifications",
-      "stats": "stats", "graph": "graph",
+      "stats": "stats", "graph": "graph", "server": "server",
     };
     const VIEW_META = {
       "": {

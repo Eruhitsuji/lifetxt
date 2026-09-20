@@ -139,6 +139,7 @@
       if (v === "focus") tasks.push(loadFocus());
       if (v === "review") tasks.push(loadReview());
       if (v === "graph") tasks.push(loadGraphPanel());
+      if (v === "server") tasks.push(loadServerBackupStatus());
       if (v === "stats") {
         statsLoaded = true;
         tasks.push(loadChart(currentChartType));

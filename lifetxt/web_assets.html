@@ -57,6 +57,7 @@ __LIFETXT_WEB_STYLES__  </style>
           <button type="button" class="workspace-tab" data-view="notifications" onclick="switchWorkspace('notifications')">🔔 Notifications</button>
           <button type="button" class="workspace-tab" data-view="stats" onclick="switchWorkspace('stats')">📊 Stats</button>
           <button type="button" class="workspace-tab" data-view="graph" onclick="switchWorkspace('graph')">🕸️ Graph</button>
+          <button type="button" class="workspace-tab" data-view="server" onclick="switchWorkspace('server')">🛡️ Server</button>
           <button type="button" class="workspace-tab" data-view="display" onclick="switchWorkspace('display')" title="Open a read-focused wall display mode">🪧 Display</button>
           <button type="button" class="workspace-tab" data-view="kiosk" onclick="switchWorkspace('kiosk')">🖥️ Kiosk</button>
         </div>
@@ -398,6 +399,17 @@ __LIFETXT_WEB_STYLES__  </style>
         <div class="section-body">
           <div id="notif-permission-bar" class="notif-permission" style="display:none"></div>
           <div id="notifications" class="stack" data-no-i18n></div>
+        </div>
+      </section>
+      <section class="server-section page" data-page="server">
+        <div class="section-head">
+          <h2><span class="h2-icon" aria-hidden="true">🛡️</span>Server</h2>
+          <button class="secondary" onclick="loadServerBackupStatus()" title="Refresh server backup status" aria-label="Refresh server backup status">↺</button>
+        </div>
+        <div class="section-body server-body">
+          <div id="server-backup-status" aria-live="polite" aria-busy="true">
+            <div class="empty">Loading backup status…</div>
+          </div>
         </div>
       </section>
   </main>

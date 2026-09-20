@@ -313,6 +313,12 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             "read_only": app.state.read_only,
         }
 
+    @app.get("/api/backup/status")
+    def get_backup_status():
+        from .server_backup_status import backup_status_payload
+
+        return backup_status_payload(app.state.config)
+
     @app.get("/api/config")
     def get_config():
         from .presence import COMMON_STATES

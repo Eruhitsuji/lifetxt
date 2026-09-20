@@ -2,6 +2,32 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-task-completion-datetime
+      capability_id: cap-web-drawer-record-editing
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/861
+      pull_request: null
+      changed_files_or_scope:
+        - lifetxt/web_assets_js_01.js
+        - lifetxt/web_assets_js_10.js
+        - lifetxt/web_assets_js_12.js
+        - lifetxt/web_assets_css_02.css
+        - tests/test_web_done_date.py
+        - tests/test_web_assets.py
+        - docs/en/web.md
+        - docs/ja/web.md
+      tests_or_evidence:
+        - python -m unittest tests.test_web_done_date -> 11 tests passed
+        - "MPLBACKEND=Agg python -m unittest discover -> 4693 tests, OK (skipped=37)"
+        - python -m unittest tests.test_web_done_date tests.test_web_assets tests.test_web_drawer_edit_js tests.test_web_mobile
+          tests.test_web_i18n tests.test_web_context_create_js tests.test_native_history_mutation tests.test_revision_telemetry_v2
+          -> 130 tests passed
+      release_or_deployment: null
+      status: implemented
+      notes: Feature/Standard; existing revision-safe PUT and native completed history reused. No API/config/format
+        changes. Browser-local custom times serialize as UTC; date-only preserved. Normal Done and recurrence
+        unchanged. Independent review pending.
+
     - requirement_id: req-module-structure-decomposition
       capability_id: cap-web-surface-structure
       epic: null

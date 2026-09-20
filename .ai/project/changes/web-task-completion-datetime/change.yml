@@ -1,0 +1,29 @@
+schema_version: 1
+change:
+  id: web-task-completion-datetime
+  title: Task completion with Now or Custom date/time
+  status: implemented
+  change_type: Feature
+  assurance_level: Standard
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/861
+  related_pull_request: null
+  base_commit: 37f31df
+scope:
+  in_scope:
+  - Task drawer date/time completion and its safety/compatibility verification
+  out_of_scope:
+  - API/format/config changes, recurrence, bulk actions, other clients, managed standards
+  write_scope:
+  - lifetxt/web_assets_js_01.js
+  - lifetxt/web_assets_js_10.js
+  - lifetxt/web_assets_js_12.js
+  - lifetxt/web_assets_css_02.css
+  - tests/test_web_done_date.py
+  - tests/test_web_assets.py
+  - docs/en/web.md
+  - docs/ja/web.md
+  - .ai/project/CAPABILITIES.yml
+  - .ai/project/TRACEABILITY.yml
+  - .ai/project/changes/web-task-completion-datetime/**

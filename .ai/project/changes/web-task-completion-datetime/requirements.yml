@@ -1,0 +1,10 @@
+schema_version: 1
+requirements:
+- id: req-web-task-completion-datetime
+  description: Task completion and explicit done date/time in one operation
+  acceptance_criteria:
+  - Now saves the current instant with completed status
+  - Custom saves date or date/time; cancellation changes nothing
+  - Existing done changes only through explicit Now/Custom
+  - Reload preserves done; one native completed event; stale revision refuses entire mutation
+  - Ordinary Done, repeat, Undo and mobile usability remain compatible

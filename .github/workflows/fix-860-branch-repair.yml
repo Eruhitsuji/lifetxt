@@ -1,0 +1,83 @@
+name: Fix 860 branch repair
+
+on:
+  push:
+    branches:
+      - fix/860-selection-visibility-v2
+    paths:
+      - .github/workflows/fix-860-branch-repair.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repair branch
+        uses: actions/checkout@v5
+        with:
+          ref: fix/860-selection-visibility-v2
+          fetch-depth: 0
+
+      - name: Apply CI contract updates
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          assets_test = Path("tests/test_web_assets.py")
+          text = assets_test.read_text(encoding="utf-8")
+          old_hash = "9d0fafc25e6ed0c6957b0886095132d843bbd458"
+          new_hash = "76bbcecd1d3d423e8e4597a4dbbf563fc9ce136b"
+          if old_hash not in text and new_hash not in text:
+              raise SystemExit("unexpected Web asset regression hash")
+          assets_test.write_text(text.replace(old_hash, new_hash), encoding="utf-8")
+
+          trace_path = Path(".ai/project/TRACEABILITY.yml")
+          trace = trace_path.read_text(encoding="utf-8")
+          issue_url = "https://github.com/Eruhitsuji/lifetxt/issues/860"
+          if issue_url not in trace:
+              marker = "  chains:\n"
+              if marker not in trace:
+                  raise SystemExit("traceability chains marker not found")
+              entry = """    - requirement_id: req-module-structure-decomposition
+              capability_id: cap-web-surface-structure
+              epic: null
+              task_issue: https://github.com/Eruhitsuji/lifetxt/issues/860
+              pull_request: https://github.com/Eruhitsuji/lifetxt/pull/863
+              changed_files_or_scope:
+                - Replace accent-tinted text and item selection states with theme-aware neutral gray selection tokens
+                - Preserve readable selected text with the active theme ink color across light, dark, and high-contrast modes
+                - Keep the neutral selection override isolated in the final packaged Web UI CSS fragment
+                - lifetxt/web_assets.py
+                - lifetxt/web_assets_css_05.css
+                - tests/test_web_selection_contrast.py
+                - tests/test_web_assets.py
+                - .ai/project/TRACEABILITY.yml
+              tests_or_evidence:
+                - tests/test_web_selection_contrast.py covers final CSS ordering, neutral theme tokens, selected text color, and absence of accent-soft selection backgrounds
+                - tests/test_web_assets.py regression hash updated for the intentional packaged-page CSS change
+                - GitHub Actions CI for PR #863
+              release_or_deployment: null
+              notes: >-
+                Bug/Standard assurance Web UI presentation fix for #860. Selection
+                semantics and interaction behavior are unchanged; only the visual
+                selection palette and explicit selected-text color are adjusted.
+              status: implemented
+
+"""
+              trace = trace.replace(marker, marker + entry, 1)
+              trace_path.write_text(trace, encoding="utf-8")
+          PY
+
+      - name: Remove one-shot repair workflow and push repair commit
+        shell: bash
+        run: |
+          git rm .github/workflows/fix-860-branch-repair.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/test_web_assets.py .ai/project/TRACEABILITY.yml
+          git diff --cached --check
+          git commit -m "fix(web): satisfy selection CI contracts"
+          git push origin HEAD:fix/860-selection-visibility-v2

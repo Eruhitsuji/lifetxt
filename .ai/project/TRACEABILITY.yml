@@ -13988,6 +13988,153 @@ traceability:
         unimplemented follow-ups rather than silently claimed complete.
       status: implemented
 
+    - requirement_id: req-server-backup-status-api
+      capability_id: cap-lifetxt-backup-v1
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/865
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/866
+      pull_request: null
+      changed_files_or_scope:
+        - Add GET /api/backup/status as a read-only projection of the existing
+          backup_cli.run_status and configured backup state
+        - Exclude absolute paths, remote targets, credentials, and raw adapter
+          errors from the browser-facing contract
+        - lifetxt/server_backup_status.py
+        - lifetxt/webapp.py
+        - tests/test_web_backup_status.py
+      tests_or_evidence:
+        - python -m unittest tests.test_web_backup_status tests.test_backup_cli
+          -> 24 tests, OK
+        - python -m ruff check lifetxt/server_backup_status.py lifetxt/webapp.py
+          tests/test_web_backup_status.py -> clean
+      release_or_deployment: null
+      notes: >-
+        Extends cap-lifetxt-backup-v1 rather than adding a second status or
+        archive parser. The endpoint is GET-only and intentionally returns
+        generic remote-failure guidance instead of the persisted rclone error,
+        which may contain server paths or remote names. Self-review additionally
+        refuses destination inspection for incomplete/disabled configuration
+        and drops malformed timestamps and non-generated archive names.
+      status: implemented
+
+    - requirement_id: req-web-server-backup-status-panel
+      capability_id: cap-lifetxt-backup-v1
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/865
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/867
+      pull_request: null
+      changed_files_or_scope:
+        - Add a responsive read-only Server view that consumes only GET
+          /api/backup/status
+        - Render unconfigured, disabled, never-run, local-failure,
+          remote-failure, healthy, unavailable, and API-error states
+        - Keep local artifacts and off-host upload results visually separate
+          with no mutation controls
+        - lifetxt/web_assets.html
+        - lifetxt/web_assets_js_01.js
+        - lifetxt/web_assets_js_02.js
+        - lifetxt/web_assets_js_03.js
+        - lifetxt/web_assets_js_08.js
+        - lifetxt/web_assets_js_18.js
+        - lifetxt/web_assets_css_05.css
+        - tests/test_web_backup_status_js.py
+        - tests/test_web_assets.py
+      tests_or_evidence:
+        - python -m unittest tests.test_web_backup_status_js
+          tests.test_web_backup_status tests.test_web_mobile
+          tests.test_web_assets tests.test_web_i18n -> 81 tests, OK
+        - node --check on assembled Web UI script -> no syntax error
+      release_or_deployment: null
+      notes: >-
+        Presentation only over #866's normalized contract. On phone-width
+        layouts the two status cards collapse to one column, labels and values
+        wrap independently, and the panel exposes no create, restore, prune,
+        delete, upload, or run-now action.
+      status: implemented
+
+    - requirement_id: req-server-backup-run-now-authorization-design
+      capability_id: cap-lifetxt-backup-v1
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/865
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/868
+      pull_request: null
+      changed_files_or_scope:
+        - Compare the ordinary Web, Remote Safe Mode, backup orchestration,
+          generated backup service, and service-control trust boundaries
+        - Select explicit backup:run authorization under Remote Safe Mode only
+        - Define asynchronous idempotent admission, audit, rate-limit,
+          sanitization, and local-versus-remote outcome requirements
+        - Split future implementation into blocked issues 870 and 871
+        - .ai/project/changes/server-backup-run-now-authorization/
+      tests_or_evidence:
+        - lifetxt/remote_access.py and lifetxt/remote_web.py source inspection
+        - lifetxt/backup_cli.py and lifetxt/backup_remote.py source inspection
+        - lifetxt/server_init.py generated unit and allowlist inspection
+        - docs/en/remote.md deployment-boundary inspection
+        - Design self-review against issue 868 acceptance criteria
+      release_or_deployment: null
+      notes: >-
+        Security/High investigation outcome only. No runtime endpoint or UI
+        mutation is added. Product-owner approval, independent security review,
+        and human Merge Authority remain required before #870/#871 proceed.
+      status: implemented
+
+    - requirement_id: req-ubuntu-server-backup-runbook
+      capability_id: cap-lifetxt-backup-v1
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/865
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/869
+      pull_request: null
+      changed_files_or_scope:
+        - Distinguish Git history, server-update rollback copies, and
+          lifetxt-backup-v1 disaster-recovery archives
+        - Document backup_schedule source selection, systemd lifecycle,
+          status, local retention, copy-only rclone upload, and off-host checks
+        - Add a conservative verify/dry-run/staged-restore drill
+        - Replace the backup-format page's broken backups.md link with the
+          canonical Ubuntu runbook
+        - docs/deployment/ubuntu-server.md
+        - docs/en/backup-format-v1.md
+        - tests/test_ubuntu_server_backup_docs.py
+      tests_or_evidence:
+        - python -m unittest tests.test_ubuntu_server_backup_docs -> 3 tests, OK
+        - python scripts/validate_release_docs.py --output <temporary-report>
+          -> no errors
+        - Manual comparison with backup_cli.py, backup_remote.py, cli.py, and
+          server_init.py
+      release_or_deployment: null
+      notes: >-
+        Documentation/Standard. The runbook states that keep_last prunes only
+        complete local archives and that rclone upload uses copyto, never sync;
+        remote retention remains an independent operator/provider policy.
+      status: implemented
+
+    - requirement_id: req-server-backup-operations-integration
+      capability_id: cap-lifetxt-backup-v1
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/865
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/865
+      pull_request: null
+      changed_files_or_scope:
+        - Integrate issue-specific child branches for 866, 867, 868, and 869
+          into one parent branch and one final pull request
+        - Deliver the secret-free status API, read-only responsive panel,
+          High-assurance run-now authorization decision, and Ubuntu runbook
+        - Self-review and harden incomplete/disabled-config I/O, persisted
+          status sanitization, Japanese copy, and refresh accessibility
+      tests_or_evidence:
+        - "MPLBACKEND=Agg python -m unittest discover -> 4706 tests, OK (skipped=35)"
+        - python -m ruff check lifetxt tests scripts -> All checks passed
+        - python -m ruff format --check on all changed Python files -> 6 files formatted
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - python scripts/validate_release_docs.py --output <temporary-report>
+          -> errors 0, ok true
+        - git diff --check origin/main...HEAD -> clean
+      release_or_deployment: null
+      notes: >-
+        Feature/High integration for #865. The runtime additions themselves
+        are read-only; High assurance applies to the #868 operational-mutation
+        design, whose implementation remains blocked in #870/#871. Full-tree
+        ruff format --check still reports 35 pre-existing unformatted files
+        unchanged by this branch; every changed Python file passes. Independent
+        review and human Merge Authority approval remain required.
+      status: implemented
+
     - requirement_id: req-web-drawer-record-editing-reliability
       capability_id: cap-web-drawer-record-editing
       epic: null

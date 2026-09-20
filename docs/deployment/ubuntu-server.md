@@ -145,7 +145,9 @@ data was untouched by a code change.
   .lifetxt.json           # config (workspace-based, see config.md)
   archive/life.txt        # role: archive destination
   .generated/              # role: generated sources (e.g. google_calendar.life.txt)
-  backups/                 # timestamped pre-update backups (section 6)
+  backups/
+    disaster-recovery/     # lifetxt-backup-v1 archives (section 5)
+    server-update/         # timestamped pre-update copies (section 6)
 ```
 
 Run both the checkout and the data directory as a dedicated, non-login
@@ -268,38 +270,160 @@ certificate path from the example without replacing it with your own.
 
 ## 5. Backup and restore
 
-Before any update (section 6 does this automatically), and on whatever
-schedule you choose otherwise, back up:
+Use three different recovery mechanisms for three different failure classes:
 
-- `life.txt` (primary)
-- the archive destination file(s)
-- `.lifetxt.json`
-- any `role: generated` source files (e.g. the Google Calendar mirror)
-- **every configured named workspace's write target** -- if you added a
-  `workspaces` section to `.lifetxt.json` (by hand, or via the opt-in
-  `ai_workspace` generation above) after your `server-update.json` was
-  written, its `backup_paths` does not pick that up automatically; add the
-  new write target to `backup_paths` yourself
+| Mechanism | Protects against | Does not replace |
+| --- | --- | --- |
+| Periodic local Git-commit worker (section 11) | Accidental edits and history mistakes while the same repository and disk survive | A copy on another host/device |
+| `server-update` timestamped copies (section 6) | Rolling back the files covered by one guarded application update | Recurring disaster-recovery snapshots or host loss |
+| `lifetxt-backup-v1` archives | Host/disk/device loss; optionally copied off-host | Git history or the update-specific rollback report |
 
-`lifetxt server-update` checks the last point for you: every dry-run and
-applied run compares `backup_paths` against every workspace write target the
-live `.lifetxt.json` currently declares and prints a non-fatal
-`backup_paths does not cover ...` warning naming anything missing. This never
-blocks the update -- it exists so a workspace added after initial setup is
-never silently left out of backup coverage, without `server-update` guessing
-at your intended backup policy by rewriting `backup_paths` itself.
+Enable disaster-recovery backups in the deployment `server-init.json`. The
+source list is an explicit allowlist: include every authoritative file needed
+to reconstruct the deployment, including every named workspace write target.
+Do not include credential files, rclone configuration, reverse-proxy secrets,
+or a directory in the hope that lifetxt will walk it; the backup command reads
+only the regular files named in `sources`.
 
-A plain timestamped copy is sufficient; `lifetxt` does not require a special
-backup format. To restore, stop the services, replace the files from a
-backup, verify with section 7's checks, then restart:
+Keep `server-update.json`'s separate `backup_paths` allowlist current too.
+Every `server-update` dry-run compares it with the live config's named
+workspace write targets and prints a non-fatal `backup_paths does not cover`
+warning for omissions. That update-specific check does not add sources to
+`backup_schedule` and does not rewrite either policy for you.
+
+```json
+{
+  "backup_schedule": {
+    "enabled": true,
+    "destination": "/srv/lifetxt/backups/disaster-recovery",
+    "sources": [
+      "/srv/lifetxt/life.txt",
+      "/srv/lifetxt/archive/life.txt",
+      "/srv/lifetxt/.generated/google_calendar.life.txt",
+      "/srv/lifetxt/ai-inbox.life.txt",
+      "/srv/lifetxt/.lifetxt.json"
+    ],
+    "source_identity": "primary-server",
+    "keep_last": 14,
+    "interval_minutes": 1440,
+    "remote": {
+      "backend": "rclone",
+      "target": "offsite:lifetxt/primary-server"
+    }
+  }
+}
+```
+
+Omit `remote` when you do not use rclone. `source_identity` is a shareable
+diagnostic label stored in the manifest, not a hostname, path, credential, or
+other secret. The rclone remote named `offsite` must already be configured for
+the `lifetxt` service account outside lifetxt; neither rclone credentials nor
+their config file belong in `server-init.json` or `.lifetxt.json`.
+
+With `systemd.enabled` and `systemd.install_units` enabled (the defaults),
+`server-init` generates `lifetxt-backup.service` and
+`lifetxt-backup.timer`. The one-shot service runs the same canonical
+`lifetxt backup run-scheduled` flow as the CLI: create locally, optionally
+upload the completed archive, then apply local retention. It also adds the
+timer and service to generated `server-update.json` in timer-before-service
+order so an update cannot race a scheduled run. Preview and apply the complete
+plan as described under [Guarded bootstrap or manual setup](#guarded-bootstrap-or-manual-setup),
+then enable the timer if your `systemd.enable` setting did not do so:
 
 ```sh
-sudo systemctl stop lifetxt.service lifetxt-sync-ics.timer
-cp /srv/lifetxt/backups/<timestamp>/life.txt /srv/lifetxt/life.txt
-# ... repeat for config/archive/generated as needed
-python -m lifetxt check /srv/lifetxt/life.txt
-sudo systemctl start lifetxt.service lifetxt-sync-ics.timer
+sudo systemctl daemon-reload
+sudo systemctl enable --now lifetxt-backup.timer
+sudo systemctl list-timers lifetxt-backup.timer
+sudo systemctl status lifetxt-backup.timer lifetxt-backup.service
+sudo journalctl -u lifetxt-backup.service --since today
 ```
+
+For an existing deployment, review the dry-run carefully. `server-init`
+refuses to overwrite a differing generated application config, unit, wrapper,
+or sudoers file. Resolve those differences as an explicit adoption change;
+do not bypass the refusal by deleting production configuration without first
+saving and reviewing it.
+
+### Status, verification, and retention
+
+Run status as the service user against the generated application config. The
+latest local archive and the most recent off-host attempt are deliberately
+reported separately: a local success followed by a remote failure is not
+off-host protection.
+
+```sh
+sudo -u lifetxt /opt/lifetxt/venv/bin/lifetxt backup status \
+  --config /srv/lifetxt/.lifetxt.json
+
+sudo -u lifetxt /opt/lifetxt/venv/bin/lifetxt backup verify \
+  /srv/lifetxt/backups/disaster-recovery/replace-with-archive.ltbackup
+```
+
+`keep_last: 14` keeps the 14 newest **complete local** archives after each
+successful scheduled run. The rclone adapter uses a single-file `copyto`,
+never `sync`: local pruning or local absence does not delete remote objects.
+Define remote retention independently in the storage provider or a separately
+reviewed operator procedure. If you prune local archives manually, preview
+the exact deletion set first:
+
+```sh
+sudo -u lifetxt /opt/lifetxt/venv/bin/lifetxt backup prune \
+  --destination /srv/lifetxt/backups/disaster-recovery \
+  --keep-last 14 --dry-run
+sudo -u lifetxt /opt/lifetxt/venv/bin/lifetxt backup prune \
+  --destination /srv/lifetxt/backups/disaster-recovery \
+  --keep-last 14
+```
+
+Periodically verify both a local archive and a separately downloaded off-host
+archive. A successful upload attempt alone does not prove that later download,
+integrity verification, or restore will work.
+
+### Conservative restore drill
+
+Restore into a new staging directory first; do not point `--overwrite` at the
+live data tree as the first recovery step. The command verifies format,
+manifest, path safety, size limits, and every file hash before writing.
+Record which optional timers/services are active first, omit units your
+deployment does not install, and restart only the units that were active.
+
+```sh
+systemctl is-active lifetxt.service lifetxt-backup.timer
+# If installed: systemctl is-active lifetxt-sync-ics.timer
+
+archive=/srv/lifetxt/backups/disaster-recovery/replace-with-archive.ltbackup
+staging=/srv/lifetxt/restore-staging-YYYYMMDDTHHMMSSZ
+
+sudo systemctl stop lifetxt-backup.timer lifetxt-backup.service lifetxt.service
+# If installed: sudo systemctl stop lifetxt-sync-ics.timer lifetxt-sync-ics.service
+sudo install -d -o lifetxt -g lifetxt -m 0700 "$staging"
+sudo -u lifetxt /opt/lifetxt/venv/bin/lifetxt backup verify "$archive"
+sudo -u lifetxt /opt/lifetxt/venv/bin/lifetxt backup restore \
+  "$archive" "$staging" --dry-run
+sudo -u lifetxt /opt/lifetxt/venv/bin/lifetxt backup restore \
+  "$archive" "$staging"
+```
+
+Inspect the staged relative file layout, compare it with the live tree, and
+run section 7's validation commands against the staged primary file. Only then
+copy or atomically replace the intended live files, preserving ownership and
+permissions. Keep the old live files as separate rollback evidence until the
+restored service passes all checks.
+
+```sh
+sudo -u lifetxt /opt/lifetxt/venv/bin/lifetxt check "$staging/life.txt"
+# Review every staged file, then deliberately install only the chosen files,
+# preserving the live files separately and setting owner/mode per file.
+sudo systemctl start lifetxt.service
+# Restart only the optional timers that were active before the drill.
+# sudo systemctl start lifetxt-sync-ics.timer lifetxt-backup.timer
+curl -sf http://127.0.0.1:8765/api/health
+```
+
+Archive details and safety limits are normative in
+[`backup-format-v1.md`](../en/backup-format-v1.md); configuration keys are in
+[`config.md`](../en/config.md), and the exact command flags are in
+[`cli.md`](../en/cli.md).
 
 ## 6. Update and rollback
 

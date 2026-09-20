@@ -13992,7 +13992,7 @@ traceability:
       capability_id: cap-lifetxt-backup-v1
       epic: https://github.com/Eruhitsuji/lifetxt/issues/865
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/866
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/872
       changed_files_or_scope:
         - Add GET /api/backup/status as a read-only projection of the existing
           backup_cli.run_status and configured backup state
@@ -14020,7 +14020,7 @@ traceability:
       capability_id: cap-lifetxt-backup-v1
       epic: https://github.com/Eruhitsuji/lifetxt/issues/865
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/867
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/872
       changed_files_or_scope:
         - Add a responsive read-only Server view that consumes only GET
           /api/backup/status
@@ -14054,7 +14054,7 @@ traceability:
       capability_id: cap-lifetxt-backup-v1
       epic: https://github.com/Eruhitsuji/lifetxt/issues/865
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/868
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/872
       changed_files_or_scope:
         - Compare the ordinary Web, Remote Safe Mode, backup orchestration,
           generated backup service, and service-control trust boundaries
@@ -14080,7 +14080,7 @@ traceability:
       capability_id: cap-lifetxt-backup-v1
       epic: https://github.com/Eruhitsuji/lifetxt/issues/865
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/869
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/872
       changed_files_or_scope:
         - Distinguish Git history, server-update rollback copies, and
           lifetxt-backup-v1 disaster-recovery archives
@@ -14109,7 +14109,7 @@ traceability:
       capability_id: cap-lifetxt-backup-v1
       epic: https://github.com/Eruhitsuji/lifetxt/issues/865
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/865
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/872
       changed_files_or_scope:
         - Integrate issue-specific child branches for 866, 867, 868, and 869
           into one parent branch and one final pull request

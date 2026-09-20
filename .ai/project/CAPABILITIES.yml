@@ -10428,6 +10428,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/871
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/848
+      - https://github.com/Eruhitsuji/lifetxt/pull/872
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       The read-only server status API reuses backup_cli.run_status and

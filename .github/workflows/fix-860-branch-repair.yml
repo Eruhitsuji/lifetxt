@@ -41,34 +41,33 @@ jobs:
               marker = "  chains:\n"
               if marker not in trace:
                   raise SystemExit("traceability chains marker not found")
-              entry = """    - requirement_id: req-module-structure-decomposition
-              capability_id: cap-web-surface-structure
-              epic: null
-              task_issue: https://github.com/Eruhitsuji/lifetxt/issues/860
-              pull_request: https://github.com/Eruhitsuji/lifetxt/pull/863
-              changed_files_or_scope:
-                - Replace accent-tinted text and item selection states with theme-aware neutral gray selection tokens
-                - Preserve readable selected text with the active theme ink color across light, dark, and high-contrast modes
-                - Keep the neutral selection override isolated in the final packaged Web UI CSS fragment
-                - lifetxt/web_assets.py
-                - lifetxt/web_assets_css_05.css
-                - tests/test_web_selection_contrast.py
-                - tests/test_web_assets.py
-                - .ai/project/TRACEABILITY.yml
-              tests_or_evidence:
-                - tests/test_web_selection_contrast.py covers final CSS ordering, neutral theme tokens, selected text color, and absence of accent-soft selection backgrounds
-                - tests/test_web_assets.py regression hash updated for the intentional packaged-page CSS change
-                - GitHub Actions CI for PR #863
-              release_or_deployment: null
-              notes: >-
-                Bug/Standard assurance Web UI presentation fix for #860. Selection
-                semantics and interaction behavior are unchanged; only the visual
-                selection palette and explicit selected-text color are adjusted.
-              status: implemented
-
-"""
-              trace = trace.replace(marker, marker + entry, 1)
-              trace_path.write_text(trace, encoding="utf-8")
+              entry = (
+                  "    - requirement_id: req-module-structure-decomposition\n"
+                  "      capability_id: cap-web-surface-structure\n"
+                  "      epic: null\n"
+                  "      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/860\n"
+                  "      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/863\n"
+                  "      changed_files_or_scope:\n"
+                  "        - Replace accent-tinted text and item selection states with theme-aware neutral gray selection tokens\n"
+                  "        - Preserve readable selected text with the active theme ink color across light, dark, and high-contrast modes\n"
+                  "        - Keep the neutral selection override isolated in the final packaged Web UI CSS fragment\n"
+                  "        - lifetxt/web_assets.py\n"
+                  "        - lifetxt/web_assets_css_05.css\n"
+                  "        - tests/test_web_selection_contrast.py\n"
+                  "        - tests/test_web_assets.py\n"
+                  "        - .ai/project/TRACEABILITY.yml\n"
+                  "      tests_or_evidence:\n"
+                  "        - tests/test_web_selection_contrast.py covers final CSS ordering, neutral theme tokens, selected text color, and absence of accent-soft selection backgrounds\n"
+                  "        - tests/test_web_assets.py regression hash updated for the intentional packaged-page CSS change\n"
+                  "        - GitHub Actions CI for PR #863\n"
+                  "      release_or_deployment: null\n"
+                  "      notes: >-\n"
+                  "        Bug/Standard assurance Web UI presentation fix for #860. Selection\n"
+                  "        semantics and interaction behavior are unchanged; only the visual\n"
+                  "        selection palette and explicit selected-text color are adjusted.\n"
+                  "      status: implemented\n\n"
+              )
+              trace_path.write_text(trace.replace(marker, marker + entry, 1), encoding="utf-8")
           PY
 
       - name: Remove one-shot repair workflow and push repair commit

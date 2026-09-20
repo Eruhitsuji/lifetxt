@@ -2,6 +2,31 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-module-structure-decomposition
+      capability_id: cap-web-surface-structure
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/860
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/863
+      changed_files_or_scope:
+        - Replace accent-tinted text and item selection states with theme-aware neutral gray selection tokens
+        - Preserve readable selected text with the active theme ink color across light, dark, and high-contrast modes
+        - Keep the neutral selection override isolated in the final packaged Web UI CSS fragment
+        - lifetxt/web_assets.py
+        - lifetxt/web_assets_css_05.css
+        - tests/test_web_selection_contrast.py
+        - tests/test_web_assets.py
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests/test_web_selection_contrast.py covers final CSS ordering, neutral theme tokens, selected text color, and absence of accent-soft selection backgrounds
+        - tests/test_web_assets.py regression hash updated for the intentional packaged-page CSS change
+        - GitHub Actions CI for PR #863
+      release_or_deployment: null
+      notes: >-
+        Bug/Standard assurance Web UI presentation fix for #860. Selection
+        semantics and interaction behavior are unchanged; only the visual
+        selection palette and explicit selected-text color are adjusted.
+      status: implemented
+
     - requirement_id: req-web-responsive-record-detail-tab-bar-align-content-fix
       capability_id: cap-web-responsive-record-detail
       epic: null

@@ -847,3 +847,26 @@ Start with Today to see what needs attention, Items to find records, and Create
 to add a task, event, or note. Empty views explain whether there is no data or
 only no matching result and provide a safe next action. Select More to reach
 specialist views such as Timeline, Graph, and Stats; direct links remain valid.
+
+## Completing a task with a date or time
+
+Open a task's detail drawer and choose **Done date…**:
+
+- **Now / current time** completes the task and sets `done` to the current instant, with second precision.
+- **Custom / complete** saves the selected date and completes the task. Leave **Time (optional)** empty for `done:YYYY-MM-DD`, or enter a time to save an explicit UTC timestamp such as `done:2026-09-18T15:15:00Z` (2026-09-19 00:15 in Asia/Tokyo).
+- **Cancel**, Escape, or closing the drawer before saving changes neither the task nor `done`.
+
+The form shows the browser timezone used for time input. Timed values are stored
+in UTC; date-only values retain the selected calendar date. Custom times use
+minute input precision. A nonexistent local time during a daylight-saving jump
+is refused; an ambiguous repeated time uses the browser's earlier occurrence.
+Now uses the device clock. Existing `done` values are shown with an overwrite
+notice: only choosing Now or saving Custom replaces them. Undo restores both
+the previous status and details.
+
+The original **Done** button remains available and preserves an existing `done`
+value; it does not add a date when none exists.
+**Complete + repeat**, bulk completion, and CLI/TUI behavior are unchanged.
+Done date… completes only the selected task; it does not generate a repeat
+occurrence. State and date are sent in one existing revision-protected update,
+including the native `completed` history event when the task has an ID.

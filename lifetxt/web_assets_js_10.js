@@ -268,6 +268,9 @@
       const isRepeat = !!(item?.details?.repeat?.length && hasId);
       document.getElementById("drawer-head-btns").innerHTML =
         `<button class="secondary" onclick="drawerMarkDone()" id="drawer-done-btn"${!item.editable || isDone ? " disabled" : ""}>Done</button>` +
+        (item.type === "T"
+          ? `<button class="secondary" onclick="drawerDoneDate()" id="drawer-done-date-btn"${!item.editable || isDone ? " disabled" : ""}>Done date…</button>`
+          : "") +
         (isRepeat
           ? `<button class="secondary" onclick="drawerComplete()" id="drawer-complete-btn" title="Complete this instance and materialize the next occurrence"${!item.editable || isDone ? " disabled" : ""}>✓ Complete + repeat</button>`
           : "") +

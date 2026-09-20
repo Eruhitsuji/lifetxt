@@ -1,0 +1,44 @@
+schema_version: 1
+verification:
+- command: python -m unittest tests.test_web_done_date
+  result: passed
+  notes: 11 tests; Node interactions plus real FastAPI persistence and conflict tests.
+- command: Targeted Web regression suite (see root TRACEABILITY.yml)
+  result: passed
+  notes: 130 tests.
+- command: MPLBACKEND=Agg python -m unittest discover
+  result: passed
+  commit: 04cd886
+  notes: 4693 tests, OK (skipped=37), 227.743s; Python 3.12.14 / bash. Runtime sources unchanged during
+    final run; traceability YAML indentation corrected and separately verified. BashCompletionExecutionTests
+    ran.
+- command: python -m unittest tests.test_traceability_gate tests.test_change_package_closeout
+  result: passed
+  commit: 04cd886
+  notes: 17 tests passed.
+- command: ruff check lifetxt tests scripts; ruff format --check tests/test_web_done_date.py tests/test_web_assets.py;
+    mypy --follow-imports=skip --ignore-missing-imports lifetxt/diagnostic_contract.py; python -m lifetxt
+    check examples/minimal_life.txt; node --check assembled JS; git diff --check
+  result: passed
+  commit: 04cd886
+- command: Real Chromium/WebKit desktop and mobile browser verification
+  result: blocked
+  notes: Browser engine downloads timed out; native mobile date picker/rendering and real iPhone Safari
+    unverified.
+review_ledger:
+- reviewer: Eruhitsuji
+  review_type: implementation_and_integration
+  target_commit: null
+  result: pending
+  finding_count: 0
+  completed_at: null
+earlier_attempts:
+- command: MPLBACKEND=Agg python -m unittest discover
+  result: failed_then_resolved
+  notes: 4693 tests; one packaged-asset digest failure because Japanese labels and digest were edited
+    while this run was in flight. Full output retained locally in .test-output-first.log. Final frozen
+    runtime run passes. Python 3.12.14 / bash; BashCompletionExecutionTests ran.
+- command: Post-commit traceability gate
+  result: failed_then_resolved
+  notes: Evidence sequence indentation did not match gate; fixed indentation and validated YAML; 17 governance
+    tests now pass.

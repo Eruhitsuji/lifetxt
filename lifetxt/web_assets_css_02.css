@@ -569,3 +569,8 @@
       flex-shrink: 0;
       width: 1.5rem;
       height: 1.5rem;
+
+    .drawer-done-form { min-width: 0; }
+    .drawer-done-form input { min-width: 0; width: 100%; max-width: 100%; box-sizing: border-box; }
+    .drawer-done-form button { min-height: 44px; white-space: normal; }
+    .drawer-done-form p { margin: 0; overflow-wrap: anywhere; }

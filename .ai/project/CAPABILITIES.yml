@@ -37,6 +37,52 @@ capabilities:
       replaced_by: null
       deprecation_issue: null
 
+  - id: cap-remote-backup-run-operation
+    name: Scoped authenticated Remote backup run operation
+    summary: >-
+      Adds a Remote protocol v2-only, explicitly scoped and audited admission
+      route for the existing generated lifetxt-backup.service, plus a
+      capability-gated authenticated Remote browser control. Admission is
+      idempotent, single-run, rate-limited, and secret-free; status preserves
+      local creation and off-host upload as independent outcomes.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-remote-backup-run-operation
+    implementation_locations:
+      - lifetxt/remote_backup_operations.py
+      - lifetxt/remote_access.py
+      - lifetxt/remote_web.py
+      - lifetxt/config_registry.py
+      - tests/test_remote_backup_operations.py
+      - docs/en/remote.md
+      - docs/ja/remote.md
+    public_interfaces:
+      - POST /api/remote/v1/operations/backup-runs
+      - GET /api/remote/v1/operations/backup-runs/{operation_id}
+      - Authenticated /remote Run backup now control
+      - remote.backup_run.* configuration
+    tests_or_evidence:
+      - python -m unittest tests.test_remote_backup_operations tests.test_remote_web_v20 -> Ran 17 tests, OK
+      - MPLBACKEND=Agg python -m unittest discover -> Ran 4713 tests, OK (skipped=35)
+      - python scripts/validate_release_docs.py --output <temporary-report> -> errors 0, ok true
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/870
+      - https://github.com/Eruhitsuji/lifetxt/issues/871
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/873
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Reuses Remote Safe Mode authentication, explicit scopes, protocol
+      negotiation, CSRF/origin, generic rate limiting, request IDs, audit, and
+      single-worker guard, plus the generated backup service and #836
+      run-scheduled destination lock. No plain-Web mutation or general service
+      control endpoint is added.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
   - id: cap-temporal-life-review
     name: Deterministic Temporal Life Review
     summary: >-

@@ -1,0 +1,10 @@
+schema_version: 1
+
+traceability:
+  - requirement_id: req-remote-backup-run-operation
+    capability_id: cap-remote-backup-run-operation
+    task_issue:
+      - https://github.com/Eruhitsuji/lifetxt/issues/870
+      - https://github.com/Eruhitsuji/lifetxt/issues/871
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/873
+    status: implemented

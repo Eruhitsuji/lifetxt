@@ -45,6 +45,7 @@ from .remote_sessions import (
 )
 from .clock_skew import ClockSkewError, clock_audit_evidence, require_acceptable_clock
 from .remote_contracts_v6 import remote_client_time_header, remote_clock_required
+from .remote_backup_operations import BackupRunStore
 
 _INSTALLED = False
 _LOGIN_PATH = "/api/remote/v1/browser/login"
@@ -99,18 +100,21 @@ def _remote_page(nonce):
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>lifetxt Remote Safe Mode</title>
 <style nonce="%s">
-body{font-family:system-ui,sans-serif;max-width:980px;margin:3rem auto;padding:0 1rem;color:#202124}fieldset{border:1px solid #bbb;border-radius:.5rem;padding:1rem}input,button{font:inherit;padding:.55rem}.row{display:flex;gap:.5rem;flex-wrap:wrap}pre{white-space:pre-wrap;background:#f5f5f5;padding:1rem;border-radius:.5rem;min-height:8rem}.muted{color:#666}.hidden{display:none}</style></head>
-<body><h1>lifetxt Remote Safe Mode</h1><p class="muted">Authenticated, read-only browser session. Tokens are exchanged once and are not stored by this page.</p>
+body{font-family:system-ui,sans-serif;max-width:980px;margin:3rem auto;padding:0 1rem;color:#202124}fieldset{border:1px solid #bbb;border-radius:.5rem;padding:1rem}input,button{font:inherit;padding:.55rem}.row{display:flex;gap:.5rem;flex-wrap:wrap}pre{white-space:pre-wrap;background:#f5f5f5;padding:1rem;border-radius:.5rem;min-height:8rem}.muted{color:#666}.hidden{display:none}.operation{margin:1rem 0;padding:1rem;border:1px solid #bbb;border-radius:.5rem}.operation button{min-height:44px}@media(max-width:480px){body{margin:1rem auto}.row button{width:100%%}}</style></head>
+<body><h1>lifetxt Remote Safe Mode</h1><p class="muted">Authenticated Remote session. Tokens are exchanged once and are not stored by this page.</p>
 <fieldset id="login"><legend>Sign in</legend><div class="row"><input id="token" type="password" autocomplete="current-password" placeholder="Bearer token"><button id="sign-in">Sign in</button></div></fieldset>
-<div id="session" class="hidden"><div class="row"><button id="refresh">Refresh snapshot</button><button id="logout">Sign out</button></div><p id="identity"></p><pre id="output"></pre></div>
+<div id="session" class="hidden"><div class="row"><button id="refresh">Refresh snapshot</button><button id="logout">Sign out</button></div><p id="identity"></p><section id="backup-operation" class="operation hidden" aria-labelledby="backup-title"><h2 id="backup-title">Backup</h2><p>A run may create a local backup, upload it off-host, and prune backups according to configured retention.</p><button id="run-backup">Run backup now</button><p id="backup-status" role="status" aria-live="polite"></p></section><pre id="output"></pre></div>
 <script nonce="%s">
-(()=>{let csrf=null;const version={'X-Lifetxt-Remote-Version':'2'};const $=id=>document.getElementById(id);
+(()=>{let csrf=null,poll=null,operationKey=null;const version={'X-Lifetxt-Remote-Version':'2'};const $=id=>document.getElementById(id);
 async function json(url,opt={}){opt.headers=Object.assign({'Accept':'application/json'},version,opt.headers||{});const r=await fetch(url,opt);const v=await r.json().catch(()=>({error:'INVALID_RESPONSE'}));if(!r.ok)throw new Error(v.error+': '+(v.message||r.status));return v}
-async function load(){const v=await json('/api/remote/v1/snapshot');$('identity').textContent='Signed in';$('output').textContent=JSON.stringify(v,null,2);$('login').classList.add('hidden');$('session').classList.remove('hidden')}
+function renderOperation(v){$('backup-status').textContent='Status: '+v.status+'; local: '+v.local.status+'; remote: '+v.remote.status;if(v.status==='admitted'||v.status==='running'){poll=setTimeout(()=>json(v.status_url).then(renderOperation).catch(showBackupError),1000)}else{const wait=Math.max(0,Number(v.cooldown_seconds)||0);$('backup-status').textContent+='; next run available after '+wait+' seconds';setTimeout(()=>{operationKey=null;$('run-backup').disabled=false;$('backup-status').textContent='Ready'},wait*1000)}}
+function showBackupError(e){$('backup-status').textContent=String(e);$('run-backup').disabled=false}
+async function load(){const [v,s,c]=await Promise.all([json('/api/remote/v1/snapshot'),json('/api/remote/v1/session'),json('/api/remote/v1/capabilities')]);$('identity').textContent=s.principal.id+' ('+s.principal.role+')';$('output').textContent=JSON.stringify(v,null,2);const op=c.operations&&c.operations.backup_run;const allowed=s.principal.scopes.includes('backup:run')&&op&&op.available;$('backup-operation').classList.toggle('hidden',!allowed);$('login').classList.add('hidden');$('session').classList.remove('hidden')}
 async function resume(){try{const s=await json('/api/remote/v1/browser/session');csrf=s.csrf_token;$('identity').textContent=s.principal.id+' ('+s.principal.role+')';await load()}catch(_){}}
 $('sign-in').onclick=async()=>{try{const token=$('token').value;const s=await json('/api/remote/v1/browser/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token})});$('token').value='';csrf=s.csrf_token;$('identity').textContent=s.principal.id+' ('+s.principal.role+')';await load()}catch(e){$('output').textContent=String(e)}};
 $('refresh').onclick=()=>load().catch(e=>$('output').textContent=String(e));
-$('logout').onclick=async()=>{try{await json('/api/remote/v1/browser/logout',{method:'POST',headers:{'X-CSRF-Token':csrf}})}finally{csrf=null;$('session').classList.add('hidden');$('login').classList.remove('hidden');$('output').textContent=''}};
+$('run-backup').onclick=async()=>{if(!operationKey&&!confirm('Run the configured backup now? This may create locally, upload off-host, and prune according to retention.'))return;$('run-backup').disabled=true;$('backup-status').textContent='Submitting…';operationKey=operationKey||(crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random());try{const v=await json('/api/remote/v1/operations/backup-runs',{method:'POST',headers:{'X-CSRF-Token':csrf,'Idempotency-Key':operationKey,'Origin':location.origin}});renderOperation(v)}catch(e){showBackupError(e)}};
+$('logout').onclick=async()=>{try{await json('/api/remote/v1/browser/logout',{method:'POST',headers:{'X-CSRF-Token':csrf,'Origin':location.origin}})}finally{if(poll)clearTimeout(poll);csrf=null;operationKey=null;$('backup-operation').classList.add('hidden');$('session').classList.add('hidden');$('login').classList.remove('hidden');$('output').textContent=''}};
 resume();})();</script></body></html>""" % (html.escape(nonce), html.escape(nonce))
 
 
@@ -141,6 +145,8 @@ def install_remote_web():
         app.state.remote_session_store = BrowserSessionStore()
         principal_limiter = RateLimiter()
         login_limiter = RateLimiter()
+        backup_run_store = BackupRunStore()
+        app.state.remote_backup_run_store = backup_run_store
 
         @app.middleware("http")
         async def remote_guard(request: Request, call_next):
@@ -509,6 +515,59 @@ def install_remote_web():
                 "warnings": warnings,
                 "request_id": request.state.remote_request_id,
             }
+
+        @app.post("/api/remote/v1/operations/backup-runs", status_code=202)
+        def admit_backup_run(request: Request):
+            _require_v2(request)
+            current = principal(request)
+            require_scope(current, "backup:run")
+            operation, duplicate = backup_run_store.admit(
+                current["id"], request.headers.get("idempotency-key"), app.state.config
+            )
+            event = audit_event(
+                current,
+                "backup.run",
+                "duplicate" if duplicate else "accepted",
+                request.state.remote_request_id,
+                request.client.host if request.client else None,
+                {"operation_id": operation["operation_id"]},
+            )
+            if not _audit_safely(app.state.config, event):
+                if not duplicate:
+                    backup_run_store.abandon(operation["operation_id"])
+                raise RemoteAccessError(
+                    "AUDIT_UNAVAILABLE", "Backup run audit is unavailable.", 503
+                )
+            if not duplicate:
+                lifecycle_request_id = request.state.remote_request_id
+                lifecycle_host = request.client.host if request.client else None
+
+                def audit_lifecycle(outcome, operation_id):
+                    _audit_safely(
+                        app.state.config,
+                        audit_event(
+                            current,
+                            "backup.run",
+                            outcome,
+                            lifecycle_request_id,
+                            lifecycle_host,
+                            {"operation_id": operation_id},
+                        ),
+                    )
+
+                backup_run_store.start(
+                    operation["operation_id"],
+                    app.state.config,
+                    audit_callback=audit_lifecycle,
+                )
+            return operation
+
+        @app.get("/api/remote/v1/operations/backup-runs/{operation_id}")
+        def backup_run_status(operation_id: str, request: Request):
+            _require_v2(request)
+            current = principal(request)
+            require_scope(current, "backup:run")
+            return backup_run_store.get(operation_id, current["id"])
 
         @app.post(_LOGIN_PATH)
         def browser_login(request: Request, payload=Body(default={})):

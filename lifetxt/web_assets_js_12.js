@@ -123,23 +123,83 @@
       }
     }
 
-    async function drawerMarkDone() {
-      if (!drawerItem || !drawerItem.editable) return;
-      const line = drawerItem.line;
-      const prevPayload = {status: drawerItem.status, type: drawerItem.type, title: drawerItem.title, details: drawerItem.details || {}};
-      await api(`/api/items/${line}`, {
-        method: "PUT",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({...prevPayload, status: "[x]"}),
-      });
-      registerUndo("Marked done.", async () => {
-        await api(`/api/items/${line}`, {
+    let drawerDoneSaving = false;
+
+    function drawerDoneDate() {
+      if (!drawerItem?.editable || drawerItem.type !== "T" || ["[x]", "[-]"].includes(drawerItem.status)) return;
+      drawerEditing = true;
+      document.getElementById("drawer-head-btns").innerHTML =
+        `<button class="secondary" onclick="drawerCancelEdit()">Cancel</button>`;
+      const existing = drawerItem.details?.done || [];
+      const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      document.getElementById("drawer-body").innerHTML =
+        `<form id="drawer-done-form" class="drawer-edit-form drawer-done-form" onsubmit="event.preventDefault();drawerSaveDoneDate()">` +
+        `<h4>${escapeHtml(t("Completion date"))}</h4>` +
+        (existing.length ? `<p>${escapeHtml(t("Now or Custom will replace the existing done value."))}</p><p data-no-i18n>${escapeHtml(existing.join(", "))}</p>` : "") +
+        `<button type="button" class="primary" onclick="drawerMarkDone(new Date().toISOString().slice(0, 19) + 'Z')">${escapeHtml(t("Now / current time"))}</button>` +
+        `<label>${escapeHtml(t("Date"))}<input id="drawer-done-date" type="date" min="0001-01-01" max="9999-12-31" required></label>` +
+        `<label>${escapeHtml(t("Time (optional)"))}<input id="drawer-done-time" type="time" step="60"></label>` +
+        `<p>${escapeHtml(t("Times use your browser timezone; leave time empty for a date only."))}</p>` +
+        `<p data-no-i18n>${escapeHtml(zone)}</p>` +
+        `<button type="submit" class="primary">${escapeHtml(t("Custom / complete"))}</button>` +
+        `</form>`;
+      document.getElementById("drawer-done-date").focus();
+    }
+
+    function drawerSaveDoneDate() {
+      const form = document.getElementById("drawer-done-form");
+      if (!form || !form.reportValidity()) return;
+      const date = document.getElementById("drawer-done-date").value;
+      const time = document.getElementById("drawer-done-time").value;
+      let value = date;
+      if (time) {
+        const stamp = new Date(`${date}T${time}`);
+        // Reject DST gaps instead of silently moving the selected wall time.
+        const pad = n => String(n).padStart(2, "0");
+        const roundtrip = `${String(stamp.getFullYear()).padStart(4, "0")}-${pad(stamp.getMonth() + 1)}-${pad(stamp.getDate())}T${pad(stamp.getHours())}:${pad(stamp.getMinutes())}`;
+        if (!Number.isFinite(stamp.getTime()) || roundtrip !== `${date}T${time}`) {
+          showToast("Invalid local date/time. Choose another time.", "warning");
+          return;
+        }
+        value = stamp.toISOString().replace(/\.\d{3}Z$/, "Z");
+      }
+      return drawerMarkDone(value);
+    }
+
+    async function drawerMarkDone(doneValue = null) {
+      if (!drawerItem?.editable || ["[x]", "[-]"].includes(drawerItem.status) || drawerDoneSaving) return;
+      if (doneValue !== null && drawerItem.type !== "T") return;
+      const item = drawerItem;
+      const idKey = appConfig?.ids?.key || "id";
+      const itemId = item.id || item.details?.[idKey]?.[0];
+      const path = itemId ? `/api/items/id/${encodeURIComponent(itemId)}` : `/api/items/${item.line}`;
+      const prevPayload = {status: item.status, type: item.type, title: item.title, details: item.details || {}};
+      const details = {...prevPayload.details};
+      if (doneValue !== null) details.done = [doneValue];
+      drawerDoneSaving = true;
+      try {
+        await api(path, {
           method: "PUT",
           headers: {"Content-Type": "application/json"},
-          body: JSON.stringify(prevPayload),
+          body: JSON.stringify({...prevPayload, status: "[x]", details}),
         });
-      });
-      closeDrawer();
+        registerUndo("Marked done.", async () => {
+          await api(path, {
+            method: "PUT",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(prevPayload),
+          });
+        });
+      } catch(e) {
+        showActionableError("Could not complete this record.", e);
+        return;
+      } finally {
+        drawerDoneSaving = false;
+      }
+      if (drawerItem === item) {
+        drawerEditing = false;
+        closeDrawer();
+      }
       await refreshAll();
     }
 

@@ -5,7 +5,7 @@ verification:
     result: passed
     commands:
       - command: python -m unittest tests.test_remote_backup_operations tests.test_remote_web_v20
-        result: Ran 16 tests, OK
+        result: Ran 17 tests, OK
       - command: python -m ruff check changed Python files
         result: All checks passed
       - command: MPLBACKEND=Agg python -m unittest discover

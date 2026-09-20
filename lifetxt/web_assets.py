@@ -63,6 +63,7 @@ _CSS_RESOURCE_NAMES = (
     "web_assets_css_02.css",
     "web_assets_css_03.css",
     "web_assets_css_04.css",
+    "web_assets_css_05.css",
 )
 _JS_RESOURCE_NAMES = (
     "web_assets_js_01.js",

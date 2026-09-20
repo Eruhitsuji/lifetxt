@@ -123,6 +123,37 @@ GET /api/remote/v1/resources/{resource}
 GET /api/remote/v1/diagnostics
 ```
 
+### 認証付きバックアップ実行操作
+
+Remote protocol v2 は、scheduled backup、永続 Remote audit、限定された
+service-control command がすべて設定済みの場合に
+`operations.backup_run` を公開できます。`POST
+/api/remote/v1/operations/backup-runs` を送信できるのは、`backup:run`
+scope を明示的に付与された principal だけです。組み込みの owner、admin、
+write scope からはこの権限を継承しません。新しい `Idempotency-Key` を送信し、
+browser session では CSRF header と same-origin の `Origin` header も送信します。
+`202` は非同期実行の受理を示すだけで、local 作成や remote upload の成功を
+示しません。返された `status_url` を poll し、`local` と `remote` の状態を
+個別に確認してください。
+
+request では unit、command、path、target、retention、credential を指定できません。
+設定済み argv prefix には必ず `start lifetxt-backup.service` だけが追加され、
+その `ExecStart` は引き続き `lifetxt backup run-scheduled` です。
+
+```yaml
+remote:
+  audit_log: /var/lib/lifetxt/remote-audit.jsonl
+  backup_run:
+    enabled: true
+    service_command: [sudo, -n, /usr/local/sbin/lifetxt-systemctl]
+    cooldown_seconds: 900
+```
+
+root 所有 wrapper では、この経路用に `start:lifetxt-backup.service` のみを
+明示的に許可してください。Remote Safe Mode が無効、audit sink または runner が
+利用不能、あるいは `backup.enabled` が false の場合、この操作は公開されず、
+CLI/systemctl が run-now interface のままです。
+
 共通read backendは現在次のresourceを公開します。
 
 - `items`: text、type、project、open-only、limitで絞り込んだvisible item

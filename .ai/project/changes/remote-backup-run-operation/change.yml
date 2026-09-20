@@ -1,0 +1,54 @@
+schema_version: 1
+
+change:
+  id: remote-backup-run-operation
+  title: Add scoped Remote backup run operation and browser control
+  status: implemented
+  change_type: Security
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue:
+    - https://github.com/Eruhitsuji/lifetxt/issues/870
+    - https://github.com/Eruhitsuji/lifetxt/issues/871
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/873
+  base_commit: 7130ff6
+  target_release: next normal maintenance release
+
+scope:
+  in_scope:
+    - Remote protocol v2 POST admission and GET status routes for the fixed lifetxt-backup.service.
+    - Explicit backup:run authorization, durable audit precondition, idempotency, single-run admission, and a minimum 15-minute per-principal cooldown.
+    - Bounded secret-free operation status preserving separate local and remote outcomes.
+    - An authenticated /remote control gated by both capability advertisement and explicit scope.
+    - English/Japanese operator documentation and configuration registry metadata.
+  out_of_scope:
+    - Any mutation on the ordinary Web API or UI.
+    - Restore, prune, delete, arbitrary upload, schedule editing, or general service control.
+    - A second in-process backup implementation or lock.
+  write_scope:
+    - lifetxt/remote_backup_operations.py
+    - lifetxt/remote_access.py
+    - lifetxt/remote_web.py
+    - lifetxt/config_registry.py
+    - tests/test_remote_backup_operations.py
+    - docs/en/remote.md
+    - docs/ja/remote.md
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+    - this package
+  forbidden_scope:
+    - .ai/managed/**
+    - Plain Web backup mutation
+    - Request-controlled command, unit, path, target, retention, or credential
+  shared_files:
+    - lifetxt/remote_access.py
+    - lifetxt/remote_web.py
+    - lifetxt/config_registry.py
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+
+human_approvals_required:
+  - Independent security review of the latest commit.
+  - Independent implementation review of the latest commit.
+  - Merge Authority approval; the implementing AI must not merge the pull request.

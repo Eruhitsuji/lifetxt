@@ -14195,6 +14195,27 @@ traceability:
         pull_request is filled in once the final integration PR is opened.
       status: implemented
 
+    - requirement_id: req-remote-backup-run-operation
+      capability_id: cap-remote-backup-run-operation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/865
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/870
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/873
+      changed_files_or_scope:
+        - Remote v2 backup-run admission and bounded status routes
+        - Explicit backup:run scope, audit precondition, idempotency, admission control, and dedicated cooldown
+        - Fixed lifetxt-backup.service dispatch with secret-free local/remote outcome mapping
+        - Capability/scope-gated authenticated Remote browser control
+      tests_or_evidence:
+        - python -m unittest tests.test_remote_backup_operations tests.test_remote_web_v20 -> Ran 17 tests, OK
+        - MPLBACKEND=Agg python -m unittest discover -> Ran 4713 tests, OK (skipped=35)
+        - python scripts/validate_release_docs.py --output <temporary-report> -> errors 0, ok true
+      release_or_deployment: null
+      notes: >-
+        Security/High implementation of the owner-approved #868 design.
+        Independent security review and human Merge Authority approval remain
+        required; the implementing AI will not merge the final PR.
+      status: implemented
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

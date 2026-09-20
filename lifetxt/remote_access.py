@@ -450,6 +450,7 @@ def _capability_v1(config):
 
 def _capability_v2(config):
     from .remote_backend import resource_catalog
+    from .remote_backup_operations import configured as backup_run_configured
 
     remote = _section(config)
     payload = OrderedDict(
@@ -498,6 +499,17 @@ def _capability_v2(config):
                     "admission_only": True,
                     "exact_revision_required": True,
                     "authoritative_remote_writes_enabled": False,
+                },
+            ),
+            (
+                "operations",
+                {
+                    "backup_run": {
+                        "available": backup_run_configured(config),
+                        "required_scope": "backup:run",
+                        "route": "/api/remote/v1/operations/backup-runs",
+                        "asynchronous": True,
+                    }
                 },
             ),
             ("https_required", True),

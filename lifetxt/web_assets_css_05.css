@@ -1,0 +1,35 @@
+    /* ── Neutral selection states (#860) ── */
+    :root {
+      --selection-bg: #e5e7eb;
+      --selection-border: #9ca3af;
+    }
+    [data-theme="dark"] {
+      --selection-bg: #374151;
+      --selection-border: #9ca3af;
+    }
+    [data-contrast="high"] {
+      --selection-bg: #d1d5db;
+      --selection-border: #000000;
+    }
+    [data-contrast="high"][data-theme="dark"] {
+      --selection-bg: #374151;
+      --selection-border: #ffffff;
+    }
+    ::selection { background: var(--selection-bg); }
+    .item.selected {
+      border-color: var(--selection-border);
+      background: var(--selection-bg);
+      box-shadow: inset 3px 0 0 var(--selection-border);
+    }
+    .item.bulk-selected {
+      border-color: var(--selection-border);
+      background: var(--selection-bg);
+    }
+    @media print {
+      .item.selected,
+      .item.bulk-selected {
+        border-color: #ccc;
+        background: #fff;
+        box-shadow: none;
+      }
+    }

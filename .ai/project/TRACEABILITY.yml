@@ -14198,10 +14198,8 @@ traceability:
     - requirement_id: req-remote-backup-run-operation
       capability_id: cap-remote-backup-run-operation
       epic: https://github.com/Eruhitsuji/lifetxt/issues/865
-      task_issue:
-        - https://github.com/Eruhitsuji/lifetxt/issues/870
-        - https://github.com/Eruhitsuji/lifetxt/issues/871
-      pull_request: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/870
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/873
       changed_files_or_scope:
         - Remote v2 backup-run admission and bounded status routes
         - Explicit backup:run scope, audit precondition, idempotency, admission control, and dedicated cooldown

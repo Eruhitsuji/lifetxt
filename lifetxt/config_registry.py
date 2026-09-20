@@ -578,6 +578,46 @@ CONFIG_REGISTRY = OrderedDict(
             ),
         ),
         (
+            "remote.backup_run",
+            _entry(
+                "object",
+                None,
+                "Remote-only admission settings for starting the fixed lifetxt-backup.service.",
+            ),
+        ),
+        (
+            "remote.backup_run.enabled",
+            _entry(
+                "boolean",
+                False,
+                "Advertise and admit authenticated backup runs when backup.enabled, audit, and the narrow service runner are also configured.",
+            ),
+        ),
+        (
+            "remote.backup_run.service_command",
+            _entry(
+                "array<string>",
+                None,
+                "Trusted argv prefix for the least-privilege service-control wrapper; lifetxt appends only start and lifetxt-backup.service.",
+            ),
+        ),
+        (
+            "remote.backup_run.cooldown_seconds",
+            _entry(
+                "integer",
+                900,
+                "Per-principal accepted-run cooldown; values below 900 fail closed.",
+            ),
+        ),
+        (
+            "remote.backup_run.runner_timeout_seconds",
+            _entry(
+                "integer",
+                3600,
+                "Bound for the fixed service-control invocation; raw output is discarded.",
+            ),
+        ),
+        (
             "transactions.require_operator_authorization",
             _entry(
                 "boolean",

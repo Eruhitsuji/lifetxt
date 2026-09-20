@@ -1,0 +1,26 @@
+schema_version: 1
+
+verification:
+  - requirement_id: req-remote-backup-run-operation
+    result: passed
+    commands:
+      - command: python -m unittest tests.test_remote_backup_operations tests.test_remote_web_v20
+        result: Ran 16 tests, OK
+      - command: python -m ruff check changed Python files
+        result: All checks passed
+      - command: MPLBACKEND=Agg python -m unittest discover
+        result: Ran 4713 tests, OK (skipped=35)
+      - command: python -m lifetxt check examples/minimal_life.txt
+        result: OK 10 items
+      - command: python scripts/validate_release_docs.py --output <temporary-report>
+        result: errors 0, ok true
+      - command: node --check on the script extracted from the generated /remote page
+        result: no syntax errors
+    notes: >-
+      Focused tests cover capability/scope/protocol gates, audit/runner
+      availability, CSRF, idempotency, fixed dispatch, cooldown, UI security
+      cues, and secret-free split local/remote outcomes. Full-suite and
+      integration verification are recorded before the final PR. Independent
+      security review and Merge Authority approval remain required. Full-tree
+      ruff format --check still reports 35 pre-existing unformatted files;
+      every changed Python file passes ruff format/check.

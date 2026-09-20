@@ -1,0 +1,26 @@
+schema_version: 1
+
+requirements:
+  - id: req-remote-backup-run-operation
+    kind: ADDED
+    statement: >-
+      Admit on-demand scheduled backups only through authenticated Remote Safe
+      Mode with explicit backup:run authority and a fixed, audited,
+      abuse-resistant service-control boundary.
+    acceptance_criteria:
+      - The operation exists only under /api/remote/v1 and requires protocol v2 plus explicit backup:run scope.
+      - Backup, durable audit, and a structured narrow runner must all be configured before capability advertisement or admission.
+      - A printable bounded Idempotency-Key deduplicates retries for the same principal.
+      - One process admits at most one active run and enforces at least 900 seconds between accepted runs per principal.
+      - The runner receives only its trusted configured argv prefix plus start and lifetxt-backup.service; stdout and stderr are discarded.
+      - Accepted, duplicate, started, completed, failed, and rejected HTTP outcomes are audited without request secrets or operational paths.
+      - Status is bounded and reports local creation separately from optional remote upload without paths, targets, raw errors, logs, or credentials.
+      - The authenticated Remote browser control appears only with both advertised capability and backup:run scope, confirms configured effects, submits CSRF/origin and a fresh idempotency key, polls status, and disables repeat submission.
+      - The ordinary Web UI and API expose no backup mutation.
+    constraints:
+      - Reuse the generated lifetxt-backup.service and backup run-scheduled orchestration.
+      - Keep the existing destination lock as execution-time defense in depth.
+      - Operation state is process-local and bounded; restart invalidates polling state while systemd and the destination lock retain execution safety.
+    owner: Eruhitsuji
+
+open_questions: []

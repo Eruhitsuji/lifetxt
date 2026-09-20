@@ -123,6 +123,37 @@ GET /api/remote/v1/resources/{resource}
 GET /api/remote/v1/diagnostics
 ```
 
+### Authenticated backup run operation
+
+Remote protocol v2 can advertise `operations.backup_run` when scheduled backup,
+durable Remote audit, and a narrow service-control command are all configured.
+Only a principal explicitly granted `backup:run` may submit
+`POST /api/remote/v1/operations/backup-runs`; the built-in owner, admin, and
+write scopes do not grant it. Send a fresh `Idempotency-Key`. Browser sessions
+also send their CSRF header and same-origin `Origin` header. A `202` response is
+an asynchronous admission, not proof that local creation or remote upload
+succeeded; poll its `status_url` and inspect the separate `local` and `remote`
+statuses.
+
+The request accepts no unit, command, path, target, retention, or credential.
+The configured argv prefix is always followed by exactly
+`start lifetxt-backup.service`, whose `ExecStart` remains `lifetxt backup
+run-scheduled`. Example application configuration:
+
+```yaml
+remote:
+  audit_log: /var/lib/lifetxt/remote-audit.jsonl
+  backup_run:
+    enabled: true
+    service_command: [sudo, -n, /usr/local/sbin/lifetxt-systemctl]
+    cooldown_seconds: 900
+```
+
+The root-owned wrapper must explicitly allow only
+`start:lifetxt-backup.service` for this path. If Remote Safe Mode is disabled,
+the audit sink or runner is unavailable, or `backup.enabled` is false, the
+operation is not advertised and CLI/systemctl remains the run-now interface.
+
 The shared read backend currently publishes:
 
 - `items`: visible items with text, type, project, open-only, and bounded-result filters;

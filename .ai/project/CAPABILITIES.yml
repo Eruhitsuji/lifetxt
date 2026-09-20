@@ -10428,8 +10428,14 @@ capabilities:
     status: active
     owner: Eruhitsuji
     source_requirements:
+      - req-web-task-completion-datetime
       - req-web-drawer-record-editing-reliability
     implementation_locations:
+      - lifetxt/web_assets_js_01.js
+      - lifetxt/web_assets_js_10.js
+      - lifetxt/web_assets_js_12.js
+      - lifetxt/web_assets_css_02.css
+      - tests/test_web_done_date.py
       - lifetxt/web_assets_js_17.js
       - lifetxt/web_assets_js_18.js
       - tests/test_web_drawer_edit_js.py
@@ -10437,8 +10443,10 @@ capabilities:
       - tests/test_web_assets.py
       - tests/test_web_quick_status_js.py
     public_interfaces:
+      - "Task detail Done date…: Now or Custom date/optional time, Cancel, Undo (#861)"
       - Web UI record-detail drawer Edit / Save / Cancel actions
     tests_or_evidence:
+      - tests.test_web_done_date (completion UI, persistence, completed event, stale revision)
       - "tests/test_web_drawer_edit_js.py ScopeRegressionGuardTests (2 tests): the structured-field/actionable-error helpers stay declared before loadConfig().then(...), and each is declared exactly once -- confirmed via git-show of the pre-fix commit to fail against the old code (8 of 9 sub-assertions) and pass once the fix is restored"
       - "tests/test_web_drawer_edit_js.py DrawerEditInteractionTests (7 tests): drawerEdit() renders an enabled, focusable form with the current title/status/structured-field values; drawerSaveEdit() sends exactly one PUT with the edited title and structured field; a custom/raw detail key survives a structured-field-only edit; Type S standard and custom state round-trip through save; Cancel makes no API call and reopens the original record with drawerEditing cleared; a read-only record refuses Edit and leaves drawer-body untouched; a blank title fails loudly before any save request"
       - "live: real Playwright (Chromium) session against a real running lifetxt serve process and a disposable fixture workspace -- before the fix, clicking Edit left #drawer-edit-title absent (0 elements) with a captured page error 'renderStructuredFields is not defined'; after the fix, the same click renders the real edit form, and a full title change (\"Buy milk\" -> \"Buy milc and eggs\") plus a due: structured-field change save successfully, with the server-side item confirmed updated via a direct GET /api/items call"
@@ -10447,6 +10455,7 @@ capabilities:
       - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
       - ruff format --check / ruff check on changed Python files -> clean
     related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/861
       - https://github.com/Eruhitsuji/lifetxt/issues/850
       - https://github.com/Eruhitsuji/lifetxt/issues/776
       - https://github.com/Eruhitsuji/lifetxt/issues/798

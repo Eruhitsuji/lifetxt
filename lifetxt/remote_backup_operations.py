@@ -8,7 +8,7 @@ import time
 import uuid
 from collections import OrderedDict
 
-from .backup_cli import run_status
+from .backup_cli import resolve_destination, run_status
 from .remote_access import RemoteAccessError
 
 SERVICE = "lifetxt-backup.service"
@@ -176,32 +176,39 @@ class BackupRunStore(object):
         if audit_callback:
             audit_callback("started", operation_id)
         try:
-            before = run_status(config)
-        except Exception:
-            before = {}
+            destination = resolve_destination(config)
+            before = run_status(destination)
+        except (OSError, TypeError, ValueError):
+            destination = None
+            before = None
         command = list(settings(config)["service_command"]) + ["start", SERVICE]
+        dispatch_ok = False
         try:
-            self._runner(
-                command,
-                stdin=subprocess.DEVNULL,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                check=False,
-                timeout=int(settings(config).get("runner_timeout_seconds") or 3600),
-            )
-        except Exception:
+            if destination is not None:
+                result = self._runner(
+                    command,
+                    stdin=subprocess.DEVNULL,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    check=False,
+                    timeout=int(settings(config).get("runner_timeout_seconds") or 3600),
+                )
+                dispatch_ok = result.returncode == 0
+        except (OSError, subprocess.SubprocessError, TypeError, ValueError):
             pass
         try:
-            status = run_status(config)
-        except Exception:
-            status = {}
-        local_ok = status.get("last_attempt_ok")
+            status = run_status(destination) if destination is not None else None
+        except (OSError, TypeError, ValueError):
+            status = None
+        local_ok = status.get("last_attempt_ok") if status is not None else None
         remote_configured = bool(
             ((config.get("backup") or {}).get("remote") or {}).get("target")
         )
-        remote_ok = status.get("last_remote_upload_ok")
+        remote_ok = status.get("last_remote_upload_ok") if status is not None else None
         fresh_attempt = bool(
-            status.get("last_attempt_at")
+            before is not None
+            and status is not None
+            and status.get("last_attempt_at")
             and status.get("last_attempt_at") != before.get("last_attempt_at")
         )
         with self._lock:
@@ -210,10 +217,10 @@ class BackupRunStore(object):
                 return
             operation["local"] = {
                 "status": "succeeded"
-                if fresh_attempt and local_ok is True
+                if dispatch_ok and fresh_attempt and local_ok is True
                 else "failed"
             }
-            if remote_configured and fresh_attempt:
+            if remote_configured and dispatch_ok and fresh_attempt:
                 operation["remote"] = {
                     "status": "succeeded" if remote_ok is True else "failed"
                 }
@@ -221,7 +228,9 @@ class BackupRunStore(object):
                 operation["remote"] = {
                     "status": "not_configured" if not remote_configured else "unknown"
                 }
-            operation["status"] = "completed" if fresh_attempt else "failed"
+            operation["status"] = (
+                "completed" if dispatch_ok and fresh_attempt else "failed"
+            )
             if self._active == operation_id:
                 self._active = None
             outcome = operation["status"]

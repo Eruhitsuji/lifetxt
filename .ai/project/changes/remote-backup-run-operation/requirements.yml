@@ -15,6 +15,7 @@ requirements:
       - The runner receives only its trusted configured argv prefix plus start and lifetxt-backup.service; stdout and stderr are discarded.
       - Accepted, duplicate, started, completed, failed, and rejected HTTP outcomes are audited without request secrets or operational paths.
       - Status is bounded and reports local creation separately from optional remote upload without paths, targets, raw errors, logs, or credentials.
+      - Result detection reads persisted status from the configured backup destination before and after dispatch, and never reports success for a non-zero runner exit, unreadable status, or no fresh attempt.
       - The authenticated Remote browser control appears only with both advertised capability and backup:run scope, confirms configured effects, submits CSRF/origin and a fresh idempotency key, polls status, and disables repeat submission.
       - The ordinary Web UI and API expose no backup mutation.
     constraints:

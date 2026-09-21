@@ -64,11 +64,14 @@ capabilities:
       - remote.backup_run.* configuration
     tests_or_evidence:
       - python -m unittest tests.test_remote_backup_operations tests.test_remote_web_v20 -> Ran 17 tests, OK
+      - python -m unittest tests.test_remote_backup_operations tests.test_remote_web_v20 tests.test_backup_cli tests.test_web_backup_status -> Ran 46 tests, OK (#874)
+      - MPLBACKEND=Agg python -m unittest discover -> Ran 4719 tests, OK (skipped=35) (#874)
       - MPLBACKEND=Agg python -m unittest discover -> Ran 4713 tests, OK (skipped=35)
       - python scripts/validate_release_docs.py --output <temporary-report> -> errors 0, ok true
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/870
       - https://github.com/Eruhitsuji/lifetxt/issues/871
+      - https://github.com/Eruhitsuji/lifetxt/issues/874
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/873
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
@@ -77,7 +80,10 @@ capabilities:
       negotiation, CSRF/origin, generic rate limiting, request IDs, audit, and
       single-worker guard, plus the generated backup service and #836
       run-scheduled destination lock. No plain-Web mutation or general service
-      control endpoint is added.
+      control endpoint is added. Issue #874 corrected result detection to resolve
+      and read the configured destination before and after dispatch, while
+      failing closed on status-read errors, non-zero runner exits, and absent
+      fresh attempts.
     replacement:
       replaces: []
       replaced_by: null

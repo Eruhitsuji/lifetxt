@@ -8,3 +8,9 @@ traceability:
       - https://github.com/Eruhitsuji/lifetxt/issues/871
     pull_request: https://github.com/Eruhitsuji/lifetxt/pull/873
     status: implemented
+  - requirement_id: req-remote-backup-run-operation
+    capability_id: cap-remote-backup-run-operation
+    task_issue:
+      - https://github.com/Eruhitsuji/lifetxt/issues/874
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/875
+    status: implemented

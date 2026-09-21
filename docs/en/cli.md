@@ -4194,7 +4194,8 @@ The bootstrap config must name the source and data roots explicitly:
   "service_control": {
     "enabled": true,
     "wrapper_path": "/usr/local/sbin/lifetxt-systemctl",
-    "sudoers_path": "/etc/sudoers.d/lifetxt-server-update"
+    "sudoers_path": "/etc/sudoers.d/lifetxt-server-update",
+    "remote_backup_polkit_rule_path": "/etc/polkit-1/rules.d/60-lifetxt-remote-backup.rules"
   },
   "reverse_proxy": {
     "backend": "nginx",
@@ -4211,6 +4212,9 @@ Important boundaries:
   generated; the command does not assume a username.
 - `service_control.enabled` generates a narrow wrapper/sudoers artifact for
   `is-active`, `stop`, and `start` on the configured lifetxt units only.
+- `service_control.remote_backup_polkit_rule_path` optionally generates a
+  separate fixed-user, fixed-verb, fixed-unit Polkit rule for Remote backup
+  dispatch while `lifetxt.service` retains `NoNewPrivileges=true`.
 - Installer, validation, and service commands are structured argv arrays. The
   command does not add a shell-string escape hatch.
 - Calendar URLs, Basic Auth credentials, real hostnames, VPN details, and other

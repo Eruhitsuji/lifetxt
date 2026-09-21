@@ -145,12 +145,25 @@ remote:
   audit_log: /var/lib/lifetxt/remote-audit.jsonl
   backup_run:
     enabled: true
-    service_command: [sudo, -n, /usr/local/sbin/lifetxt-systemctl]
+    service_command: [/bin/systemctl, --no-ask-password]
     cooldown_seconds: 900
 ```
 
-root 所有 wrapper では、この経路用に `start:lifetxt-backup.service` のみを
-明示的に許可してください。Remote Safe Mode が無効、audit sink または runner が
+`NoNewPrivileges=true` を維持する system service では、この command 内で `sudo`
+を使用しないでください。Linux により、その process の権限取得が禁止されます。
+代わりに `service_control.remote_backup_polkit_rule_path` を、例えば
+`/etc/polkit-1/rules.d/60-lifetxt-remote-backup.rules` に設定し、`server-init` で
+root 所有の Polkit rule を生成します。この rule は設定済み service user、`start`
+verb、`lifetxt-backup.service` の組み合わせだけを systemd D-Bus 経由で許可します。
+review 済み rule を root で install し、distribution で必要なら Polkit を reload
+した後、service user として確認します。
+
+```sh
+sudo -u lifetxt /bin/systemctl --no-ask-password start lifetxt-backup.service
+```
+
+別の sudo wrapper は対話的な `server-update` 用のままであり、Remote Web process
+の dispatch 経路ではありません。Remote Safe Mode が無効、audit sink または runner が
 利用不能、あるいは `backup.enabled` が false の場合、この操作は公開されず、
 CLI/systemctl が run-now interface のままです。
 

@@ -16,6 +16,10 @@ verification:
         result: errors 0, ok true
       - command: node --check on the script extracted from the generated /remote page
         result: no syntax errors
+      - command: python -m unittest tests.test_remote_backup_operations tests.test_remote_web_v20 tests.test_backup_cli tests.test_web_backup_status
+        result: Ran 46 tests, OK (#874)
+      - command: MPLBACKEND=Agg python -m unittest discover
+        result: Ran 4719 tests, OK (skipped=35; #874)
     notes: >-
       Focused tests cover capability/scope/protocol gates, audit/runner
       availability, CSRF, idempotency, fixed dispatch, cooldown, UI security
@@ -23,4 +27,7 @@ verification:
       integration verification are recorded before the final PR. Independent
       security review and Merge Authority approval remain required. Full-tree
       ruff format --check still reports 35 pre-existing unformatted files;
-      every changed Python file passes ruff format/check.
+      every changed Python file passes ruff format/check. Issue #874 adds real
+      persisted-status regression coverage for local-only and local-plus-remote
+      success, plus fail-closed coverage for no fresh attempt, missing
+      destination, and a non-zero runner exit.

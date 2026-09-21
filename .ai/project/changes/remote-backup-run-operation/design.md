@@ -11,6 +11,10 @@ Systemd remains the execution and hardening boundary, and that unit continues
 to run the canonical `backup run-scheduled` implementation and destination
 lock. Runner output is discarded. Completion reads only the existing backup
 status contract and maps it to separate normalized local/remote states.
+The operation resolves the configured backup destination once, reads persisted
+status from that destination before and after dispatch, and requires both a
+zero runner exit and a changed attempt timestamp before reporting completion.
+An invalid destination, unreadable status, or unchanged attempt fails closed.
 
 The capability manifest advertises the operation only when Remote, backup,
 audit, and the runner are configured. Authorization still independently

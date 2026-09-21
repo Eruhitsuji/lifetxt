@@ -1,3 +1,4 @@
+import json
 import os
 import tempfile
 import time
@@ -14,6 +15,10 @@ from lifetxt.webapp import create_app
 
 class _Result(object):
     returncode = 0
+
+
+class _FailedResult(object):
+    returncode = 1
 
 
 @unittest.skipIf(TestClient is None, "web extras unavailable")
@@ -81,6 +86,25 @@ class RemoteBackupOperationTests(unittest.TestCase):
         values["Idempotency-Key"] = key
         values.update(headers or {})
         return self.client.post("/api/remote/v1/operations/backup-runs", headers=values)
+
+    def _wait(self, accepted):
+        for _ in range(100):
+            result = self.client.get(
+                accepted.json()["status_url"], headers=self.headers
+            ).json()
+            if result["status"] in ("completed", "failed"):
+                return result
+            time.sleep(0.01)
+        self.fail("backup operation did not finish")
+
+    def _write_status(self, **values):
+        os.makedirs(self.destination, exist_ok=True)
+        with open(
+            os.path.join(self.destination, ".lifetxt-backup-status.json"),
+            "w",
+            encoding="utf-8",
+        ) as handle:
+            json.dump(values, handle)
 
     def test_capability_is_advertised_only_when_available(self):
         value = self.client.get(
@@ -172,20 +196,81 @@ class RemoteBackupOperationTests(unittest.TestCase):
                     "last_remote_error": "secret raw adapter output",
                 },
             ],
-        ):
+        ) as status:
             accepted = self._post("split-result")
-            for _ in range(50):
-                result = self.client.get(
-                    accepted.json()["status_url"], headers=self.headers
-                ).json()
-                if result["status"] in ("completed", "failed"):
-                    break
-                time.sleep(0.01)
+            result = self._wait(accepted)
+        self.assertEqual(
+            [mock.call(self.destination), mock.call(self.destination)],
+            status.call_args_list,
+        )
         self.assertEqual("completed", result["status"])
         self.assertEqual("succeeded", result["local"]["status"])
         self.assertEqual("failed", result["remote"]["status"])
         self.assertNotIn("private", str(result))
         self.assertNotIn("secret", str(result))
+
+    def test_persisted_local_and_remote_success_is_detected(self):
+        self.config["backup"]["remote"] = {
+            "backend": "rclone",
+            "target": "example:private-target",
+        }
+        self._write_status(last_attempt_at="before", last_attempt_ok=True)
+
+        def runner(command, **kwargs):
+            self.calls.append((command, kwargs))
+            self._write_status(
+                last_attempt_at="after",
+                last_attempt_ok=True,
+                last_remote_upload_at="after",
+                last_remote_upload_ok=True,
+            )
+            return _Result()
+
+        self.client.app.state.remote_backup_run_store._runner = runner
+        result = self._wait(self._post("persisted-success"))
+        self.assertEqual("completed", result["status"])
+        self.assertEqual("succeeded", result["local"]["status"])
+        self.assertEqual("succeeded", result["remote"]["status"])
+
+    def test_persisted_local_success_without_remote_is_detected(self):
+        self._write_status(last_attempt_at="before", last_attempt_ok=True)
+
+        def runner(command, **kwargs):
+            self.calls.append((command, kwargs))
+            self._write_status(last_attempt_at="after", last_attempt_ok=True)
+            return _Result()
+
+        self.client.app.state.remote_backup_run_store._runner = runner
+        result = self._wait(self._post("local-only-success"))
+        self.assertEqual("completed", result["status"])
+        self.assertEqual("succeeded", result["local"]["status"])
+        self.assertEqual("not_configured", result["remote"]["status"])
+
+    def test_no_fresh_attempt_is_not_reported_as_success(self):
+        self._write_status(last_attempt_at="unchanged", last_attempt_ok=True)
+        result = self._wait(self._post("no-fresh-attempt"))
+        self.assertEqual("failed", result["status"])
+        self.assertEqual("failed", result["local"]["status"])
+
+    def test_runner_failure_is_not_reported_as_success(self):
+        self._write_status(last_attempt_at="before", last_attempt_ok=True)
+
+        def runner(command, **kwargs):
+            self._write_status(last_attempt_at="after", last_attempt_ok=True)
+            return _FailedResult()
+
+        self.client.app.state.remote_backup_run_store._runner = runner
+        result = self._wait(self._post("runner-failure"))
+        self.assertEqual("failed", result["status"])
+        self.assertEqual("failed", result["local"]["status"])
+
+    def test_missing_destination_fails_without_dispatch(self):
+        self.config["backup"].pop("destination")
+        result = self._wait(self._post("missing-destination"))
+        self.assertEqual("failed", result["status"])
+        self.assertEqual("failed", result["local"]["status"])
+        self.assertEqual("not_configured", result["remote"]["status"])
+        self.assertEqual([], self.calls)
 
     def test_unavailable_audit_or_runner_is_not_advertised(self):
         self.config["remote"].pop("audit_log")

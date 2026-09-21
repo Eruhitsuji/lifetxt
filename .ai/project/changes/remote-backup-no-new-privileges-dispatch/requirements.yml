@@ -1,0 +1,21 @@
+schema_version: 1
+
+requirements:
+  - id: req-remote-backup-no-new-privileges-dispatch
+    kind: MODIFIED
+    statement: >-
+      Remote Safe Mode can start the fixed lifetxt-backup.service while the Web
+      service remains unprivileged and retains NoNewPrivileges=true.
+    acceptance_criteria:
+      - Generated authorization is fixed to the configured service user, start verb, and lifetxt-backup.service unit.
+      - The Web runner uses systemctl over systemd D-Bus without sudo or request-controlled argv.
+      - Existing Remote scope, audit, idempotency, concurrency, cooldown, and fail-closed result semantics remain unchanged.
+      - Scheduled backup remains independent of Remote Safe Mode.
+      - Deployment documentation includes generation, installation, and verification guidance.
+    constraints:
+      - Do not disable NoNewPrivileges.
+      - Do not grant arbitrary systemd or sudo authority.
+      - Do not add a runtime dependency.
+    owner: Eruhitsuji
+
+open_questions: []

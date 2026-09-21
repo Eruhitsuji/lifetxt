@@ -38,6 +38,19 @@ class UbuntuServerBackupDocsTests(unittest.TestCase):
         self.assertIn("Git-commit worker", self.runbook)
         self.assertIn("server-update", self.runbook)
 
+    def test_runbook_covers_no_new_privileges_compatible_remote_dispatch(self):
+        required = (
+            '"remote_backup_polkit_rule_path"',
+            '"service_command": ["/bin/systemctl", "--no-ask-password"]',
+            "NoNewPrivileges=true",
+            "only the configured service user",
+            "`start lifetxt-backup.service`",
+            "no stop, restart",
+        )
+        for text in required:
+            with self.subTest(text=text):
+                self.assertIn(text, self.runbook)
+
     def test_format_doc_links_to_the_existing_runbook_not_a_missing_page(self):
         self.assertNotIn("(backups.md)", self.format_doc)
         self.assertIn(

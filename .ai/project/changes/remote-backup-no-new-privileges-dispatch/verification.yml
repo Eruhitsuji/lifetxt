@@ -1,0 +1,55 @@
+schema_version: 1
+
+verification:
+  planned: []
+  executed:
+    - type: focused-unit-and-contract
+      command: python -m unittest tests.test_server_init.BackupScheduleConfigGenerationTests tests.test_remote_backup_operations
+      requirement_ids:
+        - req-remote-backup-no-new-privileges-dispatch
+      status: passed
+      result: Ran 24 tests, OK
+    - type: focused-regression
+      command: python -m unittest tests.test_server_init tests.test_remote_backup_operations tests.test_ubuntu_server_backup_docs tests.test_config_validation tests.test_remote_web_v20
+      requirement_ids:
+        - req-remote-backup-no-new-privileges-dispatch
+      status: passed
+      result: Ran 132 tests, OK (skipped=2)
+    - type: policy-and-traceability
+      command: python -m unittest tests.test_change_package_closeout tests.test_traceability_gate tests.test_capability_matrix
+      requirement_ids:
+        - req-remote-backup-no-new-privileges-dispatch
+      status: passed
+      result: Ran 30 tests, OK
+    - type: full-suite
+      command: MPLBACKEND=Agg python -m unittest discover
+      requirement_ids:
+        - req-remote-backup-no-new-privileges-dispatch
+      status: passed
+      result: Ran 4723 tests, OK (skipped=35)
+    - type: static-and-docs
+      command: ruff check and format --check on changed Python files; validate_release_docs.py; lifetxt check examples/minimal_life.txt; git diff --check
+      requirement_ids:
+        - req-remote-backup-no-new-privileges-dispatch
+      status: passed
+      result: All checks passed; release docs errors 0; example check 10 items; diff clean
+
+review_ledger:
+  - reviewer: implementing AI self-review
+    review_type: implementation-security-test-operations
+    target_commit: pending-final-commit
+    result: passed-with-human-review-required
+    finding_count: 0
+    completed_at: 2026-09-21
+
+release_evidence:
+  migration_notes: >-
+    Existing deployments opt in by adding the Polkit rule path, applying the
+    reviewed server-init plan, and replacing the Remote runner's sudo argv with
+    systemctl --no-ask-password.
+  rollback_plan: >-
+    Revert the change or remove the generated Polkit rule and disable the Remote
+    backup-run capability. Scheduled lifetxt-backup.timer operation is unaffected.
+  operations_evidence:
+    - Generated policy content and deployment runbook tests.
+    - Real deployment verification remains required because this environment does not run systemd/Polkit.

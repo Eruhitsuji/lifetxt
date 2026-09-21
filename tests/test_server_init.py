@@ -926,6 +926,77 @@ class BackupScheduleConfigGenerationTests(unittest.TestCase):
                 dict(app_config["backup"]),
             )
 
+    def test_remote_backup_polkit_rule_is_fixed_to_service_user_start_and_unit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            policy_path = os.path.join(
+                tmp, "polkit-1", "rules.d", "60-lifetxt-remote-backup.rules"
+            )
+            config = server_init.load_config(
+                _write_json(
+                    tmp,
+                    _config(
+                        tmp,
+                        backup_schedule=_backup_schedule_config(),
+                        service_control={"remote_backup_polkit_rule_path": policy_path},
+                    ),
+                )
+            )
+
+            plan = server_init.build_plan(config)
+            policy = next(
+                step for step in plan["steps"] if step.get("path") == policy_path
+            )
+
+            self.assertEqual("0644", policy["mode"])
+            self.assertIn('subject.user == "lifetxt"', policy["content"])
+            self.assertIn('action.lookup("verb") == "start"', policy["content"])
+            self.assertIn(
+                'action.lookup("unit") == "lifetxt-backup.service"',
+                policy["content"],
+            )
+            self.assertNotIn("stop", policy["content"])
+            self.assertNotIn("restart", policy["content"])
+            self.assertNotIn("lifetxt.service", policy["content"])
+
+    def test_remote_backup_polkit_rule_requires_scheduled_backup(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaisesRegex(
+                server_init.ServerInitError, "requires backup_schedule.enabled"
+            ):
+                server_init.load_config(
+                    _write_json(
+                        tmp,
+                        _config(
+                            tmp,
+                            service_control={
+                                "remote_backup_polkit_rule_path": os.path.join(
+                                    tmp, "60-lifetxt-remote-backup.rules"
+                                )
+                            },
+                        ),
+                    )
+                )
+
+    def test_remote_backup_polkit_rule_path_rejects_whitespace(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaisesRegex(
+                server_init.ServerInitError, "remote_backup_polkit_rule_path"
+            ):
+                server_init.load_config(
+                    _write_json(
+                        tmp,
+                        _config(
+                            tmp,
+                            backup_schedule=_backup_schedule_config(),
+                            service_control={
+                                "remote_backup_polkit_rule_path": os.path.join(
+                                    tmp, "bad policy.rules"
+                                )
+                            },
+                        ),
+                    )
+                )
+
     def test_remote_section_is_copied_into_app_config_when_set(self):
         with tempfile.TemporaryDirectory() as tmp:
             config = server_init.load_config(

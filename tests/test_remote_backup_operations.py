@@ -44,7 +44,7 @@ class RemoteBackupOperationTests(unittest.TestCase):
                 "audit_log": self.audit,
                 "backup_run": {
                     "enabled": True,
-                    "service_command": ["test-service-control"],
+                    "service_command": ["/bin/systemctl", "--no-ask-password"],
                     "cooldown_seconds": 900,
                 },
                 "principals": [
@@ -136,7 +136,12 @@ class RemoteBackupOperationTests(unittest.TestCase):
             time.sleep(0.01)
         self.assertEqual(1, len(self.calls))
         self.assertEqual(
-            ["test-service-control", "start", "lifetxt-backup.service"],
+            [
+                "/bin/systemctl",
+                "--no-ask-password",
+                "start",
+                "lifetxt-backup.service",
+            ],
             self.calls[0][0],
         )
         self.assertEqual(-3, self.calls[0][1]["stdout"])

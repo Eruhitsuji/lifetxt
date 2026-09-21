@@ -1,0 +1,51 @@
+schema_version: 1
+
+change:
+  id: remote-backup-no-new-privileges-dispatch
+  title: Make Remote backup dispatch compatible with NoNewPrivileges
+  status: implemented
+  change_type: Security
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/876
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/877
+  base_commit: 9345a14
+  target_release: next normal maintenance release
+
+scope:
+  in_scope:
+    - Generate an opt-in Polkit rule authorizing only the service user to start lifetxt-backup.service.
+    - Document systemctl D-Bus dispatch that works with NoNewPrivileges=true.
+    - Preserve the fixed Remote operation command suffix and all existing admission, audit, and result semantics.
+  out_of_scope:
+    - Disabling NoNewPrivileges or granting general sudo/systemd authority.
+    - Changing scheduled backup, archive, upload, or retention behavior.
+    - Allowing request-controlled commands, units, paths, targets, credentials, or retention.
+  write_scope:
+    - lifetxt/server_init.py
+    - lifetxt/config_registry.py
+    - tests/test_server_init.py
+    - tests/test_remote_backup_operations.py
+    - tests/test_ubuntu_server_backup_docs.py
+    - docs/deployment/ubuntu-server.md
+    - docs/en/cli.md
+    - docs/en/remote.md
+    - docs/ja/remote.md
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+    - .ai/project/changes/remote-backup-no-new-privileges-dispatch/
+  forbidden_scope:
+    - .ai/managed/**
+    - lifetxt.service privilege relaxation
+    - General-purpose service control from Remote Safe Mode
+  shared_files:
+    - lifetxt/server_init.py
+    - lifetxt/config_registry.py
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+
+human_approvals_required:
+  - Independent security review of the latest commit.
+  - Independent implementation and integration review of the latest commit.
+  - Merge Authority approval; the implementing AI must not merge the pull request.

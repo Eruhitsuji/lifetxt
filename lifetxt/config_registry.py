@@ -598,7 +598,7 @@ CONFIG_REGISTRY = OrderedDict(
             _entry(
                 "array<string>",
                 None,
-                "Trusted argv prefix for the least-privilege service-control wrapper; lifetxt appends only start and lifetxt-backup.service.",
+                "Trusted argv prefix for least-privilege service control; lifetxt appends only start and lifetxt-backup.service. Use systemctl --no-ask-password with the generated fixed-unit Polkit rule when the Web service has NoNewPrivileges=true.",
             ),
         ),
         (

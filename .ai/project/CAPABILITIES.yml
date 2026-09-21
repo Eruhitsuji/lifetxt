@@ -55,26 +55,35 @@ capabilities:
       - lifetxt/remote_web.py
       - lifetxt/config_registry.py
       - tests/test_remote_backup_operations.py
+      - tests/test_server_init.py
+      - tests/test_ubuntu_server_backup_docs.py
       - docs/en/remote.md
       - docs/ja/remote.md
+      - docs/deployment/ubuntu-server.md
+      - .ai/project/changes/remote-backup-no-new-privileges-dispatch/
     public_interfaces:
       - POST /api/remote/v1/operations/backup-runs
       - GET /api/remote/v1/operations/backup-runs/{operation_id}
       - Authenticated /remote Run backup now control
       - remote.backup_run.* configuration
+      - service_control.remote_backup_polkit_rule_path server-init configuration
     tests_or_evidence:
       - python -m unittest tests.test_remote_backup_operations tests.test_remote_web_v20 -> Ran 17 tests, OK
       - python -m unittest tests.test_remote_backup_operations tests.test_remote_web_v20 tests.test_backup_cli tests.test_web_backup_status -> Ran 46 tests, OK (#874)
       - MPLBACKEND=Agg python -m unittest discover -> Ran 4719 tests, OK (skipped=35) (#874)
       - MPLBACKEND=Agg python -m unittest discover -> Ran 4713 tests, OK (skipped=35)
       - python scripts/validate_release_docs.py --output <temporary-report> -> errors 0, ok true
+      - python -m unittest tests.test_server_init.BackupScheduleConfigGenerationTests tests.test_remote_backup_operations -> Ran 24 tests, OK (#876)
+      - MPLBACKEND=Agg python -m unittest discover -> Ran 4723 tests, OK (skipped=35) (#876)
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/870
       - https://github.com/Eruhitsuji/lifetxt/issues/871
       - https://github.com/Eruhitsuji/lifetxt/issues/874
+      - https://github.com/Eruhitsuji/lifetxt/issues/876
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/873
       - https://github.com/Eruhitsuji/lifetxt/pull/875
+      - https://github.com/Eruhitsuji/lifetxt/pull/877
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       Reuses Remote Safe Mode authentication, explicit scopes, protocol
@@ -84,7 +93,10 @@ capabilities:
       control endpoint is added. Issue #874 corrected result detection to resolve
       and read the configured destination before and after dispatch, while
       failing closed on status-read errors, non-zero runner exits, and absent
-      fresh attempts.
+      fresh attempts. Issue #876 adds an opt-in generated Polkit rule constrained
+      to the validated service user, start verb, and lifetxt-backup.service, so
+      the Web process can dispatch through systemd D-Bus while retaining
+      NoNewPrivileges=true and without receiving general privilege escalation.
     replacement:
       replaces: []
       replaced_by: null

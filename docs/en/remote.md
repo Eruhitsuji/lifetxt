@@ -145,12 +145,25 @@ remote:
   audit_log: /var/lib/lifetxt/remote-audit.jsonl
   backup_run:
     enabled: true
-    service_command: [sudo, -n, /usr/local/sbin/lifetxt-systemctl]
+    service_command: [/bin/systemctl, --no-ask-password]
     cooldown_seconds: 900
 ```
 
-The root-owned wrapper must explicitly allow only
-`start:lifetxt-backup.service` for this path. If Remote Safe Mode is disabled,
+For a system service that retains `NoNewPrivileges=true`, do not use `sudo` in
+this command: Linux prevents that process from acquiring privileges. Instead,
+configure `server-init` to generate a root-owned Polkit rule by setting
+`service_control.remote_backup_polkit_rule_path` to (for example)
+`/etc/polkit-1/rules.d/60-lifetxt-remote-backup.rules`. The rule authorizes only
+the configured service user, the `start` verb, and `lifetxt-backup.service` via
+systemd D-Bus. Install the reviewed rule as root, reload Polkit if required by
+the distribution, and verify as the service user:
+
+```sh
+sudo -u lifetxt /bin/systemctl --no-ask-password start lifetxt-backup.service
+```
+
+The separate sudo wrapper remains for interactive `server-update`; it is not
+the Remote Web process's dispatch path. If Remote Safe Mode is disabled,
 the audit sink or runner is unavailable, or `backup.enabled` is false, the
 operation is not advertised and CLI/systemctl remains the run-now interface.
 

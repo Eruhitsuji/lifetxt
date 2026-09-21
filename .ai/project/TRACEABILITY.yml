@@ -14216,6 +14216,38 @@ traceability:
         required; the implementing AI will not merge the final PR.
       status: implemented
 
+    - requirement_id: req-remote-backup-no-new-privileges-dispatch
+      capability_id: cap-remote-backup-run-operation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/865
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/876
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/877
+      changed_files_or_scope:
+        - Generate an opt-in Polkit authorization fixed to the service user, start verb, and lifetxt-backup.service
+        - Document a systemctl D-Bus runner compatible with NoNewPrivileges=true
+        - Preserve the Remote operation's fixed suffix, authorization, audit, admission, cooldown, and fail-closed result contracts
+        - lifetxt/server_init.py
+        - lifetxt/config_registry.py
+        - tests/test_server_init.py
+        - tests/test_remote_backup_operations.py
+        - tests/test_ubuntu_server_backup_docs.py
+        - docs/deployment/ubuntu-server.md
+        - docs/en/cli.md
+        - docs/en/remote.md
+        - docs/ja/remote.md
+        - .ai/project/changes/remote-backup-no-new-privileges-dispatch/
+      tests_or_evidence:
+        - python -m unittest tests.test_server_init.BackupScheduleConfigGenerationTests tests.test_remote_backup_operations -> Ran 24 tests, OK
+        - python -m unittest tests.test_server_init tests.test_remote_backup_operations tests.test_ubuntu_server_backup_docs tests.test_config_validation tests.test_remote_web_v20 -> Ran 132 tests, OK (skipped=2)
+        - python -m unittest tests.test_change_package_closeout tests.test_traceability_gate tests.test_capability_matrix -> Ran 30 tests, OK
+        - MPLBACKEND=Agg python -m unittest discover -> Ran 4723 tests, OK (skipped=35)
+      release_or_deployment: null
+      notes: >-
+        Security/High bug fix. Real systemd/Polkit integration remains an
+        operator verification because the development environment has no
+        systemd or Polkit daemon. Independent security and implementation
+        review plus human Merge Authority approval remain required.
+      status: implemented
+
     - requirement_id: req-remote-backup-run-operation
       capability_id: cap-remote-backup-run-operation
       epic: https://github.com/Eruhitsuji/lifetxt/issues/865

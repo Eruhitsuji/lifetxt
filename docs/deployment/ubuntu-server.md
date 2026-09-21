@@ -67,7 +67,8 @@ environment details, and the service user/group explicitly:
   "service_control": {
     "enabled": true,
     "wrapper_path": "/usr/local/sbin/lifetxt-systemctl",
-    "sudoers_path": "/etc/sudoers.d/lifetxt-server-update"
+    "sudoers_path": "/etc/sudoers.d/lifetxt-server-update",
+    "remote_backup_polkit_rule_path": "/etc/polkit-1/rules.d/60-lifetxt-remote-backup.rules"
   },
   "reverse_proxy": {
     "backend": "nginx",
@@ -251,6 +252,30 @@ every future systemd action without performing that action; `systemctl
 --dry-run` is not a portable start/stop permission probe across supported
 Ubuntu/systemd versions. The wrapper allowlist is therefore the real
 authorization boundary.
+
+The optional `remote_backup_polkit_rule_path` is a separate authorization
+boundary for Remote Safe Mode. When scheduled backup is enabled, `server-init`
+generates a root-owned Polkit rule that permits only the configured service user
+to ask systemd to `start lifetxt-backup.service`. It grants no stop, restart,
+other-unit, shell, path, target, retention, or credential authority. Configure
+the application-side runner as follows:
+
+```json
+{
+  "remote": {
+    "backup_run": {
+      "enabled": true,
+      "service_command": ["/bin/systemctl", "--no-ask-password"],
+      "cooldown_seconds": 900
+    }
+  }
+}
+```
+
+This D-Bus/Polkit path works while the generated `lifetxt.service` keeps
+`NoNewPrivileges=true`; the Web process does not execute `sudo` or receive a
+general privilege-escalation capability. Review and install the generated rule
+as root, then test the exact command as the configured service user.
 
 ## 4. Reverse proxy
 

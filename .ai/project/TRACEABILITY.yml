@@ -14216,6 +14216,33 @@ traceability:
         required; the implementing AI will not merge the final PR.
       status: implemented
 
+    - requirement_id: req-remote-backup-run-operation
+      capability_id: cap-remote-backup-run-operation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/865
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/874
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/875
+      changed_files_or_scope:
+        - Resolve backup.destination before reading persisted status for the
+          Remote backup run operation
+        - Require a zero runner exit and a fresh attempt before completion
+        - Fail closed on missing destination, unreadable status, non-zero
+          runner exit, and no fresh attempt
+        - lifetxt/remote_backup_operations.py
+        - tests/test_remote_backup_operations.py
+      tests_or_evidence:
+        - python -m unittest tests.test_remote_backup_operations tests.test_remote_web_v20 tests.test_backup_cli tests.test_web_backup_status -> Ran 46 tests, OK
+        - MPLBACKEND=Agg python -m unittest discover -> Ran 4719 tests, OK (skipped=35)
+        - python -m unittest tests.test_change_package_closeout tests.test_traceability_gate tests.test_capability_matrix -> Ran 30 tests, OK
+        - python -m ruff check lifetxt tests scripts -> All checks passed
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      release_or_deployment: null
+      notes: >-
+        Bug/High correction to the existing security-sensitive operational
+        capability. Fixed service dispatch, audit, idempotency, one-active-run,
+        cooldown, and ordinary-Web read-only boundaries remain unchanged.
+        Independent review and human Merge Authority approval remain required.
+      status: implemented
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

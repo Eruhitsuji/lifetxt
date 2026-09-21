@@ -11,6 +11,7 @@ change:
   related_issue:
     - https://github.com/Eruhitsuji/lifetxt/issues/870
     - https://github.com/Eruhitsuji/lifetxt/issues/871
+    - https://github.com/Eruhitsuji/lifetxt/issues/874
   related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/873
   base_commit: 7130ff6
   target_release: next normal maintenance release

@@ -11,6 +11,7 @@ except Exception:
     TestClient = None
 
 from lifetxt.webapp import create_app
+from lifetxt.remote_web import REMOTE_MUTATING_ROUTE_REVISION_CLASSIFICATION
 
 
 class _Result(object):
@@ -105,6 +106,66 @@ class RemoteBackupOperationTests(unittest.TestCase):
             encoding="utf-8",
         ) as handle:
             json.dump(values, handle)
+
+    def _client_with_revision_mode(self, mode):
+        config = dict(self.config)
+        config["web"] = {
+            "revision_mode": mode,
+            "revision_metrics_path": os.path.join(
+                self.temp.name, "revision-%s.json" % mode
+            ),
+        }
+        client = TestClient(
+            create_app(
+                paths=[self.life],
+                writable_path=self.life,
+                config=config,
+                read_only=False,
+            )
+        )
+        client.app.state.remote_backup_run_store._runner = lambda *args, **kwargs: (
+            _Result()
+        )
+        return client
+
+    def test_all_mutating_remote_routes_have_explicit_revision_classification(self):
+        routes = {
+            route.path
+            for route in self.client.app.routes
+            if route.path.startswith("/api/remote/v1/")
+            and set(route.methods or ()) & {"POST", "PUT", "PATCH", "DELETE"}
+        }
+        self.assertEqual(routes, set(REMOTE_MUTATING_ROUTE_REVISION_CLASSIFICATION))
+        self.assertEqual(
+            "authoritative",
+            REMOTE_MUTATING_ROUTE_REVISION_CLASSIFICATION[
+                "/api/remote/v1/ticket-mutations"
+            ],
+        )
+
+    def test_observe_mode_backup_run_does_not_record_legacy_fallback(self):
+        client = self._client_with_revision_mode("observe")
+        response = client.post(
+            "/api/remote/v1/operations/backup-runs",
+            headers=dict(self.headers, **{"Idempotency-Key": "observe-run"}),
+        )
+        self.assertEqual(202, response.status_code)
+        self.assertNotIn("X-Lifetxt-Legacy-Revision-Fallback", response.headers)
+        metrics = client.get("/api/revision-metrics").json()
+        self.assertEqual(0, metrics["legacy_fallback_total"])
+        self.assertNotIn(
+            "/api/remote/v1/operations/backup-runs",
+            metrics["legacy_fallback_by_path"],
+        )
+
+    def test_required_mode_backup_run_does_not_require_if_match(self):
+        client = self._client_with_revision_mode("required")
+        response = client.post(
+            "/api/remote/v1/operations/backup-runs",
+            headers=dict(self.headers, **{"Idempotency-Key": "required-run"}),
+        )
+        self.assertEqual(202, response.status_code)
+        self.assertEqual("required", response.headers["X-Lifetxt-Revision-Mode"])
 
     def test_capability_is_advertised_only_when_available(self):
         value = self.client.get(

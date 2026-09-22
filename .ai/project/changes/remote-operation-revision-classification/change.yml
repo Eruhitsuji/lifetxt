@@ -1,0 +1,47 @@
+schema_version: 1
+
+change:
+  id: remote-operation-revision-classification
+  title: Classify Remote operations for Web revision enforcement
+  status: implemented
+  change_type: Bug
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/880
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/881
+  base_commit: e65a4c4
+  target_release: next normal maintenance release
+
+scope:
+  in_scope:
+    - Classify every mutating Remote v1 route by revision semantics.
+    - Keep operational and session controls outside life.txt revision enforcement and fallback telemetry.
+    - Preserve authoritative Remote ticket mutations under their exact revision contract.
+    - Cover backup admission in observe and required modes.
+  out_of_scope:
+    - Changes to authentication, authorization, CSRF, audit, idempotency, cooldown, dispatch, or backup result tracking.
+    - Revision migration cutover or telemetry reset in production.
+  write_scope:
+    - lifetxt/remote_web.py
+    - lifetxt/runtime_safety_v2.py
+    - lifetxt/surface_runtime_compat.py
+    - tests/test_remote_backup_operations.py
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+    - .ai/project/changes/remote-operation-revision-classification/
+  forbidden_scope:
+    - .ai/managed/**
+    - Remote authority or credential expansion
+    - Production telemetry mutation
+  shared_files:
+    - lifetxt/remote_web.py
+    - lifetxt/runtime_safety_v2.py
+    - lifetxt/surface_runtime_compat.py
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+
+human_approvals_required:
+  - Independent implementation and security review of the latest commit.
+  - Integration review confirming normal authoritative Web and Remote writes remain revision protected.
+  - Merge Authority approval; the implementing AI must not merge the pull request.

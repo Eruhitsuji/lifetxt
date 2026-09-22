@@ -1,0 +1,53 @@
+schema_version: 1
+
+verification:
+  planned: []
+  executed:
+    - type: focused-regression
+      command: python -m unittest tests.test_remote_backup_operations tests.test_revision_telemetry_v2 tests.test_remote_web_v19 tests.test_remote_web_v20 tests.test_remote_ticket_writes_v22
+      requirement_ids:
+        - req-remote-operation-revision-classification
+      status: passed
+      result: Ran 47 tests, OK
+    - type: full-suite
+      command: MPLBACKEND=Agg python -m unittest discover
+      requirement_ids:
+        - req-remote-operation-revision-classification
+      status: passed
+      result: Ran 4731 tests, OK (skipped=35)
+    - type: policy-and-traceability
+      command: python -m unittest tests.test_change_package_closeout tests.test_traceability_gate tests.test_capability_matrix
+      requirement_ids:
+        - req-remote-operation-revision-classification
+      status: passed
+      result: Ran 30 tests, OK
+    - type: static-and-smoke
+      command: ruff format --check (changed files); ruff check lifetxt tests scripts; lifetxt check examples/minimal_life.txt; git diff --check
+      requirement_ids:
+        - req-remote-operation-revision-classification
+      status: passed
+      result: Changed files formatted; lint clean; example check 10 items; diff clean
+
+review_ledger:
+  - reviewer: implementing AI self-review
+    review_type: implementation-security-test-operations
+    target_commit: pre-commit working tree
+    result: passed-with-human-review-required
+    finding_count: 1
+    completed_at: 2026-09-22
+    notes: >-
+      The initial inspection found two independent revision middleware
+      classifications. The implementation was expanded from a single route
+      exemption to a shared registry consumed dynamically by both layers, and
+      the route-inventory test prevents future unclassified Remote mutations.
+
+release_evidence:
+  migration_notes: >-
+    After deployment, reset or restart the observation window as appropriate
+    and verify zero legitimate fallback usage before required-mode cutover.
+  rollback_plan: >-
+    Revert this change and disable Remote backup admission if a regression is
+    found; scheduled backups remain independent.
+  operations_evidence:
+    - Automated observe-mode zero-fallback and required-mode admission coverage.
+    - Production observation remains tracked by the revision migration issues.

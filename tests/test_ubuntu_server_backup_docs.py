@@ -46,6 +46,11 @@ class UbuntuServerBackupDocsTests(unittest.TestCase):
             "only the configured service user",
             "`start lifetxt-backup.service`",
             "no stop, restart",
+            "Polkit 0.106",
+            "fails closed",
+            "does not generate a broad legacy `.pkla` fallback",
+            "Scheduled",
+            "another unit remain denied",
         )
         for text in required:
             with self.subTest(text=text):

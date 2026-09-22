@@ -1,0 +1,23 @@
+schema_version: 1
+
+requirements:
+  - id: req-remote-backup-polkit-compatibility
+    kind: MODIFIED
+    statement: >-
+      server-init must never present or install the narrow JavaScript Polkit
+      rule as usable when the target host cannot verify a compatible rules
+      backend.
+    acceptance_criteria:
+      - Polkit 0.105, missing probes, failed probes, and unparseable versions fail closed before a rule is planned or written.
+      - Supported Polkit environments retain the fixed service user, start verb, and lifetxt-backup.service rule.
+      - No broad manage-units or legacy .pkla fallback is generated.
+      - No request-controlled unit, verb, argv, path, target, retention, or credential is introduced.
+      - NoNewPrivileges=true and scheduled backup behavior remain unchanged.
+      - Deployment documentation states compatibility limits and positive and negative real-host checks.
+    constraints:
+      - Do not weaken the existing authority boundary.
+      - Do not claim version probing alone proves the installed rule works; require operator verification.
+      - Keep server-update sudo authorization separate.
+    owner: Eruhitsuji
+
+open_questions: []

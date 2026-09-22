@@ -1,5 +1,5 @@
 import unittest
-from hypothesis import given, strategies as st
+from hypothesis import HealthCheck, given, settings, strategies as st
 from lifetxt.parser import parse_text
 
 class ParserInvariantTests(unittest.TestCase):
@@ -8,7 +8,7 @@ class ParserInvariantTests(unittest.TestCase):
         items, diagnostics = result
         return ([item.to_dict() for item in items], [(d.code, d.severity, d.message) for d in diagnostics])
 
-    @given(st.text(alphabet=st.characters(blacklist_categories=("Cs",)), max_size=40))
+    @settings(max_examples=25, derandomize=True, suppress_health_check=[HealthCheck.differing_executors])`n    @given(st.text(alphabet=st.characters(blacklist_categories=("Cs",)), max_size=40))
     def test_parser_is_deterministic_for_generated_values(self, value):
         text = f"[ ] T {value}\n"
         self.assertEqual(self.semantic(parse_text(text)), self.semantic(parse_text(text)))

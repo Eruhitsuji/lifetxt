@@ -1,4 +1,4 @@
-﻿# Mutation testing pilot
+# Mutation testing pilot
 
 The bounded pilot targets `lifetxt.parser` and uses `mutmut` as an optional
  development dependency. It is intentionally manual and does not run in the

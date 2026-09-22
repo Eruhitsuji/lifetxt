@@ -1,4 +1,4 @@
-name: CI
+﻿name: CI
 
 on:
   push:
@@ -197,10 +197,10 @@ jobs:
           source.write_text('# [ ] T "macOS smoke"\\n', encoding="utf-8")
           print(source)
           PY
-          python -m lifetxt check "macos smoke 日本語/input with spaces.life.txt" 2>&1 | tee macos-module.log
-          python -m lifetxt summary "macos smoke 日本語/input with spaces.life.txt" 2>&1 | tee macos-console.log
-          python -m lifetxt config init -o "macos smoke 日本語/config.json" 2>&1 | tee macos-write-surface.log
-          test -f "macos smoke 日本語/config.json"
+          python -m lifetxt check "macos smoke 譌･譛ｬ隱・input with spaces.life.txt" 2>&1 | tee macos-module.log
+          python -m lifetxt summary "macos smoke 譌･譛ｬ隱・input with spaces.life.txt" 2>&1 | tee macos-console.log
+          python -m lifetxt config init -o "macos smoke 譌･譛ｬ隱・config.json" 2>&1 | tee macos-write-surface.log
+          test -f "macos smoke 譌･譛ｬ隱・config.json"
 
       - name: Upload macOS smoke evidence
         if: always()
@@ -443,3 +443,4 @@ jobs:
                 state_reason: "completed",
               });
             }
+

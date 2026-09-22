@@ -1,0 +1,4 @@
+﻿{
+  "minimum_branch_percent": 0.0,
+  "policy": "Raise only after review; never lower to hide a regression."
+}

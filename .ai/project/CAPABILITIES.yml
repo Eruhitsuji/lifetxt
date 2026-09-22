@@ -49,6 +49,7 @@ capabilities:
     owner: Eruhitsuji
     source_requirements:
       - req-remote-backup-run-operation
+      - req-remote-backup-polkit-compatibility
     implementation_locations:
       - lifetxt/remote_backup_operations.py
       - lifetxt/remote_access.py
@@ -61,6 +62,7 @@ capabilities:
       - docs/ja/remote.md
       - docs/deployment/ubuntu-server.md
       - .ai/project/changes/remote-backup-no-new-privileges-dispatch/
+      - .ai/project/changes/remote-backup-polkit-compatibility/
     public_interfaces:
       - POST /api/remote/v1/operations/backup-runs
       - GET /api/remote/v1/operations/backup-runs/{operation_id}
@@ -80,6 +82,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/871
       - https://github.com/Eruhitsuji/lifetxt/issues/874
       - https://github.com/Eruhitsuji/lifetxt/issues/876
+      - https://github.com/Eruhitsuji/lifetxt/issues/878
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/873
       - https://github.com/Eruhitsuji/lifetxt/pull/875
@@ -97,6 +100,10 @@ capabilities:
       to the validated service user, start verb, and lifetxt-backup.service, so
       the Web process can dispatch through systemd D-Bus while retaining
       NoNewPrivileges=true and without receiving general privilege escalation.
+      Issue #878 makes server-init reject Polkit 0.105 and any unavailable,
+      failed, or unparseable version probe before planning that rule; supported
+      hosts must use Polkit 0.106+ and still pass the documented real-host
+      positive and negative authorization checks.
     replacement:
       replaces: []
       replaced_by: null

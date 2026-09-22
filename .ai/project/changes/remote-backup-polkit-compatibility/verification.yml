@@ -1,0 +1,52 @@
+schema_version: 1
+
+verification:
+  planned: []
+  executed:
+    - type: focused-regression
+      command: python -m unittest tests.test_server_init tests.test_ubuntu_server_backup_docs tests.test_remote_backup_operations
+      requirement_ids:
+        - req-remote-backup-polkit-compatibility
+      status: passed
+      result: Ran 75 tests, OK (skipped=13)
+    - type: policy-and-traceability
+      command: python -m unittest tests.test_change_package_closeout tests.test_traceability_gate tests.test_capability_matrix
+      requirement_ids:
+        - req-remote-backup-polkit-compatibility
+      status: passed
+      result: Ran 30 tests, OK
+    - type: full-suite
+      command: MPLBACKEND=Agg python -m unittest discover
+      requirement_ids:
+        - req-remote-backup-polkit-compatibility
+      status: passed
+      result: Ran 4728 tests, OK (skipped=237)
+    - type: static-and-docs
+      command: ruff check; validate_release_docs.py; lifetxt check examples/minimal_life.txt; git diff --check
+      requirement_ids:
+        - req-remote-backup-polkit-compatibility
+      status: passed
+      result: Lint clean; release docs errors 0; example check 10 items; diff clean
+
+review_ledger:
+  - reviewer: implementing AI self-review
+    review_type: implementation-security-test-operations
+    target_commit: pre-commit working tree
+    result: passed-with-human-review-required
+    finding_count: 1
+    completed_at: 2026-09-22
+    notes: >-
+      Fixed the initial parser so modern integer Polkit releases such as 122
+      are accepted rather than incorrectly treated as unparseable; added a
+      regression test and explicit missing-probe coverage.
+
+release_evidence:
+  migration_notes: >-
+    Hosts using the optional rule must report Polkit 0.106 or newer and pass
+    the documented real authorization checks before Remote backup is enabled.
+  rollback_plan: >-
+    Remove the generated rule and disable Remote backup:run; scheduled backups
+    continue independently.
+  operations_evidence:
+    - Automated legacy-version and indeterminate-probe rejection tests.
+    - Real supported-host authorization verification remains required.

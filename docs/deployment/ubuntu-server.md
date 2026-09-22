@@ -254,11 +254,19 @@ Ubuntu/systemd versions. The wrapper allowlist is therefore the real
 authorization boundary.
 
 The optional `remote_backup_polkit_rule_path` is a separate authorization
-boundary for Remote Safe Mode. When scheduled backup is enabled, `server-init`
-generates a root-owned Polkit rule that permits only the configured service user
-to ask systemd to `start lifetxt-backup.service`. It grants no stop, restart,
-other-unit, shell, path, target, retention, or credential authority. Configure
-the application-side runner as follows:
+boundary for Remote Safe Mode. It is supported only on hosts with Polkit 0.106
+or newer and an effective JavaScript `.rules` backend. `server-init` checks the
+local `/usr/bin/pkaction --version` before it presents or writes this artifact.
+It fails closed on Polkit 0.105, a missing probe, an unparseable version, or a
+failed probe; it does not generate a broad legacy `.pkla` fallback. Leave the
+setting unset and Remote `backup:run` disabled on such hosts. Scheduled
+`lifetxt-backup.timer` operation is independent and remains available.
+
+On a supported host, `server-init` generates a root-owned Polkit rule that
+permits only the configured service user to ask systemd to
+`start lifetxt-backup.service`. It grants no stop, restart, other-unit, shell,
+path, target, retention, or credential authority. Configure the application-side
+runner as follows:
 
 ```json
 {
@@ -275,7 +283,11 @@ the application-side runner as follows:
 This D-Bus/Polkit path works while the generated `lifetxt.service` keeps
 `NoNewPrivileges=true`; the Web process does not execute `sudo` or receive a
 general privilege-escalation capability. Review and install the generated rule
-as root, then test the exact command as the configured service user.
+as root, reload Polkit as required by the distribution, then test the exact
+command as the configured service user. Treat an interactive-authentication or
+non-zero result as an unsupported deployment: remove the rule, leave Remote
+`backup:run` disabled, and keep using the scheduled timer. Also verify that
+`stop lifetxt-backup.service` and another unit remain denied.
 
 ## 4. Reverse proxy
 

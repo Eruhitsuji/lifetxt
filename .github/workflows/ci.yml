@@ -232,7 +232,8 @@ jobs:
           set -o pipefail
           coverage run --branch -m unittest discover 2>&1 | tee coverage-tests.log
           coverage report -m | tee coverage-summary.txt
-          coverage json -o coverage.json`n          python scripts/check_coverage_regression.py coverage.json scripts/coverage-baseline.json
+          coverage json -o coverage.json
+          python scripts/check_coverage_regression.py coverage.json scripts/coverage-baseline.json
 
       - name: Upload coverage baseline
         if: always()

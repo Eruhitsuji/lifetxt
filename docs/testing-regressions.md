@@ -1,4 +1,4 @@
-﻿# Historical regression test policy
+# Historical regression test policy
 
 A fixed defect should add a deterministic regression test when its essential
 failure mode can be reproduced without a browser, shell, host, network, or

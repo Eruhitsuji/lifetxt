@@ -304,4 +304,370 @@ def install_remote_web():
                         request.state.remote_clock = clock
 
                 response = await call_next(request)
-            
+                clock = getattr(request.state, "remote_clock", None)
+                if clock is not None:
+                    response.headers["X-Lifetxt-Clock-State"] = clock["state"]
+                    response.headers["X-Lifetxt-Clock-Skew-Seconds"] = str(
+                        clock["skew_seconds"]
+                    )
+                for key, value in protocol_response_headers(
+                    app.state.config, negotiated
+                ).items():
+                    response.headers[key] = value
+                response.headers["X-Request-ID"] = rid
+                audit_principal = getattr(request.state, "remote_principal", principal)
+                _audit_safely(
+                    app.state.config,
+                    audit_event(
+                        audit_principal,
+                        request.method + " " + path,
+                        response.status_code,
+                        rid,
+                        host,
+                        {
+                            "authentication": auth_method,
+                            "protocol": negotiated,
+                            "session": "active" if session else "not_applicable",
+                            "clock": clock_evidence,
+                        },
+                    ),
+                )
+                return response
+            except RemoteAccessError as exc:
+                _audit_safely(
+                    app.state.config,
+                    audit_event(
+                        principal,
+                        request.method + " " + path,
+                        exc.code,
+                        rid,
+                        host,
+                        {
+                            "authentication": auth_method,
+                            "protocol": negotiated,
+                            "session": "active" if session else "not_applicable",
+                            "clock": clock_evidence,
+                        },
+                    ),
+                )
+                headers = {"X-Request-ID": rid}
+                error_version = (
+                    exc.detail.get("current", negotiated) if exc.detail else negotiated
+                )
+                if error_version not in (1, REMOTE_PROTOCOL_CURRENT):
+                    error_version = REMOTE_PROTOCOL_CURRENT
+                headers.update(
+                    protocol_response_headers(app.state.config, error_version)
+                )
+                if exc.status == 401:
+                    headers["WWW-Authenticate"] = "Bearer"
+                return JSONResponse(
+                    status_code=exc.status,
+                    content=error_payload(exc, rid),
+                    headers=headers,
+                )
+
+        def principal(request):
+            return request.state.remote_principal
+
+        @app.get("/remote", response_class=HTMLResponse)
+        def remote_page():
+            nonce = secrets.token_urlsafe(18)
+            response = HTMLResponse(_remote_page(nonce))
+            response.headers["Content-Security-Policy"] = (
+                "default-src 'none'; script-src 'nonce-%s'; style-src 'nonce-%s'; "
+                "connect-src 'self'; img-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'"
+            ) % (nonce, nonce)
+            response.headers["Referrer-Policy"] = "no-referrer"
+            return response
+
+        @app.get("/api/remote/v1/capabilities")
+        def remote_capabilities(request: Request):
+            require_scope(principal(request), "read")
+            return capability(app.state.config, request.state.remote_protocol)
+
+        @app.get("/api/remote/v1/session")
+        def remote_session(request: Request):
+            current = principal(request)
+            require_scope(current, "read")
+            result = OrderedDict(
+                (
+                    ("schema", "remote-session-v1.schema.json"),
+                    ("principal", public_principal(current)),
+                    ("authentication", request.state.remote_auth_method),
+                    ("request_id", request.state.remote_request_id),
+                    ("protocol_version", request.state.remote_protocol),
+                )
+            )
+            if request.state.remote_session:
+                result["browser_session"] = session_payload(
+                    request.state.remote_session, include_csrf=False
+                )
+            return result
+
+        @app.get("/api/remote/v1/snapshot")
+        def remote_snapshot(request: Request):
+            current = principal(request)
+            require_scope(current, "read")
+            value = snapshot(app.state.paths, app.state.config, current)
+            value["read_only"] = True
+            return value
+
+        @app.get("/api/remote/v1/tickets")
+        def remote_tickets(request: Request):
+            current = principal(request)
+            require_scope(current, "read")
+            value = read_resource(
+                "tickets",
+                app.state.paths,
+                app.state.config,
+                current,
+                request.query_params,
+            )
+            return {
+                "revision": value["revision"],
+                "tickets": value["data"].get("tickets", []),
+                "diagnostics": value["diagnostics"],
+            }
+
+        @app.get("/api/remote/v1/projects")
+        def remote_projects(request: Request):
+            current = principal(request)
+            require_scope(current, "read")
+            value = read_resource(
+                "projects",
+                app.state.paths,
+                app.state.config,
+                current,
+                request.query_params,
+            )
+            return {
+                "revision": value["revision"],
+                "projects": value["data"].get("projects", []),
+                "summary": value["data"].get("summary", {}),
+            }
+
+        @app.get("/api/remote/v1/resources")
+        def remote_resources(request: Request):
+            _require_v2(request)
+            current = principal(request)
+            require_scope(current, "read")
+            return {
+                "resources": resource_catalog(),
+                "revision": source_revision(app.state.paths),
+            }
+
+        @app.get("/api/remote/v1/resources/{resource_name}")
+        def remote_resource(resource_name: str, request: Request):
+            _require_v2(request)
+            current = principal(request)
+            require_scope(current, "read")
+            return read_resource(
+                resource_name,
+                app.state.paths,
+                app.state.config,
+                current,
+                request.query_params,
+            )
+
+        @app.get("/api/remote/v1/historical")
+        def remote_historical(request: Request):
+            _require_v2(request)
+            current = principal(request)
+            return read_historical_resource(
+                app.state.paths,
+                app.state.config,
+                current,
+                request.query_params,
+            )
+
+        @app.get("/api/remote/v1/diagnostics")
+        def remote_diagnostics(request: Request):
+            _require_v2(request)
+            current = principal(request)
+            require_scope(current, "read")
+            remote = _remote(app.state.config)
+            checks = [
+                {"name": "remote-enabled", "ok": bool(remote.get("enabled"))},
+                {"name": "https-policy", "ok": True},
+                {
+                    "name": "principal-registry",
+                    "ok": bool(principal_registry(app.state.config)),
+                },
+                {
+                    "name": "source-count",
+                    "ok": bool(app.state.paths),
+                    "value": len(app.state.paths),
+                },
+                {
+                    "name": "browser-session",
+                    "ok": True,
+                    "enabled": browser_enabled(app.state.config),
+                    "active": app.state.remote_session_store.count(),
+                },
+                {
+                    "name": "authoritative-remote-writes",
+                    "ok": False,
+                    "admission_only": True,
+                },
+            ]
+            warnings = []
+            if remote.get("browser_ui") and not remote.get("allowed_origins"):
+                warnings.append(
+                    "Browser sessions accept only the computed same origin; configure allowed_origins for additional origins."
+                )
+            if not remote.get("audit_log"):
+                warnings.append("Remote audit_log is not configured.")
+            return {
+                "schema": "remote-diagnostics-v1.schema.json",
+                "ok": all(
+                    row["ok"]
+                    for row in checks
+                    if row["name"] != "authoritative-remote-writes"
+                ),
+                "protocol": {
+                    "negotiated": request.state.remote_protocol,
+                    "current": REMOTE_PROTOCOL_CURRENT,
+                },
+                "checks": checks,
+                "warnings": warnings,
+                "request_id": request.state.remote_request_id,
+            }
+
+        @app.post(_BACKUP_RUN_PATH, status_code=202)
+        def admit_backup_run(request: Request):
+            _require_v2(request)
+            current = principal(request)
+            require_scope(current, "backup:run")
+            operation, duplicate = backup_run_store.admit(
+                current["id"], request.headers.get("idempotency-key"), app.state.config
+            )
+            event = audit_event(
+                current,
+                "backup.run",
+                "duplicate" if duplicate else "accepted",
+                request.state.remote_request_id,
+                request.client.host if request.client else None,
+                {"operation_id": operation["operation_id"]},
+            )
+            if not _audit_safely(app.state.config, event):
+                if not duplicate:
+                    backup_run_store.abandon(operation["operation_id"])
+                raise RemoteAccessError(
+                    "AUDIT_UNAVAILABLE", "Backup run audit is unavailable.", 503
+                )
+            if not duplicate:
+                lifecycle_request_id = request.state.remote_request_id
+                lifecycle_host = request.client.host if request.client else None
+
+                def audit_lifecycle(outcome, operation_id):
+                    _audit_safely(
+                        app.state.config,
+                        audit_event(
+                            current,
+                            "backup.run",
+                            outcome,
+                            lifecycle_request_id,
+                            lifecycle_host,
+                            {"operation_id": operation_id},
+                        ),
+                    )
+
+                backup_run_store.start(
+                    operation["operation_id"],
+                    app.state.config,
+                    audit_callback=audit_lifecycle,
+                )
+            return operation
+
+        @app.get("/api/remote/v1/operations/backup-runs/{operation_id}")
+        def backup_run_status(operation_id: str, request: Request):
+            _require_v2(request)
+            current = principal(request)
+            require_scope(current, "backup:run")
+            return backup_run_store.get(operation_id, current["id"])
+
+        @app.post(_LOGIN_PATH)
+        def browser_login(request: Request, payload=Body(default={})):
+            _require_v2(request)
+            token = str((payload or {}).get("token") or "")
+            current, _method = authenticate_token(token, app.state.config)
+            old_session_id = request.cookies.get(cookie_name(app.state.config))
+            if old_session_id:
+                app.state.remote_session_store.revoke(old_session_id)
+            session = app.state.remote_session_store.create(
+                current,
+                "browser-session",
+                app.state.config,
+                client_host=request.client.host if request.client else None,
+                user_agent=request.headers.get("user-agent"),
+            )
+            request.state.remote_principal = current
+            request.state.remote_auth_method = "browser-login"
+            request.state.remote_session = session
+            response = JSONResponse(session_payload(session, include_csrf=True))
+            options = cookie_security(request, app.state.config)
+            key = options.pop("key")
+            response.set_cookie(key, session["session_id"], **options)
+            response.headers["Cache-Control"] = "no-store"
+            return response
+
+        @app.get(_BROWSER_SESSION_PATH)
+        def browser_session(request: Request):
+            _require_v2(request)
+            if not request.state.remote_session:
+                raise RemoteAccessError(
+                    "BROWSER_SESSION_REQUIRED",
+                    "This endpoint requires browser-session authentication.",
+                    401,
+                )
+            require_scope(principal(request), "read")
+            response = JSONResponse(
+                session_payload(request.state.remote_session, include_csrf=True)
+            )
+            response.headers["Cache-Control"] = "no-store"
+            return response
+
+        @app.post(_LOGOUT_PATH)
+        def browser_logout(request: Request):
+            _require_v2(request)
+            session_id = request.cookies.get(cookie_name(app.state.config))
+            revoked = app.state.remote_session_store.revoke(session_id)
+            response = JSONResponse({"ok": True, "revoked": revoked})
+            response.delete_cookie(cookie_name(app.state.config), path="/api/remote/")
+            response.headers["Cache-Control"] = "no-store"
+            return response
+
+        @app.post("/api/remote/v1/write-check")
+        def remote_write_check(request: Request, payload=Body(default={})):
+            current_principal = principal(request)
+            require_scope(current_principal, "write")
+            current_revision = source_revision(app.state.paths)
+            require_exact_revision(request.headers, current_revision)
+            return {
+                "ok": True,
+                "revision": current_revision,
+                "operation": str((payload or {}).get("operation") or "write-check"),
+                "principal": current_principal["id"],
+                "authoritative_mutation": False,
+            }
+
+        @app.get("/api/remote/v1/audit")
+        def remote_audit(request: Request, limit: int = Query(200, ge=1, le=1000)):
+            current = principal(request)
+            require_scope(current, "audit")
+            path = _remote(app.state.config).get("audit_log")
+            rows = []
+            if path and os.path.exists(path):
+                with open(path, encoding="utf-8") as handle:
+                    for line in handle.readlines()[-limit:]:
+                        try:
+                            rows.append(redact_remote_value(json.loads(line)))
+                        except ValueError:
+                            pass
+            return {"events": rows, "count": len(rows)}
+
+        return app
+
+    webapp.create_app = create_app
+    _INSTALLED = True

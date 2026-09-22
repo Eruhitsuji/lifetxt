@@ -195,6 +195,8 @@ def _patch_web_path_shape_and_reads():
 
         @app.middleware("http")
         async def _compatibility_and_read_snapshot_contract(request, call_next):
+            from . import surface_runtime
+
             method = request.method.upper()
             path = request.url.path
             unsafe = method in ("POST", "PUT", "PATCH", "DELETE")
@@ -202,13 +204,7 @@ def _patch_web_path_shape_and_reads():
                 unsafe
                 and path.startswith("/api/")
                 and not path.startswith("/api/git/")
-                and path
-                not in (
-                    "/api/check-line",
-                    "/api/items/parse",
-                    "/api/shorthand/parse",
-                    "/api/timer",
-                )
+                and path not in surface_runtime._WEB_NO_REVISION_PATHS
             )
             strict = request.cookies.get(_REVISION_COOKIE) == "1" or str(
                 request.headers.get("x-lifetxt-require-revision") or ""

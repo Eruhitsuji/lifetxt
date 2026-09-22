@@ -4214,7 +4214,9 @@ Important boundaries:
   `is-active`, `stop`, and `start` on the configured lifetxt units only.
 - `service_control.remote_backup_polkit_rule_path` optionally generates a
   separate fixed-user, fixed-verb, fixed-unit Polkit rule for Remote backup
-  dispatch while `lifetxt.service` retains `NoNewPrivileges=true`.
+  dispatch while `lifetxt.service` retains `NoNewPrivileges=true`. This requires
+  Polkit 0.106 or newer with JavaScript `.rules`; `server-init` probes the local
+  `pkaction` version and fails closed without generating a legacy fallback.
 - Installer, validation, and service commands are structured argv arrays. The
   command does not add a shell-string escape hatch.
 - Calendar URLs, Basic Auth credentials, real hostnames, VPN details, and other

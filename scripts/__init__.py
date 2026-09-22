@@ -1,1 +1,1 @@
-﻿"""Repository maintenance scripts."""
+"""Repository maintenance scripts."""

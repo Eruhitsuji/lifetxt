@@ -1,12 +1,12 @@
 # Mutation testing pilot
 
-The bounded pilot targets `lifetxt.parser` and uses `mutmut` as an optional
+The bounded pilot targets `lifetxt.parser` and uses the checked-in `[mutmut]` setup.cfg section with `mutmut` as an optional
  development dependency. It is intentionally manual and does not run in the
 normal pull-request job.
 
 ```text
 python -m pip install mutmut
-mutmut run --paths-to-mutate lifetxt/parser.py --runner "python -m unittest tests.test_lifetxt tests.test_core_boundaries_884"
+mutmut run --max-children 1
 mutmut results
 ```
 
@@ -26,3 +26,12 @@ is a periodic/manual audit recommendation, not a required perfect score.
 - Decision: keep mutation testing as a manual/periodic WSL or Linux audit; do
   not add it to normal PR CI on Windows. The prerequisite and failure mode are
   now explicit and reproducible rather than silently skipped.
+## Alternative tools considered
+
+- `cosmic-ray`: considered, but its worker/executor setup adds more CI and
+  configuration surface for this unittest-based project; no pilot was run.
+- `mutmut`: selected because it is a maintained Python tool with a bounded
+  source-path configuration and a direct survivor report. It requires Linux or
+  WSL for the current release.
+- Manual source mutation: rejected as the primary evidence because it would not
+  provide a repeatable mutant inventory or standard survivor classification.

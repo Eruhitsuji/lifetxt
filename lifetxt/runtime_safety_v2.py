@@ -165,18 +165,13 @@ def _install_web_revision_policy():
 
 
 def _is_life_api_write(method, path):
+    from . import surface_runtime
+
     if method not in ("POST", "PUT", "PATCH", "DELETE"):
         return False
     if not path.startswith("/api/") or path.startswith("/api/git/"):
         return False
-    return path not in (
-        "/api/check-line",
-        "/api/items/parse",
-        "/api/shorthand/parse",
-        "/api/timer",
-        "/api/attachments",
-        "/api/work-session",
-    )
+    return path not in surface_runtime._WEB_NO_REVISION_PATHS
 
 
 def _sync_legacy_metric_state(app, report):

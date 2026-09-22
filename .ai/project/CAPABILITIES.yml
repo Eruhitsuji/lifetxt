@@ -50,10 +50,13 @@ capabilities:
     source_requirements:
       - req-remote-backup-run-operation
       - req-remote-backup-polkit-compatibility
+      - req-remote-operation-revision-classification
     implementation_locations:
       - lifetxt/remote_backup_operations.py
       - lifetxt/remote_access.py
       - lifetxt/remote_web.py
+      - lifetxt/runtime_safety_v2.py
+      - lifetxt/surface_runtime_compat.py
       - lifetxt/config_registry.py
       - tests/test_remote_backup_operations.py
       - tests/test_server_init.py
@@ -77,13 +80,16 @@ capabilities:
       - python scripts/validate_release_docs.py --output <temporary-report> -> errors 0, ok true
       - python -m unittest tests.test_server_init.BackupScheduleConfigGenerationTests tests.test_remote_backup_operations -> Ran 24 tests, OK (#876)
       - MPLBACKEND=Agg python -m unittest discover -> Ran 4723 tests, OK (skipped=35) (#876)
+      - python -m unittest tests.test_remote_backup_operations tests.test_revision_telemetry_v2 (#880)
     related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/880
       - https://github.com/Eruhitsuji/lifetxt/issues/870
       - https://github.com/Eruhitsuji/lifetxt/issues/871
       - https://github.com/Eruhitsuji/lifetxt/issues/874
       - https://github.com/Eruhitsuji/lifetxt/issues/876
       - https://github.com/Eruhitsuji/lifetxt/issues/878
     related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/881
       - https://github.com/Eruhitsuji/lifetxt/pull/873
       - https://github.com/Eruhitsuji/lifetxt/pull/875
       - https://github.com/Eruhitsuji/lifetxt/pull/877

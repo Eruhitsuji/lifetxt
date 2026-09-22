@@ -14303,6 +14303,34 @@ traceability:
         required.
       status: implemented
 
+    - requirement_id: req-remote-operation-revision-classification
+      capability_id: cap-remote-backup-run-operation
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/880
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/881
+      changed_files_or_scope:
+        - Explicitly classify every mutating /api/remote/v1 route as an
+          authoritative data mutation or an operational/session control
+        - Exclude Remote backup admission and other operational controls from
+          generic Web revision enforcement and legacy fallback telemetry
+        - Preserve the Remote ticket mutation route's own exact If-Match/CAS
+          contract and all backup authentication, authorization, audit,
+          idempotency, cooldown, and result-tracking controls
+        - lifetxt/remote_web.py
+        - lifetxt/runtime_safety_v2.py
+        - lifetxt/surface_runtime_compat.py
+        - tests/test_remote_backup_operations.py
+      tests_or_evidence:
+        - python -m unittest tests.test_remote_backup_operations tests.test_revision_telemetry_v2
+      release_or_deployment: null
+      notes: >-
+        Bug/High correction to revision migration telemetry and required-mode
+        admission. The shared no-revision route registry is now consumed by
+        both Web revision middleware layers, avoiding divergent exclusions.
+        Independent implementation/integration review and human Merge
+        Authority approval remain required.
+      status: implemented
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

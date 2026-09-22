@@ -1,0 +1,18 @@
+schema_version: 1
+
+links:
+  - requirement_id: req-remote-operation-revision-classification
+    capability_id: cap-remote-backup-run-operation
+    epic: null
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/880
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/881
+    tests_or_evidence:
+      - tests/test_remote_backup_operations.py
+      - tests/test_revision_telemetry_v2.py
+    release_or_deployment: null
+    status: implemented
+
+gaps:
+  - description: Production observation-window reset and zero-fallback verification occur after deployment.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/291
+    disposition: post-deployment revision migration evidence

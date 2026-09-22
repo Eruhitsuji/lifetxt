@@ -1,0 +1,50 @@
+schema_version: 1
+
+change:
+  id: remote-backup-polkit-compatibility
+  title: Fail closed on legacy Polkit Remote backup dispatch
+  status: implemented
+  change_type: Security
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/878
+  related_pull_request: null
+  base_commit: bc78cff
+  target_release: next normal maintenance release
+
+scope:
+  in_scope:
+    - Probe the target host Polkit version before planning the optional Remote backup authorization rule.
+    - Reject Polkit 0.105 and any unavailable, failed, or unparseable compatibility probe.
+    - Preserve the fixed service-user, start-verb, lifetxt-backup.service authority boundary on supported hosts.
+    - Document the supported backend, failure response, and real authorization verification procedure.
+  out_of_scope:
+    - Legacy .pkla fallback or general systemd authorization.
+    - Changes to scheduled backup, server-update sudo, Remote request data, archive, retention, targets, or credentials.
+  write_scope:
+    - lifetxt/server_init.py
+    - lifetxt/config_registry.py
+    - tests/test_server_init.py
+    - tests/test_ubuntu_server_backup_docs.py
+    - docs/deployment/ubuntu-server.md
+    - docs/en/cli.md
+    - docs/en/remote.md
+    - docs/ja/remote.md
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+    - .ai/project/changes/remote-backup-polkit-compatibility/
+  forbidden_scope:
+    - .ai/managed/**
+    - lifetxt.service privilege relaxation
+    - broad or request-controlled systemd service management
+  shared_files:
+    - lifetxt/server_init.py
+    - lifetxt/config_registry.py
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+
+human_approvals_required:
+  - Independent security and implementation review of the latest commit.
+  - Integration review including a supported real Polkit/systemd host before production enablement.
+  - Merge Authority approval; the implementing AI must not merge the pull request.

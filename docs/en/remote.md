@@ -155,12 +155,21 @@ configure `server-init` to generate a root-owned Polkit rule by setting
 `service_control.remote_backup_polkit_rule_path` to (for example)
 `/etc/polkit-1/rules.d/60-lifetxt-remote-backup.rules`. The rule authorizes only
 the configured service user, the `start` verb, and `lifetxt-backup.service` via
-systemd D-Bus. Install the reviewed rule as root, reload Polkit if required by
-the distribution, and verify as the service user:
+systemd D-Bus. This path requires Polkit 0.106 or newer with an effective
+JavaScript `.rules` backend. `server-init` fails closed before displaying or
+writing the rule when `/usr/bin/pkaction --version` is missing, fails, cannot be
+parsed, or reports an older version. There is no broad legacy `.pkla` fallback.
+Install the reviewed rule as root, reload Polkit if required by the distribution,
+and verify as the service user:
 
 ```sh
 sudo -u lifetxt /bin/systemctl --no-ask-password start lifetxt-backup.service
 ```
+
+If that exact verification requests interactive authentication or exits
+non-zero, remove the rule and keep Remote `backup:run` disabled. Confirm that
+`stop lifetxt-backup.service` and another unit are still denied. Scheduled
+backup through `lifetxt-backup.timer` remains independent on unsupported hosts.
 
 The separate sudo wrapper remains for interactive `server-update`; it is not
 the Remote Web process's dispatch path. If Remote Safe Mode is disabled,

@@ -14275,6 +14275,34 @@ traceability:
         Independent review and human Merge Authority approval remain required.
       status: implemented
 
+    - requirement_id: req-remote-backup-polkit-compatibility
+      capability_id: cap-remote-backup-run-operation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/865
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/878
+      pull_request: null
+      changed_files_or_scope:
+        - Fail closed before planning or writing the rule on Polkit 0.105 or an indeterminate compatibility probe
+        - Preserve the fixed service-user, start, lifetxt-backup.service authorization on supported Polkit 0.106+ hosts
+        - Document positive start and negative stop/other-unit deployment verification
+        - lifetxt/server_init.py
+        - tests/test_server_init.py
+        - docs/deployment/ubuntu-server.md
+        - docs/en/cli.md
+        - docs/en/remote.md
+        - docs/ja/remote.md
+        - .ai/project/changes/remote-backup-polkit-compatibility/
+      tests_or_evidence:
+        - tests/test_server_init.py BackupScheduleConfigGenerationTests
+        - tests/test_ubuntu_server_backup_docs.py UbuntuServerBackupDocsTests
+      release_or_deployment: null
+      notes: >-
+        Security/High follow-up to #876/#877 after real Ubuntu 20.04-era
+        Polkit 0.105 evidence showed that the generated JavaScript rule was not
+        evaluated. No broad .pkla fallback is permitted. Independent security
+        and integration review plus human Merge Authority approval remain
+        required.
+      status: implemented
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

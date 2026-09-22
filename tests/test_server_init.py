@@ -958,6 +958,131 @@ class BackupScheduleConfigGenerationTests(unittest.TestCase):
             self.assertNotIn("restart", policy["content"])
             self.assertNotIn("lifetxt.service", policy["content"])
 
+    def test_remote_backup_polkit_rule_preflight_accepts_javascript_backend(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            policy_path = os.path.join(tmp, "60-lifetxt-remote-backup.rules")
+            config = server_init.load_config(
+                _write_json(
+                    tmp,
+                    _config(
+                        tmp,
+                        backup_schedule=_backup_schedule_config(),
+                        service_control={"remote_backup_polkit_rule_path": policy_path},
+                    ),
+                )
+            )
+
+            with mock.patch(
+                "lifetxt.server_update._run",
+                return_value=_Completed(stdout="pkaction version 0.106\n"),
+            ) as run:
+                report = server_init.run_server_init(config, yes=False)
+
+            run.assert_called_once_with(
+                ["/usr/bin/pkaction", "--version"],
+                step="remote_backup_polkit_compatibility",
+            )
+            self.assertEqual("dry_run", report["status"])
+            self.assertEqual(
+                {
+                    "status": "supported",
+                    "version": "0.106",
+                    "minimum_version": "0.106",
+                    "backend": "javascript-rules",
+                },
+                report["remote_backup_polkit_compatibility"],
+            )
+            self.assertTrue(
+                any(step.get("path") == policy_path for step in report["steps"])
+            )
+
+    def test_remote_backup_polkit_rule_preflight_rejects_legacy_backend(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            policy_path = os.path.join(tmp, "60-lifetxt-remote-backup.rules")
+            config = server_init.load_config(
+                _write_json(
+                    tmp,
+                    _config(
+                        tmp,
+                        backup_schedule=_backup_schedule_config(),
+                        service_control={"remote_backup_polkit_rule_path": policy_path},
+                    ),
+                )
+            )
+
+            with mock.patch(
+                "lifetxt.server_update._run",
+                return_value=_Completed(stdout="pkaction version 0.105\n"),
+            ):
+                with self.assertRaisesRegex(
+                    server_init.ServerInitError,
+                    r"unsupported with Polkit 0\.105.*No authorization rule",
+                ) as raised:
+                    server_init.run_server_init(config, yes=False)
+
+            self.assertEqual(
+                "remote_backup_polkit_compatibility", raised.exception.step
+            )
+            self.assertFalse(os.path.exists(policy_path))
+
+    def test_remote_backup_polkit_rule_preflight_rejects_unverified_version(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = server_init.load_config(
+                _write_json(
+                    tmp,
+                    _config(
+                        tmp,
+                        backup_schedule=_backup_schedule_config(),
+                        service_control={
+                            "remote_backup_polkit_rule_path": os.path.join(
+                                tmp, "60-lifetxt-remote-backup.rules"
+                            )
+                        },
+                    ),
+                )
+            )
+
+            with mock.patch(
+                "lifetxt.server_update._run",
+                return_value=_Completed(returncode=1, stderr="probe failed"),
+            ):
+                with self.assertRaisesRegex(
+                    server_init.ServerInitError, "could not verify"
+                ):
+                    server_init.run_server_init(config, yes=False)
+
+    def test_remote_backup_polkit_rule_preflight_rejects_missing_probe(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = server_init.load_config(
+                _write_json(
+                    tmp,
+                    _config(
+                        tmp,
+                        backup_schedule=_backup_schedule_config(),
+                        service_control={
+                            "remote_backup_polkit_rule_path": os.path.join(
+                                tmp, "60-lifetxt-remote-backup.rules"
+                            )
+                        },
+                    ),
+                )
+            )
+
+            with mock.patch(
+                "lifetxt.server_update._run",
+                side_effect=server_init.server_update.ServerUpdateError(
+                    "Command not found: /usr/bin/pkaction",
+                    step="remote_backup_polkit_compatibility",
+                ),
+            ):
+                with self.assertRaisesRegex(
+                    server_init.ServerInitError, "compatibility could not be verified"
+                ):
+                    server_init.run_server_init(config, yes=False)
+
+    def test_polkit_version_parser_accepts_modern_integer_release(self):
+        self.assertEqual((122,), server_init._parse_polkit_version("pkaction 122"))
+
     def test_remote_backup_polkit_rule_requires_scheduled_backup(self):
         with tempfile.TemporaryDirectory() as tmp:
             with self.assertRaisesRegex(

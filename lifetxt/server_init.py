@@ -83,6 +83,8 @@ DEFAULT_CONFIG = {
 }
 
 _POSIX_ACCOUNT_RE = re.compile(r"^[a-z_][a-z0-9_-]*[$]?$")
+_POLKIT_RULES_MIN_VERSION = (0, 106)
+_PKACTION_PATH = "/usr/bin/pkaction"
 
 
 def load_config(path):
@@ -1504,6 +1506,69 @@ def annotate_plan(plan):
     return plan
 
 
+def _parse_polkit_version(output):
+    """Return a numeric Polkit version tuple from ``pkaction --version``."""
+    match = re.search(r"\b(\d+(?:\.\d+)*)\b", output or "")
+    if not match:
+        return None
+    return tuple(int(part) for part in match.group(1).split("."))
+
+
+def _remote_backup_polkit_preflight(config):
+    """Fail closed unless this host supports JavaScript ``.rules`` policies.
+
+    Upstream Polkit added the JavaScript rules backend in 0.106. Ubuntu
+    20.04-era Polkit 0.105 uses the legacy backend, where installing a
+    plausible-looking ``.rules`` file does not establish the narrow systemd
+    authorization boundary required by Remote backup dispatch.
+    """
+    policy_path = config["service_control"].get("remote_backup_polkit_rule_path")
+    if not policy_path:
+        return None
+    try:
+        result = server_update._run(
+            [_PKACTION_PATH, "--version"],
+            step="remote_backup_polkit_compatibility",
+        )
+    except server_update.ServerUpdateError as exc:
+        raise ServerInitError(
+            "Hardened Remote backup dispatch is unsupported because Polkit "
+            "compatibility could not be verified: %s. Leave "
+            "service_control.remote_backup_polkit_rule_path unset and keep "
+            "Remote backup:run disabled on this host." % exc,
+            step="remote_backup_polkit_compatibility",
+        )
+    combined = "\n".join(part for part in (result.stdout, result.stderr) if part)
+    version = _parse_polkit_version(combined)
+    if result.returncode != 0 or version is None:
+        diagnostic = combined.strip() or "no version output"
+        raise ServerInitError(
+            "Hardened Remote backup dispatch is unsupported because "
+            "`/usr/bin/pkaction --version` could not verify a compatible "
+            "Polkit JavaScript rules backend (%s). Leave "
+            "service_control.remote_backup_polkit_rule_path unset and keep "
+            "Remote backup:run disabled on this host." % diagnostic,
+            step="remote_backup_polkit_compatibility",
+        )
+    if version < _POLKIT_RULES_MIN_VERSION:
+        version_text = ".".join(str(part) for part in version)
+        raise ServerInitError(
+            "Hardened Remote backup dispatch is unsupported with Polkit %s; "
+            "JavaScript .rules authorization requires Polkit 0.106 or newer. "
+            "No authorization rule was planned or written. Leave "
+            "service_control.remote_backup_polkit_rule_path unset and keep "
+            "Remote backup:run disabled; scheduled backups are unaffected."
+            % version_text,
+            step="remote_backup_polkit_compatibility",
+        )
+    return {
+        "status": "supported",
+        "version": ".".join(str(part) for part in version),
+        "minimum_version": "0.106",
+        "backend": "javascript-rules",
+    }
+
+
 def _apply_directory(step):
     os.makedirs(step["path"], exist_ok=True)
     if os.name != "nt":
@@ -1569,7 +1634,10 @@ def apply_plan(plan, command_timeout=30):
 
 
 def run_server_init(config, yes=False):
+    polkit_compatibility = _remote_backup_polkit_preflight(config)
     plan = annotate_plan(build_plan(config))
+    if polkit_compatibility is not None:
+        plan["remote_backup_polkit_compatibility"] = polkit_compatibility
     if plan.get("conflicts"):
         plan["status"] = "conflict"
         plan["message"] = (

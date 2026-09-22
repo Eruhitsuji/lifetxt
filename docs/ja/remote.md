@@ -155,12 +155,21 @@ remote:
 `/etc/polkit-1/rules.d/60-lifetxt-remote-backup.rules` に設定し、`server-init` で
 root 所有の Polkit rule を生成します。この rule は設定済み service user、`start`
 verb、`lifetxt-backup.service` の組み合わせだけを systemd D-Bus 経由で許可します。
-review 済み rule を root で install し、distribution で必要なら Polkit を reload
-した後、service user として確認します。
+この経路には、有効な JavaScript `.rules` backend を持つ Polkit 0.106 以降が必要です。
+`/usr/bin/pkaction --version` が存在しない、失敗する、解析できない、または古い version
+を返す場合、`server-init` は rule を表示・書き込みする前に fail closed します。
+広い権限を与える legacy `.pkla` fallback はありません。review 済み rule を root で
+install し、distribution で必要なら Polkit を reload した後、service user として
+確認します。
 
 ```sh
 sudo -u lifetxt /bin/systemctl --no-ask-password start lifetxt-backup.service
 ```
+
+この確認で interactive authentication が要求される、または exit code が 0 以外に
+なる場合は rule を削除し、Remote `backup:run` を無効のままにしてください。
+`stop lifetxt-backup.service` と別 unit が引き続き拒否されることも確認します。
+非対応 host でも scheduled `lifetxt-backup.timer` は独立して動作します。
 
 別の sudo wrapper は対話的な `server-update` 用のままであり、Remote Web process
 の dispatch 経路ではありません。Remote Safe Mode が無効、audit sink または runner が

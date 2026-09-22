@@ -3,7 +3,7 @@ import argparse
 import json
 from pathlib import Path
 
-def check(report: Path, baseline: Path) -> tuple[bool, str]:
+def check(report: Path, baseline: Path):
     actual = json.loads(report.read_text(encoding="utf-8"))
     expected = json.loads(baseline.read_text(encoding="utf-8"))
     measured = actual["totals"]["percent_branches"]

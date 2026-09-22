@@ -1,4 +1,4 @@
-﻿import unittest
+import unittest
 from lifetxt.parser import parse_text
 
 class ParserInvariantTests(unittest.TestCase):

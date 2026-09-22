@@ -51,6 +51,24 @@ _INSTALLED = False
 _LOGIN_PATH = "/api/remote/v1/browser/login"
 _BROWSER_SESSION_PATH = "/api/remote/v1/browser/session"
 _LOGOUT_PATH = "/api/remote/v1/browser/logout"
+_BACKUP_RUN_PATH = "/api/remote/v1/operations/backup-runs"
+
+# Every mutating Remote v1 route is classified here. Operational/session
+# controls do not mutate authoritative life.txt data and therefore must not
+# enter the Web revision migration contract. Authoritative ticket mutations
+# keep their own exact If-Match/CAS contract in remote_ticket_writes.py.
+REMOTE_MUTATING_ROUTE_REVISION_CLASSIFICATION = {
+    _LOGIN_PATH: "operational",
+    _LOGOUT_PATH: "operational",
+    "/api/remote/v1/write-check": "operational",
+    _BACKUP_RUN_PATH: "operational",
+    "/api/remote/v1/ticket-mutations": "authoritative",
+}
+_REMOTE_NON_REVISION_WRITE_PATHS = frozenset(
+    path
+    for path, classification in REMOTE_MUTATING_ROUTE_REVISION_CLASSIFICATION.items()
+    if classification == "operational"
+)
 _REMOTE_PREFIX = "/api/remote/v1/"
 
 
@@ -126,7 +144,7 @@ def install_remote_web():
 
     surface_runtime._WEB_NO_REVISION_PATHS = frozenset(
         set(surface_runtime._WEB_NO_REVISION_PATHS)
-        | {"/api/remote/v1/write-check", _LOGIN_PATH, _LOGOUT_PATH}
+        | set(_REMOTE_NON_REVISION_WRITE_PATHS)
     )
     original = webapp.create_app
 
@@ -516,7 +534,7 @@ def install_remote_web():
                 "request_id": request.state.remote_request_id,
             }
 
-        @app.post("/api/remote/v1/operations/backup-runs", status_code=202)
+        @app.post(_BACKUP_RUN_PATH, status_code=202)
         def admit_backup_run(request: Request):
             _require_v2(request)
             current = principal(request)

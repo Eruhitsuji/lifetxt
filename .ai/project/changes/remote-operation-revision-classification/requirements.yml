@@ -1,0 +1,23 @@
+schema_version: 1
+
+requirements:
+  - id: req-remote-operation-revision-classification
+    kind: MODIFIED
+    statement: >-
+      Mutating Remote routes must be explicitly classified so only
+      authoritative life.txt mutations participate in the generic Web revision
+      migration contract.
+    acceptance_criteria:
+      - Backup admission does not increment legacy fallback telemetry in observe mode.
+      - Backup admission is accepted without If-Match in required mode.
+      - Every registered mutating Remote v1 route has an explicit classification.
+      - Authoritative Remote ticket mutations retain their own exact If-Match/CAS contract.
+      - Normal Web item mutations retain generic revision enforcement.
+      - Existing Remote backup security and operational controls remain unchanged.
+    constraints:
+      - Do not broadly exempt authoritative life.txt mutation routes.
+      - Use one shared no-revision registry across both Web revision middleware layers.
+      - Do not reset or alter production telemetry as part of the code change.
+    owner: Eruhitsuji
+
+open_questions: []

@@ -87,6 +87,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/pull/873
       - https://github.com/Eruhitsuji/lifetxt/pull/875
       - https://github.com/Eruhitsuji/lifetxt/pull/877
+      - https://github.com/Eruhitsuji/lifetxt/pull/879
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       Reuses Remote Safe Mode authentication, explicit scopes, protocol

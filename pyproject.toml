@@ -43,7 +43,8 @@ dev = [
   "coverage>=7,<8",
   "mypy>=1.13,<2",
   "ruff>=0.16.1",
-  "httpx2",`n  "hypothesis>=6,<7",
+  "httpx2",
+  "hypothesis>=6,<7",
   "tomli; python_version < '3.11'"
 ]
 

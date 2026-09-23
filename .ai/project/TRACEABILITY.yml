@@ -14353,6 +14353,75 @@ traceability:
         Authority approval remain required.
       status: implemented
 
+    - requirement_id: req-cli-show-logical-item-uri
+      capability_id: cap-web-stable-item-links
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/889
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/892
+      changed_files_or_scope:
+        - Resolve lifetxt://item/<id> through the shared item_uri parser before the existing show lookup
+        - Preserve plain IDs, historical selectors, workspace semantics, and distinct malformed/not-found failures
+        - lifetxt/extra_core.py
+        - tests/test_extra_cli.py
+        - docs/en/item-links.md
+        - docs/ja/item-links.md
+      tests_or_evidence:
+        - tests/test_extra_cli.py logical URI show normal, encoded, malformed, and missing-ID cases
+      release_or_deployment: null
+      notes: >-
+        Feature/Standard extension of the existing logical-link capability;
+        no URI grammar, identity, or authorization model is added.
+      status: implemented
+
+    - requirement_id: req-backup-verify-latest
+      capability_id: cap-lifetxt-backup-v1
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/890
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/892
+      changed_files_or_scope:
+        - Add backup verify --latest with optional explicit/configured destination
+        - Select by existing manifest created_at listing semantics and reuse verify_backup results
+        - Refuse no-candidate cases and never fall back when the selected newest complete candidate is corrupt
+        - lifetxt/backup_cli.py
+        - lifetxt/cli.py
+        - tests/test_backup_cli.py
+        - docs/en/backup-format-v1.md
+        - docs/en/cli.md
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - tests/test_backup_cli.py manifest ordering, incomplete exclusion, corrupt-newest, empty destination, explicit-path regression, and CLI cases
+      release_or_deployment: null
+      notes: >-
+        Feature/Standard extension of the existing backup capability; the
+        archive format and integrity verifier are unchanged.
+      status: implemented
+
+    - requirement_id: req-web-copy-stable-item-link
+      capability_id: cap-web-stable-item-links
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/891
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/892
+      changed_files_or_scope:
+        - Add a keyboard-accessible Stable link action to the existing item-detail drawer
+        - Encode the canonical ID as the shared lifetxt://item/<id> representation without host or deployment data
+        - Reuse existing clipboard and bounded toast feedback conventions while preserving Share deep links
+        - lifetxt/web_assets.html
+        - lifetxt/web_assets_js_10.js
+        - lifetxt/web_assets_js_15.js
+        - tests/test_web_deep_link_js.py
+        - tests/test_web_assets.py
+        - docs/en/web.md
+        - docs/ja/web.md
+      tests_or_evidence:
+        - tests/test_web_deep_link_js.py normal/encoded/id-less link and clipboard success/failure cases
+        - tests/test_web_assets.py assembled Web asset integrity
+        - tests/test_web_mobile.py responsive regression coverage
+      release_or_deployment: null
+      notes: >-
+        Feature/Standard extension of the existing item-detail and logical-link
+        capability; existing deployment-specific Share behavior is unchanged.
+      status: implemented
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

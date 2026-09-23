@@ -1928,7 +1928,15 @@ def build_parser():
     backup_verify_command = backup_subparsers.add_parser(
         "verify", help="Verify one backup archive's format and integrity."
     )
-    backup_verify_command.add_argument("path", help="Path to a .ltbackup file.")
+    backup_verify_command.add_argument(
+        "path", nargs="?", help="Path to a .ltbackup file."
+    )
+    backup_verify_command.add_argument(
+        "--latest",
+        action="store_true",
+        help="Verify the newest complete backup in --destination/config.",
+    )
+    backup_verify_command.add_argument("--destination", help="Backup directory.")
     backup_verify_command.add_argument("--json", action="store_true")
     backup_verify_command.set_defaults(func=command_backup_verify)
 
@@ -15115,19 +15123,39 @@ def command_backup_status(args):
 
 
 def command_backup_verify(args):
-    from .backup_cli import run_verify
+    from .backup_cli import (
+        BackupCliError,
+        resolve_destination,
+        run_verify,
+        run_verify_latest,
+    )
 
-    result = run_verify(args.path)
+    if bool(args.path) == bool(args.latest):
+        sys.stderr.write("ERROR: Pass exactly one of BACKUP or --latest.\n")
+        return 1
+    try:
+        if args.latest:
+            destination = resolve_destination(_config(args), args.destination)
+            path, result = run_verify_latest(destination)
+        else:
+            if args.destination:
+                sys.stderr.write("ERROR: --destination is only valid with --latest.\n")
+                return 1
+            path = args.path
+            result = run_verify(path)
+    except BackupCliError as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
     if getattr(args, "json", False):
+        payload = _backup_verify_result_json(result)
+        if args.latest:
+            payload["path"] = path
         write_text(
             None,
-            json.dumps(_backup_verify_result_json(result), ensure_ascii=False, indent=2)
-            + "\n",
+            json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
         )
     else:
-        write_text(
-            None, "Backup %s: %s\n" % (args.path, "OK" if result.ok else "INVALID")
-        )
+        write_text(None, "Backup %s: %s\n" % (path, "OK" if result.ok else "INVALID"))
         for error in result.errors:
             write_text(None, "  - %s\n" % error)
     return 0 if result.ok else 1

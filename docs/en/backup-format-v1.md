@@ -114,6 +114,20 @@ never guess at how to read a manifest it does not recognize.
 
 ## CLI
 
+Verify an explicit archive as before, or verify the newest complete candidate
+in the configured destination with one command:
+
+```sh
+lifetxt backup verify path/to/backup.ltbackup
+lifetxt backup verify --latest
+lifetxt backup verify --latest --destination path/to/backups
+```
+
+`--latest` uses the manifest's `created_at` ordering, ignores temporary or
+incomplete artifacts, and verifies the selected archive with the same integrity
+verifier as an explicit path. If the newest complete candidate is corrupt, the
+command reports that failure and never falls back to an older backup.
+
 See [`lifetxt backup`](cli.md) for `create`/`status`/`verify`/`restore`/
 `prune`, and the [Ubuntu Server production runbook](../deployment/ubuntu-server.md#5-backup-and-restore)
 for scheduled local/off-host operation and a conservative restore drill.

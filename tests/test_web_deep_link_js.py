@@ -53,12 +53,10 @@ def _extract_functions_under_test(full_script):
         full_script, "function syncDrawerFromUrl", "function syncDrawerFromUrl"
     )
     build_link_start = full_script.index("function buildItemDeepLink")
-    build_link_end_marker = (
-        "function drawerShareLink() { copyItemDeepLink(drawerItem); }"
-    )
-    build_link_end = full_script.index(build_link_end_marker, build_link_start) + len(
-        build_link_end_marker
-    )
+    build_link_end_marker = "function drawerCopyStableLink()"
+    stable_start = full_script.index(build_link_end_marker, build_link_start)
+    stable_end_anchor = full_script.index("if (navigator.clipboard", stable_start)
+    build_link_end = full_script.index("\n    }", stable_end_anchor) + len("\n    }")
     build_link = full_script[build_link_start:build_link_end]
     return "\n".join([url_sync, close_drawer, share_and_restore, build_link])
 
@@ -174,6 +172,11 @@ results.deep_link_line = buildItemDeepLink({ line: 42, details: {} });
 // -- buildItemDeepLink: no line, no id -> null -------------------------------
 results.deep_link_none = buildItemDeepLink({ details: {} });
 
+// -- stable logical link: canonical id only, with shared percent encoding ---
+results.stable_link_normal = buildStableItemLink({ id: "task-006" });
+results.stable_link_encoded = buildStableItemLink({ id: "a b/c!'()*" });
+results.stable_link_idless = buildStableItemLink({ line: 42, details: {} });
+
 // -- copyItemDeepLink: success path writes the URL and announces it ---------
 clipboardText = null; clipboardFails = false; toasts.length = 0;
 copyItemDeepLink({ id: "task-007", line: 9 });
@@ -222,6 +225,18 @@ results.restore_close_drawer_item_cleared = drawerItem === null;
 Promise.resolve().then(() => {
   results.copy_success_url = clipboardText;
   results.copy_success_toast = toasts.find(x => x.message && x.message.includes("Link copied"));
+  clipboardText = null; clipboardFails = false; toasts.length = 0;
+  drawerItem = { id: "stable-1" };
+  drawerCopyStableLink();
+  return Promise.resolve();
+}).then(() => {
+  results.stable_copy_success_url = clipboardText;
+  results.stable_copy_success_toast = toasts[toasts.length - 1];
+  clipboardFails = true; toasts.length = 0;
+  drawerCopyStableLink();
+  return Promise.resolve();
+}).then(() => {
+  results.stable_copy_failure_toast = toasts[toasts.length - 1];
   process.stdout.write(JSON.stringify(results));
 });
 """
@@ -306,6 +321,21 @@ class DeepLinkJsTests(unittest.TestCase):
         results = self._run()
         self.assertIn("id=task-007", results["copy_success_url"])
         self.assertIsNotNone(results["copy_success_toast"])
+
+    def test_stable_link_uses_canonical_id_and_shared_encoding_contract(self):
+        results = self._run()
+        self.assertEqual("lifetxt://item/task-006", results["stable_link_normal"])
+        self.assertEqual(
+            "lifetxt://item/a%20b%2Fc%21%27%28%29%2A",
+            results["stable_link_encoded"],
+        )
+        self.assertIsNone(results["stable_link_idless"])
+
+    def test_copy_stable_link_reports_success_and_clipboard_failure(self):
+        results = self._run()
+        self.assertEqual("lifetxt://item/stable-1", results["stable_copy_success_url"])
+        self.assertEqual("success", results["stable_copy_success_toast"]["type"])
+        self.assertEqual("error", results["stable_copy_failure_toast"]["type"])
 
     def test_restore_from_url_reopens_by_id_without_pushing_history(self):
         results = self._run()

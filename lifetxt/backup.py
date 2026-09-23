@@ -584,9 +584,9 @@ def list_backups(backup_dir):
         rows.append((name, result))
 
     def sort_key(row):
-        _name, result = row
+        name, result = row
         created_at = (result.manifest or {}).get("created_at") or ""
-        return created_at
+        return created_at, name
 
     rows.sort(key=sort_key, reverse=True)
     return rows

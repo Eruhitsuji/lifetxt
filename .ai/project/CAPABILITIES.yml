@@ -10394,6 +10394,8 @@ capabilities:
       with browser Back/Forward history sync, a copy-direct-link action,
       and a host-independent lifetxt://item/<id> logical URI with a
       matching `lifetxt item-uri format|parse` CLI command.
+      `lifetxt show` also accepts the logical URI directly, and the Web
+      detail drawer can copy it as a separate stable-link action.
     status: active
     owner: Eruhitsuji
     source_requirements: []
@@ -10401,6 +10403,7 @@ capabilities:
       - lifetxt/webapp.py
       - lifetxt/item_uri.py
       - lifetxt/cli.py
+      - lifetxt/extra_core.py
       - lifetxt/web_assets_js_01.js
       - lifetxt/web_assets_js_03.js
       - lifetxt/web_assets_js_10.js
@@ -10412,9 +10415,12 @@ capabilities:
       - Web UI ?id= deep link / copy-direct-link action
       - lifetxt://item/<id> logical URI
       - lifetxt item-uri format|parse
+      - lifetxt show lifetxt://item/<id>
+      - Web item-detail Copy stable link action
     tests_or_evidence:
       - tests/test_lifetxt.py LifeTxtWebApiTests canonical-item-id-route tests (7 tests)
-      - tests/test_web_deep_link_js.py (16 tests)
+      - tests/test_web_deep_link_js.py
+      - tests/test_extra_cli.py logical-URI show tests
       - tests/test_item_uri.py (21 tests), tests/test_item_uri_cli.py (9 tests)
       - python -m unittest tests.test_lifetxt tests.test_web_deep_link_js tests.test_web_assets tests.test_item_uri tests.test_item_uri_cli
       - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
@@ -10424,6 +10430,8 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/838
       - https://github.com/Eruhitsuji/lifetxt/issues/839
       - https://github.com/Eruhitsuji/lifetxt/issues/840
+      - https://github.com/Eruhitsuji/lifetxt/issues/889
+      - https://github.com/Eruhitsuji/lifetxt/issues/891
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/848
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
@@ -10444,7 +10452,9 @@ capabilities:
       list/prune) with SHA-256 manifest integrity and resource-limit
       guards, a provider-independent rclone upload adapter, CLI
       orchestration (`lifetxt backup create|status|verify|restore|prune|
-      run-scheduled`), registered backup.* configuration keys, and an
+      run-scheduled`), an authoritative-metadata-based
+      `backup verify --latest` convenience, registered backup.*
+      configuration keys, and an
       opt-in server-init scheduled-backup systemd timer/service pair.
       Distinct from the periodic local Git-commit worker (#731): protects
       against host loss/disk failure/device loss rather than edit/history
@@ -10473,6 +10483,7 @@ capabilities:
       - docs/deployment/ubuntu-server.md
     public_interfaces:
       - lifetxt backup create|status|verify|restore|prune|run-scheduled
+      - lifetxt backup verify --latest [--destination DIR]
       - lifetxt.backup.create_backup/verify_backup/restore_backup/list_backups/prune_backups
       - backup.* configuration keys
       - opt-in backup_schedule server-init deployment section
@@ -10481,7 +10492,7 @@ capabilities:
     tests_or_evidence:
       - tests/test_backup.py (33 tests)
       - tests/test_backup_remote.py (11 tests, real fake-rclone-script subprocess)
-      - tests/test_backup_cli.py (19 tests)
+      - tests/test_backup_cli.py
       - tests/test_server_init.py BackupScheduleConfigGenerationTests (8 tests)
       - tests/test_web_backup_status.py (5 tests)
       - tests/test_web_backup_status_js.py (5 tests)
@@ -10493,6 +10504,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/836
       - https://github.com/Eruhitsuji/lifetxt/issues/841
       - https://github.com/Eruhitsuji/lifetxt/issues/842
+      - https://github.com/Eruhitsuji/lifetxt/issues/890
       - https://github.com/Eruhitsuji/lifetxt/issues/843
       - https://github.com/Eruhitsuji/lifetxt/issues/844
       - https://github.com/Eruhitsuji/lifetxt/issues/845

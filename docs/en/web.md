@@ -547,6 +547,12 @@ The record detail drawer's **Share** button copies this same URL (current
 origin, current unrelated query parameters preserved, `id`/`line` set to
 the open record) to the clipboard.
 
+For a record with a canonical ID, **Stable link** copies the separate
+host-independent form, such as `lifetxt://item/task-001`. The value contains no
+Web origin, port, deployment path, or credentials. Copy success or failure is
+shown with the same bounded toast feedback as **Share**; the keyboard-accessible
+button is disabled for records without a canonical ID.
+
 A logical, host-independent form of the same identity --
 `lifetxt://item/<id>` -- is also available for references that should not
 embed a specific deployment's host/port; see

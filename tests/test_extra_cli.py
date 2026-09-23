@@ -10,6 +10,7 @@ from lifetxt import config
 from lifetxt import entrypoint
 from lifetxt import extra_cli
 from lifetxt.extra_common import _rank_key
+from lifetxt.item_uri import ItemUriError
 from lifetxt.model import Item
 from tests.test_lifetxt import run_cli
 
@@ -380,6 +381,24 @@ class ExtraCliTests(unittest.TestCase):
         output = self.run_extra(["count", self.path, "--by", "project"])
         self.assertIn("alpha", output)
         self.assertIn("ideas", output)
+
+    def test_show_accepts_plain_and_logical_uri_targets(self):
+        plain = self.run_extra(["show", "t1", self.path])
+        logical = self.run_extra(["show", "lifetxt://item/t1", self.path])
+        self.assertEqual(plain, logical)
+
+    def test_show_decodes_encoded_logical_uri_ids(self):
+        path = os.path.join(self.tempdir.name, "encoded.txt")
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write('[ ] T Encoded id:"a b/c"\n')
+        output = self.run_extra(["show", "lifetxt://item/a%20b%2Fc", path])
+        self.assertIn("Encoded", output)
+
+    def test_show_distinguishes_malformed_uri_from_unknown_item(self):
+        with self.assertRaises(ItemUriError):
+            extra_cli.main(["show", "lifetxt://item/", self.path])
+        with self.assertRaisesRegex(ValueError, "Item ID not found: missing"):
+            extra_cli.main(["show", "lifetxt://item/missing", self.path])
 
     def test_invoice_and_workload_json(self):
         output = self.run_extra(

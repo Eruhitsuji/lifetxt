@@ -6,7 +6,7 @@ traceability:
       capability_id: cap-test-quality-and-regression-resistance
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/882
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/888
       changed_files_or_scope:
         - .github/workflows/ci.yml
         - scripts/check_coverage_regression.py

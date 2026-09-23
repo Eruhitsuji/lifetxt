@@ -33,3 +33,20 @@ class ParserInvariantTests(unittest.TestCase):
         self.assertFalse(any(d.severity == "error" for d in diagnostics))
         self.assertEqual(["2026-06-12"], items[0].details["due"])
         self.assertEqual(["value"], items[0].details["custom"])
+    def test_validation_switches_are_observable(self):
+        duplicate = "[ ] T One id:dup\n[ ] T Two id:dup\n"
+        _items, diagnostics = parse_text(duplicate)
+        self.assertTrue(any(d.code == "W213" for d in diagnostics))
+        _items, disabled = parse_text(duplicate, check_ids=False)
+        self.assertFalse(any(d.code == "W213" for d in disabled))
+
+        refs = "[ ] T One id:one ref:missing\n"
+        _items, ref_diagnostics = parse_text(refs)
+        self.assertTrue(any(d.code == "W215" for d in ref_diagnostics))
+        _items, refs_disabled = parse_text(refs, check_references=False)
+        self.assertFalse(any(d.code == "W215" for d in refs_disabled))
+
+    def test_custom_identifier_key_is_used_for_duplicate_detection(self):
+        text = "[ ] T One key:a\n[ ] T Two key:a\n"
+        _items, diagnostics = parse_text(text, id_key="key")
+        self.assertTrue(any(d.code == "W213" for d in diagnostics))

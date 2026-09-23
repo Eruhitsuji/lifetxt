@@ -14426,7 +14426,7 @@ traceability:
       capability_id: cap-lifetxt-mini-phase-0-contract
       epic: https://github.com/Eruhitsuji/lifetxt/issues/893
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/894
-      pull_request: pending
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/895
       changed_files_or_scope:
         - lifetxt-mini/Cargo.toml
         - lifetxt-mini/src/main.rs

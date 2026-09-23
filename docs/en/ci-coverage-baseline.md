@@ -34,3 +34,8 @@ coverage run --branch -m unittest discover
 coverage report -m
 coverage json -o coverage.json
 ```
+
+
+## Current measured baseline
+
+The 2026-09-23 CI run (35836272950) measured 12,217 of 20,572 branches covered (59.3865%). The enforced floor is 59.0% to leave a small measurement-tolerance margin; it may only be raised after review.

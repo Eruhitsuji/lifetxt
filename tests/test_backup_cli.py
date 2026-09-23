@@ -1,12 +1,14 @@
 """Tests for lifetxt/backup_cli.py: the CLI orchestration layer over
 lifetxt.backup/lifetxt.backup_remote (#836/#842/#843/#844/#847)."""
 
+import json
 import os
 import sys
 import tempfile
 import unittest
+import zipfile
 
-from lifetxt.backup import BackupError, list_backups
+from lifetxt.backup import BackupError, create_backup, list_backups
 from lifetxt.backup_cli import (
     BackupCliError,
     read_status,
@@ -18,7 +20,9 @@ from lifetxt.backup_cli import (
     run_scheduled,
     run_status,
     run_verify,
+    run_verify_latest,
 )
+from tests.test_lifetxt import run_cli
 
 
 class ResolveTests(unittest.TestCase):
@@ -104,6 +108,135 @@ class RunVerifyRestorePruneTests(unittest.TestCase):
             self.assertTrue(restore_result.ok)
             prune_result = run_prune(dest, keep_last=1)
             self.assertEqual(1, len(prune_result.kept))
+
+    def _create_at(self, source, destination, name, created_at):
+        return create_backup(
+            [source], os.path.join(destination, name), created_at=created_at
+        )
+
+    def test_verify_latest_uses_manifest_time_not_filename_or_mtime(self):
+        with tempfile.TemporaryDirectory() as d:
+            src = os.path.join(d, "life.txt")
+            dest = os.path.join(d, "backups")
+            os.makedirs(dest)
+            with open(src, "w", encoding="utf-8") as f:
+                f.write("[ ] T Task\n")
+            self._create_at(src, dest, "z-old.ltbackup", "2026-01-01T00:00:00Z")
+            newest = self._create_at(
+                src, dest, "a-new.ltbackup", "2026-02-01T00:00:00Z"
+            )
+            os.utime(newest.path, (1, 1))
+            path, result = run_verify_latest(dest)
+            self.assertEqual(newest.path, path)
+            self.assertTrue(result.ok)
+
+    def test_verify_latest_breaks_equal_manifest_times_deterministically(self):
+        with tempfile.TemporaryDirectory() as d:
+            src = os.path.join(d, "life.txt")
+            dest = os.path.join(d, "backups")
+            os.makedirs(dest)
+            with open(src, "w", encoding="utf-8") as f:
+                f.write("[ ] T Task\n")
+            stamp = "2026-01-01T00:00:00Z"
+            self._create_at(src, dest, "a.ltbackup", stamp)
+            selected = self._create_at(src, dest, "z.ltbackup", stamp)
+            path, result = run_verify_latest(dest)
+            self.assertEqual(selected.path, path)
+            self.assertTrue(result.ok)
+
+    def test_verify_latest_ignores_newer_incomplete_artifact(self):
+        with tempfile.TemporaryDirectory() as d:
+            src = os.path.join(d, "life.txt")
+            dest = os.path.join(d, "backups")
+            os.makedirs(dest)
+            with open(src, "w", encoding="utf-8") as f:
+                f.write("[ ] T Task\n")
+            complete = self._create_at(
+                src, dest, "complete.ltbackup", "2026-01-01T00:00:00Z"
+            )
+            incomplete = self._create_at(
+                src, dest, "incomplete.ltbackup", "2026-02-01T00:00:00Z"
+            )
+            with zipfile.ZipFile(incomplete.path, "r") as archive:
+                manifest = json.loads(archive.read("manifest.json"))
+                members = {
+                    name: archive.read(name)
+                    for name in archive.namelist()
+                    if name != "manifest.json"
+                }
+            manifest["status"] = "in-progress"
+            with zipfile.ZipFile(incomplete.path, "w") as archive:
+                archive.writestr("manifest.json", json.dumps(manifest))
+                for name, data in members.items():
+                    archive.writestr(name, data)
+            path, result = run_verify_latest(dest)
+            self.assertEqual(complete.path, path)
+            self.assertTrue(result.ok)
+
+    def test_verify_latest_reports_corrupt_newest_without_fallback(self):
+        with tempfile.TemporaryDirectory() as d:
+            src = os.path.join(d, "life.txt")
+            dest = os.path.join(d, "backups")
+            os.makedirs(dest)
+            with open(src, "w", encoding="utf-8") as f:
+                f.write("[ ] T Task\n")
+            self._create_at(src, dest, "old.ltbackup", "2026-01-01T00:00:00Z")
+            newest = self._create_at(src, dest, "new.ltbackup", "2026-02-01T00:00:00Z")
+            with zipfile.ZipFile(newest.path, "r") as archive:
+                manifest = archive.read("manifest.json")
+            with zipfile.ZipFile(newest.path, "w") as archive:
+                archive.writestr("manifest.json", manifest)
+                archive.writestr("files/0", b"tampered")
+            path, result = run_verify_latest(dest)
+            self.assertEqual(newest.path, path)
+            self.assertFalse(result.ok)
+
+    def test_verify_latest_fails_when_no_candidate_exists(self):
+        with tempfile.TemporaryDirectory() as d:
+            with self.assertRaisesRegex(BackupCliError, "No complete backup"):
+                run_verify_latest(d)
+
+    def test_verify_latest_cli_and_explicit_path_are_both_supported(self):
+        with tempfile.TemporaryDirectory() as d:
+            src = os.path.join(d, "life.txt")
+            dest = os.path.join(d, "backups")
+            os.makedirs(dest)
+            with open(src, "w", encoding="utf-8") as f:
+                f.write("[ ] T Task\n")
+            created = self._create_at(src, dest, "one.ltbackup", "2026-01-01T00:00:00Z")
+            stdout, stderr, code = run_cli(
+                "backup", "verify", "--latest", "--destination", dest
+            )
+            self.assertEqual(0, code, stderr)
+            self.assertIn(created.path, stdout)
+            stdout, stderr, code = run_cli("backup", "verify", created.path)
+            self.assertEqual(0, code, stderr)
+            self.assertIn("OK", stdout)
+
+    def test_verify_json_preserves_explicit_shape_and_identifies_latest_path(self):
+        with tempfile.TemporaryDirectory() as d:
+            src = os.path.join(d, "life.txt")
+            dest = os.path.join(d, "backups")
+            os.makedirs(dest)
+            with open(src, "w", encoding="utf-8") as f:
+                f.write("[ ] T Task\n")
+            created = self._create_at(src, dest, "one.ltbackup", "2026-01-01T00:00:00Z")
+            stdout, stderr, code = run_cli("backup", "verify", created.path, "--json")
+            self.assertEqual(0, code, stderr)
+            self.assertNotIn("path", json.loads(stdout))
+            stdout, stderr, code = run_cli(
+                "backup", "verify", "--latest", "--destination", dest, "--json"
+            )
+            self.assertEqual(0, code, stderr)
+            self.assertEqual(created.path, json.loads(stdout)["path"])
+
+    def test_verify_latest_cli_reports_no_backups(self):
+        with tempfile.TemporaryDirectory() as d:
+            _stdout, stderr, code = run_cli(
+                "backup", "verify", "--latest", "--destination", d
+            )
+            self.assertEqual(1, code)
+            self.assertIn("No complete backup", stderr)
 
 
 class RunScheduledTests(unittest.TestCase):

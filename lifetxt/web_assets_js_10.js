@@ -278,6 +278,7 @@
         `<button class="secondary" id="drawer-create-related-btn" onclick="drawerCreateRelated()" title="Create a new record related to this one (#770)"${hasId ? "" : " disabled"}>+ Related</button>` +
         `<button class="secondary" id="drawer-copy-id" onclick="drawerCopyId()" title="Copy item ID to clipboard"${hasId ? "" : ' style="display:none"'}>Copy ID</button>` +
         `<button class="secondary" id="drawer-share-btn" onclick="drawerShareLink()" title="Copy deep link to this item">Share</button>` +
+        `<button class="secondary" id="drawer-stable-link-btn" onclick="drawerCopyStableLink()" title="Copy host-independent stable link" aria-label="Copy stable link"${hasId ? "" : " disabled"}>Stable link</button>` +
         `<button class="secondary" onclick="drawerCopyMarkdown()" title="Copy item as Markdown">MD</button>` +
         `<button class="danger" onclick="drawerDelete()" id="drawer-delete-btn"${!item.editable ? " disabled" : ""}>Delete</button>`;
     }

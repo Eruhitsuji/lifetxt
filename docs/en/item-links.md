@@ -61,7 +61,13 @@ The same seam is available from the CLI, with no life.txt file required
 python -m lifetxt item-uri format task-001
 python -m lifetxt item-uri format task-001 --base-url https://lifetxt.example.invalid
 python -m lifetxt item-uri parse "lifetxt://item/task-001"
+python -m lifetxt show "lifetxt://item/task-001" life.txt
 ```
+
+`show` accepts either the ordinary ID or its logical URI, so the last command
+is equivalent to `lifetxt show task-001 life.txt`. Malformed `lifetxt:` URIs
+are reported as URI errors; a well-formed URI whose ID is absent remains an
+ordinary item-not-found error.
 
 ### What counts as malformed vs. unknown
 

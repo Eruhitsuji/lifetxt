@@ -36,6 +36,7 @@ __all__ = [
     "run_create",
     "run_status",
     "run_verify",
+    "run_verify_latest",
     "run_restore",
     "run_prune",
     "run_scheduled",
@@ -194,6 +195,26 @@ def run_status(destination):
 
 def run_verify(path):
     return verify_backup(path)
+
+
+def run_verify_latest(destination):
+    """Verify the newest complete backup selected by manifest metadata.
+
+    Candidate ordering and completeness come from :func:`list_backups`, the
+    same authoritative listing used by status and retention.  A corrupt newest
+    complete-looking archive is returned to the caller as a failed verification
+    rather than silently falling back to an older generation.
+    """
+    rows = list_backups(destination) if os.path.isdir(destination) else []
+    candidates = [
+        (name, result)
+        for name, result in rows
+        if result.manifest and result.manifest.get("status") == "complete"
+    ]
+    if not candidates:
+        raise BackupCliError("No complete backup candidates found in %s." % destination)
+    name, result = candidates[0]
+    return os.path.join(destination, name), result
 
 
 def run_restore(path, destination_dir, *, overwrite=False, dry_run=False):

@@ -60,7 +60,12 @@ web_deep_link("task-001", base_url="https://lifetxt.example.invalid")
 python -m lifetxt item-uri format task-001
 python -m lifetxt item-uri format task-001 --base-url https://lifetxt.example.invalid
 python -m lifetxt item-uri parse "lifetxt://item/task-001"
+python -m lifetxt show "lifetxt://item/task-001" life.txt
 ```
+
+`show` は通常の ID と論理 URI のどちらも受け付けるため、最後の command は
+`lifetxt show task-001 life.txt` と同じ record を表示する。不正な `lifetxt:` URI
+は URI error、正しい形式だが存在しない ID は通常の item-not-found error になる。
 
 ### 「不正な形式」と「未知の ID」の違い
 

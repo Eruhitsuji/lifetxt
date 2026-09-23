@@ -97,6 +97,8 @@ python -m lifetxt history-check [path ...] [--id ID] [--commit-limit N] [--json]
 python -m lifetxt freebusy [path ...] --from START --to END
 python -m lifetxt item-uri format ID [--base-url URL] [--json]
 python -m lifetxt item-uri parse URI [--json]
+python -m lifetxt backup verify BACKUP
+python -m lifetxt backup verify --latest [--destination DIR]
 python -m lifetxt query "QUERY" [path ...] [--explain]
 python -m lifetxt view list
 python -m lifetxt group list [path ...]

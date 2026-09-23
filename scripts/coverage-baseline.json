@@ -1,1 +1,1 @@
-{"minimum_branch_percent": 50.0, "policy": "Raise only after review; never lower to hide a regression."}
+{"minimum_branch_percent": 59.0, "policy": "Measured at 59.3865% (12217/20572) on CI run 35836272950; raise only after review; never lower to hide a regression."}

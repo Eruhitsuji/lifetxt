@@ -1,0 +1,11 @@
+[package]
+name = "lifetxt-mini-preservation-poc"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[profile.release]
+strip = "symbols"
+lto = true
+codegen-units = 1
+

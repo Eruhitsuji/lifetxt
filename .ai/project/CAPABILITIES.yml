@@ -37,6 +37,34 @@ capabilities:
       replaced_by: null
       deprecation_issue: null
 
+  - id: cap-lifetxt-mini-phase-0-contract
+    name: lifetxt-mini Phase 0 contract and preservation spike
+    summary: >-
+      Defines the first strict-subset Mini Runtime profile and proves a
+      dependency-free native source-preserving targeted edit without claiming
+      a production runtime.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-lifetxt-mini-phase-0
+    implementation_locations:
+      - lifetxt-mini/Cargo.toml
+      - lifetxt-mini/src/main.rs
+      - lifetxt-mini/fixtures/mixed-life.txt
+      - docs/en/lifetxt-mini-phase-0.md
+    public_interfaces: []
+    tests_or_evidence:
+      - cargo test --manifest-path lifetxt-mini/Cargo.toml
+      - cargo build --release --manifest-path lifetxt-mini/Cargo.toml
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/894
+    related_pull_requests: []
+    reuse_policy: reuse_existing_life_txt_beginner_profile_semantics
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
   - id: cap-remote-backup-run-operation
     name: Scoped authenticated Remote backup run operation
     summary: >-

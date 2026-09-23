@@ -173,6 +173,31 @@
     }
     function drawerShareLink() { copyItemDeepLink(drawerItem); }
 
+    // Browser-side representation of #840's authoritative formatter. Using
+    // encodeURIComponent for the single path segment matches Python's
+    // quote(..., safe="") contract for supported canonical ids.
+    function buildStableItemLink(item) {
+      const itemId = _drawerIdFor(item);
+      if (!itemId) return null;
+      const encoded = encodeURIComponent(itemId).replace(/[!'()*]/g, ch =>
+        "%" + ch.charCodeAt(0).toString(16).toUpperCase()
+      );
+      return "lifetxt://item/" + encoded;
+    }
+    function drawerCopyStableLink() {
+      const link = buildStableItemLink(drawerItem);
+      if (!link) { showToast(t("This record has no canonical ID."), "error"); return; }
+      const announce = (ok) => {
+        if (ok) showToast(t("Stable link copied:") + " " + link, "success");
+        else showToast(t("Copy failed. Select and copy manually:") + " " + link, "error", 8000);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(link).then(() => announce(true), () => announce(false));
+      } else {
+        announce(false);
+      }
+    }
+
     // ── Context menu: copy line number + share link ───────────────
     function ctxCopyLineNumber() {
       const t = ctxTarget; closeCtxMenu();

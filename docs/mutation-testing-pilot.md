@@ -35,3 +35,20 @@ is a periodic/manual audit recommendation, not a required perfect score.
   WSL for the current release.
 - Manual source mutation: rejected as the primary evidence because it would not
   provide a repeatable mutant inventory or standard survivor classification.
+## Completed pilot result (WSL, 2026-09-23)
+
+The bounded `lifetxt/parser.py` run completed with the following result from
+`mutmut results`:
+
+| Status | Count | Interpretation |
+| --- | ---: | --- |
+| killed | 0 | No mutant was detected by the selected focused test association |
+| survived | 886 | Candidate missing assertions; requires targeted follow-up review |
+| no tests | 157 | Parser helper functions have no associated focused test |
+| not checked | 0 | Mutation execution completed for the generated inventory |
+
+This is a useful pilot result, not a quality score to optimize blindly. The
+next action is to add focused tests for selected high-risk survivors and rerun a
+smaller named mutant set. The result also confirms that the current property
+and boundary tests do not exercise enough parser internals to support a broad
+mutation gate; mutation testing remains a manual audit rather than normal CI.

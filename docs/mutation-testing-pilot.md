@@ -68,3 +68,10 @@ that execution completed and exposed a broad assertion gap in parser internals;
 no survivor is being misreported as an equivalent mutation. A future follow-up
 should narrow the target to specific parser functions and add semantic tests
 before treating mutation score as a quality gate.
+## Survivor classification example
+
+`lifetxt.parser.x_parse_text__mutmut_10` was inspected after the follow-up
+run. It changes `current_has_error = False` to `None`; both values are false in
+all conditionals using this flag, so this is an equivalent mutation with no
+observable semantic change. It is documented rather than forcing a brittle test
+that asserts the implementation's sentinel value.

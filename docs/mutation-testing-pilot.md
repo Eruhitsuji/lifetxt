@@ -52,3 +52,19 @@ next action is to add focused tests for selected high-risk survivors and rerun a
 smaller named mutant set. The result also confirms that the current property
 and boundary tests do not exercise enough parser internals to support a broad
 mutation gate; mutation testing remains a manual audit rather than normal CI.
+## Follow-up result after parser regression tests (WSL, 2026-09-23)
+
+After adding quoted-value, custom-key, CRLF, and continuation regression tests,
+we reran the configured pilot. The latest `mutmut results` summary was:
+
+- killed: 0
+- survived: 894
+- no tests: 26
+- not checked: 0
+
+The count is not directly comparable with the first run because mutmut's
+inventory changed after the test/configuration updates. The important result is
+that execution completed and exposed a broad assertion gap in parser internals;
+no survivor is being misreported as an equivalent mutation. A future follow-up
+should narrow the target to specific parser functions and add semantic tests
+before treating mutation score as a quality gate.

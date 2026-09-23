@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 165498)
-Total output lines: 18805
-
 import argparse
 import collections
 import contextlib
@@ -5625,7 +5622,7322 @@ def _import_lifetxtz_preset(path, args):
         payload_text, id_key=id_key, check_ids=False, check_references=False
     )
     if _has_error(diagnostics):
-        _print_diagnostics(dia…65498 tokens truncated…e_text(None, "Removed %s from %s\n" % (args.path, target))
+        _print_diagnostics(diagnostics)
+        raise SystemExit(1)
+    _print_warnings(diagnostics)
+    return items
+
+
+def command_demo(args):
+    if args.count < 0:
+        raise ValueError("--count must be zero or greater.")
+    if args.append and not args.output:
+        raise ValueError("--append requires --output.")
+    base_datetime = parse_demo_base_datetime(args.date)
+    kinds = parse_demo_types(args.types)
+    start_index = args.start_index
+    if start_index is None:
+        start_index = _next_demo_start_index(args.output) if args.append else 1
+    if start_index < 1:
+        raise ValueError("--start-index must be 1 or greater.")
+    output = demo_text(
+        count=args.count,
+        base_datetime=base_datetime,
+        types=kinds,
+        seed=args.seed,
+        project=args.project,
+        people=args.person,
+        start_index=start_index,
+    )
+
+    if not args.no_check:
+        items, diagnostics = parse_text(output)
+        if len(items) != args.count:
+            diagnostics.append(
+                Diagnostic(
+                    "error",
+                    "E301",
+                    "Generated %d item(s), expected %d." % (len(items), args.count),
+                )
+            )
+        if _has_error(diagnostics):
+            _print_diagnostics(diagnostics)
+            return 1
+        _print_warnings(diagnostics)
+
+    if args.output:
+        _ensure_writable_path(args.output, _config(args), "demo")
+        if args.append:
+            append_text(args.output, output)
+            action = "Appended"
+        else:
+            write_text(args.output, output)
+            action = "Generated"
+        sys.stdout.write(
+            "%s %d demo item(s) to %s\n" % (action, args.count, args.output)
+        )
+    else:
+        write_text(None, output)
+    return 0
+
+
+def _next_demo_start_index(path):
+    if not path:
+        return 1
+    try:
+        text = read_text(path)
+    except FileNotFoundError:
+        return 1
+    import re as _re
+
+    numbers = [
+        int(match.group(1)) for match in _re.finditer(r"\bdemo_[a-z]+_(\d+)\b", text)
+    ]
+    return (max(numbers) + 1) if numbers else 1
+
+
+def command_markdown(args):
+    items, diagnostics = _parse_or_exit(args.paths, _config(args))
+    items = _filter_items_from_args(items, args)
+    records = markdown_records(items, fields=args.field)
+
+    if args.format == "json":
+        output = json.dumps(
+            records,
+            ensure_ascii=False,
+            indent=2 if args.pretty else None,
+            separators=None if args.pretty else (",", ":"),
+        )
+        write_text(args.output, output + "\n")
+    elif args.format == "jsonl":
+        output = "\n".join(
+            json.dumps(record, ensure_ascii=False, separators=(",", ":"))
+            for record in records
+        )
+        if output:
+            output += "\n"
+        write_text(args.output, output)
+    elif args.format == "text":
+        write_text(args.output, markdown_records_to_text(records))
+    else:
+        write_text(args.output, markdown_records_to_html(records))
+
+    _print_warnings(diagnostics)
+    return 0
+
+
+def _occurrence_export_records(items, args):
+    if not getattr(args, "after", None) or not getattr(args, "before", None):
+        raise ValueError("--occurrences requires both --after and --before.")
+    range_start, range_end = parse_optional_time_range(args.after, args.before)
+    records = agenda_records(items, range_start, range_end)
+    filtered = filter_agenda_records(
+        records,
+        open_only=getattr(args, "open", False),
+        statuses=getattr(args, "status", None),
+        kinds=getattr(args, "kinds", None),
+        projects=getattr(args, "project", None),
+        tags=getattr(args, "tag", None),
+        tag_all=getattr(args, "tag_all", None),
+        exclude_tags=getattr(args, "exclude_tag", None),
+        users=getattr(args, "user", None),
+        persons=getattr(args, "person", None),
+        owners=getattr(args, "owner", None),
+        assignees=getattr(args, "assignee", None),
+        attendees=getattr(args, "attendee", None),
+        senders=getattr(args, "sender", None),
+        recipients=getattr(args, "recipient", None),
+        teams=getattr(args, "team", None),
+        detail_filters=getattr(args, "detail", None),
+        text=getattr(args, "text", None),
+        user_aliases=config_user_aliases(_config(args)),
+        team_members=config_team_members(_config(args)),
+        team_aliases=config_team_aliases(_config(args)),
+        tag_aliases=config_tag_aliases(_config(args)),
+    )
+    return _flatten_occurrence_records(filtered)
+
+
+def _flatten_occurrence_records(records):
+    flattened = []
+    occurrence_keys = {
+        "when",
+        "key",
+        "matches",
+        "generated",
+        "occurrence_start",
+        "occurrence_end",
+        "occurrence_index",
+        "repeat_rule",
+    }
+    for record in records:
+        matches = record.get("matches") or []
+        if not matches:
+            flattened.append(record)
+            continue
+        for match in matches:
+            occurrence = OrderedDict()
+            occurrence["when"] = format_match_time(match)
+            occurrence["key"] = match.get("key", record.get("key", ""))
+            for key, value in record.items():
+                if key not in occurrence_keys:
+                    occurrence[key] = value
+            occurrence["matches"] = [match]
+            occurrence["generated"] = bool(
+                "occurrence_index" in match or "repeat" in match
+            )
+            start = match.get("start")
+            end = match.get("end")
+            if start:
+                occurrence["occurrence_start"] = start
+            if end:
+                occurrence["occurrence_end"] = end
+            if "occurrence_index" in match:
+                occurrence["occurrence_index"] = match["occurrence_index"]
+            if "repeat" in match:
+                occurrence["repeat_rule"] = match["repeat"]
+            flattened.append(occurrence)
+    flattened.sort(
+        key=lambda record: (
+            record.get("occurrence_start") or record.get("when") or "",
+            record.get("line") or 0,
+        )
+    )
+    return flattened
+
+
+def occurrence_records_to_csv(records):
+    import csv as _csv
+    import io as _io
+
+    fields = (
+        "when",
+        "key",
+        "line",
+        "source_id",
+        "occurrence_start",
+        "occurrence_end",
+        "occurrence_index",
+        "repeat_rule",
+        "status",
+        "type",
+        "title",
+        "blocked",
+        "blocked_by",
+        "details",
+        "text",
+    )
+    output = _io.StringIO()
+    writer = _csv.DictWriter(output, fieldnames=fields, lineterminator="\n")
+    writer.writeheader()
+    for record in records:
+        row = OrderedDict()
+        for field in fields:
+            value = record.get(field, "")
+            if field in ("details", "blocked_by") and value:
+                value = json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+            elif isinstance(value, bool):
+                value = "true" if value else "false"
+            elif value is None:
+                value = ""
+            row[field] = value
+        writer.writerow(row)
+    return output.getvalue()
+
+
+def markdown_records(items, fields=None):
+    selected_fields = _markdown_fields(fields)
+    records = []
+    for item in items:
+        for field in selected_fields:
+            if field == "title":
+                raw_values = [item.title]
+            else:
+                raw_values = item.details.get(field) or []
+            for index, raw in enumerate(raw_values):
+                inline = field == "title"
+                records.append(
+                    OrderedDict(
+                        [
+                            ("source", getattr(item, "source", None)),
+                            ("line", item.line),
+                            ("type", item.kind),
+                            ("status", item.status),
+                            ("title", item.title),
+                            ("field", field),
+                            ("index", index),
+                            ("raw", raw),
+                            ("html", markdown_to_html(raw, inline=inline)),
+                            ("text", markdown_to_plain(raw)),
+                        ]
+                    )
+                )
+    return records
+
+
+def markdown_records_to_html(records):
+    lines = []
+    for record in records:
+        title = markdown_to_html(record.get("title", ""), inline=True)
+        location = _markdown_location(record)
+        field = html.escape(str(record.get("field") or ""), quote=True)
+        kind = html.escape(str(record.get("type") or ""), quote=True)
+        status = html.escape(str(record.get("status") or ""), quote=True)
+        lines.append(
+            '<article class="lifetxt-markdown" data-field="%s" data-type="%s" data-status="%s">'
+            % (field, kind, status)
+        )
+        lines.append(
+            '<header><span class="lifetxt-markdown-meta">%s</span><span class="lifetxt-markdown-title">%s</span></header>'
+            % (html.escape(location), title)
+        )
+        lines.append(
+            '<div class="lifetxt-markdown-content">%s</div>'
+            % (record.get("html") or "")
+        )
+        lines.append("</article>")
+    if lines:
+        return "\n".join(lines) + "\n"
+    return ""
+
+
+def markdown_records_to_text(records):
+    chunks = []
+    for record in records:
+        header = "%s %s %s %s" % (
+            _markdown_location(record),
+            record.get("status") or "",
+            record.get("type") or "",
+            record.get("field") or "",
+        )
+        text = markdown_to_plain(record.get("raw") or "")
+        chunks.append("%s\n%s" % (header.strip(), text))
+    if chunks:
+        return "\n\n".join(chunks) + "\n"
+    return ""
+
+
+def _markdown_fields(fields):
+    raw_fields = _split_csv_args(fields) or ["body"]
+    selected = []
+    for field in raw_fields:
+        key = field.strip().lower()
+        if key == "all":
+            candidates = ("title", "body", "note")
+        elif key in ("title", "body", "note"):
+            candidates = (key,)
+        else:
+            raise ValueError("--field must be title, body, note, or all.")
+        for candidate in candidates:
+            if candidate not in selected:
+                selected.append(candidate)
+    return selected
+
+
+def _markdown_location(record):
+    source = record.get("source") or ""
+    line = record.get("line")
+    if source and line:
+        return "%s:%s" % (source, line)
+    if line:
+        return "line %s" % line
+    if source:
+        return source
+    return "item"
+
+
+def _expand_horizon(args):
+    """The date recurring events are materialized up to, or None for the default."""
+    value = getattr(args, "expand_until", None)
+    if not value:
+        return None
+    parsed = parse_date_or_datetime(str(value))
+    if parsed is None:
+        raise ValueError("--expand-until %r is not a date." % value)
+    if isinstance(parsed, datetime.datetime):
+        return parsed
+    return datetime.datetime(parsed.year, parsed.month, parsed.day, 23, 59, 59)
+
+
+_IMPORT_EXTENSION_PRESETS = {
+    ".ics": "ics",
+    ".md": "markdown",
+    ".markdown": "markdown",
+    ".db": "sqlite",
+    ".sqlite": "sqlite",
+    ".sqlite3": "sqlite",
+    ".lifetxtz": "lifetxtz",
+}
+
+#: Every supported --preset value, in the order shown to users. Extended by
+#: register_import_preset() for formats that ship in their own module
+#: (sqlite: #691, lifetxtz: #693) so command_import_ics/command_import don't
+#: need to import those modules unconditionally.
+IMPORT_PRESETS = ["ics", "markdown", "todoist", "github", "life"]
+
+#: preset name -> (path, items, args) -> list[Item]. Registered by codec
+#: modules that need direct file access (binary formats): sqlite/lifetxtz.
+#: The "life" preset is handled inline below since it only needs read_text.
+IMPORT_PRESET_HANDLERS = {}
+
+
+def register_import_preset(name, handler):
+    """Register an additional `import --preset NAME` handler.
+
+    ``handler(path, args) -> list[Item]`` receives the raw path (never
+    pre-read as text, since binary formats such as sqlite/lifetxtz cannot be
+    decoded as UTF-8) and must raise on invalid/corrupt/unsupported input
+    before returning -- see #691/#693.
+    """
+    IMPORT_PRESETS.append(name)
+    IMPORT_PRESET_HANDLERS[name] = handler
+
+
+def _compound_extension_preset(candidate):
+    """Detect an unambiguous compound extension such as *.life.txt.
+
+    Plain os.path.splitext only ever returns the final extension, so
+    "subset.life.txt" resolves to ".txt" -- indistinguishable from an
+    arbitrary text file. Native life.txt is only inferred for the explicit,
+    unambiguous ".life.txt" suffix (#689); a plain ".txt" is never guessed.
+    """
+    lower = candidate.lower()
+    if lower.endswith(".life.txt"):
+        return "life"
+    return None
+
+
+def command_import(args):
+    """Routing-only dispatcher: infer --preset from the input extension when
+    omitted, then delegate entirely to the existing command_import_ics
+    implementation. No ICS/Markdown/Todoist/GitHub conversion logic lives
+    here -- see the module docstring convention `import-ics` already
+    established.
+    """
+    preset = getattr(args, "preset", None)
+    if not preset:
+        candidate = next(
+            (p for p in (args.paths or []) if p and p != "-"),
+            None,
+        )
+        if candidate is None:
+            raise ValueError(
+                "Cannot determine the import format without --preset. Reading "
+                "from stdin requires an explicit --preset: %s."
+                % ", ".join(IMPORT_PRESETS)
+            )
+        preset = _compound_extension_preset(candidate)
+        if preset is None:
+            ext = os.path.splitext(candidate)[1].lower()
+            preset = _IMPORT_EXTENSION_PRESETS.get(ext)
+        if preset is None:
+            raise ValueError(
+                "Cannot determine the import format for '%s'. Pass --preset "
+                "explicitly: %s." % (candidate, ", ".join(IMPORT_PRESETS))
+            )
+        args.preset = preset
+    return command_import_ics(args)
+
+
+def command_import_ics(args):
+    if args.append and not args.output:
+        raise ValueError("--append requires --output.")
+
+    items = []
+    preset = getattr(args, "preset", "ics") or "ics"
+    for path in _normalize_paths(args.paths):
+        if preset in IMPORT_PRESET_HANDLERS:
+            items.extend(IMPORT_PRESET_HANDLERS[preset](path, args))
+            continue
+        if preset == "life":
+            text = read_text(path)
+            path_items, path_diagnostics = decode_conversion_text(
+                "life",
+                text,
+                id_key=id_key_from_config(_config(args)),
+                validate=False,
+            )
+            if _has_error(path_diagnostics):
+                _print_diagnostics(path_diagnostics)
+                return 1
+            _print_warnings(path_diagnostics)
+            directives = parse_directives(text)
+            if directives:
+                sys.stderr.write(
+                    "WARNING: %s: %d directive line(s) (%s) are not preserved "
+                    "by `import --preset life`; edit the file directly if you "
+                    "need them.\n"
+                    % (path, len(directives), ", ".join(sorted(directives)))
+                )
+            items.extend(path_items)
+            continue
+        text = read_text(path)
+        if preset == "ics":
+            if getattr(args, "expand_rrule", False):
+                items.extend(
+                    items_from_ics_text(
+                        text,
+                        project=args.project,
+                        tags=args.tag,
+                        expand=True,
+                        expand_until=_expand_horizon(args),
+                        expand_count=getattr(args, "expand_count", None),
+                    )
+                )
+            else:
+                decoded, _ = decode_conversion_text(
+                    "ics",
+                    text,
+                    project=args.project,
+                    tags=args.tag,
+                    validate=False,
+                )
+                items.extend(decoded)
+        elif preset == "markdown":
+            items.extend(
+                _items_from_markdown_task_text(
+                    text,
+                    project=args.project,
+                    kind="T",
+                    tags=args.tag,
+                    source="markdown",
+                )
+            )
+        elif preset == "todoist":
+            items.extend(
+                _items_from_todoist_csv_text(
+                    text,
+                    project=args.project,
+                    tags=args.tag,
+                )
+            )
+        elif preset == "github":
+            items.extend(
+                _items_from_github_issues_json_text(
+                    text,
+                    project=args.project,
+                    tags=args.tag,
+                )
+            )
+        else:
+            raise ValueError("Unsupported import preset: %s" % preset)
+
+    diagnostics = []
+    for item in items:
+        diagnostics.extend(validate_item(item))
+    if _has_error(diagnostics):
+        _print_diagnostics(diagnostics)
+        return 1
+    _print_warnings(diagnostics)
+
+    # Native life.txt input already carries its own exact original text per
+    # item (source_text, including | continuation lines); reuse it verbatim
+    # for round-trip fidelity instead of re-canonicalizing it. Every other
+    # preset builds synthetic items with no original life.txt text to
+    # preserve, so those keep the existing canonical rendering.
+    output = _items_to_life_text(items, canonical=(preset != "life"))
+    if args.append:
+        _ensure_writable_path(args.output, _config(args), "import-ics")
+        append_text(args.output, output)
+    else:
+        _ensure_writable_path(args.output, _config(args), "import-ics")
+        write_text(args.output, output)
+    return 0
+
+
+def _items_from_markdown_task_text(
+    text, project=None, kind="T", tags=None, source=None, github_refs=False
+):
+    from .conversion import items_from_markdown_task_list_text
+
+    return items_from_markdown_task_list_text(
+        text,
+        project=project,
+        kind=kind,
+        tags=tags,
+        source=source,
+        github_refs=github_refs,
+    )
+
+
+def _items_from_todoist_csv_text(text, project=None, tags=None):
+    import csv as _csv
+
+    reader = _csv.DictReader(text.splitlines())
+    items = []
+    for row in reader:
+        normalized = {
+            _normalize_import_key(key): (value or "").strip()
+            for key, value in row.items()
+            if key is not None
+        }
+        title = _first_import_value(normalized, "content", "task", "title", "name")
+        if not title:
+            continue
+        details = OrderedDict()
+        _add_preset_detail(details, "source", "todoist")
+        uid = _first_import_value(normalized, "id", "task_id", "uid")
+        _add_preset_detail(details, "uid", uid)
+        if uid:
+            _add_preset_detail(details, "id", "todoist-%s" % uid)
+        _add_preset_detail(
+            details,
+            "project",
+            project or _first_import_value(normalized, "project", "project_name"),
+        )
+        _add_preset_detail(
+            details,
+            "note",
+            _first_import_value(normalized, "description", "comment", "note"),
+        )
+        _add_preset_detail(
+            details,
+            "due",
+            _first_import_value(normalized, "date", "due", "due_date", "deadline"),
+        )
+        _add_preset_detail(
+            details,
+            "assignee",
+            _first_import_value(normalized, "responsible", "assignee", "assigned_to"),
+        )
+        _add_preset_detail(
+            details,
+            "owner",
+            _first_import_value(normalized, "author", "creator", "created_by"),
+        )
+        _add_preset_detail(
+            details,
+            "priority",
+            _todoist_priority(
+                _first_import_value(normalized, "priority", "priority_name")
+            ),
+        )
+        for label in _split_preset_list(
+            _first_import_value(normalized, "labels", "label", "tags")
+        ):
+            _add_preset_detail(details, "tag", label)
+        for tag in tags or []:
+            _add_preset_detail(details, "tag", tag)
+        _add_preset_detail(
+            details,
+            "created",
+            _date_prefix(
+                _first_import_value(normalized, "created", "created_at", "date_added")
+            ),
+        )
+        completed = _date_prefix(
+            _first_import_value(
+                normalized, "completed", "completed_at", "date_completed", "done"
+            )
+        )
+        if completed:
+            _add_preset_detail(details, "done", completed)
+        status = (
+            "[x]"
+            if completed
+            or _looks_done(
+                _first_import_value(
+                    normalized, "status", "state", "complete", "completed"
+                )
+            )
+            else "[ ]"
+        )
+        items.append(Item(status, "T", title.replace(" ", "_"), details))
+    return items
+
+
+def _items_from_github_issues_json_text(text, project=None, tags=None):
+    payload = json.loads(text)
+    if isinstance(payload, dict):
+        issues = (
+            payload.get("items") or payload.get("issues") or payload.get("data") or []
+        )
+    else:
+        issues = payload
+    if not isinstance(issues, list):
+        raise ValueError(
+            "GitHub preset expects a JSON array or an object containing items/issues/data."
+        )
+
+    items = []
+    for issue in issues:
+        if not isinstance(issue, dict) or "pull_request" in issue:
+            continue
+        number = issue.get("number")
+        title = str(issue.get("title") or "").strip()
+        if not title:
+            continue
+        state = str(issue.get("state") or "open").lower()
+        status = "[x]" if state in ("closed", "completed", "done") else "[ ]"
+        details = OrderedDict()
+        _add_preset_detail(details, "source", "github")
+        if number is not None:
+            _add_preset_detail(details, "id", "github-%s" % number)
+            _add_preset_detail(details, "ref", "github-%s" % number)
+        _add_preset_detail(details, "url", issue.get("html_url") or issue.get("url"))
+        _add_preset_detail(details, "project", project)
+        _add_preset_detail(details, "note", issue.get("body"))
+        user = issue.get("user") if isinstance(issue.get("user"), dict) else None
+        _add_preset_detail(details, "owner", user.get("login") if user else None)
+        for assignee in _github_people(issue):
+            _add_preset_detail(details, "assignee", assignee)
+        for label in _github_labels(issue):
+            _add_preset_detail(details, "tag", label)
+        for tag in tags or []:
+            _add_preset_detail(details, "tag", tag)
+        _add_preset_detail(details, "created", _date_prefix(issue.get("created_at")))
+        _add_preset_detail(details, "updated", _date_prefix(issue.get("updated_at")))
+        closed_at = _date_prefix(issue.get("closed_at"))
+        if closed_at:
+            _add_preset_detail(details, "done", closed_at)
+        items.append(Item(status, "T", title.replace(" ", "_"), details))
+    return items
+
+
+def _normalize_import_key(key):
+    return str(key or "").strip().lower().replace(" ", "_").replace("-", "_")
+
+
+def _first_import_value(row, *keys):
+    for key in keys:
+        value = row.get(key)
+        if value:
+            return value
+    return None
+
+
+def _split_preset_list(value):
+    if not value:
+        return []
+    parts = []
+    for raw in str(value).replace(";", ",").split(","):
+        cleaned = raw.strip()
+        if cleaned:
+            parts.append(cleaned)
+    return parts
+
+
+def _todoist_priority(value):
+    if not value:
+        return None
+    raw = str(value).strip().lower()
+    mapping = {
+        "p1": "A",
+        "4": "A",
+        "urgent": "A",
+        "p2": "B",
+        "3": "B",
+        "high": "B",
+        "p3": "C",
+        "2": "C",
+        "medium": "C",
+        "p4": "D",
+        "1": "D",
+        "low": "D",
+        "normal": "D",
+    }
+    return mapping.get(raw, str(value).strip())
+
+
+def _looks_done(value):
+    if value is None:
+        return False
+    return str(value).strip().lower() in (
+        "1",
+        "yes",
+        "true",
+        "done",
+        "completed",
+        "complete",
+        "closed",
+        "x",
+    )
+
+
+def _date_prefix(value):
+    if not value:
+        return None
+    raw = str(value).strip()
+    if not raw:
+        return None
+    if len(raw) >= 10 and raw[4:5] == "-" and raw[7:8] == "-":
+        if len(raw) >= 16 and ("T" in raw[:20] or " " in raw[:20]):
+            return raw.replace(" ", "T")[:16].rstrip("Z")
+        return raw[:10]
+    return raw
+
+
+def _github_people(issue):
+    people = []
+    assignee = issue.get("assignee")
+    if isinstance(assignee, dict) and assignee.get("login"):
+        people.append(assignee["login"])
+    for entry in issue.get("assignees") or []:
+        if (
+            isinstance(entry, dict)
+            and entry.get("login")
+            and entry["login"] not in people
+        ):
+            people.append(entry["login"])
+    return people
+
+
+def _github_labels(issue):
+    labels = []
+    for label in issue.get("labels") or []:
+        if isinstance(label, dict):
+            value = label.get("name")
+        else:
+            value = label
+        if value:
+            labels.append(str(value))
+    return labels
+
+
+def _add_preset_detail(details, key, value):
+    if value is None:
+        return
+    if isinstance(value, bool):
+        value = "true" if value else "false"
+    text = str(value).strip()
+    if not text:
+        return
+    details.setdefault(key, []).append(text)
+
+
+def command_sync_ics(args):
+    sources = _ics_sync_sources(args)
+    items = []
+    for index, source in enumerate(sources, 1):
+        data = fetch_url(source["url"], args.timeout, args.user_agent, index)
+        cache_dir = args.cache_dir or _sync_config(args).get("cache_dir")
+        if cache_dir and not args.dry_run:
+            cache_name = _ics_cache_name(source, index)
+            write_bytes(os.path.join(cache_dir, cache_name), data)
+        project = args.project if args.project is not None else source.get("project")
+        if project is None:
+            project = _sync_config(args).get("project")
+        tags = list(args.tag) if args.tag else list(source.get("tags", []))
+        if not tags:
+            tags = list(_sync_config(args).get("tags", []))
+        items.extend(
+            items_from_ics_text(
+                decode_ics_bytes(data),
+                project=project,
+                tags=tags,
+                expand=bool(getattr(args, "expand_rrule", False)),
+                expand_until=_expand_horizon(args),
+                expand_count=getattr(args, "expand_count", None),
+            )
+        )
+
+    items = _dedupe_items_by_detail_id(items)
+    output = _validated_life_text_or_exit(items)
+    if output is None:
+        return 1
+    output_path = args.output or _sync_config(args).get("output")
+    if getattr(args, "merge_existing", False):
+        if not output_path:
+            raise ValueError(
+                "--merge-existing requires --output or sync_ics.output in config."
+            )
+        existing_text = read_text(output_path) if os.path.exists(output_path) else ""
+        output = _merge_generated_items_into_text(
+            existing_text,
+            items,
+            id_key=id_key_from_config(_config(args)),
+            soft_delete_missing=getattr(args, "soft_delete_missing", False),
+        )
+    if args.dry_run:
+        write_text(None, output)
+    else:
+        if output_path:
+            ensure_parent_dir(output_path)
+            _ensure_writable_path(
+                output_path, _config(args), "sync-ics", allow_generated=True
+            )
+        write_text(output_path, output)
+    return 0
+
+
+def _dedupe_items_by_detail_id(items, id_key="id"):
+    by_id = OrderedDict()
+    no_id = []
+    for item in items:
+        values = item.details.get(id_key, [])
+        item_id = str(values[0]) if values else ""
+        if not item_id:
+            no_id.append(item)
+            continue
+        by_id[item_id] = item
+    return no_id + list(by_id.values())
+
+
+def _merge_generated_items_into_text(
+    existing_text, generated_items, id_key="id", soft_delete_missing=False
+):
+    if not existing_text:
+        return _items_to_life_text(generated_items, canonical=True)
+    existing_items, diagnostics = parse_text(
+        existing_text, id_key=id_key, check_ids=False, check_references=False
+    )
+    if _has_error(diagnostics):
+        raise ValueError("Existing sync output has parse errors; refusing to merge.")
+
+    generated_by_id = OrderedDict()
+    for item in generated_items:
+        item_ids = item.details.get(id_key, [])
+        if item_ids:
+            generated_by_id[str(item_ids[0])] = item
+
+    used_ids = set()
+    replacements = {}
+    for item in existing_items:
+        item_ids = item.details.get(id_key, [])
+        item_id = str(item_ids[0]) if item_ids else ""
+        if not item_id:
+            continue
+        if item_id in generated_by_id:
+            replacements[item.line] = (
+                getattr(item, "end_line", item.line),
+                item_to_line(generated_by_id[item_id]) + "\n",
+            )
+            used_ids.add(item_id)
+            continue
+        if (
+            soft_delete_missing
+            and item.kind == "E"
+            and "ics" in item.details.get("source", [])
+        ):
+            from copy import deepcopy as _deepcopy
+
+            canceled = _deepcopy(item)
+            canceled.status = "[-]"
+            if not canceled.details.get("reason"):
+                canceled.details["reason"] = ["missing_from_feed"]
+            canceled.source_text = None
+            replacements[item.line] = (
+                getattr(item, "end_line", item.line),
+                item_to_line(canceled) + "\n",
+            )
+
+    lines = existing_text.splitlines(keepends=True)
+    merged = []
+    index = 1
+    while index <= len(lines):
+        replacement = replacements.get(index)
+        if replacement:
+            end_line, text = replacement
+            merged.append(text)
+            index = end_line + 1
+            continue
+        merged.append(lines[index - 1])
+        index += 1
+
+    new_lines = []
+    for item_id, item in generated_by_id.items():
+        if item_id not in used_ids:
+            new_lines.append(item_to_line(item))
+    if new_lines:
+        if merged and merged[-1] and not merged[-1].endswith(("\n", "\r")):
+            merged.append("\n")
+        if merged and any(line.strip() for line in merged):
+            merged.append("\n")
+        merged.append("\n".join(new_lines) + "\n")
+    return "".join(merged)
+
+
+def _prepare_serve(args):
+    """Resolve config/workspace/host/port and build the app for `serve`/`web`.
+
+    Both commands run the exact same authoritative Web server; this is the
+    one place that decides what to bind and how to build it, so neither
+    caller can drift from the other's safety/resolution behavior.
+    """
+    try:
+        import uvicorn
+
+        from .webapp import create_app
+    except ImportError as exc:
+        raise ValueError(
+            "Web dependencies are not installed. Run: pip install -r requirements-web.txt"
+        ) from exc
+
+    web_config = config_section(_config(args), "web")
+    paths = _normalize_paths(
+        list(args.paths)
+        if args.paths
+        else (config_paths(_config(args)) or ["life.txt"]),
+        _config(args),
+        stdin_when_empty=False,
+    )
+    from .paths import resolve_write_target
+
+    writable_path = resolve_write_target(
+        paths, args.write_file or config_write_file(_config(args))
+    )
+    host = args.host or web_config.get("host") or "127.0.0.1"
+    port = args.port or int(web_config.get("port") or 8000)
+    read_only = getattr(args, "read_only", False) or _truthy_config(
+        web_config.get("read_only")
+    )
+    config = _config(args)
+    token_env = getattr(args, "token_env", None) or web_config.get("token_env")
+    if token_env:
+        token = os.environ.get(str(token_env), "")
+        if not token:
+            raise ValueError(
+                "Environment variable %s (API bearer token) is not set." % token_env
+            )
+        config = _config_with_api_token(config, token)
+    if _is_public_bind_host(host) and not read_only and not _config_api_token(config):
+        if not getattr(args, "insecure_public", False) and not _truthy_config(
+            web_config.get("insecure_public")
+        ):
+            raise ValueError(
+                "Refusing to start a writable public Web server without an API token. "
+                "Use --token-env ENVVAR, --read-only, or --insecure-public."
+            )
+    _preflight_bind(host, port)
+    app = create_app(
+        paths=paths, writable_path=writable_path, config=config, read_only=read_only
+    )
+    return uvicorn, app, host, port
+
+
+def command_serve(args):
+    if getattr(args, "mcp", False):
+        return command_mcp(args)
+    uvicorn, app, host, port = _prepare_serve(args)
+    # uvicorn.Config independently reads WEB_CONCURRENCY from the environment
+    # and sets its own workers count from it, regardless of caller intent
+    # (uvicorn/config.py). serve has no --workers flag and passes an
+    # in-memory app object rather than an import string, which uvicorn
+    # cannot fan out to worker subprocesses -- left alone, a stray
+    # WEB_CONCURRENCY > 1 (e.g. inherited from an unrelated gunicorn
+    # environment) makes uvicorn refuse to start with a warning that names
+    # neither lifetxt nor WEB_CONCURRENCY as the cause. serve is
+    # single-process by design, so pin workers=1 explicitly rather than
+    # let the environment decide.
+    uvicorn.run(app, host=host, port=port, workers=1)
+    return 0
+
+
+def _browser_reachable_host(host):
+    """A loopback host a browser can actually connect to.
+
+    `0.0.0.0`/`::` are valid bind addresses (listen on every interface) but
+    not addresses a client can connect *to*; substitute the loopback address
+    that reaches the same process.
+    """
+    if host in ("0.0.0.0", "", None):
+        return "127.0.0.1"
+    if host == "::":
+        return "::1"
+    return host
+
+
+def _web_ui_url(host, port):
+    connect_host = _browser_reachable_host(host)
+    if ":" in connect_host and not connect_host.startswith("["):
+        connect_host = "[%s]" % connect_host
+    return "http://%s:%s/" % (connect_host, port)
+
+
+def _open_browser_when_ready(url, host, port, timeout=15.0, interval=0.2):
+    """Poll the existing, unauthenticated `/api/health` route, then open `url`.
+
+    Reuses the server's own readiness signal instead of guessing a fixed
+    delay or duplicating a socket-level readiness check: `/api/health` is
+    already exempt from bearer auth (lifetxt/webapp.py), so this succeeds
+    the moment the ASGI app is actually accepting and answering requests,
+    not merely the moment the TCP listener is open.
+    """
+    import time
+    import webbrowser
+
+    connect_host = _browser_reachable_host(host)
+    health_url = "http://%s:%s/api/health" % (
+        ("[%s]" % connect_host if ":" in connect_host else connect_host),
+        port,
+    )
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            with urlopen(health_url, timeout=interval):
+                break
+        except (URLError, HTTPError, OSError):
+            time.sleep(interval)
+    else:
+        return
+    webbrowser.open(url)
+
+
+def command_web(args):
+    uvicorn, app, host, port = _prepare_serve(args)
+    if not getattr(args, "no_open", False):
+        import threading
+
+        url = _web_ui_url(host, port)
+        write_text(None, "Starting lifetxt Web UI at %s ...\n" % url)
+        threading.Thread(
+            target=_open_browser_when_ready,
+            args=(url, host, port),
+            daemon=True,
+        ).start()
+    # See command_serve's own comment: single-process by design, so workers
+    # is always pinned to 1 regardless of a stray WEB_CONCURRENCY value.
+    uvicorn.run(app, host=host, port=port, workers=1)
+    return 0
+
+
+def _preflight_bind(host, port):
+    """Fail with an actionable message when the port cannot be bound.
+
+    uvicorn reports the raw OS error after it has already printed "Application
+    startup complete", which reads like a successful start. Checking first lets
+    the message name the actual cause, including the Windows case where a port
+    is administratively reserved even though nothing is listening on it.
+    """
+    import socket
+
+    probe = socket.socket(
+        socket.AF_INET6 if ":" in str(host) else socket.AF_INET, socket.SOCK_STREAM
+    )
+    try:
+        if os.name != "nt":
+            # POSIX needs SO_REUSEADDR so a socket left in TIME_WAIT does not
+            # look like a conflict. On Windows the same option lets a probe
+            # bind a port another server is already listening on, which would
+            # make this check silently useless.
+            probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        probe.bind((host, int(port)))
+    except OSError as exc:
+        raise ValueError(_bind_error_message(host, port, exc))
+    finally:
+        probe.close()
+
+
+def _suggest_port(port):
+    """A different port to try, never the one that just failed."""
+    try:
+        number = int(port)
+    except (TypeError, ValueError):
+        return 8080
+    candidate = 8080 if number != 8080 else 8090
+    return candidate if candidate != number else number + 1
+
+
+def _bind_error_message(host, port, exc):
+    errno = getattr(exc, "errno", None)
+    winerror = getattr(exc, "winerror", None)
+    lines = ["Cannot bind %s:%s (%s)." % (host, port, exc)]
+
+    in_use = errno in (48, 98) or winerror == 10048
+    forbidden = errno == 13 or winerror == 10013
+
+    suggestion = _suggest_port(port)
+
+    if in_use:
+        lines.append("Another process is already using that port.")
+        lines.append(
+            "Stop it, or start on a different port: lifetxt serve --port %d"
+            % suggestion
+        )
+    elif forbidden and os.name == "nt":
+        # Hyper-V, WSL, and Docker reserve blocks of ports on Windows. Nothing
+        # is listening, so "port in use" advice sends people down a dead end.
+        lines.append(
+            "Windows is reserving that port, so nothing can bind it even though "
+            "nothing is listening."
+        )
+        lines.append("Check the reserved ranges with:")
+        lines.append("  netsh interface ipv4 show excludedportrange protocol=tcp")
+        lines.append("Then start outside those ranges, for example:")
+        lines.append("  lifetxt serve --port %d" % suggestion)
+    elif forbidden:
+        lines.append("Ports below 1024 need elevated privileges on this system.")
+        lines.append(
+            "Use a port above 1024, for example: lifetxt serve --port %d" % suggestion
+        )
+    else:
+        lines.append("Try a different --port, or --host 127.0.0.1.")
+    return "\n".join(lines)
+
+
+def _truthy_config(value):
+    if isinstance(value, bool):
+        return value
+    text = str(value or "").strip().lower()
+    return text in ("1", "true", "yes", "on")
+
+
+def _is_public_bind_host(host):
+    text = str(host or "").strip().lower()
+    return text not in ("", "127.0.0.1", "localhost", "::1")
+
+
+def _config_api_token(config):
+    api = config_section(config or {}, "api")
+    return str(api.get("token") or "").strip()
+
+
+def _config_with_api_token(config, token):
+    from copy import deepcopy as _deepcopy
+
+    copied = _deepcopy(config or {})
+    api = copied.setdefault("api", {})
+    if not isinstance(api, dict):
+        api = {}
+        copied["api"] = api
+    api["token"] = token
+    return copied
+
+
+def command_mcp(args):
+    from .mcp import cmd_mcp
+
+    return cmd_mcp(args)
+
+
+def _ai_setup_command_and_config(args):
+    """Resolve the `lifetxt mcp` command args and the standard
+    `mcpServers`-shaped config dict shared by every `ai setup <provider>`
+    variant. Never writes a file: path resolution reuses the same pure
+    helpers `lifetxt mcp` itself uses, rather than constructing an
+    McpContext (which can trigger a transaction startup preflight for
+    non-read profiles)."""
+    from .paths import resolve_write_target
+
+    config = _config(args)
+    paths = _normalize_paths(
+        list(args.paths) if args.paths else (config_paths(config) or ["life.txt"]),
+        config,
+        stdin_when_empty=False,
+    )
+    write_target = resolve_write_target(
+        paths, args.write_file or config_write_file(config)
+    )
+    profile = args.profile or "read"
+
+    command_args = ["-m", "lifetxt", "mcp"]
+    command_args.extend(paths)
+    if write_target not in paths:
+        command_args.extend(["--write-file", write_target])
+    command_args.extend(["--profile", profile])
+
+    mcp_config = OrderedDict(
+        [
+            (
+                "mcpServers",
+                OrderedDict(
+                    [
+                        (
+                            "lifetxt",
+                            OrderedDict(
+                                [
+                                    ("command", "python"),
+                                    ("args", list(command_args)),
+                                ]
+                            ),
+                        )
+                    ]
+                ),
+            )
+        ]
+    )
+    return command_args, mcp_config, profile
+
+
+def _ai_setup_profile_line(profile):
+    return "Profile: %s%s" % (
+        profile,
+        " (default; use --profile assist|full for more access)"
+        if profile == "read"
+        else "",
+    )
+
+
+def command_ai_setup_generic(args):
+    """Print the `lifetxt mcp` command and a generic MCP client
+    configuration for the current workspace. Never writes a file."""
+    command_args, mcp_config, profile = _ai_setup_command_and_config(args)
+
+    if args.format == "json":
+        payload = OrderedDict(
+            [
+                ("command", ["python"] + command_args),
+                ("mcp_client_config", mcp_config),
+            ]
+        )
+        write_text(None, json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+        return 0
+
+    lines = [
+        "Command:",
+        "  python " + " ".join(command_args),
+        "",
+        "Generic MCP client configuration:",
+        json.dumps(mcp_config, ensure_ascii=False, indent=2),
+        "",
+        _ai_setup_profile_line(profile),
+    ]
+    write_text(None, "\n".join(lines) + "\n")
+    return 0
+
+
+CLAUDE_DESKTOP_CONFIG_PATHS = OrderedDict(
+    [
+        ("macos", "~/Library/Application Support/Claude/claude_desktop_config.json"),
+        ("windows", "%APPDATA%\\Claude\\claude_desktop_config.json"),
+        ("linux", "~/.config/claude-desktop/claude_desktop_config.json"),
+    ]
+)
+
+GEMINI_SETTINGS_PATHS = OrderedDict(
+    [
+        ("user", "~/.gemini/settings.json"),
+        ("project", ".gemini/settings.json"),
+    ]
+)
+
+
+def command_ai_setup_claude(args):
+    """Print Claude Desktop and Claude Code setup information for the
+    current workspace. Never writes a file."""
+    command_args, mcp_config, profile = _ai_setup_command_and_config(args)
+    claude_code_command = [
+        "claude",
+        "mcp",
+        "add",
+        "--transport",
+        "stdio",
+        "lifetxt",
+        "--",
+        "python",
+    ] + command_args
+
+    if args.format == "json":
+        payload = OrderedDict(
+            [
+                ("command", ["python"] + command_args),
+                ("mcp_client_config", mcp_config),
+                ("claude_desktop_config_paths", CLAUDE_DESKTOP_CONFIG_PATHS),
+                ("claude_code_project_config_path", ".mcp.json"),
+                ("claude_code_add_command", claude_code_command),
+            ]
+        )
+        write_text(None, json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+        return 0
+
+    lines = [
+        "Claude Desktop:",
+        "  Merge this into mcpServers in claude_desktop_config.json:",
+        "    macOS:   %s" % CLAUDE_DESKTOP_CONFIG_PATHS["macos"],
+        "    Windows: %s" % CLAUDE_DESKTOP_CONFIG_PATHS["windows"],
+        "    Linux:   %s" % CLAUDE_DESKTOP_CONFIG_PATHS["linux"],
+        "",
+        json.dumps(mcp_config, ensure_ascii=False, indent=2),
+        "",
+        "Claude Code:",
+        "  Add the same JSON to .mcp.json in your project root (commit it to share"
+        " with your team), or run:",
+        "    " + " ".join(claude_code_command),
+        "",
+        _ai_setup_profile_line(profile),
+    ]
+    write_text(None, "\n".join(lines) + "\n")
+    return 0
+
+
+def command_ai_setup_gemini(args):
+    """Print Gemini CLI setup information for the current workspace.
+    Never writes a file."""
+    command_args, mcp_config, profile = _ai_setup_command_and_config(args)
+    gemini_add_command = ["gemini", "mcp", "add", "lifetxt", "python"] + command_args
+
+    if args.format == "json":
+        payload = OrderedDict(
+            [
+                ("command", ["python"] + command_args),
+                ("mcp_client_config", mcp_config),
+                ("gemini_settings_paths", GEMINI_SETTINGS_PATHS),
+                ("gemini_mcp_add_command", gemini_add_command),
+            ]
+        )
+        write_text(None, json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+        return 0
+
+    lines = [
+        "Gemini CLI:",
+        "  Merge this into mcpServers in settings.json:",
+        "    User scope:    %s" % GEMINI_SETTINGS_PATHS["user"],
+        "    Project scope: %s" % GEMINI_SETTINGS_PATHS["project"],
+        "",
+        json.dumps(mcp_config, ensure_ascii=False, indent=2),
+        "",
+        "  Or run:",
+        "    " + " ".join(gemini_add_command),
+        "",
+        _ai_setup_profile_line(profile),
+    ]
+    write_text(None, "\n".join(lines) + "\n")
+    return 0
+
+
+def command_ai_doctor(args):
+    """Report whether the workspace will load and resolve a write target
+    cleanly for a direct MCP connection. Never writes a file."""
+    from .paths import resolve_write_target
+
+    config = _config(args)
+    checks = []
+
+    def add_check(symbol, label, message):
+        checks.append((symbol, label, message))
+
+    arg_paths = getattr(args, "paths", None) or []
+    life_paths = _normalize_paths(arg_paths, config, stdin_when_empty=False) or [
+        "life.txt"
+    ]
+    for path in life_paths:
+        if not os.path.exists(path):
+            add_check("FAIL", "life.txt", "Not found: %s" % path)
+        elif not os.access(path, os.R_OK):
+            add_check("FAIL", "life.txt", "Not readable: %s" % path)
+        else:
+            add_check("OK", "life.txt", "Found: %s" % path)
+
+    existing_paths = [p for p in life_paths if os.path.exists(p)]
+    if existing_paths:
+        try:
+            items, diagnostics = _parse_life_inputs(existing_paths, config)
+        except Exception as exc:  # pragma: no cover - defensive, mirrors doctor
+            add_check("FAIL", "parse", str(exc))
+        else:
+            errors = [d for d in diagnostics if d.severity == "error"]
+            if errors:
+                add_check(
+                    "FAIL",
+                    "parse",
+                    "%d error(s) -- run: lifetxt check %s"
+                    % (len(errors), existing_paths[0]),
+                )
+            else:
+                add_check("OK", "parse", "%d item(s), no errors" % len(items))
+
+    try:
+        write_target = resolve_write_target(
+            life_paths, args.write_file or config_write_file(config)
+        )
+    except ValueError as exc:
+        add_check("FAIL", "write-target", str(exc))
+    else:
+        add_check("OK", "write-target", "Resolved: %s" % write_target)
+
+    add_check(
+        "OK",
+        "profile",
+        "Recommended default for external/untrusted AI clients: "
+        "--profile read (see #502).",
+    )
+
+    if args.format == "json":
+        records = [
+            OrderedDict([("status", s), ("check", check_name), ("message", m)])
+            for s, check_name, m in checks
+        ]
+        write_text(None, json.dumps(records, ensure_ascii=False, indent=2) + "\n")
+        return 0
+
+    symbols = {"OK": "[OK]", "WARN": "[!!]", "FAIL": "[XX]"}
+    for symbol, label, message in checks:
+        write_text(
+            None, "%s %-14s %s\n" % (symbols.get(symbol, symbol), label, message)
+        )
+    return 0
+
+
+def _split_archive_text(
+    raw_text, items, archive_id_set, archive_overrides=None, remainder_overrides=None
+):
+    """Split raw_text into (archive_text, remainder_text) preserving non-item lines.
+
+    Non-item lines (comments, blanks, directives) appear in BOTH outputs.
+    archive_overrides: {id(item): str} replacement text for an archived item.
+    remainder_overrides: {id(item): Item|None} replacement/exclusion for remainder items.
+    """
+    archive_overrides = archive_overrides or {}
+    remainder_overrides = remainder_overrides or {}
+
+    raw_lines = raw_text.splitlines(keepends=True)
+
+    line_to_item = {}
+    for item in items:
+        start = getattr(item, "line", 0)
+        end = getattr(item, "end_line", start)
+        for ln in range(max(1, start), end + 1):
+            line_to_item[ln] = item
+
+    archive_out = []
+    remainder_out = []
+    custom_written = set()
+
+    for i, raw_line in enumerate(raw_lines):
+        lineno = i + 1
+        item = line_to_item.get(lineno)
+
+        if item is None:
+            archive_out.append(raw_line)
+            remainder_out.append(raw_line)
+        elif id(item) in archive_id_set:
+            item_id = id(item)
+            if item_id in custom_written:
+                pass
+            elif item_id in archive_overrides:
+                text = archive_overrides[item_id]
+                if text is not None:
+                    archive_out.append(text if text.endswith("\n") else text + "\n")
+                custom_written.add(item_id)
+            else:
+                archive_out.append(raw_line)
+        else:
+            item_id = id(item)
+            if item_id in custom_written:
+                pass
+            elif item_id in remainder_overrides:
+                modified = remainder_overrides[item_id]
+                if modified is not None:
+                    text = getattr(modified, "source_text", None) or item_to_line(
+                        modified
+                    )
+                    remainder_out.append(text if text.endswith("\n") else text + "\n")
+                custom_written.add(item_id)
+            else:
+                remainder_out.append(raw_line)
+
+    return "".join(archive_out), "".join(remainder_out)
+
+
+def _path_revision_map(values):
+    result = {}
+    for raw in values or []:
+        text = str(raw)
+        if "=" not in text:
+            raise ValueError("--revision must use PATH=SHA256.")
+        path, revision = text.rsplit("=", 1)
+        if not path.strip() or not revision.strip():
+            raise ValueError("--revision must use PATH=SHA256.")
+        result[os.path.abspath(path.strip())] = revision.strip()
+    return result
+
+
+_ArchiveSelection = collections.namedtuple(
+    "_ArchiveSelection",
+    [
+        "paths",
+        "mode",
+        "id_key",
+        "statuses",
+        "file_texts",
+        "file_snapshots",
+        "file_items",
+        "all_items",
+        "candidates",
+        "candidate_ids",
+        "open_children_by_parent",
+        "orphan_mode",
+        "orphan_blocked",
+        "external_refs",
+        "multi_source",
+    ],
+)
+
+
+def _archive_select(args, config):
+    """Resolve archive candidates and supporting selection state.
+
+    Pure (no printing, no writes): shared by ``command_archive``'s live/dry-run
+    flow and the ``archive-plan-v1`` emission/verification path
+    (:mod:`lifetxt.archive_plan_v1`) so both derive an identical candidate set
+    from identical inputs. Keeping this logic in one place avoids the class of
+    drift bug a hand-duplicated copy would risk -- exactly the kind of hazard
+    the archive-plan feature exists to guard against.
+    """
+    paths = _normalize_paths(args.paths, config, stdin_when_empty=False)
+    if not paths:
+        raise ValueError("No source files specified.")
+
+    mode = "copy" if args.copy else "move"
+    if mode == "move" and "-" in paths:
+        raise ValueError(
+            "Cannot use move mode with stdin input. Use --copy or specify a file path."
+        )
+
+    before_date = None
+    if args.before:
+        before_date = parse_date_or_datetime(args.before, is_end=False)
+        if before_date is None:
+            raise ValueError(
+                "Invalid --before date %r. Use YYYY-MM-DD or YYYY-MM-DDTHH:MM."
+                % args.before
+            )
+
+    if args.max_items is not None and args.max_items < 1:
+        raise ValueError("--max-items must be a positive integer.")
+
+    id_key = id_key_from_config(config)
+    from .mutation import read_text_snapshot
+
+    file_texts = OrderedDict()
+    file_snapshots = OrderedDict()
+    file_items = OrderedDict()
+    for path in paths:
+        snapshot = read_text_snapshot(path)
+        text = snapshot.text
+        file_snapshots[path] = snapshot
+        file_texts[path] = text
+        items, _diags = parse_text(
+            text, id_key=id_key, check_ids=False, check_references=False
+        )
+        for item in items:
+            item.source = path
+        file_items[path] = items
+
+    all_items = [item for items in file_items.values() for item in items]
+
+    statuses_arg = args.statuses or ["done,canceled"]
+    try:
+        candidates = filter_items(all_items, statuses=statuses_arg)
+    except ValueError as exc:
+        raise ValueError("Invalid --status: %s" % exc)
+
+    project_filter = getattr(args, "project_filter", None)
+    if project_filter:
+        candidates = [
+            item
+            for item in candidates
+            if project_filter in item.details.get("project", [])
+        ]
+
+    if before_date is not None:
+        candidates = [
+            item for item in candidates if _archive_item_date_before(item, before_date)
+        ]
+
+    if args.max_items is not None:
+        candidates = candidates[: args.max_items]
+
+    orphan_mode = getattr(args, "orphan_children", "block")
+    open_statuses_set = {"[ ]", "[/]", "[>]", "[?]"}
+    candidate_ids = set()
+    for item in candidates:
+        for val in item.details.get(id_key, []):
+            candidate_ids.add(str(val))
+
+    open_children_by_parent = {}
+    if candidate_ids:
+        candidate_id_set = {id(item) for item in candidates}
+        for item in all_items:
+            if id(item) in candidate_id_set:
+                continue
+            if item.status not in open_statuses_set:
+                continue
+            for parent_val in item.details.get("parent", []):
+                pid = str(parent_val)
+                if pid in candidate_ids:
+                    open_children_by_parent.setdefault(pid, []).append(item)
+
+    orphan_blocked = bool(open_children_by_parent) and orphan_mode == "block"
+
+    if open_children_by_parent and orphan_mode == "adopt":
+        already = {id(item) for item in candidates}
+        for children in open_children_by_parent.values():
+            for child in children:
+                if id(child) not in already:
+                    candidates.append(child)
+                    already.add(id(child))
+
+        # promote: archive parent only; children lose parent: in source (handled below)
+
+    if project_filter and not orphan_blocked:
+        # Ticket history (record:ticket_event / record:time_entry Notes) has no
+        # "done"/"canceled" status of its own, so it never matches the status
+        # filter above; follow it unconditionally via parent: so a ticket's
+        # history moves with it instead of being left behind as a dangling log.
+        # (Original command_archive never reached this code when blocked --
+        # it returned before this point -- so this mirrors that by skipping
+        # when orphan_blocked.)
+        history_ids = {id(item) for item in candidates}
+        for item in all_items:
+            if id(item) in history_ids:
+                continue
+            markers = item.details.get("record", [])
+            if not markers or markers[0] not in ("ticket_event", "time_entry"):
+                continue
+            if any(
+                str(value) in candidate_ids for value in item.details.get("parent", [])
+            ):
+                candidates.append(item)
+                history_ids.add(id(item))
+
+    multi_source = len(paths) > 1
+
+    external_refs = []
+    if not orphan_blocked:
+        _ext_ref_keys = ("depends_on", "blocks", "parent", "ref", "related")
+        candidate_obj_ids = {id(c) for c in candidates}
+        for item in all_items:
+            if id(item) in candidate_obj_ids:
+                continue
+            for key in _ext_ref_keys:
+                for val in item.details.get(key, []):
+                    if str(val) in candidate_ids:
+                        external_refs.append((item, key, str(val)))
+
+    return _ArchiveSelection(
+        paths=paths,
+        mode=mode,
+        id_key=id_key,
+        statuses=statuses_arg,
+        file_texts=file_texts,
+        file_snapshots=file_snapshots,
+        file_items=file_items,
+        all_items=all_items,
+        candidates=candidates,
+        candidate_ids=candidate_ids,
+        open_children_by_parent=open_children_by_parent,
+        orphan_mode=orphan_mode,
+        orphan_blocked=orphan_blocked,
+        external_refs=external_refs,
+        multi_source=multi_source,
+    )
+
+
+def command_archive(args):
+    config = _config(args)
+    selection = _archive_select(args, config)
+    paths = selection.paths
+    mode = selection.mode
+    id_key = selection.id_key
+    file_texts = selection.file_texts
+    file_snapshots = selection.file_snapshots
+    file_items = selection.file_items
+    candidates = selection.candidates
+    candidate_ids = selection.candidate_ids
+    open_children_by_parent = selection.open_children_by_parent
+    orphan_mode = selection.orphan_mode
+    external_refs = selection.external_refs
+    multi_source = selection.multi_source
+
+    if not candidates:
+        sys.stdout.write("No items match the archive criteria.\n")
+        return 0
+
+    if open_children_by_parent and orphan_mode == "block":
+        sys.stdout.write(
+            "Cannot archive: the following candidates have open children:\n"
+        )
+        for pid, children in open_children_by_parent.items():
+            child_ids = (
+                ", ".join(str(v) for c in children for v in c.details.get(id_key, []))
+                or "(no id)"
+            )
+            sys.stdout.write("  parent %s: open children %s\n" % (pid, child_ids))
+        sys.stdout.write(
+            "Use --orphan-children adopt or --orphan-children promote to proceed.\n"
+        )
+        return 1
+
+    sys.stdout.write(
+        "Items to archive (%d, %s -> %s):\n" % (len(candidates), mode, args.dest)
+    )
+    for item in candidates:
+        source_label = ("  [%s]" % item.source) if multi_source else ""
+        sys.stdout.write(
+            "  %s %s %s%s\n" % (item.status, item.kind, item.title, source_label)
+        )
+
+    if external_refs:
+        sys.stdout.write("Warning: the following items reference IDs being archived:\n")
+        for ref_item, key, ref_id in external_refs:
+            location = getattr(ref_item, "source", None) or "?"
+            sys.stdout.write(
+                "  %s:%d %s %s:%s\n"
+                % (location, ref_item.line, ref_item.title, key, ref_id)
+            )
+        if getattr(args, "block_on_external_refs", False):
+            sys.stdout.write(
+                "Blocked by %d external reference(s). Remove references or archive referencing items first.\n"
+                % len(external_refs)
+            )
+            return 1
+
+    if args.dry_run:
+        sys.stdout.write("(dry run - no changes made)\n")
+        return 0
+
+    if not args.yes:
+        sys.stdout.write("Archive %d item(s)? [y/N] " % len(candidates))
+        sys.stdout.flush()
+        answer = sys.stdin.readline().strip().lower()
+        if answer not in ("y", "yes"):
+            sys.stdout.write("Aborted.\n")
+            return 0
+
+    adopted_ids = set()
+    if orphan_mode == "adopt":
+        for children in open_children_by_parent.values():
+            for child in children:
+                adopted_ids.add(id(child))
+
+    preserve = getattr(args, "preserve_structure", False)
+
+    if preserve:
+        from copy import deepcopy as _deepcopy
+
+        archive_parts = []
+        for path, items in file_items.items():
+            path_archive_ids = {
+                id(item) for item in candidates if getattr(item, "source", None) == path
+            }
+            if not path_archive_ids:
+                continue
+            ao = {}
+            for item in candidates:
+                if getattr(item, "source", None) == path and id(item) in adopted_ids:
+                    adopted = _deepcopy(item)
+                    adopted.status = "[-]"
+                    ao[id(item)] = item_to_line(adopted)
+            archive_part, _ = _split_archive_text(
+                file_texts[path], items, path_archive_ids, archive_overrides=ao
+            )
+            archive_parts.append(archive_part)
+        archive_text = "".join(archive_parts)
+    else:
+        if orphan_mode == "adopt":
+
+            def _adopt_item_text(item):
+                if id(item) in adopted_ids:
+                    from copy import deepcopy as _deepcopy
+
+                    adopted = _deepcopy(item)
+                    adopted.status = "[-]"
+                    return item_to_line(adopted)
+                return getattr(item, "source_text", None) or item_to_line(item)
+
+            archive_lines = [_adopt_item_text(item) for item in candidates]
+            archive_text = "\n".join(archive_lines)
+            if archive_text:
+                archive_text += "\n"
+        else:
+            archive_text = _items_to_life_text(candidates)
+
+    from .mutation import MISSING_HASH, read_text_snapshot
+    from .transaction_journal import journal_directory
+    from .write_operations import commit_text_replacements
+
+    revisions = _path_revision_map(getattr(args, "revision", None))
+    destination = os.path.abspath(args.dest)
+    source_absolutes = [os.path.abspath(path) for path in paths]
+    if destination in source_absolutes:
+        raise ValueError(
+            "Archive destination must be different from every source file."
+        )
+
+    _ensure_writable_path(args.dest, config, "archive")
+    _pre_write_backup(args.dest, config, "archive")
+    dest_snapshot = read_text_snapshot(args.dest, allow_missing=True)
+    prefix = (
+        ""
+        if not dest_snapshot.text or dest_snapshot.text.endswith(("\n", "\r"))
+        else dest_snapshot.newline
+    )
+    replacements = {
+        destination: {
+            "text": dest_snapshot.text + prefix + archive_text,
+            "expected_revision": revisions.get(destination, dest_snapshot.content_hash),
+            "create": dest_snapshot.content_hash == MISSING_HASH,
+            "validate_life": True,
+        }
+    }
+
+    if mode == "move":
+        archive_ids = {id(item) for item in candidates}
+        promote_parent_ids = candidate_ids if orphan_mode == "promote" else set()
+
+        for path, items in file_items.items():
+
+            def _promote_item(item):
+                if promote_parent_ids and item.details.get("parent"):
+                    new_parents = [
+                        p
+                        for p in item.details["parent"]
+                        if str(p) not in promote_parent_ids
+                    ]
+                    if len(new_parents) < len(item.details["parent"]):
+                        from copy import deepcopy as _deepcopy
+
+                        promoted = _deepcopy(item)
+                        if new_parents:
+                            promoted.details["parent"] = new_parents
+                        else:
+                            del promoted.details["parent"]
+                        promoted.source_text = None
+                        return promoted
+                return item
+
+            remainder_text = None
+            needs_write = False
+            if preserve:
+                path_archive_ids = {
+                    id(item)
+                    for item in candidates
+                    if getattr(item, "source", None) == path
+                }
+                ro = {}
+                for item in items:
+                    if id(item) not in path_archive_ids:
+                        modified = _promote_item(item)
+                        if id(modified) != id(item):
+                            ro[id(item)] = modified
+                _, remainder_text = _split_archive_text(
+                    file_texts[path], items, path_archive_ids, remainder_overrides=ro
+                )
+                needs_write = bool(path_archive_ids) or bool(ro)
+            else:
+                remaining_raw = [item for item in items if id(item) not in archive_ids]
+                remaining = [_promote_item(item) for item in remaining_raw]
+                needs_write = len(remaining) < len(items) or any(
+                    id(r) != id(o) for r, o in zip(remaining, remaining_raw)
+                )
+                if needs_write:
+                    remainder_text = _items_to_life_text(remaining)
+            if needs_write:
+                _ensure_writable_path(path, config, "archive")
+                _pre_write_backup(path, config, "archive")
+                absolute = os.path.abspath(path)
+                source_snapshot = file_snapshots[path]
+                replacements[absolute] = {
+                    "text": remainder_text,
+                    "expected_revision": revisions.get(
+                        absolute, source_snapshot.content_hash
+                    ),
+                    "create": False,
+                    "validate_life": True,
+                }
+
+    result = commit_text_replacements(
+        replacements,
+        operation="archive.%s" % mode,
+        journal_dir=journal_directory(config, writable_path=args.dest),
+        config=config,
+    )
+    sys.stdout.write(
+        "Archived %d item(s) to %s (transaction %s).\n"
+        % (len(candidates), args.dest, result.transaction_id)
+    )
+    return 0
+
+
+def _archive_item_date_before(item, before_date):
+    for key in ("done", "updated", "created"):
+        for value in item.details.get(key, []):
+            parsed = parse_date_or_datetime(str(value))
+            if parsed is not None:
+                return parsed < before_date
+    return False
+
+
+def _parse_date_only(value):
+    """Parse a YYYY-MM-DD string to datetime.date, returning None on failure."""
+    s = str(value)
+    if len(s) >= 10 and s[4:5] == "-" and s[7:8] == "-":
+        try:
+            return datetime.date(int(s[:4]), int(s[5:7]), int(s[8:10]))
+        except (ValueError, IndexError):
+            pass
+    return None
+
+
+def _latest_item_date(item):
+    """Return the most recent parsed date from common date detail keys."""
+    best = None
+    for key in ("updated", "created", "done", "do", "due", "on"):
+        for val in item.details.get(key, []):
+            parsed = _parse_date_only(str(val))
+            if parsed and (best is None or parsed > best):
+                best = parsed
+    return best
+
+
+def _load_file_directives(path):
+    """Read #! directives from a file, returning an empty dict on any error."""
+    if not path or path == "-":
+        return {}
+    try:
+        return parse_directives(read_text(path))
+    except OSError:
+        return {}
+
+
+def _resolve_relative_date(value, today=None):
+    """Resolve relative date keywords to ISO YYYY-MM-DD strings.
+
+    Thin wrapper over shorthand.resolve_date_token so the CLI, TUI, Web UI, and
+    MCP all accept exactly the same tokens. Unknown values are returned
+    unchanged for backward compatibility.
+    """
+    from .shorthand import resolve_date_token
+
+    return resolve_date_token(value, today=today, strict=False)
+
+
+def _merge_capture_shorthand(item, args):
+    """Expand @project #tag !priority ^due out of a captured title.
+
+    Explicit flags win for single-valued keys; tags accumulate, because
+    `--tag a` plus `#b` on the same capture clearly means both.
+    """
+    if getattr(args, "no_shorthand", False):
+        return
+    from .shorthand import ShorthandError, parse_capture
+
+    try:
+        title, details = parse_capture(item.title, strict_dates=True)
+    except ShorthandError as exc:
+        raise ValueError(str(exc))
+    if not details:
+        return
+    if not title:
+        raise ValueError(
+            "Capture shorthand consumed the whole title. Quote it or pass --no-shorthand."
+        )
+    item.title = title
+    for key, values in details.items():
+        if key == "tag":
+            existing = item.details.setdefault(key, [])
+            for value in values:
+                if value not in existing:
+                    existing.append(value)
+        elif key not in item.details:
+            item.details[key] = list(values)
+
+
+def _apply_capture_preset_defaults(item, preset):
+    """Fill fields the preset defines that explicit args/shorthand left
+    unset (#594).
+
+    Precedence: config defaults < preset < explicit CLI flags/capture
+    shorthand. This runs after `_merge_capture_shorthand` -- so anything an
+    explicit flag or a `@`/`#`/`!`/`^` sigil already set is left untouched
+    -- and before `apply_config_defaults_to_item`, so a preset value still
+    outranks a bare `defaults.project`-style config default.
+    """
+    for field in ("project", "priority"):
+        if field in preset and field not in item.details:
+            item.details[field] = [preset[field]]
+    tags = preset.get("tags")
+    if tags:
+        existing = item.details.setdefault("tag", [])
+        for tag in tags:
+            if tag not in existing:
+                existing.append(tag)
+
+
+def command_quick(args):
+    config = _config(args)
+    today = timezone_today()
+
+    if args.title == "-":
+        stdin_title = sys.stdin.readline().rstrip("\r\n")
+        if not stdin_title:
+            raise ValueError("quick - requires a non-empty title on stdin.")
+        args.title = stdin_title
+
+    preset = None
+    if getattr(args, "preset", None):
+        from .capture_presets import resolve_capture_preset
+
+        preset = resolve_capture_preset(config, args.preset)
+        if args.kind is None and "type" in preset:
+            args.kind = preset["type"]
+        if args.status is None and "status" in preset:
+            args.status = preset["status"]
+
+    if args.due:
+        args.due = [_resolve_relative_date(v, today) for v in args.due]
+    if args.do:
+        args.do = [_resolve_relative_date(v, today) for v in args.do]
+    if args.until:
+        args.until = [_resolve_relative_date(v, today) for v in args.until]
+
+    if not args.kind:
+        args.kind = "T"
+    if args.status is None:
+        args.status = None
+
+    item = build_item_from_args(args)
+    _merge_capture_shorthand(item, args)
+    if preset is not None:
+        _apply_capture_preset_defaults(item, preset)
+    dest = args.append or config_write_file(config)
+    file_directives = _load_file_directives(dest)
+    apply_config_defaults_to_item(item, args, file_directives)
+    apply_auto_id_to_item(item, args)
+    line = item_to_assisted_line(item)
+
+    if not args.no_check:
+        parsed_items, diagnostics = parse_text(line + "\n")
+        if not parsed_items:
+            diagnostics.append(
+                Diagnostic("error", "E301", "Generated line did not produce an item.")
+            )
+        if _has_error(diagnostics):
+            _print_diagnostics(diagnostics)
+            return 1
+        _print_warnings(diagnostics)
+
+    if not dest:
+        raise ValueError(
+            "No output file. Use --append FILE or configure write_file in config."
+        )
+
+    _ensure_writable_path(dest, config, "quick")
+    _pre_write_backup(dest, config, "quick")
+    from .mutation import read_text_snapshot
+    from .native_history_mutation import commit_item_mutation_with_event
+    from .write_operations import append_life_records
+
+    item_ids = item.details.get(id_key_from_config(config)) or []
+    if item_ids:
+        snapshot = read_text_snapshot(dest, allow_missing=True)
+        expected = getattr(args, "revision", None) or snapshot.content_hash
+        prefix = (
+            ""
+            if not snapshot.text or snapshot.text.endswith(("\n", "\r"))
+            else snapshot.newline
+        )
+        replacement = snapshot.text + prefix + line + snapshot.newline
+        commit_item_mutation_with_event(
+            dest,
+            item_ids[0],
+            "created",
+            replacement,
+            expected,
+            id_key=id_key_from_config(config),
+            actor="local",
+            source="cli.quick",
+        )
+    else:
+        append_life_records(
+            dest,
+            line + "\n",
+            expected_revision=getattr(args, "revision", None),
+            operation="quick.capture",
+        )
+    sys.stdout.write("%s\n" % line)
+    if sys.stdout.isatty():
+        sys.stdout.write(_render_success_guidance("quick", path=dest))
+    return 0
+
+
+def _resolve_target_item(items, id_key, args, prompt_verb="Select"):
+    """Locate one item by --line, id, or --text. Returns (item, aborted).
+
+    aborted is True when a --text query matched multiple items and the
+    user declined to pick one; callers should print nothing further and
+    return 0 in that case.
+    """
+    if getattr(args, "line", None) is not None:
+        matches = [item for item in items if item.line == args.line]
+        if not matches:
+            raise ValueError("No item at line %d." % args.line)
+        return matches[0], False
+
+    item_id = getattr(args, "id", None)
+    if item_id:
+        from .ids import resolve_item_by_id
+
+        return resolve_item_by_id(items, item_id, id_key), False
+
+    text_query = getattr(args, "text", None)
+    if text_query:
+        query = text_query.lower()
+        matches = [item for item in items if query in item.title.lower()]
+        if not matches:
+            raise ValueError("No item matching %r." % text_query)
+        if len(matches) > 1:
+            sys.stdout.write("Multiple items match:\n")
+            for i, m in enumerate(matches):
+                sys.stdout.write(
+                    "  [%d] %s %s %s\n" % (i + 1, m.status, m.kind, m.title)
+                )
+            sys.stdout.write("%s which item? (1-%d) " % (prompt_verb, len(matches)))
+            sys.stdout.flush()
+            answer = sys.stdin.readline().strip()
+            try:
+                idx = int(answer) - 1
+                if idx < 0 or idx >= len(matches):
+                    raise ValueError()
+                return matches[idx], False
+            except (ValueError, IndexError):
+                sys.stdout.write("Aborted.\n")
+                return None, True
+        return matches[0], False
+
+    raise ValueError("Specify an ID, --line N, or --text QUERY.")
+
+
+def _done_precision(args, config):
+    """Decide whether done: carries a time, honouring flags then config."""
+    if getattr(args, "date_only", False):
+        return "date"
+    if getattr(args, "now", False):
+        return "datetime"
+    section = config_section(config, "done")
+    value = str(section.get("precision") or "date").strip().lower()
+    if value not in ("date", "datetime"):
+        raise ValueError(
+            "config done.precision must be date or datetime, not %r."
+            % section.get("precision")
+        )
+    return value
+
+
+def _completion_stamp(args, config, moment=None):
+    """Build the done: value at the configured precision.
+
+    Returns (value_written, date_object). The date object is what habit
+    duplicate-detection and repeat anchoring compare on, so adding a time never
+    changes which calendar day a completion belongs to.
+    """
+    date_arg = getattr(args, "date", None)
+    if date_arg:
+        parsed = parse_date_or_datetime(date_arg, is_end=False)
+        if parsed is None:
+            raise ValueError("Invalid --date %r. Use YYYY-MM-DD." % date_arg)
+        if _done_precision(args, config) == "datetime" and "T" in str(date_arg):
+            return parsed.strftime("%Y-%m-%dT%H:%M"), parsed.date()
+        return parsed.date().isoformat(), parsed.date()
+    moment = moment or local_now_naive()
+    if _done_precision(args, config) == "datetime":
+        return moment.strftime("%Y-%m-%dT%H:%M"), moment.date()
+    return moment.date().isoformat(), moment.date()
+
+
+def _state_write_path(args, config):
+    path = getattr(args, "path", None) or config_write_file(config)
+    if not path:
+        raise ValueError(
+            "No output file. Pass a path or configure write_file in your config."
+        )
+    return path
+
+
+def _attachment_diagnostics_for_check(items, config, args):
+    """Attachment warnings for `check`.
+
+    Existence and portability are always checked because they are cheap.
+    Hash verification touches every referenced file and can walk whole
+    directory trees, so it stays opt-in behind --verify-files; `lifetxt files`
+    is the command for that.
+    """
+    from .attachments import ATTACHMENT_KEYS, attachment_diagnostics
+
+    if not any(item.details.get(key) for item in items for key in ATTACHMENT_KEYS):
+        return []
+    if getattr(args, "no_files", False):
+        return []
+    return attachment_diagnostics(
+        items, config=config, verify=bool(getattr(args, "verify_files", False))
+    )
+
+
+def command_files(args):
+    """Inspect, verify, and refresh file:/dir: attachments."""
+    from .attachments import (
+        ATTACHMENT_KEYS,
+        STATUS_CHANGED,
+        STATUS_ERROR,
+        STATUS_MISSING,
+        STATUS_WRONG_TYPE,
+        attachment_records,
+        item_base_dir,
+        update_item_hashes,
+    )
+
+    config = _config(args)
+    id_key = id_key_from_config(config)
+    paths = _normalize_paths(args.paths, config)
+    verify = not getattr(args, "no_verify", False)
+    problem_statuses = (STATUS_MISSING, STATUS_CHANGED, STATUS_WRONG_TYPE, STATUS_ERROR)
+
+    rows = []
+    problems = 0
+    updates = []
+    file_revisions = {}
+
+    for path in paths:
+        from .mutation import read_text_snapshot
+
+        _snapshot = read_text_snapshot(path)
+        text = _snapshot.text
+        file_revisions[path] = _snapshot.content_hash
+        items, diagnostics = parse_text(
+            text, id_key=id_key, check_ids=False, check_references=False
+        )
+        if _has_error(diagnostics):
+            _print_diagnostics(diagnostics)
+            return 1
+        for item in items:
+            item.source = path
+        wanted = getattr(args, "item_id", None)
+        targets = [
+            item
+            for item in items
+            if not wanted or wanted in [str(v) for v in item.details.get(id_key, [])]
+        ]
+
+        if getattr(args, "update", False):
+            changed_any = False
+            for item in targets:
+                changes = update_item_hashes(
+                    item, base_dir=item_base_dir(item), config=config
+                )
+                for key, old, new in changes:
+                    updates.append(
+                        {
+                            "path": path,
+                            "item": item.title,
+                            "key": key,
+                            "from": old,
+                            "to": new,
+                        }
+                    )
+                    changed_any = True
+            if changed_any and not getattr(args, "dry_run", False):
+                _ensure_writable_path(path, config, "files")
+                _pre_write_backup(path, config, "files")
+                from .mutation import write_text as mutation_write_text
+
+                mutation_write_text(
+                    path,
+                    _render_items_preserving(text, items),
+                    expected_hash=file_revisions[path],
+                    operation="files.update_hashes",
+                    create=False,
+                )
+
+        for item in targets:
+            base_dir = item_base_dir(item)
+            for record in attachment_records(
+                item, base_dir=base_dir, config=config, verify=verify
+            ):
+                is_problem = record["status"] in problem_statuses or record["notes"]
+                if record["status"] in problem_statuses:
+                    problems += 1
+                if getattr(args, "problems", False) and not is_problem:
+                    continue
+                rows.append(
+                    OrderedDict(
+                        [
+                            ("source", path),
+                            ("id", (item.details.get(id_key) or [""])[0]),
+                            ("title", item.title),
+                            ("key", record["key"]),
+                            ("path", record["path"]),
+                            ("resolved", record["resolved"]),
+                            ("status", record["status"]),
+                            ("hash", record["hash"]),
+                            ("actual_hash", record["actual_hash"]),
+                            ("notes", record["notes"]),
+                        ]
+                    )
+                )
+
+    if getattr(args, "format", "text") == "json":
+        payload = {"count": len(rows), "problems": problems, "attachments": rows}
+        if updates:
+            payload["updates"] = updates
+        write_text(None, json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+    else:
+        for update in updates:
+            prefix = "[dry-run] " if getattr(args, "dry_run", False) else ""
+            sys.stdout.write(
+                "%shashed %s: %s\n" % (prefix, update["key"], update["to"])
+            )
+        if rows:
+            table = [
+                OrderedDict(
+                    [
+                        ("status", row["status"]),
+                        ("key", row["key"]),
+                        ("path", row["path"]),
+                        ("id", row["id"]),
+                        ("title", row["title"]),
+                    ]
+                )
+                for row in rows
+            ]
+            columns = ["status", "key", "path", "id", "title"]
+            sys.stdout.write("\n".join(_format_table(table, columns)) + "\n")
+            for row in rows:
+                for note in row["notes"]:
+                    sys.stdout.write(
+                        "  note %s:%s %s\n" % (row["key"], row["path"], note)
+                    )
+        elif not updates:
+            sys.stdout.write("No file: or dir: attachments found.\n")
+
+    if getattr(args, "check", False) and problems:
+        sys.stderr.write("%d attachment problem(s).\n" % problems)
+        return 1
+    return 0
+
+
+def _render_items_preserving(original_text, items):
+    """Re-render only the lines that own an item, leaving everything else alone."""
+    lines = original_text.splitlines(True)
+    ending = "\r\n" if original_text.count("\r\n") else "\n"
+    for item in items:
+        if item.line is None:
+            continue
+        start = item.line - 1
+        end = getattr(item, "end_line", item.line) or item.line
+        lines[start:end] = (item_to_line(item) + ending).splitlines(True)
+    return "".join(lines)
+
+
+def command_rrule(args):
+    """Expand a recurrence rule into occurrences."""
+    from .recurrence import (
+        WEEKDAY_NAMES,
+        RecurrenceError,
+        describe,
+        expand,
+        parse_rule,
+        rule_for_item,
+    )
+
+    config = _config(args)
+    source_item = None
+    rule = None
+    start_text = getattr(args, "start", None)
+
+    if getattr(args, "item_id", None):
+        if not args.path:
+            raise ValueError("--id requires --path FILE.")
+        id_key = id_key_from_config(config)
+        items, _diagnostics = _parse_life_inputs([args.path], config)
+        matches = [
+            item
+            for item in items
+            if args.item_id in [str(v) for v in item.details.get(id_key, [])]
+        ]
+        if not matches:
+            raise ValueError(
+                "No item with %s:%s in %s." % (id_key, args.item_id, args.path)
+            )
+        source_item = matches[0]
+        try:
+            rule = rule_for_item(source_item)
+        except RecurrenceError as exc:
+            raise ValueError(str(exc))
+        if rule is None:
+            raise ValueError("Item %s has no repeat: value." % args.item_id)
+        if not start_text:
+            for key in ("due", "do", "from"):
+                values = source_item.details.get(key)
+                if values:
+                    start_text = str(values[0])
+                    break
+    elif args.rule:
+        try:
+            rule = parse_rule(args.rule)
+        except RecurrenceError as exc:
+            raise ValueError(str(exc))
+    else:
+        raise ValueError(
+            "Pass a rule, or --path FILE --id ID to expand an item's repeat:."
+        )
+
+    start = local_now_naive().replace(second=0, microsecond=0)
+    if start_text:
+        parsed = parse_date_or_datetime(
+            _resolve_relative_date(start_text), is_end=False
+        )
+        if parsed is None:
+            raise ValueError("Invalid --from %r." % start_text)
+        start = parsed
+
+    after = _rrule_boundary(getattr(args, "after", None), is_end=False)
+    before = _rrule_boundary(getattr(args, "before", None), is_end=True)
+    limit = args.count if args.count and args.count > 0 else 10
+
+    try:
+        occurrences = expand(rule, start, after=after, before=before, limit=limit)
+        description = describe(rule)
+    except RecurrenceError as exc:
+        raise ValueError(str(exc))
+
+    if args.format == "json":
+        payload = OrderedDict(
+            [
+                ("rule", rule["label"]),
+                ("description", description),
+                ("frequency", rule["name"]),
+                ("interval", rule["interval"]),
+                ("count", rule["count"]),
+                ("until", rule["until"].isoformat() if rule["until"] else None),
+                # Two rules differing only in WKST produce different dates, so
+                # the week start has to be visible when comparing output.
+                ("week_start", WEEKDAY_NAMES[rule["wkst"]]),
+                ("unsupported", list(rule["unsupported"])),
+                ("start", start.isoformat()),
+                ("occurrences", [moment.isoformat() for moment in occurrences]),
+            ]
+        )
+        write_text(None, json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+        return 0
+
+    if args.format == "life":
+        title = args.title or (source_item.title if source_item else "Occurrence")
+        lines = []
+        for moment in occurrences:
+            item = Item(
+                "[ ]",
+                args.kind,
+                title,
+                OrderedDict([("due", [_rrule_stamp(moment)])]),
+                0,
+            )
+            lines.append(item_to_line(item))
+        write_text(None, "\n".join(lines) + ("\n" if lines else ""))
+        return 0
+
+    sys.stdout.write("%s\n" % description)
+    if rule["unsupported"]:
+        sys.stderr.write(
+            "Ignoring unsupported RRULE part(s): %s\n" % ", ".join(rule["unsupported"])
+        )
+    if not occurrences:
+        sys.stdout.write("No occurrences in range.\n")
+        return 0
+    for index, moment in enumerate(occurrences, 1):
+        sys.stdout.write(
+            "%3d  %s  %s\n" % (index, _rrule_stamp(moment), moment.strftime("%a"))
+        )
+    return 0
+
+
+def _rrule_stamp(moment):
+    if moment.hour or moment.minute:
+        return moment.strftime("%Y-%m-%dT%H:%M")
+    return moment.date().isoformat()
+
+
+def _rrule_boundary(value, is_end):
+    if not value:
+        return None
+    parsed = parse_date_or_datetime(_resolve_relative_date(value), is_end=is_end)
+    if parsed is None:
+        raise ValueError("Invalid date %r." % value)
+    return parsed
+
+
+def command_state(args):
+    """Record a presence status, closing the previously open one."""
+    from .presence import COMMON_STATES, format_timestamp, status_transition
+
+    config = _config(args)
+    path = _state_write_path(args, config)
+
+    if not getattr(args, "end", False) and not args.state:
+        raise ValueError(
+            "Pass a state such as: %s ... or use --end to close the current status."
+            % ", ".join(COMMON_STATES[:4])
+        )
+
+    moment = None
+    if getattr(args, "at", None):
+        parsed = parse_date_or_datetime(args.at, is_end=False)
+        if parsed is None:
+            raise ValueError("Invalid --at %r. Use YYYY-MM-DDTHH:MM." % args.at)
+        moment = parsed
+
+    details = OrderedDict()
+    for key in ("note", "project", "service", "visibility"):
+        value = getattr(args, key, None)
+        if value:
+            details[key] = [value]
+
+    from .mutation import read_text_snapshot
+
+    snapshot = read_text_snapshot(path, allow_missing=True)
+    result = status_transition(
+        snapshot.text,
+        state=args.state,
+        title=getattr(args, "title", None),
+        person=getattr(args, "person", None) or "self",
+        moment=moment,
+        details=details,
+        id_key=id_key_from_config(config),
+        close_only=bool(getattr(args, "end", False)),
+        force=bool(getattr(args, "force", False)),
+    )
+    closed, opened = result.closed, result.opened
+
+    if result.unchanged:
+        sys.stdout.write(
+            "Already %s. Nothing written; use --force to start a new record.\n"
+            % result.unchanged
+        )
+        return 0
+
+    if getattr(args, "dry_run", False):
+        for line in closed:
+            sys.stdout.write("[dry-run] Would close: %s\n" % line)
+        if opened:
+            sys.stdout.write("[dry-run] Would open: %s\n" % opened)
+        if not closed and not opened:
+            sys.stdout.write("[dry-run] No open status to close.\n")
+        return 0
+
+    _ensure_writable_path(path, config, "state")
+    _pre_write_backup(path, config, "state")
+    from .presence import status_transition_file
+
+    written = status_transition_file(
+        path,
+        expected_hash=snapshot.content_hash,
+        operation="state.transition",
+        state=args.state,
+        title=getattr(args, "title", None),
+        person=getattr(args, "person", None) or "self",
+        moment=moment,
+        details=details,
+        id_key=id_key_from_config(config),
+        close_only=bool(getattr(args, "end", False)),
+        force=bool(getattr(args, "force", False)),
+    )
+    closed, opened = written.transition.closed, written.transition.opened
+
+    for line in closed:
+        sys.stdout.write("Closed: %s\n" % line)
+    if opened:
+        sys.stdout.write("Opened: %s\n" % opened)
+    elif not closed:
+        sys.stdout.write("No open status to close at %s.\n" % format_timestamp(moment))
+    return 0
+
+
+def command_start(args):
+    """Start task, optional timer, and presence as one recoverable operation."""
+    from .work_session import start_work_transaction
+
+    config = _config(args)
+    path = args.path
+    if not path or path == "-":
+        raise ValueError("start requires a file path, not stdin.")
+    id_key = id_key_from_config(config)
+    text = read_text(path)
+    items, _ = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
+    target, aborted = _resolve_target_item(items, id_key, args, prompt_verb="Start:")
+    if aborted:
+        return 0
+    item_id = (target.details.get(id_key) or [""])[0]
+    if not item_id:
+        raise ValueError(
+            "Item %r has no %s:. Run `lifetxt ids --assign` first."
+            % (target.title, id_key)
+        )
+    if getattr(args, "dry_run", False):
+        sys.stdout.write(
+            "[dry-run] Would start work on %s as one transaction.\n" % item_id
+        )
+        return 0
+    result = start_work_transaction(
+        path,
+        item_id,
+        state=args.state,
+        use_timer=not getattr(args, "no_timer", False),
+        use_presence=not getattr(args, "no_presence", False),
+        config=config,
+        expected_item_revision=getattr(args, "item_revision", None),
+        expected_timer_revision=getattr(args, "timer_revision", None),
+        require_revisions=bool(getattr(args, "require_revisions", False)),
+    )
+    sys.stdout.write(
+        "Started: %s (%s) transaction:%s\n"
+        % (item_id, target.title, result.get("transaction_id"))
+    )
+    return 0
+
+
+def command_stop(args):
+    """Stop timer, update task, and close presence in one transaction."""
+    from .work_session import stop_work_transaction
+
+    config = _config(args)
+    if getattr(args, "dry_run", False):
+        sys.stdout.write(
+            "[dry-run] Would stop the active work session as one transaction.\n"
+        )
+        return 0
+    result = stop_work_transaction(
+        path=getattr(args, "path", None),
+        done=bool(getattr(args, "done", False)),
+        close_presence=not getattr(args, "no_presence", False),
+        config=config,
+        expected_item_revision=getattr(args, "item_revision", None),
+        expected_timer_revision=getattr(args, "timer_revision", None),
+        require_revisions=bool(getattr(args, "require_revisions", False)),
+    )
+    sys.stdout.write(
+        "Stopped: %s +%s total %s transaction:%s\n"
+        % (
+            result["id"],
+            result["elapsed_added"],
+            result["elapsed_total"],
+            result.get("transaction_id"),
+        )
+    )
+    return 0
+
+
+@contextlib.contextmanager
+def _captured_stdout():
+    """Swallow a helper command's stdout so the caller controls the output."""
+    buffer = io.StringIO()
+    original = sys.stdout
+    sys.stdout = buffer
+    try:
+        yield buffer
+    finally:
+        sys.stdout = original
+
+
+_PROGRESS_DELTA_RE = re.compile(r"^([+-])(\d+(?:\.\d+)?)(%)?$")
+
+
+def _apply_progress_delta(parsed, delta_text):
+    """Apply a signed +N/-N or +N%/-N%% delta to a parsed progress value
+    (#660), preserving its representation kind (fraction stays a fraction,
+    percentage stays a percentage) and returning the new raw text.
+
+    Both the fraction and the percentage path parse the delta digit text
+    with arbitrary-precision arithmetic (int for a fraction, Decimal for a
+    percentage) rather than float: float's own %g formatting rounds to 6
+    significant digits (silently truncating or completely no-op'ing a
+    small delta against a precise existing value), and float() on a very
+    long digit string overflows to inf, which int() then rejects with an
+    uncaught OverflowError instead of a clean CLI error. Decimal has
+    neither failure mode -- an absurdly large percentage delta still
+    fails, but via the caller's ordinary out-of-range ProgressValueError,
+    not a crash.
+
+    Raises ValueError, naming the reason, for a delta that does not match
+    the target's representation (a %% delta against a fraction, or vice
+    versa), a non-integer delta against a fraction, or an unparseable
+    delta string. Bounds validation (0-100% / 0<=current<=total) is left
+    to the caller, which re-parses the returned value via
+    lifetxt.progress.parse_progress().
+    """
+    match = _PROGRESS_DELTA_RE.match(str(delta_text or "").strip())
+    if not match:
+        raise ValueError(
+            "Invalid --delta %r. Use +N/-N for a fraction, or +N%%/-N%% for "
+            "a percentage." % delta_text
+        )
+    sign, amount_text, percent_sign = match.groups()
+
+    if parsed.kind == "fraction":
+        if percent_sign:
+            raise ValueError(
+                "progress:%s is a fraction; use +N/-N (no %%) to change its "
+                "numerator, not a percentage delta." % parsed.raw
+            )
+        if "." in amount_text:
+            raise ValueError(
+                "Fraction delta must be a whole number, got %r." % delta_text
+            )
+        amount = int(amount_text)
+        signed = amount if sign == "+" else -amount
+        return "%d/%d" % (parsed.current + signed, parsed.total)
+
+    if not percent_sign:
+        raise ValueError(
+            "progress:%s is a percentage; use +N%%/-N%% to change it, not a "
+            "fraction delta." % parsed.raw
+        )
+    from decimal import Decimal
+
+    current_decimal = Decimal(parsed.raw[:-1])  # strip the trailing '%'
+    delta_decimal = Decimal(amount_text)
+    signed_decimal = delta_decimal if sign == "+" else -delta_decimal
+    return "%s%%" % format(current_decimal + signed_decimal, "f")
+
+
+def command_progress(args):
+    """Increment/decrement an item's progress: value by a signed delta, or
+    directly set it (#665), preserving/choosing the percentage/fraction
+    representation (#660)."""
+    from .progress import ProgressValueError, parse_progress
+
+    config = _config(args)
+    path = args.path
+    if not path or path == "-":
+        raise ValueError("progress requires a file path, not stdin.")
+    id_key = id_key_from_config(config)
+    from .mutation import read_text_snapshot
+
+    snapshot = read_text_snapshot(path)
+    text = snapshot.text
+    items, _ = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
+    target, aborted = _resolve_target_item(
+        items, id_key, args, prompt_verb="Update progress:"
+    )
+    if aborted:
+        return 0
+
+    raw_values = target.details.get("progress")
+    current_raw = raw_values[0] if raw_values else None
+    set_value = getattr(args, "set_value", None)
+
+    if set_value is not None:
+        # Direct assignment (#665): the representation kind is whatever the
+        # user supplied -- never converted -- and is accepted even with no
+        # existing progress: to compare against. #645's missing-progress-
+        # is-not-implicitly-0% rule governs --delta, which needs a
+        # starting point to add/subtract from; --set does not.
+        new_raw = set_value.strip()
+        try:
+            parse_progress(new_raw)
+        except ProgressValueError as exc:
+            raise ValueError("progress:%s is invalid: %s" % (new_raw, exc.reason))
+    else:
+        if not current_raw:
+            # A missing progress: is never implicitly 0% (#645's own design
+            # constraint); reject rather than guess an initial value.
+            raise ValueError(
+                "Item %r has no progress: detail. Set an initial value "
+                "first (for example `lifetxt progress %s %s --set 0%%`)."
+                % (target.title, path, (target.details.get(id_key) or [""])[0])
+            )
+        try:
+            parsed = parse_progress(current_raw)
+        except ProgressValueError as exc:
+            raise ValueError(
+                "Existing progress:%s is invalid: %s" % (current_raw, exc.reason)
+            )
+
+        new_raw = _apply_progress_delta(parsed, args.delta)
+        try:
+            parse_progress(new_raw)
+        except ProgressValueError as exc:
+            raise ValueError(
+                "Resulting progress:%s would be invalid: %s" % (new_raw, exc.reason)
+            )
+
+    if getattr(args, "dry_run", False):
+        sys.stdout.write(
+            "[dry-run] Would change progress:%s to progress:%s.\n"
+            % (current_raw if current_raw is not None else "(none)", new_raw)
+        )
+        return 0
+
+    target_ids = target.details.get(id_key) or []
+    if not target_ids:
+        raise ValueError(
+            "progress history requires a stable %s: detail on the target item." % id_key
+        )
+    target_id = target_ids[0]
+
+    _ensure_writable_path(path, config, "progress")
+    _pre_write_backup(path, config, "progress")
+    from .progress_history import apply_progress_mutation
+
+    result = apply_progress_mutation(
+        path,
+        target_id,
+        new_raw,
+        "set" if set_value is not None else "delta",
+        snapshot.content_hash,
+        id_key=id_key,
+        expected_before=current_raw,
+    )
+    sys.stdout.write("Updated: %s\n" % item_to_line(result.item))
+    if sys.stdout.isatty():
+        sys.stdout.write(_render_success_guidance("progress", path=path))
+    return 0
+
+
+#: Detail keys never copied onto a clone (#659): identity/system provenance
+#: (matching model.py's own SYSTEM_RECOMMENDED_KEYS grouping of
+#: source/uid/created/updated -- a clone is a genuinely new record, not a
+#: continuation of the source's identity), plus done (completion history)
+#: and progress (explicitly reset to "no progress yet", never implicitly
+#: 0%, matching #645's own missing-progress-is-not-zero principle). The
+#: source's own id: is excluded separately below, keyed off the workspace's
+#: configured id_key rather than the literal string "id".
+_CLONE_RESET_DETAIL_KEYS = frozenset(
+    ("source", "uid", "created", "updated", "done", "progress")
+)
+
+
+def command_clone(args):
+    """Create a new item derived from an existing one (#659), resetting
+    identity/history-category details rather than copying them verbatim.
+    The source item is never modified."""
+    from .assist import _default_status as _clone_default_status
+
+    config = _config(args)
+    path = args.path
+    if not path or path == "-":
+        raise ValueError("clone requires a file path, not stdin.")
+    id_key = id_key_from_config(config)
+    text = read_text(path)
+    items, _ = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
+    target, aborted = _resolve_target_item(items, id_key, args, prompt_verb="Clone:")
+    if aborted:
+        return 0
+
+    new_details = OrderedDict()
+    for key, values in target.details.items():
+        if key == id_key or key in _CLONE_RESET_DETAIL_KEYS:
+            continue
+        new_details[key] = list(values)
+
+    status = _clone_default_status(target.kind, new_details)
+    new_item = Item(status, target.kind, target.title, new_details)
+
+    if auto_ids_enabled(config):
+        existing_ids = collect_item_ids(items, key=id_key)
+        ensure_item_id(
+            new_item,
+            existing_ids=existing_ids,
+            key=id_key,
+            prefix=id_prefix_for_item(new_item, config),
+        )
+
+    new_line = item_to_assisted_line(new_item)
+    parsed_new, new_diagnostics = parse_text(new_line + "\n")
+    if not parsed_new or _has_error(new_diagnostics):
+        _print_diagnostics(new_diagnostics)
+        raise ValueError("Generated clone did not produce a valid item: %s" % new_line)
+
+    if getattr(args, "dry_run", False):
+        sys.stdout.write(
+            "[dry-run] Would clone %r to:\n%s\n" % (target.title, new_line)
+        )
+        return 0
+
+    _ensure_writable_path(path, config, "clone")
+    _pre_write_backup(path, config, "clone")
+    from .write_operations import append_life_records
+
+    append_life_records(path, new_line + "\n", operation="clone.append")
+    sys.stdout.write("Cloned: %s\n" % new_line)
+    if sys.stdout.isatty():
+        sys.stdout.write(_render_success_guidance("clone", path=path))
+    return 0
+
+
+#: Detail keys that belong only to a completed state and must be removed
+#: when reopening (#664). Kept a tuple, not a single key, so a future
+#: completion-only key can be added in one place.
+_REOPEN_RESET_DETAIL_KEYS = ("done",)
+
+
+def _commit_native_cli_replacement(
+    path,
+    original_text,
+    replacement_text,
+    target,
+    event_type,
+    id_key,
+    field=None,
+    relation_target=None,
+):
+    """Use native capture when stable identity exists; preserve legacy fallback."""
+    target_ids = target.details.get(id_key) or []
+    if not target_ids:
+        atomic_write_text(path, replacement_text)
+        return None
+    from .mutation import hash_text
+    from .native_history_mutation import commit_item_mutation_with_event
+
+    return commit_item_mutation_with_event(
+        path,
+        target_ids[0],
+        event_type,
+        replacement_text,
+        hash_text(original_text),
+        id_key=id_key,
+        actor="local",
+        source="cli",
+        field=field,
+        target=relation_target,
+    )
+
+
+def command_reopen(args):
+    """Undo an item's completion (#664): remove completion-only metadata
+    and restore the item to its existing kind-aware open/default status.
+
+    Reuses the same target resolver, kind-aware status helper, and guarded
+    mutation path as `clone`/`done`/`complete` rather than a second
+    item-editing path."""
+    from .assist import _default_status as _reopen_default_status
+
+    config = _config(args)
+    path = args.path
+    if not path or path == "-":
+        raise ValueError("reopen requires a file path, not stdin.")
+    id_key = id_key_from_config(config)
+    text = read_text(path)
+    items, _ = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
+    target, aborted = _resolve_target_item(items, id_key, args, prompt_verb="Reopen:")
+    if aborted:
+        return 0
+
+    if target.kind == "H":
+        # Habit records log completions as a multiple-value done: history
+        # rather than a single completed state; there is no one entry to
+        # "undo" the way there is for an ordinary [x] item.
+        raise ValueError(
+            "Habit %r logs completions as multiple done: dates; reopen "
+            "does not support habits. Remove the specific done: date with "
+            "`lifetxt assist --update` instead." % target.title
+        )
+
+    if target.status != "[x]":
+        sys.stdout.write(
+            "Already open: %s (status %s); nothing to reopen.\n"
+            % (target.title, target.status)
+        )
+        return 0
+
+    remaining_details = OrderedDict(
+        (key, list(values))
+        for key, values in target.details.items()
+        if key not in _REOPEN_RESET_DETAIL_KEYS
+    )
+    new_status = _reopen_default_status(target.kind, remaining_details)
+
+    if getattr(args, "dry_run", False):
+        sys.stdout.write(
+            "[dry-run] Would reopen %r to status %s and remove %s.\n"
+            % (target.title, new_status, ", ".join(_REOPEN_RESET_DETAIL_KEYS))
+        )
+        return 0
+
+    update_args = types.SimpleNamespace(
+        line=target.line,
+        match_id=None,
+        status=new_status,
+        kind=None,
+        title=None,
+        add_detail=None,
+        detail=None,
+        remove_detail=list(_REOPEN_RESET_DETAIL_KEYS),
+    )
+    for flag in DETAIL_FLAGS:
+        dest = "from_" if flag == "from" else flag
+        if not hasattr(update_args, dest):
+            setattr(update_args, dest, None)
+
+    updated_text, updated_line, diagnostics = update_text(text, update_args)
+    if _has_error(diagnostics):
+        _print_diagnostics(diagnostics)
+        return 1
+
+    _ensure_writable_path(path, config, "reopen")
+    _pre_write_backup(path, config, "reopen")
+    _commit_native_cli_replacement(path, text, updated_text, target, "reopened", id_key)
+    sys.stdout.write("Reopened: %s\n" % updated_line)
+    if sys.stdout.isatty():
+        sys.stdout.write(_render_success_guidance("reopen", path=path))
+    return 0
+
+
+_DUE_ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def command_due(args):
+    """Set, replace, or clear an item's due: date (#666).
+
+    Accepts the shared today/tomorrow/+Nd/... shorthand (#667) at this CLI
+    boundary only, resolved through the workspace-aware timezone policy
+    before anything is written -- the exact same
+    `lifetxt.shorthand.resolve_date_token` resolver `quick`'s
+    --due/--do/--until flags already use. The stored value is always a
+    canonical absolute due:YYYY-MM-DD; reuses the same target resolver
+    and guarded mutation path as `done`/`progress`/`clone` rather than a
+    second item-editing path."""
+    from .shorthand import ShorthandError, resolve_date_token
+
+    config = _config(args)
+    path = args.path
+    if not path or path == "-":
+        raise ValueError("due requires a file path, not stdin.")
+    id_key = id_key_from_config(config)
+    text = read_text(path)
+    items, _ = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
+    target, aborted = _resolve_target_item(items, id_key, args, prompt_verb="Set due:")
+    if aborted:
+        return 0
+
+    clear = getattr(args, "clear", False)
+    date_arg = getattr(args, "date", None)
+    if clear and date_arg:
+        raise ValueError("Use either a date or --clear, not both.")
+    if not clear and not date_arg:
+        raise ValueError(
+            "Specify a due date (YYYY-MM-DD, today, tomorrow, +Nd, ...) or --clear."
+        )
+
+    if clear:
+        if "due" not in target.details:
+            sys.stdout.write("No due: to clear on %r.\n" % target.title)
+            return 0
+        remove_detail = ["due"]
+        add_detail = None
+        dry_run_summary = "Would clear due: on %r." % target.title
+    else:
+        try:
+            resolved = resolve_date_token(date_arg, today=timezone_today(), strict=True)
+        except ShorthandError as exc:
+            raise ValueError(str(exc))
+        if (
+            not _DUE_ISO_DATE_RE.match(resolved)
+            or parse_date_or_datetime(resolved) is None
+        ):
+            raise ValueError(
+                "Invalid due date %r. Use YYYY-MM-DD, today, tomorrow, "
+                "yesterday, a weekday, next_week, or an offset such as "
+                "+3d, -1w, +2m." % date_arg
+            )
+        remove_detail = ["due"]
+        add_detail = ["due:%s" % resolved]
+        dry_run_summary = "Would set due:%s on %r." % (resolved, target.title)
+
+    if getattr(args, "dry_run", False):
+        sys.stdout.write("[dry-run] %s\n" % dry_run_summary)
+        return 0
+
+    update_args = types.SimpleNamespace(
+        line=target.line,
+        match_id=None,
+        status=None,
+        kind=None,
+        title=None,
+        add_detail=add_detail,
+        detail=None,
+        remove_detail=remove_detail,
+    )
+    for flag in DETAIL_FLAGS:
+        dest = "from_" if flag == "from" else flag
+        if not hasattr(update_args, dest):
+            setattr(update_args, dest, None)
+
+    updated_text, updated_line, diagnostics = update_text(text, update_args)
+    if _has_error(diagnostics):
+        _print_diagnostics(diagnostics)
+        return 1
+
+    _ensure_writable_path(path, config, "due")
+    _pre_write_backup(path, config, "due")
+    _commit_native_cli_replacement(
+        path, text, updated_text, target, "schedule_changed", id_key, field="due"
+    )
+    sys.stdout.write("Updated: %s\n" % updated_line)
+    if sys.stdout.isatty():
+        sys.stdout.write(_render_success_guidance("due", path=path))
+    return 0
+
+
+def command_done(args):
+    config = _config(args)
+    path = args.path
+    if not path or path == "-":
+        raise ValueError("done command requires a file path, not stdin.")
+    text = read_text(path)
+    id_key = id_key_from_config(config)
+    items, _ = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
+
+    target, aborted = _resolve_target_item(
+        items, id_key, args, prompt_verb="Mark done:"
+    )
+    if aborted:
+        return 0
+
+    date_iso, completion_date = _completion_stamp(args, config)
+
+    if target.kind == "H":
+        # Habit logs stay date-only: the log is one entry per calendar day, and
+        # a time would break same-day duplicate detection.
+        return _command_done_habit(
+            path, text, target, completion_date.isoformat(), config, args
+        )
+
+    if target.status == "[x]":
+        sys.stdout.write(_t("done.already", title=target.title) + "\n")
+        return 0
+
+    update_args = _build_mark_done_args(target, date_iso)
+    updated_text, updated_line, diagnostics = update_text(text, update_args)
+    if _has_error(diagnostics):
+        _print_diagnostics(diagnostics)
+        return 1
+
+    dry_run = getattr(args, "dry_run", False)
+    if dry_run:
+        sys.stdout.write(_t("done.dry_run_would_mark", line=updated_line) + "\n")
+        return 0
+
+    _ensure_writable_path(path, config, "done")
+    _pre_write_backup(path, config, "done")
+    _commit_native_cli_replacement(
+        path, text, updated_text, target, "completed", id_key
+    )
+    sys.stdout.write(_t("done.done", line=updated_line) + "\n")
+    if sys.stdout.isatty():
+        sys.stdout.write(_render_success_guidance("done", path=path))
+    return 0
+
+
+def _build_mark_done_args(target, date_iso):
+    """Build update_text() args that mark an item [x] with done:DATE."""
+    update_args = types.SimpleNamespace(
+        line=target.line,
+        match_id=None,
+        status="[x]",
+        kind=None,
+        title=None,
+        done=[date_iso],
+        detail=None,
+        add_detail=None,
+        remove_detail=None,
+    )
+    for flag in DETAIL_FLAGS:
+        dest = "from_" if flag == "from" else flag
+        if not hasattr(update_args, dest):
+            setattr(update_args, dest, None)
+    return update_args
+
+
+def _command_done_habit(path, text, target, date_iso, config, args):
+    """Append a completion date to a habit item's done: log without changing status.
+
+    Habit definitions stay on one line and open (status unchanged); streaks are
+    computed from the accumulated done: values, matching item_completion_dates().
+    """
+    existing_dates = target.details.get("done", [])
+    force = getattr(args, "force", False)
+    if date_iso in existing_dates and not force:
+        raise ValueError(
+            "Habit already has done:%s. Use --force to log a duplicate same-day completion."
+            % date_iso
+        )
+
+    update_args = types.SimpleNamespace(
+        line=target.line,
+        match_id=None,
+        status=None,
+        kind=None,
+        title=None,
+        add_detail=["done:%s" % date_iso],
+        detail=None,
+        remove_detail=None,
+    )
+    for flag in DETAIL_FLAGS:
+        dest = "from_" if flag == "from" else flag
+        if not hasattr(update_args, dest):
+            setattr(update_args, dest, None)
+
+    updated_text, updated_line, diagnostics = update_text(text, update_args)
+    if _has_error(diagnostics):
+        _print_diagnostics(diagnostics)
+        return 1
+
+    from .stats import streak_days
+
+    completion_date = _parse_date_only(date_iso)
+    dates = {_parse_date_only(v) for v in existing_dates}
+    dates.discard(None)
+    dates.add(completion_date)
+    streak = streak_days(dates, completion_date)
+
+    dry_run = getattr(args, "dry_run", False)
+    if dry_run:
+        sys.stdout.write(
+            _t("done.dry_run_would_log", line=updated_line, streak=streak) + "\n"
+        )
+        return 0
+
+    _ensure_writable_path(path, config, "done")
+    _pre_write_backup(path, config, "done")
+    atomic_write_text(path, updated_text)
+    sys.stdout.write(_t("done.logged", line=updated_line, streak=streak) + "\n")
+    if sys.stdout.isatty():
+        sys.stdout.write(_render_success_guidance("done", path=path))
+    return 0
+
+
+def command_complete(args):
+    """Complete a repeat-enabled task instance, materializing the next occurrence.
+
+    Non-repeating items fall back to the same behavior as `done`. Repeat-enabled
+    items mark the current instance [x] and append a fresh [ ] instance with the
+    next due date, Taskwarrior-style, so file growth is handled by `archive`.
+    """
+    config = _config(args)
+    path = args.path
+    if not path or path == "-":
+        raise ValueError("complete command requires a file path, not stdin.")
+    text = read_text(path)
+    id_key = id_key_from_config(config)
+    items, _ = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
+
+    target, aborted = _resolve_target_item(items, id_key, args, prompt_verb="Complete:")
+    if aborted:
+        return 0
+
+    if target.status == "[x]":
+        sys.stdout.write(_t("done.already", title=target.title) + "\n")
+        return 0
+
+    date_arg = getattr(args, "date", None)
+    if date_arg:
+        completion_dt = parse_date_or_datetime(date_arg, is_end=False)
+        if completion_dt is None:
+            raise ValueError("Invalid --date %r. Use YYYY-MM-DD." % date_arg)
+        completion_date = completion_dt.date()
+    else:
+        completion_date = timezone_today()
+    date_iso = completion_date.isoformat()
+
+    repeat_value = _first_detail_value(target, "repeat")
+    dry_run = getattr(args, "dry_run", False)
+
+    if not repeat_value:
+        # No repeat rule: complete behaves exactly like done for tasks.
+        update_args = _build_mark_done_args(target, date_iso)
+        updated_text, updated_line, diagnostics = update_text(text, update_args)
+        if _has_error(diagnostics):
+            _print_diagnostics(diagnostics)
+            return 1
+        if dry_run:
+            sys.stdout.write(_t("done.dry_run_would_mark", line=updated_line) + "\n")
+            return 0
+        _ensure_writable_path(path, config, "complete")
+        _pre_write_backup(path, config, "complete")
+        _commit_native_cli_replacement(
+            path, text, updated_text, target, "completed", id_key
+        )
+        sys.stdout.write(_t("done.done", line=updated_line) + "\n")
+        if sys.stdout.isatty():
+            sys.stdout.write(_render_success_guidance("complete", path=path))
+        return 0
+
+    next_anchor_key, next_dt, rule = _compute_next_occurrence(
+        target, config, completion_date
+    )
+
+    update_args = _build_mark_done_args(target, date_iso)
+    updated_text, updated_line, diagnostics = update_text(text, update_args)
+    if _has_error(diagnostics):
+        _print_diagnostics(diagnostics)
+        return 1
+
+    if next_dt is None:
+        # Series ended (until reached): mark done, do not materialize a new instance.
+        if dry_run:
+            sys.stdout.write(
+                "[dry-run] Would mark done (series complete, no new occurrence): %s\n"
+                % updated_line
+            )
+            return 0
+        _ensure_writable_path(path, config, "complete")
+        _pre_write_backup(path, config, "complete")
+        _commit_native_cli_replacement(
+            path, text, updated_text, target, "completed", id_key
+        )
+        sys.stdout.write("Completed (series ended): %s\n" % updated_line)
+        return 0
+
+    new_details = OrderedDict()
+    for key, values in target.details.items():
+        if key in (id_key, "done"):
+            continue
+        new_details[key] = list(values)
+
+    if next_dt.time() == datetime.time():
+        next_value = next_dt.date().isoformat()
+    else:
+        next_value = format_datetime(next_dt)
+    new_details[next_anchor_key] = [next_value]
+
+    new_item = Item("[ ]", target.kind, target.title, new_details)
+    existing_ids = collect_item_ids(items, key=id_key)
+    ensure_item_id(
+        new_item,
+        existing_ids=existing_ids,
+        key=id_key,
+        prefix=id_prefix_for_item(new_item, config),
+    )
+    new_line = item_to_assisted_line(new_item)
+
+    parsed_new, new_diagnostics = parse_text(new_line + "\n")
+    if not parsed_new or _has_error(new_diagnostics):
+        _print_diagnostics(new_diagnostics)
+        raise ValueError(
+            "Generated next occurrence did not produce a valid item: %s" % new_line
+        )
+
+    if dry_run:
+        sys.stdout.write("[dry-run] Would complete: %s\n" % updated_line)
+        sys.stdout.write("[dry-run] Would add next occurrence: %s\n" % new_line)
+        return 0
+
+    end_line = getattr(target, "end_line", target.line) or target.line
+    text_lines = updated_text.splitlines(True)
+    ending = "\n"
+    if text_lines and not text_lines[-1].endswith(("\n", "\r")):
+        text_lines[-1] += ending
+    insert_at = min(end_line, len(text_lines))
+    text_lines.insert(insert_at, new_line + ending)
+    final_text = "".join(text_lines)
+
+    _ensure_writable_path(path, config, "complete")
+    _pre_write_backup(path, config, "complete")
+    target_ids = target.details.get(id_key) or []
+    new_ids = new_item.details.get(id_key) or []
+    if target_ids and new_ids:
+        from .mutation import hash_text
+        from .native_history_mutation import commit_item_mutations_with_events
+
+        commit_item_mutations_with_events(
+            path,
+            final_text,
+            hash_text(text),
+            [
+                {
+                    "item_id": target_ids[0],
+                    "event_type": "completed",
+                    "actor": "local",
+                    "source": "cli.complete",
+                },
+                {
+                    "item_id": new_ids[0],
+                    "event_type": "created",
+                    "actor": "local",
+                    "source": "cli.complete",
+                },
+            ],
+            id_key=id_key,
+        )
+    else:
+        atomic_write_text(path, final_text)
+    sys.stdout.write("Completed: %s\n" % updated_line)
+    sys.stdout.write("Next: %s\n" % new_line)
+    return 0
+
+
+def resolve_repeat_base(item, config):
+    """Resolve the effective repeat_base ('due' or 'done') for an item.
+
+    Item-level repeat_base: overrides the config defaults.repeat_base setting,
+    which defaults to 'due' when unset.
+    """
+    repeat_base = _first_detail_value(item, "repeat_base")
+    if not repeat_base:
+        defaults = config_section(config, "defaults")
+        repeat_base = defaults.get("repeat_base") or "due"
+    return str(repeat_base).strip().lower()
+
+
+def _compute_next_occurrence(item, config, completion_date):
+    """Return (anchor_key, next_datetime_or_None, rule) for repeat materialization.
+
+    Thin wrapper around agenda.next_repeat_occurrence() that resolves
+    repeat_base from the item or config first, so CLI, Web API, and MCP
+    share one calculation.
+    """
+    repeat_base = resolve_repeat_base(item, config)
+    return next_repeat_occurrence(item, repeat_base, completion_date)
+
+
+def command_batch(args):
+    config = _config(args)
+    paths = _normalize_paths(getattr(args, "paths", None) or [], config)
+    selectors = []
+    selectors.extend(("id", value) for value in (getattr(args, "ids", None) or []))
+    selectors.extend(("text", value) for value in (getattr(args, "texts", None) or []))
+    action = getattr(args, "action", "")
+    if action in ("done", "assign") and not selectors:
+        raise ValueError("batch requires at least one --id or --text selector.")
+    if action == "assign" and not getattr(args, "to", None):
+        raise ValueError("batch assign requires --to.")
+    if action in ("tag-rename", "tag-merge") and (
+        not getattr(args, "old", None) or not getattr(args, "new", None)
+    ):
+        raise ValueError("batch %s requires --old and --new." % action)
+    if action == "migrate" and not getattr(args, "migrations", None):
+        raise ValueError("batch migrate requires at least one --migration.")
+    if not paths:
+        raise ValueError("batch requires at least one file path.")
+
+    status_code = 0
+    applied = 0
+    failed = 0
+    for path in paths:
+        if path == "-":
+            raise ValueError("batch does not support stdin.")
+        try:
+            if action in ("done", "assign"):
+                for selector_kind, selector_value in selectors:
+                    if action == "done":
+                        child_args = types.SimpleNamespace(
+                            path=path,
+                            id=selector_value if selector_kind == "id" else None,
+                            line=None,
+                            text=selector_value if selector_kind == "text" else None,
+                            dry_run=getattr(args, "dry_run", False),
+                            config_data=config,
+                        )
+                        result = command_done(child_args)
+                        status_code = status_code or result
+                        applied += 1
+                        continue
+                    if getattr(args, "dry_run", False):
+                        sys.stdout.write(
+                            "[dry-run] Would assign %s=%s to %s in %s.\n"
+                            % (selector_kind, selector_value, args.to, path)
+                        )
+                        applied += 1
+                        continue
+                    child_args = types.SimpleNamespace(
+                        path=path,
+                        id=selector_value if selector_kind == "id" else None,
+                        text=selector_value if selector_kind == "text" else None,
+                        to=args.to,
+                        notify=False,
+                        from_user=None,
+                        config_data=config,
+                    )
+                    result = command_assign(child_args)
+                    status_code = status_code or result
+                    applied += 1
+                continue
+            if action == "tag-rename":
+                child_args = types.SimpleNamespace(
+                    path=path,
+                    old=args.old,
+                    new=args.new,
+                    dry_run=getattr(args, "dry_run", False),
+                    config_data=config,
+                )
+                result = command_tag_rename(child_args)
+                status_code = status_code or result
+                applied += 1
+                continue
+            if action == "tag-merge":
+                child_args = types.SimpleNamespace(
+                    path=path,
+                    old=args.old,
+                    new=args.new,
+                    dry_run=getattr(args, "dry_run", False),
+                    config=getattr(args, "config", None),
+                    config_data=config,
+                )
+                result = command_tag_merge(child_args)
+                status_code = status_code or result
+                applied += 1
+                continue
+            if action == "migrate":
+                child_args = types.SimpleNamespace(
+                    path=path,
+                    migrations=args.migrations,
+                    dry_run=getattr(args, "dry_run", False),
+                    backup=getattr(args, "backup", False),
+                    config_data=config,
+                )
+                result = command_migrate(child_args)
+                status_code = status_code or result
+                applied += 1
+                continue
+            raise ValueError("Unsupported batch action: %s" % action)
+        except Exception as exc:
+            failed += 1
+            status_code = 1
+            sys.stderr.write(
+                "ERROR: batch %s failed for %s: %s\n" % (action, path, exc)
+            )
+    if getattr(args, "dry_run", False):
+        sys.stdout.write(
+            "[dry-run] Planned %d batch operation(s), %d failed.\n" % (applied, failed)
+        )
+    else:
+        sys.stdout.write(
+            "Applied %d batch operation(s), %d failed.\n" % (applied, failed)
+        )
+    return status_code
+
+
+def command_summary(args):
+    config = _config(args)
+    compare_path = getattr(args, "compare", None)
+    if compare_path:
+        # Side-by-side comparison mode
+        primary_paths = args.paths if args.paths else ["-"]
+        _summary_compare(primary_paths, compare_path, _config(args))
+        return 0
+    paths = args.paths if args.paths else ["-"]
+    id_key = id_key_from_config(config)
+    all_results = []
+
+    for path in paths:
+        text = read_text(path)
+        items, _ = parse_text(
+            text, id_key=id_key, check_ids=False, check_references=False
+        )
+
+        line_count = len(text.splitlines())
+        type_counts = {}
+        status_counts = {}
+        ids_present = 0
+        ids_missing = 0
+        dates = []
+
+        for item in items:
+            type_counts[item.kind] = type_counts.get(item.kind, 0) + 1
+            status_counts[item.status] = status_counts.get(item.status, 0) + 1
+            if item.details.get(id_key):
+                ids_present += 1
+            else:
+                ids_missing += 1
+            for date_key in ("done", "updated", "created", "due", "do", "on"):
+                for val in item.details.get(date_key, []):
+                    s = str(val)
+                    if len(s) >= 10 and s[:10].count("-") == 2:
+                        dates.append(s[:10])
+
+        date_min = min(dates) if dates else None
+        date_max = max(dates) if dates else None
+
+        mtime = None
+        if path != "-" and os.path.exists(path):
+            stat = os.stat(path)
+            mtime = datetime.datetime.fromtimestamp(stat.st_mtime).strftime(
+                "%Y-%m-%dT%H:%M"
+            )
+
+        all_results.append(
+            OrderedDict(
+                [
+                    ("source", path),
+                    ("line_count", line_count),
+                    ("item_count", len(items)),
+                    ("type_counts", type_counts),
+                    ("status_counts", status_counts),
+                    ("id_key", id_key),
+                    ("ids_present", ids_present),
+                    ("ids_missing", ids_missing),
+                    ("date_min", date_min),
+                    ("date_max", date_max),
+                    ("modified", mtime),
+                ]
+            )
+        )
+
+    if args.format == "json":
+        payload = all_results[0] if len(all_results) == 1 else all_results
+        write_text(
+            None,
+            json.dumps(
+                payload,
+                ensure_ascii=False,
+                indent=2 if args.pretty else None,
+                separators=None if args.pretty else (",", ":"),
+            )
+            + "\n",
+        )
+    else:
+        try:
+            import shutil as _shutil
+
+            term_width = _shutil.get_terminal_size((80, 24)).columns
+        except Exception:
+            term_width = 80
+        compact = term_width < 60
+        for result in all_results:
+            if compact:
+                type_str = " ".join(
+                    "%s:%d" % (k, v) for k, v in sorted(result["type_counts"].items())
+                )
+                status_str = " ".join(
+                    "%s:%d" % (k.strip("[]"), v)
+                    for k, v in sorted(result["status_counts"].items())
+                )
+                lines = [
+                    "%s  %d items  %s  [%s]"
+                    % (result["source"], result["item_count"], type_str, status_str)
+                ]
+            else:
+                lines = ["Summary: %s" % result["source"]]
+                lines.append("  Lines:    %d" % result["line_count"])
+                lines.append("  Items:    %d" % result["item_count"])
+                if result["type_counts"]:
+                    lines.append(
+                        "  Types:    "
+                        + "  ".join(
+                            "%s:%d" % (k, v)
+                            for k, v in sorted(result["type_counts"].items())
+                        )
+                    )
+                if result["status_counts"]:
+                    lines.append(
+                        "  Statuses: "
+                        + "  ".join(
+                            "%s:%d" % (k.strip("[]"), v)
+                            for k, v in sorted(result["status_counts"].items())
+                        )
+                    )
+                lines.append(
+                    "  IDs (%s):  %d present, %d missing"
+                    % (
+                        result["id_key"],
+                        result["ids_present"],
+                        result["ids_missing"],
+                    )
+                )
+                if result["date_min"] or result["date_max"]:
+                    lines.append(
+                        "  Dates:    %s .. %s"
+                        % (
+                            result["date_min"] or "?",
+                            result["date_max"] or "?",
+                        )
+                    )
+                if result["modified"]:
+                    lines.append("  Modified: %s" % result["modified"])
+            write_text(None, "\n".join(lines) + "\n")
+    return 0
+
+
+def command_undo(args):
+    config = _config(args)
+    path = args.path
+    if not path or path == "-":
+        raise ValueError("undo requires a file path.")
+    basename = os.path.basename(path)
+    undo_dir = os.path.join(_undo_cache_dir(config), basename)
+
+    try:
+        entries = sorted(e for e in os.listdir(undo_dir) if e.endswith(".txt"))
+    except OSError:
+        entries = []
+
+    if not entries:
+        sys.stdout.write("No undo history for: %s\n" % path)
+        return 0
+
+    if args.list:
+        sys.stdout.write(
+            "Undo history for %s (%d snapshot(s)):\n" % (path, len(entries))
+        )
+        for i, name in enumerate(reversed(entries)):
+            parts = name.rsplit(".", 2)
+            if len(parts) == 3:
+                ts_raw, op, _ = parts
+                try:
+                    dt = datetime.datetime.strptime(ts_raw, "%Y%m%d_%H%M%S")
+                    ts_str = dt.strftime("%Y-%m-%d %H:%M:%S")
+                except ValueError:
+                    ts_str = ts_raw
+                    op = "?"
+                sys.stdout.write("  [%d] %s  op=%s\n" % (i + 1, ts_str, op))
+            else:
+                sys.stdout.write("  [%d] %s\n" % (i + 1, name))
+        return 0
+
+    snapshot = entries[-1]
+    snapshot_path = os.path.join(undo_dir, snapshot)
+    try:
+        content = read_text(snapshot_path)
+    except OSError as exc:
+        raise ValueError("Failed to read undo snapshot: %s" % exc)
+
+    from .write_operations import restore_text
+
+    restore_text(
+        path,
+        content,
+        expected_revision=getattr(args, "revision", None),
+        operation="undo.restore",
+    )
+    try:
+        os.unlink(snapshot_path)
+    except OSError:
+        pass
+
+    sys.stdout.write("Restored: %s (from %s)\n" % (path, snapshot))
+    return 0
+
+
+def command_init(args):
+    life_file = getattr(args, "file", None) or "life.txt"
+    config_file = getattr(args, "config_output", None) or ".lifetxt.json"
+
+    life_exists = os.path.exists(life_file)
+    config_exists = os.path.exists(config_file)
+
+    yes = getattr(args, "yes", False) or args.force
+
+    if (life_exists or config_exists) and not yes:
+        existing = [p for p in (life_file, config_file) if os.path.exists(p)]
+        sys.stdout.write(_t("init.overwrite_prompt", files=", ".join(existing)) + "\n")
+        sys.stdout.write(_t("init.overwrite_confirm"))
+        sys.stdout.flush()
+        answer = sys.stdin.readline().strip().lower()
+        if answer not in ("y", "yes"):
+            sys.stdout.write(_t("init.aborted") + "\n")
+            return 0
+
+    name = getattr(args, "name", None)
+    if not name and not yes:
+        sys.stdout.write(_t("init.name_prompt"))
+        sys.stdout.flush()
+        name = sys.stdin.readline().strip() or "self"
+    if not name:
+        name = "self"
+
+    timezone_val = getattr(args, "timezone", None)
+    if not timezone_val and not yes:
+        sys.stdout.write(_t("init.timezone_prompt"))
+        sys.stdout.flush()
+        timezone_val = sys.stdin.readline().strip() or "UTC"
+    if not timezone_val:
+        timezone_val = "UTC"
+
+    project = getattr(args, "project", None)
+    if project is None and not yes:
+        sys.stdout.write(_t("init.project_prompt"))
+        sys.stdout.flush()
+        project = sys.stdin.readline().strip()
+
+    preset = getattr(args, "preset", None)
+    if preset is None and not yes:
+        sys.stdout.write(
+            _t("init.preset_prompt", presets=", ".join(preset_names())) + "\n"
+        )
+        sys.stdout.flush()
+        answer = sys.stdin.readline().strip()
+        preset = answer or _INIT_DEFAULT_PRESET
+    if preset is None:
+        preset = _INIT_DEFAULT_PRESET
+    try:
+        validate_preset(preset)
+    except ValueError as exc:
+        sys.stderr.write("ERROR: %s\n" % exc)
+        return 1
+
+    today = timezone_today().isoformat()
+    life_text = _render_init_life_text(name, timezone_val, project, today, preset)
+
+    defaults = OrderedDict()
+    defaults["person"] = name
+    defaults["timezone"] = timezone_val
+    if project:
+        defaults["project"] = project
+    config_data = OrderedDict([("defaults", defaults)])
+    config_text = json.dumps(config_data, ensure_ascii=False, indent=2) + "\n"
+
+    write_text(life_file, life_text)
+    sys.stdout.write(_t("init.wrote", path=life_file) + "\n")
+    write_text(config_file, config_text)
+    sys.stdout.write(_t("init.wrote", path=config_file) + "\n")
+    if sys.stdout.isatty():
+        # TTY only (#638): the more beginner-friendly next-step guidance
+        # (add -> today) instead of the plain script-safe check suggestion.
+        sys.stdout.write(_render_success_guidance("init"))
+    else:
+        sys.stdout.write(
+            _t("init.next", command="python -m lifetxt check %s" % life_file) + "\n"
+        )
+    return 0
+
+
+#: Optional dependencies not covered by a pyproject.toml extras group; the
+#: plain-`pip install PKG` hint is the accurate one for these.
+_STANDALONE_OPTIONAL_DEPENDENCY_HINT = "pip install %s"
+#: Optional dependencies covered by an extras group -- installing the group
+#: is the documented, correct way to get them, not `pip install PKG` alone.
+_EXTRAS_GROUP_BY_DEPENDENCY = {
+    "fastapi": "web",
+    "uvicorn": "web",
+    "textual": "tui",
+    "watchdog": "tui",
+}
+
+
+#: Repository queried by `lifetxt update-check` and `lifetxt update`.
+_UPDATE_CHECK_REPO = "Eruhitsuji/lifetxt"
+
+
+def _parse_simple_version(text):
+    """Parse a dotted numeric version into a comparable tuple.
+
+    Accepts an optional leading "v" (GitHub tag convention) and ignores any
+    pre-release or build-metadata suffix after the dotted numeric prefix
+    (e.g. "v1.2.3-rc1" -> (1, 2, 3)). This is an informational "is this
+    newer" comparison, not a strict PEP 440 or semver parser. Returns None
+    when no leading dotted-numeric prefix can be found.
+    """
+    import re
+
+    text = str(text or "").strip()
+    if text[:1] in ("v", "V"):
+        text = text[1:]
+    match = re.match(r"^(\d+(?:\.\d+)*)", text)
+    if not match:
+        return None
+    return tuple(int(part) for part in match.group(1).split("."))
+
+
+def _github_api_get(url, timeout):
+    request = Request(
+        url,
+        headers={
+            "User-Agent": "lifetxt-update-check",
+            "Accept": "application/vnd.github+json",
+        },
+    )
+    return urlopen(request, timeout=timeout)
+
+
+def _github_latest_release_or_tag(repo, timeout=10):
+    """Find the latest published release, falling back to the newest tag.
+
+    Returns (version_text, kind, url) where kind is "release" or "tag", or
+    (None, None, None) when the repository has no releases or tags at all.
+    Raises ValueError on a network or API failure so the caller fails loudly
+    rather than silently reporting "up to date".
+    """
+    try:
+        with _github_api_get(
+            "https://api.github.com/repos/%s/releases/latest" % repo, timeout
+        ) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        version = payload.get("tag_name") or payload.get("name")
+        return version, "release", payload.get("html_url", "")
+    except HTTPError as exc:
+        if exc.code != 404:
+            raise ValueError("GitHub release lookup failed: HTTP %s." % exc.code)
+    except URLError as exc:
+        raise ValueError("GitHub release lookup failed: %s." % exc.reason)
+
+    # No published release. Fall back to the most recently created tag.
+    try:
+        with _github_api_get(
+            "https://api.github.com/repos/%s/tags" % repo, timeout
+        ) as response:
+            tags = json.loads(response.read().decode("utf-8"))
+    except HTTPError as exc:
+        raise ValueError("GitHub tag lookup failed: HTTP %s." % exc.code)
+    except URLError as exc:
+        raise ValueError("GitHub tag lookup failed: %s." % exc.reason)
+    if not tags:
+        return None, None, None
+    name = tags[0].get("name")
+    return name, "tag", "https://github.com/%s/releases/tag/%s" % (repo, name)
+
+
+def _resolve_update_check_repo(args, config):
+    """Resolve which GitHub repository to check: --repo, then config, then the built-in default.
+
+    A fork should never be silently pointed at the upstream project's
+    releases: `_UPDATE_CHECK_REPO` is only the last-resort fallback, not the
+    only option. `--repo` (a one-off override) takes precedence over
+    `update.repository` (a persistent, per-install default).
+    """
+    import re
+
+    explicit = getattr(args, "repo", None)
+    configured = config_section(config, "update").get("repository")
+    repo = str(explicit or configured or _UPDATE_CHECK_REPO).strip()
+    if not re.match(r"^[^/\s]+/[^/\s]+$", repo):
+        raise ValueError(
+            "Invalid repository %r; expected OWNER/NAME (e.g. Eruhitsuji/lifetxt)."
+            % repo
+        )
+    return repo
+
+
+def command_update_check(args):
+    """Report whether a newer lifetxt release or tag exists on GitHub.
+
+    Read-only: makes one or two GET requests to the public GitHub API and
+    never writes anything or installs anything. lifetxt has no PyPI
+    distribution, so "the latest release" means the latest GitHub Release,
+    falling back to the latest tag when no Release has been published.
+    """
+    from . import __version__
+
+    current = _parse_simple_version(__version__)
+    if current is None:
+        raise ValueError(
+            "Cannot parse the running lifetxt version %r as a dotted version."
+            % __version__
+        )
+
+    repo = _resolve_update_check_repo(args, _config(args))
+    timeout = getattr(args, "timeout", 10)
+    latest_text, kind, url = _github_latest_release_or_tag(repo, timeout=timeout)
+
+    result = OrderedDict(
+        [
+            ("current_version", __version__),
+            ("repository", repo),
+            ("latest_version", latest_text),
+            ("kind", kind),
+            ("url", url or None),
+        ]
+    )
+
+    if latest_text is None:
+        result["status"] = "no_release_found"
+        message = (
+            "No published releases or tags found for %s; nothing to compare "
+            "against." % repo
+        )
+    else:
+        latest = _parse_simple_version(latest_text)
+        if latest is None:
+            result["status"] = "unparseable"
+            message = (
+                "Found %s %s but could not parse it as a version. Compare "
+                "manually at %s" % (kind, latest_text, url)
+            )
+        elif latest > current:
+            result["status"] = "update_available"
+            message = "Update available: running %s, latest %s is %s. %s" % (
+                __version__,
+                kind,
+                latest_text,
+                url,
+            )
+        elif latest < current:
+            result["status"] = "ahead_of_latest"
+            message = "Running %s, ahead of the latest published %s %s." % (
+                __version__,
+                kind,
+                latest_text,
+            )
+        else:
+            result["status"] = "up_to_date"
+            message = "Up to date: %s." % __version__
+
+    if getattr(args, "format", "text") == "json":
+        write_text(None, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+    else:
+        write_text(None, message + "\n")
+    return 0
+
+
+#: Argument-injection defense: a git ref/remote beginning with "-" could be
+#: misread as a command-line option by git itself (e.g. a tag literally
+#: named "--upload-pack=..."). Neither a real branch nor a real remote name
+#: legitimately starts with "-", so refusing this is not a functional
+#: restriction.
+def _reject_option_like_git_arg(value, label):
+    if str(value or "").startswith("-"):
+        raise ValueError(
+            "Refusing %s %r: it looks like a command-line option, not a "
+            "name." % (label, value)
+        )
+    return value
+
+
+def _run_git_for_update(args_list, cwd, timeout):
+    import subprocess
+
+    try:
+        return subprocess.run(
+            ["git"] + list(args_list),
+            cwd=cwd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            # Decode explicitly as UTF-8 rather than the platform locale
+            # codec (e.g. cp932 on ja-JP Windows): git's own output is not
+            # guaranteed to be representable in that codec, and letting the
+            # default decoder raise mid-read would crash this command on a
+            # path or ref it never gets to evaluate. errors="replace" keeps
+            # this diagnostic-only -- the exact bytes are never parsed for
+            # control flow, only shown to the user or embedded in an error.
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout,
+        )
+    except FileNotFoundError:
+        raise ValueError("git executable not found; `lifetxt update` requires git.")
+    except subprocess.TimeoutExpired:
+        raise ValueError("git %s timed out after %ss." % (" ".join(args_list), timeout))
+    except OSError as exc:
+        raise ValueError("Failed to run git %s: %s" % (" ".join(args_list), exc))
+
+
+def _lifetxt_install_root():
+    import lifetxt
+
+    return os.path.dirname(os.path.dirname(os.path.abspath(lifetxt.__file__)))
+
+
+#: Maximum commits listed in update's dry-run preview. Bounded so a large
+#: gap (e.g. --ref pointing far ahead) still prints a short, readable
+#: summary rather than flooding the terminal.
+_UPDATE_LOG_PREVIEW_LIMIT = 20
+
+
+def _git_commit_summary(
+    repo_root, current, target, timeout, limit=_UPDATE_LOG_PREVIEW_LIMIT
+):
+    """List commits between current and target, newest first, capped at limit.
+
+    Returns (commits, total_count). commits is a list of "hash subject"
+    strings for at most limit commits; total_count is the true number of
+    commits in the range (from git rev-list --count), so the caller can
+    report "and N more" when the list was truncated. Returns ([], 0) on any
+    git failure rather than raising -- this is a preview, not a safety
+    check, and must never block update on a log lookup that failed.
+    """
+    range_spec = "%s..%s" % (current, target)
+    log = _run_git_for_update(
+        ["log", "--oneline", "--max-count=%d" % limit, range_spec],
+        cwd=repo_root,
+        timeout=timeout,
+    )
+    if log.returncode != 0:
+        return [], 0
+    commits = [line for line in log.stdout.splitlines() if line.strip()]
+    count = _run_git_for_update(
+        ["rev-list", "--count", range_spec], cwd=repo_root, timeout=timeout
+    )
+    try:
+        total = int(count.stdout.strip()) if count.returncode == 0 else len(commits)
+    except ValueError:
+        total = len(commits)
+    return commits, total
+
+
+def command_update(args):
+    """Fast-forward the running lifetxt install's git checkout.
+
+    Security/High: this and `server-update` (`command_server_update`, which
+    reuses this function's git helpers rather than reimplementing them) are
+    the only lifetxt commands that mutate the git working tree the running
+    install lives in. The project has no PyPI distribution, so this is
+    git-based rather than a package-manager update.
+
+    Safety rails, all fail-loud (raise ValueError, never silent):
+      - Refuses when the install is not inside a git working tree.
+      - Refuses when the working tree has any uncommitted change (tracked or
+        untracked) -- `git status --porcelain` must be empty.
+      - Refuses when HEAD is detached (must be on a real branch).
+      - Only ever runs `git fetch` (which touches only remote-tracking refs
+        and the object database, not the working tree or current branch)
+        and `git merge --ff-only` (which refuses anything that is not a
+        clean fast-forward, and never rewrites history). Never resets,
+        rebases, or force-pushes.
+      - Defaults to a dry run: fetches and reports what would happen without
+        merging. Only `--yes` performs the merge.
+      - Never runs `pip install` or any other build/setup code after
+        updating -- picking up dependency changes is left to the operator,
+        printed as an explicit follow-up instruction instead of executed.
+
+    The --repo/update.repository resolution (shared with `update-check`)
+    only chooses which ref *name* to ask for; the actual git operations
+    always go through the local `origin` (or --remote)'s already-configured,
+    user-trusted URL, never a URL derived from --repo.
+    """
+    timeout = getattr(args, "timeout", 10)
+    install_root = _lifetxt_install_root()
+
+    toplevel = _run_git_for_update(
+        ["rev-parse", "--show-toplevel"], cwd=install_root, timeout=timeout
+    )
+    if toplevel.returncode != 0:
+        raise ValueError(
+            "`lifetxt update` requires a git-based install. The running "
+            "install at %s does not appear to be inside a git working "
+            "tree." % install_root
+        )
+    repo_root = toplevel.stdout.strip()
+
+    status = _run_git_for_update(
+        ["status", "--porcelain"], cwd=repo_root, timeout=timeout
+    )
+    if status.returncode != 0:
+        raise ValueError(
+            "git status failed: %s" % (status.stderr.strip() or status.stdout.strip())
+        )
+    if status.stdout.strip():
+        raise ValueError(
+            "Refusing to update: %s has uncommitted changes. Commit, stash, "
+            "or discard them first." % repo_root
+        )
+
+    branch = _run_git_for_update(
+        ["symbolic-ref", "-q", "--short", "HEAD"], cwd=repo_root, timeout=timeout
+    )
+    if branch.returncode != 0:
+        raise ValueError(
+            "Refusing to update: %s is not on a branch (detached HEAD). "
+            "Check out a branch first." % repo_root
+        )
+    branch_name = branch.stdout.strip()
+
+    remote = _reject_option_like_git_arg(
+        getattr(args, "remote", None) or "origin", "remote"
+    )
+    ref = getattr(args, "ref", None)
+    if not ref:
+        repo = _resolve_update_check_repo(args, _config(args))
+        latest_text, _kind, _url = _github_latest_release_or_tag(repo, timeout=timeout)
+        if latest_text is None:
+            write_text(
+                None,
+                "No published releases or tags found for %s; nothing to "
+                "update to. Pass --ref to update to a specific branch or "
+                "commit.\n" % repo,
+            )
+            return 0
+        ref = latest_text
+    _reject_option_like_git_arg(ref, "ref")
+
+    fetch = _run_git_for_update(["fetch", remote, ref], cwd=repo_root, timeout=timeout)
+    if fetch.returncode != 0:
+        raise ValueError(
+            "git fetch %s %s failed: %s"
+            % (remote, ref, fetch.stderr.strip() or fetch.stdout.strip())
+        )
+
+    current = _run_git_for_update(
+        ["rev-parse", "HEAD"], cwd=repo_root, timeout=timeout
+    ).stdout.strip()
+    target = _run_git_for_update(
+        ["rev-parse", "FETCH_HEAD"], cwd=repo_root, timeout=timeout
+    ).stdout.strip()
+
+    result = OrderedDict(
+        [
+            ("install_root", repo_root),
+            ("branch", branch_name),
+            ("remote", remote),
+            ("ref", ref),
+            ("current_commit", current),
+            ("target_commit", target),
+        ]
+    )
+    fmt = getattr(args, "format", "text")
+
+    def emit(status_key, message):
+        result["status"] = status_key
+        if fmt == "json":
+            write_text(None, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+        else:
+            write_text(None, message + "\n")
+
+    # Equal commits are the common no-op-fetch case (cheap to check without a
+    # subprocess call). A --ref (or a stale/older release/tag) can also
+    # resolve to a commit that is already an ancestor of HEAD -- "behind",
+    # not "ahead" -- which is just as much nothing-to-update as being equal;
+    # merge-base --is-ancestor covers both without assuming target is newer.
+    already_merged = current == target
+    if not already_merged:
+        ancestor_check = _run_git_for_update(
+            ["merge-base", "--is-ancestor", target, current],
+            cwd=repo_root,
+            timeout=timeout,
+        )
+        already_merged = ancestor_check.returncode == 0
+
+    if already_merged:
+        emit(
+            "up_to_date",
+            "Already up to date on %s (%s)." % (branch_name, current[:12]),
+        )
+        return 0
+
+    commits, commit_count = _git_commit_summary(repo_root, current, target, timeout)
+    result["commits"] = commits
+    result["commit_count"] = commit_count
+
+    def _commit_lines():
+        lines = ["  %s" % line for line in commits]
+        if commit_count > len(commits):
+            lines.append("  ... and %d more" % (commit_count - len(commits)))
+        return lines
+
+    if not getattr(args, "yes", False):
+        message_lines = [
+            "Update available on %s: %s -> %s (fetched %s from %s). Dry "
+            "run: no changes made. Re-run with --yes to fast-forward."
+            % (branch_name, current[:12], target[:12], ref, remote)
+        ]
+        message_lines.extend(_commit_lines())
+        emit("update_available_dry_run", "\n".join(message_lines))
+        return 0
+
+    merge = _run_git_for_update(
+        ["merge", "--ff-only", "FETCH_HEAD"], cwd=repo_root, timeout=timeout
+    )
+    if merge.returncode != 0:
+        raise ValueError(
+            "git merge --ff-only failed (not a fast-forward): %s"
+            % (merge.stderr.strip() or merge.stdout.strip())
+        )
+
+    message_lines = [
+        "Updated %s: %s -> %s. Dependencies may have changed -- run "
+        'pip install -e "." (or the extras you use) to pick them up.'
+        % (branch_name, current[:12], target[:12])
+    ]
+    message_lines.extend(_commit_lines())
+    emit("updated", "\n".join(message_lines))
+    return 0
+
+
+#: `server-update` report statuses that represent a completed, non-broken
+#: run. Everything else (including a validated-but-incompletely-restarted
+#: update) exits non-zero so cron/systemd wrappers notice.
+_SERVER_UPDATE_SUCCESS_STATUSES = frozenset(
+    ("up_to_date", "update_available_dry_run", "updated")
+)
+
+
+def command_server_update(args):
+    """Guarded update flow for a systemd-managed production install.
+
+    Security/High: see `lifetxt.server_update` for the full design. This
+    function only loads the deployment config, calls the orchestrator, and
+    formats the result -- it holds no update logic of its own.
+    """
+    from .server_update import ServerUpdateError, load_config, run_server_update
+
+    config_path = getattr(args, "server_config", None)
+    if not config_path:
+        raise ValueError(
+            "server-update requires --server-config PATH (a deployment "
+            "config distinct from --config's application config.json; see "
+            "docs/deployment/ubuntu-server.md)."
+        )
+
+    fmt = getattr(args, "format", "text")
+    approve = getattr(args, "approve", None)
+    # --approve is how an operator confirms a specific, already-reviewed
+    # commit; requiring --yes as well would just be re-typing the same
+    # intent, and the review block's own approved_command line (which
+    # operators are meant to copy-paste verbatim) does not include --yes.
+    yes = bool(getattr(args, "yes", False)) or bool(approve)
+
+    def render(report):
+        if fmt == "json":
+            write_text(None, json.dumps(report, ensure_ascii=False, indent=2) + "\n")
+        else:
+            text = report.get("message") or ""
+            if report.get("review_block"):
+                text += "\n\n" + report["review_block"]
+            if report.get("backup_coverage_warnings"):
+                text += (
+                    "\n\nWARNING: backup_paths does not cover the following "
+                    "configured workspace write target(s):\n"
+                    + "\n".join(
+                        "  - %s" % path for path in report["backup_coverage_warnings"]
+                    )
+                )
+            write_text(None, text + "\n")
+
+    try:
+        config = load_config(config_path)
+        report = run_server_update(
+            config, yes=yes, approve=approve, server_config_path=config_path
+        )
+    except ServerUpdateError as exc:
+        report = exc.report or OrderedDict(
+            [("status", "failed"), ("step", exc.step), ("message", str(exc))]
+        )
+        render(report)
+        return 1
+
+    render(report)
+    return 0 if report.get("status") in _SERVER_UPDATE_SUCCESS_STATUSES else 1
+
+
+def _format_server_init_step(step):
+    if step["kind"] in ("directory", "file"):
+        return "%s %s %s" % (
+            step.get("action", "plan"),
+            step["kind"],
+            step["path"],
+        )
+    if step["kind"] == "command":
+        cwd = " cwd=%s" % step.get("cwd") if step.get("cwd") else ""
+        return "run %s:%s %s" % (
+            step.get("name", "command"),
+            cwd,
+            " ".join(step.get("argv") or []),
+        )
+    if step["kind"] == "health":
+        return "check health %s" % step["url"]
+    return "%s %s" % (step.get("kind", "step"), step)
+
+
+def command_server_init(args):
+    """Plan-first production bootstrap for an Ubuntu Server deployment."""
+    from .server_init import ServerInitError, load_config, run_server_init
+
+    config_path = getattr(args, "server_config", None)
+    if not config_path:
+        raise ValueError(
+            "server-init requires --server-config PATH (a deployment bootstrap "
+            "config distinct from --config's application config.json)."
+        )
+
+    fmt = getattr(args, "format", "text")
+
+    def render(report):
+        if fmt == "json":
+            write_text(None, json.dumps(report, ensure_ascii=False, indent=2) + "\n")
+            return
+        lines = [report.get("message") or ""]
+        for step in report.get("steps") or []:
+            lines.append("- " + _format_server_init_step(step))
+        if report.get("conflicts"):
+            lines.append("conflicts: %s" % ", ".join(report["conflicts"]))
+        write_text(None, "\n".join(lines).rstrip() + "\n")
+
+    try:
+        config = load_config(config_path)
+        report = run_server_init(config, yes=bool(getattr(args, "yes", False)))
+    except ServerInitError as exc:
+        report = exc.report or OrderedDict(
+            [("status", "failed"), ("step", exc.step), ("message", str(exc))]
+        )
+        render(report)
+        return 1
+
+    render(report)
+    return 0 if report.get("status") in ("dry_run", "ready") else 1
+
+
+def command_doctor(args):
+    import platform
+
+    from . import __version__
+    from .doctor import optional_dependency_report
+
+    checks = []
+    any_fail = [False]
+    # doctor --format json is a stable machine contract (dist/schemas/
+    # doctor-v1.schema.json): its "message" field must not vary with
+    # --lang, even though the same messages are locale-aware in text mode.
+    _doctor_json_mode = getattr(args, "format", "text") == "json"
+
+    def _dt(message_id, **kwargs):
+        if _doctor_json_mode:
+            return _t(message_id, locale="en", **kwargs)
+        return _t(message_id, **kwargs)
+
+    def add_check(symbol, label, message):
+        checks.append((symbol, label, message))
+        if symbol == "FAIL":
+            any_fail[0] = True
+
+    major, minor = sys.version_info[:2]
+    if (major, minor) >= (3, 10):
+        add_check("OK", "python", _dt("doctor.python_ok", major=major, minor=minor))
+    else:
+        add_check("FAIL", "python", _dt("doctor.python_fail", major=major, minor=minor))
+    add_check(
+        "OK",
+        "system",
+        "lifetxt %s, Python %s, %s %s"
+        % (
+            __version__,
+            platform.python_version(),
+            platform.system() or "unknown OS",
+            platform.release() or "",
+        ),
+    )
+
+    config = _config(args)
+
+    if getattr(args, "check_update", False):
+        # Off by default: plain `doctor` must never require network access.
+        # A failure here is reported as WARN, never FAIL -- it says nothing
+        # about the health of the local install.
+        try:
+            update_repo = _resolve_update_check_repo(args, config)
+            latest_text, kind, _url = _github_latest_release_or_tag(
+                update_repo, timeout=getattr(args, "update_timeout", 5)
+            )
+        except ValueError as exc:
+            add_check("WARN", "update", "Could not check for updates: %s" % exc)
+        else:
+            if latest_text is None:
+                add_check(
+                    "OK",
+                    "update",
+                    "No published releases or tags found for %s" % update_repo,
+                )
+            else:
+                latest = _parse_simple_version(latest_text)
+                current_version = _parse_simple_version(__version__)
+                if latest is None or current_version is None:
+                    add_check(
+                        "OK",
+                        "update",
+                        "Found %s %s but could not parse it as a version"
+                        % (kind, latest_text),
+                    )
+                elif latest > current_version:
+                    add_check(
+                        "WARN",
+                        "update",
+                        "Update available: %s -> %s -- run: lifetxt update"
+                        % (__version__, latest_text),
+                    )
+                else:
+                    add_check("OK", "update", "Up to date: %s" % __version__)
+
+    arg_paths = getattr(args, "paths", None) or []
+    life_paths = _normalize_paths(arg_paths, config, stdin_when_empty=False) or [
+        "life.txt"
+    ]
+    for path in life_paths:
+        if not os.path.exists(path):
+            add_check("FAIL", "life.txt", _dt("doctor.life_not_found", path=path))
+        elif not os.access(path, os.R_OK):
+            add_check("FAIL", "life.txt", _dt("doctor.life_not_readable", path=path))
+        else:
+            add_check("OK", "life.txt", _dt("doctor.life_found", path=path))
+
+    config_path = getattr(args, "config", None) or ".lifetxt.json"
+    if not os.path.exists(config_path):
+        add_check("WARN", "config", _dt("doctor.config_not_found", path=config_path))
+    else:
+        add_check("OK", "config", _dt("doctor.config_found", path=config_path))
+
+    import shutil
+
+    disk_check_dir = os.path.dirname(os.path.abspath(life_paths[0])) or os.getcwd()
+    try:
+        free_bytes = shutil.disk_usage(disk_check_dir).free
+    except OSError as exc:
+        add_check("WARN", "disk", "Could not check free space: %s" % exc)
+    else:
+        free_mib = free_bytes / (1024.0 * 1024.0)
+        # 100 MiB is a conservative floor: transaction journals, atomic-write
+        # temp files, and config backups all need real headroom to avoid a
+        # mid-write failure, not just enough for the life.txt file itself.
+        if free_bytes < 100 * 1024 * 1024:
+            add_check(
+                "WARN",
+                "disk",
+                _dt("doctor.disk_warn", free_mib=free_mib, dir=disk_check_dir),
+            )
+        else:
+            add_check(
+                "OK",
+                "disk",
+                _dt("doctor.disk_ok", free_mib=free_mib, dir=disk_check_dir),
+            )
+
+    for tool in ("fzf", "peco"):
+        if shutil.which(tool):
+            add_check("OK", tool, "Found in PATH")
+        else:
+            add_check("WARN", tool, "Not found (optional)")
+
+    for pkg, installed in optional_dependency_report().items():
+        if installed:
+            add_check("OK", pkg, "Installed")
+            continue
+        group = _EXTRAS_GROUP_BY_DEPENDENCY.get(pkg)
+        hint = (
+            'pip install -e ".[%s]"' % group
+            if group
+            else _STANDALONE_OPTIONAL_DEPENDENCY_HINT % pkg
+        )
+        add_check("WARN", pkg, "Not installed (optional) -- %s" % hint)
+
+    existing_paths = [p for p in life_paths if os.path.exists(p)]
+    if existing_paths:
+        items, diagnostics = _parse_life_inputs(existing_paths, config)
+        errors = [d for d in diagnostics if d.severity == "error"]
+        warnings_list = [d for d in diagnostics if d.severity == "warning"]
+        if errors:
+            add_check(
+                "FAIL",
+                "check",
+                _dt("doctor.check_fail", n=len(errors), path=existing_paths[0]),
+            )
+        elif warnings_list:
+            add_check(
+                "WARN",
+                "check",
+                _dt("doctor.check_warn", n=len(warnings_list), path=existing_paths[0]),
+            )
+        else:
+            add_check("OK", "check", _dt("doctor.check_ok", n=len(items)))
+
+        id_key = id_key_from_config(config)
+        missing_count = sum(1 for item in items if not item.details.get(id_key))
+        if missing_count:
+            add_check(
+                "WARN",
+                "ids",
+                "%d item(s) missing %s: -- run: lifetxt ids --assign --dry-run %s"
+                % (missing_count, id_key, existing_paths[0]),
+            )
+        else:
+            add_check("OK", "ids", "All items have %s:" % id_key)
+
+    _fmt = getattr(args, "format", "text")
+    _pretty = getattr(args, "pretty", False)
+    if _fmt == "json":
+        records = [
+            OrderedDict([("status", s), ("check", check_name), ("message", m)])
+            for s, check_name, m in checks
+        ]
+        write_text(
+            None,
+            json.dumps(
+                records,
+                ensure_ascii=False,
+                indent=2 if _pretty else None,
+                separators=None if _pretty else (",", ":"),
+            )
+            + "\n",
+        )
+    else:
+        symbols = {"OK": "[OK]", "WARN": "[!!]", "FAIL": "[XX]"}
+        for symbol, label, message in checks:
+            write_text(
+                None, "%s %-12s %s\n" % (symbols.get(symbol, symbol), label, message)
+            )
+
+    return 1 if any_fail[0] else 0
+
+
+def command_assign(args):
+    config = _config(args)
+    path = args.path
+    if not path or path == "-":
+        raise ValueError("assign command requires a file path, not stdin.")
+    text = read_text(path)
+    id_key = id_key_from_config(config)
+    items, _ = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
+
+    item_id = getattr(args, "id", None)
+    item_text = getattr(args, "text", None)
+
+    if item_id:
+        matches = [
+            item
+            for item in items
+            if item_id in [str(v) for v in item.details.get(id_key, [])]
+        ]
+        if not matches:
+            raise ValueError("No item with %s:%s." % (id_key, item_id))
+        if len(matches) > 1:
+            raise ValueError("Multiple items with %s:%s." % (id_key, item_id))
+        target = matches[0]
+    elif item_text:
+        query = item_text.lower()
+        matches = [item for item in items if query in item.title.lower()]
+        if not matches:
+            raise ValueError("No item matching %r." % item_text)
+        if len(matches) > 1:
+            sys.stdout.write("Multiple items match:\n")
+            for i, m in enumerate(matches):
+                sys.stdout.write(
+                    "  [%d] %s %s %s\n" % (i + 1, m.status, m.kind, m.title)
+                )
+            sys.stdout.write("Assign which item? (1-%d) " % len(matches))
+            sys.stdout.flush()
+            answer = sys.stdin.readline().strip()
+            try:
+                idx = int(answer) - 1
+                if idx < 0 or idx >= len(matches):
+                    raise ValueError()
+                target = matches[idx]
+            except (ValueError, IndexError):
+                sys.stdout.write("Aborted.\n")
+                return 0
+        else:
+            target = matches[0]
+    else:
+        raise ValueError("Specify an ID positional argument or --text QUERY.")
+
+    update_args = types.SimpleNamespace(
+        line=target.line,
+        match_id=None,
+        status=None,
+        kind=None,
+        title=None,
+        assignee=[args.to],
+        detail=None,
+        add_detail=None,
+        remove_detail=["assignee"],
+    )
+    for flag in DETAIL_FLAGS:
+        dest_attr = "from_" if flag == "from" else flag
+        if not hasattr(update_args, dest_attr):
+            setattr(update_args, dest_attr, None)
+
+    updated_text, updated_line, diagnostics = update_text(text, update_args)
+    if _has_error(diagnostics):
+        _print_diagnostics(diagnostics)
+        return 1
+
+    _ensure_writable_path(path, config, "assign")
+    _pre_write_backup(path, config, "assign")
+    atomic_write_text(path, updated_text)
+    sys.stdout.write("Assigned to %s: %s\n" % (args.to, updated_line))
+
+    if args.notify:
+        today = timezone_today().isoformat()
+        sender = getattr(args, "from_user", None) or config_user_name(config) or "self"
+        target_ids = target.details.get(id_key, [])
+        ref_val = str(target_ids[0]) if target_ids else (item_id or "(no-id)")
+        notif_line = "[ ] M Assigned_to_%s sender:%s recipient:%s ref:%s on:%s" % (
+            args.to.replace(" ", "_"),
+            sender,
+            args.to,
+            ref_val,
+            today,
+        )
+        append_text(path, notif_line + "\n")
+        sys.stdout.write("Notification: %s\n" % notif_line)
+
+    return 0
+
+
+def command_health(args):
+    from .health import build_health
+
+    config = _config(args)
+    items, diagnostics = _parse_or_exit(args.paths, config)
+    today = timezone_today()
+    since_days = getattr(args, "since", 30)
+    lookahead_days = getattr(args, "lookahead", 7)
+    ignore_codes = _split_csv_args(getattr(args, "ignore", None))
+    type_filter = _split_csv_args(getattr(args, "health_types", None))
+
+    health_issues = build_health(
+        items,
+        today,
+        since_days=since_days,
+        lookahead_days=lookahead_days,
+        ignore_codes=ignore_codes,
+        kinds=type_filter,
+        config=config,
+    )
+
+    _fmt = getattr(args, "format", "text")
+    _pretty = getattr(args, "pretty", False)
+    if _fmt == "json":
+        write_text(
+            None,
+            json.dumps(
+                health_issues,
+                ensure_ascii=False,
+                indent=2 if _pretty else None,
+                separators=None if _pretty else (",", ":"),
+            )
+            + "\n",
+        )
+    elif _fmt == "jsonl":
+        output = "\n".join(
+            json.dumps(issue, ensure_ascii=False, separators=(",", ":"))
+            for issue in health_issues
+        )
+        if output:
+            output += "\n"
+        write_text(None, output)
+    else:
+        if not health_issues:
+            write_text(None, "OK: No health issues found.\n")
+        else:
+            for issue in health_issues:
+                prefix = ""
+                if issue.get("source"):
+                    prefix = "%s:" % issue["source"]
+                if issue.get("line"):
+                    prefix += "%d: " % issue["line"]
+                write_text(
+                    None,
+                    "%s%s %s %s\n"
+                    % (prefix, issue["code"], issue["title"], issue["message"]),
+                )
+
+    _print_warnings(diagnostics)
+    return 1 if health_issues else 0
+
+
+def command_inbox(args):
+    config = _config(args)
+    items, diagnostics = _parse_or_exit(args.paths, config)
+
+    open_statuses = {"[ ]", "[/]", "[>]", "[?]"}
+    kinds_filter = set(_split_csv_args(getattr(args, "kinds", None))) or {"T"}
+    text_filter = getattr(args, "text", None)
+
+    inbox_items = []
+    for item in items:
+        if item.status not in open_statuses:
+            continue
+        if item.kind not in kinds_filter:
+            continue
+        if item.details.get("project"):
+            continue
+        if item.details.get("due"):
+            continue
+        if item.details.get("assignee"):
+            continue
+        if text_filter and text_filter.lower() not in item.title.lower():
+            continue
+        inbox_items.append(item)
+
+    if getattr(args, "fzf", False):
+        return _run_inbox_selector(inbox_items)
+
+    _fmt = getattr(args, "format", "text")
+    _pretty = getattr(args, "pretty", False)
+    if _fmt == "json":
+        write_text(None, items_to_json(inbox_items, pretty=_pretty) + "\n")
+    elif _fmt == "jsonl":
+        output = items_to_jsonl(inbox_items)
+        if output:
+            output += "\n"
+        write_text(None, output)
+    else:
+        if not inbox_items:
+            write_text(None, "Inbox is empty.\n")
+        else:
+            rows = []
+            for item in inbox_items:
+                src = getattr(item, "source", None)
+                location = (
+                    ("%s:%d" % (src, item.line)) if src else ("line:%d" % item.line)
+                )
+                rows.append(
+                    OrderedDict(
+                        [
+                            ("location", location),
+                            ("type", item.kind),
+                            ("status", item.status),
+                            ("title", item.title),
+                        ]
+                    )
+                )
+            lines = ["Inbox: %d unclassified item(s)" % len(inbox_items)]
+            lines.extend(_format_table(rows, ("location", "type", "status", "title")))
+            write_text(None, "\n".join(lines) + "\n")
+
+    if getattr(args, "process", False):
+        writable_path = None
+        for p in args.paths if args.paths else []:
+            if p != "-" and os.path.exists(p):
+                writable_path = p
+                break
+        if not writable_path:
+            sys.stderr.write("ERROR: --process requires a writable file path.\n")
+            return 1
+        if not inbox_items:
+            sys.stdout.write("Inbox is empty. Nothing to process.\n")
+            return 0
+        sys.stdout.write(
+            "Processing %d inbox item(s). Press Enter to skip a field.\n\n"
+            % len(inbox_items)
+        )
+        processed = 0
+        for item in inbox_items:
+            sys.stdout.write("  [%s %s] %s\n" % (item.status, item.kind, item.title))
+            try:
+                project = input("    project: ").strip()
+                due = input("    due:     ").strip()
+                assignee = input("    assignee:").strip()
+            except (EOFError, KeyboardInterrupt):
+                sys.stdout.write("\nAborted.\n")
+                break
+            if not project and not due and not assignee:
+                sys.stdout.write("    (skipped)\n\n")
+                continue
+            # Build update using assign command internals
+            text = read_text(writable_path)
+            lines_list = text.splitlines(keepends=True)
+            ln = item.line
+            if ln and 0 < ln <= len(lines_list):
+                import re as _re
+
+                line = lines_list[ln - 1].rstrip("\n").rstrip("\r")
+                if project:
+                    line = line + "  project:%s" % project
+                if due:
+                    line = line + "  due:%s" % due
+                if assignee:
+                    line = line + "  assignee:%s" % assignee
+                lines_list[ln - 1] = line + "\n"
+                atomic_write_text(writable_path, "".join(lines_list))
+                sys.stdout.write("    updated.\n\n")
+                processed += 1
+            else:
+                sys.stdout.write("    (could not locate line)\n\n")
+        sys.stdout.write("Processed %d/%d item(s).\n" % (processed, len(inbox_items)))
+        return 0
+
+    _print_warnings(diagnostics)
+    return 0
+
+
+def _run_inbox_selector(inbox_items):
+    import shutil
+    import subprocess
+
+    if not inbox_items:
+        write_text(None, "Inbox is empty.\n")
+        return 0
+    selector = shutil.which("fzf") or shutil.which("peco")
+    if not selector:
+        sys.stderr.write("ERROR: --fzf requires fzf or peco in PATH.\n")
+        return 1
+    rows = []
+    for item in inbox_items:
+        src = getattr(item, "source", None)
+        location = ("%s:%d" % (src, item.line)) if src else ("line:%d" % item.line)
+        ids = item.details.get("id", [])
+        item_id = str(ids[0]) if ids else ""
+        rows.append(
+            "%s\t%s\t%s\t%s\t%s"
+            % (location, item.kind, item.status, item_id, item.title)
+        )
+    proc = subprocess.run(
+        [selector],
+        input="\n".join(rows) + "\n",
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
+    )
+    if proc.returncode != 0:
+        return proc.returncode
+    selected = proc.stdout.strip()
+    if selected:
+        write_text(None, selected + "\n")
+    return 0
+
+
+def command_cleanup(args):
+    config = _config(args)
+    ignore_codes = set(
+        c.upper() for c in _split_csv_args(getattr(args, "ignore", None))
+    )
+
+    items, diagnostics = _parse_life_inputs(args.paths, config)
+    errors = [
+        d
+        for d in diagnostics
+        if d.severity == "error" and str(d.code).upper() not in ignore_codes
+    ]
+    warnings_list = [
+        d
+        for d in diagnostics
+        if d.severity == "warning" and str(d.code).upper() not in ignore_codes
+    ]
+    path_label = " ".join(str(p) for p in (_normalize_paths(args.paths, config) or []))
+
+    suggestions = []
+
+    if errors:
+        suggestions.append(
+            OrderedDict(
+                [
+                    ("priority", 1),
+                    ("check", "errors"),
+                    ("count", len(errors)),
+                    ("message", "%d syntax/validation error(s)" % len(errors)),
+                    ("action", "lifetxt check %s" % path_label),
+                ]
+            )
+        )
+
+    if warnings_list:
+        suggestions.append(
+            OrderedDict(
+                [
+                    ("priority", 2),
+                    ("check", "warnings"),
+                    ("count", len(warnings_list)),
+                    ("message", "%d warning(s)" % len(warnings_list)),
+                    ("action", "lifetxt check %s" % path_label),
+                ]
+            )
+        )
+
+    id_key = id_key_from_config(config)
+    missing_id_items = [item for item in items if not item.details.get(id_key)]
+    if missing_id_items:
+        suggestions.append(
+            OrderedDict(
+                [
+                    ("priority", 3),
+                    ("check", "ids"),
+                    ("count", len(missing_id_items)),
+                    (
+                        "message",
+                        "%d item(s) missing %s:" % (len(missing_id_items), id_key),
+                    ),
+                    ("action", "lifetxt ids --assign --dry-run %s" % path_label),
+                ]
+            )
+        )
+
+    ref_issue_codes = {"W215", "W216", "W217", "W218"}
+    ref_issues = [
+        d
+        for d in diagnostics
+        if str(d.code).upper() in ref_issue_codes
+        and str(d.code).upper() not in ignore_codes
+    ]
+    if ref_issues:
+        suggestions.append(
+            OrderedDict(
+                [
+                    ("priority", 2),
+                    ("check", "links"),
+                    ("count", len(ref_issues)),
+                    ("message", "%d broken reference(s)" % len(ref_issues)),
+                    ("action", "lifetxt links %s" % path_label),
+                ]
+            )
+        )
+
+    open_statuses = {"[ ]", "[/]", "[>]", "[?]"}
+    inbox_count = sum(
+        1
+        for item in items
+        if item.kind == "T"
+        and item.status in open_statuses
+        and not item.details.get("project")
+        and not item.details.get("due")
+        and not item.details.get("assignee")
+    )
+    if inbox_count:
+        suggestions.append(
+            OrderedDict(
+                [
+                    ("priority", 4),
+                    ("check", "inbox"),
+                    ("count", inbox_count),
+                    (
+                        "message",
+                        "%d unclassified task(s) without project/due/assignee"
+                        % inbox_count,
+                    ),
+                    ("action", "lifetxt inbox %s" % path_label),
+                ]
+            )
+        )
+
+    today_date = timezone_today()
+    cutoff = today_date - datetime.timedelta(days=90)
+    old_done_count = sum(
+        1
+        for item in items
+        if item.status in ("[x]", "[-]")
+        and _archive_item_date_before(
+            item,
+            datetime.datetime.combine(cutoff, datetime.time.min),
+        )
+    )
+    if old_done_count >= 10:
+        suggestions.append(
+            OrderedDict(
+                [
+                    ("priority", 5),
+                    ("check", "archive"),
+                    ("count", old_done_count),
+                    (
+                        "message",
+                        "%d completed/canceled item(s) older than 90 days"
+                        % old_done_count,
+                    ),
+                    (
+                        "action",
+                        "lifetxt archive --dest archive.txt --before %s --yes %s"
+                        % (
+                            cutoff.isoformat(),
+                            path_label,
+                        ),
+                    ),
+                ]
+            )
+        )
+
+    _fmt = getattr(args, "format", "text")
+    _pretty = getattr(args, "pretty", False)
+    if _fmt == "json":
+        write_text(
+            None,
+            json.dumps(
+                suggestions,
+                ensure_ascii=False,
+                indent=2 if _pretty else None,
+                separators=None if _pretty else (",", ":"),
+            )
+            + "\n",
+        )
+    else:
+        if not suggestions:
+            write_text(None, "OK: No cleanup actions needed.\n")
+        else:
+            write_text(None, "Cleanup suggestions (%d):\n" % len(suggestions))
+            for sg in sorted(suggestions, key=lambda x: x["priority"]):
+                write_text(
+                    None,
+                    "  [%d] %s: %s\n" % (sg["priority"], sg["check"], sg["message"]),
+                )
+                write_text(None, "      Run: %s\n" % sg["action"])
+
+    return 0
+
+
+def command_review(args):
+    from .review import build_review, resolve_review_range
+
+    config = _config(args)
+    paths = _normalize_paths(getattr(args, "paths", None) or [], config)
+    items, _ = _parse_life_inputs(paths, config)
+
+    if getattr(args, "temporal", False):
+        from .temporal_review import build_temporal_review
+
+        try:
+            result = build_temporal_review(
+                items,
+                since=getattr(args, "since", None),
+                until=getattr(args, "until", None),
+                week=getattr(args, "week", False),
+                limit=getattr(args, "limit", 100),
+                project=getattr(args, "project", None),
+                id_key=id_key_from_config(config),
+            )
+        except ValueError as exc:
+            sys.stderr.write("ERROR: %s\n" % exc)
+            return 1
+        fmt = getattr(args, "format", "text") or "text"
+        if fmt in ("json", "jsonl"):
+            indent = 2 if fmt == "json" and getattr(args, "pretty", False) else None
+            sys.stdout.write(
+                json.dumps(result, ensure_ascii=False, indent=indent) + "\n"
+            )
+            return 0
+        sys.stdout.write(
+            "Temporal Life Review: %s .. %s\n"
+            % (result["period"]["since"], result["period"]["until"])
+        )
+        for key, value in result["counts"].items():
+            sys.stdout.write("  %s: %s\n" % (key.replace("_", " "), value))
+        if result["limitations"]:
+            sys.stdout.write("  Limitations: %s\n" % ", ".join(result["limitations"]))
+        return 0
+
+    start, end = resolve_review_range(
+        week=getattr(args, "week", False),
+        month=getattr(args, "month", None),
+        from_date=getattr(args, "from_date", None),
+        to_date=getattr(args, "to_date", None),
+    )
+    result = build_review(
+        items,
+        start,
+        end,
+        project=getattr(args, "project", None),
+        id_key=id_key_from_config(config),
+    )
+    completed_tasks = result["completed"]
+
+    fmt = getattr(args, "format", "text") or "text"
+    if fmt == "json":
+        indent = 2 if getattr(args, "pretty", False) else None
+        sys.stdout.write(json.dumps(result, ensure_ascii=False, indent=indent) + "\n")
+        return 0
+    if fmt == "jsonl":
+        sys.stdout.write(
+            json.dumps(result, ensure_ascii=False, separators=(",", ":")) + "\n"
+        )
+        return 0
+    if fmt == "markdown":
+        lines = ["# Review: %s" % result["range"], ""]
+        lines.append("## Tasks")
+        lines.append("- Completed: **%d**" % result["completed_tasks"])
+        lines.append("- Open: %d" % result["open_tasks"])
+        if completed_tasks:
+            lines.append("")
+            lines.append("### Completed")
+            for t in completed_tasks:
+                done_val = t["done"]
+                lines.append(
+                    "- [x] %s%s"
+                    % (t["title"], (" (%s)" % done_val) if done_val else "")
+                )
+        if result["habits"]:
+            lines.append("")
+            lines.append("## Habits")
+            for title, h in result["habits"].items():
+                bar = "#" * h["done"] + "." * h["open"]
+                lines.append(
+                    "- **%s**: %d/%d (%d%%) %s"
+                    % (
+                        title,
+                        h["done"],
+                        h["done"] + h["open"],
+                        h["completion_rate"],
+                        bar,
+                    )
+                )
+        if result["journals"]:
+            lines.append("")
+            lines.append("## Journal (%d entries)" % result["journals"])
+            for entry in result["journal_entries"]:
+                lines.append("- **%s** %s" % (entry["date"], entry["title"]))
+                if entry["excerpt"]:
+                    lines.append("  > %s" % entry["excerpt"][:120])
+        if result["mood_trend"]:
+            lines.append("")
+            lines.append("## Mood")
+            for entry in result["mood_trend"]:
+                lines.append("- %s: %s" % (entry["date"], entry["mood"]))
+        if result["elapsed_by_project"]:
+            lines.append("")
+            lines.append("## Elapsed by Project")
+            for proj, elapsed in result["elapsed_by_project"].items():
+                lines.append("- **%s**: %s" % (proj, elapsed))
+        sys.stdout.write("\n".join(lines) + "\n")
+        return 0
+    if fmt == "html":
+
+        def esc(value):
+            return html.escape(str(value), quote=True)
+
+        lines = [
+            "<!doctype html>",
+            '<html lang="en">',
+            "<head>",
+            '<meta charset="utf-8">',
+            "<title>lifetxt review</title>",
+            "<style>",
+            "body{font-family:system-ui,-apple-system,sans-serif;line-height:1.5;max-width:900px;margin:32px auto;padding:0 16px;color:#1f2937}",
+            "h1,h2{line-height:1.2} table{border-collapse:collapse;width:100%;margin:12px 0}",
+            "th,td{border:1px solid #d1d5db;padding:6px 8px;text-align:left} th{background:#f3f4f6}",
+            ".meta{color:#6b7280}.card{border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin:12px 0}",
+            "</style>",
+            "</head>",
+            "<body>",
+            "<h1>Review</h1>",
+            '<p class="meta">%s</p>' % esc(result["range"]),
+            "<h2>Tasks</h2>",
+            "<ul>",
+            "<li>Completed: <strong>%d</strong></li>" % result["completed_tasks"],
+            "<li>Open: %d</li>" % result["open_tasks"],
+            "</ul>",
+        ]
+        if completed_tasks:
+            lines.extend(["<h3>Completed</h3>", "<ul>"])
+            for task in completed_tasks:
+                done_val = task["done"]
+                suffix = " (%s)" % esc(done_val) if done_val else ""
+                lines.append("<li>%s%s</li>" % (esc(task["title"]), suffix))
+            lines.append("</ul>")
+        if result["habits"]:
+            lines.extend(
+                [
+                    "<h2>Habits</h2>",
+                    "<table><thead><tr><th>Habit</th><th>Done</th><th>Total</th><th>Rate</th></tr></thead><tbody>",
+                ]
+            )
+            for title, habit in result["habits"].items():
+                total = habit["done"] + habit["open"]
+                lines.append(
+                    "<tr><td>%s</td><td>%d</td><td>%d</td><td>%d%%</td></tr>"
+                    % (esc(title), habit["done"], total, habit["completion_rate"])
+                )
+            lines.append("</tbody></table>")
+        if result["journal_entries"]:
+            lines.append("<h2>Journal</h2>")
+            for entry in result["journal_entries"]:
+                lines.append(
+                    '<article class="card"><h3>%s %s</h3>'
+                    % (esc(entry["date"]), esc(entry["title"]))
+                )
+                if entry["excerpt"]:
+                    lines.append("<p>%s</p>" % esc(entry["excerpt"]))
+                lines.append("</article>")
+        if result["mood_trend"]:
+            lines.extend(["<h2>Mood</h2>", "<ul>"])
+            for entry in result["mood_trend"]:
+                lines.append(
+                    "<li>%s: %s</li>" % (esc(entry["date"]), esc(entry["mood"]))
+                )
+            lines.append("</ul>")
+        if result["elapsed_by_project"]:
+            lines.extend(["<h2>Elapsed by Project</h2>", "<ul>"])
+            for project, elapsed in result["elapsed_by_project"].items():
+                lines.append(
+                    "<li><strong>%s</strong>: %s</li>" % (esc(project), esc(elapsed))
+                )
+            lines.append("</ul>")
+        lines.extend(["</body>", "</html>"])
+        sys.stdout.write("\n".join(lines) + "\n")
+        return 0
+
+    sys.stdout.write("Review: %s\n" % result["range"])
+    sys.stdout.write("\nTasks:\n")
+    sys.stdout.write("  Completed: %d\n" % result["completed_tasks"])
+    sys.stdout.write("  Open: %d\n" % result["open_tasks"])
+
+    if result["habits"]:
+        sys.stdout.write("\nHabits:\n")
+        for title, h in result["habits"].items():
+            sys.stdout.write(
+                "  %s: %d/%d (%d%%)\n"
+                % (title, h["done"], h["done"] + h["open"], h["completion_rate"])
+            )
+
+    if result["journals"]:
+        sys.stdout.write("\nJournal entries: %d\n" % result["journals"])
+        for entry in result["journal_entries"]:
+            sys.stdout.write("  %s %s\n" % (entry["date"], entry["title"]))
+            if entry["excerpt"]:
+                sys.stdout.write("    %s\n" % entry["excerpt"])
+
+    if result["mood_trend"]:
+        sys.stdout.write("\nMood trend:\n")
+        for entry in result["mood_trend"]:
+            sys.stdout.write("  %s: %s\n" % (entry["date"], entry["mood"]))
+
+    if result["elapsed_by_project"]:
+        sys.stdout.write("\nElapsed by project:\n")
+        for proj, elapsed in result["elapsed_by_project"].items():
+            sys.stdout.write("  %s: %s\n" % (proj, elapsed))
+
+    return 0
+
+
+def command_filter(args):
+    items, diagnostics = _parse_or_exit(args.paths, _config(args))
+    items = _filter_items_from_args(items, args)
+    id_key = id_key_from_config(_config(args))
+    limit = getattr(args, "limit", 0)
+    if limit and limit > 0:
+        items = items[:limit]
+
+    if args.format == "json":
+        output = items_to_json(items, pretty=args.pretty)
+        write_text(args.output, output + "\n")
+    elif args.format == "jsonl":
+        output = items_to_jsonl(items)
+        if output:
+            output += "\n"
+        write_text(args.output, output)
+    elif args.format == "table":
+        write_text(
+            args.output, _format_filter_table(items, width=getattr(args, "width", 0))
+        )
+    else:
+        write_text(
+            args.output,
+            _items_to_life_text(items, canonical=args.canonical, key=id_key),
+        )
+
+    _print_warnings(diagnostics)
+    return 0
+
+
+_FILTER_TABLE_COLUMNS = (
+    ("status", "STATUS"),
+    ("kind", "TYPE"),
+    ("title", "TITLE"),
+    ("project", "PROJECT"),
+)
+
+
+def _format_filter_table(items, width=None):
+    if not items:
+        return "No matching items.\n"
+
+    width = int(width or 0)
+    if width <= 0:
+        try:
+            import shutil as _shutil
+
+            width = _shutil.get_terminal_size((80, 24)).columns
+        except Exception:
+            width = 80
+
+    rows = []
+    for item in items:
+        project = (
+            str(item.details.get("project", [""])[0])
+            if item.details.get("project")
+            else ""
+        )
+        rows.append(
+            OrderedDict(
+                [
+                    ("status", _agenda_table_cell(item.status)),
+                    ("kind", _agenda_table_cell(item.kind)),
+                    ("title", _agenda_table_cell(item.title)),
+                    ("project", _agenda_table_cell(project)),
+                ]
+            )
+        )
+
+    # Narrow terminals: compact single-line form instead of a bordered table.
+    if width < 80:
+        lines = []
+        for row in rows:
+            prefix = "%s %s " % (row["status"], row["kind"])
+            max_title = max(10, width - len(prefix) - 1)
+            title = row["title"]
+            if len(title) > max_title:
+                title = title[: max_title - 3] + "..."
+            lines.append(prefix + title)
+        return "\n".join(lines) + "\n"
+
+    widths = []
+    for key, heading in _FILTER_TABLE_COLUMNS:
+        col_width = len(heading)
+        for row in rows:
+            col_width = max(col_width, len(row[key]))
+        widths.append(col_width)
+
+    lines = [
+        _agenda_format_table_row(
+            [heading for _key, heading in _FILTER_TABLE_COLUMNS], widths
+        ),
+        _agenda_format_table_row(["-" * w for w in widths], widths),
+    ]
+    for row in rows:
+        lines.append(
+            _agenda_format_table_row(
+                [row[key] for key, _heading in _FILTER_TABLE_COLUMNS], widths
+            )
+        )
+    return "\n".join(lines) + "\n"
+
+
+def command_status(args):
+    items, diagnostics = _parse_or_exit(args.paths, _config(args))
+    records = latest_status_records(items, person=args.person, active_only=args.active)
+
+    if args.format == "json":
+        output = status_records_to_json(records, pretty=args.pretty)
+        write_text(None, output + "\n")
+    elif args.format == "jsonl":
+        output = status_records_to_jsonl(records)
+        if output:
+            output += "\n"
+        write_text(None, output)
+    else:
+        write_text(None, format_status_table(records))
+
+    _print_warnings(diagnostics)
+    return 0
+
+
+def command_who(args):
+    items, diagnostics = _parse_or_exit(args.paths, _config(args))
+    records = latest_status_records(items, active_only=True)
+
+    if args.format == "json":
+        write_text(None, status_records_to_json(records, pretty=args.pretty) + "\n")
+    else:
+        if not records:
+            write_text(None, "No active presence records found.\n")
+        else:
+            for record in records:
+                person = str(record.get("person", "?"))
+                state = str(record.get("state", ""))
+                title = str(record.get("title", ""))
+                display = state if state else title
+                from_val = str(record.get("from", ""))
+                write_text(None, "%-20s  %-16s  %s\n" % (person, display, from_val))
+
+    _print_warnings(diagnostics)
+    return 0
+
+
+def command_search(args):
+    import re as _re
+
+    from .fuzzy_search import fuzzy_contains
+
+    items, diagnostics = _parse_or_exit(args.paths, _config(args))
+    pattern = args.pattern
+    use_regex = getattr(args, "regex", False)
+    use_fuzzy = getattr(args, "fuzzy", False)
+    in_fields = _split_csv_args(getattr(args, "in_fields", None))
+
+    if use_regex and use_fuzzy:
+        sys.stderr.write("ERROR: --fuzzy cannot be combined with --regex.\n")
+        return 1
+
+    if use_regex:
+        try:
+            compiled = _re.compile(pattern, _re.IGNORECASE)
+        except _re.error as exc:
+            sys.stderr.write("ERROR: Invalid regex %r: %s\n" % (pattern, exc))
+            return 1
+
+        def _matches(text):
+            return bool(compiled.search(str(text)))
+    elif use_fuzzy:
+
+        def _matches(text):
+            return fuzzy_contains(pattern, str(text))
+    else:
+        pat_lower = pattern.lower()
+
+        def _matches(text):
+            return pat_lower in str(text).lower()
+
+    results = []
+    for item in items:
+        found_field = None
+        if in_fields:
+            for field in in_fields:
+                if field == "title":
+                    if _matches(item.title):
+                        found_field = "title"
+                        break
+                else:
+                    if any(_matches(v) for v in item.details.get(field, [])):
+                        found_field = field
+                        break
+        else:
+            if _matches(item.title):
+                found_field = "title"
+            else:
+                for key, vals in item.details.items():
+                    if any(_matches(v) for v in vals):
+                        found_field = key
+                        break
+        if found_field is not None:
+            results.append((item, found_field))
+
+    if args.format == "json":
+        data = [
+            OrderedDict(
+                [
+                    ("source", getattr(item, "source", None)),
+                    ("line", item.line),
+                    ("status", item.status),
+                    ("type", item.kind),
+                    ("title", item.title),
+                    ("match_field", field),
+                ]
+            )
+            for item, field in results
+        ]
+        write_text(
+            None,
+            json.dumps(
+                data,
+                ensure_ascii=False,
+                indent=2 if args.pretty else None,
+                separators=None if args.pretty else (",", ":"),
+            )
+            + "\n",
+        )
+    elif args.format == "jsonl":
+        for item, field in results:
+            write_text(
+                None,
+                json.dumps(
+                    OrderedDict(
+                        [
+                            ("source", getattr(item, "source", None)),
+                            ("line", item.line),
+                            ("status", item.status),
+                            ("type", item.kind),
+                            ("title", item.title),
+                            ("match_field", field),
+                        ]
+                    ),
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                )
+                + "\n",
+            )
+    elif args.format == "life":
+        for item, _field in results:
+            src = getattr(item, "source_text", None)
+            write_text(None, (src if src is not None else item_to_line(item)) + "\n")
+    elif getattr(args, "count", False):
+        write_text(None, "%d\n" % len(results))
+    else:
+        highlight = getattr(args, "highlight", False)
+        if not results:
+            write_text(None, "No matches found.\n")
+        else:
+            for item, _field in results:
+                source = getattr(item, "source", None)
+                line = item.line
+                loc = (
+                    ("%s:%d" % (source, line))
+                    if source and line
+                    else ("line %d" % line if line else "?")
+                )
+                title = item.title
+                if highlight:
+                    if use_regex:
+                        title = compiled.sub("\033[1;33m\\g<0>\033[0m", title)
+                    else:
+                        idx = title.lower().find(pat_lower)
+                        if idx >= 0:
+                            title = (
+                                title[:idx]
+                                + "\033[1;33m"
+                                + title[idx : idx + len(pattern)]
+                                + "\033[0m"
+                                + title[idx + len(pattern) :]
+                            )
+                write_text(
+                    None, "%s  %s %s %s\n" % (loc, item.status, item.kind, title)
+                )
+
+    _print_warnings(diagnostics)
+    return 0 if results else 1
+
+
+def _summary_single(path, config):
+    """Compute summary data for one file path."""
+    id_key = id_key_from_config(config)
+    text = read_text(path)
+    items, _ = parse_text(text, id_key=id_key, check_ids=False, check_references=False)
+    type_counts = {}
+    status_counts = {}
+    ids_present = 0
+    ids_missing = 0
+    for item in items:
+        type_counts[item.kind] = type_counts.get(item.kind, 0) + 1
+        status_counts[item.status] = status_counts.get(item.status, 0) + 1
+        if item.details.get(id_key):
+            ids_present += 1
+        else:
+            ids_missing += 1
+    return {
+        "source": path,
+        "lines": len(text.splitlines()),
+        "items": len(items),
+        "type_counts": type_counts,
+        "status_counts": status_counts,
+        "ids_present": ids_present,
+        "ids_missing": ids_missing,
+    }
+
+
+def _summary_compare(primary_paths, compare_path, config):
+    a = _summary_single(
+        primary_paths[0] if len(primary_paths) == 1 else primary_paths[0], config
+    )
+    b = _summary_single(compare_path, config)
+
+    def _col(label, a_val, b_val):
+        delta = ""
+        try:
+            diff = int(b_val) - int(a_val)
+            delta = " (%+d)" % diff if diff != 0 else ""
+        except (TypeError, ValueError):
+            pass
+        sys.stdout.write(
+            "  %-14s %-20s %-20s%s\n" % (label, str(a_val), str(b_val), delta)
+        )
+
+    sys.stdout.write(
+        "%-14s %-20s %-20s\n"
+        % ("", os.path.basename(a["source"]), os.path.basename(b["source"]))
+    )
+    sys.stdout.write("-" * 60 + "\n")
+    _col("Lines:", a["lines"], b["lines"])
+    _col("Items:", a["items"], b["items"])
+    all_types = sorted(
+        set(list(a["type_counts"].keys()) + list(b["type_counts"].keys()))
+    )
+    for t in all_types:
+        _col("  Type %s:" % t, a["type_counts"].get(t, 0), b["type_counts"].get(t, 0))
+    all_statuses = sorted(
+        set(list(a["status_counts"].keys()) + list(b["status_counts"].keys()))
+    )
+    for s in all_statuses:
+        label = s.strip("[]")
+        _col(
+            "  [%s]:" % label,
+            a["status_counts"].get(s, 0),
+            b["status_counts"].get(s, 0),
+        )
+    _col("IDs present:", a["ids_present"], b["ids_present"])
+    _col("IDs missing:", a["ids_missing"], b["ids_missing"])
+
+
+def command_diff(args):
+    config = _config(args)
+    id_key = id_key_from_config(config)
+
+    since_date = getattr(args, "since", None)
+    if since_date:
+        after_path = args.after
+        after_dir = os.path.dirname(os.path.abspath(after_path))
+        basename = os.path.basename(after_path)
+        since_prefix = since_date[:10] if since_date else ""
+        try:
+            candidates = sorted(
+                f
+                for f in os.listdir(after_dir)
+                if f.startswith(since_prefix)
+                and f.endswith("_" + basename)
+                and f != basename
+            )
+        except OSError:
+            candidates = []
+        if not candidates:
+            sys.stderr.write(
+                "ERROR: No snapshot found for date %s in %s\n" % (since_date, after_dir)
+            )
+            return 1
+        args.before = os.path.join(after_dir, candidates[-1])
+        sys.stdout.write("Using snapshot: %s\n" % args.before)
+
+    before_text = read_text(args.before)
+    after_text = read_text(args.after)
+    before_items, _ = parse_text(
+        before_text, id_key=id_key, check_ids=False, check_references=False
+    )
+    after_items, _ = parse_text(
+        after_text, id_key=id_key, check_ids=False, check_references=False
+    )
+
+    kind_filter = set(_split_csv_args(getattr(args, "kinds", None)))
+    proj_filter = set(_split_csv_args(getattr(args, "project", None)))
+    change_type_filter = set(getattr(args, "change_types", None) or [])
+
+    def _item_key(item):
+        id_vals = item.details.get(id_key, [])
+        if id_vals:
+            return ("id", str(id_vals[0]))
+        return ("title_type", "%s|%s" % (item.kind, item.title))
+
+    def _item_passes_filter(item):
+        if kind_filter and item.kind not in kind_filter:
+            return False
+        if proj_filter and not any(
+            str(v) in proj_filter for v in item.details.get("project", [])
+        ):
+            return False
+        return True
+
+    before_map = {_item_key(i): i for i in before_items}
+    after_map = {_item_key(i): i for i in after_items}
+    before_keys = set(before_map.keys())
+    after_keys = set(after_map.keys())
+
+    changes = []
+
+    for key in sorted(after_keys - before_keys, key=lambda k: k[1]):
+        item = after_map[key]
+        if not _item_passes_filter(item):
+            continue
+        changes.append(
+            OrderedDict(
+                [
+                    ("change", "added"),
+                    ("title", item.title),
+                    ("type", item.kind),
+                    ("status", item.status),
+                    ("line", item.line),
+                    ("source", getattr(item, "source", None)),
+                ]
+            )
+        )
+
+    for key in sorted(before_keys - after_keys, key=lambda k: k[1]):
+        item = before_map[key]
+        if not _item_passes_filter(item):
+            continue
+        changes.append(
+            OrderedDict(
+                [
+                    ("change", "removed"),
+                    ("title", item.title),
+                    ("type", item.kind),
+                    ("status", item.status),
+                    ("line", item.line),
+                    ("source", getattr(item, "source", None)),
+                ]
+            )
+        )
+
+    for key in sorted(before_keys & after_keys, key=lambda k: k[1]):
+        b = before_map[key]
+        a = after_map[key]
+        if not _item_passes_filter(b):
+            continue
+        if b.status != a.status:
+            change_type = (
+                "completed"
+                if a.status == "[x]"
+                else ("canceled" if a.status == "[-]" else "status-changed")
+            )
+            changes.append(
+                OrderedDict(
+                    [
+                        ("change", change_type),
+                        ("title", a.title),
+                        ("type", a.kind),
+                        ("before", b.status),
+                        ("after", a.status),
+                        ("line", a.line),
+                        ("source", getattr(a, "source", None)),
+                    ]
+                )
+            )
+        elif b.details != a.details:
+            changed_keys = []
+            all_keys = set(list(b.details.keys()) + list(a.details.keys()))
+            for dk in all_keys:
+                bv = b.details.get(dk, [])
+                av = a.details.get(dk, [])
+                if bv != av:
+                    changed_keys.append(dk)
+            changes.append(
+                OrderedDict(
+                    [
+                        ("change", "detail-changed"),
+                        ("title", a.title),
+                        ("type", a.kind),
+                        ("changed_keys", changed_keys),
+                        ("line", a.line),
+                        ("source", getattr(a, "source", None)),
+                    ]
+                )
+            )
+
+    if change_type_filter:
+        changes = [c for c in changes if c.get("change") in change_type_filter]
+
+    fmt = getattr(args, "format", "text")
+    if fmt == "json":
+        write_text(
+            None,
+            json.dumps(
+                changes,
+                ensure_ascii=False,
+                indent=2 if args.pretty else None,
+                separators=None if args.pretty else (",", ":"),
+            )
+            + "\n",
+        )
+    elif fmt == "jsonl":
+        for c in changes:
+            write_text(
+                None, json.dumps(c, ensure_ascii=False, separators=(",", ":")) + "\n"
+            )
+    else:
+        if not changes:
+            write_text(None, "No differences found.\n")
+        else:
+            _DIFF_COLORS = {
+                "added": "\033[32m+ ",
+                "removed": "\033[31m- ",
+                "completed": "\033[32m* ",
+                "canceled": "\033[33m~ ",
+                "status-changed": "\033[36m~ ",
+                "detail-changed": "\033[36m^ ",
+            }
+            for c in changes:
+                pfx = _DIFF_COLORS.get(c["change"], "  ")
+                title = c.get("title", "")
+                ctype = c.get("type", "")
+                change = c.get("change", "")
+                extra = ""
+                if "before" in c:
+                    extra = " (%s → %s)" % (c["before"], c["after"])
+                elif "changed_keys" in c:
+                    extra = " [%s]" % ", ".join(c["changed_keys"])
+                write_text(
+                    None,
+                    "%s[%s] %s (%s)%s\033[0m\n" % (pfx, change, title, ctype, extra),
+                )
+
+    return 0 if not changes else 0
+
+
+def _plot_bar(value, max_value, width=40, char="#"):
+    if max_value == 0:
+        return ""
+    filled = int(round(value / max_value * width))
+    return char * filled + "." * (width - filled)
+
+
+def _plot_data_to_svg(plot_data, title="lifetxt plot"):
+    chart_items = [
+        (chart_title, data) for chart_title, data in plot_data.items() if data
+    ]
+    width = 900
+    row_height = 24
+    chart_gap = 46
+    margin = 24
+    title_height = 38
+    height = title_height + margin
+    for _chart_title, data in chart_items:
+        height += 32 + max(1, len(data)) * row_height + chart_gap
+    height = max(height, 160)
+
+    parts = [
+        '<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" viewBox="0 0 %d %d">'
+        % (width, height, width, height),
+        "<style>text{font-family:Arial,sans-serif;font-size:13px;fill:#1f2937}.title{font-size:20px;font-weight:700}.section{font-size:15px;font-weight:700}.axis{fill:#6b7280}.bar{fill:#2563eb}.track{fill:#e5e7eb}</style>",
+        '<rect width="100%" height="100%" fill="#ffffff"/>',
+        '<text class="title" x="%d" y="30">%s</text>'
+        % (margin, html.escape(title, quote=True)),
+    ]
+    y = 64
+    label_width = 190
+    bar_x = margin + label_width
+    bar_max_width = width - bar_x - 80
+    for chart_title, data in chart_items:
+        parts.append(
+            '<text class="section" x="%d" y="%d">%s</text>'
+            % (margin, y, html.escape(chart_title, quote=True))
+        )
+        y += 22
+        max_value = max(data.values()) or 1
+        for label, value in data.items():
+            bar_width = int(round((value / float(max_value)) * bar_max_width))
+            safe_label = html.escape(str(label), quote=True)
+            parts.append(
+                '<text x="%d" y="%d">%s</text>' % (margin, y + 15, safe_label[:42])
+            )
+            parts.append(
+                '<rect class="track" x="%d" y="%d" width="%d" height="14" rx="3"/>'
+                % (bar_x, y + 3, bar_max_width)
+            )
+            parts.append(
+                '<rect class="bar" x="%d" y="%d" width="%d" height="14" rx="3"/>'
+                % (bar_x, y + 3, bar_width)
+            )
+            parts.append(
+                '<text class="axis" x="%d" y="%d">%s</text>'
+                % (bar_x + bar_max_width + 10, y + 15, value)
+            )
+            y += row_height
+        y += chart_gap
+    if not chart_items:
+        parts.append('<text x="%d" y="%d">No plot data.</text>' % (margin, y))
+    parts.append("</svg>")
+    return "\n".join(parts)
+
+
+def _plot_data_to_png(plot_data, output_path):
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        raise ValueError(
+            "--format png requires matplotlib. Install matplotlib or use --format svg."
+        )
+
+    chart_items = [
+        (chart_title, data) for chart_title, data in plot_data.items() if data
+    ]
+    if not chart_items:
+        chart_items = [("No plot data", OrderedDict([("none", 0)]))]
+    fig, axes = plt.subplots(
+        len(chart_items), 1, figsize=(10, max(3, len(chart_items) * 3))
+    )
+    if len(chart_items) == 1:
+        axes = [axes]
+    for axis, (chart_title, data) in zip(axes, chart_items):
+        labels = list(data.keys())
+        values = list(data.values())
+        axis.barh(labels, values, color="#2563eb")
+        axis.set_title(chart_title)
+        axis.invert_yaxis()
+    fig.tight_layout()
+    fig.savefig(output_path)
+    plt.close(fig)
+
+
+def command_plot(args):
+    from .timeutil import parse_elapsed as _parse_elapsed
+
+    config = _config(args)
+    paths = _normalize_paths(getattr(args, "paths", None) or [], config) or ["life.txt"]
+    items, _ = _parse_life_inputs(paths, config)
+
+    chart = getattr(args, "chart", "all")
+    group = getattr(args, "group", "weekly")
+    project_filter = getattr(args, "project", None)
+    output_format = getattr(args, "format", "text")
+    plot_data = OrderedDict()
+    term_width = getattr(args, "width", 0)
+    if not term_width:
+        try:
+            term_width = os.get_terminal_size().columns
+        except OSError:
+            term_width = 80
+    bar_width = max(10, min(40, term_width - 30))
+
+    start_str = getattr(args, "start", None)
+    end_str = getattr(args, "end", None)
+    today = timezone_today()
+    start = (
+        _parse_date_only(start_str)
+        if start_str
+        else (today - datetime.timedelta(days=90))
+    )
+    end = _parse_date_only(end_str) if end_str else today
+
+    if project_filter:
+        items = [
+            i
+            for i in items
+            if project_filter in [str(v) for v in i.details.get("project", [])]
+        ]
+
+    def _bucket_key(d):
+        if group == "daily":
+            return d.isoformat()
+        elif group == "monthly":
+            return "%d-%02d" % (d.year, d.month)
+        else:
+            iso = d.isocalendar()
+            return "%d-W%02d" % (iso[0], iso[1])
+
+    def _print_bar_chart(title, data):
+        if not data:
+            return
+        plot_data[title] = OrderedDict(
+            (str(label), int(value)) for label, value in sorted(data.items())
+        )
+        if output_format != "text":
+            return
+        sys.stdout.write("\n## %s\n" % title)
+        max_v = max(data.values()) if data else 1
+        for label, val in sorted(data.items()):
+            bar = _plot_bar(val, max_v, width=bar_width)
+            sys.stdout.write("  %-12s %s %d\n" % (label[:12], bar, val))
+
+    # tasks chart: completed tasks per bucket
+    if chart in ("tasks", "all"):
+        task_buckets = {}
+        for item in items:
+            if item.kind == "T" and item.status == "[x]":
+                for val in item.details.get("done", []):
+                    d = _parse_date_only(str(val))
+                    if d and start <= d <= end:
+                        k = _bucket_key(d)
+                        task_buckets[k] = task_buckets.get(k, 0) + 1
+        _print_bar_chart("Tasks Completed (%s)" % group, task_buckets)
+
+    # habits chart: completions per habit
+    if chart in ("habits", "all"):
+        habit_counts = {}
+        for item in items:
+            if item.kind == "H" and item.status == "[x]":
+                for val in item.details.get("done", []):
+                    d = _parse_date_only(str(val))
+                    if d and start <= d <= end:
+                        habit_counts[item.title] = habit_counts.get(item.title, 0) + 1
+        _print_bar_chart(
+            "Habit Completions (total, %s to %s)" % (start, end), habit_counts
+        )
+
+    # mood chart: mood value distribution
+    if chart in ("mood", "all"):
+        mood_counts = {}
+        for item in items:
+            if item.kind == "J":
+                for val in item.details.get("mood", []):
+                    d = _latest_item_date(item) or today
+                    if start <= d <= end:
+                        m = str(val)
+                        mood_counts[m] = mood_counts.get(m, 0) + 1
+        _print_bar_chart("Mood Distribution (%s to %s)" % (start, end), mood_counts)
+
+    # elapsed chart: total elapsed per project
+    if chart in ("elapsed", "all"):
+        proj_elapsed = {}
+        for item in items:
+            for val in item.details.get("elapsed", []):
+                minutes = _parse_elapsed(str(val))
+                if minutes:
+                    proj = str(item.details.get("project", ["(no project)"])[0])
+                    proj_elapsed[proj] = proj_elapsed.get(proj, 0) + minutes
+        if proj_elapsed:
+            plot_data["Elapsed Time by Project"] = OrderedDict(
+                (str(project), int(minutes))
+                for project, minutes in sorted(
+                    proj_elapsed.items(), key=lambda x: -x[1]
+                )
+            )
+        if proj_elapsed and output_format == "text":
+            sys.stdout.write("\n## Elapsed Time by Project\n")
+            max_v = max(proj_elapsed.values())
+            for proj, minutes in sorted(proj_elapsed.items(), key=lambda x: -x[1]):
+                bar = _plot_bar(minutes, max_v, width=bar_width)
+                h, m = divmod(minutes, 60)
+                label = ("%dh%dm" % (h, m)) if h else ("%dm" % m)
+                sys.stdout.write("  %-14s %s %s\n" % (proj[:14], bar, label))
+
+    # deadlines chart: items due per bucket
+    if chart in ("deadlines", "all"):
+        deadline_buckets = {}
+        for item in items:
+            for key in ("due", "do"):
+                for val in item.details.get(key, []):
+                    d = _parse_date_only(str(val))
+                    if d and start <= d <= end:
+                        k = _bucket_key(d)
+                        deadline_buckets[k] = deadline_buckets.get(k, 0) + 1
+        if deadline_buckets:
+            _print_bar_chart("Deadline Density (%s)" % group, deadline_buckets)
+
+    # sparkline output: single row of Unicode block chars
+    if getattr(args, "sparkline", False) and output_format == "text":
+        SPARKS = " ▁▂▃▄▅▆▇█"
+
+        def _sparkline(data_dict):
+            if not data_dict:
+                return "(empty)"
+            keys = sorted(data_dict.keys())
+            vals = [data_dict.get(k, 0) for k in keys]
+            max_v = max(vals) or 1
+            spark = "".join(SPARKS[int(v / max_v * (len(SPARKS) - 1))] for v in vals)
+            return spark + "  (%d..%d)" % (min(vals), max(vals))
+
+        sys.stdout.write("\n## Sparklines\n")
+        if chart in ("tasks", "all"):
+            sys.stdout.write(
+                "  Tasks:     %s\n"
+                % _sparkline(task_buckets if "task_buckets" in locals() else {})
+            )
+        if chart in ("habits", "all"):
+            habit_agg = {}
+            for item in items:
+                if item.kind == "H":
+                    for val in item.details.get("done", []):
+                        d = _parse_date_only(str(val))
+                        if d and start <= d <= end:
+                            k = _bucket_key(d)
+                            habit_agg[k] = habit_agg.get(k, 0) + 1
+            sys.stdout.write("  Habits:    %s\n" % _sparkline(habit_agg))
+        if chart in ("deadlines", "all"):
+            sys.stdout.write(
+                "  Deadlines: %s\n"
+                % _sparkline(deadline_buckets if "deadline_buckets" in locals() else {})
+            )
+
+    if output_format == "svg":
+        svg = _plot_data_to_svg(plot_data, title="lifetxt plot")
+        write_text(getattr(args, "output", None), svg + "\n")
+        return 0
+    if output_format == "png":
+        output = getattr(args, "output", None)
+        if not output:
+            raise ValueError("--format png requires -o/--output.")
+        _plot_data_to_png(plot_data, output)
+        return 0
+
+    sys.stdout.write("\n")
+    return 0
+
+
+def command_export_heatmap(args):
+    config = _config(args)
+    paths = _normalize_paths(getattr(args, "paths", None) or [], config) or ["life.txt"]
+    items, _ = _parse_life_inputs(paths, config)
+    today = timezone_today()
+    end = (
+        _parse_date_only(getattr(args, "end", None))
+        if getattr(args, "end", None)
+        else today
+    )
+    start = (
+        _parse_date_only(getattr(args, "start", None))
+        if getattr(args, "start", None)
+        else end - datetime.timedelta(days=364)
+    )
+    if end < start:
+        raise ValueError("--to must not be earlier than --from.")
+    project = getattr(args, "project", None)
+    kind = getattr(args, "kind", "all")
+    counts = _activity_counts(items, start, end, kind=kind, project=project)
+    svg = _activity_heatmap_svg(
+        counts, start, end, title=getattr(args, "title", "lifetxt activity")
+    )
+    write_text(getattr(args, "output", None), svg + "\n")
+    return 0
+
+
+def _activity_counts(items, start, end, kind="all", project=None):
+    counts = OrderedDict()
+    current = start
+    while current <= end:
+        counts[current] = 0
+        current += datetime.timedelta(days=1)
+
+    for item in items:
+        if project and project not in [
+            str(value) for value in item.details.get("project", [])
+        ]:
+            continue
+        include_task = kind in ("all", "task") and item.kind == "T"
+        include_habit = kind in ("all", "habit") and item.kind == "H"
+        if not include_task and not include_habit:
+            continue
+        for value in item.details.get("done", []):
+            day = _parse_date_only(str(value))
+            if day and start <= day <= end:
+                counts[day] += 1
+        if item.status == "[x]" and not item.details.get("done"):
+            day = _latest_item_date(item)
+            if day and start <= day <= end:
+                counts[day] += 1
+    return counts
+
+
+def _activity_heatmap_svg(counts, start, end, title="lifetxt activity"):
+    cell = 12
+    gap = 3
+    left = 42
+    top = 54
+    days = list(counts.keys())
+    weeks = ((len(days) + start.weekday()) + 6) // 7
+    width = left + weeks * (cell + gap) + 24
+    height = top + 7 * (cell + gap) + 42
+    max_count = max(counts.values()) if counts else 0
+
+    def color(value):
+        if value <= 0 or max_count <= 0:
+            return "#ebedf0"
+        ratio = value / float(max_count)
+        if ratio < 0.25:
+            return "#9be9a8"
+        if ratio < 0.5:
+            return "#40c463"
+        if ratio < 0.75:
+            return "#30a14e"
+        return "#216e39"
+
+    parts = [
+        '<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" viewBox="0 0 %d %d">'
+        % (width, height, width, height),
+        "<style>text{font-family:Arial,sans-serif;font-size:12px;fill:#374151}.title{font-size:18px;font-weight:700}.meta{fill:#6b7280}</style>",
+        '<rect width="100%" height="100%" fill="#ffffff"/>',
+        '<text class="title" x="16" y="28">%s</text>'
+        % html.escape(str(title), quote=True),
+        '<text class="meta" x="16" y="46">%s to %s</text>'
+        % (start.isoformat(), end.isoformat()),
+    ]
+    for row, label in enumerate(("Mon", "", "Wed", "", "Fri", "", "Sun")):
+        if label:
+            parts.append(
+                '<text x="12" y="%d">%s</text>' % (top + row * (cell + gap) + 10, label)
+            )
+    for day, value in counts.items():
+        offset = (day - start).days + start.weekday()
+        week = offset // 7
+        row = day.weekday()
+        x = left + week * (cell + gap)
+        y = top + row * (cell + gap)
+        parts.append(
+            '<rect x="%d" y="%d" width="%d" height="%d" rx="2" fill="%s">'
+            "<title>%s: %d</title></rect>"
+            % (x, y, cell, cell, color(value), day.isoformat(), value)
+        )
+    parts.append("</svg>")
+    return "\n".join(parts)
+
+
+def command_migrate(args):
+    """Apply in-place format migrations to a life.txt file."""
+    import re as _re
+    from .timeutil import (
+        parse_elapsed as _parse_elapsed,
+        format_elapsed as _format_elapsed,
+    )
+
+    path = args.path
+    if not os.path.exists(path):
+        sys.stderr.write("ERROR: File not found: %s\n" % path)
+        return 1
+    migrations = args.migrations or []
+    if not migrations:
+        sys.stderr.write("ERROR: No --migration specified.\n")
+        return 1
+
+    text = read_text(path)
+    original_text = text
+    total_changes = 0
+
+    for migration_spec in migrations:
+        name, _, arg = migration_spec.partition("=")
+        name = name.strip()
+
+        if name == "normalize-elapsed":
+            lines = text.splitlines(keepends=True)
+            new_lines = []
+            for line in lines:
+
+                def _repl_elapsed(m):
+                    raw = m.group(1)
+                    minutes = _parse_elapsed(raw)
+                    if minutes is None:
+                        return m.group(0)
+                    normalized = _format_elapsed(minutes)
+                    return "elapsed:" + normalized
+
+                new_line = _re.sub(r"elapsed:(\S+)", _repl_elapsed, line)
+                if new_line != line:
+                    total_changes += 1
+                new_lines.append(new_line)
+            text = "".join(new_lines)
+
+        elif name == "rename-key":
+            if "=" not in migration_spec:
+                sys.stderr.write("ERROR: rename-key requires OLD=NEW format.\n")
+                return 1
+            _, _, rest = migration_spec.partition("=")
+            if "=" in rest:
+                old_key, _, new_key = rest.partition("=")
+            else:
+                old_key = arg
+                new_key = rest.replace(arg + "=", "")
+            # Get old_key=new_key from full spec: rename-key=old_key=new_key
+            parts = migration_spec.split("=", 1)
+            if len(parts) < 2:
+                sys.stderr.write("ERROR: rename-key requires OLD=NEW argument.\n")
+                return 1
+            kv = parts[1]
+            if "=" not in kv:
+                sys.stderr.write("ERROR: rename-key argument must be OLD=NEW.\n")
+                return 1
+            old_key, _, new_key = kv.partition("=")
+            old_key = old_key.strip()
+            new_key = new_key.strip()
+            if not old_key or not new_key:
+                sys.stderr.write("ERROR: rename-key OLD and NEW must not be empty.\n")
+                return 1
+            lines = text.splitlines(keepends=True)
+            new_lines = []
+            for line in lines:
+                new_line = _re.sub(
+                    r"\b" + _re.escape(old_key) + r":",
+                    new_key + ":",
+                    line,
+                )
+                if new_line != line:
+                    total_changes += 1
+                new_lines.append(new_line)
+            text = "".join(new_lines)
+
+        elif name == "add-id":
+            config = _config(args)
+            id_key = id_key_from_config(config)
+            parsed_items, _ = parse_text(
+                text, id_key=id_key, check_ids=False, check_references=False
+            )
+            lines = text.splitlines(keepends=True)
+            import secrets as _secrets
+
+            for item in parsed_items:
+                if not item.details.get(id_key):
+                    if item.line and 0 < item.line <= len(lines):
+                        new_id = _secrets.token_hex(4)
+                        lines[item.line - 1] = lines[item.line - 1].rstrip("\n").rstrip(
+                            "\r"
+                        ) + ("  %s:%s\n" % (id_key, new_id))
+                        total_changes += 1
+            text = "".join(lines)
+
+        elif name == "normalize-status":
+            from .model import VALID_STATUSES, STATUS_ALIASES
+
+            lines = text.splitlines(keepends=True)
+            new_lines = []
+            for line in lines:
+                new_line = line
+                for alias, canonical in STATUS_ALIASES.items():
+                    new_line = _re.sub(
+                        r"\[" + _re.escape(alias) + r"\]",
+                        canonical,
+                        new_line,
+                    )
+                if new_line != line:
+                    total_changes += 1
+                new_lines.append(new_line)
+            text = "".join(new_lines)
+
+        elif name == "strip-empty-details":
+            lines = text.splitlines(keepends=True)
+            new_lines = []
+            for line in lines:
+                new_line = (
+                    _re.sub(r"\s+\w[\w-]*:\s*(?=\s+\w[\w-]*:|$)", "", line).rstrip()
+                    + "\n"
+                    if line.strip() and not line.strip().startswith("#")
+                    else line
+                )
+                # more precise: remove detail key:value pairs where value is empty
+                new_line = _re.sub(r"(\s{2,})(\w[\w-]*):\s+(?=(\s{2,}|$))", "", line)
+                if new_line != line:
+                    total_changes += 1
+                new_lines.append(new_line)
+            text = "".join(new_lines)
+
+        elif name == "canonicalize-dates":
+            lines = text.splitlines(keepends=True)
+            new_lines = []
+
+            def _normalize_date_str(s):
+                # Try to parse and reformat common non-standard date formats
+                for fmt in ("%Y/%m/%d", "%d/%m/%Y", "%m/%d/%Y", "%Y.%m.%d", "%d-%m-%Y"):
+                    try:
+                        return datetime.datetime.strptime(s, fmt).date().isoformat()
+                    except ValueError:
+                        pass
+                return None
+
+            date_key_pattern = _re.compile(
+                r"(?<!\w)((?:due|do|on|created|updated|done|from|to|at|notify_at|notify_from|notify_to|ack|snooze_until|until|moved_to):)(\S+)"
+            )
+
+            def _repl_date(m):
+                key = m.group(1)
+                val = m.group(2)
+                normed = _normalize_date_str(val)
+                if normed and normed != val:
+                    return key + normed
+                return m.group(0)
+
+            for line in lines:
+                new_line = date_key_pattern.sub(_repl_date, line)
+                if new_line != line:
+                    total_changes += 1
+                new_lines.append(new_line)
+            text = "".join(new_lines)
+
+        else:
+            sys.stderr.write(
+                "ERROR: Unknown migration %r. Known: normalize-elapsed, rename-key OLD=NEW, add-id, normalize-status, strip-empty-details, canonicalize-dates.\n"
+                % name
+            )
+            return 1
+
+    dry_run = getattr(args, "dry_run", False)
+    if dry_run:
+        if text == original_text:
+            sys.stdout.write("No changes would be made.\n")
+        else:
+            import difflib
+
+            diff = list(
+                difflib.unified_diff(
+                    original_text.splitlines(keepends=True),
+                    text.splitlines(keepends=True),
+                    fromfile=path + " (before)",
+                    tofile=path + " (after)",
+                )
+            )
+            sys.stdout.write("".join(diff[:60]))
+            if len(diff) > 60:
+                sys.stdout.write("... (%d more lines)\n" % (len(diff) - 60))
+        sys.stdout.write("[dry-run] %d change(s) would be applied.\n" % total_changes)
+        return 0
+
+    if text == original_text:
+        sys.stdout.write("No changes made.\n")
+        return 0
+
+    _ensure_writable_path(path, _config(args), "migrate")
+    if getattr(args, "backup", False):
+        import shutil as _shutil
+
+        backup_path = path + ".bak"
+        _shutil.copy2(path, backup_path)
+        sys.stdout.write("Backup: %s\n" % backup_path)
+
+    atomic_write_text(path, text)
+    sys.stdout.write("Applied %d change(s) to %s\n" % (total_changes, path))
+    return 0
+
+
+def command_from_markdown(args):
+    """Convert Markdown task list items (- [ ] title) to life.txt items."""
+    paths = args.paths if args.paths else ["-"]
+    project = getattr(args, "project", None)
+    kind = getattr(args, "kind", "T") or "T"
+    do_append = getattr(args, "append", False)
+    output_path = getattr(args, "output", None)
+    preset = getattr(args, "preset", None)
+
+    items = []
+    for path in paths:
+        text = read_text(path)
+        items.extend(
+            _items_from_markdown_task_text(
+                text,
+                project=project,
+                kind=kind,
+                github_refs=preset == "github",
+            )
+        )
+
+    if not items:
+        sys.stderr.write("WARNING: No Markdown task list items found.\n")
+        return 0
+
+    output = _items_to_life_text(items, canonical=True)
+
+    if output_path:
+        _ensure_writable_path(output_path, _config(args), "from-markdown")
+        if do_append:
+            append_text(output_path, output)
+        else:
+            write_text(output_path, output)
+    else:
+        write_text(None, output)
+
+    sys.stdout.write("Imported %d item(s).\n" % len(items))
+    return 0
+
+
+def command_snapshot(args):
+    import shutil
+
+    src = args.path
+    if not os.path.exists(src):
+        sys.stderr.write("ERROR: File not found: %s\n" % src)
+        return 1
+    if args.output:
+        dest = args.output
+    else:
+        src_dir = os.path.dirname(os.path.abspath(src))
+        snap_dir = args.snapshot_dir or os.path.join(src_dir, "snapshots")
+        os.makedirs(snap_dir, exist_ok=True)
+        date_prefix = timezone_today().isoformat()
+        basename = os.path.basename(src)
+        dest = os.path.join(snap_dir, "%s_%s" % (date_prefix, basename))
+    if os.path.abspath(dest) == os.path.abspath(src):
+        sys.stderr.write("ERROR: Destination is the same as source: %s\n" % dest)
+        return 1
+    do_diff = getattr(args, "diff", False)
+    prev_snapshot = None
+    if do_diff:
+        snap_dir_for_diff = os.path.dirname(dest)
+        basename_for_diff = os.path.basename(src)
+        candidates = sorted(
+            (
+                f
+                for f in os.listdir(snap_dir_for_diff)
+                if f.endswith("_" + basename_for_diff) and f != os.path.basename(dest)
+            ),
+            reverse=True,
+        )
+        if candidates:
+            prev_snapshot = os.path.join(snap_dir_for_diff, candidates[0])
+    shutil.copy2(src, dest)
+    sys.stdout.write("Snapshot: %s -> %s\n" % (src, dest))
+    if do_diff and prev_snapshot:
+        sys.stdout.write("Diff vs %s:\n" % prev_snapshot)
+
+        class _FakeArgs:
+            before = prev_snapshot
+            after = dest
+            format = "text"
+            pretty = False
+            kinds = None
+            project = None
+            change_types = None
+
+        command_diff(_FakeArgs())
+    elif do_diff:
+        sys.stdout.write("(No previous snapshot found to diff against.)\n")
+    return 0
+
+
+# Key-name typo map: common misspellings -> canonical key
+_LINT_KEY_VARIANTS = {
+    "proj": "project",
+    "projects": "project",
+    "date": "due",
+    "deadline": "due",
+    "assign": "assignee",
+    "assigned": "assignee",
+    "assigned_to": "assignee",
+    "owners": "owner",
+    "tags": "tag",
+    "bodies": "body",
+    "note": "note",  # not a typo but capture for casing
+    "prio": "priority",
+    "priorities": "priority",
+    "loc": "loc",  # fine, keep
+    "attend": "attendee",
+    "attendees": "attendee",
+    "ref_id": "id",
+    "item_id": "id",
+    "do_by": "due",
+    "scheduled": "do",
+    "repeat_every": "repeat",
+    "interval": "interval",
+    "until": "until",
+    "count": "count",
+    "depend": "depends_on",
+    "dep": "depends_on",
+    "dependency": "depends_on",
+    "block": "blocks",
+    "related_to": "related",
+    "mood_score": "mood",
+    "elapsed_time": "elapsed",
+    "spent": "elapsed",
+    "estimate": "est",
+    "sender_email": "sender",
+    "recipient_email": "recipient",
+    "notify": "notify_at",
+}
+# Non-canonical casings to flag
+_LINT_CASING_VARIANTS = {
+    k.upper(): k
+    for k in list(_LINT_KEY_VARIANTS.values()) + list(_LINT_KEY_VARIANTS.keys())
+}
+
+#: Lint codes `--fix` (#635) may auto-apply: each one already carries a
+#: deterministic, unique replacement in ``issue["fix"]`` (a known-typo
+#: rename for L001, a case-normalization for L002). L003 (duplicate key)
+#: and L100 (custom ruleset match) are excluded even when they happen to
+#: carry a ``fix`` value: a duplicate key's correct resolution requires
+#: judgment this engine cannot safely infer, and a custom rule's
+#: replacement is operator-authored, not proven safe by this classification.
+_LINT_FIXABLE_CODES = frozenset(("L001", "L002"))
+
+
+def command_lint(args):
+    from .model import RECOMMENDED_KEYS_BY_TYPE
+
+    paths = args.paths if args.paths else ["-"]
+    config = _config(args)
+    id_key = id_key_from_config(config)
+    do_fix = getattr(args, "fix", False)
+    issues = []
+
+    path_texts = {}
+    for path in paths:
+        text = read_text(path)
+        path_texts[path] = text
+        items, parse_diags = parse_text(
+            text, id_key=id_key, check_ids=False, check_references=False
+        )
+        for item in items:
+            for key in list(item.details.keys()):
+                canonical = _LINT_KEY_VARIANTS.get(key)
+                if canonical and canonical != key:
+                    issues.append(
+                        OrderedDict(
+                            [
+                                ("source", getattr(item, "source", path) or path),
+                                ("line", item.line),
+                                ("code", "L001"),
+                                ("severity", "warning"),
+                                (
+                                    "message",
+                                    "Key %r looks like a typo for %r."
+                                    % (key, canonical),
+                                ),
+                                ("fix", canonical),
+                                ("key", key),
+                            ]
+                        )
+                    )
+                elif key.upper() == key and key.lower() in _LINT_KEY_VARIANTS:
+                    issues.append(
+                        OrderedDict(
+                            [
+                                ("source", getattr(item, "source", path) or path),
+                                ("line", item.line),
+                                ("code", "L002"),
+                                ("severity", "warning"),
+                                (
+                                    "message",
+                                    "Key %r uses non-standard casing; expected %r."
+                                    % (key, key.lower()),
+                                ),
+                                ("fix", key.lower()),
+                                ("key", key),
+                            ]
+                        )
+                    )
+            # Check for duplicate keys
+            seen = {}
+            for key in item.details.keys():
+                seen[key] = seen.get(key, 0) + 1
+            for key, n in seen.items():
+                if n > 1:
+                    issues.append(
+                        OrderedDict(
+                            [
+                                ("source", getattr(item, "source", path) or path),
+                                ("line", item.line),
+                                ("code", "L003"),
+                                ("severity", "warning"),
+                                (
+                                    "message",
+                                    "Duplicate key %r (%d values). Consider using a multi-value list."
+                                    % (key, n),
+                                ),
+                                ("fix", None),
+                                ("key", key),
+                                ("count", n),
+                            ]
+                        )
+                    )
+
+    # --ruleset: load custom rules from a JSON file
+    ruleset_file = getattr(args, "ruleset", None)
+    if ruleset_file:
+        try:
+            with open(ruleset_file, encoding="utf-8") as _rf:
+                custom_rules = json.load(_rf)
+            if not isinstance(custom_rules, list):
+                sys.stderr.write("ERROR: Ruleset must be a JSON array.\n")
+                return 2
+        except (OSError, ValueError) as exc:
+            sys.stderr.write(
+                "ERROR: Cannot load ruleset %r: %s\n" % (ruleset_file, exc)
+            )
+            return 2
+        for path in paths:
+            text = path_texts.get(path, read_text(path))
+            path_items, _ = parse_text(
+                text, id_key=id_key, check_ids=False, check_references=False
+            )
+            for item in path_items:
+                for key in item.details.keys():
+                    for rule in custom_rules:
+                        pattern = rule.get("pattern", "")
+                        replacement = rule.get("replacement")
+                        message = rule.get(
+                            "message", "Key %r matches custom rule." % key
+                        )
+                        import re as _re2
+
+                        if _re2.fullmatch(pattern, key):
+                            issues.append(
+                                OrderedDict(
+                                    [
+                                        (
+                                            "source",
+                                            getattr(item, "source", path) or path,
+                                        ),
+                                        ("line", item.line),
+                                        ("code", "L100"),
+                                        ("severity", "warning"),
+                                        ("message", message.replace("{key}", key)),
+                                        ("fix", replacement),
+                                        ("key", key),
+                                    ]
+                                )
+                            )
+
+    # --fix: auto-rename typo keys in fixable issues (L001, L002) only.
+    # L003 (duplicate key) and L100 (custom ruleset match) are never
+    # auto-applied here: a duplicate key's "correct" resolution requires
+    # judgment this command cannot safely infer, and a custom rule's
+    # replacement is operator-supplied, not proven safe by this engine.
+    if do_fix:
+        dry_run = getattr(args, "dry_run", False)
+        fixable = [
+            i for i in issues if i.get("fix") and i.get("code") in _LINT_FIXABLE_CODES
+        ]
+        skipped_ambiguous = len(issues) - len(fixable)
+        by_path = {}
+        for issue in fixable:
+            src = issue.get("source") or "-"
+            by_path.setdefault(src, []).append(issue)
+
+        fixed_count = 0
+        written_files = 0
+        skipped_files = []
+        for path, path_issues in by_path.items():
+            if path == "-":
+                sys.stderr.write("WARNING: Cannot fix stdin; skipping.\n")
+                continue
+            text = path_texts.get(path, read_text(path))
+            lines = text.splitlines(keepends=True)
+            for issue in path_issues:
+                ln = issue.get("line")
+                old_key = issue.get("key", "")
+                new_key = issue.get("fix", "")
+                if ln and 0 < ln <= len(lines):
+                    import re as _re
+
+                    lines[ln - 1] = _re.sub(
+                        r"\b" + _re.escape(old_key) + r":",
+                        new_key + ":",
+                        lines[ln - 1],
+                    )
+            new_text = "".join(lines)
+
+            # Validate the complete post-fix file before writing anything:
+            # if even one planned fix would introduce a parse error, this
+            # file's fixes are skipped entirely rather than partially
+            # applied.
+            _new_items, new_diagnostics = parse_text(
+                new_text, id_key=id_key, check_ids=False, check_references=False
+            )
+            if _has_error(new_diagnostics):
+                skipped_files.append(path)
+                continue
+
+            if dry_run:
+                sys.stdout.write(
+                    "[dry-run] Would fix %d issue(s) in %s\n" % (len(path_issues), path)
+                )
+            else:
+                atomic_write_text(path, new_text)
+            fixed_count += len(path_issues)
+            written_files += 1
+
+        sys.stdout.write(
+            _t("lint.fixed_summary", fixed=fixed_count, files=written_files) + "\n"
+        )
+        if skipped_files:
+            sys.stdout.write(
+                "Skipped %d file(s): fix would introduce a parse error -- %s\n"
+                % (len(skipped_files), ", ".join(skipped_files))
+            )
+        if skipped_ambiguous:
+            sys.stdout.write(
+                "Skipped %d finding(s): no unique safe fix is available.\n"
+                % skipped_ambiguous
+            )
+        return 1 if (skipped_files or skipped_ambiguous) else 0
+
+    if args.format == "json":
+        # The stored "message" field stays exactly as constructed above
+        # (English) in --json output: it is machine-readable and must not
+        # change with locale, per #631/#633's contract.
+        write_text(
+            None,
+            json.dumps(
+                issues,
+                ensure_ascii=False,
+                indent=2 if args.pretty else None,
+                separators=None if args.pretty else (",", ":"),
+            )
+            + "\n",
+        )
+    else:
+        if not issues:
+            write_text(None, _t("lint.no_issues") + "\n")
+        else:
+            for issue in issues:
+                src = issue.get("source") or ""
+                ln = issue.get("line") or "?"
+                code = issue.get("code", "")
+                msg = _localized_lint_text_message(issue)
+                fix = issue.get("fix")
+                fix_hint = (
+                    " (fix: %r -> %r)" % (issue.get("key", ""), fix) if fix else ""
+                )
+                loc = ("%s:%s" % (src, ln)) if src else ("line %s" % ln)
+                sys.stdout.write("%s  %s  %s%s\n" % (loc, code, msg, fix_hint))
+
+    return 1 if issues else 0
+
+
+def _localized_lint_text_message(issue):
+    """Locale-aware rendering of one lint finding's message (#633).
+
+    Only used for the plain-text renderer above; `--json` output always
+    reads the issue's own stored ``message`` field (English, unchanged) so
+    machine-readable lint output never varies with locale.
+    """
+    code = issue.get("code", "")
+    key = issue.get("key", "")
+    if code == "L001":
+        return _t("lint.typo_key", key=key, canonical=issue.get("fix"))
+    if code == "L002":
+        return _t("lint.bad_casing", key=key, expected=issue.get("fix"))
+    if code == "L003":
+        return _t("lint.duplicate_key", key=key, n=issue.get("count"))
+    return issue.get("message", "")
+
+
+def command_notify(args):
+    notification_config = config_section(_config(args), "notifications")
+    recipient = args.recipient or config_notification_recipient(_config(args))
+    lookahead = args.lookahead or notification_config.get("lookahead") or "0m"
+    grace = args.grace or notification_config.get("grace") or "2m"
+    interval = args.interval or int(notification_config.get("poll_seconds") or 30)
+    desktop = args.desktop or bool(notification_config.get("desktop"))
+    email_config = _notification_email_config(notification_config)
+    email_enabled = bool(args.email or email_config.get("enabled"))
+    state_file = None
+    if not args.no_state:
+        state_file = args.state_file or notification_config.get("state_file")
+        if not state_file:
+            config = _config(args)
+            from .workspace import active_workspace_name, workspace_scoped_default_path
+
+            if active_workspace_name(config):
+                default_state_file = workspace_scoped_default_path(
+                    ".cache/lifetxt/notifications.json", config
+                )
+                config_path = config.get("_path") if config else None
+                base_dir = (
+                    os.path.dirname(os.path.abspath(config_path))
+                    if config_path
+                    else os.getcwd()
+                )
+                state_file = os.path.abspath(os.path.join(base_dir, default_state_file))
+
+    def load_records():
+        items, diagnostics = _parse_or_exit(args.paths, _config(args))
+        _print_warnings(diagnostics)
+        return notification_records(
+            items,
+            recipient=recipient,
+            lookahead=lookahead,
+            grace=grace,
+        )
+
+    if args.watch:
+        deliver = None
+        if email_enabled:
+            deliver = lambda records: _send_notification_email_batch(
+                records,
+                recipient=recipient,
+                args=args,
+                email_config=email_config,
+                output=sys.stdout,
+            )
+        return watch_notifications(
+            load_records,
+            interval_seconds=interval,
+            desktop=desktop,
+            deliver=deliver,
+            once=bool(getattr(args, "once", False)),
+            state_file=state_file,
+        )
+
+    records = load_records()
+    if email_enabled:
+        _send_notification_email_batch(
+            records,
+            recipient=recipient,
+            args=args,
+            email_config=email_config,
+            output=sys.stdout,
+        )
+    if args.format == "json":
+        write_text(None, notifications_to_json(records, pretty=args.pretty) + "\n")
+    elif args.format == "jsonl":
+        output = notifications_to_jsonl(records)
+        if output:
+            output += "\n"
+        write_text(None, output)
+    else:
+        write_text(None, format_notification_table(records))
+    return 0
+
+
+def _notification_email_config(notification_config):
+    raw = (
+        notification_config.get("email")
+        if isinstance(notification_config, dict)
+        else None
+    )
+    if isinstance(raw, dict):
+        return raw
+    return OrderedDict()
+
+
+def _split_email_addresses(value):
+    from .mail_delivery import split_email_addresses
+
+    return split_email_addresses(value)
+
+
+def _send_notification_email_batch(records, recipient, args, email_config, output=None):
+    if output is None:
+        output = sys.stdout
+    if not records:
+        output.write("No notification email sent; no notifications found.\n")
+        output.flush()
+        return False
+
+    to_value = getattr(args, "email_to", None) or email_config.get("to")
+    to_addrs = _split_email_addresses(to_value)
+    if not to_addrs:
+        raise ValueError(
+            "--email-to or notifications.email.to is required with --email."
+        )
+
+    host_env = (
+        getattr(args, "smtp_host_env", None)
+        or email_config.get("smtp_host_env")
+        or "LIFETXT_SMTP_HOST"
+    )
+    user_env = (
+        getattr(args, "smtp_user_env", None)
+        or email_config.get("smtp_user_env")
+        or "LIFETXT_SMTP_USER"
+    )
+    pass_env = (
+        getattr(args, "smtp_pass_env", None)
+        or email_config.get("smtp_pass_env")
+        or "LIFETXT_SMTP_PASS"
+    )
+    port = getattr(args, "smtp_port", None)
+    if port is None:
+        port = email_config.get("smtp_port")
+    base_subject = (
+        getattr(args, "email_subject", None)
+        or email_config.get("subject")
+        or "lifetxt notifications"
+    )
+    subject = notification_email_subject(records, base=base_subject)
+    message = format_notification_email(records, recipient=recipient)
+
+    from .mail_delivery import (
+        _deliver_smtp_message,
+        resolve_smtp_credentials,
+        validate_smtp_port,
+    )
+
+    if port is not None:
+        port = validate_smtp_port(port)
+
+    if getattr(args, "dry_run", False):
+        port_note = " port %d" % port if port is not None else ""
+        output.write(
+            "[dry-run] Would email %d notification(s) to %s via $%s%s:\n%s\n"
+            % (len(records), ", ".join(to_addrs), host_env, port_note, message)
+        )
+        output.flush()
+        return True
+
+    smtp_host, smtp_user, smtp_pass = resolve_smtp_credentials(
+        host_env, user_env, pass_env
+    )
+
+    from email.mime.text import MIMEText
+
+    mime = MIMEText(message, "plain", "utf-8")
+    mime["Subject"] = subject
+    mime["From"] = smtp_user
+    mime["To"] = ", ".join(to_addrs)
+    _deliver_smtp_message(mime, to_addrs, smtp_host, smtp_user, smtp_pass, port=port)
+    output.write("Sent notification email to %s.\n" % ", ".join(to_addrs))
+    output.flush()
+    return True
+
+
+def command_agenda(args):
+    blocked_filter = _agenda_blocked_filter(args.blocked, args.unblocked)
+    if args.blocked and args.unblocked:
+        raise ValueError("Use either --blocked or --unblocked, not both.")
+    items, diagnostics = _parse_or_exit(args.paths, _config(args))
+    start_text, end_text = _agenda_range_texts(args)
+    range_start, range_end = parse_agenda_range(
+        start_text=start_text,
+        end_text=end_text,
+        around_text=args.around,
+        window_text=args.window,
+    )
+    records = agenda_records(items, range_start, range_end)
+    records = filter_agenda_records(
+        records,
+        open_only=args.open,
+        statuses=args.status,
+        kinds=args.kinds,
+        projects=args.project,
+        tags=args.tag,
+        tag_all=args.tag_all,
+        exclude_tags=args.exclude_tag,
+        users=args.user,
+        persons=args.person,
+        owners=args.owner,
+        assignees=args.assignee,
+        attendees=args.attendee,
+        senders=args.sender,
+        recipients=args.recipient,
+        teams=args.team,
+        detail_filters=args.detail,
+        text=args.text,
+        blocked=blocked_filter,
+        user_aliases=config_user_aliases(_config(args)),
+        team_members=config_team_members(_config(args)),
+        team_aliases=config_team_aliases(_config(args)),
+        tag_aliases=config_tag_aliases(_config(args)),
+    )
+
+    if args.format == "json":
+        output = agenda_records_to_json(records, pretty=args.pretty)
+        write_text(args.output, output + "\n")
+    elif args.format == "jsonl":
+        output = agenda_records_to_jsonl(records)
+        if output:
+            output += "\n"
+        write_text(args.output, output)
+    elif args.format == "life":
+        output = agenda_records_to_life(records)
+        if output:
+            output += "\n"
+        write_text(args.output, output)
+    else:
+        write_text(args.output, format_agenda_table(records, width=args.width))
+
+    _print_warnings(diagnostics)
+    return 0
+
+
+def _agenda_blocked_filter(blocked_value, unblocked):
+    if unblocked:
+        return False
+    if blocked_value in (None, "all", "false"):
+        return None
+    if blocked_value in (True, "only", "true"):
+        return True
+    if blocked_value == "hide":
+        return False
+    return None
+
+
+def _agenda_range_texts(args):
+    if getattr(args, "start", None) and getattr(args, "after", None):
+        raise ValueError(
+            "Use either --from or --after for agenda range start, not both."
+        )
+    if getattr(args, "end", None) and getattr(args, "before", None):
+        raise ValueError("Use either --to or --before for agenda range end, not both.")
+    start_text = getattr(args, "start", None) or getattr(args, "after", None)
+    end_text = getattr(args, "end", None) or getattr(args, "before", None)
+    return start_text, end_text
+
+
+def command_from_json(args):
+    items = []
+    for path in _normalize_paths(args.paths):
+        decoded, _ = decode_conversion_text("json", read_text(path), validate=False)
+        items.extend(decoded)
+    return _write_life_items(
+        items,
+        args.output,
+        canonical=args.canonical,
+        key=id_key_from_config(_config(args)),
+    )
+
+
+def command_from_jsonl(args):
+    items = []
+    for path in _normalize_paths(args.paths):
+        decoded, _ = decode_conversion_text("jsonl", read_text(path), validate=False)
+        items.extend(decoded)
+    return _write_life_items(
+        items,
+        args.output,
+        canonical=args.canonical,
+        key=id_key_from_config(_config(args)),
+    )
+
+
+def command_from_csv(args):
+    items = []
+    for path in _normalize_paths(args.paths):
+        decoded, _ = decode_conversion_text("csv", read_text(path), validate=False)
+        items.extend(decoded)
+    return _write_life_items(
+        items,
+        args.output,
+        canonical=args.canonical,
+        key=id_key_from_config(_config(args)),
+    )
+
+
+def command_assist(args):
+    if args.update:
+        return command_assist_update(args)
+
+    if args.output and args.append:
+        raise ValueError("Use either --output or --append, not both.")
+
+    if args.interactive or not args.title:
+        item = prompt_item(args)
+    else:
+        item = build_item_from_args(args)
+    file_directives = _load_file_directives(args.append or args.output)
+    apply_config_defaults_to_item(item, args, file_directives)
+    apply_auto_id_to_item(item, args)
+    line = item_to_assisted_line(item)
+
+    if not args.no_check:
+        parsed_items, diagnostics = parse_text(line + "\n")
+        if not parsed_items:
+            diagnostics.append(
+                Diagnostic("error", "E301", "Generated line did not produce an item.")
+            )
+        if _has_error(diagnostics):
+            _print_diagnostics(diagnostics)
+            return 1
+        _print_warnings(diagnostics)
+
+    if args.append:
+        _ensure_writable_path(args.append, _config(args), "assist")
+        append_line(args.append, line)
+    if args.output:
+        _ensure_writable_path(args.output, _config(args), "assist")
+        append_line(args.output, line)
+    write_text(None, line + "\n")
+    return 0
+
+
+_CONFIG_RESOLUTION_ORDER_NOTE = """\
+Settings are resolved in this order, highest priority first:
+  1. CLI flag (e.g. --project, --person) on the command you run.
+  2. This config file's JSON values (e.g. defaults.person, defaults.timezone).
+  3. `#!` file-level directives at the top of a life.txt file (e.g. #! self:, #! project:, #! timezone:).
+  4. Built-in defaults (e.g. person "self", timezone "UTC").
+See the "Configuration" section of docs/en/cli.md (or docs/ja/cli.md) for details.
+"""
+
+
+def command_config_init(args):
+    if os.path.exists(args.output) and not args.force:
+        raise ValueError(
+            "Config file already exists. Use --force to overwrite: %s" % args.output
+        )
+    write_text(args.output, config_template_text())
+    write_text(None, "Wrote %s\n" % args.output)
+    write_text(None, "\n" + _CONFIG_RESOLUTION_ORDER_NOTE)
+    return 0
+
+
+def command_config_show(args):
+    output = json.dumps(_public_config(_config(args)), ensure_ascii=False, indent=2)
+    write_text(None, output + "\n")
+    return 0
+
+
+def command_config_effective(args):
+    from .config_layers import redacted_effective
+
+    merged, _provenance = redacted_effective(
+        _config(args), profile=getattr(args, "profile", None)
+    )
+    write_text(None, json.dumps(merged, ensure_ascii=False, indent=2) + "\n")
+    return 0
+
+
+def command_config_sources(args):
+    from .config_layers import flatten_provenance
+
+    rows = flatten_provenance(_config(args), profile=getattr(args, "profile", None))
+    if getattr(args, "json", False):
+        payload = [
+            OrderedDict((("path", path), ("value", value), ("source", source)))
+            for path, value, source in rows
+        ]
+        write_text(None, json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+        return 0
+    width = max((len(path) for path, _v, _s in rows), default=0)
+    for path, value, source in rows:
+        write_text(
+            None,
+            "%-*s  %-18s  %s\n"
+            % (width, path, source, json.dumps(value, ensure_ascii=False)),
+        )
+    return 0
+
+
+def command_config_get(args):
+    from .config_layers import effective_config, get_dotted
+
+    merged, _provenance = effective_config(
+        _config(args), profile=getattr(args, "profile", None)
+    )
+    _sentinel = object()
+    value = get_dotted(merged, args.path, _sentinel)
+    if value is _sentinel:
+        sys.stderr.write("ERROR: No such config key: %s\n" % args.path)
+        return 1
+    if isinstance(value, (dict, list)):
+        write_text(None, json.dumps(value, ensure_ascii=False, indent=2) + "\n")
+    else:
+        write_text(None, "%s\n" % json.dumps(value, ensure_ascii=False))
+    return 0
+
+
+def command_config_set(args):
+    from .config_layers import set_dotted
+
+    config = _config(args)
+    target = args.output or config.get("_path")
+    if not target:
+        raise ValueError(
+            "No config file to write. Run config init first or pass --output."
+        )
+    data = _config_without_runtime(
+        config, getattr(args, "_workspace_injected_keys", None)
+    )
+    try:
+        value = json.loads(args.value)
+    except (ValueError, TypeError):
+        value = args.value
+    set_dotted(data, args.path, value)
+    report, code = _commit_config(args, config, target, data)
+    if code:
+        return code
+    write_text(None, "Set %s in %s\n" % (args.path, target))
+    _print_config_write_notes(report)
+    return 0
+
+
+def command_config_unset(args):
+    from .config_layers import unset_dotted
+
+    config = _config(args)
+    target = args.output or config.get("_path")
+    if not target:
+        raise ValueError(
+            "No config file to write. Run config init first or pass --output."
+        )
+    data = _config_without_runtime(
+        config, getattr(args, "_workspace_injected_keys", None)
+    )
+    if not unset_dotted(data, args.path):
+        sys.stderr.write("ERROR: No such config key: %s\n" % args.path)
+        return 1
+    report, code = _commit_config(args, config, target, data)
+    if code:
+        return code
+    write_text(None, "Removed %s from %s\n" % (args.path, target))
     _print_config_write_notes(report)
     return 0
 

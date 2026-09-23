@@ -7,7 +7,13 @@ def check(report: Path, baseline: Path):
     try:
         actual = json.loads(report.read_text(encoding="utf-8"))
         expected = json.loads(baseline.read_text(encoding="utf-8"))
-        measured = actual["totals"]["percent_branches"]
+        totals = actual["totals"]
+        if "percent_branches" in totals:
+            measured = totals["percent_branches"]
+        else:
+            covered = totals["covered_branches"]
+            total = totals["num_branches"]
+            measured = 100.0 * covered / total if total else 100.0
         floor = expected["minimum_branch_percent"]
     except (OSError, KeyError, TypeError, ValueError) as exc:
         raise ValueError(f"invalid coverage report or baseline: {exc}") from exc

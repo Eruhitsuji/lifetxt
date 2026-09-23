@@ -1,5 +1,8 @@
 import unittest
-from hypothesis import HealthCheck, given, settings, strategies as st
+try:
+    from hypothesis import HealthCheck, given, settings, strategies as st
+except ModuleNotFoundError:
+    raise unittest.SkipTest("Hypothesis is available only in the development test environment")
 from lifetxt.parser import parse_text
 
 class ParserInvariantTests(unittest.TestCase):

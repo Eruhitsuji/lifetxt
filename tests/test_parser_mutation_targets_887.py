@@ -1,4 +1,7 @@
-import pytest
+try:
+    import pytest
+except ModuleNotFoundError:
+    raise __import__("unittest").SkipTest("pytest is available only in the development test environment")
 
 from lifetxt.parser import parse_text
 

@@ -14422,6 +14422,28 @@ traceability:
         capability; existing deployment-specific Share behavior is unchanged.
       status: implemented
 
+    - requirement_id: req-lifetxt-mini-phase-0
+      capability_id: cap-lifetxt-mini-phase-0-contract
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/893
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/894
+      pull_request: pending
+      changed_files_or_scope:
+        - lifetxt-mini/Cargo.toml
+        - lifetxt-mini/src/main.rs
+        - lifetxt-mini/fixtures/mixed-life.txt
+        - lifetxt-mini/README.md
+        - docs/en/lifetxt-mini-phase-0.md
+      tests_or_evidence:
+        - cargo test --manifest-path lifetxt-mini/Cargo.toml
+        - cargo build --release --manifest-path lifetxt-mini/Cargo.toml
+        - Linux measurements deferred because this Windows host has no Linux/musl/Docker builder
+      release_or_deployment: null
+      notes: >-
+        Standard-assurance design/spike. The PoC is intentionally not a
+        production command and introduces no persisted syntax or public runtime
+        interface.
+      status: implemented
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

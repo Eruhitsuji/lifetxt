@@ -18,3 +18,18 @@ class ParserInvariantTests(unittest.TestCase):
         result = parse_text("[ ] T [unterminated\n")
         self.assertIsInstance(result, tuple)
         self.assertEqual(2, len(result))
+    # Regression: #886 review of historical parser edge cases.
+    def test_round_trip_preserves_quoted_and_custom_values(self):
+        result = parse_text('[ ] T "Research Meeting" note:"Use \\"life.txt\\"" custom:value\r\n')
+        items, diagnostics = result
+        self.assertFalse(any(d.severity == "error" for d in diagnostics))
+        self.assertEqual("Research Meeting", items[0].title)
+        self.assertEqual(["value"], items[0].details["custom"])
+
+    # Regression: #886; CRLF is a supported interchange boundary.
+    def test_crlf_and_continuation_are_semantically_stable(self):
+        text = "[ ] T Review \\\r\n  due:2026-06-12 custom:value\r\n"
+        items, diagnostics = parse_text(text)
+        self.assertFalse(any(d.severity == "error" for d in diagnostics))
+        self.assertEqual(["2026-06-12"], items[0].details["due"])
+        self.assertEqual(["value"], items[0].details["custom"])

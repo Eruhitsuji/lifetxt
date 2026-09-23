@@ -1,0 +1,6 @@
+# comment
+
+[ ] T "Buy milk" id:t1
+[/] H "Exercise" repeat:weekdays custom:x
+[N] J "Today" mood:good
+| Some journal text.

@@ -2,6 +2,28 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-test-quality-regression-gates
+      capability_id: cap-test-quality-and-regression-resistance
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/882
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/888
+      changed_files_or_scope:
+        - .github/workflows/ci.yml
+        - scripts/check_coverage_regression.py
+        - scripts/coverage-baseline.json
+        - tests/test_coverage_regression.py
+        - tests/test_core_boundaries_884.py
+        - tests/test_parser_invariants_885.py
+        - tests/test_parser_mutation_targets_887.py
+        - docs/testing-regressions.md
+        - docs/mutation-testing-pilot.md
+      tests_or_evidence:
+        - python -m unittest tests.test_coverage_regression tests.test_core_boundaries_884 tests.test_parser_invariants_885
+        - pytest tests/test_parser_mutation_targets_887.py
+        - GitHub Actions run 35834630748
+      release_or_deployment: null
+      status: implemented
+      notes: Issues #882-#887 quality, regression, property, and bounded mutation-testing work; mutation testing remains manual and periodic.
     - requirement_id: req-web-task-completion-datetime
       capability_id: cap-web-drawer-record-editing
       epic: null

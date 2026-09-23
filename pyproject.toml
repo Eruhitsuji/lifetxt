@@ -44,6 +44,8 @@ dev = [
   "mypy>=1.13,<2",
   "ruff>=0.16.1",
   "httpx2",
+  "hypothesis>=6,<7",
+  "mutmut>=3,<4",
   "tomli; python_version < '3.11'"
 ]
 

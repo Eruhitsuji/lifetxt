@@ -475,6 +475,11 @@ Record detail drawer の **Share** ボタンは、この同じ URL（現在の
 origin、無関係な既存 query parameter を保持したまま、`id`/`line` を開いて
 いる record に設定したもの）を clipboard へコピーする。
 
+正規 ID を持つ record では、**Stable link** がホスト非依存の別形式
+（例: `lifetxt://item/task-001`）をコピーする。この値に Web origin、port、
+deployment path、credential は含まれない。成功・失敗は **Share** と同じ
+toast で表示され、keyboard でも操作できる。正規 ID がない場合は無効になる。
+
 特定のデプロイメントの host/port を埋め込みたくない参照向けに、同じ
 識別子のホスト非依存な形式である `lifetxt://item/<id>` も利用できる。
 詳細は [Item Links](item-links.md) (#840) を参照。

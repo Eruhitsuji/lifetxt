@@ -284,6 +284,15 @@ def _next_action_explanation(item, rank=False, today=None):
 
 
 def command_show(args, config_data):
+    target = args.id
+    if isinstance(target, str) and target.strip().startswith("lifetxt:"):
+        # Keep URI grammar and percent-decoding in the shared #840 seam.
+        # Once resolved, every current/historical lookup follows the exact
+        # same path as an ordinary id, preserving workspace visibility and
+        # not-found behavior.
+        from .item_uri import parse_item_uri
+
+        target = parse_item_uri(target)
     revision = getattr(args, "revision", None)
     as_of = getattr(args, "as_of", None)
     historical = None
@@ -311,10 +320,10 @@ def command_show(args, config_data):
             )
         items = snapshot["items"]
         historical = snapshot["historical"]
-        item = _find_item(items, args.id)
+        item = _find_item(items, target)
     else:
         items = _load_items(args.paths, config_data)
-        item = _find_item(items, args.id)
+        item = _find_item(items, target)
     if args.format == "json":
         record = _item_record(item)
         if historical is not None:
@@ -329,7 +338,7 @@ def command_show(args, config_data):
     incoming = []
     for candidate in items:
         for key in ("parent", "ref", "depends_on", "blocks", "related"):
-            if args.id in _values(candidate, key):
+            if target in _values(candidate, key):
                 incoming.append(
                     "%s:%s from %s"
                     % (key, _item_id(candidate) or candidate.title, candidate.source)
@@ -351,7 +360,7 @@ def command_show(args, config_data):
         current = parent
     lines = [
         "%s %s %s" % (item.status, item.kind, item.title),
-        "ID: %s" % (args.id,),
+        "ID: %s" % (target,),
         "Source: %s:%s" % (item.source, item.line),
     ]
     if historical is not None:

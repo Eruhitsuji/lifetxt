@@ -1,0 +1,106 @@
+name: lifetxt-mini CI
+
+on:
+  push:
+    paths: ["lifetxt-mini/**", "scripts/measure_lifetxt_mini.sh", ".github/workflows/lifetxt-mini-ci.yml", ".ai/project/changes/**"]
+  pull_request:
+    paths: ["lifetxt-mini/**", "scripts/measure_lifetxt_mini.sh", ".github/workflows/lifetxt-mini-ci.yml", ".ai/project/changes/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  native:
+    name: native ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Record target and toolchain
+        run: |
+          rustc -Vv
+          rustup show active-toolchain
+          uname -a
+      - name: Run Mini tests
+        working-directory: lifetxt-mini
+        run: cargo test --locked
+      - name: Build release binary
+        working-directory: lifetxt-mini
+        run: cargo build --locked --release
+      - name: Execute and verify preservation proof
+        working-directory: lifetxt-mini
+        run: |
+          ./target/release/lifetxt-mini-preservation-poc done t1 > /tmp/mixed-life-output.txt
+          grep -F '[x] T "Buy milk" id:t1' /tmp/mixed-life-output.txt
+          grep -F '[/] H "Exercise" repeat:weekdays custom:x' /tmp/mixed-life-output.txt
+          grep -F '| Some journal text.' /tmp/mixed-life-output.txt
+      - name: Record native measurements
+        working-directory: lifetxt-mini
+        run: ../scripts/measure_lifetxt_mini.sh target/release/lifetxt-mini-preservation-poc
+
+  musl:
+    name: static musl ${{ matrix.target }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [x86_64-unknown-linux-musl, aarch64-unknown-linux-musl]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: 0.13.0
+      - name: Install cargo-zigbuild
+        run: cargo install cargo-zigbuild --locked
+      - name: Build static target
+        working-directory: lifetxt-mini
+        run: cargo zigbuild --locked --release --target ${{ matrix.target }}
+      - name: Verify architecture and static linkage
+        env:
+          TARGET: ${{ matrix.target }}
+        working-directory: lifetxt-mini
+        run: |
+          binary="target/${TARGET}/release/lifetxt-mini-preservation-poc"
+          test -x "$binary"
+          file "$binary"
+          if ldd "$binary" 2>&1 | grep -Eqi 'not a dynamic executable|statically linked'; then exit 0; fi
+          echo "musl artifact unexpectedly has dynamic dependencies"
+          ldd "$binary" || true
+          exit 1
+
+  conformance:
+    name: Mini/Core conformance foundation
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install Core
+        run: python -m pip install -e .
+      - name: Validate shared preservation fixture with Core
+        run: python -m lifetxt check lifetxt-mini/fixtures/mixed-life.txt
+      - name: Run Mini preservation tests
+        working-directory: lifetxt-mini
+        run: cargo test --locked
+      - name: Record conformance boundary
+        run: |
+          echo "Core is the reference implementation."
+          echo "Phase 0 exposes preservation only; paired command semantics activate with Phase 1 commands."
+          echo "Phase 2 will add mixed Full Format -> Mini mutation -> Core re-validation."

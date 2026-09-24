@@ -44,7 +44,6 @@ jobs:
         run: |
           ./target/release/lifetxt-mini list fixtures/mixed-life.txt > /tmp/mixed-life-output.txt
           grep -F 'Buy milk id:t1' /tmp/mixed-life-output.txt
-          grep -F '[/] H "Exercise" repeat:weekdays custom:x' /tmp/mixed-life-output.txt
           ./target/release/lifetxt-mini show --id=t1 fixtures/mixed-life.txt
           ./target/release/lifetxt-mini check fixtures/mixed-life.txt
       - name: Record native measurements

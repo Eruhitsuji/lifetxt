@@ -66,6 +66,35 @@ capabilities:
       replaced_by: null
       deprecation_issue: null
 
+  - id: cap-lifetxt-mini-phase-2-safe-mutation
+    name: lifetxt-mini Phase 2 safe mutation
+    summary: >-
+      Source-preserving Mini add and done mutation using stale-source checks,
+      atomic replacement, permission preservation, and conservative symlink
+      refusal.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-lifetxt-mini-phase-2-safe-mutation
+    implementation_locations:
+      - lifetxt-mini/src/main.rs
+      - scripts/measure_lifetxt_mini.sh
+      - lifetxt-mini/README.md
+    public_interfaces:
+      - lifetxt-mini add
+      - lifetxt-mini done
+    tests_or_evidence:
+      - cargo test --manifest-path lifetxt-mini/Cargo.toml
+      - native Linux x86_64/AArch64 mutation CI
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/900
+    related_pull_requests: []
+    reuse_policy: extend_existing_lifetxt_mini_phase_1_read_core
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
   - id: cap-lifetxt-mini-phase-0-contract
     name: lifetxt-mini Phase 0 contract and preservation spike
     summary: >-

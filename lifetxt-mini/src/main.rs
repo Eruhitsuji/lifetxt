@@ -1,4 +1,11 @@
-use std::{collections::HashMap, env, fs, io, path::PathBuf};
+use std::{
+    collections::HashMap,
+    env,
+    fs::{self, OpenOptions},
+    io::{self, Write},
+    path::{Path, PathBuf},
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Record {
@@ -153,6 +160,134 @@ fn print_record(r: &Record) {
         .join(" ");
     println!("[{}] {} {} {}", r.status, r.kind, r.title, f);
 }
+fn escaped(value: &str) -> String {
+    value.replace('\\', "\\\\").replace('"', "\\\"")
+}
+fn atomic_mutate(path: &Path, original: &[u8], replacement: &[u8]) -> Result<(), String> {
+    let meta = fs::symlink_metadata(path).map_err(|e| format!("{}: {e}", path.display()))?;
+    if meta.file_type().is_symlink() {
+        return Err("refusing to mutate a symbolic link".into());
+    }
+    if fs::read(path).map_err(|e| e.to_string())? != original {
+        return Err("source changed since it was read".into());
+    }
+    let parent = path.parent().unwrap_or_else(|| Path::new("."));
+    let stamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    let temp = parent.join(format!(
+        ".{}.lifetxt-mini-{stamp}.tmp",
+        path.file_name()
+            .and_then(|v| v.to_str())
+            .unwrap_or("life.txt")
+    ));
+    let result = (|| {
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&temp)
+            .map_err(|e| e.to_string())?;
+        file.write_all(replacement).map_err(|e| e.to_string())?;
+        file.sync_all().map_err(|e| e.to_string())?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            fs::set_permissions(&temp, fs::Permissions::from_mode(meta.permissions().mode()))
+                .map_err(|e| e.to_string())?;
+        }
+        fs::rename(&temp, path).map_err(|e| e.to_string())?;
+        #[cfg(unix)]
+        {
+            let dir = std::fs::File::open(parent).map_err(|e| e.to_string())?;
+            dir.sync_all().map_err(|e| e.to_string())?;
+        }
+        Ok::<(), String>(())
+    })();
+    if result.is_err() {
+        let _ = fs::remove_file(&temp);
+    }
+    result
+}
+fn done_source(source: &str, wanted: &str) -> Result<String, String> {
+    let document = parse(source)?;
+    let rs = records(&document);
+    let matches: Vec<_> = rs.into_iter().filter(|r| id(r) == Some(wanted)).collect();
+    if matches.len() > 1 {
+        return Err(format!("duplicate id: {wanted}"));
+    }
+    let Some(target) = matches.first() else {
+        return Err(format!("record not found: {wanted}"));
+    };
+    if target.kind != 'T' || target.status != ' ' {
+        return Err("done requires an open Mini Task".into());
+    }
+    let line = source
+        .split_inclusive('\n')
+        .nth(target.line - 1)
+        .ok_or("target line missing")?;
+    let offset = source
+        .split_inclusive('\n')
+        .take(target.line - 1)
+        .map(str::len)
+        .sum::<usize>();
+    let marker = line.find("[ ]").ok_or("target status marker missing")?;
+    let mut out = source.to_string();
+    out.replace_range(offset + marker..offset + marker + 3, "[x]");
+    Ok(out)
+}
+fn add_source(
+    source: &str,
+    title: &str,
+    kind: char,
+    fields: &[(String, String)],
+) -> Result<String, String> {
+    if title.is_empty() {
+        return Err("title must not be empty".into());
+    }
+    let doc = parse(source)?;
+    let existing: Vec<_> = records(&doc).iter().filter_map(|r| id(r)).collect();
+    if fields
+        .iter()
+        .any(|(k, v)| k == "id" && existing.contains(&v.as_str()))
+    {
+        return Err("duplicate id".into());
+    }
+    if fields.iter().any(|(k, _)| {
+        !matches!(
+            k.as_str(),
+            "id" | "due" | "on" | "from" | "to" | "project" | "tag"
+        )
+    }) {
+        return Err("unsupported detail".into());
+    }
+    let mut record = format!("[ ] {kind} \"{}\"", escaped(title));
+    for (k, v) in fields {
+        record.push_str(&format!(
+            " {k}:{}",
+            if v.contains(char::is_whitespace) {
+                format!("\"{}\"", escaped(v))
+            } else {
+                v.clone()
+            }
+        ));
+    }
+    let separator = if source.is_empty() || source.ends_with('\n') || source.ends_with('\r') {
+        ""
+    } else {
+        "\n"
+    };
+    let newline = if source.contains("\r\n") {
+        "\r\n"
+    } else {
+        "\n"
+    };
+    let mut out = source.to_string();
+    out.push_str(separator);
+    out.push_str(&record);
+    out.push_str(newline);
+    Ok(out)
+}
 fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().skip(1).collect();
     if args.is_empty() {
@@ -160,6 +295,54 @@ fn main() -> io::Result<()> {
         std::process::exit(2);
     }
     let command = args[0].as_str();
+    if command == "add" {
+        let mut title = None;
+        let mut kind = 'T';
+        let mut fields = Vec::new();
+        let mut path_arg = None;
+        let mut i = 1;
+        while i < args.len() {
+            match args[i].as_str() {
+                "--type" => {
+                    i += 1;
+                    kind = match args.get(i).map(String::as_str) {
+                        Some("task") => 'T',
+                        Some("event") => 'E',
+                        Some("note") => 'N',
+                        _ => {
+                            eprintln!("--type must be task, event, or note");
+                            std::process::exit(2)
+                        }
+                    };
+                }
+                "--id" | "--due" | "--on" | "--from" | "--to" | "--project" | "--tag" => {
+                    let key = args[i].trim_start_matches("--").to_string();
+                    i += 1;
+                    let value = args.get(i).cloned().unwrap_or_else(|| {
+                        eprintln!("missing value for --{key}");
+                        std::process::exit(2)
+                    });
+                    fields.push((key, value));
+                }
+                value if value.starts_with("--") => {
+                    eprintln!("unsupported add argument");
+                    std::process::exit(2)
+                }
+                value if title.is_none() => title = Some(value.to_string()),
+                value => path_arg = Some(value),
+            }
+            i += 1;
+        }
+        let path = resolve(path_arg);
+        let original = fs::read(&path)?;
+        let source = String::from_utf8(original.clone())
+            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "invalid UTF-8"))?;
+        let replacement = add_source(&source, title.as_deref().unwrap_or(""), kind, &fields)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
+        atomic_mutate(&path, &original, replacement.as_bytes())
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        return Ok(());
+    }
     let mut path_arg = None;
     let mut selector = None;
     for a in &args[1..] {
@@ -173,7 +356,8 @@ fn main() -> io::Result<()> {
         }
     }
     let path = resolve(path_arg);
-    let source = String::from_utf8(fs::read(&path)?)
+    let original = fs::read(&path)?;
+    let source = String::from_utf8(original.clone())
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "invalid UTF-8"))?;
     let doc = parse(&source).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
     let rs = records(&doc);
@@ -208,6 +392,22 @@ fn main() -> io::Result<()> {
             }
         }
         "check" => println!("Mini Runtime Profile: OK (unsupported records skipped)"),
+        "done" => {
+            let wanted = selector
+                .or_else(|| args.get(1).map(String::as_str))
+                .unwrap_or_else(|| {
+                    eprintln!("done requires an exact id");
+                    std::process::exit(2)
+                });
+            let replacement = done_source(&source, wanted).unwrap_or_else(|e| {
+                eprintln!("{e}");
+                std::process::exit(1)
+            });
+            atomic_mutate(&path, &original, replacement.as_bytes()).unwrap_or_else(|e| {
+                eprintln!("{e}");
+                std::process::exit(1)
+            });
+        }
         _ => {
             eprintln!("unknown command: {command}");
             std::process::exit(2)
@@ -251,5 +451,30 @@ mod tests {
             .spans
             .iter()
             .any(|span| matches!(span, Span::Comment(_))));
+    }
+
+    #[test]
+    fn done_changes_only_the_status_marker() {
+        let source = "# c\r\n[ ] T \"東京\" id:t1 tag:a tag:b\r\n| body\r\n";
+        let actual = done_source(source, "t1").unwrap();
+        assert_eq!(
+            actual,
+            "# c\r\n[x] T \"東京\" id:t1 tag:a tag:b\r\n| body\r\n"
+        );
+    }
+
+    #[test]
+    fn add_preserves_missing_final_newline_and_uses_existing_line_ending() {
+        let actual = add_source("[ ] T \"A\" id:a\r\n", "B", 'N', &[]).unwrap();
+        assert_eq!(actual, "[ ] T \"A\" id:a\r\n[ ] N \"B\"\r\n");
+        let actual = add_source("[ ] T \"A\" id:a", "B", 'T', &[]).unwrap();
+        assert_eq!(actual, "[ ] T \"A\" id:a\n[ ] T \"B\"\n");
+    }
+
+    #[test]
+    fn duplicate_and_unsupported_done_targets_fail() {
+        assert!(done_source("[ ] T A id:x\n[ ] T B id:x\n", "x").is_err());
+        assert!(done_source("[x] T A id:x\n", "x").is_err());
+        assert!(done_source("[/] H A id:x\n", "x").is_err());
     }
 }

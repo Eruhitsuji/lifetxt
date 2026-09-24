@@ -288,6 +288,70 @@ fn add_source(
     out.push_str(newline);
     Ok(out)
 }
+fn date_value(value: &str) -> Result<(i32, u32, u32), String> {
+    let parts: Vec<_> = value.split('-').collect();
+    if parts.len() != 3 {
+        return Err(format!("invalid date: {value}"));
+    }
+    let y: i32 = parts[0]
+        .parse()
+        .map_err(|_| format!("invalid date: {value}"))?;
+    let m: u32 = parts[1]
+        .parse()
+        .map_err(|_| format!("invalid date: {value}"))?;
+    let d: u32 = parts[2]
+        .parse()
+        .map_err(|_| format!("invalid date: {value}"))?;
+    let leap = y % 4 == 0 && (y % 100 != 0 || y % 400 == 0);
+    let days = [
+        31,
+        if leap { 29 } else { 28 },
+        31,
+        30,
+        31,
+        30,
+        31,
+        31,
+        30,
+        31,
+        30,
+        31,
+    ];
+    if parts[0].len() != 4
+        || parts[1].len() != 2
+        || parts[2].len() != 2
+        || !(1..=12).contains(&m)
+        || d == 0
+        || d > days[(m - 1) as usize]
+    {
+        return Err(format!("invalid date: {value}"));
+    }
+    Ok((y, m, d))
+}
+fn today_records<'a>(doc: &'a Document, selected: (i32, u32, u32)) -> Vec<&'a Record> {
+    records(doc)
+        .into_iter()
+        .filter(|record| {
+            if record.status == 'x' {
+                return false;
+            }
+            record.fields.iter().any(|(key, value)| match key.as_str() {
+                "due" => date_value(value)
+                    .map(|date| date <= selected)
+                    .unwrap_or(false),
+                "on" => date_value(value)
+                    .map(|date| date == selected)
+                    .unwrap_or(false),
+                "from" => value
+                    .get(..10)
+                    .and_then(|v| date_value(v).ok())
+                    .map(|date| date == selected)
+                    .unwrap_or(false),
+                _ => false,
+            })
+        })
+        .collect()
+}
 fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().skip(1).collect();
     if args.is_empty() {
@@ -295,6 +359,48 @@ fn main() -> io::Result<()> {
         std::process::exit(2);
     }
     let command = args[0].as_str();
+    if command == "today" {
+        let mut selected = None;
+        let mut path_arg = None;
+        let mut i = 1;
+        while i < args.len() {
+            match args[i].as_str() {
+                "--date" => {
+                    i += 1;
+                    selected = Some(
+                        date_value(args.get(i).map(String::as_str).unwrap_or("")).unwrap_or_else(
+                            |e| {
+                                eprintln!("{e}");
+                                std::process::exit(2)
+                            },
+                        ),
+                    );
+                }
+                value if value.starts_with("--") => {
+                    eprintln!("Mini Runtime Profile: unsupported today argument");
+                    std::process::exit(2)
+                }
+                value => path_arg = Some(value),
+            }
+            i += 1;
+        }
+        let Some(selected) = selected else {
+            eprintln!("today requires --date=YYYY-MM-DD; implicit local date is unavailable in the std-only Mini runtime");
+            std::process::exit(2)
+        };
+        let path = resolve(path_arg);
+        let source = String::from_utf8(fs::read(&path)?)
+            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "invalid UTF-8"))?;
+        let document = parse(&source).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+        println!(
+            "Mini Runtime Profile: today --date {:04}-{:02}-{:02}",
+            selected.0, selected.1, selected.2
+        );
+        for record in today_records(&document, selected) {
+            print_record(record);
+        }
+        return Ok(());
+    }
     if command == "add" {
         let mut title = None;
         let mut kind = 'T';
@@ -476,5 +582,23 @@ mod tests {
         assert!(done_source("[ ] T A id:x\n[ ] T B id:x\n", "x").is_err());
         assert!(done_source("[x] T A id:x\n", "x").is_err());
         assert!(done_source("[/] H A id:x\n", "x").is_err());
+    }
+
+    #[test]
+    fn today_uses_bounded_dates_and_excludes_completed_records() {
+        let source = "[ ] T Due id:d due:2026-09-23\n[x] T Done id:x due:2026-09-20\n[ ] E On id:o on:2026-09-24\n[ ] N Future id:f from:2026-09-25T09:00:00+09:00\n";
+        let document = parse(source).unwrap();
+        let actual: Vec<_> = today_records(&document, (2026, 9, 24))
+            .iter()
+            .filter_map(|r| id(r))
+            .collect();
+        assert_eq!(actual, vec!["d", "o"]);
+    }
+
+    #[test]
+    fn date_validation_rejects_invalid_calendar_dates() {
+        assert!(date_value("2026-02-29").is_err());
+        assert_eq!(date_value("2024-02-29").unwrap(), (2024, 2, 29));
+        assert!(date_value("2026-9-01").is_err());
     }
 }

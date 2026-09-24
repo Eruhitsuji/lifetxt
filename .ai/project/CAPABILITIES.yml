@@ -95,6 +95,32 @@ capabilities:
       replaced_by: null
       deprecation_issue: null
 
+  - id: cap-lifetxt-mini-phase-3-bounded-today
+    name: lifetxt-mini Phase 3 bounded today view
+    summary: >-
+      Deterministic read-only daily view over supported Mini due, on, and from
+      dates with explicit ISO date semantics and no implicit timezone fallback.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-lifetxt-mini-phase-3-bounded-today
+    implementation_locations:
+      - lifetxt-mini/src/main.rs
+      - lifetxt-mini/README.md
+    public_interfaces:
+      - lifetxt-mini today --date
+    tests_or_evidence:
+      - cargo test --manifest-path lifetxt-mini/Cargo.toml
+      - native Linux x86_64/AArch64 today CI
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/902
+    related_pull_requests: []
+    reuse_policy: extend_existing_lifetxt-mini-phase-2-safe-mutation
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
   - id: cap-lifetxt-mini-phase-0-contract
     name: lifetxt-mini Phase 0 contract and preservation spike
     summary: >-

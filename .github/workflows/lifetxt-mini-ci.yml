@@ -46,6 +46,7 @@ jobs:
           grep -F 'Buy milk id:t1' /tmp/mixed-life-output.txt
           ./target/release/lifetxt-mini show --id=t1 fixtures/mixed-life.txt
           ./target/release/lifetxt-mini check fixtures/mixed-life.txt
+          ./target/release/lifetxt-mini today --date 2026-09-24 fixtures/mixed-life.txt
           cp fixtures/mixed-life.txt /tmp/phase2-life.txt
           ./target/release/lifetxt-mini done --id=t1 /tmp/phase2-life.txt
           grep -F '[x] T "Buy milk" id:t1' /tmp/phase2-life.txt

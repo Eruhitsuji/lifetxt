@@ -14444,6 +14444,24 @@ traceability:
         interface.
       status: implemented
 
+    - requirement_id: req-lifetxt-mini-phase-1-read-core
+      capability_id: cap-lifetxt-mini-phase-1-read-core
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/893
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/898
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/899
+      changed_files_or_scope:
+        - lifetxt-mini/src/main.rs
+        - lifetxt-mini/README.md
+        - .github/workflows/lifetxt-mini-ci.yml
+      tests_or_evidence:
+        - cargo test --manifest-path lifetxt-mini/Cargo.toml
+        - native Linux x86_64/AArch64 and musl CI lanes
+      release_or_deployment: null
+      notes: >-
+        High-assurance read-only Mini parser and CLI boundary. Mutation,
+        persistence, and full Core parity remain out of scope.
+      status: implemented
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

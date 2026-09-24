@@ -39,16 +39,16 @@ jobs:
       - name: Build release binary
         working-directory: lifetxt-mini
         run: cargo build --locked --release
-      - name: Execute and verify preservation proof
+      - name: Execute and verify read-only commands
         working-directory: lifetxt-mini
         run: |
-          ./target/release/lifetxt-mini-preservation-poc done t1 > /tmp/mixed-life-output.txt
-          grep -F '[x] T "Buy milk" id:t1' /tmp/mixed-life-output.txt
-          grep -F '[/] H "Exercise" repeat:weekdays custom:x' /tmp/mixed-life-output.txt
-          grep -F '| Some journal text.' /tmp/mixed-life-output.txt
+          ./target/release/lifetxt-mini list fixtures/mixed-life.txt > /tmp/mixed-life-output.txt
+          grep -F 'Buy milk id:t1' /tmp/mixed-life-output.txt
+          ./target/release/lifetxt-mini show --id=t1 fixtures/mixed-life.txt
+          ./target/release/lifetxt-mini check fixtures/mixed-life.txt
       - name: Record native measurements
         working-directory: lifetxt-mini
-        run: ../scripts/measure_lifetxt_mini.sh target/release/lifetxt-mini-preservation-poc
+        run: ../scripts/measure_lifetxt_mini.sh target/release/lifetxt-mini
 
   musl:
     name: static musl ${{ matrix.target }}
@@ -75,7 +75,7 @@ jobs:
           TARGET: ${{ matrix.target }}
         working-directory: lifetxt-mini
         run: |
-          binary="target/${TARGET}/release/lifetxt-mini-preservation-poc"
+          binary="target/${TARGET}/release/lifetxt-mini"
           test -x "$binary"
           file "$binary"
           if ldd "$binary" 2>&1 | grep -Eqi 'not a dynamic executable|statically linked'; then exit 0; fi
@@ -102,5 +102,5 @@ jobs:
       - name: Record conformance boundary
         run: |
           echo "Core is the reference implementation."
-          echo "Phase 0 exposes preservation only; paired command semantics activate with Phase 1 commands."
-          echo "Phase 2 will add mixed Full Format -> Mini mutation -> Core re-validation."
+          echo "Phase 1 exposes list/show/check with an explicit Mini Runtime Profile."
+          echo "Mutation remains deferred to Phase 2."

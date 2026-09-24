@@ -21,3 +21,18 @@ presented as Mini semantics.
 Core-style options not implemented by Mini are rejected. Output identifies the
 Mini Runtime Profile where semantics differ. Linux x86_64 and AArch64 are the
 official supported targets; static musl builds are verified in CI.
+
+## Phase 2 mutation
+
+The done --id=<id> path completes an exact, open Mini Task by replacing only
+its [ ] status marker with [x]. The add "title" path appends a Mini record and
+accepts --type task|event|note plus --id, --due, --on, --from, --to, --project,
+and --tag. Mutation refuses duplicate IDs, unsupported targets, invalid UTF-8,
+and symbolic-link paths.
+
+Writes use a sibling temporary file, flush the file, preserve the source mode
+on Unix, then atomically replace the original and sync its containing
+directory. Before replacement, the source bytes are read again; a concurrent
+change aborts without replacing the authoritative file. Failed writes remove
+the temporary file where possible. The operation does not canonicalize or
+rewrite unrelated source bytes.

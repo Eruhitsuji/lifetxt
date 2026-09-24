@@ -14462,6 +14462,25 @@ traceability:
         persistence, and full Core parity remain out of scope.
       status: implemented
 
+    - requirement_id: req-lifetxt-mini-phase-2-safe-mutation
+      capability_id: cap-lifetxt-mini-phase-2-safe-mutation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/893
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/900
+      pull_request: null
+      changed_files_or_scope:
+        - lifetxt-mini/src/main.rs
+        - scripts/measure_lifetxt_mini.sh
+        - lifetxt-mini/README.md
+        - .github/workflows/lifetxt-mini-ci.yml
+      tests_or_evidence:
+        - cargo test --manifest-path lifetxt-mini/Cargo.toml
+        - native Linux x86_64/AArch64 and static musl mutation lanes
+      release_or_deployment: null
+      notes: >-
+        Very-high-assurance first durable write path. Mutation is bounded to
+        Mini add and exact-ID done; no broad Core parity or backup subsystem.
+      status: implemented
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

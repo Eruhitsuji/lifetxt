@@ -14466,7 +14466,7 @@ traceability:
       capability_id: cap-lifetxt-mini-phase-2-safe-mutation
       epic: https://github.com/Eruhitsuji/lifetxt/issues/893
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/900
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/901
       changed_files_or_scope:
         - lifetxt-mini/src/main.rs
         - scripts/measure_lifetxt_mini.sh

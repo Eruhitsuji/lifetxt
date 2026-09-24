@@ -14520,6 +14520,30 @@ traceability:
         additional platform targets are introduced.
       status: implemented
 
+    - requirement_id: req-lifetxt-mini-shared-version-identity
+      capability_id: cap-lifetxt-mini-shared-version-identity
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/893
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/906
+      pull_request: null
+      changed_files_or_scope:
+        - lifetxt-mini/Cargo.toml
+        - lifetxt-mini/build.rs
+        - lifetxt-mini/src/main.rs
+        - scripts/check_lifetxt_mini_version.py
+        - .github/workflows/lifetxt-mini-ci.yml
+        - .github/workflows/lifetxt-mini-release.yml
+        - docs/en/lifetxt-mini-distribution.md
+        - docs/ja/lifetxt-mini-distribution.md
+      tests_or_evidence:
+        - cargo test --manifest-path lifetxt-mini/Cargo.toml
+        - Mini --version reports the canonical pyproject version
+        - release workflow checks tag/Core/Cargo/Mini identity before upload
+      release_or_deployment: null
+      notes: >-
+        Medium-high assurance release consistency change; runtime command
+        semantics and platform scope are unchanged.
+      status: implemented
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

@@ -32,3 +32,8 @@ The Mini artifact version is the repository release tag (vX.Y.Z); it is not an
 independent product version. A release is published only from the tagged
 revision after native architecture, static linkage, conformance, checksum, and
 smoke checks pass.
+
+The version printed by lifetxt-mini --version is injected from the same
+pyproject.toml project.version used by the Core CLI and release tag checks.
+Matching versions identify one repository release, not feature parity: Python
+Core remains broader than the Mini Runtime Profile.

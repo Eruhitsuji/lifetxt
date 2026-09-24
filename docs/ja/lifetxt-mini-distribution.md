@@ -23,3 +23,8 @@ ARMv7、RISC-V、Android/iOS、bare metalは公式対象外です。
 artifactのversionは対応するrepository release tagと同じです。native
 architecture実行、static linkage、conformance、checksum、smoke testを
 通過したartifactだけがGitHub Releaseへ公開されます。
+
+lifetxt-mini --version は、Core CLIとrelease tagの検証に使う同じ
+pyproject.toml の project.version から注入されます。同じversionは同じ
+repository releaseを示すだけで、機能同等を意味しません。Python Coreの
+方がMini Runtime Profileより広い機能を持ちます。

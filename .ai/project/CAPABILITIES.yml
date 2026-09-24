@@ -150,6 +150,35 @@ capabilities:
       replaced_by: null
       deprecation_issue: null
 
+  - id: cap-lifetxt-mini-shared-version-identity
+    name: lifetxt-mini shared release version identity
+    summary: >-
+      Injects the canonical Core project version into Mini builds and verifies
+      Core, Cargo metadata, Mini output, and release tags cannot drift.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-lifetxt-mini-shared-version-identity
+    implementation_locations:
+      - lifetxt-mini/build.rs
+      - lifetxt-mini/Cargo.toml
+      - scripts/check_lifetxt_mini_version.py
+      - .github/workflows/lifetxt-mini-ci.yml
+      - .github/workflows/lifetxt-mini-release.yml
+    public_interfaces:
+      - lifetxt-mini --version
+    tests_or_evidence:
+      - cargo test --manifest-path lifetxt-mini/Cargo.toml
+      - Core/Cargo/Mini/tag consistency check
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/906
+    related_pull_requests: []
+    reuse_policy: extend_existing_lifetxt-mini-phase-4-distribution
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
   - id: cap-lifetxt-mini-phase-0-contract
     name: lifetxt-mini Phase 0 contract and preservation spike
     summary: >-

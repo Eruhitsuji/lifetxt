@@ -35,6 +35,7 @@ jobs:
         with:
           version: 0.13.0
       - run: cargo install cargo-zigbuild --locked
+      - run: python scripts/check_lifetxt_mini_version.py --tag "${{ inputs.tag || github.ref_name }}"
       - run: cargo test --locked
         working-directory: lifetxt-mini
       - run: cargo zigbuild --locked --release --target ${{ matrix.target }}
@@ -48,6 +49,7 @@ jobs:
           ldd "$binary" 2>&1 | tee artifact-ldd.txt || true
           grep -Eqi 'statically linked|not a dynamic executable' artifact-ldd.txt
           "$binary" --version
+          python scripts/check_lifetxt_mini_version.py --binary "$PWD/$binary" --tag "${{ inputs.tag || github.ref_name }}"
           "$binary" --help
           "$binary" check fixtures/mixed-life.txt
           "$binary" today --date 2026-09-24 fixtures/mixed-life.txt

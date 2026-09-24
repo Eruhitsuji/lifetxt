@@ -359,12 +359,15 @@ fn main() -> io::Result<()> {
         std::process::exit(2);
     }
     if matches!(args[0].as_str(), "--help" | "-h") {
-        println!("lifetxt-mini 0.1.0 - Python-free Mini Runtime Profile");
+        println!(
+            "lifetxt-mini {} - Python-free Mini Runtime Profile",
+            env!("LIFETXT_VERSION")
+        );
         println!("commands: list, show --id ID, check, add, done --id ID, today --date YYYY-MM-DD");
         return Ok(());
     }
     if args[0] == "--version" {
-        println!("lifetxt-mini 0.1.0");
+        println!("lifetxt-mini {}", env!("LIFETXT_VERSION"));
         return Ok(());
     }
     let command = args[0].as_str();

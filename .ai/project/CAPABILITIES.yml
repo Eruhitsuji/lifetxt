@@ -121,6 +121,35 @@ capabilities:
       replaced_by: null
       deprecation_issue: null
 
+  - id: cap-lifetxt-mini-phase-4-distribution
+    name: lifetxt-mini Phase 4 native distribution
+    summary: >-
+      Reproducible static musl artifacts, native architecture verification,
+      checksums, GitHub Release publication, and standalone installation
+      guidance for Linux x86_64 and AArch64.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-lifetxt-mini-phase-4-distribution
+    implementation_locations:
+      - .github/workflows/lifetxt-mini-release.yml
+      - docs/en/lifetxt-mini-distribution.md
+      - docs/ja/lifetxt-mini-distribution.md
+    public_interfaces:
+      - GitHub Release lifetxt-mini binaries
+      - lifetxt-mini distribution documentation
+    tests_or_evidence:
+      - native Linux x86_64/AArch64 release jobs
+      - SHA-256 verification before publication
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/904
+    related_pull_requests: []
+    reuse_policy: extend_existing_lifetxt-mini-ci-and-release-conventions
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
   - id: cap-lifetxt-mini-phase-0-contract
     name: lifetxt-mini Phase 0 contract and preservation spike
     summary: >-

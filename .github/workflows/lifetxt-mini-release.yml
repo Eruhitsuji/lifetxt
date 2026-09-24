@@ -53,6 +53,7 @@ jobs:
           "$binary" --help
           "$binary" check fixtures/mixed-life.txt
           "$binary" today --date 2026-09-24 fixtures/mixed-life.txt
+          python ../scripts/check_mini_core_conformance.py --binary "$PWD/$binary"
       - name: Package and checksum
         shell: bash
         env:

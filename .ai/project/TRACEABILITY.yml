@@ -14500,6 +14500,26 @@ traceability:
         semantics remain out of scope.
       status: implemented
 
+    - requirement_id: req-lifetxt-mini-phase-4-distribution
+      capability_id: cap-lifetxt-mini-phase-4-distribution
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/893
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/904
+      pull_request: null
+      changed_files_or_scope:
+        - .github/workflows/lifetxt-mini-release.yml
+        - docs/en/lifetxt-mini-distribution.md
+        - docs/ja/lifetxt-mini-distribution.md
+        - lifetxt-mini/src/main.rs
+      tests_or_evidence:
+        - cargo test --manifest-path lifetxt-mini/Cargo.toml
+        - native Linux x86_64/AArch64 musl release jobs
+        - SHA-256 verification and native smoke flow before publication
+      release_or_deployment: GitHub Release assets only after verified tag build
+      notes: >-
+        High-assurance distribution change. No runtime language semantics or
+        additional platform targets are introduced.
+      status: implemented
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

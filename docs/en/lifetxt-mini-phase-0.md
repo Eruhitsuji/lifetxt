@@ -1,5 +1,28 @@
 # lifetxt-mini Phase 0 contract and spike decision
 
+> Historical decision record for Issue #894 / PR #895. This records the Phase
+> 0 design state and is not the current product specification. See
+> lifetxt-mini/README.md for current usage.
+
+## Current status after Phases 1 E
+
+Later issues resolved the open Phase 0 decisions:
+
+| Decision | Current outcome |
+| --- | --- |
+| Runtime/toolchain | Rust + std |
+| Repository layout | lifetxt-mini/ in this repository |
+| Official OS and architectures | Linux x86_64 and Linux AArch64 |
+| Release targets | x86_64-unknown-linux-musl and aarch64-unknown-linux-musl |
+| Mutation model | Source-preserving atomic replacement with stale-source protection |
+| Daily-use command | Bounded today --date YYYY-MM-DD |
+| Distribution | Tagged GitHub Release artifacts with SHA-256 checksums |
+| Version identity | Core, Mini, and repository release use one version |
+
+The current command surface is list, show, Mini-profile check, add, done, and
+today --date YYYY-MM-DD. The Mini runtime remains a strict subset of Python
+Core. See lifetxt-mini-distribution.md for current installation guidance.
+
 Status: design/spike evidence for Issue #894. The Python Core remains the
 reference implementation.
 
@@ -45,19 +68,23 @@ The repository layout is the existing repository under `lifetxt-mini/`, so
 fixtures, Core conformance, release automation, and traceability remain
 together.
 
-x86_64 Linux is the Phase 1 target. AArch64 Linux is the next target when the
-same musl-oriented build is available. ARMv7 is deferred until a maintained
-cross toolchain and CI runner are confirmed; it is not rejected by the file
-format. Static musl is preferred for offline file processing, but the final
-choice must be confirmed by an actual builder. DNS/libc limitations are not
-material because the runtime has no network behavior.
+At the time of this Phase 0 record, x86_64 Linux was the Phase 1 target and
+AArch64 was deferred. That sequencing is superseded: the current official
+support boundary is Linux x86_64 and Linux AArch64, with static musl release
+targets and native execution checks. ARMv7 remains unsupported. Static musl is
+now the established release direction.
 
 ## Measurements
+
+The statements in this section are historical Phase 0 observations. Phase 4
+release CI now records final artifact size, linkage, startup/RSS evidence,
+target triple, and toolchain. Those later measurements do not rewrite what was
+known during the spike, and remain evidence rather than permanent hard gates.
 
 The reproducible commands are in `lifetxt-mini/README.md`. This Windows host
 does not provide a Linux, musl, or Docker builder, so Linux binary size,
 dependency, startup, and RSS values are intentionally **not claimed** by this
-spike. Phase 1 must record the actual stripped size, `ldd` result, startup
+spike. At the time, the planned Phase 1 work was to record the actual stripped size, `ldd` result, startup
 method, peak RSS, target triple, and toolchain before setting budgets. The
 aspirational `<2 MiB` binary / `<5 MiB` RSS values therefore remain goals, not
 requirements.
@@ -72,7 +99,7 @@ Core Beginner Profile fixture must produce the same supported interpretation
 in mini. Differences in presentation are allowed, differences in persisted
 meaning are not.
 
-## Phase 1 entry recommendation
+## Phase 1 entry recommendation (historical)
 
 Proceed with changes: keep the profile narrow, add a real path resolver and
 strict parser, add Linux CI measurement, and make duplicate IDs / malformed

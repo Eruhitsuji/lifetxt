@@ -1,5 +1,5 @@
 [package]
-name = "lifetxt-mini-preservation-poc"
+name = "lifetxt-mini"
 version = "0.1.0"
 edition = "2021"
 publish = false

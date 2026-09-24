@@ -37,6 +37,35 @@ capabilities:
       replaced_by: null
       deprecation_issue: null
 
+  - id: cap-lifetxt-mini-phase-1-read-core
+    name: lifetxt-mini Phase 1 read-only core
+    summary: >-
+      Dependency-free Mini-1 parser and read-only list, show, and profile check
+      commands that preserve opaque Full Format content and keep Python Core as
+      the reference implementation.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-lifetxt-mini-phase-1-read-core
+    implementation_locations:
+      - lifetxt-mini/src/main.rs
+      - lifetxt-mini/README.md
+    public_interfaces:
+      - lifetxt-mini list
+      - lifetxt-mini show --id
+      - lifetxt-mini check
+    tests_or_evidence:
+      - cargo test --manifest-path lifetxt-mini/Cargo.toml
+      - lifetxt-mini CI native and musl lanes
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/898
+    related_pull_requests: []
+    reuse_policy: extend_existing_lifetxt_mini_phase_0_contract
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
   - id: cap-lifetxt-mini-phase-0-contract
     name: lifetxt-mini Phase 0 contract and preservation spike
     summary: >-

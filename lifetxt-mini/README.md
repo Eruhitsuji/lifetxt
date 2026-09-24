@@ -1,24 +1,23 @@
-# lifetxt-mini Phase 0 preservation PoC
+# lifetxt-mini Phase 1
 
-This is a deliberately dependency-free Rust spike. It is not a production
-runtime or a second life.txt implementation. It reads the checked-in mixed
-fixture and changes only the status marker of the supported task `t1`.
-
-## Linux build and run
-
-On a Linux host with Rust installed:
+`lifetxt-mini` is a dependency-free, read-only Rust runtime for the Mini-1
+profile. Python Core remains the full/reference implementation. The runtime
+never writes `life.txt` and keeps unsupported records opaque.
 
 ```sh
-cd lifetxt-mini
-cargo test
-cargo build --release
-ldd target/release/lifetxt-mini-preservation-poc || true
-/usr/bin/time -v target/release/lifetxt-mini-preservation-poc done t1
+cargo run -- list path/to/life.txt
+cargo run -- show --id=t1 path/to/life.txt
+cargo run -- check path/to/life.txt
 ```
 
-The executable reads `fixtures/mixed-life.txt` relative to the `lifetxt-mini`
-working directory. The production design must replace this fixture-only input
-with an explicit path/default-file resolver; no such CLI is claimed here.
+Input resolution is an explicit path, then `LIFETXT_FILE`, then `./life.txt`.
+`show` requires an exact `--id=` selector; missing or duplicate IDs fail. The
+Mini profile supports `[ ]`, `[x]`, `[N]` with record types `T`, `E`, and `N`,
+quoted UTF-8 titles, and details such as `id`, `due`, `on`, `from`, `to`,
+`project`, and `tag`. Unknown details are retained in the source-backed record
+and unsupported Full Format records are skipped by `check` rather than being
+presented as Mini semantics.
 
-The crate uses only Rust's standard library. No Python, network, database,
-async runtime, or serialization dependency is required at runtime.
+Core-style options not implemented by Mini are rejected. Output identifies the
+Mini Runtime Profile where semantics differ. Linux x86_64 and AArch64 are the
+official supported targets; static musl builds are verified in CI.

@@ -23,6 +23,21 @@ subset and the documented date/project/tag details. today requires an explicit
 ISO date and uses only bounded due, on, and from rules; completed records are
 excluded. Unsupported Core arguments are rejected instead of silently weakened.
 
+## Core/Mini compatibility surface
+
+The conformance lane classifies commands by semantic relationship, not by
+matching output text:
+
+| Class | Commands | Contract |
+| --- | --- | --- |
+| A: Core-equivalent intersection | `list`, `show` | Compare shared record identity and selection semantics on the same fixture. |
+| B: bounded Mini semantics | `check`, `add`, `done`, `today` | Mini behavior is intentionally narrower; mutations must remain Core-valid, and `today` keeps its explicit Mini Runtime Profile identity. |
+| C: unsupported | Core-only options and records outside the Mini subset | Reject or preserve them; never silently reinterpret them. |
+
+`scripts/check_mini_core_conformance.py` is the executable contract for this
+surface. It uses the shared preservation fixture, checks Core validity before
+and after Mini mutations, and normalizes only meaningful record semantics.
+
 Mini understands [ ], [x], and [N] records of types T, E, and N. Unknown or
 repeated details and unsupported Full Format records remain source-backed or
 opaque and are not guessed into Mini semantics. Japanese and other UTF-8 text

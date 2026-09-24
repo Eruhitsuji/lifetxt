@@ -2,9 +2,9 @@ name: lifetxt-mini CI
 
 on:
   push:
-    paths: ["lifetxt-mini/**", "scripts/measure_lifetxt_mini.sh", "scripts/check_lifetxt_mini_version.py", "pyproject.toml", ".github/workflows/lifetxt-mini-ci.yml", ".ai/project/changes/**"]
+    paths: ["lifetxt-mini/**", "lifetxt/parser.py", "lifetxt/cli.py", "lifetxt/beginner_profile.py", "scripts/measure_lifetxt_mini.sh", "scripts/check_lifetxt_mini_version.py", "scripts/check_mini_core_conformance.py", "pyproject.toml", ".github/workflows/lifetxt-mini-ci.yml", ".ai/project/changes/**"]
   pull_request:
-    paths: ["lifetxt-mini/**", "scripts/measure_lifetxt_mini.sh", "scripts/check_lifetxt_mini_version.py", "pyproject.toml", ".github/workflows/lifetxt-mini-ci.yml", ".ai/project/changes/**"]
+    paths: ["lifetxt-mini/**", "lifetxt/parser.py", "lifetxt/cli.py", "lifetxt/beginner_profile.py", "scripts/measure_lifetxt_mini.sh", "scripts/check_lifetxt_mini_version.py", "scripts/check_mini_core_conformance.py", "pyproject.toml", ".github/workflows/lifetxt-mini-ci.yml", ".ai/project/changes/**"]
   workflow_dispatch:
 
 permissions:

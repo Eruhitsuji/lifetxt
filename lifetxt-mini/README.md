@@ -36,3 +36,16 @@ directory. Before replacement, the source bytes are read again; a concurrent
 change aborts without replacing the authoritative file. Failed writes remove
 the temporary file where possible. The operation does not canonicalize or
 rewrite unrelated source bytes.
+
+## Phase 3 today
+
+Use today --date YYYY-MM-DD path for a deterministic daily view. Mini includes
+incomplete supported records when due is on or before the selected date, on
+equals the selected date, or the date portion of from equals the selected
+date. Completed [x] records are excluded. Results use source order and
+identify themselves as the Mini Runtime Profile.
+
+The explicit --date argument is required. The std-only runtime does not
+silently substitute UTC or claim full local timezone/DST behavior. Recurrence,
+dependency, priority, reminder, and unsupported Full Format semantics are not
+evaluated; opaque records are ignored.

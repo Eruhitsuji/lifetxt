@@ -14481,6 +14481,25 @@ traceability:
         Mini add and exact-ID done; no broad Core parity or backup subsystem.
       status: implemented
 
+    - requirement_id: req-lifetxt-mini-phase-3-bounded-today
+      capability_id: cap-lifetxt-mini-phase-3-bounded-today
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/893
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/902
+      pull_request: null
+      changed_files_or_scope:
+        - lifetxt-mini/src/main.rs
+        - lifetxt-mini/README.md
+        - .github/workflows/lifetxt-mini-ci.yml
+      tests_or_evidence:
+        - cargo test --manifest-path lifetxt-mini/Cargo.toml
+        - native Linux x86_64/AArch64 and static musl today lanes
+      release_or_deployment: null
+      notes: >-
+        High-assurance read-only daily view with explicit date semantics.
+        Recurrence, timezone, priority, dependency, and unsupported Full Format
+        semantics remain out of scope.
+      status: implemented
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

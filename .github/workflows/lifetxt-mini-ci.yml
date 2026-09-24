@@ -107,8 +107,14 @@ jobs:
       - name: Run Mini preservation tests
         working-directory: lifetxt-mini
         run: cargo test --locked
+      - name: Build Mini conformance binary
+        working-directory: lifetxt-mini
+        run: cargo build --locked --release
+      - name: Run Core/Mini semantic conformance
+        run: python scripts/check_mini_core_conformance.py --binary lifetxt-mini/target/release/lifetxt-mini
       - name: Record conformance boundary
         run: |
           echo "Core is the reference implementation."
-          echo "Phase 1 exposes list/show/check with an explicit Mini Runtime Profile."
-          echo "Mutation remains deferred to Phase 2."
+          echo "A: list/show compare the shared semantic intersection."
+          echo "B: check/add/done/today use bounded Mini semantics with Core validity checks."
+          echo "C: unsupported Core-only inputs are rejected or preserved."

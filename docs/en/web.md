@@ -88,6 +88,7 @@ tools.
 | `GET` | `/api/config` | Show public runtime config used by the GUI |
 | `GET` | `/api/items` | List items with optional filters |
 | `GET` | `/api/personal-context` | Return a bounded page (at most 100 records) of the shared current-only Personal Context capsule for `person:self`; `include_stale=true` explicitly adds stale records while keeping other non-current states excluded. Use `offset` to retrieve later pages. The response includes shared `current`/`stale` health counts, `total_count`, and `has_more`. |
+| `POST` | `/api/personal-context/{id}/reconfirm` | Explicitly reconfirm one stale, writable Personal Context record. Requires the page's `source_revision`; updates only `updated:` through the exact-ID CAS path and returns `409` on concurrent changes. |
 | `POST` | `/api/personal-context/preview` | Validate up to 25 bootstrap facts and preview their exact ordinary Note records without writing or assigning IDs |
 | `POST` | `/api/items/parse` | Parse a raw life.txt line/body block and return parsed item data without writing |
 | `POST` | `/api/items/raw` | Append a validated raw life.txt line to the writable file |
@@ -902,6 +903,10 @@ disabled. The overview uses the same Context Capsule and health/currentness
 resolvers as the CLI and MCP surfaces. It is current-only by default. **Show
 stale** explicitly adds visually marked stale facts and exposes current/stale
 counts; it neither changes `updated:` nor promotes stale facts to current.
+For a stale fact that you have deliberately reviewed, use **Still correct** to
+reconfirm it. The action is one-record-at-a-time, preserves unrelated details,
+and reloads the counts after success. Leave a fact stale when it needs later
+review; use the existing correction/proposal flow when its content is wrong.
 Superseded, expired, future-effective, conflicting, and historical-only records
 remain excluded.
 

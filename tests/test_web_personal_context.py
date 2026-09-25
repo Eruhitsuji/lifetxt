@@ -81,6 +81,37 @@ class WebPersonalContextTests(unittest.TestCase):
         self.assertEqual(400, self.client.get("/api/personal-context?offset=-1").status_code)
         self.assertEqual(400, self.client.get("/api/personal-context?limit=nope").status_code)
 
+    def test_stale_personal_context_can_be_reconfirmed_with_cas_and_preservation(self):
+        before = Path(self.path).read_text(encoding="utf-8")
+        result = self.client.get("/api/personal-context?include_stale=true").json()
+        response = self.client.post(
+            "/api/personal-context/stale/reconfirm",
+            json={"expected_source_revision": result["source_revision"]},
+        )
+        self.assertEqual(200, response.status_code)
+        self.assertTrue(response.json()["reconfirmed"])
+        self.assertEqual("stale", response.json()["id"])
+        after = Path(self.path).read_text(encoding="utf-8")
+        self.assertIn("id:stale", after)
+        self.assertIn("tag:skill", after)
+        self.assertIn("source:user", after)
+        self.assertNotEqual(before, after)
+        current = self.client.get("/api/personal-context").json()
+        self.assertIn("stale", {row["id"] for row in current["items"]})
+        self.assertEqual({"current": 3, "stale": 0}, current["currentness_counts"])
+
+    def test_reconfirm_requires_stale_exact_writable_id_and_current_revision(self):
+        self.assertEqual(404, self.client.post("/api/personal-context/missing/reconfirm").status_code)
+        current = self.client.get("/api/personal-context").json()
+        self.assertEqual(409, self.client.post("/api/personal-context/current/reconfirm").status_code)
+        self.assertEqual(
+            409,
+            self.client.post(
+                "/api/personal-context/stale/reconfirm",
+                json={"expected_source_revision": "wrong"},
+            ).status_code,
+        )
+
     def test_projection_all_current_all_stale_and_mixed_counts(self):
         datasets = {
             "all-current": (

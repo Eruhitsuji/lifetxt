@@ -194,13 +194,150 @@ Python is the user's favorite programming language
 If an inference would be useful as Personal Context, ask the user to confirm it
 first. Once confirmed, it can be handled like any other explicit candidate.
 
-This guide deliberately does not introduce `assertion:`, `confidence:`, or
-`subject:` vocabulary. Those concepts remain deferred until real use justifies
-a stable Format/Query contract.
+This guide deliberately does not introduce `assertion:` or `subject:`
+vocabulary. Those concepts remain deferred until real use justifies a stable
+Format/Query contract. See
+[Optional epistemic metadata](#5-optional-epistemic-metadata-how-sure-is-this)
+below for an opt-in way to record how a fact was known and how confident its
+source was.
 
-## 5. Lifecycle: Bootstrap -> Maintain -> Consume
+## 5. Optional epistemic metadata: how sure is this?
 
-### 5.1 Bootstrap
+A record existing in a Personal Context workspace means the information is
+**represented** there. It does not by itself mean lifetxt independently
+verified the information as objectively true. `N` (Note) is a representation
+container: it can hold a fact, an observation, a report, a memory, a
+hypothesis, an opinion, a preference, or an inference. Optional epistemic
+metadata helps interpret an existing record; it does not create a new
+`Knowledge` or `Belief` record kind.
+
+This convention is **opt-in**. It uses two ordinary custom detail keys, not
+new Format 1.0 grammar, not a global Query field, and not a dedicated
+API/MCP schema field:
+
+```text
+epistemic:explicit|observed|reported|derived|inferred
+confidence:low|medium|high
+```
+
+### `epistemic:` origin values
+
+| Value | Meaning |
+| --- | --- |
+| `explicit` | Directly stated by the relevant human/authoritative actor in the source interaction. "Explicitly stated," not "independently verified." |
+| `observed` | Produced from a direct, deterministic observation/measurement/system signal, with no probabilistic interpretation step. |
+| `reported` | Another person/source reports the claim; lifetxt represents that report, not an independent verification of it. |
+| `derived` | A deterministic, reproducible consequence/transformation of already represented structured information. |
+| `inferred` | A probabilistic, heuristic, or model-generated conclusion, including AI inference. |
+
+`derived` and `inferred` are deliberately distinct: `derived` must be
+deterministic and reproducible from data already represented in the
+workspace, while `inferred` covers any probabilistic, heuristic, or
+model-generated conclusion, AI inference included.
+
+`memory`, `opinion`, `hypothesis`, and `assumed` are intentionally **not**
+part of this first vocabulary. Each one mixes semantic content type, stance,
+or modality with epistemic origin -- a memory can be explicitly stated, an
+opinion can be explicit, and a hypothesis can be explicitly proposed or
+model-inferred. Use `tag:` or the record's own wording for those
+distinctions instead of overloading `epistemic:`.
+
+### Optional claim confidence
+
+`confidence:low|medium|high` is a separate, optional, qualitative field for
+how confident the record's source is in the claim itself:
+
+- only `low`/`medium`/`high` are recommended in this first convention; a
+  numeric probability-like value such as `0.85` is not recommended unless a
+  future calibrated, producer-specific use case separately justifies it --
+  an unearned numeric value creates false precision;
+- a missing `confidence:` means **not recorded / unknown**, never a hidden
+  default of `low` or `high`;
+- confidence is never automatically inferred from `epistemic:`. An
+  `explicit` record can still be uncertain (the user said it but was
+  unsure), and an `inferred` record can be high-confidence while remaining
+  distinguishable from `explicit`.
+
+### Representative examples
+
+```text
+[N] N "Prefers keyboard-driven tools" person:self source:conversation-123 epistemic:explicit
+[N] N "WAN is unavailable" source:router-monitor epistemic:observed
+[N] N "Alice says she lives in Tokyo" source:message-42 epistemic:reported
+[N] N "Quarter ends before review date" source:calendar-record epistemic:derived
+[N] N "Likely prefers morning meetings" source:conversation-123 epistemic:inferred confidence:medium
+```
+
+### What this convention does not replace
+
+`epistemic:`/`confidence:` are deliberately narrow. They do not duplicate,
+and must not be confused with, mechanisms this guide and the rest of
+Personal Context already cover:
+
+| Concern | Existing mechanism |
+| --- | --- |
+| Source/provenance | `source:`, IDs/links, proposal history, Native History, Context Why |
+| Freshness | existing `updated:`/staleness behavior |
+| Validity | existing temporal validity/currentness behavior |
+| Correction | existing `corrects:` / history-preserving correction |
+| Source reliability | deferred; not the same as claim confidence |
+
+Field-level epistemic metadata -- marking one field of a multi-field record
+rather than the whole record -- also remains deferred until concrete use
+cases show that atomic, single-fact Personal Context records are
+insufficient.
+
+### Open-world compatibility
+
+- Existing records with no `epistemic:` or `confidence:` remain valid and
+  keep their current meaning.
+- Missing epistemic metadata means no epistemic status was recorded. It must
+  not be read as inferred, low-confidence, untrusted, or invalid.
+- `source:`, `updated:`, `corrects:`, currentness, Context Health, Context
+  Why, Capsule, and the Web onboarding flow all remain authoritative and
+  unchanged whether or not this convention is used.
+- Older lifetxt versions preserve `epistemic:`/`confidence:` as ordinary
+  custom detail metadata even without a local `custom_fields` registry; no
+  data migration is required.
+
+### Optional typed validation and local filtering
+
+An advanced user can opt into typed enum validation for these two keys with
+the existing generic [`custom_fields`](./config.md#generic-custom-fields)
+configuration:
+
+```json
+{
+  "custom_fields": {
+    "epistemic": {
+      "type": "enum",
+      "values": ["explicit", "observed", "reported", "derived", "inferred"],
+      "kinds": ["N"],
+      "required": false,
+      "filterable": false
+    },
+    "confidence": {
+      "type": "enum",
+      "values": ["low", "medium", "high"],
+      "kinds": ["N"],
+      "required": false,
+      "filterable": false
+    }
+  }
+}
+```
+
+This is not a hidden default: `custom_fields` is itself optional, and every
+field declared in it stays optional (`required: false`) unless a workspace
+owner chooses otherwise. Setting `filterable: true` on either field enables
+**local, config-derived Query recognition only** -- `lifetxt query
+"epistemic:inferred"` becomes possible in that workspace -- and does not
+promote `epistemic:`/`confidence:` to the global Query/Format vocabulary
+anywhere else.
+
+## 6. Lifecycle: Bootstrap -> Maintain -> Consume
+
+### 6.1 Bootstrap
 
 Bootstrap creates a small initial Personal Context from the material currently
 available to the AI. It is not an attempt to model the user's entire life.
@@ -249,7 +386,7 @@ lifetxt check personal.life.txt
 lifetxt context health personal.life.txt
 ```
 
-### 5.2 Maintain
+### 6.2 Maintain
 
 Personal Context should grow during normal use rather than through repeated
 full rebuilds.
@@ -287,7 +424,7 @@ boundary: read tools are available, while the only additional write capability
 is `stage_proposal`. MCP is useful automation, not a requirement for this
 lifecycle.
 
-### 5.3 Consume
+### 6.3 Consume
 
 Personal Context becomes valuable when another session or another AI can use it
 without rediscovering the same facts.
@@ -322,7 +459,7 @@ second source of truth. By default it excludes stale and superseded Personal
 Context records, which makes it a better handoff surface than blindly sending
 all historical records to every model.
 
-## 6. Reconcile before appending
+## 7. Reconcile before appending
 
 An AI maintaining existing Personal Context should classify new information as
 one of these cases:
@@ -340,7 +477,7 @@ The goal is a Personal Context store that remains explainable and maintainable,
 not an append-only log where every past statement is treated as permanently
 true.
 
-## 7. Start with one file; split only when useful
+## 8. Start with one file; split only when useful
 
 The simplest recommended layout is:
 
@@ -367,9 +504,9 @@ This is only a workspace/file organization choice. It does not introduce new
 Personal DB storage semantics, and all files can still be read together by
 lifetxt's multi-file surfaces.
 
-## 8. Worked scenarios
+## 9. Worked scenarios
 
-### 8.1 Chat-only bootstrap
+### 9.1 Chat-only bootstrap
 
 A user starts with no Personal Context and asks a chat AI to help build one.
 The AI asks a bounded set of questions about profile, preferences, skills,
@@ -380,7 +517,7 @@ small reviewed set of `N` records, and the user saves them to
 The next session can read that file instead of asking the same background
 questions again.
 
-### 8.2 Document-assisted bootstrap (PDF / ZIP / repository)
+### 9.2 Document-assisted bootstrap (PDF / ZIP / repository)
 
 The user uploads a resume PDF and a project ZIP to a capable chat AI. The AI
 reads the PDF, inspects useful files inside the archive, and extracts only
@@ -398,7 +535,7 @@ The PDF and ZIP remain source material. **lifetxt itself did not parse either
 file in this workflow.** If the AI client can understand a future file type,
 the same Personal Context authoring policy still applies.
 
-### 8.3 Ongoing maintenance and correction
+### 9.3 Ongoing maintenance and correction
 
 A stored record says the user prefers one work style. Months later the user
 explicitly says their preference has changed.
@@ -411,7 +548,7 @@ preserves the previous record as history through `corrects:`.
 `lifetxt context health` then classifies the old record as superseded instead of
 silently treating both values as current.
 
-### 8.4 Cross-session / cross-provider reuse
+### 9.4 Cross-session / cross-provider reuse
 
 A later AI client needs to help plan work. It reads a bounded Context Capsule
 containing current goals, projects, and preferences, then uses those facts to
@@ -421,7 +558,7 @@ The same `personal.life.txt` can be used by a different MCP client, CLI-driven
 agent, local model, or ordinary chat workflow. Provider-specific memory is not
 the durable store; lifetxt is.
 
-## 9. Review and validation checklist for AI authors
+## 10. Review and validation checklist for AI authors
 
 Before proposing or saving Personal Context, an AI should check:
 
@@ -443,7 +580,7 @@ lifetxt check personal.life.txt
 lifetxt context health personal.life.txt
 ```
 
-## 10. Non-goals
+## 11. Non-goals
 
 This guide does not add or require:
 
@@ -451,8 +588,12 @@ This guide does not add or require:
 - built-in PDF/ZIP/DOCX/OCR ingestion;
 - RAG, embeddings, vector storage, or bulk source mirroring;
 - provider SDKs or provider-specific memory APIs;
-- first-class `subject:`, `assertion:`, `confidence:`, or category fields;
-- promotion of the example tag values into mandatory Query vocabulary;
+- first-class `subject:`, `assertion:`, or category fields;
+- promotion of `epistemic:`/`confidence:`, or the example tag values, into
+  mandatory Query/Format vocabulary -- both stay opt-in custom details
+  (see [Optional epistemic metadata](#5-optional-epistemic-metadata-how-sure-is-this));
+- field-level epistemic metadata, source-reliability scoring, or numeric
+  probability calibration;
 - automatic unreviewed authoritative AI writes;
 - a requirement to use MCP.
 

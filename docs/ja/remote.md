@@ -35,7 +35,7 @@ X-Lifetxt-Remote-Capability-Revision
 X-Request-ID
 ```
 
-未対応versionは`REMOTE_VERSION_UNSUPPORTED`、HTTP 426で拒否されます。version 2ではbrowser session、CSRF／Origin検証、resource catalog、aggregate diagnostics、capability revision negotiationを利用できます。
+未対応versionは`REMOTE_VERSION_UNSUPPORTED`、HTTP 426で拒否されます。version 2ではbrowser session、CSRF／Origin検証、resource catalog、aggregate diagnostics、capability revision negotiation、`workspace-sync-snapshot` featureを利用できます。
 
 ## 設定例
 
@@ -122,6 +122,27 @@ GET /api/remote/v1/resources
 GET /api/remote/v1/resources/{resource}
 GET /api/remote/v1/diagnostics
 ```
+
+### Workspace sync snapshot
+
+protocol version 2の`GET /api/remote/v1/snapshot`は、server-authoritativeな
+multi-device accessのread基盤です。従来のticket／project fieldに加えて次を返します。
+
+- 後続のguarded mutationが指定するworkspace全体のaggregate `revision`
+- 認証済みprincipalの通常のaccess grantでfilter済みの`items`
+- opaqueな`workspace.workspace_id`と、順序付きのopaque source ID
+- 各sourceのrole、既定visibility、存在状態、設定済みwrite targetかどうか
+- source text、item ID、filesystem pathを含まないaggregate diagnostic count
+
+opaque IDはprotocol identityでありserver pathではありません。generated、archive、
+readonly、reference sourceはwritableとして公開されません。responseには設定secret、
+token／session／audit／backup state、raw source text、attachment byteを含めません。
+snapshot構築中にsourceが変化した場合、serverは
+`REMOTE_SNAPSHOT_REVISION_CHANGED`（HTTP 409）を返します。clientは異なるrevisionの
+状態を混在させず、requestを再実行する必要があります。
+
+protocol version 1は従来のsnapshot shapeを維持します。このsnapshotはread contract
+であり、offline write、local file replication、自動conflict resolutionを有効化しません。
 
 ### 認証付きバックアップ実行操作
 

@@ -1,0 +1,24 @@
+schema_version: 1
+
+requirements:
+  - id: req-multi-device-sync-snapshot
+    kind: ADDED
+    statement: >-
+      A protocol-v2 Remote client can fetch one internally consistent,
+      path-redacted workspace snapshot containing visible items, an aggregate
+      revision, opaque source identities, source roles, and the selected write
+      target without enabling mutation or offline replication.
+    acceptance_criteria:
+      - Protocol v2 advertises workspace-sync-snapshot and returns the manifest plus visible items.
+      - Protocol v1 retains its existing response shape.
+      - Local paths, secrets, raw source text, attachment bytes, and diagnostic details are absent.
+      - Generated/archive/readonly/reference sources are never marked writable.
+      - Duplicate IDs are exposed only as aggregate diagnostic counts.
+      - A mid-read source change returns an explicit HTTP 409 conflict.
+      - Authentication and principal visibility filtering remain mandatory.
+    constraints:
+      - Reuse remote_backend.source_revision and existing Remote authentication/redaction.
+      - Do not add a persisted Format field or provider-specific identity.
+    owner: Eruhitsuji
+
+open_questions: []

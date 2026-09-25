@@ -3,6 +3,7 @@
 from __future__ import unicode_literals
 
 import hashlib
+import os
 from collections import OrderedDict
 
 from .remote_access import RemoteAccessError, redact_remote_value
@@ -147,6 +148,90 @@ def _diagnostics(rows):
         {"severity": severity, "code": code, "count": count}
         for (severity, code), count in counts.items()
     ]
+
+
+def _opaque_id(kind, *parts):
+    digest = hashlib.sha256()
+    digest.update(("lifetxt-remote-%s-v1" % kind).encode("utf-8"))
+    for part in parts:
+        digest.update(b"\0")
+        digest.update(str(part).encode("utf-8"))
+    return digest.hexdigest()
+
+
+def _workspace_manifest(paths, config, writable_path, diagnostics):
+    """Build a client-safe manifest without exposing server-local paths."""
+    from .workspace import (
+        active_workspace_name,
+        default_workspace_name,
+        resolve_workspace,
+    )
+
+    config = config or {}
+    name = active_workspace_name(config) or default_workspace_name(config)
+    workspace_id = _opaque_id("workspace", name)
+    records = {}
+    try:
+        resolution = resolve_workspace(config, name)
+    except ValueError:
+        resolution = None
+    if resolution is not None:
+        for source_index, source in enumerate(resolution["sources"]):
+            for file_index, path in enumerate(source.get("files") or []):
+                records[os.path.normcase(os.path.abspath(path))] = (
+                    source_index,
+                    file_index,
+                    source,
+                )
+
+    write_key = (
+        os.path.normcase(os.path.abspath(writable_path)) if writable_path else None
+    )
+    sources = []
+    write_source_id = None
+    for path_index, path in enumerate(paths or []):
+        key = os.path.normcase(os.path.abspath(path))
+        matched = records.get(key)
+        if matched:
+            source_index, file_index, source = matched
+            role = str(source.get("role") or "primary")
+            declared_writable = bool(source.get("writable", False))
+            default_visible = bool(source.get("default_visible", True))
+            exists = bool(source.get("exists", False))
+        else:
+            source_index, file_index = path_index, 0
+            role = "primary"
+            declared_writable = True
+            default_visible = True
+            exists = os.path.exists(path)
+        source_id = _opaque_id("source", workspace_id, source_index, file_index, role)
+        writable = bool(write_key and key == write_key and declared_writable)
+        if writable:
+            write_source_id = source_id
+        sources.append(
+            OrderedDict(
+                (
+                    ("source_id", source_id),
+                    ("role", role),
+                    ("writable", writable),
+                    ("default_visible", default_visible),
+                    ("exists", exists),
+                )
+            )
+        )
+
+    diagnostic_rows = list(diagnostics or [])
+    if resolution is not None:
+        diagnostic_rows.extend(resolution.get("diagnostics") or [])
+    return OrderedDict(
+        (
+            ("workspace_id", workspace_id),
+            ("sources", sources),
+            ("write_source_id", write_source_id),
+            ("writable", write_source_id is not None),
+            ("diagnostics", _diagnostics(diagnostic_rows)),
+        )
+    )
 
 
 def _item_rows(items, config):
@@ -547,15 +632,32 @@ def read_resource(name, paths, config, principal, params=None):
     )
 
 
-def snapshot(paths, config, principal):
-    tickets = read_resource("tickets", paths, config, principal)
-    projects = read_resource("projects", paths, config, principal)
-    return OrderedDict(
+def snapshot(paths, config, principal, protocol_version=1, writable_path=None):
+    revision = source_revision(paths)
+    items, diagnostics = _read(paths, config)
+    visible = _visible_items(items, principal, config)
+    tickets = _resource_tickets(visible, config or {}, {})
+    projects = _resource_projects(visible, config or {}, {})
+    current_revision = source_revision(paths)
+    if current_revision != revision:
+        raise RemoteAccessError(
+            "REMOTE_SNAPSHOT_REVISION_CHANGED",
+            "The workspace changed while the snapshot was being built; retry the request.",
+            409,
+            {"current_revision": current_revision},
+        )
+    result = OrderedDict(
         (
             ("schema", "remote-snapshot-v1.schema.json"),
-            ("revision", source_revision(paths)),
-            ("tickets", tickets["data"].get("tickets", [])),
-            ("projects", projects["data"].get("projects", [])),
+            ("revision", revision),
+            ("tickets", tickets.get("tickets", [])),
+            ("projects", projects.get("projects", [])),
             ("read_only", True),
         )
     )
+    if int(protocol_version or 1) >= 2:
+        result["workspace"] = _workspace_manifest(
+            paths, config, writable_path, diagnostics
+        )
+        result["items"] = _item_rows(visible, config or {})
+    return result

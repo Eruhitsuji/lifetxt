@@ -1787,6 +1787,7 @@ capabilities:
       - req-stable-core-performance-baseline
       - req-storage-health-readonly
       - req-storage-maintenance-schedule
+      - req-storage-maintenance-auto-apply
       - req-stable-cli-decomposition-plan
       - req-stable-deterministic-roundtrip
       - req-stable-resource-warning-cleanup
@@ -1855,6 +1856,7 @@ capabilities:
       - core benchmark records deterministic small/medium/large workflow trends
       - Storage Health reports read-only active/archive facts with explainable advisory status
       - opt-in maintenance warn/plan systemd units use a dedicated serialized oneshot and never apply archive plans
+      - high-assurance auto mode reuses archive-plan-v1 verification/apply and records fail-closed outcomes
       - deterministic generated life.txt records reparse to identical canonical lines
       - focused ResourceWarning gate passes with warnings promoted to errors
       - deprecated AST string nodes are excluded by focused safety-foundation tests

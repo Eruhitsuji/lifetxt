@@ -19,9 +19,6 @@ def _browser_path():
     configured = os.environ.get("LIFETXT_BROWSER_BIN")
     candidates = (
         configured,
-        shutil.which("google-chrome"),
-        shutil.which("chromium"),
-        shutil.which("chromium-browser"),
         "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
     )
     return next((path for path in candidates if path and os.path.isfile(path)), None)

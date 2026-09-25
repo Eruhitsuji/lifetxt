@@ -13556,7 +13556,7 @@ traceability:
       capability_id: cap-stable-maintainability
       epic: https://github.com/Eruhitsuji/lifetxt/issues/937
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/945
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/953
       changed_files_or_scope:
         - lifetxt/storage_health.py
         - lifetxt/cli.py
@@ -13577,7 +13577,7 @@ traceability:
       capability_id: cap-stable-maintainability
       epic: https://github.com/Eruhitsuji/lifetxt/issues/937
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/947
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/953
       changed_files_or_scope:
         - lifetxt/server_init.py
         - lifetxt/cli.py
@@ -13600,7 +13600,7 @@ traceability:
       capability_id: cap-project-archive-plan-v1
       epic: https://github.com/Eruhitsuji/lifetxt/issues/937
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/946
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/953
       changed_files_or_scope:
         - Add `lifetxt maintenance plan NAME --emit-plan PATH`, a plan-only
           orchestration over `project archive --dry-run --emit-plan` reusing

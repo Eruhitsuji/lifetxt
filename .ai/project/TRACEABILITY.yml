@@ -14603,6 +14603,29 @@ traceability:
         service worker, offline cache, mutation queue, or share target.
       status: implemented
 
+    - requirement_id: req-web-mobile-quick-capture-validation
+      capability_id: cap-web-mobile-quick-capture
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/914
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/920
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/922
+      changed_files_or_scope:
+        - tests/browser_mobile_capture_probe.mjs
+        - tests/test_web_mobile_capture_browser.py
+        - docs/en/web.md
+        - docs/ja/web.md
+      tests_or_evidence:
+        - TMPDIR=/private/tmp python -m unittest tests.test_web_mobile_capture_browser
+        - python -m unittest tests.test_web_mobile_capture tests.test_web_installability tests.test_web_i18n
+        - headless Chrome viewport matrix at 320/360/390/430 px plus short landscape and reduced height
+      release_or_deployment: null
+      notes: >-
+        Standard-assurance browser emulation covers overflow, coarse pointer,
+        touch targets, focus, keyboard submission, success/error feedback,
+        pending duplicate suppression, and EN/JA rendering. No physical device
+        was available; real iOS/Android browser chrome, safe areas, virtual
+        keyboard resize, and installed-icon presentation remain residual risk.
+      status: implemented
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

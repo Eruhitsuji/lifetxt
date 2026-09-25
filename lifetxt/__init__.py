@@ -305,6 +305,12 @@ from .remote_ticket_writes import (
 
 _install_remote_ticket_writes()
 del _install_remote_ticket_writes
+from .remote_item_writes import (
+    install_remote_item_writes as _install_remote_item_writes,
+)
+
+_install_remote_item_writes()
+del _install_remote_item_writes
 del _install_runtime_safety_v2
 del _install_schema_validation_v2
 del _install_safety_compat_v2

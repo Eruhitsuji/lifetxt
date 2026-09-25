@@ -1,0 +1,19 @@
+schema_version: 1
+change:
+  id: remote-authoritative-item-mutations
+  title: Add exact-revision generic Remote item mutations
+  status: implemented
+  change_type: Feature
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/931
+  related_pull_request: []
+  base_commit: 2e387b4
+  target_release: null
+scope:
+  in_scope: [protocol-v2 ordinary-item create/update/delete, exact admission, per-file CAS, canonical IDs, replay, Native History evidence]
+  out_of_scope: [offline queues, replicas, cross-file batches, attachment bytes, providers, Format migration]
+  write_scope: [lifetxt/remote_item_writes.py, lifetxt/native_history.py, lifetxt/__init__.py, tests/test_remote_item_writes.py, docs/en/remote.md, docs/ja/remote.md, dist/schemas/item-event-v1.schema.json, .ai/project/**]
+  forbidden_scope: [.ai/managed/**]
+human_approvals_required: [independent implementation/integration/security review, Merge Authority approval]

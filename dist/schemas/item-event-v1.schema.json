@@ -18,6 +18,30 @@
     {
       "properties": {
         "event": {
+          "const": "edited"
+        }
+      },
+      "required": [
+        "item_kind",
+        "item_title",
+        "after_status"
+      ]
+    },
+    {
+      "properties": {
+        "event": {
+          "const": "deleted"
+        }
+      },
+      "required": [
+        "item_kind",
+        "item_title",
+        "before_status"
+      ]
+    },
+    {
+      "properties": {
+        "event": {
           "const": "status_changed"
         }
       },
@@ -158,6 +182,8 @@
     "event": {
       "enum": [
         "created",
+        "edited",
+        "deleted",
         "status_changed",
         "completed",
         "reopened",
@@ -200,6 +226,17 @@
         "realizes",
         "replaced_by"
       ]
+    },
+    "remote_operation": {
+      "enum": [
+        "create",
+        "update",
+        "delete"
+      ]
+    },
+    "remote_request_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
     },
     "sequence": {
       "minimum": 1,

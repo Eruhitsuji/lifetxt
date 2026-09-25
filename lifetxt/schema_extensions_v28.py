@@ -18,6 +18,8 @@ def item_event_v1_schema():
         "event": {
             "enum": [
                 "created",
+                "edited",
+                "deleted",
                 "status_changed",
                 "completed",
                 "reopened",
@@ -33,6 +35,8 @@ def item_event_v1_schema():
         "source_revision": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
         "actor": {"type": "string"},
         "source": {"type": "string"},
+        "remote_operation": {"enum": ["create", "update", "delete"]},
+        "remote_request_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
         "item_kind": {"type": "string", "minLength": 1},
         "item_title": {"type": "string"},
         "before_status": {"type": "string", "minLength": 1},
@@ -59,6 +63,8 @@ def item_event_v1_schema():
     variants = []
     for event, payload in (
         ("created", ["item_kind", "item_title", "after_status"]),
+        ("edited", ["item_kind", "item_title", "after_status"]),
+        ("deleted", ["item_kind", "item_title", "before_status"]),
         ("status_changed", ["before_status", "after_status"]),
         ("completed", ["before_status", "after_status"]),
         ("reopened", ["before_status", "after_status"]),

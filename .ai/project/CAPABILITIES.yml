@@ -1,6 +1,21 @@
 schema_version: 1
 
 capabilities:
+  - id: cap-remote-authoritative-item-mutations
+    name: Authoritative Remote ordinary-item mutations
+    summary: Disabled-by-default protocol-v2 create/update/delete with exact admission, per-file CAS, canonical IDs, replay, access checks, and Native History evidence.
+    status: active
+    owner: Eruhitsuji
+    source_requirements: [req-multi-device-sync-mutations]
+    implementation_locations: [lifetxt/remote_item_writes.py, lifetxt/native_history.py, tests/test_remote_item_writes.py]
+    public_interfaces: [POST /api/remote/v1/item-mutations, remote.item_writes_enabled]
+    tests_or_evidence: [tests.test_remote_item_writes, tests.test_native_history]
+    related_issues: [https://github.com/Eruhitsuji/lifetxt/issues/915, https://github.com/Eruhitsuji/lifetxt/issues/931]
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: Online-only single-target mutation; no replicas, tombstones, providers, or attachment transfer.
+    replacement: {replaces: [], replaced_by: null, deprecation_issue: null}
+
   - id: cap-ai-standard-guided-activation
     name: AI standard guided activation
     summary: Keep the AI Development Standard v0.1.0 Guided trial active with explicit project commands, cadence, ownership, traceability, and adoption evidence.

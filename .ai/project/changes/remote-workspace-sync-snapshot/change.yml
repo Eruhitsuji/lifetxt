@@ -1,0 +1,43 @@
+schema_version: 1
+
+change:
+  id: remote-workspace-sync-snapshot
+  title: Expose a redacted Remote workspace sync snapshot manifest
+  status: implemented
+  change_type: Feature
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/933
+  related_pull_request:
+    - https://github.com/Eruhitsuji/lifetxt/pull/934
+  base_commit: 5d61266
+  target_release: null
+
+scope:
+  in_scope:
+    - Add a protocol-v2 workspace snapshot manifest with opaque workspace/source identities.
+    - Include source roles, the single selected write source, visible items, aggregate revision, and redacted diagnostic counts.
+    - Reject snapshots whose aggregate revision changes during construction.
+    - Preserve the protocol-v1 snapshot shape.
+  out_of_scope:
+    - Authoritative mutations, offline queues, replicated files, attachment bytes, and provider adapters.
+    - Format or persisted life.txt changes.
+  write_scope:
+    - lifetxt/remote_backend.py
+    - lifetxt/remote_access.py
+    - lifetxt/remote_web.py
+    - lifetxt/schema_extensions_v19.py
+    - dist/schemas/remote-snapshot-v1.schema.json
+    - tests/test_remote_workspace_snapshot.py
+    - docs/en/remote.md
+    - docs/ja/remote.md
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+    - .ai/project/changes/remote-workspace-sync-snapshot/**
+  forbidden_scope:
+    - .ai/managed/**
+
+human_approvals_required:
+  - Independent implementation and integration/security review.
+  - Merge Authority approval before merge into main.

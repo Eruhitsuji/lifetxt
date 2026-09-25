@@ -35,7 +35,7 @@ X-Lifetxt-Remote-Capability-Revision
 X-Request-ID
 ```
 
-Unsupported versions fail with `REMOTE_VERSION_UNSUPPORTED` and HTTP 426. Version 2 adds browser sessions, CSRF/origin checks, the resource catalog, aggregate diagnostics, and capability revision negotiation.
+Unsupported versions fail with `REMOTE_VERSION_UNSUPPORTED` and HTTP 426. Version 2 adds browser sessions, CSRF/origin checks, the resource catalog, aggregate diagnostics, capability revision negotiation, and the `workspace-sync-snapshot` feature.
 
 ## Configuration example
 
@@ -122,6 +122,30 @@ GET /api/remote/v1/resources
 GET /api/remote/v1/resources/{resource}
 GET /api/remote/v1/diagnostics
 ```
+
+### Workspace sync snapshot
+
+With protocol version 2, `GET /api/remote/v1/snapshot` is the read foundation
+for server-authoritative multi-device access. In addition to the legacy ticket
+and project fields, it returns:
+
+- the aggregate workspace `revision` that a later guarded mutation must name;
+- `items`, filtered through the authenticated principal's normal access grants;
+- an opaque `workspace.workspace_id` and ordered opaque source IDs;
+- each source's role, visibility default, existence, and whether it is the one
+  configured write target; and
+- aggregate diagnostic counts without source text, item IDs, or filesystem paths.
+
+The opaque IDs are protocol identity, not server paths. Generated, archive,
+readonly, and reference sources are never marked writable. The response never
+contains configuration secrets, token/session/audit/backup state, raw source
+text, or attachment bytes. If any source changes while the snapshot is being
+built, the server returns `REMOTE_SNAPSHOT_REVISION_CHANGED` (HTTP 409); the
+client must retry instead of combining states from different revisions.
+
+Protocol version 1 keeps its legacy snapshot shape. This snapshot remains a
+read contract: it does not enable offline writes, local file replication, or
+automatic conflict resolution.
 
 ### Authenticated backup run operation
 

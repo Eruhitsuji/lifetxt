@@ -409,7 +409,13 @@ def install_remote_web():
         def remote_snapshot(request: Request):
             current = principal(request)
             require_scope(current, "read")
-            value = snapshot(app.state.paths, app.state.config, current)
+            value = snapshot(
+                app.state.paths,
+                app.state.config,
+                current,
+                request.state.remote_protocol,
+                app.state.writable_path,
+            )
             value["read_only"] = True
             return value
 

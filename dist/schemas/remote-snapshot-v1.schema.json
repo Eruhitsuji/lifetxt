@@ -3,6 +3,12 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": true,
   "properties": {
+    "items": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
     "projects": {
       "items": {
         "type": "object"
@@ -23,6 +29,9 @@
         "type": "object"
       },
       "type": "array"
+    },
+    "workspace": {
+      "type": "object"
     }
   },
   "required": [

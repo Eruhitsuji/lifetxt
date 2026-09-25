@@ -20,6 +20,8 @@ ITEM_EVENT_MARKER = "item_event"
 ITEM_EVENT_SCHEMA = "item-event-v1.schema.json"
 ITEM_EVENT_TYPES = (
     "created",
+    "edited",
+    "deleted",
     "status_changed",
     "completed",
     "reopened",
@@ -43,9 +45,16 @@ _COMMON_FIELDS = (
     "transaction",
     "source_revision",
 )
-_OPTIONAL_COMMON_FIELDS = ("actor", "source")
+_OPTIONAL_COMMON_FIELDS = (
+    "actor",
+    "source",
+    "remote_operation",
+    "remote_request_hash",
+)
 _EVENT_FIELDS = {
     "created": ("item_kind", "item_title", "after_status"),
+    "edited": ("item_kind", "item_title", "after_status"),
+    "deleted": ("item_kind", "item_title", "before_status"),
     "status_changed": ("before_status", "after_status"),
     "completed": ("before_status", "after_status"),
     "reopened": ("before_status", "after_status"),
@@ -121,6 +130,8 @@ def build_item_event(
     source_revision,
     actor=None,
     source=None,
+    remote_operation=None,
+    remote_request_hash=None,
     **payload
 ):
     """Build one closed-vocabulary ``record:item_event`` Note."""
@@ -170,6 +181,12 @@ def build_item_event(
         details["actor"] = [str(actor)]
     if source not in (None, ""):
         details["source"] = [str(source)]
+    if remote_operation not in (None, ""):
+        details["remote_operation"] = [str(remote_operation)]
+    if remote_request_hash not in (None, ""):
+        if not _REVISION_RE.match(str(remote_request_hash)):
+            raise ValueError("Remote request hash must be a SHA-256 hash.")
+        details["remote_request_hash"] = [str(remote_request_hash)]
     for key in _EVENT_FIELDS[event_type] + _OPTIONAL_EVENT_FIELDS.get(event_type, ()):
         if payload.get(key) not in (None, ""):
             details[key] = [str(payload[key])]

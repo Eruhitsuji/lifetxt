@@ -147,6 +147,17 @@ Protocol version 1 keeps its legacy snapshot shape. This snapshot remains a
 read contract: it does not enable offline writes, local file replication, or
 automatic conflict resolution.
 
+### Authoritative item mutations
+
+Set `remote.item_writes_enabled: true` to advertise protocol-v2
+`item-mutations`. `POST /api/remote/v1/item-mutations` accepts only `create`,
+`update`, and `delete` against the configured writable source. Every request
+requires `write` scope, exact aggregate `If-Match`, and a stable
+`transaction_id`. The server assigns create IDs; update/delete require one
+unique canonical ID. Successful operations append Native History evidence in
+the same per-file CAS. This remains online-only and creates no replica
+tombstones.
+
 ### Authenticated backup run operation
 
 Remote protocol v2 can advertise `operations.backup_run` when scheduled backup,

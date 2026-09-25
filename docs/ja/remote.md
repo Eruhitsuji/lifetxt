@@ -144,6 +144,16 @@ snapshot構築中にsourceが変化した場合、serverは
 protocol version 1は従来のsnapshot shapeを維持します。このsnapshotはread contract
 であり、offline write、local file replication、自動conflict resolutionを有効化しません。
 
+### Authoritative item mutation
+
+`remote.item_writes_enabled: true`でprotocol-v2の`item-mutations`を公開します。
+`POST /api/remote/v1/item-mutations`は設定済みwritable sourceへの`create`、
+`update`、`delete`だけを受け付けます。`write` scope、aggregate revisionと一致する
+`If-Match`、安定した`transaction_id`が必須です。create IDはserverが割り当て、
+update/deleteには一意なcanonical IDが必要です。成功したoperationは同じper-file
+CAS内でNative History evidenceを追加します。online-onlyでありreplica tombstoneは
+作成しません。
+
 ### 認証付きバックアップ実行操作
 
 Remote protocol v2 は、scheduled backup、永続 Remote audit、限定された

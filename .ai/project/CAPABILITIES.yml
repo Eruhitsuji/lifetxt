@@ -1785,6 +1785,8 @@ capabilities:
       - req-stable-optional-dependency-compatibility
       - req-stable-release-doc-validation
       - req-stable-core-performance-baseline
+      - req-storage-health-readonly
+      - req-storage-maintenance-schedule
       - req-stable-cli-decomposition-plan
       - req-stable-deterministic-roundtrip
       - req-stable-resource-warning-cleanup
@@ -1814,6 +1816,8 @@ capabilities:
       - scripts/audit_ruff_rules.py
       - scripts/validate_release_docs.py
       - scripts/benchmark_core.py
+      - lifetxt/storage_health.py
+      - lifetxt/server_init.py
       - docs/en/
     public_interfaces:
       - .ai/project/COMMANDS.yml
@@ -1849,6 +1853,8 @@ capabilities:
       - optional Web/TUI minimum and upper dependency bands run focused smoke tests
       - release-document validator checks 69 internal links and safe CLI help examples
       - core benchmark records deterministic small/medium/large workflow trends
+      - Storage Health reports read-only active/archive facts with explainable advisory status
+      - opt-in maintenance warn/plan systemd units use a dedicated serialized oneshot and never apply archive plans
       - deterministic generated life.txt records reparse to identical canonical lines
       - focused ResourceWarning gate passes with warnings promoted to errors
       - deprecated AST string nodes are excluded by focused safety-foundation tests
@@ -4722,18 +4728,23 @@ capabilities:
       - req-archive-plan-v1-schema-and-emit
       - req-archive-apply-plan-verification-execution
       - req-archive-plan-v1-operator-docs
+      - req-storage-maintenance-plan
     implementation_locations:
       - lifetxt/archive_plan_v1.py
       - lifetxt/schema_extensions_v23.py
       - lifetxt/cli.py
       - dist/schemas/archive-plan-v1.schema.json
       - tests/test_archive_plan_v1.py
+      - tests/test_maintenance_plan.py
       - docs/en/projects.md
       - docs/ja/projects.md
+      - docs/en/cli.md
+      - docs/ja/cli.md
       - .ai/project/changes/project-archive-plan-v1/
     public_interfaces:
       - lifetxt project archive --dry-run --emit-plan PATH
       - lifetxt project archive --apply-plan PLAN [--yes]
+      - lifetxt maintenance plan NAME --emit-plan PATH
       - lifetxt.archive_plan_v1.build_plan
       - lifetxt.archive_plan_v1.write_plan
       - lifetxt.archive_plan_v1.load_plan
@@ -4743,6 +4754,8 @@ capabilities:
       - lifetxt.archive_plan_v1.verify_workspace_revision_unchanged
       - lifetxt.archive_plan_v1.verify_selection_unchanged
       - lifetxt.archive_plan_v1.verify_recovery_evidence_reachable
+      - lifetxt.cli.command_maintenance_plan
+      - lifetxt.cli._resolve_project_archive_workspace_inputs
     tests_or_evidence:
       - tests/test_archive_plan_v1.py EmitPlanTests, ApplyPlanTests, ArchivePlanV1UnitTests (29 tests)
       - tests/test_schema_extensions_v2.py bundle-completeness gate (77 documents)
@@ -4754,11 +4767,16 @@ capabilities:
       - '/security-review (research + false-positive-filtering subagents): 1 finding confirmed at 8/10 -- plan_hash was described as "tamper detection" but is a self-referential checksum with no external key; fixed by renaming to "self-consistency check" throughout and removing misleading "share it" doc language. A second candidate (unscoped plan source/destination paths) was excluded at 2/10, confirmed pre-existing in archive_safety_v3.py, not a regression'
       - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
       - ruff format --check / ruff check lifetxt tests scripts -> clean (pre-existing drift in 3 unrelated files confirmed present on main already)
+      - tests/test_maintenance_plan.py MaintenancePlanTests (10 tests: writes an archive-plan-v1 document and makes no other change, output matches an equivalent project archive --dry-run --emit-plan call field for field, no-candidates and orphan-blocked selections write no plan and report the block reason, --format json shape for both the written and blocked cases, the generated plan applies through the existing --apply-plan path unmodified, multi-source workspace selection, query behavior unaffected by generating a plan, --dest override)
+      - python -m unittest tests.test_maintenance_plan tests.test_archive_plan_v1 tests.test_project_archive tests.test_project_archive_safety_v3 tests.test_cli_taxonomy tests.test_completion_surfaces tests.test_completion_values tests.test_surface_runtime -> Ran 174 tests, OK (skipped=1)
+      - 'live: real lifetxt maintenance plan NAME --emit-plan plan.json against a disposable fixture wrote a schema-valid archive-plan-v1 document and left every workspace file byte-unchanged; the generated plan applied correctly via the existing lifetxt project archive --apply-plan path'
+      - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/183
       - https://github.com/Eruhitsuji/lifetxt/issues/254
       - https://github.com/Eruhitsuji/lifetxt/issues/255
       - https://github.com/Eruhitsuji/lifetxt/issues/256
+      - https://github.com/Eruhitsuji/lifetxt/issues/946
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/258
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
@@ -4793,6 +4811,35 @@ capabilities:
       #183 was later closed at its evidence ceiling (root cause unprovable,
       recovery and preventive follow-up complete) once this capability had
       shipped -- see its closing comment for the final disposition.
+      #946 adds `lifetxt maintenance plan`, a thin, plan-only orchestration
+      layer over `project archive --dry-run --emit-plan`: it factors the
+      existing source/destination workspace resolution out of
+      `command_project_archive` into
+      `_resolve_project_archive_workspace_inputs` (a pure extraction reused
+      unchanged by both commands) and reuses the identical
+      `_archive_select`/`_project_archive_emit_plan` selection and
+      archive-plan-v1 builder -- no second mutation engine or plan schema.
+      `_project_archive_emit_plan` gained two purely additive parameters
+      (`selection=None`, `quiet=False`) so the new command can reuse an
+      already-computed selection instead of re-parsing every source file a
+      second time, and can suppress that function's own stdout/stderr
+      confirmation lines in favor of its own richer summary
+      (why maintenance was requested, the selection policy used, candidate
+      count, block reason, and an explicit "no workspace file was changed"
+      confirmation); `project archive --emit-plan` itself passes neither
+      argument, so its own output is unchanged. Eligible candidates remain
+      exactly the existing `project archive` selection/safety contract
+      (status/before/max-items filters, orphan-children handling,
+      reference/orphan/revision checks) -- no age-based rule was added for
+      Notes/Journals/Events/Messages/Status records, and no archive-file
+      rotation was introduced, per #946's own explicit scope. `#945`
+      (Storage Health diagnostics) has not shipped yet, so `reason` always
+      reports an explicit operator invocation in this first slice; once
+      #945 ships, its recommendation text is expected to flow into the same
+      `reason` field with no change to this command's own contract.
+      Applying a generated plan uses the existing, independently
+      re-verified `project archive --apply-plan` path unchanged; there is
+      no `lifetxt maintenance apply`.
     replacement:
       replaces: []
       replaced_by: null

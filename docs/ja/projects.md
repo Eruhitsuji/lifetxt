@@ -149,6 +149,54 @@ recoveryは、他のmulti-file書き込みと同じbackup/journalの契約を使
 planパスの周りでscriptingする場合、`set -o noclobber`のようなshell側の
 追加防御も妥当な選択です。
 
+### `lifetxt maintenance plan`: `--emit-plan`の上に立つorchestration
+
+`lifetxt maintenance plan NAME --emit-plan PATH`は、`project archive --dry-run
+--emit-plan`の上に立つ、planのみを生成する薄いorchestration層です。同じ
+`project archive`候補選択ポリシーと`archive-plan-v1`ビルダーをそのまま再利用
+しており、第2のmutation engineやplan schemaは存在しません。この最初のスライス
+では「maintenance」は常に一つのことだけを意味します: あるprojectの既に対象と
+なっているdone/canceled record（とそのticket history）を、workspaceに設定
+された`role: archive`sourceへ移動することです。プレーンな`project archive
+--dry-run --emit-plan`呼び出しと同じ意味を持ちます。
+
+```console
+$ lifetxt maintenance plan web --emit-plan plan.json
+Maintenance requested: explicit operator request via `lifetxt maintenance plan` (no automatic Storage Health recommendation is available yet; see #945)
+Project: web
+Selection policy: project archive selection (status=done,canceled, before=(none), max_items=(none), orphan_children=block, block_on_external_refs=False)
+Candidates: 3 item(s)
+Plan written to plan.json.
+No workspace file was changed. Review the plan, then apply it with:
+  lifetxt project archive --apply-plan plan.json
+```
+
+このreportは、なぜmaintenanceが要求されたのかを常に明示します。この
+コマンドが将来的にフロントエンドとなる予定のStorage Health推奨エンジン
+（#945）はまだ実装されていないため、現時点では常に明示的なoperatorの
+呼び出しです。将来#945が実装されれば、その推奨テキストが同じ`reason`
+フィールドに表示されますが、それでも実行するかどうかを決めるのは
+operatorやscriptであり、`maintenance plan`自身が自動的に何かを実行したり
+適用したりすることはありません。
+
+対象となる候補が存在しない場合（あるいは選択がblockされた場合 -- open
+childrenや`--block-on-external-refs`指定時の外部参照）、planファイルは
+書き込まれず、コマンドは非ゼロの終了コードを返します。これは`project
+archive --dry-run --emit-plan`自身のno-op動作と同じであり、存在しない
+結果を捏造することはありません。
+
+`maintenance plan`が`life.txt`やarchive destinationそのものに書き込むこと
+はありません -- 作成しうる唯一のファイルは`PATH`に指定されたplan文書
+だけです。生成されたplanの適用は、上記で説明した`lifetxt project archive
+--apply-plan PATH`と全く同じ、独立して再検証される経路を使います。
+`lifetxt maintenance apply`というコマンドは存在しません。
+
+この最初のスライスは、Notes・Journals・Events・Messages・Status recordなど
+projectに属さない履歴を、単に古いという理由だけで自動archiveすることを
+意図的に行わず、また年次/月次のarchiveファイルrotationも導入しません
+（境界の詳細は英語版 [issue #946](https://github.com/Eruhitsuji/lifetxt/issues/946)
+を参照してください）。
+
 ## 算出の透明性
 
 導出値はすべて算出方法を明示します。

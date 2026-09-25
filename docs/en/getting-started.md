@@ -153,6 +153,8 @@ the format specification for the recommended keys per type, and
 [`cli.md`](./cli.md) for command-level filtering and shorthand capture
 (`lifetxt add "Buy milk @home #errand !high ^tomorrow"` -- `add` is the
 beginner-facing spelling of `quick`/`q`).
+The dedicated [Quick capture guide](./quick-capture.md) explains every
+supported token, precedence, literal sigils, dates, and surface differences.
 
 ## Level 3 -- Full Format
 
@@ -182,6 +184,8 @@ first -- it is already valid input to the full grammar.
   `--preset student`, `work`, `research`, or `personal` for a small starter
   section skeleton matching your use case (see [`cli.md`](./cli.md)).
 - `lifetxt add "Buy milk ^tomorrow"` -- capture your first real record.
+- [`quick-capture.md`](./quick-capture.md) -- learn the complete shorthand
+  contract after that first capture.
 - `lifetxt web` -- open the browser UI against it.
 - [`life_txt_format_spec.md`](./life_txt_format_spec.md) -- the complete
   grammar.

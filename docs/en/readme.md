@@ -12,6 +12,8 @@ Start with:
   principles behind it.
 - [life_txt_format_spec.md](./life_txt_format_spec.md) for the file format.
 - [cli.md](./cli.md) for command usage and compatibility.
+- [quick-capture.md](./quick-capture.md) for the authoritative Quick capture
+  shorthand, precedence, edge cases, and surface differences.
 - [config.md](./config.md) for configuration files and effective settings.
 - [web.md](./web.md) for the optional FastAPI/Web UI surface.
 - [ai-integration.md](./ai-integration.md) for MCP and AI client usage.
@@ -41,6 +43,7 @@ Every Markdown file under `docs/en/` is listed here.
 | AI/MCP integration | [ai-integration.md](./ai-integration.md) |
 | Personal Context / Personal DB with AI | [personal-context.md](./personal-context.md) |
 | CLI reference | [cli.md](./cli.md) |
+| Quick capture and shorthand | [quick-capture.md](./quick-capture.md) |
 | Configuration | [config.md](./config.md) |
 | Delegated mutations, remote attachments, recovery | [delegated-remote-attachments-and-recovery.md](./delegated-remote-attachments-and-recovery.md) |
 | Editor setup and safe edit flow | [editor.md](./editor.md) |

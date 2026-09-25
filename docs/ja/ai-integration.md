@@ -300,6 +300,9 @@ field を設定しない -- MCP tool の境界でのみ付与される。
 
 CLI と TUI が受け付ける shorthand は MCP でも使えます。
 
+tokenとsurfaceの正規契約は[Quick captureガイド](./quick-capture.md)を
+参照してください。
+
 ```json
 {"name": "capture_item", "arguments": {"text": "Buy milk @home #errand !high ^tomorrow"}}
 ```

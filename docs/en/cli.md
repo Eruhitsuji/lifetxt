@@ -542,6 +542,11 @@ and Web UI, so a token means the same thing everywhere.
 `quick`, the TUI `/add`, and the Web quick-add box expand four sigils out of the
 title:
 
+The authoritative reference, including precedence, repetition, quoting,
+literal sigils, validation, persisted results, and per-surface differences, is
+[Quick capture and shorthand](./quick-capture.md). The compact table below is
+kept as command-reference help.
+
 | Sigil | Expands to | Example |
 | --- | --- | --- |
 | `@NAME` | `project:NAME` | `@home` |

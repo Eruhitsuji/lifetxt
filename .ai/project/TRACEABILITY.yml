@@ -31,6 +31,29 @@ traceability:
         than a new runtime capability being introduced.
       status: implemented
 
+    - requirement_id: req-storage-maintenance-auto-apply
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/937
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/948
+      pull_request: null
+      changed_files_or_scope:
+        - lifetxt/cli.py
+        - lifetxt/server_init.py
+        - tests/test_server_maintenance.py
+        - docs/en/storage-health.md
+        - docs/ja/storage-health.md
+      tests_or_evidence:
+        - "tests.test_server_maintenance covers auto unit generation and blocked apply failure"
+        - "existing archive-plan-v1 verification/apply path remains the only authoritative mutation path"
+        - "auto mode is explicit, disabled by default, serialized by FileLock, and fail-closed on apply errors"
+      release_or_deployment: null
+      notes: >-
+        High-assurance auto orchestration generates the existing frozen
+        archive-plan-v1 and delegates to the existing re-verified apply path.
+        It never introduces a second mutation engine, broadens eligibility, or
+        couples archive mutation to backup retention.
+      status: implemented
+
     - requirement_id: req-philosophy-typed-semantic-frame
       capability_id: cap-life-philosophy-documentation
       epic: https://github.com/Eruhitsuji/lifetxt/issues/949

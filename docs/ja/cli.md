@@ -246,7 +246,7 @@ audience、そしてこの表と同じカテゴリ分類を表示します。
 | Getting Started / Daily | `tour`、`help`、`init`、`quick` (`add`)、`today`、`next`、`agenda`、`show`、`edit`、`done`、`complete`、`progress`、`clone`、`reopen`、`due`、`review`、`assist`、`state`、`start`、`stop`、`assign`、`timer`、`notify` |
 | Query / Explore | `filter`、`search`、`find`、`query`、`view`、`summary`、`inbox`、`health`、`temporal`、`timeline`、`history-check`、`thread`、`lifecycle-stats`、`freebusy`、`count`、`status`、`recent`、`item-uri` |
 | Projects / People / Collaboration | `project`、`portfolio`、`area`、`person`、`group`、`who`、`message`、`proposal`、`ticket`、`version`、`sprint` |
-| Structure / Data Integrity | `check`、`integrity`、`ids`、`links`、`backlinks`、`sources`、`tag`、`lint`、`deps`、`diff`、`snapshot`、`undo`、`cleanup`、`files` |
+| Structure / Data Integrity | `check`、`integrity`、`maintenance`、`storage`、`ids`、`links`、`backlinks`、`sources`、`tag`、`lint`、`deps`、`diff`、`snapshot`、`undo`、`cleanup`、`files` |
 | Import / Export / Reports | `convert`、`import`、`export`、`import-ics`、`sync-ics`、`to-json`、`to-jsonl`、`to-csv`、`from-json`、`from-jsonl`、`from-csv`、`from-markdown`、`from-todo`、`to-ics`、`markdown`、`stats`、`plot`、`export-heatmap`、`standup`、`invoice`、`share`、`digest`、`report` |
 | Interfaces / Integration | `tui`、`fzf`、`web`、`serve`、`mcp`、`ai`、`completion`、`git-hook`、`watch`、`remote` |
 | Workspace / Configuration / Safety | `config`、`workspace`、`path`、`doctor`、`format`、`safety`、`capabilities`、`attachment`、`update`、`update-check`、`server-init`、`server-update`、`server-report`、`git-commit-worker`、`backup` |
@@ -3479,6 +3479,7 @@ python -m lifetxt template apply weekly_review --append life.txt --dry-run
 - `remote` 系のコマンドは、チケット作成、read-only クライアント操作、Remote Safe Mode、添付ファイルの分離保存を扱います。安全な書き込みの詳細は `remote-ticket-writes.md` と `delegated-remote-attachments-and-recovery.md` を参照してください。
 - `update-check` と `doctor --check-update` は、ローカルの実行版と GitHub release/tag の比較を行います。fork で運用する場合は `update.repository` または `--repo OWNER/NAME` で比較先を明示します。
 - `project archive --dry-run --emit-plan` は移動計画だけを出力し、`project archive --apply-plan` は同じ計画を検証して適用します。workspace 外への移動、重複 destination、古い計画は拒否されます。
+- `maintenance plan NAME --emit-plan PATH` は、`project archive --dry-run --emit-plan` に対する薄い orchestration です。同じ project-archive の選択ポリシーと `archive-plan-v1` の書式を再利用し、なぜ maintenance が要求されたか、どの選択ポリシーが使われたか、候補件数とブロック理由、そしてどの workspace ファイルも変更されていないことを報告します。生成された plan の適用は、既存の `project archive --apply-plan` のみが行います。詳細は英語版 [projects.md](../en/projects.md) を参照してください。
 - `--version` は CLI の実行版確認に使います。release gate や baseline 記録では、この値と `doctor --check-update` の結果を併記します。
 - 共通オプションのうち、入力ファイル、workspace、設定ファイル、出力形式に関わる指定は、設定解決順序と同じ優先順位で評価されます。詳細は `config.md` と `release-baselines.md` を参照してください。
 - `vm run PATH --entry ID` は、`value:` / `op:` / `var:` / `next:` / `zero:` / `nonzero:` という既存の custom key を 2-counter Minsky machine として解釈する、opt-in のチューリング完全実行モデルです。`check` を含む他のどのコマンドも VM record を実行しません。詳細は [vm.md](vm.md) を参照してください。

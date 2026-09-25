@@ -154,6 +154,53 @@ a shell-side defense such as `set -o noclobber` is a reasonable extra
 precaution when scripting `--emit-plan`/`--apply-plan` around an
 untrusted or hand-edited plan path.
 
+### `lifetxt maintenance plan`: orchestration over `--emit-plan`
+
+`lifetxt maintenance plan NAME --emit-plan PATH` is a thin, plan-only
+orchestration layer over `project archive --dry-run --emit-plan`. It reuses
+the exact same `project archive` candidate-selection policy and
+`archive-plan-v1` builder -- there is no second mutation engine or plan
+schema. In this first slice, "maintenance" always means one thing: moving a
+project's already-eligible done/canceled records (and their ticket history)
+into the workspace's configured `role: archive` source, the same as a plain
+`project archive --dry-run --emit-plan` call.
+
+```console
+$ lifetxt maintenance plan web --emit-plan plan.json
+Maintenance requested: explicit operator request via `lifetxt maintenance plan` (no automatic Storage Health recommendation is available yet; see #945)
+Project: web
+Selection policy: project archive selection (status=done,canceled, before=(none), max_items=(none), orphan_children=block, block_on_external_refs=False)
+Candidates: 3 item(s)
+Plan written to plan.json.
+No workspace file was changed. Review the plan, then apply it with:
+  lifetxt project archive --apply-plan plan.json
+```
+
+The report always states why maintenance was requested. Today that is
+always an explicit operator invocation, since the Storage Health
+recommendation engine this command is designed to eventually front-end
+(#945) has not shipped yet; once it exists, its recommendation text will
+appear in the same `reason` field, still triggered by an operator or script
+that chooses to act on it -- `maintenance plan` never runs or applies
+anything on its own.
+
+When no eligible candidate exists (or the selection is blocked -- open
+children, external references with `--block-on-external-refs`), no plan
+file is written and the command exits non-zero, matching `project archive
+--dry-run --emit-plan`'s own no-op behavior; nothing is fabricated.
+
+`maintenance plan` never writes to `life.txt` or the archive destination
+itself -- the only file it can create is the plan document at `PATH`.
+Applying a generated plan uses the exact same, independently re-verified
+`lifetxt project archive --apply-plan PATH` path described above; there is
+no `lifetxt maintenance apply`.
+
+This first slice deliberately does not archive Notes, Journals, Events,
+Messages, Status records, or any other non-project history merely because
+it is old, and does not introduce yearly/monthly archive-file rotation --
+see [issue #946](https://github.com/Eruhitsuji/lifetxt/issues/946) for the
+full boundary.
+
 ## Transparent derivations
 
 Every derived number states how it was computed:

@@ -330,6 +330,8 @@ CATEGORIES = OrderedDict(
                 "commands": (
                     "check",
                     "integrity",
+                    "maintenance",
+                    "storage",
                     "ids",
                     "links",
                     "backlinks",
@@ -868,6 +870,7 @@ _EXAMPLES = {
     "links": ("lifetxt links",),
     "check": ("lifetxt check life.txt",),
     "integrity": ("lifetxt integrity",),
+    "maintenance": ("lifetxt maintenance plan NAME --emit-plan plan.json",),
     "ai": ("lifetxt ai setup generic",),
     "mcp": ("lifetxt mcp --profile read",),
     "context": ("lifetxt context health",),

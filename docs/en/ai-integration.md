@@ -307,6 +307,9 @@ the MCP tool boundary.
 
 The same shorthand the CLI and TUI accept works here:
 
+The authoritative token and surface contract is the
+[Quick capture guide](./quick-capture.md).
+
 ```json
 {"name": "capture_item", "arguments": {"text": "Buy milk @home #errand !high ^tomorrow"}}
 ```

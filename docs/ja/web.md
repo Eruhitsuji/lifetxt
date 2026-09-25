@@ -580,6 +580,9 @@ palette が別の行を強調していても `/due tomorrow` は引数付きで�
 クイック追加の入力欄は、`[` で始まる完全な life.txt 行と、
 キャプチャ記号を含む plain text の両方を受け付けます。
 
+token、escape、validation、surface差異の完全な契約は
+[Quick capture と省略記法](./quick-capture.md)を参照してください。
+
 ```
 Buy milk @home #errand !high ^tomorrow
 ```

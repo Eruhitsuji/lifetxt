@@ -659,6 +659,9 @@ in the browser, the TUI, and the CLI.
 The quick-add input accepts either a full life.txt line (anything starting with
 `[`) or plain text with capture shorthand:
 
+See [Quick capture and shorthand](./quick-capture.md) for the complete token,
+escaping, validation, and surface-difference contract.
+
 ```
 Buy milk @home #errand !high ^tomorrow
 ```

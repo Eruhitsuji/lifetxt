@@ -9,6 +9,8 @@
 - [philosophy.md](./philosophy.md): lifetxt がなぜ存在するのか、その背後にある原則
 - [life_txt_format_spec.md](./life_txt_format_spec.md): file format
 - [cli.md](./cli.md): command usage と compatibility
+- [quick-capture.md](./quick-capture.md): Quick captureの省略記法、優先順位、
+  edge case、surface差異の正規ガイド
 - [config.md](./config.md): configuration files と effective settings
 - [web.md](./web.md): optional FastAPI/Web UI surface
 - [ai-integration.md](./ai-integration.md): MCP と AI client usage
@@ -38,6 +40,7 @@
 | AI/MCP integration | [ai-integration.md](./ai-integration.md) |
 | AIによる Personal Context / Personal DB | [personal-context.md](./personal-context.md) |
 | CLI reference | [cli.md](./cli.md) |
+| Quick capture と省略記法 | [quick-capture.md](./quick-capture.md) |
 | Configuration | [config.md](./config.md) |
 | Delegated mutations, remote attachments, recovery | [delegated-remote-attachments-and-recovery.md](./delegated-remote-attachments-and-recovery.md) |
 | Editor setup and safe edit flow | [editor.md](./editor.md) |

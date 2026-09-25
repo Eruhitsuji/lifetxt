@@ -7157,6 +7157,7 @@ capabilities:
       - req-cli-add-alias
       - req-cli-web-launcher
       - req-cli-unified-import
+      - req-quick-capture-shorthand-guide
     implementation_locations:
       - lifetxt/tour.py
       - lifetxt/entrypoint.py
@@ -7170,6 +7171,9 @@ capabilities:
       - docs/ja/cli.md
       - docs/en/getting-started.md
       - docs/ja/getting-started.md
+      - docs/en/quick-capture.md
+      - docs/ja/quick-capture.md
+      - tests/test_quick_capture_docs.py
       - readme.md
     public_interfaces:
       - lifetxt tour
@@ -7201,8 +7205,10 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/591
       - https://github.com/Eruhitsuji/lifetxt/issues/592
       - https://github.com/Eruhitsuji/lifetxt/issues/593
+      - https://github.com/Eruhitsuji/lifetxt/issues/923
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/597
+      - https://github.com/Eruhitsuji/lifetxt/pull/924
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       Self-scoped and implemented autonomously per repository owner

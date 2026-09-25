@@ -1048,7 +1048,7 @@ traceability:
       capability_id: cap-supported-platform-install
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/76
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/918
       changed_files_or_scope:
         - Remove the undeclared dateutil and pytz timezone fallbacks
         - lifetxt/safety_foundation.py

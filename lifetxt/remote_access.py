@@ -479,6 +479,7 @@ def _capability_v2(config):
                     "capability-negotiation",
                     "remote-diagnostics",
                     "recursive-redaction",
+                    "workspace-sync-snapshot",
                 ],
             ),
             ("resources", resource_catalog()),

@@ -37,6 +37,47 @@ capabilities:
       replaced_by: null
       deprecation_issue: null
 
+  - id: cap-remote-workspace-sync-snapshot
+    name: Redacted Remote workspace sync snapshot
+    summary: >-
+      Protocol-v2 Remote clients can read one revision-consistent workspace
+      snapshot with visible items, opaque workspace/source identities, source
+      roles, the selected write target, and aggregate diagnostics without local
+      path, secret, raw-text, or attachment-byte disclosure.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-multi-device-sync-snapshot
+    implementation_locations:
+      - lifetxt/remote_backend.py
+      - lifetxt/remote_access.py
+      - lifetxt/remote_web.py
+      - lifetxt/schema_extensions_v19.py
+      - tests/test_remote_workspace_snapshot.py
+      - docs/en/remote.md
+      - docs/ja/remote.md
+    public_interfaces:
+      - GET /api/remote/v1/snapshot with X-Lifetxt-Remote-Version 2
+      - GET /api/remote/v1/capabilities feature workspace-sync-snapshot
+    tests_or_evidence:
+      - tests.test_remote_workspace_snapshot
+      - tests.test_remote_backend_v20
+      - tests.test_remote_web_v20
+      - tests.test_remote_compatibility_v21
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/915
+      - https://github.com/Eruhitsuji/lifetxt/issues/933
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Read-only online foundation. It does not enable authoritative mutations,
+      local replicas, offline queues, provider synchronization, or attachment
+      byte transfer. #931 owns the guarded mutation surface.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
   - id: cap-lifetxt-mini-phase-1-read-core
     name: lifetxt-mini Phase 1 read-only core
     summary: >-

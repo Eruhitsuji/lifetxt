@@ -98,6 +98,8 @@ def schema_bundle_v19():
                         "tickets": {"type": "array", "items": {"type": "object"}},
                         "projects": {"type": "array", "items": {"type": "object"}},
                         "read_only": {"type": "boolean"},
+                        "items": {"type": "array", "items": {"type": "object"}},
+                        "workspace": {"type": "object"},
                     },
                     ("schema", "revision", "tickets", "projects"),
                 ),

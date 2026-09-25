@@ -14630,7 +14630,7 @@ traceability:
       capability_id: cap-adoption-onboarding-commands
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/923
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/924
       changed_files_or_scope:
         - docs/en/quick-capture.md
         - docs/ja/quick-capture.md

@@ -2,6 +2,38 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-personal-context-inference-provenance
+      capability_id: cap-unified-inbox-proposals
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/936
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/941
+      pull_request: null
+      changed_files_or_scope:
+        - tests/test_inbox.py
+        - docs/en/inbox.md
+        - docs/ja/inbox.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - "tests/test_inbox.py InboxEpistemicMetadataPreservationTests (8 tests): epistemic:inferred/confidence:medium candidate details survive stage -> accept -> reparse unchanged; acceptance never rewrites epistemic:inferred to epistemic:explicit; proposal-level operational source/provenance never leaks into accepted item details, including when the candidate already carries its own source: detail; reject/defer of an inferred candidate makes no authoritative write (target file does not exist); an explicit edit_proposal() edit before accept is the only thing that changes the accepted epistemic value, with the untouched confidence detail proving accept() itself never touches either field"
+        - "python -m unittest tests.test_inbox -> Ran 36 tests, OK; all new tests passed on first run against the unmodified apply_proposal()/proposal_item() implementation, confirming no lifetxt/inbox.py preservation defect exists (change.details is the sole source of the accepted Item; provenance/source are never read into it)"
+        - 'python scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> {"errors": 0, "ok": true}'
+        - "python -m unittest tests.test_release_policy tests.test_surface_runtime.TuiDocumentationDriftTests -> Ran 14 tests, OK"
+        - "manual cross-reference slug check (docs/en/inbox.md#personal-context.md and docs/ja/inbox.md are both outside validate_release_docs.py's checked-document set) against scripts/validate_release_docs.py's own slug() algorithm for both the new English and Japanese '## Editing before acceptance'/'## 承認前の編集' self-links and the personal-context.md#5-... cross-reference added by #940"
+      release_or_deployment: null
+      notes: >-
+        Bounded regression/documentation slice per #941's own "prefer
+        tests/docs only" instruction: implementation-time verification found
+        the existing lifetxt/inbox.py already satisfies every acceptance
+        criterion (apply_proposal()/proposal_item() build the accepted Item
+        strictly from the proposal's own change["details"] and never read
+        provenance/source into it), so no production code changed. Adds
+        InboxEpistemicMetadataPreservationTests as a permanent regression
+        guard against a future accidental reclassification, plus a short
+        "Acceptance is write authorization, not epistemic reclassification"
+        documentation note in docs/en+ja/inbox.md cross-referencing #940's
+        convention. No new proposal schema field, Format key, KNOWN_KEYS
+        entry, global Query syntax, or MCP/API field was added.
+
     - requirement_id: req-personal-context-epistemic-convention
       capability_id: cap-personal-context-toolkit
       epic: https://github.com/Eruhitsuji/lifetxt/issues/936

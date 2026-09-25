@@ -5843,6 +5843,7 @@ capabilities:
       - req-inbox-proposal-stale-detection
       - req-inbox-ticket-creation-event
       - req-inbox-proposal-idempotency-key
+      - req-personal-context-inference-provenance
     implementation_locations:
       - lifetxt/inbox.py
       - lifetxt/cli.py
@@ -5882,6 +5883,8 @@ capabilities:
       - "confirmed via git stash (production code only, tests kept) that the new tests in both test_inbox.py and test_ticket_creation_event.py fail against the pre-#496/#497 code (no staleness detection, no creation event), then pass once the fix is restored"
       - "confirmed via git stash (production code only, tests kept) that 5 of the 6 new InboxIdempotencyTests tests fail against the pre-#514 code (TypeError: stage_create() got an unexpected keyword argument 'idempotency_key', or two distinct proposal IDs where one was expected); the sixth (no-key baseline) passes unmodified against the old code, confirming it correctly locks in unchanged behavior rather than indicating a weak test"
       - "live: real disposable workspace (mcp_call.py driving lifetxt.mcp.McpContext/call_tool directly), used to verify the docs/en/ai-integration.md Personal AI Memory worked example (#515) is byte-accurate: stage_proposal(kind=N)/proposal list/proposal accept/search/query all produced exactly the output now documented"
+      - "tests/test_inbox.py InboxEpistemicMetadataPreservationTests (8 tests, #941): an inferred/confidence-bearing candidate's item details survive stage -> accept -> reparse unchanged; acceptance never rewrites epistemic:inferred to epistemic:explicit; proposal-level operational source/provenance never leaks into the accepted record's details, including when the candidate already carries its own source: detail; reject/defer of an inferred candidate makes no authoritative write; an explicit edit_proposal() edit before accept is the only thing that changes the accepted value, with the untouched confidence detail proving accept() itself does not touch either field"
+      - python -m unittest tests.test_inbox -> Ran 36 tests, OK (no lifetxt/inbox.py change was needed; every #941 scenario already passed against the existing apply_proposal()/proposal_item() implementation, which builds the accepted Item strictly from the proposal's own change.details and never reads provenance/source)
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/472
       - https://github.com/Eruhitsuji/lifetxt/issues/490
@@ -5890,6 +5893,8 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/497
       - https://github.com/Eruhitsuji/lifetxt/issues/512
       - https://github.com/Eruhitsuji/lifetxt/issues/514
+      - https://github.com/Eruhitsuji/lifetxt/issues/936
+      - https://github.com/Eruhitsuji/lifetxt/issues/941
     related_pull_requests: []
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
@@ -5979,6 +5984,21 @@ capabilities:
       evolved proposal contract is unmodified; #512 confirmed the two
       contracts are deliberately distinct (external-adapter text mutation vs.
       human-reviewed record creation), not an oversight to unify.
+      #941 (design authority #936, following #940's documented
+      `epistemic:`/`confidence:` convention) verified that acceptance is a
+      write-authority decision only, never a reclassification of a
+      candidate's epistemic origin: `apply_proposal()`/`proposal_item()`
+      build the accepted `Item` strictly from `change["details"]`, and
+      neither reads nor writes `proposal["provenance"]`/`proposal["source"]`
+      into it, so an `inferred` candidate's custom details are appended
+      byte-for-byte and a proposal's own operational `source`/`provenance`
+      can never leak into the accepted record. No preservation defect was
+      found, so no code in `lifetxt/inbox.py` changed -- this pass is
+      test-and-documentation only, per the task's own "prefer tests/docs
+      only" instruction, adding `InboxEpistemicMetadataPreservationTests` as
+      a permanent regression guard and a short "Acceptance is write
+      authorization, not epistemic reclassification" note in
+      `docs/en+ja/inbox.md` pointing at #940's convention section.
     replacement:
       replaces: []
       replaced_by: null

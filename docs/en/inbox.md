@@ -201,6 +201,23 @@ plain accept relies on each proposal's own `staged_target`/`expected_revision`
 captured when it was staged (see [Staleness](#staleness)) rather than a
 caller-supplied revision.
 
+### Acceptance is write authorization, not epistemic reclassification
+
+Accept is a decision about **writing the candidate into authoritative
+life.txt**, not a reinterpretation of how the candidate was originally
+known. If a staged candidate's own item details carry the opt-in
+[`epistemic:`/`confidence:` convention](personal-context.md#5-optional-epistemic-metadata-how-sure-is-this)
+(for example `epistemic:inferred confidence:medium` on an AI-suggested
+Note), accepting it appends those details unchanged — an `inferred`
+candidate is never silently rewritten to `explicit`, and no confidence
+value is invented or removed. A proposal's own operational `source`/
+`provenance` (who/what staged the proposal) is tracked separately from the
+candidate's item details and is never copied into them on accept.
+
+If a reviewer wants a different epistemic status on the accepted record,
+[edit the proposal](#editing-before-acceptance) before accepting it — that
+explicit edit, not acceptance itself, is what changes the value.
+
 ## Staleness
 
 Accepting a proposal checks the workspace against the revision captured when

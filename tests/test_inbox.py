@@ -343,5 +343,158 @@ class InboxIdempotencyTests(unittest.TestCase):
         self.assertEqual(1, len(inbox.list_proposals(self.config)))
 
 
+class InboxEpistemicMetadataPreservationTests(unittest.TestCase):
+    """#941: acceptance is a write-authority decision, not an epistemic
+    reclassification. A candidate's ``epistemic:``/``confidence:`` custom
+    Item details (the #936/#940 opt-in convention) must survive create ->
+    stage -> accept -> reparse unchanged, and proposal-level operational
+    ``source``/``provenance`` must never leak into the accepted record's
+    details."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.store = os.path.join(self.temp.name, "proposals.json")
+        self.target = os.path.join(self.temp.name, "life.txt")
+        self.config = {
+            "inbox": {"proposals_file": self.store},
+            "write_file": self.target,
+        }
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def _accepted_item(self, proposal):
+        inbox.accept(self.config, proposal["id"], self.target)
+        with open(self.target, "r", encoding="utf-8") as handle:
+            content = handle.read()
+        items, diags = parse_text("#! timezone: UTC\n%s" % content)
+        self.assertFalse([d for d in diags if d.severity == "error"], diags)
+        self.assertEqual(1, len(items))
+        return items[0]
+
+    def test_inferred_candidate_details_survive_accept_and_reparse(self):
+        proposal = inbox.stage_create(
+            self.config,
+            "Likely prefers morning meetings",
+            kind="N",
+            details={
+                "epistemic": "inferred",
+                "confidence": "medium",
+                "source": "conversation-123",
+            },
+            source="mcp",
+        )
+
+        item = self._accepted_item(proposal)
+
+        self.assertEqual(["inferred"], item.details.get("epistemic"))
+        self.assertEqual(["medium"], item.details.get("confidence"))
+        self.assertEqual(["conversation-123"], item.details.get("source"))
+
+    def test_acceptance_never_rewrites_inferred_to_explicit(self):
+        proposal = inbox.stage_create(
+            self.config,
+            "Likely prefers morning meetings",
+            kind="N",
+            details={"epistemic": "inferred"},
+        )
+
+        item = self._accepted_item(proposal)
+
+        self.assertEqual(["inferred"], item.details.get("epistemic"))
+        self.assertNotIn("explicit", item.details.get("epistemic", []))
+
+    def test_proposal_level_source_never_leaks_into_accepted_item_details(self):
+        # The staged "source" argument is proposal-level operational
+        # metadata (recorded under proposal["provenance"]["source"]); it
+        # must not silently become or overwrite an epistemic-shaped detail
+        # on the accepted record when the candidate itself carries none.
+        proposal = inbox.stage_create(
+            self.config,
+            "Uses Python regularly",
+            kind="N",
+            details={},
+            source="mcp-suggestion",
+        )
+        self.assertEqual("mcp-suggestion", proposal["provenance"]["source"])
+
+        item = self._accepted_item(proposal)
+
+        self.assertNotIn("epistemic", item.details)
+        self.assertNotIn("confidence", item.details)
+        self.assertNotIn("source", item.details)
+
+    def test_proposal_level_provenance_does_not_overwrite_explicit_item_source(self):
+        # When the candidate *does* carry its own source: detail, staging
+        # under a different proposal-level source must not overwrite it.
+        proposal = inbox.stage_create(
+            self.config,
+            "Alice says she lives in Tokyo",
+            kind="N",
+            details={"source": "message-42", "epistemic": "reported"},
+            source="mcp-suggestion",
+        )
+        self.assertEqual("mcp-suggestion", proposal["provenance"]["source"])
+
+        item = self._accepted_item(proposal)
+
+        self.assertEqual(["message-42"], item.details.get("source"))
+        self.assertEqual(["reported"], item.details.get("epistemic"))
+
+    def test_reject_of_inferred_candidate_makes_no_authoritative_write(self):
+        proposal = inbox.stage_create(
+            self.config,
+            "Likely prefers morning meetings",
+            kind="N",
+            details={"epistemic": "inferred", "confidence": "medium"},
+        )
+
+        inbox.reject(self.config, proposal["id"])
+
+        self.assertFalse(os.path.exists(self.target))
+        self.assertEqual(
+            "rejected", inbox.get_proposal(self.config, proposal["id"])["status"]
+        )
+
+    def test_defer_of_inferred_candidate_makes_no_authoritative_write(self):
+        proposal = inbox.stage_create(
+            self.config,
+            "Likely prefers morning meetings",
+            kind="N",
+            details={"epistemic": "inferred", "confidence": "medium"},
+        )
+
+        inbox.defer(self.config, proposal["id"])
+
+        self.assertFalse(os.path.exists(self.target))
+        self.assertEqual(
+            "deferred", inbox.get_proposal(self.config, proposal["id"])["status"]
+        )
+
+    def test_explicit_reviewer_edit_before_accept_is_the_only_thing_that_changes(self):
+        proposal = inbox.stage_create(
+            self.config,
+            "Likely prefers morning meetings",
+            kind="N",
+            details={"epistemic": "inferred", "confidence": "medium"},
+        )
+
+        # A deliberate, explicit reviewer edit through the existing
+        # edit_proposal path is authoritative for the accepted record --
+        # this is the human explicitly changing the value, not acceptance
+        # itself performing an implicit reclassification.
+        inbox.edit_proposal(
+            self.config, proposal["id"], details={"epistemic": "explicit"}
+        )
+        edited = inbox.get_proposal(self.config, proposal["id"])
+
+        item = self._accepted_item(edited)
+
+        self.assertEqual(["explicit"], item.details.get("epistemic"))
+        # The untouched confidence detail is preserved unchanged, proving
+        # accept() itself did not touch either field on its own.
+        self.assertEqual(["medium"], item.details.get("confidence"))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -89,7 +89,7 @@
     syncViewTabs = function() {
       _beginnerNavSyncViewTabs();
       const more = document.getElementById("nav-more");
-      const advanced = new Set(["agenda", "timeline", "calendar", "focus", "review", "messages", "team", "status", "notifications", "stats", "graph", "server", "display", "kiosk"]);
+      const advanced = new Set(["agenda", "timeline", "calendar", "focus", "review", "messages", "team", "status", "notifications", "stats", "graph", "server", "context", "display", "kiosk"]);
       if (more && advanced.has(currentView())) more.open = true;
       const summary = document.getElementById("nav-more-summary");
       if (summary && more) summary.setAttribute("aria-expanded", more.open ? "true" : "false");

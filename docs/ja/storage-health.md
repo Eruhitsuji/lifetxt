@@ -13,3 +13,9 @@ maintenance推奨時にreview可能な`archive-plan-v1`を生成しますが、�
 生成されるsystemd timerは`Persistent=true`で、再起動後に未実行分を試行します。
 専用oneshot serviceにより重複実行はsystemdのunit単位で直列化されます。
 scheduled backupは別の操作として扱います。
+
+`auto`は別のHigh-assuranceかつ明示的なopt-inモードです。同じfreezeされた
+planを生成した後、既存のrevision/config/selection/reference/recovery検証を
+再実行し、すべて成功した場合だけ既存の`project archive --apply-plan`経路を
+呼び出します。どれか一つでも失敗した場合はblocked/non-successを記録し、
+適用は行いません。`enabled: false`または`mode: off`で無効化できます。

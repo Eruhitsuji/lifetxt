@@ -27,3 +27,9 @@ recommends maintenance. It never applies that plan. The generated systemd
 timer uses `Persistent=true`, so a missed run is attempted after reboot, and
 the dedicated oneshot service prevents overlapping runs through systemd's
 unit serialization. Scheduled backup remains a separate operation.
+
+`auto` is a separate High-assurance, explicit opt-in mode. It generates the
+same frozen plan, re-runs the existing revision/config/selection/reference and
+recovery checks, and only then calls the existing `project archive
+--apply-plan` path. Any error records a blocked/non-success result and performs
+no apply. Disable it by setting `enabled` to `false` or `mode` to `off`.

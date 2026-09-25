@@ -63,6 +63,7 @@ REMOTE_MUTATING_ROUTE_REVISION_CLASSIFICATION = {
     "/api/remote/v1/write-check": "operational",
     _BACKUP_RUN_PATH: "operational",
     "/api/remote/v1/ticket-mutations": "authoritative",
+    "/api/remote/v1/item-mutations": "authoritative",
 }
 _REMOTE_NON_REVISION_WRITE_PATHS = frozenset(
     path

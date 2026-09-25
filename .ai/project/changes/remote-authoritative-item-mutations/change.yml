@@ -14,6 +14,6 @@ change:
 scope:
   in_scope: [protocol-v2 ordinary-item create/update/delete, exact admission, per-file CAS, canonical IDs, replay, Native History evidence]
   out_of_scope: [offline queues, replicas, cross-file batches, attachment bytes, providers, Format migration]
-  write_scope: [lifetxt/remote_item_writes.py, lifetxt/native_history.py, lifetxt/__init__.py, tests/test_remote_item_writes.py, docs/en/remote.md, docs/ja/remote.md, dist/schemas/item-event-v1.schema.json, .ai/project/**]
+  write_scope: [lifetxt/remote_item_writes.py, lifetxt/remote_web.py, lifetxt/native_history.py, lifetxt/__init__.py, tests/test_remote_item_writes.py, tests/test_remote_backup_operations.py, docs/en/remote.md, docs/ja/remote.md, dist/schemas/item-event-v1.schema.json, .ai/project/**]
   forbidden_scope: [.ai/managed/**]
 human_approvals_required: [independent implementation/integration/security review, Merge Authority approval]

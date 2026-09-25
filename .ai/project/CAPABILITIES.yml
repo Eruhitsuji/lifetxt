@@ -11,7 +11,7 @@ capabilities:
     public_interfaces: [POST /api/remote/v1/item-mutations, remote.item_writes_enabled]
     tests_or_evidence: [tests.test_remote_item_writes, tests.test_native_history]
     related_issues: [https://github.com/Eruhitsuji/lifetxt/issues/915, https://github.com/Eruhitsuji/lifetxt/issues/931]
-    related_pull_requests: []
+    related_pull_requests: [https://github.com/Eruhitsuji/lifetxt/pull/935]
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: Online-only single-target mutation; no replicas, tombstones, providers, or attachment transfer.
     replacement: {replaces: [], replaced_by: null, deprecation_issue: null}

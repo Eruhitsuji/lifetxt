@@ -2,6 +2,17 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-multi-device-sync-mutations
+      capability_id: cap-remote-authoritative-item-mutations
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/915
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/931
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/935
+      changed_files_or_scope: [lifetxt/remote_item_writes.py, lifetxt/native_history.py, lifetxt/schema_extensions_v28.py, dist/schemas/item-event-v1.schema.json, tests/test_remote_item_writes.py, docs/en/remote.md, docs/ja/remote.md]
+      tests_or_evidence: [focused Remote/Native History/schema/traceability/change-package suites (73 tests OK), ruff check on changed Python files]
+      release_or_deployment: null
+      notes: High-assurance online-only authoritative mutation path; disabled by default and limited to one configured target.
+      status: implemented
+
     - requirement_id: req-multi-device-sync-snapshot
       capability_id: cap-remote-workspace-sync-snapshot
       epic: https://github.com/Eruhitsuji/lifetxt/issues/915

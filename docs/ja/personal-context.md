@@ -190,12 +190,148 @@ Python is the user's favorite programming language
 推測内容をPersonal Contextにすると将来役立ちそうなら、まずuserへ確認します。
 確認された後は、通常のexplicit candidateとして扱えます。
 
-このガイドでは、新しい `assertion:`、`confidence:`、`subject:` vocabularyを
-導入しません。それらは実利用からstable contractが必要だと分かるまで保留します。
+このガイドでは、新しい `assertion:`、`subject:` vocabularyを導入しません。
+それらは実利用からstable contractが必要だと分かるまで保留します。opt-inで
+factの根拠と確信度を記録する方法については、後述の
+[Optional epistemic metadata](#5-optional-epistemic-metadata-この-recordはどのくらい確からしいか)
+を参照してください。
 
-## 5. Lifecycle: Bootstrap -> Maintain -> Consume
+## 5. Optional epistemic metadata: このrecordはどのくらい確からしいか
 
-### 5.1 Bootstrap
+Personal Context workspaceにrecordが存在するということは、その情報が
+**representされている**ことを意味します。lifetxtがそれを客観的な真実として
+独立に検証した、という意味ではありません。`N`（Note）はrepresentation
+containerです。fact、observation、report、memory、hypothesis、opinion、
+preference、inferenceのどれを保持していても構いません。optionalな
+epistemic metadataは既存recordの解釈を助けるものであり、新しい
+`Knowledge`や`Belief`というrecord kindを作るものではありません。
+
+このconventionは**opt-in**です。新しいFormat 1.0 grammarでも、global
+Query fieldでも、専用のAPI/MCP schema fieldでもなく、ordinaryなcustom
+detail keyを2つ使うだけです。
+
+```text
+epistemic:explicit|observed|reported|derived|inferred
+confidence:low|medium|high
+```
+
+### `epistemic:` origin values
+
+| Value | 意味 |
+| --- | --- |
+| `explicit` | source interactionで、当該の人間/authoritative actorが直接述べたもの。「明示的に述べられた」であり、「独立に検証された」ではありません。 |
+| `observed` | 確率的な解釈stepを挟まない、直接的でdeterministicなobservation/measurement/system signalから得られたもの。 |
+| `reported` | 別の人物/sourceがそのclaimをreportしている場合。lifetxtはそのreportをrepresentするのであり、独立した検証を主張しません。 |
+| `derived` | すでにrepresentされているstructuredな情報からのdeterministicで再現可能な帰結/変換。 |
+| `inferred` | AI推測を含む、確率的・heuristic・model生成のconclusion。 |
+
+`derived` と `inferred` は意図的に区別します。`derived` はworkspace内に
+すでにrepresentされているdataからdeterministicかつ再現可能でなければ
+なりません。一方 `inferred` は、AI推測を含む確率的・heuristic・model生成
+のconclusion全般を指します。
+
+`memory`、`opinion`、`hypothesis`、`assumed` は最初のvocabularyに意図的に
+**含めません**。それぞれ、semantic content type・stance・modalityと
+epistemic originを混ぜてしまうためです -- memoryはexplicitに述べられうる
+し、opinionもexplicitになり得ますし、hypothesisはexplicitに提示される
+こともmodel-inferredなこともあります。これらの区別には `epistemic:` を
+overloadせず、`tag:` やrecord自体の文言を使ってください。
+
+### Optional claim confidence
+
+`confidence:low|medium|high` は、そのrecordのsourceがclaim自体をどれだけ
+確信しているかを表す、別のoptionalでqualitativeなfieldです。
+
+- この最初のconventionでは `low`/`medium`/`high` のみを推奨します。
+  `0.85` のようなnumericでprobability-likeな値は、将来calibrateされた
+  producer固有のuse caseが別途正当化しない限り推奨しません -- 根拠のない
+  numeric値はfalse precisionを生みます；
+- `confidence:` が無いことは **未記録/unknown** を意味し、`low` や
+  `high` の隠れたdefaultではありません；
+- confidenceは `epistemic:` から自動的に推測されることはありません。
+  `explicit` なrecordでもuncertainなことはあります（userが述べたが
+  自信がなかった場合など）し、`inferred` なrecordでもhigh-confidenceで
+  ありながら `explicit` とは区別され続けます。
+
+### Representative examples
+
+```text
+[N] N "Prefers keyboard-driven tools" person:self source:conversation-123 epistemic:explicit
+[N] N "WAN is unavailable" source:router-monitor epistemic:observed
+[N] N "Alice says she lives in Tokyo" source:message-42 epistemic:reported
+[N] N "Quarter ends before review date" source:calendar-record epistemic:derived
+[N] N "Likely prefers morning meetings" source:conversation-123 epistemic:inferred confidence:medium
+```
+
+### このconventionが置き換えないもの
+
+`epistemic:`/`confidence:` は意図的に狭いvocabularyです。このガイドや
+Personal Contextの他の仕組みが既に扱っているconcernと重複させたり、
+混同したりしてはいけません。
+
+| Concern | 既存の仕組み |
+| --- | --- |
+| Source/provenance | `source:`、ID/link、proposal history、Native History、Context Why |
+| Freshness | 既存の `updated:`/staleness behavior |
+| Validity | 既存のtemporal validity/currentness behavior |
+| Correction | 既存の `corrects:` / history-preserving correction |
+| Source reliability | 保留。claim confidenceとは別物です |
+
+Field-level epistemic metadata（record全体ではなく多field recordの1
+fieldだけにmarkする）も、atomicで単一factのPersonal Context recordでは
+不十分だと具体的なuse caseが示すまで保留します。
+
+### Open-world compatibility
+
+- `epistemic:` や `confidence:` が無い既存recordは、そのままvalidで
+  現在の意味を保ちます。
+- epistemic metadataが無いことは、epistemic statusが記録されなかった
+  ことを意味します。inferred、low-confidence、untrusted、invalidだと
+  読み替えてはいけません。
+- `source:`、`updated:`、`corrects:`、currentness、Context Health、
+  Context Why、Capsule、Web onboarding flowは、このconventionを使うか
+  どうかに関わらず、authoritativeなまま変わりません。
+- 古いlifetxt versionは、local `custom_fields` registryが無くても
+  `epistemic:`/`confidence:` を通常のcustom detail metadataとして保持
+  します。data migrationは不要です。
+
+### Optional typed validationとlocal filtering
+
+advanced userは、既存の汎用[`custom_fields`](./config.md#汎用-custom-field)
+設定を使って、この2つのkeyにtyped enum validationをopt-inできます。
+
+```json
+{
+  "custom_fields": {
+    "epistemic": {
+      "type": "enum",
+      "values": ["explicit", "observed", "reported", "derived", "inferred"],
+      "kinds": ["N"],
+      "required": false,
+      "filterable": false
+    },
+    "confidence": {
+      "type": "enum",
+      "values": ["low", "medium", "high"],
+      "kinds": ["N"],
+      "required": false,
+      "filterable": false
+    }
+  }
+}
+```
+
+これは隠れたdefaultではありません。`custom_fields` 自体がoptionalであり、
+そこで宣言したfieldも、workspace ownerが別途選ばない限り `required: false`
+のままoptionalです。どちらかのfieldに `filterable: true` を設定すると、
+**そのworkspace内でのlocalな、config-derivedなQuery認識のみ**が有効に
+なります（そのworkspaceで `lifetxt query "epistemic:inferred"` が使える
+ようになります）。他のどこでも `epistemic:`/`confidence:` がglobalな
+Query/Format vocabularyに昇格するわけではありません。
+
+## 6. Lifecycle: Bootstrap -> Maintain -> Consume
+
+### 6.1 Bootstrap
 
 Bootstrapは、現在AIが利用できる情報から**小さな初期Personal Context**を作る工程です。
 最初からuserの人生全体をmodel化することを目標にしません。
@@ -242,7 +378,7 @@ lifetxt check personal.life.txt
 lifetxt context health personal.life.txt
 ```
 
-### 5.2 Maintain
+### 6.2 Maintain
 
 Personal Contextは毎回full rebuildするのではなく、日常利用の中で少しずつ育てます。
 
@@ -278,7 +414,7 @@ MCP/agent clientなら `--profile assist` で同じproposal-first boundaryを利
 read toolsに加え、追加writeとして許可されるのは `stage_proposal` だけです。MCPは
 便利なautomationですが、このlifecycleの必須条件ではありません。
 
-### 5.3 Consume
+### 6.3 Consume
 
 Personal Contextの価値は、別sessionや別AIが同じ背景を再発見せず利用できることに
 あります。
@@ -312,7 +448,7 @@ Capsuleはdeterministic revisionを持つread-only projectionであり、第二�
 truthではありません。既定ではstale/supersededなPersonal Contextを除外するため、
 過去record全件を無条件にmodelへ渡すより適したhandoff surfaceです。
 
-## 6. 追加する前にreconcileする
+## 7. 追加する前にreconcileする
 
 既存Personal ContextをmaintainするAIは、新情報を次のいずれかに分類します。
 
@@ -328,7 +464,7 @@ truthではありません。既定ではstale/supersededなPersonal Contextを�
 目標は、過去の全発言を永遠にtrueとしてappendするlogではなく、説明可能でmaintain
 できるPersonal Context storeです。
 
-## 7. 最初は1 file、必要になってから分割する
+## 8. 最初は1 file、必要になってから分割する
 
 最小の推奨構成は次だけです。
 
@@ -354,9 +490,9 @@ personal/
 これはworkspace/file organization上の選択にすぎず、新しいPersonal DB storage
 semanticsではありません。lifetxtのmulti-file surfaceから同じcontextとして読めます。
 
-## 8. Worked scenarios
+## 9. Worked scenarios
 
-### 8.1 Chat-only bootstrap
+### 9.1 Chat-only bootstrap
 
 Personal Contextがまだないuserがchat AIへ初期構築を依頼します。AIはprofile、
 preferences、skills、goals、active projectsについてboundedな質問をし、明示された
@@ -365,7 +501,7 @@ durable factだけを抽出します。小さな `N` record集合を提示し、
 
 次のsessionは同じ背景質問を最初から繰り返さず、そのfileを読んで開始できます。
 
-### 8.2 PDF / ZIP / repositoryを使うbootstrap
+### 9.2 PDF / ZIP / repositoryを使うbootstrap
 
 userがresume PDFとproject ZIPを対応可能なchat AIへuploadします。AIはPDFを読み、
 archive内の必要なfileを調べ、durable skill、project responsibility、明示されたgoal
@@ -382,7 +518,7 @@ PDF/ZIP自体はsource materialとして残ります。**このworkflowではlif
 ZIPもparseしていません。** 将来AI clientが新しいfile typeを理解できるように
 なっても、同じPersonal Context authoring policyを利用できます。
 
-### 8.3 継続利用中のcorrection
+### 9.3 継続利用中のcorrection
 
 保存済みrecordに特定のwork styleを好むとあります。数か月後、userが明示的に
 好みが変わったと述べました。
@@ -394,7 +530,7 @@ AIは矛盾するpreferenceをもう1件current factとしてblind appendしま�
 `lifetxt context health` では旧recordがsupersededとして分類され、2つの値を両方current
 として扱うことを避けられます。
 
-### 8.4 別session / 別providerで再利用
+### 9.4 別session / 別providerで再利用
 
 後のAI clientがwork planを作る必要があります。現在のgoals、projects、preferencesを
 含むbounded Context Capsuleを読み、そのfactをplanへ反映します。
@@ -402,7 +538,7 @@ AIは矛盾するpreferenceをもう1件current factとしてblind appendしま�
 同じ `personal.life.txt` は別のMCP client、CLI-driven agent、local model、通常のchat
 workflowからも使えます。provider-specific memoryではなくlifetxtをdurable storeにします。
 
-## 9. AI author向けreview / validation checklist
+## 10. AI author向けreview / validation checklist
 
 Personal Contextをproposal/saveする前に、AIは次を確認します。
 
@@ -424,7 +560,7 @@ lifetxt check personal.life.txt
 lifetxt context health personal.life.txt
 ```
 
-## 10. Non-goals
+## 11. Non-goals
 
 このガイドは次を追加・要求しません。
 
@@ -432,8 +568,12 @@ lifetxt context health personal.life.txt
 - built-in PDF/ZIP/DOCX/OCR ingestion;
 - RAG、embedding、vector storage、bulk source mirroring;
 - provider SDK / provider-specific memory API;
-- first-class `subject:`、`assertion:`、`confidence:`、category field;
-- 例示したtag値をmandatory Query vocabularyへ昇格すること;
+- first-class `subject:`、`assertion:`、category field;
+- `epistemic:`/`confidence:`や、例示したtag値をmandatory Query/Format
+  vocabularyへ昇格すること -- どちらもopt-inなcustom detailのままです
+  （[Optional epistemic metadata](#5-optional-epistemic-metadata-このrecordはどのくらい確からしいか)参照）;
+- field-level epistemic metadata、source reliability scoring、numeric
+  probability calibration;
 - unreviewedなauthoritative AI writeの自動化;
 - MCPの利用必須化。
 

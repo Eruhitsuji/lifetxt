@@ -6629,6 +6629,7 @@ capabilities:
       - req-web-personal-context-projection-preview
       - req-web-personal-context-onboarding
       - req-web-personal-context-stale-inspection
+      - req-personal-context-epistemic-convention
     implementation_locations:
       - lifetxt/personal_context.py
       - lifetxt/webapp.py
@@ -6644,6 +6645,8 @@ capabilities:
       - tests/test_web_personal_context_onboarding.py
       - docs/en/personal-context-toolkit.md
       - docs/ja/personal-context-toolkit.md
+      - docs/en/personal-context.md
+      - docs/ja/personal-context.md
     public_interfaces:
       - lifetxt context health
       - lifetxt context why <id>
@@ -6672,6 +6675,8 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/925
       - https://github.com/Eruhitsuji/lifetxt/issues/926
       - https://github.com/Eruhitsuji/lifetxt/issues/929
+      - https://github.com/Eruhitsuji/lifetxt/issues/936
+      - https://github.com/Eruhitsuji/lifetxt/issues/940
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/553
       - https://github.com/Eruhitsuji/lifetxt/pull/927
@@ -6684,6 +6689,17 @@ capabilities:
       freeform detail convention scoped to this toolkit, not new Format or Query
       vocabulary. `memory correct` stages a replacement Note through Unified
       Inbox and never directly rewrites or deletes the authoritative old record.
+      #940 (design authority #936) documents a second opt-in record-level
+      custom-detail convention -- `epistemic:explicit|observed|reported|
+      derived|inferred` and `confidence:low|medium|high` -- in
+      docs/en+ja/personal-context.md, section "Optional epistemic metadata".
+      It reuses the existing #596 generic `custom_fields` registry for typed
+      enum validation and optional local `filterable:true` Query recognition,
+      and explicitly keeps claim confidence separate from `source:`,
+      `updated:`/staleness, `corrects:`/correction, and currentness, all of
+      which stay unchanged. No new record kind, Format key, global Query
+      field, or API/MCP schema field was added; missing `epistemic:`/
+      `confidence:` remains open-world (unknown, never a hidden default).
     replacement:
       replaces: []
       replaced_by: null

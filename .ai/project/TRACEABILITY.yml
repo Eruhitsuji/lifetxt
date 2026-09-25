@@ -2,6 +2,39 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-personal-context-epistemic-convention
+      capability_id: cap-personal-context-toolkit
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/936
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/940
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/942
+      changed_files_or_scope:
+        - docs/en/personal-context.md
+        - docs/ja/personal-context.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - "schema validation: the documented custom_fields.epistemic/confidence example validates against dist/schemas/config-v1.schema.json via Draft202012Validator"
+        - "python scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> {\"errors\": 0, \"ok\": true}"
+        - "python -m unittest tests.test_release_policy tests.test_surface_runtime.TuiDocumentationDriftTests -> Ran 14 tests, OK"
+        - manual heading/anchor renumbering check (grep for '^## ' confirms no duplicate/skipped section numbers in either language file)
+        - manual cross-reference slug check against scripts/validate_release_docs.py's own slug() algorithm for both the new English anchor and the Japanese anchor (docs/ja/personal-context.md is outside that script's checked-document set)
+      release_or_deployment: null
+      notes: >-
+        Documentation-only convention slice implementing #936's design
+        decision. Adds no Format grammar, `model.KNOWN_KEYS` entry, global
+        Query field, or API/MCP schema field. `epistemic:`/`confidence:` are
+        documented as ordinary opt-in custom details, reusing the existing
+        #596 generic `custom_fields` registry for optional typed enum
+        validation and optional local `filterable:true` Query recognition,
+        and are explicitly kept separate from `source:`/provenance,
+        `updated:`/freshness, currentness/validity, and `corrects:`/
+        correction, all of which are unchanged. `memory`, `opinion`,
+        `hypothesis`, and `assumed` are documented as intentionally outside
+        the first `epistemic:` vocabulary rather than silently conflated
+        with it. Field-level epistemic metadata and source-reliability
+        scoring remain explicit, unimplemented follow-ups.
+      status: implemented
+
     - requirement_id: req-multi-device-sync-cli
       capability_id: cap-remote-authoritative-sync-cli
       epic: https://github.com/Eruhitsuji/lifetxt/issues/915

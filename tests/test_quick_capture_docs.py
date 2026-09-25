@@ -55,7 +55,7 @@ class QuickCaptureDocumentationTests(unittest.TestCase):
 
     def test_established_discovery_pages_link_to_the_guide(self):
         paths = (
-            ROOT / "README.md",
+            ROOT / "readme.md",
             ROOT / "docs" / "en" / "readme.md",
             ROOT / "docs" / "ja" / "readme.md",
             ROOT / "docs" / "en" / "getting-started.md",

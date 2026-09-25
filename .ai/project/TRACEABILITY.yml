@@ -14644,7 +14644,7 @@ traceability:
         - docs/ja/web.md
         - docs/en/ai-integration.md
         - docs/ja/ai-integration.md
-        - README.md
+        - readme.md
         - tests/test_quick_capture_docs.py
       tests_or_evidence:
         - python -m unittest tests.test_quick_capture_docs tests.test_shorthand

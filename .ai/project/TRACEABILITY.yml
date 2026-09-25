@@ -2,6 +2,39 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-philosophy-typed-semantic-frame
+      capability_id: cap-life-philosophy-documentation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/949
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/950
+      pull_request: null
+      changed_files_or_scope:
+        - docs/en/philosophy.md
+        - docs/ja/philosophy.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - 'python scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> {"errors": 0, "ok": true}'
+        - "python -m unittest tests.test_release_policy tests.test_surface_runtime.TuiDocumentationDriftTests -> Ran 14 tests, OK"
+        - "manual anchor/slug check against scripts/validate_release_docs.py's own slug() algorithm for the new Section 9 heading, every renumbered Section 9-12 self-link in both languages, and the cross-file links to personal-context.md#5-optional-epistemic-metadata-..., inbox.md#acceptance-is-write-authorization-not-epistemic-reclassification, and vm.md"
+        - "manual review confirming no inbound anchor references to the old Section 9-11 numbering exist elsewhere in the repository before renumbering (grep across docs/ and readme.md)"
+      release_or_deployment: null
+      notes: >-
+        Documentation-only follow-up to the #949 non-normative-semantics
+        investigation, implemented once the design-doc reflection was
+        explicitly approved. Adds a new Section 9, "A record as a typed
+        semantic frame," to docs/en+ja/philosophy.md documenting
+        `R = <kind, head, arguments, modifiers, relations, context>` as
+        internal design vocabulary only; renumbers the old Sections 9-11
+        to 10-12 in both languages with all internal cross-references
+        updated. No Format, Query, API, MCP, or runtime behavior changed;
+        composes the existing reference-key/temporal-context/Native-History
+        contracts and the #940/#941 epistemic convention rather than
+        duplicating them, and reconfirms the Core-vs-#560-VM execution
+        boundary unchanged. Extends cap-life-philosophy-documentation
+        rather than creating a new capability, per the task's own
+        "no new runtime capability" framing.
+      status: implemented
+
     - requirement_id: req-personal-context-inference-provenance
       capability_id: cap-unified-inbox-proposals
       epic: https://github.com/Eruhitsuji/lifetxt/issues/936

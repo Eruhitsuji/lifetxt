@@ -6,7 +6,7 @@ traceability:
       capability_id: cap-personal-context-toolkit
       epic: https://github.com/Eruhitsuji/lifetxt/issues/936
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/940
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/942
       changed_files_or_scope:
         - docs/en/personal-context.md
         - docs/ja/personal-context.md
@@ -32,8 +32,7 @@ traceability:
         `hypothesis`, and `assumed` are documented as intentionally outside
         the first `epistemic:` vocabulary rather than silently conflated
         with it. Field-level epistemic metadata and source-reliability
-        scoring remain explicit, unimplemented follow-ups. pull_request is
-        filled in once the pull request implementing this entry is opened.
+        scoring remain explicit, unimplemented follow-ups.
       status: implemented
 
     - requirement_id: req-multi-device-sync-cli

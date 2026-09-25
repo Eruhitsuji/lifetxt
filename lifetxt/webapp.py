@@ -58,7 +58,7 @@ from .markdown import item_markdown_payload
 from .model import Diagnostic, Item
 from .notifier import notification_records
 from .parser import parse_text
-from .personal_context import context_capsule
+from .personal_context import context_capsule, context_health
 from .paths import expand_paths
 from .serializer import item_from_dict, item_to_line
 from .status_summary import latest_status_records
@@ -386,11 +386,20 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         return beginner_profile_payload()
 
     @app.get("/api/personal-context")
-    def get_personal_context():
-        """Expose the shared current-only Personal Context projection."""
+    def get_personal_context(include_stale=False):
+        """Expose the shared Personal Context projection, current-only by default."""
         items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
         raise_for_errors(diagnostics)
-        return context_capsule(items, person="self")
+        include_stale_flag = _bool_query(include_stale)
+        result = context_capsule(items, person="self", include_stale=include_stale_flag)
+        health = context_health(items, person="self")
+        result["currentness_counts"] = OrderedDict(
+            (
+                ("current", health["counts"]["current"]),
+                ("stale", health["counts"]["stale"]),
+            )
+        )
+        return result
 
     @app.post("/api/personal-context/preview")
     def preview_personal_context(payload=Body(...)):

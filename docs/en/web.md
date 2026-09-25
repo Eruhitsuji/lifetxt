@@ -87,7 +87,7 @@ tools.
 | `GET` | `/api/health` | Show server paths and writable file |
 | `GET` | `/api/config` | Show public runtime config used by the GUI |
 | `GET` | `/api/items` | List items with optional filters |
-| `GET` | `/api/personal-context` | Return the shared current-only Personal Context capsule for `person:self` |
+| `GET` | `/api/personal-context` | Return the shared current-only Personal Context capsule for `person:self`; `include_stale=true` explicitly adds stale records while keeping other non-current states excluded. The response includes shared `current`/`stale` health counts. |
 | `POST` | `/api/personal-context/preview` | Validate up to 25 bootstrap facts and preview their exact ordinary Note records without writing or assigning IDs |
 | `POST` | `/api/items/parse` | Parse a raw life.txt line/body block and return parsed item data without writing |
 | `POST` | `/api/items/raw` | Append a validated raw life.txt line to the writable file |
@@ -898,9 +898,12 @@ Saving is deliberately sequential through the existing `POST /api/items`
 route. If one write fails, the page reports saved, failed, and remaining counts
 and keeps every unsaved fact editable; it does not claim batch atomicity. In a
 read-only server, current context and preview remain available but Save is
-disabled. The overview uses the same current-only Context Capsule resolver as
-the CLI and MCP surfaces, so superseded or otherwise non-current records are
-not silently presented as current.
+disabled. The overview uses the same Context Capsule and health/currentness
+resolvers as the CLI and MCP surfaces. It is current-only by default. **Show
+stale** explicitly adds visually marked stale facts and exposes current/stale
+counts; it neither changes `updated:` nor promotes stale facts to current.
+Superseded, expired, future-effective, conflicting, and historical-only records
+remain excluded.
 
 ## Completing a task with a date or time
 

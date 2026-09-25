@@ -23,17 +23,23 @@ class WebPersonalContextOnboardingTests(unittest.TestCase):
         self.assertIn('aria-labelledby="personal-context-heading"', self.html)
 
     def test_ui_uses_projection_preview_and_authoritative_item_write_routes(self):
-        self.assertIn('api("/api/personal-context")', self.js)
+        self.assertIn("api(`/api/personal-context", self.js)
+        self.assertIn("?include_stale=true", self.js)
         self.assertIn('api("/api/personal-context/preview"', self.js)
         self.assertIn('api("/api/items"', self.js)
         self.assertNotIn("/api/personal-context/save", self.js)
         self.assertIn("personalContextReadOnly", self.js)
         self.assertIn("remainingRecords", self.js)
+        self.assertIn("currentness_counts", self.js)
+        self.assertIn("personal-context-stale-badge", self.js)
+        self.assertIn('label: "Other context"', self.js)
+        self.assertIn('id="personal-context-include-stale"', self.html)
 
     def test_responsive_and_accessible_contract_is_present(self):
         for width in (760, 430):
             self.assertIn("@media (max-width: %dpx)" % width, self.css)
         self.assertIn("min-height: 44px", self.css)
+        self.assertIn(".personal-context-stale-badge", self.css)
         self.assertIn('aria-live="assertive"', self.html)
         self.assertIn('role="status"', self.html)
         self.assertIn(

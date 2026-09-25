@@ -606,9 +606,9 @@ def _shlex_quote(value):
 def _validate_maintenance_schedule_config(config, source_path):
     schedule = config.get("maintenance_schedule") or {}
     mode = schedule.get("mode", "off")
-    if mode not in ("off", "warn", "plan"):
+    if mode not in ("off", "warn", "plan", "auto"):
         raise ServerInitError(
-            "Config %s: maintenance_schedule.mode must be off, warn, or plan."
+            "Config %s: maintenance_schedule.mode must be off, warn, plan, or auto."
             % source_path,
             step="load_config",
         )
@@ -625,7 +625,7 @@ def _validate_maintenance_schedule_config(config, source_path):
             % source_path,
             step="load_config",
         )
-    if mode == "plan" and schedule.get("enabled") and not schedule.get("project"):
+    if mode in ("plan", "auto") and schedule.get("enabled") and not schedule.get("project"):
         raise ServerInitError(
             "Config %s: plan maintenance_schedule requires project." % source_path,
             step="load_config",

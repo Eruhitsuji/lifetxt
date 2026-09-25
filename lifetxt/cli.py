@@ -1647,7 +1647,7 @@ def build_parser():
     mnt_run = maintenance_subparsers.add_parser(
         "run", help="Run read-only scheduled Storage Health/plan maintenance."
     )
-    mnt_run.add_argument("--mode", choices=("off", "warn", "plan"), default="off")
+    mnt_run.add_argument("--mode", choices=("off", "warn", "plan", "auto"), default="off")
     mnt_run.add_argument("--project")
     mnt_run.add_argument("--emit-plan")
     mnt_run.add_argument("--result")
@@ -13763,7 +13763,7 @@ def command_maintenance_plan(args):
 
 
 def command_maintenance_run(args):
-    """Run one non-mutating scheduled maintenance attempt."""
+    """Run one maintenance attempt; ``auto`` is explicit fail-closed apply."""
     mode = getattr(args, "mode", "off")
     if mode == "off":
         return 0
@@ -13779,8 +13779,14 @@ def command_maintenance_run(args):
     health = __import__("lifetxt.storage_health", fromlist=["measure"]).measure(
         paths, _normalize_paths(health_args.archive, config)
     )
-    result = {"mode": mode, "health": health, "plan_path": None, "mutated": False}
-    if mode == "plan" and health["status"] == "maintenance_recommended":
+    result = {
+        "mode": mode,
+        "health": health,
+        "plan_path": None,
+        "mutated": False,
+        "outcome": "no-op",
+    }
+    if mode in ("plan", "auto") and health["status"] == "maintenance_recommended":
         project = getattr(args, "project", None)
         emit_plan = getattr(args, "emit_plan", None)
         if not project or not emit_plan:
@@ -13793,11 +13799,26 @@ def command_maintenance_run(args):
                 preserve_structure=False, block_on_external_refs=False,
                 emit_plan=emit_plan, format="json", config=getattr(args, "config", None)
             )
-            code = command_maintenance_plan(plan_args)
-            if code == 0:
-                result["plan_path"] = emit_plan
-            else:
-                result["error"] = "maintenance plan generation failed"
+            try:
+                from .mutation import FileLock
+
+                with FileLock(paths[0], operation="maintenance.auto"):
+                    code = command_maintenance_plan(plan_args)
+                    if code == 0:
+                        result["plan_path"] = emit_plan
+                        result["outcome"] = "planned"
+                        if mode == "auto":
+                            apply_args = argparse.Namespace(
+                                config=getattr(args, "config", None), yes=True
+                            )
+                            _project_archive_apply_plan(apply_args, config, emit_plan)
+                            result["outcome"] = "applied"
+                            result["applied"] = True
+                    else:
+                        result["error"] = "maintenance plan generation failed"
+            except Exception as exc:
+                result["error"] = str(exc)
+                result["outcome"] = "blocked"
     if getattr(args, "result", None):
         with open(args.result, "w", encoding="utf-8") as handle:
             json.dump(result, handle, ensure_ascii=False, indent=2)

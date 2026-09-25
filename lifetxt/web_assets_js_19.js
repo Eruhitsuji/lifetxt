@@ -81,8 +81,26 @@
       target.innerHTML = groups.map(group => {
         const rows = group.rows;
         if (!rows.length) return "";
-        return `<div class="personal-context-group"><h4>${t(group.label)} <span>${rows.length}</span></h4><ul data-no-i18n>${rows.map(row => `<li class="${row.stale ? "personal-context-stale" : ""}"><span>${escapeHtml(row.title || "")}</span>${row.stale ? `<span class="personal-context-stale-badge">${escapeHtml(t("Stale"))}</span>` : ""}</li>`).join("")}</ul></div>`;
+        return `<div class="personal-context-group"><h4>${t(group.label)} <span>${rows.length}</span></h4><ul data-no-i18n>${rows.map(row => `<li class="${row.stale ? "personal-context-stale" : ""}"><span>${escapeHtml(row.title || "")}</span>${row.stale ? `<span class="personal-context-stale-badge">${escapeHtml(t("Stale"))}</span><button type="button" class="secondary personal-context-reconfirm" data-personal-context-id="${escapeHtml(row.id || "")}" onclick="reconfirmPersonalContext(this.dataset.personalContextId)">${escapeHtml(t("Still correct"))}</button>` : ""}</li>`).join("")}</ul></div>`;
       }).join("") || `<div class="empty">${t("No current Personal Context yet.")}</div>`;
+    }
+
+    async function reconfirmPersonalContext(itemId) {
+      if (!itemId) return;
+      const feedback = document.getElementById("personal-context-feedback");
+      if (feedback) feedback.textContent = t("Reconfirming…");
+      try {
+        const target = document.getElementById("personal-context-current");
+        const sourceRevision = target?.dataset.personalContextSourceRevision || "";
+        await api(`/api/personal-context/${encodeURIComponent(itemId)}/reconfirm`, {
+          method: "POST",
+          body: JSON.stringify({expected_source_revision: sourceRevision}),
+        });
+        if (feedback) feedback.textContent = t("Reconfirmed.");
+        await loadPersonalContext();
+      } catch (error) {
+        if (feedback) feedback.textContent = error.message;
+      }
     }
 
     async function loadMorePersonalContext() {
@@ -120,6 +138,7 @@
         if (target) {
           target.dataset.personalContextOffset = String(data.offset || 0);
           target.dataset.personalContextItems = JSON.stringify(data.items || []);
+          target.dataset.personalContextSourceRevision = data.source_revision || "";
         }
         const save = document.getElementById("personal-context-save-btn");
         if (save) save.disabled = personalContextReadOnly;

@@ -6716,6 +6716,7 @@ capabilities:
       - req-web-personal-context-onboarding
       - req-web-personal-context-stale-inspection
       - req-web-personal-context-pagination
+      - req-web-personal-context-reconfirm
       - req-personal-context-epistemic-convention
     implementation_locations:
       - lifetxt/personal_context.py
@@ -6742,6 +6743,7 @@ capabilities:
       - lifetxt decisions
       - GET /api/personal-context
       - POST /api/personal-context/preview
+      - POST /api/personal-context/{id}/reconfirm
       - Web More > Personal Context
       - GET /api/personal-context?limit=100&offset=100
     tests_or_evidence:
@@ -6751,6 +6753,7 @@ capabilities:
       - tests/test_web_personal_context.py
       - tests/test_web_personal_context_onboarding.py
       - bounded API pagination and Web Load more coverage in PR #955
+      - exact-ID CAS reconfirmation and stale-to-current Web coverage in PR #958
       - PR #553 CI
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/500

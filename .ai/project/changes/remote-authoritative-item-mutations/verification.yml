@@ -1,0 +1,14 @@
+schema_version: 1
+verification:
+  executed:
+    - type: unit-integration
+      command: python -m unittest tests.test_remote_item_writes and focused Remote/Native History suites
+      requirement_ids: [req-multi-device-sync-mutations]
+      result: Ran 48 tests -- OK
+      commit: 47b2d7e
+      executed_at: '2026-09-25'
+      status: passed
+  gaps: []
+review_ledger:
+  - {reviewer: Codex implementer self-review, review_type: implementation-security-integration, target_commit: 47b2d7e, result: passed-informational-only, finding_count: 0, completed_at: '2026-09-25'}
+  - {reviewer: independent reviewer, review_type: implementation-and-integration, target_commit: pending, result: pending, finding_count: 0, completed_at: null}

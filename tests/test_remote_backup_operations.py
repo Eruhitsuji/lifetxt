@@ -142,6 +142,12 @@ class RemoteBackupOperationTests(unittest.TestCase):
                 "/api/remote/v1/ticket-mutations"
             ],
         )
+        self.assertEqual(
+            "authoritative",
+            REMOTE_MUTATING_ROUTE_REVISION_CLASSIFICATION[
+                "/api/remote/v1/item-mutations"
+            ],
+        )
 
     def test_observe_mode_backup_run_does_not_record_legacy_fallback(self):
         client = self._client_with_revision_mode("observe")

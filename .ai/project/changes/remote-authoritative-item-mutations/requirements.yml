@@ -1,0 +1,13 @@
+schema_version: 1
+requirements:
+  - id: req-multi-device-sync-mutations
+    kind: ADDED
+    statement: Authenticated protocol-v2 clients can mutate one authoritative ordinary item only from an exact current revision, with durable replay and history evidence.
+    acceptance_criteria:
+      - Exact If-Match, write scope, opt-in, and one write target are required.
+      - Create assigns an authority-owned ID; update/delete require a unique ID.
+      - Stale, duplicate, malformed, forbidden, and transaction-reuse requests make no write.
+      - Operation and evidence commit in one CAS.
+    constraints: [no offline or multi-file mutation behavior]
+    owner: Eruhitsuji
+open_questions: []

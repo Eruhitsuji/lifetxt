@@ -236,7 +236,7 @@ including its `--json` machine-readable form for scripts and AI clients.
 | Getting Started / Daily | `tour`, `help`, `init`, `quick` (`add`), `today`, `next`, `agenda`, `show`, `edit`, `done`, `complete`, `progress`, `clone`, `reopen`, `due`, `review`, `assist`, `state`, `start`, `stop`, `assign`, `timer`, `notify` |
 | Query / Explore | `filter`, `search`, `find`, `query`, `view`, `summary`, `inbox`, `health`, `temporal`, `timeline`, `history-check`, `thread`, `lifecycle-stats`, `freebusy`, `count`, `status`, `recent`, `item-uri` |
 | Projects / People / Collaboration | `project`, `portfolio`, `area`, `person`, `group`, `who`, `message`, `proposal`, `ticket`, `version`, `sprint` |
-| Structure / Data Integrity | `check`, `integrity`, `ids`, `links`, `backlinks`, `sources`, `tag`, `lint`, `deps`, `diff`, `snapshot`, `undo`, `cleanup`, `files` |
+| Structure / Data Integrity | `check`, `integrity`, `maintenance`, `storage`, `ids`, `links`, `backlinks`, `sources`, `tag`, `lint`, `deps`, `diff`, `snapshot`, `undo`, `cleanup`, `files` |
 | Import / Export / Reports | `convert`, `import`, `export`, `import-ics`, `sync-ics`, `to-json`, `to-jsonl`, `to-csv`, `from-json`, `from-jsonl`, `from-csv`, `from-markdown`, `from-todo`, `to-ics`, `markdown`, `stats`, `plot`, `export-heatmap`, `standup`, `invoice`, `share`, `digest`, `report` |
 | Interfaces / Integration | `tui`, `fzf`, `web`, `serve`, `mcp`, `ai`, `completion`, `git-hook`, `watch`, `remote` |
 | Workspace / Configuration / Safety | `config`, `workspace`, `path`, `doctor`, `format`, `safety`, `capabilities`, `attachment`, `update`, `update-check`, `server-init`, `server-update`, `server-report`, `git-commit-worker`, `backup` |
@@ -4137,7 +4137,7 @@ warrant a dedicated guide:
 | `next`, `show`, `edit`, `path`, `count`, `invoice`, `standup`, `to-ics`, `from-todo` | [new-cli-workflows.md](new-cli-workflows.md) |
 | `safety locks\|serve-target\|timezone\|revisions\|transactions\|write-routes\|release-gate`, `attachment put\|reference\|delete\|status`, `format info\|check\|canon\|schemas`, `capabilities` | [release-safety-foundations.md](release-safety-foundations.md) |
 | `workspace` (in depth), named-workspace configuration | [config.md](config.md#named-workspaces) |
-| `project`, `portfolio`, `project archive`, `project tickets` | [projects.md](projects.md), [ticket-projects.md](ticket-projects.md) |
+| `project`, `portfolio`, `project archive`, `project tickets`, `maintenance` | [projects.md](projects.md), [ticket-projects.md](ticket-projects.md) |
 | `query`, `view` (saved queries) | [query.md](query.md) |
 | `person`, `message`, `group` | [people.md](people.md), [messaging.md](messaging.md) |
 | `proposal` (Unified Inbox) | [inbox.md](inbox.md) |

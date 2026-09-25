@@ -476,6 +476,16 @@ def build_parser():
     )
     check.set_defaults(func=command_check)
 
+    storage = subparsers.add_parser("storage", help="Read-only storage diagnostics.")
+    storage_subparsers = storage.add_subparsers(dest="storage_command")
+    storage_health = storage_subparsers.add_parser(
+        "health", help="Inspect Storage Health without changing any file."
+    )
+    _add_input_paths(storage_health)
+    storage_health.add_argument("--archive", action="append", default=[])
+    storage_health.add_argument("--json", action="store_true")
+    storage_health.set_defaults(func=command_storage_health)
+
     integrity = subparsers.add_parser(
         "integrity",
         help="Run a read-only aggregate data-integrity report.",
@@ -1539,6 +1549,111 @@ def build_parser():
         ),
     )
     proj_archive.set_defaults(func=command_project_archive)
+
+    maintenance_command = subparsers.add_parser(
+        "maintenance",
+        help="Plan-only workspace maintenance orchestration over archive-plan-v1.",
+    )
+    maintenance_subparsers = maintenance_command.add_subparsers(
+        dest="maintenance_command"
+    )
+
+    mnt_plan = maintenance_subparsers.add_parser(
+        "plan",
+        help=(
+            "Generate a reviewable archive-plan-v1 document for one project's "
+            "done/canceled records without changing any workspace file."
+        ),
+    )
+    mnt_plan.add_argument("name", help="Project name.")
+    _add_input_paths(mnt_plan)
+    mnt_plan.add_argument(
+        "--dest",
+        help="Archive file the plan would append items to. Defaults to the "
+        "active workspace's role: archive source.",
+    )
+    mnt_plan.add_argument(
+        "--workspace", help="Named workspace to resolve sources/destination from."
+    )
+    mnt_plan.add_argument(
+        "--status",
+        action="append",
+        dest="statuses",
+        metavar="STATUS",
+        help=(
+            "Only select items with this status. Can be repeated or "
+            "comma-separated. Defaults to done,canceled."
+        ),
+    )
+    mnt_plan.add_argument(
+        "--before",
+        metavar="DATE",
+        help="Only select items whose done: or updated: date is before DATE "
+        "(YYYY-MM-DD).",
+    )
+    mnt_plan.add_argument(
+        "--max-items",
+        type=int,
+        dest="max_items",
+        metavar="N",
+        help="Maximum number of items to select.",
+    )
+    mnt_plan.add_argument(
+        "--copy",
+        action="store_true",
+        help="Plan a copy instead of a move (items would stay in the source file).",
+    )
+    mnt_plan.add_argument(
+        "--orphan-children",
+        dest="orphan_children",
+        choices=("block", "adopt", "promote"),
+        default="block",
+        help=(
+            "How to handle open children of selected parents: "
+            "block (default) refuses to select, "
+            "adopt selects open children together, "
+            "promote selects the parent only."
+        ),
+    )
+    mnt_plan.add_argument(
+        "--preserve-structure",
+        action="store_true",
+        dest="preserve_structure",
+        help="Preserve comment/blank lines in the eventual archive parameters.",
+    )
+    mnt_plan.add_argument(
+        "--block-on-external-refs",
+        action="store_true",
+        dest="block_on_external_refs",
+        help="Treat references to selected items as a block reason instead of "
+        "a warning.",
+    )
+    mnt_plan.add_argument(
+        "--emit-plan",
+        required=True,
+        metavar="PATH",
+        dest="emit_plan",
+        help=(
+            "Write the schema-valid archive-plan-v1 JSON document to PATH. "
+            "Use `lifetxt project archive --apply-plan PATH` to review and "
+            "later apply it; this command never applies a plan."
+        ),
+    )
+    mnt_plan.add_argument(
+        "--format", choices=("text", "json"), default="text", help="Output format."
+    )
+    mnt_plan.set_defaults(func=command_maintenance_plan)
+
+    mnt_run = maintenance_subparsers.add_parser(
+        "run", help="Run read-only scheduled Storage Health/plan maintenance."
+    )
+    mnt_run.add_argument("--mode", choices=("off", "warn", "plan"), default="off")
+    mnt_run.add_argument("--project")
+    mnt_run.add_argument("--emit-plan")
+    mnt_run.add_argument("--result")
+    _add_input_paths(mnt_run)
+    mnt_run.add_argument("--archive", action="append", default=[])
+    mnt_run.set_defaults(func=command_maintenance_run)
 
     portfolio_command = subparsers.add_parser(
         "portfolio", help="Compare projects by state, progress, risk, and workload."
@@ -4978,6 +5093,26 @@ _W225_GUIDANCE = (
     "  Hint: To resolve W225, either (1) close children manually, "
     "(2) run archive --orphan-children adopt, or (3) run archive --orphan-children promote."
 )
+
+
+def command_storage_health(args):
+    from .storage_health import measure
+
+    config = _config(args)
+    paths = _normalize_paths(getattr(args, "paths", []) or [], config)
+    if not paths:
+        paths = _normalize_paths(["life.txt"], config)
+    archive_paths = _normalize_paths(getattr(args, "archive", []) or [], config)
+    result = measure(paths, archive_paths)
+    if getattr(args, "json", False):
+        write_text(None, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+    else:
+        write_text(None, "Storage Health: %s\n" % result["status"])
+        for key in ("active_bytes", "active_records", "archive_bytes", "archive_records", "parse_duration_ms"):
+            write_text(None, "%s: %s\n" % (key, result[key]))
+        if result["reasons"]:
+            write_text(None, "reasons: %s\n" % ", ".join(result["reasons"]))
+    return 0
 
 
 def command_check(args):
@@ -13366,6 +13501,39 @@ def command_project_archive(args):
         return _project_archive_apply_plan(args, config, apply_plan_path)
 
     config = _config(args)
+    paths, dest, workspace_name = _resolve_project_archive_workspace_inputs(
+        args, config
+    )
+
+    archive_args = argparse.Namespace(
+        paths=paths,
+        dest=dest,
+        revision=getattr(args, "revision", None) or [],
+        statuses=getattr(args, "statuses", None),
+        before=getattr(args, "before", None),
+        max_items=getattr(args, "max_items", None),
+        dry_run=getattr(args, "dry_run", False),
+        copy=getattr(args, "copy", False),
+        yes=getattr(args, "yes", False),
+        orphan_children=getattr(args, "orphan_children", "block"),
+        preserve_structure=getattr(args, "preserve_structure", False),
+        block_on_external_refs=getattr(args, "block_on_external_refs", False),
+        project_filter=args.name,
+        config=getattr(args, "config", None),
+        config_data=config,
+        workspace=workspace_name,
+    )
+    if emit_plan_path:
+        _project_archive_emit_plan(archive_args, config, emit_plan_path)
+    return command_archive(archive_args)
+
+
+def _resolve_project_archive_workspace_inputs(args, config):
+    """Resolve source paths, destination, and workspace name shared by
+    ``project archive`` and ``maintenance plan`` (#946), which both need the
+    same workspace-based source/destination resolution before selecting
+    archive candidates.
+    """
     from .workspace import resolve_workspace, workspace_resolution_active
 
     workspace_name = getattr(args, "workspace", None)
@@ -13404,27 +13572,7 @@ def command_project_archive(args):
     if not paths:
         raise ValueError("No source files specified.")
 
-    archive_args = argparse.Namespace(
-        paths=paths,
-        dest=dest,
-        revision=getattr(args, "revision", None) or [],
-        statuses=getattr(args, "statuses", None),
-        before=getattr(args, "before", None),
-        max_items=getattr(args, "max_items", None),
-        dry_run=getattr(args, "dry_run", False),
-        copy=getattr(args, "copy", False),
-        yes=getattr(args, "yes", False),
-        orphan_children=getattr(args, "orphan_children", "block"),
-        preserve_structure=getattr(args, "preserve_structure", False),
-        block_on_external_refs=getattr(args, "block_on_external_refs", False),
-        project_filter=args.name,
-        config=getattr(args, "config", None),
-        config_data=config,
-        workspace=workspace_name,
-    )
-    if emit_plan_path:
-        _project_archive_emit_plan(archive_args, config, emit_plan_path)
-    return command_archive(archive_args)
+    return paths, dest, workspace_name
 
 
 def _archive_plan_blocking_reason(selection, args):
@@ -13438,14 +13586,25 @@ def _archive_plan_blocking_reason(selection, args):
     return None
 
 
-def _project_archive_emit_plan(archive_args, config, emit_plan_path):
-    """Write an ``archive-plan-v1`` document for the current selection.
+def _project_archive_emit_plan(
+    archive_args, config, emit_plan_path, selection=None, quiet=False
+):
+    """Write an ``archive-plan-v1`` document for the current selection and
+    return the built plan dict, or ``None`` when nothing was written.
 
     Purely additive: computed from the same ``archive_args``/``selection``
     ``command_archive`` is about to print from, so it never changes the
     existing dry-run text output. Nothing is written when the selection
     would not itself proceed (no candidates, orphan-blocked, or blocked by
     external references), matching "no other change" for --emit-plan.
+
+    ``selection`` lets a caller that already computed ``_archive_select``
+    for its own reporting (``maintenance plan``, #946) reuse it instead of
+    re-parsing every source file a second time. ``quiet`` suppresses this
+    function's own stdout/stderr confirmation lines for a caller that
+    prints its own summary instead (also #946); ``project archive
+    --emit-plan`` itself always passes neither, preserving its existing
+    output exactly.
     """
     from . import archive_plan_v1
     from .config_writer import config_revision as _config_revision_of
@@ -13453,11 +13612,13 @@ def _project_archive_emit_plan(archive_args, config, emit_plan_path):
     from .timezone_policy import utcnow
     from .workspace import active_workspace_name
 
-    selection = _archive_select(archive_args, config)
+    if selection is None:
+        selection = _archive_select(archive_args, config)
     reason = _archive_plan_blocking_reason(selection, archive_args)
     if reason:
-        sys.stderr.write("No archive plan written: %s.\n" % reason)
-        return
+        if not quiet:
+            sys.stderr.write("No archive plan written: %s.\n" % reason)
+        return None
 
     dest_abs = os.path.abspath(archive_args.dest)
     dest_snapshot = read_text_snapshot(dest_abs, allow_missing=True)
@@ -13498,7 +13659,152 @@ def _project_archive_emit_plan(archive_args, config, emit_plan_path):
         now_iso=now_iso,
     )
     archive_plan_v1.write_plan(emit_plan_path, plan)
-    sys.stdout.write("Archive plan written to %s.\n" % emit_plan_path)
+    if not quiet:
+        sys.stdout.write("Archive plan written to %s.\n" % emit_plan_path)
+    return plan
+
+
+def command_maintenance_plan(args):
+    """Plan-only workspace maintenance orchestration over ``archive-plan-v1``
+    (#946).
+
+    A thin orchestration layer over ``lifetxt project archive --dry-run
+    --emit-plan``: it resolves the same workspace-based source/destination
+    inputs and reuses the identical ``project archive`` candidate-selection
+    policy and ``archive-plan-v1`` builder (:func:`_project_archive_emit_plan`)
+    unchanged, then reports why maintenance was requested, which selection
+    policy applied, the candidate count and any block reason, and that no
+    workspace file was changed.
+
+    This command never mutates a workspace source or destination file --
+    the only file it can write is the new ``archive-plan-v1`` plan document
+    itself. Review the plan, then apply it with the existing, independently
+    re-verified ``lifetxt project archive --apply-plan PLAN`` path; this
+    command never applies a plan itself.
+    """
+    config = _config(args)
+    paths, dest, workspace_name = _resolve_project_archive_workspace_inputs(
+        args, config
+    )
+
+    archive_args = argparse.Namespace(
+        paths=paths,
+        dest=dest,
+        statuses=getattr(args, "statuses", None),
+        before=getattr(args, "before", None),
+        max_items=getattr(args, "max_items", None),
+        copy=getattr(args, "copy", False),
+        orphan_children=getattr(args, "orphan_children", "block"),
+        preserve_structure=getattr(args, "preserve_structure", False),
+        block_on_external_refs=getattr(args, "block_on_external_refs", False),
+        project_filter=args.name,
+        config=getattr(args, "config", None),
+        config_data=config,
+        workspace=workspace_name,
+    )
+
+    selection = _archive_select(archive_args, config)
+    reason = _archive_plan_blocking_reason(selection, archive_args)
+    reason_text = (
+        "explicit operator request via `lifetxt maintenance plan` "
+        "(no automatic Storage Health recommendation is available yet; see #945)"
+    )
+    policy_text = (
+        "project archive selection (status=%s, before=%s, max_items=%s, "
+        "orphan_children=%s, block_on_external_refs=%s)"
+        % (
+            ",".join(selection.statuses),
+            archive_args.before or "(none)",
+            archive_args.max_items if archive_args.max_items is not None else "(none)",
+            archive_args.orphan_children,
+            bool(archive_args.block_on_external_refs),
+        )
+    )
+
+    plan = None
+    if reason is None:
+        plan = _project_archive_emit_plan(
+            archive_args, config, args.emit_plan, selection=selection, quiet=True
+        )
+
+    if args.format == "json":
+        record = OrderedDict(
+            [
+                ("project", args.name),
+                ("workspace", workspace_name),
+                ("reason", reason_text),
+                ("policy", policy_text),
+                ("sources", paths),
+                ("destination", dest),
+                ("candidate_count", len(selection.candidates)),
+                ("blocked", reason),
+                ("plan_path", args.emit_plan if plan is not None else None),
+                ("mutated", False),
+            ]
+        )
+        write_text(None, json.dumps(record, ensure_ascii=False, indent=2) + "\n")
+        return 0 if plan is not None else 1
+
+    write_text(None, "Maintenance requested: %s\n" % reason_text)
+    write_text(None, "Project: %s\n" % args.name)
+    write_text(None, "Selection policy: %s\n" % policy_text)
+    write_text(None, "Candidates: %d item(s)\n" % len(selection.candidates))
+    if reason is not None:
+        write_text(None, "No plan written: %s.\n" % reason)
+        write_text(None, "No workspace file was changed.\n")
+        return 1
+    write_text(None, "Plan written to %s.\n" % args.emit_plan)
+    write_text(
+        None,
+        "No workspace file was changed. Review the plan, then apply it with:\n"
+        "  lifetxt project archive --apply-plan %s\n" % args.emit_plan,
+    )
+    return 0
+
+
+def command_maintenance_run(args):
+    """Run one non-mutating scheduled maintenance attempt."""
+    mode = getattr(args, "mode", "off")
+    if mode == "off":
+        return 0
+    health_args = argparse.Namespace(
+        paths=getattr(args, "paths", []) or [],
+        archive=getattr(args, "archive", []) or [],
+        json=True,
+        config=getattr(args, "config", None),
+        workspace=getattr(args, "workspace", None),
+    )
+    config = _config(args)
+    paths = _normalize_paths(health_args.paths or ["life.txt"], config)
+    health = __import__("lifetxt.storage_health", fromlist=["measure"]).measure(
+        paths, _normalize_paths(health_args.archive, config)
+    )
+    result = {"mode": mode, "health": health, "plan_path": None, "mutated": False}
+    if mode == "plan" and health["status"] == "maintenance_recommended":
+        project = getattr(args, "project", None)
+        emit_plan = getattr(args, "emit_plan", None)
+        if not project or not emit_plan:
+            result["error"] = "plan mode requires --project and --emit-plan"
+        else:
+            plan_args = argparse.Namespace(
+                name=project, paths=health_args.paths, dest=None,
+                workspace=getattr(args, "workspace", None), statuses=None,
+                before=None, max_items=None, copy=False, orphan_children="block",
+                preserve_structure=False, block_on_external_refs=False,
+                emit_plan=emit_plan, format="json", config=getattr(args, "config", None)
+            )
+            code = command_maintenance_plan(plan_args)
+            if code == 0:
+                result["plan_path"] = emit_plan
+            else:
+                result["error"] = "maintenance plan generation failed"
+    if getattr(args, "result", None):
+        with open(args.result, "w", encoding="utf-8") as handle:
+            json.dump(result, handle, ensure_ascii=False, indent=2)
+            handle.write("\n")
+    else:
+        write_text(None, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+    return 1 if result.get("error") else 0
 
 
 def _project_archive_apply_plan(args, config, apply_plan_path):

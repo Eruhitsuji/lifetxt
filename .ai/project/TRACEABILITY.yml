@@ -13552,6 +13552,102 @@ traceability:
         release; it packages whatever had already merged to main.
       status: implemented
 
+    - requirement_id: req-storage-health-readonly
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/937
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/945
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/953
+      changed_files_or_scope:
+        - lifetxt/storage_health.py
+        - lifetxt/cli.py
+        - tests/test_storage_health.py
+        - docs/en/storage-health.md
+        - docs/ja/storage-health.md
+      tests_or_evidence:
+        - "tests.test_storage_health -> 2 tests, OK"
+        - "lifetxt storage health --json examples/minimal_life.txt -> schema-valid read-only result"
+      release_or_deployment: null
+      notes: >-
+        Read-only Storage Health facts and conservative advisory thresholds
+        derived from #944 evidence. No source, archive, backup, index, or
+        metrics-history mutation is performed.
+      status: implemented
+
+    - requirement_id: req-storage-maintenance-schedule
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/937
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/947
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/953
+      changed_files_or_scope:
+        - lifetxt/server_init.py
+        - lifetxt/cli.py
+        - tests/test_server_maintenance.py
+        - docs/en/storage-health.md
+        - docs/ja/storage-health.md
+      tests_or_evidence:
+        - "tests.test_server_maintenance -> 2 tests, OK"
+        - "generated warn/plan systemd units use Persistent=true and never archive --apply"
+        - "maintenance modes validate off/warn/plan and default to off"
+      release_or_deployment: null
+      notes: >-
+        Dedicated opt-in systemd oneshot service/timer for non-mutating health
+        and reviewable plan generation. It reuses the existing maintenance-plan
+        and archive-plan-v1 paths, keeps backup scheduling separate, and does
+        not add an in-process lifetxt serve scheduler.
+      status: implemented
+
+    - requirement_id: req-storage-maintenance-plan
+      capability_id: cap-project-archive-plan-v1
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/937
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/946
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/953
+      changed_files_or_scope:
+        - Add `lifetxt maintenance plan NAME --emit-plan PATH`, a plan-only
+          orchestration over `project archive --dry-run --emit-plan` reusing
+          the existing project-archive candidate-selection policy and
+          archive-plan-v1 builder unchanged
+        - Extract `_resolve_project_archive_workspace_inputs` out of
+          `command_project_archive` (pure refactor, reused by both commands)
+        - Extend `_project_archive_emit_plan` with additive `selection=`/
+          `quiet=` parameters and a return value (the built plan or `None`),
+          preserving `project archive --emit-plan`'s own output byte-for-byte
+        - lifetxt/cli.py
+        - lifetxt/cli_taxonomy.py
+        - tests/test_maintenance_plan.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+        - docs/en/projects.md
+        - docs/ja/projects.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - "tests/test_maintenance_plan.py MaintenancePlanTests (10 tests): writes a schema-valid archive-plan-v1 document and makes no other change; the produced plan matches an equivalent `project archive --dry-run --emit-plan` call field for field; a no-candidates selection and an orphan-blocked selection both write no plan, exit non-zero, and report the block reason; `--format json` shape for both the written and blocked cases; the generated plan applies correctly through the existing, unmodified `project archive --apply-plan` path; multi-source workspace candidate selection; `lifetxt query` output is byte-identical before and after generating a plan; `--dest` overrides the workspace archive source"
+        - python -m unittest tests.test_maintenance_plan tests.test_archive_plan_v1 tests.test_project_archive tests.test_project_archive_safety_v3 tests.test_cli_taxonomy tests.test_completion_surfaces tests.test_completion_values tests.test_surface_runtime -> Ran 174 tests, OK (skipped=1)
+        - "live: real disposable fixture -- `lifetxt maintenance plan web --emit-plan plan.json` wrote a schema-valid archive-plan-v1 document, left life.txt/archive.life.txt/.lifetxt.json byte-unchanged, and reported the reason/selection policy/candidate count; `lifetxt project archive web --apply-plan plan.json --yes` against the same plan correctly moved the item and both files re-checked OK afterward"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check lifetxt/cli.py lifetxt/cli_taxonomy.py tests/test_maintenance_plan.py -> clean
+        - 'scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> {"errors": 0, "ok": true}'
+      release_or_deployment: null
+      notes: >-
+        Extends cap-project-archive-plan-v1 rather than creating a second
+        archive mutation engine or plan schema, per #946's own explicit
+        constraint. Candidate eligibility is exactly the existing `project
+        archive` selection/safety contract (status/before/max-items filters,
+        orphan-children handling, reference/orphan/revision checks); no
+        age-based archival rule was added for Notes/Journals/Events/
+        Messages/Status records, and no yearly/monthly archive-file
+        rotation was introduced. `reason` always reports an explicit
+        operator invocation in this first slice, since #945 (Storage Health
+        diagnostics) has not shipped yet; `maintenance plan` never applies
+        the plan it generates -- applying continues to use the existing,
+        independently re-verified `project archive --apply-plan` path with
+        no code change. Standard assurance per #946's own task contract
+        (this slice never applies a mutation; the existing apply path
+        retains its own higher, previously-reviewed data-integrity
+        contract). pull_request is filled in once the pull request
+        implementing this entry is opened.
+      status: implemented
+
   required_chain:
     - Requirement
     - Capability

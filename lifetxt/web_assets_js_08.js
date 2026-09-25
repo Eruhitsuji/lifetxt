@@ -140,6 +140,7 @@
       if (v === "review") tasks.push(loadReview());
       if (v === "graph") tasks.push(loadGraphPanel());
       if (v === "server") tasks.push(loadServerBackupStatus());
+      if (v === "context") tasks.push(loadPersonalContext());
       if (v === "stats") {
         statsLoaded = true;
         tasks.push(loadChart(currentChartType));

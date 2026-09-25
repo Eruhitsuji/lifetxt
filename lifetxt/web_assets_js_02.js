@@ -400,13 +400,13 @@
     }
     // ── Single-content page router ─────────────────────────────────
     // Each view owns the whole screen: exactly one page section is shown.
-    const PAGE_VIEWS = ["dashboard", "today", "agenda", "timeline", "calendar", "focus", "review", "messages", "team", "status", "notifications", "stats", "graph", "server"];
+    const PAGE_VIEWS = ["dashboard", "today", "agenda", "timeline", "calendar", "focus", "review", "messages", "team", "status", "notifications", "stats", "graph", "server", "context"];
     const VIEW_PAGE = {
       "": "items", "messages": "items", "kiosk": "items", "display": "items",
       "dashboard": "dashboard", "today": "today", "agenda": "agenda", "timeline": "timeline",
       "calendar": "calendar", "focus": "focus", "review": "review", "team": "team",
       "status": "status", "notifications": "notifications",
-      "stats": "stats", "graph": "graph", "server": "server",
+      "stats": "stats", "graph": "graph", "server": "server", "context": "context",
     };
     const VIEW_META = {
       "": {

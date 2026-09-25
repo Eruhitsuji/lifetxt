@@ -6604,6 +6604,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/pull/553
       - https://github.com/Eruhitsuji/lifetxt/pull/927
       - https://github.com/Eruhitsuji/lifetxt/pull/928
+      - https://github.com/Eruhitsuji/lifetxt/pull/930
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       Reuses cap-personal-ai-memory-convention, cap-unified-inbox-proposals,

@@ -377,6 +377,60 @@
       }
     }
 
+    let captureSubmitPending = false;
+
+    function captureSuccessSummary(data) {
+      const item = data?.item || {};
+      const title = String(item.title || "").trim();
+      const idKey = appConfig?.ids?.key || "id";
+      const idValue = Array.isArray(item.details?.[idKey]) ? item.details[idKey][0] : "";
+      const summary = title && idValue ? `${title} (${idValue})` : (title || idValue || t("item"));
+      return summary.length > 80 ? summary.slice(0, 77) + "…" : summary;
+    }
+
+    async function submitCapture() {
+      if (captureSubmitPending) return;
+      const input = document.getElementById("capture-text");
+      const button = document.getElementById("capture-submit");
+      const feedback = document.getElementById("capture-feedback");
+      const text = String(input?.value || "").trim();
+      if (!text || !input || !button || !feedback) return;
+      captureSubmitPending = true;
+      button.disabled = true;
+      button.setAttribute("aria-busy", "true");
+      feedback.textContent = "";
+      feedback.className = "capture-feedback";
+      try {
+        const path = text.startsWith("[") ? "/api/items/raw" : "/api/items/capture";
+        const body = text.startsWith("[") ? {line: text} : {text};
+        const data = await api(path, {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(body),
+        });
+        feedback.textContent = `${t("Captured:")} ${captureSuccessSummary(data)}`;
+        feedback.className = "capture-feedback ok";
+        input.value = "";
+      } catch (error) {
+        feedback.textContent = `${t("Capture failed:")} ${t(actionableErrorText(error))}`;
+        feedback.className = "capture-feedback err";
+      } finally {
+        captureSubmitPending = false;
+        button.disabled = false;
+        button.removeAttribute("aria-busy");
+        input.focus({preventScroll: true});
+      }
+    }
+
+    function initializeCaptureMode() {
+      if (location.pathname.replace(/\/+$/, "") !== "/capture") return false;
+      document.body.classList.add("capture-mode");
+      document.title = `${t("Quick Capture")} — life.txt`;
+      const input = document.getElementById("capture-text");
+      requestAnimationFrame(() => input?.focus({preventScroll: true}));
+      return true;
+    }
+
     // ── Keyboard shortcuts ─────────────────────────────────────────
     document.addEventListener("keydown", function(e) {
       if (trapModalFocus(e)) return;

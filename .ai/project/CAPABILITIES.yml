@@ -6715,6 +6715,7 @@ capabilities:
       - req-web-personal-context-projection-preview
       - req-web-personal-context-onboarding
       - req-web-personal-context-stale-inspection
+      - req-web-personal-context-pagination
       - req-personal-context-epistemic-convention
     implementation_locations:
       - lifetxt/personal_context.py
@@ -6742,12 +6743,14 @@ capabilities:
       - GET /api/personal-context
       - POST /api/personal-context/preview
       - Web More > Personal Context
+      - GET /api/personal-context?limit=100&offset=100
     tests_or_evidence:
       - tests/test_personal_context.py
       - tests/test_personal_context_cli.py
       - tests/test_personal_context_correction.py
       - tests/test_web_personal_context.py
       - tests/test_web_personal_context_onboarding.py
+      - bounded API pagination and Web Load more coverage in PR #955
       - PR #553 CI
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/500

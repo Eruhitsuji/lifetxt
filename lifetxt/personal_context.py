@@ -342,12 +342,23 @@ def _coerce_limit(limit):
     return limit
 
 
+def _coerce_offset(offset):
+    try:
+        offset = int(offset)
+    except (TypeError, ValueError):
+        raise ValueError("offset must be an integer")
+    if offset < 0:
+        raise ValueError("offset must be zero or greater")
+    return offset
+
+
 def context_capsule(
     items,
     person="self",
     tags=None,
     include_stale=False,
     limit=DEFAULT_LIMIT,
+    offset=0,
     stale_after_days=DEFAULT_STALE_DAYS,
     evaluation_time=None,
 ):
@@ -360,6 +371,7 @@ def context_capsule(
     widen inclusion to any other non-current state.
     """
     limit = _coerce_limit(limit)
+    offset = _coerce_offset(offset)
 
     currentness = resolve_currentness(
         items, evaluation_time=evaluation_time, stale_after_days=stale_after_days
@@ -381,13 +393,15 @@ def context_capsule(
             row, ensure_ascii=False, sort_keys=True, separators=(",", ":")
         )
     )
-    selected = selected[:limit]
+    total_count = len(selected)
+    selected = selected[offset : offset + limit]
     tag_values = sorted({str(tag) for tag in (tags or []) if str(tag)})
     revision_input = OrderedDict(
         (
             ("person", person),
             ("tags", tag_values),
             ("include_stale", bool(include_stale)),
+            ("offset", offset),
             ("stale_after_days", int(stale_after_days)),
             ("items", selected),
         )
@@ -405,7 +419,9 @@ def context_capsule(
             ("include_stale", bool(include_stale)),
             ("stale_after_days", int(stale_after_days)),
             ("limit", limit),
+            ("offset", offset),
             ("count", len(selected)),
+            ("total_count", total_count),
             ("items", selected),
         )
     )

@@ -87,7 +87,7 @@ tools.
 | `GET` | `/api/health` | Show server paths and writable file |
 | `GET` | `/api/config` | Show public runtime config used by the GUI |
 | `GET` | `/api/items` | List items with optional filters |
-| `GET` | `/api/personal-context` | Return the shared current-only Personal Context capsule for `person:self`; `include_stale=true` explicitly adds stale records while keeping other non-current states excluded. The response includes shared `current`/`stale` health counts. |
+| `GET` | `/api/personal-context` | Return a bounded page (at most 100 records) of the shared current-only Personal Context capsule for `person:self`; `include_stale=true` explicitly adds stale records while keeping other non-current states excluded. Use `offset` to retrieve later pages. The response includes shared `current`/`stale` health counts, `total_count`, and `has_more`. |
 | `POST` | `/api/personal-context/preview` | Validate up to 25 bootstrap facts and preview their exact ordinary Note records without writing or assigning IDs |
 | `POST` | `/api/items/parse` | Parse a raw life.txt line/body block and return parsed item data without writing |
 | `POST` | `/api/items/raw` | Append a validated raw life.txt line to the writable file |

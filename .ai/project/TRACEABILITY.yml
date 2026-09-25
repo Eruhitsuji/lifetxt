@@ -14626,6 +14626,37 @@ traceability:
         keyboard resize, and installed-icon presentation remain residual risk.
       status: implemented
 
+    - requirement_id: req-quick-capture-shorthand-guide
+      capability_id: cap-adoption-onboarding-commands
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/923
+      pull_request: null
+      changed_files_or_scope:
+        - docs/en/quick-capture.md
+        - docs/ja/quick-capture.md
+        - docs/en/readme.md
+        - docs/ja/readme.md
+        - docs/en/getting-started.md
+        - docs/ja/getting-started.md
+        - docs/en/cli.md
+        - docs/ja/cli.md
+        - docs/en/web.md
+        - docs/ja/web.md
+        - docs/en/ai-integration.md
+        - docs/ja/ai-integration.md
+        - README.md
+        - tests/test_quick_capture_docs.py
+      tests_or_evidence:
+        - python -m unittest tests.test_quick_capture_docs tests.test_shorthand
+        - python scripts/validate_release_docs.py
+        - full unittest discovery and lifetxt check smoke
+      release_or_deployment: null
+      notes: >-
+        Standard-assurance documentation of the existing closed shorthand
+        grammar and per-surface behavior. No parser, Format, mutation, or
+        shorthand semantics changed.
+      status: implemented
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

@@ -519,6 +519,10 @@ life.txt の detail は file 内では `key:value` です。`key=value` は `ass
 
 `quick`、TUI の `/add`、Web のクイック追加欄は、タイトル中の 4 つの記号を展開します。
 
+優先順位、繰返し、quote、literal sigil、validation、保存結果、surface差異を含む
+正規referenceは[Quick capture と省略記法](./quick-capture.md)です。以下の短い表は
+command referenceとして残しています。
+
 | 記号 | 展開結果 | 例 |
 | --- | --- | --- |
 | `@NAME` | `project:NAME` | `@home` |

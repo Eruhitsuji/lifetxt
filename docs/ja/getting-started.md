@@ -156,6 +156,8 @@ command level の filtering と shorthand capture
 （`lifetxt add "Buy milk @home #errand !high ^tomorrow"` -- `add` は
 `quick`/`q` の初心者向けの綴りです）は
 [`cli.md`](./cli.md) を参照してください。
+[Quick captureガイド](./quick-capture.md)には、全対応token、優先順位、literal
+sigil、日付、surface差異をまとめています。
 
 ## Level 3 -- Full Format
 
@@ -187,6 +189,8 @@ Level 1 や Level 2 で書いたものを先に変更する必要はありませ
   合った小さな starter section skeleton になります（[`cli.md`](./cli.md)
   参照）。
 - `lifetxt add "Buy milk ^tomorrow"` -- 最初の実データを capture します。
+- [`quick-capture.md`](./quick-capture.md) -- 最初のcapture後に完全な省略記法の
+  契約を学びます。
 - `lifetxt web` -- それに対してブラウザ UI を開きます。
 - [`life_txt_format_spec.md`](./life_txt_format_spec.md) -- 完全な grammar
 - [`cli.md`](./cli.md) -- すべての command、filter、output format

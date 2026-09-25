@@ -79,6 +79,7 @@
         "Durable facts you explicitly choose help tools work with your preferences and goals. Nothing is inferred here.": "自分で明示的に選んだ永続的な事実は、ツールが好みや目標を踏まえる助けになります。ここでは何も推測しません。",
         "Current context": "現在のコンテキスト",
         "Show stale": "古い可能性がある事実を表示",
+        "Load more": "さらに読み込む",
         "Current": "現在有効",
         "Stale": "要確認",
         "Other context": "その他のコンテキスト",

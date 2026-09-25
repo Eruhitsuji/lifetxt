@@ -62,6 +62,10 @@
       const counts = data?.currentness_counts || {current: 0, stale: 0};
       const countTarget = document.getElementById("personal-context-counts");
       if (countTarget) countTarget.innerHTML = `<span>${t("Current")}: <strong>${Number(counts.current) || 0}</strong></span><span>${t("Stale")}: <strong>${Number(counts.stale) || 0}</strong></span>`;
+      const pagination = document.getElementById("personal-context-pagination");
+      const loadMore = document.getElementById("personal-context-load-more");
+      if (pagination) pagination.hidden = !data?.has_more;
+      if (loadMore) loadMore.disabled = false;
       if (!items.length) {
         target.innerHTML = `<div class="empty-state compact-empty"><div class="empty-title">${t("No current Personal Context yet.")}</div><p>${t("Add a few explicit facts to give tools durable context.")}</p></div>`;
         return;
@@ -81,6 +85,27 @@
       }).join("") || `<div class="empty">${t("No current Personal Context yet.")}</div>`;
     }
 
+    async function loadMorePersonalContext() {
+      const button = document.getElementById("personal-context-load-more");
+      if (button) button.disabled = true;
+      const includeStale = !!document.getElementById("personal-context-include-stale")?.checked;
+      const current = document.getElementById("personal-context-current");
+      const offset = Number(current?.dataset.personalContextOffset || 0) + 100;
+      try {
+        const data = await api(`/api/personal-context?limit=100&offset=${offset}${includeStale ? "&include_stale=true" : ""}`);
+        const existing = JSON.parse(current.dataset.personalContextItems || "[]");
+        data.items = existing.concat(data.items || []);
+        data.has_more = offset + (data.items.length - existing.length) < data.total_count;
+        current.dataset.personalContextOffset = String(offset);
+        current.dataset.personalContextItems = JSON.stringify(data.items);
+        renderPersonalContextCurrent(data);
+      } catch (error) {
+        if (button) button.disabled = false;
+        const feedback = document.getElementById("personal-context-feedback");
+        if (feedback) feedback.textContent = error.message;
+      }
+    }
+
     async function loadPersonalContext() {
       const target = document.getElementById("personal-context-current");
       if (target) target.setAttribute("aria-busy", "true");
@@ -92,6 +117,10 @@
         ]);
         personalContextReadOnly = !!health.read_only;
         renderPersonalContextCurrent(data);
+        if (target) {
+          target.dataset.personalContextOffset = String(data.offset || 0);
+          target.dataset.personalContextItems = JSON.stringify(data.items || []);
+        }
         const save = document.getElementById("personal-context-save-btn");
         if (save) save.disabled = personalContextReadOnly;
         if (personalContextReadOnly) {

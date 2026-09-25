@@ -386,12 +386,26 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         return beginner_profile_payload()
 
     @app.get("/api/personal-context")
-    def get_personal_context(include_stale=False):
+    def get_personal_context(include_stale=False, limit=100, offset=0):
         """Expose the shared Personal Context projection, current-only by default."""
         items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
         raise_for_errors(diagnostics)
         include_stale_flag = _bool_query(include_stale)
-        result = context_capsule(items, person="self", include_stale=include_stale_flag)
+        try:
+            limit = min(int(limit), 100)
+            offset = int(offset)
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=400, detail="limit and offset must be integers")
+        if limit < 1 or offset < 0:
+            raise HTTPException(status_code=400, detail="limit must be positive and offset must be zero or greater")
+        result = context_capsule(
+            items,
+            person="self",
+            include_stale=include_stale_flag,
+            limit=limit,
+            offset=offset,
+        )
+        result["has_more"] = offset + result["count"] < result["total_count"]
         health = context_health(items, person="self")
         result["currentness_counts"] = OrderedDict(
             (

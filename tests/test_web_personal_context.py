@@ -55,6 +55,32 @@ class WebPersonalContextTests(unittest.TestCase):
         self.assertNotIn("old", rows)
         self.assertNotIn("other", rows)
 
+    def test_projection_pages_beyond_default_bound_with_full_counts(self):
+        lines = [
+            f"[N] N Fact{index} id:fact{index} person:self tag:profile source:user updated:2999-01-01\n"
+            for index in range(205)
+        ]
+        Path(self.path).write_text("".join(lines), encoding="utf-8")
+
+        first = self.client.get("/api/personal-context?limit=100")
+        second = self.client.get("/api/personal-context?limit=100&offset=100")
+        last = self.client.get("/api/personal-context?limit=100&offset=200")
+
+        self.assertEqual(100, len(first.json()["items"]))
+        self.assertEqual(100, len(second.json()["items"]))
+        self.assertEqual(5, len(last.json()["items"]))
+        self.assertTrue(first.json()["has_more"])
+        self.assertTrue(second.json()["has_more"])
+        self.assertFalse(last.json()["has_more"])
+        for result in (first.json(), second.json(), last.json()):
+            self.assertEqual(205, result["total_count"])
+            self.assertEqual({"current": 205, "stale": 0}, result["currentness_counts"])
+
+    def test_projection_rejects_invalid_paging_and_caps_requested_limit(self):
+        self.assertEqual(400, self.client.get("/api/personal-context?limit=0").status_code)
+        self.assertEqual(400, self.client.get("/api/personal-context?offset=-1").status_code)
+        self.assertEqual(400, self.client.get("/api/personal-context?limit=nope").status_code)
+
     def test_projection_all_current_all_stale_and_mixed_counts(self):
         datasets = {
             "all-current": (

@@ -71,6 +71,8 @@ and config/life.txt file health, so you know what to install next. `add` is
 the beginner-facing spelling of `quick`/`q`; `web` starts the same server as
 `serve` and opens your browser to it. See section 16 ("`tour`, `init`, and
 `doctor`") of the [CLI guide](./docs/en/cli.md) for the full flag reference.
+See the [Quick capture guide](./docs/en/quick-capture.md) for every supported
+sigil, date token, precedence rule, literal escape, and surface difference.
 
 Not sure which of lifetxt's many commands to reach for? `lifetxt help` gives
 a role-based index (Getting Started, Query, Projects, and more) plus guided

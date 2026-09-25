@@ -53,6 +53,25 @@ lifetxt remote diagnose home
 
 `lifetxt remote diagnose home` reports a fixed set of named checks (`remote-enabled`, `https-policy`, `principal-registry`, `source-count`, `browser-session`, `authoritative-remote-writes`) plus free-text `warnings`. Verified against a real server with `remote.ticket_writes_enabled: true` and working ticket mutations already succeeding: the `authoritative-remote-writes` check still reports `{"ok": false, "admission_only": true}` unconditionally, and the route's own aggregate `ok` computation explicitly excludes that one check by name (`lifetxt/remote_web.py`). This check does not read `remote.ticket_writes_enabled` and cannot be used to confirm that ticket writes are enabled -- use `lifetxt remote permissions PROFILE`'s `ticket_mutations_enabled` field or `lifetxt remote test PROFILE`'s `capabilities.mutation_policy.ticket_mutations_enabled` instead.
 
+## Mutate ordinary items through the CLI
+
+Protocol-v2 clients can create, update, and delete ordinary items through the authority selected by the profile. The client first requires the server to advertise the `item-mutations` feature and an enabled `mutation_policy.item_mutations_enabled`, then reads the current authoritative snapshot revision and submits exactly one revision-checked operation.
+
+```console
+lifetxt remote item-create home "Plan quarterly review" \
+  --type T --status "[ ]" --detail project=work \
+  --transaction-id item-create-quarterly-review
+
+lifetxt remote item-update home I-20260925-0001 \
+  --title "Plan Q4 review" --status "[/]" \
+  --detail project=work --transaction-id item-update-quarterly-review
+
+lifetxt remote item-delete home I-20260925-0001 \
+  --transaction-id item-delete-quarterly-review
+```
+
+These commands do not create a local replica, cache, or offline queue. If the authority cannot be reached, the command fails without making a local change. If the server capability is absent or disabled, the command stops before reading a snapshot or attempting a write. A stale revision is reported as structured JSON on standard error with exit code `3`; it is never overwritten or retried automatically. Refresh the authoritative state, abandon the change, or submit a reviewed change as a new transaction. Profile token values remain in their configured environment variables and are not printed.
+
 ## Mutate tickets through the CLI
 
 Each command obtains the current aggregate revision immediately before the request and sends it through `If-Match`. The client never overwrites a conflict automatically. `--transaction-id` is optional on every mutation subcommand; when omitted, the client generates a random UUID4 for you (`uuid.uuid4()` in `mutate_ticket()`). Supply your own stable, meaningful ID and reuse it only when retrying the identical operation after a lost response -- a fresh random ID on every invocation defeats the retry-safety this parameter exists for.

@@ -1,0 +1,19 @@
+schema_version: 1
+change:
+  id: remote-authoritative-sync-cli
+  title: Add a guarded CLI client for authoritative workspace sync
+  status: implemented
+  change_type: Feature
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/932
+  related_pull_request: [https://github.com/Eruhitsuji/lifetxt/pull/939]
+  base_commit: b76f128
+  target_release: null
+scope:
+  in_scope: [protocol-v2 capability negotiation, authoritative snapshot display, bounded ordinary-item create/update/delete, exact revisions, stable transaction IDs, fail-closed conflicts and outages]
+  out_of_scope: [local replicas, whole-file mirroring, offline queues, provider sync, semantic merge, attachment bytes, Format changes]
+  write_scope: [lifetxt/remote_client_writes.py, tests/test_remote_client_writes_v23.py, docs/en/remote-client-writes.md, docs/ja/remote-client-writes.md, .ai/project/**]
+  forbidden_scope: [.ai/managed/**]
+human_approvals_required: [public CLI/API contract approval, independent implementation/integration/security review, Merge Authority approval]

@@ -7,7 +7,7 @@
 これは意図と方向性を述べるものであり、runtime の挙動、file format、API、schema、
 MCP contract を変更するものではありません。この文書と `.ai/project/RULES.md` の
 Design Principles が食い違う場合は `RULES.md` が優先します
-（[Section 10](#10-将来の機能のための-product-principles) 参照）。
+（[Section 11](#11-将来の機能のための-product-principles) 参照）。
 
 - [1. なぜ lifetxt は存在するのか](#1-なぜ-lifetxt-は存在するのか)
 - [2. 人生を統合した record](#2-人生を統合した-record)
@@ -17,9 +17,10 @@ Design Principles が食い違う場合は `RULES.md` が優先します
 - [6. 外部 system と hub model](#6-外部-system-と-hub-model)
 - [7. AI と Personal Context](#7-ai-と-personal-context)
 - [8. Life Record、Life Context、Life Assistance](#8-life-recordlife-contextlife-assistance)
-- [9. Privacy、選択的な記録、disclosure](#9-privacy選択的な記録disclosure)
-- [10. 将来の機能のための Product Principles](#10-将来の機能のための-product-principles)
-- [11. lifetxt ではないもの](#11-lifetxt-ではないもの)
+- [9. typed semantic frameとしてのrecord](#9-typed-semantic-frameとしてのrecord)
+- [10. Privacy、選択的な記録、disclosure](#10-privacy選択的な記録disclosure)
+- [11. 将来の機能のための Product Principles](#11-将来の機能のための-product-principles)
+- [12. lifetxt ではないもの](#12-lifetxt-ではないもの)
 
 ---
 
@@ -62,7 +63,7 @@ Future   = intent / 起きるべきこと・起きるかもしれないこと
 統合を意味します -- task は所属する project を参照でき、journal entry はその日の
 event を参照でき、ticket の history はそれを起票した人を参照できます。あなたに
 関するあらゆる datum を無差別に収集することを意味するのではありません。詳細は
-[Section 9](#9-privacy選択的な記録disclosure) を参照してください。
+[Section 10](#10-privacy選択的な記録disclosure) を参照してください。
 
 ## 3. なぜ text が基盤なのか
 
@@ -222,7 +223,74 @@ Assistance layer が完全に変わっても、record は有用であり続け�
 現在のすべての lifetxt interface と AI integration への access を失っても、
 plain text file に自分自身の人生の、本物で使える record が残っているべきです。
 
-## 9. Privacy、選択的な記録、disclosure
+## 9. typed semantic frameとしてのrecord
+
+このsectionは**内部の設計vocabulary**を説明するものであり、Format・Query・
+API・MCP contractではありません。plainな `life.txt` の1行が、Life Context
+（[Section 8](#8-life-recordlife-contextlife-assistance)）の前提となる
+「意味のある構造」へどうなるかを説明するもので、新しいgrammar・key・record
+kind・fieldは一切追加しません。CLI・TUI・Web UI・MCPのどのsurfaceでも、
+利用者が気づくような変化はありません。
+
+内部での推論のためには、recordを裸のsentenceとしてではなく、小さなtyped
+frameとしてmodel化するのが有用です:
+
+```text
+R = <kind, head, arguments, modifiers, relations, context>
+```
+
+- **kind** -- recordの型（`T`/`E`/`D`/`R`/`H`/`N`/`S`/`M`/`J`）。既に
+  record のepistemic modeの多くを表しています。Taskは意図、Eventは
+  発生、Statusは現在stateのスナップショット、Journalは歴史的記録です。
+  Noteだけは意図的に中立なcontainerです -- fact、observation、report、
+  memory、hypothesis、opinion、preference、inferenceのどれも保持でき、
+  だからこそ後述のopt-inなepistemic conventionの自然な置き場所になって
+  います。
+- **head** -- recordのtitle。人間可読な表面文字列であり、machine向けの
+  predicate identifierではありません。recordが有用であるためにformalな
+  grammarを必要とすることはありません。
+- **arguments** -- `person:`、`assignee:`、`attendee:` のような
+  participant/entity detail。
+- **modifiers** -- `due:`、`on:`、`project:`、`tag:` のようなtemporal・
+  location・project・tag detail。
+- **relations** -- ID-basedな参照（`parent:`、`depends_on:`、
+  `related:`、`follows:`、その他既存のreference key全体）。link/backlink
+  やTemporal Thread契約が既に読み書きしているのと同じgraphです。
+- **context** -- recordに保存されているのではなく、recordについて
+  読み取られるすべて -- 現在のstate、temporal fact、history、epistemic
+  status（後述）です。
+
+この「personal semantic representation model」は、意図的に、lifetxtが
+既に持っている振る舞いを説明できる最小のモデルです。既存の契約 --
+relations用のreference key、time/history用の `temporal_context()`/
+Native History、context用の
+[epistemic convention](./personal-context.md#5-optional-epistemic-metadata-このrecordはどのくらい確からしいか) --
+を合成するだけで、どれも重複実装せず、次の3つの区分を明確に保ちます:
+
+```text
+persisted / authoritative   実際にlife.txtへ書き込まれたrecordそのもの
+deterministic derived       recordから計算される再現可能なread model
+                             （temporal fact、link、history projectionなど）
+probabilistic / inferred    recordが persistされているかどうかとは独立な、
+                             recordの「内容」が持つepistemicな性質
+```
+
+`epistemic:inferred` な内容を持つrecordであっても、一度acceptされれば
+他のrecordと同じ、ordinaryなauthoritative recordです -- 詳細は
+[AI提案recordのreviewとaccept](./inbox.md#acceptance-is-write-authorization-not-epistemic-reclassification)
+を参照してください。derived read model（temporal context、native
+history、link graphなど）は、それ自体がauthoritative dataとして
+書き戻されることは決してありません。`source:`、`updated:`、
+`epistemic:`など、欠落したoptional fieldは常に「記録されていない」を
+意味し、隠れたdefaultではありません。
+
+このモデルは `life.txt` と [opt-inなlifetxt VM](./vm.md) の関係を
+変更しません: 通常のrecordは引き続き宣言的な人生の記録であり、VMは
+特別な形のrecordの上で動作する、明示的に起動する別のexecution layer
+です -- このvocabularyは通常のrecordをprogramming languageとして
+再定義するものではありません。
+
+## 10. Privacy、選択的な記録、disclosure
 
 「統合された life record」は「すべてを自動的に収集する」ことだと解釈しては
 なりません。lifetxt の ownership model には、記録しない権利、開示しない権利が
@@ -245,7 +313,7 @@ Data minimization、workspace boundary、disclosure policy、provenance の
 追跡は、この原則が実際に software 内で強制される方法です。この文書は、それら
 の仕組みが果たすべき意図を述べています。
 
-## 10. 将来の機能のための Product Principles
+## 11. 将来の機能のための Product Principles
 
 `.ai/project/RULES.md` の Design Principles と Product Boundaries は、
 lifetxt が何をし、何をしないかについての、repository における権威ある
@@ -268,7 +336,7 @@ enforceable な rule であり続けます。この文書は、それらの rule
 - 今日好まれている client が消えても、underlying record は理解可能な
   ままか?
 
-## 11. lifetxt ではないもの
+## 12. lifetxt ではないもの
 
 この vision が過大な主張にならないよう、lifetxt は明示的に以下ではありません:
 

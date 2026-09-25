@@ -886,6 +886,22 @@ to add a task, event, or note. Empty views explain whether there is no data or
 only no matching result and provide a safe next action. Select More to reach
 specialist views such as Timeline, Graph, and Stats; direct links remain valid.
 
+### Personal Context onboarding
+
+Open **More → Personal Context** to review current `person:self` facts or add
+explicit context. The five labels—Profile, Preferences, Skills, Goals, and
+Projects—are ordinary singular `tag:` conventions (`profile`, `preference`,
+`skill`, `goal`, `project`), not new schema fields. Enter one atomic fact per
+row and preview the exact Note records before saving.
+
+Saving is deliberately sequential through the existing `POST /api/items`
+route. If one write fails, the page reports saved, failed, and remaining counts
+and keeps every unsaved fact editable; it does not claim batch atomicity. In a
+read-only server, current context and preview remain available but Save is
+disabled. The overview uses the same current-only Context Capsule resolver as
+the CLI and MCP surfaces, so superseded or otherwise non-current records are
+not silently presented as current.
+
 ## Completing a task with a date or time
 
 Open a task's detail drawer and choose **Done date…**:

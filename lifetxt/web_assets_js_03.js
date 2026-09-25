@@ -68,6 +68,11 @@
         description: "Inspect disaster-recovery backup health without exposing server paths or credentials.",
         actions: [["Refresh", "refresh"], ["Items", "items"]],
       },
+      context: {
+        label: "Personal Context",
+        description: "Review current facts and add explicit, durable context without inference.",
+        actions: [["Refresh", "refresh"], ["Items", "items"]],
+      },
       display: {
         label: "Display",
         description: "Read-focused wall display mode with editing controls hidden.",

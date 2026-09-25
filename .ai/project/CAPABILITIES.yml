@@ -6555,15 +6555,20 @@ capabilities:
       - req-personal-decision-memory
       - req-personal-context-toolkit-integration
       - req-web-personal-context-projection-preview
+      - req-web-personal-context-onboarding
     implementation_locations:
       - lifetxt/personal_context.py
       - lifetxt/webapp.py
+      - lifetxt/web_assets.html
+      - lifetxt/web_assets_js_19.js
+      - lifetxt/web_assets_css_06.css
       - lifetxt/personal_context_cli.py
       - lifetxt/entrypoint.py
       - tests/test_personal_context.py
       - tests/test_personal_context_cli.py
       - tests/test_personal_context_correction.py
       - tests/test_web_personal_context.py
+      - tests/test_web_personal_context_onboarding.py
       - docs/en/personal-context-toolkit.md
       - docs/ja/personal-context-toolkit.md
     public_interfaces:
@@ -6574,11 +6579,13 @@ capabilities:
       - lifetxt decisions
       - GET /api/personal-context
       - POST /api/personal-context/preview
+      - Web More > Personal Context
     tests_or_evidence:
       - tests/test_personal_context.py
       - tests/test_personal_context_cli.py
       - tests/test_personal_context_correction.py
       - tests/test_web_personal_context.py
+      - tests/test_web_personal_context_onboarding.py
       - PR #553 CI
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/500
@@ -6590,9 +6597,11 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/551
       - https://github.com/Eruhitsuji/lifetxt/issues/552
       - https://github.com/Eruhitsuji/lifetxt/issues/925
+      - https://github.com/Eruhitsuji/lifetxt/issues/926
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/553
       - https://github.com/Eruhitsuji/lifetxt/pull/927
+      - https://github.com/Eruhitsuji/lifetxt/pull/928
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       Reuses cap-personal-ai-memory-convention, cap-unified-inbox-proposals,

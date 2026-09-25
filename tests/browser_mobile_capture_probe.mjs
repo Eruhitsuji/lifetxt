@@ -10,7 +10,7 @@ if (!browserPath || !htmlPath) throw new Error("browser path and HTML path are r
 const html = await readFile(htmlPath);
 const captureBodies = [];
 const server = http.createServer((request, response) => {
-  if (request.url.startsWith("/capture")) {
+  if (request.url.startsWith("/capture") || request.url.startsWith("/?")) {
     response.writeHead(200, {"content-type": "text/html; charset=utf-8", "cache-control": "no-store"});
     response.end(html);
     return;
@@ -126,6 +126,38 @@ try {
     });
     results.push({...testCase, ...evaluated.result.value});
   }
+  const contextResults = [];
+  for (const testCase of cases.slice(0, 4)) {
+    await command("Emulation.setDeviceMetricsOverride", {
+      width: testCase.width, height: testCase.height, deviceScaleFactor: 2, mobile: true,
+      screenWidth: testCase.width, screenHeight: testCase.height,
+    });
+    await command("Page.navigate", {url: `http://127.0.0.1:${port}/?view=context&lang=${testCase.lang}`});
+    for (let attempt = 0; attempt < 100; attempt += 1) {
+      const ready = await command("Runtime.evaluate", {
+        expression: "document.querySelector('[data-page=context]')?.classList.contains('page-active') && document.querySelector('.personal-context-fact')",
+        returnByValue: true,
+      });
+      if (ready.result.value) break;
+      await delay(50);
+    }
+    const evaluated = await command("Runtime.evaluate", {
+      expression: `(() => {
+        const section = document.querySelector("[data-page=context]");
+        const input = document.querySelector(".personal-context-fact").getBoundingClientRect();
+        const select = document.querySelector(".personal-context-domain").getBoundingClientRect();
+        return {
+          viewport: {width: innerWidth, height: innerHeight},
+          scrollWidth: document.documentElement.scrollWidth,
+          section: section.getBoundingClientRect().toJSON(),
+          input: input.toJSON(), select: select.toJSON(),
+          heading: document.getElementById("personal-context-heading").textContent.trim(),
+        };
+      })()`,
+      returnByValue: true,
+    });
+    contextResults.push({...testCase, ...evaluated.result.value});
+  }
   await command("Emulation.setDeviceMetricsOverride", {width: 390, height: 360, deviceScaleFactor: 2, mobile: true});
   await command("Page.navigate", {url: `http://127.0.0.1:${port}/capture?lang=en`});
   await delay(300);
@@ -142,7 +174,7 @@ try {
   await command("Runtime.evaluate", {expression: "document.getElementById('capture-text').value = 'Only once'; document.getElementById('capture-form').requestSubmit(); document.getElementById('capture-form').requestSubmit()"});
   const pendingState = await command("Runtime.evaluate", {expression: `({disabled: document.getElementById("capture-submit").disabled, busy: document.getElementById("capture-submit").getAttribute("aria-busy")})`, returnByValue: true});
   await delay(350);
-  process.stdout.write(JSON.stringify({viewports: results, interactions: {success: success.result.value, failure: failure.result.value, pending: pendingState.result.value, pendingRequestCount: captureBodies.length - beforePending}}));
+  process.stdout.write(JSON.stringify({viewports: results, contextViewports: contextResults, interactions: {success: success.result.value, failure: failure.result.value, pending: pendingState.result.value, pendingRequestCount: captureBodies.length - beforePending}}));
 } finally {
   if (socket) socket.close();
   if (browser.exitCode === null) {

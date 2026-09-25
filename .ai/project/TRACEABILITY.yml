@@ -2,6 +2,41 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-personal-context-onboarding
+      capability_id: cap-personal-context-toolkit
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/916
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/926
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/928
+      changed_files_or_scope:
+        - lifetxt/web_assets.py
+        - lifetxt/web_assets.html
+        - lifetxt/web_assets_js_01.js
+        - lifetxt/web_assets_js_02.js
+        - lifetxt/web_assets_js_03.js
+        - lifetxt/web_assets_js_08.js
+        - lifetxt/web_assets_js_18.js
+        - lifetxt/web_assets_js_19.js
+        - lifetxt/web_assets_css_06.css
+        - tests/test_web_assets.py
+        - tests/test_web_personal_context_onboarding.py
+        - tests/browser_mobile_capture_probe.mjs
+        - tests/test_web_mobile_capture_browser.py
+        - docs/en/web.md
+        - docs/ja/web.md
+        - docs/en/personal-context.md
+        - docs/ja/personal-context.md
+      tests_or_evidence:
+        - python -m unittest tests.test_web_personal_context_onboarding tests.test_web_personal_context tests.test_web_assets tests.test_web_i18n
+        - node --check assembled Web script
+        - responsive CSS contracts for 320/360/390/430 px layouts
+        - full unittest discovery and lifetxt check smoke
+      release_or_deployment: null
+      status: implemented
+      notes: >-
+        Standard-assurance progressive Web onboarding. It uses the server
+        projection/preview from #925 and sequential existing item writes;
+        partial failure leaves unsaved facts editable and never claims batch
+        atomicity. No schema, database, inference, or browser serializer added.
     - requirement_id: req-web-personal-context-projection-preview
       capability_id: cap-personal-context-toolkit
       epic: https://github.com/Eruhitsuji/lifetxt/issues/916

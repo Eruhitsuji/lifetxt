@@ -48,6 +48,7 @@ class MobileCaptureBrowserTests(unittest.TestCase):
             raise AssertionError(process.stderr or process.stdout)
         evidence = json.loads(process.stdout)
         cls.results = evidence["viewports"]
+        cls.context_results = evidence["contextViewports"]
         cls.interactions = evidence["interactions"]
 
     def test_every_target_viewport_has_no_horizontal_page_overflow(self):
@@ -109,6 +110,26 @@ class MobileCaptureBrowserTests(unittest.TestCase):
         self.assertTrue(self.interactions["pending"]["disabled"])
         self.assertEqual("true", self.interactions["pending"]["busy"])
         self.assertEqual(1, self.interactions["pendingRequestCount"])
+
+    def test_personal_context_layout_covers_phone_viewport_matrix(self):
+        self.assertEqual(
+            [320, 360, 390, 430], [row["width"] for row in self.context_results]
+        )
+        for result in self.context_results:
+            with self.subTest(result["name"]):
+                self.assertLessEqual(result["scrollWidth"], result["viewport"]["width"])
+                self.assertGreaterEqual(result["section"]["left"], 0)
+                self.assertLessEqual(
+                    result["section"]["right"], result["viewport"]["width"]
+                )
+                self.assertGreaterEqual(result["input"]["height"], 44)
+                self.assertGreaterEqual(result["select"]["height"], 44)
+                expected = (
+                    "パーソナルコンテキスト"
+                    if result["lang"] == "ja"
+                    else "Personal Context"
+                )
+                self.assertIn(expected, result["heading"])
 
 
 if __name__ == "__main__":

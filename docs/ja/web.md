@@ -871,6 +871,21 @@ lifetxt serve life.txt --port 8080
 からTimeline、Graph、Statsなどの専門画面を開けます。直接リンクも引き続き
 利用できます。
 
+### Personal Context のオンボーディング
+
+**More → Personal Context** から、現在の `person:self` の事実を確認したり、
+明示的なコンテキストを追加したりできます。Profile、Preferences、Skills、
+Goals、Projects は新しいschema fieldではなく、通常の単数形 `tag:` 規約
+（`profile`、`preference`、`skill`、`goal`、`project`）です。1行に1つの
+最小単位の事実を入力し、保存前に正確なNote recordをpreviewします。
+
+保存は既存の `POST /api/items` を使って意図的に逐次実行します。途中で失敗
+した場合は、保存済み・失敗・未保存の件数を表示し、未保存の全factを編集可能な
+まま保持します。batch atomicityは保証しません。read-only serverでは現在値と
+previewを利用できますが、保存は無効です。overviewはCLI/MCPと同じcurrent-only
+Context Capsule resolverを使うため、supersededなどの非current recordを現在値
+として暗黙に表示しません。
+
 ## 完了時に日付・日時を記録する
 
 タスクの詳細を開き、**完了日時…** を選びます。

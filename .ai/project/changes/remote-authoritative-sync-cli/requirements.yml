@@ -1,0 +1,15 @@
+schema_version: 1
+requirements:
+  - id: req-multi-device-sync-cli
+    kind: ADDED
+    statement: Authenticated protocol-v2 CLI clients can inspect the authoritative workspace revision and submit bounded ordinary-item mutations without creating a local writable replica.
+    acceptance_criteria:
+      - Snapshot reads and item writes negotiate server capabilities and protocol v2.
+      - Create, update, and delete submit the current authoritative revision and a stable transaction ID.
+      - Capability absence, auth denial, unsupported write targets, and authority outage fail closed without local mutation.
+      - Stale conflicts are structured and never retried as an overwrite.
+      - Normal and error output does not disclose authentication material or local/server paths.
+      - English and Japanese usage documentation states the online-only authority model.
+    constraints: [no offline mutations, no local replica or cache, no provider adapter, no attachment-byte transfer]
+    owner: Eruhitsuji
+open_questions: []

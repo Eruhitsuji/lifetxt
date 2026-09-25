@@ -53,6 +53,25 @@ lifetxt remote diagnose home
 
 `lifetxt remote diagnose home`は固定されたcheck一覧（`remote-enabled`、`https-policy`、`principal-registry`、`source-count`、`browser-session`、`authoritative-remote-writes`）とfree-textの`warnings`を返します。`remote.ticket_writes_enabled: true`かつticket mutationが実際に成功しているserverに対して確認したところ、`authoritative-remote-writes` checkは常に`{"ok": false, "admission_only": true}`を返し続けており、routeの集約`ok`計算自身がこのcheckだけを名前で除外しています（`lifetxt/remote_web.py`）。このcheckは`remote.ticket_writes_enabled`を参照しておらず、ticket writeが有効かどうかの確認には使えません -- 代わりに`lifetxt remote permissions PROFILE`の`ticket_mutations_enabled`か、`lifetxt remote test PROFILE`の`capabilities.mutation_policy.ticket_mutations_enabled`を使用してください。
 
+## CLIから通常itemを編集する
+
+protocol-v2 clientは、profileで選択したauthorityを通じて通常itemをcreate／update／deleteできます。clientは最初にserverが`item-mutations` featureと、有効な`mutation_policy.item_mutations_enabled`を公開していることを確認します。その後、現在のauthoritative snapshot revisionを取得し、revision check付きoperationを1回だけ送信します。
+
+```console
+lifetxt remote item-create home "四半期レビューを計画" \
+  --type T --status "[ ]" --detail project=work \
+  --transaction-id item-create-quarterly-review
+
+lifetxt remote item-update home I-20260925-0001 \
+  --title "Q4レビューを計画" --status "[/]" \
+  --detail project=work --transaction-id item-update-quarterly-review
+
+lifetxt remote item-delete home I-20260925-0001 \
+  --transaction-id item-delete-quarterly-review
+```
+
+これらのcommandはlocal replica、cache、offline queueを作成しません。authorityへ接続できない場合はlocal変更を行わず失敗します。server capabilityが存在しないか無効な場合は、snapshot取得やwrite試行より前に停止します。stale revisionはstructured JSONとしてstandard errorへ出力され、exit code `3`を返します。自動上書きや自動再試行は行いません。authoritative stateをrefreshしてから、変更を破棄するか、確認済み変更を新しいtransactionとして送信してください。profileのtoken値は設定されたenvironment variable内に留まり、出力されません。
+
 ## CLIからticketを編集する
 
 すべての更新は、更新直前に取得したRemote aggregate revisionを`If-Match`へ設定します。競合時にclientが自動上書きすることはありません。`--transaction-id`はすべてのmutation subcommandでoptionalです。省略した場合、client側でランダムなUUID4が生成されます（`mutate_ticket()`内の`uuid.uuid4()`）。安定した意味のあるIDを自分で指定し、response lostが疑われる同一requestを再試行するときだけ再利用してください -- 呼び出しのたびにランダムなIDを生成すると、このparameterが本来提供する再試行安全性が失われます。

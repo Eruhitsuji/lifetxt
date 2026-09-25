@@ -1,6 +1,21 @@
 schema_version: 1
 
 capabilities:
+  - id: cap-remote-authoritative-sync-cli
+    name: Guarded authoritative workspace sync CLI
+    summary: Protocol-v2 CLI snapshot and bounded ordinary-item create/update/delete against one online authority, with capability negotiation, exact revisions, stable transaction IDs, and non-overwriting conflicts.
+    status: active
+    owner: Eruhitsuji
+    source_requirements: [req-multi-device-sync-cli]
+    implementation_locations: [lifetxt/remote_client.py, lifetxt/remote_client_writes.py, tests/test_remote_client_writes_v23.py, docs/en/remote-client-writes.md, docs/ja/remote-client-writes.md]
+    public_interfaces: [lifetxt remote snapshot, lifetxt remote item-create, lifetxt remote item-update, lifetxt remote item-delete]
+    tests_or_evidence: [tests.test_remote_client_writes_v23, tests.test_remote_client_v19, tests.test_remote_workspace_snapshot, tests.test_remote_item_writes, tests.test_workspace_foundation]
+    related_issues: [https://github.com/Eruhitsuji/lifetxt/issues/915, https://github.com/Eruhitsuji/lifetxt/issues/932]
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: Online-only and server-authoritative; no local replica, offline queue, provider synchronization, semantic merge, whole-file mirror, or attachment-byte transfer.
+    replacement: {replaces: [], replaced_by: null, deprecation_issue: null}
+
   - id: cap-remote-authoritative-item-mutations
     name: Authoritative Remote ordinary-item mutations
     summary: Disabled-by-default protocol-v2 create/update/delete with exact admission, per-file CAS, canonical IDs, replay, access checks, and Native History evidence.

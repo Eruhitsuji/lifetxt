@@ -32,6 +32,7 @@
     .personal-context-stale { color: var(--muted); }
     .personal-context-stale > span:first-child { text-decoration: underline dotted; text-underline-offset: .18em; }
     .personal-context-stale-badge { display: inline-block; margin-left: .5rem; padding: .1rem .4rem; border: 1px solid var(--warn); border-radius: 999px; color: var(--ink); background: var(--warn-soft); font-size: .7rem; font-weight: 700; text-decoration: none; }
+    .personal-context-reconfirm { margin-left: .5rem; min-height: 36px; padding: .2rem .55rem; font-size: .75rem; }
     @media (max-width: 760px) {
       .personal-context-layout { grid-template-columns: 1fr; }
       .personal-context-fact-row { grid-template-columns: 1fr; }

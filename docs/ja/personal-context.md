@@ -6,6 +6,12 @@ Web UI の **More → Personal Context** には、範囲を限定した初回導
 行いません。この画面の現在値は、以下で説明する共有currentness resolverを使います。
 既定表示はcurrent-onlyです。**古い可能性がある事実を表示**は、同じbounded capsule
 でstale inclusionを明示的に有効化し、recordを変更・再確認せず区別して表示します。
+stale factが明示的に確認され、今も正しい場合はWeb UIの**まだ正しい**を使えます。
+これはexact-IDのcompare-and-swap mutation経路で`updated:`のfreshness evidenceだけを
+更新し、ID、内容、source、tag、その他のdetailを保持します。stale recordを一括でcurrentへ
+昇格させることはありません。表示後にfileが変更されていた場合は安全側に失敗するため、再読込
+してから操作します。内容を直す場合はreconfirmではなく、既存のproposal-first correctionを
+利用してください。
 表示件数には共有healthを使います。
 
 このガイドでは、生成AIが lifetxt を provider-independent な Personal Context /

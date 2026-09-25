@@ -4,6 +4,9 @@ Web UI の **More → Personal Context** には、範囲を限定した初回導
 既存のProfile/Preference/Skill/Goal/Project tag規約を説明し、通常のNote recordの
 正確な形をserverでpreviewしてから、正規のitem APIで1件ずつ保存します。AI推論は
 行いません。この画面の現在値は、以下で説明する共有currentness resolverを使います。
+既定表示はcurrent-onlyです。**古い可能性がある事実を表示**は、同じbounded capsule
+でstale inclusionを明示的に有効化し、recordを変更・再確認せず区別して表示します。
+表示件数には共有healthを使います。
 
 このガイドでは、生成AIが lifetxt を provider-independent な Personal Context /
 Personal DB として作成・維持・活用するための方針を説明します。ここで定義するのは

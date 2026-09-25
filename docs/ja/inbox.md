@@ -198,6 +198,24 @@ CLI の `proposal accept` はそもそも `expected_revision` を渡さないた
 に依存します（[陳腐化](#陳腐化) 参照）。呼び出し側が渡す revision には
 依存しません。
 
+### 承認は書き込みの authorization であり、epistemic reclassificationではない
+
+承認は**候補をauthoritativeなlife.txtへ書き込む**という決定であり、その
+候補がどのように知られたかを再解釈するものではありません。staging された
+候補自身のitem detailsに、opt-inな
+[`epistemic:`/`confidence:` convention](personal-context.md#5-optional-epistemic-metadata-このrecordはどのくらい確からしいか)
+（例えばAIが提案したNoteの `epistemic:inferred confidence:medium`）が
+含まれている場合、承認するとそれらのdetailsはそのまま追記されます --
+`inferred` な候補が黙って `explicit` に書き換えられることはありませんし、
+confidenceの値が新たに作られたり削除されたりすることもありません。提案
+自身の運用metadataである `source`/`provenance`（誰/何がその提案を
+stagingしたか）は候補のitem detailsとは別に追跡され、承認時にそこへ
+コピーされることはありません。
+
+reviewerが承認後のrecordに別のepistemic statusを持たせたい場合は、承認する
+前に[提案を編集](#承認前の編集)してください -- 値を変えるのはその明示的な
+編集であり、承認そのものではありません。
+
 ## 陳腐化
 
 提案を承認する際は、staging 時に記録された revision に対してワークスペースを

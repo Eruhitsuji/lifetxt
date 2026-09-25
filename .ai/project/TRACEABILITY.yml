@@ -2,6 +2,35 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-storage-scaling-benchmark
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/937
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/944
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/952
+      changed_files_or_scope:
+        - scripts/benchmark_core.py
+        - tests/test_benchmark_core.py
+        - docs/en/core-performance-baseline.json
+        - docs/en/core-performance-baseline.md
+      tests_or_evidence:
+        - "python 3.12 -m unittest tests.test_benchmark_core -> 2 tests, OK"
+        - "python 3.12 scripts/benchmark_core.py -> deterministic 1k/10k/100k/200k single-file and multi-source measurements"
+        - "ruff check scripts/benchmark_core.py tests/test_benchmark_core.py"
+        - "git diff --check"
+      release_or_deployment: null
+      notes: >-
+        Standard-assurance investigation tooling for long-lived workspace
+        storage scaling. The benchmark generates deterministic Task/Event/Note
+        records, compares one-file and active/archive layouts, measures
+        parse/load, validation, Query, search, agenda, and deterministic-date
+        command-center paths, and records bytes, fixture hashes, platform
+        metadata, and RSS where reliable. Web/server and TUI startup are
+        explicitly documented as deployment-specific follow-up measurements.
+        No production parser, Query, storage, archive, or indexing behavior is
+        changed, and the existing maintainability capability is extended rather
+        than a new runtime capability being introduced.
+      status: implemented
+
     - requirement_id: req-philosophy-typed-semantic-frame
       capability_id: cap-life-philosophy-documentation
       epic: https://github.com/Eruhitsuji/lifetxt/issues/949

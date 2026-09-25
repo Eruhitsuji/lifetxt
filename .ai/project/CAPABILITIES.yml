@@ -11,7 +11,7 @@ capabilities:
     public_interfaces: [lifetxt remote snapshot, lifetxt remote item-create, lifetxt remote item-update, lifetxt remote item-delete]
     tests_or_evidence: [tests.test_remote_client_writes_v23, tests.test_remote_client_v19, tests.test_remote_workspace_snapshot, tests.test_remote_item_writes, tests.test_workspace_foundation]
     related_issues: [https://github.com/Eruhitsuji/lifetxt/issues/915, https://github.com/Eruhitsuji/lifetxt/issues/932]
-    related_pull_requests: []
+    related_pull_requests: [https://github.com/Eruhitsuji/lifetxt/pull/939]
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: Online-only and server-authoritative; no local replica, offline queue, provider synchronization, semantic merge, whole-file mirror, or attachment-byte transfer.
     replacement: {replaces: [], replaced_by: null, deprecation_issue: null}

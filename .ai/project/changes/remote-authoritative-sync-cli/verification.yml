@@ -5,24 +5,24 @@ verification:
       command: python -m unittest tests.test_remote_client_writes_v23 tests.test_remote_client_v19 tests.test_remote_compatibility_v21 tests.test_remote_workspace_snapshot tests.test_remote_item_writes tests.test_workspace_foundation
       requirement_ids: [req-multi-device-sync-cli]
       result: Ran 104 tests -- OK (skipped=4)
-      commit: working-tree
+      commit: c4212ca
       executed_at: '2026-09-25'
       status: passed
     - type: governance
       command: python -m unittest tests.test_traceability_gate tests.test_change_package_closeout
       requirement_ids: [req-multi-device-sync-cli]
       result: Ran 17 tests -- OK
-      commit: working-tree
+      commit: c4212ca
       executed_at: '2026-09-25'
       status: passed
     - type: integration
       command: python -m lifetxt check examples/minimal_life.txt
       requirement_ids: [req-multi-device-sync-cli]
       result: OK -- 10 items
-      commit: working-tree
+      commit: c4212ca
       executed_at: '2026-09-25'
       status: passed
   gaps: []
 review_ledger:
-  - {reviewer: Codex implementer self-review, review_type: implementation-security-integration, target_commit: working-tree, result: passed-informational-only, finding_count: 0, completed_at: '2026-09-25'}
+  - {reviewer: Codex implementer self-review, review_type: implementation-security-integration, target_commit: c4212ca, result: passed-informational-only, finding_count: 0, completed_at: '2026-09-25'}
   - {reviewer: independent reviewer, review_type: implementation-and-integration, target_commit: pending, result: pending, finding_count: 0, completed_at: null}

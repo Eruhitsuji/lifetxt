@@ -58,6 +58,7 @@ from .markdown import item_markdown_payload
 from .model import Diagnostic, Item
 from .notifier import notification_records
 from .parser import parse_text
+from .personal_context import context_capsule
 from .paths import expand_paths
 from .serializer import item_from_dict, item_to_line
 from .status_summary import latest_status_records
@@ -205,6 +206,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         {
             "/api/check-line",
             "/api/items/parse",
+            "/api/personal-context/preview",
             "/api/remote/v1/browser/login",
             "/api/remote/v1/browser/logout",
             "/api/remote/v1/write-check",
@@ -382,6 +384,21 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         from .beginner_profile import beginner_profile_payload
 
         return beginner_profile_payload()
+
+    @app.get("/api/personal-context")
+    def get_personal_context():
+        """Expose the shared current-only Personal Context projection."""
+        items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
+        raise_for_errors(diagnostics)
+        return context_capsule(items, person="self")
+
+    @app.post("/api/personal-context/preview")
+    def preview_personal_context(payload=Body(...)):
+        """Render bootstrap facts without assigning IDs or writing a file."""
+        try:
+            return personal_context_preview(payload)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=error_detail(exc))
 
     @app.get("/api/items")
     def get_items(
@@ -2434,6 +2451,76 @@ def item_from_payload(payload):
     if _has_error(diagnostics):
         raise ValueError(diagnostics_to_output(diagnostics))
     return item
+
+
+_PERSONAL_CONTEXT_DOMAINS = frozenset(
+    ("profile", "preference", "skill", "goal", "project")
+)
+_PERSONAL_CONTEXT_PREVIEW_LIMIT = 25
+_PERSONAL_CONTEXT_FACT_LIMIT = 500
+
+
+def personal_context_preview(payload):
+    """Return exact ordinary Note records for a bounded bootstrap request."""
+    if not isinstance(payload, dict):
+        raise ValueError("Body must be a JSON object.")
+    facts = payload.get("facts")
+    if not isinstance(facts, list):
+        raise ValueError("facts must be a JSON array.")
+    if not facts:
+        raise ValueError("At least one fact is required.")
+    if len(facts) > _PERSONAL_CONTEXT_PREVIEW_LIMIT:
+        raise ValueError(
+            "A preview supports at most %d facts." % _PERSONAL_CONTEXT_PREVIEW_LIMIT
+        )
+
+    records = []
+    for index, fact in enumerate(facts):
+        if not isinstance(fact, dict):
+            raise ValueError("facts[%d] must be a JSON object." % index)
+        domain = str(fact.get("domain") or "").strip().lower()
+        if domain not in _PERSONAL_CONTEXT_DOMAINS:
+            raise ValueError(
+                "facts[%d].domain must be one of: %s."
+                % (index, ", ".join(sorted(_PERSONAL_CONTEXT_DOMAINS)))
+            )
+        title = str(fact.get("fact") or "").strip()
+        if not title:
+            raise ValueError("facts[%d].fact is required." % index)
+        if len(title) > _PERSONAL_CONTEXT_FACT_LIMIT:
+            raise ValueError(
+                "facts[%d].fact must be %d characters or fewer."
+                % (index, _PERSONAL_CONTEXT_FACT_LIMIT)
+            )
+        if "\n" in title or "\r" in title:
+            raise ValueError("facts[%d].fact must be a single line." % index)
+
+        item = Item(
+            "[N]",
+            "N",
+            title,
+            OrderedDict(
+                (("person", ["self"]), ("tag", [domain]), ("source", ["user"]))
+            ),
+        )
+        create_payload = item.to_dict()
+        records.append(
+            OrderedDict(
+                (
+                    ("domain", domain),
+                    ("fact", title),
+                    ("line", item_to_line(item)),
+                    ("payload", create_payload),
+                )
+            )
+        )
+    return OrderedDict(
+        (
+            ("schema", "personal-context-bootstrap-preview-v1"),
+            ("count", len(records)),
+            ("records", records),
+        )
+    )
 
 
 def assign_auto_id_from_paths(item, config=None, paths=None, now=None):

@@ -5,10 +5,13 @@ from unittest import mock
 
 from lifetxt.remote_client_writes import (
     RemoteMutationConflict,
+    _cmd_item_create,
+    _cmd_item_update,
     _cmd_edit,
     create_ticket,
     edit_ticket,
     interactive_tui,
+    mutate_item,
     remote_permissions,
     ticket_detail,
 )
@@ -219,6 +222,141 @@ class RemoteClientWritesTests(unittest.TestCase):
             code = _cmd_edit(args)
         self.assertEqual(code, 3)
         self.assertIn("REMOTE_MUTATION_CONFLICT", stderr.getvalue())
+
+    @mock.patch("lifetxt.remote_client_writes.request")
+    @mock.patch("lifetxt.remote_client_writes.snapshot")
+    def test_item_mutation_uses_snapshot_revision_without_retry(
+        self, snapshot, request
+    ):
+        snapshot.return_value = {"revision": "a" * 64}
+        request.side_effect = [
+            (
+                {
+                    "features": ["item-mutations"],
+                    "mutation_policy": {"item_mutations_enabled": True},
+                },
+                {},
+            ),
+            ({"operation": "delete", "replayed": False}, {}),
+        ]
+        value = mutate_item(
+            {"url": "https://example.test"},
+            "delete",
+            {"item_id": "I-1"},
+            transaction_id="tx-item-1",
+        )
+        self.assertEqual("delete", value["operation"])
+        args, kwargs = request.call_args_list[1]
+        self.assertEqual(args[1:3], ("POST", "/api/remote/v1/item-mutations"))
+        self.assertEqual("a" * 64, kwargs["revision"])
+        self.assertEqual("tx-item-1", kwargs["payload"]["transaction_id"])
+        self.assertEqual(1, snapshot.call_count)
+        self.assertEqual(2, request.call_count)
+
+    @mock.patch("lifetxt.remote_client_writes.request")
+    @mock.patch("lifetxt.remote_client_writes.snapshot")
+    def test_item_conflict_is_non_retrying_and_actionable(self, snapshot, request):
+        snapshot.return_value = {"revision": "old"}
+        request.side_effect = [
+            (
+                {
+                    "features": ["item-mutations"],
+                    "mutation_policy": {"item_mutations_enabled": True},
+                },
+                {},
+            ),
+            RuntimeError(
+                json.dumps(
+                    {
+                        "error": "REVISION_CONFLICT",
+                        "detail": {
+                            "expected_revision": "old",
+                            "current_revision": "new",
+                        },
+                    }
+                )
+            ),
+        ]
+        with self.assertRaises(RemoteMutationConflict) as caught:
+            mutate_item(
+                {"url": "https://example.test"},
+                "update",
+                {"item_id": "I-1", "item": {"title": "Changed"}},
+                transaction_id="tx-conflict",
+            )
+        value = caught.exception.as_dict()
+        self.assertFalse(value["automatic_retry"])
+        self.assertEqual("new", value["current_revision"])
+        self.assertEqual(2, request.call_count)
+
+    @mock.patch("lifetxt.remote_client_writes.request")
+    @mock.patch("lifetxt.remote_client_writes.snapshot")
+    def test_item_mutation_requires_advertised_enabled_capability(
+        self, snapshot, request
+    ):
+        request.return_value = (
+            {
+                "features": ["workspace-sync-snapshot"],
+                "mutation_policy": {"item_mutations_enabled": False},
+            },
+            {},
+        )
+        with self.assertRaisesRegex(RuntimeError, "does not advertise"):
+            mutate_item(
+                {"url": "https://example.test"},
+                "delete",
+                {"item_id": "I-1"},
+            )
+        snapshot.assert_not_called()
+        self.assertEqual(1, request.call_count)
+
+    @mock.patch("lifetxt.remote_client_writes.request")
+    @mock.patch("lifetxt.remote_client_writes.snapshot")
+    def test_item_mutation_propagates_authority_connection_failure(
+        self, snapshot, request
+    ):
+        request.side_effect = RuntimeError("Remote request failed: timed out")
+        with self.assertRaisesRegex(RuntimeError, "timed out"):
+            mutate_item(
+                {"url": "https://example.test"},
+                "create",
+                {"item": {"title": "New"}},
+            )
+        snapshot.assert_not_called()
+        self.assertEqual(1, request.call_count)
+
+    @mock.patch("lifetxt.remote_client_writes.mutate_item")
+    @mock.patch("lifetxt.remote_client_writes.get_profile")
+    def test_item_create_cli_builds_structured_details(self, get_profile, mutate):
+        get_profile.return_value = {"url": "https://example.test"}
+        mutate.return_value = {"operation": "create"}
+        args = mock.Mock(
+            profile="home",
+            profiles_file=None,
+            title="New item",
+            item_type="T",
+            status="[ ]",
+            detail=["project=home", "visibility=shared"],
+            transaction_id="tx-create",
+        )
+        self.assertEqual(0, _cmd_item_create(args))
+        payload = mutate.call_args[0][2]
+        self.assertEqual(["home"], payload["item"]["details"]["project"])
+        self.assertEqual(["shared"], payload["item"]["details"]["visibility"])
+
+    def test_item_update_cli_requires_a_change(self):
+        args = mock.Mock(
+            profile="home",
+            profiles_file=None,
+            item_id="I-1",
+            title=None,
+            item_type=None,
+            status=None,
+            detail=[],
+            transaction_id="tx-empty",
+        )
+        with self.assertRaises(ValueError):
+            _cmd_item_update(args)
 
 
 if __name__ == "__main__":

@@ -2,6 +2,32 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-personal-context-pagination
+      capability_id: cap-personal-context-toolkit
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/955
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/956
+      changed_files_or_scope:
+        - lifetxt/personal_context.py
+        - lifetxt/webapp.py
+        - lifetxt/web_assets.html
+        - lifetxt/web_assets_js_19.js
+        - tests/test_web_personal_context.py
+        - tests/test_web_personal_context_onboarding.py
+        - docs/en/web.md
+        - docs/ja/web.md
+      tests_or_evidence:
+        - "Web API pagination covers 205 records across three bounded pages with full currentness counts"
+        - "Web onboarding assertions cover Load more affordance and paging function"
+        - "tests.test_web_personal_context, tests.test_web_personal_context_onboarding, tests.test_personal_context, tests.test_mcp_expansion -> 334 tests, OK"
+      release_or_deployment: null
+      notes: >-
+        Adds bounded offset pagination to the Web Personal Context projection
+        while preserving the shared context_capsule safety bound and full
+        current/stale health counts. The Web client progressively loads later
+        pages without mutating records or currentness state.
+      status: implemented
+
     - requirement_id: req-storage-scaling-benchmark
       capability_id: cap-stable-maintainability
       epic: https://github.com/Eruhitsuji/lifetxt/issues/937

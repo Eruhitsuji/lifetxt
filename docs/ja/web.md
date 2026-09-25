@@ -83,7 +83,7 @@ MCP tool は `list_items`、`get_item`、`create_item`、`update_item`、
 | `GET` | `/api/health` | 読み込み path と書き込み先を表示 |
 | `GET` | `/api/config` | Web UI が使う公開 runtime config を表示 |
 | `GET` | `/api/items` | item 一覧。filter 指定可能 |
-| `GET` | `/api/personal-context` | `person:self` のcurrent-only Personal Context capsuleを共有resolverから返す。`include_stale=true` を明示するとstale recordだけを追加し、他の非current状態は除外したままにする。responseには共有health由来の`current`/`stale`件数を含む |
+| `GET` | `/api/personal-context` | `person:self` の共有resolverによるcurrent-only Personal Context capsuleを最大100件のbounded pageで返す。`include_stale=true` を明示するとstale recordだけを追加し、`offset` で後続ページを取得できる。responseには共有health由来の`current`/`stale`件数、`total_count`、`has_more`を含む |
 | `POST` | `/api/personal-context/preview` | 最大25件のbootstrap factを検証し、ID付与・書き込みなしで通常Note recordの正確な形をpreview |
 | `POST` | `/api/items/parse` | raw life.txt 行または body block を解析し、書き込まずに parsed item を返す |
 | `POST` | `/api/items/raw` | 検証済み raw life.txt 行を書き込み先ファイルへ追記 |

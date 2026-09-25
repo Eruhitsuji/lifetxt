@@ -83,6 +83,8 @@ MCP tool は `list_items`、`get_item`、`create_item`、`update_item`、
 | `GET` | `/api/health` | 読み込み path と書き込み先を表示 |
 | `GET` | `/api/config` | Web UI が使う公開 runtime config を表示 |
 | `GET` | `/api/items` | item 一覧。filter 指定可能 |
+| `GET` | `/api/personal-context` | `person:self` の current-only Personal Context capsule を共有 resolver から返す |
+| `POST` | `/api/personal-context/preview` | 最大25件のbootstrap factを検証し、ID付与・書き込みなしで通常Note recordの正確な形をpreview |
 | `POST` | `/api/items/parse` | raw life.txt 行または body block を解析し、書き込まずに parsed item を返す |
 | `POST` | `/api/items/raw` | 検証済み raw life.txt 行を書き込み先ファイルへ追記 |
 | `GET` | `/api/items/{id}` | 正規の exact-ID 取得 (#837)。数字のみの path segment は下位互換のため 1-based line number として扱われ（旧 `GET /api/items/{line_no}` と同じ）、それ以外（および一致する行が無い数字 ID）は `GET /api/items/id/{id}` と同じ検索で正規 `id:` として解決する。未知の ID は `404` |

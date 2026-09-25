@@ -1,0 +1,147 @@
+import os
+import tempfile
+import unittest
+from pathlib import Path
+
+
+try:
+    from fastapi.testclient import TestClient
+except Exception:
+    TestClient = None
+
+
+@unittest.skipIf(TestClient is None, "web extras unavailable")
+class WebPersonalContextTests(unittest.TestCase):
+    def setUp(self):
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.path = os.path.join(self.temp_dir.name, "life.txt")
+        Path(self.path).write_text(
+            "[N] N Current id:current person:self tag:preference source:user\n"
+            "[N] N Old id:old person:self tag:goal source:user replaced_by:new\n"
+            "[N] N New id:new person:self tag:goal source:user corrects:old\n"
+            "[N] N Other id:other person:alex tag:skill source:user\n",
+            encoding="utf-8",
+        )
+        from lifetxt.webapp import create_app
+
+        self.client = TestClient(create_app([self.path], writable_path=self.path))
+
+    def tearDown(self):
+        self.temp_dir.cleanup()
+
+    def test_projection_reuses_current_only_capsule(self):
+        response = self.client.get("/api/personal-context")
+        self.assertEqual(200, response.status_code)
+        result = response.json()
+        self.assertEqual("personal-context-capsule-v1", result["schema"])
+        self.assertEqual("self", result["person"])
+        self.assertEqual({"current", "new"}, {row["id"] for row in result["items"]})
+        self.assertNotIn("old", {row["id"] for row in result["items"]})
+        self.assertNotIn("other", {row["id"] for row in result["items"]})
+
+    def test_preview_returns_exact_ordinary_note_payloads_without_writing(self):
+        before = Path(self.path).read_text(encoding="utf-8")
+        response = self.client.post(
+            "/api/personal-context/preview",
+            json={
+                "facts": [
+                    {"domain": "Preference", "fact": "Prefers dark mode"},
+                    {"domain": "skill", "fact": "Uses Python regularly"},
+                ]
+            },
+        )
+        self.assertEqual(200, response.status_code)
+        result = response.json()
+        self.assertEqual("personal-context-bootstrap-preview-v1", result["schema"])
+        self.assertEqual(2, result["count"])
+        first = result["records"][0]
+        self.assertEqual(
+            '[N] N "Prefers dark mode" person:self tag:preference source:user',
+            first["line"],
+        )
+        self.assertEqual(
+            {
+                "status": "[N]",
+                "type": "N",
+                "title": "Prefers dark mode",
+                "details": {
+                    "person": ["self"],
+                    "tag": ["preference"],
+                    "source": ["user"],
+                },
+            },
+            first["payload"],
+        )
+        self.assertNotIn("id", first["payload"]["details"])
+        self.assertEqual(before, Path(self.path).read_text(encoding="utf-8"))
+
+    def test_preview_rejects_invalid_or_unbounded_input(self):
+        cases = [
+            {},
+            {"facts": []},
+            {"facts": [{"domain": "secret", "fact": "No"}]},
+            {"facts": [{"domain": "goal", "fact": ""}]},
+            {"facts": [{"domain": "goal", "fact": "a\nb"}]},
+            {"facts": [{"domain": "goal", "fact": "x" * 501}]},
+            {"facts": [{"domain": "goal", "fact": "x"}] * 26},
+        ]
+        for payload in cases:
+            with self.subTest(payload=payload):
+                self.assertEqual(
+                    400,
+                    self.client.post(
+                        "/api/personal-context/preview", json=payload
+                    ).status_code,
+                )
+
+    def test_read_only_can_project_and_preview_but_not_save(self):
+        from lifetxt.webapp import create_app
+
+        client = TestClient(
+            create_app([self.path], writable_path=self.path, read_only=True)
+        )
+        self.assertEqual(200, client.get("/api/personal-context").status_code)
+        payload = {"facts": [{"domain": "profile", "fact": "Lives in Tokyo"}]}
+        preview = client.post("/api/personal-context/preview", json=payload)
+        self.assertEqual(200, preview.status_code)
+        self.assertEqual(
+            403,
+            client.post(
+                "/api/items", json=preview.json()["records"][0]["payload"]
+            ).status_code,
+        )
+
+    def test_bearer_auth_applies_to_both_routes(self):
+        from lifetxt.webapp import create_app
+
+        client = TestClient(
+            create_app(
+                [self.path],
+                writable_path=self.path,
+                config={"api": {"token": "test-token"}},
+            )
+        )
+        headers = {"Authorization": "Bearer test-token"}
+        self.assertEqual(401, client.get("/api/personal-context").status_code)
+        self.assertEqual(
+            200, client.get("/api/personal-context", headers=headers).status_code
+        )
+        self.assertEqual(
+            401,
+            client.post(
+                "/api/personal-context/preview",
+                json={"facts": [{"domain": "goal", "fact": "Ship it"}]},
+            ).status_code,
+        )
+        self.assertEqual(
+            200,
+            client.post(
+                "/api/personal-context/preview",
+                json={"facts": [{"domain": "goal", "fact": "Ship it"}]},
+                headers=headers,
+            ).status_code,
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

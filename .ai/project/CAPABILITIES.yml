@@ -6554,13 +6554,16 @@ capabilities:
       - req-personal-context-capsule
       - req-personal-decision-memory
       - req-personal-context-toolkit-integration
+      - req-web-personal-context-projection-preview
     implementation_locations:
       - lifetxt/personal_context.py
+      - lifetxt/webapp.py
       - lifetxt/personal_context_cli.py
       - lifetxt/entrypoint.py
       - tests/test_personal_context.py
       - tests/test_personal_context_cli.py
       - tests/test_personal_context_correction.py
+      - tests/test_web_personal_context.py
       - docs/en/personal-context-toolkit.md
       - docs/ja/personal-context-toolkit.md
     public_interfaces:
@@ -6569,10 +6572,13 @@ capabilities:
       - lifetxt context capsule
       - lifetxt memory correct <id> TEXT
       - lifetxt decisions
+      - GET /api/personal-context
+      - POST /api/personal-context/preview
     tests_or_evidence:
       - tests/test_personal_context.py
       - tests/test_personal_context_cli.py
       - tests/test_personal_context_correction.py
+      - tests/test_web_personal_context.py
       - PR #553 CI
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/500
@@ -6583,6 +6589,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/550
       - https://github.com/Eruhitsuji/lifetxt/issues/551
       - https://github.com/Eruhitsuji/lifetxt/issues/552
+      - https://github.com/Eruhitsuji/lifetxt/issues/925
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/553
     reuse_policy: prefer_reuse_or_extension_before_new_implementation

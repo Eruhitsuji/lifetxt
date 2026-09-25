@@ -1,0 +1,33 @@
+
+    /* ── Personal Context onboarding (#916 / #926) ── */
+    .personal-context-lead { margin: .35rem 0 0; color: var(--muted); max-width: 48rem; }
+    .personal-context-layout { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 1rem; }
+    .personal-context-card { min-width: 0; padding: 1rem; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--panel); }
+    .personal-context-card h3 { margin: 0 0 .75rem; }
+    .personal-context-steps { margin: 0 0 1rem; padding-left: 1.25rem; color: var(--muted); }
+    .personal-context-steps li + li { margin-top: .35rem; }
+    .personal-context-facts { display: grid; gap: .65rem; }
+    .personal-context-fact-row { display: grid; grid-template-columns: minmax(8rem, .55fr) minmax(12rem, 1.45fr) auto; gap: .6rem; align-items: end; }
+    .personal-context-fact-row label { display: grid; gap: .25rem; font-size: .78rem; color: var(--muted); }
+    .personal-context-fact-row input, .personal-context-fact-row select { width: 100%; min-height: 44px; }
+    .personal-context-remove { min-height: 44px; }
+    .personal-context-actions { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .6rem; margin-top: .8rem; }
+    .personal-context-preview { margin-top: 1rem; }
+    .personal-context-preview ol { display: grid; gap: .5rem; padding-left: 1.35rem; }
+    .personal-context-preview code { display: block; overflow-wrap: anywhere; padding: .55rem; border-radius: var(--r-sm); background: var(--soft); }
+    .personal-context-feedback { min-height: 1.5rem; margin-top: .65rem; color: var(--muted); }
+    .personal-context-next { display: flex; flex-wrap: wrap; gap: .45rem .8rem; margin-top: 1rem; padding-top: .8rem; border-top: 1px solid var(--line); font-size: .82rem; }
+    .personal-context-next strong { width: 100%; }
+    .personal-context-group + .personal-context-group { margin-top: 1rem; }
+    .personal-context-group h4 { display: flex; justify-content: space-between; margin: 0; padding-bottom: .35rem; border-bottom: 1px solid var(--line); }
+    .personal-context-group h4 span { color: var(--muted); font-weight: 400; }
+    .personal-context-group ul { margin: .55rem 0 0; padding-left: 1.25rem; }
+    @media (max-width: 760px) {
+      .personal-context-layout { grid-template-columns: 1fr; }
+      .personal-context-fact-row { grid-template-columns: 1fr; }
+      .personal-context-remove { justify-self: start; }
+    }
+    @media (max-width: 430px) {
+      .personal-context-card { padding: .8rem; }
+      .personal-context-actions > button { width: 100%; }
+    }

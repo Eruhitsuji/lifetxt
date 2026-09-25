@@ -64,6 +64,7 @@ __LIFETXT_WEB_STYLES__  </style>
           <button type="button" class="workspace-tab" data-view="stats" onclick="switchWorkspace('stats')">📊 Stats</button>
           <button type="button" class="workspace-tab" data-view="graph" onclick="switchWorkspace('graph')">🕸️ Graph</button>
           <button type="button" class="workspace-tab" data-view="server" onclick="switchWorkspace('server')">🛡️ Server</button>
+          <button type="button" class="workspace-tab" data-view="context" onclick="switchWorkspace('context')">🧭 Personal Context</button>
           <button type="button" class="workspace-tab" data-view="display" onclick="switchWorkspace('display')" title="Open a read-focused wall display mode">🪧 Display</button>
           <button type="button" class="workspace-tab" data-view="kiosk" onclick="switchWorkspace('kiosk')">🖥️ Kiosk</button>
         </div>
@@ -432,6 +433,45 @@ __LIFETXT_WEB_STYLES__  </style>
           <div id="server-backup-status" aria-live="polite" aria-busy="true">
             <div class="empty">Loading backup status…</div>
           </div>
+        </div>
+      </section>
+      <section class="personal-context-section page" data-page="context" aria-labelledby="personal-context-heading">
+        <div class="section-head">
+          <div>
+            <h2 id="personal-context-heading"><span class="h2-icon" aria-hidden="true">🧭</span>Personal Context</h2>
+            <p class="personal-context-lead">Durable facts you explicitly choose help tools work with your preferences and goals. Nothing is inferred here.</p>
+          </div>
+          <button type="button" class="secondary" onclick="loadPersonalContext()">↺ Refresh</button>
+        </div>
+        <div class="personal-context-layout">
+          <section class="personal-context-card" aria-labelledby="personal-context-current-heading">
+            <h3 id="personal-context-current-heading">Current context</h3>
+            <div id="personal-context-current" aria-live="polite" aria-busy="true"><div class="empty">Loading…</div></div>
+          </section>
+          <section class="personal-context-card" aria-labelledby="personal-context-bootstrap-heading">
+            <h3 id="personal-context-bootstrap-heading">Add context</h3>
+            <ol class="personal-context-steps">
+              <li>Choose a domain convention: Profile, Preferences, Skills, Goals, or Projects.</li>
+              <li>Write one atomic fact per row—something that can stay true or be corrected later.</li>
+              <li>Preview the exact life.txt records, then save them sequentially.</li>
+            </ol>
+            <form id="personal-context-form" onsubmit="event.preventDefault();previewPersonalContext();">
+              <div id="personal-context-facts" class="personal-context-facts"></div>
+              <div class="personal-context-actions">
+                <button type="button" class="secondary" onclick="addPersonalContextFact()">＋ Add fact</button>
+                <button id="personal-context-preview-btn" type="submit">Preview records</button>
+              </div>
+            </form>
+            <div id="personal-context-preview" class="personal-context-preview" aria-live="polite"></div>
+            <div id="personal-context-feedback" class="personal-context-feedback" role="status" aria-live="assertive" aria-atomic="true"></div>
+            <aside class="personal-context-next" aria-label="Next steps">
+              <strong>Next steps</strong>
+              <a href="https://github.com/Eruhitsuji/lifetxt/blob/main/docs/en/personal-context-toolkit.md#context-health" target="_blank" rel="noopener noreferrer">Check context health</a>
+              <a href="https://github.com/Eruhitsuji/lifetxt/blob/main/docs/en/personal-context-toolkit.md#proposal-first-correction" target="_blank" rel="noopener noreferrer">Correct a fact</a>
+              <a href="https://github.com/Eruhitsuji/lifetxt/blob/main/docs/en/personal-context-toolkit.md#context-capsule" target="_blank" rel="noopener noreferrer">Use a context capsule</a>
+              <a href="https://github.com/Eruhitsuji/lifetxt/blob/main/docs/en/ai-integration.md#10-personal-ai-memory" target="_blank" rel="noopener noreferrer">Connect AI tools</a>
+            </aside>
+          </section>
         </div>
       </section>
   </main>

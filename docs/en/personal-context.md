@@ -1,5 +1,11 @@
 # Personal Context: AI Authoring and Usage Guide
 
+The Web UI provides a bounded first-use path at **More → Personal Context**.
+It explains the existing Profile/Preference/Skill/Goal/Project tag conventions,
+previews exact ordinary Note records on the server, and saves them one at a
+time through the authoritative item API. It performs no AI inference. Current
+context on that page uses the shared currentness resolver documented below.
+
 This guide explains how a generative AI can build, maintain, and use lifetxt as
 provider-independent Personal Context / a Personal DB. It defines an authoring
 and usage policy, not a new file format, schema, record kind, query language, or

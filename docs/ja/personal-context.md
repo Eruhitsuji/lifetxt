@@ -1,5 +1,10 @@
 # Personal Context: AIによる作成・維持・活用ガイド
 
+Web UI の **More → Personal Context** には、範囲を限定した初回導線があります。
+既存のProfile/Preference/Skill/Goal/Project tag規約を説明し、通常のNote recordの
+正確な形をserverでpreviewしてから、正規のitem APIで1件ずつ保存します。AI推論は
+行いません。この画面の現在値は、以下で説明する共有currentness resolverを使います。
+
 このガイドでは、生成AIが lifetxt を provider-independent な Personal Context /
 Personal DB として作成・維持・活用するための方針を説明します。ここで定義するのは
 **authoring / usage policy** であり、新しい file format、schema、record kind、

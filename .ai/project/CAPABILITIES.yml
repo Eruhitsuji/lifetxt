@@ -67,7 +67,8 @@ capabilities:
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/915
       - https://github.com/Eruhitsuji/lifetxt/issues/933
-    related_pull_requests: []
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/934
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       Read-only online foundation. It does not enable authoritative mutations,

@@ -10837,6 +10837,7 @@ capabilities:
     source_requirements:
       - req-web-mobile-quick-capture
       - req-web-mobile-quick-capture-installability
+      - req-web-mobile-quick-capture-validation
     implementation_locations:
       - lifetxt/webapp.py
       - lifetxt/web_assets.html
@@ -10851,6 +10852,8 @@ capabilities:
       - lifetxt/web_icon_512.png
       - tests/test_web_mobile_capture.py
       - tests/test_web_installability.py
+      - tests/test_web_mobile_capture_browser.py
+      - tests/browser_mobile_capture_probe.mjs
       - tests/test_web_assets.py
       - docs/en/web.md
       - docs/ja/web.md
@@ -10863,12 +10866,14 @@ capabilities:
     tests_or_evidence:
       - tests.test_web_mobile_capture
       - tests.test_web_installability
+      - tests.test_web_mobile_capture_browser
       - tests.test_web_assets
       - tests.test_web_i18n
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/914
       - https://github.com/Eruhitsuji/lifetxt/issues/917
       - https://github.com/Eruhitsuji/lifetxt/issues/919
+      - https://github.com/Eruhitsuji/lifetxt/issues/920
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/921
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
@@ -10876,6 +10881,8 @@ capabilities:
       Online capture only. Installability metadata launches `/capture` and
       reuses the existing brand geometry, but adds no service worker, offline
       queue, share-target, mobile-only parser, record type, or mutation path.
+      Browser automation covers representative phone and keyboard-reduced
+      viewports; physical iOS/Android behavior remains explicitly unverified.
     replacement:
       replaces: []
       replaced_by: null

@@ -39,6 +39,15 @@ Quick Capture is online-only. It does not install an offline cache, queue
 mutations, or weaken the Web server's `no-store`, authentication, read-only, or
 write-target behavior.
 
+Automated mobile verification covers 320, 360, 390, and 430 CSS-pixel portrait
+widths plus short landscape and reduced-height keyboard-like viewports in
+headless Chrome. It checks overflow, touch target size, initial/repeat focus,
+keyboard submission, success/error feedback, duplicate suppression, and EN/JA
+rendering. This is browser emulation, not physical-device evidence: actual
+iOS Safari/Android browser chrome, safe-area insets, software-keyboard resizing,
+and installed home-screen icon presentation remain platform-level residual
+risks to check on target devices.
+
 Multiple files can be read at once. Paths may be glob patterns such as
 `projects/**/*.life.txt`, and directories are expanded to life.txt-like `.txt`
 files. Create, update, and delete operations use the first file unless

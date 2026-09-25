@@ -30,6 +30,11 @@ Quick add endpoints and shorthand as the full Web UI (`@project`, `#tag`,
 `!priority`, `^due`, or a complete life.txt line). A successful capture clears
 and refocuses the input; a failed capture keeps the text available for retry.
 
+The Web UI publishes an app manifest and phone-sized life.txt icons. In a
+supporting mobile browser, use its **Add to Home Screen** or **Install** action
+while viewing `/capture`; the resulting shortcut opens directly in Quick
+Capture with standalone presentation where the platform supports it.
+
 Quick Capture is online-only. It does not install an offline cache, queue
 mutations, or weaken the Web server's `no-store`, authentication, read-only, or
 write-target behavior.

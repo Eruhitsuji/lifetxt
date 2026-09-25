@@ -310,6 +310,28 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             headers={"Cache-Control": "no-store"},
         )
 
+    @app.get("/manifest.webmanifest")
+    def web_app_manifest():
+        from .web_assets import web_resource_bytes
+
+        return Response(
+            content=web_resource_bytes("web_app_manifest.json"),
+            media_type="application/manifest+json",
+            headers={"Cache-Control": "no-store"},
+        )
+
+    @app.get("/assets/lifetxt-icon-{size}.png")
+    def web_app_icon(size: int):
+        from .web_assets import web_resource_bytes
+
+        if size not in (180, 192, 512):
+            raise HTTPException(status_code=404, detail="Unknown Web app icon size.")
+        return Response(
+            content=web_resource_bytes("web_icon_%d.png" % size),
+            media_type="image/png",
+            headers={"Cache-Control": "no-store"},
+        )
+
     @app.get("/api/health")
     def health():
         return {

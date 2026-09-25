@@ -53,7 +53,14 @@ dev = [
 packages = ["lifetxt"]
 
 [tool.setuptools.package-data]
-lifetxt = ["web_assets.html", "web_assets_css_*.css", "web_assets_js_*.js"]
+lifetxt = [
+  "web_assets.html",
+  "web_assets_css_*.css",
+  "web_assets_js_*.js",
+  "web_app_manifest.json",
+  "web_icon.svg",
+  "web_icon_*.png",
+]
 
 [tool.ruff]
 required-version = ">=0.16.1"

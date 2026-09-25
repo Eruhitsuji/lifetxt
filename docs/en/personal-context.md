@@ -9,6 +9,14 @@ The page is current-only by default. Its **Show stale** control calls the same
 bounded capsule with stale inclusion enabled and labels those records without
 modifying or reconfirming them; shared health supplies the displayed counts.
 
+When a stale fact is explicitly reviewed and remains correct, the Web UI offers
+**Still correct**. This updates only its `updated:` freshness evidence through
+the exact-ID, compare-and-swap mutation path; it preserves the ID, content,
+source, tags, and other details. It never bulk-promotes stale facts. If the
+file changed since the page was loaded, the operation fails closed and the user
+must reload. Facts that need changes should use the existing proposal-first
+correction flow, not reconfirmation.
+
 This guide explains how a generative AI can build, maintain, and use lifetxt as
 provider-independent Personal Context / a Personal DB. It defines an authoring
 and usage policy, not a new file format, schema, record kind, query language, or

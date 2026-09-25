@@ -58,7 +58,13 @@ from .markdown import item_markdown_payload
 from .model import Diagnostic, Item
 from .notifier import notification_records
 from .parser import parse_text
-from .personal_context import context_capsule, context_health
+from .personal_context import (
+    context_capsule,
+    context_health,
+    item_currentness,
+    resolve_currentness,
+    select_personal_context,
+)
 from .paths import expand_paths
 from .serializer import item_from_dict, item_to_line
 from .status_summary import latest_status_records
@@ -406,6 +412,10 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             offset=offset,
         )
         result["has_more"] = offset + result["count"] < result["total_count"]
+        if app.state.writable_path and os.path.exists(app.state.writable_path):
+            result["source_revision"] = mutation.read_text_snapshot(
+                app.state.writable_path
+            ).content_hash
         health = context_health(items, person="self")
         result["currentness_counts"] = OrderedDict(
             (
@@ -414,6 +424,91 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             )
         )
         return result
+
+    @app.post("/api/personal-context/{item_id}/reconfirm")
+    def reconfirm_personal_context(item_id, payload=Body(None)):
+        """Explicitly refresh one stale Personal Context fact through CAS."""
+        if app.state.read_only or not app.state.writable_path:
+            raise HTTPException(
+                status_code=403,
+                detail={"error": "READ_ONLY", "message": "Web mode is read-only."},
+            )
+        payload = payload if isinstance(payload, dict) else {}
+        expected_source_revision = payload.get("expected_source_revision")
+        writable = app.state.writable_path
+        snapshot = mutation.read_text_snapshot(writable, allow_missing=False)
+        if expected_source_revision and expected_source_revision != snapshot.content_hash:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "error": "CONFLICT",
+                    "expected_revision": expected_source_revision,
+                    "current_revision": snapshot.content_hash,
+                },
+            )
+        key = id_key_from_config(app.state.config)
+        parsed_items, diagnostics = parse_text(snapshot.text, id_key=key)
+        raise_for_errors(diagnostics)
+        try:
+            item = find_item_by_id(parsed_items, item_id, key=key)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=error_detail(exc))
+        if item is None:
+            raise HTTPException(status_code=404, detail="Item id:%s was not found." % item_id)
+        if not is_editable(item, writable) or getattr(item, "generated", False):
+            raise HTTPException(status_code=409, detail="Personal Context item is not writable.")
+        currentness = resolve_currentness(parsed_items)
+        record = item_currentness(item, currentness)
+        if record is None or record.get("state") != "stale":
+            raise HTTPException(status_code=409, detail="Only stale Personal Context items can be reconfirmed.")
+        if item not in select_personal_context(parsed_items, person="self"):
+            raise HTTPException(status_code=409, detail="Item is not an eligible Personal Context record.")
+        now_value = _format_now()
+
+        def transform(text):
+            current_items, current_diagnostics = parse_text(text, id_key=key)
+            raise_for_errors(current_diagnostics)
+            current_item = find_item_by_id(current_items, item_id, key=key)
+            if current_item is None:
+                raise mutation.MutationError("Personal Context item disappeared during reconfirmation.")
+            details = OrderedDict((name, list(values)) for name, values in current_item.details.items())
+            details["updated"] = [now_value]
+            from .write_operations import transform_items_text_with_native_history
+
+            return transform_items_text_with_native_history(
+                text,
+                [{"id": str(item_id), "status": current_item.status, "type": current_item.kind, "title": current_item.title, "set_details": details}],
+                id_key=key,
+                source_revision=mutation.hash_text(text),
+            )
+
+        try:
+            mutation.mutate_text(
+                writable,
+                transform,
+                expected_hash=snapshot.content_hash,
+                operation="web personal context reconfirm",
+            )
+        except mutation.MutationConflict as exc:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "error": "CONFLICT",
+                    "expected_revision": exc.expected_hash,
+                    "current_revision": exc.actual_hash,
+                },
+            )
+        except (ValueError, mutation.MutationError) as exc:
+            raise HTTPException(status_code=409, detail=str(exc))
+        updated_items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
+        raise_for_errors(diagnostics)
+        updated = find_item_by_id(updated_items, item_id, key=key)
+        return {
+            "id": item_id,
+            "reconfirmed": True,
+            "item": api_item(updated, writable, key),
+            "source_revision": mutation.read_text_snapshot(writable).content_hash,
+        }
 
     @app.post("/api/personal-context/preview")
     def preview_personal_context(payload=Body(...)):

@@ -84,6 +84,7 @@ MCP tool は `list_items`、`get_item`、`create_item`、`update_item`、
 | `GET` | `/api/config` | Web UI が使う公開 runtime config を表示 |
 | `GET` | `/api/items` | item 一覧。filter 指定可能 |
 | `GET` | `/api/personal-context` | `person:self` の共有resolverによるcurrent-only Personal Context capsuleを最大100件のbounded pageで返す。`include_stale=true` を明示するとstale recordだけを追加し、`offset` で後続ページを取得できる。responseには共有health由来の`current`/`stale`件数、`total_count`、`has_more`を含む |
+| `POST` | `/api/personal-context/{id}/reconfirm` | staleかつwritableなPersonal Context recordを明示的に再確認する。pageの`source_revision`を要求し、exact-IDのCAS経路で`updated:`だけを更新する。並行変更時は`409`で安全側に失敗する |
 | `POST` | `/api/personal-context/preview` | 最大25件のbootstrap factを検証し、ID付与・書き込みなしで通常Note recordの正確な形をpreview |
 | `POST` | `/api/items/parse` | raw life.txt 行または body block を解析し、書き込まずに parsed item を返す |
 | `POST` | `/api/items/raw` | 検証済み raw life.txt 行を書き込み先ファイルへ追記 |
@@ -886,6 +887,9 @@ previewを利用できますが、保存は無効です。overviewはCLI/MCPと�
 Capsuleおよびhealth/currentness resolverを使い、既定はcurrent-onlyです。
 **古い可能性がある事実を表示**を明示すると、stale factを区別して表示し、
 current/stale件数も確認できます。この操作は`updated:`を変更せず、staleをcurrentへ
+昇格させません。レビューしても正しいと判断したstale factには**まだ正しい**を使えます。
+1件ずつ明示的に再確認し、成功後に件数と表示を更新します。後で確認するものはstaleのまま
+残し、内容を直す場合は既存のcorrection/proposal経路を使ってください。
 昇格させません。superseded、expired、future-effective、conflicting、
 historical-onlyは引き続き除外されます。
 

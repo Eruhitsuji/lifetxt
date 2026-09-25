@@ -27,6 +27,8 @@ class WebPersonalContextOnboardingTests(unittest.TestCase):
         self.assertIn("?include_stale=true", self.js)
         self.assertIn("loadMorePersonalContext", self.js)
         self.assertIn('id="personal-context-load-more"', self.html)
+        self.assertIn("reconfirmPersonalContext", self.js)
+        self.assertIn("Still correct", self.js)
         self.assertIn('api("/api/personal-context/preview"', self.js)
         self.assertIn('api("/api/items"', self.js)
         self.assertNotIn("/api/personal-context/save", self.js)

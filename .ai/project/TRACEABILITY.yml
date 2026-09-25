@@ -2,6 +2,34 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-personal-context-reconfirm
+      capability_id: cap-personal-context-toolkit
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/957
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/958
+      changed_files_or_scope:
+        - lifetxt/webapp.py
+        - lifetxt/web_assets_js_01.js
+        - lifetxt/web_assets_js_19.js
+        - lifetxt/web_assets_css_06.css
+        - tests/test_web_personal_context.py
+        - tests/test_web_personal_context_onboarding.py
+        - docs/en/personal-context.md
+        - docs/ja/personal-context.md
+        - docs/en/web.md
+        - docs/ja/web.md
+      tests_or_evidence:
+        - "reconfirm API preserves exact-ID record details and transitions stale to current"
+        - "unknown ID, non-stale ID, and stale source revision are rejected"
+        - "Web UI exposes explicit Still correct action and refreshes after success"
+      release_or_deployment: null
+      notes: >-
+        Adds a one-record-at-a-time, explicit review mutation that updates only
+        freshness evidence through the shared exact-ID native-history and CAS
+        write path. It never bulk-promotes stale facts and remains disabled by
+        the existing read-only Web guard.
+      status: implemented
+
     - requirement_id: req-web-personal-context-pagination
       capability_id: cap-personal-context-toolkit
       epic: https://github.com/Eruhitsuji/lifetxt/issues/500

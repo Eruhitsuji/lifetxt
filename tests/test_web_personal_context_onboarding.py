@@ -25,6 +25,8 @@ class WebPersonalContextOnboardingTests(unittest.TestCase):
     def test_ui_uses_projection_preview_and_authoritative_item_write_routes(self):
         self.assertIn("api(`/api/personal-context", self.js)
         self.assertIn("?include_stale=true", self.js)
+        self.assertIn("loadMorePersonalContext", self.js)
+        self.assertIn('id="personal-context-load-more"', self.html)
         self.assertIn('api("/api/personal-context/preview"', self.js)
         self.assertIn('api("/api/items"', self.js)
         self.assertNotIn("/api/personal-context/save", self.js)

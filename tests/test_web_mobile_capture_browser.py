@@ -49,6 +49,7 @@ class MobileCaptureBrowserTests(unittest.TestCase):
         evidence = json.loads(process.stdout)
         cls.results = evidence["viewports"]
         cls.context_results = evidence["contextViewports"]
+        cls.context_interaction = evidence["contextInteraction"]
         cls.interactions = evidence["interactions"]
 
     def test_every_target_viewport_has_no_horizontal_page_overflow(self):
@@ -130,6 +131,12 @@ class MobileCaptureBrowserTests(unittest.TestCase):
                     else "Personal Context"
                 )
                 self.assertIn(expected, result["heading"])
+
+    def test_personal_context_stale_toggle_exposes_counts_and_badge(self):
+        self.assertTrue(self.context_interaction["checked"])
+        self.assertIn("1", self.context_interaction["counts"])
+        self.assertEqual(1, self.context_interaction["staleBadges"])
+        self.assertIn("Stale fact", self.context_interaction["staleText"])
 
 
 if __name__ == "__main__":

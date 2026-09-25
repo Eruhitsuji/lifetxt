@@ -445,7 +445,11 @@ __LIFETXT_WEB_STYLES__  </style>
         </div>
         <div class="personal-context-layout">
           <section class="personal-context-card" aria-labelledby="personal-context-current-heading">
-            <h3 id="personal-context-current-heading">Current context</h3>
+            <div class="personal-context-current-head">
+              <h3 id="personal-context-current-heading">Current context</h3>
+              <label class="personal-context-stale-toggle"><input id="personal-context-include-stale" type="checkbox" onchange="loadPersonalContext()"> Show stale</label>
+            </div>
+            <div id="personal-context-counts" class="personal-context-counts" aria-live="polite"></div>
             <div id="personal-context-current" aria-live="polite" aria-busy="true"><div class="empty">Loading…</div></div>
           </section>
           <section class="personal-context-card" aria-labelledby="personal-context-bootstrap-heading">

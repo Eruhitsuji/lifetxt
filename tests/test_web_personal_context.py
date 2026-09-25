@@ -16,9 +16,10 @@ class WebPersonalContextTests(unittest.TestCase):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.path = os.path.join(self.temp_dir.name, "life.txt")
         Path(self.path).write_text(
-            "[N] N Current id:current person:self tag:preference source:user\n"
-            "[N] N Old id:old person:self tag:goal source:user replaced_by:new\n"
-            "[N] N New id:new person:self tag:goal source:user corrects:old\n"
+            "[N] N Current id:current person:self tag:preference source:user updated:2999-01-01\n"
+            "[N] N Stale id:stale person:self tag:skill source:user updated:2000-01-01\n"
+            "[N] N Old id:old person:self tag:goal source:user replaced_by:new updated:2999-01-01\n"
+            "[N] N New id:new person:self tag:goal source:user corrects:old updated:2999-01-01\n"
             "[N] N Other id:other person:alex tag:skill source:user\n",
             encoding="utf-8",
         )
@@ -36,8 +37,59 @@ class WebPersonalContextTests(unittest.TestCase):
         self.assertEqual("personal-context-capsule-v1", result["schema"])
         self.assertEqual("self", result["person"])
         self.assertEqual({"current", "new"}, {row["id"] for row in result["items"]})
+        self.assertEqual({"current": 2, "stale": 1}, result["currentness_counts"])
+        self.assertFalse(result["include_stale"])
+        self.assertNotIn("stale", {row["id"] for row in result["items"]})
         self.assertNotIn("old", {row["id"] for row in result["items"]})
         self.assertNotIn("other", {row["id"] for row in result["items"]})
+
+    def test_projection_explicitly_includes_only_stale_records(self):
+        response = self.client.get("/api/personal-context?include_stale=true")
+        self.assertEqual(200, response.status_code)
+        result = response.json()
+        self.assertTrue(result["include_stale"])
+        rows = {row["id"]: row for row in result["items"]}
+        self.assertEqual({"current", "new", "stale"}, set(rows))
+        self.assertTrue(rows["stale"]["stale"])
+        self.assertFalse(rows["current"]["stale"])
+        self.assertNotIn("old", rows)
+        self.assertNotIn("other", rows)
+
+    def test_projection_all_current_all_stale_and_mixed_counts(self):
+        datasets = {
+            "all-current": (
+                "[N] N One id:one person:self tag:profile source:user updated:2999-01-01\n",
+                {"current": 1, "stale": 0},
+                {"one"},
+            ),
+            "all-stale": (
+                "[N] N One id:one person:self tag:profile source:user updated:2000-01-01\n",
+                {"current": 0, "stale": 1},
+                {"one"},
+            ),
+            "mixed": (
+                "[N] N One id:one person:self tag:profile source:user updated:2999-01-01\n"
+                "[N] N Two id:two person:self tag:project source:user updated:2000-01-01\n",
+                {"current": 1, "stale": 1},
+                {"one", "two"},
+            ),
+        }
+        for name, (text, counts, included_ids) in datasets.items():
+            with self.subTest(name=name):
+                Path(self.path).write_text(text, encoding="utf-8")
+                default = self.client.get("/api/personal-context").json()
+                expanded = self.client.get(
+                    "/api/personal-context?include_stale=true"
+                ).json()
+                self.assertEqual(counts, default["currentness_counts"])
+                self.assertEqual(
+                    included_ids,
+                    {row["id"] for row in expanded["items"]},
+                )
+                self.assertEqual(
+                    {row["id"] for row in expanded["items"] if not row["stale"]},
+                    {row["id"] for row in default["items"]},
+                )
 
     def test_preview_returns_exact_ordinary_note_payloads_without_writing(self):
         before = Path(self.path).read_text(encoding="utf-8")
@@ -101,6 +153,10 @@ class WebPersonalContextTests(unittest.TestCase):
             create_app([self.path], writable_path=self.path, read_only=True)
         )
         self.assertEqual(200, client.get("/api/personal-context").status_code)
+        self.assertEqual(
+            200,
+            client.get("/api/personal-context?include_stale=true").status_code,
+        )
         payload = {"facts": [{"domain": "profile", "fact": "Lives in Tokyo"}]}
         preview = client.post("/api/personal-context/preview", json=payload)
         self.assertEqual(200, preview.status_code)

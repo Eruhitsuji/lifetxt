@@ -6556,6 +6556,7 @@ capabilities:
       - req-personal-context-toolkit-integration
       - req-web-personal-context-projection-preview
       - req-web-personal-context-onboarding
+      - req-web-personal-context-stale-inspection
     implementation_locations:
       - lifetxt/personal_context.py
       - lifetxt/webapp.py
@@ -6598,6 +6599,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/552
       - https://github.com/Eruhitsuji/lifetxt/issues/925
       - https://github.com/Eruhitsuji/lifetxt/issues/926
+      - https://github.com/Eruhitsuji/lifetxt/issues/929
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/553
       - https://github.com/Eruhitsuji/lifetxt/pull/927

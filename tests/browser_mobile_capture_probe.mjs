@@ -15,6 +15,14 @@ const server = http.createServer((request, response) => {
     response.end(html);
     return;
   }
+  if (request.url.startsWith("/api/personal-context")) {
+    const includeStale = request.url.includes("include_stale=true");
+    const current = {id: "current", title: "Current fact", details: {tag: ["profile"]}, stale: false};
+    const stale = {id: "stale", title: "Stale fact", details: {tag: ["value"]}, stale: true};
+    response.writeHead(200, {"content-type": "application/json"});
+    response.end(JSON.stringify({items: includeStale ? [current, stale] : [current], currentness_counts: {current: 1, stale: 1}}));
+    return;
+  }
   if (request.method === "POST") {
     let body = "";
     request.on("data", chunk => { body += chunk; });
@@ -158,6 +166,17 @@ try {
     });
     contextResults.push({...testCase, ...evaluated.result.value});
   }
+  await command("Runtime.evaluate", {expression: "document.getElementById('personal-context-include-stale').click()"});
+  await delay(150);
+  const contextInteraction = await command("Runtime.evaluate", {
+    expression: `({
+      checked: document.getElementById("personal-context-include-stale").checked,
+      counts: document.getElementById("personal-context-counts").textContent,
+      staleBadges: document.querySelectorAll(".personal-context-stale-badge").length,
+      staleText: document.querySelector(".personal-context-stale")?.textContent,
+    })`,
+    returnByValue: true,
+  });
   await command("Emulation.setDeviceMetricsOverride", {width: 390, height: 360, deviceScaleFactor: 2, mobile: true});
   await command("Page.navigate", {url: `http://127.0.0.1:${port}/capture?lang=en`});
   await delay(300);
@@ -174,7 +193,7 @@ try {
   await command("Runtime.evaluate", {expression: "document.getElementById('capture-text').value = 'Only once'; document.getElementById('capture-form').requestSubmit(); document.getElementById('capture-form').requestSubmit()"});
   const pendingState = await command("Runtime.evaluate", {expression: `({disabled: document.getElementById("capture-submit").disabled, busy: document.getElementById("capture-submit").getAttribute("aria-busy")})`, returnByValue: true});
   await delay(350);
-  process.stdout.write(JSON.stringify({viewports: results, contextViewports: contextResults, interactions: {success: success.result.value, failure: failure.result.value, pending: pendingState.result.value, pendingRequestCount: captureBodies.length - beforePending}}));
+  process.stdout.write(JSON.stringify({viewports: results, contextViewports: contextResults, contextInteraction: contextInteraction.result.value, interactions: {success: success.result.value, failure: failure.result.value, pending: pendingState.result.value, pendingRequestCount: captureBodies.length - beforePending}}));
 } finally {
   if (socket) socket.close();
   if (browser.exitCode === null) {

@@ -66,6 +66,22 @@ __LIFETXT_WEB_STYLES__  </style>
   </header>
   <div id="view-guide" class="view-guide" aria-live="polite"></div>
   <main id="workspace" tabindex="-1">
+    <section class="capture-section page" data-page="capture" aria-labelledby="capture-heading">
+      <div class="capture-card">
+        <div class="capture-brand" aria-hidden="true">life.txt</div>
+        <h2 id="capture-heading">Quick Capture</h2>
+        <p class="capture-intro">Capture one thought to your authoritative life.txt.</p>
+        <form id="capture-form" class="capture-form" onsubmit="event.preventDefault();submitCapture();">
+          <label for="capture-text">What do you want to remember?</label>
+          <input id="capture-text" name="text" autocomplete="off" enterkeyhint="done" required data-no-i18n
+                 placeholder="Buy milk @home ^tomorrow" aria-describedby="capture-syntax capture-feedback">
+          <button id="capture-submit" type="submit">Capture</button>
+        </form>
+        <p id="capture-syntax" class="capture-syntax"><span data-no-i18n>@project #tag !high ^tomorrow</span><span>shorthand and full life.txt lines use the same Quick add semantics.</span></p>
+        <div id="capture-feedback" class="capture-feedback" role="status" aria-live="polite" aria-atomic="true"></div>
+        <a class="capture-back" href="/">Open full Web UI</a>
+      </div>
+    </section>
     <section class="item-section page" data-page="items">
       <div class="section-head">
         <h2><span class="h2-icon" aria-hidden="true">📋</span><span id="items-heading-label">Items</span></h2>

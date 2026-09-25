@@ -10822,3 +10822,48 @@ capabilities:
       replaces: []
       replaced_by: null
       deprecation_issue: null
+
+  - id: cap-web-mobile-quick-capture
+    name: Mobile-first Web Quick Capture
+    summary: >-
+      A stable `/capture` entry presents a focused, phone-friendly capture
+      surface while reusing the existing Web Quick add endpoints, capture
+      shorthand, authentication, read-only/write-target enforcement, and
+      no-store policy. Successful writes clear and refocus the input; failures
+      preserve it; a pending request suppresses duplicate UI submission.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-web-mobile-quick-capture
+    implementation_locations:
+      - lifetxt/webapp.py
+      - lifetxt/web_assets.html
+      - lifetxt/web_assets_css_04.css
+      - lifetxt/web_assets_js_01.js
+      - lifetxt/web_assets_js_08.js
+      - lifetxt/web_assets_js_18.js
+      - tests/test_web_mobile_capture.py
+      - tests/test_web_assets.py
+      - docs/en/web.md
+      - docs/ja/web.md
+    public_interfaces:
+      - GET /capture
+      - POST /api/items/capture
+      - POST /api/items/raw (existing full-line Quick add behavior)
+    tests_or_evidence:
+      - tests.test_web_mobile_capture
+      - tests.test_web_assets
+      - tests.test_web_i18n
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/914
+      - https://github.com/Eruhitsuji/lifetxt/issues/917
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      Online capture only. No service worker, offline queue, share-target,
+      mobile-only parser, record type, or mutation path is introduced.
+      Installability metadata remains a separate child slice of #914.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null

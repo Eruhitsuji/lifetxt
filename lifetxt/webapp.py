@@ -302,6 +302,14 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             headers={"Cache-Control": "no-store"},
         )
 
+    @app.get("/capture", response_class=HTMLResponse)
+    def capture():
+        """Serve the same authenticated Web shell in capture-first mode."""
+        return HTMLResponse(
+            content=HTML_PAGE,
+            headers={"Cache-Control": "no-store"},
+        )
+
     @app.get("/api/health")
     def health():
         return {

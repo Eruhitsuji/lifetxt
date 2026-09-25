@@ -108,6 +108,7 @@
       setupWorkspaceTabs();
       syncStatusFilterBarsFromUrl();
       _syncGraphLayoutBtns();
+      if (initializeCaptureMode()) return;
       startGitPolling();
       // Back-compat: ?workspace=new used to open the editor panel
       if (firstParam(query(), ["workspace", "panel"], "").toLowerCase() === "new") newItem();

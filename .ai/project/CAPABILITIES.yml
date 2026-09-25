@@ -59,7 +59,8 @@ capabilities:
       - lifetxt-mini CI native and musl lanes
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/898
-    related_pull_requests: []
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/918
     reuse_policy: extend_existing_lifetxt_mini_phase_0_contract
     replacement:
       replaces: []

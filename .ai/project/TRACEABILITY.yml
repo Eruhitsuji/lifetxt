@@ -2,6 +2,29 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-personal-context-projection-preview
+      capability_id: cap-personal-context-toolkit
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/916
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/925
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/927
+      changed_files_or_scope:
+        - lifetxt/webapp.py
+        - tests/test_web_personal_context.py
+        - docs/en/web.md
+        - docs/ja/web.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - python -m unittest tests.test_web_personal_context tests.test_personal_context
+        - ruff format and ruff check
+        - full unittest discovery and lifetxt check smoke
+      release_or_deployment: null
+      status: implemented
+      notes: >-
+        Standard-assurance Web projection and non-mutating bootstrap preview.
+        Current records delegate to the shared Context Capsule currentness
+        resolver. Previewed records are ordinary Notes, while IDs and durable
+        writes remain owned by the existing POST /api/items path.
     - requirement_id: req-test-quality-regression-gates
       capability_id: cap-test-quality-and-regression-resistance
       epic: null

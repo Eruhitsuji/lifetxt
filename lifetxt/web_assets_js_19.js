@@ -59,14 +59,25 @@
       if (!target) return;
       target.setAttribute("aria-busy", "false");
       const items = data?.items || [];
+      const counts = data?.currentness_counts || {current: 0, stale: 0};
+      const countTarget = document.getElementById("personal-context-counts");
+      if (countTarget) countTarget.innerHTML = `<span>${t("Current")}: <strong>${Number(counts.current) || 0}</strong></span><span>${t("Stale")}: <strong>${Number(counts.stale) || 0}</strong></span>`;
       if (!items.length) {
         target.innerHTML = `<div class="empty-state compact-empty"><div class="empty-title">${t("No current Personal Context yet.")}</div><p>${t("Add a few explicit facts to give tools durable context.")}</p></div>`;
         return;
       }
-      target.innerHTML = PERSONAL_CONTEXT_DOMAINS.map(domain => {
-        const rows = items.filter(item => personalContextTags(item).includes(domain));
+      const groups = PERSONAL_CONTEXT_DOMAINS.map(domain => ({
+        label: PERSONAL_CONTEXT_LABELS[domain],
+        rows: items.filter(item => personalContextTags(item).includes(domain)),
+      }));
+      groups.push({
+        label: "Other context",
+        rows: items.filter(item => !personalContextTags(item).some(tag => PERSONAL_CONTEXT_DOMAINS.includes(tag))),
+      });
+      target.innerHTML = groups.map(group => {
+        const rows = group.rows;
         if (!rows.length) return "";
-        return `<div class="personal-context-group"><h4>${t(PERSONAL_CONTEXT_LABELS[domain])} <span>${rows.length}</span></h4><ul data-no-i18n>${rows.map(row => `<li>${escapeHtml(row.title || "")}</li>`).join("")}</ul></div>`;
+        return `<div class="personal-context-group"><h4>${t(group.label)} <span>${rows.length}</span></h4><ul data-no-i18n>${rows.map(row => `<li class="${row.stale ? "personal-context-stale" : ""}"><span>${escapeHtml(row.title || "")}</span>${row.stale ? `<span class="personal-context-stale-badge">${escapeHtml(t("Stale"))}</span>` : ""}</li>`).join("")}</ul></div>`;
       }).join("") || `<div class="empty">${t("No current Personal Context yet.")}</div>`;
     }
 
@@ -74,8 +85,9 @@
       const target = document.getElementById("personal-context-current");
       if (target) target.setAttribute("aria-busy", "true");
       try {
+        const includeStale = !!document.getElementById("personal-context-include-stale")?.checked;
         const [data, health] = await Promise.all([
-          api("/api/personal-context"),
+          api(`/api/personal-context${includeStale ? "?include_stale=true" : ""}`),
           api("/api/health").catch(() => ({})),
         ]);
         personalContextReadOnly = !!health.read_only;

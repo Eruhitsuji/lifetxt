@@ -83,7 +83,7 @@ MCP tool は `list_items`、`get_item`、`create_item`、`update_item`、
 | `GET` | `/api/health` | 読み込み path と書き込み先を表示 |
 | `GET` | `/api/config` | Web UI が使う公開 runtime config を表示 |
 | `GET` | `/api/items` | item 一覧。filter 指定可能 |
-| `GET` | `/api/personal-context` | `person:self` の current-only Personal Context capsule を共有 resolver から返す |
+| `GET` | `/api/personal-context` | `person:self` のcurrent-only Personal Context capsuleを共有resolverから返す。`include_stale=true` を明示するとstale recordだけを追加し、他の非current状態は除外したままにする。responseには共有health由来の`current`/`stale`件数を含む |
 | `POST` | `/api/personal-context/preview` | 最大25件のbootstrap factを検証し、ID付与・書き込みなしで通常Note recordの正確な形をpreview |
 | `POST` | `/api/items/parse` | raw life.txt 行または body block を解析し、書き込まずに parsed item を返す |
 | `POST` | `/api/items/raw` | 検証済み raw life.txt 行を書き込み先ファイルへ追記 |
@@ -882,9 +882,12 @@ Goals、Projects は新しいschema fieldではなく、通常の単数形 `tag:
 保存は既存の `POST /api/items` を使って意図的に逐次実行します。途中で失敗
 した場合は、保存済み・失敗・未保存の件数を表示し、未保存の全factを編集可能な
 まま保持します。batch atomicityは保証しません。read-only serverでは現在値と
-previewを利用できますが、保存は無効です。overviewはCLI/MCPと同じcurrent-only
-Context Capsule resolverを使うため、supersededなどの非current recordを現在値
-として暗黙に表示しません。
+previewを利用できますが、保存は無効です。overviewはCLI/MCPと同じContext
+Capsuleおよびhealth/currentness resolverを使い、既定はcurrent-onlyです。
+**古い可能性がある事実を表示**を明示すると、stale factを区別して表示し、
+current/stale件数も確認できます。この操作は`updated:`を変更せず、staleをcurrentへ
+昇格させません。superseded、expired、future-effective、conflicting、
+historical-onlyは引き続き除外されます。
 
 ## 完了時に日付・日時を記録する
 

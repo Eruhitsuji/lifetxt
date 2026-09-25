@@ -2,6 +2,38 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-personal-context-stale-inspection
+      capability_id: cap-personal-context-toolkit
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/929
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/930
+      changed_files_or_scope:
+        - lifetxt/webapp.py
+        - lifetxt/web_assets.html
+        - lifetxt/web_assets_js_01.js
+        - lifetxt/web_assets_js_19.js
+        - lifetxt/web_assets_css_06.css
+        - tests/test_web_personal_context.py
+        - tests/test_web_personal_context_onboarding.py
+        - tests/browser_mobile_capture_probe.mjs
+        - tests/test_web_mobile_capture_browser.py
+        - tests/test_web_assets.py
+        - docs/en/web.md
+        - docs/ja/web.md
+        - docs/en/personal-context.md
+        - docs/ja/personal-context.md
+      tests_or_evidence:
+        - python -m unittest tests.test_web_personal_context tests.test_web_personal_context_onboarding tests.test_web_assets tests.test_web_i18n tests.test_web_selection_contrast
+        - TMPDIR=/private/tmp python -m unittest tests.test_web_mobile_capture_browser
+        - all-current, all-stale, mixed, read-only, default-current-only, and excluded-state API coverage
+        - full unittest discovery and lifetxt check smoke
+      release_or_deployment: null
+      status: implemented
+      notes: >-
+        Standard-assurance explicit stale inspection. Default API/UI behavior
+        remains current-only. The opt-in path delegates to shared Context
+        Capsule and Health/currentness logic, never mutates or promotes stale
+        records, and continues excluding every other non-current state.
     - requirement_id: req-web-personal-context-onboarding
       capability_id: cap-personal-context-toolkit
       epic: https://github.com/Eruhitsuji/lifetxt/issues/916

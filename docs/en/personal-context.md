@@ -5,6 +5,9 @@ It explains the existing Profile/Preference/Skill/Goal/Project tag conventions,
 previews exact ordinary Note records on the server, and saves them one at a
 time through the authoritative item API. It performs no AI inference. Current
 context on that page uses the shared currentness resolver documented below.
+The page is current-only by default. Its **Show stale** control calls the same
+bounded capsule with stale inclusion enabled and labels those records without
+modifying or reconfirming them; shared health supplies the displayed counts.
 
 This guide explains how a generative AI can build, maintain, and use lifetxt as
 provider-independent Personal Context / a Personal DB. It defines an authoring

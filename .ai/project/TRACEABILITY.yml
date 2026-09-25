@@ -11,9 +11,12 @@ traceability:
         - lifetxt/personal_context.py
         - lifetxt/webapp.py
         - lifetxt/web_assets.html
+        - lifetxt/web_assets_js_01.js
         - lifetxt/web_assets_js_19.js
+        - lifetxt/web_assets_css_06.css
         - tests/test_web_personal_context.py
         - tests/test_web_personal_context_onboarding.py
+        - tests/test_web_assets.py
         - docs/en/web.md
         - docs/ja/web.md
       tests_or_evidence:

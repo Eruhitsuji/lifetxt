@@ -33,6 +33,7 @@ traceability:
         documentation note in docs/en+ja/inbox.md cross-referencing #940's
         convention. No new proposal schema field, Format key, KNOWN_KEYS
         entry, global Query syntax, or MCP/API field was added.
+      status: implemented
 
     - requirement_id: req-personal-context-epistemic-convention
       capability_id: cap-personal-context-toolkit

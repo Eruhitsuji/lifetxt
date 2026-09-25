@@ -81,8 +81,69 @@
       target.innerHTML = groups.map(group => {
         const rows = group.rows;
         if (!rows.length) return "";
-        return `<div class="personal-context-group"><h4>${t(group.label)} <span>${rows.length}</span></h4><ul data-no-i18n>${rows.map(row => `<li class="${row.stale ? "personal-context-stale" : ""}"><span>${escapeHtml(row.title || "")}</span>${row.stale ? `<span class="personal-context-stale-badge">${escapeHtml(t("Stale"))}</span><button type="button" class="secondary personal-context-reconfirm" data-personal-context-id="${escapeHtml(row.id || "")}" onclick="reconfirmPersonalContext(this.dataset.personalContextId)">${escapeHtml(t("Still correct"))}</button>` : ""}</li>`).join("")}</ul></div>`;
+        return `<div class="personal-context-group"><h4>${t(group.label)} <span>${rows.length}</span></h4><ul data-no-i18n>${rows.map(row => `<li class="${row.stale ? "personal-context-stale" : ""}"><span>${escapeHtml(row.title || "")}</span>${row.stale ? `<span class="personal-context-stale-badge">${escapeHtml(t("Stale"))}</span><button type="button" class="secondary personal-context-reconfirm" data-personal-context-id="${escapeHtml(row.id || "")}" onclick="reconfirmPersonalContext(this.dataset.personalContextId)">${escapeHtml(t("Still correct"))}</button>` : ""}${personalContextReviewMenu(row.id)}</li>`).join("")}</ul></div>`;
       }).join("") || `<div class="empty">${t("No current Personal Context yet.")}</div>`;
+    }
+
+    // Progressive-disclosure review outcomes beyond plain reconfirm (#960):
+    // Correct/Replace, Changed over time, No longer valid. "Review later"
+    // has no control at all -- simply not opening/using this menu is that
+    // outcome, and performs no mutation.
+    function personalContextReviewMenu(itemId) {
+      const id = escapeHtml(itemId || "");
+      if (!id) return "";
+      return `<details class="personal-context-review-menu"><summary>${escapeHtml(t("Something changed…"))}</summary><div class="personal-context-review-actions"><button type="button" class="secondary" data-personal-context-id="${id}" onclick="correctPersonalContext(this.dataset.personalContextId)">${escapeHtml(t("Correct the record"))}</button><button type="button" class="secondary" data-personal-context-id="${id}" onclick="changePersonalContext(this.dataset.personalContextId)">${escapeHtml(t("Changed over time"))}</button><button type="button" class="secondary" data-personal-context-id="${id}" onclick="expirePersonalContext(this.dataset.personalContextId)">${escapeHtml(t("No longer valid"))}</button></div></details>`;
+    }
+
+    function personalContextSourceRevision() {
+      const target = document.getElementById("personal-context-current");
+      return target?.dataset.personalContextSourceRevision || "";
+    }
+
+    // Re-fetch exactly the range of records already loaded (never resetting
+    // to the first page) so a single-record review action does not discard
+    // pagination the user already expanded via Load more (#961).
+    async function fetchPersonalContextRange(count, includeStale) {
+      const items = [];
+      let offset = 0;
+      let lastData = null;
+      let remaining = Math.max(count, 1);
+      while (remaining > 0) {
+        const limit = Math.min(remaining, 100);
+        const data = await api(
+          `/api/personal-context?limit=${limit}&offset=${offset}${includeStale ? "&include_stale=true" : ""}`
+        );
+        const batch = data.items || [];
+        items.push(...batch);
+        lastData = data;
+        offset += batch.length;
+        remaining -= batch.length;
+        if (!batch.length) break;
+      }
+      return {items, lastData};
+    }
+
+    async function refreshLoadedPersonalContext() {
+      const current = document.getElementById("personal-context-current");
+      const includeStale = !!document.getElementById("personal-context-include-stale")?.checked;
+      const previousItems = JSON.parse(current?.dataset.personalContextItems || "[]");
+      const loadedCount = previousItems.length || 100;
+      const scrollY = typeof window !== "undefined" && window.scrollY;
+      const {items, lastData} = await fetchPersonalContextRange(loadedCount, includeStale);
+      const totalCount = lastData ? lastData.total_count : items.length;
+      const data = Object.assign({}, lastData, {
+        items,
+        offset: 0,
+        has_more: items.length < totalCount,
+      });
+      if (current) {
+        current.dataset.personalContextOffset = "0";
+        current.dataset.personalContextItems = JSON.stringify(items);
+        current.dataset.personalContextSourceRevision = data.source_revision || "";
+      }
+      renderPersonalContextCurrent(data);
+      if (typeof window !== "undefined" && window.scrollTo) window.scrollTo(0, scrollY || 0);
+      return data;
     }
 
     async function reconfirmPersonalContext(itemId) {
@@ -90,14 +151,78 @@
       const feedback = document.getElementById("personal-context-feedback");
       if (feedback) feedback.textContent = t("Reconfirming…");
       try {
-        const target = document.getElementById("personal-context-current");
-        const sourceRevision = target?.dataset.personalContextSourceRevision || "";
         await api(`/api/personal-context/${encodeURIComponent(itemId)}/reconfirm`, {
           method: "POST",
-          body: JSON.stringify({expected_source_revision: sourceRevision}),
+          body: JSON.stringify({expected_source_revision: personalContextSourceRevision()}),
         });
         if (feedback) feedback.textContent = t("Reconfirmed.");
-        await loadPersonalContext();
+        await refreshLoadedPersonalContext();
+      } catch (error) {
+        if (feedback) feedback.textContent = error.message;
+      }
+    }
+
+    async function expirePersonalContext(itemId) {
+      if (!itemId) return;
+      const feedback = document.getElementById("personal-context-feedback");
+      if (feedback) feedback.textContent = t("Ending applicability…");
+      try {
+        await api(`/api/personal-context/${encodeURIComponent(itemId)}/expire`, {
+          method: "POST",
+          body: JSON.stringify({expected_source_revision: personalContextSourceRevision()}),
+        });
+        if (feedback) feedback.textContent = t("No longer valid.");
+        await refreshLoadedPersonalContext();
+      } catch (error) {
+        if (feedback) feedback.textContent = error.message;
+      }
+    }
+
+    async function changePersonalContext(itemId) {
+      if (!itemId) return;
+      const feedback = document.getElementById("personal-context-feedback");
+      const replacementText = typeof window !== "undefined" && window.prompt
+        ? window.prompt(t("What is true now?"))
+        : "";
+      if (!replacementText || !replacementText.trim()) return;
+      const validFrom = typeof window !== "undefined" && window.prompt
+        ? window.prompt(t("Effective from (YYYY-MM-DD, optional):")) || ""
+        : "";
+      if (feedback) feedback.textContent = t("Recording the change…");
+      try {
+        await api(`/api/personal-context/${encodeURIComponent(itemId)}/change`, {
+          method: "POST",
+          body: JSON.stringify({
+            expected_source_revision: personalContextSourceRevision(),
+            replacement_text: replacementText.trim(),
+            valid_from: validFrom.trim() || undefined,
+          }),
+        });
+        if (feedback) feedback.textContent = t("Changed over time.");
+        await refreshLoadedPersonalContext();
+      } catch (error) {
+        if (feedback) feedback.textContent = error.message;
+      }
+    }
+
+    async function correctPersonalContext(itemId) {
+      if (!itemId) return;
+      const feedback = document.getElementById("personal-context-feedback");
+      const replacementText = typeof window !== "undefined" && window.prompt
+        ? window.prompt(t("What should this record have said?"))
+        : "";
+      if (!replacementText || !replacementText.trim()) return;
+      if (feedback) feedback.textContent = t("Correcting…");
+      try {
+        await api(`/api/personal-context/${encodeURIComponent(itemId)}/correct`, {
+          method: "POST",
+          body: JSON.stringify({
+            expected_source_revision: personalContextSourceRevision(),
+            replacement_text: replacementText.trim(),
+          }),
+        });
+        if (feedback) feedback.textContent = t("Corrected.");
+        await refreshLoadedPersonalContext();
       } catch (error) {
         if (feedback) feedback.textContent = error.message;
       }

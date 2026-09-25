@@ -10,6 +10,7 @@ import uuid
 from .remote_client import get_profile, request, snapshot
 
 MUTATION_ROUTE = "/api/remote/v1/ticket-mutations"
+ITEM_MUTATION_ROUTE = "/api/remote/v1/item-mutations"
 _CONFLICT_CODES = {
     "REVISION_CONFLICT",
     "STALE_REVISION",
@@ -200,6 +201,45 @@ def mutate_ticket(
             expected_revision=conflict.get("expected_revision", current_revision),
             current_revision=conflict.get("current_revision"),
             attempted_change=conflict.get("attempted_change"),
+            current_item=conflict.get("current_item"),
+        )
+
+
+def mutate_item(profile, operation, payload, revision=None, transaction_id=None):
+    """Submit one authoritative item operation without automatic retry."""
+    capabilities = request(profile, "GET", "/api/remote/v1/capabilities")[0]
+    features = list(capabilities.get("features") or [])
+    policy = dict(capabilities.get("mutation_policy") or {})
+    if "item-mutations" not in features:
+        raise RuntimeError("Remote server does not advertise item mutations.")
+    if not policy.get("item_mutations_enabled"):
+        raise RuntimeError("Remote item mutations are disabled by the server.")
+    before = snapshot(profile)
+    current_revision = revision or before.get("revision")
+    if not current_revision:
+        raise RuntimeError("Remote snapshot did not include a revision.")
+    body = dict(payload or {})
+    body["operation"] = str(operation)
+    body["transaction_id"] = str(transaction_id or uuid.uuid4())
+    try:
+        return request(
+            profile,
+            "POST",
+            ITEM_MUTATION_ROUTE,
+            payload=body,
+            revision=current_revision,
+        )[0]
+    except RuntimeError as exc:
+        detail = _runtime_detail(exc)
+        if _error_code(detail) not in _CONFLICT_CODES:
+            raise
+        conflict = detail.get("detail") or {}
+        raise RemoteMutationConflict(
+            "Remote data changed before the item mutation could be committed.",
+            detail=detail,
+            expected_revision=conflict.get("expected_revision", current_revision),
+            current_revision=conflict.get("current_revision"),
+            attempted_change=body,
             current_item=conflict.get("current_item"),
         )
 
@@ -503,6 +543,30 @@ def install_remote_client_writes_cli():
                 command.add_argument("--comment")
                 command.add_argument("--corrects")
             command.set_defaults(func=function)
+        item_definitions = (
+            ("item-create", _cmd_item_create),
+            ("item-update", _cmd_item_update),
+            ("item-delete", _cmd_item_delete),
+        )
+        for name, function in item_definitions:
+            if name in subs.choices:
+                continue
+            command = subs.add_parser(name)
+            _profile_args(command)
+            command.add_argument("--transaction-id")
+            if name == "item-create":
+                command.add_argument("title")
+                command.add_argument("--type", dest="item_type", default="T")
+                command.add_argument("--status", default="[ ]")
+                command.add_argument("--detail", action="append", default=[])
+            else:
+                command.add_argument("item_id")
+                if name == "item-update":
+                    command.add_argument("--title")
+                    command.add_argument("--type", dest="item_type")
+                    command.add_argument("--status")
+                    command.add_argument("--detail", action="append", default=[])
+            command.set_defaults(func=function)
         tui = subs.choices.get("tui")
         if tui is not None and not any(
             action.dest == "interactive" for action in tui._actions
@@ -613,6 +677,62 @@ def _cmd_log_time(args):
         args.corrects,
         args.transaction_id,
         args.dry_run,
+    )
+
+
+def _item_details(values):
+    return dict((key, [value]) for key, value in _pairs(values).items())
+
+
+def _cmd_item_create(args):
+    return _emit_mutation(
+        mutate_item,
+        _profile(args),
+        "create",
+        {
+            "item": {
+                "status": args.status,
+                "type": args.item_type,
+                "title": args.title,
+                "details": _item_details(args.detail),
+            }
+        },
+        None,
+        args.transaction_id,
+    )
+
+
+def _cmd_item_update(args):
+    item = {}
+    for key, value in (
+        ("title", args.title),
+        ("type", args.item_type),
+        ("status", args.status),
+    ):
+        if value is not None:
+            item[key] = value
+    if args.detail:
+        item["details"] = _item_details(args.detail)
+    if not item:
+        raise ValueError("item-update requires at least one changed field.")
+    return _emit_mutation(
+        mutate_item,
+        _profile(args),
+        "update",
+        {"item_id": args.item_id, "item": item},
+        None,
+        args.transaction_id,
+    )
+
+
+def _cmd_item_delete(args):
+    return _emit_mutation(
+        mutate_item,
+        _profile(args),
+        "delete",
+        {"item_id": args.item_id},
+        None,
+        args.transaction_id,
     )
 
 

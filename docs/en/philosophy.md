@@ -8,7 +8,7 @@ a proposed feature belongs in the project.
 It states intent and direction. It does not itself change any runtime
 behavior, file format, API, schema, or MCP contract. Where this document
 and `.ai/project/RULES.md`'s Design Principles disagree, `RULES.md` is
-authoritative (see [Section 10](#10-product-principles-for-future-features)).
+authoritative (see [Section 11](#11-product-principles-for-future-features)).
 
 - [1. Why lifetxt exists](#1-why-lifetxt-exists)
 - [2. An integrated record of life](#2-an-integrated-record-of-life)
@@ -18,9 +18,10 @@ authoritative (see [Section 10](#10-product-principles-for-future-features)).
 - [6. External systems and the hub model](#6-external-systems-and-the-hub-model)
 - [7. AI and Personal Context](#7-ai-and-personal-context)
 - [8. Life Record, Life Context, Life Assistance](#8-life-record-life-context-life-assistance)
-- [9. Privacy, selective recording, and disclosure](#9-privacy-selective-recording-and-disclosure)
-- [10. Product principles for future features](#10-product-principles-for-future-features)
-- [11. What lifetxt is not](#11-what-lifetxt-is-not)
+- [9. A record as a typed semantic frame](#9-a-record-as-a-typed-semantic-frame)
+- [10. Privacy, selective recording, and disclosure](#10-privacy-selective-recording-and-disclosure)
+- [11. Product principles for future features](#11-product-principles-for-future-features)
+- [12. What lifetxt is not](#12-what-lifetxt-is-not)
 
 ---
 
@@ -66,7 +67,7 @@ relationships between your information -- a task can reference the
 project it belongs to, a journal entry can reference the day's events, a
 ticket's history can reference the person who raised it. It does not mean
 indiscriminate collection of every possible datum about you; see
-[Section 9](#9-privacy-selective-recording-and-disclosure).
+[Section 10](#10-privacy-selective-recording-and-disclosure).
 
 ## 3. Why text is the substrate
 
@@ -229,7 +230,78 @@ completely. A person should be able to lose access to every current
 lifetxt interface and AI integration and still have a real, usable record
 of their own life sitting in plain text files.
 
-## 9. Privacy, selective recording, and disclosure
+## 9. A record as a typed semantic frame
+
+This section describes an **internal design vocabulary**, not a Format,
+Query, API, or MCP contract. It explains how a plain `life.txt` line
+becomes the "meaningful structure" that Life Context depends on
+([Section 8](#8-life-record-life-context-life-assistance)); it adds no new
+grammar, key, record kind, or field, and it changes nothing a reader would
+notice in the CLI, TUI, Web UI, or MCP surface.
+
+For internal reasoning, a record is usefully modeled as a small typed
+frame rather than a bare sentence:
+
+```text
+R = <kind, head, arguments, modifiers, relations, context>
+```
+
+- **kind** -- the record's type (`T`/`E`/`D`/`R`/`H`/`N`/`S`/`M`/`J`),
+  which already carries most of a record's epistemic mode: a Task is an
+  intention, an Event is an occurrence, a Status is a present-state
+  snapshot, a Journal is a historical entry. A Note is the one
+  intentionally neutral container -- it can hold a fact, an observation, a
+  report, a memory, a hypothesis, an opinion, a preference, or an
+  inference, which is why it is the natural home for the opt-in epistemic
+  convention below.
+- **head** -- the record's title: a human-readable surface string, not a
+  machine predicate identifier. A record never needs a formal grammar to
+  be useful.
+- **arguments** -- participant/entity details such as `person:`,
+  `assignee:`, `attendee:`.
+- **modifiers** -- temporal, location, project, and tag details such as
+  `due:`, `on:`, `project:`, `tag:`.
+- **relations** -- ID-based references (`parent:`, `depends_on:`,
+  `related:`, `follows:`, and the rest of the existing reference-key set),
+  the same graph the link/backlink and Temporal Thread contracts already
+  read and write.
+- **context** -- everything read *about* the record rather than stored
+  *in* it: current state, temporal facts, history, and epistemic status
+  (see below).
+
+This "personal semantic representation model" is deliberately the
+smallest useful description of behavior lifetxt already has. It composes
+existing contracts -- reference keys for relations, `temporal_context()`/
+Native History for time and history, the [epistemic
+convention](./personal-context.md#5-optional-epistemic-metadata-how-sure-is-this)
+for context -- rather than duplicating or extending any of them, and it
+keeps three concerns explicitly distinct:
+
+```text
+persisted / authoritative   the record as actually written to life.txt
+deterministic derived       a reproducible read model computed from records
+                             (temporal facts, links, history projections)
+probabilistic / inferred    an epistemic property of a record's *content*,
+                             independent of whether the record itself is
+                             persisted
+```
+
+A record whose content is `epistemic:inferred` is still, once accepted,
+an ordinary authoritative record like any other -- see [Reviewing and
+accepting AI-suggested
+records](./inbox.md#acceptance-is-write-authorization-not-epistemic-reclassification).
+A derived read model (temporal context, native history, link graphs) is
+never itself written back as authoritative data. A missing detail --
+`source:`, `updated:`, `epistemic:`, or any other optional field -- means
+"not recorded," never a hidden default.
+
+This model does not change the relationship between `life.txt` and the
+[opt-in `lifetxt` VM](./vm.md): plain records remain a declarative record
+of your life, and the VM is a separate, explicitly-invoked execution
+layer over specially-shaped records -- this vocabulary does not redefine
+ordinary records as a programming language.
+
+## 10. Privacy, selective recording, and disclosure
 
 "Integrated life record" must not be read as "collect everything
 automatically." lifetxt's ownership model includes the right not to
@@ -254,7 +326,7 @@ provenance tracking are how this principle is actually enforced in the
 software; this document states the intent that those mechanisms exist to
 serve.
 
-## 10. Product principles for future features
+## 11. Product principles for future features
 
 `.ai/project/RULES.md`'s Design Principles and Product Boundaries remain
 the repository-authoritative, enforceable rules for what lifetxt does and
@@ -278,7 +350,7 @@ checklist is:
 - Will the underlying record remain understandable if today's preferred
   client disappears?
 
-## 11. What lifetxt is not
+## 12. What lifetxt is not
 
 To keep this vision from overreaching, lifetxt explicitly does not claim
 to be:

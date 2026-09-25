@@ -6286,6 +6286,7 @@ capabilities:
     owner: Eruhitsuji
     source_requirements:
       - req-life-philosophy-documentation
+      - req-philosophy-typed-semantic-frame
     implementation_locations:
       - docs/en/philosophy.md
       - docs/ja/philosophy.md
@@ -6302,10 +6303,15 @@ capabilities:
       - git diff --check -- readme.md docs/en/readme.md docs/ja/readme.md .ai/project/RULES.md docs/en/philosophy.md docs/ja/philosophy.md -> clean
       - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
       - manual English/Japanese semantic-parity review (11 matching sections in each language, not a literal translation)
+      - "manual anchor/slug check against scripts/validate_release_docs.py's own slug() algorithm for the new Section 9 heading and every renumbered Section 9-12 self-link and cross-file link (personal-context.md#5-.../inbox.md#acceptance-is-write-authorization-.../vm.md), in both languages"
+      - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true} (#950, after adding Section 9 and renumbering 9-11 to 10-12)'
+      - python -m unittest tests.test_release_policy tests.test_surface_runtime.TuiDocumentationDriftTests -> Ran 14 tests, OK (#950)
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/506
       - https://github.com/Eruhitsuji/lifetxt/issues/500
       - https://github.com/Eruhitsuji/lifetxt/issues/503
+      - https://github.com/Eruhitsuji/lifetxt/issues/949
+      - https://github.com/Eruhitsuji/lifetxt/issues/950
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/504
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
@@ -6327,6 +6333,17 @@ capabilities:
       in tests/test_life_hub.py::TicketAttentionTests, unrelated to this
       capability; not fixed here per this repository's Horizontal Review
       Scope Discipline.
+      #950 (approved follow-up from the #949 non-normative-semantics
+      investigation) adds a new Section 9, "A record as a typed semantic
+      frame," between the existing "Life Record, Life Context, Life
+      Assistance" and "Privacy" sections, renumbering the old Sections
+      9-11 to 10-12 in both languages. It documents
+      `R = <kind, head, arguments, modifiers, relations, context>` as
+      internal design vocabulary only -- no Format, Query, API, MCP, or
+      runtime change -- and composes (rather than duplicates) the
+      existing reference-key/temporal-context/Native-History contracts
+      and the #940/#941 epistemic convention, while reconfirming the
+      Core-life.txt-vs-#560-VM execution boundary unchanged.
     replacement:
       replaces: []
       replaced_by: null

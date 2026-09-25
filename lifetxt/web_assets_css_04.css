@@ -339,6 +339,51 @@
     body { overflow-x: hidden; }
     main, header, .section, .item { min-width: 0; }
 
+    .capture-section { display: none; }
+    body.capture-mode {
+      min-height: 100dvh;
+      padding: var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);
+    }
+    body.capture-mode > header,
+    body.capture-mode > .view-guide,
+    body.capture-mode > .mobile-fab,
+    body.capture-mode > #back-to-top { display: none !important; }
+    body.capture-mode main {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: calc(100dvh - var(--safe-top) - var(--safe-bottom));
+      max-width: 34rem;
+      padding: clamp(.75rem, 4vw, 1.5rem);
+    }
+    body.capture-mode main > .page { display: none !important; }
+    body.capture-mode main > .capture-section {
+      display: block !important;
+      width: 100%;
+      overflow: visible;
+    }
+    .capture-card { display: grid; gap: 1rem; padding: clamp(1rem, 5vw, 2rem); }
+    .capture-brand { color: var(--accent); font-weight: 800; letter-spacing: -.02em; }
+    .capture-card h2 { color: var(--ink); font-size: 1.35rem; letter-spacing: -.02em; text-transform: none; }
+    .capture-intro, .capture-syntax { margin: 0; color: var(--muted); }
+    .capture-form { display: grid; gap: .65rem; }
+    .capture-form label { font-weight: 700; }
+    .capture-form input { width: 100%; min-height: 3.25rem; font-size: 1rem; }
+    .capture-form button { width: 100%; min-height: 3.25rem; font-weight: 700; }
+    .capture-form button[disabled] { cursor: wait; opacity: .7; }
+    .capture-syntax { display: flex; flex-wrap: wrap; gap: .25rem .5rem; font-size: .82rem; overflow-wrap: anywhere; }
+    .capture-feedback { min-height: 2.6rem; padding: .7rem .8rem; border-radius: var(--r-sm); }
+    .capture-feedback:empty { padding: 0; min-height: 0; }
+    .capture-feedback.ok { color: var(--ok); background: var(--ok-soft); }
+    .capture-feedback.err { color: var(--danger); background: var(--danger-soft); }
+    .capture-back { justify-self: center; color: var(--muted); font-size: .86rem; }
+
+    @media (max-height: 520px) and (orientation: landscape) {
+      body.capture-mode main { align-items: flex-start; }
+      .capture-card { gap: .65rem; padding-block: .8rem; }
+      .capture-intro { display: none; }
+    }
+
     /* Wide content scrolls inside its own box instead of the page. */
     .table-scroll, .review-table-wrap, .team-table-wrap {
       overflow-x: auto;

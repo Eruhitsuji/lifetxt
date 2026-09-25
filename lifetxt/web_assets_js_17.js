@@ -552,4 +552,5 @@
       container.querySelector(".actionable-error")?.focus();
     }
 
+    initializeCaptureMode();
     loadConfig().then(() => {

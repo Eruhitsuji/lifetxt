@@ -21,6 +21,19 @@ Open:
 http://127.0.0.1:8000/
 ```
 
+### Mobile Quick Capture
+
+Open `/capture` to go directly to a capture-first screen, for example
+`http://127.0.0.1:8000/capture`. Bookmark that URL or add it to your phone's
+home screen for a low-friction capture entry. It uses the same authoritative
+Quick add endpoints and shorthand as the full Web UI (`@project`, `#tag`,
+`!priority`, `^due`, or a complete life.txt line). A successful capture clears
+and refocuses the input; a failed capture keeps the text available for retry.
+
+Quick Capture is online-only. It does not install an offline cache, queue
+mutations, or weaken the Web server's `no-store`, authentication, read-only, or
+write-target behavior.
+
 Multiple files can be read at once. Paths may be glob patterns such as
 `projects/**/*.life.txt`, and directories are expanded to life.txt-like `.txt`
 files. Create, update, and delete operations use the first file unless

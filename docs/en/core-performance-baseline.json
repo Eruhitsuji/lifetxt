@@ -1,84 +1,705 @@
 {
-  "schema": "lifetxt-core-benchmark-v1",
+  "schema": "lifetxt-storage-benchmark-v1",
+  "benchmark_version": "1",
+  "commit": "105573b4cf69ed8bb5eee80d60ab64efc4d4664c",
   "python": "3.12.3",
   "platform": "Windows-10-10.0.19045-SP0",
-  "interpreter": "C:\\Users\\CodexSandboxOffline\\.codex\\.sandbox\\cwd\\bb54800020e77a4d\\.venv\\Scripts\\python.exe",
-  "fixture_sizes": {
-    "small": 100,
-    "medium": 1000,
-    "large": 5000
-  },
-  "results": {
-    "small": {
-      "check": {
-        "elapsed_seconds": 0.651556,
-        "stdout_bytes": 15,
-        "stderr_bytes": 0
-      },
-      "json": {
-        "elapsed_seconds": 0.652355,
-        "stdout_bytes": 4,
-        "stderr_bytes": 0
-      },
-      "filter": {
-        "elapsed_seconds": 0.619948,
-        "stdout_bytes": 0,
-        "stderr_bytes": 0
-      },
-      "summary": {
-        "elapsed_seconds": 0.623894,
-        "stdout_bytes": 187,
-        "stderr_bytes": 0
+  "interpreter": "python.exe",
+  "reference_date": "2026-09-24",
+  "sizes": [
+    1000,
+    10000,
+    100000,
+    200000
+  ],
+  "layouts": [
+    {
+      "layout": "single-file",
+      "records": 1000,
+      "bytes": 88966,
+      "source_files": [
+        {
+          "path": "active.life.txt",
+          "bytes": 88966
+        }
+      ],
+      "fixture_sha256": "a119a146ab0ddab2fcfa33c33cc421b11d7a4f936358fed24bfc01ec2a2f49f7",
+      "operations": {
+        "parse_load": {
+          "duration_seconds": 0.001596,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "records": 0
+          }
+        },
+        "check": {
+          "duration_seconds": 0.001704,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "diagnostics": 0
+          }
+        },
+        "query": {
+          "duration_seconds": 7e-05,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "records": 0
+          }
+        },
+        "agenda": {
+          "duration_seconds": 5e-06,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "records": 0
+          }
+        },
+        "today": {
+          "duration_seconds": 0.001182,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "keys": [
+              "blocked",
+              "captures",
+              "counts",
+              "due_today",
+              "habits",
+              "horizon_days",
+              "inbox",
+              "messages",
+              "mode",
+              "next_actions",
+              "now",
+              "overdue",
+              "person",
+              "project_attention",
+              "reference_date",
+              "safety",
+              "ticket_attention",
+              "today_events",
+              "upcoming",
+              "waiting"
+            ]
+          }
+        },
+        "search": {
+          "duration_seconds": 1e-06,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "records": 0
+          }
+        }
       }
     },
-    "medium": {
-      "check": {
-        "elapsed_seconds": 0.663658,
-        "stdout_bytes": 15,
-        "stderr_bytes": 0
-      },
-      "json": {
-        "elapsed_seconds": 0.769617,
-        "stdout_bytes": 4,
-        "stderr_bytes": 0
-      },
-      "filter": {
-        "elapsed_seconds": 0.632615,
-        "stdout_bytes": 0,
-        "stderr_bytes": 0
-      },
-      "summary": {
-        "elapsed_seconds": 0.612695,
-        "stdout_bytes": 188,
-        "stderr_bytes": 0
+    {
+      "layout": "multi-source",
+      "records": 1000,
+      "bytes": 88966,
+      "source_files": [
+        {
+          "path": "active.life.txt",
+          "bytes": 44502
+        },
+        {
+          "path": "archive.life.txt",
+          "bytes": 44464
+        }
+      ],
+      "fixture_sha256": "a119a146ab0ddab2fcfa33c33cc421b11d7a4f936358fed24bfc01ec2a2f49f7",
+      "operations": {
+        "parse_load": {
+          "duration_seconds": 0.001629,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "records": 0
+          }
+        },
+        "check": {
+          "duration_seconds": 0.001559,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "diagnostics": 0
+          }
+        },
+        "query": {
+          "duration_seconds": 5.7e-05,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "records": 0
+          }
+        },
+        "agenda": {
+          "duration_seconds": 3e-06,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "records": 0
+          }
+        },
+        "today": {
+          "duration_seconds": 0.000152,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "keys": [
+              "blocked",
+              "captures",
+              "counts",
+              "due_today",
+              "habits",
+              "horizon_days",
+              "inbox",
+              "messages",
+              "mode",
+              "next_actions",
+              "now",
+              "overdue",
+              "person",
+              "project_attention",
+              "reference_date",
+              "safety",
+              "ticket_attention",
+              "today_events",
+              "upcoming",
+              "waiting"
+            ]
+          }
+        },
+        "search": {
+          "duration_seconds": 1e-06,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "records": 0
+          }
+        }
       }
     },
-    "large": {
-      "check": {
-        "elapsed_seconds": 0.633214,
-        "stdout_bytes": 15,
-        "stderr_bytes": 0
-      },
-      "json": {
-        "elapsed_seconds": 0.684659,
-        "stdout_bytes": 4,
-        "stderr_bytes": 0
-      },
-      "filter": {
-        "elapsed_seconds": 0.678323,
-        "stdout_bytes": 0,
-        "stderr_bytes": 0
-      },
-      "summary": {
-        "elapsed_seconds": 0.76698,
-        "stdout_bytes": 188,
-        "stderr_bytes": 0
+    {
+      "layout": "single-file",
+      "records": 10000,
+      "bytes": 889570,
+      "source_files": [
+        {
+          "path": "active.life.txt",
+          "bytes": 889570
+        }
+      ],
+      "fixture_sha256": "1d57149a68eb5bb6c6b85bd29f577dd07d9dde6e2e8c5afd15fcff7bbc5ab37b",
+      "operations": {
+        "parse_load": {
+          "duration_seconds": 0.029205,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "records": 0
+          }
+        },
+        "check": {
+          "duration_seconds": 0.028659,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "diagnostics": 0
+          }
+        },
+        "query": {
+          "duration_seconds": 0.000122,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "records": 0
+          }
+        },
+        "agenda": {
+          "duration_seconds": 6e-06,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "records": 0
+          }
+        },
+        "today": {
+          "duration_seconds": 0.000194,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "keys": [
+              "blocked",
+              "captures",
+              "counts",
+              "due_today",
+              "habits",
+              "horizon_days",
+              "inbox",
+              "messages",
+              "mode",
+              "next_actions",
+              "now",
+              "overdue",
+              "person",
+              "project_attention",
+              "reference_date",
+              "safety",
+              "ticket_attention",
+              "today_events",
+              "upcoming",
+              "waiting"
+            ]
+          }
+        },
+        "search": {
+          "duration_seconds": 1e-06,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "records": 0
+          }
+        }
+      }
+    },
+    {
+      "layout": "multi-source",
+      "records": 10000,
+      "bytes": 889570,
+      "source_files": [
+        {
+          "path": "active.life.txt",
+          "bytes": 444785
+        },
+        {
+          "path": "archive.life.txt",
+          "bytes": 444785
+        }
+      ],
+      "fixture_sha256": "1d57149a68eb5bb6c6b85bd29f577dd07d9dde6e2e8c5afd15fcff7bbc5ab37b",
+      "operations": {
+        "parse_load": {
+          "duration_seconds": 0.023276,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "records": 0
+          }
+        },
+        "check": {
+          "duration_seconds": 0.01801,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "diagnostics": 0
+          }
+        },
+        "query": {
+          "duration_seconds": 5.7e-05,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "records": 0
+          }
+        },
+        "agenda": {
+          "duration_seconds": 3e-06,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "records": 0
+          }
+        },
+        "today": {
+          "duration_seconds": 0.000161,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "keys": [
+              "blocked",
+              "captures",
+              "counts",
+              "due_today",
+              "habits",
+              "horizon_days",
+              "inbox",
+              "messages",
+              "mode",
+              "next_actions",
+              "now",
+              "overdue",
+              "person",
+              "project_attention",
+              "reference_date",
+              "safety",
+              "ticket_attention",
+              "today_events",
+              "upcoming",
+              "waiting"
+            ]
+          }
+        },
+        "search": {
+          "duration_seconds": 0.0,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "records": 0
+          }
+        }
+      }
+    },
+    {
+      "layout": "single-file",
+      "records": 100000,
+      "bytes": 8896453,
+      "source_files": [
+        {
+          "path": "active.life.txt",
+          "bytes": 8896453
+        }
+      ],
+      "fixture_sha256": "5658b9b7a5e0dd3ef1d7390922cbe446ab7a20a7e4bb9b4d9888c075fd5476bf",
+      "operations": {
+        "parse_load": {
+          "duration_seconds": 0.380351,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "records": 0
+          }
+        },
+        "check": {
+          "duration_seconds": 0.352348,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "diagnostics": 0
+          }
+        },
+        "query": {
+          "duration_seconds": 0.000109,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "records": 0
+          }
+        },
+        "agenda": {
+          "duration_seconds": 6e-06,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "records": 0
+          }
+        },
+        "today": {
+          "duration_seconds": 0.000233,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "keys": [
+              "blocked",
+              "captures",
+              "counts",
+              "due_today",
+              "habits",
+              "horizon_days",
+              "inbox",
+              "messages",
+              "mode",
+              "next_actions",
+              "now",
+              "overdue",
+              "person",
+              "project_attention",
+              "reference_date",
+              "safety",
+              "ticket_attention",
+              "today_events",
+              "upcoming",
+              "waiting"
+            ]
+          }
+        },
+        "search": {
+          "duration_seconds": 1e-06,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "records": 0
+          }
+        }
+      }
+    },
+    {
+      "layout": "multi-source",
+      "records": 100000,
+      "bytes": 8896453,
+      "source_files": [
+        {
+          "path": "active.life.txt",
+          "bytes": 4448189
+        },
+        {
+          "path": "archive.life.txt",
+          "bytes": 4448264
+        }
+      ],
+      "fixture_sha256": "5658b9b7a5e0dd3ef1d7390922cbe446ab7a20a7e4bb9b4d9888c075fd5476bf",
+      "operations": {
+        "parse_load": {
+          "duration_seconds": 0.231389,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "records": 0
+          }
+        },
+        "check": {
+          "duration_seconds": 0.264259,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "diagnostics": 0
+          }
+        },
+        "query": {
+          "duration_seconds": 7.2e-05,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "records": 0
+          }
+        },
+        "agenda": {
+          "duration_seconds": 5e-06,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "records": 0
+          }
+        },
+        "today": {
+          "duration_seconds": 0.000221,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "keys": [
+              "blocked",
+              "captures",
+              "counts",
+              "due_today",
+              "habits",
+              "horizon_days",
+              "inbox",
+              "messages",
+              "mode",
+              "next_actions",
+              "now",
+              "overdue",
+              "person",
+              "project_attention",
+              "reference_date",
+              "safety",
+              "ticket_attention",
+              "today_events",
+              "upcoming",
+              "waiting"
+            ]
+          }
+        },
+        "search": {
+          "duration_seconds": 1e-06,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "records": 0
+          }
+        }
+      }
+    },
+    {
+      "layout": "single-file",
+      "records": 200000,
+      "bytes": 17794054,
+      "source_files": [
+        {
+          "path": "active.life.txt",
+          "bytes": 17794054
+        }
+      ],
+      "fixture_sha256": "57ec194829ddc9e58be1a825e469070f150e05d82f5e26335393c8f083147381",
+      "operations": {
+        "parse_load": {
+          "duration_seconds": 0.654845,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "records": 0
+          }
+        },
+        "check": {
+          "duration_seconds": 0.728902,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "diagnostics": 0
+          }
+        },
+        "query": {
+          "duration_seconds": 0.000115,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "records": 0
+          }
+        },
+        "agenda": {
+          "duration_seconds": 5e-06,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "records": 0
+          }
+        },
+        "today": {
+          "duration_seconds": 0.000196,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "keys": [
+              "blocked",
+              "captures",
+              "counts",
+              "due_today",
+              "habits",
+              "horizon_days",
+              "inbox",
+              "messages",
+              "mode",
+              "next_actions",
+              "now",
+              "overdue",
+              "person",
+              "project_attention",
+              "reference_date",
+              "safety",
+              "ticket_attention",
+              "today_events",
+              "upcoming",
+              "waiting"
+            ]
+          }
+        },
+        "search": {
+          "duration_seconds": 1e-06,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "records": 0
+          }
+        }
+      }
+    },
+    {
+      "layout": "multi-source",
+      "records": 200000,
+      "bytes": 17794054,
+      "source_files": [
+        {
+          "path": "active.life.txt",
+          "bytes": 8896453
+        },
+        {
+          "path": "archive.life.txt",
+          "bytes": 8897601
+        }
+      ],
+      "fixture_sha256": "57ec194829ddc9e58be1a825e469070f150e05d82f5e26335393c8f083147381",
+      "operations": {
+        "parse_load": {
+          "duration_seconds": 0.455741,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "records": 0
+          }
+        },
+        "check": {
+          "duration_seconds": 0.40102,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "diagnostics": 0
+          }
+        },
+        "query": {
+          "duration_seconds": 0.000103,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "records": 0
+          }
+        },
+        "agenda": {
+          "duration_seconds": 5e-06,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "records": 0
+          }
+        },
+        "today": {
+          "duration_seconds": 0.000179,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "keys": [
+              "blocked",
+              "captures",
+              "counts",
+              "due_today",
+              "habits",
+              "horizon_days",
+              "inbox",
+              "messages",
+              "mode",
+              "next_actions",
+              "now",
+              "overdue",
+              "person",
+              "project_attention",
+              "reference_date",
+              "safety",
+              "ticket_attention",
+              "today_events",
+              "upcoming",
+              "waiting"
+            ]
+          }
+        },
+        "search": {
+          "duration_seconds": 1e-06,
+          "peak_rss_bytes": null,
+          "rss_delta_bytes": null,
+          "result": {
+            "records": 0
+          }
+        }
       }
     }
+  ],
+  "unsupported_surfaces": {
+    "web_server": "not measured: startup and HTTP scheduling are environment/port dependent; use a deployment-specific harness",
+    "tui": "not measured: terminal rendering/startup timing is environment dependent and not a stable scaling signal"
   },
-  "measurement": {
-    "metric": "wall_clock_seconds",
-    "repeat_policy": "single deterministic run per case; compare trends, not one-run thresholds",
-    "resource_proxy": "stdout and stderr byte counts"
+  "interpretation": {
+    "thresholds": "No universal limits are inferred from one machine; compare trends and repeated runs.",
+    "rss": "Unix getrusage peak is recorded; Windows reports null because this dependency-free harness has no reliable cross-process RSS provider."
   }
 }

@@ -936,3 +936,10 @@ value; it does not add a date when none exists.
 Done date… completes only the selected task; it does not generate a repeat
 occurrence. State and date are sent in one existing revision-protected update,
 including the native `completed` history event when the task has an ID.
+
+Personal Context review policy: each record displays its effective periodic interval
+or no-periodic-review setting. In writable mode, **No periodic review** sets the
+record's `review:never` override and **Use inherited review policy** clears it.
+This changes only review metadata; **Still correct** separately updates freshness
+(`updated:`). Correction, replacement, and expiry remain available. Current
+workspace tag policies are configured under `personal_context.review.tag_policies`.

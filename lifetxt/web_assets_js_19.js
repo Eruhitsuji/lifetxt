@@ -83,7 +83,7 @@
       target.innerHTML = groups.map(group => {
         const rows = group.rows;
         if (!rows.length) return "";
-        return `<div class="personal-context-group"><h4>${t(group.label)} <span>${rows.length}</span></h4><ul data-no-i18n>${rows.map(row => `<li class="${row.stale ? "personal-context-stale" : ""}">${personalContextReadOnly ? "" : `<label class="personal-context-select"><input type="checkbox" data-personal-context-select="${escapeHtml(row.id || "")}" ${personalContextSelectedIds.has(row.id) ? "checked" : ""} onchange="togglePersonalContextSelection(this.dataset.personalContextSelect, this.checked)" aria-label="${escapeHtml(t("Select record"))}"></label>`}<span>${escapeHtml(row.title || "")}</span>${row.stale ? `<span class="personal-context-stale-badge">${escapeHtml(t("Stale"))}</span>${personalContextReadOnly ? "" : `<button type="button" class="secondary personal-context-reconfirm" data-personal-context-id="${escapeHtml(row.id || "")}" onclick="reconfirmPersonalContext(this.dataset.personalContextId)">${escapeHtml(t("Still correct"))}</button>`}` : ""}${personalContextReadOnly ? "" : personalContextReviewMenu(row.id)}</li>`).join("")}</ul></div>`;
+        return `<div class="personal-context-group"><h4>${t(group.label)} <span>${rows.length}</span></h4><ul data-no-i18n>${rows.map(row => `<li class="${row.stale ? "personal-context-stale" : ""}">${personalContextReadOnly ? "" : `<label class="personal-context-select"><input type="checkbox" data-personal-context-select="${escapeHtml(row.id || "")}" ${personalContextSelectedIds.has(row.id) ? "checked" : ""} onchange="togglePersonalContextSelection(this.dataset.personalContextSelect, this.checked)" aria-label="${escapeHtml(t("Select record"))}"></label>`}<span>${escapeHtml(row.title || "")}</span>${row.stale ? `<span class="personal-context-stale-badge">${escapeHtml(t("Stale"))}</span>${personalContextReadOnly ? "" : `<button type="button" class="secondary personal-context-reconfirm" data-personal-context-id="${escapeHtml(row.id || "")}" onclick="reconfirmPersonalContext(this.dataset.personalContextId)">${escapeHtml(t("Still correct"))}</button>`}` : ""}${row.review_policy ? `<small title="${escapeHtml(row.review_policy.source || "")}">${escapeHtml(row.review_policy.mode === "never" ? t("No periodic review") : `${t("Review every")} ${row.review_policy.days} ${t("days")}`)}</small>` : ""}${personalContextReadOnly ? "" : `<button type="button" class="secondary" data-personal-context-id="${escapeHtml(row.id || "")}" onclick="setPersonalContextReviewPolicy(this.dataset.personalContextId, ${row.review_policy?.source === "record_override" ? "'inherit'" : "'never'"})">${escapeHtml(t(row.review_policy?.source === "record_override" ? "Use inherited review policy" : "No periodic review"))}</button>`}${personalContextReadOnly ? "" : personalContextReviewMenu(row.id)}</li>`).join("")}</ul></div>`;
       }).join("") || `<div class="empty">${t("No current Personal Context yet.")}</div>`;
       updatePersonalContextSelectionUi();
     }
@@ -206,6 +206,22 @@
       });
       if (typeof window !== "undefined" && window.scrollTo) window.scrollTo(0, scrollY || 0);
       return data;
+    }
+
+    async function setPersonalContextReviewPolicy(itemId, mode) {
+      if (!itemId || personalContextReadOnly) return;
+      const feedback = document.getElementById("personal-context-feedback");
+      try {
+        await api(`/api/personal-context/${encodeURIComponent(itemId)}/review-policy`, {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({mode, expected_source_revision: personalContextSourceRevision()}),
+        });
+        await refreshLoadedPersonalContext();
+        if (feedback) feedback.textContent = t("Review policy updated.");
+      } catch (error) {
+        if (feedback) feedback.textContent = error.message;
+      }
     }
 
     async function reconfirmPersonalContext(itemId) {

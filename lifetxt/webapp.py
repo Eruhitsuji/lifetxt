@@ -398,6 +398,9 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
     def get_personal_context(include_stale=False, limit=100, offset=0):
         """Expose the shared Personal Context projection, current-only by default."""
         items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
+        from .personal_context_review_policy import configured_tag_policies
+
+        tag_policies = configured_tag_policies(app.state.config)
         raise_for_errors(diagnostics)
         include_stale_flag = _bool_query(include_stale)
         try:
@@ -418,13 +421,14 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             include_stale=include_stale_flag,
             limit=limit,
             offset=offset,
+            tag_policies=tag_policies,
         )
         result["has_more"] = offset + result["count"] < result["total_count"]
         if app.state.writable_path and os.path.exists(app.state.writable_path):
             result["source_revision"] = mutation.read_text_snapshot(
                 app.state.writable_path
             ).content_hash
-        health = context_health(items, person="self")
+        health = context_health(items, person="self", tag_policies=tag_policies)
         result["currentness_counts"] = OrderedDict(
             (
                 ("current", health["counts"]["current"]),
@@ -472,7 +476,11 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             raise HTTPException(
                 status_code=409, detail="Personal Context item is not writable."
             )
-        currentness = resolve_currentness(parsed_items)
+        from .personal_context_review_policy import configured_tag_policies
+
+        currentness = resolve_currentness(
+            parsed_items, tag_policies=configured_tag_policies(app.state.config)
+        )
         record = item_currentness(item, currentness)
         if record is None or record.get("state") != "stale":
             raise HTTPException(
@@ -599,7 +607,12 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             except ValueError as exc:
                 results.append({"id": item_id, "status": "failed", "error": error_detail(exc)})
                 continue
-            currentness = resolve_currentness(current_items)
+            from .personal_context_review_policy import configured_tag_policies
+
+            currentness = resolve_currentness(
+                current_items,
+                tag_policies=configured_tag_policies(app.state.config),
+            )
             record = item_currentness(item, currentness) if item is not None else None
             if item is None:
                 results.append({"id": item_id, "status": "failed", "error": "Item was not found."})
@@ -711,7 +724,11 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
                 status_code=409,
                 detail="Item is not an eligible Personal Context record.",
             )
-        currentness = resolve_currentness(parsed_items)
+        from .personal_context_review_policy import configured_tag_policies
+
+        currentness = resolve_currentness(
+            parsed_items, tag_policies=configured_tag_policies(app.state.config)
+        )
         record = item_currentness(item, currentness)
         state = record.get("state") if record else "current"
         return writable, snapshot, key, parsed_items, item, state
@@ -722,6 +739,64 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
                 status_code=409,
                 detail="Item is already %s and cannot be %s again." % (state, action),
             )
+
+    @app.post("/api/personal-context/{item_id}/review-policy")
+    def set_personal_context_review_policy(item_id, payload=Body(...)):
+        """Set or clear only the explicit per-record no-periodic-review detail."""
+        if not isinstance(payload, dict) or payload.get("mode") not in ("never", "inherit"):
+            raise HTTPException(status_code=400, detail="mode must be never or inherit")
+        if not payload.get("expected_source_revision"):
+            raise HTTPException(status_code=400, detail="expected_source_revision is required")
+        writable, snapshot, key, _, _, _ = _personal_context_review_target(
+            item_id, payload, require_editable=True
+        )
+
+        def transform(text):
+            current_items, diagnostics = parse_text(text, id_key=key)
+            raise_for_errors(diagnostics)
+            current_item = find_item_by_id(current_items, item_id, key=key)
+            if current_item is None:
+                raise mutation.MutationError("Personal Context item disappeared.")
+            details = OrderedDict(
+                (name, list(values)) for name, values in current_item.details.items()
+            )
+            if payload["mode"] == "never":
+                details["review"] = ["never"]
+            else:
+                details["review"] = []
+            from .write_operations import transform_items_text_with_native_history
+
+            return transform_items_text_with_native_history(
+                text,
+                [{"id": str(item_id), "status": current_item.status,
+                  "type": current_item.kind, "title": current_item.title,
+                  "set_details": details}],
+                id_key=key, source_revision=mutation.hash_text(text),
+            )
+
+        try:
+            result = mutation.mutate_text(
+                writable, transform, expected_hash=snapshot.content_hash,
+                operation="web personal context review policy",
+            )
+        except mutation.MutationConflict as exc:
+            raise HTTPException(status_code=409, detail={
+                "error": "CONFLICT", "expected_revision": exc.expected_hash,
+                "current_revision": exc.actual_hash,
+            })
+        except (ValueError, mutation.MutationError) as exc:
+            raise HTTPException(status_code=409, detail=str(exc))
+        updated_items, diagnostics = parse_text(result.snapshot.text, id_key=key)
+        raise_for_errors(diagnostics)
+        from .personal_context_review_policy import configured_tag_policies
+
+        updated = find_item_by_id(updated_items, item_id, key=key)
+        state = item_currentness(updated, resolve_currentness(
+            updated_items, tag_policies=configured_tag_policies(app.state.config)
+        ))
+        return {"id": item_id, "state": state["state"],
+                "review_policy": state["review_policy"],
+                "source_revision": result.snapshot.content_hash}
 
     @app.post("/api/personal-context/{item_id}/expire")
     def expire_personal_context(item_id, payload=Body(None)):

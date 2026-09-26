@@ -177,9 +177,17 @@ async function main() {
   ]});
   await refreshLoadedPersonalContext();
   results.open_menu_after_removal = state.current._menus.filter(menu => menu.open).map(menu => menu.dataset.personalContextId);
+  personalContextSelectedIds.add("item2");
+  renderPersonalContextCurrent({...fakePage(0, 3, 3), items: [
+    {id: "item0", title: "A long fact ".repeat(30), stale: false, details: {tag: ["profile"]}, review_policy: {mode: "periodic", days: 30, source: "inherited"}},
+    {id: "item1", title: "Never reviewed", stale: false, details: {tag: ["profile"]}, review_policy: {mode: "never", source: "record_override"}},
+    {id: "item2", title: "Older fact", stale: true, details: {tag: ["profile"]}, review_policy: {mode: "periodic", days: 30, source: "inherited"}},
+  ]});
+  results.cards = state.current.innerHTML;
   personalContextReadOnly = true;
   renderPersonalContextCurrent({...fakePage(0, 1, 1), items: [{id: "item1", title: "B", stale: true, details: {}}]});
   results.read_only_no_mutation_controls = !state.current.innerHTML.includes("Still correct") && !state.current.innerHTML.includes("personal-context-review-menu") && !state.current.innerHTML.includes("data-personal-context-select");
+  results.read_only_card = state.current.innerHTML;
   personalContextReadOnly = false;
   return results;
 }
@@ -212,6 +220,19 @@ class PersonalContextReviewJsTests(unittest.TestCase):
 
     def test_read_only_renderer_hides_review_mutations(self):
         self.assertTrue(self.results["read_only_no_mutation_controls"])
+        self.assertIn('class="personal-context-item ', self.results["read_only_card"])
+        self.assertNotIn("personal-context-item-actions", self.results["read_only_card"])
+
+    def test_cards_separate_fact_state_policy_and_actions(self):
+        cards = self.results["cards"]
+        self.assertEqual(3, cards.count('class="personal-context-item '))
+        self.assertIn("personal-context-stale personal-context-item-selected", cards)
+        self.assertIn('class="personal-context-item-title"', cards)
+        self.assertIn('class="personal-context-item-meta"', cards)
+        self.assertIn("No periodic review", cards)
+        self.assertIn("Use inherited review policy", cards)
+        self.assertIn("Still correct", cards)
+        self.assertIn("personal-context-item-actions", cards)
 
     def test_small_loaded_range_is_refetched_as_one_page(self):
         self.assertEqual(1, self.results["small_page_calls"])

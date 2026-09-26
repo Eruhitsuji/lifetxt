@@ -2,6 +2,47 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-personal-context-review-outcomes-dod
+      capability_id: cap-personal-context-toolkit
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/967
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/970
+      changed_files_or_scope:
+        - lifetxt/web_assets_js_19.js
+        - tests/test_web_personal_context.py
+        - tests/test_web_personal_context_review_js.py
+        - docs/en/personal-context.md
+        - docs/ja/personal-context.md
+        - docs/en/web.md
+        - docs/ja/web.md
+      tests_or_evidence:
+        - "read-only renderer hides single-record and bulk review controls while preserving record display and backend 403"
+        - "Web correction retains the original record and requires exact ID and source-revision CAS"
+        - "EN/JA documentation distinguishes reconfirmation, correction, temporal change, expiration, and review later"
+      release_or_deployment: null
+      notes: >-
+        Follow-up to #960. The explicit user-triggered Web correction remains a
+        direct authoritative mutation; the CLI proposal workflow is separate.
+      status: implemented
+
+    - requirement_id: req-web-personal-context-expanded-menu-preservation
+      capability_id: cap-personal-context-toolkit
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/968
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/970
+      changed_files_or_scope:
+        - lifetxt/web_assets_js_19.js
+        - tests/test_web_personal_context_review_js.py
+      tests_or_evidence:
+        - "expanded review menu remains open by stable ID after another record is reconfirmed and the list is reordered"
+        - "disappeared records do not restore a stale menu after authoritative refresh"
+        - "loaded range, stale filter, scroll position, and shared review refresh path remain covered"
+      release_or_deployment: null
+      notes: >-
+        Follow-up to #961, preserving DOM details state alongside the existing
+        range-preserving refresh after authoritative reads.
+      status: implemented
+
     - requirement_id: req-web-personal-context-bulk-review
       capability_id: cap-personal-context-toolkit
       epic: https://github.com/Eruhitsuji/lifetxt/issues/500

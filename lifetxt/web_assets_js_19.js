@@ -83,7 +83,7 @@
       target.innerHTML = groups.map(group => {
         const rows = group.rows;
         if (!rows.length) return "";
-        return `<div class="personal-context-group"><h4>${t(group.label)} <span>${rows.length}</span></h4><ul data-no-i18n>${rows.map(row => `<li class="${row.stale ? "personal-context-stale" : ""}"><label class="personal-context-select"><input type="checkbox" data-personal-context-select="${escapeHtml(row.id || "")}" ${personalContextSelectedIds.has(row.id) ? "checked" : ""} onchange="togglePersonalContextSelection(this.dataset.personalContextSelect, this.checked)" aria-label="${escapeHtml(t("Select record"))}"></label><span>${escapeHtml(row.title || "")}</span>${row.stale ? `<span class="personal-context-stale-badge">${escapeHtml(t("Stale"))}</span><button type="button" class="secondary personal-context-reconfirm" data-personal-context-id="${escapeHtml(row.id || "")}" onclick="reconfirmPersonalContext(this.dataset.personalContextId)">${escapeHtml(t("Still correct"))}</button>` : ""}${personalContextReviewMenu(row.id)}</li>`).join("")}</ul></div>`;
+        return `<div class="personal-context-group"><h4>${t(group.label)} <span>${rows.length}</span></h4><ul data-no-i18n>${rows.map(row => `<li class="${row.stale ? "personal-context-stale" : ""}">${personalContextReadOnly ? "" : `<label class="personal-context-select"><input type="checkbox" data-personal-context-select="${escapeHtml(row.id || "")}" ${personalContextSelectedIds.has(row.id) ? "checked" : ""} onchange="togglePersonalContextSelection(this.dataset.personalContextSelect, this.checked)" aria-label="${escapeHtml(t("Select record"))}"></label>`}<span>${escapeHtml(row.title || "")}</span>${row.stale ? `<span class="personal-context-stale-badge">${escapeHtml(t("Stale"))}</span>${personalContextReadOnly ? "" : `<button type="button" class="secondary personal-context-reconfirm" data-personal-context-id="${escapeHtml(row.id || "")}" onclick="reconfirmPersonalContext(this.dataset.personalContextId)">${escapeHtml(t("Still correct"))}</button>`}` : ""}${personalContextReadOnly ? "" : personalContextReviewMenu(row.id)}</li>`).join("")}</ul></div>`;
       }).join("") || `<div class="empty">${t("No current Personal Context yet.")}</div>`;
       updatePersonalContextSelectionUi();
     }
@@ -149,7 +149,7 @@
     function personalContextReviewMenu(itemId) {
       const id = escapeHtml(itemId || "");
       if (!id) return "";
-      return `<details class="personal-context-review-menu"><summary>${escapeHtml(t("Something changed…"))}</summary><div class="personal-context-review-actions"><button type="button" class="secondary" data-personal-context-id="${id}" onclick="correctPersonalContext(this.dataset.personalContextId)">${escapeHtml(t("Correct the record"))}</button><button type="button" class="secondary" data-personal-context-id="${id}" onclick="changePersonalContext(this.dataset.personalContextId)">${escapeHtml(t("Changed over time"))}</button><button type="button" class="secondary" data-personal-context-id="${id}" onclick="expirePersonalContext(this.dataset.personalContextId)">${escapeHtml(t("No longer valid"))}</button></div></details>`;
+      return `<details class="personal-context-review-menu" data-personal-context-id="${id}"><summary>${escapeHtml(t("Something changed…"))}</summary><div class="personal-context-review-actions"><button type="button" class="secondary" data-personal-context-id="${id}" onclick="correctPersonalContext(this.dataset.personalContextId)">${escapeHtml(t("Correct the record"))}</button><button type="button" class="secondary" data-personal-context-id="${id}" onclick="changePersonalContext(this.dataset.personalContextId)">${escapeHtml(t("Changed over time"))}</button><button type="button" class="secondary" data-personal-context-id="${id}" onclick="expirePersonalContext(this.dataset.personalContextId)">${escapeHtml(t("No longer valid"))}</button></div></details>`;
     }
 
     function personalContextSourceRevision() {
@@ -186,6 +186,8 @@
       const previousItems = JSON.parse(current?.dataset.personalContextItems || "[]");
       const loadedCount = previousItems.length || 100;
       const scrollY = typeof window !== "undefined" && window.scrollY;
+      const openMenuIds = new Set(Array.from(current?.querySelectorAll(".personal-context-review-menu[open]") || [])
+        .map(menu => menu.dataset.personalContextId).filter(Boolean));
       const {items, lastData} = await fetchPersonalContextRange(loadedCount, includeStale);
       const totalCount = lastData ? lastData.total_count : items.length;
       const data = Object.assign({}, lastData, {
@@ -199,6 +201,9 @@
         current.dataset.personalContextSourceRevision = data.source_revision || "";
       }
       renderPersonalContextCurrent(data);
+      current?.querySelectorAll(".personal-context-review-menu").forEach(menu => {
+        if (openMenuIds.has(menu.dataset.personalContextId)) menu.open = true;
+      });
       if (typeof window !== "undefined" && window.scrollTo) window.scrollTo(0, scrollY || 0);
       return data;
     }

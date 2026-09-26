@@ -720,6 +720,7 @@ class LifeTxtParserTests(unittest.TestCase):
                 "do",
                 "due",
                 "priority",
+                "importance",
                 "progress",
                 "assignee",
                 "owner",

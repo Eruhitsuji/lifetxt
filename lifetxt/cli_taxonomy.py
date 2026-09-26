@@ -280,6 +280,7 @@ CATEGORIES = OrderedDict(
                 "summarize your data.",
                 "commands": (
                     "filter",
+                    "list",
                     "search",
                     "find",
                     "query",

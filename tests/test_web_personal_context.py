@@ -77,9 +77,15 @@ class WebPersonalContextTests(unittest.TestCase):
             self.assertEqual({"current": 205, "stale": 0}, result["currentness_counts"])
 
     def test_projection_rejects_invalid_paging_and_caps_requested_limit(self):
-        self.assertEqual(400, self.client.get("/api/personal-context?limit=0").status_code)
-        self.assertEqual(400, self.client.get("/api/personal-context?offset=-1").status_code)
-        self.assertEqual(400, self.client.get("/api/personal-context?limit=nope").status_code)
+        self.assertEqual(
+            400, self.client.get("/api/personal-context?limit=0").status_code
+        )
+        self.assertEqual(
+            400, self.client.get("/api/personal-context?offset=-1").status_code
+        )
+        self.assertEqual(
+            400, self.client.get("/api/personal-context?limit=nope").status_code
+        )
 
     def test_stale_personal_context_can_be_reconfirmed_with_cas_and_preservation(self):
         before = Path(self.path).read_text(encoding="utf-8")
@@ -101,9 +107,13 @@ class WebPersonalContextTests(unittest.TestCase):
         self.assertEqual({"current": 3, "stale": 0}, current["currentness_counts"])
 
     def test_reconfirm_requires_stale_exact_writable_id_and_current_revision(self):
-        self.assertEqual(404, self.client.post("/api/personal-context/missing/reconfirm").status_code)
+        self.assertEqual(
+            404, self.client.post("/api/personal-context/missing/reconfirm").status_code
+        )
         current = self.client.get("/api/personal-context").json()
-        self.assertEqual(409, self.client.post("/api/personal-context/current/reconfirm").status_code)
+        self.assertEqual(
+            409, self.client.post("/api/personal-context/current/reconfirm").status_code
+        )
         self.assertEqual(
             409,
             self.client.post(
@@ -252,6 +262,185 @@ class WebPersonalContextTests(unittest.TestCase):
                 "/api/personal-context/preview",
                 json={"facts": [{"domain": "goal", "fact": "Ship it"}]},
                 headers=headers,
+            ).status_code,
+        )
+
+
+@unittest.skipIf(TestClient is None, "web extras unavailable")
+class WebPersonalContextReviewOutcomesTests(unittest.TestCase):
+    """Expanded review outcomes: expire, change, correct (#960)."""
+
+    def setUp(self):
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.path = os.path.join(self.temp_dir.name, "life.txt")
+        Path(self.path).write_text(
+            "[N] N Current id:current person:self tag:profile source:user updated:2999-01-01\n"
+            "[N] N Stale id:stale person:self tag:skill source:user updated:2000-01-01\n"
+            "[N] N Old id:old person:self tag:goal source:user replaced_by:new updated:2999-01-01\n"
+            "[N] N New id:new person:self tag:goal source:user corrects:old updated:2999-01-01\n",
+            encoding="utf-8",
+        )
+        from lifetxt.webapp import create_app
+
+        self.client = TestClient(create_app([self.path], writable_path=self.path))
+
+    def tearDown(self):
+        self.temp_dir.cleanup()
+
+    def _revision(self):
+        # Deliberately reuse /api/personal-context's own source_revision
+        # rather than GET /api/revision: fetching /api/revision opts this
+        # client session into strict revision mode (via a cookie set only
+        # on /api/revision and /api/capabilities), which then requires an
+        # explicit If-Match header these tests do not send -- matching how
+        # the real Web UI client discovers the revision it already has
+        # from its last load rather than a separate discovery call.
+        return self.client.get("/api/personal-context?include_stale=true").json()[
+            "source_revision"
+        ]
+
+    def test_expire_ends_applicability_without_deleting_the_record(self):
+        response = self.client.post(
+            "/api/personal-context/current/expire",
+            json={
+                "expected_source_revision": self._revision(),
+                "valid_to": "2000-01-01",
+            },
+        )
+        self.assertEqual(200, response.status_code)
+        result = response.json()
+        self.assertEqual("expired", result["state"])
+        self.assertEqual(["2000-01-01"], result["item"]["details"]["valid_to"])
+        text = Path(self.path).read_text(encoding="utf-8")
+        self.assertIn("id:current", text)
+        self.assertIn("valid_to:2000-01-01", text)
+        projection = self.client.get("/api/personal-context").json()
+        self.assertNotIn("current", {row["id"] for row in projection["items"]})
+
+    def test_expire_rejects_already_terminal_states(self):
+        # "old" is already superseded by "new"; a terminal state cannot be
+        # ended again.
+        response = self.client.post(
+            "/api/personal-context/old/expire",
+            json={"expected_source_revision": self._revision()},
+        )
+        self.assertEqual(409, response.status_code)
+
+    def test_expire_requires_writable_id_and_current_revision(self):
+        self.assertEqual(
+            404, self.client.post("/api/personal-context/missing/expire").status_code
+        )
+        self.assertEqual(
+            409,
+            self.client.post(
+                "/api/personal-context/current/expire",
+                json={"expected_source_revision": "wrong"},
+            ).status_code,
+        )
+
+    def test_change_preserves_old_record_and_starts_a_new_current_record(self):
+        before = Path(self.path).read_text(encoding="utf-8")
+        response = self.client.post(
+            "/api/personal-context/current/change",
+            json={
+                "expected_source_revision": self._revision(),
+                "replacement_text": "Works at Beta Corp",
+                "valid_from": "2026-01-01",
+            },
+        )
+        self.assertEqual(200, response.status_code)
+        result = response.json()
+        new_id = result["new_id"]
+        self.assertTrue(new_id)
+        self.assertEqual([new_id], result["old_item"]["details"]["replaced_by"])
+        self.assertEqual("Works at Beta Corp", result["new_item"]["title"])
+        self.assertEqual(["2026-01-01"], result["new_item"]["details"]["valid_from"])
+        self.assertEqual(["profile"], result["new_item"]["details"]["tag"])
+        text = Path(self.path).read_text(encoding="utf-8")
+        self.assertIn("id:current", text)
+        self.assertIn("replaced_by:%s" % new_id, text)
+        self.assertIn("Works at Beta Corp", text)
+        self.assertNotEqual(before, text)
+        # The old record's own historical content is untouched, only
+        # gaining the replacement relation.
+        self.assertIn("Current", text)
+
+    def test_change_requires_replacement_text(self):
+        response = self.client.post(
+            "/api/personal-context/current/change",
+            json={"expected_source_revision": self._revision()},
+        )
+        self.assertEqual(400, response.status_code)
+
+    def test_change_rejects_already_terminal_states(self):
+        response = self.client.post(
+            "/api/personal-context/old/change",
+            json={
+                "expected_source_revision": self._revision(),
+                "replacement_text": "x",
+            },
+        )
+        self.assertEqual(409, response.status_code)
+
+    def test_correct_leaves_the_old_record_unmodified_and_links_the_new_one(self):
+        before = Path(self.path).read_text(encoding="utf-8")
+        response = self.client.post(
+            "/api/personal-context/current/correct",
+            json={
+                "expected_source_revision": self._revision(),
+                "replacement_text": "Was actually wrong from the start",
+            },
+        )
+        self.assertEqual(200, response.status_code)
+        result = response.json()
+        new_id = result["new_id"]
+        self.assertTrue(new_id)
+        self.assertEqual(["current"], result["new_item"]["details"]["corrects"])
+        # Unlike change, the old record gains no new detail at all.
+        self.assertNotIn("replaced_by", result["old_item"]["details"])
+        text = Path(self.path).read_text(encoding="utf-8")
+        self.assertIn(before.splitlines()[0], text)
+        self.assertIn("corrects:current", text)
+        projection = self.client.get("/api/personal-context").json()
+        self.assertNotIn("current", {row["id"] for row in projection["items"]})
+        self.assertIn(new_id, {row["id"] for row in projection["items"]})
+
+    def test_correct_requires_replacement_text(self):
+        response = self.client.post(
+            "/api/personal-context/current/correct",
+            json={"expected_source_revision": self._revision()},
+        )
+        self.assertEqual(400, response.status_code)
+
+    def test_review_later_performs_no_mutation(self):
+        # "Review later" has no dedicated route: it is simply not calling
+        # any mutating endpoint. Confirm the file is untouched by a plain
+        # projection read, which is the only request the Web UI issues.
+        before = Path(self.path).read_text(encoding="utf-8")
+        self.client.get("/api/personal-context?include_stale=true")
+        self.assertEqual(before, Path(self.path).read_text(encoding="utf-8"))
+
+    def test_read_only_mode_rejects_every_new_mutation(self):
+        from lifetxt.webapp import create_app
+
+        client = TestClient(
+            create_app([self.path], writable_path=self.path, read_only=True)
+        )
+        self.assertEqual(
+            403, client.post("/api/personal-context/current/expire").status_code
+        )
+        self.assertEqual(
+            403,
+            client.post(
+                "/api/personal-context/current/change",
+                json={"replacement_text": "x"},
+            ).status_code,
+        )
+        self.assertEqual(
+            403,
+            client.post(
+                "/api/personal-context/current/correct",
+                json={"replacement_text": "x"},
             ).status_code,
         )
 

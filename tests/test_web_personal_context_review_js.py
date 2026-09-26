@@ -56,6 +56,7 @@ global.window = {scrollY: 0, scrollTo: (_x, y) => { global.window.scrollY = y; }
 const t = value => value;
 const escapeHtml = value => String(value);
 let personalContextReadOnly = false;
+const personalContextSelectedIds = new Set();
 const PERSONAL_CONTEXT_DOMAINS = ["profile", "preference", "skill", "goal", "project"];
 const PERSONAL_CONTEXT_LABELS = {profile: "Profile", preference: "Preferences", skill: "Skills", goal: "Goals", project: "Projects"};
 
@@ -178,7 +179,7 @@ async function main() {
   results.open_menu_after_removal = state.current._menus.filter(menu => menu.open).map(menu => menu.dataset.personalContextId);
   personalContextReadOnly = true;
   renderPersonalContextCurrent({...fakePage(0, 1, 1), items: [{id: "item1", title: "B", stale: true, details: {}}]});
-  results.read_only_no_mutation_controls = !state.current.innerHTML.includes("Still correct") && !state.current.innerHTML.includes("personal-context-review-menu");
+  results.read_only_no_mutation_controls = !state.current.innerHTML.includes("Still correct") && !state.current.innerHTML.includes("personal-context-review-menu") && !state.current.innerHTML.includes("data-personal-context-select");
   personalContextReadOnly = false;
   return results;
 }

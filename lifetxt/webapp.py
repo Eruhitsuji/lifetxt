@@ -546,6 +546,126 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             "source_revision": mutate_result.snapshot.content_hash,
         }
 
+    @app.post("/api/personal-context/bulk-review")
+    def bulk_review_personal_context(payload=Body(...)):
+        """Apply one bounded review outcome to explicitly selected IDs.
+
+        This is deliberately an orchestration over the existing exact-ID
+        semantics.  It is not a general bulk editor: only reconfirm and expire
+        are accepted, and every item gets its own validation and mutation
+        result so a retry cannot silently repeat a successful item.
+        """
+        if app.state.read_only or not app.state.writable_path:
+            raise HTTPException(
+                status_code=403,
+                detail={"error": "READ_ONLY", "message": "Web mode is read-only."},
+            )
+        payload = payload if isinstance(payload, dict) else {}
+        item_ids = payload.get("ids")
+        action = str(payload.get("action") or "").strip().lower()
+        if not isinstance(item_ids, list) or not item_ids:
+            raise HTTPException(status_code=400, detail="ids must be a non-empty list.")
+        if len(item_ids) > 100:
+            raise HTTPException(status_code=400, detail="At most 100 items may be reviewed at once.")
+        if len({str(item_id) for item_id in item_ids}) != len(item_ids):
+            raise HTTPException(status_code=400, detail="ids must not contain duplicates.")
+        if action not in ("reconfirm", "expire"):
+            raise HTTPException(status_code=400, detail="Only reconfirm and expire are supported.")
+
+        writable = app.state.writable_path
+        expected_revision = payload.get("expected_source_revision")
+        snapshot = mutation.read_text_snapshot(writable, allow_missing=False)
+        if expected_revision and expected_revision != snapshot.content_hash:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "error": "CONFLICT",
+                    "expected_revision": expected_revision,
+                    "current_revision": snapshot.content_hash,
+                },
+            )
+        key = id_key_from_config(app.state.config)
+        parsed_items, diagnostics = parse_text(snapshot.text, id_key=key)
+        raise_for_errors(diagnostics)
+        selected = [str(item_id) for item_id in item_ids]
+        results = []
+
+        for item_id in selected:
+            current_snapshot = mutation.read_text_snapshot(writable, allow_missing=False)
+            current_items, current_diagnostics = parse_text(current_snapshot.text, id_key=key)
+            raise_for_errors(current_diagnostics)
+            try:
+                item = find_item_by_id(current_items, item_id, key=key)
+            except ValueError as exc:
+                results.append({"id": item_id, "status": "failed", "error": error_detail(exc)})
+                continue
+            currentness = resolve_currentness(current_items)
+            record = item_currentness(item, currentness) if item is not None else None
+            if item is None:
+                results.append({"id": item_id, "status": "failed", "error": "Item was not found."})
+                continue
+            if not is_editable(item, writable) or getattr(item, "generated", False):
+                results.append({"id": item_id, "status": "failed", "error": "Item is not writable."})
+                continue
+            if item not in select_personal_context(current_items, person="self"):
+                results.append({"id": item_id, "status": "failed", "error": "Item is not an eligible Personal Context record."})
+                continue
+            state = record.get("state") if record else "current"
+            if action == "reconfirm" and state != "stale":
+                results.append({"id": item_id, "status": "failed", "error": "Only stale items can be reconfirmed."})
+                continue
+            if action == "expire" and state in ("expired", "superseded", "conflicting"):
+                results.append({"id": item_id, "status": "failed", "error": "Item is already terminal."})
+                continue
+
+            now_value = _format_now()
+            valid_to_value = payload.get("valid_to") or now_value
+
+            def transform(text, selected_id=item_id):
+                items, item_diagnostics = parse_text(text, id_key=key)
+                raise_for_errors(item_diagnostics)
+                current_item = find_item_by_id(items, selected_id, key=key)
+                if current_item is None:
+                    raise mutation.MutationError("Item disappeared during bulk review.")
+                if action == "reconfirm":
+                    details = OrderedDict((name, list(values)) for name, values in current_item.details.items())
+                    details["updated"] = [now_value]
+                else:
+                    details = expire_details(current_item, valid_to=valid_to_value)
+                from .write_operations import transform_items_text_with_native_history
+
+                return transform_items_text_with_native_history(
+                    text,
+                    [{"id": selected_id, "status": current_item.status, "type": current_item.kind,
+                      "title": current_item.title, "set_details": details}],
+                    id_key=key,
+                    source_revision=mutation.hash_text(text),
+                )
+
+            try:
+                mutate_result = mutation.mutate_text(
+                    writable, transform, expected_hash=current_snapshot.content_hash,
+                    operation="web personal context bulk " + action,
+                )
+            except mutation.MutationConflict as exc:
+                results.append({"id": item_id, "status": "conflicted", "error": "Source changed during review.", "current_revision": exc.actual_hash})
+                continue
+            except (ValueError, mutation.MutationError) as exc:
+                results.append({"id": item_id, "status": "failed", "error": str(exc)})
+                continue
+            results.append({"id": item_id, "status": "succeeded", "state": "current" if action == "reconfirm" else "expired"})
+
+        final_snapshot = mutation.read_text_snapshot(writable, allow_missing=False)
+        succeeded = [result["id"] for result in results if result["status"] == "succeeded"]
+        return {
+            "selected": len(selected),
+            "succeeded": len(succeeded),
+            "conflicted": sum(result["status"] == "conflicted" for result in results),
+            "failed": sum(result["status"] == "failed" for result in results),
+            "results": results,
+            "source_revision": final_snapshot.content_hash,
+        }
+
     def _personal_context_review_target(item_id, payload, require_editable=False):
         """Shared CAS preamble for every Personal Context review outcome route."""
         if app.state.read_only or not app.state.writable_path:

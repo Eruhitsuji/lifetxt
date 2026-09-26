@@ -450,6 +450,12 @@ __LIFETXT_WEB_STYLES__  </style>
               <label class="personal-context-stale-toggle"><input id="personal-context-include-stale" type="checkbox" onchange="loadPersonalContext()"> Show stale</label>
             </div>
             <div id="personal-context-counts" class="personal-context-counts" aria-live="polite"></div>
+            <div id="personal-context-bulk-toolbar" class="personal-context-bulk-toolbar" hidden>
+              <span id="personal-context-selected-count" aria-live="polite">0 selected</span>
+              <button type="button" class="secondary" onclick="bulkReconfirmPersonalContext()">Still correct</button>
+              <button type="button" class="secondary" onclick="bulkExpirePersonalContext()">No longer valid</button>
+              <button type="button" class="secondary" onclick="clearPersonalContextSelection()">Clear selection</button>
+            </div>
             <div id="personal-context-current" aria-live="polite" aria-busy="true"><div class="empty">Loading…</div></div>
             <div id="personal-context-pagination" class="personal-context-pagination" hidden>
               <button id="personal-context-load-more" type="button" class="secondary" onclick="loadMorePersonalContext()">Load more</button>

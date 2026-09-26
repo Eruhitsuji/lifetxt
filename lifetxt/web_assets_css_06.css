@@ -8,6 +8,9 @@
     .personal-context-current-head h3 { margin: 0; }
     .personal-context-stale-toggle { display: inline-flex; align-items: center; gap: .4rem; min-height: 44px; color: var(--muted); font-size: .82rem; }
     .personal-context-counts { display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin: .45rem 0 .8rem; color: var(--muted); font-size: .82rem; }
+    .personal-context-bulk-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem; margin: .5rem 0 .8rem; padding: .55rem; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--soft); }
+    .personal-context-select { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; margin-left: -1.25rem; }
+    .personal-context-select input { width: 1.1rem; height: 1.1rem; }
     .personal-context-pagination { display: flex; justify-content: center; margin-top: .8rem; }
     .personal-context-steps { margin: 0 0 1rem; padding-left: 1.25rem; color: var(--muted); }
     .personal-context-steps li + li { margin-top: .35rem; }

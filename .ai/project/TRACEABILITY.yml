@@ -2,6 +2,23 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-importance-priority-matrix
+      capability_id: cap-importance-priority-matrix
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/974
+      pull_request: null
+      changed_files_or_scope:
+        - lifetxt/priority_matrix.py
+        - lifetxt/cli.py
+        - lifetxt/model.py
+        - lifetxt/validator.py
+        - tests/test_priority_matrix.py
+        - docs/en/priority-matrix.md
+        - docs/ja/priority-matrix.md
+      tests_or_evidence: [tests.test_priority_matrix]
+      release_or_deployment: null
+      status: implemented
+
     - requirement_id: req-web-personal-context-card-layout
       capability_id: cap-personal-context-toolkit
       epic: https://github.com/Eruhitsuji/lifetxt/issues/500

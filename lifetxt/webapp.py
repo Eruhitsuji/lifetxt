@@ -59,8 +59,11 @@ from .model import Diagnostic, Item
 from .notifier import notification_records
 from .parser import parse_text
 from .personal_context import (
+    changed_details,
     context_capsule,
     context_health,
+    correction_details,
+    expire_details,
     item_currentness,
     resolve_currentness,
     select_personal_context,
@@ -401,9 +404,14 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             limit = min(int(limit), 100)
             offset = int(offset)
         except (TypeError, ValueError):
-            raise HTTPException(status_code=400, detail="limit and offset must be integers")
+            raise HTTPException(
+                status_code=400, detail="limit and offset must be integers"
+            )
         if limit < 1 or offset < 0:
-            raise HTTPException(status_code=400, detail="limit must be positive and offset must be zero or greater")
+            raise HTTPException(
+                status_code=400,
+                detail="limit must be positive and offset must be zero or greater",
+            )
         result = context_capsule(
             items,
             person="self",
@@ -437,7 +445,10 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         expected_source_revision = payload.get("expected_source_revision")
         writable = app.state.writable_path
         snapshot = mutation.read_text_snapshot(writable, allow_missing=False)
-        if expected_source_revision and expected_source_revision != snapshot.content_hash:
+        if (
+            expected_source_revision
+            and expected_source_revision != snapshot.content_hash
+        ):
             raise HTTPException(
                 status_code=409,
                 detail={
@@ -454,15 +465,25 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=error_detail(exc))
         if item is None:
-            raise HTTPException(status_code=404, detail="Item id:%s was not found." % item_id)
+            raise HTTPException(
+                status_code=404, detail="Item id:%s was not found." % item_id
+            )
         if not is_editable(item, writable) or getattr(item, "generated", False):
-            raise HTTPException(status_code=409, detail="Personal Context item is not writable.")
+            raise HTTPException(
+                status_code=409, detail="Personal Context item is not writable."
+            )
         currentness = resolve_currentness(parsed_items)
         record = item_currentness(item, currentness)
         if record is None or record.get("state") != "stale":
-            raise HTTPException(status_code=409, detail="Only stale Personal Context items can be reconfirmed.")
+            raise HTTPException(
+                status_code=409,
+                detail="Only stale Personal Context items can be reconfirmed.",
+            )
         if item not in select_personal_context(parsed_items, person="self"):
-            raise HTTPException(status_code=409, detail="Item is not an eligible Personal Context record.")
+            raise HTTPException(
+                status_code=409,
+                detail="Item is not an eligible Personal Context record.",
+            )
         now_value = _format_now()
 
         def transform(text):
@@ -470,20 +491,32 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             raise_for_errors(current_diagnostics)
             current_item = find_item_by_id(current_items, item_id, key=key)
             if current_item is None:
-                raise mutation.MutationError("Personal Context item disappeared during reconfirmation.")
-            details = OrderedDict((name, list(values)) for name, values in current_item.details.items())
+                raise mutation.MutationError(
+                    "Personal Context item disappeared during reconfirmation."
+                )
+            details = OrderedDict(
+                (name, list(values)) for name, values in current_item.details.items()
+            )
             details["updated"] = [now_value]
             from .write_operations import transform_items_text_with_native_history
 
             return transform_items_text_with_native_history(
                 text,
-                [{"id": str(item_id), "status": current_item.status, "type": current_item.kind, "title": current_item.title, "set_details": details}],
+                [
+                    {
+                        "id": str(item_id),
+                        "status": current_item.status,
+                        "type": current_item.kind,
+                        "title": current_item.title,
+                        "set_details": details,
+                    }
+                ],
                 id_key=key,
                 source_revision=mutation.hash_text(text),
             )
 
         try:
-            mutation.mutate_text(
+            mutate_result = mutation.mutate_text(
                 writable,
                 transform,
                 expected_hash=snapshot.content_hash,
@@ -500,14 +533,289 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             )
         except (ValueError, mutation.MutationError) as exc:
             raise HTTPException(status_code=409, detail=str(exc))
-        updated_items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
+        # Reuse the snapshot committed inside the mutation lock rather than a
+        # separate post-write read, which can otherwise observe a transient
+        # stale filesystem view immediately after the rename on some hosts.
+        updated_items, diagnostics = parse_text(mutate_result.snapshot.text, id_key=key)
         raise_for_errors(diagnostics)
         updated = find_item_by_id(updated_items, item_id, key=key)
         return {
             "id": item_id,
             "reconfirmed": True,
             "item": api_item(updated, writable, key),
-            "source_revision": mutation.read_text_snapshot(writable).content_hash,
+            "source_revision": mutate_result.snapshot.content_hash,
+        }
+
+    def _personal_context_review_target(item_id, payload, require_editable=False):
+        """Shared CAS preamble for every Personal Context review outcome route."""
+        if app.state.read_only or not app.state.writable_path:
+            raise HTTPException(
+                status_code=403,
+                detail={"error": "READ_ONLY", "message": "Web mode is read-only."},
+            )
+        payload = payload if isinstance(payload, dict) else {}
+        expected_source_revision = payload.get("expected_source_revision")
+        writable = app.state.writable_path
+        snapshot = mutation.read_text_snapshot(writable, allow_missing=False)
+        if (
+            expected_source_revision
+            and expected_source_revision != snapshot.content_hash
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "error": "CONFLICT",
+                    "expected_revision": expected_source_revision,
+                    "current_revision": snapshot.content_hash,
+                },
+            )
+        key = id_key_from_config(app.state.config)
+        parsed_items, diagnostics = parse_text(snapshot.text, id_key=key)
+        raise_for_errors(diagnostics)
+        try:
+            item = find_item_by_id(parsed_items, item_id, key=key)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=error_detail(exc))
+        if item is None:
+            raise HTTPException(
+                status_code=404, detail="Item id:%s was not found." % item_id
+            )
+        if require_editable and (
+            not is_editable(item, writable) or getattr(item, "generated", False)
+        ):
+            raise HTTPException(
+                status_code=409, detail="Personal Context item is not writable."
+            )
+        if item not in select_personal_context(parsed_items, person="self"):
+            raise HTTPException(
+                status_code=409,
+                detail="Item is not an eligible Personal Context record.",
+            )
+        currentness = resolve_currentness(parsed_items)
+        record = item_currentness(item, currentness)
+        state = record.get("state") if record else "current"
+        return writable, snapshot, key, parsed_items, item, state
+
+    def _reject_terminal_review_state(state, action):
+        if state in ("expired", "superseded", "conflicting"):
+            raise HTTPException(
+                status_code=409,
+                detail="Item is already %s and cannot be %s again." % (state, action),
+            )
+
+    @app.post("/api/personal-context/{item_id}/expire")
+    def expire_personal_context(item_id, payload=Body(None)):
+        """End one Personal Context record's applicability without deleting it."""
+        writable, snapshot, key, parsed_items, item, state = (
+            _personal_context_review_target(item_id, payload, require_editable=True)
+        )
+        payload = payload if isinstance(payload, dict) else {}
+        _reject_terminal_review_state(state, "ended")
+        valid_to_value = payload.get("valid_to") or _format_now()
+
+        def transform(text):
+            current_items, current_diagnostics = parse_text(text, id_key=key)
+            raise_for_errors(current_diagnostics)
+            current_item = find_item_by_id(current_items, item_id, key=key)
+            if current_item is None:
+                raise mutation.MutationError(
+                    "Personal Context item disappeared during review."
+                )
+            details = expire_details(current_item, valid_to=valid_to_value)
+            from .write_operations import transform_items_text_with_native_history
+
+            return transform_items_text_with_native_history(
+                text,
+                [
+                    {
+                        "id": str(item_id),
+                        "status": current_item.status,
+                        "type": current_item.kind,
+                        "title": current_item.title,
+                        "set_details": details,
+                    }
+                ],
+                id_key=key,
+                source_revision=mutation.hash_text(text),
+            )
+
+        try:
+            mutate_result = mutation.mutate_text(
+                writable,
+                transform,
+                expected_hash=snapshot.content_hash,
+                operation="web personal context expire",
+            )
+        except mutation.MutationConflict as exc:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "error": "CONFLICT",
+                    "expected_revision": exc.expected_hash,
+                    "current_revision": exc.actual_hash,
+                },
+            )
+        except (ValueError, mutation.MutationError) as exc:
+            raise HTTPException(status_code=409, detail=str(exc))
+        updated_items, diagnostics = parse_text(mutate_result.snapshot.text, id_key=key)
+        raise_for_errors(diagnostics)
+        updated = find_item_by_id(updated_items, item_id, key=key)
+        return {
+            "id": item_id,
+            "state": "expired",
+            "item": api_item(updated, writable, key),
+            "source_revision": mutate_result.snapshot.content_hash,
+        }
+
+    @app.post("/api/personal-context/{item_id}/change")
+    def change_personal_context(item_id, payload=Body(...)):
+        """Record a real-world change: end the old record, start a new one.
+
+        The old record keeps its historically-correct content and gains
+        ``replaced_by:``; a new record captures the current state. Neither
+        record is deleted, matching the existing correction lifecycle's
+        history-preserving contract.
+        """
+        payload = payload if isinstance(payload, dict) else {}
+        replacement_text = str(payload.get("replacement_text") or "").strip()
+        if not replacement_text:
+            raise HTTPException(status_code=400, detail="replacement_text is required.")
+        valid_from = payload.get("valid_from") or None
+        writable, snapshot, key, parsed_items, item, state = (
+            _personal_context_review_target(item_id, payload, require_editable=True)
+        )
+        _reject_terminal_review_state(state, "replaced")
+
+        new_details, _template_old_update = changed_details(
+            item, parsed_items, config=app.state.config, valid_from=valid_from, key=key
+        )
+        new_id = (new_details.get(key) or [None])[0]
+        new_line = item_to_line(
+            Item(status="[ ]", kind="N", title=replacement_text, details=new_details)
+        )
+
+        def transform(text):
+            current_items, current_diagnostics = parse_text(text, id_key=key)
+            raise_for_errors(current_diagnostics)
+            current_item = find_item_by_id(current_items, item_id, key=key)
+            if current_item is None:
+                raise mutation.MutationError(
+                    "Personal Context item disappeared during review."
+                )
+            old_update = OrderedDict(
+                (name, list(values)) for name, values in current_item.details.items()
+            )
+            old_update["replaced_by"] = [new_id]
+            from .write_operations import transform_items_text_with_native_history
+
+            updated = transform_items_text_with_native_history(
+                text,
+                [
+                    {
+                        "id": str(item_id),
+                        "status": current_item.status,
+                        "type": current_item.kind,
+                        "title": current_item.title,
+                        "set_details": old_update,
+                    }
+                ],
+                id_key=key,
+                source_revision=mutation.hash_text(text),
+            )
+            prefix = (
+                ""
+                if not updated or updated.endswith(("\n", "\r"))
+                else snapshot.newline
+            )
+            return updated + prefix + new_line + snapshot.newline
+
+        try:
+            mutate_result = mutation.mutate_text(
+                writable,
+                transform,
+                expected_hash=snapshot.content_hash,
+                operation="web personal context change",
+            )
+        except mutation.MutationConflict as exc:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "error": "CONFLICT",
+                    "expected_revision": exc.expected_hash,
+                    "current_revision": exc.actual_hash,
+                },
+            )
+        except (ValueError, mutation.MutationError) as exc:
+            raise HTTPException(status_code=409, detail=str(exc))
+        updated_items, diagnostics = parse_text(mutate_result.snapshot.text, id_key=key)
+        raise_for_errors(diagnostics)
+        old_item = find_item_by_id(updated_items, item_id, key=key)
+        new_item = find_item_by_id(updated_items, new_id, key=key) if new_id else None
+        return {
+            "id": item_id,
+            "new_id": new_id,
+            "old_item": api_item(old_item, writable, key) if old_item else None,
+            "new_item": api_item(new_item, writable, key) if new_item else None,
+            "source_revision": mutate_result.snapshot.content_hash,
+        }
+
+    @app.post("/api/personal-context/{item_id}/correct")
+    def correct_personal_context(item_id, payload=Body(...)):
+        """Correct a record that was wrong even for the time it described.
+
+        Unlike ``change``, the old record is not modified: the new record
+        alone carries ``corrects:<old-id>``, matching the existing Personal
+        Memory correction lifecycle (``lifetxt memory correct``).
+        """
+        payload = payload if isinstance(payload, dict) else {}
+        replacement_text = str(payload.get("replacement_text") or "").strip()
+        if not replacement_text:
+            raise HTTPException(status_code=400, detail="replacement_text is required.")
+        writable, snapshot, key, parsed_items, item, state = (
+            _personal_context_review_target(item_id, payload, require_editable=False)
+        )
+        _reject_terminal_review_state(state, "corrected")
+
+        new_details = correction_details(
+            item, parsed_items, config=app.state.config, key=key
+        )
+        new_id = (new_details.get(key) or [None])[0]
+        new_line = item_to_line(
+            Item(status="[ ]", kind="N", title=replacement_text, details=new_details)
+        )
+
+        def transform(text):
+            prefix = "" if not text or text.endswith(("\n", "\r")) else snapshot.newline
+            return text + prefix + new_line + snapshot.newline
+
+        try:
+            mutate_result = mutation.mutate_text(
+                writable,
+                transform,
+                expected_hash=snapshot.content_hash,
+                operation="web personal context correct",
+            )
+        except mutation.MutationConflict as exc:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "error": "CONFLICT",
+                    "expected_revision": exc.expected_hash,
+                    "current_revision": exc.actual_hash,
+                },
+            )
+        except (ValueError, mutation.MutationError) as exc:
+            raise HTTPException(status_code=409, detail=str(exc))
+        updated_items, diagnostics = parse_text(mutate_result.snapshot.text, id_key=key)
+        raise_for_errors(diagnostics)
+        old_item = find_item_by_id(updated_items, item_id, key=key)
+        new_item = find_item_by_id(updated_items, new_id, key=key) if new_id else None
+        return {
+            "id": item_id,
+            "new_id": new_id,
+            "old_item": api_item(old_item, writable, key) if old_item else None,
+            "new_item": api_item(new_item, writable, key) if new_item else None,
+            "source_revision": mutate_result.snapshot.content_hash,
         }
 
     @app.post("/api/personal-context/preview")

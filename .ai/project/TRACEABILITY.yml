@@ -2,6 +2,65 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-personal-context-review-outcomes
+      capability_id: cap-personal-context-toolkit
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/960
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/963
+      changed_files_or_scope:
+        - lifetxt/personal_context.py
+        - lifetxt/webapp.py
+        - lifetxt/web_assets_js_01.js
+        - lifetxt/web_assets_js_19.js
+        - tests/test_web_personal_context.py
+      tests_or_evidence:
+        - "expire ends applicability via valid_to without deleting the record and rejects already-terminal states"
+        - "change preserves the old record unmodified, links it with replaced_by:<new-id>, and starts a new current record, optionally effective from valid_from"
+        - "correct leaves the old record completely unmodified and links the new one via corrects:<old-id>, reusing the existing proposal-shaped correction convention"
+        - "review later performs no mutation; read-only mode rejects every new mutation; every route enforces the same CAS/expected_source_revision precondition as reconfirm"
+        - "python -m unittest tests.test_web_personal_context -> 21 tests, OK"
+      release_or_deployment: null
+      notes: >-
+        Extends the existing single-record reconfirm review action (#957/PR
+        #958) with three further review outcomes -- Correct the record,
+        Changed over time, and No longer valid -- reusing the existing
+        correction_details()/expire_details()/changed_details() domain
+        helpers, the shared currentness resolver's own valid_to/replaced_by/
+        corrects conventions, and the same CAS mutation contract every other
+        Personal Context write route already uses. No new record kind,
+        Format key, or currentness state is introduced. All four write
+        routes (reconfirm/expire/change/correct) were also hardened to build
+        their response from the MutationResult.snapshot captured inside the
+        write lock rather than a separate post-write disk read, fixing an
+        intermittent stale-read race observed on this Windows host.
+      status: implemented
+
+    - requirement_id: req-web-personal-context-preserve-loaded-state
+      capability_id: cap-personal-context-toolkit
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/961
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/963
+      changed_files_or_scope:
+        - lifetxt/web_assets_js_19.js
+        - tests/test_web_personal_context_review_js.py
+      tests_or_evidence:
+        - "a single-page loaded range is refetched as exactly one page rather than reset to a default 100-record page"
+        - "a multi-page loaded range (spanning several 100-record server pages) is refetched in full, not truncated back to page one"
+        - "the active include_stale filter and scroll position are preserved across a review-action refresh"
+        - "reconfirm/expire/change/correct all route through the shared range-preserving refresh instead of the full-reset loader"
+        - "python -m unittest tests.test_web_personal_context_review_js -> 6 tests, OK"
+      release_or_deployment: null
+      notes: >-
+        Adds refreshLoadedPersonalContext(), which re-fetches exactly the
+        range the user had already loaded (paging through as many
+        /api/personal-context calls as needed) instead of calling the
+        original page-1-only loadPersonalContext() after every review
+        mutation, and restores window.scrollY afterward. Also fixes an
+        over-fetch bug found while testing this fix itself: the range
+        computation originally floored the fetch count at 100 records
+        regardless of how few were actually loaded.
+      status: implemented
+
     - requirement_id: req-web-personal-context-reconfirm
       capability_id: cap-personal-context-toolkit
       epic: https://github.com/Eruhitsuji/lifetxt/issues/500

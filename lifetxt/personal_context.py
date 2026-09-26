@@ -496,6 +496,70 @@ def correction_details(
     return proposed.details
 
 
+def expire_details(target, valid_to=None, now_value=None):
+    """Return details ending ``target``'s applicability, without deleting it.
+
+    Reuses the shared currentness resolver's existing ``valid_to:`` evidence
+    convention so the record is classified ``expired`` on the next read; no
+    new custom key or currentness rule is introduced.
+    """
+    details = OrderedDict((key, list(values)) for key, values in target.details.items())
+    details["valid_to"] = [str(valid_to) if valid_to else _timestamp(now_value)]
+    return details
+
+
+def changed_details(
+    target,
+    items,
+    config=None,
+    valid_from=None,
+    source="manual",
+    now_value=None,
+    key="id",
+):
+    """Build ``(new_item_details, old_item_update)`` for a real-world change.
+
+    Unlike :func:`correction_details` (the old claim was wrong), this
+    represents a case where the old claim was historically correct and
+    reality changed later. The old record keeps its content unchanged and
+    gains ``replaced_by:<new-id>`` -- the existing lifecycle replacement
+    convention the shared currentness resolver already understands -- while
+    a new record starts the current state, optionally effective from
+    ``valid_from``. Neither record is deleted or rewritten.
+    """
+    target_id = _first(target, key)
+    if not target_id:
+        raise ValueError(
+            "Recording a temporal change requires a target with %s:." % key
+        )
+
+    new_details = OrderedDict()
+    for detail_key in ("person", "tag", "project"):
+        values = _values(target, detail_key)
+        if values:
+            new_details[detail_key] = values
+    if valid_from:
+        new_details["valid_from"] = [str(valid_from)]
+    new_details["source"] = [str(source)]
+    new_details["updated"] = [_timestamp(now_value)]
+
+    proposed = Item(status="[ ]", kind="N", title="", details=new_details)
+    prefix = id_prefix_for_item(proposed, config=config)
+    ensure_item_id(
+        proposed,
+        existing_ids=collect_item_ids(items, key=key),
+        key=key,
+        prefix=prefix,
+        now=now_value,
+    )
+    new_id = _first(proposed, key)
+
+    old_update = OrderedDict((k, list(v)) for k, v in target.details.items())
+    old_update["replaced_by"] = [new_id]
+
+    return proposed.details, old_update
+
+
 def stage_memory_correction(
     config,
     items,

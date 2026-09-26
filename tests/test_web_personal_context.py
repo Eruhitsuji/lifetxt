@@ -122,6 +122,35 @@ class WebPersonalContextTests(unittest.TestCase):
             ).status_code,
         )
 
+    def test_bulk_review_reports_per_item_results(self):
+        result = self.client.get("/api/personal-context?include_stale=true").json()
+        response = self.client.post(
+            "/api/personal-context/bulk-review",
+            json={"ids": ["stale", "current", "missing"], "action": "reconfirm",
+                  "expected_source_revision": result["source_revision"]},
+        )
+        self.assertEqual(200, response.status_code)
+        body = response.json()
+        self.assertEqual((3, 1, 0, 2), tuple(body[key] for key in ("selected", "succeeded", "conflicted", "failed")))
+        self.assertEqual(
+            {"stale": "succeeded", "current": "failed", "missing": "failed"},
+            {row["id"]: row["status"] for row in body["results"]},
+        )
+
+    def test_bulk_expire_uses_one_date_and_rejects_unsupported_action(self):
+        result = self.client.get("/api/personal-context").json()
+        response = self.client.post(
+            "/api/personal-context/bulk-review",
+            json={"ids": ["current", "new"], "action": "expire", "valid_to": "2026-09-26",
+                  "expected_source_revision": result["source_revision"]},
+        )
+        self.assertEqual(200, response.status_code)
+        self.assertEqual(2, response.json()["succeeded"])
+        self.assertIn("valid_to:2026-09-26", Path(self.path).read_text(encoding="utf-8"))
+        self.assertEqual(400, self.client.post(
+            "/api/personal-context/bulk-review", json={"ids": ["current"], "action": "correct"}
+        ).status_code)
+
     def test_projection_all_current_all_stale_and_mixed_counts(self):
         datasets = {
             "all-current": (

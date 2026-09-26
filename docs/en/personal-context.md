@@ -613,7 +613,7 @@ lifetxt     stores durable, inspectable, user-owned context
 human       remains the authority for what becomes trusted personal context
 ```
 
-### Review outcomes in Web
+## 12. Review outcomes in Web
 
 In **More → Personal Context**, review one record at a time. **Still correct** reconfirms a stale fact by updating its freshness evidence. **Correct the record** fixes an inaccurate record: the explicit user action writes a new record with `corrects:<old-id>`, preserving the original as history. This Web action is a direct authoritative mutation, unlike the CLI `lifetxt memory correct` proposal workflow. It requires the exact record ID and the current source revision (CAS); concurrent edits fail rather than overwriting changes.
 

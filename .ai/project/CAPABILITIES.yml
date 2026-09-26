@@ -11,7 +11,7 @@ capabilities:
     public_interfaces: [lifetxt list --matrix, lifetxt list --quadrant]
     tests_or_evidence: [tests.test_priority_matrix]
     related_issues: [https://github.com/Eruhitsuji/lifetxt/issues/974]
-    related_pull_requests: []
+    related_pull_requests: [https://github.com/Eruhitsuji/lifetxt/pull/975]
     reuse_policy: reuse_existing_timezone_policy_and_due_parser
     replacement: {replaces: [], replaced_by: null, deprecation_issue: null}
 

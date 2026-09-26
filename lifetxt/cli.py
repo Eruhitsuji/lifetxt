@@ -476,6 +476,14 @@ def build_parser():
     )
     check.set_defaults(func=command_check)
 
+    listing = subparsers.add_parser("list", help="List actionable tasks by priority matrix.")
+    _add_input_paths(listing)
+    listing.add_argument("--matrix", action="store_true", help="Group tasks by importance and derived urgency.")
+    listing.add_argument("--quadrant", choices=("Q1", "Q2", "Q3", "Q4", "unclassified"),
+                         help="Only show one priority group (implies --matrix).")
+    listing.add_argument("--json", action="store_true", help="Emit the grouped result as JSON.")
+    listing.set_defaults(func=command_priority_matrix)
+
     storage = subparsers.add_parser("storage", help="Read-only storage diagnostics.")
     storage_subparsers = storage.add_subparsers(dest="storage_command")
     storage_health = storage_subparsers.add_parser(
@@ -13191,6 +13199,29 @@ def _project_items(args):
     ) or ["life.txt"]
     items, _diagnostics = _parse_or_exit(paths, _config(args))
     return items
+
+
+def command_priority_matrix(args):
+    from .priority_matrix import matrix_rows
+
+    if not (args.matrix or args.quadrant):
+        raise ValueError("list requires --matrix or --quadrant.")
+    groups = matrix_rows(_project_items(args), quadrant=args.quadrant)
+    if args.json:
+        write_text(None, json.dumps(groups, ensure_ascii=False, indent=2) + "\n")
+        return 0
+    headings = {
+        "Q1": "IMPORTANT / URGENT", "Q2": "IMPORTANT / NOT URGENT",
+        "Q3": "NOT IMPORTANT / URGENT", "Q4": "NOT IMPORTANT / NOT URGENT",
+        "unclassified": "IMPORTANCE MISSING OR INVALID",
+    }
+    for name, rows in groups.items():
+        if args.quadrant and name != args.quadrant:
+            continue
+        write_text(None, "%s (%s)\n" % (headings[name], name))
+        for row in rows:
+            write_text(None, "  %s%s\n" % (row["title"], " due:" + row["due"] if row["due"] else ""))
+    return 0
 
 
 def _project_today():

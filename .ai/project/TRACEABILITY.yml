@@ -2,6 +2,27 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-importance-priority-coexistence
+      capability_id: cap-importance-priority-matrix
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/974
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/976
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/979
+      changed_files_or_scope:
+        - docs/en/priority-matrix.md
+        - docs/ja/priority-matrix.md
+        - tests/test_priority_matrix.py
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests.test_priority_matrix
+        - "priority changes do not affect urgency, quadrant classification, or source ordering"
+        - "priority:A without valid importance remains unclassified"
+      release_or_deployment: null
+      notes: >-
+        Clarifies the existing matrix capability's coexistence contract; it
+        does not define a second classifier or priority score.
+      status: implemented
+
     - requirement_id: req-importance-priority-matrix
       capability_id: cap-importance-priority-matrix
       epic: null

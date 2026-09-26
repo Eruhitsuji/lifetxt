@@ -6,13 +6,18 @@ capabilities:
     summary: Optional human importance with read-only timezone-aware due-derived urgency and CLI quadrants.
     status: active
     owner: Eruhitsuji
-    source_requirements: [req-importance-priority-matrix]
+    source_requirements: [req-importance-priority-matrix, req-importance-priority-coexistence]
     implementation_locations: [lifetxt/priority_matrix.py, lifetxt/cli.py, lifetxt/cli_taxonomy.py, lifetxt/validator.py]
     public_interfaces: [lifetxt list --matrix, lifetxt list --quadrant]
     tests_or_evidence: [tests.test_priority_matrix]
-    related_issues: [https://github.com/Eruhitsuji/lifetxt/issues/974]
-    related_pull_requests: [https://github.com/Eruhitsuji/lifetxt/pull/975]
+    related_issues: [https://github.com/Eruhitsuji/lifetxt/issues/974, https://github.com/Eruhitsuji/lifetxt/issues/976]
+    related_pull_requests: [https://github.com/Eruhitsuji/lifetxt/pull/975, https://github.com/Eruhitsuji/lifetxt/pull/979]
     reuse_policy: reuse_existing_timezone_policy_and_due_parser
+    notes: >-
+      The #976 coexistence contract extends this capability: explicit priority
+      remains independent of importance, derived urgency, and quadrant; matrix
+      classification preserves source order and does not calculate a unified
+      score or recommended execution order.
     replacement: {replaces: [], replaced_by: null, deprecation_issue: null}
 
   - id: cap-remote-authoritative-sync-cli

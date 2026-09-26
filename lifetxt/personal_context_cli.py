@@ -166,6 +166,7 @@ def _health_text(report):
             issues.append("missing-source")
         if item["broken_references"]:
             issues.append("broken-ref")
+        issues.extend((item.get("review_policy") or {}).get("diagnostics") or [])
         rows.append(
             [
                 item["state"],
@@ -194,6 +195,15 @@ def _why_text(report):
     ]
     if report.get("reasons"):
         lines.append("reasons: %s" % ", ".join(report["reasons"]))
+    policy = report.get("review_policy") or {}
+    if policy:
+        lines.append("review: %s%s (source: %s; due: %s)" % (
+            policy["mode"],
+            " every %s days" % policy["days"] if policy["mode"] == "periodic" else "",
+            policy["source"], "yes" if report.get("review_due") else "no",
+        ))
+        if policy.get("diagnostics"):
+            lines.append("review diagnostics: %s" % ", ".join(policy["diagnostics"]))
     if report.get("valid_from"):
         lines.append("valid_from: %s" % report["valid_from"])
     if report.get("valid_to"):
@@ -311,17 +321,22 @@ def _render(report, args, text_renderer):
 
 
 def _dispatch(args, config_data):
+    from .personal_context_review_policy import configured_tag_policies
+
+    tag_policies = configured_tag_policies(config_data)
     if args.command == "context" and args.context_action == "health":
         items = _load_items(args.paths, config_data)
         report = context_health(
-            items, person=args.person, stale_after_days=args.stale_after_days
+            items, person=args.person, stale_after_days=args.stale_after_days,
+            tag_policies=tag_policies,
         )
         return _render(report, args, _health_text)
 
     if args.command == "context" and args.context_action == "why":
         items = _load_items(args.paths, config_data)
         report = explain_personal_context_item(
-            items, args.id, stale_after_days=args.stale_after_days
+            items, args.id, stale_after_days=args.stale_after_days,
+            tag_policies=tag_policies,
         )
         return _render(report, args, _why_text)
 
@@ -335,6 +350,7 @@ def _dispatch(args, config_data):
             limit=args.limit,
             stale_after_days=args.stale_after_days,
             evaluation_time=args.as_of,
+            tag_policies=tag_policies if not args.as_of else None,
         )
         return _render(report, args, _capsule_text)
 
@@ -371,6 +387,7 @@ def _dispatch(args, config_data):
             include_stale=args.include_stale,
             limit=args.limit,
             stale_after_days=args.stale_after_days,
+            tag_policies=tag_policies,
         )
         return _render(report, args, _decisions_text)
 

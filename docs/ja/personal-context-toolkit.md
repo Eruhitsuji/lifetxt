@@ -164,3 +164,27 @@ lifetxt decisions --workspace personal --project demo
 - AIからauthoritative Personal Contextへの自動書き込み
 
 目的は、既存のユーザー所有plain-text memoryを、最小限の実装追加で「検査可能・訂正可能・持ち運び可能」にすることです。
+
+### 再確認方針と鮮度
+
+有効期間（`valid_from:` / `valid_to:`）、訂正・置換、更新日時（`updated:`）は別の証拠です。
+任意のカスタム詳細 `review:never` は経過日数による定期再確認だけを抑制します。
+事実が永久に正しいという宣言ではなく、訂正・失効・置換は引き続き可能です。
+不正な値は通常の定期再確認に戻し、`review_policy.diagnostics` に示します。
+
+ワークスペースの設定でタグごとに方針を明示できます。
+
+```json
+{"personal_context":{"review":{"tag_policies":{"history":{"mode":"never"},"profile":{"mode":"periodic","days":365}}}}}
+```
+
+タグ名自体に組み込みの意味はありません。記録の指定、タグ設定、従来の
+`--stale-after-days` による既定値の順に適用します。複数のタグでは定期再確認を
+優先し、その最短間隔を採用します。Health、Why、Capsule、Decision Memory、MCP、
+Web は共通の判定を使います。`stale_fact` は更新日時から得た生の証拠であり、
+`review_due` と解決済み状態が実際の再確認要否を示します。現在の設定を過去時点の
+証拠として履歴表示にさかのぼって適用しません。
+
+書き込み可能な Web 画面で「定期的な再確認をしない」を選ぶと記録単位で設定し、
+「既定の再確認方針を使用」で解除できます。「まだ正しい」は `updated:` を更新する
+別の操作です。

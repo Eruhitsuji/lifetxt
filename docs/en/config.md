@@ -712,3 +712,7 @@ syntax remains ordinary `key:value` detail metadata -- an older lifetxt
 version will preserve the custom detail text but will not know the new
 configuration semantics. Removing the optional `custom_fields` section is
 the downgrade path.
+
+Personal Context review tag policies are optional. For example,
+`{"personal_context":{"review":{"tag_policies":{"profile":{"mode":"periodic","days":365}}}}}`.
+Tags are workspace-defined conventions; no policy is assigned to a tag by default.

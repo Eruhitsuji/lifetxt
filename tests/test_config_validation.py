@@ -29,6 +29,11 @@ from lifetxt.config_migration import migrate_config
 
 
 class ValidationTests(unittest.TestCase):
+    def test_invalid_review_config_is_diagnosed(self):
+        self.assertIn("C009", self.codes({"personal_context": {
+            "review": {"tag_policies": {"profile": {"mode": "periodic", "days": -1}}},
+        }}))
+
     def codes(self, config):
         return {row["code"] for row in validate_config(config)}
 

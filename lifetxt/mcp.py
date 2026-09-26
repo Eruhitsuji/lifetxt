@@ -3424,6 +3424,7 @@ def _tool_get_personal_context(args, context):
     this tool's default output.
     """
     from .personal_context import DEFAULT_LIMIT, context_capsule
+    from .personal_context_review_policy import configured_tag_policies
 
     items, _diagnostics = _read_items(context)
     person = args.get("person")
@@ -3441,6 +3442,7 @@ def _tool_get_personal_context(args, context):
         tags=tags,
         include_stale=_truthy(args.get("include_stale")),
         limit=limit,
+        tag_policies=configured_tag_policies(context.config),
     )
 
 

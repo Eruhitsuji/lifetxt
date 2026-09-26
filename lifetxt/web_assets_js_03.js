@@ -28,6 +28,11 @@
         description: "Prioritize open, actionable work and reduce noisy context while planning.",
         actions: [["Open tasks", "openTasks"], ["New record", "newItem"], ["Refresh", "refresh"]],
       },
+      matrix: {
+        label: "Priority Matrix",
+        description: "Importance is a human judgment; urgency comes from deadlines. Manual priority is separate.",
+        actions: [["Refresh", "refreshMatrix"]],
+      },
       review: {
         label: "Review",
         description: "Summarize completed, carried, blocked, and planned work for a chosen period.",
@@ -96,6 +101,8 @@
       today: () => switchWorkspace("today"),
       agenda: () => switchWorkspace("agenda"),
       focus: () => switchWorkspace("focus"),
+      matrix: () => switchWorkspace("matrix"),
+      refreshMatrix: () => loadPriorityMatrix(),
       review: () => switchWorkspace("review"),
       messages: () => switchWorkspace("messages"),
       team: () => switchWorkspace("team"),
@@ -137,6 +144,7 @@
       timeline: "Timeline: chronological board for today, next 24 hours, or week with an updated now line.",
       calendar: "Calendar: month/week grid of dated records; click a day for Agenda or an entry for details.",
       focus: "Focus: reduced-noise list of overdue, due-today, and in-progress work.",
+      matrix: "Priority Matrix: group active tasks by importance and deadline urgency.",
       review: "Review: weekly/monthly/custom period summary with Markdown copy.",
       messages: "Messages: type M records, sender/recipient filters, and notification-oriented conversations.",
       team: "Team: presence, workload, and recent messages grouped by person.",

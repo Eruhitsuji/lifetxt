@@ -55,6 +55,31 @@ class PriorityMatrixTests(unittest.TestCase):
         self.assertTrue(any(d.code == "W231" for d in validate_item(items[2])))
         self.assertFalse(any(d.code == "W231" for d in validate_item(items[1])))
 
+    def test_priority_does_not_affect_classification_or_matrix_order(self):
+        first = self.item("high", "2026-09-26")
+        second = self.item("high", "2026-09-26")
+        first.title, second.title = "Lower explicit priority", "Higher explicit priority"
+        first.details["priority"] = ["C"]
+        second.details["priority"] = ["A"]
+
+        first_result = classify_item(first, self.reference)
+        second_result = classify_item(second, self.reference)
+        self.assertEqual(first_result, second_result)
+        self.assertEqual(first_result["quadrant"], "Q1")
+        self.assertEqual(
+            [row["title"] for row in matrix_rows([first, second], self.reference)["Q1"]],
+            ["Lower explicit priority", "Higher explicit priority"],
+        )
+
+    def test_priority_without_valid_importance_remains_unclassified(self):
+        item = self.item(due="2026-09-26")
+        item.details["priority"] = ["A"]
+
+        result = classify_item(item, self.reference)
+        self.assertIsNone(result["importance"])
+        self.assertEqual(result["quadrant"], "unclassified")
+        self.assertEqual(len(matrix_rows([item], self.reference)["unclassified"]), 1)
+
     def test_stable_group_order(self):
         a = self.item("high", "2026-09-26")
         b = self.item("high", "2026-09-26")

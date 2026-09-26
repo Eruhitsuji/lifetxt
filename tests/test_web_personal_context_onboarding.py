@@ -53,6 +53,14 @@ class WebPersonalContextOnboardingTests(unittest.TestCase):
             '"Personal Context": "パーソナルコンテキスト"', web_assets.HTML_PAGE
         )
 
+    def test_item_cards_wrap_long_facts_and_controls_on_mobile(self):
+        self.assertIn(".personal-context-item { min-width: 0;", self.css)
+        self.assertIn(".personal-context-item-title { flex: 1; min-width: 0;", self.css)
+        self.assertIn("overflow-wrap: anywhere", self.css)
+        self.assertIn(".personal-context-item-actions { display: flex; flex-wrap: wrap;", self.css)
+        self.assertIn(".personal-context-item-selected {", self.css)
+        self.assertIn(".personal-context-item-actions button, .personal-context-item-actions summary { min-height: 44px; }", self.css)
+
     @unittest.skipUnless(shutil.which("node"), "node is not on PATH")
     def test_sequential_save_stops_at_failure_and_retains_unsaved_records(self):
         start = self.js.index("    async function savePersonalContextRecords")

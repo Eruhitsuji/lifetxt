@@ -83,7 +83,14 @@
       target.innerHTML = groups.map(group => {
         const rows = group.rows;
         if (!rows.length) return "";
-        return `<div class="personal-context-group"><h4>${t(group.label)} <span>${rows.length}</span></h4><ul data-no-i18n>${rows.map(row => `<li class="${row.stale ? "personal-context-stale" : ""}">${personalContextReadOnly ? "" : `<label class="personal-context-select"><input type="checkbox" data-personal-context-select="${escapeHtml(row.id || "")}" ${personalContextSelectedIds.has(row.id) ? "checked" : ""} onchange="togglePersonalContextSelection(this.dataset.personalContextSelect, this.checked)" aria-label="${escapeHtml(t("Select record"))}"></label>`}<span>${escapeHtml(row.title || "")}</span>${row.stale ? `<span class="personal-context-stale-badge">${escapeHtml(t("Stale"))}</span>${personalContextReadOnly ? "" : `<button type="button" class="secondary personal-context-reconfirm" data-personal-context-id="${escapeHtml(row.id || "")}" onclick="reconfirmPersonalContext(this.dataset.personalContextId)">${escapeHtml(t("Still correct"))}</button>`}` : ""}${row.review_policy ? `<small title="${escapeHtml(row.review_policy.source || "")}">${escapeHtml(row.review_policy.mode === "never" ? t("No periodic review") : `${t("Review every")} ${row.review_policy.days} ${t("days")}`)}</small>` : ""}${personalContextReadOnly ? "" : `<button type="button" class="secondary" data-personal-context-id="${escapeHtml(row.id || "")}" onclick="setPersonalContextReviewPolicy(this.dataset.personalContextId, ${row.review_policy?.source === "record_override" ? "'inherit'" : "'never'"})">${escapeHtml(t(row.review_policy?.source === "record_override" ? "Use inherited review policy" : "No periodic review"))}</button>`}${personalContextReadOnly ? "" : personalContextReviewMenu(row.id)}</li>`).join("")}</ul></div>`;
+        return `<div class="personal-context-group"><h4>${t(group.label)} <span>${rows.length}</span></h4><ul data-no-i18n>${rows.map(row => {
+          const selected = personalContextSelectedIds.has(row.id);
+          const state = row.stale ? t("Stale") : t("Current");
+          const policy = row.review_policy ? `<span class="personal-context-policy" title="${escapeHtml(row.review_policy.source || "")}">${escapeHtml(row.review_policy.mode === "never" ? t("No periodic review") : `${t("Review every")} ${row.review_policy.days} ${t("days")}`)}</span>` : "";
+          const selection = personalContextReadOnly ? "" : `<label class="personal-context-select"><input type="checkbox" data-personal-context-select="${escapeHtml(row.id || "")}" ${selected ? "checked" : ""} onchange="togglePersonalContextSelection(this.dataset.personalContextSelect, this.checked)" aria-label="${escapeHtml(t("Select record"))}"></label>`;
+          const actions = personalContextReadOnly ? "" : `<div class="personal-context-item-actions">${row.stale ? `<button type="button" class="secondary personal-context-reconfirm" data-personal-context-id="${escapeHtml(row.id || "")}" onclick="reconfirmPersonalContext(this.dataset.personalContextId)">${escapeHtml(t("Still correct"))}</button>` : ""}<button type="button" class="secondary" data-personal-context-id="${escapeHtml(row.id || "")}" onclick="setPersonalContextReviewPolicy(this.dataset.personalContextId, ${row.review_policy?.source === "record_override" ? "'inherit'" : "'never'"})">${escapeHtml(t(row.review_policy?.source === "record_override" ? "Use inherited review policy" : "No periodic review"))}</button>${personalContextReviewMenu(row.id)}</div>`;
+          return `<li class="personal-context-item ${row.stale ? "personal-context-stale" : ""} ${selected ? "personal-context-item-selected" : ""}"><div class="personal-context-item-head">${selection}<span class="personal-context-item-title">${escapeHtml(row.title || "")}</span></div><div class="personal-context-item-meta"><span class="personal-context-state ${row.stale ? "personal-context-stale-badge" : ""}">${escapeHtml(state)}</span>${policy}</div>${actions}</li>`;
+        }).join("")}</ul></div>`;
       }).join("") || `<div class="empty">${t("No current Personal Context yet.")}</div>`;
       updatePersonalContextSelectionUi();
     }
@@ -100,12 +107,18 @@
       if (!itemId) return;
       if (selected) personalContextSelectedIds.add(itemId);
       else personalContextSelectedIds.delete(itemId);
+      document.querySelectorAll("[data-personal-context-select]").forEach(input => {
+        if (input.dataset.personalContextSelect === itemId) input.closest(".personal-context-item")?.classList.toggle("personal-context-item-selected", selected);
+      });
       updatePersonalContextSelectionUi();
     }
 
     function clearPersonalContextSelection() {
       personalContextSelectedIds.clear();
-      document.querySelectorAll("[data-personal-context-select]").forEach(input => { input.checked = false; });
+      document.querySelectorAll("[data-personal-context-select]").forEach(input => {
+        input.checked = false;
+        input.closest(".personal-context-item")?.classList.remove("personal-context-item-selected");
+      });
       updatePersonalContextSelectionUi();
     }
 

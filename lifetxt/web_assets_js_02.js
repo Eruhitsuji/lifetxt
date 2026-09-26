@@ -59,6 +59,22 @@
         "Hide advanced options": "詳細オプションを隠す",
         "Beginner mode shows only the Task/Event/Note types and the most common statuses; this shows or hides the rest.":
           "初心者モードでは Task/Event/Note の種類と主要な状態のみを表示します。このボタンで残りの表示・非表示を切り替えます。",
+        "Priority Matrix": "優先度マトリクス",
+        "Priority Matrix groups": "優先度マトリクスのグループ",
+        "Importance is a human judgment; urgency comes from deadlines. Manual priority is separate.": "重要度は人が判断し、緊急度は期限から決まります。手動優先度は別の情報です。",
+        "Important / Urgent": "重要 / 緊急",
+        "Important / Not urgent": "重要 / 緊急ではない",
+        "Not important / Urgent": "重要ではない / 緊急",
+        "Not important / Not urgent": "重要ではない / 緊急ではない",
+        "Unclassified": "未分類",
+        "Manual priority": "手動優先度",
+        "Due": "期限",
+        "No due date": "期限なし",
+        "Not set": "未設定",
+        "No tasks in this group.": "このグループにタスクはありません。",
+        "Could not load priority matrix.": "優先度マトリクスを読み込めませんでした。",
+        "Evaluated at": "評価時刻",
+        "Priority Matrix: group active tasks by importance and deadline urgency.": "進行中のタスクを重要度と期限による緊急度でグループ化します。",
       },
     };
 
@@ -400,13 +416,13 @@
     }
     // ── Single-content page router ─────────────────────────────────
     // Each view owns the whole screen: exactly one page section is shown.
-    const PAGE_VIEWS = ["dashboard", "today", "agenda", "timeline", "calendar", "focus", "review", "messages", "team", "status", "notifications", "stats", "graph", "server", "context"];
+    const PAGE_VIEWS = ["dashboard", "today", "agenda", "timeline", "calendar", "focus", "matrix", "review", "messages", "team", "status", "notifications", "stats", "graph", "server", "context"];
     const VIEW_PAGE = {
       "": "items", "messages": "items", "kiosk": "items", "display": "items",
       "dashboard": "dashboard", "today": "today", "agenda": "agenda", "timeline": "timeline",
       "calendar": "calendar", "focus": "focus", "review": "review", "team": "team",
       "status": "status", "notifications": "notifications",
-      "stats": "stats", "graph": "graph", "server": "server", "context": "context",
+      "stats": "stats", "graph": "graph", "server": "server", "context": "context", "matrix": "matrix",
     };
     const VIEW_META = {
       "": {

@@ -6717,6 +6717,7 @@ capabilities:
       - req-web-personal-context-stale-inspection
       - req-web-personal-context-pagination
       - req-web-personal-context-reconfirm
+      - req-web-personal-context-bulk-review
       - req-personal-context-epistemic-convention
     implementation_locations:
       - lifetxt/personal_context.py

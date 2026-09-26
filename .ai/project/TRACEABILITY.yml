@@ -2,6 +2,35 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-personal-context-bulk-review
+      capability_id: cap-personal-context-toolkit
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/962
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/969
+      changed_files_or_scope:
+        - lifetxt/webapp.py
+        - lifetxt/web_assets.html
+        - lifetxt/web_assets_js_19.js
+        - lifetxt/web_assets_css_06.css
+        - tests/test_web_personal_context.py
+        - tests/test_web_personal_context_onboarding.py
+        - docs/en/personal-context.md
+        - docs/ja/personal-context.md
+      tests_or_evidence:
+        - "explicit multi-select and selected-count/clear controls preserve selection across Load more"
+        - "bounded bulk reconfirm and expire resolve exact IDs and reuse per-item CAS/native-history mutation semantics"
+        - "partial success identifies succeeded, conflicted, and failed records without hiding retry targets"
+        - "read-only mode exposes no mutating bulk action and replacement/correction remains per-record"
+        - "python -m unittest tests.test_web_personal_context tests.test_web_personal_context_onboarding tests.test_web_personal_context_review_js -> 34 tests, OK"
+        - "ruff check and git diff --check passed"
+      release_or_deployment: null
+      notes: >-
+        Extends the existing Personal Context review capability with explicit,
+        bounded reconfirm/expiry orchestration. It deliberately does not add a
+        generic bulk editor, bulk replacement text, new record kind, or new
+        transaction engine.
+      status: implemented
+
     - requirement_id: req-web-personal-context-review-outcomes
       capability_id: cap-personal-context-toolkit
       epic: https://github.com/Eruhitsuji/lifetxt/issues/500

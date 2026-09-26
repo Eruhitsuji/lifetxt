@@ -10,9 +10,12 @@ traceability:
       changed_files_or_scope:
         - lifetxt/priority_matrix.py
         - lifetxt/cli.py
+        - lifetxt/cli_taxonomy.py
         - lifetxt/model.py
         - lifetxt/validator.py
         - tests/test_priority_matrix.py
+        - tests/test_lifetxt.py
+        - docs/en/cli.md
         - docs/en/priority-matrix.md
         - docs/ja/priority-matrix.md
       tests_or_evidence: [tests.test_priority_matrix]

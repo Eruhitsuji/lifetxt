@@ -65,6 +65,37 @@ class ParseValidityBoundsTests(unittest.TestCase):
 
 
 class ResolveCurrentnessTests(unittest.TestCase):
+    def test_review_policy_only_controls_age_transition(self):
+        old = _note("old", updated="2000-01-01", review="never")
+        state = resolve_currentness([old])["old"]
+        self.assertEqual(STATE_CURRENT, state["state"])
+        self.assertFalse(state["review_due"])
+        self.assertIsNotNone(state["raw_stale_fact"])
+        self.assertEqual("record_override", state["review_policy"]["source"])
+        old.details["valid_to"] = ["2001-01-01"]
+        self.assertEqual(STATE_EXPIRED, resolve_currentness([old])["old"]["state"])
+        historical = resolve_currentness([old], apply_review_policy=False)["old"]
+        self.assertEqual(STATE_EXPIRED, historical["state"])
+        del old.details["valid_to"]
+        self.assertEqual(STATE_STALE, resolve_currentness(
+            [old], apply_review_policy=False,
+        )["old"]["state"])
+
+    def test_invalid_override_falls_back_and_tag_policies_are_order_independent(self):
+        old = _note("old", updated="2000-01-01", review="unknown",
+                    tag=["never_tag", "short_tag", "long_tag"])
+        policies = {"never_tag": {"mode": "never"},
+                    "long_tag": {"mode": "periodic", "days": 365},
+                    "short_tag": {"mode": "periodic", "days": 10}}
+        result = resolve_currentness([old], tag_policies=policies)["old"]
+        self.assertEqual(STATE_STALE, result["state"])
+        self.assertEqual(10, result["review_policy"]["days"])
+        self.assertIn("invalid_record_review_policy", result["review_policy"]["diagnostics"])
+        old.details["tag"] = list(reversed(old.details["tag"]))
+        reordered = resolve_currentness([old], tag_policies=policies)["old"]
+        self.assertEqual(result["state"], reordered["state"])
+        self.assertEqual(result["review_policy"], reordered["review_policy"])
+
     def test_plain_item_is_current(self):
         items = [_note("a")]
         states = resolve_currentness(items)

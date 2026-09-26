@@ -259,6 +259,24 @@ def validate_config(config, use_jsonschema=True):
     _walk_secrets(config, "", rows)
     rows.extend(_workspace_diagnostics(config))
     rows.extend(_deprecation_diagnostics(config))
+    review_section = config.get("personal_context") if isinstance(config, dict) else None
+    if review_section is not None:
+        review = review_section.get("review") if isinstance(review_section, dict) else None
+        policies = review.get("tag_policies") if isinstance(review, dict) else None
+        if not isinstance(review_section, dict) or (review is not None and not isinstance(review, dict)) or (policies is not None and not isinstance(policies, dict)):
+            rows.append(diagnostic("warning", "C009", "Invalid Personal Context review configuration; periodic fallback applies.", path="personal_context.review"))
+        elif isinstance(policies, dict):
+            for tag, policy in sorted(policies.items(), key=lambda pair: str(pair[0])):
+                valid = isinstance(policy, dict) and (
+                    policy.get("mode") == "never" or (
+                        policy.get("mode") == "periodic"
+                        and isinstance(policy.get("days"), int)
+                        and not isinstance(policy.get("days"), bool)
+                        and policy["days"] >= 0
+                    )
+                )
+                if not valid:
+                    rows.append(diagnostic("warning", "C009", "Invalid Personal Context tag review policy; periodic fallback applies.", path="personal_context.review.tag_policies.%s" % tag))
     if use_jsonschema:
         rows.extend(_jsonschema_diagnostics(config))
     return _dedupe(rows)

@@ -164,3 +164,30 @@ This first toolkit intentionally does **not** add:
 - automatic AI writes to authoritative Personal Context.
 
 The goal is to make existing user-owned plain-text memory more inspectable, correctable, and portable with the smallest coherent implementation surface.
+
+### Review policy and freshness
+
+Validity (`valid_from:` / `valid_to:`), correction/supersession, and freshness
+(`updated:`) are different evidence. An optional `review:never` custom detail
+suppresses only age-based periodic review. It does not certify a fact forever or
+prevent correction, expiry, or replacement. Invalid review values use ordinary
+periodic review and appear in `review_policy.diagnostics`.
+
+Workspace configuration can opt tags into policies:
+
+```json
+{"personal_context":{"review":{"tag_policies":{"history":{"mode":"never"},"profile":{"mode":"periodic","days":365}}}}}
+```
+
+Tag names have no built-in meaning. A record override wins over matching tag
+policies; periodic wins over `never`, the shortest periodic threshold wins, and
+the existing `--stale-after-days` value is the fallback. Context Health, Why,
+Capsule, Decision Memory, MCP, and Web share this resolution. `stale_fact`
+remains raw age evidence; `review_due` and the resolved state say whether review
+is actually due. Current workspace policies are not projected backwards into
+historical/as-of results.
+
+In writable Web mode, use **No periodic review** on a record to set the
+explicit override, or **Use inherited review policy** to clear it. **Still
+correct** refreshes `updated:` instead; correcting or ending a fact changes its
+lifecycle independently of review policy.

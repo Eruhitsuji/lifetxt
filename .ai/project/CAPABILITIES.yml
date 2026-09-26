@@ -6818,6 +6818,9 @@ capabilities:
       - req-personal-context-currentness-resolver
       - req-personal-context-currentness-consumer-integration
       - req-personal-context-currentness-mcp-read
+      - req-personal-context-review-policy-resolution
+      - req-personal-context-review-policy-consumers
+      - req-web-personal-context-review-policy
     implementation_locations:
       - lifetxt/personal_context_currentness.py
       - lifetxt/personal_context.py

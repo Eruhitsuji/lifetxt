@@ -518,3 +518,7 @@ metadata のままであるため、life.txt file の migration は不要です 
 古い lifetxt version は custom detail のテキストを保持しますが、新しい
 設定の意味論は認識しません。downgrade 時は任意の `custom_fields`
 セクションを削除すれば元に戻ります。
+
+Personal Context のタグ別再確認方針は任意です。例:
+`{"personal_context":{"review":{"tag_policies":{"profile":{"mode":"periodic","days":365}}}}}`。
+タグはワークスペース側で定義する慣例で、タグ名だけで方針は適用されません。

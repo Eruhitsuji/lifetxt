@@ -11,7 +11,8 @@ def historical_personal_context(
     items, cutoff, person="self", tags=None, limit=100, id_key="id"
 ):
     """Return field-level as-of context; unavailable fields never use current values."""
-    states = resolve_currentness(items, key=id_key, evaluation_time=cutoff)
+    states = resolve_currentness(items, key=id_key, evaluation_time=cutoff,
+                                 apply_review_policy=False)
     rows = []
     limitations = set()
     for item in select_personal_context(items, person=person, tags=tags):

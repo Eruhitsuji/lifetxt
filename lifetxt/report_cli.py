@@ -609,6 +609,7 @@ def render_report_v2(
         id_key=id_key,
         config_path=config_path,
         workspace_name=workspace_name,
+        reference_time=generated,
     )
 
     previous_context = None

@@ -204,6 +204,14 @@ override for the rendered heading. Available types:
 | `inbox` | Unified Inbox summary | `limit` |
 | `ticket-attention` | the Command Center ticket-attention rule | `stale_after_days` |
 | `health` | `lifetxt.health.build_health()` (the same rules `lifetxt health` uses) | `since_days`, `lookahead_days`, `ignore_codes`, `kinds` |
+| `priority-matrix` | shared importance/deadline classifier | `detail` (boolean, default `false`) |
+
+Add `{"type": "priority-matrix"}` to opt in to five live counts (Q1–Q4 and
+unclassified). Set `"detail": true` to include task groups and their manual
+`priority` values; this field is shown separately and never changes matrix
+membership. Groups preserve source order. Urgency is evaluated when the report
+runs, not at the historical period end selected with `--date`. Profiles without
+this section are unchanged.
 
 An unknown `type`, or an option a provider does not understand, fails loudly
 when the profile is read -- before any rendering happens.

@@ -2,6 +2,60 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-priority-matrix-view
+      capability_id: cap-importance-priority-matrix
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/977
+      pull_request: null
+      changed_files_or_scope:
+        - lifetxt/webapp.py
+        - lifetxt/web_assets.html
+        - lifetxt/web_assets_js_02.js
+        - lifetxt/web_assets_js_03.js
+        - lifetxt/web_assets_js_08.js
+        - lifetxt/web_assets_js_20.js
+        - lifetxt/web_assets_css_06.css
+        - tests/test_web_priority_matrix.py
+        - tests/test_web_assets.py
+        - tests/test_web_i18n.py
+        - docs/en/web.md
+        - docs/ja/web.md
+      tests_or_evidence:
+        - tests.test_web_priority_matrix
+        - tests.test_web_i18n
+        - tests.test_web_assets
+        - "Web endpoint and view reuse the shared matrix classifier, preserve source order, and expose manual priority separately"
+      release_or_deployment: null
+      notes: >-
+        Read-only Web surface; due urgency is evaluated at request time in the
+        configured workspace timezone. Existing auth and read-only middleware
+        remain authoritative.
+      status: implemented
+
+    - requirement_id: req-report-v2-priority-matrix-section
+      capability_id: cap-report-v2-composition
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/978
+      pull_request: null
+      changed_files_or_scope:
+        - lifetxt/report_v2.py
+        - lifetxt/report_cli.py
+        - tests/test_report_v2.py
+        - tests/test_report_v2_cli.py
+        - docs/en/reports.md
+        - docs/ja/reports.md
+      tests_or_evidence:
+        - tests.test_report_v2
+        - tests.test_report_v2_cli
+        - "The opt-in section reuses the shared classifier and does not change v1/default report output"
+        - "detail=true adds source-ordered groups and manual priority as a distinct field"
+      release_or_deployment: null
+      notes: >-
+        Report urgency is evaluated at generation time, independently of the
+        historical report period selected by --date. Existing profiles only
+        receive this section when they explicitly configure it.
+      status: implemented
+
     - requirement_id: req-importance-priority-coexistence
       capability_id: cap-importance-priority-matrix
       epic: https://github.com/Eruhitsuji/lifetxt/issues/974

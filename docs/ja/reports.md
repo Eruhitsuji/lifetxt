@@ -198,6 +198,13 @@ aggregation を組み合わせる composition layer です。v2 profile はこ�
 | `inbox` | Unified Inbox summary | `limit` |
 | `ticket-attention` | Command Center の ticket-attention rule | `stale_after_days` |
 | `health` | `lifetxt.health.build_health()`（`lifetxt health` と同一 rule） | `since_days`、`lookahead_days`、`ignore_codes`、`kinds` |
+| `priority-matrix` | 重要度/期限の共有 classifier | `detail` (boolean、既定 `false`) |
+
+`{"type": "priority-matrix"}` を追加すると Q1〜Q4 と未分類の5件数を出力します。
+`"detail": true` ではタスク一覧と手動 `priority` も含めます。この値は別項目として
+表示され、マトリクスの分類には影響しません。グループ内は元ファイルの順序を保ちます。
+緊急度は `--date` で指定した過去の期間末ではなく、レポート実行時に評価します。
+この section がない既存 profile の出力は変わりません。
 
 未知の `type`、あるいは provider が理解しない option は、profile を読み込んだ時点で
 （rendering の前に）明示的な error になります。

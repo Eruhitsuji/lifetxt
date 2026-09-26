@@ -906,9 +906,13 @@ counts; it neither changes `updated:` nor promotes stale facts to current.
 For a stale fact that you have deliberately reviewed, use **Still correct** to
 reconfirm it. The action is one-record-at-a-time, preserves unrelated details,
 and reloads the counts after success. Leave a fact stale when it needs later
-review; use the existing correction/proposal flow when its content is wrong.
+review; use **Correct the record** when its content was wrong. The CLI proposal workflow remains available separately.
 Superseded, expired, future-effective, conflicting, and historical-only records
 remain excluded.
+
+
+
+Personal Context review actions in **More → Personal Context** are explicit, single-record writes. **Still correct** reconfirms stale information; **Correct the record** writes a new corrected record with `corrects:<old-id>` while preserving the original. The Web correction is an authoritative direct mutation on explicit user action, using exact ID and source-revision CAS; the CLI correction proposal workflow remains available separately. **Changed over time** links the former record with `replaced_by:` and can set `valid_from:` on the replacement. **No longer valid** ends applicability with `valid_to:`. **Review later** simply leaves the record unchanged. Read-only Web hides these mutation controls and the backend still rejects writes with `403`.
 
 ## Completing a task with a date or time
 
@@ -932,6 +936,3 @@ value; it does not add a date when none exists.
 Done date… completes only the selected task; it does not generate a repeat
 occurrence. State and date are sent in one existing revision-protected update,
 including the native `completed` history event when the task has an ID.
-
-
-Personal Context review actions in **More → Personal Context** are explicit, single-record writes. **Still correct** reconfirms stale information; **Correct the record** writes a new corrected record with `corrects:<old-id>` while preserving the original. The Web correction is an authoritative direct mutation on explicit user action, using exact ID and source-revision CAS; the CLI correction proposal workflow remains available separately. **Changed over time** links the former record with `replaced_by:` and can set `valid_from:` on the replacement. **No longer valid** ends applicability with `valid_to:`. **Review later** simply leaves the record unchanged. Read-only Web hides these mutation controls and the backend still rejects writes with `403`.

@@ -412,6 +412,22 @@ class WebPersonalContextReviewOutcomesTests(unittest.TestCase):
         )
         self.assertEqual(400, response.status_code)
 
+    def test_correct_requires_exact_id_and_current_revision_without_mutating_history(self):
+        before = Path(self.path).read_text(encoding="utf-8")
+        for item_id, revision, expected in (
+            ("missing", self._revision(), 404),
+            ("current", "wrong", 409),
+        ):
+            response = self.client.post(
+                f"/api/personal-context/{item_id}/correct",
+                json={
+                    "expected_source_revision": revision,
+                    "replacement_text": "Correction must not be saved",
+                },
+            )
+            self.assertEqual(expected, response.status_code)
+            self.assertEqual(before, Path(self.path).read_text(encoding="utf-8"))
+
     def test_review_later_performs_no_mutation(self):
         # "Review later" has no dedicated route: it is simply not calling
         # any mutating endpoint. Confirm the file is untouched by a plain

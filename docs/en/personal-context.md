@@ -612,3 +612,9 @@ AI/client   understands sources and proposes meaning
 lifetxt     stores durable, inspectable, user-owned context
 human       remains the authority for what becomes trusted personal context
 ```
+
+### Review outcomes in Web
+
+In **More → Personal Context**, review one record at a time. **Still correct** reconfirms a stale fact by updating its freshness evidence. **Correct the record** fixes an inaccurate record: the explicit user action writes a new record with `corrects:<old-id>`, preserving the original as history. This Web action is a direct authoritative mutation, unlike the CLI `lifetxt memory correct` proposal workflow. It requires the exact record ID and the current source revision (CAS); concurrent edits fail rather than overwriting changes.
+
+**Changed over time** records a new fact (optionally with `valid_from:`) and links the former fact using `replaced_by:`; use this when the old fact was true previously. **No longer valid** ends the old fact's applicability using `valid_to:` without inventing a replacement. **Review later** means taking no action and causes no mutation. In read-only Web mode, facts remain visible and review mutation controls are hidden.

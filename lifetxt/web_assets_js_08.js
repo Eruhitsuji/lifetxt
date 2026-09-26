@@ -137,6 +137,7 @@
       if (v === "dashboard") tasks.push(loadDashboard());
       if (v === "today") tasks.push(loadToday());
       if (v === "focus") tasks.push(loadFocus());
+      if (v === "matrix") tasks.push(loadPriorityMatrix());
       if (v === "review") tasks.push(loadReview());
       if (v === "graph") tasks.push(loadGraphPanel());
       if (v === "server") tasks.push(loadServerBackupStatus());

@@ -14066,6 +14066,7 @@ traceability:
     - requirement_id: req-personal-context-review-policy-resolution
       capability_id: cap-personal-context-currentness
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/964
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/971
       changed_files_or_scope:
         - lifetxt/personal_context_review_policy.py
         - lifetxt/personal_context_currentness.py
@@ -14076,6 +14077,7 @@ traceability:
     - requirement_id: req-personal-context-review-policy-consumers
       capability_id: cap-personal-context-currentness
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/965
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/971
       changed_files_or_scope:
         - lifetxt/personal_context.py
         - lifetxt/personal_context_cli.py
@@ -14087,6 +14089,7 @@ traceability:
     - requirement_id: req-web-personal-context-review-policy
       capability_id: cap-personal-context-currentness
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/966
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/971
       changed_files_or_scope:
         - lifetxt/webapp.py
         - lifetxt/web_assets_js_19.js

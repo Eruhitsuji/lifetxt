@@ -80,6 +80,18 @@ class PriorityMatrixTests(unittest.TestCase):
         self.assertEqual(result["quadrant"], "unclassified")
         self.assertEqual(len(matrix_rows([item], self.reference)["unclassified"]), 1)
 
+    def test_manual_priority_is_included_only_when_requested(self):
+        item = self.item("high", "2026-09-26")
+        item.details["priority"] = ["A"]
+
+        default_row = matrix_rows([item], self.reference)["Q1"][0]
+        detailed_row = matrix_rows(
+            [item], self.reference, include_priority=True
+        )["Q1"][0]
+        self.assertNotIn("priority", default_row)
+        self.assertEqual(detailed_row["priority"], "A")
+        self.assertEqual(detailed_row["quadrant"], "Q1")
+
     def test_stable_group_order(self):
         a = self.item("high", "2026-09-26")
         b = self.item("high", "2026-09-26")

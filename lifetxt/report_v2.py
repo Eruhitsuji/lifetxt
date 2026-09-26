@@ -107,6 +107,7 @@ class ReportContext:
         id_key="id",
         config_path=None,
         workspace_name=None,
+        reference_time=None,
     ):
         self.items = items
         self.config_data = config_data
@@ -118,6 +119,7 @@ class ReportContext:
         self.id_key = id_key
         self.config_path = config_path
         self.workspace_name = workspace_name
+        self.reference_time = reference_time
         self._command_center_cache = {}
 
     def command_center_result(
@@ -172,6 +174,7 @@ class ReportContext:
             id_key=self.id_key,
             config_path=self.config_path,
             workspace_name=self.workspace_name,
+            reference_time=self.reference_time,
         )
 
 
@@ -289,6 +292,29 @@ def _provider_health(context, options):
     return OrderedDict((("findings", findings), ("count", len(findings))))
 
 
+def _provider_priority_matrix(context, options):
+    from .priority_matrix import QUADRANTS, matrix_rows
+    from .timezone_policy import now as timezone_now
+
+    reference_time = context.reference_time or timezone_now()
+    include_items = options.get("detail", False)
+    groups = matrix_rows(
+        context.items,
+        reference_time,
+        include_priority=include_items,
+    )
+    result = OrderedDict(
+        (
+            ("evaluated_at", reference_time.isoformat(timespec="seconds")),
+            ("timezone", context.timezone_name),
+            ("counts", OrderedDict((name, len(groups[name])) for name in QUADRANTS)),
+        )
+    )
+    if include_items:
+        result["groups"] = groups
+    return result
+
+
 SECTION_PROVIDERS = OrderedDict(
     (
         ("review", _provider_review),
@@ -300,6 +326,7 @@ SECTION_PROVIDERS = OrderedDict(
         ("inbox", _provider_inbox),
         ("ticket-attention", _provider_ticket_attention),
         ("health", _provider_health),
+        ("priority-matrix", _provider_priority_matrix),
     )
 )
 
@@ -313,6 +340,7 @@ _SECTION_TITLES = {
     "inbox": "Inbox",
     "ticket-attention": "Tickets Needing Attention",
     "health": "Health",
+    "priority-matrix": "Priority Matrix",
 }
 
 
@@ -339,6 +367,17 @@ def validate_sections(sections, audience="private"):
                 "Allowed: %s"
                 % (section_type, ", ".join(sorted(EXTERNAL_SAFE_SECTION_TYPES)))
             )
+        if section_type == "priority-matrix":
+            unknown = sorted(set(entry) - {"type", "title", "detail"})
+            if unknown:
+                raise ReportError(
+                    "Priority matrix section has unknown option(s): %s"
+                    % ", ".join(str(key) for key in unknown)
+                )
+            if "detail" in entry and not isinstance(entry["detail"], bool):
+                raise ReportError(
+                    "Priority matrix section detail must be true or false."
+                )
     return sections
 
 
@@ -612,6 +651,40 @@ def _flatten_for_bullets(value, depth=0):
 
 def _render_section_markdown(section_type, data):
     lines = []
+    if section_type == "priority-matrix":
+        counts = data.get("counts") or {}
+        labels = OrderedDict(
+            (
+                ("Q1", "Important / Urgent"),
+                ("Q2", "Important / Not urgent"),
+                ("Q3", "Not important / Urgent"),
+                ("Q4", "Not important / Not urgent"),
+                ("unclassified", "Unclassified"),
+            )
+        )
+        for key, label in labels.items():
+            lines.append("- %s: %s" % (label, counts.get(key, 0)))
+        groups = data.get("groups")
+        if groups is not None:
+            for key, label in labels.items():
+                lines.append("")
+                heading = key if key == "unclassified" else "%s — %s" % (key, label)
+                lines.append("### %s" % heading)
+                rows = groups.get(key) or []
+                if not rows:
+                    lines.append("- No tasks.")
+                    continue
+                for row in rows:
+                    priority = row.get("priority") or "—"
+                    due = row.get("due") or "No due date"
+                    lines.append(
+                        "- Manual priority: %s | %s | Due: %s"
+                        % (priority, row.get("title", ""), due)
+                    )
+        lines.append(
+            "- Urgency is derived at evaluation time; manual priority does not affect quadrant membership."
+        )
+        return lines
     if section_type == "review":
         lines.append("- Completed tasks: %d" % data.get("completed_tasks", 0))
         lines.append("- Open tasks: %d" % data.get("open_tasks", 0))

@@ -915,3 +915,6 @@ Now または Custom の保存を明示的に選んだ場合だけ置き換え�
 「完了日時…」は選択したタスクだけを完了し、繰り返しの次回項目は生成しません。
 状態と日付は既存のリビジョン検証付き更新で同時保存し、ID がある場合は
 Native History の `completed` イベントも同じ更新に含めます。
+
+
+**More → Personal Context**の確認結果は、1件ずつ明示的に書き込む操作です。**Still correct** はstaleな事実を再確認します。**Correct the record** は元の記録を履歴に残し、`corrects:<旧ID>` を付けた訂正記録を新規作成します。Webではユーザーの明示操作により、正確なIDとsource revisionによるCASを伴う直接の確定書き込みです。CLIのcorrection proposal経路とは別です。**Changed over time** は以前正しかった記録を `replaced_by:` で後継に関連付け、必要なら後継に `valid_from:` を指定します。**No longer valid** は `valid_to:` で適用期間を終了します。**Review later** は操作をせず書き込みもありません。読み取り専用Webはこれらの書き込み操作を隠し、API側も書き込みを `403` で拒否します。

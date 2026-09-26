@@ -2,6 +2,24 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-personal-context-card-layout
+      capability_id: cap-personal-context-toolkit
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/972
+      pull_request: null
+      changed_files_or_scope:
+        - lifetxt/web_assets_js_19.js
+        - lifetxt/web_assets_css_06.css
+        - tests/test_web_personal_context_review_js.py
+        - tests/test_web_personal_context_onboarding.py
+        - tests/test_web_assets.py
+      tests_or_evidence:
+        - "Card renderer covers current, stale, never-review, selected and read-only records; existing menu and pagination tests pass"
+        - "Responsive CSS wraps facts and actions at narrow widths"
+      release_or_deployment: null
+      notes: Presentation-only refinement preserving existing API and mutation contracts.
+      status: implemented
+
     - requirement_id: req-web-personal-context-review-outcomes-dod
       capability_id: cap-personal-context-toolkit
       epic: https://github.com/Eruhitsuji/lifetxt/issues/500

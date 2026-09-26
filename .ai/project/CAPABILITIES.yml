@@ -11,7 +11,7 @@ capabilities:
     public_interfaces: [lifetxt list --matrix, lifetxt list --quadrant, GET /api/priority-matrix, Web Priority Matrix view]
     tests_or_evidence: [tests.test_priority_matrix, tests.test_web_priority_matrix]
     related_issues: [https://github.com/Eruhitsuji/lifetxt/issues/974, https://github.com/Eruhitsuji/lifetxt/issues/976, https://github.com/Eruhitsuji/lifetxt/issues/977]
-    related_pull_requests: [https://github.com/Eruhitsuji/lifetxt/pull/975, https://github.com/Eruhitsuji/lifetxt/pull/979]
+    related_pull_requests: [https://github.com/Eruhitsuji/lifetxt/pull/975, https://github.com/Eruhitsuji/lifetxt/pull/979], https://github.com/Eruhitsuji/lifetxt/pull/980
     reuse_policy: reuse_existing_timezone_policy_and_due_parser
     notes: >-
       The #976 coexistence contract extends this capability: explicit priority
@@ -7945,6 +7945,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/619
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/612
+      - https://github.com/Eruhitsuji/lifetxt/pull/980
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       Self-scoped and implemented autonomously per repository owner

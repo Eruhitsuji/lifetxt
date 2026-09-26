@@ -79,6 +79,7 @@ VALIDATOR_DIAGNOSTIC_HINTS = {
     "W223": "Use only RRULE parts supported by lifetxt recurrence expansion.",
     "W226": "Use a duration such as 25m, 1h30m, or 90.",
     "W230": "Use progress:75% or progress:3/5.",
+    "W231": "Use exactly one importance:high, importance:normal, or importance:low.",
 }
 
 
@@ -165,6 +166,10 @@ def validate_item(item):
         recommended = set()
 
     for key, values in item.details.items():
+        if key == "importance" and (len(values) != 1 or values[0] not in ("high", "normal", "low")):
+            diagnostics.append(
+                _diagnostic("warning", "W231", "importance: must have one value: high, normal, or low.", item.line)
+            )
         if not _KEY_STYLE_RE.match(key):
             diagnostics.append(
                 _diagnostic(

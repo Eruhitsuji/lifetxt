@@ -889,7 +889,7 @@ Capsuleおよびhealth/currentness resolverを使い、既定はcurrent-onlyで�
 current/stale件数も確認できます。この操作は`updated:`を変更せず、staleをcurrentへ
 昇格させません。レビューしても正しいと判断したstale factには**まだ正しい**を使えます。
 1件ずつ明示的に再確認し、成功後に件数と表示を更新します。後で確認するものはstaleのまま
-残し、内容を直す場合は既存のcorrection/proposal経路を使ってください。
+残し、内容が誤っていた場合は **Correct the record** を使います。CLIのcorrection proposal経路も別途利用できます。
 昇格させません。superseded、expired、future-effective、conflicting、
 historical-onlyは引き続き除外されます。
 

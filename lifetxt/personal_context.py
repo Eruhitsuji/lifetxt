@@ -157,6 +157,7 @@ def context_health(
     person="self",
     stale_after_days=DEFAULT_STALE_DAYS,
     evaluation_time=None,
+    tag_policies=None,
 ):
     """Return bounded health facts for Personal Context records.
 
@@ -173,6 +174,7 @@ def context_health(
         items,
         evaluation_time=evaluation_time,
         stale_after_days=stale_after_days,
+        tag_policies=tag_policies,
     )
     findings = []
     counts = OrderedDict([("total", len(selected))])
@@ -206,6 +208,8 @@ def context_health(
                     ("title", item.title),
                     ("state", state),
                     ("reasons", list((record or {}).get("reasons") or [])),
+                    ("review_policy", (record or {}).get("review_policy")),
+                    ("review_due", (record or {}).get("review_due", False)),
                     ("missing_source", missing_source),
                     ("broken_references", broken),
                     (
@@ -259,6 +263,7 @@ def explain_personal_context_item(
     stale_after_days=DEFAULT_STALE_DAYS,
     key="id",
     evaluation_time=None,
+    tag_policies=None,
 ):
     """Explain one item from deterministic provenance/temporal/link evidence."""
     target = _unique_item(items, item_id, key=key)
@@ -270,6 +275,7 @@ def explain_personal_context_item(
         key=key,
         evaluation_time=evaluation_time,
         stale_after_days=stale_after_days,
+        tag_policies=tag_policies,
     )
     record = item_currentness(target, currentness, key=key)
     state = record["state"] if record else STATE_CURRENT
@@ -307,6 +313,8 @@ def explain_personal_context_item(
             ("id", str(item_id)),
             ("state", state),
             ("reasons", reasons),
+            ("review_policy", (record or {}).get("review_policy")),
+            ("review_due", (record or {}).get("review_due", False)),
             ("valid_from", (record or {}).get("valid_from")),
             ("valid_to", (record or {}).get("valid_to")),
             ("item", _public_item_record(target)),
@@ -323,10 +331,13 @@ def explain_personal_context_item(
     )
 
 
-def _capsule_item_record(item, stale_after_days=DEFAULT_STALE_DAYS):
+def _capsule_item_record(item, stale_after_days=DEFAULT_STALE_DAYS, currentness=None):
     record = _public_item_record(item)
     stale = _stale_fact(item, stale_after_days=stale_after_days)
-    record["stale"] = stale is not None
+    record["stale"] = currentness["state"] == STATE_STALE if currentness else stale is not None
+    if currentness:
+        record["review_policy"] = currentness["review_policy"]
+        record["review_due"] = currentness["review_due"]
     if stale is not None:
         record["stale_fact"] = stale
     return record
@@ -361,6 +372,7 @@ def context_capsule(
     offset=0,
     stale_after_days=DEFAULT_STALE_DAYS,
     evaluation_time=None,
+    tag_policies=None,
 ):
     """Return a deterministic, read-only Personal Context projection.
 
@@ -374,7 +386,9 @@ def context_capsule(
     offset = _coerce_offset(offset)
 
     currentness = resolve_currentness(
-        items, evaluation_time=evaluation_time, stale_after_days=stale_after_days
+        items, evaluation_time=evaluation_time, stale_after_days=stale_after_days,
+        tag_policies=tag_policies,
+        apply_review_policy=evaluation_time is None,
     )
     selected = []
     for item in select_personal_context(items, person=person, tags=tags):
@@ -386,7 +400,7 @@ def context_capsule(
             pass
         else:
             continue
-        selected.append(_capsule_item_record(item, stale_after_days=stale_after_days))
+        selected.append(_capsule_item_record(item, stale_after_days=stale_after_days, currentness=record))
 
     selected.sort(
         key=lambda row: json.dumps(
@@ -434,6 +448,7 @@ def decision_memory(
     include_stale=False,
     limit=DEFAULT_LIMIT,
     stale_after_days=DEFAULT_STALE_DAYS,
+    tag_policies=None,
 ):
     """Project `tag:decision` Personal Context records without a new kind."""
     limit = _coerce_limit(limit)
@@ -444,6 +459,7 @@ def decision_memory(
         include_stale=include_stale,
         limit=len(items),
         stale_after_days=stale_after_days,
+        tag_policies=tag_policies,
     )
     records = list(capsule["items"])
     if project:

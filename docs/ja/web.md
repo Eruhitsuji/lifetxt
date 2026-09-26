@@ -918,3 +918,9 @@ Native History の `completed` イベントも同じ更新に含めます。
 
 
 **More → Personal Context**の確認結果は、1件ずつ明示的に書き込む操作です。**Still correct** はstaleな事実を再確認します。**Correct the record** は元の記録を履歴に残し、`corrects:<旧ID>` を付けた訂正記録を新規作成します。Webではユーザーの明示操作により、正確なIDとsource revisionによるCASを伴う直接の確定書き込みです。CLIのcorrection proposal経路とは別です。**Changed over time** は以前正しかった記録を `replaced_by:` で後継に関連付け、必要なら後継に `valid_from:` を指定します。**No longer valid** は `valid_to:` で適用期間を終了します。**Review later** は操作をせず書き込みもありません。読み取り専用Webはこれらの書き込み操作を隠し、API側も書き込みを `403` で拒否します。
+
+Personal Context の再確認方針: 各記録に適用中の再確認間隔、または定期再確認不要を
+表示します。書き込み可能な場合、「定期的な再確認をしない」で `review:never` を
+設定し、「既定の再確認方針を使用」で解除できます。これは再確認方針だけの変更です。
+「まだ正しい」は別途 `updated:` を更新し、訂正・置換・失効の操作も引き続き可能です。
+タグ別の方針は `personal_context.review.tag_policies` で設定します。

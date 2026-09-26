@@ -45,6 +45,7 @@ from collections import OrderedDict
 from .temporal_context import DEFAULT_STALE_DAYS, node_facts
 from .timeutil import parse_date_or_datetime
 from .timezone_policy import now as timezone_now
+from .personal_context_review_policy import effective_review_policy
 
 
 CORRECTS_KEY = "corrects"
@@ -183,6 +184,8 @@ def resolve_currentness(
     evaluation_time=None,
     stale_after_days=DEFAULT_STALE_DAYS,
     historical_ids=None,
+    tag_policies=None,
+    apply_review_policy=True,
 ):
     """Classify every item's Personal Context currentness state.
 
@@ -212,6 +215,15 @@ def resolve_currentness(
         identity = _identity(item, key=key)
         valid_from, valid_to, malformed = parse_validity_bounds(item)
         successors = edges.get(item_id, set()) if item_id else set()
+        policy = effective_review_policy(item, stale_after_days, tag_policies)
+        if not apply_review_policy:
+            policy = {"mode": "periodic", "days": int(stale_after_days),
+                      "source": "historical_periodic_fallback", "diagnostics": []}
+        raw_stale = _stale_fact(item, stale_after_days=stale_after_days)
+        effective_stale = (
+            _stale_fact(item, stale_after_days=policy["days"])
+            if policy["mode"] == "periodic" else None
+        )
 
         reasons = []
         state = None
@@ -241,8 +253,7 @@ def resolve_currentness(
             state = STATE_HISTORICAL_ONLY
             reasons.append("explicit_historical_context")
         else:
-            stale = _stale_fact(item, stale_after_days=stale_after_days)
-            if stale is not None:
+            if effective_stale is not None:
                 state = STATE_STALE
                 reasons.append("stale_since")
             else:
@@ -252,6 +263,9 @@ def resolve_currentness(
             (
                 ("id", item_id or None),
                 ("state", state),
+                ("review_policy", policy),
+                ("review_due", state == STATE_STALE),
+                ("raw_stale_fact", raw_stale),
                 ("reasons", reasons),
                 (
                     "valid_from",

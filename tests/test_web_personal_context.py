@@ -12,6 +12,60 @@ except Exception:
 
 @unittest.skipIf(TestClient is None, "web extras unavailable")
 class WebPersonalContextTests(unittest.TestCase):
+    def test_review_policy_override_round_trip_and_revision_conflict(self):
+        initial = self.client.get("/api/personal-context?include_stale=true").json()
+        revision = initial["source_revision"]
+        url = "/api/personal-context/stale/review-policy"
+        set_result = self.client.post(url, json={
+            "mode": "never", "expected_source_revision": revision,
+        })
+        self.assertEqual(200, set_result.status_code, set_result.text)
+        self.assertEqual("current", set_result.json()["state"])
+        self.assertIn("updated:2000-01-01", Path(self.path).read_text())
+        current = self.client.get("/api/personal-context").json()
+        row = next(item for item in current["items"] if item["id"] == "stale")
+        self.assertFalse(row["stale"])
+        self.assertIsNotNone(row["stale_fact"])
+        self.assertEqual(409, self.client.post(url, json={
+            "mode": "inherit", "expected_source_revision": revision,
+        }).status_code)
+        cleared = self.client.post(url, json={
+            "mode": "inherit", "expected_source_revision": current["source_revision"],
+        })
+        self.assertEqual(200, cleared.status_code, cleared.text)
+        self.assertEqual("stale", cleared.json()["state"])
+        self.assertNotIn("review:never", Path(self.path).read_text())
+
+    def test_review_policy_rejects_read_only_and_invalid_mode(self):
+        from lifetxt.webapp import create_app
+
+        read_only = TestClient(create_app(
+            [self.path], writable_path=self.path, read_only=True,
+        ))
+        url = "/api/personal-context/stale/review-policy"
+        self.assertEqual(403, read_only.post(url, json={"mode": "never"}).status_code)
+        self.assertEqual(400, self.client.post(url, json={"mode": "forever"}).status_code)
+
+    def test_configured_tag_policy_flows_through_web_projection(self):
+        from lifetxt.webapp import create_app
+
+        configured = TestClient(create_app(
+            [self.path], writable_path=self.path,
+            config={"personal_context": {"review": {"tag_policies": {
+                "skill": {"mode": "never"},
+            }}}},
+        ))
+        result = configured.get("/api/personal-context").json()
+        self.assertEqual({"current": 3, "stale": 0}, result["currentness_counts"])
+        row = next(item for item in result["items"] if item["id"] == "stale")
+        self.assertEqual("tag:skill", row["review_policy"]["source"])
+        self.assertFalse(row["stale"])
+        self.assertEqual(409, configured.post(
+            "/api/personal-context/stale/reconfirm",
+            json={"expected_source_revision": result["source_revision"]},
+        ).status_code)
+
+
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.path = os.path.join(self.temp_dir.name, "life.txt")

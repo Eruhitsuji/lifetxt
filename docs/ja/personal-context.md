@@ -590,3 +590,9 @@ AI/client   sourceを理解し、meaningを提案する
 lifetxt     durableでinspect可能なuser-owned contextを保存する
 human       何をtrusted Personal Contextにするかのauthorityを持つ
 ```
+
+### Webでの確認結果
+
+**More → Personal Context**では1件ずつ確認します。古くなった事実が今も正しければ **Still correct** で鮮度の根拠を更新します。記録自体が誤りなら **Correct the record** を使い、元の記録を履歴として残しながら `corrects:<旧ID>` を持つ新しい記録を作ります。Webでユーザーが明示的に実行するこの操作は、CLIの `lifetxt memory correct` のproposal経路とは異なる直接の確定書き込みです。正確なIDと現在のsource revision（CAS）を要求し、競合時は上書きしません。
+
+以前は正しかった事実が変わった場合は **Changed over time** を使います。新しい事実（必要なら `valid_from:` を指定）を記録し、旧記録を `replaced_by:` で関連付けます。事実が該当しなくなり後継がない場合は **No longer valid** で `valid_to:` を設定します。**Review later** は何も操作しないことで、書き込みは発生しません。読み取り専用のWebでは事実を閲覧できますが、確認結果を書き込む操作は表示されません。

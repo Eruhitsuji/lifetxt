@@ -932,3 +932,6 @@ value; it does not add a date when none exists.
 Done date… completes only the selected task; it does not generate a repeat
 occurrence. State and date are sent in one existing revision-protected update,
 including the native `completed` history event when the task has an ID.
+
+
+Personal Context review actions in **More → Personal Context** are explicit, single-record writes. **Still correct** reconfirms stale information; **Correct the record** writes a new corrected record with `corrects:<old-id>` while preserving the original. The Web correction is an authoritative direct mutation on explicit user action, using exact ID and source-revision CAS; the CLI correction proposal workflow remains available separately. **Changed over time** links the former record with `replaced_by:` and can set `valid_from:` on the replacement. **No longer valid** ends applicability with `valid_to:`. **Review later** simply leaves the record unchanged. Read-only Web hides these mutation controls and the backend still rejects writes with `403`.

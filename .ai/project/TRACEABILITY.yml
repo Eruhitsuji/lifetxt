@@ -6,7 +6,7 @@ traceability:
       capability_id: cap-importance-priority-matrix
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/974
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/975
       changed_files_or_scope:
         - lifetxt/priority_matrix.py
         - lifetxt/cli.py

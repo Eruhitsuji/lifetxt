@@ -6,6 +6,7 @@
     };
     let personalContextPreviewRecords = [];
     let personalContextReadOnly = false;
+    const personalContextSelectedIds = new Set();
 
     function personalContextFactRow(domain = "profile", fact = "") {
       const options = PERSONAL_CONTEXT_DOMAINS.map(value =>
@@ -68,6 +69,7 @@
       if (loadMore) loadMore.disabled = false;
       if (!items.length) {
         target.innerHTML = `<div class="empty-state compact-empty"><div class="empty-title">${t("No current Personal Context yet.")}</div><p>${t("Add a few explicit facts to give tools durable context.")}</p></div>`;
+        updatePersonalContextSelectionUi();
         return;
       }
       const groups = PERSONAL_CONTEXT_DOMAINS.map(domain => ({
@@ -81,8 +83,63 @@
       target.innerHTML = groups.map(group => {
         const rows = group.rows;
         if (!rows.length) return "";
-        return `<div class="personal-context-group"><h4>${t(group.label)} <span>${rows.length}</span></h4><ul data-no-i18n>${rows.map(row => `<li class="${row.stale ? "personal-context-stale" : ""}"><span>${escapeHtml(row.title || "")}</span>${row.stale ? `<span class="personal-context-stale-badge">${escapeHtml(t("Stale"))}</span><button type="button" class="secondary personal-context-reconfirm" data-personal-context-id="${escapeHtml(row.id || "")}" onclick="reconfirmPersonalContext(this.dataset.personalContextId)">${escapeHtml(t("Still correct"))}</button>` : ""}${personalContextReviewMenu(row.id)}</li>`).join("")}</ul></div>`;
+        return `<div class="personal-context-group"><h4>${t(group.label)} <span>${rows.length}</span></h4><ul data-no-i18n>${rows.map(row => `<li class="${row.stale ? "personal-context-stale" : ""}"><label class="personal-context-select"><input type="checkbox" data-personal-context-select="${escapeHtml(row.id || "")}" ${personalContextSelectedIds.has(row.id) ? "checked" : ""} onchange="togglePersonalContextSelection(this.dataset.personalContextSelect, this.checked)" aria-label="${escapeHtml(t("Select record"))}"></label><span>${escapeHtml(row.title || "")}</span>${row.stale ? `<span class="personal-context-stale-badge">${escapeHtml(t("Stale"))}</span><button type="button" class="secondary personal-context-reconfirm" data-personal-context-id="${escapeHtml(row.id || "")}" onclick="reconfirmPersonalContext(this.dataset.personalContextId)">${escapeHtml(t("Still correct"))}</button>` : ""}${personalContextReviewMenu(row.id)}</li>`).join("")}</ul></div>`;
       }).join("") || `<div class="empty">${t("No current Personal Context yet.")}</div>`;
+      updatePersonalContextSelectionUi();
+    }
+
+    function updatePersonalContextSelectionUi() {
+      const count = personalContextSelectedIds.size;
+      const toolbar = document.getElementById("personal-context-bulk-toolbar");
+      const countTarget = document.getElementById("personal-context-selected-count");
+      if (countTarget) countTarget.textContent = `${count} ${t("selected")}`;
+      if (toolbar) toolbar.hidden = !count || personalContextReadOnly;
+    }
+
+    function togglePersonalContextSelection(itemId, selected) {
+      if (!itemId) return;
+      if (selected) personalContextSelectedIds.add(itemId);
+      else personalContextSelectedIds.delete(itemId);
+      updatePersonalContextSelectionUi();
+    }
+
+    function clearPersonalContextSelection() {
+      personalContextSelectedIds.clear();
+      document.querySelectorAll("[data-personal-context-select]").forEach(input => { input.checked = false; });
+      updatePersonalContextSelectionUi();
+    }
+
+    async function bulkReviewPersonalContext(action, validTo) {
+      const ids = Array.from(personalContextSelectedIds);
+      if (!ids.length || personalContextReadOnly) return;
+      const feedback = document.getElementById("personal-context-feedback");
+      if (feedback) feedback.textContent = t("Reviewing selected records…");
+      try {
+        const result = await api("/api/personal-context/bulk-review", {
+          method: "POST",
+          body: JSON.stringify({ids, action, valid_to: validTo || undefined, expected_source_revision: personalContextSourceRevision()}),
+        });
+        result.results?.filter(row => row.status === "succeeded").forEach(row => personalContextSelectedIds.delete(row.id));
+        const summary = `${t("Selected")}: ${result.selected}; ${t("Succeeded")}: ${result.succeeded}; ${t("Conflicted")}: ${result.conflicted}; ${t("Failed")}: ${result.failed}`;
+        if (feedback) feedback.textContent = summary;
+        await refreshLoadedPersonalContext();
+        updatePersonalContextSelectionUi();
+      } catch (error) {
+        if (feedback) feedback.textContent = error.message;
+      }
+    }
+
+    function bulkReconfirmPersonalContext() {
+      if (typeof window !== "undefined" && window.confirm && !window.confirm(t("Reconfirm all selected records?"))) return;
+      return bulkReviewPersonalContext("reconfirm");
+    }
+
+    function bulkExpirePersonalContext() {
+      if (typeof window === "undefined" || !window.prompt) return;
+      const validTo = window.prompt(t("Effective end date (YYYY-MM-DD):"));
+      if (!validTo || !validTo.trim()) return;
+      if (window.confirm && !window.confirm(t("End applicability for all selected records?"))) return;
+      return bulkReviewPersonalContext("expire", validTo.trim());
     }
 
     // Progressive-disclosure review outcomes beyond plain reconfirm (#960):

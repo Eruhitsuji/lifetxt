@@ -566,6 +566,17 @@ lifetxt check personal.life.txt
 lifetxt context health personal.life.txt
 ```
 
+### Webの一括レビュー
+
+WebのPersonal Context画面では、ユーザーが明示的に選択した複数recordに対して、
+範囲を限定したレビューを実行できます。確認後のStill correctとNo longer validが
+対象で、後者もhistoryを残し、選択全体に1つの有効終了日を使います。結果は
+recordごとに成功・競合・失敗を表示するため、失敗した項目を再確認できます。
+
+置換文を複数factへ一括適用することはありません。Correct the recordとChanged over
+timeはrecordごとに内容が異なり得るため、従来どおり個別操作です。Load moreで
+追加されたrecordは暗黙に選択されず、read-only Web modeでは変更操作を表示しません。
+
 ## 11. Non-goals
 
 このガイドは次を追加・要求しません。

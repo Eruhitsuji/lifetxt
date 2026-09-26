@@ -427,6 +427,19 @@ The correction proposal points back to the old record with the existing
 `corrects:<old-id>` convention. The previous record remains inspectable, while
 the toolkit treats it as superseded after the correcting record is accepted.
 
+### Web bulk review
+
+The Web Personal Context view supports explicit multi-selection for bounded
+review actions. After confirmation, **Still correct** and **No longer valid**
+can be applied to the selected records. Expiry keeps records in history and
+uses one explicit effective end date. Results are reported per record, so
+conflicts and failures remain identifiable and can be retried.
+
+Bulk review never applies replacement text to multiple facts. **Correct the
+record** and **Changed over time** remain per-record because each replacement
+may have different content. Newly loaded pages are not selected implicitly,
+and read-only Web mode exposes no mutating bulk action.
+
 For an MCP/agent client, `--profile assist` provides the same proposal-first
 boundary: read tools are available, while the only additional write capability
 is `stage_proposal`. MCP is useful automation, not a requirement for this

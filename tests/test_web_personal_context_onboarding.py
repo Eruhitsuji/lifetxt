@@ -38,6 +38,9 @@ class WebPersonalContextOnboardingTests(unittest.TestCase):
         self.assertIn("personal-context-stale-badge", self.js)
         self.assertIn('label: "Other context"', self.js)
         self.assertIn('id="personal-context-include-stale"', self.html)
+        self.assertIn('id="personal-context-bulk-toolbar"', self.html)
+        self.assertIn("bulkReviewPersonalContext", self.js)
+        self.assertIn("/api/personal-context/bulk-review", self.js)
 
     def test_responsive_and_accessible_contract_is_present(self):
         for width in (760, 430):

@@ -56,6 +56,8 @@ global.window = {scrollY: 0, scrollTo: (_x, y) => { global.window.scrollY = y; }
 const t = value => value;
 const escapeHtml = value => String(value);
 let personalContextReadOnly = false;
+const PERSONAL_CONTEXT_DOMAINS = ["profile", "preference", "skill", "goal", "project"];
+const PERSONAL_CONTEXT_LABELS = {profile: "Profile", preference: "Preferences", skill: "Skills", goal: "Goals", project: "Projects"};
 
 let apiCalls = [];
 let apiImpl = null;
@@ -161,12 +163,12 @@ async function main() {
   state.current.dataset.personalContextItems = JSON.stringify(fakePage(0, 3, 3).items);
   renderPersonalContextCurrent(fakePage(0, 3, 3));
   state.current._menus.find(menu => menu.dataset.personalContextId === "item0").open = true;
-  apiImpl = async () => ({...fakePage(0, 3, 3), items: [
+  apiImpl = async path => path.includes("/reconfirm") ? {id: "item1", reconfirmed: true} : ({...fakePage(0, 3, 3), items: [
     {id: "item2", title: "C", details: {}},
     {id: "item0", title: "A", details: {}},
     {id: "item1", title: "B", details: {}},
   ]});
-  await refreshLoadedPersonalContext();
+  await reconfirmPersonalContext("item1");
   results.open_menu_after_reorder = state.current._menus.filter(menu => menu.open).map(menu => menu.dataset.personalContextId);
   apiImpl = async () => ({...fakePage(0, 2, 2), items: [
     {id: "item2", title: "C", details: {}},

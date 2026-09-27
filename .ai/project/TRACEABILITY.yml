@@ -2,6 +2,31 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-priority-horizon
+      capability_id: cap-importance-priority-matrix
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/974
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/981
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/982
+      changed_files_or_scope:
+        - lifetxt/priority_matrix.py
+        - lifetxt/cli.py
+        - tests/test_priority_matrix.py
+        - docs/en/priority-matrix.md
+        - docs/ja/priority-matrix.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests.test_priority_matrix
+        - "Priority Horizon derives only the next Q-changing boundary from the shared urgency policy; defaults and life.txt remain unchanged"
+        - "Date-only and offset deadlines use the existing timezone semantics; exact threshold and no-transition cases are deterministic"
+      release_or_deployment: null
+      notes: >-
+        The `--horizon` CLI option is opt-in. Only entering the existing
+        seven-day urgency band changes a task's Q1-Q4 quadrant; subsequent
+        urgency thresholds stay on the urgent side. Derived transition data is
+        returned by the matrix view and is never stored in life.txt.
+      status: implemented
+
     - requirement_id: req-web-priority-matrix-view
       capability_id: cap-importance-priority-matrix
       epic: null

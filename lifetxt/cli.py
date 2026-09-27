@@ -476,12 +476,28 @@ def build_parser():
     )
     check.set_defaults(func=command_check)
 
-    listing = subparsers.add_parser("list", help="List actionable tasks by priority matrix.")
+    listing = subparsers.add_parser(
+        "list", help="List actionable tasks by priority matrix."
+    )
     _add_input_paths(listing)
-    listing.add_argument("--matrix", action="store_true", help="Group tasks by importance and derived urgency.")
-    listing.add_argument("--quadrant", choices=("Q1", "Q2", "Q3", "Q4", "unclassified"),
-                         help="Only show one priority group (implies --matrix).")
-    listing.add_argument("--json", action="store_true", help="Emit the grouped result as JSON.")
+    listing.add_argument(
+        "--matrix",
+        action="store_true",
+        help="Group tasks by importance and derived urgency.",
+    )
+    listing.add_argument(
+        "--quadrant",
+        choices=("Q1", "Q2", "Q3", "Q4", "unclassified"),
+        help="Only show one priority group (implies --matrix).",
+    )
+    listing.add_argument(
+        "--horizon",
+        action="store_true",
+        help="Show each task's next time-based quadrant transition (implies --matrix).",
+    )
+    listing.add_argument(
+        "--json", action="store_true", help="Emit the grouped result as JSON."
+    )
     listing.set_defaults(func=command_priority_matrix)
 
     storage = subparsers.add_parser("storage", help="Read-only storage diagnostics.")
@@ -13203,10 +13219,18 @@ def _project_items(args):
 
 def command_priority_matrix(args):
     from .priority_matrix import matrix_rows
+    from .timezone_policy import now
+    from .timeutil import parse_date, parse_datetime
 
-    if not (args.matrix or args.quadrant):
+    if not (args.matrix or args.quadrant or args.horizon):
         raise ValueError("list requires --matrix or --quadrant.")
-    groups = matrix_rows(_project_items(args), quadrant=args.quadrant)
+    reference = now()
+    groups = matrix_rows(
+        _project_items(args),
+        reference_time=reference,
+        quadrant=args.quadrant,
+        include_horizon=args.horizon,
+    )
     if args.json:
         write_text(None, json.dumps(groups, ensure_ascii=False, indent=2) + "\n")
         return 0
@@ -13220,7 +13244,36 @@ def command_priority_matrix(args):
             continue
         write_text(None, "%s (%s)\n" % (headings[name], name))
         for row in rows:
-            write_text(None, "  %s%s\n" % (row["title"], " due:" + row["due"] if row["due"] else ""))
+            write_text(
+                None,
+                "  %s%s\n" % (row["title"], " due:" + row["due"] if row["due"] else ""),
+            )
+            if args.horizon:
+                if row["next_at"] is None:
+                    write_text(None, "    -> no scheduled transition\n")
+                else:
+                    next_at = datetime.datetime.fromisoformat(row["next_at"])
+                    days = (next_at.date() - reference.date()).days
+                    due = row["due"]
+                    if (
+                        due
+                        and parse_date(due) is None
+                        and parse_datetime(due) is not None
+                    ):
+                        date_label = next_at.isoformat(timespec="seconds")
+                    else:
+                        date_label = next_at.date().isoformat()
+                    if days == 0:
+                        timing = "today"
+                    elif days == 1:
+                        timing = "in 1 day"
+                    else:
+                        timing = "in %d days" % days
+                    write_text(
+                        None,
+                        "    -> %s %s (%s)\n"
+                        % (row["next_quadrant"], timing, date_label),
+                    )
     return 0
 
 

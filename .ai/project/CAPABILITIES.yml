@@ -3,21 +3,23 @@ schema_version: 1
 capabilities:
   - id: cap-importance-priority-matrix
     name: Derived importance and urgency matrix
-    summary: Optional human importance with read-only timezone-aware due-derived urgency and CLI quadrants.
+    summary: Optional human importance with read-only timezone-aware due-derived urgency, CLI quadrants, and Web matrix view/API.
     status: active
     owner: Eruhitsuji
-    source_requirements: [req-importance-priority-matrix, req-importance-priority-coexistence]
-    implementation_locations: [lifetxt/priority_matrix.py, lifetxt/cli.py, lifetxt/cli_taxonomy.py, lifetxt/validator.py]
-    public_interfaces: [lifetxt list --matrix, lifetxt list --quadrant]
-    tests_or_evidence: [tests.test_priority_matrix]
-    related_issues: [https://github.com/Eruhitsuji/lifetxt/issues/974, https://github.com/Eruhitsuji/lifetxt/issues/976]
-    related_pull_requests: [https://github.com/Eruhitsuji/lifetxt/pull/975, https://github.com/Eruhitsuji/lifetxt/pull/979]
+    source_requirements: [req-importance-priority-matrix, req-importance-priority-coexistence, req-web-priority-matrix-view]
+    implementation_locations: [lifetxt/priority_matrix.py, lifetxt/cli.py, lifetxt/cli_taxonomy.py, lifetxt/validator.py, lifetxt/webapp.py, lifetxt/web_assets.html, lifetxt/web_assets_js_20.js, lifetxt/web_assets_css_06.css]
+    public_interfaces: [lifetxt list --matrix, lifetxt list --quadrant, GET /api/priority-matrix, Web Priority Matrix view]
+    tests_or_evidence: [tests.test_priority_matrix, tests.test_web_priority_matrix]
+    related_issues: [https://github.com/Eruhitsuji/lifetxt/issues/974, https://github.com/Eruhitsuji/lifetxt/issues/976, https://github.com/Eruhitsuji/lifetxt/issues/977]
+    related_pull_requests: [https://github.com/Eruhitsuji/lifetxt/pull/975, https://github.com/Eruhitsuji/lifetxt/pull/979], https://github.com/Eruhitsuji/lifetxt/pull/980
     reuse_policy: reuse_existing_timezone_policy_and_due_parser
     notes: >-
       The #976 coexistence contract extends this capability: explicit priority
       remains independent of importance, derived urgency, and quadrant; matrix
       classification preserves source order and does not calculate a unified
       score or recommended execution order.
+      The Web surface reuses this classifier and preserves read-only behavior;
+      its task rows expose explicit priority only as separate metadata.
     replacement: {replaces: [], replaced_by: null, deprecation_issue: null}
 
   - id: cap-remote-authoritative-sync-cli
@@ -6910,6 +6912,7 @@ capabilities:
       - tests/test_report_cli.py
       - docs/en/reports.md
       - docs/ja/reports.md
+      - tests/test_priority_matrix.py
       - docs/en/config.md
       - docs/ja/config.md
       - examples/report_profiles.config.json
@@ -7853,8 +7856,10 @@ capabilities:
       - req-report-readonly-validate
       - req-report-resolved-inspection
       - req-report-v2-project-health-render-contract
+      - req-report-v2-priority-matrix-section
     implementation_locations:
       - lifetxt/report_v2.py
+      - lifetxt/priority_matrix.py
       - lifetxt/health.py
       - lifetxt/mail_delivery.py
       - lifetxt/report_cli.py
@@ -7894,6 +7899,7 @@ capabilities:
       - reports.*.scope
       - reports.*.email
       - reports.*.email.smtp_port
+      - reports.*.sections[type=priority-matrix]
     tests_or_evidence:
       - tests/test_health.py -> Ran 6 tests, OK; full existing health CLI test suite (14 tests) re-run unmodified against the refactored command_health -> OK
       - tests/test_report_v2.py -> Ran 22 tests, OK (period math, section-provider composition matching direct engine calls, comparison diff, external-audience redaction, all three renderers)
@@ -7939,6 +7945,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/619
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/612
+      - https://github.com/Eruhitsuji/lifetxt/pull/980
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
       Self-scoped and implemented autonomously per repository owner

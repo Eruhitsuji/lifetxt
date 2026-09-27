@@ -56,6 +56,7 @@ __LIFETXT_WEB_STYLES__  </style>
           <button type="button" class="workspace-tab" data-view="timeline" onclick="switchWorkspace('timeline')">🕒 Timeline</button>
           <button type="button" class="workspace-tab" data-view="calendar" onclick="switchWorkspace('calendar')" title="Month/week calendar grid of dated records">📆 Calendar</button>
           <button type="button" class="workspace-tab" data-view="focus" onclick="switchWorkspace('focus')">🎯 Focus</button>
+          <button type="button" class="workspace-tab" data-view="matrix" onclick="switchWorkspace('matrix')">📊 Priority Matrix</button>
           <button type="button" class="workspace-tab" data-view="review" onclick="switchWorkspace('review')">📝 Review</button>
           <button type="button" class="workspace-tab" data-view="messages" onclick="switchWorkspace('messages')">💬 Messages</button>
           <button type="button" class="workspace-tab" data-view="team" onclick="switchWorkspace('team')">🟢 Team</button>
@@ -362,6 +363,19 @@ __LIFETXT_WEB_STYLES__  </style>
         </div>
         <div class="section-body">
           <div id="agenda" class="stack"></div>
+        </div>
+      </section>
+      <section class="priority-matrix-section page" data-page="matrix">
+        <div class="section-head">
+          <h2><span class="h2-icon" aria-hidden="true">📊</span>Priority Matrix</h2>
+          <button class="secondary" onclick="loadPriorityMatrix()">Refresh</button>
+        </div>
+        <div class="section-body">
+          <p class="priority-matrix-intro">Importance is a human judgment; urgency comes from deadlines. Manual priority is separate.</p>
+          <p id="priority-matrix-evaluated-at" class="muted"></p>
+          <div id="priority-matrix-grid" class="priority-matrix-grid" aria-label="Priority Matrix groups"></div>
+          <h3 id="priority-matrix-detail-heading"></h3>
+          <div id="priority-matrix-detail" class="stack" aria-live="polite"></div>
         </div>
       </section>
       <section class="status-section page" data-page="status">

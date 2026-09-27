@@ -189,6 +189,37 @@ class ReportV2ProfileValidationTests(unittest.TestCase):
 
 class ReportV2CliEndToEndTests(unittest.TestCase):
     @mock.patch.object(
+        report_cli,
+        "timezone_now",
+        return_value=datetime.datetime(2026, 8, 26, 12, tzinfo=datetime.timezone.utc),
+    )
+    @mock.patch.object(
+        report_cli, "timezone_today", return_value=datetime.date(2026, 8, 26)
+    )
+    def test_preview_priority_matrix_is_explicit_and_uses_generation_time(
+        self, _timezone_today, _timezone_now
+    ):
+        with _TempWorkspace() as ws:
+            with open(ws.life_path, "w", encoding="utf-8") as handle:
+                handle.write(
+                    "[ ] T Report importance:high priority:C due:2026-08-27\n"
+                )
+            config_path = ws.write_config(
+                {
+                    "weekly": {
+                        "period": "weekly",
+                        "sections": [{"type": "priority-matrix", "detail": True}],
+                    }
+                }
+            )
+            out, code = _run(["preview", "weekly"], config_path)
+        self.assertEqual(code, 0)
+        self.assertIn("## Priority Matrix", out)
+        self.assertIn("Q1", out)
+        self.assertIn("Manual priority: C", out)
+        self.assertIn("Report", out)
+
+    @mock.patch.object(
         report_cli, "timezone_today", return_value=datetime.date(2026, 8, 26)
     )
     def test_preview_v2_profile_renders_markdown_by_default(self, _timezone_today):

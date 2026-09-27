@@ -943,3 +943,11 @@ record's `review:never` override and **Use inherited review policy** clears it.
 This changes only review metadata; **Still correct** separately updates freshness
 (`updated:`). Correction, replacement, and expiry remain available. Current
 workspace tag policies are configured under `personal_context.review.tag_policies`.
+The **Priority Matrix** view groups active tasks into Q1–Q4 and Unclassified.
+Importance is a human judgment; urgency is derived from due dates at the time
+the view loads. Select a group to inspect its tasks. Manual `priority` remains
+visible as separate metadata and does not affect classification. The view is
+read-only and preserves source order.
+
+`GET /api/priority-matrix` returns `evaluated_at`, `timezone`, counts for all five
+groups, and task rows grouped by quadrant.

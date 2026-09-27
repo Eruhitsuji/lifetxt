@@ -46,7 +46,7 @@ def classify_item(item, reference_time=None):
     return {"importance": importance, "urgency": urgency, "quadrant": quadrant}
 
 
-def matrix_rows(items, reference_time=None, quadrant=None):
+def matrix_rows(items, reference_time=None, quadrant=None, include_priority=False):
     """Group actionable tasks in stable source order."""
     if quadrant is not None and quadrant not in QUADRANTS:
         raise ValueError("Unknown quadrant: %s" % quadrant)
@@ -56,10 +56,13 @@ def matrix_rows(items, reference_time=None, quadrant=None):
         result = classify_item(item, reference)
         if result is None or (quadrant is not None and result["quadrant"] != quadrant):
             continue
-        groups[result["quadrant"]].append({
+        row = {
             "title": item.title,
             "status": item.status,
             "due": (item.details.get("due") or [None])[0],
             **result,
-        })
+        }
+        if include_priority:
+            row["priority"] = (item.details.get("priority") or [None])[0]
+        groups[result["quadrant"]].append(row)
     return groups

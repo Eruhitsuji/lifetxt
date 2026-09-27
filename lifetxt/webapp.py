@@ -1404,6 +1404,23 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             id_key=id_key_from_config(app.state.config),
         )
 
+    @app.get("/api/priority-matrix")
+    def get_priority_matrix():
+        """Read active-task matrix groups through the shared classifier."""
+        from .priority_matrix import QUADRANTS, matrix_rows
+        from .timezone_policy import current_timezone_name, now as timezone_now
+
+        items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
+        raise_for_errors(diagnostics)
+        evaluated_at = timezone_now()
+        groups = matrix_rows(items, evaluated_at, include_priority=True)
+        return {
+            "evaluated_at": evaluated_at.isoformat(timespec="seconds"),
+            "timezone": current_timezone_name(),
+            "counts": {name: len(groups[name]) for name in QUADRANTS},
+            "groups": groups,
+        }
+
     @app.get("/api/agenda")
     def get_agenda(
         start=Query(None, alias="from"),

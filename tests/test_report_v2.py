@@ -81,6 +81,44 @@ class SectionValidationTests(unittest.TestCase):
         with self.assertRaises(ReportError):
             validate_sections([])
 
+    def test_priority_matrix_detail_must_be_boolean(self):
+        with self.assertRaises(ReportError):
+            validate_sections([{"type": "priority-matrix", "detail": "yes"}])
+
+    def test_priority_matrix_rejects_unknown_options(self):
+        with self.assertRaises(ReportError):
+            validate_sections([{"type": "priority-matrix", "quadrant": "Q1"}])
+
+
+class PriorityMatrixProviderTests(unittest.TestCase):
+    def test_priority_matrix_is_opt_in_and_detail_preserves_source_order(self):
+        items, _ = parse_text(
+            "[ ] T First importance:high priority:C\n"
+            "[ ] T Second importance:high priority:A\n"
+            "[ ] T Missing importance:invalid priority:B\n"
+        )
+        ref = datetime.datetime(2026, 8, 26, 12, tzinfo=datetime.timezone.utc)
+        start, end = resolve_period("weekly", datetime.date(2026, 8, 26))
+        context = ReportContext(items, {}, datetime.date(2026, 8, 26), "weekly", start, end, "UTC", reference_time=ref)
+
+        profile = {"period": "weekly", "sections": [{"type": "priority-matrix"}]}
+        summary = build_report_model("matrix", profile, context, ref)
+        section = summary["sections"][0]
+        self.assertEqual(section["data"]["counts"]["Q2"], 2)
+        self.assertEqual(section["data"]["counts"]["unclassified"], 1)
+        self.assertNotIn("groups", section["data"])
+        self.assertEqual(section["data"]["evaluated_at"], ref.isoformat())
+
+        detailed = build_report_model(
+            "matrix", {"period": "weekly", "sections": [{"type": "priority-matrix", "detail": True}]}, context, ref
+        )
+        data = detailed["sections"][0]["data"]
+        self.assertEqual([row["title"] for row in data["groups"]["Q2"]], ["First", "Second"])
+        self.assertEqual([row["priority"] for row in data["groups"]["Q2"]], ["C", "A"])
+        markdown = render_markdown(detailed)
+        self.assertIn("Manual priority: C", markdown)
+        self.assertIn("First", markdown)
+
 
 class ScopeTests(unittest.TestCase):
     def test_none_scope_validates_to_empty_dict(self):

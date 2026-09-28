@@ -59,7 +59,7 @@ verification:
     - type: smoke
       command: python -m lifetxt check examples/minimal_life.txt
       requirement_ids: [req-multi-person-workspace-membership, req-multi-person-workspace-remote-enforcement]
-      result: OK: 10 items
+      result: "OK: 10 items"
       commit: 6a58fbf
       executed_at: '2026-09-29'
       status: passed

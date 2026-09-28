@@ -323,6 +323,45 @@ lifetxt remote profile-remove home
 
 The client sends a request ID, an offset-aware client timestamp, and the selected protocol version. It rejects a server that omits negotiation headers for protocol 2 or returns a different version.
 
+## Workspace collaboration authorization
+
+When the selected named workspace has a `collaboration` section, each Remote
+workspace read is checked against that workspace's membership on every request.
+The protocol-v2 snapshot and capability response include only the authenticated
+principal's role and bounded effective permissions. A non-member is denied;
+membership does not expose other workspaces or local source paths. Ordinary
+item writes require both the existing Remote `write` scope and workspace
+`owner`/`editor` permission, followed by the existing item/source policy and
+exact-revision checks. `viewer` is read-only. A missing collaboration section
+keeps the previous behavior.
+
+For an owner who also has the principal's existing `admin` scope, protocol v2
+negotiates the member-management API. The CLI reads a configuration revision
+with `member-list`; pass that exact value to one change. A stale revision is a
+conflict and must be resolved by listing again, not retried automatically:
+
+```console
+lifetxt remote member-list home --workspace team
+lifetxt remote member-add home --workspace team --principal bob --role editor --config-revision <revision>
+lifetxt remote member-role home --workspace team --principal bob --role viewer --config-revision <revision>
+lifetxt remote member-remove home --workspace team --principal bob --config-revision <revision>
+```
+
+Only existing configured principal IDs can be added. The API never accepts
+credentials, and it rejects removal or demotion of the last active owner.
+Membership changes use the server's atomic configuration compare-and-set,
+take effect on the next request, and emit bounded Remote audit evidence.
+
+The authenticated `/remote` page shows the selected workspace, signed-in
+principal, and active role. Authorized owners can list and manage members there;
+the page asks before removal and owner demotion, refreshes after a stale
+configuration conflict, and never retries the change automatically. Its recent
+activity list displays Native History actor IDs when present, using the stable
+ID as the fallback after a member is renamed or removed. The interface adapts
+to narrow screens and chooses English or Japanese from the browser language.
+Invitation, credential creation, presence, and offline collaboration are not
+part of this first slice.
+
 ## Write boundary
 
 Every admitted remote write requires an exact `If-Match` revision. Missing revisions fail with `REVISION_REQUIRED`; stale revisions fail with `REVISION_CONFLICT`.

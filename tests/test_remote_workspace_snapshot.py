@@ -165,6 +165,94 @@ class RemoteWorkspaceSnapshotWebTests(unittest.TestCase):
             )
         )
 
+    def test_collaboration_role_is_bounded_and_checked_on_every_request(self):
+        os.environ["REMOTE_COLLAB_EDITOR"] = "editor-secret"
+        os.environ["REMOTE_COLLAB_VIEWER"] = "viewer-secret"
+        try:
+            self.config["default_workspace"] = "team"
+            self.config["workspaces"] = {
+                "team": {
+                    "sources": [self.path],
+                    "write_file": self.path,
+                    "collaboration": {
+                        "members": {
+                            "alice": {"role": "editor"},
+                            "bob": {"role": "viewer"},
+                        }
+                    },
+                }
+            }
+            self.config["remote"]["principals"] = [
+                {
+                    "id": "alice",
+                    "role": "reader",
+                    "scopes": ["read", "write"],
+                    "token_env": "REMOTE_COLLAB_EDITOR",
+                },
+                {
+                    "id": "bob",
+                    "role": "reader",
+                    "scopes": ["read", "write"],
+                    "token_env": "REMOTE_COLLAB_VIEWER",
+                },
+                {
+                    "id": "carol",
+                    "role": "reader",
+                    "scopes": ["read", "write"],
+                    "token_env": "REMOTE_SNAPSHOT_TOKEN",
+                },
+            ]
+            app = create_app(
+                paths=[self.path],
+                writable_path=self.path,
+                config=self.config,
+                read_only=False,
+            )
+            client = TestClient(app)
+            v2 = {"X-Lifetxt-Remote-Version": "2"}
+            editor = dict(v2, Authorization="Bearer editor-secret")
+            viewer = dict(v2, Authorization="Bearer viewer-secret")
+
+            snapshot = client.get("/api/remote/v1/snapshot", headers=editor)
+            self.assertEqual(200, snapshot.status_code, snapshot.text)
+            workspace = snapshot.json()["workspace"]["collaboration"]
+            self.assertEqual("editor", workspace["role"])
+            self.assertEqual(
+                {"read": True, "write": True, "member_admin": False},
+                workspace["permissions"],
+            )
+            self.assertNotIn("members", str(snapshot.json()))
+            self.assertNotIn(self.temp.name, str(snapshot.json()))
+
+            readonly = client.get("/api/remote/v1/snapshot", headers=viewer)
+            self.assertEqual(200, readonly.status_code, readonly.text)
+            denied = client.post(
+                "/api/remote/v1/item-mutations", headers=viewer, json={}
+            )
+            self.assertEqual(403, denied.status_code)
+            self.assertEqual("WORKSPACE_PERMISSION_DENIED", denied.json()["error"])
+
+            nonmember = client.get(
+                "/api/remote/v1/snapshot",
+                headers=dict(v2, Authorization="Bearer snapshot-secret"),
+            )
+            self.assertEqual(403, nonmember.status_code)
+            self.assertEqual("WORKSPACE_ACCESS_DENIED", nonmember.json()["error"])
+
+            # A current snapshot does not preserve write authority after a
+            # server-side role downgrade; the next request re-resolves it.
+            app.state.config["workspaces"]["team"]["collaboration"]["members"]["alice"][
+                "role"
+            ] = "viewer"
+            revoked = client.post(
+                "/api/remote/v1/item-mutations", headers=editor, json={}
+            )
+            self.assertEqual(403, revoked.status_code)
+            self.assertEqual("WORKSPACE_PERMISSION_DENIED", revoked.json()["error"])
+        finally:
+            os.environ.pop("REMOTE_COLLAB_EDITOR", None)
+            os.environ.pop("REMOTE_COLLAB_VIEWER", None)
+
     def tearDown(self):
         self.temp.cleanup()
         os.environ.pop("REMOTE_SNAPSHOT_TOKEN", None)

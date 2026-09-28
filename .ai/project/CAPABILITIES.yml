@@ -1,6 +1,24 @@
 schema_version: 1
 
 capabilities:
+  - id: cap-multi-person-workspace-collaboration
+    name: Multi-person workspace collaboration
+    summary: Per-workspace owner/editor/viewer membership layered over Remote principal scopes, guarded member administration, and role-aware Remote Web history.
+    status: active
+    owner: Eruhitsuji
+    source_requirements: [req-multi-person-workspace-membership, req-multi-person-workspace-remote-enforcement, req-multi-person-workspace-membership-admin, req-multi-person-workspace-web-ux]
+    implementation_locations: [lifetxt/collaboration.py, lifetxt/config_validation.py, lifetxt/remote_backend.py, lifetxt/remote_web.py, lifetxt/remote_client.py]
+    public_interfaces: [workspace collaboration config, Remote protocol-v2 workspace member API, lifetxt remote member-list, lifetxt remote member-add, lifetxt remote member-role, lifetxt remote member-remove, Remote Web member and activity panel]
+    tests_or_evidence: [tests.test_collaboration, tests.test_remote_workspace_snapshot, tests.test_remote_item_writes, tests.test_remote_collaboration_admin, tests.test_remote_client_v20, tests.test_remote_web_v20]
+    related_issues: [https://github.com/Eruhitsuji/lifetxt/issues/983, https://github.com/Eruhitsuji/lifetxt/issues/984, https://github.com/Eruhitsuji/lifetxt/issues/985, https://github.com/Eruhitsuji/lifetxt/issues/986, https://github.com/Eruhitsuji/lifetxt/issues/987]
+    related_pull_requests: [https://github.com/Eruhitsuji/lifetxt/pull/988]
+    reuse_policy: extend_existing_remote_principals_and_atomic_config_cas
+    notes: >-
+      Collaboration is opt-in per named workspace. Workspace roles only narrow
+      existing Remote principal scopes and never provision credentials or grant
+      backup, recovery, or server administration.
+    replacement: {replaces: [], replaced_by: null, deprecation_issue: null}
+
   - id: cap-importance-priority-matrix
     name: Derived importance and urgency matrix
     summary: Optional human importance with read-only timezone-aware due-derived urgency, CLI quadrants, and Web matrix view/API.

@@ -237,6 +237,14 @@ class RemoteWebV20Tests(unittest.TestCase):
         self.assertEqual(200, page.status_code)
         self.assertIn("Content-Security-Policy", page.headers)
         self.assertIn("Tokens are exchanged once", page.text)
+        self.assertIn('id="members-section"', page.text)
+        self.assertIn('id="member-list"', page.text)
+        self.assertIn("max-width:560px", page.text)
+        self.assertIn("overflow-wrap:anywhere", page.text)
+        self.assertIn("WORKSPACE_CONFIG_REVISION_CONFLICT", page.text)
+        self.assertIn("最後の有効なOwner", page.text)
+        self.assertNotIn("innerHTML", page.text)
+        self.assertNotIn("localStorage", page.text)
 
 
 @unittest.skipIf(TestClient is None, "web extras unavailable")

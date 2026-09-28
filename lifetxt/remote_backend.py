@@ -159,7 +159,7 @@ def _opaque_id(kind, *parts):
     return digest.hexdigest()
 
 
-def _workspace_manifest(paths, config, writable_path, diagnostics):
+def _workspace_manifest(paths, config, writable_path, diagnostics, principal=None):
     """Build a client-safe manifest without exposing server-local paths."""
     from .workspace import (
         active_workspace_name,
@@ -223,7 +223,7 @@ def _workspace_manifest(paths, config, writable_path, diagnostics):
     diagnostic_rows = list(diagnostics or [])
     if resolution is not None:
         diagnostic_rows.extend(resolution.get("diagnostics") or [])
-    return OrderedDict(
+    manifest = OrderedDict(
         (
             ("workspace_id", workspace_id),
             ("sources", sources),
@@ -232,6 +232,20 @@ def _workspace_manifest(paths, config, writable_path, diagnostics):
             ("diagnostics", _diagnostics(diagnostic_rows)),
         )
     )
+    from .collaboration import resolve_membership
+
+    membership = resolve_membership(config, principal or {})
+    if membership["collaboration_enabled"]:
+        manifest["collaboration"] = OrderedDict(
+            (
+                ("enabled", True),
+                ("workspace_name", membership["workspace_name"]),
+                ("principal_id", membership["principal_id"]),
+                ("role", membership["role"]),
+                ("permissions", membership["permissions"]),
+            )
+        )
+    return manifest
 
 
 def _item_rows(items, config):
@@ -657,7 +671,7 @@ def snapshot(paths, config, principal, protocol_version=1, writable_path=None):
     )
     if int(protocol_version or 1) >= 2:
         result["workspace"] = _workspace_manifest(
-            paths, config, writable_path, diagnostics
+            paths, config, writable_path, diagnostics, principal
         )
         result["items"] = _item_rows(visible, config or {})
     return result

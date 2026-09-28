@@ -8,9 +8,11 @@ from lifetxt import cli
 from lifetxt.remote_client import (
     PROFILE_VERSION,
     _load,
+    change_workspace_member,
     get_profile,
     request,
     set_profile,
+    workspace_members,
 )
 
 
@@ -91,6 +93,52 @@ class RemoteClientV20Tests(unittest.TestCase):
         self.assertEqual("items", args.resource)
         args = parser.parse_args(["remote", "profile-remove", "home"])
         self.assertEqual("home", args.name)
+        args = parser.parse_args(
+            [
+                "remote",
+                "member-role",
+                "home",
+                "--workspace",
+                "team",
+                "--principal",
+                "bob",
+                "--role",
+                "viewer",
+                "--config-revision",
+                "a" * 64,
+            ]
+        )
+        self.assertEqual("role", args.operation)
+
+    @mock.patch("lifetxt.remote_client.urlopen")
+    def test_member_cli_calls_only_the_authoritative_remote_api(self, opener):
+        opener.return_value = FakeResponse({"members": [], "config_revision": "a" * 64})
+        profile = {"url": "https://example.test", "protocol_version": 2}
+        listing = workspace_members(profile, "team")
+        self.assertEqual("a" * 64, listing["config_revision"])
+        self.assertIn("workspace=team", opener.call_args[0][0].full_url)
+
+        opener.return_value = FakeResponse({"ok": True})
+        changed = change_workspace_member(
+            profile, "team", "add", "bob", "editor", "a" * 64
+        )
+        self.assertTrue(changed["ok"])
+        sent = opener.call_args[0][0]
+        self.assertEqual("POST", sent.method)
+        self.assertEqual(
+            "/api/remote/v1/workspace/members",
+            sent.full_url.split("?", 1)[0].replace("https://example.test", ""),
+        )
+        self.assertEqual(
+            {
+                "workspace": "team",
+                "operation": "add",
+                "principal_id": "bob",
+                "role": "editor",
+                "expected_config_revision": "a" * 64,
+            },
+            json.loads(sent.data.decode("utf-8")),
+        )
 
 
 if __name__ == "__main__":

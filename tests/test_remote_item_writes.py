@@ -162,6 +162,26 @@ class RemoteItemWriteTests(unittest.TestCase):
         )
         self.assertEqual(400, response.status_code)
 
+    def test_event_actor_comes_from_authenticated_principal(self):
+        response = self.mutate(
+            {
+                "operation": "create",
+                "transaction_id": "tx-forged-actor",
+                "actor": "mallory",
+                "item": {
+                    "status": "[ ]",
+                    "type": "T",
+                    "title": "Actor evidence",
+                    "details": {"visibility": ["shared"]},
+                },
+            }
+        )
+        self.assertEqual(200, response.status_code, response.text)
+        with open(self.path, encoding="utf-8") as handle:
+            content = handle.read()
+        self.assertIn("actor:alice", content)
+        self.assertNotIn("actor:mallory", content)
+
 
 if __name__ == "__main__":
     unittest.main()

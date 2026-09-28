@@ -15405,42 +15405,42 @@ traceability:
       capability_id: cap-multi-person-workspace-collaboration
       epic: https://github.com/Eruhitsuji/lifetxt/issues/983
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/984
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/988
       changed_files_or_scope: [lifetxt/collaboration.py, lifetxt/config_validation.py, tests/test_collaboration.py, tests/test_remote_workspace_snapshot.py, docs/en/config.md, docs/ja/config.md]
       tests_or_evidence: [tests.test_collaboration, tests.test_remote_workspace_snapshot]
       release_or_deployment: null
       notes: Roles are opt-in per workspace and intersect with existing principal scopes.
-      status: proposed
+      status: implemented
     - requirement_id: req-multi-person-workspace-remote-enforcement
       capability_id: cap-multi-person-workspace-collaboration
       epic: https://github.com/Eruhitsuji/lifetxt/issues/983
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/985
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/988
       changed_files_or_scope: [lifetxt/remote_web.py, lifetxt/remote_backend.py, tests/test_remote_workspace_snapshot.py, tests/test_remote_item_writes.py, docs/en/remote.md, docs/ja/remote.md]
       tests_or_evidence: [tests.test_remote_workspace_snapshot, tests.test_remote_item_writes]
       release_or_deployment: null
       notes: Request-time membership enforcement preserves visibility, source, revision, and authenticated actor safeguards.
-      status: proposed
+      status: implemented
     - requirement_id: req-multi-person-workspace-membership-admin
       capability_id: cap-multi-person-workspace-collaboration
       epic: https://github.com/Eruhitsuji/lifetxt/issues/983
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/986
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/988
       changed_files_or_scope: [lifetxt/collaboration.py, lifetxt/remote_web.py, lifetxt/remote_client.py, tests/test_remote_collaboration_admin.py, tests/test_remote_client_v20.py, docs/en/remote.md, docs/ja/remote.md]
       tests_or_evidence: [tests.test_remote_collaboration_admin, tests.test_remote_client_v20]
       release_or_deployment: null
       notes: Owner member management uses exact config revision compare-and-swap and bounded audit.
-      status: proposed
+      status: implemented
     - requirement_id: req-multi-person-workspace-web-ux
       capability_id: cap-multi-person-workspace-collaboration
       epic: https://github.com/Eruhitsuji/lifetxt/issues/983
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/987
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/988
       changed_files_or_scope: [lifetxt/remote_web.py, tests/test_remote_web_v20.py, tests/test_remote_collaboration_admin.py, docs/en/remote.md, docs/ja/remote.md]
       tests_or_evidence: [tests.test_remote_web_v20, tests.test_remote_collaboration_admin]
       release_or_deployment: null
       notes: Browser role presentation is informational; the server performs all authorization on each request.
-      status: proposed
+      status: implemented
 
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception

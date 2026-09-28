@@ -3,12 +3,14 @@
 from __future__ import unicode_literals
 
 import html
+import hashlib
 import json
 import os
 import secrets
 from collections import OrderedDict
 
 from .remote_access import (
+    REMOTE_CAPABILITY_REVISION_HEADER,
     REMOTE_PROTOCOL_CURRENT,
     RateLimiter,
     RemoteAccessError,
@@ -52,23 +54,25 @@ _LOGIN_PATH = "/api/remote/v1/browser/login"
 _BROWSER_SESSION_PATH = "/api/remote/v1/browser/session"
 _LOGOUT_PATH = "/api/remote/v1/browser/logout"
 _BACKUP_RUN_PATH = "/api/remote/v1/operations/backup-runs"
+_WORKSPACE_MEMBERS_PATH = "/api/remote/v1/workspace/members"
 
 # Every mutating Remote v1 route is classified here. Operational/session
 # controls do not mutate authoritative life.txt data and therefore must not
-# enter the Web revision migration contract. Authoritative ticket mutations
-# keep their own exact If-Match/CAS contract in remote_ticket_writes.py.
+# enter the Web revision migration contract. Workspace membership writes use
+# configuration CAS; ticket/item mutations keep exact If-Match/CAS contracts.
 REMOTE_MUTATING_ROUTE_REVISION_CLASSIFICATION = {
     _LOGIN_PATH: "operational",
     _LOGOUT_PATH: "operational",
     "/api/remote/v1/write-check": "operational",
     _BACKUP_RUN_PATH: "operational",
+    _WORKSPACE_MEMBERS_PATH: "config-cas",
     "/api/remote/v1/ticket-mutations": "authoritative",
     "/api/remote/v1/item-mutations": "authoritative",
 }
 _REMOTE_NON_REVISION_WRITE_PATHS = frozenset(
     path
     for path, classification in REMOTE_MUTATING_ROUTE_REVISION_CLASSIFICATION.items()
-    if classification == "operational"
+    if classification in ("operational", "config-cas")
 )
 _REMOTE_PREFIX = "/api/remote/v1/"
 
@@ -113,28 +117,43 @@ def _require_v2(request):
 
 
 def _remote_page(nonce):
-    # The token exists only in the password input until the login request is
-    # complete. It is never placed in localStorage/sessionStorage/cookies.
-    return """<!doctype html>
+    # The token exists only in the password input until login completes.
+    template = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>lifetxt Remote Safe Mode</title>
-<style nonce="%s">
-body{font-family:system-ui,sans-serif;max-width:980px;margin:3rem auto;padding:0 1rem;color:#202124}fieldset{border:1px solid #bbb;border-radius:.5rem;padding:1rem}input,button{font:inherit;padding:.55rem}.row{display:flex;gap:.5rem;flex-wrap:wrap}pre{white-space:pre-wrap;background:#f5f5f5;padding:1rem;border-radius:.5rem;min-height:8rem}.muted{color:#666}.hidden{display:none}.operation{margin:1rem 0;padding:1rem;border:1px solid #bbb;border-radius:.5rem}.operation button{min-height:44px}@media(max-width:480px){body{margin:1rem auto}.row button{width:100%%}}</style></head>
-<body><h1>lifetxt Remote Safe Mode</h1><p class="muted">Authenticated Remote session. Tokens are exchanged once and are not stored by this page.</p>
-<fieldset id="login"><legend>Sign in</legend><div class="row"><input id="token" type="password" autocomplete="current-password" placeholder="Bearer token"><button id="sign-in">Sign in</button></div></fieldset>
-<div id="session" class="hidden"><div class="row"><button id="refresh">Refresh snapshot</button><button id="logout">Sign out</button></div><p id="identity"></p><section id="backup-operation" class="operation hidden" aria-labelledby="backup-title"><h2 id="backup-title">Backup</h2><p>A run may create a local backup, upload it off-host, and prune backups according to configured retention.</p><button id="run-backup">Run backup now</button><p id="backup-status" role="status" aria-live="polite"></p></section><pre id="output"></pre></div>
-<script nonce="%s">
-(()=>{let csrf=null,poll=null,operationKey=null;const version={'X-Lifetxt-Remote-Version':'2'};const $=id=>document.getElementById(id);
+<style nonce="__NONCE__">
+body{font-family:system-ui,sans-serif;max-width:980px;margin:3rem auto;padding:0 1rem;color:#202124}fieldset{border:1px solid #bbb;border-radius:.5rem;padding:1rem}input,button,select{font:inherit;padding:.55rem;max-width:100%}.row{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}.hidden{display:none}.muted{color:#555}.operation,.panel{margin:1rem 0;padding:1rem;border:1px solid #bbb;border-radius:.5rem}.operation button,.panel button,.panel select{min-height:44px}.member-list{display:grid;gap:.65rem}.member-card{display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;border:1px solid #ccc;border-radius:.4rem;padding:.75rem;min-width:0}.member-identity{min-width:0;overflow-wrap:anywhere}.member-controls{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}.member-controls button,.member-controls select{min-height:44px}form{display:flex;gap:.5rem;align-items:end;flex-wrap:wrap}label{display:grid;gap:.25rem}input,select{min-width:0}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f5f5f5;padding:1rem;border-radius:.5rem;min-height:8rem}.activity-list{padding-inline-start:1.5rem}.activity-list li{overflow-wrap:anywhere;margin:.3rem 0}:focus-visible{outline:3px solid #175cd3;outline-offset:2px}@media(max-width:560px){body{margin:1rem auto}.row button,form button{width:100%}.member-card{align-items:stretch}.member-controls{width:100%}.member-controls select,.member-controls button{flex:1}}
+</style></head><body>
+<h1>lifetxt Remote Safe Mode</h1><p class="muted" id="intro">Authenticated Remote session. Tokens are exchanged once and are not stored by this page.</p>
+<fieldset id="login"><legend id="login-title">Sign in</legend><div class="row"><label><span id="token-label">Bearer token</span><input id="token" type="password" autocomplete="current-password"></label><button id="sign-in" type="button">Sign in</button></div></fieldset>
+<div id="access-denied" class="panel hidden" role="alert"><p id="access-denied-message"></p><button id="denied-sign-out" type="button">Sign out</button></div>
+<main id="session" class="hidden"><div class="row"><button id="refresh" type="button">Refresh snapshot</button><button id="logout" type="button">Sign out</button></div><p id="identity" role="status" aria-live="polite"></p>
+<section id="members-section" class="panel hidden" aria-labelledby="members-title"><div class="row"><h2 id="members-title">Workspace members</h2><button id="members-refresh" type="button">Refresh member list</button></div><p id="member-status" role="status" aria-live="polite"></p><form id="member-add-form"><label><span id="principal-label">Principal ID</span><input id="new-principal" required autocomplete="off"></label><label><span id="role-label">Role</span><select id="new-role"><option value="owner">Owner</option><option value="editor">Editor</option><option value="viewer">Viewer</option></select></label><button id="member-add" type="submit">Add member</button></form><div id="member-list" class="member-list" aria-live="polite"></div></section>
+<section id="activity-section" class="panel hidden" aria-labelledby="activity-title"><h2 id="activity-title">Recent activity</h2><p id="activity-note" class="muted">Authenticated Native History actor IDs are shown when available.</p><ol id="activity-list" class="activity-list"></ol></section>
+<section id="backup-operation" class="operation hidden" aria-labelledby="backup-title"><h2 id="backup-title">Backup</h2><p id="backup-description">A run may create a local backup, upload it off-host, and prune backups according to configured retention.</p><button id="run-backup" type="button">Run backup now</button><p id="backup-status" role="status" aria-live="polite"></p></section><pre id="output"></pre></main>
+<script nonce="__NONCE__">
+(()=>{let csrf=null,poll=null,operationKey=null,workspaceName=null,configRevision=null,locale=(navigator.language||'').toLowerCase().startsWith('ja')?'ja':'en';const version={'X-Lifetxt-Remote-Version':'2'};const $=id=>document.getElementById(id);
+const strings={en:{intro:'Authenticated Remote session. Tokens are exchanged once and are not stored by this page.',signIn:'Sign in',token:'Bearer token',workspace:'Workspace',signedIn:'Signed in',role:'Role',owner:'Owner',editor:'Editor',viewer:'Viewer',readOnly:'Read-only access',members:'Workspace members',principal:'Principal ID',add:'Add member',remove:'Remove',refresh:'Refresh snapshot',signOut:'Sign out',noMembers:'No members are configured.',loadMembers:'Refresh member list',accessDenied:'Access denied to the selected workspace.',memberDenied:'You do not have permission to manage workspace members.',stale:'Membership changed elsewhere. The list was refreshed; review it before making another change.',lastOwner:'The last active owner cannot be removed or demoted.',unknown:'That principal is not configured on the server.',insufficient:'This action is not permitted.',confirmRemove:'Remove this workspace member?',confirmOwner:'Change or remove this owner? The server will reject this if it would leave no active owner.',added:'Member added.',changed:'Member role changed.',removed:'Member removed.',activity:'Recent activity',activityNote:'Authenticated Native History actor IDs are shown when available.',actorUnknown:'Unknown actor',noActivity:'No native history actor events are available.',disabled:'Disabled',backup:'Backup',backupRun:'Run backup now'},ja:{intro:'認証済みのRemote sessionです。tokenはサインイン時に一度だけ送信され、このページには保存されません。',signIn:'サインイン',token:'Bearer token',workspace:'ワークスペース',signedIn:'ログイン中',role:'ロール',owner:'Owner（管理者）',editor:'Editor（編集者）',viewer:'Viewer（閲覧者）',readOnly:'閲覧のみ',members:'ワークスペースメンバー',principal:'Principal ID',add:'メンバーを追加',remove:'削除',refresh:'snapshotを更新',signOut:'サインアウト',noMembers:'メンバーが設定されていません。',loadMembers:'メンバー一覧を更新',accessDenied:'選択中のワークスペースへのアクセスが拒否されました。',memberDenied:'メンバー管理の権限がありません。',stale:'別の変更が先に反映されました。一覧を更新しました。内容を確認してから再操作してください。',lastOwner:'最後の有効なOwnerは削除・降格できません。',unknown:'このPrincipal IDはサーバーに設定されていません。',insufficient:'この操作は許可されていません。',confirmRemove:'このワークスペースメンバーを削除しますか？',confirmOwner:'Ownerを変更または削除しますか？有効なOwnerがいなくなる操作はサーバーが拒否します。',added:'メンバーを追加しました。',changed:'メンバーのロールを変更しました。',removed:'メンバーを削除しました。',activity:'最近の操作',activityNote:'Native Historyに認証済みactor IDがある場合に表示します。',actorUnknown:'不明なactor',noActivity:'Native Historyのactorイベントはありません。',disabled:'無効',backup:'バックアップ',backupRun:'今すぐバックアップ'}};const t=key=>strings[locale][key]||strings.en[key]||key;
 async function json(url,opt={}){opt.headers=Object.assign({'Accept':'application/json'},version,opt.headers||{});const r=await fetch(url,opt);const v=await r.json().catch(()=>({error:'INVALID_RESPONSE'}));if(!r.ok)throw new Error(v.error+': '+(v.message||r.status));return v}
+function setRoleLine(collab,principal){if(!collab){$('identity').textContent=principal.id+' ('+principal.role+')';return}const role=t(collab.role);$('identity').textContent=t('workspace')+': '+collab.workspace_name+' · '+t('signedIn')+': '+(principal.display_name||principal.id)+' · '+t('role')+': '+role+(collab.permissions.write?'':' · '+t('readOnly'));}
+function renderActivity(snapshot){const section=$('activity-section'),list=$('activity-list');list.replaceChildren();const rows=(snapshot.items||[]).filter(item=>(item.details&&item.details.record||[]).includes('item_event'));section.classList.toggle('hidden',!rows.length);rows.sort((a,b)=>String((a.details.at||[])[0]||'').localeCompare(String((b.details.at||[])[0]||''))).slice(-30).reverse().forEach(item=>{const d=item.details||{},li=document.createElement('li');const at=(d.at||[])[0]||'',actor=(d.actor||[])[0]||t('actorUnknown'),event=(d.event||[])[0]||'event',parent=(d.parent||[])[0]||'';li.textContent=[at,actor,event,parent].filter(Boolean).join(' · ');list.appendChild(li)});if(!rows.length){const li=document.createElement('li');li.textContent=t('noActivity');list.appendChild(li);section.classList.remove('hidden')}}
+function errorText(error){const value=String(error);if(value.includes('WORKSPACE_CONFIG_REVISION_CONFLICT'))return t('stale');if(value.includes('WORKSPACE_LAST_OWNER_REQUIRED'))return t('lastOwner');if(value.includes('WORKSPACE_PRINCIPAL_UNKNOWN'))return t('unknown');if(value.includes('WORKSPACE_PERMISSION_DENIED')||value.includes('FORBIDDEN'))return t('insufficient');if(value.includes('WORKSPACE_ACCESS_DENIED')||value.includes('WORKSPACE_NOT_AVAILABLE'))return t('accessDenied');return t('insufficient')}
+function renderMembers(rows){const list=$('member-list');list.replaceChildren();if(!rows.length){const empty=document.createElement('p');empty.textContent=t('noMembers');list.appendChild(empty);return}rows.forEach(member=>{const card=document.createElement('article');card.className='member-card';const identity=document.createElement('div');identity.className='member-identity';const label=document.createElement('strong');label.textContent=member.display_name||member.principal_id;const id=document.createElement('div');id.textContent=member.principal_id;const state=document.createElement('div');state.textContent=member.disabled?' · '+t('disabled'):'';identity.append(label,id,state);const controls=document.createElement('div');controls.className='member-controls';const select=document.createElement('select');select.setAttribute('aria-label',t('role')+' · '+member.display_name);['owner','editor','viewer'].forEach(role=>{const option=document.createElement('option');option.value=role;option.textContent=t(role);select.appendChild(option)});select.value=member.role;select.onchange=()=>changeMember('role',member,select.value);const remove=document.createElement('button');remove.type='button';remove.textContent=t('remove');remove.onclick=()=>changeMember('remove',member);controls.append(select,remove);card.append(identity,controls);list.appendChild(card)})}
+async function loadMembers(){if(!workspaceName)return;const value=await json('/api/remote/v1/workspace/members?workspace='+encodeURIComponent(workspaceName));configRevision=value.config_revision;renderMembers(value.members||[])}
+async function changeMember(operation,member,role){if(!configRevision){$('member-status').textContent=t('insufficient');return}if(operation==='remove'&&!confirm(t('confirmRemove')))return;if(operation==='role'&&member.role==='owner'&&role!=='owner'&&!confirm(t('confirmOwner')))return;$('member-status').textContent='…';const body={workspace:workspaceName,operation,principal_id:member.principal_id,expected_config_revision:configRevision};if(role)body.role=role;try{await json('/api/remote/v1/workspace/members',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf,'Origin':location.origin},body:JSON.stringify(body)});$('member-status').textContent=t(operation==='add'?'added':operation==='remove'?'removed':'changed');await load()}catch(error){$('member-status').textContent=errorText(error);if(String(error).includes('WORKSPACE_CONFIG_REVISION_CONFLICT'))await loadMembers().catch(()=>{});if(String(error).includes('WORKSPACE_ACCESS_DENIED')){$('identity').textContent=t('accessDenied');$('members-section').classList.add('hidden');$('activity-section').classList.add('hidden');$('output').textContent=''}}}
+async function addMember(event){event.preventDefault();const id=$('new-principal').value.trim(),role=$('new-role').value;if(!id)return;await changeMember('add',{principal_id:id,role:'',display_name:id},role);if($('member-status').textContent===t('added'))$('new-principal').value=''}
 function renderOperation(v){$('backup-status').textContent='Status: '+v.status+'; local: '+v.local.status+'; remote: '+v.remote.status;if(v.status==='admitted'||v.status==='running'){poll=setTimeout(()=>json(v.status_url).then(renderOperation).catch(showBackupError),1000)}else{const wait=Math.max(0,Number(v.cooldown_seconds)||0);$('backup-status').textContent+='; next run available after '+wait+' seconds';setTimeout(()=>{operationKey=null;$('run-backup').disabled=false;$('backup-status').textContent='Ready'},wait*1000)}}
-function showBackupError(e){$('backup-status').textContent=String(e);$('run-backup').disabled=false}
-async function load(){const [v,s,c]=await Promise.all([json('/api/remote/v1/snapshot'),json('/api/remote/v1/session'),json('/api/remote/v1/capabilities')]);$('identity').textContent=s.principal.id+' ('+s.principal.role+')';$('output').textContent=JSON.stringify(v,null,2);const op=c.operations&&c.operations.backup_run;const allowed=s.principal.scopes.includes('backup:run')&&op&&op.available;$('backup-operation').classList.toggle('hidden',!allowed);$('login').classList.add('hidden');$('session').classList.remove('hidden')}
-async function resume(){try{const s=await json('/api/remote/v1/browser/session');csrf=s.csrf_token;$('identity').textContent=s.principal.id+' ('+s.principal.role+')';await load()}catch(_){}}
-$('sign-in').onclick=async()=>{try{const token=$('token').value;const s=await json('/api/remote/v1/browser/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token})});$('token').value='';csrf=s.csrf_token;$('identity').textContent=s.principal.id+' ('+s.principal.role+')';await load()}catch(e){$('output').textContent=String(e)}};
-$('refresh').onclick=()=>load().catch(e=>$('output').textContent=String(e));
-$('run-backup').onclick=async()=>{if(!operationKey&&!confirm('Run the configured backup now? This may create locally, upload off-host, and prune according to retention.'))return;$('run-backup').disabled=true;$('backup-status').textContent='Submitting…';operationKey=operationKey||(crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random());try{const v=await json('/api/remote/v1/operations/backup-runs',{method:'POST',headers:{'X-CSRF-Token':csrf,'Idempotency-Key':operationKey,'Origin':location.origin}});renderOperation(v)}catch(e){showBackupError(e)}};
-$('logout').onclick=async()=>{try{await json('/api/remote/v1/browser/logout',{method:'POST',headers:{'X-CSRF-Token':csrf,'Origin':location.origin}})}finally{if(poll)clearTimeout(poll);csrf=null;operationKey=null;$('backup-operation').classList.add('hidden');$('session').classList.add('hidden');$('login').classList.remove('hidden');$('output').textContent=''}};
-resume();})();</script></body></html>""" % (html.escape(nonce), html.escape(nonce))
+function showBackupError(error){$('backup-status').textContent=errorText(error);$('run-backup').disabled=false}
+async function load(){const [snapshot,session,capabilities]=await Promise.all([json('/api/remote/v1/snapshot'),json('/api/remote/v1/session'),json('/api/remote/v1/capabilities')]);const collab=snapshot.workspace&&snapshot.workspace.collaboration;setRoleLine(collab,session.principal);workspaceName=collab&&collab.workspace_name;$('output').textContent=JSON.stringify(snapshot,null,2);renderActivity(snapshot);const admin=capabilities.workspace_membership_admin&&capabilities.workspace_membership_admin.available;$('members-section').classList.toggle('hidden',!admin);if(admin)await loadMembers();const op=capabilities.operations&&capabilities.operations.backup_run;const allowed=session.principal.scopes.includes('backup:run')&&op&&op.available;$('backup-operation').classList.toggle('hidden',!allowed);$('login').classList.add('hidden');$('access-denied').classList.add('hidden');$('session').classList.remove('hidden')}
+async function signOut(){try{await json('/api/remote/v1/browser/logout',{method:'POST',headers:{'X-CSRF-Token':csrf,'Origin':location.origin}})}finally{if(poll)clearTimeout(poll);csrf=null;operationKey=null;workspaceName=null;configRevision=null;$('members-section').classList.add('hidden');$('activity-section').classList.add('hidden');$('backup-operation').classList.add('hidden');$('session').classList.add('hidden');$('access-denied').classList.add('hidden');$('login').classList.remove('hidden');$('output').textContent=''}}
+async function resume(){try{const session=await json('/api/remote/v1/browser/session');csrf=session.csrf_token;await load()}catch(error){if(String(error).includes('WORKSPACE_ACCESS_DENIED')||String(error).includes('WORKSPACE_NOT_AVAILABLE')){$('login').classList.add('hidden');$('access-denied-message').textContent=t('accessDenied');$('denied-sign-out').textContent=t('signOut');$('access-denied').classList.remove('hidden')}}}
+$('sign-in').onclick=async()=>{try{const token=$('token').value;const session=await json('/api/remote/v1/browser/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token})});$('token').value='';csrf=session.csrf_token;await load()}catch(error){$('output').textContent=errorText(error);if(String(error).includes('WORKSPACE_ACCESS_DENIED')||String(error).includes('WORKSPACE_NOT_AVAILABLE')){$('login').classList.add('hidden');$('access-denied-message').textContent=t('accessDenied');$('denied-sign-out').textContent=t('signOut');$('access-denied').classList.remove('hidden')}}};
+$('refresh').onclick=()=>load().catch(error=>{$('output').textContent=errorText(error);if(String(error).includes('WORKSPACE_ACCESS_DENIED')){$('identity').textContent=t('accessDenied');$('members-section').classList.add('hidden');$('activity-section').classList.add('hidden')}});$('members-refresh').onclick=()=>loadMembers().catch(error=>$('member-status').textContent=errorText(error));$('member-add-form').onsubmit=addMember;
+$('run-backup').onclick=async()=>{if(!operationKey&&!confirm('Run the configured backup now? This may create locally, upload off-host, and prune according to retention.'))return;$('run-backup').disabled=true;$('backup-status').textContent='Submitting…';operationKey=operationKey||(crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random());try{const value=await json('/api/remote/v1/operations/backup-runs',{method:'POST',headers:{'X-CSRF-Token':csrf,'Idempotency-Key':operationKey,'Origin':location.origin}});renderOperation(value)}catch(error){showBackupError(error)}};
+$('logout').onclick=signOut;$('denied-sign-out').onclick=signOut;
+document.documentElement.lang=locale==='ja'?'ja':'en';$('intro').textContent=t('intro');$('login-title').textContent=t('signIn');$('token-label').textContent=t('token');$('sign-in').textContent=t('signIn');$('refresh').textContent=t('refresh');$('logout').textContent=t('signOut');$('denied-sign-out').textContent=t('signOut');$('members-title').textContent=t('members');$('members-refresh').textContent=t('loadMembers');$('principal-label').textContent=t('principal');$('role-label').textContent=t('role');$('member-add').textContent=t('add');$('activity-title').textContent=t('activity');$('activity-note').textContent=t('activityNote');$('backup-title').textContent=t('backup');$('run-backup').textContent=t('backupRun');Array.from($('new-role').options).forEach(option=>option.textContent=t(option.value));
+resume();})();</script></body></html>"""
+    return template.replace("__NONCE__", html.escape(nonce))
 
 
 def install_remote_web():
@@ -274,6 +293,49 @@ def install_remote_web():
                     request.state.remote_auth_method = auth_method
                     request.state.remote_session = session
 
+                    # Workspace membership is checked on every workspace API
+                    # request so a stale snapshot cannot preserve authority.
+                    if path.startswith(_REMOTE_PREFIX) and path not in (
+                        _LOGIN_PATH,
+                        _LOGOUT_PATH,
+                        _BROWSER_SESSION_PATH,
+                        _BACKUP_RUN_PATH,
+                    ):
+                        from .collaboration import (
+                            require_workspace_permission,
+                            selected_workspace_name,
+                        )
+
+                        configured_workspace = selected_workspace_name(app.state.config)
+                        requested_workspace = request.query_params.get("workspace")
+                        if (
+                            requested_workspace
+                            and requested_workspace != configured_workspace
+                        ):
+                            raise RemoteAccessError(
+                                "WORKSPACE_NOT_AVAILABLE",
+                                "The selected workspace is unavailable.",
+                                404,
+                            )
+                        membership_operation = None
+                        if request.method.upper() in ("GET", "HEAD"):
+                            membership_operation = "read"
+                        elif path in (
+                            "/api/remote/v1/item-mutations",
+                            "/api/remote/v1/ticket-mutations",
+                            "/api/remote/v1/write-check",
+                        ):
+                            membership_operation = "write"
+                        if membership_operation:
+                            request.state.workspace_membership = (
+                                require_workspace_permission(
+                                    app.state.config,
+                                    principal,
+                                    membership_operation,
+                                    configured_workspace,
+                                )
+                            )
+
                     if (
                         not app.state.read_only
                         and remote_clock_required(app.state.config)
@@ -315,6 +377,13 @@ def install_remote_web():
                     app.state.config, negotiated
                 ).items():
                     response.headers[key] = value
+                capability_revision_value = getattr(
+                    request.state, "remote_capability_revision", None
+                )
+                if path == "/api/remote/v1/capabilities" and capability_revision_value:
+                    response.headers[REMOTE_CAPABILITY_REVISION_HEADER] = (
+                        capability_revision_value
+                    )
                 response.headers["X-Request-ID"] = rid
                 audit_principal = getattr(request.state, "remote_principal", principal)
                 _audit_safely(
@@ -385,7 +454,155 @@ def install_remote_web():
         @app.get("/api/remote/v1/capabilities")
         def remote_capabilities(request: Request):
             require_scope(principal(request), "read")
-            return capability(app.state.config, request.state.remote_protocol)
+            value = capability(app.state.config, request.state.remote_protocol)
+            membership = getattr(request.state, "workspace_membership", None)
+            if (
+                membership
+                and membership["collaboration_enabled"]
+                and int(request.state.remote_protocol) >= 2
+            ):
+                member_admin_available = bool(
+                    membership["permissions"]["member_admin"]
+                    and app.state.config.get("_path")
+                    and os.path.isfile(app.state.config.get("_path"))
+                )
+                value["workspace_collaboration"] = {
+                    "enabled": True,
+                    "role": membership["role"],
+                    "permissions": membership["permissions"],
+                    "member_management_available": member_admin_available,
+                }
+                if member_admin_available:
+                    features = list(value.get("features") or [])
+                    if "workspace-membership-admin" not in features:
+                        features.append("workspace-membership-admin")
+                    value["features"] = features
+                    value["workspace_membership_admin"] = {
+                        "available": True,
+                        "route": _WORKSPACE_MEMBERS_PATH,
+                        "operations": ["list", "add", "role", "remove"],
+                        "config_revision_required": True,
+                    }
+                else:
+                    value["workspace_membership_admin"] = {"available": False}
+                capability_payload = OrderedDict(value)
+                capability_payload.pop("capability_revision", None)
+                value["capability_revision"] = hashlib.sha256(
+                    json.dumps(
+                        capability_payload, sort_keys=True, separators=(",", ":")
+                    ).encode("utf-8")
+                ).hexdigest()
+                request.state.remote_capability_revision = value["capability_revision"]
+            return value
+
+        @app.get(_WORKSPACE_MEMBERS_PATH)
+        def workspace_members(request: Request, workspace: str = Query(...)):
+            _require_v2(request)
+            from .collaboration import fresh_config_snapshot, member_listing
+
+            app.state.config, _revision = fresh_config_snapshot(app.state.config)
+            return member_listing(app.state.config, principal(request), str(workspace))
+
+        @app.post(_WORKSPACE_MEMBERS_PATH)
+        def workspace_member_mutation(request: Request, payload=Body(default={})):
+            _require_v2(request)
+            current = principal(request)
+            body = payload if isinstance(payload, dict) else {}
+            operation = str(body.get("operation") or "").strip().lower()
+            workspace_name = str(body.get("workspace") or "")[:128]
+            target_id = str(body.get("principal_id") or "")[:128]
+            target_role = body.get("role")
+            outcome = 403
+            before_revision = None
+            after_revision = None
+            expected_revision = body.get("expected_config_revision")
+            target_is_configured = target_id in principal_registry(app.state.config)
+            try:
+                allowed_fields = {
+                    "workspace",
+                    "operation",
+                    "principal_id",
+                    "role",
+                    "expected_config_revision",
+                }
+                if set(body) - allowed_fields:
+                    raise RemoteAccessError(
+                        "WORKSPACE_MEMBER_REQUEST_INVALID",
+                        "The membership request contains unsupported fields.",
+                        400,
+                    )
+                from .collaboration import (
+                    change_membership,
+                    fresh_config_snapshot,
+                    selected_workspace_name,
+                )
+
+                fresh_config, before_revision = fresh_config_snapshot(app.state.config)
+                target_is_configured = target_id in principal_registry(fresh_config)
+                configured_workspace = selected_workspace_name(app.state.config)
+                if workspace_name != configured_workspace:
+                    raise RemoteAccessError(
+                        "WORKSPACE_NOT_AVAILABLE",
+                        "The selected workspace is unavailable.",
+                        404,
+                    )
+                result, updated_config = change_membership(
+                    fresh_config,
+                    current,
+                    workspace_name,
+                    operation,
+                    target_id,
+                    target_role,
+                    expected_revision,
+                )
+                app.state.config = updated_config
+                after_revision = result["revision_after"]
+                outcome = 200
+                return result
+            except RemoteAccessError as exc:
+                outcome = exc.status
+                raise
+            finally:
+                action = (
+                    "member.%s" % operation
+                    if operation in ("add", "role", "remove")
+                    else "member.invalid"
+                )
+                _audit_safely(
+                    app.state.config,
+                    audit_event(
+                        current,
+                        action,
+                        outcome,
+                        request.state.remote_request_id,
+                        request.client.host if request.client else None,
+                        {
+                            "workspace_id": __import__("hashlib")
+                            .sha256(
+                                (
+                                    "lifetxt-collaboration-workspace-v1\0"
+                                    + workspace_name
+                                ).encode("utf-8")
+                            )
+                            .hexdigest(),
+                            "target_principal": target_id
+                            if target_is_configured
+                            else None,
+                            "target_role": target_role
+                            if target_role in ("owner", "editor", "viewer")
+                            else None,
+                            "expected_config_revision": expected_revision
+                            if isinstance(expected_revision, str)
+                            and len(expected_revision) == 64
+                            and all(
+                                char in "0123456789abcdef" for char in expected_revision
+                            )
+                            else None,
+                            "before_config_revision": before_revision,
+                            "result_config_revision": after_revision,
+                        },
+                    ),
+                )
 
         @app.get("/api/remote/v1/session")
         def remote_session(request: Request):

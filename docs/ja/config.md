@@ -82,6 +82,37 @@ $ lifetxt workspace files --resolved
 $ lifetxt workspace validate --all
 ```
 
+### コラボレーションメンバーシップ
+
+Remoteコラボレーションのメンバーシップは名前付きワークスペースごとに
+設定し、`remote.principals` に既に存在するIDを参照します。これは通常の
+レコード項目である `person:`、`assignee:`、`owner:` とは別の設定です。
+
+```json
+{
+  "remote": {"principals": [{"id": "alice", "role": "reader", "scopes": ["read", "write", "admin"]}]},
+  "workspaces": {
+    "team": {
+      "sources": ["team.life.txt"],
+      "write_file": "team.life.txt",
+      "collaboration": {"members": {"alice": {"role": "owner"}}}
+    }
+  }
+}
+```
+
+ワークスペースロールは `owner`、`editor`、`viewer` の3種類です。
+コラボレーションを有効にする各ワークスペースには、少なくとも1人の
+有効なownerが必要です。`owner`は通常のワークスペース読み書きができ、
+principalが既存のRemote `admin` scopeも持つ場合にメンバーを管理できます。
+バックアップ、復旧、サーバーセキュリティの権限は付与しません。
+ワークスペース権限はprincipalのRemote scopeと既存のitem/source policyの
+両方に制限されます。`collaboration` のないワークスペースは、従来の
+single-user/Remote動作を維持します。
+`config check` はメンバー設定の不正形式（`C020`）、未知のRemote principal
+（`C021`）、不正なrole（`C022`）、有効なownerがいない状態（`C023`）をerror
+として報告します。
+
 ## ソースマニフェストの項目
 
 `sources` の各要素はパス文字列、またはオブジェクトです。オブジェクト形式は次を

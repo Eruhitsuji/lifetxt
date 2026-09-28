@@ -1,0 +1,62 @@
+schema_version: 1
+
+change:
+  id: multi-person-workspace-collaboration
+  title: Add per-workspace membership, guarded Remote admin, and role-aware Web UX
+  status: implemented
+  change_type: Security
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/983
+  related_pull_request: null
+  base_commit: f935aaeb42b3345930728f753b58f3cb571c020c
+  target_release: null
+
+scope:
+  in_scope:
+    - Add a reusable owner/editor/viewer resolver per named workspace, intersecting roles with existing Remote principal scopes.
+    - Validate collaboration membership references, roles, enabled principals, and the active-owner invariant.
+    - Re-check workspace read and ordinary write authority on each Remote request and expose only the current principal's bounded role/capability.
+    - Add guarded member list/add/change-role/remove Remote protocol-v2 operations and CLI commands using atomic config CAS.
+    - Add an authenticated role/member/activity surface to the Remote Web page with responsive EN/JA text and stale-conflict handling.
+    - Preserve Native History actor evidence from authenticated principal context.
+    - Update EN/JA docs, tests, capability registry, traceability, and this change package.
+  out_of_scope:
+    - Invitations, account or credential creation, OAuth/OIDC, organization hierarchy, project/item ACL, and global server/recovery administration.
+    - Realtime presence/editor, WebSocket/SSE collaboration, CRDT/OT, offline queues, and conflict auto-merge.
+    - Format grammar or ordinary life.txt membership metadata.
+    - Editing .ai/managed/**.
+  write_scope:
+    - lifetxt/collaboration.py
+    - lifetxt/config_validation.py
+    - lifetxt/remote_access.py
+    - lifetxt/remote_backend.py
+    - lifetxt/remote_web.py
+    - lifetxt/remote_client.py
+    - tests/test_collaboration.py
+    - tests/test_remote_workspace_snapshot.py
+    - tests/test_remote_item_writes.py
+    - tests/test_remote_collaboration_admin.py
+    - tests/test_remote_client_v20.py
+    - tests/test_remote_web_v20.py
+    - docs/en/config.md
+    - docs/ja/config.md
+    - docs/en/remote.md
+    - docs/ja/remote.md
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+    - .ai/project/changes/multi-person-workspace-collaboration/**
+  forbidden_scope:
+    - .ai/managed/**
+    - Format grammar or plain life.txt membership/ACL fields.
+    - Credential, token, or password provisioning.
+  shared_files:
+    - lifetxt/remote_web.py
+    - lifetxt/collaboration.py
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+
+human_approvals_required:
+  - Independent authorization/security and integration review before merge.
+  - Merge Authority approval before merge into main.

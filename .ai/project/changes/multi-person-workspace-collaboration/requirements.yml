@@ -1,0 +1,74 @@
+schema_version: 1
+
+requirements:
+  - id: req-multi-person-workspace-membership
+    kind: ADDED
+    statement: >-
+      A shared resolver determines the current authenticated principal's role
+      and bounded effective permissions for one named workspace, intersecting
+      membership permissions with existing principal scopes and item/source
+      policy while keeping non-members denied.
+    acceptance_criteria:
+      - Only owner, editor, and viewer are supported workspace roles.
+      - Different roles for one principal across named workspaces remain isolated.
+      - Disabled/unknown principals, malformed roles, and ownerless collaboration configuration fail closed.
+      - No collaboration configuration preserves existing single-user/Remote behavior.
+      - Ordinary record person/assignee/owner fields never grant workspace access.
+    constraints:
+      - Reuse remote.principals as the authentication registry.
+      - Do not grant backup, recovery, or server-security authority through workspace owner.
+    owner: Eruhitsuji
+
+  - id: req-multi-person-workspace-remote-enforcement
+    kind: ADDED
+    statement: >-
+      Remote workspace reads and ordinary item mutations re-evaluate membership
+      for every request while preserving existing visibility, source, revision,
+      CAS, idempotency, and authenticated Native History actor safeguards.
+    acceptance_criteria:
+      - A non-member cannot read a collaboration-enabled workspace or distinguish other workspace content.
+      - Viewer writes and stale-role writes are rejected before mutation.
+      - Workspace role never bypasses existing principal scope or item/source policy.
+      - Snapshot/capability data is bounded to current principal and selected workspace and exposes no local paths or secrets.
+      - Actor evidence comes from the authenticated principal, ignores payload actor claims, and remains in history after membership removal.
+    constraints:
+      - Protocol-v1 shape and no-collaboration Remote behavior remain compatible.
+      - No silent retry or last-write-wins behavior is added.
+    owner: Eruhitsuji
+
+  - id: req-multi-person-workspace-membership-admin
+    kind: ADDED
+    statement: >-
+      A negotiated Remote protocol-v2 API and CLI let authorized workspace
+      owners manage only existing Remote principals through exact configuration
+      revision CAS and bounded audit evidence.
+    acceptance_criteria:
+      - Listing and mutation require workspace owner permission and existing Remote admin scope.
+      - Add, role change, and remove accept only known principal IDs and owner/editor/viewer roles.
+      - Every write requires an exact config revision and stale writes fail without changing the config.
+      - Last-active-owner removal/demotion and disabled sole-owner states are rejected.
+      - API responses and audit evidence exclude credentials, unrelated workspaces, local paths, and full config content.
+      - CLI commands call the Remote API and never edit local mirrors or remote configuration directly.
+    constraints:
+      - Existing local config editing remains the bootstrap/recovery authority.
+      - No invitation or credential provisioning is added.
+    owner: Eruhitsuji
+
+  - id: req-multi-person-workspace-web-ux
+    kind: ADDED
+    statement: >-
+      The authenticated Remote Web page presents the selected workspace,
+      principal, role, authorized member controls, and authenticated Native
+      History actor evidence without making client-side role checks authoritative.
+    acceptance_criteria:
+      - Owner/editor/viewer roles and read-only state are clear; non-members receive a bounded denial state.
+      - Eligible owners can list/add/change/remove members with confirmation for removal/owner demotion.
+      - Stale config conflicts refresh the roster and never automatically retry.
+      - Actor IDs are displayed from historical actor evidence with a stable-ID fallback.
+      - EN/JA copy, keyboard labels/focus, 44px controls, wrapping, and narrow viewport layout are provided.
+    constraints:
+      - Server authorization remains authoritative.
+      - No realtime presence, invitations, or offline collaboration is added.
+    owner: Eruhitsuji
+
+open_questions: []

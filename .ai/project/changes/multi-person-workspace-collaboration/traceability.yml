@@ -5,49 +5,49 @@ links:
     capability_id: cap-multi-person-workspace-collaboration
     epic: https://github.com/Eruhitsuji/lifetxt/issues/983
     task_issue: https://github.com/Eruhitsuji/lifetxt/issues/984
-    pull_request: null
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/988
     tests_or_evidence:
       - tests/test_collaboration.py
       - tests/test_remote_workspace_snapshot.py
       - docs/en/config.md
       - docs/ja/config.md
     release_or_deployment: null
-    status: proposed
+    status: implemented
   - requirement_id: req-multi-person-workspace-remote-enforcement
     capability_id: cap-multi-person-workspace-collaboration
     epic: https://github.com/Eruhitsuji/lifetxt/issues/983
     task_issue: https://github.com/Eruhitsuji/lifetxt/issues/985
-    pull_request: null
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/988
     tests_or_evidence:
       - tests/test_remote_workspace_snapshot.py
       - tests/test_remote_item_writes.py
       - docs/en/remote.md
       - docs/ja/remote.md
     release_or_deployment: null
-    status: proposed
+    status: implemented
   - requirement_id: req-multi-person-workspace-membership-admin
     capability_id: cap-multi-person-workspace-collaboration
     epic: https://github.com/Eruhitsuji/lifetxt/issues/983
     task_issue: https://github.com/Eruhitsuji/lifetxt/issues/986
-    pull_request: null
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/988
     tests_or_evidence:
       - tests/test_remote_collaboration_admin.py
       - tests/test_remote_client_v20.py
       - docs/en/remote.md
       - docs/ja/remote.md
     release_or_deployment: null
-    status: proposed
+    status: implemented
   - requirement_id: req-multi-person-workspace-web-ux
     capability_id: cap-multi-person-workspace-collaboration
     epic: https://github.com/Eruhitsuji/lifetxt/issues/983
     task_issue: https://github.com/Eruhitsuji/lifetxt/issues/987
-    pull_request: null
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/988
     tests_or_evidence:
       - tests/test_remote_web_v20.py
       - tests/test_remote_collaboration_admin.py
       - docs/en/remote.md
       - docs/ja/remote.md
     release_or_deployment: null
-    status: proposed
+    status: implemented
 
 gaps: []

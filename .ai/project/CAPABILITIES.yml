@@ -11,7 +11,7 @@ capabilities:
     public_interfaces: [workspace collaboration config, Remote protocol-v2 workspace member API, lifetxt remote member-list, lifetxt remote member-add, lifetxt remote member-role, lifetxt remote member-remove, Remote Web member and activity panel]
     tests_or_evidence: [tests.test_collaboration, tests.test_remote_workspace_snapshot, tests.test_remote_item_writes, tests.test_remote_collaboration_admin, tests.test_remote_client_v20, tests.test_remote_web_v20]
     related_issues: [https://github.com/Eruhitsuji/lifetxt/issues/983, https://github.com/Eruhitsuji/lifetxt/issues/984, https://github.com/Eruhitsuji/lifetxt/issues/985, https://github.com/Eruhitsuji/lifetxt/issues/986, https://github.com/Eruhitsuji/lifetxt/issues/987]
-    related_pull_requests: []
+    related_pull_requests: [https://github.com/Eruhitsuji/lifetxt/pull/988]
     reuse_policy: extend_existing_remote_principals_and_atomic_config_cas
     notes: >-
       Collaboration is opt-in per named workspace. Workspace roles only narrow

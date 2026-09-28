@@ -240,6 +240,31 @@ def diagnostics(profile):
     return request(profile, "GET", "/api/remote/v1/diagnostics")[0]
 
 
+def workspace_members(profile, workspace):
+    return request(
+        profile,
+        "GET",
+        "/api/remote/v1/workspace/members",
+        params={"workspace": str(workspace)},
+    )[0]
+
+
+def change_workspace_member(
+    profile, workspace, operation, principal_id, role=None, config_revision=None
+):
+    payload = {
+        "workspace": str(workspace),
+        "operation": str(operation),
+        "principal_id": str(principal_id),
+        "expected_config_revision": config_revision,
+    }
+    if role is not None:
+        payload["role"] = str(role)
+    return request(
+        profile, "POST", "/api/remote/v1/workspace/members", payload=payload
+    )[0]
+
+
 def test_connection(profile):
     capabilities, capability_headers = request(
         profile, "GET", "/api/remote/v1/capabilities"
@@ -364,6 +389,27 @@ def install_remote_client_cli():
         command.add_argument("path")
         command.add_argument("--profiles-file")
         command.set_defaults(func=_cmd_export)
+        command = remote_subs.add_parser("member-list")
+        command.add_argument("profile")
+        command.add_argument("--workspace", required=True)
+        command.add_argument("--profiles-file")
+        command.set_defaults(func=_cmd_member_list)
+        for command_name, operation in (
+            ("member-add", "add"),
+            ("member-role", "role"),
+            ("member-remove", "remove"),
+        ):
+            command = remote_subs.add_parser(command_name)
+            command.add_argument("profile")
+            command.add_argument("--workspace", required=True)
+            command.add_argument("--principal", required=True)
+            if operation in ("add", "role"):
+                command.add_argument(
+                    "--role", required=True, choices=("owner", "editor", "viewer")
+                )
+            command.add_argument("--config-revision", required=True)
+            command.add_argument("--profiles-file")
+            command.set_defaults(func=_cmd_member_change, operation=operation)
         return parser
 
     cli.build_parser = build_parser
@@ -431,3 +477,20 @@ def _cmd_export(args):
 def _cmd_tui(args):
     sys.stdout.write(render_tui(snapshot(_profile(args))))
     return 0
+
+
+def _cmd_member_list(args):
+    return _emit(workspace_members(_profile(args), args.workspace))
+
+
+def _cmd_member_change(args):
+    return _emit(
+        change_workspace_member(
+            _profile(args),
+            args.workspace,
+            args.operation,
+            args.principal,
+            getattr(args, "role", None),
+            args.config_revision,
+        )
+    )

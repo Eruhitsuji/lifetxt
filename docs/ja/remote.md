@@ -316,6 +316,43 @@ lifetxt remote profile-remove home
 
 clientはrequest ID、offset-aware client time、選択したprotocol versionを送信します。protocol 2でnegotiation headerを返さないserverや、要求と異なるversionを返すserverは拒否します。
 
+## ワークスペースコラボレーション認可
+
+選択中の名前付きワークスペースに `collaboration` がある場合、Remoteの
+各ワークスペースreadでmembershipを再確認します。protocol-v2 snapshotと
+capability responseには、認証済みprincipal自身のroleと、制限された有効権限
+だけを含めます。非メンバーは拒否され、他workspaceやlocal source pathは
+開示されません。通常のitem writeには、既存のRemote `write` scopeと
+workspaceの `owner`/`editor` 権限の両方が必要で、その後に既存の
+item/source policyとexact revisionを検証します。`viewer` はread-onlyです。
+`collaboration` がない場合は従来の動作を維持します。
+
+protocol v2では、workspace `owner` とprincipalの既存 `admin` scopeの両方を
+持つ場合にメンバー管理APIを利用できます。CLIの `member-list` で構成revisionを
+取得し、その値を変更コマンドにそのまま指定します。stale revisionはconflictと
+なり、自動再試行せず、再度一覧を取得して判断します。
+
+```console
+lifetxt remote member-list home --workspace team
+lifetxt remote member-add home --workspace team --principal bob --role editor --config-revision <revision>
+lifetxt remote member-role home --workspace team --principal bob --role viewer --config-revision <revision>
+lifetxt remote member-remove home --workspace team --principal bob --config-revision <revision>
+```
+
+追加できるのは設定済みprincipal IDだけです。APIはcredentialを受け取らず、
+最後の有効なownerの削除・降格を拒否します。メンバー変更はserver側で
+atomicな構成compare-and-setを行い、次のrequestから反映され、制限されたRemote
+audit evidenceが記録されます。
+
+認証済みの `/remote` pageには、選択中workspace、ログイン中principal、現在の
+roleを表示します。権限を持つownerはそこでメンバー一覧・変更を行えます。
+削除とowner降格の前に確認し、staleな構成revisionのconflict後は一覧を更新
+しますが、変更の自動再試行はしません。Recent activityにはNative Historyに
+actor IDがある場合に表示し、memberの改名・削除後も安定IDをfallbackとして
+残します。狭い画面に対応し、ブラウザー言語に応じて日本語または英語を表示
+します。招待、credential作成、presence、offline collaborationはこの初期
+範囲には含みません。
+
 ## Write境界
 
 admissionされるremote writeにはexactな`If-Match` revisionが必要です。revisionがなければ`REVISION_REQUIRED`、staleなら`REVISION_CONFLICT`になります。

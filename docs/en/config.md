@@ -119,6 +119,33 @@ $ lifetxt workspace files --resolved
 $ lifetxt workspace validate --all
 ```
 
+### Collaboration membership
+
+Remote collaboration membership is configured per named workspace and refers
+to IDs already present in `remote.principals`. It is separate from ordinary
+record fields such as `person:`, `assignee:`, and `owner:`:
+
+```json
+{
+  "remote": {"principals": [{"id": "alice", "role": "reader", "scopes": ["read", "write", "admin"]}]},
+  "workspaces": {
+    "team": {
+      "sources": ["team.life.txt"],
+      "write_file": "team.life.txt",
+      "collaboration": {"members": {"alice": {"role": "owner"}}}
+    }
+  }
+}
+```
+
+The supported workspace roles are `owner`, `editor`, and `viewer`. Every
+collaboration-enabled workspace needs at least one active owner. `owner`
+provides ordinary workspace read/write and, together with the principal's
+existing Remote `admin` scope, member administration. It does not grant backup,
+recovery, or server-security authority. Workspace permissions intersect the
+principal's Remote scopes and existing item/source policy. A workspace without
+`collaboration` retains the existing single-user/Remote behavior.
+
 Several *unconfigured* default file paths (currently the notification watch
 state file; see `lifetxt notify --watch` in
 [new-cli-workflows.md](new-cli-workflows.md)) insert the active workspace's
@@ -222,6 +249,10 @@ available. It reports one of these codes per problem:
 | `C006` | error | A workspace definition has no `sources`, or a source entry is malformed. |
 | `C007` | warning | A deprecated key is set (currently only `generated_paths`; see its replacement in `config explain generated_paths`). |
 | `C008` | error | The document fails `config-v1.schema.json` validation (only reported when `jsonschema` is installed). |
+| `C020` | error | A workspace collaboration block or member map is malformed. |
+| `C021` | error | A workspace member references an unknown `remote.principals` ID. |
+| `C022` | error | A workspace member role is not exactly `owner`, `editor`, or `viewer`. |
+| `C023` | error | A collaboration-enabled workspace has no active owner. |
 
 Any `error`-severity finding makes the file unwritable (`config set`/`unset`/
 `migrate` refuse to write it) until fixed; `warning`-severity findings do not

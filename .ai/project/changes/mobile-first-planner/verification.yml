@@ -1,0 +1,28 @@
+schema_version: 1
+verification:
+  planned:
+    - command: .venv/bin/python -m unittest tests.test_web_planner tests.test_web_installability tests.test_web_mobile_capture tests.test_web_assets tests.test_web_i18n
+    - command: MPLBACKEND=Agg .venv/bin/python -m unittest discover
+    - command: .venv/bin/ruff check lifetxt/webapp.py lifetxt/web_assets.py tests/test_web_planner.py
+    - command: .venv/bin/python scripts/validate_release_docs.py --output /tmp/lifetxt-release-docs-validation.json
+  gaps:
+    - Headless Chrome and physical iOS/Android hardware are not available in this environment.
+  results:
+    - command: .venv/bin/python -m unittest tests.test_web_planner tests.test_web_installability tests.test_web_mobile_capture tests.test_web_assets tests.test_web_i18n
+      result: passed
+      evidence: 61 tests passed.
+    - command: MPLBACKEND=Agg .venv/bin/python -m unittest discover
+      result: passed
+      evidence: 4915 tests passed; 47 skipped.
+    - command: .venv/bin/ruff check lifetxt/webapp.py lifetxt/web_assets.py tests/test_web_planner.py tests/test_web_planner_browser.py
+      result: passed
+      evidence: All checks passed.
+    - command: node --check lifetxt/web_planner.js && node --check tests/browser_planner_probe.mjs
+      result: passed
+      evidence: Both JavaScript files parse successfully.
+    - command: .venv/bin/python scripts/validate_release_docs.py --output /tmp/lifetxt-release-docs-validation.json
+      result: passed
+      evidence: {"errors": 0, "ok": true}
+    - command: .venv/bin/python -m lifetxt check examples/minimal_life.txt
+      result: passed
+      evidence: OK: 10 item(s)

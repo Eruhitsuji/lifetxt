@@ -48,6 +48,16 @@ iOS Safari/Android browser chrome, safe-area insets, software-keyboard resizing,
 and installed home-screen icon presentation remain platform-level residual
 risks to check on target devices.
 
+### Mobile Day Planner
+
+Open `/planner` for a separate day view. Previous/next controls select a day;
+`?date=YYYY-MM-DD` makes it bookmarkable and `?lang=ja` selects Japanese.
+The page shows the shared agenda, actionable Tasks, Habits, Notes, and the
+selected day's Journal. It writes through the existing capture and item APIs,
+so new records remain ordinary `life.txt` entries. A Planner-specific
+manifest makes `/planner` installable while the existing `/capture` shortcut
+continues to open Quick Capture. Both routes are online-only.
+
 Multiple files can be read at once. Paths may be glob patterns such as
 `projects/**/*.life.txt`, and directories are expanded to life.txt-like `.txt`
 files. Create, update, and delete operations use the first file unless
@@ -114,7 +124,7 @@ tools.
 | `PUT` | `/api/items/{line}` | Replace an item on a line in the writable file |
 | `DELETE` | `/api/items/{line}` | Delete an item line from the writable file |
 | `GET` | `/api/agenda` | Show agenda records for a datetime range |
-| `GET` | `/api/command-center` | The canonical Daily Command Center: current status, today's events, overdue/due-today/upcoming, blocked, waiting, next actions, habits, messages, captures, a bounded Unified Inbox summary, project/ticket attention, and a safety signal |
+| `GET` | `/api/command-center` | The canonical Daily Command Center; optional `date=YYYY-MM-DD` selects a reference day, otherwise the configured workspace today applies |
 | `GET` | `/api/saved-views` | List every configured saved view (`saved_views` config) |
 | `GET` | `/api/saved-views/{name}` | Run one saved view; same `count`/`items`/`query_diagnostics` shape as `GET /api/items` |
 | `GET` | `/api/areas` | List every `area:` grouping with task progress |

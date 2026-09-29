@@ -2,6 +2,76 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-planner-day-experience
+      capability_id: cap-web-mobile-planner
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/991
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/992
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/999
+      changed_files_or_scope: [lifetxt/webapp.py, lifetxt/web_assets.py, lifetxt/web_planner.html, lifetxt/web_planner.css, lifetxt/web_planner.js]
+      tests_or_evidence: [tests.test_web_planner, mobile responsive shell]
+      release_or_deployment: null
+      notes: Separate no-store Planner UI, selected-day navigation, and mobile day shell.
+      status: proposed
+    - requirement_id: req-planner-day-schedule
+      capability_id: cap-web-mobile-planner
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/991
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/993
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/999
+      changed_files_or_scope: [lifetxt/webapp.py, lifetxt/web_planner.js, tests/test_web_planner.py]
+      tests_or_evidence: [tests.test_web_planner selected-date shared command center]
+      release_or_deployment: null
+      notes: Shared agenda and command center; omitted date preserves prior workspace-today behavior.
+      status: proposed
+    - requirement_id: req-planner-day-actions
+      capability_id: cap-web-mobile-planner
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/991
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/994
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/999
+      changed_files_or_scope: [lifetxt/web_planner.js, tests/test_web_planner.py]
+      tests_or_evidence: [task completion date, habit completion preserves open status]
+      release_or_deployment: null
+      notes: Task and Habit mutations use existing item routes and Format 1.0 records.
+      status: proposed
+    - requirement_id: req-planner-quick-capture
+      capability_id: cap-web-mobile-planner
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/991
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/995
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/999
+      changed_files_or_scope: [lifetxt/web_planner.html, lifetxt/web_planner.js]
+      tests_or_evidence: [tests.test_web_mobile_capture, Planner capture uses existing endpoint]
+      release_or_deployment: null
+      notes: Quick Capture preserves shared parsing and authorization behavior.
+      status: proposed
+    - requirement_id: req-planner-notes-journal
+      capability_id: cap-web-mobile-planner
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/991
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/996
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/999
+      changed_files_or_scope: [lifetxt/web_planner.html, lifetxt/web_planner.js]
+      tests_or_evidence: [tests.test_web_planner journal create and update]
+      release_or_deployment: null
+      notes: Notes and Journals are ordinary item records; existing selected-day Journal is updated.
+      status: proposed
+    - requirement_id: req-planner-mobile-interoperability
+      capability_id: cap-web-mobile-planner
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/991
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/997
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/999
+      changed_files_or_scope: [lifetxt/web_planner.css, docs/en/web.md, docs/ja/web.md]
+      tests_or_evidence: [responsive CSS, accessibility controls, existing cross-surface API contract]
+      release_or_deployment: null
+      notes: Physical-device checks are not claimed by this implementation.
+      status: proposed
+    - requirement_id: req-planner-home-screen-entry
+      capability_id: cap-web-mobile-planner
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/991
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/998
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/999
+      changed_files_or_scope: [lifetxt/webapp.py, lifetxt/planner_app_manifest.json, tests/test_web_planner.py]
+      tests_or_evidence: [separate Planner manifest, existing capture manifest regression check]
+      release_or_deployment: null
+      notes: Planner start URL is separate and does not replace /capture.
+      status: proposed
     - requirement_id: req-priority-thread-overlay
       capability_id: cap-lifecycle-temporal-thread
       epic: https://github.com/Eruhitsuji/lifetxt/issues/699

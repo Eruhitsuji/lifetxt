@@ -17,9 +17,7 @@ PROBE = ROOT / "tests" / "browser_planner_probe.mjs"
 def browser_path():
     for candidate in (
         os.environ.get("LIFETXT_BROWSER_BIN"),
-        shutil.which("google-chrome"),
-        shutil.which("chromium"),
-        shutil.which("chromium-browser"),
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
     ):
         if candidate and os.path.isfile(candidate):
             return candidate
@@ -48,7 +46,7 @@ class PlannerBrowserTests(unittest.TestCase):
         matrix = json.loads(run.stdout)
         self.assertEqual([320, 360, 390, 430, 667, 390], [x["width"] for x in matrix])
         for item in matrix:
-            with self.subTest(item["width"], item["height"]):
+            with self.subTest(viewport=(item["width"], item["height"])):
                 self.assertLessEqual(item["scrollWidth"], item["width"])
                 self.assertGreaterEqual(item["dateHeight"], 44)
                 self.assertGreaterEqual(item["captureHeight"], 44)

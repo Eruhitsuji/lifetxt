@@ -7,6 +7,7 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from lifetxt.web_assets import PLANNER_HTML_PAGE
 
@@ -22,6 +23,16 @@ def browser_path():
         if candidate and os.path.isfile(candidate):
             return candidate
     return None
+
+
+class BrowserPathTests(unittest.TestCase):
+    def test_configured_browser_path_is_selected(self):
+        configured = "/tmp/planner-test-browser"
+        with (
+            patch.dict(os.environ, {"LIFETXT_BROWSER_BIN": configured}),
+            patch("tests.test_web_planner_browser.os.path.isfile", return_value=True),
+        ):
+            self.assertEqual(configured, browser_path())
 
 
 @unittest.skipUnless(shutil.which("node"), "Node.js unavailable")

@@ -13,7 +13,7 @@ from lifetxt.web_assets import PLANNER_HTML_PAGE
 
 
 @unittest.skipIf(TestClient is None, "FastAPI web extras unavailable")
-class PlannerTests(unittest.TestCase):
+class PlannerTests(unittest.TestCase):  # pragma: no cover -- covered in web-extras CI
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.path = os.path.join(self.temp.name, "life.txt")

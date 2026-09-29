@@ -86,6 +86,62 @@ class TemporalCliTests(unittest.TestCase):
                 ["next"], [r["id"] for r in data["relations"]["successors"]]
             )
 
+    def test_thread_priority_overlay_is_opt_in_additive_and_read_only(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            src = self._write_source(
+                temp_dir,
+                "[ ] T Previous id:previous importance:high due:2000-01-01\n"
+                "[ ] T Current id:current importance:high due:2099-01-01 "
+                "follows:previous\n",
+            )
+            with open(src, encoding="utf-8") as handle:
+                original = handle.read()
+
+            stdout, stderr, code = run_cli("thread", "current", src, "--json")
+            self.assertEqual(0, code, stderr)
+            default = json.loads(stdout)
+            self.assertTrue(
+                all(
+                    "priority_context" not in node
+                    for node in default["explicit"]["nodes"]
+                )
+            )
+
+            stdout, stderr, code = run_cli(
+                "thread", "current", src, "--priority", "--json"
+            )
+            self.assertEqual(0, code, stderr)
+            overlaid = json.loads(stdout)
+            annotations = {
+                node["id"]: node.get("priority_context")
+                for node in overlaid["explicit"]["nodes"]
+            }
+            self.assertEqual("Q1", annotations["previous"]["quadrant"])
+            self.assertEqual("Q2", annotations["current"]["quadrant"])
+            self.assertIsNotNone(annotations["current"]["next_at"])
+            self.assertEqual("Q1", annotations["current"]["next_quadrant"])
+
+            stdout, stderr, code = run_cli("thread", "current", src, "--priority")
+            self.assertEqual(0, code, stderr)
+            self.assertIn("Priority overlay (derived, read-only)", stdout)
+            with open(src, encoding="utf-8") as handle:
+                self.assertEqual(original, handle.read())
+
+    def test_thread_priority_overlay_rejects_historical_modes(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            src, before, after = self._historical_repo(temp_dir)
+            for args in (
+                ("--revision", before),
+                ("--as-of", "2026-01-01T09:00:00+09:00"),
+                ("--diff", "%s..%s" % (before, after)),
+            ):
+                with self.subTest(args=args):
+                    _stdout, stderr, code = run_cli(
+                        "thread", "target", src, "--priority", *args
+                    )
+                    self.assertNotEqual(0, code)
+                    self.assertIn("only available for current workspace", stderr)
+
     def test_thread_human_output_names_lifecycle_groups(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             src = self._write_source(temp_dir, THREAD_SAMPLE)

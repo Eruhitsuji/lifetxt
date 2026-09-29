@@ -81,7 +81,7 @@ from .web_read_service import limit_items as _service_limit_items
 from .web_read_service import read_life_inputs as _service_read_life_inputs
 from .web_read_service import sort_items as _service_sort_items
 from .web_read_service import sort_key_for_item as _service_sort_key_for_item
-from .web_assets import HTML_PAGE
+from .web_assets import HTML_PAGE, PLANNER_HTML_PAGE
 from .web_routes_analytics import register_analytics_routes
 from .web_routes_git import register_git_routes
 from . import __version__
@@ -321,12 +321,26 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             headers={"Cache-Control": "no-store"},
         )
 
+    @app.get("/planner", response_class=HTMLResponse)
+    def planner():
+        return HTMLResponse(content=PLANNER_HTML_PAGE, headers={"Cache-Control": "no-store"})
+
     @app.get("/manifest.webmanifest")
     def web_app_manifest():
         from .web_assets import web_resource_bytes
 
         return Response(
             content=web_resource_bytes("web_app_manifest.json"),
+            media_type="application/manifest+json",
+            headers={"Cache-Control": "no-store"},
+        )
+
+    @app.get("/planner.webmanifest")
+    def planner_web_app_manifest():
+        from .web_assets import web_resource_bytes
+
+        return Response(
+            content=web_resource_bytes("planner_app_manifest.json"),
             media_type="application/manifest+json",
             headers={"Cache-Control": "no-store"},
         )
@@ -1537,7 +1551,8 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
 
     @app.get("/api/command-center")
     def get_command_center_route(
-        horizon=None, person=None, mode="today", saved_view=None, area=None
+        horizon=None, person=None, mode="today", saved_view=None, area=None,
+        selected_date=Query(None, alias="date"),
     ):
         """The canonical Daily Command Center, unchanged from CLI/MCP.
 
@@ -1571,10 +1586,19 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
                 )
             except ValueError as exc:
                 raise HTTPException(status_code=400, detail=error_detail(exc))
+        reference_date = timezone_today()
+        if selected_date is not None and str(selected_date).strip():
+            try:
+                date_text = str(selected_date).strip()
+                reference_date = datetime.strptime(date_text, "%Y-%m-%d").date()
+                if reference_date.isoformat() != date_text:
+                    raise ValueError
+            except ValueError:
+                raise HTTPException(status_code=400, detail="date must use YYYY-MM-DD.")
         return command_center(
             items,
             app.state.config,
-            timezone_today(),
+            reference_date,
             horizon_days=horizon_days,
             person=person,
             mode=str(mode or "today"),

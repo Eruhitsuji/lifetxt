@@ -24,6 +24,8 @@ capabilities:
       - lifetxt/web_planner.js
       - lifetxt/planner_app_manifest.json
       - tests/test_web_planner.py
+      - tests/test_web_planner_browser.py
+      - tests/browser_planner_probe.mjs
       - docs/en/web.md
       - docs/ja/web.md
     public_interfaces:
@@ -46,7 +48,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/996
       - https://github.com/Eruhitsuji/lifetxt/issues/997
       - https://github.com/Eruhitsuji/lifetxt/issues/998
-    related_pull_requests: []
+    related_pull_requests: [https://github.com/Eruhitsuji/lifetxt/pull/999]
     reuse_policy: extend_existing_web_and_domain_apis
     notes: >-
       New Notes and Journals remain ordinary Format 1.0 records. The Planner

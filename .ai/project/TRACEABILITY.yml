@@ -6,7 +6,7 @@ traceability:
       capability_id: cap-web-mobile-planner
       epic: https://github.com/Eruhitsuji/lifetxt/issues/991
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/992
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/999
       changed_files_or_scope: [lifetxt/webapp.py, lifetxt/web_assets.py, lifetxt/web_planner.html, lifetxt/web_planner.css, lifetxt/web_planner.js]
       tests_or_evidence: [tests.test_web_planner, mobile responsive shell]
       release_or_deployment: null
@@ -16,7 +16,7 @@ traceability:
       capability_id: cap-web-mobile-planner
       epic: https://github.com/Eruhitsuji/lifetxt/issues/991
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/993
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/999
       changed_files_or_scope: [lifetxt/webapp.py, lifetxt/web_planner.js, tests/test_web_planner.py]
       tests_or_evidence: [tests.test_web_planner selected-date shared command center]
       release_or_deployment: null
@@ -26,7 +26,7 @@ traceability:
       capability_id: cap-web-mobile-planner
       epic: https://github.com/Eruhitsuji/lifetxt/issues/991
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/994
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/999
       changed_files_or_scope: [lifetxt/web_planner.js, tests/test_web_planner.py]
       tests_or_evidence: [task completion date, habit completion preserves open status]
       release_or_deployment: null
@@ -36,7 +36,7 @@ traceability:
       capability_id: cap-web-mobile-planner
       epic: https://github.com/Eruhitsuji/lifetxt/issues/991
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/995
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/999
       changed_files_or_scope: [lifetxt/web_planner.html, lifetxt/web_planner.js]
       tests_or_evidence: [tests.test_web_mobile_capture, Planner capture uses existing endpoint]
       release_or_deployment: null
@@ -46,7 +46,7 @@ traceability:
       capability_id: cap-web-mobile-planner
       epic: https://github.com/Eruhitsuji/lifetxt/issues/991
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/996
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/999
       changed_files_or_scope: [lifetxt/web_planner.html, lifetxt/web_planner.js]
       tests_or_evidence: [tests.test_web_planner journal create and update]
       release_or_deployment: null
@@ -56,7 +56,7 @@ traceability:
       capability_id: cap-web-mobile-planner
       epic: https://github.com/Eruhitsuji/lifetxt/issues/991
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/997
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/999
       changed_files_or_scope: [lifetxt/web_planner.css, docs/en/web.md, docs/ja/web.md]
       tests_or_evidence: [responsive CSS, accessibility controls, existing cross-surface API contract]
       release_or_deployment: null
@@ -66,7 +66,7 @@ traceability:
       capability_id: cap-web-mobile-planner
       epic: https://github.com/Eruhitsuji/lifetxt/issues/991
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/998
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/999
       changed_files_or_scope: [lifetxt/webapp.py, lifetxt/planner_app_manifest.json, tests/test_web_planner.py]
       tests_or_evidence: [separate Planner manifest, existing capture manifest regression check]
       release_or_deployment: null

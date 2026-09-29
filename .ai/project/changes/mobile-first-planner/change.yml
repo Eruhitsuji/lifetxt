@@ -2,7 +2,7 @@ schema_version: 1
 change:
   id: mobile-first-planner
   title: Mobile-first Planner Web UI
-  status: proposed
+  status: implemented
   assurance: standard
   issue: https://github.com/Eruhitsuji/lifetxt/issues/991
   tasks:

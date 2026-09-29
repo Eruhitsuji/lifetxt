@@ -11,7 +11,7 @@ window.fetch=async url=>new Response(JSON.stringify(String(url).includes('/api/c
 const server = http.createServer((req,res)=>{res.writeHead(200,{'Content-Type':'text/html'});res.end(html)});
 await new Promise(ok=>server.listen(0,'127.0.0.1',ok));
 const profile=await mkdtemp(path.join(os.tmpdir(),'planner-chrome-'));
-const proc=spawn(browser,['--headless=new','--disable-gpu','--no-sandbox','--no-first-run','--remote-debugging-port=0',`--user-data-dir=${profile}`,'about:blank'],{stdio:'ignore'});
+const proc=spawn(browser,['--headless=new','--disable-gpu','--no-sandbox','--no-first-run','--no-default-browser-check','--disable-dev-shm-usage','--remote-debugging-port=0',`--user-data-dir=${profile}`,'about:blank'],{stdio:'ignore'});
 const wait=ms=>new Promise(ok=>setTimeout(ok,ms));
 async function port(){for(let i=0;i<100;i++){try{return +(await readFile(path.join(profile,'DevToolsActivePort'),'utf8')).split('\n')[0]}catch{await wait(100)}}throw Error('DevTools unavailable')}
 let id=0;const pending=new Map();let ws;

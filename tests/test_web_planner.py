@@ -3,12 +3,16 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from fastapi.testclient import TestClient
+try:
+    from fastapi.testclient import TestClient
+except ImportError:
+    TestClient = None
 
 from lifetxt import webapp
 from lifetxt.web_assets import PLANNER_HTML_PAGE
 
 
+@unittest.skipIf(TestClient is None, "FastAPI web extras unavailable")
 class PlannerTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()

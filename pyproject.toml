@@ -58,6 +58,10 @@ lifetxt = [
   "web_assets_css_*.css",
   "web_assets_js_*.js",
   "web_app_manifest.json",
+  "planner_app_manifest.json",
+  "web_planner.html",
+  "web_planner.css",
+  "web_planner.js",
   "web_icon.svg",
   "web_icon_*.png",
 ]

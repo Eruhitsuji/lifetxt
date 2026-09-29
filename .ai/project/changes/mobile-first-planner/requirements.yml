@@ -1,0 +1,23 @@
+schema_version: 1
+requirements:
+  - id: req-planner-day-experience
+    statement: Provide an independent mobile-first Planner route with bookmarkable day selection.
+    acceptance: /planner is no-store; date selection and URL preserve selected day; existing routes remain available.
+  - id: req-planner-day-schedule
+    statement: Show selected-day agenda and command-center work using shared domain behavior.
+    acceptance: Events, reminders, deadlines, due tasks and next actions reflect selected date.
+  - id: req-planner-day-actions
+    statement: Show actionable Tasks and Habits and record their completion.
+    acceptance: Task completion records selected date; habit remains open with selected date appended to done.
+  - id: req-planner-quick-capture
+    statement: Provide Quick Capture using the established capture API.
+    acceptance: Capture uses existing endpoint and honors read-only state.
+  - id: req-planner-notes-journal
+    statement: Create and edit Notes and selected-day Journals.
+    acceptance: Records use standard item APIs and remain ordinary Format 1.0 items.
+  - id: req-planner-mobile-interoperability
+    statement: Make the page usable at mobile widths with accessible controls and English/Japanese text.
+    acceptance: Responsive layout, touch-sized controls, safe areas, and existing cross-surface records.
+  - id: req-planner-home-screen-entry
+    statement: Provide a Planner home-screen launch entry without changing Quick Capture.
+    acceptance: Separate standalone manifest and preserved /capture manifest.

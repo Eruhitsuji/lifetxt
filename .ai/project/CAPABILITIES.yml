@@ -1,6 +1,61 @@
 schema_version: 1
 
 capabilities:
+  - id: cap-web-mobile-planner
+    name: Mobile-first Planner Web UI
+    summary: >-
+      An independent, bookmarkable day view reusing shared agenda, command
+      center, capture, and item APIs for mobile and desktop Web clients.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-planner-day-experience
+      - req-planner-day-schedule
+      - req-planner-day-actions
+      - req-planner-quick-capture
+      - req-planner-notes-journal
+      - req-planner-mobile-interoperability
+      - req-planner-home-screen-entry
+    implementation_locations:
+      - lifetxt/webapp.py
+      - lifetxt/web_assets.py
+      - lifetxt/web_planner.html
+      - lifetxt/web_planner.css
+      - lifetxt/web_planner.js
+      - lifetxt/planner_app_manifest.json
+      - tests/test_web_planner.py
+      - docs/en/web.md
+      - docs/ja/web.md
+    public_interfaces:
+      - GET /planner
+      - GET /planner.webmanifest
+      - GET /api/command-center?date=YYYY-MM-DD (optional)
+      - Existing agenda, item, capture and mutation APIs
+    tests_or_evidence:
+      - tests.test_web_planner
+      - tests.test_web_installability
+      - tests.test_web_mobile_capture
+      - tests.test_web_assets
+      - tests.test_web_i18n
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/991
+      - https://github.com/Eruhitsuji/lifetxt/issues/992
+      - https://github.com/Eruhitsuji/lifetxt/issues/993
+      - https://github.com/Eruhitsuji/lifetxt/issues/994
+      - https://github.com/Eruhitsuji/lifetxt/issues/995
+      - https://github.com/Eruhitsuji/lifetxt/issues/996
+      - https://github.com/Eruhitsuji/lifetxt/issues/997
+      - https://github.com/Eruhitsuji/lifetxt/issues/998
+    related_pull_requests: []
+    reuse_policy: extend_existing_web_and_domain_apis
+    notes: >-
+      New Notes and Journals remain ordinary Format 1.0 records. The Planner
+      manifest is separate from Quick Capture. No service worker or offline queue.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
   - id: cap-multi-person-workspace-collaboration
     name: Multi-person workspace collaboration
     summary: Per-workspace owner/editor/viewer membership layered over Remote principal scopes, guarded member administration, and role-aware Remote Web history.

@@ -74,6 +74,7 @@ def web_resource_bytes(name: str) -> bytes:
     """Read one allowlisted installability resource from the package."""
     allowed = {
         "web_app_manifest.json",
+        "planner_app_manifest.json",
         "web_icon_180.png",
         "web_icon_192.png",
         "web_icon_512.png",
@@ -81,6 +82,16 @@ def web_resource_bytes(name: str) -> bytes:
     if name not in allowed:
         raise ValueError("Unknown Web installability resource: %s" % name)
     return resources.files(__package__).joinpath(name).read_bytes()
+
+
+def _assemble_planner_html() -> str:
+    template = _read_resource("web_planner.html")
+    return template.replace("__PLANNER_CSS__", _read_resource("web_planner.css")).replace(
+        "__PLANNER_JS__", _read_resource("web_planner.js")
+    )
+
+
+PLANNER_HTML_PAGE = _assemble_planner_html()
 
 
 def _svg_data_uri(svg: str) -> str:

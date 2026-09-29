@@ -1,0 +1,30 @@
+schema_version: 1
+chains:
+  - requirement_id: req-planner-day-experience
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/992
+    implementation: [lifetxt/webapp.py, lifetxt/web_planner.html, lifetxt/web_planner.css, lifetxt/web_planner.js]
+    verification: [tests.test_web_planner]
+  - requirement_id: req-planner-day-schedule
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/993
+    implementation: [lifetxt/webapp.py, lifetxt/web_planner.js]
+    verification: [tests.test_web_planner]
+  - requirement_id: req-planner-day-actions
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/994
+    implementation: [lifetxt/web_planner.js]
+    verification: [tests.test_web_planner]
+  - requirement_id: req-planner-quick-capture
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/995
+    implementation: [lifetxt/web_planner.js]
+    verification: [tests.test_web_mobile_capture]
+  - requirement_id: req-planner-notes-journal
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/996
+    implementation: [lifetxt/web_planner.js]
+    verification: [tests.test_web_planner]
+  - requirement_id: req-planner-mobile-interoperability
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/997
+    implementation: [lifetxt/web_planner.css, docs/en/web.md, docs/ja/web.md]
+    verification: [tests.test_web_planner, tests.test_web_planner_browser]
+  - requirement_id: req-planner-home-screen-entry
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/998
+    implementation: [lifetxt/planner_app_manifest.json, lifetxt/webapp.py]
+    verification: [tests.test_web_planner, tests.test_web_installability]

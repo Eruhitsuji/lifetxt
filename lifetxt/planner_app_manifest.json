@@ -1,0 +1,15 @@
+{
+  "id": "/planner",
+  "name": "life.txt Planner",
+  "short_name": "Planner",
+  "description": "A mobile-first view of your life.txt day.",
+  "start_url": "/planner",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f4f7f5",
+  "theme_color": "#27343d",
+  "icons": [
+    {"src": "/assets/lifetxt-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "/assets/lifetxt-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"}
+  ]
+}

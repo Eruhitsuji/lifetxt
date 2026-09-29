@@ -145,6 +145,61 @@
             "null"
           ]
         },
+        "priority_context": {
+          "additionalProperties": false,
+          "properties": {
+            "importance": {
+              "enum": [
+                "high",
+                "normal",
+                "low",
+                null
+              ]
+            },
+            "next_at": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "next_quadrant": {
+              "enum": [
+                "Q1",
+                "Q2",
+                "Q3",
+                "Q4",
+                "unclassified",
+                null
+              ]
+            },
+            "quadrant": {
+              "enum": [
+                "Q1",
+                "Q2",
+                "Q3",
+                "Q4",
+                "unclassified"
+              ]
+            },
+            "urgency": {
+              "enum": [
+                "critical",
+                "high",
+                "normal",
+                "low",
+                "unknown"
+              ]
+            }
+          },
+          "required": [
+            "importance",
+            "urgency",
+            "quadrant",
+            "next_at",
+            "next_quadrant"
+          ],
+          "type": "object"
+        },
         "provenance": {
           "type": "object"
         },

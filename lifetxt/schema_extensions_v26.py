@@ -21,6 +21,32 @@ def temporal_thread_v1_schema():
             "source": {"type": ["string", "null"]},
             "line": {"type": ["integer", "null"]},
             "provenance": {"type": "object"},
+            "priority_context": {
+                "type": "object",
+                "required": [
+                    "importance",
+                    "urgency",
+                    "quadrant",
+                    "next_at",
+                    "next_quadrant",
+                ],
+                "properties": {
+                    "importance": {
+                        "enum": ["high", "normal", "low", None]
+                    },
+                    "urgency": {
+                        "enum": ["critical", "high", "normal", "low", "unknown"]
+                    },
+                    "quadrant": {
+                        "enum": ["Q1", "Q2", "Q3", "Q4", "unclassified"]
+                    },
+                    "next_at": {"type": ["string", "null"]},
+                    "next_quadrant": {
+                        "enum": ["Q1", "Q2", "Q3", "Q4", "unclassified", None]
+                    },
+                },
+                "additionalProperties": False,
+            },
         },
         "additionalProperties": True,
     }

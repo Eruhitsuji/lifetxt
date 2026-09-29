@@ -500,3 +500,47 @@ def temporal_thread(
             ("derived", derived),
         )
     )
+
+
+def priority_thread_overlay(thread, items, reference_time=None, key="id"):
+    """Return a thread copy annotated with the shared priority-matrix facts.
+
+    Only bounded explicit graph nodes are considered. Non-actionable tasks and
+    non-task items remain unchanged. The classifier and horizon are delegated
+    to ``priority_matrix`` and receive the same reference instant.
+    """
+    from .priority_matrix import classify_item, next_transition
+    from .timezone_policy import now
+
+    reference = reference_time if reference_time is not None else now()
+    index = build_id_index(items, key)
+    result = OrderedDict(thread)
+    explicit = OrderedDict(thread.get("explicit", {}))
+    nodes = []
+    for original in explicit.get("nodes", []):
+        node = OrderedDict(original)
+        matches = index.get(node.get("id"), [])
+        if len(matches) == 1:
+            item = matches[0]
+            classification = classify_item(item, reference)
+            if classification is not None:
+                transition = next_transition(item, reference)
+                node["priority_context"] = OrderedDict(
+                    (
+                        ("importance", classification["importance"]),
+                        ("urgency", classification["urgency"]),
+                        ("quadrant", classification["quadrant"]),
+                        (
+                            "next_at",
+                            transition["next_at"] if transition else None,
+                        ),
+                        (
+                            "next_quadrant",
+                            transition["next_quadrant"] if transition else None,
+                        ),
+                    )
+                )
+        nodes.append(node)
+    explicit["nodes"] = nodes
+    result["explicit"] = explicit
+    return result

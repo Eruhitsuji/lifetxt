@@ -1,9 +1,11 @@
+import copy
 import datetime
 import unittest
 from types import SimpleNamespace
 
 from lifetxt.parser import parse_text
 from lifetxt.temporal_thread import (
+    priority_thread_overlay,
     replacement_chain_analysis,
     temporal_consistency,
     temporal_consistency_summary,
@@ -163,6 +165,113 @@ class TemporalThreadTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(ValueError, "duplicate: dup"):
             temporal_thread(items, items[0], TODAY)
+
+    def test_priority_overlay_reuses_matrix_and_horizon_for_thread_nodes(self):
+        import datetime as dt
+        from unittest import mock
+
+        items, _ = parse_text(
+            "[ ] T Urgent id:urgent importance:high due:2026-08-31\n"
+            "[ ] T Soon id:soon importance:high due:2026-09-10 follows:urgent\n"
+            "[ ] T Low_urgent id:low-urgent importance:low priority:A "
+            "due:2026-08-31 follows:soon\n"
+            "[ ] T Unimportant id:unimportant importance:normal follows:low-urgent\n"
+            "[ ] T Missing id:missing due:2026-08-31 follows:unimportant\n"
+            "[ ] T Invalid id:invalid importance:urgent follows:missing\n"
+            "[x] T Done id:done importance:high due:2026-08-31 follows:invalid\n"
+            "[-] T Cancelled id:cancelled importance:high due:2026-08-31 follows:done\n"
+            "[ ] E Meeting id:meeting on:2026-08-31 follows:cancelled\n"
+            "[ ] T No_due id:no-due importance:high follows:meeting\n"
+        )
+        target = _item(items, "urgent")
+        thread = temporal_thread(items, target, TODAY, max_depth=12)
+        reference = dt.datetime(2026, 9, 1, tzinfo=dt.timezone.utc)
+        before = [copy.deepcopy(item.details) for item in items]
+        from lifetxt import priority_matrix
+
+        classify = priority_matrix.classify_item
+        transition = priority_matrix.next_transition
+        classifier_references = []
+        classifier_items = {}
+        horizon_references = []
+
+        def record_classify(item, ref=None):
+            classifier_references.append(ref)
+            classifier_items.setdefault(item.details["id"][0], []).append(ref)
+            return classify(item, ref)
+
+        def record_transition(item, ref=None):
+            horizon_references.append(ref)
+            return transition(item, ref)
+
+        with mock.patch(
+            "lifetxt.priority_matrix.classify_item", side_effect=record_classify
+        ), mock.patch(
+            "lifetxt.priority_matrix.next_transition", side_effect=record_transition
+        ):
+            enriched = priority_thread_overlay(thread, items, reference)
+
+        contexts = {
+            node["id"]: node.get("priority_context")
+            for node in enriched["explicit"]["nodes"]
+        }
+        self.assertEqual("Q1", contexts["urgent"]["quadrant"])
+        self.assertEqual("Q2", contexts["soon"]["quadrant"])
+        self.assertEqual("Q1", contexts["soon"]["next_quadrant"])
+        self.assertTrue(contexts["soon"]["next_at"].startswith("2026-09-03T"))
+        self.assertEqual("Q3", contexts["low-urgent"]["quadrant"])
+        self.assertEqual("Q4", contexts["unimportant"]["quadrant"])
+        self.assertEqual("unclassified", contexts["missing"]["quadrant"])
+        self.assertIsNone(contexts["missing"]["importance"])
+        self.assertEqual("unclassified", contexts["invalid"]["quadrant"])
+        self.assertIsNone(contexts["done"])
+        self.assertIsNone(contexts["cancelled"])
+        self.assertIsNone(contexts["meeting"])
+        self.assertEqual("Q2", contexts["no-due"]["quadrant"])
+        self.assertIsNone(contexts["no-due"]["next_at"])
+        self.assertNotIn("priority_context", thread["explicit"]["nodes"][0])
+        self.assertEqual(before, [item.details for item in items])
+        self.assertTrue(classifier_references)
+        self.assertTrue(horizon_references)
+        annotated_ids = [item_id for item_id, value in contexts.items() if value]
+        self.assertTrue(
+            all(reference in classifier_items[item_id] for item_id in annotated_ids)
+        )
+        self.assertTrue(all(value is reference for value in horizon_references))
+
+    def test_priority_overlay_observes_exact_urgency_boundary(self):
+        import datetime as dt
+
+        items, _ = parse_text(
+            "#! timezone: UTC\n"
+            "[ ] T Boundary id:boundary importance:high due:2026-09-10T23:59:59+00:00\n"
+        )
+        thread = temporal_thread(items, items[0], TODAY)
+        boundary = dt.datetime(2026, 9, 3, 23, 59, 59, tzinfo=dt.timezone.utc)
+        just_before = boundary - dt.timedelta(microseconds=1)
+        self.assertEqual(
+            "Q2",
+            priority_thread_overlay(thread, items, just_before)["explicit"]["nodes"][0][
+                "priority_context"
+            ]["quadrant"],
+        )
+        self.assertEqual(
+            "Q1",
+            priority_thread_overlay(thread, items, boundary)["explicit"]["nodes"][0][
+                "priority_context"
+            ]["quadrant"],
+        )
+
+    def test_priority_overlay_does_not_change_default_thread_result(self):
+        thread = temporal_thread(self.items, _item(self.items, "actual"), TODAY)
+        enriched = priority_thread_overlay(
+            thread,
+            self.items,
+            datetime.datetime(2026, 9, 8, tzinfo=datetime.timezone.utc),
+        )
+        self.assertNotIn("priority_context", thread["explicit"]["nodes"][0])
+        self.assertEqual("temporal-thread-v1", enriched["schema"])
+        self.assertEqual(thread["explicit"]["edges"], enriched["explicit"]["edges"])
 
     def test_negative_bounds_fail_loudly(self):
         with self.assertRaisesRegex(ValueError, "zero or greater"):

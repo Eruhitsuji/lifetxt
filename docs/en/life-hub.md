@@ -167,6 +167,8 @@ temporal context. It never infers a plan/result or lifecycle order from dates:
 $ lifetxt thread visit-actual
 $ lifetxt thread visit-actual --depth 4 --nodes 25 --window 14 --limit 10
 $ lifetxt thread visit-actual --json
+$ lifetxt thread visit-actual --priority
+$ lifetxt thread visit-actual --priority --json
 $ lifetxt thread visit-actual --revision a7805b4
 $ lifetxt thread visit-actual --diff a7805b4..eb87484
 $ lifetxt thread visit-actual --as-of 2026-06-01T09:00:00Z --ref main
@@ -186,6 +188,16 @@ and derived provenance; it never edits an edge. Same-day, missing, invalid, or
 ambiguous evidence is not guessed, and `realizes:` has no chronological rule.
 The warning list is bounded with the explicit thread and reports
 `consistency.truncated` when the thread bounds limit its evidence.
+
+Use `--priority` to add a read-only `priority_context` to each visible,
+actionable task node. It reuses the priority matrix classifier and horizon:
+importance is the stored human judgment, urgency and quadrant are derived, and
+`next_at`/`next_quadrant` identify the next quadrant transition when one exists.
+The command captures one reference instant for the entire overlay. Other node
+kinds and completed/cancelled tasks remain in the thread without an annotation;
+missing or invalid importance stays `unclassified`. This flag only annotates
+nodes: it does not change graph edges, ordering, or `life.txt`. It is available
+for current workspace threads, not historical snapshots or diffs.
 
 The same domain result is exposed by TUI `/thread [ID]`, Web
 `GET /api/temporal-thread/{id}` and the item drawer, and read-only MCP

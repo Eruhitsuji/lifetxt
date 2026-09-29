@@ -24,11 +24,40 @@ capabilities:
     summary: Optional human importance with read-only timezone-aware due-derived urgency, CLI quadrants, and Web matrix view/API.
     status: active
     owner: Eruhitsuji
-    source_requirements: [req-importance-priority-matrix, req-importance-priority-coexistence, req-web-priority-matrix-view, req-priority-horizon]
-    implementation_locations: [lifetxt/priority_matrix.py, lifetxt/cli.py, lifetxt/cli_taxonomy.py, lifetxt/validator.py, lifetxt/webapp.py, lifetxt/web_assets.html, lifetxt/web_assets_js_20.js, lifetxt/web_assets_css_06.css]
-    public_interfaces: [lifetxt list --matrix, lifetxt list --quadrant, lifetxt list --horizon, GET /api/priority-matrix, Web Priority Matrix view]
-    tests_or_evidence: [tests.test_priority_matrix, tests.test_web_priority_matrix]
-    related_issues: [https://github.com/Eruhitsuji/lifetxt/issues/974, https://github.com/Eruhitsuji/lifetxt/issues/976, https://github.com/Eruhitsuji/lifetxt/issues/977, https://github.com/Eruhitsuji/lifetxt/issues/981]
+    source_requirements:
+      - req-importance-priority-matrix
+      - req-importance-priority-coexistence
+      - req-web-priority-matrix-view
+      - req-priority-horizon
+      - req-priority-thread-overlay
+    implementation_locations:
+      - lifetxt/priority_matrix.py
+      - lifetxt/temporal_thread.py
+      - lifetxt/cli.py
+      - lifetxt/cli_taxonomy.py
+      - lifetxt/validator.py
+      - lifetxt/webapp.py
+      - lifetxt/web_assets.html
+      - lifetxt/web_assets_js_20.js
+      - lifetxt/web_assets_css_06.css
+    public_interfaces:
+      - lifetxt list --matrix
+      - lifetxt list --quadrant
+      - lifetxt list --horizon
+      - lifetxt thread ID --priority
+      - GET /api/priority-matrix
+      - Web Priority Matrix view
+    tests_or_evidence:
+      - tests.test_priority_matrix
+      - tests.test_temporal_thread
+      - tests.test_temporal_cli
+      - tests.test_web_priority_matrix
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/974
+      - https://github.com/Eruhitsuji/lifetxt/issues/976
+      - https://github.com/Eruhitsuji/lifetxt/issues/977
+      - https://github.com/Eruhitsuji/lifetxt/issues/981
+      - https://github.com/Eruhitsuji/lifetxt/issues/989
     related_pull_requests: [https://github.com/Eruhitsuji/lifetxt/pull/975, https://github.com/Eruhitsuji/lifetxt/pull/979, https://github.com/Eruhitsuji/lifetxt/pull/980]
     reuse_policy: reuse_existing_timezone_policy_and_due_parser
     notes: >-
@@ -40,6 +69,8 @@ capabilities:
       its task rows expose explicit priority only as separate metadata.
       Priority Horizon reuses the same urgency boundary and stores no
       time-derived state in life.txt; it is opt-in on the CLI matrix.
+      Priority Thread Overlay composes that classifier/horizon onto bounded
+      Temporal Thread task nodes without changing graph structure.
     replacement: {replaces: [], replaced_by: null, deprecation_issue: null}
 
   - id: cap-remote-authoritative-sync-cli
@@ -637,6 +668,7 @@ capabilities:
       - req-historical-as-of-semantics
       - req-temporal-thread-surfaces
       - req-lifecycle-temporal-consistency
+      - req-priority-thread-overlay
       - req-historical-temporal-thread-exact-revision
       - req-git-as-of-temporal-thread
     implementation_locations:
@@ -644,6 +676,7 @@ capabilities:
       - lifetxt/links.py
       - lifetxt/temporal_context.py
       - lifetxt/temporal_thread.py
+      - lifetxt/priority_matrix.py
       - lifetxt/historical_temporal.py
       - lifetxt/schema_extensions_v26.py
       - lifetxt/schema_extensions_v27.py
@@ -668,6 +701,7 @@ capabilities:
       - lifetxt check diagnostic W244
       - lifetxt thread ID --revision REV
       - lifetxt thread ID --as-of RFC3339 [--ref REF]
+      - lifetxt thread ID --priority
     tests_or_evidence:
       - tests/test_links.py lifecycle relation reference and cycle coverage
       - tests/test_temporal_thread.py bounded domain model and TUI delegation coverage
@@ -678,6 +712,12 @@ capabilities:
       - tests/test_links.py W244 diagnostic parity coverage
       - tests/test_historical_temporal.py exact-revision and as-of Git evidence coverage
       - tests/test_temporal_cli.py historical CLI text/JSON coverage
+      - >-
+        tests/test_temporal_thread.py priority overlay composition and fixed
+        reference time coverage
+      - >-
+        tests/test_temporal_cli.py opt-in, additive JSON/text,
+        historical-mode rejection, and no-write coverage
       - dist/schemas/temporal-thread-v1.schema.json release-schema validation
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/699

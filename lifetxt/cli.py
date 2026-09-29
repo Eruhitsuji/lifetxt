@@ -1945,6 +1945,14 @@ def build_parser():
         action="store_true",
         help="Compare realizes plan and actual temporal evidence.",
     )
+    thread_command.add_argument(
+        "--priority",
+        action="store_true",
+        help=(
+            "Annotate actionable thread tasks with the derived priority "
+            "matrix and horizon."
+        ),
+    )
     thread_command.add_argument("--json", action="store_true", help="Emit JSON.")
     thread_command.set_defaults(func=command_thread)
 
@@ -14971,10 +14979,16 @@ def command_thread(args):
     revision = getattr(args, "revision", None)
     diff_spec = getattr(args, "diff", None)
     as_of = getattr(args, "as_of", None)
+    include_priority = getattr(args, "priority", False)
     requested_ref = getattr(args, "ref", None)
     analysis_items = None
     if requested_ref and not as_of:
         sys.stderr.write("ERROR: --ref is only valid together with --as-of.\n")
+        return 1
+    if include_priority and (revision or as_of or diff_spec):
+        sys.stderr.write(
+            "ERROR: --priority is only available for current workspace threads.\n"
+        )
         return 1
 
     try:
@@ -15017,7 +15031,21 @@ def command_thread(args):
             if target is None:
                 sys.stderr.write("ERROR: No item with id %r.\n" % args.id)
                 return 1
-            result = temporal_thread(items, target, _project_today(), key=key, **bounds)
+            if include_priority:
+                from .temporal_thread import priority_thread_overlay
+                from .timezone_policy import now
+
+                priority_reference = now()
+                result = temporal_thread(
+                    items, target, priority_reference.date(), key=key, **bounds
+                )
+                result = priority_thread_overlay(
+                    result, items, reference_time=priority_reference, key=key
+                )
+            else:
+                result = temporal_thread(
+                    items, target, _project_today(), key=key, **bounds
+                )
     except ValueError as exc:
         sys.stderr.write("ERROR: %s\n" % exc)
         return 1
@@ -15117,6 +15145,34 @@ def command_thread(args):
             write_text(None, "    %s %s\n" % (row["id"], row["title"]))
     if not any_explicit:
         write_text(None, "  No explicit lifecycle relations.\n")
+    priority_nodes = [
+        node
+        for node in result.get("explicit", {}).get("nodes", [])
+        if node.get("priority_context") is not None
+    ]
+    if priority_nodes:
+        write_text(None, "  Priority overlay (derived, read-only):\n")
+        for node in priority_nodes:
+            context = node["priority_context"]
+            write_text(
+                None,
+                "    %s %s: %s / %s / %s\n"
+                % (
+                    node["id"],
+                    node["title"],
+                    context["importance"] or "importance missing",
+                    context["urgency"],
+                    context["quadrant"],
+                ),
+            )
+            if context["next_at"]:
+                write_text(
+                    None,
+                    "      -> %s at %s\n"
+                    % (context["next_quadrant"], context["next_at"]),
+                )
+            else:
+                write_text(None, "      -> no scheduled quadrant transition\n")
     derived = result["derived"]
     write_text(
         None,

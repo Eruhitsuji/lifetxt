@@ -2,6 +2,39 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-priority-thread-overlay
+      capability_id: cap-lifecycle-temporal-thread
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/699
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/989
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/990
+      changed_files_or_scope:
+        - lifetxt/temporal_thread.py
+        - lifetxt/cli.py
+        - lifetxt/schema_extensions_v26.py
+        - dist/schemas/temporal-thread-v1.schema.json
+        - tests/test_temporal_thread.py
+        - tests/test_temporal_cli.py
+        - docs/en/life-hub.md
+        - docs/ja/life-hub.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - >-
+          tests.test_temporal_thread priority overlay composition and fixed
+          reference time
+        - >-
+          tests.test_temporal_cli opt-in/default compatibility, JSON/text
+          output, historical-mode rejection, and no-write behavior
+        - >-
+          Priority annotations delegate to classify_item() and next_transition()
+          with one injected reference instant; no graph or source item changes
+      release_or_deployment: next normal maintenance release
+      notes: >-
+        Optional, derived node annotations only. Existing priority matrix and
+        Priority Horizon semantics are reused; historical thread evidence is
+        intentionally not overlaid with current priority state.
+      status: implemented
+
     - requirement_id: req-priority-horizon
       capability_id: cap-importance-priority-matrix
       epic: https://github.com/Eruhitsuji/lifetxt/issues/974

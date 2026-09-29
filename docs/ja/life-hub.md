@@ -127,6 +127,8 @@ MCP: `get_temporal_context`（`id`、`window`、`limit`、`stale_after`）。rea
 $ lifetxt thread visit-actual
 $ lifetxt thread visit-actual --depth 4 --nodes 25 --window 14 --limit 10
 $ lifetxt thread visit-actual --json
+$ lifetxt thread visit-actual --priority
+$ lifetxt thread visit-actual --priority --json
 $ lifetxt thread visit-actual --revision a7805b4
 $ lifetxt thread visit-actual --diff a7805b4..eb87484
 $ lifetxt thread visit-actual --as-of 2026-06-01T09:00:00Z --ref main
@@ -145,6 +147,15 @@ additive な `consistency.warnings` は、解決済み `follows:` / `replaced_by
 同一日、欠損・不正日付、曖昧な evidence は推測せず、`realizes:` に時系列ruleは
 設けません。warning list は explicit thread とともに bounded で、制限された場合は
 `consistency.truncated` が true になります。
+
+`--priority` を指定すると、表示対象の actionable task node に read-only な
+`priority_context` を追加します。既存の priority matrix classifier と horizon を再利用し、
+importance は保存された人の判断、urgency/quadrant は派生値として示します。
+次の quadrant 変更が決定できる場合は `next_at` / `next_quadrant` も含みます。
+thread 全体で同じ reference instant を使います。他の kind や完了・取消済み task は
+thread に残しつつ annotation を付けず、importance が欠落または不正な task は
+`unclassified` のままです。node への注釈だけを行い、graph edge、順序、`life.txt` は
+変更しません。現在の workspace thread で利用でき、historical snapshot/diff では使えません。
 
 同じ domain result を TUI `/thread [ID]`、Web
 `GET /api/temporal-thread/{id}` と item drawer、read-only MCP

@@ -1,0 +1,26 @@
+schema_version: 1
+change:
+  id: mobile-first-planner
+  title: Mobile-first Planner Web UI
+  status: proposed
+  assurance: standard
+  issue: https://github.com/Eruhitsuji/lifetxt/issues/991
+  tasks:
+    - https://github.com/Eruhitsuji/lifetxt/issues/992
+    - https://github.com/Eruhitsuji/lifetxt/issues/993
+    - https://github.com/Eruhitsuji/lifetxt/issues/994
+    - https://github.com/Eruhitsuji/lifetxt/issues/995
+    - https://github.com/Eruhitsuji/lifetxt/issues/996
+    - https://github.com/Eruhitsuji/lifetxt/issues/997
+    - https://github.com/Eruhitsuji/lifetxt/issues/998
+  scope:
+    in:
+      - Independent Planner route with date navigation and bilingual mobile layout
+      - Shared agenda and command center display, task and habit completion
+      - Quick Capture, Notes and Journal authoring via existing APIs
+      - Planner-specific home screen manifest while preserving Quick Capture
+    out:
+      - Offline cache or write queue
+      - New item parser or record format
+      - Physical-device certification
+  merge_policy: Human review required; do not merge automatically.

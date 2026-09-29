@@ -45,6 +45,14 @@ Web サーバーの `no-store`、認証、読み取り専用、書き込み先�
 検証ではありません。iOS Safari / Android のブラウザUI、safe area、ソフトウェア
 キーボードによるリサイズ、ホーム画面アイコンの実表示は対象実機で確認すべき残余リスクです。
 
+### モバイル Day Planner
+
+別画面の日次ビューは `/planner` で開きます。前後の日付へ移動でき、
+`?date=YYYY-MM-DD` で日付をブックマークできます。`?lang=ja` は日本語表示です。
+共有の予定、タスク、習慣、メモ、選択日のJournalを表示し、既存のCapture・item APIで
+記録します。作成したデータは通常の `life.txt` レコードとしてWeb UIとCLIから参照できます。
+Planner専用のホーム画面manifestを使い、`/capture` の起動先は維持します。どちらもオンライン専用です。
+
 複数ファイルを同時に読めます。作成、更新、削除は既定では最初のファイルに対して
 行います。変更先を明示したい場合は `--write-file` を使います。
 path には `projects/**/*.life.txt` のような glob も指定できます。ディレクトリを指定した場合は、
@@ -110,7 +118,7 @@ MCP tool は `list_items`、`get_item`、`create_item`、`update_item`、
 | `PUT` | `/api/items/{line}` | 書き込み先ファイルの指定行 item を置換 |
 | `DELETE` | `/api/items/{line}` | 書き込み先ファイルの指定行 item を削除 |
 | `GET` | `/api/agenda` | 日時範囲に関連する agenda record を表示 |
-| `GET` | `/api/command-center` | canonical な Daily Command Center: current status、today's events、overdue/due-today/upcoming、blocked、waiting、next actions、habits、messages、captures、bounded な Unified Inbox summary、project/ticket attention、safety signal |
+| `GET` | `/api/command-center` | canonical な Daily Command Center。任意の `date=YYYY-MM-DD` で基準日を指定可能。省略時は従来どおりworkspaceの今日 |
 | `GET` | `/api/saved-views` | 設定済みの saved view(`saved_views` config)を一覧表示 |
 | `GET` | `/api/saved-views/{name}` | 1 つの saved view を実行。`GET /api/items` と同じ `count`/`items`/`query_diagnostics` 形式 |
 | `GET` | `/api/areas` | `area:` によるグループを task 進捗と共に一覧表示 |

@@ -50,13 +50,17 @@ risks to check on target devices.
 
 ### Mobile Day Planner
 
-Open `/planner` for a separate day view. Previous/next controls select a day;
-`?date=YYYY-MM-DD` makes it bookmarkable and `?lang=ja` selects Japanese.
-The page shows the shared agenda, actionable Tasks, Habits, Notes, and the
-selected day's Journal. It writes through the existing capture and item APIs,
-so new records remain ordinary `life.txt` entries. A Planner-specific
-manifest makes `/planner` installable while the existing `/capture` shortcut
-continues to open Quick Capture. Both routes are online-only.
+Open `/planner` for a separate Day Planner. Day remains the default and shows
+the shared agenda, actionable Tasks, Habits, Notes, and the selected day's
+Journal. Switch to **Week** for a Monday–Sunday overview of dated Events,
+Reminders, Deadlines, and Tasks. Previous/next controls move by a day or a
+week according to the selected view; selecting a date in Week opens that exact
+day in Day. `?date=YYYY-MM-DD` preserves the selected date, `?view=week` opens
+the weekly overview, and `?lang=ja` selects Japanese. Week is read-only; Day
+continues to write through the existing capture and item APIs, so new records
+remain ordinary `life.txt` entries. A Planner-specific manifest makes
+`/planner` installable while the existing `/capture` shortcut continues to
+open Quick Capture. Both routes are online-only.
 
 Multiple files can be read at once. Paths may be glob patterns such as
 `projects/**/*.life.txt`, and directories are expanded to life.txt-like `.txt`

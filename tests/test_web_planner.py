@@ -21,6 +21,11 @@ class PlannerTests(unittest.TestCase):  # pragma: no cover -- covered in web-ext
             "[ ] E Lab_Meeting id:event-1 at:09:00 on:2031-02-03\n"
             "[ ] R Water_Plants id:reminder-1 on:2031-02-03\n"
             "[ ] T Due_Report id:task-1 due:2031-02-03\n"
+            "[ ] D Submit_Grant id:deadline-1 on:2031-02-05\n"
+            "[ ] E Daily_Standup id:repeat-1 "
+            "repeat:RRULE:FREQ=DAILY;COUNT=3 "
+            "from:2031-02-04T11:00 to:2031-02-04T11:30\n"
+            "[ ] T Untimed_Next_Action id:undated-task\n"
             "[ ] H Exercise id:habit-1 done:2031-02-02\n"
             "[N] J Journal_Entry id:journal-1 on:2031-02-03 body:Existing\n",
             encoding="utf-8",
@@ -60,6 +65,22 @@ class PlannerTests(unittest.TestCase):  # pragma: no cover -- covered in web-ext
             400, self.client.get("/api/command-center?date=2031-02-30").status_code
         )
 
+    def test_week_range_uses_shared_agenda_occurrences_and_excludes_undated_tasks(self):
+        response = self.client.get("/api/agenda?from=2031-02-03&to=2031-02-09")
+        self.assertEqual(200, response.status_code)
+        records = response.json()["records"]
+        self.assertTrue(
+            {"E", "R", "D", "T"}.issubset({record["type"] for record in records})
+        )
+        repeating = next(
+            record for record in records if record["title"] == "Daily_Standup"
+        )
+        self.assertEqual(
+            ["2031-02-04T11:00", "2031-02-05T11:00", "2031-02-06T11:00"],
+            [match["start"] for match in repeating["matches"]],
+        )
+        self.assertNotIn("Untimed_Next_Action", [record["title"] for record in records])
+
     def test_normal_journal_record_create_update(self):
         payload = {
             "status": "[N]",
@@ -93,6 +114,10 @@ class PlannerTests(unittest.TestCase):  # pragma: no cover -- covered in web-ext
             "safe-area-inset-bottom",
             "min-height:44px",
             'habits:"習慣"',
+            'id="view-week"',
+            'id="week-days"',
+            "weekStart(value)",
+            "previousWeek",
             "navigator.serviceWorker",
         ):
             if expected == "navigator.serviceWorker":

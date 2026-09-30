@@ -2,6 +2,32 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-planner-week-overview
+      capability_id: cap-web-mobile-planner
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/991
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1002
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1004
+      changed_files_or_scope:
+        - lifetxt/web_planner.html
+        - lifetxt/web_planner.css
+        - lifetxt/web_planner.js
+        - tests/test_web_planner.py
+        - tests/test_web_planner_browser.py
+        - docs/en/web.md
+        - docs/ja/web.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests.test_web_planner
+        - tests.test_web_planner_browser
+        - Planner mobile viewport matrix
+      release_or_deployment: null
+      notes: >-
+        Extends the existing Planner capability with a deterministic Monday–Sunday
+        overview. #1003 is a duplicate of this task and is referenced by the same
+        closing PR. Dated occurrences come from the shared Agenda API; Week itself
+        has no mutation controls.
+      status: proposed
     - requirement_id: req-planner-day-experience
       capability_id: cap-web-mobile-planner
       epic: https://github.com/Eruhitsuji/lifetxt/issues/991

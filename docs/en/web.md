@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 13119)
+Total output lines: 967
+
 # life.txt Web API And GUI
 
 The web interface is optional. It uses FastAPI and uvicorn, but the core parser
@@ -50,13 +53,17 @@ risks to check on target devices.
 
 ### Mobile Day Planner
 
-Open `/planner` for a separate day view. Previous/next controls select a day;
-`?date=YYYY-MM-DD` makes it bookmarkable and `?lang=ja` selects Japanese.
-The page shows the shared agenda, actionable Tasks, Habits, Notes, and the
-selected day's Journal. It writes through the existing capture and item APIs,
-so new records remain ordinary `life.txt` entries. A Planner-specific
-manifest makes `/planner` installable while the existing `/capture` shortcut
-continues to open Quick Capture. Both routes are online-only.
+Open `/planner` for a separate Day Planner. Day remains the default and shows
+the shared agenda, actionable Tasks, Habits, Notes, and the selected day's
+Journal. Switch to **Week** for a Monday–Sunday overview of dated Events,
+Reminders, Deadlines, and Tasks. Previous/next controls move by a day or a
+week according to the selected view; selecting a date in Week opens that exact
+day in Day. `?date=YYYY-MM-DD` preserves the selected date, `?view=week` opens
+the weekly overview, and `?lang=ja` selects Japanese. Week is read-only; Day
+continues to write through the existing capture and item APIs, so new records
+remain ordinary `life.txt` entries. A Planner-specific manifest makes
+`/planner` installable while the existing `/capture` shortcut continues to
+open Quick Capture. Both routes are online-only.
 
 Multiple files can be read at once. Paths may be glob patterns such as
 `projects/**/*.life.txt`, and directories are expanded to life.txt-like `.txt`
@@ -327,249 +334,7 @@ The browser GUI supports:
   and Month/Week mode are keyboard-driven (`,` `.` previous/next period, `t`
   today, `m` toggle mode) and persisted in the URL via
   `?view=calendar&calmode=month|week&cal=YYYY-MM-DD`. The first weekday
-  column follows the `web.week_start` config (`monday` default or `sunday`)
-- A Team view: a presence board combining latest status records (colored
-  presence dot and state badge per person), open messages addressed to each
-  person, and an open/overdue workload summary per assignee — designed for
-  wall displays with `?view=team&refresh=60` and the fullscreen toggle
-- Colored presence indicators on the Status and Team views: state values map
-  to a dot and badge color (available/free/online → green, busy/meeting →
-  red, focus/dnd → violet, away/lunch → amber, out/offline or ended → gray
-  outline; anything else → blue), with the state text always shown so color
-  is never the only signal
-- A fullscreen toggle (header ⛶ button, `f` key, or command palette) using
-  the browser Fullscreen API — pairs with kiosk/display mode for wall
-  screens
-- A Display workspace tab and command-palette action for read-focused wall
-  displays. Display mode hides editing controls, keeps a visible Exit Display
-  button, uses a light wall-display palette unless the page is in dark theme,
-  and follows browser Back/Forward URL state.
-- Showing near-current agenda records with a blocked-item filter
-- Showing active status / presence records
-- Status (`S`) authoring offers the shared common presence states in a selector.
-  Choose **Custom…** to enter any other `state:` value; existing custom values
-  reopen unchanged and remain free-form Format data.
-- Team cards include a `View items` action that opens the shared Items view
-  filtered with `user=PERSON&open_only=true`, so presence, assignments,
-  sent messages, and received messages can be inspected from one place.
-- Showing due message notifications
-- Showing repeated agenda occurrences with occurrence badges
-- Browser notifications after the user grants permission
-- Showing message threads in the record detail modal using `parent:`
-- Replying to message threads from the record detail modal
-- Keyboard-trapped modals for Help, Git, Undo history, record details, and the
-  record editor
-- A fuzzy command palette with actions, view switching, Calendar/Kiosk/Display
-  shortcuts, and recently opened items
-- Guided empty states in the Items view. When no records exist, the UI offers
-  New record, Quick add, and the command palette; when filters hide all
-  records, it offers Clear filters and New record.
-- Showing ID reference graphs for `parent:`, `ref:`, `depends_on:`,
-  `blocks:`, `related:`, `duplicate_of:`, and `replaced_by:`
-- Rendering sanitized Markdown title/body/note previews
-- Highlighting search matches in titles, details, and body/note previews
-- Creating new items in a centered record editor modal (`＋ New` or `n`) with
-  viewport-aware hover/focus help on the New button and the editor Status,
-  Type, Title, and Details fields
-- Importing a raw life.txt line/body block into the editor through the server
-  parser, with a live parse preview before writing
-- Selecting editable items and saving changes
-- Deleting editable item lines
-- Session undo history for the last five undoable browser actions, available
-  from the command palette as `Show undo history`
-
-Editable items are items from the writable file. Items loaded from generated
-files, such as `.generated/google_calendar.life.txt`, are shown read-only.
-
-The layout follows a one-screen-one-content rule: the header view bar picks a
-single full-width page (Items, Dashboard, Agenda, Timeline, Focus, Review,
-Messages, Team, Status, Notifications, Stats, Graph, Display, or Kiosk), and nothing else
-competes for space. The
-record editor opens as a centered modal from `＋ New`, and clicking an item
-opens a centered record detail modal.
-
-### Beginner Authoring Mode
-
-The record editor's Type and Status fields default to showing every Format
-1.0 value (Full mode). A "Hide advanced options" / "Show advanced options"
-button at the top of the editor toggles **Beginner mode**, which narrows
-those two selects to the [Beginner / Minimal
-Profile](./getting-started.md)'s subset -- `T`/`E`/`N` types and
-`[ ]`/`[x]`/`[N]` statuses -- reusing the exact same vocabulary
-`lifetxt/beginner_profile.py` defines (also exposed at
-`GET /api/beginner-profile`) rather than a second, Web-only copy of it.
-
-This is presentation only: no Format, parser, or data change is involved.
-Opening an existing record whose Type or Status falls outside the beginner
-subset (for example a `D` deadline or a `[/]` in-progress status) always
-keeps that value visible and selected, even in Beginner mode -- it is never
-silently hidden, dropped, or rewritten. The preference is remembered per
-browser (not shared across devices or with other viewers) and defaults to
-Full mode, so nothing changes for an existing user until they opt in.
-
-## Web UI Configuration
-
-`/api/config` exposes a safe subset of `web.*` settings to the browser. The
-GUI applies these values at startup:
-
-```json
-{
-  "web": {
-    "theme": {
-      "accent": "#0e7a65",
-      "accent_hover": "#0a6252",
-      "accent_soft": "#e0f0ea",
-      "accent_ink": "#ffffff"
-    },
-    "dashboard": {
-      "cards": ["today", "needs_attention", "completions", "projects"],
-      "limits": {"today": 7, "needs_attention": 7, "projects": 7}
-    }
-  }
-}
-```
-
-Supported theme token names mirror the CSS variables without the leading
-`--`: `bg`, `panel`, `panel_2`, `soft`, `ink`, `muted`, `line`,
-`line_strong`, `accent`, `accent_hover`, `accent_soft`, `accent_ink`,
-`danger`, `warn`, `ok`, `info`, `violet`, `shadow_1`, `shadow_2`,
-`shadow_3`, `r_sm`, `r_md`, and `r_lg` plus the matching `*_soft` semantic
-tokens. Dotted keys such as `"theme.accent"` and `"dashboard.cards"` are also
-accepted for flat config generators.
-
-## Completion
-
-Text fields complete the values your file already uses, so you reuse
-`project:research` instead of creating `project:reserach` beside it. The
-candidates come from the same layer as the shell completion scripts, the TUI,
-and the MCP `complete` tool, so every surface agrees.
-
-The quick-add bar completes each token as you reach it:
-
-| Typing | Completes |
-|---|---|
-| `@` | project |
-| `#` | tag |
-| `!` | priority |
-| `^` | date words (`tomorrow`, `next_friday`, `+3d`) |
-| `KEY:` | that key's values, e.g. `assignee:` offers people |
-| a bare word after the title | detail key names |
-
-The presence bar completes presence states, and the record editor completes
-inside its Details box.
-
-Keys: `↑`/`↓` to move, `Tab` or `Enter` to accept, `Esc` to dismiss, and
-`Ctrl+Space` to ask for suggestions without typing more. Tapping a suggestion
-works on a phone. `Enter` accepts the suggestion rather than submitting the
-bar, so a half-typed word cannot be filed by accident.
-
-### `GET /api/complete`
-
-The endpoint behind it, also useful on its own:
-
-```bash
-curl 'http://127.0.0.1:8000/api/complete?kind=project&prefix=re&limit=10'
-```
-
-```json
-{"kind": "project", "prefix": "re", "candidates": ["research"]}
-```
-
-| Parameter | Meaning |
-|---|---|
-| `kind` | `state`, `project`, `tag`, `person`, `id`, `type`, `status`, `context`, `priority`, `key`, `team`, `service`, `channel` |
-| `prefix` | Optional filter; prefix matches rank above substring matches |
-| `limit` | Maximum candidates, clamped to 200 (default 20) |
-
-`person` spans `person:`, `owner:`, `assignee:`, `attendee:`, `sender:`,
-`recipient:`, and `user:` at once. `state` and `priority` list the documented
-values first, then any others your file uses. An unknown `kind` returns 400
-with the supported list.
-
-## Interface Language
-
-The GUI ships English as its source language and translates the interface in
-the browser. Set the language per session with `?lang=ja`, or make it the
-default for a workspace with `web.language` in `.lifetxt.json`:
-
-```json
-{"web": {"language": "ja"}}
-```
-
-`?lang=` overrides the config value, so a shared config can still be viewed in
-English with `?lang=en`. Any other value falls back to English.
-
-Two rules govern what gets translated:
-
-- **Interface chrome is translated.** Buttons, tabs, view guides, keyboard-help
-  rows, select options, and the `title`, `placeholder`, and `aria-label`
-  attributes behind them. Labels that embed a live value — `View all 63 (55
-  more)`, `Open 2026-07-20 in Agenda`, `3d overdue` — are matched by pattern so
-  the numbers and dates pass through untouched.
-- **Your records are never translated.** Titles, details, projects, tags, and
-  people come from `life.txt` and are rendered verbatim. A task you named
-  `Done` stays `Done`; it is not rewritten into the translation of the status
-  word.
-
-Views render asynchronously, so the page keeps watching for newly rendered
-content and translates it as it appears. Switching views, refreshing, or
-paging through the calendar does not leave English fragments behind.
-
-## URL Parameters
-
-The GUI reads query parameters on load. This is useful for bookmarks, wall
-displays, and sharing fixed views.
-
-Examples:
-
-```txt
-http://127.0.0.1:8000/?kind=T&open_only=true&sort=time&order=asc
-http://127.0.0.1:8000/?view=dashboard&refresh=60
-http://127.0.0.1:8000/?view=agenda&around=now&window=1d
-http://127.0.0.1:8000/?view=timeline&range=week&refresh=120
-http://127.0.0.1:8000/?view=focus&theme=dark
-http://127.0.0.1:8000/?mode=display&window=12h&sort=time&order=asc&limit=20&refresh=60
-http://127.0.0.1:8000/?mode=display&type=S&person=self&refresh=30
-```
-
-Supported parameters:
-
-| Parameter | Meaning |
-|---|---|
-| `view=dashboard\|agenda\|timeline\|focus\|review\|messages\|team\|status\|notifications\|stats\|graph` | Open a full-screen view; `view=messages` also defaults the item filter to type `M` |
-| `mode=display` or `view=display` | Wall-display mode: hides editing controls and enables auto-refresh |
-| `mode=kiosk` or `view=kiosk` | Always-on kiosk board mode with auto-scroll and card grid |
-| `preset=NAME` | Apply URL parameters from config `views.NAME` |
-| `workspace=agenda\|status\|notifications\|stats\|graph` | Legacy alias for `view=...`; `workspace=new` opens the record editor modal |
-| `refresh=SECONDS` | Auto-refresh interval; display mode defaults to 60 seconds |
-| `kind=E` or `type=E` | Filter by life.txt type |
-| `text=VALUE` or `q=VALUE` | Search title, line text, and detail values |
-| `fuzzy=true` | Also match `text`/`q` within a small typo/edit distance, not only an exact substring; opt-in, Unicode-normalized |
-| `open_only=true` or `open=true` | Show unfinished workflow items only |
-| `status=todo` | Filter by status or status alias |
-| `project=VALUE`, `tag=VALUE`, `tag_all=VALUE`, `exclude_tag=VALUE` | Filter by tags and projects |
-| `user=VALUE`, `team=VALUE`, `person=VALUE` | Filter by users, teams, or presence target |
-| `owner=VALUE`, `assignee=VALUE`, `attendee=VALUE` | Filter by people details |
-| `sender=VALUE`, `recipient=VALUE` | Filter by message details |
-| `sort=line\|time\|title\|type\|status\|source` | Item sort key |
-| `order=asc\|desc` | Item sort order |
-| `limit=N` | Limit item and agenda results |
-| `around=now`, `window=1d` | Agenda range |
-| `from=YYYY-MM-DD`, `to=YYYY-MM-DD` | Agenda range |
-| `range=today\|24h\|week` | Timeline range when `view=timeline`; the UI updates this value when range buttons are clicked |
-| `calmode=month\|week` | Calendar grid mode when `view=calendar`; the UI updates this value when the Month/Week buttons are used |
-| `cal=YYYY-MM-DD` | Anchor date of the visible calendar period; the UI updates this value on Prev/Next/Today navigation |
-| `after=VALUE`, `before=VALUE` | Item time filters |
-| `notify_refresh=SECONDS` | Notification polling interval |
-| `notify_lookahead=DURATION` | Future notification lookahead for browser notifications |
-| `kiosk_cols=N` | Fixed kiosk card columns, up to 8 |
-| `kiosk_filter=kind:T,status:[/]` | Kiosk-only compact filter expression |
-| `kiosk_title=TEXT` | Header title shown only in kiosk mode |
-| `theme=dark` or `theme=light` | Force the color theme; useful for kiosks and wall displays where `localStorage` cannot be pre-seeded |
-| `lang=ja` or `lang=en` | Interface language, overriding config `web.language`; records are never translated |
-| `graph_root=ID`, `graph_depth=N` | Initial graph panel root/depth parameters |
-| `id=VALUE` | Open one record's detail drawer directly, resolved by its canonical `id:` through the same `GET /api/items/{id}` route the REST API exposes (#837/#838); an unknown ID shows a clear not-found message instead of silently opening another record |
-| `line=N` | Open one record's detail drawer directly by 1-based line number; used automatically as a fallback deep link for records with no `id:` |
+  column follows the `web.week_start` config (`mond…3119 tokens truncated…sed automatically as a fallback deep link for records with no `id:` |
 
 ### Record Deep Links
 

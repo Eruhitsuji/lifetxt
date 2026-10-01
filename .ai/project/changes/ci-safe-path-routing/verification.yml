@@ -1,8 +1,22 @@
 schema_version: 1
 verification:
-  executed: []
+  executed:
+    - type: workflow-contract
+      command: python -m unittest tests.test_ci_path_routing tests.test_ci_workflow_responsibilities tests.test_change_package_closeout tests.test_run_ci_like
+      requirement_ids: [req-ci-safe-path-routing]
+      result: Ran 16 tests -- OK
+      commit: 1cad475
+      executed_at: '2026-10-01'
+      status: passed
+    - type: documentation
+      command: python scripts/validate_release_docs.py --output /tmp/lifetxt-release-doc-validation-1011.json
+      requirement_ids: [req-ci-safe-path-routing]
+      result: errors 0, ok true
+      commit: 1cad475
+      executed_at: '2026-10-01'
+      status: passed
   gaps:
     - description: Real GitHub Actions path and skipped-needs behavior requires the PR run.
-      tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1011
+      tracked_by: https://github.com/Eruhitsuji/lifetxt/pull/1017
 review_ledger:
   - {reviewer: independent reviewer, review_type: implementation-and-integration, target_commit: pending, result: pending, finding_count: 0, completed_at: null}

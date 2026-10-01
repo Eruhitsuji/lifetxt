@@ -115,8 +115,12 @@ class PlannerTests(unittest.TestCase):  # pragma: no cover -- covered in web-ext
             "min-height:44px",
             'habits:"習慣"',
             'id="view-week"',
+            'id="view-month"',
             'id="week-days"',
+            'id="month-grid"',
             "weekStart(value)",
+            "loadMonth()",
+            "densityText(count)",
             "previousWeek",
             "navigator.serviceWorker",
         ):
@@ -124,6 +128,16 @@ class PlannerTests(unittest.TestCase):  # pragma: no cover -- covered in web-ext
                 self.assertNotIn(expected, PLANNER_HTML_PAGE)
             else:
                 self.assertIn(expected, PLANNER_HTML_PAGE)
+
+    def test_month_range_reuses_agenda_for_leap_year_and_recurrence(self):
+        response = self.client.get("/api/agenda?from=2031-01-27&to=2031-03-02")
+        self.assertEqual(200, response.status_code)
+        repeating = next(
+            record
+            for record in response.json()["records"]
+            if record["title"] == "Daily_Standup"
+        )
+        self.assertEqual(3, len(repeating["matches"]))
 
 
 if __name__ == "__main__":

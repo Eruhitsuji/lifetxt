@@ -19,7 +19,7 @@ capabilities:
   - id: cap-web-mobile-planner
     name: Mobile-first Planner Web UI
     summary: >-
-      An independent, bookmarkable Day and Monday–Sunday Week view reusing
+      An independent, bookmarkable Day, Monday–Sunday Week, and mobile Month view reusing
       shared agenda, command center, capture, and item APIs for mobile and
       desktop Web clients.
     status: active
@@ -34,6 +34,7 @@ capabilities:
       - req-planner-home-screen-entry
       - req-planner-week-overview
       - req-planner-mobile-date-navigation-geometry
+      - req-planner-month-overview
     implementation_locations:
       - lifetxt/webapp.py
       - lifetxt/web_assets.py
@@ -50,7 +51,7 @@ capabilities:
       - GET /planner
       - GET /planner.webmanifest
       - GET /api/command-center?date=YYYY-MM-DD (optional)
-      - GET /api/agenda?from=YYYY-MM-DD&to=YYYY-MM-DD (week overview)
+      - GET /api/agenda?from=YYYY-MM-DD&to=YYYY-MM-DD (week and month overview)
       - Existing agenda, item, capture and mutation APIs
     tests_or_evidence:
       - tests.test_web_planner
@@ -70,14 +71,17 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/1002
       - https://github.com/Eruhitsuji/lifetxt/issues/1003
       - https://github.com/Eruhitsuji/lifetxt/issues/1006
+      - https://github.com/Eruhitsuji/lifetxt/issues/1018
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/999
       - https://github.com/Eruhitsuji/lifetxt/pull/1004
       - https://github.com/Eruhitsuji/lifetxt/pull/1007
+      - https://github.com/Eruhitsuji/lifetxt/pull/1019
     reuse_policy: extend_existing_web_and_domain_apis
     notes: >-
       New Notes and Journals remain ordinary Format 1.0 records. The Planner
       manifest is separate from Quick Capture. No service worker or offline queue.
+      Month is read-oriented and uses canonical Agenda matches for bounded per-day density.
     replacement:
       replaces: []
       replaced_by: null

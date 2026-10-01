@@ -26,12 +26,22 @@ verification:
       requirement_ids: [req-ordinary-note-projection]
       result: All checks passed
       status: passed
+    - type: full-regression
+      command: LIFETXT_BROWSER_BIN=<Chromium> MPLBACKEND=Agg python -m unittest discover
+      requirement_ids: [req-ordinary-note-projection, req-planner-user-note-projection]
+      result: Ran 4946 tests in 256.528s -- OK (35 optional/environment skips); tree 2b16cfd751630b3f52c2303c5bc40d9949e9ba2c
+      status: passed
+    - type: type-and-document-validation
+      command: mypy approved diagnostic boundary; validate_release_docs.py; lifetxt check examples/minimal_life.txt; git diff --check
+      requirement_ids: [req-ordinary-note-projection]
+      result: All passed; release documentation 114 internal links, zero errors
+      status: passed
   gaps:
     - description: Physical iPhone/terminal host evidence is not inferred from headless Chromium or model tests.
       tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1020
 review_ledger:
-  - {reviewer: implementer, review_type: self-review, target_commit: pending, result: complete, finding_count: 0, completed_at: '2026-10-02'}
-  - {reviewer: independent human reviewer, review_type: implementation-and-integration, target_commit: pending, result: pending, finding_count: 0, completed_at: null}
+  - {reviewer: implementer, review_type: self-review, target_commit: 829f79aaaac2b69a0f4545530c17e1e9b9215f48, result: complete, finding_count: 0, completed_at: '2026-10-02'}
+  - {reviewer: independent human reviewer, review_type: implementation-and-integration, target_commit: 829f79aaaac2b69a0f4545530c17e1e9b9215f48, result: pending, finding_count: 0, completed_at: null}
 release_evidence:
   migration_notes: No Format or persistence changes.
   rollback_plan: Revert the PR; no data migration to reverse.

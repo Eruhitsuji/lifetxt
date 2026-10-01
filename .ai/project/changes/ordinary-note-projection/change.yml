@@ -2,13 +2,13 @@ schema_version: 1
 change:
   id: ordinary-note-projection
   title: Shared ordinary Notes across user-facing surfaces
-  status: implemented
+  status: verified
   change_type: Feature
   assurance_level: Standard
   owner: Eruhitsuji
   accountable_owner: Eruhitsuji
   related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1020
-  related_pull_request: []
+  related_pull_request: [https://github.com/Eruhitsuji/lifetxt/pull/1022]
 scope:
   write_scope: [lifetxt/**, tests/**, docs/en/**, docs/ja/**, .ai/project/CAPABILITIES.yml, .ai/project/TRACEABILITY.yml, .ai/project/changes/ordinary-note-projection/**]
   forbidden_scope: [.ai/managed/**, Format grammar, persistence, authentication]

@@ -11,7 +11,7 @@ capabilities:
     public_interfaces: [lifetxt notes, GET /api/notes, MCP list_notes, TUI /view notes, --ordinary-notes, GET /api/remote/v1/resources/notes]
     tests_or_evidence: [tests.test_ordinary_notes, tests.test_ordinary_notes_browser, tests.test_web_planner_browser]
     related_issues: [https://github.com/Eruhitsuji/lifetxt/issues/1020]
-    related_pull_requests: []
+    related_pull_requests: [https://github.com/Eruhitsuji/lifetxt/pull/1022]
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     replacement: {replaces: [], replaced_by: null, deprecation_issue: null}
 
@@ -94,6 +94,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/pull/1004
       - https://github.com/Eruhitsuji/lifetxt/pull/1007
       - https://github.com/Eruhitsuji/lifetxt/pull/1019
+      - https://github.com/Eruhitsuji/lifetxt/pull/1022
     reuse_policy: extend_existing_web_and_domain_apis
     notes: >-
       New Notes and Journals remain ordinary Format 1.0 records. The Planner

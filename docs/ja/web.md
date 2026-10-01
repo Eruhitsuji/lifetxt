@@ -945,3 +945,7 @@ Personal Context の再確認方針: 各記録に適用中の再確認間隔、�
 
 `GET /api/priority-matrix` は `evaluated_at`、`timezone`、5グループすべての件数と、
 quadrant ごとのタスク一覧を返します。
+
+## 通常のメモ
+
+[CLI・Web・Planner・TUI・MCPで共通の通常メモを利用する](ordinary-notes.md)。

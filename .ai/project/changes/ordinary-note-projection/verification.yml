@@ -1,0 +1,37 @@
+schema_version: 1
+verification:
+  executed:
+    - type: shared-surface-parity
+      command: python -m unittest tests.test_ordinary_notes tests.test_remote_backend_v20 tests.test_remote_web_v20
+      requirement_ids: [req-ordinary-note-projection]
+      result: Ran 60 tests -- OK
+      status: passed
+    - type: browser
+      command: LIFETXT_BROWSER_BIN=<Chromium> python -m unittest tests.test_web_planner_browser
+      requirement_ids: [req-planner-user-note-projection]
+      result: Ran 2 tests -- OK; Chromium 153; EN/JA 320/360/390/430; read-only; pages; error/retry; revision/date races; Day/Week/Month regressions
+      status: passed
+    - type: web-surface-browser
+      command: LIFETXT_BROWSER_BIN=<Chromium> python -m unittest tests.test_ordinary_notes_browser
+      requirement_ids: [req-ordinary-note-projection]
+      result: Ran 1 test -- OK; Existing Web ordinary/raw filters and Remote browser next pages; EN/JA; 320/390 CSS px
+      status: passed
+    - type: completion-consistency
+      command: python -m unittest tests.test_change_package_closeout tests.test_cli_taxonomy tests.test_surface_runtime
+      requirement_ids: [req-ordinary-note-projection]
+      result: Ran 61 tests -- OK (1 optional browser dependency skipped)
+      status: passed
+    - type: static
+      command: python -m ruff check lifetxt tests scripts
+      requirement_ids: [req-ordinary-note-projection]
+      result: All checks passed
+      status: passed
+  gaps:
+    - description: Physical iPhone/terminal host evidence is not inferred from headless Chromium or model tests.
+      tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1020
+review_ledger:
+  - {reviewer: implementer, review_type: self-review, target_commit: pending, result: complete, finding_count: 0, completed_at: '2026-10-02'}
+  - {reviewer: independent human reviewer, review_type: implementation-and-integration, target_commit: pending, result: pending, finding_count: 0, completed_at: null}
+release_evidence:
+  migration_notes: No Format or persistence changes.
+  rollback_plan: Revert the PR; no data migration to reverse.

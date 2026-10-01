@@ -309,6 +309,7 @@ def _require_tool_allowed_for_profile(name, context):
 READ_ONLY_TOOLS = frozenset(
     [
         "list_items",
+        "list_notes",
         "get_item",
         "check_line",
         "parse_item",
@@ -457,6 +458,9 @@ def _tool_schemas():
             "list_items",
             "List life.txt items with the same filters as GET /api/items.",
             {
+                "ordinary_notes": _bool(
+                    "Only shared ordinary Notes; raw N remains available by default."
+                ),
                 "open_only": _bool("Only open workflow statuses."),
                 "blocked": _string("Use true/only to return blocked items."),
                 "status": _string("Comma-separated status filter."),
@@ -479,6 +483,20 @@ def _tool_schemas():
                 "sort": _string("Sort key."),
                 "order": _string("asc or desc."),
                 "limit": _integer("Maximum number of items."),
+            },
+        ),
+        _tool(
+            "list_notes",
+            "Browse shared ordinary Notes with bounded paging; excludes semantic/system N records.",
+            {
+                "date": _string("Selected date YYYY-MM-DD."),
+                "offset": _integer("Page offset, default 0."),
+                "limit": _integer("Page size 1-100, default 5."),
+                "sort": _string(
+                    "relevance (default), title, line, updated or created."
+                ),
+                "order": _string("asc or desc (default)."),
+                "text": _string("Search Notes before paging."),
             },
         ),
         _tool(
@@ -1698,6 +1716,25 @@ def _id_key(context):
     return id_key_from_config(context.config)
 
 
+def _tool_list_notes(args, context):
+    from .ordinary_notes import ordinary_notes_page
+
+    items, diagnostics = _read_items(context)
+    page = ordinary_notes_page(
+        filter_items(items, text=args.get("text")),
+        **{
+            key: args[key]
+            for key in ("date", "offset", "limit", "sort", "order")
+            if key in args
+        },
+    )
+    response = items_response(
+        page.pop("items"), diagnostics, context.writable_path, _id_key(context)
+    )
+    response.update(page)
+    return response
+
+
 def _tool_list_items(args, context):
     items, diagnostics = _read_items(context)
     range_start, range_end = parse_optional_time_range(
@@ -1705,6 +1742,7 @@ def _tool_list_items(args, context):
     )
     filtered = filter_items(
         items,
+        ordinary_notes=_truthy(args.get("ordinary_notes")),
         open_only=_truthy(args.get("open_only")) or _truthy(args.get("blocked")),
         statuses=_csv_values(args.get("status")),
         kinds=_csv_values(args.get("kind") or args.get("type")),
@@ -3540,6 +3578,7 @@ def _tool_get_file_state(_args, context):
 TOOL_HANDLERS = OrderedDict(
     [
         ("list_items", _tool_list_items),
+        ("list_notes", _tool_list_notes),
         ("get_item", _tool_get_item),
         ("check_line", _tool_check_line),
         ("parse_item", _tool_parse_item),

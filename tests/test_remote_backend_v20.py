@@ -52,6 +52,7 @@ class RemoteReadBackendTests(unittest.TestCase):
                 "agenda",
                 "search",
                 "next",
+                "notes",
             ],
             [row["name"] for row in resource_catalog()],
         )

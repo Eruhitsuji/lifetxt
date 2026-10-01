@@ -1035,8 +1035,36 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=error_detail(exc))
 
+    @app.get("/api/notes")
+    def get_notes(
+        date=None, offset=0, limit=5, sort="relevance", order="desc", text=None
+    ):
+        from .ordinary_notes import ordinary_notes_page
+
+        items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
+        try:
+            page = ordinary_notes_page(
+                filter_items(items, text=text),
+                date=date,
+                offset=offset,
+                limit=limit,
+                sort=sort,
+                order=order,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=error_detail(exc)) from exc
+        response = items_response(
+            page.pop("items"),
+            diagnostics,
+            app.state.writable_path,
+            id_key_from_config(app.state.config),
+        )
+        response.update(page)
+        return response
+
     @app.get("/api/items")
     def get_items(
+        ordinary_notes=False,
         open_only=False,
         blocked=False,
         status=None,
@@ -1069,6 +1097,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         blocked_flag = _bool_query(blocked)
         filtered = filter_items(
             items,
+            ordinary_notes=_bool_query(ordinary_notes),
             open_only=open_only_flag or blocked_flag,
             statuses=_csv_values(status),
             kinds=_csv_values(kind or type_value),

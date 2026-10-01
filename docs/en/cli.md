@@ -19,6 +19,7 @@ python -m lifetxt integrity [path ...]
 python -m lifetxt ids [path ...]
 python -m lifetxt links [path ...]
 python -m lifetxt sources [path ...]
+python -m lifetxt notes [path ...]
 python -m lifetxt convert --from FORMAT --to FORMAT [path ...]
 python -m lifetxt to-json [path ...]
 python -m lifetxt to-jsonl [path ...]
@@ -234,7 +235,7 @@ including its `--json` machine-readable form for scripts and AI clients.
 | Category | Commands |
 |---|---|
 | Getting Started / Daily | `tour`, `help`, `init`, `quick` (`add`), `today`, `next`, `agenda`, `show`, `edit`, `done`, `complete`, `progress`, `clone`, `reopen`, `due`, `review`, `assist`, `state`, `start`, `stop`, `assign`, `timer`, `notify` |
-| Query / Explore | `filter`, `list`, `search`, `find`, `query`, `view`, `summary`, `inbox`, `health`, `temporal`, `timeline`, `history-check`, `thread`, `lifecycle-stats`, `freebusy`, `count`, `status`, `recent`, `item-uri` |
+| Query / Explore | `filter`, `list`, `search`, `find`, `query`, `view`, `summary`, `inbox`, `health`, `temporal`, `timeline`, `history-check`, `thread`, `lifecycle-stats`, `freebusy`, `count`, `status`, `recent`, `item-uri`, `notes` |
 | Projects / People / Collaboration | `project`, `portfolio`, `area`, `person`, `group`, `who`, `message`, `proposal`, `ticket`, `version`, `sprint` |
 | Structure / Data Integrity | `check`, `integrity`, `maintenance`, `storage`, `ids`, `links`, `backlinks`, `sources`, `tag`, `lint`, `deps`, `diff`, `snapshot`, `undo`, `cleanup`, `files` |
 | Import / Export / Reports | `convert`, `import`, `export`, `import-ics`, `sync-ics`, `to-json`, `to-jsonl`, `to-csv`, `from-json`, `from-jsonl`, `from-csv`, `from-markdown`, `from-todo`, `to-ics`, `markdown`, `stats`, `plot`, `export-heatmap`, `standup`, `invoice`, `share`, `digest`, `report` |
@@ -2728,7 +2729,7 @@ the MCP `complete` tool return.
 | Command | Purpose |
 | --- | --- |
 | `/help [QUERY]` | Toggle the reference, or search it (`/help timer`) |
-| `/view all\|tasks\|agenda\|status\|next\|today` | Switch which sections are listed |
+| `/view all\|tasks\|agenda\|status\|next\|today\|notes\|raw-notes` | Switch which sections are listed |
 | `/next` | Open, unblocked, non-someday actions ordered by priority |
 | `/today` | Show the Daily Command Center: now, attention, inbox, upcoming |
 | `/search TEXT` | Fuzzy filter every listed row |
@@ -4507,3 +4508,7 @@ partial report is never emailed. See
 section](../deployment/ubuntu-server.md#scheduled-email-delivery) for the
 full walkthrough, including creating the `EnvironmentFile=` and testing
 delivery by hand first.
+
+## Ordinary Notes
+
+[Shared ordinary Notes across CLI, Web, Planner, TUI and MCP](ordinary-notes.md).

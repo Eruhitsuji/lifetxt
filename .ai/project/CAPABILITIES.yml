@@ -1,6 +1,21 @@
 schema_version: 1
 
 capabilities:
+  - id: cap-ci-responsibility-separation
+    name: CI responsibility separation
+    summary: Separate fast PR merge evidence, main compatibility evidence, and release-artifact evidence without dropping supported-platform or quality coverage.
+    status: active
+    owner: Eruhitsuji
+    source_requirements: [req-ci-release-artifact-responsibility, req-ci-pr-main-responsibility-separation, req-ci-safe-path-routing]
+    implementation_locations: [scripts/run_ci_like.py, tests/test_run_ci_like.py, .github/workflows/ci.yml, docs/en/release-policy-gates.md, docs/ja/release-policy-gates.md]
+    public_interfaces: [scripts/run_ci_like.py --profile release, GitHub Actions CI]
+    tests_or_evidence: [tests.test_run_ci_like]
+    related_issues: [https://github.com/Eruhitsuji/lifetxt/issues/1008, https://github.com/Eruhitsuji/lifetxt/issues/1009, https://github.com/Eruhitsuji/lifetxt/issues/1010, https://github.com/Eruhitsuji/lifetxt/issues/1011]
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: '#1009 implements the first artifact-only release-profile slice; PR/main routing and safe path routing remain in the dependent children.'
+    replacement: {replaces: [], replaced_by: null, deprecation_issue: null}
+
   - id: cap-web-mobile-planner
     name: Mobile-first Planner Web UI
     summary: >-

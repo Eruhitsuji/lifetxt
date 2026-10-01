@@ -687,6 +687,25 @@ def build_parser():
     )
     sources_command.set_defaults(func=command_sources)
 
+    notes = subparsers.add_parser("notes", help="Browse shared ordinary Notes only.")
+    _add_input_paths(notes)
+    notes.add_argument("--date", help="Prioritize Notes associated with YYYY-MM-DD.")
+    notes.add_argument("--offset", type=int, default=0)
+    notes.add_argument(
+        "--limit", type=int, default=5, help="Page size, 1-100 (default 5)."
+    )
+    notes.add_argument(
+        "--sort",
+        choices=("relevance", "title", "line", "updated", "created"),
+        default="relevance",
+    )
+    notes.add_argument("--order", choices=("asc", "desc"), default="desc")
+    notes.add_argument("--text", help="Search ordinary Notes before paging.")
+    notes.add_argument("--format", choices=("text", "json", "jsonl"), default="text")
+    notes.add_argument("--pretty", action="store_true")
+    notes.add_argument("-o", "--output")
+    notes.set_defaults(func=command_notes)
+
     to_json = subparsers.add_parser("to-json", help="Convert life.txt to JSON array.")
     _add_input_paths(to_json)
     to_json.add_argument("-o", "--output", help="Output file. Defaults to stdout.")
@@ -5015,6 +5034,11 @@ def _add_serve_core_arguments(parser):
 
 def _add_item_filter_arguments(parser):
     parser.add_argument(
+        "--ordinary-notes",
+        action="store_true",
+        help="Only ordinary Notes; exclude semantic/system N conventions.",
+    )
+    parser.add_argument(
         "--open",
         action="store_true",
         help="Keep unfinished workflow items only: [ ], [/], [>], or [?].",
@@ -5610,6 +5634,39 @@ def command_ids_assign(args):
         write_text(None, output)
     else:
         write_text(None, format_id_assignments(records, args.dry_run))
+    return 0
+
+
+def command_notes(args):
+    from .ordinary_notes import ordinary_notes_page
+
+    items, diagnostics = _parse_or_exit(args.paths, _config(args))
+    items = filter_items(items, text=args.text)
+    page = ordinary_notes_page(
+        items,
+        date=args.date,
+        offset=args.offset,
+        limit=args.limit,
+        sort=args.sort,
+        order=args.order,
+    )
+    if args.format == "json":
+        result = dict(page, items=[item.to_dict() for item in page["items"]])
+        output = (
+            json.dumps(result, ensure_ascii=False, indent=2 if args.pretty else None)
+            + "\n"
+        )
+    elif args.format == "jsonl":
+        output = encode_conversion_items(page["items"], "jsonl")
+    else:
+        output = "".join(item_to_line(item) + "\n" for item in page["items"])
+        output += "%s / %s Notes; next offset: %s\n" % (
+            page["count"],
+            page["total"],
+            page["next_offset"],
+        )
+    write_text(args.output, output)
+    _print_warnings(diagnostics)
     return 0
 
 
@@ -17834,6 +17891,7 @@ def _filter_items_from_args(items, args):
     config = _config(args)
     return filter_items(
         items,
+        ordinary_notes=getattr(args, "ordinary_notes", False),
         open_only=getattr(args, "open", False),
         statuses=getattr(args, "status", None),
         kinds=getattr(args, "kinds", None),

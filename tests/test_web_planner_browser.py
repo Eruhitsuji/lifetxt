@@ -70,6 +70,44 @@ class PlannerBrowserTests(unittest.TestCase):
                 )
         self.assertEqual("予定", matrix[1]["schedule"])
         self.assertEqual("Schedule", matrix[0]["schedule"])
+        self.assertEqual(
+            [320, 360, 390, 430], [x["width"] for x in result["notesMatrix"]]
+        )
+        for item in result["notesMatrix"]:
+            with self.subTest(notes_viewport=item["width"]):
+                self.assertEqual(5, item["initial"]["count"])
+                self.assertIn("5 / 12", item["initial"]["total"])
+                self.assertEqual(
+                    "さらに表示" if item["lang"] == "ja" else "Load more",
+                    item["initial"]["label"],
+                )
+                self.assertGreaterEqual(item["initial"]["moreHeight"], 44)
+                self.assertEqual(0, item["initial"]["editButtons"])
+                self.assertTrue(item["initial"]["newDisabled"])
+                self.assertEqual(10, len(item["middle"]["rows"]))
+                self.assertEqual(2, item["middle"]["calls"])
+                self.assertEqual(12, len(set(item["final"])))
+                self.assertEqual(item["middle"]["rows"], item["final"][:10])
+                self.assertTrue(item["moreHidden"])
+                self.assertEqual(3, len(item["calls"]))
+                self.assertIn("offset=5", item["calls"][1])
+                self.assertIn("offset=10", item["calls"][2])
+                self.assertLessEqual(item["scrollWidth"], item["width"])
+        self.assertEqual(5, result["notesError"]["rows"])
+        self.assertTrue(result["notesError"]["enabled"])
+        self.assertIn("temporary error", result["notesError"]["feedback"])
+        self.assertEqual(5, result["notesRevision"]["rows"])
+        self.assertEqual(3, result["notesRevision"]["calls"])
+        self.assertEqual(5, len(result["notesRace"]["rows"]))
+        self.assertTrue(
+            all(
+                result["notesRace"]["date"] in row
+                for row in result["notesRace"]["rows"]
+            )
+        )
+        self.assertIn("0 / 0", result["notesEmpty"]["total"])
+        self.assertTrue(result["notesEmpty"]["moreHidden"])
+        self.assertTrue(result["notesEmpty"]["empty"])
         week_matrix = result["weekMatrix"]
         self.assertEqual([320, 360, 390, 430], [x["width"] for x in week_matrix])
         for item in week_matrix:
@@ -92,7 +130,10 @@ class PlannerBrowserTests(unittest.TestCase):
                 self.assertTrue(item["longTitle"])
                 geometry = item["dateNav"]
                 self.assert_date_navigation_geometry(
-                    geometry["label"], geometry["prev"], geometry["date"], geometry["next"]
+                    geometry["label"],
+                    geometry["prev"],
+                    geometry["date"],
+                    geometry["next"],
                 )
         month_matrix = result["monthMatrix"]
         self.assertEqual([320, 360, 390, 430], [x["width"] for x in month_matrix])
@@ -105,7 +146,9 @@ class PlannerBrowserTests(unittest.TestCase):
                 self.assertLessEqual(item["scrollWidth"], item["width"])
                 self.assertGreaterEqual(item["minHeight"], 44)
                 self.assertEqual(1, item["agendaRequests"])
-                self.assertTrue(any("items" in label or "件" in label for label in item["labels"]))
+                self.assertTrue(
+                    any("items" in label or "件" in label for label in item["labels"])
+                )
         self.assertIn("view=month", result["monthNext"]["url"])
         self.assertIn("date=2031-03-01", result["monthNext"]["url"])
         self.assertIn("from=2031-02-24&to=2031-04-06", result["monthNext"]["request"])

@@ -81,6 +81,7 @@ def load_filtered_items(args):
     config = getattr(args, "config_data", None) or {}
     return filter_items(
         items,
+        ordinary_notes=getattr(args, "ordinary_notes", False),
         open_only=args.open,
         statuses=args.status,
         kinds=args.kinds,

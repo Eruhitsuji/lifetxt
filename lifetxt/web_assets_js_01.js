@@ -177,6 +177,8 @@
         "Deferred": "延期",
         "Pending": "保留",
         "Note": "メモ",
+        "Ordinary Notes": "通常のメモ",
+        "Raw Notes (N)": "すべてのメモ（N）",
         "Details": "詳細",
         "Duplicate": "複製",
         "Export": "エクスポート",

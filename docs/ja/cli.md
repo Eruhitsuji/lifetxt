@@ -19,6 +19,7 @@ python -m lifetxt integrity [path ...]
 python -m lifetxt ids [path ...]
 python -m lifetxt links [path ...]
 python -m lifetxt sources [path ...]
+python -m lifetxt notes [path ...]
 python -m lifetxt convert --from FORMAT --to FORMAT [path ...]
 python -m lifetxt to-json [path ...]
 python -m lifetxt to-jsonl [path ...]
@@ -244,7 +245,7 @@ audience、そしてこの表と同じカテゴリ分類を表示します。
 | カテゴリ | コマンド |
 |---|---|
 | Getting Started / Daily | `tour`、`help`、`init`、`quick` (`add`)、`today`、`next`、`agenda`、`show`、`edit`、`done`、`complete`、`progress`、`clone`、`reopen`、`due`、`review`、`assist`、`state`、`start`、`stop`、`assign`、`timer`、`notify` |
-| Query / Explore | `filter`、`search`、`find`、`query`、`view`、`summary`、`inbox`、`health`、`temporal`、`timeline`、`history-check`、`thread`、`lifecycle-stats`、`freebusy`、`count`、`status`、`recent`、`item-uri` |
+| Query / Explore | `filter`、`search`、`find`、`query`、`view`、`summary`、`inbox`、`health`、`temporal`、`timeline`、`history-check`、`thread`、`lifecycle-stats`、`freebusy`、`count`、`status`、`recent`、`item-uri`、`notes` |
 | Projects / People / Collaboration | `project`、`portfolio`、`area`、`person`、`group`、`who`、`message`、`proposal`、`ticket`、`version`、`sprint` |
 | Structure / Data Integrity | `check`、`integrity`、`maintenance`、`storage`、`ids`、`links`、`backlinks`、`sources`、`tag`、`lint`、`deps`、`diff`、`snapshot`、`undo`、`cleanup`、`files` |
 | Import / Export / Reports | `convert`、`import`、`export`、`import-ics`、`sync-ics`、`to-json`、`to-jsonl`、`to-csv`、`from-json`、`from-jsonl`、`from-csv`、`from-markdown`、`from-todo`、`to-ics`、`markdown`、`stats`、`plot`、`export-heatmap`、`standup`、`invoice`、`share`、`digest`、`report` |
@@ -2216,7 +2217,7 @@ shell completion script・Web UI・MCP の `complete` tool と同一です。
 | command | 用途 |
 | --- | --- |
 | `/help [QUERY]` | 一覧の表示切り替え、または検索 (`/help timer`) |
-| `/view all\|tasks\|agenda\|status\|next\|today` | 表示する section を切り替え |
+| `/view all\|tasks\|agenda\|status\|next\|today\|notes\|raw-notes` | 表示する section を切り替え |
 | `/next` | 未完了・blocked でない・someday でない次の行動を priority 順に表示 |
 | `/today` | Daily Command Center を表示: now、attention、inbox、upcoming |
 | `/search TEXT` | 全 row を fuzzy filter |
@@ -3486,3 +3487,7 @@ python -m lifetxt template apply weekly_review --append life.txt --dry-run
 - `ticket`（development ticket: 新規作成、list、表示、編集、状態遷移、links）は英語版 [tickets.md](tickets.md) で詳しく説明しています。同様に `server-init`（本番 Ubuntu Server bootstrap の plan-first コマンド）、`server-update`（systemd 管理 install の guarded な本番更新）、`server-report`（稼働中 deployment への scheduled report job の plan/install/remove）はいずれも既定で dry-run、`--yes` で適用する安全設計です。詳細は英語版 [cli.md](../en/cli.md) の該当節を参照してください。
 - `python -m lifetxt help` は、コマンドをカテゴリ別に整理した索引、beginner/daily/power/ai/admin のガイド付きパス、そして `--json` による機械可読な capability catalog を提供します ([§1.1](#11-コマンドカテゴリとガイド付きパス) 参照)。既存コマンドの名前・alias・引数・終了コードは変更されません。
 - `export` は `to-json` / `to-jsonl` / `to-csv` / `share --format markdown` を束ねる統一 export エントリポイントで、既存の serializer をそのまま呼び出すだけの routing-only dispatcher です。`--format life` は native life.txt を round-trip するための first-class フォーマットで、対応する `import ... --preset life`（`*.life.txt` 拡張子から自動推論）は書き込み前に既存パーサーで検証します。`--format sqlite` / `--format lifetxtz` は、それぞれ `lifetxt-sqlite-v1`（外部 SQL ツールで参照可能な relational interchange）と `lifetxtz-v1`（stdlib `zipfile` による compressed native archive、SHA-256 integrity 検証つき）という versioned な contract に従います。いずれも plain life.txt を置き換える authoritative store ではありません。詳細は英語版 [cli.md](../en/cli.md) の該当節を参照してください。
+
+## 通常のメモ
+
+[CLI・Web・Planner・TUI・MCPで共通の通常メモを利用する](ordinary-notes.md)。

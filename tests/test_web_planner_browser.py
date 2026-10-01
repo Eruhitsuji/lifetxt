@@ -94,6 +94,24 @@ class PlannerBrowserTests(unittest.TestCase):
                 self.assert_date_navigation_geometry(
                     geometry["label"], geometry["prev"], geometry["date"], geometry["next"]
                 )
+        month_matrix = result["monthMatrix"]
+        self.assertEqual([320, 360, 390, 430], [x["width"] for x in month_matrix])
+        for item in month_matrix:
+            with self.subTest(month_viewport=item["width"]):
+                self.assertEqual(35, item["days"])
+                self.assertEqual(7, item["outside"])
+                self.assertEqual(1, item["today"])
+                self.assertEqual(1, item["selected"])
+                self.assertLessEqual(item["scrollWidth"], item["width"])
+                self.assertGreaterEqual(item["minHeight"], 44)
+                self.assertEqual(1, item["agendaRequests"])
+                self.assertTrue(any("items" in label or "件" in label for label in item["labels"]))
+        self.assertIn("view=month", result["monthNext"]["url"])
+        self.assertIn("date=2031-03-01", result["monthNext"]["url"])
+        self.assertIn("from=2031-02-24&to=2031-04-06", result["monthNext"]["request"])
+        self.assertNotIn("view=month", result["monthDayTransition"]["url"])
+        self.assertTrue(result["monthDayTransition"]["monthHidden"])
+        self.assertTrue(result["monthDayTransition"]["dayVisible"])
         self.assertIn("date=2031-02-10", result["nav"]["url"])
         self.assertIn("view=week", result["nav"]["url"])
         self.assertIn("from=2031-02-10&to=2031-02-16", result["nav"]["request"])

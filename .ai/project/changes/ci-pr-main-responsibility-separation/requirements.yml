@@ -1,0 +1,15 @@
+schema_version: 1
+requirements:
+  - id: req-ci-pr-main-responsibility-separation
+    kind: ADDED
+    statement: Pull requests receive fast Python 3.12 merge evidence while main retains the complete supported compatibility and regression matrix behind stable aggregate gates.
+    acceptance_criteria:
+      - PR runs full Python 3.12 source validation, traceability, mypy, and docs validation.
+      - Main and manual CI retain Python 3.10/3.11/3.12, no-Web, ResourceWarning, OS smoke, coverage, and optional dependency checks.
+      - New pushes cancel older runs only for the same pull request.
+      - PR gate and main gate fail unless all of their responsibilities succeed.
+      - Main CI failure Issue automation observes main gate and recovers on its next success.
+      - Release and lifetxt-mini workflows remain unchanged.
+    constraints: [no path-based skipping in this slice, no assurance deletion]
+    owner: Eruhitsuji
+open_questions: []

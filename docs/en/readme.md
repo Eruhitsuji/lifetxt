@@ -43,6 +43,7 @@ Every Markdown file under `docs/en/` is listed here.
 | AI/MCP integration | [ai-integration.md](./ai-integration.md) |
 | Personal Context / Personal DB with AI | [personal-context.md](./personal-context.md) |
 | CLI reference | [cli.md](./cli.md) |
+| CI responsibilities | [ci-responsibilities.md](./ci-responsibilities.md) |
 | Quick capture and shorthand | [quick-capture.md](./quick-capture.md) |
 | Configuration | [config.md](./config.md) |
 | Delegated mutations, remote attachments, recovery | [delegated-remote-attachments-and-recovery.md](./delegated-remote-attachments-and-recovery.md) |

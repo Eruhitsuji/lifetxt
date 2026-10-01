@@ -2,6 +2,20 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-planner-month-overview
+      capability_id: cap-web-mobile-planner
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/991
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1018
+      pull_request: pending
+      changed_files_or_scope: [lifetxt/web_planner.html, lifetxt/web_planner.css, lifetxt/web_planner.js, tests/test_web_planner.py, tests/test_web_planner_browser.py, tests/browser_planner_probe.mjs, docs/en/web.md, docs/ja/web.md, .ai/project/CAPABILITIES.yml, .ai/project/TRACEABILITY.yml]
+      tests_or_evidence:
+        - tests.test_web_planner
+        - tests.test_web_planner_browser at 320 / 360 / 390 / 430 CSS px
+        - physical iPhone-class verification remains manual
+      release_or_deployment: null
+      notes: Month reuses a single bounded Agenda range and canonical matches; it adds no recurrence engine, storage, or mutation surface.
+      status: proposed
+
     - requirement_id: req-ci-safe-path-routing
       capability_id: cap-ci-responsibility-separation
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1008

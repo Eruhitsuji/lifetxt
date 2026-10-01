@@ -16,11 +16,14 @@ const profile = await mkdtemp(path.join(os.tmpdir(), "planner-chrome-"));
 const proc = spawn(browser, ["--headless=new", "--disable-gpu", "--no-sandbox", "--no-first-run", "--no-default-browser-check", "--disable-dev-shm-usage", "--remote-debugging-port=0", `--user-data-dir=${profile}`, "about:blank"], {stdio: "ignore"});
 const wait = ms => new Promise(ok => setTimeout(ok, ms));
 async function port() {
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 300; i++) {
     try { return +(await readFile(path.join(profile, "DevToolsActivePort"), "utf8")).split("\n")[0]; }
-    catch { await wait(100); }
+    catch {
+      if (proc.exitCode !== null) throw Error(`Chromium exited before DevTools started (code ${proc.exitCode})`);
+      await wait(100);
+    }
   }
-  throw Error("DevTools unavailable");
+  throw Error("DevTools unavailable after 30 seconds");
 }
 let id = 0;
 const pending = new Map();

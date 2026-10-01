@@ -70,6 +70,18 @@ try {
     await openPage(`http://127.0.0.1:${server.address().port}/planner?view=week&date=2031-02-03&lang=${lang}`, true);
     weekMatrix.push(await evaljs(`(()=>{const rect=id=>{const r=document.querySelector(id).getBoundingClientRect();return {top:r.top,bottom:r.bottom,width:r.width,height:r.height}};return {lang:'${lang}',width:innerWidth,scrollWidth:document.documentElement.scrollWidth,days:document.querySelectorAll('.week-day').length,controls:[document.querySelector('#view-week').getBoundingClientRect().height,document.querySelector('#prev').getBoundingClientRect().height,document.querySelector('#next').getBoundingClientRect().height],dateNav:{label:rect('.date-row label'),prev:rect('#prev'),date:rect('#date'),next:rect('#next')},eventText:document.querySelector('#week-days').innerText,today:document.querySelector('.week-day.is-today')?.innerText,selected:document.querySelector('.week-day.is-selected')?.innerText,agendaRequests:window.__agendaCalls.length,timeCount:document.querySelectorAll('.week-record time').length,contentFits:[...document.querySelectorAll('.week-record')].every(node=>node.scrollWidth<=node.clientWidth),longTitle:document.querySelector('#week-days').innerText.includes('Very_Long_Unbroken_Title')}})()`));
   }
+  const monthMatrix = [];
+  for (const [width, lang] of [[320, "en"], [360, "ja"], [390, "en"], [430, "ja"]]) {
+    await cmd("Emulation.setDeviceMetricsOverride", {width, height: 844, deviceScaleFactor: 2, mobile: true, screenWidth: width, screenHeight: 844});
+    await cmd("Page.navigate", {url:`http://127.0.0.1:${server.address().port}/planner?view=month&date=2031-02-03&lang=${lang}`});
+    for (let i=0;i<100;i++){if(await evaljs("document.readyState==='complete'&&document.querySelectorAll('.month-day').length===35"))break;await wait(50)}
+    monthMatrix.push(await evaljs(`({width:innerWidth,lang:'${lang}',scrollWidth:document.documentElement.scrollWidth,days:document.querySelectorAll('.month-day').length,outside:document.querySelectorAll('.month-day.is-outside').length,today:document.querySelectorAll('.month-day.is-today').length,selected:document.querySelectorAll('.month-day.is-selected').length,minHeight:Math.min(...[...document.querySelectorAll('.month-day')].map(x=>x.getBoundingClientRect().height)),agendaRequests:window.__agendaCalls.length,labels:[...document.querySelectorAll('.month-day')].map(x=>x.getAttribute('aria-label')),monthText:document.querySelector('#month-heading').textContent})`));
+  }
+  await evaljs("document.querySelector('#next').click()");
+  const monthNext = await evaljs("({url:location.search,request:window.__agendaCalls.at(-1),heading:document.querySelector('#month-heading').textContent})");
+  await evaljs("document.querySelector('.month-day[aria-current=date]').click()");
+  const monthDayTransition = await evaljs("({url:location.search,monthHidden:document.querySelector('#month-view').hidden,dayVisible:!document.querySelector('#day-view').hidden})");
+  await openPage(`http://127.0.0.1:${server.address().port}/planner?view=week&date=2031-02-03&lang=ja`, true);
   await evaljs("document.querySelector('#next').click()");
   const nav = await evaljs("({url:location.search,request:window.__agendaCalls.at(-1)})");
   await evaljs("document.querySelector('#prev').click()");
@@ -85,7 +97,7 @@ try {
   const monthBoundary = await evaljs("({request:window.__agendaCalls.at(-1),days:document.querySelectorAll('.week-day').length,emptyDays:document.querySelectorAll('.week-empty').length})");
   await openPage(`http://127.0.0.1:${server.address().port}/planner?view=week&date=2031-02-03&lang=ja&readonly=1`, true);
   const readOnly = await evaljs("({days:document.querySelectorAll('.week-day').length,dockHidden:document.querySelector('#dock').hidden,captureDisabled:document.querySelector('#open-capture').disabled})");
-  process.stdout.write(JSON.stringify({matrix, weekMatrix, nav, navBack, returnToToday, dayTransition, yearBoundary, monthBoundary, readOnly}));
+  process.stdout.write(JSON.stringify({matrix, weekMatrix, monthMatrix, monthNext, monthDayTransition, nav, navBack, returnToToday, dayTransition, yearBoundary, monthBoundary, readOnly}));
 } finally {
   if (ws) ws.close();
   if (proc.exitCode === null) { proc.kill("SIGTERM"); await new Promise(ok => proc.once("exit", ok)); }

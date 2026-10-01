@@ -7,7 +7,7 @@
 <a class="skip" href="#main" data-i18n="skip">Skip to Planner</a>
 <header><a href="/" class="brand">✓ life.txt</a><a href="/" data-i18n="web">Full Web UI</a></header>
 <main id="main"><section class="day-head"><div class="title-row"><div><p data-i18n="eyebrow">Your day, in one place</p><h1 id="title" data-i18n="title">Day Planner</h1></div><button id="today" data-i18n="today">Today</button></div>
-<div id="view-switch" class="view-switch" role="group" aria-label="Planner view"><button id="view-day" type="button" data-i18n="day" aria-pressed="true">Day</button><button id="view-week" type="button" data-i18n="week" aria-pressed="false">Week</button></div>
+<div id="view-switch" class="view-switch" role="group" aria-label="Planner view"><button id="view-day" type="button" data-i18n="day" aria-pressed="true">Day</button><button id="view-week" type="button" data-i18n="week" aria-pressed="false">Week</button><button id="view-month" type="button" data-i18n="month" aria-pressed="false">Month</button></div>
 <div class="date-row"><button id="prev" aria-label="Previous day">‹</button><label for="date" data-i18n="choose">Choose date</label><input id="date" type="date" aria-label="Selected day"><button id="next" aria-label="Next day">›</button></div><p id="feedback" role="status" aria-live="polite"></p></section>
 <div id="day-view">
 <section class="panel"><h2 data-i18n="schedule">Schedule</h2><div id="schedule" aria-live="polite"></div></section>
@@ -16,7 +16,8 @@
 <section class="panel"><h2 data-i18n="notes">Notes</h2><div id="notes" aria-live="polite"></div><button id="new-note" data-i18n="newNote">＋ Add a note</button></section>
 <section class="panel"><h2 data-i18n="journal">Journal</h2><div id="journal"></div><button id="edit-journal" data-i18n="writeJournal">Write today's journal</button></section>
  </div>
- <section id="week-view" class="week-view" hidden aria-labelledby="week-range-heading"><div class="week-heading"><h2 id="week-range-heading" data-i18n="weekOf">Week of</h2><p id="week-range"></p></div><div id="week-days" class="week-days"></div></section></main>
+ <section id="week-view" class="week-view" hidden aria-labelledby="week-range-heading"><div class="week-heading"><h2 id="week-range-heading" data-i18n="weekOf">Week of</h2><p id="week-range"></p></div><div id="week-days" class="week-days"></div></section>
+ <section id="month-view" class="month-view" hidden aria-labelledby="month-heading"><h2 id="month-heading"></h2><div id="month-weekdays" class="month-weekdays" aria-hidden="true"></div><div id="month-grid" class="month-grid"></div></section></main>
 <div id="dock" class="dock"><button id="open-capture" data-i18n="capture">＋ Quick Capture</button></div>
 <dialog id="capture-dialog" aria-labelledby="capture-title"><form id="capture-form"><h2 id="capture-title" data-i18n="capture">Quick Capture</h2><label for="capture-text" data-i18n="prompt">What do you want to remember?</label><input id="capture-text" required><p id="capture-feedback" role="status" aria-live="polite"></p><button type="submit" data-i18n="submitCapture">Capture</button><button type="button" data-close="capture-dialog" data-i18n="close">Close</button></form></dialog>
 <dialog id="editor" aria-labelledby="editor-heading"><form id="editor-form"><h2 id="editor-heading"></h2><label for="editor-title" data-i18n="labelTitle">Title</label><input id="editor-title" required><label for="editor-body" data-i18n="labelBody">Details / journal</label><textarea id="editor-body" rows="7"></textarea><p id="editor-feedback" role="status" aria-live="polite"></p><button type="submit" data-i18n="save">Save</button><button type="button" data-close="editor" data-i18n="close">Close</button></form></dialog>

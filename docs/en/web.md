@@ -56,7 +56,11 @@ Journal. Switch to **Week** for a Monday–Sunday overview of dated Events,
 Reminders, Deadlines, and Tasks. Previous/next controls move by a day or a
 week according to the selected view; selecting a date in Week opens that exact
 day in Day. `?date=YYYY-MM-DD` preserves the selected date, `?view=week` opens
-the weekly overview, and `?lang=ja` selects Japanese. Week is read-only; Day
+the weekly overview, and `?view=month` opens a Monday–Sunday month calendar.
+Month uses one shared Agenda range request, presents bounded count-based
+density instead of item titles, and sends a selected date to Day for details.
+Leading/trailing dates complete each week and remain navigable. `?lang=ja`
+selects Japanese. Week and Month are read-only; Day
 continues to write through the existing capture and item APIs, so new records
 remain ordinary `life.txt` entries. A Planner-specific manifest makes
 `/planner` installable while the existing `/capture` shortcut continues to

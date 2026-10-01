@@ -87,5 +87,5 @@ try {
   if (ws) ws.close();
   if (proc.exitCode === null) { proc.kill("SIGTERM"); await new Promise(ok => proc.once("exit", ok)); }
   await new Promise(ok => server.close(ok));
-  await rm(profile, {recursive: true, force: true});
+  await rm(profile, {recursive: true, force: true, maxRetries: 5, retryDelay: 100});
 }

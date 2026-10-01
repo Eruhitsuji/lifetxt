@@ -40,6 +40,7 @@
 | AI/MCP integration | [ai-integration.md](./ai-integration.md) |
 | AIによる Personal Context / Personal DB | [personal-context.md](./personal-context.md) |
 | CLI reference | [cli.md](./cli.md) |
+| CI responsibilities | [ci-responsibilities.md](./ci-responsibilities.md) |
 | Quick capture と省略記法 | [quick-capture.md](./quick-capture.md) |
 | Configuration | [config.md](./config.md) |
 | Delegated mutations, remote attachments, recovery | [delegated-remote-attachments-and-recovery.md](./delegated-remote-attachments-and-recovery.md) |

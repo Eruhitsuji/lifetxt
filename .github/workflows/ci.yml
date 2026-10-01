@@ -11,6 +11,10 @@ permissions:
   contents: read
   issues: write
 
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('pr-ci-{0}', github.event.pull_request.number) || format('ci-{0}-{1}', github.event_name, github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   test:
     name: Python ${{ matrix.python-version }} with Web extras
@@ -18,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ${{ fromJSON(github.event_name == 'pull_request' && '["3.12"]' || '["3.10", "3.11", "3.12"]') }}
 
     steps:
       - name: Check out repository
@@ -61,6 +65,7 @@ jobs:
 
   resource-warning-gate:
     name: ResourceWarning regression gate
+    if: ${{ github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -80,6 +85,7 @@ jobs:
 
   no-web-extras:
     name: Python 3.12 without optional Web dependencies
+    if: ${{ github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -127,6 +133,7 @@ jobs:
 
   windows-core-smoke:
     name: Windows core CLI smoke
+    if: ${{ github.event_name != 'pull_request' }}
     runs-on: windows-latest
     env:
       PYTHONIOENCODING: utf-8
@@ -172,6 +179,7 @@ jobs:
 
   macos-core-smoke:
     name: macOS core CLI smoke
+    if: ${{ github.event_name != 'pull_request' }}
     runs-on: macos-latest
 
     steps:
@@ -214,6 +222,7 @@ jobs:
 
   coverage-baseline:
     name: Publish stable coverage baseline
+    if: ${{ github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -270,6 +279,7 @@ jobs:
 
   optional-dependency-compatibility:
     name: ${{ matrix.extra }} ${{ matrix.band }} compatibility
+    if: ${{ github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -343,8 +353,9 @@ jobs:
           name: release-document-validation
           path: docs/en/release-doc-validation.json
 
-  release-gate:
-    name: Required release policy and clean wheel
+  traceability-gate:
+    name: Validate PR traceability
+    if: ${{ github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -359,44 +370,100 @@ jobs:
           python-version: "3.12"
 
       - name: Run traceability update gate
-        if: github.event_name == 'pull_request'
         env:
           LIFETXT_TRACEABILITY_GATE_BASE: ${{ github.event.pull_request.base.sha }}
           LIFETXT_TRACEABILITY_GATE_PR_URL: https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }}
         run: python -m unittest tests.test_traceability_gate
 
-      - name: Run isolated release profile
-        shell: bash
+  pr-gate:
+    name: PR gate
+    if: ${{ always() && github.event_name == 'pull_request' }}
+    needs: [test, type-check, release-document-validation, traceability-gate]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every PR responsibility to pass
+        env:
+          TEST_RESULT: ${{ needs.test.result }}
+          TYPE_RESULT: ${{ needs['type-check'].result }}
+          DOCS_RESULT: ${{ needs['release-document-validation'].result }}
+          TRACEABILITY_RESULT: ${{ needs['traceability-gate'].result }}
         run: |
-          set -o pipefail
-          python scripts/run_ci_like.py --profile release --python python3.12 2>&1 | tee release-gate.log
+          python - <<'PY'
+          import os
 
-      - name: Upload release policy evidence
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: release-policy-evidence
-          if-no-files-found: warn
-          path: |
-            release-gate.log
-            .cache/release-policy-manifest.json
+          results = {
+              "python-3.12": os.environ["TEST_RESULT"],
+              "type-check": os.environ["TYPE_RESULT"],
+              "docs": os.environ["DOCS_RESULT"],
+              "traceability": os.environ["TRACEABILITY_RESULT"],
+          }
+          failed = {name: value for name, value in results.items() if value != "success"}
+          print("PR responsibility results:", results)
+          if failed:
+              raise SystemExit("PR gate failed: %r" % failed)
+          PY
+
+  main-gate:
+    name: Main compatibility gate
+    if: ${{ always() && github.event_name != 'pull_request' }}
+    needs:
+      - test
+      - resource-warning-gate
+      - no-web-extras
+      - windows-core-smoke
+      - macos-core-smoke
+      - coverage-baseline
+      - type-check
+      - optional-dependency-compatibility
+      - release-document-validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every main compatibility responsibility to pass
+        env:
+          TEST_RESULT: ${{ needs.test.result }}
+          RESOURCE_RESULT: ${{ needs['resource-warning-gate'].result }}
+          NO_WEB_RESULT: ${{ needs['no-web-extras'].result }}
+          WINDOWS_RESULT: ${{ needs['windows-core-smoke'].result }}
+          MACOS_RESULT: ${{ needs['macos-core-smoke'].result }}
+          COVERAGE_RESULT: ${{ needs['coverage-baseline'].result }}
+          TYPE_RESULT: ${{ needs['type-check'].result }}
+          OPTIONAL_RESULT: ${{ needs['optional-dependency-compatibility'].result }}
+          DOCS_RESULT: ${{ needs['release-document-validation'].result }}
+        run: |
+          python - <<'PY'
+          import os
+
+          results = {
+              "python-matrix": os.environ["TEST_RESULT"],
+              "resource-warning": os.environ["RESOURCE_RESULT"],
+              "no-web": os.environ["NO_WEB_RESULT"],
+              "windows": os.environ["WINDOWS_RESULT"],
+              "macos": os.environ["MACOS_RESULT"],
+              "coverage": os.environ["COVERAGE_RESULT"],
+              "type-check": os.environ["TYPE_RESULT"],
+              "optional-dependencies": os.environ["OPTIONAL_RESULT"],
+              "docs": os.environ["DOCS_RESULT"],
+          }
+          failed = {name: value for name, value in results.items() if value != "success"}
+          print("Main responsibility results:", results)
+          if failed:
+              raise SystemExit("Main compatibility gate failed: %r" % failed)
+          PY
 
   ci-visibility:
     name: Keep main-branch CI failures visible
     if: ${{ always() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-    needs: [test, no-web-extras, release-gate]
+    needs: [main-gate]
     runs-on: ubuntu-latest
     env:
-      TEST_RESULT: ${{ needs.test.result }}
-      NO_WEB_RESULT: ${{ needs['no-web-extras'].result }}
-      RELEASE_RESULT: ${{ needs['release-gate'].result }}
+      MAIN_GATE_RESULT: ${{ needs['main-gate'].result }}
     steps:
       - name: Open, update, or close the CI failure issue
         uses: actions/github-script@v8
         with:
           script: |
             const title = "CI failure on main";
-            const failed = process.env.TEST_RESULT !== "success" || process.env.NO_WEB_RESULT !== "success" || process.env.RELEASE_RESULT !== "success";
+            const failed = process.env.MAIN_GATE_RESULT !== "success";
             const { data: issues } = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -409,9 +476,7 @@ jobs:
               const body = [
                 "The latest CI run on `main` failed.",
                 "",
-                `- Matrix result: \`${process.env.TEST_RESULT}\``,
-                `- No-Web result: \`${process.env.NO_WEB_RESULT}\``,
-                `- Release gate result: \`${process.env.RELEASE_RESULT}\``,
+                `- Main compatibility gate: \`${process.env.MAIN_GATE_RESULT}\``,
                 `- Run: ${runUrl}`,
                 "",
                 "This issue is maintained automatically and closes after the next successful main-branch run.",

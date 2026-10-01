@@ -2,13 +2,13 @@ schema_version: 1
 change:
   id: ci-safe-path-routing
   title: Add conservative path-based CI routing
-  status: proposed
+  status: implemented
   change_type: Operations
   assurance_level: High
   owner: Eruhitsuji
   accountable_owner: Eruhitsuji
   related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1011
-  related_pull_request: []
+  related_pull_request: [https://github.com/Eruhitsuji/lifetxt/pull/1017]
   base_commit: 63a311c
   target_release: null
 scope:

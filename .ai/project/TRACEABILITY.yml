@@ -6,12 +6,12 @@ traceability:
       capability_id: cap-ci-responsibility-separation
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1008
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1011
-      pull_request: pending
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1017
       changed_files_or_scope: [.github/workflows/ci.yml, scripts/classify_ci_paths.py, tests/test_ci_path_routing.py, tests/test_ci_workflow_responsibilities.py, docs/en/ci-responsibilities.md, docs/ja/ci-responsibilities.md, .ai/project/changes/ci-safe-path-routing/]
       tests_or_evidence: [tests.test_ci_path_routing, tests.test_ci_workflow_responsibilities, GitHub Actions PR run]
       release_or_deployment: null
       notes: Only docs-only changes use the lightweight route; all ambiguous cases fail safe to full CI.
-      status: proposed
+      status: implemented
 
     - requirement_id: req-ci-pr-main-responsibility-separation
       capability_id: cap-ci-responsibility-separation

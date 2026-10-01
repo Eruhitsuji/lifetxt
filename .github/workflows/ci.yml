@@ -16,8 +16,34 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  classify-changes:
+    name: Classify changed paths
+    runs-on: ubuntu-latest
+    outputs:
+      category: ${{ steps.classify.outputs.category }}
+      run-heavy: ${{ steps.classify.outputs.run-heavy }}
+    steps:
+      - name: Check out repository history
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Classify paths conservatively
+        id: classify
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" || -z "$BASE_SHA" || "$BASE_SHA" == "0000000000000000000000000000000000000000" ]]; then
+            : > changed-paths.txt
+          else
+            git diff --name-only "$BASE_SHA" "$HEAD_SHA" > changed-paths.txt
+          fi
+          python scripts/classify_ci_paths.py changed-paths.txt --github-output "$GITHUB_OUTPUT"
+
   test:
     name: Python ${{ matrix.python-version }} with Web extras
+    needs: [classify-changes]
+    if: ${{ needs['classify-changes'].outputs['run-heavy'] == 'true' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -65,7 +91,8 @@ jobs:
 
   resource-warning-gate:
     name: ResourceWarning regression gate
-    if: ${{ github.event_name != 'pull_request' }}
+    needs: [classify-changes]
+    if: ${{ github.event_name != 'pull_request' && needs['classify-changes'].outputs['run-heavy'] == 'true' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -85,7 +112,8 @@ jobs:
 
   no-web-extras:
     name: Python 3.12 without optional Web dependencies
-    if: ${{ github.event_name != 'pull_request' }}
+    needs: [classify-changes]
+    if: ${{ github.event_name != 'pull_request' && needs['classify-changes'].outputs['run-heavy'] == 'true' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -135,7 +163,8 @@ jobs:
 
   windows-core-smoke:
     name: Windows core CLI smoke
-    if: ${{ github.event_name != 'pull_request' }}
+    needs: [classify-changes]
+    if: ${{ github.event_name != 'pull_request' && needs['classify-changes'].outputs['run-heavy'] == 'true' }}
     runs-on: windows-latest
     env:
       PYTHONIOENCODING: utf-8
@@ -181,7 +210,8 @@ jobs:
 
   macos-core-smoke:
     name: macOS core CLI smoke
-    if: ${{ github.event_name != 'pull_request' }}
+    needs: [classify-changes]
+    if: ${{ github.event_name != 'pull_request' && needs['classify-changes'].outputs['run-heavy'] == 'true' }}
     runs-on: macos-latest
 
     steps:
@@ -224,7 +254,8 @@ jobs:
 
   coverage-baseline:
     name: Publish stable coverage baseline
-    if: ${{ github.event_name != 'pull_request' }}
+    needs: [classify-changes]
+    if: ${{ github.event_name != 'pull_request' && needs['classify-changes'].outputs['run-heavy'] == 'true' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -262,6 +293,8 @@ jobs:
 
   type-check:
     name: Static type check stable diagnostic contract
+    needs: [classify-changes]
+    if: ${{ needs['classify-changes'].outputs['run-heavy'] == 'true' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -280,8 +313,9 @@ jobs:
         run: mypy --follow-imports=skip --ignore-missing-imports lifetxt/diagnostic_contract.py
 
   optional-dependency-compatibility:
-    name: ${{ matrix.extra }} ${{ matrix.band }} compatibility
-    if: ${{ github.event_name != 'pull_request' }}
+    name: Optional dependency compatibility
+    needs: [classify-changes]
+    if: ${{ github.event_name != 'pull_request' && needs['classify-changes'].outputs['run-heavy'] == 'true' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -334,6 +368,7 @@ jobs:
 
   release-document-validation:
     name: Validate release documentation
+    needs: [classify-changes]
     runs-on: ubuntu-latest
 
     steps:
@@ -357,6 +392,7 @@ jobs:
 
   traceability-gate:
     name: Validate PR traceability
+    needs: [classify-changes]
     if: ${{ github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
 
@@ -380,7 +416,7 @@ jobs:
   pr-gate:
     name: PR gate
     if: ${{ always() && github.event_name == 'pull_request' }}
-    needs: [test, type-check, release-document-validation, traceability-gate]
+    needs: [classify-changes, test, type-check, release-document-validation, traceability-gate]
     runs-on: ubuntu-latest
     steps:
       - name: Require every PR responsibility to pass
@@ -389,6 +425,7 @@ jobs:
           TYPE_RESULT: ${{ needs['type-check'].result }}
           DOCS_RESULT: ${{ needs['release-document-validation'].result }}
           TRACEABILITY_RESULT: ${{ needs['traceability-gate'].result }}
+          PATH_CATEGORY: ${{ needs['classify-changes'].outputs.category }}
         run: |
           python - <<'PY'
           import os
@@ -399,7 +436,11 @@ jobs:
               "docs": os.environ["DOCS_RESULT"],
               "traceability": os.environ["TRACEABILITY_RESULT"],
           }
-          failed = {name: value for name, value in results.items() if value != "success"}
+          expected = "skipped" if os.environ["PATH_CATEGORY"] == "docs-only" else "success"
+          failed = {
+              name: value for name, value in results.items()
+              if value != (expected if name in {"python-3.12", "type-check"} else "success")
+          }
           print("PR responsibility results:", results)
           if failed:
               raise SystemExit("PR gate failed: %r" % failed)
@@ -410,6 +451,7 @@ jobs:
     if: ${{ always() && github.event_name != 'pull_request' }}
     needs:
       - test
+      - classify-changes
       - resource-warning-gate
       - no-web-extras
       - windows-core-smoke
@@ -431,6 +473,7 @@ jobs:
           TYPE_RESULT: ${{ needs['type-check'].result }}
           OPTIONAL_RESULT: ${{ needs['optional-dependency-compatibility'].result }}
           DOCS_RESULT: ${{ needs['release-document-validation'].result }}
+          PATH_CATEGORY: ${{ needs['classify-changes'].outputs.category }}
         run: |
           python - <<'PY'
           import os
@@ -446,7 +489,11 @@ jobs:
               "optional-dependencies": os.environ["OPTIONAL_RESULT"],
               "docs": os.environ["DOCS_RESULT"],
           }
-          failed = {name: value for name, value in results.items() if value != "success"}
+          expected = "skipped" if os.environ["PATH_CATEGORY"] == "docs-only" else "success"
+          failed = {
+              name: value for name, value in results.items()
+              if value != ("success" if name == "docs" else expected)
+          }
           print("Main responsibility results:", results)
           if failed:
               raise SystemExit("Main compatibility gate failed: %r" % failed)

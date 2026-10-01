@@ -6,14 +6,14 @@ traceability:
       capability_id: cap-ci-responsibility-separation
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1008
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1014
-      pull_request: pending
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1015
       changed_files_or_scope: [.github/workflows/ci.yml, tests/test_ci_workflow_responsibilities.py]
       tests_or_evidence:
         - python -m unittest tests.test_ci_workflow_responsibilities
         - no-Web CI lane after merge
       release_or_deployment: null
       notes: Restore the no-Web lane after #1013 added a PyYAML-based workflow contract test; PyYAML remains test tooling and is not a runtime dependency.
-      status: proposed
+      status: verified
 
     - requirement_id: req-ci-pr-main-responsibility-separation
       capability_id: cap-ci-responsibility-separation

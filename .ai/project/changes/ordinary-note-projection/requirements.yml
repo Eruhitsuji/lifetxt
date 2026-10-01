@@ -1,0 +1,13 @@
+schema_version: 1
+requirements:
+  - id: req-ordinary-note-projection
+    kind: ADDED
+    statement: Every Note browsing surface can use the same ordinary Note projection while preserving raw N access.
+    owner: Eruhitsuji
+    acceptance_criteria: [authoritative classifier reuse, deterministic ordering, filtering before paging, all-surface parity, EN/JA documentation]
+  - id: req-planner-user-note-projection
+    kind: ADDED
+    statement: Planner consumes ordinary Notes through bounded five-row pages with counts and accessible expansion.
+    owner: Eruhitsuji
+    acceptance_criteria: [five-row initial page, incremental expansion, no duplicates, revision and navigation safety, read-only expansion, mobile geometry]
+open_questions: []

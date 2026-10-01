@@ -298,6 +298,7 @@ CATEGORIES = OrderedDict(
                     "status",
                     "recent",
                     "item-uri",
+                    "notes",
                 ),
             },
         ),

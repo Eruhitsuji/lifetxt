@@ -196,7 +196,12 @@ def filter_items(
     team_aliases=None,
     tag_aliases=None,
     fuzzy=False,
+    ordinary_notes=False,
 ):
+    if ordinary_notes:
+        from .ordinary_notes import select_ordinary_notes
+
+        items = select_ordinary_notes(items)
     statuses = _normalize_status_filter(statuses)
     kinds = _normalize_type_filter(kinds)
     projects = _normalize_filter_values(projects)

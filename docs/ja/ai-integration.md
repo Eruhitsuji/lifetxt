@@ -743,3 +743,7 @@ provenance モデルも、AI 推論から authoritative な fact への自動昇
 ありません -- すべての Personal AI Memory 候補は、他の Unified Inbox
 proposal と全く同じ human review を通過します。この convention の元になった
 調査全体は #503 を参照してください。
+
+## 通常のメモ
+
+[CLI・Web・Planner・TUI・MCPで共通の通常メモを利用する](ordinary-notes.md)。

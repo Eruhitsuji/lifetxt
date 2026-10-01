@@ -810,3 +810,7 @@ bounded, deterministic retrospective from the workspace Life Timeline. Add
 currently open tasks; it does not infer causes, invent history, or call an AI
 provider. Incomplete history and event truncation remain visible in
 `limitations` and `diagnostics`.
+
+## Ordinary Notes
+
+[Shared ordinary Notes across CLI, Web, Planner, TUI and MCP](ordinary-notes.md).

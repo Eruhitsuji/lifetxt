@@ -1,6 +1,20 @@
 schema_version: 1
 
 capabilities:
+  - id: cap-ordinary-note-projection
+    name: Shared ordinary Note projection
+    summary: Surface-neutral reading Notes composed from authoritative semantic classifiers with bounded deterministic browsing.
+    status: active
+    owner: Eruhitsuji
+    source_requirements: [req-ordinary-note-projection, req-planner-user-note-projection]
+    implementation_locations: [lifetxt/ordinary_notes.py, lifetxt/cli.py, lifetxt/webapp.py, lifetxt/tui_backend.py, lifetxt/tui_app.py, lifetxt/mcp.py, lifetxt/remote_backend.py, lifetxt/remote_web.py, lifetxt/web_planner.js]
+    public_interfaces: [lifetxt notes, GET /api/notes, MCP list_notes, TUI /view notes, --ordinary-notes, GET /api/remote/v1/resources/notes]
+    tests_or_evidence: [tests.test_ordinary_notes, tests.test_ordinary_notes_browser, tests.test_web_planner_browser]
+    related_issues: [https://github.com/Eruhitsuji/lifetxt/issues/1020]
+    related_pull_requests: []
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    replacement: {replaces: [], replaced_by: null, deprecation_issue: null}
+
   - id: cap-ci-responsibility-separation
     name: CI responsibility separation
     summary: Separate fast PR merge evidence, main compatibility evidence, and release-artifact evidence without dropping supported-platform or quality coverage.
@@ -35,6 +49,7 @@ capabilities:
       - req-planner-week-overview
       - req-planner-mobile-date-navigation-geometry
       - req-planner-month-overview
+      - req-planner-user-note-projection
     implementation_locations:
       - lifetxt/webapp.py
       - lifetxt/web_assets.py
@@ -52,6 +67,7 @@ capabilities:
       - GET /planner.webmanifest
       - GET /api/command-center?date=YYYY-MM-DD (optional)
       - GET /api/agenda?from=YYYY-MM-DD&to=YYYY-MM-DD (week and month overview)
+      - GET /api/notes (shared ordinary Notes in five-row pages)
       - Existing agenda, item, capture and mutation APIs
     tests_or_evidence:
       - tests.test_web_planner
@@ -60,6 +76,7 @@ capabilities:
       - tests.test_web_assets
       - tests.test_web_i18n
     related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/1020
       - https://github.com/Eruhitsuji/lifetxt/issues/991
       - https://github.com/Eruhitsuji/lifetxt/issues/992
       - https://github.com/Eruhitsuji/lifetxt/issues/993

@@ -19,6 +19,7 @@ RESOURCE_NAMES = (
     "agenda",
     "search",
     "next",
+    "notes",
 )
 
 
@@ -59,6 +60,10 @@ def resource_catalog():
         {"name": "agenda", "parameters": ["after", "before", "limit"]},
         {"name": "search", "parameters": ["q", "types", "limit", "fuzzy"]},
         {"name": "next", "parameters": ["project", "assignee", "limit"]},
+        {
+            "name": "notes",
+            "parameters": ["text", "date", "offset", "limit", "sort", "order"],
+        },
     ]
 
 
@@ -331,6 +336,26 @@ def _resource_items(items, config, params):
     return {"count": len(filtered), "items": _item_rows(filtered, config)}
 
 
+def _resource_notes(items, config, params):
+    from .agenda import filter_items
+    from .ordinary_notes import ordinary_notes_page
+
+    # read_resource has already applied authoritative visibility before this.
+    try:
+        page = ordinary_notes_page(
+            filter_items(items, text=params.get("text") or params.get("q")),
+            **{
+                key: params[key]
+                for key in ("date", "offset", "limit", "sort", "order")
+                if key in params
+            },
+        )
+    except ValueError as exc:
+        raise RemoteAccessError("REMOTE_PARAMETER_INVALID", str(exc), 400) from exc
+    page["items"] = _item_rows(page["items"], config)
+    return page
+
+
 _TICKETS_DEFAULT_PAGE_SIZE = 200
 
 
@@ -599,6 +624,7 @@ def _resource_next(items, config, params):
 
 _BUILDERS = {
     "items": _resource_items,
+    "notes": _resource_notes,
     "tickets": _resource_tickets,
     "ticket-detail": _resource_ticket_detail,
     "projects": _resource_projects,

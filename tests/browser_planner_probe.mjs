@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 
 const [browser, file] = process.argv.slice(2);
-const mock = `window.__agendaCalls=[];window.fetch=async input=>{const url=String(input);if(url.includes('/api/agenda')){window.__agendaCalls.push(url);return new Response(JSON.stringify({records:[{type:'E',title:'Daily Standup',matches:[{start:'2031-02-03T09:00'},{start:'2031-02-04T09:00'}]},{type:'R',title:'Water Plants',matches:[{start:'2031-02-03'}]},{type:'D',title:'Submit Grant',matches:[{start:'2031-02-05'}]},{type:'T',title:'Finish Report',matches:[{start:'2031-02-06T14:00'}]},{type:'T',title:'Very_Long_Unbroken_Title_'+'x'.repeat(120),matches:[{start:'2031-02-07T14:00'}]}]}),{status:200,headers:{'Content-Type':'application/json'}})}return new Response(JSON.stringify(url.includes('/api/config')?{today:'2031-02-03',web:{language:'en'}}:url.includes('/api/health')?{read_only:new URL(location.href).searchParams.has('readonly'),writable_path:'life.txt'}:url.includes('/api/command-center')?{due_today:[],next_actions:[],blocked:[]}:{items:[]}),{status:200,headers:{'Content-Type':'application/json'}})};`;
+const mock = `window.__notesCalls=[];window.__notesMode='normal';window.__delayMore=false;window.__agendaCalls=[];window.fetch=async input=>{const url=String(input);if(url.includes('/api/notes?')){window.__notesCalls.push(url);const params=new URL(url,location.href).searchParams,offset=Number(params.get('offset')||0),limit=Number(params.get('limit')||5),date=params.get('date');if(window.__notesMode==='error'&&offset>0)return new Response(JSON.stringify({detail:'temporary error'}),{status:500});const total=window.__notesMode==='empty'?0:12,items=Array.from({length:total},(_,i)=>({id:'n'+i,title:date+' Note '+i+' '+'x'.repeat(80),type:'N',editable:true,details:{body:['Note body']}})).slice(offset,offset+limit),page={items,count:items.length,total,has_more:offset+items.length<total,next_offset:offset+items.length<total?offset+items.length:null,revision:window.__notesMode==='changed'?'r2':'r1'};if(window.__delayMore&&offset>0)return new Promise(resolve=>{window.__releaseNotes=()=>resolve(new Response(JSON.stringify(page),{status:200}))});return new Response(JSON.stringify(page),{status:200})}if(url.includes('/api/agenda')){window.__agendaCalls.push(url);return new Response(JSON.stringify({records:[{type:'E',title:'Daily Standup',matches:[{start:'2031-02-03T09:00'},{start:'2031-02-04T09:00'}]},{type:'R',title:'Water Plants',matches:[{start:'2031-02-03'}]},{type:'D',title:'Submit Grant',matches:[{start:'2031-02-05'}]},{type:'T',title:'Finish Report',matches:[{start:'2031-02-06T14:00'}]},{type:'T',title:'Very_Long_Unbroken_Title_'+'x'.repeat(120),matches:[{start:'2031-02-07T14:00'}]}]}),{status:200,headers:{'Content-Type':'application/json'}})}return new Response(JSON.stringify(url.includes('/api/config')?{today:'2031-02-03',web:{language:'en'}}:url.includes('/api/health')?{read_only:new URL(location.href).searchParams.has('readonly'),writable_path:'life.txt'}:url.includes('/api/command-center')?{due_today:[],next_actions:[],blocked:[]}:{items:[]}),{status:200,headers:{'Content-Type':'application/json'}})};`;
 const html = (await readFile(file, "utf8")).replace("<script>(() =>", `<script>${mock}</script><script>(() =>`);
 const server = http.createServer((req, res) => {
   res.writeHead(200, {"Content-Type": "text/html"});
@@ -64,6 +64,40 @@ try {
     await openPage(`http://127.0.0.1:${server.address().port}/planner?lang=${lang}`);
     matrix.push(await evaljs(`(()=>{const rect=id=>{const r=document.querySelector(id).getBoundingClientRect();return {top:r.top,bottom:r.bottom,width:r.width,height:r.height}};return {width:innerWidth,height:innerHeight,scrollWidth:document.documentElement.scrollWidth,dateHeight:document.querySelector('#date').getBoundingClientRect().height,captureHeight:document.querySelector('#open-capture').getBoundingClientRect().height,schedule:document.querySelector('#schedule').previousElementSibling.textContent.trim(),label:rect('.date-row label'),prev:rect('#prev'),date:rect('#date'),next:rect('#next')}})()`));
   }
+  const notesMatrix = [];
+  async function notesReady(count){
+    for(let i=0;i<100;i++){if(await evaljs(`document.querySelectorAll('#notes .card').length===${count}&&!document.querySelector('#more-notes').disabled`))return;await wait(30)}
+    throw Error('Notes did not reach '+count+' rows');
+  }
+  for (const [width,lang] of [[320,'en'],[360,'ja'],[390,'en'],[430,'ja']]) {
+    await cmd('Emulation.setDeviceMetricsOverride',{width,height:844,deviceScaleFactor:2,mobile:true,screenWidth:width,screenHeight:844});
+    await openPage(`http://127.0.0.1:${server.address().port}/planner?lang=${lang}&readonly=1`);
+    await notesReady(5);
+    const initial=await evaljs(`({count:document.querySelectorAll('#notes .card').length,total:document.querySelector('#notes-count').textContent,label:document.querySelector('#more-notes').textContent,moreHeight:document.querySelector('#more-notes').getBoundingClientRect().height,editButtons:document.querySelectorAll('#notes button').length,newDisabled:document.querySelector('#new-note').disabled})`);
+    await evaljs("document.querySelector('#more-notes').click();document.querySelector('#more-notes').click()");
+    await notesReady(10);
+    const middle=await evaljs("({rows:[...document.querySelectorAll('#notes strong')].map(x=>x.textContent),calls:window.__notesCalls.length})");
+    await evaljs("document.querySelector('#more-notes').click()");
+    await notesReady(12);
+    notesMatrix.push(await evaljs(`({width:innerWidth,lang:'${lang}',initial:${JSON.stringify(initial)},middle:${JSON.stringify(middle)},final:[...document.querySelectorAll('#notes strong')].map(x=>x.textContent),moreHidden:document.querySelector('#more-notes').hidden,calls:window.__notesCalls,scrollWidth:document.documentElement.scrollWidth})`));
+  }
+  // Retry errors without losing already-displayed rows.
+  await openPage(`http://127.0.0.1:${server.address().port}/planner?lang=en`);await notesReady(5);
+  await evaljs("window.__notesMode='error';document.querySelector('#more-notes').click()");await wait(100);
+  const notesError=await evaljs("({rows:document.querySelectorAll('#notes .card').length,enabled:!document.querySelector('#more-notes').disabled,feedback:document.querySelector('#feedback').textContent})");
+  await evaljs("window.__notesMode='normal';document.querySelector('#more-notes').click()");await notesReady(10);
+  // Workspace revision changes restart the bounded page, rather than mix snapshots.
+  await openPage(`http://127.0.0.1:${server.address().port}/planner?lang=en`);await notesReady(5);
+  await evaljs("window.__notesMode='changed';document.querySelector('#more-notes').click()");await wait(100);
+  const notesRevision=await evaljs("({rows:document.querySelectorAll('#notes .card').length,calls:window.__notesCalls.length,total:document.querySelector('#notes-count').textContent})");
+  // A delayed old page must never append after changing the selected day.
+  await openPage(`http://127.0.0.1:${server.address().port}/planner?lang=en`);await notesReady(5);
+  await evaljs("window.__delayMore=true;document.querySelector('#more-notes').click()");
+  await evaljs("document.querySelector('#next').click()");await notesReady(5);
+  await evaljs("window.__releaseNotes()");await wait(100);
+  const notesRace=await evaljs("({rows:[...document.querySelectorAll('#notes strong')].map(x=>x.textContent),date:document.querySelector('#date').value,total:document.querySelector('#notes-count').textContent})");
+  await evaljs("window.__notesMode='empty';document.querySelector('#today').click()");await notesReady(0);
+  const notesEmpty=await evaljs("({total:document.querySelector('#notes-count').textContent,moreHidden:document.querySelector('#more-notes').hidden,empty:document.querySelector('#notes .empty').textContent})");
   const weekMatrix = [];
   for (const [width, lang] of [[320, "en"], [360, "ja"], [390, "en"], [430, "ja"]]) {
     await cmd("Emulation.setDeviceMetricsOverride", {width, height: 844, deviceScaleFactor: 2, mobile: true, screenWidth: width, screenHeight: 844});
@@ -97,7 +131,7 @@ try {
   const monthBoundary = await evaljs("({request:window.__agendaCalls.at(-1),days:document.querySelectorAll('.week-day').length,emptyDays:document.querySelectorAll('.week-empty').length})");
   await openPage(`http://127.0.0.1:${server.address().port}/planner?view=week&date=2031-02-03&lang=ja&readonly=1`, true);
   const readOnly = await evaljs("({days:document.querySelectorAll('.week-day').length,dockHidden:document.querySelector('#dock').hidden,captureDisabled:document.querySelector('#open-capture').disabled})");
-  process.stdout.write(JSON.stringify({matrix, weekMatrix, monthMatrix, monthNext, monthDayTransition, nav, navBack, returnToToday, dayTransition, yearBoundary, monthBoundary, readOnly}));
+  process.stdout.write(JSON.stringify({matrix, notesMatrix, notesError, notesRevision, notesRace, notesEmpty, weekMatrix, monthMatrix, monthNext, monthDayTransition, nav, navBack, returnToToday, dayTransition, yearBoundary, monthBoundary, readOnly}));
 } finally {
   if (ws) ws.close();
   if (proc.exitCode === null) { proc.kill("SIGTERM"); await new Promise(ok => proc.once("exit", ok)); }

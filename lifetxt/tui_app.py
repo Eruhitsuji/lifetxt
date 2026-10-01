@@ -26,6 +26,7 @@ from .tui import (
     TUI_SECTIONS,
     _char_display_width,
     _clip_display_width,
+    _task_row,
     dashboard_model,
     load_items,
     row_project,
@@ -35,7 +36,7 @@ from .workspace import active_workspace_name
 from .tui_layout import display_width, fit, fit_spans, frame_to_text, pad, spans_to_text
 
 
-WORKSPACE_VIEWS = ("all",) + TUI_SECTIONS + ("next", "today")
+WORKSPACE_VIEWS = ("all",) + TUI_SECTIONS + ("next", "today", "notes", "raw-notes")
 #: Bounded rows shown per Today section before "... and N more".
 TODAY_SECTION_LIMIT = 8
 WORKSPACE_SORTS = ("natural", "due", "priority", "title", "status")
@@ -433,6 +434,7 @@ class WorkspaceState(object):
         self._model = None
         self._today = None
         self._items = []
+        self._note_items = []
         self._temporal_thread = None
         self._temporal_thread_target = None
         self._native_timeline = None
@@ -511,6 +513,12 @@ class WorkspaceState(object):
                 items=backend_items,
             )
             self.error = backend_error or ""
+            self._note_items = []
+            if self.view == "notes":
+                notes, notes_error = self.backend.load_notes(items=self._items)
+                self._note_items = list(notes or [])
+                if notes_error:
+                    self.error = notes_error
         except Exception as exc:
             self.error = str(exc)
             self._model = None
@@ -561,6 +569,20 @@ class WorkspaceState(object):
                 self.view == "next" and section["key"] == "tasks"
             ):
                 rows.extend(section_rows)
+
+        if self.view in ("notes", "raw-notes"):
+            items = (
+                self._note_items
+                if self.view == "notes"
+                else [item for item in self._items if item.kind == "N"]
+            )
+            rows = []
+            for item in items:
+                row = _task_row(item, self.options["id_key"])
+                row["section"] = self.view
+                if self._passes_filters(row):
+                    rows.append(row)
+            counts[self.view] = len(rows)
 
         if self.view == "next":
             rows = [row for row in rows if is_next_action(row)]
@@ -832,6 +854,8 @@ def _cmd_view(state, argument):
             "Unknown view %r. Use one of: %s" % (value, ", ".join(WORKSPACE_VIEWS))
         )
     state.view = value
+    if value == "notes":
+        state.load()
     state.selected = 0
     state.scroll = 0
     return ("info", "View: %s" % value)
@@ -1859,10 +1883,10 @@ COMMANDS = (
     Command("help", "[QUERY]", "Toggle the reference, or search it", _cmd_help),
     Command(
         "view",
-        "all|tasks|agenda|status|next|today",
+        "all|tasks|agenda|status|next|today|notes|raw-notes",
         "Switch which sections are listed",
         _cmd_view,
-        values=("all", "tasks", "agenda", "status", "next", "today"),
+        values=WORKSPACE_VIEWS,
     ),
     Command(
         "next",

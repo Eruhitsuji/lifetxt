@@ -969,3 +969,7 @@ read-only and preserves source order.
 
 `GET /api/priority-matrix` returns `evaluated_at`, `timezone`, counts for all five
 groups, and task rows grouped by quadrant.
+
+## Ordinary Notes
+
+[Shared ordinary Notes across CLI, Web, Planner, TUI and MCP](ordinary-notes.md).

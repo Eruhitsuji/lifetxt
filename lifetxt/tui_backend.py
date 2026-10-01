@@ -72,6 +72,10 @@ class TuiBackend(object):
         """
         raise NotImplementedError
 
+    def load_notes(self, items=None):
+        """Return ordinary Notes. Remote implementations must use server projection."""
+        raise NotImplementedError
+
     def apply_semantic_changes(self, grouped, before, id_key, journal_dir=None):
         """Commit a pre-built, per-source-file set of item changes.
 
@@ -131,6 +135,15 @@ class LocalTuiBackend(TuiBackend):
         from .tui import load_items as _load_items
 
         return _load_items(self.args.paths), None
+
+    def load_notes(self, items=None):
+        from .ordinary_notes import select_ordinary_notes
+
+        if items is None:
+            items, error = self.load_items()
+            if error:
+                return None, error
+        return select_ordinary_notes(items), None
 
     def apply_semantic_changes(self, grouped, before, id_key, journal_dir=None):
         from .write_operations import mutate_item_files, mutate_items
@@ -330,6 +343,46 @@ class RemoteTuiBackend(TuiBackend):
         if self.cache_enabled:
             self._save_cache_snapshot(raw_items)
         return items, None
+
+    def load_notes(self, items=None):
+        # Never derive ordinary classification from the raw/offline snapshot.
+        try:
+            raw_items, offset, revision = [], 0, None
+            while True:
+                payload = self.connection.request(
+                    "GET", "/api/notes?limit=100&offset=%s" % offset
+                )
+                if (
+                    not isinstance(payload, dict)
+                    or "total" not in payload
+                    or "revision" not in payload
+                ):
+                    raise ValueError(
+                        "Server does not provide the ordinary Notes projection."
+                    )
+                if revision is not None and revision != payload["revision"]:
+                    raise ValueError(
+                        "Notes changed during paging; reload the Notes view."
+                    )
+                revision = payload["revision"]
+                page_items = payload.get("items") or []
+                raw_items.extend(page_items)
+                if not payload.get("has_more"):
+                    break
+                next_offset = payload.get("next_offset")
+                if (
+                    not isinstance(next_offset, int)
+                    or not page_items
+                    or next_offset != offset + len(page_items)
+                    or next_offset > payload["total"]
+                ):
+                    raise ValueError("Invalid ordinary Notes pagination from server.")
+                offset = next_offset
+            notes, by_id = self._items_from_payload(raw_items)
+            self._items_by_id.update(by_id)
+            return notes, None
+        except Exception as exc:
+            return None, str(exc)
 
     def _save_cache_snapshot(self, raw_items):
         from .tui_remote_cache import save_snapshot

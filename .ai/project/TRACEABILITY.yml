@@ -2,6 +2,22 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-ordinary-note-projection
+      capability_id: cap-ordinary-note-projection
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1020
+      pull_request: null
+      changed_files_or_scope: [lifetxt/**, tests/test_ordinary_notes.py, docs/en/ordinary-notes.md, docs/ja/ordinary-notes.md]
+      tests_or_evidence: [tests.test_ordinary_notes, tests.test_web_planner_browser]
+      status: implemented
+
+    - requirement_id: req-planner-user-note-projection
+      capability_id: cap-web-mobile-planner
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1020
+      pull_request: null
+      changed_files_or_scope: [lifetxt/web_planner.js, lifetxt/web_planner.html, tests/browser_planner_probe.mjs]
+      tests_or_evidence: [tests.test_web_planner_browser]
+      status: implemented
+
     - requirement_id: req-planner-month-overview
       capability_id: cap-web-mobile-planner
       epic: https://github.com/Eruhitsuji/lifetxt/issues/991

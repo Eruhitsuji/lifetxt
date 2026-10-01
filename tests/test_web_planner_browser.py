@@ -65,6 +65,9 @@ class PlannerBrowserTests(unittest.TestCase):
                 self.assertLessEqual(item["scrollWidth"], item["width"])
                 self.assertGreaterEqual(item["dateHeight"], 44)
                 self.assertGreaterEqual(item["captureHeight"], 44)
+                self.assert_date_navigation_geometry(
+                    item["label"], item["prev"], item["date"], item["next"]
+                )
         self.assertEqual("予定", matrix[1]["schedule"])
         self.assertEqual("Schedule", matrix[0]["schedule"])
         week_matrix = result["weekMatrix"]
@@ -87,6 +90,10 @@ class PlannerBrowserTests(unittest.TestCase):
                 self.assertEqual(4, item["timeCount"])
                 self.assertTrue(item["contentFits"])
                 self.assertTrue(item["longTitle"])
+                geometry = item["dateNav"]
+                self.assert_date_navigation_geometry(
+                    geometry["label"], geometry["prev"], geometry["date"], geometry["next"]
+                )
         self.assertIn("date=2031-02-10", result["nav"]["url"])
         self.assertIn("view=week", result["nav"]["url"])
         self.assertIn("from=2031-02-10&to=2031-02-16", result["nav"]["request"])
@@ -111,6 +118,18 @@ class PlannerBrowserTests(unittest.TestCase):
         self.assertEqual(7, result["readOnly"]["days"])
         self.assertTrue(result["readOnly"]["dockHidden"])
         self.assertTrue(result["readOnly"]["captureDisabled"])
+
+    def assert_date_navigation_geometry(self, label, prev, date, next_button):
+        self.assertLessEqual(abs(prev["top"] - date["top"]), 2)
+        self.assertLessEqual(abs(next_button["top"] - date["top"]), 2)
+        self.assertLessEqual(abs(prev["width"] - 44), 1)
+        self.assertLessEqual(abs(next_button["width"] - 44), 1)
+        self.assertGreater(date["width"], prev["width"])
+        control_row_top = min(prev["top"], date["top"], next_button["top"])
+        self.assertLessEqual(label["bottom"], control_row_top)
+        self.assertGreaterEqual(prev["height"], 44)
+        self.assertGreaterEqual(next_button["height"], 44)
+        self.assertGreaterEqual(date["height"], 44)
 
 
 if __name__ == "__main__":

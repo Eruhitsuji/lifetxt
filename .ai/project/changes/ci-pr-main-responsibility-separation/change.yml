@@ -1,0 +1,19 @@
+schema_version: 1
+change:
+  id: ci-pr-main-responsibility-separation
+  title: Separate PR merge and main compatibility CI responsibilities
+  status: implemented
+  change_type: Operations
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1010
+  related_pull_request: []
+  base_commit: 61db4d9
+  target_release: null
+scope:
+  in_scope: [PR Python 3.12 merge checks, main compatibility matrix, PR concurrency, aggregate gates, main failure Issue monitoring, bilingual documentation, workflow contract tests]
+  out_of_scope: [path filtering, lifetxt-mini changes, distribution workflow changes, quality check deletion, product behavior]
+  write_scope: [.github/workflows/ci.yml, tests/test_ci_workflow_responsibilities.py, docs/en/ci-responsibilities.md, docs/ja/ci-responsibilities.md, docs/en/readme.md, docs/ja/readme.md, .ai/project/**]
+  forbidden_scope: [.ai/managed/**, .github/workflows/release.yml, .github/workflows/lifetxt-mini-ci.yml]
+human_approvals_required: [independent implementation/integration review, Merge Authority approval]

@@ -6,6 +6,8 @@ lifetxt releases は undocumented CI commands の集合ではなく、versioned 
 
 CI workflow には required job `Required release policy and clean wheel` があります。disposable virtual environment で `release` profile を実行し、`release-gate.log` と `.cache/release-policy-manifest.json` を artifact `release-policy-evidence` として upload します。
 
+release profileの責務はartifact固有の検証に限定されています。source checkoutのcompile、full unit test、example validation、source-tree smokeはPR/main CIが担当するため、release profileでは重複実行しません。executable release policyとsafety gate、sdist/wheel build、Twine metadata validation、clean wheel-only install、installed module／console entry point smoke、installed wheelによるexample checkは維持します。
+
 local では同じ profile を実行できます。
 
 ```bash

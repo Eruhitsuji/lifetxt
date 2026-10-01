@@ -45,7 +45,7 @@ class CiWorkflowResponsibilityTests(unittest.TestCase):
         }
         for name in expected:
             self.assertEqual(
-                "${{ github.event_name != 'pull_request' }}",
+                "${{ github.event_name != 'pull_request' && needs['classify-changes'].outputs['run-heavy'] == 'true' }}",
                 self.jobs[name]["if"],
                 name,
             )
@@ -66,17 +66,22 @@ class CiWorkflowResponsibilityTests(unittest.TestCase):
     def test_pr_gate_aggregates_fast_merge_responsibilities(self):
         gate = self.jobs["pr-gate"]
         self.assertEqual(
-            {"test", "type-check", "release-document-validation", "traceability-gate"},
+            {"classify-changes", "test", "type-check", "release-document-validation", "traceability-gate"},
             set(gate["needs"]),
         )
         self.assertIn("always()", gate["if"])
-        self.assertIn('value != "success"', self.text)
+        self.assertIn('PATH_CATEGORY', self.text)
+        self.assertEqual(
+            "Optional dependency compatibility",
+            self.jobs["optional-dependency-compatibility"]["name"],
+        )
 
     def test_main_gate_aggregates_all_compatibility_responsibilities(self):
         gate = self.jobs["main-gate"]
         self.assertEqual(
             {
                 "test",
+                "classify-changes",
                 "resource-warning-gate",
                 "no-web-extras",
                 "windows-core-smoke",

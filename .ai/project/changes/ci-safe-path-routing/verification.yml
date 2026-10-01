@@ -1,0 +1,8 @@
+schema_version: 1
+verification:
+  executed: []
+  gaps:
+    - description: Real GitHub Actions path and skipped-needs behavior requires the PR run.
+      tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1011
+review_ledger:
+  - {reviewer: independent reviewer, review_type: implementation-and-integration, target_commit: pending, result: pending, finding_count: 0, completed_at: null}

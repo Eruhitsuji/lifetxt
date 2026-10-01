@@ -170,13 +170,14 @@ def run_for_interpreter(command, root, profile, include_web, keep_venv, skip_smo
         _run(command + ["-m", "venv", venv_dir], cwd=root)
         python = _python_in_venv(venv_dir)
         _install_profile_dependencies(python, root, profile, include_web)
-        _run_tests(python, root, profile)
-        if profile != "mcp":
-            _run_examples(python, root)
-        if not skip_smoke and profile != "mcp":
-            _run([python, "scripts/smoke_test.py"], cwd=root)
         if profile == "release":
             _run_release_profile(python, root)
+        else:
+            _run_tests(python, root, profile)
+            if profile != "mcp":
+                _run_examples(python, root)
+            if not skip_smoke and profile != "mcp":
+                _run([python, "scripts/smoke_test.py"], cwd=root)
     finally:
         if cleanup:
             shutil.rmtree(venv_dir, ignore_errors=True)
@@ -223,7 +224,7 @@ def main(argv=None):
         shlex.split(value, posix=os.name != "nt")
         for value in (args.interpreters or [sys.executable])
     ]
-    include_web = args.profile in ("core", "web", "release") and not args.no_web
+    include_web = args.profile in ("core", "web") and not args.no_web
     for command in commands:
         if not command:
             raise SystemExit("--python cannot be empty")

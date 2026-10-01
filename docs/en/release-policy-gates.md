@@ -17,6 +17,13 @@ Required release policy and clean wheel
 
 It runs the `release` profile in a disposable virtual environment, records `release-gate.log`, writes `.cache/release-policy-manifest.json`, and uploads both as the `release-policy-evidence` artifact.
 
+The release profile is intentionally artifact-specific. It does not repeat the
+source checkout's compile, full unit-test, example-validation, or source-tree
+smoke sequence; PR and main CI own those checks. It retains the executable
+release policy and safety gate, sdist/wheel build, Twine metadata validation,
+clean wheel-only installation, installed module and console entry-point smoke,
+and an example check performed with the installed wheel.
+
 Run the same profile locally:
 
 ```bash

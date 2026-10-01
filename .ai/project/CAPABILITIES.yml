@@ -11,7 +11,7 @@ capabilities:
     public_interfaces: [scripts/run_ci_like.py --profile release, GitHub Actions CI]
     tests_or_evidence: [tests.test_run_ci_like]
     related_issues: [https://github.com/Eruhitsuji/lifetxt/issues/1008, https://github.com/Eruhitsuji/lifetxt/issues/1009, https://github.com/Eruhitsuji/lifetxt/issues/1010, https://github.com/Eruhitsuji/lifetxt/issues/1011]
-    related_pull_requests: []
+    related_pull_requests: [https://github.com/Eruhitsuji/lifetxt/pull/1012]
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: '#1009 implements the first artifact-only release-profile slice; PR/main routing and safe path routing remain in the dependent children.'
     replacement: {replaces: [], replaced_by: null, deprecation_issue: null}

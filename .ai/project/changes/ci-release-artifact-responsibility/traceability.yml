@@ -4,7 +4,7 @@ links:
     capability_id: cap-ci-responsibility-separation
     epic: https://github.com/Eruhitsuji/lifetxt/issues/1008
     task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1009
-    pull_request: null
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1012
     tests_or_evidence: [tests/test_run_ci_like.py, focused traceability and change-package suites, release-profile command review]
     status: implemented
 gaps: []

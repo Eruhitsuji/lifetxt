@@ -16,6 +16,13 @@ Pull-request runs share `pr-ci-<number>` concurrency with
 Pushes to `main`, manual CI runs, and release runs use non-colliding groups and
 are not cancelled by later runs.
 
+CI classifies the complete changed-path set as `docs-only`, `python-core`,
+`web`, `tui`, or fail-safe `full`. Only changes entirely below `docs/` use the
+lightweight route: documentation validation and PR traceability still run,
+while the Python suite and mypy are intentionally skipped. Mixed Web/TUI
+changes, workflow and project-control files, packaging metadata, unknown
+paths, empty comparisons, and manual dispatch all select `full`.
+
 ## Main: compatibility and regression detection
 
 After merge, `main` runs Python 3.10, 3.11, and 3.12; no-Web tests;
@@ -23,6 +30,11 @@ ResourceWarning checks; Windows and macOS core smoke; coverage regression;
 minimum and upper Web/TUI dependency compatibility; mypy; and release
 documentation validation. `Main compatibility gate` fails closed over all of
 these results.
+
+For a docs-only merge, main skips compatibility runners and requires their
+results to be `skipped`; documentation validation must still succeed. Every
+other category continues requiring all compatibility results to be `success`,
+so an accidental skip cannot make the aggregate gate green.
 
 The automatic `CI failure on main` Issue observes only that stable aggregate
 gate. A failing aggregate opens or updates the Issue; the next successful main

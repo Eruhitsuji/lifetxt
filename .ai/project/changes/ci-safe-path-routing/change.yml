@@ -1,0 +1,19 @@
+schema_version: 1
+change:
+  id: ci-safe-path-routing
+  title: Add conservative path-based CI routing
+  status: proposed
+  change_type: Operations
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1011
+  related_pull_request: []
+  base_commit: 63a311c
+  target_release: null
+scope:
+  in_scope: [changed-path classification, docs-only runner skipping, fail-closed aggregate gates, stable skipped job names, bilingual documentation, contract tests]
+  out_of_scope: [lifetxt-mini routing, release workflows, product behavior, quality-boundary deletion]
+  write_scope: [.github/workflows/ci.yml, scripts/classify_ci_paths.py, tests/test_ci_path_routing.py, tests/test_ci_workflow_responsibilities.py, docs/en/ci-responsibilities.md, docs/ja/ci-responsibilities.md, .ai/project/**]
+  forbidden_scope: [.ai/managed/**, .github/workflows/lifetxt-mini-ci.yml, .github/workflows/release.yml]
+human_approvals_required: [independent implementation/integration review, Merge Authority approval]

@@ -1,0 +1,9 @@
+schema_version: 1
+requirements:
+  - id: req-ci-safe-path-routing
+    kind: ADDED
+    statement: CI may skip heavy runners only for an explicitly classified docs-only change while unknown or shared changes fail safe to the full route.
+    acceptance_criteria: [document path categories, fail safe for unknown/shared changes, aggregate intentional skips, preserve lifetxt-mini filters, retain quality responsibilities]
+    constraints: [docs-only is the sole lightweight route in this first conservative implementation]
+    owner: Eruhitsuji
+open_questions: []

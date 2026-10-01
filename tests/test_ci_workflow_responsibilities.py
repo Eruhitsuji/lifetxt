@@ -50,6 +50,19 @@ class CiWorkflowResponsibilityTests(unittest.TestCase):
                 name,
             )
 
+    def test_no_web_lane_installs_yaml_without_web_extras(self):
+        job = self.jobs["no-web-extras"]
+        install = next(
+            step for step in job["steps"] if step["name"].startswith("Install dependency-free")
+        )
+        self.assertIn("python -m pip install -e .", install["run"])
+        self.assertIn("python -m pip install PyYAML", install["run"])
+        absent_check = next(
+            step for step in job["steps"] if step["name"].startswith("Assert optional Web")
+        )
+        for package in ("fastapi", "uvicorn", "httpx", "httpx2"):
+            self.assertIn(package, absent_check["run"])
+
     def test_pr_gate_aggregates_fast_merge_responsibilities(self):
         gate = self.jobs["pr-gate"]
         self.assertEqual(

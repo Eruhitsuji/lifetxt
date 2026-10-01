@@ -1,0 +1,13 @@
+schema_version: 1
+requirements:
+  - id: req-ci-release-artifact-responsibility
+    kind: ADDED
+    statement: The release CI profile verifies publication policy and built artifacts without repeating source-tree validation owned by PR and main CI.
+    acceptance_criteria:
+      - Release profile omits source-tree compile, full unittest, example, and smoke repetitions.
+      - Release policy, safety gate, sdist/wheel build, Twine, clean install, installed entrypoints, and installed example validation remain.
+      - Non-release profiles retain their source-tree validation behavior.
+      - Release profile does not install optional Web dependencies it does not use.
+    constraints: [no publishing-workflow changes, no assurance deletion]
+    owner: Eruhitsuji
+open_questions: []

@@ -1,0 +1,19 @@
+schema_version: 1
+change:
+  id: ci-release-artifact-responsibility
+  title: Limit the release profile to distribution-artifact assurance
+  status: implemented
+  change_type: Operations
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1009
+  related_pull_request: [https://github.com/Eruhitsuji/lifetxt/pull/1012]
+  base_commit: cc4c3dd
+  target_release: null
+scope:
+  in_scope: [release-profile command selection, artifact assurance retention, focused tests, English and Japanese documentation]
+  out_of_scope: [PR/main workflow routing, path filtering, publishing workflows, test removal, user-facing semantics]
+  write_scope: [scripts/run_ci_like.py, tests/test_run_ci_like.py, docs/en/release-policy-gates.md, docs/ja/release-policy-gates.md, .ai/project/**]
+  forbidden_scope: [.ai/managed/**, .github/workflows/release.yml]
+human_approvals_required: [independent implementation/integration review, Merge Authority approval]

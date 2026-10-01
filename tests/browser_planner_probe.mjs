@@ -16,11 +16,14 @@ const profile = await mkdtemp(path.join(os.tmpdir(), "planner-chrome-"));
 const proc = spawn(browser, ["--headless=new", "--disable-gpu", "--no-sandbox", "--no-first-run", "--no-default-browser-check", "--disable-dev-shm-usage", "--remote-debugging-port=0", `--user-data-dir=${profile}`, "about:blank"], {stdio: "ignore"});
 const wait = ms => new Promise(ok => setTimeout(ok, ms));
 async function port() {
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 300; i++) {
     try { return +(await readFile(path.join(profile, "DevToolsActivePort"), "utf8")).split("\n")[0]; }
-    catch { await wait(100); }
+    catch {
+      if (proc.exitCode !== null) throw Error(`Chromium exited before DevTools started (code ${proc.exitCode})`);
+      await wait(100);
+    }
   }
-  throw Error("DevTools unavailable");
+  throw Error("DevTools unavailable after 30 seconds");
 }
 let id = 0;
 const pending = new Map();
@@ -59,13 +62,13 @@ try {
   for (const [width, height, lang] of [[320, 640, "en"], [360, 720, "ja"], [390, 844, "en"], [430, 932, "ja"], [667, 320, "ja"], [390, 360, "en"]]) {
     await cmd("Emulation.setDeviceMetricsOverride", {width, height, deviceScaleFactor: 2, mobile: true, screenWidth: width, screenHeight: height});
     await openPage(`http://127.0.0.1:${server.address().port}/planner?lang=${lang}`);
-    matrix.push(await evaljs(`({width:innerWidth,height:innerHeight,scrollWidth:document.documentElement.scrollWidth,dateHeight:document.querySelector('#date').getBoundingClientRect().height,captureHeight:document.querySelector('#open-capture').getBoundingClientRect().height,schedule:document.querySelector('#schedule').previousElementSibling.textContent.trim()})`));
+    matrix.push(await evaljs(`(()=>{const rect=id=>{const r=document.querySelector(id).getBoundingClientRect();return {top:r.top,bottom:r.bottom,width:r.width,height:r.height}};return {width:innerWidth,height:innerHeight,scrollWidth:document.documentElement.scrollWidth,dateHeight:document.querySelector('#date').getBoundingClientRect().height,captureHeight:document.querySelector('#open-capture').getBoundingClientRect().height,schedule:document.querySelector('#schedule').previousElementSibling.textContent.trim(),label:rect('.date-row label'),prev:rect('#prev'),date:rect('#date'),next:rect('#next')}})()`));
   }
   const weekMatrix = [];
   for (const [width, lang] of [[320, "en"], [360, "ja"], [390, "en"], [430, "ja"]]) {
     await cmd("Emulation.setDeviceMetricsOverride", {width, height: 844, deviceScaleFactor: 2, mobile: true, screenWidth: width, screenHeight: 844});
     await openPage(`http://127.0.0.1:${server.address().port}/planner?view=week&date=2031-02-03&lang=${lang}`, true);
-    weekMatrix.push(await evaljs(`({lang:'${lang}',width:innerWidth,scrollWidth:document.documentElement.scrollWidth,days:document.querySelectorAll('.week-day').length,controls:[document.querySelector('#view-week').getBoundingClientRect().height,document.querySelector('#prev').getBoundingClientRect().height,document.querySelector('#next').getBoundingClientRect().height],eventText:document.querySelector('#week-days').innerText,today:document.querySelector('.week-day.is-today')?.innerText,selected:document.querySelector('.week-day.is-selected')?.innerText,agendaRequests:window.__agendaCalls.length,timeCount:document.querySelectorAll('.week-record time').length,contentFits:[...document.querySelectorAll('.week-record')].every(node=>node.scrollWidth<=node.clientWidth),longTitle:document.querySelector('#week-days').innerText.includes('Very_Long_Unbroken_Title')})`));
+    weekMatrix.push(await evaljs(`(()=>{const rect=id=>{const r=document.querySelector(id).getBoundingClientRect();return {top:r.top,bottom:r.bottom,width:r.width,height:r.height}};return {lang:'${lang}',width:innerWidth,scrollWidth:document.documentElement.scrollWidth,days:document.querySelectorAll('.week-day').length,controls:[document.querySelector('#view-week').getBoundingClientRect().height,document.querySelector('#prev').getBoundingClientRect().height,document.querySelector('#next').getBoundingClientRect().height],dateNav:{label:rect('.date-row label'),prev:rect('#prev'),date:rect('#date'),next:rect('#next')},eventText:document.querySelector('#week-days').innerText,today:document.querySelector('.week-day.is-today')?.innerText,selected:document.querySelector('.week-day.is-selected')?.innerText,agendaRequests:window.__agendaCalls.length,timeCount:document.querySelectorAll('.week-record time').length,contentFits:[...document.querySelectorAll('.week-record')].every(node=>node.scrollWidth<=node.clientWidth),longTitle:document.querySelector('#week-days').innerText.includes('Very_Long_Unbroken_Title')}})()`));
   }
   await evaljs("document.querySelector('#next').click()");
   const nav = await evaljs("({url:location.search,request:window.__agendaCalls.at(-1)})");
@@ -87,5 +90,5 @@ try {
   if (ws) ws.close();
   if (proc.exitCode === null) { proc.kill("SIGTERM"); await new Promise(ok => proc.once("exit", ok)); }
   await new Promise(ok => server.close(ok));
-  await rm(profile, {recursive: true, force: true});
+  await rm(profile, {recursive: true, force: true, maxRetries: 5, retryDelay: 100});
 }

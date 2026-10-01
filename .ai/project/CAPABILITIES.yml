@@ -18,6 +18,7 @@ capabilities:
       - req-planner-mobile-interoperability
       - req-planner-home-screen-entry
       - req-planner-week-overview
+      - req-planner-mobile-date-navigation-geometry
     implementation_locations:
       - lifetxt/webapp.py
       - lifetxt/web_assets.py
@@ -53,9 +54,11 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/998
       - https://github.com/Eruhitsuji/lifetxt/issues/1002
       - https://github.com/Eruhitsuji/lifetxt/issues/1003
+      - https://github.com/Eruhitsuji/lifetxt/issues/1006
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/999
       - https://github.com/Eruhitsuji/lifetxt/pull/1004
+      - https://github.com/Eruhitsuji/lifetxt/pull/1007
     reuse_policy: extend_existing_web_and_domain_apis
     notes: >-
       New Notes and Journals remain ordinary Format 1.0 records. The Planner

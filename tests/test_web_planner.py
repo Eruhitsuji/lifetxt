@@ -118,6 +118,9 @@ class PlannerTests(unittest.TestCase):  # pragma: no cover -- covered in web-ext
             'id="view-month"',
             'id="week-days"',
             'id="month-grid"',
+            'id="temporal-context"',
+            'dayPosition()',
+            'data-position',
             "weekStart(value)",
             "loadMonth()",
             "densityText(count)",
@@ -128,6 +131,13 @@ class PlannerTests(unittest.TestCase):  # pragma: no cover -- covered in web-ext
                 self.assertNotIn(expected, PLANNER_HTML_PAGE)
             else:
                 self.assertIn(expected, PLANNER_HTML_PAGE)
+
+    def test_temporal_day_semantics_use_workspace_today_and_gate_completion(self):
+        self.assertIn('config.today', PLANNER_HTML_PAGE)
+        self.assertIn('date<today?"past":date>today?"future":"today"', PLANNER_HTML_PAGE)
+        self.assertIn('dayPosition()==="today"&&writable', PLANNER_HTML_PAGE)
+        self.assertIn('past:"過去"', PLANNER_HTML_PAGE)
+        self.assertIn('future:"未来"', PLANNER_HTML_PAGE)
 
     def test_month_range_reuses_agenda_for_leap_year_and_recurrence(self):
         response = self.client.get("/api/agenda?from=2031-01-27&to=2031-03-02")

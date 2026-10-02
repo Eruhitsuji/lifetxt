@@ -5861,6 +5861,7 @@ capabilities:
     status: active
     owner: Eruhitsuji
     source_requirements:
+      - req-shared-read-scope
       - req-tui-saved-views-and-area-switching
     implementation_locations:
       - lifetxt/query.py

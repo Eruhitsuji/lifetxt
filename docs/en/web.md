@@ -999,3 +999,6 @@ order, plus Comfortable or Compact density. Workspace defaults are exposed in
 `/api/config`; a versioned browser-local override may take precedence and can be
 reset to workspace defaults. These preferences never filter records, alter
 temporal eligibility, or change mutation/history semantics.
+Planner scope is bookmarkable with `area` or `saved_view` URL parameters. The
+same authoritative scope is applied before Agenda, Command Center, ordinary
+Notes, and Past Review aggregation; the browser does not filter returned rows.

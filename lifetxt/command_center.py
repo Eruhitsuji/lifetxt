@@ -100,26 +100,9 @@ def scoped_items(items, config, saved_view=None, area=None):
     can report the exact same message a direct ``saved view`` or ``area``
     lookup would.
     """
-    if saved_view and area:
-        raise ValueError(
-            "today: --saved-view and --area cannot be combined; choose one scope."
-        )
-    if saved_view:
-        from .saved_views import run_saved_view
+    from .read_scope import resolve_read_scope
 
-        filtered, diagnostics = run_saved_view(items, config, saved_view)
-        errors = [d for d in diagnostics if d.get("severity") == "error"]
-        if errors:
-            raise ValueError(errors[0]["message"])
-        return filtered
-    if area:
-        from .areas import area_row_keys, area_show
-
-        keys = area_row_keys(items, config, area)
-        if not keys:
-            area_show(items, config, area)  # raises ValueError on an unknown name
-        return [it for it in items if (getattr(it, "source", None), it.line) in keys]
-    return items
+    return resolve_read_scope(items, config, saved_view=saved_view, area=area)[0]
 
 
 def _status_now(items, person=None):

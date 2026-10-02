@@ -1,0 +1,9 @@
+schema_version: 1
+verification:
+  executed: []
+  gaps:
+    - description: Live main Incident update/close behavior must be observed after human merge; fixtures exercise the exact workflow scripts offline.
+      tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1026
+review_ledger:
+  - {reviewer: independent reviewer, review_type: implementation, target_commit: pending, result: pending, finding_count: 0, completed_at: null}
+  - {reviewer: Eruhitsuji, review_type: integration-and-CI-design, target_commit: pending, result: pending, finding_count: 0, completed_at: null}

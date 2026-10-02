@@ -3,6 +3,7 @@
 import argparse
 import datetime
 import json
+import importlib.util
 import shutil
 from pathlib import Path
 import subprocess
@@ -15,6 +16,10 @@ from lifetxt.model import Item
 from lifetxt.parser import parse_text
 from lifetxt.quick_input import QuickInputError, resolve_quick_input
 from lifetxt.tui_backend import RemoteTuiBackend
+
+WEB_AVAILABLE = importlib.util.find_spec("fastapi") is not None and any(
+    importlib.util.find_spec(name) is not None for name in ("httpx", "httpx2")
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 INPUTS = (
@@ -196,10 +201,12 @@ class QuickSurfaceTests(unittest.TestCase):
         return items[0]
 
     def test_cli_local_tui_web_and_mcp_create_the_same_logical_records(self):
-        client = self.client()
+        client = self.client() if WEB_AVAILABLE else None
         for text in INPUTS:
             expected = logical(resolve_quick_input(text, id_key="uid").item)
-            for surface in ("cli", "tui", "web", "mcp", "remote-tui"):
+            for surface in ("cli", "tui", "mcp") + (
+                ("web", "remote-tui") if WEB_AVAILABLE else ()
+            ):
                 with self.subTest(text=text, surface=surface):
                     self.path.write_text("", encoding="utf-8")
                     if surface == "cli":
@@ -276,9 +283,11 @@ class QuickSurfaceTests(unittest.TestCase):
         return Connection()
 
     def test_invalid_inputs_do_not_write_in_any_adapter(self):
-        client = self.client()
+        client = self.client() if WEB_AVAILABLE else None
         for text in INVALID:
-            for surface in ("cli", "tui", "web", "mcp", "remote-tui"):
+            for surface in ("cli", "tui", "mcp") + (
+                ("web", "remote-tui") if WEB_AVAILABLE else ()
+            ):
                 with self.subTest(text=text, surface=surface):
                     before = self.path.read_bytes()
                     if surface == "cli":
@@ -325,12 +334,13 @@ class QuickSurfaceTests(unittest.TestCase):
         self.assertEqual(before, self.path.read_bytes())
         with self.assertRaises(ValueError):
             tui_app.run_command(self.state(), "/add " + text)
-        response = self.post(
-            self.client(),
-            "/api/items/capture",
-            json={"text": text},
-        )
-        self.assertGreaterEqual(response.status_code, 400, response.text)
+        if WEB_AVAILABLE:
+            response = self.post(
+                self.client(),
+                "/api/items/capture",
+                json={"text": text},
+            )
+            self.assertGreaterEqual(response.status_code, 400, response.text)
         context = mcp.McpContext(
             paths=[str(self.path)], writable_path=str(self.path), config=self.config
         )
@@ -338,6 +348,7 @@ class QuickSurfaceTests(unittest.TestCase):
             mcp.call_tool("capture_item", {"text": text}, context)
         self.assertEqual(before, self.path.read_bytes())
 
+    @unittest.skipUnless(WEB_AVAILABLE, "optional Web test dependencies unavailable")
     def test_auth_read_only_and_revision_guards_remain_in_force(self):
         before = self.path.read_bytes()
         readonly = self.client(read_only=True)
@@ -388,6 +399,7 @@ class QuickSurfaceTests(unittest.TestCase):
             mcp.call_tool("capture_item", {"text": INPUTS[3]}, context)
         self.assertEqual(before, self.path.read_bytes())
 
+    @unittest.skipUnless(WEB_AVAILABLE, "optional Web test dependencies unavailable")
     def test_preview_raw_and_mcp_proposal_do_not_regress(self):
         client = self.client()
         before = self.path.read_bytes()
@@ -417,6 +429,7 @@ class QuickSurfaceTests(unittest.TestCase):
         )
 
     @unittest.skipUnless(shutil.which("node"), "Node.js unavailable")
+    @unittest.skipUnless(WEB_AVAILABLE, "optional Web test dependencies unavailable")
     def test_all_browser_quick_handlers_delegate_and_match_server_semantics(self):
         result = subprocess.run(
             ["node", str(ROOT / "tests/quick_input_clients.mjs"), json.dumps(INPUTS)],
@@ -447,7 +460,7 @@ class QuickSurfaceTests(unittest.TestCase):
                     self.assertEqual(logical(expected), logical(self.only_item()))
 
     def test_related_capture_keeps_record_semantics_and_context_precedence(self):
-        for remote in (False, True):
+        for remote in (False, True) if WEB_AVAILABLE else (False,):
             with self.subTest(remote=remote):
                 self.path.write_text(
                     "[ ] T Parent uid:parent project:context\n", encoding="utf-8"
@@ -470,7 +483,7 @@ class QuickSurfaceTests(unittest.TestCase):
         self.config["ids"]["auto"] = False
         self.config_path.write_text(json.dumps(self.config), encoding="utf-8")
         text = "[N] N Explicit uid:chosen"
-        for surface in ("cli", "web", "mcp", "tui"):
+        for surface in ("cli", "mcp", "tui") + (("web",) if WEB_AVAILABLE else ()):
             with self.subTest(surface=surface):
                 self.path.write_text("", encoding="utf-8")
                 if surface == "cli":

@@ -19,3 +19,14 @@ class TemporalReviewTests(unittest.TestCase):
         items, _ = parse_text('[ ] T "Open task"\n')
         with self.assertRaisesRegex(ValueError, "cannot be combined"):
             build_temporal_review(items, since="2030-01-01", week=True)
+
+    def test_date_bounds_use_workspace_timezone_when_requested(self):
+        items, _ = parse_text('[ ] T "Open task"\n')
+        result = build_temporal_review(
+            items,
+            since="2030-06-01",
+            until="2030-06-01",
+            timezone_name="Asia/Tokyo",
+        )
+        self.assertEqual("2030-06-01T00:00:00+09:00", result["period"]["since"])
+        self.assertEqual("2030-06-01T23:59:59.999999+09:00", result["period"]["until"])

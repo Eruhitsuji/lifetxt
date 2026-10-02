@@ -559,12 +559,20 @@ capabilities:
     owner: Eruhitsuji
     source_requirements:
       - req-temporal-life-review
+      - req-temporal-life-review-cross-surface
+      - req-planner-past-review-timeline
     implementation_locations:
       - lifetxt/temporal_review.py
       - lifetxt/cli.py
+      - lifetxt/webapp.py
+      - lifetxt/mcp.py
+      - lifetxt/web_planner.html
+      - lifetxt/web_planner.js
       - tests/test_temporal_review.py
     public_interfaces:
       - lifetxt review --temporal
+      - GET /api/temporal-review
+      - MCP get_temporal_review
     tests_or_evidence:
       - tests.test_temporal_review
     related_issues:

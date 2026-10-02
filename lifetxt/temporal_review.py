@@ -6,6 +6,7 @@ import datetime
 from .review import resolve_review_range
 from .agenda import agenda_records
 from .timeutil import parse_date_or_datetime
+from .timezone_policy import date_boundaries
 from .workspace_timeline import workspace_timeline
 
 
@@ -18,7 +19,14 @@ def _date_bound(value, end=False):
 
 
 def build_temporal_review(
-    items, since=None, until=None, week=False, limit=100, project=None, id_key="id"
+    items,
+    since=None,
+    until=None,
+    week=False,
+    limit=100,
+    project=None,
+    id_key="id",
+    timezone_name=None,
 ):
     if week and (since or until):
         raise ValueError("--week cannot be combined with --since/--until.")
@@ -31,9 +39,15 @@ def build_temporal_review(
     if not since:
         raise ValueError("Temporal review requires --since, --until, or --week.")
     if "T" not in str(since):
-        since = _date_bound(str(since))
+        if timezone_name:
+            since = date_boundaries(str(since), timezone_name)[0].isoformat()
+        else:
+            since = _date_bound(str(since))
     if until and "T" not in str(until):
-        until = _date_bound(str(until), end=True)
+        if timezone_name:
+            until = date_boundaries(str(until), timezone_name)[1].isoformat()
+        else:
+            until = _date_bound(str(until), end=True)
     result = workspace_timeline(
         items, id_key=id_key, limit=limit, since=since, until=until, project=project
     )

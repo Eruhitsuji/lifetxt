@@ -17,7 +17,7 @@ from lifetxt import web_assets, webapp
 
 REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
 # #1021 intentionally changes Quick submit/preview and Focus capture fragments.
-LEGACY_PRISTINE_GIT_BLOB_SHA = "25ffd72b1979e00c48678ff294640b605725de8d"
+LEGACY_PRISTINE_GIT_BLOB_SHA = "6a7b4fdd13c09de7c85141100256a0efa8564ee4"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )

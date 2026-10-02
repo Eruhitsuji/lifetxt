@@ -7,6 +7,7 @@ change:
   assurance_level: Standard
   owner: Eruhitsuji
   related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1021
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1023
 scope:
   write_scope: [lifetxt/**, tests/**, docs/en/**, docs/ja/**, .ai/project/CAPABILITIES.yml, .ai/project/TRACEABILITY.yml, .ai/project/changes/shared-quick-input/**]
   forbidden_scope: [.ai/managed/**, Format grammar redesign, mutation architecture, auth changes]

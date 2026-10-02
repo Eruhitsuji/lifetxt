@@ -518,6 +518,11 @@ life.txt の detail は file 内では `key:value` です。`key=value` は `ass
 
 ### キャプチャ記号
 
+Quick (`quick` / `q` / `add`) は完全なlife.txt 1行も受理します。例：
+`lifetxt quick '[N] N "Idea" body:"text"' --append life.txt`。
+ローカル／Remote TUI・Web・MCPのQuick入口も同じ共通resolverを利用します。
+
+
 `quick`、TUI の `/add`、Web のクイック追加欄は、タイトル中の 4 つの記号を展開します。
 
 優先順位、繰返し、quote、literal sigil、validation、保存結果、surface差異を含む

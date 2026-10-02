@@ -971,3 +971,6 @@ PlannerのDayでは、セクションの表示・順序と、標準／コンパ�
 Plannerのスコープは`area`または`saved_view`のURLパラメーターでブックマークできます。
 同じ共有スコープをAgenda、Command Center、通常メモ、Pastレビューの集約前に適用し、
 ブラウザー側で取得結果を後から絞り込みません。
+PlannerのTodayはworkspaceのタイムゾーンで解決され、画面復帰時または日付境界を
+またいだ低頻度の再同期で`/api/config`から更新されます。ブラウザーのローカル日付は
+権威あるTodayとして使用しません。

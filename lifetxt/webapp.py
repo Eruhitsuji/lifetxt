@@ -3014,6 +3014,13 @@ def public_web_team_config(web):
 
 def public_web_config(config):
     web = config_section(config, "web")
+    planner = _nested_or_dotted(web, "planner")
+    default_sections = ["schedule", "tasks", "habits", "notes", "journal", "review"]
+    configured_sections = planner.get("sections")
+    sections = [x for x in configured_sections or default_sections if x in default_sections]
+    sections = list(dict.fromkeys(str(x) for x in sections))
+    sections.extend(x for x in default_sections if x not in sections)
+    hidden = [x for x in _string_list(planner.get("hidden_sections")) if x in default_sections]
     return {
         "display_refresh": _int_or_default(web.get("display_refresh"), 60),
         "notification_poll_seconds": _int_or_default(
@@ -3032,6 +3039,13 @@ def public_web_config(config):
         "dashboard": public_web_dashboard_config(web),
         "presence": public_web_presence_config(web),
         "team": public_web_team_config(web),
+        "planner": {
+            "sections": sections,
+            "hidden_sections": list(dict.fromkeys(hidden)),
+            "density": str(planner.get("density") or "comfortable")
+            if str(planner.get("density") or "comfortable") in ("comfortable", "compact")
+            else "comfortable",
+        },
     }
 
 

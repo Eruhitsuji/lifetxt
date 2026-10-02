@@ -213,6 +213,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
 
     _READ_ONLY_ALLOWED_PATHS = frozenset(
         {
+            "/api/quick/resolve",
             "/api/check-line",
             "/api/items/parse",
             "/api/personal-context/preview",
@@ -2377,35 +2378,69 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
                 raise HTTPException(status_code=400, detail=error_detail(exc))
         return result
 
-    @app.post("/api/items/capture", status_code=201)
-    def capture_item(payload=Body(...)):
-        """Append a task from plain text, expanding capture sigils.
-
-        Building the line here rather than in the browser keeps one
-        serializer, so the Web UI cannot drift from `lifetxt quick`.
-        """
-        from .shorthand import ShorthandError, parse_capture
+    @app.post("/api/quick/resolve")
+    def preview_quick(payload=Body(...)):
+        """Non-writing preview of the same Quick contract used by capture."""
+        from .quick_input import resolve_quick_input
 
         if not isinstance(payload, dict):
             raise HTTPException(status_code=400, detail="Body must be a JSON object.")
-        text = str(payload.get("text") or "").strip()
-        if not text:
-            raise HTTPException(status_code=400, detail="text is required.")
         try:
-            title, details = parse_capture(text, strict_dates=True)
-        except ShorthandError as exc:
-            raise HTTPException(status_code=400, detail=error_detail(exc))
-        if not title:
-            raise HTTPException(
-                status_code=400,
-                detail="Capture shorthand consumed the whole title. Add a title.",
+            resolved = resolve_quick_input(
+                payload.get("text"),
+                id_key=id_key_from_config(app.state.config),
             )
-
-        kind = str(payload.get("type") or "T")
-        item = Item("[ ]", kind, title, details or None)
-        ensure_item_id(item, key=id_key_from_config(app.state.config))
-        append_item_to_file(app.state.writable_path, item)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=error_detail(exc))
         return {
+            "mode": resolved.mode,
+            "title": resolved.item.title,
+            "status": resolved.item.status,
+            "type": resolved.item.kind,
+            "details": resolved.item.details,
+            "line": item_to_line(resolved.item),
+        }
+
+    @app.post("/api/items/capture", status_code=201)
+    def capture_item(payload=Body(...)):
+        """Resolve one shared Quick input and append through the write contract."""
+        from .quick_input import QuickInputError, resolve_quick_input
+
+        if not isinstance(payload, dict):
+            raise HTTPException(status_code=400, detail="Body must be a JSON object.")
+        try:
+            resolved = resolve_quick_input(
+                payload.get("text"),
+                id_key=id_key_from_config(app.state.config),
+                shorthand_item=Item("[ ]", str(payload.get("type") or "T"), ""),
+                extra_details=payload.get("details"),
+            )
+            item = resolved.item
+            paths = auto_id_paths(app.state.paths, app.state.writable_path)
+            assign_auto_id_from_paths(item, app.state.config, paths)
+            existing, _diagnostics = read_life_inputs(paths, app.state.config)
+            ensure_item_id(
+                item,
+                key=id_key_from_config(app.state.config),
+                existing_ids=collect_item_ids(
+                    existing, key=id_key_from_config(app.state.config)
+                ),
+                prefix=id_prefix_for_item(item, app.state.config),
+            )
+            append_item_to_file(app.state.writable_path, item)
+        except QuickInputError as exc:
+            raise HTTPException(
+                status_code=422 if exc.diagnostics else 400,
+                detail={
+                    "error": "VALIDATION_ERROR",
+                    "message": str(exc),
+                    "detail": diagnostics_to_output(exc.diagnostics),
+                },
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=error_detail(exc))
+        return {
+            "mode": resolved.mode,
             "line": item_to_line(item),
             "item": api_item(
                 item, app.state.writable_path, id_key_from_config(app.state.config)

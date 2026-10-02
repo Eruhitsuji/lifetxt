@@ -34,14 +34,14 @@ capabilities:
     summary: Separate fast PR merge evidence, main compatibility evidence, and release-artifact evidence without dropping supported-platform or quality coverage.
     status: active
     owner: Eruhitsuji
-    source_requirements: [req-ci-release-artifact-responsibility, req-ci-pr-main-responsibility-separation, req-ci-safe-path-routing]
-    implementation_locations: [scripts/run_ci_like.py, tests/test_run_ci_like.py, .github/workflows/ci.yml, docs/en/release-policy-gates.md, docs/ja/release-policy-gates.md]
+    source_requirements: [req-ci-release-artifact-responsibility, req-ci-pr-main-responsibility-separation, req-ci-safe-path-routing, req-ci-main-recovery-contract]
+    implementation_locations: [scripts/run_ci_like.py, tests/test_run_ci_like.py, scripts/classify_ci_paths.py, tests/test_ci_recovery_contract.py, .github/workflows/ci.yml, docs/en/release-policy-gates.md, docs/ja/release-policy-gates.md]
     public_interfaces: [scripts/run_ci_like.py --profile release, GitHub Actions CI]
-    tests_or_evidence: [tests.test_run_ci_like, tests.test_ci_workflow_responsibilities]
-    related_issues: [https://github.com/Eruhitsuji/lifetxt/issues/1008, https://github.com/Eruhitsuji/lifetxt/issues/1009, https://github.com/Eruhitsuji/lifetxt/issues/1010, https://github.com/Eruhitsuji/lifetxt/issues/1011]
-    related_pull_requests: [https://github.com/Eruhitsuji/lifetxt/pull/1012, https://github.com/Eruhitsuji/lifetxt/pull/1013]
+    tests_or_evidence: [tests.test_run_ci_like, tests.test_ci_workflow_responsibilities, tests.test_ci_path_routing, tests.test_ci_recovery_contract]
+    related_issues: [https://github.com/Eruhitsuji/lifetxt/issues/1008, https://github.com/Eruhitsuji/lifetxt/issues/1009, https://github.com/Eruhitsuji/lifetxt/issues/1010, https://github.com/Eruhitsuji/lifetxt/issues/1011, https://github.com/Eruhitsuji/lifetxt/issues/1026]
+    related_pull_requests: [https://github.com/Eruhitsuji/lifetxt/pull/1012, https://github.com/Eruhitsuji/lifetxt/pull/1013, https://github.com/Eruhitsuji/lifetxt/pull/1027]
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
-    notes: '#1009 implements the artifact-only release profile. #1010 separates PR and main responsibilities with stable aggregate gates and fail-closed main failure visibility. #1011 adds conservative path classification with a docs-only lightweight route and fail-safe full routing.'
+    notes: '#1026 adds selective no-Web/coverage PR checks, actionable main Incident evidence and recovery-first merge governance. #1009 implements the artifact-only release profile. #1010 separates PR and main responsibilities with stable aggregate gates and fail-closed main failure visibility. #1011 adds conservative path classification with a docs-only lightweight route and fail-safe full routing.'
     replacement: {replaces: [], replaced_by: null, deprecation_issue: null}
 
   - id: cap-web-mobile-planner

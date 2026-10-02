@@ -992,3 +992,10 @@ workspace timezone, and the same bounded model is available through CLI and MCP
 (`get_temporal_review`). Review rows are historical lifecycle evidence only;
 scheduled records and current item state are not treated as proof of past
 occurrence. Incomplete or truncated history remains visible as such.
+### Planner presentation customization
+
+Planner Day supports presentation-only preferences for section visibility and
+order, plus Comfortable or Compact density. Workspace defaults are exposed in
+`/api/config`; a versioned browser-local override may take precedence and can be
+reset to workspace defaults. These preferences never filter records, alter
+temporal eligibility, or change mutation/history semantics.

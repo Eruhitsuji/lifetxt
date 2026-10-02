@@ -540,6 +540,11 @@ and Web UI, so a token means the same thing everywhere.
 
 ### Capture sigils
 
+Quick (`quick` / `q` / `add`) also accepts one complete life.txt record;
+for example `lifetxt quick '[N] N "Idea" body:"text"' --append life.txt`.
+The same shared resolver serves local/Remote TUI and Web/MCP Quick entry points.
+
+
 `quick`, the TUI `/add`, and the Web quick-add box expand four sigils out of the
 title:
 
@@ -2755,7 +2760,7 @@ row when nothing is marked.
 | `/set KEY VALUE` | Set a detail; an empty value removes the key |
 | `/due DATE` | Set `due:` using `today`, `tomorrow`, a weekday, `+3d`, or `-1w` |
 | `/assign USER` | Set `assignee:` |
-| `/add TITLE` | Append a new open task; capture sigils (`@ # ! ^`) are expanded |
+| `/add TITLE` | Capture shorthand or one complete life.txt record with shared Quick resolution |
 | `/guided TITLE [key=value ...]` | Create a task with guided common fields such as `due=tomorrow`, `project=work`, `priority=A`, `tag=next`, or `progress=40%` |
 | `/guided_edit key=value [key=value ...]` | Edit common fields on the selected item through the same canonical write path |
 | `/related [parent\|related\|ref] TITLE` | Create a task related to the selected row, with its `id:`/`project:` prefilled (#770) |

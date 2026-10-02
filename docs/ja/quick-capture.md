@@ -1,13 +1,13 @@
 # Quick capture と省略記法
 
-Quick capture は短い入力を通常の `life.txt` task に変換します。CLI の
-`add`、`quick`、`q`、TUI の `/add`、Web Quick add、MCP/Web の capture 操作は、
-同じ4種類のtoken parserを共有します。省略記法は入力時だけの便宜機能です。
-fileには `@home` ではなく `project:home` のような正規fieldが保存されます。
+Quickは、**省略記法または完全なlife.txt 1行**を受け付ける共通入力基盤です。
+CLI `add` / `quick` / `q`、ローカル／Remote TUI `/add`、Web Quick Add、
+`/capture`、Planner Quick Capture、MCP `capture_item`が同じresolverを利用します。
+完全なrecordは既存Format parser、省略記法は既存の4種類のtoken parserで解析します。
+保存されるfileでは `@home` は `project:home` のような正規fieldになります。
 
-task titleと少数の共通fieldで十分ならQuick captureを使います。他のrecord type、
-status、body、link、repeated/custom keyなどを明示する場合は、完全な
-[Format line](./life_txt_format_spec.md)またはstructured create/editを使います。
+共通fieldを素早く入力するなら省略記法を、type・status・body・引用値・繰り返し／
+custom keyを明示するなら完全な[Format line](./life_txt_format_spec.md)を、同じ入口で使えます。
 
 ## Quick start
 
@@ -107,25 +107,48 @@ endpoint、MCPでは、複数project/priority/dueや重複tagが残り得ます�
 認識されたsigilだけでtitleが空になる入力は拒否されます。認識tokenのないplain
 textは通常のtitle serialization以外は変更されません。
 
-## 完全lineはsurface固有
+## 完全なrecordも同じQuick入口で入力
 
-`/capture`を含むWeb Quick-add controlは、trim後に`[`で始まる入力をraw-line
-endpointへ送ります。たとえば`[ ] N "Read later" tag:reading`を入力できます。
-それ以外はshorthand capture endpointへ送ります。
+```sh
+lifetxt quick '[N] N "Idea" body:"共通Quick入力を試す"' --append life.txt
+lifetxt add '[N] J "Journal" on:2026-10-01 body:"今日の記録"' --append life.txt
+```
 
-CLI `add`/`quick`/`q`、TUI `/add`、MCP `capture_item`、Web
-`POST /api/items/capture`にはこの完全line判定がありません。それぞれのraw/structured
-authoring経路を使ってください。Web APIでは`POST /api/items/raw`が別endpointです。
+Web Quick Add、`/capture`、Plannerにも同じ1行を貼り付けられます。
+TUIでは `/add [N] N "Idea" body:"text"`、MCPでは `capture_item` の `text` に
+完全な1行を渡します。Webの共通APIは `POST /api/items/capture`、bodyは
+`{"text":"..."}`です。応答の `mode` は `shorthand` または `full_line`です。
+`POST /api/quick/resolve` は同じ契約の非書込previewで、IDを生成しません。
+明示的な `POST /api/items/raw` とstructured create/importも引き続き利用できます。
+
+trim後に `[` で始まる入力は完全recordの意図として扱います。不正なstatus/type、
+閉じていない引用符、構文エラーは省略記法のtaskに変換せず、何も書き込まずエラーを返します。
+例：`[ ] T "unterminated`。Quickは1行入力専用で、複数行／一括importは対象外です。
+Formatのwarningはwarningのまま、custom keyは有効のままです。
+完全recordのtitle/body内のsigilは文字として保持し、展開しません。
+
+完全record自体が優先されます。CLIのtype/status/detail flag、preset、設定由来の
+入力defaultは省略記法にだけ適用します。完全recordのfieldはその1行内で指定してください。
+`--no-shorthand`はtitleのsigil展開を止めますが、`--no-check`と併用しても
+不正な完全recordの検証を回避できません。関連recordのcontextは未指定fieldだけを補います。
+既存のrevision・認証・read-only・書込先の制約も適用されます。明示IDは保持し、
+workspace内の重複IDは拒否します。CLIは `ids.auto` に従い、TUI/Web/MCPは従来どおり
+操作用IDを保証します。設定されたID key/prefixを利用します。
+MCPの設定に応じた出所metadataとdry-run proposalも維持します。
 
 ## 利用可能なsurface
 
-| Surface | Shorthand入口 | 主な差異 |
+| Surface | 共通Quick入口 | 固有の動作 |
 | --- | --- | --- |
-| CLI | `add`, `quick`, `q` | option、preset、default、stdin、`--no-shorthand` |
-| TUI | `/add TITLE` | shorthand。CLI option/presetなし。context prefillより明示sigil優先 |
-| Web UI | Quick add、`/capture` | shorthandとUI専用の完全line routing |
-| Web API | `POST /api/items/capture` | shorthand task capture。`type`指定可。raw lineは別endpoint |
-| MCP | `capture_item`, `parse_shorthand` | task captureまたは非書込preview。structured `create_item`は別 |
+| CLI | `add`, `quick`, `q`, stdin | 既存の省略記法flag/preset/default |
+| ローカルTUI | `/add`, `/a`, `/related` | 共通resolver。関連contextは未指定fieldを補完 |
+| Remote TUI | `/add`, `/a`, `/related` | revision付きでtextをサーバーへ送り、サーバー側で解決 |
+| Web UI | Quick Add、`/capture`、Planner、command `/add`、Focus Quick Add | 共通capture API。Focusはdue未指定時だけ今日を補完 |
+| Web API | `POST /api/items/capture` | 省略記法または完全record。省略記法には`type`指定可 |
+| MCP | `capture_item` | 省略記法または完全record。proposalと出所metadataを維持 |
+
+`parse_shorthand` / `POST /api/shorthand/parse`は明示的な省略記法専用previewです。
+structured/guided editorやpresence/message commandは専用契約を維持します。
 
 すべてのshorthand capture経路は、空になったtitleと不正な`^DATE`を拒否します。
 validation失敗時は対象recordを書きません。完全なfile grammarと推奨field値は

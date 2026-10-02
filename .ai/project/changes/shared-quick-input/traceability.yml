@@ -1,0 +1,7 @@
+schema_version: 1
+traceability:
+  - requirement_id: req-shared-quick-input-resolution
+    capability_id: cap-shared-quick-input
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1021
+    tests_or_evidence: [tests.test_quick_input]
+    status: verified

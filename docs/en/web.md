@@ -1002,3 +1002,6 @@ temporal eligibility, or change mutation/history semantics.
 Planner scope is bookmarkable with `area` or `saved_view` URL parameters. The
 same authoritative scope is applied before Agenda, Command Center, ordinary
 Notes, and Past Review aggregation; the browser does not filter returned rows.
+Planner Today is resolved by the workspace timezone and periodically re-synced
+from `/api/config` when the page returns to the foreground or crosses a date
+boundary. Browser-local calendar time is never authoritative.

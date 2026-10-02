@@ -1452,28 +1452,19 @@ def _cmd_add(state, argument):
     if not title:
         raise ValueError("Usage: /add TITLE")
     if state.backend.is_remote:
-        # Remote create (#677/#679 MVP): the server, not this process,
-        # assigns the id and parses the capture shorthand, so this reuses
-        # the exact same POST /api/items route the Web UI and CLI `add`
-        # already call rather than a second creation implementation.
-        from .shorthand import ShorthandError, parse_capture
-
-        try:
-            parsed_title, details = parse_capture(title, strict_dates=True)
-        except ShorthandError as exc:
-            raise ValueError(str(exc))
-        payload = {
-            "status": "[ ]",
-            "type": "T",
-            "title": parsed_title,
-            "details": {key: list(values) for key, values in details.items()},
-        }
-        state.backend.create_item(payload)
+        state.backend.capture_item(title)
         state.reload()
-        return ("success", "Added: %s" % parsed_title)
+        return ("success", "Added: %s" % title)
     path = _write_target(state)
-    existing = set(row.get("id") for row in state.rows if row.get("id"))
-    line = _quick_add_line(title, state.options["id_key"], existing_ids=existing)
+    from .ids import collect_item_ids
+
+    existing = collect_item_ids(state._items, key=state.options["id_key"])
+    line = _quick_add_line(
+        title,
+        state.options["id_key"],
+        existing_ids=existing,
+        config=getattr(state.args, "config_data", None),
+    )
     from . import mutation
     from .write_operations import append_life_records
 
@@ -1539,7 +1530,9 @@ def _cmd_guided(state, argument):
         state.reload()
         return ("success", "Added guided item: %s" % title)
     path = _write_target(state)
-    existing = set(row.get("id") for row in state.rows if row.get("id"))
+    from .ids import collect_item_ids
+
+    existing = collect_item_ids(state._items, key=state.options["id_key"])
     line = _quick_add_line(
         title,
         state.options["id_key"],
@@ -1610,34 +1603,22 @@ def _cmd_new_related(state, argument):
         prefill_details["project"] = [project_values[0]]
 
     if state.backend.is_remote:
-        from .shorthand import ShorthandError, parse_capture
-
-        try:
-            parsed_title, parsed_details = parse_capture(title, strict_dates=True)
-        except ShorthandError as exc:
-            raise ValueError(str(exc))
-        merged_details = {key: list(values) for key, values in prefill_details.items()}
-        for key, values in parsed_details.items():
-            merged_details[key] = list(values)
-        payload = {
-            "status": "[ ]",
-            "type": "T",
-            "title": parsed_title,
-            "details": merged_details,
-        }
-        state.backend.create_item(payload)
+        state.backend.capture_item(title, extra_details=prefill_details)
         state.reload()
         return (
             "success",
-            "Added: %s (%s:%s)" % (parsed_title, field, target_id),
+            "Added: %s (%s:%s)" % (title, field, target_id),
         )
     path = _write_target(state)
-    existing = set(r.get("id") for r in state.rows if r.get("id"))
+    from .ids import collect_item_ids
+
+    existing = collect_item_ids(state._items, key=state.options["id_key"])
     line = _quick_add_line(
         title,
         state.options["id_key"],
         existing_ids=existing,
         extra_details=prefill_details,
+        config=getattr(state.args, "config_data", None),
     )
     from . import mutation
     from .write_operations import append_life_records
@@ -2336,36 +2317,27 @@ def _write_target(state):
 
 
 def _quick_add_line(
-    title, id_key, existing_ids=None, shorthand=True, extra_details=None
+    title, id_key, existing_ids=None, shorthand=True, extra_details=None, config=None
 ):
-    """Build a new task line, optionally with context-supplied detail
-    values (#770) layered underneath whatever the capture shorthand
-    itself parses. ``extra_details`` never overrides a key the shorthand
-    already produced -- an explicit ``@project`` sigil, for example, still
-    wins over a caller-supplied ``project`` prefill.
-    """
-    from .ids import generate_item_id
-    from .model import Item
+    """Resolve Quick text, fill absent context fields and assign a unique ID."""
+    from .ids import ensure_item_id, id_prefix_for_item
     from .serializer import item_to_line
-    from .shorthand import ShorthandError, parse_capture
+    from .quick_input import resolve_quick_input
 
-    details = {}
-    if shorthand:
-        try:
-            parsed_title, details = parse_capture(title, strict_dates=True)
-        except ShorthandError as exc:
-            raise ValueError(str(exc))
-        if details:
-            if not parsed_title:
-                raise ValueError("Capture shorthand consumed the whole title.")
-            title = parsed_title
-    if extra_details:
-        for key, values in extra_details.items():
-            if key not in details:
-                details[key] = list(values)
-
-    item = Item("[ ]", "T", title, details or None, 0)
-    item.details[id_key] = [generate_item_id(item, existing_ids=existing_ids)]
+    item = resolve_quick_input(
+        title,
+        id_key=id_key,
+        shorthand=shorthand,
+        extra_details=extra_details,
+    ).item
+    if existing_ids and set(item.details.get(id_key, [])) & existing_ids:
+        raise ValueError("Duplicate %s: value; use a unique ID." % id_key)
+    ensure_item_id(
+        item,
+        key=id_key,
+        existing_ids=existing_ids,
+        prefix=id_prefix_for_item(item, config),
+    )
     return item_to_line(item)
 
 

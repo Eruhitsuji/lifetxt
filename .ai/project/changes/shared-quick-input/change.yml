@@ -1,0 +1,13 @@
+schema_version: 1
+change:
+  id: shared-quick-input
+  title: One Quick input contract across all textual capture surfaces
+  status: verified
+  change_type: Feature
+  assurance_level: Standard
+  owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1021
+scope:
+  write_scope: [lifetxt/**, tests/**, docs/en/**, docs/ja/**, .ai/project/CAPABILITIES.yml, .ai/project/TRACEABILITY.yml, .ai/project/changes/shared-quick-input/**]
+  forbidden_scope: [.ai/managed/**, Format grammar redesign, mutation architecture, auth changes]
+human_approvals_required: [independent review, Merge Authority approval]

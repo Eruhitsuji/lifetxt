@@ -2,6 +2,22 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-surface-navigation-placement
+      capability_id: cap-web-mobile-planner
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1039
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1040
+      changed_files_or_scope:
+        - lifetxt/web_assets.html
+        - tests/test_web_assets.py
+      tests_or_evidence:
+        - "Top keeps Planner and Quick Capture links inside the accessible More disclosure"
+        - "icons are decorative while translated link labels and anchor hrefs remain explicit"
+        - "Planner and Capture links back to Top remain covered by regression tests"
+      notes: >-
+        Repositions existing surface links into More and adds decorative icons;
+        routes, APIs, domain behavior, and capture semantics are unchanged.
+      status: implemented
+
     - requirement_id: req-web-surface-navigation-links
       capability_id: cap-web-mobile-planner
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1037

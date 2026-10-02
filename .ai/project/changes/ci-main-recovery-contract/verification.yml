@@ -1,9 +1,85 @@
 schema_version: 1
 verification:
-  executed: []
+  executed:
+  - type: no-Web
+    command: MPLBACKEND=Agg python -m unittest discover; assert optional package absence
+    requirement_ids:
+    - req-ci-main-recovery-contract
+    result: 4963 tests, OK; FastAPI/Uvicorn/HTTPX/HTTPX2 absent; complete final output
+      retained
+    status: passed
+    executed_at: '2026-10-02'
+    commit: 041f9f8f4f892d8bb0a939fe24e8e42a4566f272
+  - type: optional-Web
+    command: python -m unittest tests.test_quick_input
+    requirement_ids:
+    - req-ci-main-recovery-contract
+    result: 'HTTPX: 16 passed; HTTPX2: 16 passed without skips; no-Web focused: 16
+      tests, skipped 3 Web-only cases'
+    status: passed
+    executed_at: '2026-10-02'
+    commit: 041f9f8f4f892d8bb0a939fe24e8e42a4566f272
+  - type: coverage
+    command: MPLBACKEND=Agg python -m coverage run --branch -m unittest discover;
+      coverage json; python scripts/check_coverage_regression.py coverage.json scripts/coverage-baseline.json
+    requirement_ids:
+    - req-ci-main-recovery-contract
+    result: 4966 tests, OK (skipped=312); branch coverage 59.24% >= unchanged 59.00%
+      minimum; dev-only environment, no FastAPI/Uvicorn/HTTPX
+    status: passed
+    executed_at: '2026-10-02'
+    commit: 041f9f8f4f892d8bb0a939fe24e8e42a4566f272
+  - type: CI-contract
+    command: python -m unittest tests.test_ci_recovery_contract tests.test_ci_path_routing
+      tests.test_ci_workflow_responsibilities tests.test_change_package_closeout
+    requirement_ids:
+    - req-ci-main-recovery-contract
+    result: 22 tests passed
+    status: passed
+    executed_at: '2026-10-02'
+    commit: 041f9f8f4f892d8bb0a939fe24e8e42a4566f272
+  - type: resource-warning
+    command: python -W error::ResourceWarning -m unittest tests.test_config_validation
+      tests.test_archive_plan_v1 tests.test_safety_foundation
+    requirement_ids:
+    - req-ci-main-recovery-contract
+    result: 101 tests, OK (skipped=3)
+    status: passed
+    executed_at: '2026-10-02'
+    commit: 041f9f8f4f892d8bb0a939fe24e8e42a4566f272
+  - type: static-and-integration
+    command: ruff format --check <changed Python files>; ruff check <changed Python
+      files>; mypy --follow-imports=skip --ignore-missing-imports lifetxt/diagnostic_contract.py;
+      python -m lifetxt check examples/minimal_life.txt; python scripts/validate_release_docs.py
+      --output validation.json
+    requirement_ids:
+    - req-ci-main-recovery-contract
+    result: format/lint/types passed; example OK 10 items; document validation errors=0,
+      ok=true
+    status: passed
+    executed_at: '2026-10-02'
+    commit: 041f9f8f4f892d8bb0a939fe24e8e42a4566f272
   gaps:
-    - description: Live main Incident update/close behavior must be observed after human merge; fixtures exercise the exact workflow scripts offline.
-      tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1026
+  - description: Live main Incident update/close behavior must be observed after human
+      merge; fixtures exercise the exact workflow scripts offline.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1026
+  diagnosed_runs:
+  - type: non-final-no-Web
+    result: 'Initial full run: 4954 tests, failures=3, skips=314. Only outdated CI-contract
+      expectations failed; no FastAPI import errors. Python 3.12.14/Bash; BashCompletionExecutionTests
+      ran. Workflow/test files were edited while this initial run was in flight. Fresh
+      final run and updated focused contracts supersede this evidence.'
+    status: diagnosed
 review_ledger:
-  - {reviewer: independent reviewer, review_type: implementation, target_commit: pending, result: pending, finding_count: 0, completed_at: null}
-  - {reviewer: Eruhitsuji, review_type: integration-and-CI-design, target_commit: pending, result: pending, finding_count: 0, completed_at: null}
+- reviewer: independent reviewer
+  review_type: implementation
+  target_commit: pending
+  result: pending
+  finding_count: 0
+  completed_at: null
+- reviewer: Eruhitsuji
+  review_type: integration-and-CI-design
+  target_commit: pending
+  result: pending
+  finding_count: 0
+  completed_at: null

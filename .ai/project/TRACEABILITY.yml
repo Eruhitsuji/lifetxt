@@ -5,7 +5,7 @@ traceability:
     - requirement_id: req-ci-main-recovery-contract
       capability_id: cap-ci-responsibility-separation
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1026
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1027
       changed_files_or_scope: [.github/workflows/ci.yml, scripts/classify_ci_paths.py, tests/test_quick_input.py, tests/test_ci_recovery_contract.py, tests/test_ci_path_routing.py, tests/test_ci_workflow_responsibilities.py, .ai/project/changes/ci-main-recovery-contract/]
       tests_or_evidence: [tests.test_quick_input, tests.test_ci_recovery_contract, tests.test_ci_path_routing, tests.test_ci_workflow_responsibilities, no-Web full discover, dev-only coverage regression]
       status: implemented

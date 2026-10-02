@@ -17,7 +17,7 @@ from lifetxt import web_assets, webapp
 
 REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
 # #1021 intentionally changes Quick submit/preview and Focus capture fragments.
-LEGACY_PRISTINE_GIT_BLOB_SHA = "86333d33be22cffe4b742a04359ceac5eb33b929"
+LEGACY_PRISTINE_GIT_BLOB_SHA = "25ffd72b1979e00c48678ff294640b605725de8d"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )
@@ -36,8 +36,31 @@ class WebAssetExtractionTests(unittest.TestCase):
         self.assertIn("consistencyWarnings", web_assets.HTML_PAGE)
 
     def test_surface_navigation_links_are_explicit(self):
-        for href in ('href="/planner"', 'href="/capture"'):
-            self.assertIn(href, web_assets.HTML_PAGE)
+        nav = re.search(
+            r'<nav class="workspace-tabs header-workspace-tabs"[^>]*>(.*?)</nav>',
+            web_assets.HTML_PAGE,
+            re.DOTALL,
+        ).group(1)
+        primary = re.search(
+            r'<div class="nav-primary"[^>]*>(.*?)</div>', nav, re.DOTALL
+        ).group(1)
+        more = re.search(
+            r'<div class="nav-advanced"[^>]*>(.*?)</div>', nav, re.DOTALL
+        ).group(1)
+        self.assertNotIn('href="/planner"', primary)
+        self.assertNotIn('href="/capture"', primary)
+        self.assertRegex(
+            more,
+            r'<a class="workspace-tab surface-link" href="/planner">'
+            r'<span aria-hidden="true">📓</span> '
+            r'<span data-i18n="Planner">Planner</span></a>',
+        )
+        self.assertRegex(
+            more,
+            r'<a class="workspace-tab surface-link" href="/capture">'
+            r'<span aria-hidden="true">⚡</span> '
+            r'<span data-i18n="Quick Capture">Quick Capture</span></a>',
+        )
         self.assertIn('href="/"', web_assets.PLANNER_HTML_PAGE)
         self.assertIn('class="capture-back" href="/"', web_assets.HTML_PAGE)
 

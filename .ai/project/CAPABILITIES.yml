@@ -65,6 +65,7 @@ capabilities:
       - req-planner-month-overview
       - req-planner-temporal-day-semantics
       - req-planner-user-note-projection
+      - req-planner-presentation-customization
     implementation_locations:
       - lifetxt/webapp.py
       - lifetxt/web_assets.py

@@ -1,6 +1,7 @@
 import os
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 try:
@@ -64,6 +65,14 @@ class PlannerTests(unittest.TestCase):  # pragma: no cover -- covered in web-ext
         self.assertEqual(
             400, self.client.get("/api/command-center?date=2031-02-30").status_code
         )
+
+    def test_config_today_passes_workspace_timezone_to_policy(self):
+        with patch("lifetxt.webapp.resolve_timezone_name", return_value="Asia/Tokyo"), patch(
+            "lifetxt.webapp.timezone_today", side_effect=lambda name=None: self.assertEqual("Asia/Tokyo", name) or __import__("datetime").date(2031, 2, 3)
+        ):
+            response = self.client.get("/api/config")
+        self.assertEqual(200, response.status_code)
+        self.assertEqual("2031-02-03", response.json()["today"])
 
     def test_week_range_uses_shared_agenda_occurrences_and_excludes_undated_tasks(self):
         response = self.client.get("/api/agenda?from=2031-02-03&to=2031-02-09")

@@ -955,3 +955,10 @@ quadrant ごとのタスク一覧を返します。
 ### Planner DayのPast / Today / Future
 
 Planner Dayは、/api/configが返すworkspace基準のTodayと、URLで選択した日付を使って、Past・Today・Futureを明示します。Todayでは従来どおり実行操作を表示します。Pastは記録されたcontextを読む画面、Futureは計画を確認する画面として扱います。TaskとHabitの通常の完了操作はTodayでだけ利用でき、PastやFutureの日付を完了日として誤って記録しません。Pastの予定は予定されたcontextであり、実際に起きた証拠とは扱いません。Plannerは過去のTask状態を再構成しません。
+### Planner Pastのレビュー / アクティビティ
+
+PastのPlanner Dayは、読み取り専用の`temporal-life-review-v1`契約を
+`/api/temporal-review?date=YYYY-MM-DD`から取得します。選択日はworkspaceの
+タイムゾーンで解決され、同じ有界モデルをCLIとMCP（`get_temporal_review`）でも
+利用できます。表示する行は履歴上のライフサイクル証拠に限られ、予定や現在の
+アイテム状態を過去の実績とはみなしません。不完全・切り詰められた履歴も明示します。

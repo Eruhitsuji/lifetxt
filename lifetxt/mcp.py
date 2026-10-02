@@ -315,6 +315,7 @@ READ_ONLY_TOOLS = frozenset(
         "parse_item",
         "get_agenda",
         "get_review",
+        "get_temporal_review",
         "get_graph",
         "get_blockers",
         "list_links",
@@ -597,6 +598,17 @@ def _tool_schemas():
                     "Range start date, YYYY-MM-DD. Defaults to the current week start."
                 ),
                 "to": _string("Range end date, YYYY-MM-DD. Defaults to today."),
+                "project": _string("Restrict the review to one project."),
+            },
+        ),
+        _tool(
+            "get_temporal_review",
+            "Return the bounded temporal-life-review-v1 evidence projection for a selected day or explicit period.",
+            {
+                "date": _string("One workspace-local calendar day, YYYY-MM-DD."),
+                "since": _string("Explicit period start, YYYY-MM-DD or timestamp."),
+                "until": _string("Explicit period end, YYYY-MM-DD or timestamp."),
+                "limit": _integer("Maximum number of returned history rows."),
                 "project": _string("Restrict the review to one project."),
             },
         ),
@@ -2096,6 +2108,34 @@ def _tool_get_review(args, context):
     return result
 
 
+def _tool_get_temporal_review(args, context):
+    from .temporal_review import build_temporal_review
+    from .timezone_policy import current_timezone_name
+
+    date = args.get("date")
+    since = args.get("since")
+    until = args.get("until")
+    if date and (since or until):
+        raise ValueError("Use date or since/until, not both.")
+    if date:
+        since = until = date
+    if not since:
+        raise ValueError("Temporal review requires date or since.")
+    limit = max(1, min(int(args.get("limit") or 100), 500))
+    items, diagnostics = _read_items(context)
+    result = build_temporal_review(
+        items,
+        since=since,
+        until=until,
+        limit=limit,
+        project=args.get("project"),
+        id_key=_id_key(context),
+        timezone_name=current_timezone_name(),
+    )
+    result["diagnostics"] = diagnostics_to_output(diagnostics)
+    return result
+
+
 def _tool_get_graph(args, context):
     items, _diagnostics = _read_items(context)
     key = _id_key(context)
@@ -3585,6 +3625,7 @@ TOOL_HANDLERS = OrderedDict(
         ("delete_item", _tool_delete_item),
         ("get_agenda", _tool_get_agenda),
         ("get_review", _tool_get_review),
+        ("get_temporal_review", _tool_get_temporal_review),
         ("get_graph", _tool_get_graph),
         ("get_blockers", _tool_get_blockers),
         ("list_links", _tool_list_links),

@@ -984,3 +984,11 @@ groups, and task rows grouped by quadrant.
 ## Ordinary Notes
 
 [Shared ordinary Notes across CLI, Web, Planner, TUI and MCP](ordinary-notes.md).
+### Planner Past review activity
+
+Past Planner days consume the read-only `temporal-life-review-v1` contract from
+`/api/temporal-review?date=YYYY-MM-DD`. The selected date is resolved using the
+workspace timezone, and the same bounded model is available through CLI and MCP
+(`get_temporal_review`). Review rows are historical lifecycle evidence only;
+scheduled records and current item state are not treated as proof of past
+occurrence. Incomplete or truncated history remains visible as such.

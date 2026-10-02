@@ -17,7 +17,7 @@ from lifetxt import web_assets, webapp
 
 REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
 # #1021 intentionally changes Quick submit/preview and Focus capture fragments.
-LEGACY_PRISTINE_GIT_BLOB_SHA = "be366fa2208554fe3bd2e70b03e96860d79f1a74"
+LEGACY_PRISTINE_GIT_BLOB_SHA = "86333d33be22cffe4b742a04359ceac5eb33b929"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )
@@ -34,6 +34,12 @@ class WebAssetExtractionTests(unittest.TestCase):
         self.assertTrue(web_assets.HTML_PAGE.endswith("</html>"))
         self.assertIn("/api/temporal-thread/", web_assets.HTML_PAGE)
         self.assertIn("consistencyWarnings", web_assets.HTML_PAGE)
+
+    def test_surface_navigation_links_are_explicit(self):
+        for href in ('href="/planner"', 'href="/capture"'):
+            self.assertIn(href, web_assets.HTML_PAGE)
+        self.assertIn('href="/"', web_assets.PLANNER_HTML_PAGE)
+        self.assertIn('class="capture-back" href="/"', web_assets.HTML_PAGE)
 
     def test_split_resources_assemble_the_legacy_pristine_page(self):
         package = resources.files("lifetxt")

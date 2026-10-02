@@ -1005,3 +1005,5 @@ Notes, and Past Review aggregation; the browser does not filter returned rows.
 Planner Today is resolved by the workspace timezone and periodically re-synced
 from `/api/config` when the page returns to the foreground or crosses a date
 boundary. Browser-local calendar time is never authoritative.
+The main Web UI header provides direct links to Planner and Quick Capture. The
+Planner and Capture surfaces retain their explicit links back to the main Web UI.

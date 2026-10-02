@@ -974,3 +974,5 @@ Plannerのスコープは`area`または`saved_view`のURLパラメーターで�
 PlannerのTodayはworkspaceのタイムゾーンで解決され、画面復帰時または日付境界を
 またいだ低頻度の再同期で`/api/config`から更新されます。ブラウザーのローカル日付は
 権威あるTodayとして使用しません。
+メインWeb UIのヘッダーからPlannerとQuick Captureへ直接移動できます。PlannerとCaptureには、
+従来どおりメインWeb UIへ戻る明示的なリンクを残しています。

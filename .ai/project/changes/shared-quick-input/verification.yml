@@ -36,12 +36,17 @@ verification:
       requirement_ids: [req-shared-quick-input-resolution]
       result: Ran 4 tests -- OK
       status: passed
+    - type: publication-tree-equivalence
+      command: git diff --exit-code HEAD origin/feature/issue-1021-shared-quick-input; git rev-parse HEAD^{tree} origin/feature/issue-1021-shared-quick-input^{tree}
+      requirement_ids: [req-shared-quick-input-resolution]
+      result: No differences; both trees were 75bd65dc71ab56d90fc3ba724335af7c0b911114 before PR traceability-only updates. Runtime code and tests are identical to the locally verified implementation.
+      status: passed
   gaps:
     - description: Physical phone and terminal-host interaction was not exercised; Node executes actual Web/Planner handlers and server integration covers Remote transport semantics.
       tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1021
 review_ledger:
   - {reviewer: implementer, review_type: self-review, target_commit: c766570c712c3b1230d27ab5c9fd03472d338414, result: complete, finding_count: 0, completed_at: '2026-10-02'}
-  - {reviewer: independent human reviewer, review_type: implementation-and-integration, target_commit: c766570c712c3b1230d27ab5c9fd03472d338414, result: pending, finding_count: 0, completed_at: null}
+  - {reviewer: independent human reviewer, review_type: implementation-and-integration, target_commit: latest PR head, result: pending, finding_count: 0, completed_at: null}
 release_evidence:
   migration_notes: No Format, persistence or configuration changes. Additive Quick API acceptance and optional mode metadata; explicit raw/import remains available.
   rollback_plan: Revert the PR; no data migration to reverse.

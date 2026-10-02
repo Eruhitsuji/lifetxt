@@ -867,12 +867,15 @@ def _tool_schemas():
         ),
         _tool(
             "capture_item",
-            "Create a task from plain text, expanding capture shorthand: "
+            "Quick capture accepts shorthand or one complete life.txt record, "
+            "preserving explicit status/type/details. Malformed records fail. "
+            "Shorthand: "
             "@project sets project:, #tag adds tag:, !value sets priority:, and "
             "^date sets due:. Relative dates such as tomorrow or +3d resolve. "
-            "lifetxt generates the id; do not invent one.",
+            "Omit the id to let lifetxt generate it; an explicit full-record id is "
+            "preserved and must be unique.",
             {
-                "text": _string("Title with optional @ # ! ^ tokens."),
+                "text": _string("Shorthand text or one complete life.txt record."),
                 "type": _string("Item type. Defaults to T."),
                 "status": _string("Initial status. Defaults to [ ]."),
                 "dry_run": _bool("Return a unified diff instead of writing."),
@@ -2556,28 +2559,19 @@ def _tool_get_status(args, context):
 
 
 def _tool_capture_item(args, context):
-    """Create a task from plain text, expanding capture sigils."""
-    from .shorthand import ShorthandError, parse_capture
+    """Resolve a shared Quick input with existing MCP write/proposal safeguards."""
+    from .quick_input import resolve_quick_input
+    from .model import Item
 
     _require_writable(context)
     _check_expected_hash(context, args)
-    text = str(args.get("text") or "").strip()
-    if not text:
-        raise ValueError("capture_item requires text.")
-    try:
-        title, details = parse_capture(text, strict_dates=True)
-    except ShorthandError as exc:
-        raise ValueError(str(exc))
-    if not title:
-        raise ValueError("Capture shorthand consumed the whole title. Include a title.")
-
-    payload = {
-        "status": args.get("status", "[ ]"),
-        "type": args.get("type") or "T",
-        "title": title,
-        "details": _normalize_details(details),
-    }
-    item = item_from_payload(payload)
+    resolved = resolve_quick_input(
+        args.get("text"),
+        id_key=_id_key(context),
+        shorthand_item=Item(args.get("status") or "[ ]", args.get("type") or "T", ""),
+    )
+    item = resolved.item
+    title = item.title
     _stamp_source(item, context)
     _ensure_server_id(item, context)
 
@@ -2586,6 +2580,7 @@ def _tool_capture_item(args, context):
     if _dry_run(args):
         after = before + ("" if before.endswith(("\n", "")) else "\n") + line + "\n"
         proposal = _proposal(context, before, after, "Capture %s" % title)
+        proposal["mode"] = resolved.mode
         proposal["text"] = line
         return proposal
 
@@ -2593,6 +2588,7 @@ def _tool_capture_item(args, context):
     return _applied(
         context,
         {
+            "mode": resolved.mode,
             "line": line_no,
             "item": api_item(item, context.writable_path, _id_key(context)),
             "text": line,

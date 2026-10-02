@@ -3319,7 +3319,8 @@ def build_parser():
     quick.add_argument(
         "title",
         help=(
-            "Item title. Use - to read a single line from stdin. Capture shorthand is "
+            "Shorthand or one complete life.txt record. "
+            "Use - to read one line from stdin. Shorthand is "
             "expanded: @project #tag !priority ^due."
         ),
     )
@@ -7817,43 +7818,12 @@ def _resolve_relative_date(value, today=None):
     return resolve_date_token(value, today=today, strict=False)
 
 
-def _merge_capture_shorthand(item, args):
-    """Expand @project #tag !priority ^due out of a captured title.
-
-    Explicit flags win for single-valued keys; tags accumulate, because
-    `--tag a` plus `#b` on the same capture clearly means both.
-    """
-    if getattr(args, "no_shorthand", False):
-        return
-    from .shorthand import ShorthandError, parse_capture
-
-    try:
-        title, details = parse_capture(item.title, strict_dates=True)
-    except ShorthandError as exc:
-        raise ValueError(str(exc))
-    if not details:
-        return
-    if not title:
-        raise ValueError(
-            "Capture shorthand consumed the whole title. Quote it or pass --no-shorthand."
-        )
-    item.title = title
-    for key, values in details.items():
-        if key == "tag":
-            existing = item.details.setdefault(key, [])
-            for value in values:
-                if value not in existing:
-                    existing.append(value)
-        elif key not in item.details:
-            item.details[key] = list(values)
-
-
 def _apply_capture_preset_defaults(item, preset):
     """Fill fields the preset defines that explicit args/shorthand left
     unset (#594).
 
     Precedence: config defaults < preset < explicit CLI flags/capture
-    shorthand. This runs after `_merge_capture_shorthand` -- so anything an
+    shorthand. This runs after shared Quick resolution -- so anything an
     explicit flag or a `@`/`#`/`!`/`^` sigil already set is left untouched
     -- and before `apply_config_defaults_to_item`, so a preset value still
     outranks a bare `defaults.project`-style config default.
@@ -7901,14 +7871,27 @@ def command_quick(args):
     if args.status is None:
         args.status = None
 
-    item = build_item_from_args(args)
-    _merge_capture_shorthand(item, args)
-    if preset is not None:
-        _apply_capture_preset_defaults(item, preset)
+    from .quick_input import resolve_quick_input
+
+    resolved = resolve_quick_input(
+        args.title,
+        id_key=id_key_from_config(config),
+        today=today,
+        shorthand=not args.no_shorthand,
+        shorthand_item=build_item_from_args(args),
+        merge_tags=True,
+    )
+    item = resolved.item
     dest = args.append or config_write_file(config)
-    file_directives = _load_file_directives(dest)
-    apply_config_defaults_to_item(item, args, file_directives)
+    if resolved.mode == "shorthand":
+        if preset is not None:
+            _apply_capture_preset_defaults(item, preset)
+        file_directives = _load_file_directives(dest)
+        apply_config_defaults_to_item(item, args, file_directives)
     apply_auto_id_to_item(item, args)
+    from .web_read_service import assert_unique_ids
+
+    assert_unique_ids(_auto_id_scan_items(args) + [item], key=id_key_from_config(config))
     line = item_to_assisted_line(item)
 
     if not args.no_check:

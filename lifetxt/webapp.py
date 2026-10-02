@@ -71,7 +71,11 @@ from .personal_context import (
 from .paths import expand_paths
 from .serializer import item_from_dict, item_to_line
 from .status_summary import latest_status_records
-from .timezone_policy import local_now_naive, today as timezone_today
+from .timezone_policy import (
+    local_now_naive,
+    resolve_timezone_name,
+    today as timezone_today,
+)
 from .timeutil import format_datetime as format_life_datetime, parse_date_or_datetime
 from .validator import validate_item
 from .web_read_service import find_item_by_id as _service_find_item_by_id
@@ -378,6 +382,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
     @app.get("/api/config")
     def get_config():
         from .presence import COMMON_STATES
+        workspace_timezone = resolve_timezone_name(app.state.config)
 
         return {
             "paths": app.state.paths,
@@ -387,7 +392,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             # calendar-day differences against the same reference date the
             # CLI/TUI already use, rather than the browser's own local date
             # -- a CodeX review finding against #658.
-            "today": timezone_today().isoformat(),
+            "today": timezone_today(workspace_timezone).isoformat(),
             # Shared Status/presence authoring vocabulary.  ``state:`` remains
             # free-form; the Web editor presents these values as suggestions
             # and keeps an explicit Custom path for every other value.

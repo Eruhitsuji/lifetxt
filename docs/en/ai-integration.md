@@ -291,7 +291,7 @@ the MCP tool boundary.
 
 | Tool | Purpose |
 | --- | --- |
-| `capture_item` | Create a task from plain text with `@project #tag !priority ^due` |
+| `capture_item` | Quick capture from shorthand or one complete life.txt record |
 | `create_item` | Create a record from explicit fields |
 | `update_item` | Change fields on an existing record |
 | `mark_done` | Close a task and write `done:` |
@@ -382,10 +382,12 @@ session but not when a Web UI or another agent may be writing concurrently.
 
 ### Server-generated ids
 
-`create_item` and `capture_item` refuse a client-supplied `id:` and generate one
-themselves. A model that invents ids will eventually reuse one, which silently
-merges two unrelated records on the next update. Read the id out of the
-response and use it for follow-up calls.
+`create_item` refuses a client-supplied `id:` and generates one. `capture_item`
+accepts shorthand or one full record through shared Quick resolution. An explicit
+ID in a full record is preserved, with duplicate workspace IDs rejected; otherwise
+lifetxt generates one. Read the response ID for subsequent updates. Malformed
+full-record attempts fail without writing. Source metadata and proposal/revision
+safeguards apply to both input modes.
 
 This holds regardless of config `ids.auto`, which governs hand-written capture
 rather than API writes.

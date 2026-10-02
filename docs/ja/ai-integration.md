@@ -284,7 +284,7 @@ field を設定しない -- MCP tool の境界でのみ付与される。
 
 | Tool | Purpose |
 | --- | --- |
-| `capture_item` | `@project #tag !priority ^due` を含む plain text から task を作る |
+| `capture_item` | 省略記法または完全なlife.txt 1行をQuick入力する |
 | `create_item` | explicit fields から record を作る |
 | `update_item` | existing record の fields を変更 |
 | `mark_done` | task を close し `done:` を書く |
@@ -360,7 +360,11 @@ read は content hash を返し、write はそれを受け取れます。
 
 ### Server-generated ids
 
-`create_item` と `capture_item` は client-supplied `id:` を拒否し、server 側で生成します。model が id を作ると再利用事故を起こし、後続 update で無関係な 2 records を同一視する危険があります。response から id を読み取り、後続 call に使ってください。
+`create_item`はclient-supplied `id:`を拒否して生成します。`capture_item`は共通Quick
+resolverで省略記法または完全な1行を受理します。完全recordの明示IDは保持し、workspace内の
+重複IDは拒否します。ID未指定時は生成します。後続updateにはresponseのIDを使ってください。
+不正な完全recordは書き込まずエラーになります。両方の入力で出所metadataと
+proposal/revisionの制約を維持します。
 
 これは config の `ids.auto` とは別です。`ids.auto` は hand-written capture を対象にします。
 

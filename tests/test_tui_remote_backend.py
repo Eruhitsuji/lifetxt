@@ -331,8 +331,8 @@ class WorkspaceStateRemoteWiringTests(unittest.TestCase):
         tui_app._cmd_add(state, "Buy milk")
         post_calls = [c for c in connection.calls if c[0] == "POST"]
         self.assertEqual(len(post_calls), 1)
-        self.assertEqual(post_calls[0][1], "/api/items")
-        self.assertEqual(post_calls[0][2]["title"], "Buy milk")
+        self.assertEqual(post_calls[0][1], "/api/items/capture")
+        self.assertEqual(post_calls[0][2]["text"], "Buy milk")
 
     def test_cmd_new_related_creates_a_remote_item_through_the_backend(self):
         # #770: Remote TUI parity -- /related must create the new item
@@ -357,7 +357,7 @@ class WorkspaceStateRemoteWiringTests(unittest.TestCase):
         self.assertIn("related:t1", message)
         post_calls = [c for c in connection.calls if c[0] == "POST"]
         self.assertEqual(len(post_calls), 1)
-        self.assertEqual(post_calls[0][1], "/api/items")
+        self.assertEqual(post_calls[0][1], "/api/items/capture")
         payload_details = post_calls[0][2]["details"]
         self.assertEqual(["t1"], payload_details["related"])
         self.assertEqual(["work"], payload_details["project"])

@@ -1,0 +1,52 @@
+schema_version: 1
+verification:
+  executed:
+    - type: focused-parity-and-regression
+      command: python -m unittest tests.test_quick_input tests.test_shorthand tests.test_web_mobile_capture tests.test_tui_remote_backend tests.test_mcp_expansion tests.test_quick_capture_docs
+      requirement_ids: [req-shared-quick-input-resolution]
+      result: Ran 475 tests -- OK; latest tests.test_quick_input rerun: 16 tests -- OK, including relative-date and browser/server parity
+      status: passed
+    - type: static
+      command: python -m ruff check lifetxt tests scripts; python -m mypy --follow-imports=skip --ignore-missing-imports lifetxt/diagnostic_contract.py
+      requirement_ids: [req-shared-quick-input-resolution]
+      result: Both passed
+      status: passed
+    - type: documentation-and-smoke
+      command: python scripts/validate_release_docs.py --output .release-docs-validation.json; python -m lifetxt check examples/minimal_life.txt; git diff --check
+      requirement_ids: [req-shared-quick-input-resolution]
+      result: Zero document validation errors; OK 10 items; clean whitespace diff
+      status: passed
+    - type: initial-full-regression
+      command: MPLBACKEND=Agg python -m unittest discover
+      requirement_ids: [req-shared-quick-input-resolution]
+      result: Ran 4959 tests -- FAILED (2 failures, 46 skips); package verification file was initially absent and intentional Web fragment changes required updating the assembled-page hash. Both repaired; focused governance 89 tests subsequently passed. Python 3.12.14, Bash; BashCompletionExecutionTests ran; tree was modified during this exploratory run; no claim of final-tree verification.
+      status: failed-repaired
+    - type: governance-and-assembly
+      command: python -m unittest tests.test_release_policy tests.test_traceability_gate tests.test_change_package_closeout tests.test_surface_runtime tests.test_web_assets tests.test_web_i18n
+      requirement_ids: [req-shared-quick-input-resolution]
+      result: Ran 89 tests -- OK
+      status: passed
+    - type: final-full-regression
+      command: MPLBACKEND=Agg python -m unittest discover
+      requirement_ids: [req-shared-quick-input-resolution]
+      result: Ran 4962 tests in 337.441s -- OK (46 optional/environment skips); commit c766570c712c3b1230d27ab5c9fd03472d338414; Python 3.12.14, Bash; BashCompletionExecutionTests ran; working tree unchanged throughout the run.
+      status: passed
+    - type: bash-completion
+      command: python -m unittest tests.test_roundtrip_golden.BashCompletionExecutionTests
+      requirement_ids: [req-shared-quick-input-resolution]
+      result: Ran 4 tests -- OK
+      status: passed
+    - type: publication-tree-equivalence
+      command: git diff --exit-code HEAD origin/feature/issue-1021-shared-quick-input; git rev-parse HEAD^{tree} origin/feature/issue-1021-shared-quick-input^{tree}
+      requirement_ids: [req-shared-quick-input-resolution]
+      result: No differences; both trees were 75bd65dc71ab56d90fc3ba724335af7c0b911114 before PR traceability-only updates. Runtime code and tests are identical to the locally verified implementation.
+      status: passed
+  gaps:
+    - description: Physical phone and terminal-host interaction was not exercised; Node executes actual Web/Planner handlers and server integration covers Remote transport semantics.
+      tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1021
+review_ledger:
+  - {reviewer: implementer, review_type: self-review, target_commit: c766570c712c3b1230d27ab5c9fd03472d338414, result: complete, finding_count: 0, completed_at: '2026-10-02'}
+  - {reviewer: independent human reviewer, review_type: implementation-and-integration, target_commit: latest PR head, result: pending, finding_count: 0, completed_at: null}
+release_evidence:
+  migration_notes: No Format, persistence or configuration changes. Additive Quick API acceptance and optional mode metadata; explicit raw/import remains available.
+  rollback_plan: Revert the PR; no data migration to reverse.

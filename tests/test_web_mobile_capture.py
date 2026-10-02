@@ -185,10 +185,10 @@ class MobileCaptureJsTests(unittest.TestCase):
         self.assertGreaterEqual(result["focused"], 2)
         self.assertFalse(result["disabled"])
 
-    def test_full_line_reuses_existing_raw_quick_add_path(self):
-        self.assertEqual("/api/items/raw", self.result["fullLine"]["path"])
+    def test_full_line_uses_common_capture_contract(self):
+        self.assertEqual("/api/items/capture", self.result["fullLine"]["path"])
         self.assertEqual(
-            {"line": "[ ] T Full_line id:T-2"}, self.result["fullLine"]["body"]
+            {"text": "[ ] T Full_line id:T-2"}, self.result["fullLine"]["body"]
         )
 
     def test_failure_preserves_text_and_reports_no_success(self):

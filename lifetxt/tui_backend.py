@@ -498,6 +498,19 @@ class RemoteTuiBackend(TuiBackend):
             if_match=self.connection.file_revision,
         )
 
+    def capture_item(self, text, extra_details=None):
+        """Send Quick text unchanged; the authoritative server resolves it."""
+        self._refuse_if_serving_cache("create an item")
+        payload = {"text": text}
+        if extra_details:
+            payload["details"] = extra_details
+        return self.connection.request(
+            "POST",
+            "/api/items/capture",
+            json_body=payload,
+            if_match=self.connection.file_revision,
+        )
+
     def delete_item(self, item_id):
         """Delete one item on the remote workspace (#677 MVP: delete)."""
         self._refuse_if_serving_cache("delete an item")

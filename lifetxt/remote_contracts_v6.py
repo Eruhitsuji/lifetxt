@@ -400,6 +400,7 @@ def _patch_web():
                 "/api/check-line",
                 "/api/items/parse",
                 "/api/shorthand/parse",
+                "/api/quick/resolve",
             }
             if (
                 not app.state.read_only

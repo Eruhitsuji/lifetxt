@@ -2,6 +2,31 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-temporal-life-review-cross-surface
+      capability_id: cap-temporal-life-review
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/991
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1029
+      pull_request: null
+      changed_files_or_scope:
+        - lifetxt/temporal_review.py
+        - lifetxt/webapp.py
+        - lifetxt/mcp.py
+        - lifetxt/web_planner.html
+        - lifetxt/web_planner.js
+        - tests/test_temporal_review.py
+        - tests/test_web_planner.py
+        - docs/en/web.md
+        - docs/ja/web.md
+      tests_or_evidence:
+        - "date-scoped temporal review uses workspace timezone boundaries"
+        - "Web API and MCP expose the same temporal-life-review-v1 result read-only"
+        - "Planner Past consumes bounded API evidence without browser-side history aggregation"
+      notes: >-
+        Extends the existing temporal-life-review capability across read
+        surfaces and makes Planner Past a presentation consumer; no parallel
+        history or retrospective engine is introduced.
+      status: implemented
+
     - requirement_id: req-planner-temporal-day-semantics
       capability_id: cap-web-mobile-planner
       epic: https://github.com/Eruhitsuji/lifetxt/issues/991

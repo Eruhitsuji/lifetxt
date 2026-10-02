@@ -9,7 +9,9 @@ on:
 
 permissions:
   contents: read
-  issues: write
+  actions: read
+  pull-requests: read
+  issues: read
 
 concurrency:
   group: ${{ github.event_name == 'pull_request' && format('pr-ci-{0}', github.event.pull_request.number) || format('ci-{0}-{1}', github.event_name, github.run_id) }}
@@ -22,6 +24,8 @@ jobs:
     outputs:
       category: ${{ steps.classify.outputs.category }}
       run-heavy: ${{ steps.classify.outputs.run-heavy }}
+      run-no-web: ${{ steps.classify.outputs.run-no-web }}
+      run-coverage: ${{ steps.classify.outputs.run-coverage }}
     steps:
       - name: Check out repository history
         uses: actions/checkout@v5
@@ -63,6 +67,7 @@ jobs:
         run: |
           python -m pip install -e ".[dev]"
           python -m pip install -r requirements-web.txt
+          python -c "from tests.test_quick_input import WEB_AVAILABLE; assert WEB_AVAILABLE, 'Quick Web tests must run in the Web extras lane'"
 
       - name: Compile Python files
         run: python -m compileall lifetxt tests scripts
@@ -113,7 +118,7 @@ jobs:
   no-web-extras:
     name: Python 3.12 without optional Web dependencies
     needs: [classify-changes]
-    if: ${{ github.event_name != 'pull_request' && needs['classify-changes'].outputs['run-heavy'] == 'true' }}
+    if: ${{ needs['classify-changes'].outputs['run-heavy'] == 'true' && (github.event_name != 'pull_request' || needs['classify-changes'].outputs['run-no-web'] == 'true') }}
     runs-on: ubuntu-latest
 
     steps:
@@ -255,7 +260,7 @@ jobs:
   coverage-baseline:
     name: Publish stable coverage baseline
     needs: [classify-changes]
-    if: ${{ github.event_name != 'pull_request' && needs['classify-changes'].outputs['run-heavy'] == 'true' }}
+    if: ${{ needs['classify-changes'].outputs['run-heavy'] == 'true' && (github.event_name != 'pull_request' || needs['classify-changes'].outputs['run-coverage'] == 'true') }}
     runs-on: ubuntu-latest
 
     steps:
@@ -413,10 +418,40 @@ jobs:
           LIFETXT_TRACEABILITY_GATE_PR_URL: https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }}
         run: python -m unittest tests.test_traceability_gate
 
+  main-health:
+    name: Main recovery-first status
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report main health without blocking recovery
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const repo = {owner: context.repo.owner, repo: context.repo.repo};
+            let message;
+            try {
+              const issues = await github.paginate(github.rest.issues.listForRepo, {...repo, state: "open", per_page: 100});
+              const incident = issues.find(issue => !issue.pull_request && issue.title === "CI failure on main");
+              const {data} = await github.rest.actions.listWorkflowRuns({...repo, workflow_id: "ci.yml", branch: "main", event: "push", per_page: 1});
+              const latest = data.workflow_runs[0];
+              if (incident || !latest || latest.status !== "completed" || latest.conclusion !== "success") {
+                message = "Recovery-first: main is failed, pending, or unverified. Prioritize a recovery PR; defer ordinary feature merges until the latest full main compatibility run is green. Recovery PRs remain mergeable after their own checks and human review.";
+                if (incident) message += ` Incident: ${incident.html_url}`;
+                if (latest) message += ` Main run: ${latest.html_url}`;
+                core.warning(message);
+              } else {
+                message = `Main is healthy: ${latest.html_url}. Recheck main health immediately before merge.`;
+              }
+            } catch (error) {
+              message = "Recovery-first: main health could not be verified. Check the main CI and Incident manually before merge. Recovery PRs are not blocked by this advisory.";
+              core.warning(message);
+            }
+            await core.summary.addHeading("Main recovery-first status").addRaw(message).write();
+
   pr-gate:
     name: PR gate
     if: ${{ always() && github.event_name == 'pull_request' }}
-    needs: [classify-changes, test, type-check, release-document-validation, traceability-gate]
+    needs: [classify-changes, test, type-check, release-document-validation, traceability-gate, no-web-extras, coverage-baseline, main-health]
     runs-on: ubuntu-latest
     steps:
       - name: Require every PR responsibility to pass
@@ -425,6 +460,11 @@ jobs:
           TYPE_RESULT: ${{ needs['type-check'].result }}
           DOCS_RESULT: ${{ needs['release-document-validation'].result }}
           TRACEABILITY_RESULT: ${{ needs['traceability-gate'].result }}
+          NO_WEB_RESULT: ${{ needs['no-web-extras'].result }}
+          COVERAGE_RESULT: ${{ needs['coverage-baseline'].result }}
+          HEALTH_RESULT: ${{ needs['main-health'].result }}
+          NO_WEB_SELECTED: ${{ needs['classify-changes'].outputs['run-no-web'] }}
+          COVERAGE_SELECTED: ${{ needs['classify-changes'].outputs['run-coverage'] }}
           PATH_CATEGORY: ${{ needs['classify-changes'].outputs.category }}
         run: |
           python - <<'PY'
@@ -435,12 +475,22 @@ jobs:
               "type-check": os.environ["TYPE_RESULT"],
               "docs": os.environ["DOCS_RESULT"],
               "traceability": os.environ["TRACEABILITY_RESULT"],
+              "main-health": os.environ["HEALTH_RESULT"],
           }
           expected = "skipped" if os.environ["PATH_CATEGORY"] == "docs-only" else "success"
           failed = {
               name: value for name, value in results.items()
               if value != (expected if name in {"python-3.12", "type-check"} else "success")
           }
+          for name, result_key, selected_key in (
+              ("no-web", "NO_WEB_RESULT", "NO_WEB_SELECTED"),
+              ("coverage", "COVERAGE_RESULT", "COVERAGE_SELECTED"),
+          ):
+              value = os.environ[result_key]
+              results[name] = value
+              wanted = "success" if os.environ[selected_key] == "true" else "skipped"
+              if value != wanted:
+                  failed[name] = value
           print("PR responsibility results:", results)
           if failed:
               raise SystemExit("PR gate failed: %r" % failed)
@@ -500,63 +550,73 @@ jobs:
           PY
 
   ci-visibility:
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+      issues: write
     name: Keep main-branch CI failures visible
     if: ${{ always() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-    needs: [main-gate]
+    needs: [main-gate, classify-changes]
     runs-on: ubuntu-latest
     env:
       MAIN_GATE_RESULT: ${{ needs['main-gate'].result }}
+      FULL_COMPATIBILITY: ${{ needs['classify-changes'].outputs['run-heavy'] }}
     steps:
       - name: Open, update, or close the CI failure issue
         uses: actions/github-script@v8
         with:
           script: |
+            const repo = {owner: context.repo.owner, repo: context.repo.repo};
             const title = "CI failure on main";
             const failed = process.env.MAIN_GATE_RESULT !== "success";
-            const { data: issues } = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: "open",
-              per_page: 100,
-            });
+            // A late older run must not overwrite or close a newer incident.
+            const {data: runs} = await github.rest.actions.listWorkflowRuns({...repo, workflow_id: "ci.yml", branch: "main", event: "push", per_page: 1});
+            if (runs.workflow_runs[0]?.id !== context.runId) {
+              core.notice("Ignoring superseded main run for incident state.");
+              return;
+            }
+            const issues = await github.paginate(github.rest.issues.listForRepo, {...repo, state: "open", per_page: 100});
             const existing = issues.find(issue => !issue.pull_request && issue.title === title);
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             if (failed) {
+              const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {...repo, run_id: context.runId, filter: "latest", per_page: 100});
+              let sources = [];
+              try {
+                const pulls = await github.paginate(github.rest.repos.listPullRequestsAssociatedWithCommit, {...repo, commit_sha: context.sha, per_page: 100});
+                sources = pulls.filter(pr => pr.merged_at && pr.base.ref === "main" && pr.merge_commit_sha === context.sha);
+              } catch (error) {
+                core.warning("Source PR lookup unavailable; use the merge commit link.");
+              }
+              const failedJobs = jobs.filter(job => ["failure", "cancelled", "timed_out", "action_required", "startup_failure", "stale"].includes(job.conclusion));
               const body = [
-                "The latest CI run on `main` failed.",
+                "The latest CI run on `main` failed. Recovery-first: defer ordinary feature merges; prioritize a reviewed recovery PR. Do not block recovery solely because main is red.",
                 "",
                 `- Main compatibility gate: \`${process.env.MAIN_GATE_RESULT}\``,
-                `- Run: ${runUrl}`,
+                `- Run: ${runUrl} (attempt ${process.env.GITHUB_RUN_ATTEMPT || "1"})`,
+                `- Merge commit: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/commit/${context.sha}`,
+                `- Source PR: ${sources.length ? sources.map(pr => pr.html_url).join(", ") : "not resolved; inspect merge commit"}`,
+                `- Failure artifacts and logs: ${runUrl}#artifacts`,
                 "",
-                "This issue is maintained automatically and closes after the next successful main-branch run.",
+                "### Failed jobs and steps",
+                ...failedJobs.map(job => `- [${job.name}](${job.html_url}): ${job.conclusion}; failed steps: ${(job.steps || []).filter(step => step.conclusion === "failure").map(step => step.name).join(", ") || "see job log"}`),
+                ...(failedJobs.length ? [] : ["- Job details unavailable; inspect the aggregate gate log."]),
+                "",
+                "### Recovery contract",
+                "1. Inspect failed job logs/artifacts; reproduce in the corresponding dependency environment.",
+                "2. Link a recovery PR to this Incident, record cause and verification, and obtain human review. Do not lower thresholds or remove compatibility checks.",
+                "3. Before any merge, recheck the latest main run and this Incident. Ordinary feature merges wait for recovery; recovery PRs use their own required checks.",
+                "4. Verify the next full main compatibility run succeeds; only then resume normal merges.",
+                "",
+                "This issue is maintained automatically and closes after the next successful full main-branch compatibility run. A docs-only success is not recovery evidence.",
               ].join("\n");
               if (existing) {
-                await github.rest.issues.createComment({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: existing.number,
-                  body,
-                });
+                await github.rest.issues.createComment({...repo, issue_number: existing.number, body});
+                await github.rest.issues.update({...repo, issue_number: existing.number, body});
               } else {
-                await github.rest.issues.create({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  title,
-                  body,
-                });
+                await github.rest.issues.create({...repo, title, body});
               }
-            } else if (existing) {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: existing.number,
-                body: `CI recovered successfully: ${runUrl}`,
-              });
-              await github.rest.issues.update({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: existing.number,
-                state: "closed",
-                state_reason: "completed",
-              });
+            } else if (existing && process.env.FULL_COMPATIBILITY === "true") {
+              await github.rest.issues.createComment({...repo, issue_number: existing.number, body: `CI recovered successfully: ${runUrl}`});
+              await github.rest.issues.update({...repo, issue_number: existing.number, state: "closed", state_reason: "completed"});
             }

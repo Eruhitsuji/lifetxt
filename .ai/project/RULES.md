@@ -448,3 +448,29 @@ someone acting on it alone would reinstate a prohibition whose basis has gone.
 Revisit if spec-driven work returns to a single-tool arrangement, or if the
 distillation step is found to be skipped often enough that the change package
 stops reflecting the spec.
+
+## Main CI Recovery First
+
+Before merging any PR, Merge Authority checks the latest main CI run and any
+open `CI failure on main` Incident. The required PR `Main recovery-first status`
+job reports red, pending or unknown main in annotations and its summary; a green
+PR gate alone is not proof that main is healthy. Recheck immediately before merge
+because main state can change after the PR run.
+
+While main is red or an Incident is open, defer ordinary feature merges and
+prioritize recovery PRs linked to the Incident, with cause, affected job/dependency
+environment, reproduction and verification evidence. Recovery PRs remain eligible
+after their own required checks and independent human review; never fail every PR
+solely because main is red. Unknown/pending main requires checking the actual run
+before deciding; no advisory can waive human merge approval.
+
+The next successful full main compatibility run closes the Incident automatically.
+Docs-only success and superseded runs cannot establish recovery. Verify that full
+run and closure before resuming ordinary merges. Do not lower coverage thresholds,
+remove optional-boundary tests, or silently auto-revert to make main green.
+
+PRs changing tests/Python boundaries select the existing no-Web suite; dependency,
+coverage and CI workflow changes also select dev-only coverage. Docs-only PRs skip
+these heavy jobs. The no-Web environment has no FastAPI/Uvicorn/HTTPX/HTTPX2;
+dev-only coverage includes dev tools but no Web extras. Optional Web tests explicitly
+skip there and run in the Web extras suite. Coverage thresholds are unchanged.

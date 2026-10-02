@@ -382,20 +382,19 @@
       if (!qInput) return;
       if (!line.trim()) { qInput.className = ""; document.getElementById("quick-check-msg") && (document.getElementById("quick-check-msg").textContent = ""); return; }
       try {
-        const data = await api("/api/check-line", {
+        await api("/api/quick/resolve", {
           method: "POST",
           headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({line}),
+          body: JSON.stringify({text: line}),
         });
-        qInput.classList.toggle("ok", data.ok);
-        qInput.classList.toggle("err", !data.ok);
+        qInput.classList.add("ok");
+        qInput.classList.remove("err");
+      } catch(error) {
+        qInput.classList.add("err");
+        qInput.classList.remove("ok");
         const msg = document.getElementById("quick-check-msg");
-        if (msg) {
-          const errs = (data.diagnostics || []).filter(d => d.severity === "error");
-          msg.textContent = errs.length ? errs[0].message : (data.ok && data.item_count > 0 ? "✓" : "");
-          msg.className = "check-msg " + (data.ok ? "ok" : "err");
-        }
-      } catch(_) {}
+        if (msg) { msg.textContent = error.message; msg.className = "check-msg err"; }
+      }
     }
     async function liveParseRawImport(line) {
       const preview = document.getElementById("import-raw-preview");

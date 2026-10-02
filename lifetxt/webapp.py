@@ -1448,6 +1448,46 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             id_key=id_key_from_config(app.state.config),
         )
 
+    @app.get("/api/temporal-review")
+    def get_temporal_review(
+        date=None,
+        since=None,
+        until=None,
+        limit=100,
+        project=None,
+    ):
+        """Return the bounded, versioned Temporal Life Review projection."""
+        from .temporal_review import build_temporal_review
+        from .timezone_policy import current_timezone_name
+
+        if date and (since or until):
+            raise HTTPException(
+                status_code=400,
+                detail="Use date or since/until, not both.",
+            )
+        try:
+            limit = max(1, min(int(limit), 500))
+            if date:
+                since, until = date, date
+            if not since:
+                raise ValueError("Temporal review requires date or since.")
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=error_detail(exc))
+        items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
+        raise_for_errors(diagnostics)
+        try:
+            return build_temporal_review(
+                items,
+                since=since,
+                until=until,
+                limit=limit,
+                project=project,
+                id_key=id_key_from_config(app.state.config),
+                timezone_name=current_timezone_name(),
+            )
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=error_detail(exc))
+
     @app.get("/api/priority-matrix")
     def get_priority_matrix():
         """Read active-task matrix groups through the shared classifier."""

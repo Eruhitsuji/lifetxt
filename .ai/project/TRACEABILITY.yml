@@ -5,7 +5,7 @@ traceability:
     - requirement_id: req-planner-workspace-today-refresh
       capability_id: cap-web-mobile-planner
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1035
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1036
       changed_files_or_scope:
         - lifetxt/webapp.py
         - lifetxt/web_planner.js

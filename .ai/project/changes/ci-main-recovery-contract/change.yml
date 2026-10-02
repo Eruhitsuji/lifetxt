@@ -1,0 +1,20 @@
+schema_version: 1
+change:
+  id: ci-main-recovery-contract
+  title: Repair optional test boundaries and make main CI recovery actionable
+  status: implemented
+  change_type: Bug
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1026
+  related_pull_request: []
+  base_commit: 1e108b5358c95036a77cfd00bfa8ba1d721ff0d0
+  target_release: null
+scope:
+  in_scope: [Quick optional Web tests, selective no-Web and coverage PR checks, actionable main Incident, recovery-first advisory and merge process, CI contract tests]
+  out_of_scope: [product semantics, main-wide checks on every PR, release and distribution, lifetxt-mini, automatic revert]
+  write_scope: [.github/workflows/ci.yml, scripts/classify_ci_paths.py, tests/test_quick_input.py, tests/test_ci_path_routing.py, tests/test_ci_workflow_responsibilities.py, tests/test_ci_recovery_contract.py, .ai/project/**]
+  forbidden_scope: [.ai/managed/**, lifetxt/**, .github/workflows/release.yml, .github/workflows/lifetxt-mini-ci.yml]
+  shared_files: [.github/workflows/ci.yml, .ai/project/TRACEABILITY.yml, .ai/project/CAPABILITIES.yml]
+human_approvals_required: [CI design approval, independent implementation review, independent integration review, human merge]

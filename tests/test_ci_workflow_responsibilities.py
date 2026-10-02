@@ -37,10 +37,8 @@ class CiWorkflowResponsibilityTests(unittest.TestCase):
     def test_compatibility_jobs_are_main_or_dispatch_only(self):
         expected = {
             "resource-warning-gate",
-            "no-web-extras",
             "windows-core-smoke",
             "macos-core-smoke",
-            "coverage-baseline",
             "optional-dependency-compatibility",
         }
         for name in expected:
@@ -53,12 +51,16 @@ class CiWorkflowResponsibilityTests(unittest.TestCase):
     def test_no_web_lane_installs_yaml_without_web_extras(self):
         job = self.jobs["no-web-extras"]
         install = next(
-            step for step in job["steps"] if step["name"].startswith("Install dependency-free")
+            step
+            for step in job["steps"]
+            if step["name"].startswith("Install dependency-free")
         )
         self.assertIn("python -m pip install -e .", install["run"])
         self.assertIn("python -m pip install PyYAML", install["run"])
         absent_check = next(
-            step for step in job["steps"] if step["name"].startswith("Assert optional Web")
+            step
+            for step in job["steps"]
+            if step["name"].startswith("Assert optional Web")
         )
         for package in ("fastapi", "uvicorn", "httpx", "httpx2"):
             self.assertIn(package, absent_check["run"])
@@ -66,11 +68,20 @@ class CiWorkflowResponsibilityTests(unittest.TestCase):
     def test_pr_gate_aggregates_fast_merge_responsibilities(self):
         gate = self.jobs["pr-gate"]
         self.assertEqual(
-            {"classify-changes", "test", "type-check", "release-document-validation", "traceability-gate"},
+            {
+                "classify-changes",
+                "test",
+                "type-check",
+                "release-document-validation",
+                "traceability-gate",
+                "no-web-extras",
+                "coverage-baseline",
+                "main-health",
+            },
             set(gate["needs"]),
         )
         self.assertIn("always()", gate["if"])
-        self.assertIn('PATH_CATEGORY', self.text)
+        self.assertIn("PATH_CATEGORY", self.text)
         self.assertEqual(
             "Optional dependency compatibility",
             self.jobs["optional-dependency-compatibility"]["name"],
@@ -93,9 +104,13 @@ class CiWorkflowResponsibilityTests(unittest.TestCase):
             },
             set(gate["needs"]),
         )
-        self.assertEqual(["main-gate"], self.jobs["ci-visibility"]["needs"])
+        self.assertEqual(
+            ["main-gate", "classify-changes"], self.jobs["ci-visibility"]["needs"]
+        )
         visibility_env = self.jobs["ci-visibility"]["env"]
-        self.assertEqual({"MAIN_GATE_RESULT"}, set(visibility_env))
+        self.assertEqual(
+            {"MAIN_GATE_RESULT", "FULL_COMPATIBILITY"}, set(visibility_env)
+        )
 
     def test_release_artifact_work_stays_in_release_workflow(self):
         self.assertNotIn("release-gate", self.jobs)

@@ -1,0 +1,21 @@
+schema_version: 1
+requirements:
+  - id: req-ci-main-recovery-contract
+    kind: ADDED
+    statement: Detect sensitive optional test boundary failures before merge and make main failures actionable without blocking recovery PRs.
+    acceptance_criteria:
+      - no-Web full suite succeeds with fastapi/uvicorn/httpx/httpx2 absent
+      - dev-only coverage full suite and unchanged regression thresholds succeed
+      - Web extras execute all Quick Web cases; core adapters remain exercised without Web
+      - tests and Python boundary changes select no-Web checks; CI, dependency, and coverage changes also select coverage
+      - docs-only runs no heavy compatibility jobs
+      - PR gate rejects selected check failure, cancellation, or unexpected skip
+      - Incident includes run, merge SHA, source PR when resolvable, failed jobs/steps, logs/artifacts, and recovery process
+      - repeated failure updates latest Incident body and appends history
+      - latest successful full main run closes Incident; docs-only or older runs cannot falsely close it
+      - PR main-health summary warns on red, pending, or unknown main and never fails solely for red main
+      - merge authority rechecks main and defers feature merges during recovery
+      - preserve release, mini, OS and optional dependency compatibility responsibilities
+    constraints: [reuse existing classifier/gates/Incident, no threshold reduction, no runtime dependency addition, no pull_request_target or execution of PR code with privileged write token]
+    owner: Eruhitsuji
+open_questions: []

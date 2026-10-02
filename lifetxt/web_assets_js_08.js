@@ -326,10 +326,10 @@
       if (!input || !msgEl) return;
       const text = (input.value || "").trim();
       if (shorthandTimer) clearTimeout(shorthandTimer);
-      if (!text || text.startsWith("[")) { msgEl.textContent = ""; msgEl.className = "check-msg"; return; }
+      if (!text) { msgEl.textContent = ""; msgEl.className = "check-msg"; return; }
       shorthandTimer = setTimeout(async () => {
         try {
-          const data = await api("/api/shorthand/parse", {
+          const data = await api("/api/quick/resolve", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({text}),
@@ -351,21 +351,11 @@
       if (!line) return;
       const msgEl = document.getElementById("quick-check-msg");
       try {
-        // A leading status marker means the user typed a full life.txt line.
-        // Anything else is plain text with capture shorthand.
-        if (line.startsWith("[")) {
-          await api("/api/items/raw", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({line}),
-          });
-        } else {
-          await api("/api/items/capture", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({text: line}),
-          });
-        }
+        await api("/api/items/capture", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({text: line}),
+        });
         input.value = "";
         input.className = "";
         if (msgEl) { msgEl.textContent = ""; msgEl.className = "check-msg"; }
@@ -403,12 +393,10 @@
       feedback.textContent = "";
       feedback.className = "capture-feedback";
       try {
-        const path = text.startsWith("[") ? "/api/items/raw" : "/api/items/capture";
-        const body = text.startsWith("[") ? {line: text} : {text};
-        const data = await api(path, {
+        const data = await api("/api/items/capture", {
           method: "POST",
           headers: {"Content-Type": "application/json"},
-          body: JSON.stringify(body),
+          body: JSON.stringify({text}),
         });
         feedback.textContent = `${t("Captured:")} ${captureSuccessSummary(data)}`;
         feedback.className = "capture-feedback ok";

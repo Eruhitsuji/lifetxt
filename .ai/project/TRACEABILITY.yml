@@ -2,6 +2,23 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-surface-navigation-links
+      capability_id: cap-web-mobile-planner
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1037
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1038
+      changed_files_or_scope:
+        - lifetxt/web_assets.html
+        - lifetxt/web_assets_js_01.js
+        - tests/test_web_assets.py
+      tests_or_evidence:
+        - "Top exposes explicit Planner and Quick Capture links with normal anchor semantics"
+        - "existing Planner and Capture links back to Top remain covered"
+        - "navigation remains static, keyboard reachable and mobile-compatible"
+      notes: >-
+        Adds discoverability-only links between existing Web surfaces without
+        changing routes, API, domain, capture, or Planner semantics.
+      status: implemented
+
     - requirement_id: req-planner-workspace-today-refresh
       capability_id: cap-web-mobile-planner
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1035

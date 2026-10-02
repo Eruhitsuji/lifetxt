@@ -216,7 +216,7 @@
         "Group: Source": "グループ: ソース",
         "Quick add": "クイック追加",
         "Quick Capture": "クイックキャプチャ",
-        "Planner": "Planner",
+        "Planner": "プランナー",
         "Capture one thought to your authoritative life.txt.": "1つのメモを正規の life.txt に記録します。",
         "What do you want to remember?": "何を記録しますか？",
         "Capture": "記録",

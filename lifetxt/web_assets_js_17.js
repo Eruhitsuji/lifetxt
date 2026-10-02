@@ -189,15 +189,11 @@
       const input = document.getElementById("focus-quick-title");
       const title = (input?.value || "").trim();
       if (!title) return;
-      const safe = /^[A-Za-z0-9_.\-]+$/.test(title)
-        ? title
-        : `"${title.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
-      const line = `[ ] T ${safe} due:${_fmtDate(new Date())}`;
       try {
-        await api("/api/items/raw", {
+        await api("/api/items/capture", {
           method: "POST",
           headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({line}),
+          body: JSON.stringify({text: title, details: {due: [_fmtDate(new Date())]}}),
         });
         input.value = "";
         showToast("Task added for today.", "success");

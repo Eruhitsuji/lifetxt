@@ -1,15 +1,14 @@
 # Quick capture and shorthand
 
-Quick capture turns one short input into a normal `life.txt` task. The CLI
-commands `add`, `quick`, and `q`, TUI `/add`, Web Quick add, and MCP/Web capture
-operations share the same four-token parser. Shorthand is only an authoring
-convenience: the file stores canonical fields such as `project:home`, never
-`@home`.
+Quick is one fast textual entry point accepting **shorthand or one complete
+life.txt record**. CLI `add`/`quick`/`q`, local and Remote TUI `/add`, Web Quick
+Add, `/capture`, Planner Quick Capture, and MCP `capture_item` use the same
+surface-neutral resolver. Full records use the authoritative Format parser;
+shorthand uses the existing four-token parser. Files store canonical fields.
 
-Use Quick capture when a task title plus a few common fields is enough. Use a
-complete [Format line](./life_txt_format_spec.md) or structured create/edit
-operation for other record types, statuses, bodies, links, repeated/custom
-keys, or fully explicit authoring.
+Use shorthand for titles and common fields, or enter a complete
+[Format line](./life_txt_format_spec.md) to retain explicit types, statuses,
+bodies, quoted values, and repeated/custom keys through the same Quick entry.
 
 ## Quick start
 
@@ -112,27 +111,50 @@ still applies explicit options and configured defaults.
 A title made entirely from recognized sigils is rejected. Plain text without
 recognized tokens is unchanged apart from normal title serialization.
 
-## Full lines are surface-specific
+## Complete records through the same Quick entry
 
-The Web Quick-add controls, including `/capture`, route trimmed input beginning
-with `[` to the raw-line endpoint. This permits a complete line such as
-`[ ] N "Read later" tag:reading`. Other input uses the shorthand capture
-endpoint.
+```sh
+lifetxt quick '[N] N "Idea" body:"Try shared Quick input"' --append life.txt
+lifetxt add '[N] J "Journal" on:2026-10-01 body:"Today’s notes"' --append life.txt
+```
 
-CLI `add`/`quick`/`q`, TUI `/add`, MCP `capture_item`, and Web
-`POST /api/items/capture` are task-capture interfaces; they do **not** detect a
-complete line this way. Use their raw/structured authoring path instead. The
-Web API exposes `POST /api/items/raw` separately.
+Paste the same full line into Web Quick Add, `/capture`, Planner, or TUI
+`/add [N] N "Idea" body:"text"`; MCP uses `capture_item` with `text` containing
+the line. Web clients always use `POST /api/items/capture` with `{"text":"..."}`.
+The response includes `mode: shorthand` or `mode: full_line`.
+`POST /api/quick/resolve` previews the same contract without writing or assigning IDs.
+Explicit `POST /api/items/raw` and structured create/import remain available.
+
+A trimmed leading `[` reserves complete-record intent. Invalid statuses/types,
+unclosed quotes and invalid syntax fail without creating a shorthand task.
+For example `[ ] T "unterminated` is rejected. Quick accepts one line, not batch
+or multiline import. Format warnings remain warnings; custom keys remain valid.
+Sigils inside a full record's title/body are literal and never expanded.
+
+Full records are authoritative: CLI type/status/detail flags, presets and
+configured authoring defaults apply to shorthand only, not to full records.
+Use the full record itself to set its fields. `--no-shorthand` disables sigil
+expansion for title input; it does not bypass malformed full-record validation,
+even when combined with `--no-check`. Related/context captures fill only absent
+fields. Existing revision, authentication, read-only and write-target guards apply.
+Explicit IDs are preserved and duplicate workspace IDs are rejected. CLI follows
+`ids.auto`; TUI/Web/MCP continue guaranteeing addressable IDs, using configured
+ID keys/prefixes. MCP may add configured source metadata and supports dry-run proposals.
 
 ## Availability
 
-| Surface | Shorthand entry | Important differences |
+| Surface | Common Quick entry | Adapter behavior |
 | --- | --- | --- |
-| CLI | `add`, `quick`, `q` | options, presets, defaults, stdin, `--no-shorthand` |
-| TUI | `/add TITLE` | shorthand; no CLI options/presets; context prefill stays below explicit sigils |
-| Web UI | Quick add and `/capture` | shorthand plus UI-only full-line routing |
-| Web API | `POST /api/items/capture` | shorthand task capture; `type` may be supplied; raw line is a separate endpoint |
-| MCP | `capture_item`, `parse_shorthand` | shorthand task capture or non-writing preview; structured `create_item` is separate |
+| CLI | `add`, `quick`, `q`, stdin | existing shorthand flags/presets/defaults |
+| Local TUI | `/add`, `/a`, `/related` | shared resolver; related context fills absent fields |
+| Remote TUI | `/add`, `/a`, `/related` | sends text to authoritative server with revision |
+| Web UI | Quick Add, `/capture`, Planner, command `/add`, Focus Quick Add | common capture API; Focus supplies today's due date only if absent |
+| Web API | `POST /api/items/capture` | shorthand or full record; optional shorthand `type` |
+| MCP | `capture_item` | shorthand or full record; existing proposals and source metadata |
+
+`parse_shorthand` / `POST /api/shorthand/parse` remain explicit shorthand-only
+preview contracts. Structured/guided editors and presence/message commands keep
+their specialized contracts.
 
 All shorthand capture paths reject an empty result title and invalid `^DATE`.
 Validation failures do not create the requested record. For the complete file

@@ -2,6 +2,14 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-shared-quick-input-resolution
+      capability_id: cap-shared-quick-input
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1021
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1023
+      changed_files_or_scope: [lifetxt/quick_input.py, CLI, Web API and UI, Planner, local and Remote TUI, MCP, EN/JA guides]
+      tests_or_evidence: [tests.test_quick_input, tests.test_shorthand, tests.test_web_mobile_capture]
+      status: verified
+
     - requirement_id: req-ordinary-note-projection
       capability_id: cap-ordinary-note-projection
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1020

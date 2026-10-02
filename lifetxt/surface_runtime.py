@@ -81,6 +81,7 @@ _WEB_NO_REVISION_PATHS = frozenset(
         "/api/check-line",
         "/api/items/parse",
         "/api/shorthand/parse",
+        "/api/quick/resolve",
         "/api/timer",
     )
 )

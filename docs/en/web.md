@@ -66,6 +66,15 @@ remain ordinary `life.txt` entries. A Planner-specific manifest makes
 `/planner` installable while the existing `/capture` shortcut continues to
 open Quick Capture. Both routes are online-only.
 
+Planner Day also makes the selected date's temporal position explicit using
+the workspace-authoritative Today from `/api/config`: **Past**, **Today**, or
+**Future**. Today keeps the execution affordances. Past is a conservative
+record/context view, and Future is a planning view. Ordinary Task and Habit
+completion controls are available only for Today, so browsing a past or future
+date cannot create a completion dated by that selected date. Past schedule
+entries remain scheduled context, not proof that an event occurred; Planner
+does not reconstruct historical Task state.
+
 Multiple files can be read at once. Paths may be glob patterns such as
 `projects/**/*.life.txt`, and directories are expanded to life.txt-like `.txt`
 files. Create, update, and delete operations use the first file unless

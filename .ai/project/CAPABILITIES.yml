@@ -63,6 +63,7 @@ capabilities:
       - req-planner-week-overview
       - req-planner-mobile-date-navigation-geometry
       - req-planner-month-overview
+      - req-planner-temporal-day-semantics
       - req-planner-user-note-projection
     implementation_locations:
       - lifetxt/webapp.py

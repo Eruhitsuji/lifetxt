@@ -950,3 +950,8 @@ quadrant ごとのタスク一覧を返します。
 ## 通常のメモ
 
 [CLI・Web・Planner・TUI・MCPで共通の通常メモを利用する](ordinary-notes.md)。
+
+
+### Planner DayのPast / Today / Future
+
+Planner Dayは、/api/configが返すworkspace基準のTodayと、URLで選択した日付を使って、Past・Today・Futureを明示します。Todayでは従来どおり実行操作を表示します。Pastは記録されたcontextを読む画面、Futureは計画を確認する画面として扱います。TaskとHabitの通常の完了操作はTodayでだけ利用でき、PastやFutureの日付を完了日として誤って記録しません。Pastの予定は予定されたcontextであり、実際に起きた証拠とは扱いません。Plannerは過去のTask状態を再構成しません。

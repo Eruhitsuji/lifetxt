@@ -11,7 +11,7 @@ capabilities:
     public_interfaces: [CLI quick/q/add, POST /api/items/capture, POST /api/quick/resolve, TUI /add, TUI /related, MCP capture_item]
     tests_or_evidence: [tests.test_quick_input, tests.test_web_mobile_capture, tests.test_shorthand]
     related_issues: [https://github.com/Eruhitsuji/lifetxt/issues/1021]
-    related_pull_requests: []
+    related_pull_requests: [https://github.com/Eruhitsuji/lifetxt/pull/1023]
     reuse_policy: shared resolver only; reuse authoritative Format parser and existing shorthand, serializer, IDs and mutation contracts
     replacement: {replaces: [], replaced_by: null, deprecation_issue: null}
 

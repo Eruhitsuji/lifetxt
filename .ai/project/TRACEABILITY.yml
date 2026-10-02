@@ -2,6 +2,27 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-planner-presentation-customization
+      capability_id: cap-web-mobile-planner
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/991
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1031
+      pull_request: null
+      changed_files_or_scope:
+        - lifetxt/webapp.py
+        - lifetxt/web_planner.html
+        - lifetxt/web_planner.css
+        - lifetxt/web_planner.js
+        - tests/test_web_planner.py
+      tests_or_evidence:
+        - "workspace Planner defaults are normalized with forward-compatible section placement"
+        - "browser-local versioned presentation override supports reorder, visibility, density and reset"
+        - "temporal eligibility remains in shared Planner rendering and is unaffected by presentation preferences"
+      notes: >-
+        Presentation-only customization extends the existing Planner capability;
+        it does not add a Format record, data scope, query filter, or domain
+        semantics.
+      status: implemented
+
     - requirement_id: req-temporal-life-review-cross-surface
       capability_id: cap-temporal-life-review
       epic: https://github.com/Eruhitsuji/lifetxt/issues/991

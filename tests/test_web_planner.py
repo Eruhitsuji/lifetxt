@@ -107,6 +107,17 @@ class PlannerTests(unittest.TestCase):  # pragma: no cover -- covered in web-ext
             403, client.post("/api/items/capture", json={"text": "No"}).status_code
         )
 
+    def test_public_config_normalizes_planner_preferences(self):
+        planner = webapp.public_web_config(
+            {"web": {"planner": {"sections": ["journal", "journal", "future"], "hidden_sections": ["habits", "future"], "density": "invalid"}}}
+        )["planner"]
+        self.assertEqual(
+            ["journal", "schedule", "tasks", "habits", "notes", "review"],
+            planner["sections"],
+        )
+        self.assertEqual(["habits"], planner["hidden_sections"])
+        self.assertEqual("comfortable", planner["density"])
+
     def test_assets_include_accessibility_mobile_and_bilingual_contract(self):
         for expected in (
             "viewport-fit=cover",

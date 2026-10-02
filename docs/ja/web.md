@@ -135,7 +135,8 @@ MCP tool は `list_items`、`get_item`、`create_item`、`update_item`、
 | `POST` | `/api/timer` | timer 操作。body: `{"action": "start", "id": "t1"}`、`stop`、`cancel` |
 | `GET` | `/api/status` | 最新 status / presence record を表示 |
 | `POST` | `/api/status` | 直前の open な status を閉じて presence を記録。body: `{"state": "busy"}`、`{"end": true}`、同じ状態を繰り返す場合は `"force": true` |
-| `POST` | `/api/items/capture` | plain text から task を追記。`@project #tag !priority ^due` を展開 |
+| `POST` | `/api/items/capture` | Quick入力：省略記法または完全なlife.txt 1行 |
+| `POST` | `/api/quick/resolve` | 共通Quick入力を非書込preview |
 | `POST` | `/api/shorthand/parse` | 書き込まずに省略記法の展開を確認 |
 | `GET` | `/api/notifications` | Message 通知候補を表示 |
 | `GET` | `/api/chart/tasks` | task chart data |

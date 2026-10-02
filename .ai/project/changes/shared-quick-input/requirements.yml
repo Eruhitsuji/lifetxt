@@ -1,0 +1,6 @@
+schema_version: 1
+requirements:
+  - id: req-shared-quick-input-resolution
+    description: Every applicable textual Quick surface accepts shorthand or one complete record through one authoritative resolver; malformed full-record intent fails without writes.
+    source: https://github.com/Eruhitsuji/lifetxt/issues/1021
+    acceptance: [retain explicit record semantics, preserve shorthand and surface safeguards, all textual Quick surfaces consume shared resolution, EN/JA guides and parity evidence]

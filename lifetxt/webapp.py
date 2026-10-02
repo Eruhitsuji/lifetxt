@@ -1038,14 +1038,18 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
 
     @app.get("/api/notes")
     def get_notes(
-        date=None, offset=0, limit=5, sort="relevance", order="desc", text=None
+        date=None, offset=0, limit=5, sort="relevance", order="desc", text=None,
+        area=None, saved_view=None,
     ):
         from .ordinary_notes import ordinary_notes_page
 
         items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
         try:
+            from .read_scope import resolve_read_scope
+
+            scoped, scope = resolve_read_scope(items, app.state.config, area=area, saved_view=saved_view)
             page = ordinary_notes_page(
-                filter_items(items, text=text),
+                filter_items(scoped, text=text),
                 date=date,
                 offset=offset,
                 limit=limit,
@@ -1061,6 +1065,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             id_key_from_config(app.state.config),
         )
         response.update(page)
+        response["scope"] = scope
         return response
 
     @app.get("/api/items")
@@ -1455,6 +1460,8 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         until=None,
         limit=100,
         project=None,
+        area=None,
+        saved_view=None,
     ):
         """Return the bounded, versioned Temporal Life Review projection."""
         from .temporal_review import build_temporal_review
@@ -1475,8 +1482,11 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             raise HTTPException(status_code=400, detail=error_detail(exc))
         items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
         raise_for_errors(diagnostics)
+        from .read_scope import resolve_read_scope
+
+        items, scope = resolve_read_scope(items, app.state.config, area=area, saved_view=saved_view)
         try:
-            return build_temporal_review(
+            result = build_temporal_review(
                 items,
                 since=since,
                 until=until,
@@ -1485,6 +1495,8 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
                 id_key=id_key_from_config(app.state.config),
                 timezone_name=current_timezone_name(),
             )
+            result["scope"] = scope
+            return result
         except (TypeError, ValueError) as exc:
             raise HTTPException(status_code=400, detail=error_detail(exc))
 
@@ -1531,9 +1543,14 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         q=None,
         limit=None,
         blocked=None,
+        area=None,
+        saved_view=None,
     ):
         items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
         raise_for_errors(diagnostics)
+        from .read_scope import resolve_read_scope
+
+        items, scope = resolve_read_scope(items, app.state.config, area=area, saved_view=saved_view)
         range_start, range_end = parse_agenda_range(start, end, around, window)
         records = agenda_records(items, range_start, range_end)
         record_items = []
@@ -1609,7 +1626,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         elif blocked_mode in ("hide", "none"):
             filtered_records = [r for r in filtered_records if not r["blocked"]]
         filtered_records = limit_items(filtered_records, limit)
-        return {"count": len(filtered_records), "records": filtered_records}
+        return {"count": len(filtered_records), "records": filtered_records, "scope": scope}
 
     @app.get("/api/status")
     def get_status(person=None, active=False):

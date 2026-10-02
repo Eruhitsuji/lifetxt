@@ -26,7 +26,7 @@ http://127.0.0.1:8000/
 Open `/capture` to go directly to a capture-first screen, for example
 `http://127.0.0.1:8000/capture`. Bookmark that URL or add it to your phone's
 home screen for a low-friction capture entry. It uses the same authoritative
-Quick add endpoints and shorthand as the full Web UI (`@project`, `#tag`,
+Quick capture endpoint and shared resolution as the full Web UI (`@project`, `#tag`,
 `!priority`, `^due`, or a complete life.txt line). A successful capture clears
 and refocuses the input; a failed capture keeps the text available for retry.
 
@@ -143,7 +143,8 @@ tools.
 | `POST` | `/api/timer` | Drive the timer. Body: `{"action": "start", "id": "t1"}`, or `stop` / `cancel` |
 | `GET` | `/api/status` | Show latest status / presence records |
 | `POST` | `/api/status` | Record a presence status, closing the previously open one. Body: `{"state": "busy"}`, `{"end": true}`, or add `"force": true` to repeat a state |
-| `POST` | `/api/items/capture` | Append a task from plain text, expanding `@project #tag !priority ^due` |
+| `POST` | `/api/items/capture` | Quick capture: shorthand or one complete life.txt record |
+| `POST` | `/api/quick/resolve` | Preview shared Quick resolution without writing |
 | `POST` | `/api/shorthand/parse` | Preview shorthand expansion without writing |
 | `GET` | `/api/notifications` | Show due message notifications for a recipient |
 | `GET` | `/api/chart/tasks` | Task count chart data |
@@ -677,8 +678,9 @@ in the browser, the TUI, and the CLI.
 
 ### Quick add shorthand and presence
 
-The quick-add input accepts either a full life.txt line (anything starting with
-`[`) or plain text with capture shorthand:
+The quick-add input accepts shorthand or one complete life.txt record through
+`POST /api/items/capture`. The server resolves the input; a malformed leading
+`[` record attempt fails without writing. Planner and `/capture` use the same contract:
 
 See [Quick capture and shorthand](./quick-capture.md) for the complete token,
 escaping, validation, and surface-difference contract.

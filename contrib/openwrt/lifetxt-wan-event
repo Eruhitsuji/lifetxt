@@ -1,0 +1,42 @@
+#!/bin/sh
+# Bounded OpenWrt WAN semantic-event adapter for lifetxt-mini.
+set -eu
+
+event=${1-}
+case "$event" in
+  WAN_UP) title="WAN restored" ;;
+  WAN_DOWN) title="WAN disconnected" ;;
+  *) echo "usage: $0 WAN_UP|WAN_DOWN" >&2; exit 2 ;;
+esac
+
+state_file=${LIFETXT_WAN_STATE_FILE:-/var/lib/lifetxt/openwrt-wan.state}
+life_file=${LIFETXT_FILE:-/root/life.txt}
+mini=${LIFETXT_MINI:-/usr/bin/lifetxt-mini}
+state_dir=$(dirname "$state_file")
+mkdir -p "$state_dir"
+lock="$state_file.lock"
+if ! mkdir "$lock" 2>/dev/null; then
+  echo "another WAN event is being handled; refusing duplicate work" >&2
+  exit 75
+fi
+cleanup() { rmdir "$lock" 2>/dev/null || true; }
+trap cleanup EXIT HUP INT TERM
+
+previous=""
+if [ -f "$state_file" ]; then
+  previous=$(sed -n 's/^stable=//p' "$state_file" | head -n 1)
+fi
+if [ "$previous" = "$event" ]; then
+  exit 0
+fi
+
+# The OpenWrt hook is the stabilization boundary: only the two fixed semantic
+# notifications reach this adapter. Raw link samples never enter life.txt.
+timestamp=$(date -u '+%Y%m%dT%H%M%SZ')
+id="iot-wan-$(printf '%s' "$event" | tr 'A-Z' 'a-z')-$timestamp"
+"$mini" add "$title" --type event --id "$id" --tag iot --tag network "$life_file"
+
+tmp="$state_file.tmp.$$"
+umask 077
+printf 'stable=%s\nlast_id=%s\n' "$event" "$id" > "$tmp"
+mv -f "$tmp" "$state_file"

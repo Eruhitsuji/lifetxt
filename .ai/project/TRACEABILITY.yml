@@ -2,6 +2,25 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-iot-openwrt-wan-semantic-event-poc
+      capability_id: cap-iot-semantic-edge-adapter-poc
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1051
+      pull_request: null
+      changed_files_or_scope:
+        - contrib/openwrt/lifetxt-wan-event
+        - contrib/openwrt/README.md
+        - tests/test_openwrt_wan_adapter.py
+      tests_or_evidence:
+        - "Only fixed WAN_UP and WAN_DOWN inputs are accepted"
+        - "Stable state and a lock suppress repeated or concurrent notifications"
+        - "Mini invocation failure does not advance adapter state"
+        - "Produced events use only Mini-supported id and tag details"
+      notes: >-
+        Isolated local OpenWrt proof of concept. Raw telemetry, network
+        ingestion, MQTT, Home Assistant, and Mini/Core feature expansion remain
+        out of scope.
+      status: implemented
+
     - requirement_id: req-web-items-filter-consistent-apply
       capability_id: cap-web-beginner-first-ux
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1049

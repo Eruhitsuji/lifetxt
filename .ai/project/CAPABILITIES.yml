@@ -304,6 +304,29 @@ capabilities:
       replaced_by: null
       deprecation_issue: null
 
+  - id: cap-iot-semantic-edge-adapter-poc
+    name: Bounded IoT semantic edge adapter proof of concept
+    summary: >-
+      Local edge adapters normalize explicitly supported device transitions into
+      bounded existing life.txt records without adding telemetry or network
+      ingestion semantics to Core or lifetxt-mini.
+    status: experimental
+    owner: Eruhitsuji
+    source_requirements:
+      - req-iot-openwrt-wan-semantic-event-poc
+    implementation_locations:
+      - contrib/openwrt/lifetxt-wan-event
+      - contrib/openwrt/README.md
+      - tests/test_openwrt_wan_adapter.py
+    public_interfaces:
+      - local OpenWrt hook invocation with WAN_UP or WAN_DOWN
+    tests_or_evidence:
+      - tests.test_openwrt_wan_adapter
+    reuse_policy: reuse_existing_lifetxt_mini_event_mutation
+    notes: >-
+      This is a local, non-safety-critical PoC. It is not a telemetry service,
+      MQTT/Home Assistant integration, network endpoint, or alerting path.
+
   - id: cap-lifetxt-mini-phase-1-read-core
     name: lifetxt-mini Phase 1 read-only core
     summary: >-

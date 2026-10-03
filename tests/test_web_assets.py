@@ -17,7 +17,7 @@ from lifetxt import web_assets, webapp
 
 REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
 # #1021 intentionally changes Quick submit/preview and Focus capture fragments.
-LEGACY_PRISTINE_GIT_BLOB_SHA = "02287cfd2c63e98804fbde31d96f45c3fb4ac58c"
+LEGACY_PRISTINE_GIT_BLOB_SHA = "9037cd5921ac9d0076c7850318c32501e472c7ba"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )
@@ -68,6 +68,19 @@ class WebAssetExtractionTests(unittest.TestCase):
         self.assertIn(".surface-link", web_assets.HTML_PAGE)
         self.assertIn('data-status="__active__"', web_assets.HTML_PAGE)
         self.assertIn("setActiveStatusFilter", web_assets.HTML_PAGE)
+
+    def test_items_filters_apply_without_discarding_pending_controls(self):
+        for expected in (
+            'search?.addEventListener("input", schedule)',
+            'search?.addEventListener("keydown"',
+            'control.addEventListener("change", () => loadItems())',
+            'limit?.addEventListener("keydown"',
+            "let itemsLoadGeneration = 0",
+            "if (generation !== itemsLoadGeneration) return;",
+            "updateUrlFromControls();\n      const params = query();",
+        ):
+            self.assertIn(expected, web_assets.HTML_PAGE)
+        self.assertNotIn('<button onclick="loadItems()">Apply</button>', web_assets.HTML_PAGE)
 
     def test_split_resources_assemble_the_legacy_pristine_page(self):
         package = resources.files("lifetxt")

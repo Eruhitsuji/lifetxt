@@ -14,7 +14,7 @@ verification:
       result: Ran 101 tests OK
       status: passed
     - type: smoke
-      command: C:\Users\L1007\AppData\Local\Programs\Python\Python312\python.exe contrib/cloudflare_public_api/smoke_native.py
+      command: py -3.12 contrib/cloudflare_public_api/smoke_native.py
       result: Native shared-core smoke completed for 0/1/10/100/500 records; conversion, quick input, priority classification, and structured invalid diagnostics exercised.
       status: passed
     - type: toolchain
@@ -55,3 +55,7 @@ verification:
       status: incomplete
   gaps:
     - FastAPI comparison is qualitative only; no second adapter was added.
+review_ledger:
+  - {reviewer: Codex implementer self-review, review_type: implementation-security-integration, target_commit: abcbd06040cc1399cba33861f4dccd0d47112dcd, result: passed-informational-only, finding_count: 0, completed_at: '2026-10-03'}
+  - {reviewer: Eruhitsuji, review_type: implementation-integration-security-audit, target_commit: abcbd06040cc1399cba33861f4dccd0d47112dcd, result: findings-recorded-for-correction, finding_count: 6, completed_at: '2026-10-03'}
+  - {reviewer: independent reviewer, review_type: implementation-and-integration, target_commit: pending-after-correction, result: pending, finding_count: 0, completed_at: null}

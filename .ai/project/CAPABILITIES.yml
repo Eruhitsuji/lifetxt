@@ -11,7 +11,7 @@ capabilities:
     public_interfaces: []
     tests_or_evidence: [contrib/cloudflare_public_api/smoke_native.py, .ai/project/changes/cloudflare-public-api-poc/verification.yml]
     related_issues: [https://github.com/Eruhitsuji/lifetxt/issues/827]
-    related_pull_requests: []
+    related_pull_requests: [https://github.com/Eruhitsuji/lifetxt/pull/1056]
     reuse_policy: experimental-evidence-only; never use as a production API contract
     replacement: {replaces: [], replaced_by: null, deprecation_issue: null}
 

@@ -15953,10 +15953,10 @@ traceability:
     - requirement_id: req-web-top-configurable-clock
       capability_id: cap-web-surface-structure
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1058
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1059
       changed_files_or_scope: [lifetxt/web_assets.html, lifetxt/web_assets_css_01.css, lifetxt/web_assets_js_07.js, lifetxt/web_assets_js_13.js, lifetxt/config.py, lifetxt/config_registry.py, lifetxt/schema_extensions_v5.py, dist/schemas/config-v1.schema.json, docs/en/config.md, docs/ja/config.md, examples/config/personal.lifetxt.json, tests/test_web_assets.py, tests/test_web_top_clock.py, tests/test_web_top_clock_browser.py, tests/browser_top_clock_probe.mjs]
       tests_or_evidence: [tests.test_web_top_clock, tests.test_web_top_clock_browser]
-      notes: Extend existing Web presentation with one shared browser-local Top/Kiosk clock timer and optional local calendar date. Human independent review is required before merge.
+      notes: Extend existing Web presentation with one shared browser-local Top/Kiosk clock timer and optional local calendar date. Focused behavioral checks passed; actual Chrome/mobile probe is blocked by the execution environment's Unix socket restriction. Human independent review and browser verification are required before merge.
       status: implemented
 
   gap_policy:

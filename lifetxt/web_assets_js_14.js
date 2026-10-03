@@ -257,6 +257,7 @@
 
     // ── setStatusFilter: "All" button — clears everything ────────
     function setStatusFilter(statusValue) {
+      updateUrlFromControls();
       const params = query();
       params.delete("blocked");
       params.delete("status");
@@ -270,6 +271,7 @@
 
     // ── toggleStatusFilter: multi-select individual statuses ──────
     function toggleStatusFilter(statusValue) {
+      updateUrlFromControls();
       const params = query();
       params.delete("blocked");
       params.delete("open_only");
@@ -293,6 +295,7 @@
     }
 
     function setActiveStatusFilter() {
+      updateUrlFromControls();
       const params = query();
       params.delete("blocked");
       params.delete("open_only");

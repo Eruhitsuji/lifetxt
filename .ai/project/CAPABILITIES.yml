@@ -327,6 +327,29 @@ capabilities:
       This is a local, non-safety-critical PoC. It is not a telemetry service,
       MQTT/Home Assistant integration, network endpoint, or alerting path.
 
+  - id: cap-iot-connected-semantic-remote-poc
+    name: Connected semantic Remote ingestion proof of concept
+    summary: >-
+      A bounded trusted semantic adapter using authenticated Remote protocol,
+      exact revision checks, transaction replay, and ordinary item mutation for
+      fixed WAN events.
+    status: experimental
+    owner: Eruhitsuji
+    source_requirements:
+      - req-iot-connected-semantic-remote-poc
+    implementation_locations:
+      - contrib/remote/connected_semantic_event.py
+      - contrib/remote/README.md
+      - tests/test_connected_semantic_event.py
+    public_interfaces:
+      - local connected adapter invocation with WAN_UP or WAN_DOWN
+    tests_or_evidence:
+      - tests.test_connected_semantic_event
+    reuse_policy: reuse_existing_remote_protocol_v2_item_mutation
+    notes: >-
+      Requires a dedicated minimum-scope Remote principal. No new endpoint,
+      IoT schema, telemetry service, or production configuration is introduced.
+
   - id: cap-lifetxt-mini-phase-1-read-core
     name: lifetxt-mini Phase 1 read-only core
     summary: >-

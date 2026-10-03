@@ -2,6 +2,25 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-iot-connected-semantic-remote-poc
+      capability_id: cap-iot-connected-semantic-remote-poc
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1053
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1054
+      changed_files_or_scope:
+        - contrib/remote/connected_semantic_event.py
+        - contrib/remote/README.md
+        - tests/test_connected_semantic_event.py
+      tests_or_evidence:
+        - "Fixed WAN_UP/WAN_DOWN mapping uses ordinary E item mutations"
+        - "Protocol-v2, write scope, item capability, and enabled policy are checked before mutation"
+        - "Existing If-Match and transaction replay client paths are reused"
+        - "Revision conflict retries only the same transaction and fixed payload"
+      notes: >-
+        Connected proof of concept only; no IoT endpoint, Mini expansion,
+        telemetry store, MQTT/Home Assistant integration, or production Remote
+        configuration change.
+      status: implemented
+
     - requirement_id: req-iot-openwrt-wan-semantic-event-poc
       capability_id: cap-iot-semantic-edge-adapter-poc
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1051

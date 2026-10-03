@@ -30,6 +30,14 @@ if [ "$previous" = "$event" ]; then
   exit 0
 fi
 
+if [ -z "$previous" ]; then
+  tmp="$state_file.tmp.$$"
+  umask 077
+  printf 'stable=%s\n' "$event" > "$tmp"
+  mv -f "$tmp" "$state_file"
+  exit 0
+fi
+
 # The OpenWrt hook is the stabilization boundary: only the two fixed semantic
 # notifications reach this adapter. Raw link samples never enter life.txt.
 timestamp=$(date -u '+%Y%m%dT%H%M%SZ')

@@ -44,7 +44,7 @@ the PoC only, not a project-wide Python 3.14 support declaration.
 HTTP evidence at the local Wrangler port (`127.0.0.1:1461`):
 
 * `/health`: 200, `{"ok": true}`
-* `/v1/info`: 200, engine `1.0.3`, source revision recorded, runtime metadata
+* `/v1/info`: 200, engine `1.0.3`, base engine revision recorded, runtime metadata
 * `/v1/check`: minimal and Japanese/Unicode inputs 200/valid; malformed quoted
   input 200/invalid with `E018`; 100-record deterministic fixture 200/valid
 * internal non-contractual smoke: conversion, quick input, and priority matrix
@@ -79,7 +79,11 @@ Deployment was approved for this investigation only.
 * Worker: `lifetxt-cloudflare-public-api-poc`
 * URL: `https://lifetxt-cloudflare-public-api-poc.leo10070021.workers.dev`
 * Version: `3a4d4cd3-c971-4109-921b-04b2f8362a55`
-* Source revision: `0d340f0e24b60d3ee6cd95186ac0fd9bec6b715a`
+* Engine/base revision reported by the deployed PoC: `0d340f0e24b60d3ee6cd95186ac0fd9bec6b715a`
+* Adapter implementation was deployed from the uncommitted working tree based
+  on that engine revision, and was later captured for review in PR #1056 at
+  commit `abcbd06040cc1399cba33861f4dccd0d47112dcd`. The reported base
+  revision is therefore not the exact source commit for the complete adapter.
 * Startup time: 2479 ms
 * Upload: 28,577.58 KiB; gzip 6,343.52 KiB
 * Deploy duration: 141.50 sec upload plus 0.68 sec trigger update
@@ -139,7 +143,8 @@ dashboard/API after confirmation.
 
 ## Final repository verification
 
-The supported-runtime, targeted Core/safety, change-package closeout,
+The supported-runtime (2 tests), targeted configuration/archive/safety (101
+tests), change-package closeout,
 compile, native shared-core smoke, and integration checks passed. The captured
 repository full suite completed with 4,974 tests, 313 skips, 14 failures, and
 2 errors on this Windows host; the failures were existing host/environment

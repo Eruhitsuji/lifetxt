@@ -9,6 +9,7 @@ import unittest
 from pathlib import Path
 
 from lifetxt.web_assets import HTML_PAGE
+from lifetxt.webapp import public_web_config
 from tests.test_web_mobile_capture_browser import _browser_path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -24,6 +25,24 @@ class TopClockBrowserTests(unittest.TestCase):
         ) as handle:
             handle.write(HTML_PAGE)
             html_path = handle.name
+        with tempfile.NamedTemporaryFile(
+            "w", suffix=".json", encoding="utf-8", delete=False
+        ) as handle:
+            json.dump(
+                {
+                    "web": public_web_config(
+                        {
+                            "defaults": {"timezone": "Asia/Tokyo"},
+                            "web": {
+                                "top_clock": {"format": "h:mm:ss a", "show_date": True}
+                            },
+                        }
+                    ),
+                    "notifications": {"enabled": False},
+                },
+                handle,
+            )
+            config_path = handle.name
         try:
             process = subprocess.run(
                 [
@@ -31,6 +50,7 @@ class TopClockBrowserTests(unittest.TestCase):
                     str(ROOT / "tests/browser_top_clock_probe.mjs"),
                     _browser_path(),
                     html_path,
+                    config_path,
                 ],
                 capture_output=True,
                 text=True,
@@ -38,6 +58,7 @@ class TopClockBrowserTests(unittest.TestCase):
             )
         finally:
             os.unlink(html_path)
+            os.unlink(config_path)
         if process.returncode:
             raise AssertionError(process.stderr or process.stdout)
         cls.evidence = json.loads(process.stdout)

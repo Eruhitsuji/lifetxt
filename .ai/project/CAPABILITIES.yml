@@ -2712,9 +2712,11 @@ capabilities:
     status: active
     owner: Eruhitsuji
     source_requirements:
+      - req-web-top-clock-public-config-custom-format
       - req-web-top-configurable-clock
       - req-module-structure-decomposition
     implementation_locations:
+      - lifetxt/web_clock_config.py
       - lifetxt/web_assets_js_13.js
       - lifetxt/web_assets.py
       - lifetxt/web_routes_git.py
@@ -2726,6 +2728,7 @@ capabilities:
       - lifetxt.web_assets.HTML_PAGE
       - lifetxt.web_routes_git.register_git_routes
     tests_or_evidence:
+      - tests.test_web_clock_public_config
       - tests.test_web_top_clock
       - tests.test_web_top_clock_browser
       - tests/test_web_assets.py
@@ -2736,6 +2739,7 @@ capabilities:
       - 'a route module must not import fastapi at module level: create_app imports it inside the function behind an ImportError guard, which is what keeps import lifetxt.webapp working without the Web extras and the no-Web CI job green'
       - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 1778 tests, OK (skipped=14)'
     related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/1060
       - https://github.com/Eruhitsuji/lifetxt/issues/1058
       - https://github.com/Eruhitsuji/lifetxt/issues/67
       - https://github.com/Eruhitsuji/lifetxt/issues/82

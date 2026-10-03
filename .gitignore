@@ -46,3 +46,9 @@ desktop/src-tauri/gen/
 # build output; .gitkeep documents the directory's purpose.
 desktop/src-tauri/resources/bin/*
 !desktop/src-tauri/resources/bin/.gitkeep
+# Cloudflare PoC local environments and dependency installs
+contrib/cloudflare_public_api/node_modules/
+contrib/cloudflare_public_api/python_modules/
+contrib/cloudflare_public_api/.venv/
+contrib/cloudflare_public_api/.venv-workers/
+contrib/cloudflare_public_api/.wrangler/

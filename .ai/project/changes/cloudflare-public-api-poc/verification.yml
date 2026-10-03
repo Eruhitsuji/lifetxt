@@ -1,0 +1,63 @@
+schema_version: 1
+verification:
+  executed:
+    - type: baseline
+      command: git rev-parse origin/main
+      result: 0d340f0e24b60d3ee6cd95186ac0fd9bec6b715a
+      status: passed
+    - type: unit
+      command: py -3.12 -m unittest tests.test_supported_runtime
+      result: Ran 2 tests OK
+      status: passed
+    - type: unit
+      command: py -3.12 -m unittest tests.test_config_validation tests.test_archive_plan_v1 tests.test_safety_foundation
+      result: Ran 101 tests OK
+      status: passed
+    - type: smoke
+      command: py -3.12 contrib/cloudflare_public_api/smoke_native.py
+      result: Native shared-core smoke completed for 0/1/10/100/500 records; conversion, quick input, priority classification, and structured invalid diagnostics exercised.
+      status: passed
+    - type: toolchain
+      command: Python 3.12; node --version; uv --version; uv run pywrangler --version
+      result: Python 3.12.3; Node v24.19.0; uv 0.12.22; pywrangler 1.17.6; Wrangler 4.147.0.
+      status: passed
+    - type: reproducibility
+      command: uv build --wheel --out-dir .cache/wheels; cd contrib/cloudflare_public_api; uv sync --locked
+      result: Fresh-checkout procedure resolved and synchronized the PoC environment without pywrangler init or machine-specific paths.
+      status: passed
+    - type: local-worker
+      command: uv run pywrangler dev; HTTP requests to http://127.0.0.1:1461
+      result: 'Wrangler 4.147.0; compatibility_date 2026-10-03; python_workers; local CPython/Pyodide 3.14.2; health/info/check and shared-core smoke passed; malformed input returned E018.'
+      status: passed
+    - type: bundle
+      command: pywrangler dev bundle report
+      result: '1998 modules; 28574.17 KiB total; 9047.18 KiB vendored modules; CPU and memory counters not observable locally.'
+      status: passed
+    - type: deployment
+      command: uv run pywrangler deploy
+      result: 'Approved temporary PoC deployment; Worker lifetxt-cloudflare-public-api-poc; version 3a4d4cd3-c971-4109-921b-04b2f8362a55; startup 2479 ms; upload 28577.58 KiB, gzip 6343.52 KiB; workers.dev endpoint returned.'
+      status: passed
+    - type: remote-smoke
+      command: node contrib/cloudflare_public_api/deployed_smoke.mjs https://lifetxt-cloudflare-public-api-poc.leo10070021.workers.dev
+      result: 'Historical deployed version: health/info/shared smoke/check minimal+Unicode+invalid+10+100+500 all HTTP 200; invalid E018; expected counts returned. The checked-in post-review adapter removes the temporary /__poc/smoke route without redeploying.'
+      status: passed
+    - type: observability
+      command: wrangler tail lifetxt-cloudflare-public-api-poc --format json --sampling-rate 0.99
+      result: 'outcome ok, stateless, no exceptions/truncation/resource errors; check CPU/wall ms approximately 4/5 (1 record), 4/4 (10), 17/17 (100), 47/47 (500).'
+      status: passed
+    - type: change-package
+      command: py -3.12 -m unittest tests.test_change_package_closeout
+      result: Ran 3 tests OK after adding the required decisions.md.
+      status: passed
+    - type: full-suite
+      command: '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover'
+      result: 'Completed 4974 tests with 313 skipped, 14 failures, and 2 errors on Windows; failures were unrelated host/environment issues and are recorded in RESULTS.md.'
+      status: incomplete
+  gaps:
+    - FastAPI comparison is qualitative only; no second adapter was added.
+review_ledger:
+  - {reviewer: Codex implementer self-review, review_type: implementation-security-integration, target_commit: abcbd06040cc1399cba33861f4dccd0d47112dcd, result: passed-informational-only, finding_count: 0, completed_at: '2026-10-03'}
+  - {reviewer: ChatGPT independent AI review via owner-connected GitHub tooling, review_type: implementation-integration-security-audit, target_commit: abcbd06040cc1399cba33861f4dccd0d47112dcd, result: findings-recorded-for-correction, finding_count: 6, completed_at: '2026-10-03'}
+  - {reviewer: Codex implementer correction review, review_type: implementation-security-integration, target_commit: 6b3301948a7eb078276d0d99548d519480dab1d2, result: passed-informational-only, finding_count: 0, completed_at: '2026-10-03'}
+  - {reviewer: ChatGPT independent AI review via owner-connected GitHub tooling, review_type: latest-head-implementation-integration-security-audit, target_commit: 9e78a482866296f2d39b5337f9bb6f9a64744f10, result: findings-recorded-for-correction, finding_count: 4, notes: 'GO WITH CORE-IMPORT REFACTOR supported; P1=2, P2=2; no new storage/fetch/authoritative-mutation/security-boundary finding; human final merge approval pending.', completed_at: '2026-10-03'}
+  - {reviewer: independent reviewer, review_type: implementation-and-integration, target_commit: pending-after-correction, result: pending, finding_count: 0, completed_at: null}

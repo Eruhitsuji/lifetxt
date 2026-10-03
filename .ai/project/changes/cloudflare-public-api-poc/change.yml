@@ -1,0 +1,37 @@
+schema_version: 1
+
+change:
+  id: cloudflare-public-api-poc
+  title: Cloudflare Python Workers feasibility benchmark PoC
+  status: in_progress
+  change_type: Investigation
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/827
+  related_pull_request: [https://github.com/Eruhitsuji/lifetxt/pull/1056]
+  base_commit: 0d340f0e24b60d3ee6cd95186ac0fd9bec6b715a
+  target_release: null
+
+scope:
+  in_scope:
+    - Isolated native Python Worker adapter and local shared-core evidence harness.
+    - Import-boundary, runtime, benchmark, deployment, and security findings.
+  out_of_scope:
+    - Production Public Utility API, public contract, limits, deployment workflow, custom domain, and persistent storage.
+    - Cloudflare deployment without explicit human approval.
+  write_scope:
+    - contrib/cloudflare_public_api/
+    - .ai/project/changes/cloudflare-public-api-poc/
+    - .ai/project/TRACEABILITY.yml
+    - .ai/project/CAPABILITIES.yml
+  forbidden_scope:
+    - .ai/managed/**
+    - lifetxt/** semantic implementation
+    - .github/workflows/release.yml
+    - Cloudflare account resources and secrets
+  shared_files: []
+
+human_approvals_required:
+  - Independent implementation and integration/security review.
+  - Human approval before Cloudflare deployment and merge.

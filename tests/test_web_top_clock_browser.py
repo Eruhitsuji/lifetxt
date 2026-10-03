@@ -50,6 +50,7 @@ class TopClockBrowserTests(unittest.TestCase):
                 width=result["width"], lang=result["lang"], dark=result["dark"]
             ):
                 self.assertFalse(result["hidden"])
+                self.assertEqual("dark" if result["dark"] else "light", result["theme"])
                 self.assertRegex(
                     result["text"], r"^\d{4}-\d{2}-\d{2} \d{1,2}:\d{2}:\d{2} [AP]M$"
                 )

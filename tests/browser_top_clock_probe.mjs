@@ -88,13 +88,14 @@ try {
           await delay(50);
         }
         if (!ready) throw new Error("Top clock did not initialize");
-        await evaluate(`document.body.classList.toggle("dark", ${dark})`);
+        await evaluate(`document.documentElement.setAttribute("data-theme", ${dark} ? "dark" : "light")`);
         const result = await evaluate(`(() => {
           const el = document.getElementById("top-clock");
           const rect = el.getBoundingClientRect();
           const header = document.querySelector("header").getBoundingClientRect();
           const nav = document.getElementById("workspace-tabs").getBoundingClientRect();
           return {text: el.textContent, dateTime: el.dateTime, hidden: el.hidden,
+            theme: document.documentElement.getAttribute("data-theme"),
             live: el.getAttribute("aria-live"), tag: el.tagName,
             numerals: getComputedStyle(el).fontVariantNumeric,
             rect: rect.toJSON(), header: header.toJSON(), nav: nav.toJSON(),

@@ -2,6 +2,24 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-items-filter-consistent-apply
+      capability_id: cap-web-beginner-first-ux
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1049
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1050
+      changed_files_or_scope:
+        - lifetxt/web_assets.html
+        - lifetxt/web_assets_js_04.js
+        - lifetxt/web_assets_js_14.js
+        - tests/test_web_assets.py
+      tests_or_evidence:
+        - "Search applies on debounce or Enter, and filter controls apply on change"
+        - "Status changes preserve current search/type/sort/order/limit/open controls"
+        - "Load generation prevents stale item responses from rendering over newer requests"
+      notes: >-
+        Keeps the existing URL as the shareable filter representation while
+        removing the undiscoverable Apply step; no API or query-language change.
+      status: implemented
+
     - requirement_id: req-web-usability-children-1041
       capability_id: cap-web-mobile-planner
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1041

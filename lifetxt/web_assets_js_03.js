@@ -396,7 +396,7 @@
       const fallbackSort = currentView() === "messages" ? "time" : (appConfig?.web?.default_sort || "line");
       document.getElementById("kind").value = firstParam(params, ["kind", "type"], fallbackKind);
       document.getElementById("sort").value = firstParam(params, ["sort"], fallbackSort);
-      document.getElementById("order").value = firstParam(params, ["order"], appConfig?.web?.default_order || "asc");
+      document.getElementById("order").value = firstParam(params, ["order"], appConfig?.web?.default_order || "desc");
       document.getElementById("open-only").checked = boolParam(params, ["open", "open_only"]) || params.get("blocked") === "true";
       document.getElementById("limit").value = firstParam(params, ["limit"], appConfig?.web?.default_limit || "");
       const groupSel = document.getElementById("group-by");

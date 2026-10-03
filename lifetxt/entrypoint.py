@@ -351,6 +351,9 @@ def _bare_invocation_main():
 
 
 def main(argv=None):
+    from . import bootstrap_legacy_surfaces
+
+    bootstrap_legacy_surfaces()
     try:
         argv_without_lang, lang_arg = _extract_lang_arg(argv)
     except ValueError as exc:

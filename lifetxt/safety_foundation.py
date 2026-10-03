@@ -680,6 +680,9 @@ def write_schema_bundle(directory):
 
 
 def schema_bundle():
+    from . import bootstrap_legacy_surfaces
+
+    bootstrap_legacy_surfaces()
     base = "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/"
     item = {
         "$schema": "https://json-schema.org/draft/2020-12/schema",

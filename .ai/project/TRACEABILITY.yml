@@ -2,6 +2,24 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-core-import-boundary-refactor
+      capability_id: cap-core-import-boundary
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/823
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1055
+      pull_request: null
+      changed_files_or_scope:
+        - lifetxt/__init__.py
+        - lifetxt/core.py
+        - lifetxt/_legacy_bootstrap.py
+        - lifetxt/entrypoint.py
+        - tests/test_core_import_boundary.py
+      tests_or_evidence:
+        - tests/test_core_import_boundary.py
+        - docs/design/core-import-boundary.md
+      release_or_deployment: null
+      notes: Platform-neutral refactor; no Cloudflare deployment or production API.
+      status: in_progress
+
     - requirement_id: req-cloudflare-public-api-feasibility
       capability_id: cap-cloudflare-public-api-feasibility-poc
       epic: https://github.com/Eruhitsuji/lifetxt/issues/823

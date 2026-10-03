@@ -1,0 +1,20 @@
+schema_version: 1
+change:
+  id: core-import-boundary-refactor
+  title: Refactor platform-neutral Core import boundary for embedding
+  status: in_progress
+  change_type: Investigation
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1055
+  related_pull_request: []
+  base_commit: 4e9b75a6f7fea2c105b933143926f196f25829c6
+  target_release: null
+scope:
+  in_scope: [small Core import surface, explicit legacy bootstrap, import/startup evidence, CLI/Web/Remote compatibility verification]
+  out_of_scope: [Public Utility API, Cloudflare deployment, request limits, storage, authentication, custom domains, Cloudflare-specific conditionals]
+  write_scope: [lifetxt/__init__.py, lifetxt/core.py, lifetxt/_legacy_bootstrap.py, lifetxt/entrypoint.py, tests/test_core_import_boundary.py, .ai/project/**]
+  forbidden_scope: [.ai/managed/**, .github/workflows/**, contrib/cloudflare_public_api/]
+  shared_files: [lifetxt/__init__.py, lifetxt/entrypoint.py]
+human_approvals_required: [independent implementation/integration/security review, Merge Authority approval]

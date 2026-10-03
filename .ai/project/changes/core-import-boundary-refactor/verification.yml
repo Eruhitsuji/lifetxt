@@ -1,0 +1,32 @@
+schema_version: 1
+verification:
+  executed:
+    - type: core-boundary
+      command: py -3.12 -m unittest tests.test_core_import_boundary
+      result: "Ran 3 tests OK; package-root excludes legacy runtime/release/Remote modules and lifetxt.core exposes authoritative operations."
+      commit: ea1f463c
+      status: passed
+    - type: targeted-compatibility
+      command: py -3.12 -m unittest tests.test_supported_runtime tests.test_config_validation tests.test_archive_plan_v1 tests.test_safety_foundation tests.test_surface_runtime tests.test_bare_invocation tests.test_remote_compatibility_v21 tests.test_remote_client_v19 tests.test_remote_client_writes_v23
+      result: "Targeted runs passed: 95 tests (skipped=8) and 67 tests (skipped=8; overlapping surface coverage)."
+      commit: ea1f463c
+      status: passed
+    - type: integration
+      command: py -3.12 -m lifetxt check examples/minimal_life.txt
+      result: "OK: 10 item(s)"
+      commit: ea1f463c
+      status: passed
+    - type: governance
+      command: py -3.12 -m unittest tests.test_traceability_gate tests.test_change_package_closeout
+      result: Ran 20 tests OK
+      commit: ea1f463c
+      status: passed
+    - type: static
+      command: ruff check lifetxt/__init__.py lifetxt/core.py lifetxt/_legacy_bootstrap.py lifetxt/entrypoint.py tests/test_core_import_boundary.py
+      result: All checks passed
+      commit: ea1f463c
+      status: passed
+  gaps: []
+review_ledger:
+  - {reviewer: Codex implementer self-review, review_type: implementation-security-integration, target_commit: ea1f463c, result: passed-informational-only, finding_count: 0, completed_at: '2026-10-03'}
+  - {reviewer: independent reviewer, review_type: implementation-and-integration, target_commit: pending, result: pending, finding_count: 0, completed_at: null}

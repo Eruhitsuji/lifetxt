@@ -21,9 +21,12 @@ __LIFETXT_WEB_STYLES__  </style>
   <header>
     <div class="brand">
       <span class="brand-mark" aria-hidden="true">✓</span>
-      <div>
+      <div class="brand-copy">
         <h1>life.txt</h1>
-        <p class="subtitle" id="app-subtitle">Plain text tasks, schedule, presence, and notes.</p>
+        <div class="brand-subtitle-row">
+          <p class="subtitle" id="app-subtitle">Plain text tasks, schedule, presence, and notes.</p>
+          <time id="top-clock" aria-live="off" hidden></time>
+        </div>
       </div>
     </div>
     <div class="toolbar">
@@ -39,7 +42,7 @@ __LIFETXT_WEB_STYLES__  </style>
       <button class="secondary" onclick="openHelpModal()" title="Keyboard shortcuts (?)">?</button>
       <button id="git-status-badge" class="git-badge" style="display:none" onclick="openGitModal()"></button>
       <button id="display-exit-btn" class="secondary" style="display:none" onclick="switchWorkspace('')" title="Exit display mode">Exit Display</button>
-      <span id="kiosk-clock" style="display:none"></span>
+      <time id="kiosk-clock" aria-live="off" style="display:none"></time>
       <button id="kiosk-exit-btn" class="secondary" style="display:none" onclick="toggleKioskMode()" title="Exit kiosk mode (Esc)">✕ Exit</button>
     </div>
     <nav class="workspace-tabs header-workspace-tabs" id="workspace-tabs" aria-label="Views" role="tablist">

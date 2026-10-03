@@ -176,6 +176,12 @@ def config_template():
             ("host", "127.0.0.1"),
             ("port", 8000),
             ("display_refresh", 60),
+            (
+                "top_clock",
+                OrderedDict(
+                    [("enabled", True), ("format", "HH:mm"), ("show_date", False)]
+                ),
+            ),
             ("notification_poll_seconds", 30),
             ("notification_lookahead", "0m"),
             ("default_limit", ""),

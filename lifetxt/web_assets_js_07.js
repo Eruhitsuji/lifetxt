@@ -347,6 +347,7 @@
     });
     async function loadConfig() {
       appConfig = await api("/api/config");
+      _syncWebClocks();
       applyConfiguredTheme();
       applyConfiguredDashboard();
       initAccessibilityPrefs();

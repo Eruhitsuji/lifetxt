@@ -257,6 +257,33 @@ def schema_bundle_v5():
                     "properties": {
                         "config_version": {"type": "integer", "minimum": 1},
                         "default_workspace": {"type": "string"},
+                        "web": {
+                            "type": "object",
+                            "additionalProperties": True,
+                            "properties": {
+                                "top_clock": {
+                                    "type": "object",
+                                    "additionalProperties": True,
+                                    "properties": {
+                                        "enabled": {"type": "boolean", "default": True},
+                                        "format": {
+                                            "type": "string",
+                                            "enum": [
+                                                "HH:mm",
+                                                "HH:mm:ss",
+                                                "h:mm a",
+                                                "h:mm:ss a",
+                                            ],
+                                            "default": "HH:mm",
+                                        },
+                                        "show_date": {
+                                            "type": "boolean",
+                                            "default": False,
+                                        },
+                                    },
+                                },
+                            },
+                        },
                         "paths": {"type": "array", "items": {"type": "string"}},
                         "write_file": {"type": "string"},
                         "config": {

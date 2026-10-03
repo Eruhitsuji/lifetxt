@@ -92,7 +92,6 @@
     let statsLoaded = false;
 
     // ── Kiosk mode (bulletin board / 掲示板モード) ────────────────
-    let _kioskClockTimer = null;
     let _kioskScrollTimer = null;
     let _kioskAutoScroll = null;
 
@@ -127,23 +126,73 @@
       }
     }
 
-    function _kioskStartClock() {
-      if (_kioskClockTimer) clearInterval(_kioskClockTimer);
-      const update = () => {
-        const now = new Date();
-        const date = now.toLocaleDateString(undefined, { weekday:"short", month:"short", day:"numeric" });
-        const time = now.toLocaleTimeString(undefined, { hour:"2-digit", minute:"2-digit" });
-        const el = document.getElementById("kiosk-clock");
-        if (el) el.textContent = date + "  " + time;
+    // One browser-local time source and timer serve both Top and Kiosk.
+    const TOP_CLOCK_FORMATS = ["HH:mm", "HH:mm:ss", "h:mm a", "h:mm:ss a"];
+    let _webClockTimer = null;
+
+    function _topClockSettings() {
+      const raw = appConfig?.web?.top_clock;
+      const settings = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+      return {
+        enabled: typeof settings.enabled === "boolean" ? settings.enabled : true,
+        format: TOP_CLOCK_FORMATS.includes(settings.format) ? settings.format : "HH:mm",
+        showDate: settings.show_date === true,
       };
-      update();
-      _kioskClockTimer = setInterval(update, 1000);
     }
 
+    function _formatWebClock(now, settings = null) {
+      if (!settings) {
+        const date = now.toLocaleDateString(undefined, { weekday:"short", month:"short", day:"numeric" });
+        const time = now.toLocaleTimeString(undefined, { hour:"2-digit", minute:"2-digit" });
+        return date + "  " + time;
+      }
+      const pad = value => String(value).padStart(2, "0");
+      const format = TOP_CLOCK_FORMATS.includes(settings.format) ? settings.format : "HH:mm";
+      const hour = now.getHours();
+      const twelveHour = format.startsWith("h:");
+      let text = (twelveHour ? String(hour % 12 || 12) : pad(hour)) + ":" + pad(now.getMinutes());
+      if (format.includes("ss")) text += ":" + pad(now.getSeconds());
+      if (twelveHour) text += hour < 12 ? " AM" : " PM";
+      if (settings.showDate) text = now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate()) + " " + text;
+      return text;
+    }
+
+    function _updateWebClocks() {
+      const now = new Date();
+      const settings = _topClockSettings();
+      const top = document.getElementById("top-clock");
+      const kiosk = document.getElementById("kiosk-clock");
+      if (top && !top.hidden) {
+        top.textContent = _formatWebClock(now, settings);
+        top.dateTime = now.toISOString();
+      }
+      if (kiosk && isKioskMode()) {
+        kiosk.textContent = _formatWebClock(now);
+        kiosk.dateTime = now.toISOString();
+      }
+    }
+
+    function _syncWebClocks() {
+      if (_webClockTimer !== null) clearInterval(_webClockTimer);
+      _webClockTimer = null;
+      const settings = _topClockSettings();
+      const top = document.getElementById("top-clock");
+      const kioskActive = isKioskMode();
+      const topActive = settings.enabled && !kioskActive && !isDisplayMode() && !document.body.classList.contains("capture-mode") && location.pathname.replace(/\/+$/, "") !== "/capture";
+      if (top) {
+        top.hidden = !topActive;
+        top.style.minWidth = (settings.showDate ? 11 : 0) + (settings.format.includes("ss") ? 8 : 5) + (settings.format.startsWith("h:") ? 3 : 0) + "ch";
+      }
+      _updateWebClocks();
+      if ((top && topActive) || kioskActive) _webClockTimer = setInterval(_updateWebClocks, 1000);
+    }
+
+    function _kioskStartClock() { _syncWebClocks(); }
+
     function _kioskStopClock() {
-      if (_kioskClockTimer) { clearInterval(_kioskClockTimer); _kioskClockTimer = null; }
       const el = document.getElementById("kiosk-clock");
-      if (el) el.textContent = "";
+      if (el) { el.textContent = ""; el.removeAttribute("datetime"); }
+      _syncWebClocks();
     }
 
     function _kioskStartScroll() {

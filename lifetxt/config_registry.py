@@ -181,6 +181,34 @@ CONFIG_REGISTRY = OrderedDict(
             ),
         ),
         (
+            "web.top_clock.enabled",
+            _entry(
+                "boolean",
+                True,
+                "Show the compact browser-local Top clock. Reload the page after changing.",
+                since="1.0.3",
+            ),
+        ),
+        (
+            "web.top_clock.format",
+            _entry(
+                "string",
+                "HH:mm",
+                "Top time format; unsupported values fall back to HH:mm. Reload the page after changing.",
+                allowed=["HH:mm", "HH:mm:ss", "h:mm a", "h:mm:ss a"],
+                since="1.0.3",
+            ),
+        ),
+        (
+            "web.top_clock.show_date",
+            _entry(
+                "boolean",
+                False,
+                "Prefix the Top clock with the browser-local date (YYYY-MM-DD). Reload the page after changing.",
+                since="1.0.3",
+            ),
+        ),
+        (
             "web.host",
             _entry(
                 "string",

@@ -16,8 +16,8 @@ from lifetxt import web_assets, webapp
 
 
 REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
-# #1021 intentionally changes Quick submit/preview and Focus capture fragments.
-LEGACY_PRISTINE_GIT_BLOB_SHA = "9037cd5921ac9d0076c7850318c32501e472c7ba"
+# #1058 intentionally adds the shared Top/Kiosk clock and optional date.
+LEGACY_PRISTINE_GIT_BLOB_SHA = "7efb649c92994fdb027edf0089066f45139c35fe"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )
@@ -80,7 +80,9 @@ class WebAssetExtractionTests(unittest.TestCase):
             "updateUrlFromControls();\n      const params = query();",
         ):
             self.assertIn(expected, web_assets.HTML_PAGE)
-        self.assertNotIn('<button onclick="loadItems()">Apply</button>', web_assets.HTML_PAGE)
+        self.assertNotIn(
+            '<button onclick="loadItems()">Apply</button>', web_assets.HTML_PAGE
+        )
 
     def test_split_resources_assemble_the_legacy_pristine_page(self):
         package = resources.files("lifetxt")

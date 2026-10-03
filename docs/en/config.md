@@ -747,3 +747,43 @@ the downgrade path.
 Personal Context review tag policies are optional. For example,
 `{"personal_context":{"review":{"tag_policies":{"profile":{"mode":"periodic","days":365}}}}}`.
 Tags are workspace-defined conventions; no policy is assigned to a tag by default.
+
+### Compact Top clock
+
+The existing Web UI header shows a small clock by default (`HH:mm`). Configure
+it in `.lifetxt.json` (see `examples/config/personal.lifetxt.json`):
+
+```json
+{
+  "web": {
+    "top_clock": {
+      "enabled": true,
+      "format": "HH:mm:ss",
+      "show_date": true
+    }
+  }
+}
+```
+
+| Key | Type | Default | Behavior |
+| --- | --- | --- | --- |
+| `web.top_clock.enabled` | boolean | `true` | Show/hide the Top clock. |
+| `web.top_clock.format` | string | `HH:mm` | `HH:mm`, `HH:mm:ss`, `h:mm a`, or `h:mm:ss a`. |
+| `web.top_clock.show_date` | boolean | `false` | Prefix the time with `YYYY-MM-DD`. |
+
+For example, the configuration above displays `2026-10-03 21:14:37`;
+`h:mm:ss a` displays `9:14:37 PM`. The date is independent of the time format.
+The browser's current local date/time and timezone are used, matching Kiosk;
+`defaults.timezone` affects records, not these clocks. Both clocks share a
+client-side timer and make no clock requests to the server. Kiosk retains its
+existing localized date/time display; Top settings do not alter Kiosk. Top's
+clock is hidden in Kiosk, Display, and Quick Capture modes.
+
+Reload the Web page after changing settings; no server restart is required.
+These non-secret settings use normal configuration-layer provenance and can be
+inspected with `lifetxt config explain web.top_clock.format` (or either boolean
+key). The schema/registry validate the four supported formats; if an invalid or
+unsupported value reaches the browser, it safely uses `HH:mm`. Malformed boolean
+values use the defaults. Omitted settings use the defaults. No config-version
+migration is needed; older builds ignore these optional keys on read, and the
+clock enhancement is absent after downgrade.

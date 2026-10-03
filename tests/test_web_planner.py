@@ -167,7 +167,7 @@ class PlannerTests(unittest.TestCase):  # pragma: no cover -- covered in web-ext
             'id="detail-dialog"',
             "showDetail(record,match)",
             "row.setAttribute('role','button')",
-            "expected_source_revision:sourceRevision",
+            "expected_source_revision:typeof sourceRevision===\'string\'?sourceRevision:\'\'",
             "sourceRevision=tasks.source_revision",
         ):
             self.assertIn(expected, PLANNER_HTML_PAGE)

@@ -2,6 +2,32 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-usability-children-1041
+      capability_id: cap-web-mobile-planner
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1041
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1041
+      pull_request: null
+      changed_files_or_scope:
+        - lifetxt/web_assets.html
+        - lifetxt/web_assets_css_02.css
+        - lifetxt/web_assets_js_03.js
+        - lifetxt/web_assets_js_14.js
+        - lifetxt/web_planner.html
+        - lifetxt/web_planner.css
+        - lifetxt/web_planner.js
+        - lifetxt/webapp.py
+        - tests/test_web_assets.py
+        - tests/test_web_planner.py
+      tests_or_evidence:
+        - "Planner and Quick Capture links share surface styling in More"
+        - "Planner provides read-only record detail and revision-safe Quick Capture"
+        - "Top Items uses neutral newest-first default ordering and an Active preset"
+        - "Planner form controls share accessible touch and focus defaults"
+      notes: >-
+        Integrates child issues #1042 through #1047 under epic #1041; the six
+        child requirement identifiers are represented by this integration chain.
+      status: implemented
+
     - requirement_id: req-web-surface-navigation-placement
       capability_id: cap-web-mobile-planner
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1039

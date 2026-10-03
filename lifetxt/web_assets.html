@@ -173,6 +173,7 @@ __LIFETXT_WEB_STYLES__  </style>
         <button class="filter-btn" data-status="" onclick="setStatusFilter('')">All</button>
         <button class="filter-btn" data-status="[ ]" onclick="toggleStatusFilter('[ ]')">○ Open</button>
         <button class="filter-btn" data-status="[/]" onclick="toggleStatusFilter('[/]')">◑ In Progress</button>
+        <button class="filter-btn" data-status="__active__" onclick="setActiveStatusFilter()">● <span data-i18n="Active only">Active</span></button>
         <button class="filter-btn" data-status="[x]" onclick="toggleStatusFilter('[x]')">✓ Done</button>
         <button class="filter-btn" data-status="[-]" onclick="toggleStatusFilter('[-]')">✕ Cancelled</button>
         <button class="filter-btn" data-status="__blocked__" onclick="toggleBlockedFilter()" title="Items blocked by open dependencies">⚡ Blocked</button>

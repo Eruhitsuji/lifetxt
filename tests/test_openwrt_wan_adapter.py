@@ -76,9 +76,10 @@ class OpenWrtWanAdapterTests(unittest.TestCase):
             mini = directory / "mini"
             mini.write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
             mini.chmod(0o755)
+            self.assertEqual(0, self.run_adapter("WAN_UP", life, state, mini).returncode)
             result = self.run_adapter("WAN_DOWN", life, state, mini)
             self.assertNotEqual(0, result.returncode)
-            self.assertFalse(state.exists())
+            self.assertEqual("stable=WAN_UP\n", state.read_text())
 
 
 if __name__ == "__main__":

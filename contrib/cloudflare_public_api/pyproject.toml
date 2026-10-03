@@ -1,0 +1,11 @@
+[project]
+name = "lifetxt-cloudflare-public-api-poc"
+version = "0.0.0"
+requires-python = ">=3.13"
+dependencies = ["lifetxt"]
+
+[dependency-groups]
+dev = ["workers-py", "workers-runtime-sdk"]
+
+[tool.uv.sources]
+lifetxt = { path = "../../.cache/wheels/lifetxt-1.0.3-py3-none-any.whl" }

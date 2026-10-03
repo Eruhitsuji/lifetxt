@@ -1,6 +1,20 @@
 schema_version: 1
 
 capabilities:
+  - id: cap-core-import-boundary
+    name: Platform-neutral Core import boundary
+    summary: Explicit small import surface for authoritative parser and shared Core operations, with legacy integration bootstrap kept out of package-root import.
+    status: active
+    owner: Eruhitsuji
+    source_requirements: [req-core-import-boundary-refactor]
+    implementation_locations: [lifetxt/__init__.py, lifetxt/core.py, lifetxt/_legacy_bootstrap.py, lifetxt/entrypoint.py]
+    public_interfaces: [lifetxt.core]
+    tests_or_evidence: [tests/test_core_import_boundary.py, docs/design/core-import-boundary.md]
+    related_issues: [https://github.com/Eruhitsuji/lifetxt/issues/1055, https://github.com/Eruhitsuji/lifetxt/issues/827]
+    related_pull_requests: [https://github.com/Eruhitsuji/lifetxt/pull/1057]
+    reuse_policy: platform-neutral embedding surface; preserve existing integration semantics
+    replacement: {replaces: [], replaced_by: null, deprecation_issue: null}
+
   - id: cap-cloudflare-public-api-feasibility-poc
     name: Cloudflare Public API feasibility PoC
     summary: Isolated experimental evidence for running authoritative Python Core in a stateless Cloudflare Worker; not a production API.

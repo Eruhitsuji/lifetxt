@@ -1,0 +1,15 @@
+schema_version: 1
+requirements:
+  - id: req-core-import-boundary-refactor
+    kind: ADDED
+    statement: Embedding consumers can import authoritative Core operations without package-root eager initialization, while CLI/Web/Remote compatibility remains explicit and behavior-compatible.
+    acceptance_criteria:
+      - lifetxt.core exposes parser, conversion, quick-input, and priority-matrix operations.
+      - package-root import does not load legacy runtime, release, Web, or Remote installer modules.
+      - CLI entrypoint bootstraps the legacy compatibility surface before dispatch.
+      - Existing targeted CLI, Web, Remote, safety, and runtime tests remain green.
+      - Import time and module graph measurements are captured and comparable for root and Core imports.
+      - No Cloudflare-specific conditional or deployment code is added.
+    constraints: [preserve package-root exports, no public API contract, no storage or network side effects]
+    owner: Eruhitsuji
+open_questions: []

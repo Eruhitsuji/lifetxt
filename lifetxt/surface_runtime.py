@@ -102,6 +102,9 @@ def operation_names(surface=None):
 
 def operation_matrix():
     """Return a stable JSON-compatible surface/capability matrix."""
+    from . import bootstrap_legacy_surfaces
+
+    bootstrap_legacy_surfaces()
     rows = []
     for name, spec in OPERATION_REGISTRY.items():
         rows.append(

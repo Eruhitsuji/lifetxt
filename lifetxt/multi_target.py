@@ -10,11 +10,12 @@ fails.  Rollback failure is never hidden.
 from __future__ import unicode_literals
 
 import contextlib
+import importlib
 import json
 import os
 from collections import namedtuple
 
-from . import mutation
+mutation = importlib.import_module(".mutation", __package__)
 from .mutation import MISSING_HASH, FileLock, MutationConflict
 
 

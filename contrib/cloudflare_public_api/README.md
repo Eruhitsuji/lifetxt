@@ -22,6 +22,23 @@ cd contrib/cloudflare_public_api
 uv sync
 ```
 
+## Manual Cloudflare reproduction
+
+An active Cloudflare account with Workers & Pages access is required for the
+remote step. The local `pywrangler dev` step does not require an account.
+
+For the approved manual PoC flow, authenticate interactively with Wrangler:
+
+```text
+npx wrangler login --device --use-keyring
+npx wrangler whoami
+```
+
+Complete the browser/device approval when prompted. On Windows, the keyring
+option uses the OS credential store/Credential Manager where supported. Do not
+copy credentials, OAuth values, or tokens into the repository or evidence.
+An API Token was not needed for this manual OAuth PoC flow.
+
 Run the local Worker from this directory:
 
 ```text
@@ -37,7 +54,7 @@ client:
 GET  http://127.0.0.1:8787/health
 GET  http://127.0.0.1:8787/v1/info
 POST http://127.0.0.1:8787/v1/check
-     {"text":"- [ ] minimal"}
+     {"text":"[ ] T \"Read paper\""}
 GET  http://127.0.0.1:8787/__poc/smoke
 ```
 
@@ -64,6 +81,19 @@ After local verification, a human must approve any deployment. The exact
 command is `uv run pywrangler deploy` from this directory. It would
 create/update only the named Worker and its `workers.dev` endpoint; no D1, KV,
 R2, Durable Object, custom domain, or user-content storage is configured.
+
+The deployed PoC endpoint is:
+
+`https://lifetxt-cloudflare-public-api-poc.leo10070021.workers.dev`
+
+To remove the temporary PoC Worker after review, use the authenticated account
+context and explicitly confirm the target name:
+
+```text
+npx wrangler delete lifetxt-cloudflare-public-api-poc
+```
+
+Deletion is a separate human cleanup decision and is not part of local setup.
 
 Future release automation must use `CLOUDFLARE_ACCOUNT_ID` and a least-
 privilege `CLOUDFLARE_API_TOKEN` in a protected GitHub Environment, deploy the

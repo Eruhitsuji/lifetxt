@@ -3051,7 +3051,9 @@ def public_web_config(config):
         "notification_lookahead": web.get("notification_lookahead", "0m"),
         "default_limit": web.get("default_limit", ""),
         "default_sort": web.get("default_sort", "line"),
-        "default_order": web.get("default_order", "asc"),
+        # Newest records are the neutral Web Items default; explicit workspace
+        # configuration remains authoritative.
+        "default_order": web.get("default_order", "desc"),
         "due_soon_days": _int_or_default(web.get("due_soon_days"), 3),
         "week_start": _normalize_week_start(web.get("week_start")),
         "high_contrast": _truthy_config(web.get("high_contrast")),

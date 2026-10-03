@@ -66,6 +66,9 @@ capabilities:
       - req-planner-temporal-day-semantics
       - req-planner-user-note-projection
       - req-planner-presentation-customization
+      - req-planner-record-detail-view
+      - req-planner-quick-capture-revision-parity
+      - req-planner-form-control-style-consistency
     implementation_locations:
       - lifetxt/webapp.py
       - lifetxt/web_assets.py

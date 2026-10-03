@@ -162,6 +162,20 @@ class PlannerTests(unittest.TestCase):  # pragma: no cover -- covered in web-ext
         self.assertIn('past:"過去"', PLANNER_HTML_PAGE)
         self.assertIn('future:"未来"', PLANNER_HTML_PAGE)
 
+    def test_planner_details_and_revision_safe_capture_are_available(self):
+        for expected in (
+            'id="detail-dialog"',
+            "showDetail(record,match)",
+            "row.setAttribute('role','button')",
+            "expected_source_revision:typeof sourceRevision===\'string\'?sourceRevision:\'\'",
+            "sourceRevision=tasks.source_revision",
+        ):
+            self.assertIn(expected, PLANNER_HTML_PAGE)
+
+    def test_planner_form_controls_have_shared_focusable_defaults(self):
+        self.assertIn("input,select,textarea,button{font:inherit", PLANNER_HTML_PAGE)
+        self.assertIn("min-height:44px", PLANNER_HTML_PAGE)
+
     def test_month_range_reuses_agenda_for_leap_year_and_recurrence(self):
         response = self.client.get("/api/agenda?from=2031-01-27&to=2031-03-02")
         self.assertEqual(200, response.status_code)

@@ -35,6 +35,8 @@
           btn.textContent = total ? `${label} (${total})` : label;
         } else if (sv === "__blocked__") {
           btn.classList.toggle("active", isBlocked);
+        } else if (sv === "__active__") {
+          btn.classList.toggle("active", !isBlocked && selected.has("[ ]") && selected.has("[/]"));
         } else {
           btn.classList.toggle("active", selected.has(sv));
           const n = counts[sv] || 0;
@@ -284,6 +286,18 @@
       } else {
         params.set("status", [...selected].join(","));
       }
+      history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
+      applyUrlToControls();
+      loadItems();
+      syncStatusFilterBtns();
+    }
+
+    function setActiveStatusFilter() {
+      const params = query();
+      params.delete("blocked");
+      params.delete("open_only");
+      params.set("status", "[ ],[/]");
+      document.getElementById("open-only").checked = false;
       history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
       applyUrlToControls();
       loadItems();

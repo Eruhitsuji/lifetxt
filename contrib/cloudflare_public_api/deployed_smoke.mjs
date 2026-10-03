@@ -21,7 +21,7 @@ const cases = [
   ["fivehundred", Array.from({ length: 500 }, (_, i) => `[ ] T "task ${i + 1}" id:t_${i + 1}`).join("\n")],
 ];
 
-for (const path of ["/health", "/v1/info", "/__poc/smoke"]) {
+for (const path of ["/health", "/v1/info"]) {
   console.log(path, JSON.stringify(await timed(path)));
 }
 for (const [name, text] of cases) {

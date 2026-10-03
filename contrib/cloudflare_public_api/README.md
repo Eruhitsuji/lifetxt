@@ -20,6 +20,8 @@ PoC, then synchronize the PoC environment:
 uv build --wheel --out-dir .cache/wheels
 cd contrib/cloudflare_public_api
 uv sync
+npm ci
+npx wrangler --version
 ```
 
 ## Manual Cloudflare reproduction
@@ -55,8 +57,12 @@ GET  http://127.0.0.1:8787/health
 GET  http://127.0.0.1:8787/v1/info
 POST http://127.0.0.1:8787/v1/check
      {"text":"[ ] T \"Read paper\""}
-GET  http://127.0.0.1:8787/__poc/smoke
 ```
+
+The `/v1/info` response uses `engine_base_revision` for the authoritative
+engine revision. It is not the complete adapter source revision. The already
+deployed temporary Worker version used the earlier legacy field
+`source_revision`; this historical difference is retained in `RESULTS.md`.
 
 The local port may be changed by Wrangler; use the URL it prints. The
 `deployed_smoke.mjs` script is a convenient bounded client for a deployed or
@@ -72,8 +78,11 @@ Routes are deliberately non-contractual:
 * `GET /v1/info`
 * `POST /v1/check` with `{"text": "..."}`
 
-The in-process smoke script also exercises conversion, quick input resolution,
-and priority classification without exposing those as HTTP endpoints.
+The in-process `smoke_native.py` script exercises conversion, quick input
+resolution, and priority classification without exposing those as HTTP
+endpoints. The already-deployed historical Worker also had a temporary
+`/__poc/smoke` route; the checked-in adapter removes that route and does not
+claim it as part of the intended HTTP surface.
 
 ## Deployment approval boundary
 

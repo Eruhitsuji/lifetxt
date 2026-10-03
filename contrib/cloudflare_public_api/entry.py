@@ -25,7 +25,7 @@ from lifetxt.priority_matrix import classify_item
 from lifetxt.quick_input import resolve_quick_input
 SHARED_IMPORT_SECONDS_AFTER_ROOT = round(time.perf_counter() - _shared_import_started, 6)
 
-SOURCE_REVISION = "0d340f0e24b60d3ee6cd95186ac0fd9bec6b715a"
+ENGINE_BASE_REVISION = "0d340f0e24b60d3ee6cd95186ac0fd9bec6b715a"
 
 
 def _json(value, status=200):
@@ -64,7 +64,7 @@ class Default(WorkerEntrypoint):
                 "service": "lifetxt-public-api-poc",
                 "engine_version": lifetxt.__version__,
                 "runtime": "cloudflare-python-worker",
-                "source_revision": SOURCE_REVISION,
+                "engine_base_revision": ENGINE_BASE_REVISION,
                 "package_root_import_seconds": PACKAGE_ROOT_IMPORT_SECONDS,
                 "shared_import_seconds_after_root": SHARED_IMPORT_SECONDS_AFTER_ROOT,
             })
@@ -74,8 +74,6 @@ class Default(WorkerEntrypoint):
             if not isinstance(text, str):
                 return _json({"error": "text must be a string"}, status=400)
             return _json(check_text(text))
-        if path == "__poc/smoke":
-            return _json(shared_core_smoke('[ ] T "日本語 smoke" id:smoke_1 due:2026-10-03\n'))
         return _json({"error": "not found"}, status=404)
 
 

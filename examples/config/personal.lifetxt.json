@@ -15,6 +15,9 @@
       "write_file": "life.txt"
     }
   },
+  "web": {
+    "top_clock": { "enabled": true, "format": "HH:mm:ss", "show_date": true }
+  },
   "defaults": {
     "person": "self",
     "timezone": "Asia/Tokyo"

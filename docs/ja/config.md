@@ -553,3 +553,44 @@ metadata のままであるため、life.txt file の migration は不要です 
 Personal Context のタグ別再確認方針は任意です。例:
 `{"personal_context":{"review":{"tag_policies":{"profile":{"mode":"periodic","days":365}}}}}`。
 タグはワークスペース側で定義する慣例で、タグ名だけで方針は適用されません。
+
+### Topの小型時計
+
+既存Web UIのヘッダーに小型時計を表示します。既定の形式は`HH:mm`です。
+`.lifetxt.json`に次のように設定してください
+（`examples/config/personal.lifetxt.json`にも例があります）。
+
+```json
+{
+  "web": {
+    "top_clock": {
+      "enabled": true,
+      "format": "HH:mm:ss",
+      "show_date": true
+    }
+  }
+}
+```
+
+| キー | 型 | 既定値 | 動作 |
+| --- | --- | --- | --- |
+| `web.top_clock.enabled` | boolean | `true` | Topの時計表示をON/OFFにします。 |
+| `web.top_clock.format` | string | `HH:mm` | `HH:mm`、`HH:mm:ss`、`h:mm a`、`h:mm:ss a`から選択します。 |
+| `web.top_clock.show_date` | boolean | `false` | 時刻の前に`YYYY-MM-DD`形式の日付を付けます。 |
+
+上記の例では`2026-10-03 21:14:37`と表示します。
+`h:mm:ss a`なら`9:14:37 PM`のような12時間表記になります。
+日付表示は時刻の形式とは独立して切り替えられます。
+Kioskと同じく、ブラウザの現在のローカル日時・タイムゾーンを使用します。
+`defaults.timezone`はレコード用であり、これらの時計には適用されません。
+TopとKioskはクライアント側のタイマーを共有し、時計更新用のサーバ通信は行いません。
+Kioskの既存の日付・時刻のロケール表示は維持し、Top用設定の影響を受けません。
+Kiosk、Display、Quick CaptureモードではTop用時計を非表示にします。
+
+設定変更後はWebページを再読み込みしてください。サーバ再起動は不要です。
+これらは秘密情報を含まない設定で、通常の設定レイヤーによる由来の追跡が適用されます。
+`lifetxt config explain web.top_clock.format`などで各キーを説明できます。
+スキーマとレジストリで4種類の形式を検証しますが、不正・未対応の値がブラウザに
+渡った場合は安全に`HH:mm`へフォールバックします。不正なboolean値は既定値を使用します。
+設定省略時も既定値を使用します。設定バージョンの移行は不要です。
+旧版は読み取り時に追加キーを無視し、ダウングレード後は時計の追加機能がなくなります。

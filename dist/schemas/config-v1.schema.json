@@ -499,6 +499,36 @@
       },
       "type": "object"
     },
+    "web": {
+      "additionalProperties": true,
+      "properties": {
+        "top_clock": {
+          "additionalProperties": true,
+          "properties": {
+            "enabled": {
+              "default": true,
+              "type": "boolean"
+            },
+            "format": {
+              "default": "HH:mm",
+              "enum": [
+                "HH:mm",
+                "HH:mm:ss",
+                "h:mm a",
+                "h:mm:ss a"
+              ],
+              "type": "string"
+            },
+            "show_date": {
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
     "workspace": {
       "additionalProperties": true,
       "properties": {

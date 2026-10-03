@@ -11,7 +11,7 @@ capabilities:
     public_interfaces: [lifetxt.core]
     tests_or_evidence: [tests/test_core_import_boundary.py, docs/design/core-import-boundary.md]
     related_issues: [https://github.com/Eruhitsuji/lifetxt/issues/1055, https://github.com/Eruhitsuji/lifetxt/issues/827]
-    related_pull_requests: []
+    related_pull_requests: [https://github.com/Eruhitsuji/lifetxt/pull/1057]
     reuse_policy: platform-neutral embedding surface; preserve existing integration semantics
     replacement: {replaces: [], replaced_by: null, deprecation_issue: null}
 

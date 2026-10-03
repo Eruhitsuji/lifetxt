@@ -34,7 +34,7 @@ class OpenWrtWanAdapterTests(unittest.TestCase):
             life = directory / "life.txt"
             life.write_text("[ ] T \"seed\" id:seed\n", encoding="utf-8")
             state = directory / "state"
-            calls = directory / "calls"
+            calls = pathlib.Path(str(state) + ".calls")
             mini = directory / "mini"
             mini.write_text(
                 "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$LIFETXT_CALLS\"\n",

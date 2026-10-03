@@ -4,6 +4,34 @@ from lifetxt.remote_client import *
 
 
 class RemoteClientTests(unittest.TestCase):
+    def test_default_profile_round_trip_and_explicit_override(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = os.path.join(d, "profiles.json")
+            set_profile("one", "https://one.example", path=p)
+            set_profile("two", "https://two.example", path=p)
+            with self.assertRaises(KeyError):
+                resolve_profile(path=p)
+            use_profile("two", p)
+            self.assertEqual(resolve_profile(path=p)[0], "two")
+            self.assertEqual(resolve_profile("one", p)[0], "one")
+
+    def test_single_profile_is_backward_compatible_fallback(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = os.path.join(d, "profiles.json")
+            set_profile("only", "https://one.example", path=p)
+            self.assertEqual(resolve_profile(path=p)[0], "only")
+
+    def test_unconfigured_error_is_actionable(self):
+        with tempfile.TemporaryDirectory() as d:
+            with self.assertRaisesRegex(KeyError, "remote setup"):
+                resolve_profile(path=os.path.join(d, "profiles.json"))
+
+    def test_default_metadata_is_optional_for_existing_files(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = os.path.join(d, "profiles.json")
+            with open(p, "w") as handle:
+                handle.write('{"version": 3, "profiles": {"home": {"url": "https://example.test"}}}')
+            self.assertEqual(resolve_profile(path=p)[0], "home")
     def test_profiles_store_token_env_only(self):
         with tempfile.TemporaryDirectory() as d:
             p = os.path.join(d, "profiles.json")

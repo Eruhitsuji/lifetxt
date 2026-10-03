@@ -52,7 +52,7 @@ def _normalized_profile(row):
 def _load(path=None):
     target = profile_path(path)
     if not os.path.exists(target):
-        return {"version": PROFILE_VERSION, "profiles": {}}
+        return {"version": PROFILE_VERSION, "profiles": {}, "default_profile": None}
     with open(target, encoding="utf-8") as handle:
         data = json.load(handle)
     profiles = data.get("profiles") if isinstance(data, dict) else None
@@ -61,7 +61,8 @@ def _load(path=None):
     migrated = OrderedDict()
     for name, row in sorted(profiles.items()):
         migrated[str(name)] = _normalized_profile(row)
-    return {"version": PROFILE_VERSION, "profiles": migrated}
+    default = data.get("default_profile") if isinstance(data, dict) else None
+    return {"version": PROFILE_VERSION, "profiles": migrated, "default_profile": str(default) if default else None}
 
 
 def _save(data, path=None):
@@ -71,6 +72,7 @@ def _save(data, path=None):
         os.makedirs(parent, exist_ok=True)
     payload = {
         "version": PROFILE_VERSION,
+        "default_profile": data.get("default_profile"),
         "profiles": OrderedDict(
             (str(name), _normalized_profile(row))
             for name, row in sorted((data.get("profiles") or {}).items())
@@ -122,6 +124,32 @@ def set_profile(
 
 def list_profiles(path=None):
     return OrderedDict(sorted(_load(path)["profiles"].items()))
+
+
+def default_profile(path=None):
+    data = _load(path)
+    value = data.get("default_profile")
+    return value if value in data["profiles"] else None
+
+
+def use_profile(name, path=None):
+    data = _load(path)
+    if str(name) not in data["profiles"]:
+        raise KeyError("Unknown remote profile: %s" % name)
+    data["default_profile"] = str(name)
+    _save(data, path)
+    return str(name)
+
+
+def resolve_profile(name=None, path=None):
+    selected = str(name) if name else default_profile(path)
+    if not selected:
+        profiles = list_profiles(path)
+        if len(profiles) == 1:
+            selected = next(iter(profiles))
+    if not selected:
+        raise KeyError("Remote client is not configured. Run: lifetxt remote setup")
+    return selected, get_profile(selected, path)
 
 
 def get_profile(name, path=None):
@@ -358,6 +386,21 @@ def install_remote_client_cli():
         command = remote_subs.add_parser("profile-list")
         command.add_argument("--profiles-file")
         command.set_defaults(func=_cmd_list)
+        command = remote_subs.add_parser("setup")
+        command.add_argument("--profile")
+        command.add_argument("--url")
+        command.add_argument("--token-env", default="LIFETXT_REMOTE_TOKEN")
+        command.add_argument("--profiles-file")
+        command.add_argument("--non-interactive", action="store_true")
+        command.set_defaults(func=_cmd_setup)
+        command = remote_subs.add_parser("use")
+        command.add_argument("profile")
+        command.add_argument("--profiles-file")
+        command.set_defaults(func=_cmd_use)
+        command = remote_subs.add_parser("status")
+        command.add_argument("--profile")
+        command.add_argument("--profiles-file")
+        command.set_defaults(func=_cmd_status)
         command = remote_subs.add_parser("profile-show")
         command.add_argument("name")
         command.add_argument("--profiles-file")
@@ -375,7 +418,7 @@ def install_remote_client_cli():
             ("diagnose", _cmd_diagnose),
         ):
             command = remote_subs.add_parser(command_name)
-            command.add_argument("profile")
+            command.add_argument("profile", nargs="?")
             command.add_argument("--profiles-file")
             command.set_defaults(func=function)
         command = remote_subs.add_parser("get")
@@ -434,6 +477,25 @@ def _cmd_set(args):
     )
 
 
+def _cmd_use(args):
+    return _emit({"default_profile": use_profile(args.profile, args.profiles_file)})
+
+
+def _cmd_setup(args):
+    interactive = not args.non_interactive
+    name = args.profile or (input("Profile name [default]: ").strip() if interactive else None) or "default"
+    url = args.url or (input("Server URL: ").strip() if interactive else None)
+    if not url:
+        raise ValueError("remote setup requires --url in non-interactive mode")
+    token_env = args.token_env
+    if interactive and args.token_env == "LIFETXT_REMOTE_TOKEN":
+        token_env = input("Token environment variable [LIFETXT_REMOTE_TOKEN]: ").strip() or token_env
+    profile = set_profile(name, url, token_env, path=args.profiles_file)
+    result = test_connection(profile)
+    use_profile(name, args.profiles_file)
+    return _emit({"profile": name, "default_profile": name, "connection": result})
+
+
 def _cmd_list(args):
     return _emit(list_profiles(args.profiles_file))
 
@@ -447,11 +509,18 @@ def _cmd_delete(args):
 
 
 def _profile(args):
-    return get_profile(args.profile, args.profiles_file)
+    return resolve_profile(args.profile, args.profiles_file)[1]
 
 
 def _cmd_test(args):
     return _emit(test_connection(_profile(args)))
+
+
+def _cmd_status(args):
+    name, profile = resolve_profile(args.profile, args.profiles_file)
+    result = test_connection(profile)
+    capabilities = result.get("capabilities") or {}
+    return _emit({"profile": name, "server": profile["url"], "connection": "OK", "protocol": result.get("negotiated_protocol"), "authentication": "OK", "capabilities": sorted(capabilities) if isinstance(capabilities, dict) else []})
 
 
 def _cmd_snapshot(args):

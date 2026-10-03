@@ -15968,6 +15968,21 @@ traceability:
       notes: Publish and reload only validated clock settings; main timezone by default with independent IANA override, safe custom tokens including weekdays and ISO weeks. Browser execution is unavailable in this environment (no supported Chrome); independent browser and human merge review remain required.
       status: implemented
 
+    - requirement_id: req-remote-client-guided-setup
+      capability_id: cap-remote-cli-read-client
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1062
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1063
+      changed_files_or_scope:
+        - lifetxt/remote_client.py
+        - tests/test_remote_client_v19.py
+      tests_or_evidence:
+        - tests.test_remote_client_v19
+        - default profile resolution and explicit override coverage
+        - backward-compatible single-profile fallback and actionable setup error coverage
+      release_or_deployment: null
+      notes: Extends the existing shared Remote CLI/TUI profile authority without storing bearer tokens.
+      status: in_progress
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

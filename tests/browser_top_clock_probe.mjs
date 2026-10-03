@@ -4,10 +4,11 @@ import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 
-const [browserPath, htmlPath] = process.argv.slice(2);
-if (!browserPath || !htmlPath) throw new Error("browser path and HTML path are required");
+const [browserPath, htmlPath, configPath] = process.argv.slice(2);
+if (!browserPath || !htmlPath || !configPath) throw new Error("browser path and HTML path are required");
 
 const html = await readFile(htmlPath);
+const publicConfig = JSON.parse(await readFile(configPath, "utf8"));
 let requests = 0;
 const server = http.createServer((request, response) => {
   if (request.url === "/" || request.url.startsWith("/?")) {
@@ -17,7 +18,7 @@ const server = http.createServer((request, response) => {
   }
   requests++;
   response.writeHead(200, {"content-type": "application/json"});
-  const data = request.url === "/api/config" ? {web: {top_clock: {enabled: true, format: "h:mm:ss a", show_date: true}}, notifications: {enabled: false}} : {items: [], records: [], projects: [], contexts: [], tags: [], areas: [], completion: {}, warnings: []};
+  const data = request.url === "/api/config" ? publicConfig : {items: [], records: [], projects: [], contexts: [], tags: [], areas: [], completion: {}, warnings: []};
   response.end(JSON.stringify(data));
 });
 await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));

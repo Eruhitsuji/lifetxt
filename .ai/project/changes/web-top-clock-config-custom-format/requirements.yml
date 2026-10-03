@@ -1,0 +1,9 @@
+schema_version: 1
+requirements:
+  - id: req-web-top-clock-public-config-custom-format
+    kind: CHANGED
+    statement: Top clock settings must reach the browser through the real public config API, follow the main timezone by default, and allow independent zones and safe custom date/time formats.
+    acceptance_criteria: [public allowlist, persisted changes visible on page reload, no auth or workspace reload, IANA override, weekday and ISO week formats, legacy formats accepted, sanitized malformed-file failure, bilingual examples and published schema]
+    constraints: [bounded text-only formats, shared timer, no clock polling]
+    owner: Eruhitsuji
+open_questions: []

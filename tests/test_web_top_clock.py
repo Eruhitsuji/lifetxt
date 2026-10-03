@@ -21,13 +21,23 @@ ROOT = Path(__file__).resolve().parents[1]
 class TopClockConfigTests(unittest.TestCase):
     def test_defaults_and_explain_metadata(self):
         self.assertEqual(
-            {"enabled": True, "format": "HH:mm", "show_date": False},
+            {
+                "enabled": True,
+                "format": "HH:mm",
+                "show_date": False,
+                "date_separator": "-",
+                "timezone": "main",
+                "show_timezone": False,
+            },
             config_template()["web"]["top_clock"],
         )
         for key, value, kind in (
             ("enabled", True, "boolean"),
             ("format", "HH:mm", "string"),
             ("show_date", False, "boolean"),
+            ("date_separator", "-", "string"),
+            ("timezone", "main", "string"),
+            ("show_timezone", False, "boolean"),
         ):
             entry = explain_key("web.top_clock." + key)
             self.assertEqual(value, entry["default"])
@@ -35,10 +45,7 @@ class TopClockConfigTests(unittest.TestCase):
             self.assertFalse(entry["secret"])
             self.assertFalse(entry["restart_required"])
             self.assertFalse(entry["deprecated"])
-        self.assertEqual(
-            ["HH:mm", "HH:mm:ss", "h:mm a", "h:mm:ss a"],
-            explain_key("web.top_clock.format")["allowed_values"],
-        )
+        self.assertIsNone(explain_key("web.top_clock.format")["allowed_values"])
 
     def test_authoritative_schema_matches_published_and_example(self):
         schema = schema_bundle()["config-v1.schema.json"]
@@ -48,14 +55,12 @@ class TopClockConfigTests(unittest.TestCase):
         self.assertEqual(schema, published)
         clock = schema["properties"]["web"]["properties"]["top_clock"]
         self.assertEqual("object", clock["type"])
-        self.assertEqual(
-            ["HH:mm", "HH:mm:ss", "h:mm a", "h:mm:ss a"],
-            clock["properties"]["format"]["enum"],
-        )
+        self.assertIn("pattern", clock["properties"]["format"])
+        self.assertEqual(128, clock["properties"]["format"]["maxLength"])
         example = json.loads(
             (ROOT / "examples/config/personal.lifetxt.json").read_text()
         )
-        self.assertTrue(example["web"]["top_clock"]["show_date"])
+        self.assertEqual("main", example["web"]["top_clock"]["timezone"])
 
     def test_optional_settings_do_not_require_config_migration(self):
         from lifetxt.config_validation import validate_config
@@ -69,7 +74,14 @@ class TopClockConfigTests(unittest.TestCase):
         self.assertIn("font-variant-numeric: tabular-nums", HTML_PAGE)
         for language in ("en", "ja"):
             documentation = (ROOT / f"docs/{language}/config.md").read_text()
-            for key in ("enabled", "format", "show_date"):
+            for key in (
+                "enabled",
+                "format",
+                "show_date",
+                "timezone",
+                "date_separator",
+                "show_timezone",
+            ):
                 self.assertIn("web.top_clock." + key, documentation)
 
 
@@ -85,6 +97,7 @@ class TopClockJavaScriptTests(unittest.TestCase):
         harness = r"""
 const assert = require("node:assert/strict");
 let appConfig = {};
+const currentLanguage = () => "en";
 const location = {pathname: "/"};
 let kioskMode = false, displayMode = false, captureMode = false;
 let callbacks = new Map(), timerId = 0;
@@ -105,7 +118,7 @@ global.Date = class extends RealDate { constructor(...args) { super(...(args.len
         assertions = r"""
 const expected = ["21:14", "21:14:37", "9:14 PM", "9:14:37 PM"];
 TOP_CLOCK_FORMATS.forEach((format, index) => {
-  appConfig = {web: {top_clock: {format, show_date: true}}};
+  appConfig = {web: {top_clock: {format, show_date: true, timezone: "browser-local"}}};
   _syncWebClocks();
   assert.equal(elements["top-clock"].textContent, "2026-10-03 " + expected[index]);
   assert.equal(elements["top-clock"].dateTime, current.toISOString());
@@ -115,13 +128,13 @@ TOP_CLOCK_FORMATS.forEach((format, index) => {
 for (const raw of [null, [], "bad", {format: "<script>"}, {format: ["HH:mm:ss"]}, {enabled: "false", show_date: "true"}]) {
   appConfig = {web: {top_clock: raw}};
   _syncWebClocks();
-  assert.equal(elements["top-clock"].textContent, "21:14");
+  assert.equal(_topClockSettings().format, "HH:mm");
   assert.equal(elements["top-clock"].hidden, false);
 }
 for (const [hour, expected] of [[0, "12:00:00 AM"], [12, "12:00:00 PM"], [23, "11:00:00 PM"]]) {
   assert.equal(_formatWebClock(new RealDate(2026, 9, 3, hour), {format: "h:mm:ss a"}), expected);
 }
-appConfig = {web: {top_clock: {format: "HH:mm:ss", show_date: true}}};
+appConfig = {web: {top_clock: {format: "HH:mm:ss", show_date: true, timezone: "browser-local"}}};
 current = new RealDate(2026, 11, 31, 23, 59, 59);
 _syncWebClocks();
 assert.equal(elements["top-clock"].textContent, "2026-12-31 23:59:59");

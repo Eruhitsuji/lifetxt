@@ -262,6 +262,18 @@ def validate_config(config, use_jsonschema=True):
 
     rows.extend(config_membership_diagnostics(config))
     rows.extend(_deprecation_diagnostics(config))
+    from .web_clock_config import invalid_clock_paths
+
+    for path in invalid_clock_paths(config):
+        rows.append(
+            diagnostic(
+                "error",
+                "C010",
+                "Invalid Top clock configuration.",
+                "Use a supported date/time token pattern, boolean, separator, or IANA timezone.",
+                path,
+            )
+        )
     review_section = (
         config.get("personal_context") if isinstance(config, dict) else None
     )

@@ -1,0 +1,9 @@
+schema_version: 1
+links:
+  - requirement_id: req-web-top-clock-public-config-custom-format
+    capability_id: cap-web-surface-structure
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1060
+    pull_request: null
+    tests_or_evidence: [tests.test_web_clock_public_config, tests.test_web_top_clock, tests.test_web_assets, tests.test_web_top_clock_browser]
+    status: implemented
+gaps: [independent browser verification in an unrestricted environment]

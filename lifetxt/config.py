@@ -179,7 +179,14 @@ def config_template():
             (
                 "top_clock",
                 OrderedDict(
-                    [("enabled", True), ("format", "HH:mm"), ("show_date", False)]
+                    [
+                        ("enabled", True),
+                        ("format", "HH:mm"),
+                        ("show_date", False),
+                        ("date_separator", "-"),
+                        ("timezone", "main"),
+                        ("show_timezone", False),
+                    ]
                 ),
             ),
             ("notification_poll_seconds", 30),

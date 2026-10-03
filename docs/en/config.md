@@ -750,40 +750,51 @@ Tags are workspace-defined conventions; no policy is assigned to a tag by defaul
 
 ### Compact Top clock
 
-The existing Web UI header shows a small clock by default (`HH:mm`). Configure
-it in `.lifetxt.json` (see `examples/config/personal.lifetxt.json`):
+The Top clock defaults to the main application timezone. Choose an independent IANA timezone and a custom format:
 
 ```json
-{
-  "web": {
-    "top_clock": {
-      "enabled": true,
-      "format": "HH:mm:ss",
-      "show_date": true
-    }
-  }
-}
+{"web":{"top_clock":{"enabled":true,"timezone":"Asia/Tokyo","format":"YYYY/MM/DD HH:mm:ss (z)","show_date":false}}}
 ```
 
-| Key | Type | Default | Behavior |
-| --- | --- | --- | --- |
-| `web.top_clock.enabled` | boolean | `true` | Show/hide the Top clock. |
-| `web.top_clock.format` | string | `HH:mm` | `HH:mm`, `HH:mm:ss`, `h:mm a`, or `h:mm:ss a`. |
-| `web.top_clock.show_date` | boolean | `false` | Prefix the time with `YYYY-MM-DD`. |
+| Key | Default | Behavior |
+| --- | --- | --- |
+| `web.top_clock.enabled` | `true` | Show/hide the clock. |
+| `web.top_clock.format` | `HH:mm` | Custom token/literal format, 1–128 characters. |
+| `web.top_clock.timezone` | `main` | Main application timezone; an IANA name such as `Asia/Tokyo` or `America/New_York`; `browser-local` explicitly selects the viewer timezone. |
+| `web.top_clock.show_date` | `false` | Prefix a date when the format has no calendar tokens. |
+| `web.top_clock.date_separator` | `-` | `-` or `/` for the convenience date prefix. |
+| `web.top_clock.show_timezone` | `false` | Append the timezone label unless the format already includes `z`. |
 
-For example, the configuration above displays `2026-10-03 21:14:37`;
-`h:mm:ss a` displays `9:14:37 PM`. The date is independent of the time format.
-The browser's current local date/time and timezone are used, matching Kiosk;
-`defaults.timezone` affects records, not these clocks. Both clocks share a
-client-side timer and make no clock requests to the server. Kiosk retains its
-existing localized date/time display; Top settings do not alter Kiosk. Top's
-clock is hidden in Kiosk, Display, and Quick Capture modes.
+| Tokens | Meaning |
+| --- | --- |
+| `YYYY`, `YY` | Calendar year |
+| `M`, `MM`, `MMM`, `MMMM` | Month number or localized name |
+| `D`, `DD` | Day of month |
+| `d`, `dd`, `ddd`, `dddd`, `E` | Sunday-based weekday number, localized weekday names, ISO weekday (Monday=1) |
+| `H`, `HH`, `h`, `hh` | 24-hour / 12-hour clock |
+| `m`, `mm`, `s`, `ss`, `A`, `a` | Minutes, seconds, AM/PM (both preserve uppercase legacy output) |
+| `GGGG`, `W`, `WW` | ISO week-year and week number |
+| `z`, `Z`, `ZZ` | Zone label, offset `+09:00`, offset `+0900` |
+| `[literal]` | Literal text; escape letters that are not format tokens |
 
-Reload the Web page after changing settings; no server restart is required.
-These non-secret settings use normal configuration-layer provenance and can be
-inspected with `lifetxt config explain web.top_clock.format` (or either boolean
-key). The schema/registry validate the four supported formats; if an invalid or
-unsupported value reaches the browser, it safely uses `HH:mm`. Malformed boolean
-values use the defaults. Omitted settings use the defaults. No config-version
-migration is needed; older builds ignore these optional keys on read, and the
-clock enhancement is absent after downgrade.
+Examples: `YYYY/MM/DD HH:mm:ss (z)` → `2026/10/03 22:12:34 (JST)`;
+`YYYY/MM/DD dddd` → `2026/10/03 Saturday` (Japanese UI: `土曜日`);
+`GGGG-[W]WW-E` → `2026-W40-6`. ISO week-year can differ from calendar year.
+The original `HH:mm`, `HH:mm:ss`, `h:mm a`, and `h:mm:ss a` formats remain valid.
+
+Reload the Web page after `lifetxt config set web.top_clock.format '"YYYY/MM/DD HH:mm:ss (z)"'`
+or editing the configuration file. The existing server rereads only clock settings
+on `/api/config`; no restart is required. Main timezone, authentication and other
+server settings keep their startup values. Malformed/unreadable files return a
+generic 503 without disclosing paths or contents; fix the file and reload.
+Only allowlisted clock fields and resolved timezone metadata are published.
+Invalid field values safely fall back to defaults; `config validate` also reports
+invalid formats/timezones. Format text is rendered as text, never evaluated.
+
+Named zones track DST. For a main timezone configured as `local`/`host`, the clock
+uses the server offset returned on page reload, not the viewer's timezone.
+Omitted timezone now follows the main timezone; use `browser-local` to retain the
+previous viewer-local behavior. No data/config-version migration is required.
+Top and Kiosk share a client-side timer without clock-update network requests.
+Kiosk retains its existing localized viewer-local display. Top is hidden in
+Kiosk, Display and Quick Capture modes. Long custom formats wrap on narrow screens.

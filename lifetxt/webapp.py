@@ -180,6 +180,12 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
 
         app.state.writable_path = resolve_write_target(app.state.paths, writable_path)
     app.state.config = config or {}
+    clock_path = app.state.config.get("_path")
+    clock_config_path = (
+        os.path.abspath(clock_path)
+        if isinstance(clock_path, str) and clock_path
+        else None
+    )
     app.state.read_only = read_only
     if not read_only:
         assert_unique_workspace_ids(
@@ -380,8 +386,25 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         return backup_status_payload(app.state.config)
 
     @app.get("/api/config")
-    def get_config():
+    def get_config(response: Response):
         from .presence import COMMON_STATES
+        from .web_clock_config import public_clock_config
+
+        response.headers["Cache-Control"] = "no-store"
+        public_web = public_web_config(app.state.config)
+        if clock_config_path:
+            from .config import load_config
+
+            try:
+                current_clock_config = load_config(clock_config_path)
+            except (OSError, ValueError, UnicodeError):
+                raise HTTPException(
+                    status_code=503,
+                    detail="Could not reload Top clock settings. Check the server configuration file.",
+                ) from None
+            public_web["top_clock"] = public_clock_config(
+                current_clock_config, main_config=app.state.config
+            )
         workspace_timezone = resolve_timezone_name(app.state.config)
 
         return {
@@ -400,7 +423,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             "user": config_user_name(app.state.config),
             "notifications": public_notification_config(app.state.config),
             "ids": public_id_config(app.state.config),
-            "web": public_web_config(app.state.config),
+            "web": public_web,
             "git": public_git_config(app.state.config),
             "views": public_views_config(app.state.config),
             "users": public_users_config(app.state.config),
@@ -3035,14 +3058,20 @@ def public_web_team_config(web):
 
 
 def public_web_config(config):
+    from .web_clock_config import public_clock_config
+
     web = config_section(config, "web")
     planner = _nested_or_dotted(web, "planner")
     default_sections = ["schedule", "tasks", "habits", "notes", "journal", "review"]
     configured_sections = planner.get("sections")
-    sections = [x for x in configured_sections or default_sections if x in default_sections]
+    sections = [
+        x for x in configured_sections or default_sections if x in default_sections
+    ]
     sections = list(dict.fromkeys(str(x) for x in sections))
     sections.extend(x for x in default_sections if x not in sections)
-    hidden = [x for x in _string_list(planner.get("hidden_sections")) if x in default_sections]
+    hidden = [
+        x for x in _string_list(planner.get("hidden_sections")) if x in default_sections
+    ]
     return {
         "display_refresh": _int_or_default(web.get("display_refresh"), 60),
         "notification_poll_seconds": _int_or_default(
@@ -3059,6 +3088,7 @@ def public_web_config(config):
         "high_contrast": _truthy_config(web.get("high_contrast")),
         "reduced_motion": _truthy_config(web.get("reduced_motion")),
         "language": str(web.get("language", "") or "").strip().lower(),
+        "top_clock": public_clock_config(config),
         "theme": public_web_theme_config(web),
         "dashboard": public_web_dashboard_config(web),
         "presence": public_web_presence_config(web),

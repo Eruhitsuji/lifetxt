@@ -44,7 +44,7 @@ the PoC only, not a project-wide Python 3.14 support declaration.
 HTTP evidence at the local Wrangler port (`127.0.0.1:1461`):
 
 * `/health`: 200, `{"ok": true}`
-* `/v1/info`: 200, engine `1.0.3`, base engine revision recorded, runtime metadata
+* `/v1/info`: 200, engine `1.0.3`, `engine_base_revision` recorded, runtime metadata
 * `/v1/check`: minimal and Japanese/Unicode inputs 200/valid; malformed quoted
   input 200/invalid with `E018`; 100-record deterministic fixture 200/valid
 * internal non-contractual smoke: conversion, quick input, and priority matrix
@@ -84,6 +84,11 @@ Deployment was approved for this investigation only.
   on that engine revision, and was later captured for review in PR #1056 at
   commit `abcbd06040cc1399cba33861f4dccd0d47112dcd`. The reported base
   revision is therefore not the exact source commit for the complete adapter.
+* The deployed version returned the legacy `/v1/info` field `source_revision`
+  and exposed the temporary `/__poc/smoke` route. The checked-in post-review
+  adapter renames the field to `engine_base_revision` and removes that HTTP
+  route; no redeployment was performed, so the deployed historical evidence is
+  intentionally distinct from the current source.
 * Startup time: 2479 ms
 * Upload: 28,577.58 KiB; gzip 6,343.52 KiB
 * Deploy duration: 141.50 sec upload plus 0.68 sec trigger update

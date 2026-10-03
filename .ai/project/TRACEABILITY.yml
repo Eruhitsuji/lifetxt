@@ -5,7 +5,7 @@ traceability:
     - requirement_id: req-iot-connected-semantic-remote-poc
       capability_id: cap-iot-connected-semantic-remote-poc
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1053
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1054
       changed_files_or_scope:
         - contrib/remote/connected_semantic_event.py
         - contrib/remote/README.md

@@ -20,7 +20,7 @@ verification:
       executed_at: '2026-10-03'
       status: passed
   gaps:
-    - description: Real Chrome/mobile verification is unavailable because this environment has no supported browser; three probe tests skipped. Full discovery remains in progress, with focused final checks already passed.
+    - description: Real Chrome/mobile verification is unavailable because this environment has no supported browser; three probe tests skipped.
       tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1060
 review_ledger:
   - {reviewer: independent reviewer, review_type: implementation-and-integration, target_commit: pending, result: pending, finding_count: 0, completed_at: null}

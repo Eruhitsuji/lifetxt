@@ -15962,7 +15962,7 @@ traceability:
     - requirement_id: req-web-top-clock-public-config-custom-format
       capability_id: cap-web-surface-structure
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1060
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1061
       changed_files_or_scope: [lifetxt/web_clock_config.py, lifetxt/webapp.py, lifetxt/config.py, lifetxt/config_registry.py, lifetxt/config_validation.py, lifetxt/schema_extensions_v5.py, lifetxt/web_assets_js_13.js, lifetxt/web_assets_css_01.css, dist/schemas/config-v1.schema.json, docs/en/config.md, docs/ja/config.md, examples/config/personal.lifetxt.json, tests/test_web_clock_public_config.py, tests/test_web_top_clock.py, tests/test_web_top_clock_browser.py, tests/browser_top_clock_probe.mjs, tests/test_web_assets.py]
       tests_or_evidence: [tests.test_web_clock_public_config, tests.test_web_top_clock, tests.test_web_assets, tests.test_web_top_clock_browser]
       notes: Publish and reload only validated clock settings; main timezone by default with independent IANA override, safe custom tokens including weekdays and ISO weeks. Browser execution is unavailable in this environment (no supported Chrome); independent browser and human merge review remain required.

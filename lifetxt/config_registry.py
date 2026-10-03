@@ -185,7 +185,7 @@ CONFIG_REGISTRY = OrderedDict(
             _entry(
                 "boolean",
                 True,
-                "Show the compact browser-local Top clock. Reload the page after changing.",
+                "Show the compact Top clock. Reload the page after changing.",
                 since="1.0.3",
             ),
         ),
@@ -194,8 +194,7 @@ CONFIG_REGISTRY = OrderedDict(
             _entry(
                 "string",
                 "HH:mm",
-                "Top time format; unsupported values fall back to HH:mm. Reload the page after changing.",
-                allowed=["HH:mm", "HH:mm:ss", "h:mm a", "h:mm:ss a"],
+                "Top date/time token format (1-128 characters); date, weekday and ISO week tokens plus bracket-escaped literals. Invalid patterns fall back to HH:mm. Reload the page after changing.",
                 since="1.0.3",
             ),
         ),
@@ -204,7 +203,35 @@ CONFIG_REGISTRY = OrderedDict(
             _entry(
                 "boolean",
                 False,
-                "Prefix the Top clock with the browser-local date (YYYY-MM-DD). Reload the page after changing.",
+                "Prefix time-only clock formats with a date. Custom calendar formats supply their own date. Reload the page after changing.",
+                since="1.0.3",
+            ),
+        ),
+        (
+            "web.top_clock.date_separator",
+            _entry(
+                "string",
+                "-",
+                "Date separator for the show_date prefix of time-only formats. Reload the page after changing.",
+                allowed=["-", "/"],
+                since="1.0.3",
+            ),
+        ),
+        (
+            "web.top_clock.timezone",
+            _entry(
+                "string",
+                "main",
+                "Clock timezone: main uses the active application timezone; browser-local uses the viewer; an IANA name selects another timezone. Reload the page after changing.",
+                since="1.0.3",
+            ),
+        ),
+        (
+            "web.top_clock.show_timezone",
+            _entry(
+                "boolean",
+                False,
+                "Append a timezone label unless the custom format already includes z. Reload the page after changing.",
                 since="1.0.3",
             ),
         ),

@@ -1,0 +1,26 @@
+schema_version: 1
+verification:
+  executed:
+    - type: integration-and-regression
+      command: python -m unittest tests.test_clock_contract_v4 tests.test_timezone_clock_v3 tests.test_traceability_gate tests.test_change_package_closeout tests.test_web_clock_public_config tests.test_web_top_clock tests.test_web_assets
+      requirement_ids: [req-web-top-clock-public-config-custom-format]
+      result: Ran 55 tests -- OK; includes actual API-to-JavaScript rendering and persisted CLI reload.
+      executed_at: '2026-10-03'
+      status: passed
+    - type: lint-and-type
+      command: ruff check lifetxt tests scripts; mypy --follow-imports=skip --ignore-missing-imports lifetxt/diagnostic_contract.py
+      requirement_ids: [req-web-top-clock-public-config-custom-format]
+      result: All lint checks passed; no typing issues in the approved boundary.
+      executed_at: '2026-10-03'
+      status: passed
+    - type: documentation-and-assets
+      command: python scripts/validate_release_docs.py; node --check assembled-Web-JavaScript; ruff format --check changed formatted modules
+      requirement_ids: [req-web-top-clock-public-config-custom-format]
+      result: Documentation errors 0; assembled JavaScript syntax valid; nine changed modules already formatted.
+      executed_at: '2026-10-03'
+      status: passed
+  gaps:
+    - description: Real Chrome/mobile verification is unavailable because this environment has no supported browser; three probe tests skipped.
+      tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1060
+review_ledger:
+  - {reviewer: independent reviewer, review_type: implementation-and-integration, target_commit: pending, result: pending, finding_count: 0, completed_at: null}

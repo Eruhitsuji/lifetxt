@@ -505,23 +505,39 @@
         "top_clock": {
           "additionalProperties": true,
           "properties": {
+            "date_separator": {
+              "default": "-",
+              "enum": [
+                "-",
+                "/"
+              ],
+              "type": "string"
+            },
             "enabled": {
               "default": true,
               "type": "boolean"
             },
             "format": {
               "default": "HH:mm",
-              "enum": [
-                "HH:mm",
-                "HH:mm:ss",
-                "h:mm a",
-                "h:mm:ss a"
-              ],
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^(?:\\[[^\\[\\]\\x00-\\x1f\\x7f]*\\]|YYYY|MMMM|dddd|GGGG|MMM|ddd|YY|MM|DD|dd|HH|hh|mm|ss|WW|ZZ|M|D|d|E|H|h|m|s|A|a|W|Z|z|[^A-Za-z\\[\\]\\x00-\\x1f\\x7f])+$",
               "type": "string"
             },
             "show_date": {
               "default": false,
               "type": "boolean"
+            },
+            "show_timezone": {
+              "default": false,
+              "type": "boolean"
+            },
+            "timezone": {
+              "default": "main",
+              "description": "main, browser-local, or a validated IANA timezone name",
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
             }
           },
           "type": "object"

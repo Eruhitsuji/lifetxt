@@ -4,6 +4,8 @@ from __future__ import unicode_literals
 
 from collections import OrderedDict
 
+from .web_clock_config import CLOCK_FORMAT_PATTERN
+
 BASE = "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/"
 DRAFT = "https://json-schema.org/draft/2020-12/schema"
 
@@ -268,15 +270,28 @@ def schema_bundle_v5():
                                         "enabled": {"type": "boolean", "default": True},
                                         "format": {
                                             "type": "string",
-                                            "enum": [
-                                                "HH:mm",
-                                                "HH:mm:ss",
-                                                "h:mm a",
-                                                "h:mm:ss a",
-                                            ],
+                                            "minLength": 1,
+                                            "maxLength": 128,
+                                            "pattern": CLOCK_FORMAT_PATTERN,
                                             "default": "HH:mm",
                                         },
                                         "show_date": {
+                                            "type": "boolean",
+                                            "default": False,
+                                        },
+                                        "date_separator": {
+                                            "type": "string",
+                                            "enum": ["-", "/"],
+                                            "default": "-",
+                                        },
+                                        "timezone": {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 128,
+                                            "default": "main",
+                                            "description": "main, browser-local, or a validated IANA timezone name",
+                                        },
+                                        "show_timezone": {
                                             "type": "boolean",
                                             "default": False,
                                         },

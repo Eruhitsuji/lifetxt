@@ -16,7 +16,7 @@
     }
   },
   "web": {
-    "top_clock": { "enabled": true, "format": "HH:mm:ss", "show_date": true }
+    "top_clock": { "enabled": true, "format": "YYYY/MM/DD HH:mm:ss (z)", "timezone": "main", "show_date": false, "date_separator": "/", "show_timezone": false }
   },
   "defaults": {
     "person": "self",

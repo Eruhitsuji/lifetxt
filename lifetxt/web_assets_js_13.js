@@ -128,16 +128,93 @@
 
     // One browser-local time source and timer serve both Top and Kiosk.
     const TOP_CLOCK_FORMATS = ["HH:mm", "HH:mm:ss", "h:mm a", "h:mm:ss a"];
+    const CLOCK_FORMAT_TOKENS = ["YYYY", "YY", "MMMM", "MMM", "MM", "M", "DD", "D", "dddd", "ddd", "dd", "d", "E", "HH", "H", "hh", "h", "mm", "m", "ss", "s", "A", "a", "GGGG", "WW", "W", "ZZ", "Z", "z"].sort((a, b) => b.length - a.length);
+    const CLOCK_CALENDAR_TOKENS = new Set(["YYYY", "YY", "MMMM", "MMM", "MM", "M", "DD", "D", "dddd", "ddd", "dd", "d", "E", "GGGG", "WW", "W"]);
     let _webClockTimer = null;
+    const _clockFormatters = new Map();
+
+    function _parseClockFormat(format) {
+      if (typeof format !== "string" || !format || Array.from(format).length > 128 || /[\x00-\x1f\x7f]/.test(format)) return null;
+      const parts = [];
+      for (let i = 0; i < format.length;) {
+        if (format[i] === "[") {
+          const end = format.indexOf("]", i + 1);
+          if (end < 0 || format.slice(i + 1, end).includes("[")) return null;
+          parts.push({literal: format.slice(i + 1, end)});
+          i = end + 1;
+        } else if (/[A-Za-z]/.test(format[i])) {
+          const token = CLOCK_FORMAT_TOKENS.find(value => format.startsWith(value, i));
+          if (!token) return null;
+          parts.push({token});
+          i += token.length;
+        } else {
+          if (format[i] === "]") return null;
+          parts.push({literal: format[i++]});
+        }
+      }
+      return parts;
+    }
+
+    function _validClockZone(zone) {
+      if (typeof zone !== "string" || !zone || zone.length > 128 || !/^[A-Za-z0-9_+./-]+$/.test(zone)) return false;
+      try { new Intl.DateTimeFormat("en-US", {timeZone: zone}); return true; }
+      catch (_) { return false; }
+    }
 
     function _topClockSettings() {
       const raw = appConfig?.web?.top_clock;
       const settings = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+      const timezone = ["main", "browser-local"].includes(settings.timezone) || _validClockZone(settings.timezone) ? settings.timezone : "main";
+      const main = settings.main_timezone;
+      const mainZone = ["local", "host"].includes(main) || _validClockZone(main) ? main : "UTC";
+      const mainOffset = Number.isInteger(settings.main_utc_offset_minutes) && Math.abs(settings.main_utc_offset_minutes) <= 1440 ? settings.main_utc_offset_minutes : 0;
       return {
         enabled: typeof settings.enabled === "boolean" ? settings.enabled : true,
-        format: TOP_CLOCK_FORMATS.includes(settings.format) ? settings.format : "HH:mm",
+        format: _parseClockFormat(settings.format) ? settings.format : "HH:mm",
         showDate: settings.show_date === true,
+        dateSeparator: ["-", "/"].includes(settings.date_separator) ? settings.date_separator : "-",
+        timezone, resolvedTimezone: timezone === "main" ? mainZone : timezone,
+        mainOffset, showTimezone: settings.show_timezone === true,
       };
+    }
+
+    function _clockOffsetText(minutes, colon = true) {
+      const pad = value => String(value).padStart(2, "0");
+      return (minutes < 0 ? "-" : "+") + pad(Math.floor(Math.abs(minutes) / 60)) + (colon ? ":" : "") + pad(Math.abs(minutes) % 60);
+    }
+
+    function _clockCalendarDate(year, month, day) {
+      const value = new Date(0);
+      value.setUTCFullYear(year, month - 1, day);
+      value.setUTCHours(0, 0, 0, 0);
+      return value;
+    }
+
+    function _clockParts(now, settings) {
+      const zone = settings.resolvedTimezone || "browser-local";
+      const serverLocal = zone === "local" || zone === "host";
+      const instant = serverLocal ? new Date(now.getTime() + settings.mainOffset * 60000) : now;
+      const timeZone = serverLocal ? "UTC" : zone === "browser-local" ? undefined : zone;
+      const key = timeZone || "browser-local";
+      if (!_clockFormatters.has(key)) _clockFormatters.set(key, new Intl.DateTimeFormat("en-US", {
+        timeZone, calendar: "gregory", numberingSystem: "latn", hourCycle: "h23",
+        year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", timeZoneName: "short",
+      }));
+      const formatter = _clockFormatters.get(key);
+      const parts = Object.fromEntries(formatter.formatToParts(instant).map(part => [part.type, part.value]));
+      const year = Number(parts.year), month = Number(parts.month), day = Number(parts.day);
+      const calendar = _clockCalendarDate(year, month, day);
+      const weekday = calendar.getUTCDay();
+      const thursday = new Date(calendar.getTime());
+      thursday.setUTCDate(thursday.getUTCDate() + 4 - (weekday || 7));
+      const weekYear = thursday.getUTCFullYear();
+      const week = Math.ceil(((thursday - _clockCalendarDate(weekYear, 1, 1)) / 86400000 + 1) / 7);
+      const wallInstant = _clockCalendarDate(year, month, day);
+      wallInstant.setUTCHours(Number(parts.hour), Number(parts.minute), Number(parts.second));
+      const offset = serverLocal ? settings.mainOffset : Math.round((wallInstant.getTime() - Math.floor(now.getTime() / 1000) * 1000) / 60000);
+      const canonical = formatter.resolvedOptions().timeZone;
+      const label = serverLocal ? "UTC" + _clockOffsetText(offset) : canonical === "Asia/Tokyo" ? "JST" : canonical === "UTC" ? "UTC" : parts.timeZoneName;
+      return {year, month, day, weekday, weekYear, week, hour: Number(parts.hour), minute: Number(parts.minute), second: Number(parts.second), offset, label};
     }
 
     function _formatWebClock(now, settings = null) {
@@ -147,13 +224,27 @@
         return date + "  " + time;
       }
       const pad = value => String(value).padStart(2, "0");
-      const format = TOP_CLOCK_FORMATS.includes(settings.format) ? settings.format : "HH:mm";
-      const hour = now.getHours();
-      const twelveHour = format.startsWith("h:");
-      let text = (twelveHour ? String(hour % 12 || 12) : pad(hour)) + ":" + pad(now.getMinutes());
-      if (format.includes("ss")) text += ":" + pad(now.getSeconds());
-      if (twelveHour) text += hour < 12 ? " AM" : " PM";
-      if (settings.showDate) text = now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate()) + " " + text;
+      const parts = _parseClockFormat(settings.format) || _parseClockFormat("HH:mm");
+      const value = _clockParts(now, settings);
+      const ja = currentLanguage() === "ja";
+      const shortDays = ja ? ["日", "月", "火", "水", "木", "金", "土"] : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      const longDays = ja ? shortDays.map(day => day + "曜日") : ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+      const shortMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const longMonths = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+      const ampm = value.hour < 12 ? "AM" : "PM";
+      const tokens = {
+        YYYY: String(value.year).padStart(4, "0"), YY: pad(value.year % 100),
+        MMMM: ja ? value.month + "月" : longMonths[value.month - 1], MMM: ja ? value.month + "月" : shortMonths[value.month - 1], MM: pad(value.month), M: String(value.month),
+        DD: pad(value.day), D: String(value.day), dddd: longDays[value.weekday], ddd: shortDays[value.weekday], dd: ja ? shortDays[value.weekday] : shortDays[value.weekday].slice(0, 2), d: String(value.weekday), E: String(value.weekday || 7),
+        HH: pad(value.hour), H: String(value.hour), hh: pad(value.hour % 12 || 12), h: String(value.hour % 12 || 12), mm: pad(value.minute), m: String(value.minute), ss: pad(value.second), s: String(value.second), A: ampm, a: ampm,
+        GGGG: String(value.weekYear).padStart(4, "0"), WW: pad(value.week), W: String(value.week), z: value.label, Z: _clockOffsetText(value.offset), ZZ: _clockOffsetText(value.offset, false),
+      };
+      let text = parts.map(part => part.token ? tokens[part.token] : part.literal).join("");
+      if (settings.showDate && !parts.some(part => CLOCK_CALENDAR_TOKENS.has(part.token))) {
+        const separator = settings.dateSeparator === "/" ? "/" : "-";
+        text = tokens.YYYY + separator + tokens.MM + separator + tokens.DD + " " + text;
+      }
+      if (settings.showTimezone && !parts.some(part => part.token === "z")) text += " (" + value.label + ")";
       return text;
     }
 
@@ -175,13 +266,15 @@
     function _syncWebClocks() {
       if (_webClockTimer !== null) clearInterval(_webClockTimer);
       _webClockTimer = null;
+      _clockFormatters.clear();
       const settings = _topClockSettings();
       const top = document.getElementById("top-clock");
       const kioskActive = isKioskMode();
       const topActive = settings.enabled && !kioskActive && !isDisplayMode() && !document.body.classList.contains("capture-mode") && location.pathname.replace(/\/+$/, "") !== "/capture";
       if (top) {
         top.hidden = !topActive;
-        top.style.minWidth = (settings.showDate ? 11 : 0) + (settings.format.includes("ss") ? 8 : 5) + (settings.format.startsWith("h:") ? 3 : 0) + "ch";
+        const reserve = Math.min(32, settings.format.length + (settings.showDate ? 11 : 0) + (settings.showTimezone ? 12 : 0));
+        top.style.minWidth = "min(100%, " + reserve + "ch)";
       }
       _updateWebClocks();
       if ((top && topActive) || kioskActive) _webClockTimer = setInterval(_updateWebClocks, 1000);

@@ -116,7 +116,7 @@
     .brand { display: flex; align-items: center; gap: .6rem; min-width: 0; flex: 1 1 16rem; }
     .brand-copy { min-width: 0; }
     .brand-subtitle-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: .2rem .65rem; }
-    #top-clock { color: var(--muted); font-size: .75rem; font-variant-numeric: tabular-nums; white-space: nowrap; flex-shrink: 0; }
+    #top-clock { color: var(--muted); font-size: .75rem; font-variant-numeric: tabular-nums; white-space: normal; overflow-wrap: anywhere; max-width: 100%; flex: 0 1 auto; }
     #top-clock[hidden] { display: none; }
     .kiosk-mode #top-clock, .display-mode #top-clock, .capture-mode #top-clock { display: none; }
     .brand-mark {

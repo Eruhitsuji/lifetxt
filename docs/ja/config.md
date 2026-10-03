@@ -556,41 +556,50 @@ Personal Context のタグ別再確認方針は任意です。例:
 
 ### Topの小型時計
 
-既存Web UIのヘッダーに小型時計を表示します。既定の形式は`HH:mm`です。
-`.lifetxt.json`に次のように設定してください
-（`examples/config/personal.lifetxt.json`にも例があります）。
+Topの時計は既定でメインのタイムゾーンを使用します。別のIANAタイムゾーンと任意の日付・時刻形式も指定できます。
 
 ```json
-{
-  "web": {
-    "top_clock": {
-      "enabled": true,
-      "format": "HH:mm:ss",
-      "show_date": true
-    }
-  }
-}
+{"web":{"top_clock":{"enabled":true,"timezone":"Asia/Tokyo","format":"YYYY/MM/DD HH:mm:ss (z)","show_date":false}}}
 ```
 
-| キー | 型 | 既定値 | 動作 |
-| --- | --- | --- | --- |
-| `web.top_clock.enabled` | boolean | `true` | Topの時計表示をON/OFFにします。 |
-| `web.top_clock.format` | string | `HH:mm` | `HH:mm`、`HH:mm:ss`、`h:mm a`、`h:mm:ss a`から選択します。 |
-| `web.top_clock.show_date` | boolean | `false` | 時刻の前に`YYYY-MM-DD`形式の日付を付けます。 |
+| キー | 既定値 | 動作 |
+| --- | --- | --- |
+| `web.top_clock.enabled` | `true` | 時計を表示・非表示にします。 |
+| `web.top_clock.format` | `HH:mm` | トークンと文字列を組み合わせた1〜128文字の任意形式。 |
+| `web.top_clock.timezone` | `main` | メインのタイムゾーン。`Asia/Tokyo`、`America/New_York`などのIANA名や、閲覧端末の`browser-local`も指定できます。 |
+| `web.top_clock.show_date` | `false` | 形式に日付トークンがない場合に日付を付加します。 |
+| `web.top_clock.date_separator` | `-` | 付加する日付の区切り。`-`または`/`。 |
+| `web.top_clock.show_timezone` | `false` | タイムゾーン名を付加します。形式に`z`があれば重複しません。 |
 
-上記の例では`2026-10-03 21:14:37`と表示します。
-`h:mm:ss a`なら`9:14:37 PM`のような12時間表記になります。
-日付表示は時刻の形式とは独立して切り替えられます。
-Kioskと同じく、ブラウザの現在のローカル日時・タイムゾーンを使用します。
-`defaults.timezone`はレコード用であり、これらの時計には適用されません。
-TopとKioskはクライアント側のタイマーを共有し、時計更新用のサーバ通信は行いません。
-Kioskの既存の日付・時刻のロケール表示は維持し、Top用設定の影響を受けません。
-Kiosk、Display、Quick CaptureモードではTop用時計を非表示にします。
+| トークン | 意味 |
+| --- | --- |
+| `YYYY`、`YY` | 年 |
+| `M`、`MM`、`MMM`、`MMMM` | 月番号またはUI言語の月名 |
+| `D`、`DD` | 日 |
+| `d`、`dd`、`ddd`、`dddd`、`E` | 日曜=0の曜日番号、UI言語の曜日名、ISO曜日番号（月曜=1） |
+| `H`、`HH`、`h`、`hh` | 24時間・12時間表記 |
+| `m`、`mm`、`s`、`ss`、`A`、`a` | 分、秒、AM/PM（既存表示と同じく両方大文字） |
+| `GGGG`、`W`、`WW` | ISO週年と週番号 |
+| `z`、`Z`、`ZZ` | タイムゾーン名、時差`+09:00`、時差`+0900` |
+| `[文字列]` | トークンとして扱わない文字列。英字の固定文字列は括弧で囲みます。 |
 
-設定変更後はWebページを再読み込みしてください。サーバ再起動は不要です。
-これらは秘密情報を含まない設定で、通常の設定レイヤーによる由来の追跡が適用されます。
-`lifetxt config explain web.top_clock.format`などで各キーを説明できます。
-スキーマとレジストリで4種類の形式を検証しますが、不正・未対応の値がブラウザに
-渡った場合は安全に`HH:mm`へフォールバックします。不正なboolean値は既定値を使用します。
-設定省略時も既定値を使用します。設定バージョンの移行は不要です。
-旧版は読み取り時に追加キーを無視し、ダウングレード後は時計の追加機能がなくなります。
+`YYYY/MM/DD HH:mm:ss (z)`は`2026/10/03 22:12:34 (JST)`、
+`YYYY/MM/DD dddd`は`2026/10/03 土曜日`、`GGGG-[W]WW-E`は`2026-W40-6`のように表示します。
+ISO週年は暦年と異なる場合があります。従来の`HH:mm`、`HH:mm:ss`、`h:mm a`、`h:mm:ss a`も使用できます。
+
+設定ファイルを編集するか、例えば次のコマンドを実行した後、Webページを再読み込みしてください。サーバ再起動は不要です。
+
+```sh
+lifetxt config set web.top_clock.format '"YYYY/MM/DD HH:mm:ss (z)"'
+lifetxt config set web.top_clock.timezone '"Asia/Tokyo"'
+```
+
+`/api/config`では時計設定だけを再読み込みします。メインのタイムゾーン、認証、その他のサーバ設定は起動時の値を維持します。
+ファイルが壊れている、または読み取れない場合は、パスや内容を含めない503応答を返します。ファイルを修正して再読み込みしてください。
+公開するのは検証済みの時計設定とタイムゾーンの表示用情報だけです。不正な設定値は既定値に戻り、`config validate`でも検出できます。
+形式はテキストとして表示し、コードとして評価しません。
+
+IANAタイムゾーンは夏時間に追従します。メイン設定が`local`/`host`の場合は、閲覧端末ではなくページ再読み込み時のサーバの時差を使用します。
+タイムゾーンを省略するとメイン設定に従います。以前の閲覧端末の表示を維持する場合は`browser-local`を指定してください。
+データや設定バージョンの移行は不要です。TopとKioskはクライアント側のタイマーを共有し、時計更新用の通信を行いません。
+Kioskの既存の閲覧端末基準の日時表示は維持します。Kiosk、Display、Quick CaptureではTop時計を隠します。長い形式は狭い画面で折り返します。

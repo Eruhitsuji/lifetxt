@@ -1,0 +1,19 @@
+schema_version: 1
+change:
+  id: web-top-clock-config-custom-format
+  title: Publish clock configuration and support independent zones and custom formats
+  status: implemented
+  change_type: Bug
+  assurance_level: Standard
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1060
+  related_pull_request: [https://github.com/Eruhitsuji/lifetxt/pull/1061]
+  base_commit: d73f253d
+  target_release: null
+scope:
+  in_scope: [public clock configuration, clock-only reload, custom formats, timezone selection, validation, tests, documentation]
+  out_of_scope: [runtime auth reload, main timezone reload, kiosk format changes]
+  write_scope: [lifetxt/**, tests/**, docs/en/config.md, docs/ja/config.md, examples/config/personal.lifetxt.json, dist/schemas/config-v1.schema.json, .ai/project/**]
+  forbidden_scope: [.ai/managed/**]
+human_approvals_required: [independent implementation/integration review, Merge Authority approval]

@@ -1,0 +1,7 @@
+name = "lifetxt-cloudflare-public-api-poc"
+main = "entry.py"
+compatibility_date = "2026-10-03"
+compatibility_flags = ["python_workers"]
+
+[python_modules]
+exclude = ["**/*.pyc", "**/__pycache__"]

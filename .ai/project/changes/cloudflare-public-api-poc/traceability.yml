@@ -1,0 +1,16 @@
+schema_version: 1
+traceability:
+  requirement_id: req-cloudflare-public-api-feasibility
+  capability_id: cap-cloudflare-public-api-feasibility-poc
+  epic: https://github.com/Eruhitsuji/lifetxt/issues/823
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/827
+  pull_request: null
+  changed_files_or_scope:
+    - contrib/cloudflare_public_api/
+    - .ai/project/changes/cloudflare-public-api-poc/
+  tests_or_evidence:
+    - py -3.12 -m unittest tests.test_supported_runtime
+    - py -3.12 -m unittest tests.test_config_validation tests.test_archive_plan_v1 tests.test_safety_foundation
+    - contrib/cloudflare_public_api/smoke_native.py
+  release_or_deployment: null
+  status: in_progress

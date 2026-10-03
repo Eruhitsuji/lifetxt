@@ -1,6 +1,20 @@
 schema_version: 1
 
 capabilities:
+  - id: cap-cloudflare-public-api-feasibility-poc
+    name: Cloudflare Public API feasibility PoC
+    summary: Isolated experimental evidence for running authoritative Python Core in a stateless Cloudflare Worker; not a production API.
+    status: experimental
+    owner: Eruhitsuji
+    source_requirements: [req-cloudflare-public-api-feasibility]
+    implementation_locations: [contrib/cloudflare_public_api/]
+    public_interfaces: []
+    tests_or_evidence: [contrib/cloudflare_public_api/smoke_native.py, .ai/project/changes/cloudflare-public-api-poc/verification.yml]
+    related_issues: [https://github.com/Eruhitsuji/lifetxt/issues/827]
+    related_pull_requests: []
+    reuse_policy: experimental-evidence-only; never use as a production API contract
+    replacement: {replaces: [], replaced_by: null, deprecation_issue: null}
+
   - id: cap-shared-quick-input
     name: Shared Quick input resolution
     summary: One textual entry resolves shorthand or a complete record with authoritative parsing and safe invalid-record refusal.

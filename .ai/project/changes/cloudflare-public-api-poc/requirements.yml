@@ -1,0 +1,9 @@
+schema_version: 1
+requirements:
+  - id: req-cloudflare-public-api-feasibility
+    statement: Prove or disprove bounded use of authoritative Python Core in current Cloudflare Python Workers runtime.
+    source: https://github.com/Eruhitsuji/lifetxt/issues/827
+    acceptance:
+      - Native health/info/check path is runnable in pywrangler.
+      - Core parser, conversion, quick input, and priority smoke paths are exercised without CLI or persistence.
+      - CPython comparison and runtime/import/resource observations are retained.

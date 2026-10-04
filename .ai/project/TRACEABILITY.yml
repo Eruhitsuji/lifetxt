@@ -16091,6 +16091,36 @@ traceability:
       notes: Semantic CLI adapters only; TUI presentation and unsupported server contracts remain out of scope.
       status: in_progress
 
+    - requirement_id: req-web-items-phone-first-viewport-layout
+      capability_id: cap-web-beginner-first-ux
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1069
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1080
+      changed_files_or_scope: [lifetxt/web_assets.html, lifetxt/web_assets_css_02.css, lifetxt/web_assets_css_04.css, lifetxt/web_assets_js_02.js, lifetxt/web_assets_js_03.js]
+      tests_or_evidence: [responsive toolbar/FAB CSS, mobile view-guide reduction, desktop layout preserved]
+      release_or_deployment: null
+      notes: Keep phone controls reachable without changing item/filter semantics.
+      status: in_progress
+
+    - requirement_id: req-web-header-view-settings-consolidation
+      capability_id: cap-web-beginner-first-ux
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1070
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1080
+      changed_files_or_scope: [lifetxt/web_assets.html, lifetxt/web_assets_css_02.css, lifetxt/web_assets_js_03.js]
+      tests_or_evidence: [accessible View settings disclosure, Escape/outside close, existing preference handlers retained]
+      release_or_deployment: null
+      notes: Notifications remains in More; preference shortcuts and handlers are unchanged.
+      status: in_progress
+
+    - requirement_id: req-web-single-primary-create-entry
+      capability_id: cap-web-beginner-first-ux
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1071
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1080
+      changed_files_or_scope: [lifetxt/web_assets.html, lifetxt/web_assets_css_02.css, lifetxt/web_assets_js_02.js]
+      tests_or_evidence: [desktop primary navigation create retained, phone primary navigation create hidden, mobile FAB retained]
+      release_or_deployment: null
+      notes: Existing newItem behavior and keyboard shortcut remain authoritative.
+      status: in_progress
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

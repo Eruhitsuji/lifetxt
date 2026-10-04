@@ -45,6 +45,12 @@
           "表示: 編集操作を隠した閲覧専用の壁掛けモードです。戻る、または「表示を終了」で抜けられます。",
         "Kiosk: always-on board with clock, auto-refresh, optional kiosk_filter, and auto-scroll.":
           "キオスク: 時計・自動更新・任意の kiosk_filter・自動スクロールを備えた常時表示ボードです。",
+        "View settings": "表示設定",
+        "Dark": "ダーク",
+        "Contrast": "コントラスト",
+        "Motion": "モーション",
+        "Density": "密度",
+        "Fullscreen": "全画面",
         "Create a life.txt record. Pick a status, type, title, and detail keys; press n to open this editor from the keyboard.":
           "life.txt のレコードを作成します。ステータス・種類・タイトル・詳細キーを指定できます。キーボードから開くには n。",
         "Workflow state: [ ] open, [/] active, [x] done, [-] cancelled, [>] deferred, [?] maybe, [N] note.":
@@ -428,5 +434,5 @@
       "": {
         label: "Items",
         description: "Search, filter, edit, and bulk-manage life.txt records.",
-        actions: [["New record", "newItem"], ["Quick add", "quickAdd"], ["Set status", "setStatus"], ["End status", "endStatus"], ["Clear filters", "clearFilters"]],
+        actions: [["Quick add", "quickAdd"], ["Set status", "setStatus"], ["End status", "endStatus"], ["Clear filters", "clearFilters"]],
       },

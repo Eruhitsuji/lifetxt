@@ -1,5 +1,21 @@
 # Remote CLI／TUIからの参照・編集
 
+## 基本アイテム操作
+
+`lifetxt remote setup` でデフォルト profile を設定した後は、profile 名を
+毎回指定せずに基本操作を実行できます。
+
+```text
+lifetxt remote list
+lifetxt remote add "Buy milk"
+lifetxt remote done ITEM-ID
+```
+
+別のサーバーを使う場合は `--profile NAME` を指定します。`add` と `done`
+は構造化された権威サーバー側の mutation であり、リモートシェル実行や
+ローカルの life.txt のアップロードは行いません。revision conflict は自動
+再試行せず報告するため、必要なら状態を更新して意図的に再実行します。
+
 Remote protocol version 2では、server上のvisible dataをCLIから参照し、権限があるprincipalだけが限定的なticket更新を実行できます。client profileにはsecret本体を保存せず、Bearer tokenを格納した環境変数名だけを保存します。
 
 本ドキュメントは`lifetxt remote` CLI client（`lifetxt/remote_client_writes.py`と`lifetxt/remote_client_writes_compat_v25.py`）とそのinteractive TUIを扱います。基盤となるread-only resource catalogについては[remote.md](remote.md)、このclientが話すwire-levelの`POST /api/remote/v1/ticket-mutations`契約については[remote-ticket-writes.md](remote-ticket-writes.md)、`lifetxt remote test`が報告するcapability negotiationについては[remote-compatibility.md](remote-compatibility.md)を参照してください。

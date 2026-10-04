@@ -7,7 +7,7 @@ import json
 import sys
 import uuid
 
-from .remote_client import get_profile, request, snapshot
+from .remote_client import get_profile, request, resolve_profile, snapshot
 
 MUTATION_ROUTE = "/api/remote/v1/ticket-mutations"
 ITEM_MUTATION_ROUTE = "/api/remote/v1/item-mutations"
@@ -567,6 +567,28 @@ def install_remote_client_writes_cli():
                     command.add_argument("--status")
                     command.add_argument("--detail", action="append", default=[])
             command.set_defaults(func=function)
+        if "list" not in subs.choices:
+            command = subs.add_parser("list", help="List visible Remote items.")
+            command.add_argument("--profile")
+            command.add_argument("--profiles-file")
+            command.set_defaults(func=_cmd_item_list)
+        if "add" not in subs.choices:
+            command = subs.add_parser("add", help="Add an ordinary Remote item.")
+            command.add_argument("title")
+            command.add_argument("--profile")
+            command.add_argument("--profiles-file")
+            command.add_argument("--type", dest="item_type", default="T")
+            command.add_argument("--status", default="[ ]")
+            command.add_argument("--detail", action="append", default=[])
+            command.add_argument("--transaction-id")
+            command.set_defaults(func=_cmd_item_create_default)
+        if "done" not in subs.choices:
+            command = subs.add_parser("done", help="Complete an ordinary Remote item.")
+            command.add_argument("item_id")
+            command.add_argument("--profile")
+            command.add_argument("--profiles-file")
+            command.add_argument("--transaction-id")
+            command.set_defaults(func=_cmd_item_done)
         tui = subs.choices.get("tui")
         if tui is not None and not any(
             action.dest == "interactive" for action in tui._actions
@@ -588,6 +610,10 @@ def _profile_args(parser):
 
 def _profile(args):
     return get_profile(args.profile, args.profiles_file)
+
+
+def _default_profile(args):
+    return resolve_profile(args.profile, args.profiles_file)[1]
 
 
 def _emit(value):
@@ -731,6 +757,36 @@ def _cmd_item_delete(args):
         _profile(args),
         "delete",
         {"item_id": args.item_id},
+        None,
+        args.transaction_id,
+    )
+
+
+def _cmd_item_list(args):
+    data = snapshot(_default_profile(args))
+    rows = data.get("items") or []
+    for row in rows:
+        print("%s\t%s" % (row.get("id") or "-", row.get("title") or row.get("text") or ""))
+    return 0
+
+
+def _cmd_item_create_default(args):
+    return _emit_mutation(
+        mutate_item,
+        _default_profile(args),
+        "create",
+        {"item": {"status": args.status, "type": args.item_type, "title": args.title, "details": _item_details(args.detail)}},
+        None,
+        args.transaction_id,
+    )
+
+
+def _cmd_item_done(args):
+    return _emit_mutation(
+        mutate_item,
+        _default_profile(args),
+        "update",
+        {"item_id": args.item_id, "item": {"status": "[x]"}},
         None,
         args.transaction_id,
     )

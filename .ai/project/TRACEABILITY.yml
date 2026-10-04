@@ -15983,6 +15983,23 @@ traceability:
       notes: Extends the existing shared Remote CLI/TUI profile authority without storing bearer tokens.
       status: in_progress
 
+    - requirement_id: req-remote-cli-basic-item-operations
+      capability_id: cap-remote-cli-read-client
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1064
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1065
+      changed_files_or_scope:
+        - lifetxt/remote_client_writes.py
+        - tests/test_remote_client_writes_v23.py
+        - docs/en/remote-client-writes.md
+        - docs/ja/remote-client-writes.md
+      tests_or_evidence:
+        - tests.test_remote_client_writes_v23
+        - shared default profile resolution for list/add/done
+        - authoritative item mutation and no automatic conflict retry
+      release_or_deployment: null
+      notes: Thin CLI adapter over the existing item-mutation and snapshot contracts.
+      status: in_progress
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

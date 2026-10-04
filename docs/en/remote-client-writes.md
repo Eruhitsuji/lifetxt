@@ -1,5 +1,21 @@
 # Read and edit server data from the Remote CLI and TUI
 
+## Basic item commands
+
+After configuring a default profile with `lifetxt remote setup`, the basic
+Remote CLI operations are available without naming a profile each time:
+
+```text
+lifetxt remote list
+lifetxt remote add "Buy milk"
+lifetxt remote done ITEM-ID
+```
+
+Use `--profile NAME` for another configured server. `add` and `done` are
+structured authoritative mutations; they do not execute remote shell commands
+or upload a local life.txt. A stale revision is reported without automatic
+retry, so refresh and intentionally repeat the command when appropriate.
+
 Remote protocol version 2 lets a client inspect visible server data and lets only authorized principals execute the deliberately limited ticket mutation contract. Profiles store an environment-variable name for the Bearer token, never the token value itself.
 
 This document covers the `lifetxt remote` CLI client (`lifetxt/remote_client_writes.py` and `lifetxt/remote_client_writes_compat_v25.py`) and its interactive TUI. See [remote.md](remote.md) for the read-only resource catalog it builds on, [remote-ticket-writes.md](remote-ticket-writes.md) for the wire-level `POST /api/remote/v1/ticket-mutations` contract this client speaks, and [remote-compatibility.md](remote-compatibility.md) for the capability negotiation `lifetxt remote test` reports.

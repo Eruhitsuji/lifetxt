@@ -260,6 +260,18 @@
     // ── Record detail modal ────────────────────────────────────────
     let drawerItem = null;
     let drawerEditing = false;
+    document.addEventListener("keydown", event => {
+      const overflow = document.getElementById("drawer-overflow");
+      if (event.key === "Escape" && overflow?.open) {
+        overflow.open = false;
+        overflow.querySelector("summary")?.focus();
+        event.stopPropagation();
+      }
+    }, true);
+    document.addEventListener("click", event => {
+      const overflow = document.getElementById("drawer-overflow");
+      if (overflow?.open && !overflow.contains(event.target)) overflow.open = false;
+    });
 
     function _drawerRestoreButtons(item) {
       const isDone = ["[x]", "[-]"].includes(item.status);
@@ -277,7 +289,7 @@
         `<button class="secondary" id="drawer-edit-btn" onclick="drawerEdit()"${!item.editable ? " disabled" : ""}>Edit</button>` +
         `<button class="secondary" id="drawer-create-related-btn" onclick="drawerCreateRelated()" title="Create a new record related to this one (#770)"${hasId ? "" : " disabled"}>+ Related</button>` +
         `<details class="drawer-overflow" id="drawer-overflow"><summary class="secondary" aria-label="More record actions">More</summary>` +
-        `<div class="drawer-overflow-menu" role="menu" aria-label="More record actions">` +
+        `<div class="drawer-overflow-menu" aria-label="More record actions">` +
         `<button class="secondary" id="drawer-copy-id" onclick="drawerCopyId()" title="Copy item ID to clipboard"${hasId ? "" : ' style="display:none"'}>Copy ID</button>` +
         `<button class="secondary" id="drawer-share-btn" onclick="drawerShareLink()" title="Copy deep link to this item">Share</button>` +
         `<button class="secondary" id="drawer-stable-link-btn" onclick="drawerCopyStableLink()" title="Copy host-independent stable link" aria-label="Copy stable link"${hasId ? "" : " disabled"}>Stable link</button>` +

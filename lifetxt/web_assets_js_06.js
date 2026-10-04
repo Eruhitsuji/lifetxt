@@ -4,9 +4,16 @@
       const text = String(value || "");
       if (!text) return "";
       const allDayRange = /^(\d{4}-\d{2}-\d{2})T00:00(?::00)?\.\.(\d{4}-\d{2}-\d{2})T23:59(?::59)?$/.exec(text);
-      if (/^\d{4}-\d{2}-\d{2}$/.test(text) || allDayRange) return options.dayContext ? "" : "All day";
-      if (text.length > 10 && /T00:00(?::00)?$/.test(text) && options.allDayMidnight) return options.dayContext ? "" : "All day";
-      return text;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(text) || allDayRange) return options.dayContext ? "" : t("All day");
+      if (text.length > 10 && /T00:00(?::00)?$/.test(text) && options.allDayMidnight) return options.dayContext ? "" : t("All day");
+      const parts = text.split("..");
+      const format = (part) => {
+        const date = new Date(part);
+        if (Number.isNaN(date.getTime())) return part;
+        if (options.dayContext) return new Intl.DateTimeFormat(undefined, {hour: "numeric", minute: "2-digit"}).format(date);
+        return new Intl.DateTimeFormat(undefined, {dateStyle: "medium", timeStyle: "short"}).format(date);
+      };
+      return parts.map(format).join(" – ");
     }
     function _agendaMatchWhen(match, fallbackWhen) {
       if (!match) return fallbackWhen || "";

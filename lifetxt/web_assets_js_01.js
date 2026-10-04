@@ -149,6 +149,8 @@
         "Refresh": "更新",
         "Search": "検索",
         "Search (/)": "検索 (/)",
+        "Search items": "アイテムを検索",
+        "Select for bulk action": "一括操作の対象に選択",
         "Apply": "適用",
         "All": "すべて",
         "All types": "すべての種類",

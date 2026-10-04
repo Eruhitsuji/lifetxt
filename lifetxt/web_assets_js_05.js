@@ -9,7 +9,7 @@
         const _bulkKey = String(item.line) + "|" + (item.source || "");
         node.addEventListener("click", (e) => {
           if (e.target.closest(".ref-link")) return;
-          if (e.target.closest(".item-check")) return;
+          if (e.target.closest(".item-check-hit")) return;
           selectItem(item);
           openDrawer(item);
         });
@@ -17,7 +17,7 @@
         const isBulkSelected = bulkSelectedLines.has(_bulkKey);
         if (isBulkSelected) node.classList.add("bulk-selected");
         node.innerHTML = `
-          <input type="checkbox" class="item-check" title="Select for bulk action" ${isBulkSelected ? "checked" : ""}>
+          <label class="item-check-hit"><input type="checkbox" class="item-check" title="${escapeHtml(t("Select for bulk action"))}" aria-label="${escapeHtml(t("Select for bulk action"))}" ${isBulkSelected ? "checked" : ""}></label>
           <span class="status-badge ${statusCls}" title="${escapeHtml(item.status)}">${escapeHtml(statusLabel)}</span>
           <span class="type-badge ${typeCls}">${escapeHtml(item.type)}</span>
           <div>
@@ -35,6 +35,10 @@
           _updateBulkToolbar();
         });
         node.querySelector(".item-check").addEventListener("click", (ev) => {
+          ev.stopPropagation();
+        });
+        // The wider hit area around the checkbox must not open the drawer.
+        node.querySelector(".item-check-hit").addEventListener("click", (ev) => {
           ev.stopPropagation();
         });
         const statusBadge = node.querySelector(".status-badge");

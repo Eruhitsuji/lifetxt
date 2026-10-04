@@ -57,10 +57,7 @@
     const _structuredTypeSelect = document.getElementById("edit-type");
     if (_structuredTypeSelect) _structuredTypeSelect.addEventListener("change", _structuredTypeChanged);
     const _structuredDetailsTextarea = document.getElementById("edit-details");
-    if (_structuredDetailsTextarea) _structuredDetailsTextarea.addEventListener("input", () => {
-      syncStructuredFieldsIntoDetails();
-      refreshStructuredFields();
-    });
+    if (_structuredDetailsTextarea) _structuredDetailsTextarea.addEventListener("input", refreshStructuredFields);
     const _structuredContainer = document.getElementById("structured-fields");
     if (_structuredContainer) {
       _structuredContainer.addEventListener("input", syncStructuredFieldsIntoDetails);

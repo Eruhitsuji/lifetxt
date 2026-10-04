@@ -396,7 +396,8 @@
         "related"
       );
       if (choice === null) return; // user cancelled -- no stale/implicit relation
-      const field = choice.trim().toLowerCase() || "related";
+      const requestedField = choice.trim().toLowerCase() || "related";
+      const field = requestedField === "relation_title" ? "related" : requestedField;
       if (!RELATED_FIELD_CHOICES.includes(field)) {
         showToast(`Unknown relation "${field}". Use one of: ${RELATED_FIELD_CHOICES.join(", ")}.`, "error");
         return;

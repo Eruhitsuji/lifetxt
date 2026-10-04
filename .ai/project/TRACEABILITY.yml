@@ -2,6 +2,26 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-diagnostics-location-navigation-summary
+      capability_id: cap-web-beginner-first-ux
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1067
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1073
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1082
+      changed_files_or_scope:
+        - lifetxt/web_assets_js_04.js
+        - lifetxt/web_assets_js_01.js
+        - lifetxt/web_assets_css_03.css
+        - tests/test_web_diagnostics_js.py
+        - tests/test_web_assets.py
+      tests_or_evidence:
+        - "tests/test_web_diagnostics_js.py (15 tests): location labels, Windows/POSIX basenames, source+line matching, escaping, summary counts/open state, Open record fallback and toasts"
+        - "Web suites -> Ran 274 tests, OK; node --check on the assembled script OK"
+        - "Live Playwright/Edge check against lifetxt serve (single/multi-file, ja, 1280px/390px): Open record keeps filters, summary state survives refresh, no page errors"
+      notes: >-
+        Client-side presentation only; record lookup reuses currentItems and
+        the existing unfiltered /api/items list without changing filters.
+      status: implemented
+
     - requirement_id: req-web-main-accessible-controls-navigation
       capability_id: cap-web-beginner-first-ux
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1067

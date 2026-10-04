@@ -742,7 +742,7 @@
     /* #791: surface rollout of the shared control geometry.  These selectors
        deliberately affect presentation only; semantic variants retain their
        colors while sharing the same row height. */
-    button.secondary, button.danger, button.filter-btn, button.workspace-tab,
+    button.secondary, .button-control.secondary, button.danger, button.filter-btn, .workspace-tab,
     button.review-range-btn, button.chart-tab, button.chart-group-btn,
     button.graph-layout-btn, button.graph-export-btn {
       min-height: var(--control-height);
@@ -761,8 +761,8 @@
     }
     .icon-only, .control-icon { border-radius: 50%; }
     @media (max-width: 560px) {
-      button.secondary, button.danger, button.filter-btn,
-      button.workspace-tab, button.review-range-btn, button.chart-tab,
+      button.secondary, .button-control.secondary, button.danger, button.filter-btn,
+      .workspace-tab, button.review-range-btn, button.chart-tab,
       button.chart-group-btn, button.graph-layout-btn, button.graph-export-btn {
         min-height: var(--control-height);
       }
@@ -770,7 +770,6 @@
       .nav-more > summary { width: 100%; text-align: center; }
       .nav-advanced { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .nav-advanced .workspace-tab { width: 100%; }
-      .nav-advanced > .surface-link { display: flex; align-items: center; width: 100%; min-height: 44px; padding: .32rem .6rem; color: var(--ink); font-weight: 600; text-decoration: none; }
     }
     @media (max-width: 680px) {
       /* An explicitly opened More menu gets its own full-width row below the
@@ -781,6 +780,7 @@
       .header-workspace-tabs > .nav-more[open] > .nav-advanced { max-width: 100%; }
     }
     @media (pointer: coarse), (max-width: 680px) {
+      .workspace-tab, #drawer-head-btns > button, .drawer-overflow > summary.button-control { min-height: max(44px, var(--control-height)); }
       /* #1072: 44x44 CSS px effective touch targets. The checkbox itself stays
          small; its wrapping label carries the hit area without opening the
          record drawer. */

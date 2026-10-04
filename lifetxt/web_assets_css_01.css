@@ -177,7 +177,7 @@
       min-width: 0;
     }
     /* ── Form controls ── */
-    input, select, textarea, button {
+    input, select, textarea, button, .button-control, .workspace-tab {
       max-width: 100%;
       border: 1px solid var(--line-strong);
       border-radius: var(--r-sm);
@@ -187,12 +187,12 @@
       font: inherit;
       transition: border-color var(--t-fast), box-shadow var(--t-fast), background var(--t-fast);
     }
-    input, select, button {
+    input, select, button, .button-control, .workspace-tab {
       box-sizing: border-box;
       min-height: var(--control-height);
       line-height: var(--control-line-height);
     }
-    button {
+    button, .button-control {
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -230,17 +230,17 @@
       font-family: var(--font-mono);
       font-size: .9rem;
     }
-    button {
+    button, .button-control {
       cursor: pointer;
       background: var(--accent);
       border-color: var(--accent);
       color: var(--accent-ink);
       font-weight: 650;
     }
-    button:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
-    button:active { transform: translateY(1px); }
-    button.secondary { background: var(--panel); color: var(--accent); }
-    button.secondary:hover { background: var(--accent-soft); border-color: var(--accent); }
+    button:hover, .button-control:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+    button:active, .button-control:active, .workspace-tab:active { transform: translateY(1px); }
+    button.secondary, .button-control.secondary { background: var(--panel); color: var(--accent); }
+    button.secondary:hover, .button-control.secondary:hover { background: var(--accent-soft); border-color: var(--accent); }
     button.danger { background: var(--panel); border-color: var(--danger); color: var(--danger); }
     button.danger:hover { background: var(--danger-soft); }
     button:disabled { cursor: not-allowed; opacity: .55; transform: none; }

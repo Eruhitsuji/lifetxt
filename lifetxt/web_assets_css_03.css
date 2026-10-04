@@ -58,10 +58,10 @@
     .review-mood-row { flex-wrap: wrap; }
     .review-num { color: var(--muted); font-size: .78rem; font-variant-numeric: tabular-nums; }
     /* ── Presence (Status & Team views) ──────────────────────────── */
-    .drawer-overflow { position: relative; }
-    .drawer-overflow > summary { list-style: none; cursor: pointer; }
+    .drawer-overflow { position: relative; z-index: 100; }
+    .drawer-overflow > summary { display: inline-flex; align-items: center; list-style: none; cursor: pointer; }
     .drawer-overflow > summary::-webkit-details-marker { display: none; }
-    .drawer-overflow-menu { position: absolute; z-index: 20; right: 0; top: calc(100% + .25rem); display: grid; gap: .25rem; min-width: 10rem; padding: .4rem; background: var(--panel); border: 1px solid var(--line-strong); border-radius: .45rem; box-shadow: 0 .35rem 1rem rgba(0,0,0,.18); }
+    .drawer-overflow-menu { position: absolute; z-index: 1000; right: 0; top: calc(100% + .25rem); display: grid; gap: .25rem; min-width: 10rem; padding: .4rem; background: var(--panel); border: 1px solid var(--line-strong); border-radius: .45rem; box-shadow: 0 .35rem 1rem rgba(0,0,0,.18); }
     .drawer-overflow-menu button { text-align: left; white-space: nowrap; }
     .items-filter-disclosure > summary { display: none; }
     .items-filter-disclosure > .items-controls { display: flex; }

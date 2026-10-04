@@ -2,6 +2,31 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-more-active-view-collapsed-nav
+      capability_id: cap-web-beginner-first-ux
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1067
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1068
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1079
+      changed_files_or_scope:
+        - lifetxt/web_assets.html
+        - lifetxt/web_assets_css_02.css
+        - lifetxt/web_assets_css_04.css
+        - lifetxt/web_assets_js_18.js
+        - tests/test_web_more_nav_js.py
+        - tests/test_web_assets.py
+        - .ai/project/CAPABILITIES.yml
+      tests_or_evidence:
+        - "tests.test_web_more_nav_js (12 tests): advanced views keep More collapsed and name the view with aria-current; primary views clear it; explicit open is not overridden; choosing a destination, Escape (focus to summary) and outside click close More"
+        - "Playwright/Edge against real lifetxt serve: direct ?view=agenda/messages/matrix/server stay collapsed with primary tabs on one row; Back/Forward and ?lang=ja keep the correct indication; open panel fits the viewport with no horizontal scroll at 1280/800/690/600/390/320 px; no JS errors"
+        - "python -m unittest tests.test_web_more_nav_js tests.test_web_assets tests.test_web_mobile tests.test_web_i18n tests.test_release_policy tests.test_web_personal_context_onboarding tests.test_web_commands tests.test_surface_runtime -> Ran 149 tests, OK"
+      release_or_deployment: null
+      notes: >-
+        Refines the #797 auto-expansion of More: the active advanced view is
+        shown in the collapsed summary instead of forcing the panel open. The
+        same commits first reached main by an unreviewed direct push and are
+        backed out by #1078; this PR re-proposes them for review.
+      status: implemented
+
     - requirement_id: req-core-import-boundary-refactor
       capability_id: cap-core-import-boundary
       epic: https://github.com/Eruhitsuji/lifetxt/issues/823

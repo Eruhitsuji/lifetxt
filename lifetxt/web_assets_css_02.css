@@ -388,6 +388,7 @@
       box-shadow: var(--shadow-1);
     }
     .workspace-tab {
+      justify-content: center;
       display: inline-flex;
       align-items: center;
       gap: .3rem;
@@ -402,7 +403,7 @@
     }
     .workspace-tab:hover { color: var(--accent); background: var(--accent-soft); border-color: var(--accent); }
     .workspace-tab.active { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
-    .surface-link { color: inherit; text-decoration: none; }
+    .surface-link { text-decoration: none; }
     .nav-primary, .nav-advanced { display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; }
     .nav-more { position: relative; }
     .nav-more > summary { list-style: none; }

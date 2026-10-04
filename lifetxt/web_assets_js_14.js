@@ -410,9 +410,12 @@
     function toggleImportRaw(show) {
       const row = document.getElementById("import-raw-row");
       if (!row) return;
-      const visible = show !== undefined ? show : row.style.display === "none";
-      row.style.display = visible ? "" : "none";
+      const visible = show !== undefined ? show : row.hidden;
+      row.hidden = !visible;
+      const toggle = document.getElementById("import-raw-toggle");
+      if (toggle) toggle.setAttribute("aria-expanded", String(visible));
       if (visible) document.getElementById("import-raw-input").focus();
+      else if (row.contains(document.activeElement)) toggle?.focus();
     }
     async function importRawLine() {
       const input = document.getElementById("import-raw-input");

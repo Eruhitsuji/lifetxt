@@ -586,6 +586,7 @@
         "⚠️ Read-only demo — write operations are disabled.": "⚠️ 読み取り専用デモ — 書き込み操作は無効です。",
         "q or Escape to close": "q または Escape で閉じる",
         "closes the previous status automatically": "前のステータスは自動的に終了します",
+        "Paste one complete life.txt record line, check the preview, then import it to fill the form. Review the form before creating the record.": "life.txt のレコード1行を貼り付け、プレビューを確認して「取り込む」を押すとフォームに反映されます。内容を確認してからレコードを作成してください。",
         "Import raw line": "life.txt の行を読み込む",
         "Record Detail": "レコード詳細",
         "Mark Done": "完了にする",

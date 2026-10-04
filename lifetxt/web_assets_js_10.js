@@ -288,7 +288,7 @@
           : "") +
         `<button class="secondary" id="drawer-edit-btn" onclick="drawerEdit()"${!item.editable ? " disabled" : ""}>Edit</button>` +
         `<button class="secondary" id="drawer-create-related-btn" onclick="drawerCreateRelated()" title="Create a new record related to this one (#770)"${hasId ? "" : " disabled"}>+ Related</button>` +
-        `<details class="drawer-overflow" id="drawer-overflow"><summary class="secondary" aria-label="More record actions">More</summary>` +
+        `<details class="drawer-overflow" id="drawer-overflow"><summary class="button-control secondary" aria-label="More record actions">More</summary>` +
         `<div class="drawer-overflow-menu" aria-label="More record actions">` +
         `<button class="secondary" id="drawer-copy-id" onclick="drawerCopyId()" title="Copy item ID to clipboard"${hasId ? "" : ' style="display:none"'}>Copy ID</button>` +
         `<button class="secondary" id="drawer-share-btn" onclick="drawerShareLink()" title="Copy deep link to this item">Share</button>` +

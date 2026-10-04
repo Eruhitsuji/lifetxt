@@ -127,6 +127,7 @@
       if (!_legacyCopyText(text)) fail(); else succeed();
     }
     function _legacyCopyText(text) {
+      if (typeof document === "undefined" || !document.createElement || !document.body || !document.body.appendChild) return false;
       const textarea = document.createElement("textarea");
       textarea.value = String(text);
       textarea.setAttribute("readonly", "");

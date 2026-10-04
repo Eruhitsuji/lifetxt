@@ -1,5 +1,13 @@
       await refreshAll();
     }
+    function _temporalDisplayLabel(value, options = {}) {
+      const text = String(value || "");
+      if (!text) return "";
+      const allDayRange = /^(\d{4}-\d{2}-\d{2})T00:00(?::00)?\.\.(\d{4}-\d{2}-\d{2})T23:59(?::59)?$/.exec(text);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(text) || allDayRange) return options.dayContext ? "" : "All day";
+      if (text.length > 10 && /T00:00(?::00)?$/.test(text) && options.allDayMidnight) return options.dayContext ? "" : "All day";
+      return text;
+    }
     function _agendaMatchWhen(match, fallbackWhen) {
       if (!match) return fallbackWhen || "";
       if (match.end !== undefined && match.end !== "") return `${match.start}..${match.end}`;
@@ -70,11 +78,12 @@
         const blockedBadge = record.blocked
           ? `<span class="blocked-badge" title="Blocked by: ${escapeHtml((record.blocked_by || []).map(b => b.title || b.id).join(", "))}">⚡ blocked</span>`
           : "";
-        const source = record.source_id ? `<div class="meta">source: ${escapeHtml(record.source_id)}</div>` : "";
+        const source = record.source_id ? `<div class="meta">ID: ${escapeHtml(record.source_id)}</div>` : "";
         const countdown = agendaCountdownLabel({status: record.status, occurrence_start: entry.when});
+        const displayWhen = _temporalDisplayLabel(entry.when, {allDayMidnight: true});
         node.insertAdjacentHTML(
           "beforeend",
-          `<div style="${borderStyle}padding-left:.45rem"><span class="pill">${escapeHtml(entry.when)}</span>${occ}${spanBadge}${blockedBadge}${countdown}<div class="title">${escapeHtml(record.title)}</div>${source}</div>`
+          `<div style="${borderStyle}padding-left:.45rem"><span class="pill">${escapeHtml(displayWhen)}</span>${occ}${spanBadge}${blockedBadge}${countdown}<div class="title">${escapeHtml(record.title)}</div>${source}</div>`
         );
       }
       if (!unlimitedAgenda && entries.length > limit) {

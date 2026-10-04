@@ -55,6 +55,7 @@
     // data-no-i18n and the walker skips those subtrees entirely.
     const UI_STRINGS = {
       ja: {
+        "More record actions": "その他の操作",
         // Chrome and navigation
         "Plain text tasks, schedule, presence, and notes.": "プレーンテキストのタスク・予定・在席・メモ。",
         "Skip to content": "本文へスキップ",

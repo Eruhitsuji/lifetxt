@@ -16003,9 +16003,12 @@ traceability:
     - requirement_id: req-remote-cli-practical-tui-parity
       capability_id: cap-remote-cli-read-client
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1066
-      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1067
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1074
       changed_files_or_scope:
         - lifetxt/remote_client_writes.py
+        - lifetxt/remote_client.py
+        - tests/test_remote_client_v19.py
+        - tests/test_remote_client_writes_v23.py
         - docs/en/remote-client-writes.md
         - docs/ja/remote-client-writes.md
       tests_or_evidence:

@@ -10999,6 +10999,7 @@ capabilities:
       - req-web-actionable-retryable-errors
       - req-web-status-standard-custom-authoring
       - req-web-quick-status-standard-custom-authoring
+      - req-web-more-active-view-collapsed-nav
     implementation_locations:
       - lifetxt/web_assets.html
       - lifetxt/web_assets_css_01.css
@@ -11013,6 +11014,7 @@ capabilities:
       - lifetxt/web_assets_js_12.js
       - lifetxt/web_assets_js_16.js
       - lifetxt/web_assets_js_18.js
+      - tests/test_web_more_nav_js.py
       - lifetxt/webapp.py
       - tests/test_web_quick_status_js.py
       - docs/en/web.md
@@ -11023,6 +11025,7 @@ capabilities:
       - lifetxt.web_assets_js_18 beginner-mode _todaySubsection empty-state override
       - Web Status (`S`) standard/custom `state:` authoring controls backed by `lifetxt.presence.COMMON_STATES`
       - Web Quick Status standard/custom state picker plus optional activity/title field, delegating to POST /api/status
+      - Collapsed More navigation naming the active advanced view ("More: Agenda", aria-current) with a desktop overlay dropdown
     tests_or_evidence:
       - tests/test_web_actionable_errors_js.py (4 Node.js-driven tests, added during review): status-based error-message classification (409/401/403/5xx/network/generic), toast fallback when no retry is offered, actionable block rendered into #toast-container with a wired retry button and focus, and a null-container call never throws
       - python -m unittest tests.test_web_actionable_errors_js -> Ran 4 tests, OK
@@ -11043,6 +11046,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/798
       - https://github.com/Eruhitsuji/lifetxt/issues/821
       - https://github.com/Eruhitsuji/lifetxt/issues/829
+      - https://github.com/Eruhitsuji/lifetxt/issues/1068
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/822
       - https://github.com/Eruhitsuji/lifetxt/pull/830

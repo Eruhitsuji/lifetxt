@@ -342,6 +342,24 @@
       color: var(--warn);
       background: var(--warn-soft);
     }
+    /* #1073: location, hint, open-record action, and multi-diagnostic summary. */
+    .diagnostic-head { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .6rem; }
+    .diagnostic-text { flex: 1 1 16rem; min-width: 0; overflow-wrap: anywhere; }
+    .diagnostic-location { font-weight: 700; overflow-wrap: anywhere; }
+    .diagnostic-hidden { font-family: var(--font-sans, inherit); font-size: .78rem; opacity: .85; }
+    .diagnostic-open { font-family: var(--font-sans, inherit); }
+    .diagnostic-hint { margin-top: .3rem; font-family: var(--font-sans, inherit); font-size: .8rem; color: var(--muted); }
+    .diagnostics-summary { margin: .75rem 1rem 0; }
+    .diagnostics-summary > summary {
+      display: flex; flex-wrap: wrap; align-items: center; gap: .5rem;
+      padding: .5rem .65rem; border: 1px solid var(--warn); border-radius: var(--r-sm);
+      background: var(--warn-soft); color: var(--ink); cursor: pointer; font-size: .86rem;
+    }
+    .diagnostics-summary-title { font-weight: 700; }
+    .diagnostic-count { padding: .05rem .45rem; border-radius: 999px; font-size: .76rem; font-weight: 700; }
+    .diagnostic-count.error { color: var(--danger); background: var(--danger-soft); }
+    .diagnostic-count.warning { color: var(--warn); background: var(--panel); }
+    .diagnostics-summary .diagnostic { margin: .4rem 0 0; }
     .parse-preview {
       margin-top: .35rem;
       padding: .5rem .6rem;

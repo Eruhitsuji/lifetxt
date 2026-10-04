@@ -16214,7 +16214,7 @@ traceability:
     - requirement_id: req-web-post-1090-ui-regression-followup
       capability_id: cap-web-beginner-first-ux
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1092
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1093
       changed_files_or_scope:
         - lifetxt/web_assets.html
         - lifetxt/web_assets_js_01.js

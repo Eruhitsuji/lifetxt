@@ -597,13 +597,21 @@ def install_remote_client_writes_cli():
             command.add_argument("--profile")
             command.add_argument("--profiles-file")
             command.set_defaults(func=handler)
-        command = subs.add_parser("status")
-        command.add_argument("item_id")
-        command.add_argument("new_status")
-        command.add_argument("--profile")
-        command.add_argument("--profiles-file")
-        command.add_argument("--transaction-id")
-        command.set_defaults(func=_cmd_item_status)
+        command = subs.choices.get("status")
+        if command is not None:
+            command.add_argument("item_id", nargs="?")
+            command.add_argument("new_status", nargs="?")
+            command.add_argument("--transaction-id")
+            old_status = command.get_default("func")
+            command.set_defaults(func=lambda args, old=old_status: _cmd_status_dispatch(args, old))
+        else:
+            command = subs.add_parser("status")
+            command.add_argument("item_id")
+            command.add_argument("new_status")
+            command.add_argument("--profile")
+            command.add_argument("--profiles-file")
+            command.add_argument("--transaction-id")
+            command.set_defaults(func=_cmd_item_status)
         command = subs.add_parser("reopen")
         command.add_argument("item_id")
         command.add_argument("--profile")
@@ -831,6 +839,14 @@ def _cmd_item_done(args):
 
 def _cmd_item_status(args):
     return _emit_mutation(mutate_item, _default_profile(args), "update", {"item_id": args.item_id, "item": {"status": args.new_status}}, None, args.transaction_id)
+
+
+def _cmd_status_dispatch(args, old):
+    if args.item_id is not None:
+        if args.new_status is None:
+            raise ValueError("remote status ITEM_ID requires a new status")
+        return _cmd_item_status(args)
+    return old(args)
 
 
 def _cmd_item_reopen(args):

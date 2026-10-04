@@ -358,6 +358,31 @@ class RemoteClientWritesTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             _cmd_item_update(args)
 
+    @mock.patch("lifetxt.remote_client_writes.snapshot")
+    @mock.patch("lifetxt.remote_client_writes.resolve_profile")
+    def test_basic_item_list_uses_resolved_profile(self, resolve, snapshot):
+        from lifetxt.remote_client_writes import _cmd_item_list
+
+        resolve.return_value = ("home", {"url": "https://example.test"})
+        snapshot.return_value = {"items": [{"id": "I-1", "title": "Buy milk"}]}
+        args = mock.Mock(profile=None, profiles_file=None)
+        with mock.patch("sys.stdout", new_callable=io.StringIO) as output:
+            self.assertEqual(0, _cmd_item_list(args))
+        self.assertIn("I-1\tBuy milk", output.getvalue())
+
+    @mock.patch("lifetxt.remote_client_writes.mutate_item")
+    @mock.patch("lifetxt.remote_client_writes.resolve_profile")
+    def test_basic_item_done_uses_authoritative_update(self, resolve, mutate):
+        from lifetxt.remote_client_writes import _cmd_item_done
+
+        resolve.return_value = ("home", {"url": "https://example.test"})
+        mutate.return_value = {"operation": "update", "item_id": "I-1"}
+        args = mock.Mock(profile=None, profiles_file=None, item_id="I-1", transaction_id="tx")
+        self.assertEqual(0, _cmd_item_done(args))
+        self.assertEqual("update", mutate.call_args[0][1])
+        self.assertEqual("I-1", mutate.call_args[0][2]["item_id"])
+        self.assertEqual("[x]", mutate.call_args[0][2]["item"]["status"])
+
 
 if __name__ == "__main__":
     unittest.main()

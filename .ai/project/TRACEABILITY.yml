@@ -2,6 +2,33 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-main-accessible-controls-navigation
+      capability_id: cap-web-beginner-first-ux
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1067
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1072
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1081
+      changed_files_or_scope:
+        - lifetxt/web_assets.html
+        - lifetxt/web_assets_css_01.css
+        - lifetxt/web_assets_css_04.css
+        - lifetxt/web_assets_js_01.js
+        - lifetxt/web_assets_js_03.js
+        - lifetxt/web_assets_js_05.js
+        - tests/test_web_a11y_controls.py
+        - tests/test_lifetxt.py
+        - tests/test_web_assets.py
+        - tests/test_web_mobile.py
+        - .ai/project/CAPABILITIES.yml
+      tests_or_evidence:
+        - "tests.test_web_a11y_controls (9 tests): aria-label on 7 icon-only header controls and 9 Items filter controls; nav is not a tablist; syncViewTabs sets only aria-current; arrow/End keys move across nav controls; row checkbox hit area and 44px touch-target CSS"
+        - "Playwright/Edge against real lifetxt serve: get_by_role/get_by_label resolve every affected control; ARIA snapshot shows navigation Views with no tab roles; aria-current on the active view (Items, Agenda + More summary); Tab and arrow keys reach all nav controls; at 390px touch the checkbox hit area is 44x44 and a corner tap selects without opening the drawer; Open-only label is 44px tall; web.language=ja localizes the new labels; no JS errors"
+        - "18 Web-related test modules incl. tests.test_web_assets, tests.test_web_mobile, tests.test_web_i18n, tests.test_release_policy, tests.test_surface_runtime -> Ran 324 tests, OK"
+      release_or_deployment: null
+      notes: >-
+        Replaces the invalid mixed tablist/tab navigation model with plain nav
+        plus aria-current, keeping #1068's More summary indication.
+      status: implemented
+
     - requirement_id: req-web-more-active-view-collapsed-nav
       capability_id: cap-web-beginner-first-ux
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1067

@@ -354,6 +354,7 @@
     .item:hover { border-color: var(--line-strong); box-shadow: var(--shadow-2); }
     .item.selected { border-color: var(--accent); background: var(--panel-2); box-shadow: inset 3px 0 0 var(--accent); }
     .item:active { transform: none; }
+    .item-check-hit { display: inline-flex; align-items: center; justify-content: center; align-self: center; cursor: pointer; }
     .item-check { opacity: 0; cursor: pointer; width: 1rem; height: 1rem; align-self: center; transition: opacity var(--t-fast); accent-color: var(--accent); }
     .item:hover .item-check, .item.bulk-selected .item-check { opacity: 1; }
     .item.bulk-selected { border-color: var(--accent); background: var(--accent-soft); }

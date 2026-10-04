@@ -19,8 +19,12 @@ import unittest
 
 from lifetxt.web_assets import HTML_PAGE
 
-_START = "    // Keep advanced destinations discoverable without giving them equal first-"
-_END_ANCHOR = "if (_moreNav.open && !_moreNav.contains(event.target)) closeMoreNav(false);"
+_START = (
+    "    // Keep advanced destinations discoverable without giving them equal first-"
+)
+_END_ANCHOR = (
+    "if (_moreNav.open && !_moreNav.contains(event.target)) closeMoreNav(false);"
+)
 
 
 def _nav_snippet():
@@ -100,7 +104,13 @@ function snapshot() {
 @unittest.skipUnless(shutil.which("node"), "node is required for Web JS behavior tests")
 class MoreNavigationBehaviorTests(unittest.TestCase):
     def _run(self, steps):
-        source = _HARNESS + _nav_snippet() + "\nconst out = {};\n" + steps + "\nconsole.log(JSON.stringify(out));\n"
+        source = (
+            _HARNESS
+            + _nav_snippet()
+            + "\nconst out = {};\n"
+            + steps
+            + "\nconsole.log(JSON.stringify(out));\n"
+        )
         result = subprocess.run(
             ["node", "-e", source],
             capture_output=True,
@@ -150,7 +160,7 @@ class MoreNavigationBehaviorTests(unittest.TestCase):
 
     def test_escape_closes_more_and_returns_focus_to_summary(self):
         out = self._run(
-            'more.open = true; let prevented = false;'
+            "more.open = true; let prevented = false;"
             'more.dispatch("keydown", {key: "Escape", preventDefault() { prevented = true; }, stopPropagation() {}});'
             "out.s = snapshot(); out.prevented = prevented;"
         )
@@ -160,7 +170,7 @@ class MoreNavigationBehaviorTests(unittest.TestCase):
 
     def test_escape_when_closed_is_left_to_the_global_handler(self):
         out = self._run(
-            'let prevented = false;'
+            "let prevented = false;"
             'more.dispatch("keydown", {key: "Escape", preventDefault() { prevented = true; }, stopPropagation() {}});'
             "out.prevented = prevented;"
         )
@@ -168,8 +178,8 @@ class MoreNavigationBehaviorTests(unittest.TestCase):
 
     def test_outside_click_closes_but_inside_click_does_not(self):
         out = self._run(
-            'more.open = true; docListeners.click.forEach(fn => fn({target: summary})); out.inside = more.open;'
-            'docListeners.click.forEach(fn => fn({target: outside})); out.outside = more.open;'
+            "more.open = true; docListeners.click.forEach(fn => fn({target: summary})); out.inside = more.open;"
+            "docListeners.click.forEach(fn => fn({target: outside})); out.outside = more.open;"
         )
         self.assertTrue(out["inside"])
         self.assertFalse(out["outside"])
@@ -191,11 +201,14 @@ class MoreNavigationMarkupTests(unittest.TestCase):
         block = block[: block.index("\n    }\n")]
         self.assertIn(".header-workspace-tabs > .nav-more { position: static; }", block)
         self.assertIn("position: absolute;", block)
-        self.assertIn(".header-workspace-tabs > .nav-primary { flex-wrap: nowrap; }", block)
+        self.assertIn(
+            ".header-workspace-tabs > .nav-primary { flex-wrap: nowrap; }", block
+        )
 
     def test_phone_open_more_gets_its_own_row(self):
         self.assertIn(
-            ".header-workspace-tabs:has(> .nav-more[open]) { flex-wrap: wrap; }", HTML_PAGE
+            ".header-workspace-tabs:has(> .nav-more[open]) { flex-wrap: wrap; }",
+            HTML_PAGE,
         )
         self.assertIn(
             ".header-workspace-tabs > .nav-more[open] { flex: 1 1 100%; min-width: 0; }",

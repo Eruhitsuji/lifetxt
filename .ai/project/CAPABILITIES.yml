@@ -11001,10 +11001,12 @@ capabilities:
       - req-web-quick-status-standard-custom-authoring
       - req-web-more-active-view-collapsed-nav
       - req-web-main-accessible-controls-navigation
+      - req-web-diagnostics-location-navigation-summary
     implementation_locations:
       - lifetxt/web_assets.html
       - lifetxt/web_assets_css_01.css
       - lifetxt/web_assets_css_02.css
+      - lifetxt/web_assets_css_03.css
       - lifetxt/web_assets_css_04.css
       - lifetxt/web_assets_js_01.js
       - lifetxt/web_assets_js_04.js
@@ -11017,6 +11019,7 @@ capabilities:
       - lifetxt/web_assets_js_18.js
       - tests/test_web_more_nav_js.py
       - tests/test_web_a11y_controls.py
+      - tests/test_web_diagnostics_js.py
       - lifetxt/webapp.py
       - tests/test_web_quick_status_js.py
       - docs/en/web.md
@@ -11028,6 +11031,7 @@ capabilities:
       - Web Status (`S`) standard/custom `state:` authoring controls backed by `lifetxt.presence.COMMON_STATES`
       - Web Quick Status standard/custom state picker plus optional activity/title field, delegating to POST /api/status
       - Collapsed More navigation naming the active advanced view ("More: Agenda", aria-current) with a desktop overlay dropdown
+      - Items diagnostics with file:line location, Open record action, filter-hidden note, and a collapsible error/warning count summary
     tests_or_evidence:
       - tests/test_web_actionable_errors_js.py (4 Node.js-driven tests, added during review): status-based error-message classification (409/401/403/5xx/network/generic), toast fallback when no retry is offered, actionable block rendered into #toast-container with a wired retry button and focus, and a null-container call never throws
       - python -m unittest tests.test_web_actionable_errors_js -> Ran 4 tests, OK
@@ -11039,6 +11043,7 @@ capabilities:
       - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
       - tests/test_web_quick_status_js.py covers config-backed standard options, Custom precedence and retention, optional title, empty validation, same-state no-op, End, failure retention, accessible labels, and Enter submission
       - MPLBACKEND=Agg python -m unittest discover -> Ran 4523 tests, OK (skipped=210), after merging origin/main at 1eb56eb
+      - tests/test_web_diagnostics_js.py (15 tests) covers diagnostic location labels, filter-hidden marking, source+line record matching, escaping, summary counts/open state, and Open record fallback/toasts (#1073)
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/793
       - https://github.com/Eruhitsuji/lifetxt/issues/794
@@ -11050,6 +11055,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/829
       - https://github.com/Eruhitsuji/lifetxt/issues/1068
       - https://github.com/Eruhitsuji/lifetxt/issues/1072
+      - https://github.com/Eruhitsuji/lifetxt/issues/1073
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/822
       - https://github.com/Eruhitsuji/lifetxt/pull/830

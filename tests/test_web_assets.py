@@ -17,7 +17,7 @@ from lifetxt import web_assets, webapp
 
 REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
 # #1072 adds accessible names, nav aria-current, and 44px touch targets.
-LEGACY_PRISTINE_GIT_BLOB_SHA = "0d769d3016277ea45dbe8599aea5cedb9c7759cd"
+LEGACY_PRISTINE_GIT_BLOB_SHA = "fb84d2931ba6708a236da52ac26db88815c39015"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )

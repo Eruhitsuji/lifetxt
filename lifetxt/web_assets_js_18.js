@@ -96,6 +96,7 @@
       display: {icon: "▣", label: "Display"},
     };
     function normalizeMoreNavigationLabels() {
+      if (!document.querySelectorAll) return;
       document.querySelectorAll("#nav-advanced .workspace-tab[data-view]").forEach(tab => {
         const spec = MORE_VIEW_LABELS[tab.dataset.view];
         if (!spec || tab.dataset.semanticLabel === spec.label) return;

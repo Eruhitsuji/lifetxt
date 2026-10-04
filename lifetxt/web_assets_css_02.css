@@ -410,30 +410,6 @@
     .nav-more[open] > summary { color: var(--accent-ink); background: var(--accent); }
     .nav-advanced { padding: .45rem; margin-top: .25rem; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow-2); }
     .nav-advanced .workspace-tab { white-space: nowrap; }
-    /* The active advanced view is named in the collapsed summary ("More: Agenda")
-       instead of forcing the whole More panel open (#1068). */
-    /* Pull the label up to "More" so the flex gap does not read as "More : X". */
-    .nav-more-current { margin-inline-start: -.3rem; }
-    .nav-more-current::before { content: ": "; }
-    .nav-more-current[hidden] { display: none; }
-    @media (min-width: 681px) {
-      /* Desktop: More opens as an overlay dropdown so the primary tabs keep
-         their single row whether or not the panel is open (#1068). */
-      .header-workspace-tabs { position: relative; overflow: visible; }
-      .header-workspace-tabs > .nav-primary { flex-wrap: nowrap; }
-      /* Anchor the dropdown to the whole navigation bar, not the More button,
-         so it always fits inside the viewport. */
-      .header-workspace-tabs > .nav-more { position: static; }
-      .nav-advanced {
-        position: absolute;
-        top: calc(100% + .3rem);
-        left: .5rem;
-        z-index: 60;
-        width: max-content;
-        max-width: min(46rem, calc(100% - 1rem));
-        margin-top: 0;
-      }
-    }
     .field-help-text { display: block; color: var(--muted); font-size: .75rem; font-weight: 400; }
     .skip-link {
       position: fixed;

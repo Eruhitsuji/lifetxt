@@ -16030,3 +16030,10 @@ traceability:
       reason: Presentation-only brand integration; no runtime behavior, data model, public interface, or independently callable capability changed
       approved_by: Eruhitsuji
       status: accepted
+    - exception_type: traceability_not_applicable
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1068
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1078
+      scope: Revert of f283625f and 999f748e (lifetxt/web_assets*, tests/test_web_more_nav_js.py, tests/test_web_assets.py, .ai/project/CAPABILITIES.yml); resulting tree equals f09ed531
+      reason: Process-incident remediation that removes unreviewed commits pushed directly to main; it introduces no requirement or behavior, and the #1068 requirement chain is recorded by its own reviewed follow-up PR
+      approved_by: Eruhitsuji
+      status: accepted

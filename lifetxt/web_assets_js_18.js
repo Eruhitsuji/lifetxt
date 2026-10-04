@@ -84,20 +84,60 @@
     };
 
     // Keep advanced destinations discoverable without giving them equal first-
-    // run prominence. Direct URLs still open the More group automatically.
+    // run prominence. Opening an advanced view (directly, via history, or from
+    // the menu) leaves More collapsed and names the active view in its summary
+    // ("More: Agenda") instead of forcing the panel open (#1068).
+    const ADVANCED_NAV_VIEWS = new Set(["agenda", "timeline", "calendar", "focus", "matrix", "review", "messages", "team", "status", "notifications", "stats", "graph", "server", "context", "display", "kiosk"]);
+    function navTabLabel(tab) {
+      return String(tab?.textContent || "").replace(/^[^\p{L}\p{N}]+/u, "").trim();
+    }
     const _beginnerNavSyncViewTabs = syncViewTabs;
     syncViewTabs = function() {
       _beginnerNavSyncViewTabs();
       const more = document.getElementById("nav-more");
-      const advanced = new Set(["agenda", "timeline", "calendar", "focus", "review", "messages", "team", "status", "notifications", "stats", "graph", "server", "context", "display", "kiosk"]);
-      if (more && advanced.has(currentView())) more.open = true;
       const summary = document.getElementById("nav-more-summary");
-      if (summary && more) summary.setAttribute("aria-expanded", more.open ? "true" : "false");
+      const current = document.getElementById("nav-more-current");
+      const view = currentView();
+      const activeTab = more && ADVANCED_NAV_VIEWS.has(view)
+        ? Array.from(more.querySelectorAll(".workspace-tab[data-view]")).find(tab => tab.dataset.view === view)
+        : null;
+      if (current) {
+        current.textContent = activeTab ? navTabLabel(activeTab) : "";
+        current.hidden = !activeTab;
+      }
+      if (summary) {
+        summary.classList.toggle("active", !!activeTab);
+        if (activeTab) summary.setAttribute("aria-current", "page");
+        else summary.removeAttribute("aria-current");
+        if (more) summary.setAttribute("aria-expanded", more.open ? "true" : "false");
+      }
     };
+    function closeMoreNav(returnFocus) {
+      const more = document.getElementById("nav-more");
+      if (!more || !more.open) return false;
+      more.open = false;
+      if (returnFocus) document.getElementById("nav-more-summary")?.focus();
+      return true;
+    }
     const _moreNav = document.getElementById("nav-more");
-    if (_moreNav) _moreNav.addEventListener("toggle", () => {
-      document.getElementById("nav-more-summary")?.setAttribute("aria-expanded", _moreNav.open ? "true" : "false");
-    });
+    if (_moreNav) {
+      _moreNav.addEventListener("toggle", () => {
+        document.getElementById("nav-more-summary")?.setAttribute("aria-expanded", _moreNav.open ? "true" : "false");
+      });
+      // Choosing a destination closes the menu; the summary keeps the context.
+      _moreNav.querySelector(".nav-advanced")?.addEventListener("click", event => {
+        if (event.target.closest(".workspace-tab")) closeMoreNav(false);
+      });
+      _moreNav.addEventListener("keydown", event => {
+        if (event.key === "Escape" && closeMoreNav(true)) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      });
+      document.addEventListener("click", event => {
+        if (_moreNav.open && !_moreNav.contains(event.target)) closeMoreNav(false);
+      });
+    }
 
       applyPresetToUrl();
       applyUrlToControls();

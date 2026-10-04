@@ -16144,11 +16144,61 @@ traceability:
     - requirement_id: req-web-more-icon-label-clarity
       capability_id: cap-web-beginner-first-ux
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1077
-      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1081
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1083
       changed_files_or_scope: [lifetxt/web_assets.html, lifetxt/web_assets_css_03.css, tests/test_web_assets.py]
       tests_or_evidence: [distinct reliable More-view glyphs, Team/Status clarifying labels, decorative icon treatment]
       release_or_deployment: null
       notes: Uses system-supported Unicode glyphs without external font dependencies.
+      status: in_progress
+
+    - requirement_id: req-web-more-icon-label-semantic-followup
+      capability_id: cap-web-beginner-first-ux
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1084
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1089
+      changed_files_or_scope: [lifetxt/web_assets.html, lifetxt/web_assets_js_01.js, lifetxt/web_assets_js_18.js, lifetxt/web_assets_css_03.css]
+      tests_or_evidence: [semantic More navigation labels, localized Team/Status labels, decorative icons, active summary parity]
+      release_or_deployment: null
+      notes: Replaces CSS-generated labels with semantic runtime markup and normal i18n.
+      status: in_progress
+
+    - requirement_id: req-web-human-temporal-locale-followup
+      capability_id: cap-web-beginner-first-ux
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1085
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1089
+      changed_files_or_scope: [lifetxt/web_assets_js_01.js, lifetxt/web_assets_js_06.js, lifetxt/web_assets_js_07.js, lifetxt/web_assets_js_16.js]
+      tests_or_evidence: [locale-aware timed labels, localized all-day label, cross-view helper reuse]
+      release_or_deployment: null
+      notes: Formatting only; parser, API and workspace timezone semantics remain unchanged.
+      status: in_progress
+
+    - requirement_id: req-web-items-mobile-filter-disclosure
+      capability_id: cap-web-beginner-first-ux
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1086
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1089
+      changed_files_or_scope: [lifetxt/web_assets.html, lifetxt/web_assets_css_03.css, lifetxt/web_assets_css_04.css]
+      tests_or_evidence: [native mobile filter disclosure, preserved control IDs and query behavior, desktop-visible controls]
+      release_or_deployment: null
+      notes: Native details disclosure keeps existing filter controls and values intact.
+      status: in_progress
+
+    - requirement_id: req-web-disclosure-aria-consistency
+      capability_id: cap-web-beginner-first-ux
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1087
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1089
+      changed_files_or_scope: [lifetxt/web_assets.html, lifetxt/web_assets_js_10.js]
+      tests_or_evidence: [native details disclosure semantics, keyboard Escape close, outside click close, preserved aria-pressed toggles]
+      release_or_deployment: null
+      notes: Removes incomplete ARIA menu roles while retaining native disclosure behavior.
+      status: in_progress
+
+    - requirement_id: req-web-1067-closeout
+      capability_id: cap-web-beginner-first-ux
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1088
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1089
+      changed_files_or_scope: [.ai/project/TRACEABILITY.yml]
+      tests_or_evidence: [traceability gate, release-policy metadata validation, dependent follow-up mapping]
+      release_or_deployment: null
+      notes: Repository metadata records the follow-up implementation chain; GitHub issue closure remains maintainer-controlled.
       status: in_progress
 
   gap_policy:

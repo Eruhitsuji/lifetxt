@@ -26,7 +26,7 @@ traceability:
       capability_id: cap-web-beginner-first-ux
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1067
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1072
-      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1081
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1083
       changed_files_or_scope:
         - lifetxt/web_assets.html
         - lifetxt/web_assets_css_01.css
@@ -16119,6 +16119,36 @@ traceability:
       tests_or_evidence: [desktop primary navigation create retained, phone primary navigation create hidden, mobile FAB retained]
       release_or_deployment: null
       notes: Existing newItem behavior and keyboard shortcut remain authoritative.
+      status: in_progress
+
+    - requirement_id: req-web-human-temporal-display
+      capability_id: cap-web-beginner-first-ux
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1075
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1083
+      changed_files_or_scope: [lifetxt/web_assets_js_06.js, lifetxt/web_assets_js_07.js, lifetxt/web_assets_js_16.js, tests/test_web_assets.py]
+      tests_or_evidence: [shared temporal display helper, all-day Agenda/Today/Calendar rendering, Agenda ID label]
+      release_or_deployment: null
+      notes: Presentation-only temporal formatting; API and parser semantics remain unchanged.
+      status: in_progress
+
+    - requirement_id: req-web-drawer-action-overflow
+      capability_id: cap-web-beginner-first-ux
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1076
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1083
+      changed_files_or_scope: [lifetxt/web_assets.html, lifetxt/web_assets_js_10.js, lifetxt/web_assets_css_03.css, tests/test_web_assets.py]
+      tests_or_evidence: [keyboard-accessible overflow disclosure, copy/share/stable-link/Markdown action grouping, mobile wrapping]
+      release_or_deployment: null
+      notes: Existing action handlers and generated content remain unchanged.
+      status: in_progress
+
+    - requirement_id: req-web-more-icon-label-clarity
+      capability_id: cap-web-beginner-first-ux
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1077
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1081
+      changed_files_or_scope: [lifetxt/web_assets.html, lifetxt/web_assets_css_03.css, tests/test_web_assets.py]
+      tests_or_evidence: [distinct reliable More-view glyphs, Team/Status clarifying labels, decorative icon treatment]
+      release_or_deployment: null
+      notes: Uses system-supported Unicode glyphs without external font dependencies.
       status: in_progress
 
   gap_policy:

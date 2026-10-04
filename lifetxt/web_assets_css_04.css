@@ -770,6 +770,7 @@
       .nav-more > summary { width: 100%; text-align: center; }
       .nav-advanced { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .nav-advanced .workspace-tab { width: 100%; }
+      .nav-advanced > .surface-link { display: flex; align-items: center; width: 100%; min-height: 44px; padding: .32rem .6rem; color: var(--ink); font-weight: 600; text-decoration: none; }
     }
     @media (max-width: 680px) {
       /* An explicitly opened More menu gets its own full-width row below the

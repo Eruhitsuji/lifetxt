@@ -16201,6 +16201,16 @@ traceability:
       notes: Repository metadata records the follow-up implementation chain; GitHub issue closure remains maintainer-controlled.
       status: in_progress
 
+    - requirement_id: req-web-post-1067-regression-repair
+      capability_id: cap-web-beginner-first-ux
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1090
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1091
+      changed_files_or_scope: [lifetxt/web_assets_css_02.css, lifetxt/web_assets_css_03.css, lifetxt/web_assets_css_04.css, lifetxt/web_assets_css_06.css, lifetxt/web_assets_js_05.js, lifetxt/web_assets_js_15.js, lifetxt/web_assets_js_18.js, tests/test_web_assets.py]
+      tests_or_evidence: [new-record details editing/import flow, supported relation mapping, HTTP clipboard fallback, drawer menu stacking/mobile styling, Priority Matrix spacing]
+      release_or_deployment: null
+      notes: Post-#1067 Web regression repair; existing APIs, relation vocabulary, and URL contracts are preserved.
+      status: in_progress
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

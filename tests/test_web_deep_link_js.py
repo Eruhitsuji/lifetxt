@@ -52,13 +52,17 @@ def _extract_functions_under_test(full_script):
     share_and_restore = _extract_block(
         full_script, "function syncDrawerFromUrl", "function syncDrawerFromUrl"
     )
-    build_link_start = full_script.index("function buildItemDeepLink")
-    build_link_end_marker = "function drawerCopyStableLink()"
-    stable_start = full_script.index(build_link_end_marker, build_link_start)
-    stable_end_anchor = full_script.index("if (navigator.clipboard", stable_start)
-    build_link_end = full_script.index("\n    }", stable_end_anchor) + len("\n    }")
-    build_link = full_script[build_link_start:build_link_end]
-    return "\n".join([url_sync, close_drawer, share_and_restore, build_link])
+    # Keep the clipboard helper together with the deep-link functions.  The
+    # copy actions used to call navigator.clipboard directly, but now share a
+    # fallback-aware helper, so anchoring on that implementation detail would
+    # make this extraction brittle.
+    clipboard_start = full_script.index("function writeClipboardText")
+    context_menu_start = full_script.index(
+        "    // ── Context menu: copy line number + share link ───────────────",
+        clipboard_start,
+    )
+    deep_link_and_copy = full_script[clipboard_start:context_menu_start]
+    return "\n".join([url_sync, close_drawer, share_and_restore, deep_link_and_copy])
 
 
 _HARNESS = """

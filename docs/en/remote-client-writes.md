@@ -1,5 +1,10 @@
 # Read and edit server data from the Remote CLI and TUI
 
+Semantic parity commands include `show`, `search`, `today`, `edit`, `status`,
+`reopen`, `delete --yes`, and `timeline`. They reuse server projections and
+the authoritative item-mutation contract; unsupported projections fail rather
+than being approximated locally, and mutation conflicts are never retried.
+
 ## Basic item commands
 
 After configuring a default profile with `lifetxt remote setup`, the basic

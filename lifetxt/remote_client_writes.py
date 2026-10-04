@@ -7,7 +7,7 @@ import json
 import sys
 import uuid
 
-from .remote_client import get_profile, request, resolve_profile, snapshot
+from .remote_client import get_profile, request, resolve_profile, resource, snapshot
 
 MUTATION_ROUTE = "/api/remote/v1/ticket-mutations"
 ITEM_MUTATION_ROUTE = "/api/remote/v1/item-mutations"
@@ -589,6 +589,51 @@ def install_remote_client_writes_cli():
             command.add_argument("--profiles-file")
             command.add_argument("--transaction-id")
             command.set_defaults(func=_cmd_item_done)
+        for name, handler in (("show", _cmd_item_show), ("search", _cmd_search), ("next", _cmd_view_next), ("today", _cmd_view_today), ("notes", _cmd_view_notes), ("timeline", _cmd_timeline)):
+            if name in subs.choices:
+                continue
+            command = subs.add_parser(name)
+            command.add_argument("value", nargs="?" if name != "search" else None)
+            command.add_argument("--profile")
+            command.add_argument("--profiles-file")
+            command.set_defaults(func=handler)
+        command = subs.choices.get("status")
+        if command is not None:
+            command.add_argument("item_id", nargs="?")
+            command.add_argument("new_status", nargs="?")
+            command.add_argument("--transaction-id")
+            old_status = command.get_default("func")
+            command.set_defaults(func=lambda args, old=old_status: _cmd_status_dispatch(args, old))
+        else:
+            command = subs.add_parser("status")
+            command.add_argument("item_id")
+            command.add_argument("new_status")
+            command.add_argument("--profile")
+            command.add_argument("--profiles-file")
+            command.add_argument("--transaction-id")
+            command.set_defaults(func=_cmd_item_status)
+        command = subs.add_parser("reopen")
+        command.add_argument("item_id")
+        command.add_argument("--profile")
+        command.add_argument("--profiles-file")
+        command.add_argument("--transaction-id")
+        command.set_defaults(func=_cmd_item_reopen)
+        command = subs.add_parser("delete")
+        command.add_argument("item_id")
+        command.add_argument("--yes", action="store_true")
+        command.add_argument("--profile")
+        command.add_argument("--profiles-file")
+        command.add_argument("--transaction-id")
+        command.set_defaults(func=_cmd_item_delete_default)
+        command = subs.add_parser("edit")
+        command.add_argument("item_id")
+        command.add_argument("--title")
+        command.add_argument("--set", action="append", default=[])
+        command.add_argument("--unset", action="append", default=[])
+        command.add_argument("--profile")
+        command.add_argument("--profiles-file")
+        command.add_argument("--transaction-id")
+        command.set_defaults(func=_cmd_item_edit_default)
         tui = subs.choices.get("tui")
         if tui is not None and not any(
             action.dest == "interactive" for action in tui._actions
@@ -790,6 +835,75 @@ def _cmd_item_done(args):
         None,
         args.transaction_id,
     )
+
+
+def _cmd_item_status(args):
+    return _emit_mutation(mutate_item, _default_profile(args), "update", {"item_id": args.item_id, "item": {"status": args.new_status}}, None, args.transaction_id)
+
+
+def _cmd_status_dispatch(args, old):
+    if args.item_id is not None:
+        if args.new_status is None:
+            raise ValueError("remote status ITEM_ID requires a new status")
+        return _cmd_item_status(args)
+    return old(args)
+
+
+def _cmd_item_reopen(args):
+    args.new_status = "[ ]"
+    return _cmd_item_status(args)
+
+
+def _cmd_item_delete_default(args):
+    if not args.yes:
+        raise ValueError("remote delete requires --yes to confirm the authoritative deletion")
+    return _emit_mutation(mutate_item, _default_profile(args), "delete", {"item_id": args.item_id}, None, args.transaction_id)
+
+
+def _cmd_item_edit_default(args):
+    item = {}
+    if args.title is not None:
+        item["title"] = args.title
+    details = _item_details(args.set)
+    for key in args.unset:
+        details[key] = []
+    if details:
+        item["details"] = details
+    if not item:
+        raise ValueError("remote edit requires --title, --set, or --unset")
+    return _emit_mutation(mutate_item, _default_profile(args), "update", {"item_id": args.item_id, "item": item}, None, args.transaction_id)
+
+
+def _read_resource(args, name, params=None):
+    return _emit(resource(_default_profile(args), name, params=params))
+
+
+def _cmd_item_show(args):
+    data = snapshot(_default_profile(args))
+    for row in data.get("items", []):
+        if str(row.get("id")) == str(args.value):
+            return _emit(row)
+    raise KeyError("Remote item is not visible: %s" % args.value)
+
+
+def _cmd_search(args):
+    return _read_resource(args, "search", [("q", args.value)])
+
+
+def _cmd_view_next(args):
+    return _read_resource(args, "next")
+
+
+def _cmd_view_today(args):
+    return _read_resource(args, "today")
+
+
+def _cmd_view_notes(args):
+    return _read_resource(args, "notes")
+
+
+def _cmd_timeline(args):
+    return _read_resource(args, "timeline", [("item", args.value)])
 
 
 def _cmd_tui(args, old):

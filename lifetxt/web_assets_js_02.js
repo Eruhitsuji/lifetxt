@@ -428,5 +428,5 @@
       "": {
         label: "Items",
         description: "Search, filter, edit, and bulk-manage life.txt records.",
-        actions: [["New record", "newItem"], ["Quick add", "quickAdd"], ["Set status", "setStatus"], ["End status", "endStatus"], ["Clear filters", "clearFilters"]],
+        actions: [["Quick add", "quickAdd"], ["Set status", "setStatus"], ["End status", "endStatus"], ["Clear filters", "clearFilters"]],
       },

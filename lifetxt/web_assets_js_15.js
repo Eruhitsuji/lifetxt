@@ -115,15 +115,38 @@
     // ── Clear view preset ─────────────────────────────────────────
 
     // ── Drawer: copy ID to clipboard ──────────────────────────────
+    function writeClipboardText(text, onSuccess, onFailure) {
+      const succeed = () => { if (onSuccess) onSuccess(); };
+      const fail = () => { if (onFailure) onFailure(); };
+      if (typeof navigator !== "undefined" && navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(String(text)).then(succeed, () => {
+          if (!_legacyCopyText(text)) fail(); else succeed();
+        });
+        return;
+      }
+      if (!_legacyCopyText(text)) fail(); else succeed();
+    }
+    function _legacyCopyText(text) {
+      if (typeof document === "undefined" || !document.createElement || !document.body || !document.body.appendChild) return false;
+      const textarea = document.createElement("textarea");
+      textarea.value = String(text);
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      let copied = false;
+      try { copied = document.execCommand("copy"); } catch (_) { copied = false; }
+      if (textarea.remove) textarea.remove();
+      else textarea.parentNode?.removeChild(textarea);
+      return copied;
+    }
     function drawerCopyId() {
       if (!drawerItem) return;
       const idKey = (appConfig?.ids?.key) || "id";
       const idVal = drawerItem?.details?.[idKey]?.[0] || drawerItem?.id || "";
       if (!idVal) { showToast("No ID on this item.", "error"); return; }
-      navigator.clipboard.writeText(String(idVal)).then(
-        () => showToast("Copied: " + idVal, "success"),
-        () => showToast("Copy failed.", "error")
-      );
+      writeClipboardText(String(idVal), () => showToast("Copied: " + idVal, "success"), () => showToast("Copy failed.", "error"));
     }
 
     // ── Drawer: copy as Markdown ───────────────────────────────────
@@ -135,10 +158,7 @@
       const proj = item?.details?.project?.[0] ? ` — project: ${item.details.project[0]}` : "";
       const tags = (item?.details?.tag || []).map(t => `#${t}`).join(" ");
       const md = `- [${tick}] ${item.title}${due}${proj}${tags ? " " + tags : ""}`;
-      navigator.clipboard.writeText(md).then(
-        () => showToast("Copied as Markdown.", "success"),
-        () => showToast("Copy failed.", "error")
-      );
+      writeClipboardText(md, () => showToast("Copied as Markdown.", "success"), () => showToast("Copy failed.", "error"));
     }
 
     // ── Share: canonical record deep link (#839) ───────────────────
@@ -165,11 +185,7 @@
         if (ok) showToast(t("Link copied:") + " " + built.label, "success");
         else showToast(t("Copy failed. Select and copy manually:") + " " + built.url, "error", 8000);
       };
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(built.url).then(() => announce(true), () => announce(false));
-      } else {
-        announce(false);
-      }
+      writeClipboardText(built.url, () => announce(true), () => announce(false));
     }
     function drawerShareLink() { copyItemDeepLink(drawerItem); }
 
@@ -191,11 +207,7 @@
         if (ok) showToast(t("Stable link copied:") + " " + link, "success");
         else showToast(t("Copy failed. Select and copy manually:") + " " + link, "error", 8000);
       };
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(link).then(() => announce(true), () => announce(false));
-      } else {
-        announce(false);
-      }
+      writeClipboardText(link, () => announce(true), () => announce(false));
     }
 
     // ── Context menu: copy line number + share link ───────────────

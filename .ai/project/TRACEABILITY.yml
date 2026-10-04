@@ -16000,6 +16000,22 @@ traceability:
       notes: Thin CLI adapter over the existing item-mutation and snapshot contracts.
       status: in_progress
 
+    - requirement_id: req-remote-cli-practical-tui-parity
+      capability_id: cap-remote-cli-read-client
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1066
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1067
+      changed_files_or_scope:
+        - lifetxt/remote_client_writes.py
+        - docs/en/remote-client-writes.md
+        - docs/ja/remote-client-writes.md
+      tests_or_evidence:
+        - tests.test_remote_client_writes_v23
+        - existing snapshot/resource projections and item mutation contract reused
+        - delete confirmation and no automatic conflict retry preserved
+      release_or_deployment: null
+      notes: Semantic CLI adapters only; TUI presentation and unsupported server contracts remain out of scope.
+      status: in_progress
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

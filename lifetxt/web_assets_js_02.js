@@ -436,4 +436,3 @@
         description: "Search, filter, edit, and bulk-manage life.txt records.",
         actions: [["Quick add", "quickAdd"], ["Set status", "setStatus"], ["End status", "endStatus"], ["Clear filters", "clearFilters"]],
       },
-        "More record actions": "その他の操作",

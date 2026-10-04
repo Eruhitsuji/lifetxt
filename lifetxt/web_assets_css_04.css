@@ -294,6 +294,10 @@
       .toolbar > *, .actions > *, .section-head button { flex: 1 1 100%; }
       .search-wrap { flex: 1 1 100%; }
       .search-wrap input { width: 100%; }
+      .items-filter-disclosure { display: block; }
+      .items-filter-disclosure > summary { display: block; width: max-content; margin: .25rem 0 .4rem; }
+      .items-filter-disclosure:not([open]) > .items-controls { display: none; }
+      .items-filter-disclosure[open] > .items-controls { display: flex; }
       .items-controls > * { flex: 1 1 40%; }
       .workspace-tabs { margin-inline: -.15rem; }
       .workspace-tab { padding: .32rem .6rem; font-size: .78rem; }

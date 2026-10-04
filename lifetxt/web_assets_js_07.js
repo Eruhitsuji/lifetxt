@@ -219,7 +219,8 @@
       const type = record.type || "N";
       const when = String(dayWhen || record.occurrence_start || ((record.matches || [])[0] || {}).start || record.when || "");
       const timed = when.length > 10;
-      const time = timed && _temporalDisplayLabel(when, {allDayMidnight: true}) !== "All day" ? when.slice(11, 16) + " " : "";
+      const timeLabel = _temporalDisplayLabel(when, {allDayMidnight: true, dayContext: true});
+      const time = timeLabel ? timeLabel + " " : "";
       const dueCls = agendaDueSoonClass(record);
       const clickable = Number.isInteger(record.line);
       const occ = (record.occurrence_start || record.repeat_rule) ? " ↻" : "";

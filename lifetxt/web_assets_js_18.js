@@ -88,12 +88,30 @@
     // the menu) leaves More collapsed and names the active view in its summary
     // ("More: Agenda") instead of forcing the panel open (#1068).
     const ADVANCED_NAV_VIEWS = new Set(["agenda", "timeline", "calendar", "focus", "matrix", "review", "messages", "team", "status", "notifications", "stats", "graph", "server", "context", "display", "kiosk"]);
+    const MORE_VIEW_LABELS = {
+      matrix: {icon: "◆", label: "Priority Matrix"},
+      stats: {icon: "▥", label: "Stats"},
+      team: {icon: "●", label: "Team · presence"},
+      status: {icon: "◉", label: "Status · latest"},
+      display: {icon: "▣", label: "Display"},
+    };
+    function normalizeMoreNavigationLabels() {
+      document.querySelectorAll("#nav-advanced .workspace-tab[data-view]").forEach(tab => {
+        const spec = MORE_VIEW_LABELS[tab.dataset.view];
+        if (!spec || tab.dataset.semanticLabel === spec.label) return;
+        tab.dataset.semanticLabel = spec.label;
+        tab.innerHTML = `<span aria-hidden="true">${spec.icon}</span> <span data-i18n="${spec.label}">${spec.label}</span>`;
+      });
+      applyLanguage();
+    }
     function navTabLabel(tab) {
+      return String(tab?.dataset?.semanticLabel || tab?.textContent || "").replace(/^[^\p{L}\p{N}]+/u, "").trim();
       return String(tab?.textContent || "").replace(/^[^\p{L}\p{N}]+/u, "").trim();
     }
     const _beginnerNavSyncViewTabs = syncViewTabs;
     syncViewTabs = function() {
       _beginnerNavSyncViewTabs();
+      normalizeMoreNavigationLabels();
       const more = document.getElementById("nav-more");
       const summary = document.getElementById("nav-more-summary");
       const current = document.getElementById("nav-more-current");

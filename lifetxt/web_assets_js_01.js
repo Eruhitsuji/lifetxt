@@ -55,6 +55,11 @@
     // data-no-i18n and the walker skips those subtrees entirely.
     const UI_STRINGS = {
       ja: {
+        "Team · presence": "チーム・在席",
+        "Status · latest": "ステータス・最新",
+        "All day": "終日",
+        "Filters": "絞り込み",
+        "Item filters": "アイテムの絞り込み",
         "More record actions": "その他の操作",
         // Chrome and navigation
         "Plain text tasks, schedule, presence, and notes.": "プレーンテキストのタスク・予定・在席・メモ。",

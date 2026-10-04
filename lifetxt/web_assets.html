@@ -31,21 +31,21 @@ __LIFETXT_WEB_STYLES__  </style>
     </div>
     <div class="toolbar">
       <button id="new-item-btn" class="help-target" data-workspace="new" data-help="Create a life.txt record. Pick a status, type, title, and detail keys; press n to open this editor from the keyboard." onclick="newItem()" title="Create a new record (n)">＋ New</button>
-      <button id="dark-btn" class="secondary" onclick="toggleDarkMode()" title="Toggle dark mode (d)">🌙</button>
-      <button id="contrast-btn" class="secondary" onclick="toggleHighContrast()" title="Toggle high-contrast theme" aria-pressed="false">◑</button>
-      <button id="motion-btn" class="secondary" onclick="toggleReducedMotion()" title="Toggle reduced motion" aria-pressed="false">⏸</button>
-      <button id="density-btn" class="secondary" onclick="toggleDensity()" title="Toggle compact density">▤</button>
-      <button id="fullscreen-btn" class="secondary" onclick="toggleFullscreen()" title="Toggle fullscreen (f)">⛶</button>
+      <button id="dark-btn" class="secondary" onclick="toggleDarkMode()" title="Toggle dark mode (d)" aria-label="Toggle dark mode">🌙</button>
+      <button id="contrast-btn" class="secondary" onclick="toggleHighContrast()" title="Toggle high-contrast theme" aria-label="Toggle high-contrast theme" aria-pressed="false">◑</button>
+      <button id="motion-btn" class="secondary" onclick="toggleReducedMotion()" title="Toggle reduced motion" aria-label="Toggle reduced motion" aria-pressed="false">⏸</button>
+      <button id="density-btn" class="secondary" onclick="toggleDensity()" title="Toggle compact density" aria-label="Toggle compact density">▤</button>
+      <button id="fullscreen-btn" class="secondary" onclick="toggleFullscreen()" title="Toggle fullscreen (f)" aria-label="Toggle fullscreen">⛶</button>
       <button id="notif-btn" class="secondary" onclick="toggleNotifPanel()" title="Open notifications / enable browser alerts">Notifications</button>
       <button id="refresh-btn" class="secondary" onclick="triggerRefresh()" title="Refresh (r)">Refresh</button>
-      <button class="secondary" onclick="openCmdk()" title="Command palette (Ctrl+K)">⌘</button>
-      <button class="secondary" onclick="openHelpModal()" title="Keyboard shortcuts (?)">?</button>
+      <button class="secondary" onclick="openCmdk()" title="Command palette (Ctrl+K)" aria-label="Command palette">⌘</button>
+      <button class="secondary" onclick="openHelpModal()" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts help">?</button>
       <button id="git-status-badge" class="git-badge" style="display:none" onclick="openGitModal()"></button>
       <button id="display-exit-btn" class="secondary" style="display:none" onclick="switchWorkspace('')" title="Exit display mode">Exit Display</button>
       <time id="kiosk-clock" aria-live="off" style="display:none"></time>
       <button id="kiosk-exit-btn" class="secondary" style="display:none" onclick="toggleKioskMode()" title="Exit kiosk mode (Esc)">✕ Exit</button>
     </div>
-    <nav class="workspace-tabs header-workspace-tabs" id="workspace-tabs" aria-label="Views" role="tablist">
+    <nav class="workspace-tabs header-workspace-tabs" id="workspace-tabs" aria-label="Views">
       <div class="nav-primary" aria-label="Primary">
         <button type="button" class="workspace-tab" data-view="today" onclick="switchWorkspace('today')" title="Daily Command Center: now, attention, inbox, upcoming">🌅 Today</button>
         <button type="button" class="workspace-tab" data-view="" onclick="switchWorkspace('')">📋 Items</button>
@@ -101,14 +101,14 @@ __LIFETXT_WEB_STYLES__  </style>
         <div class="toolbar">
           <div class="search-wrap">
             <span class="search-icon" aria-hidden="true">🔍</span>
-            <input id="search" placeholder="Search (/)" list="tag-suggestions" autocomplete="off">
+            <input id="search" aria-label="Search items" placeholder="Search (/)" list="tag-suggestions" autocomplete="off">
             <span id="search-count"></span>
           </div>
           <label class="inline"><input id="open-only" type="checkbox"> Open</label>
         </div>
       </div>
       <div class="items-controls">
-          <select id="kind" title="Filter by type">
+          <select id="kind" title="Filter by type" aria-label="Filter by type">
             <option value="">All types</option>
             <option value="T">Task</option>
             <option value="E">Event</option>
@@ -121,7 +121,7 @@ __LIFETXT_WEB_STYLES__  </style>
             <option value="M">Message</option>
             <option value="J">Journal</option>
           </select>
-          <select id="sort" title="Sort by">
+          <select id="sort" title="Sort by" aria-label="Sort by">
             <option value="line">Line</option>
             <option value="time">Time</option>
             <option value="title">Title</option>
@@ -129,25 +129,25 @@ __LIFETXT_WEB_STYLES__  </style>
             <option value="status">Status</option>
             <option value="source">Source</option>
           </select>
-          <select id="order" title="Sort order">
+          <select id="order" title="Sort order" aria-label="Sort order">
             <option value="asc">Asc</option>
             <option value="desc">Desc</option>
           </select>
-          <select id="group-by" title="Group items" onchange="loadItems()">
+          <select id="group-by" title="Group items" aria-label="Group items" onchange="loadItems()">
             <option value="">No grouping</option>
             <option value="project">Group: Project</option>
             <option value="type">Group: Type</option>
             <option value="status">Group: Status</option>
             <option value="source">Group: Source</option>
           </select>
-          <input id="limit" inputmode="numeric" placeholder="Limit" title="Max rows">
-          <select id="saved-view-select" title="Apply a saved view" onchange="applySavedView(this.value)">
+          <input id="limit" inputmode="numeric" placeholder="Limit" title="Max rows" aria-label="Max rows">
+          <select id="saved-view-select" title="Apply a saved view" aria-label="Apply a saved view" onchange="applySavedView(this.value)">
             <option value="">Saved view…</option>
           </select>
-          <select id="area-select" title="Filter by area" onchange="applyArea(this.value)">
+          <select id="area-select" title="Filter by area" aria-label="Filter by area" onchange="applyArea(this.value)">
             <option value="">Area…</option>
           </select>
-          <select id="export-select" title="Download the currently filtered items" onchange="if(this.value){exportItems(this.value);this.value='';}" style="margin-left:auto">
+          <select id="export-select" title="Download the currently filtered items" aria-label="Download the currently filtered items" onchange="if(this.value){exportItems(this.value);this.value='';}" style="margin-left:auto">
             <option value="">⇩ Export…</option>
             <option value="csv">CSV</option>
             <option value="json">JSON</option>

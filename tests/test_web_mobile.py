@@ -452,11 +452,13 @@ class RegressionTests(unittest.TestCase):
 
     def test_mobile_rules_come_after_the_desktop_rules_they_override(self):
         # Both blocks have equal specificity, so source order decides.
-        desktop_check = STYLE.find(".item-check { display: none; }")
+        desktop_check = STYLE.find(".item-check, .item-check-hit { display: none; }")
         mobile_check = STYLE.find(".item-check { display: block; }")
+        mobile_hit = STYLE.find(".item-check-hit { display: inline-flex; }")
 
         self.assertGreater(desktop_check, -1)
         self.assertGreater(mobile_check, desktop_check)
+        self.assertGreater(mobile_hit, desktop_check)
 
 
 if __name__ == "__main__":

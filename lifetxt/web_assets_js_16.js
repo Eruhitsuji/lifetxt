@@ -389,8 +389,8 @@
       const statusCls = STATUS_CLASS[ref.status] || "status-note";
       const statusIcon = STATUS_ICON[ref.status] || "·";
       const project = ref.project ? `<span class="pill">@${escapeHtml(ref.project)}</span>` : "";
-      const due = ref.due ? `<span class="pill">due:${escapeHtml(ref.due)}</span>` : "";
-      const when = ref.when ? `<span class="pill">${escapeHtml(ref.when)}</span>` : "";
+      const due = ref.due ? `<span class="pill">${escapeHtml(_temporalDisplayLabel(ref.due, {allDayMidnight: true}) === "All day" ? "All day" : "due:" + ref.due)}</span>` : "";
+      const when = ref.when ? `<span class="pill">${escapeHtml(_temporalDisplayLabel(ref.when, {allDayMidnight: true}) || "All day")}</span>` : "";
       const reasons = ref.reasons && ref.reasons.length ? `<span class="pill">${escapeHtml(ref.reasons.join(", "))}</span>` : "";
       return `<div class="dash-row">
         <span class="status-badge ${statusCls}" style="font-size:.7rem;padding:.08rem .4rem">${escapeHtml(statusIcon)}</span>

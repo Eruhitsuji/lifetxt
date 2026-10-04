@@ -16,8 +16,8 @@ from lifetxt import web_assets, webapp
 
 
 REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
-# #1068 keeps More collapsed and names the active advanced view.
-LEGACY_PRISTINE_GIT_BLOB_SHA = "1a269a3b73a2700ee2c039203f4a73856ef68f92"
+# #1060 intentionally adds custom formats and independently selected timezones.
+LEGACY_PRISTINE_GIT_BLOB_SHA = "acf3e654779e3e58c211c04a3ab3902a8ebbe57b"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )

@@ -485,6 +485,11 @@
     .view-guide-desc { color: var(--muted); font-size: .86rem; margin-top: .12rem; }
     .view-guide-actions { display: flex; gap: .4rem; flex-wrap: wrap; justify-content: flex-end; }
     .view-guide-actions button { padding: .34rem .6rem; font-size: .78rem; }
+    .view-settings { position: relative; }
+    .view-settings > summary { list-style: none; cursor: pointer; padding: .35rem .6rem; }
+    .view-settings > summary::-webkit-details-marker { display: none; }
+    .view-settings-menu { position: absolute; right: 0; top: calc(100% + .35rem); z-index: 80; display: grid; gap: .25rem; min-width: 12rem; padding: .4rem; background: var(--panel); border: 1px solid var(--line-strong); border-radius: var(--r-md); box-shadow: var(--shadow-3); }
+    .view-settings-menu button { text-align: left; }
     .display-mode .view-guide,
     .kiosk-mode .view-guide { display: none; }
     /* ── Dashboard view ──────────────────────────────────────────── */

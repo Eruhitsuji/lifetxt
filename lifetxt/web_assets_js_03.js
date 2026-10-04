@@ -218,6 +218,15 @@
         </div>`;
     }
     function setupWorkspaceTabs() {
+      const settings = document.getElementById("view-settings");
+      if (settings) {
+        document.addEventListener("keydown", (event) => {
+          if (event.key === "Escape") settings.removeAttribute("open");
+        });
+        document.addEventListener("click", (event) => {
+          if (settings.open && !settings.contains(event.target)) settings.removeAttribute("open");
+        });
+      }
       const nav = document.getElementById("workspace-tabs");
       if (!nav) return;
       // Plain navigation (#1072): the bar mixes buttons, links, and the More

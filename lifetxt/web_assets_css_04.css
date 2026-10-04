@@ -450,6 +450,11 @@
         flex: 0 0 auto;
         white-space: nowrap;
       }
+      .view-settings { order: 0; }
+      .view-settings-menu { position: fixed; top: 4.25rem; right: .75rem; max-width: calc(100vw - 1.5rem); }
+      #primary-create { display: none; }
+      .view-guide { max-height: 8rem; overflow: auto; margin-bottom: .35rem; }
+      main { padding-bottom: calc(7rem + var(--safe-bottom)); }
 
       .workspace-tabs {
         overflow-x: auto;

@@ -16211,6 +16211,36 @@ traceability:
       notes: Post-#1067 Web regression repair; existing APIs, relation vocabulary, and URL contracts are preserved.
       status: in_progress
 
+    - requirement_id: req-web-post-1090-ui-regression-followup
+      capability_id: cap-web-beginner-first-ux
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1092
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1093
+      changed_files_or_scope:
+        - lifetxt/web_assets.html
+        - lifetxt/web_assets_js_01.js
+        - lifetxt/web_assets_js_10.js
+        - lifetxt/web_assets_js_14.js
+        - lifetxt/web_assets_css_01.css
+        - lifetxt/web_assets_css_02.css
+        - lifetxt/web_assets_css_03.css
+        - lifetxt/web_assets_css_04.css
+        - tests/test_web_assets.py
+        - tests/test_web_ui_regressions.py
+        - tests/test_web_ui_regressions_browser.py
+        - tests/browser_ui_regressions_probe.mjs
+      tests_or_evidence:
+        - tests.test_web_ui_regressions (initial hidden state, first toggle, cancel/reopen focus, shared summary/link contracts)
+        - tests.test_web_ui_regressions_browser (real parse API, 1280x900 and 390x844, en/ja, light/dark, editable/read-only drawer, normal/hover/pressed/focus parity, native keyboard navigation)
+        - tests.test_web_assets, tests.test_web_i18n, tests.test_release_policy, tests.test_web_mobile, tests.test_web_more_nav_js, tests.test_web_a11y_controls
+      notes: >-
+        Standard-assurance bounded Web regression repair. Raw import uses hidden
+        state and explanatory help; native summary and anchor semantics are
+        preserved while sharing existing secondary/workspace control styles.
+        Self-review found and repaired late CSS overriding mobile touch height.
+        No parser/API, Format, production data, or dependency changes.
+      release_or_deployment: null
+      status: implemented
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

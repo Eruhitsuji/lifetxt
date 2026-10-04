@@ -229,10 +229,14 @@
       }
       const nav = document.getElementById("workspace-tabs");
       if (!nav) return;
-      nav.setAttribute("role", "tablist");
+      // Plain navigation (#1072): the bar mixes buttons, links, and the More
+      // disclosure, so it is not a tablist. Every control stays in the normal
+      // Tab order; arrow keys are a convenience across the visible controls.
+      nav.removeAttribute("role");
       nav.addEventListener("keydown", (event) => {
         if (!["ArrowRight", "ArrowLeft", "Home", "End"].includes(event.key)) return;
-        const tabs = Array.from(nav.querySelectorAll(".workspace-tab[data-view]"));
+        const tabs = Array.from(nav.querySelectorAll(".workspace-tab"))
+          .filter(tab => tab.getClientRects().length > 0);
         const current = tabs.indexOf(document.activeElement);
         if (current < 0 || !tabs.length) return;
         event.preventDefault();
@@ -319,9 +323,8 @@
       document.querySelectorAll(".workspace-tab[data-view]").forEach(btn => {
         const active = (btn.dataset.view || "") === v;
         btn.classList.toggle("active", active);
-        btn.setAttribute("role", "tab");
-        btn.setAttribute("aria-selected", active ? "true" : "false");
-        btn.tabIndex = active ? 0 : -1;
+        if (active) btn.setAttribute("aria-current", "page");
+        else btn.removeAttribute("aria-current");
       });
       const notifBtn = document.getElementById("notif-btn");
       if (notifBtn) notifBtn.classList.toggle("btn-active", v === "notifications");

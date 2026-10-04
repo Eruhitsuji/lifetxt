@@ -11000,6 +11000,7 @@ capabilities:
       - req-web-status-standard-custom-authoring
       - req-web-quick-status-standard-custom-authoring
       - req-web-more-active-view-collapsed-nav
+      - req-web-main-accessible-controls-navigation
     implementation_locations:
       - lifetxt/web_assets.html
       - lifetxt/web_assets_css_01.css
@@ -11015,6 +11016,7 @@ capabilities:
       - lifetxt/web_assets_js_16.js
       - lifetxt/web_assets_js_18.js
       - tests/test_web_more_nav_js.py
+      - tests/test_web_a11y_controls.py
       - lifetxt/webapp.py
       - tests/test_web_quick_status_js.py
       - docs/en/web.md
@@ -11047,6 +11049,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/821
       - https://github.com/Eruhitsuji/lifetxt/issues/829
       - https://github.com/Eruhitsuji/lifetxt/issues/1068
+      - https://github.com/Eruhitsuji/lifetxt/issues/1072
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/822
       - https://github.com/Eruhitsuji/lifetxt/pull/830

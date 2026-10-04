@@ -16,8 +16,8 @@ from lifetxt import web_assets, webapp
 
 
 REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
-# #1068 keeps More collapsed and names the active advanced view.
-LEGACY_PRISTINE_GIT_BLOB_SHA = "1a269a3b73a2700ee2c039203f4a73856ef68f92"
+# #1072 adds accessible names, nav aria-current, and 44px touch targets.
+LEGACY_PRISTINE_GIT_BLOB_SHA = "9f4f8219eba65ffbfc5f1621df3570e5726982d3"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )

@@ -19,7 +19,7 @@
     .kiosk-mode .item .title { font-weight: 700; color: #0d2b1a; font-size: 1em; }
     .kiosk-mode .item .meta { font-size: .8em; color: #4a7a5e; }
     .kiosk-mode .item .source { display: none; }
-    .kiosk-mode .item-check { display: none !important; }
+    .kiosk-mode .item-check, .kiosk-mode .item-check-hit { display: none !important; }
     .kiosk-mode .item.kiosk-changed {
       border-color: #f59e0b;
       box-shadow: 0 0 0 3px rgba(245, 158, 11, .25), 0 1px 6px rgba(0,0,0,.1);
@@ -264,7 +264,7 @@
     @media print {
       header .toolbar, .detail-drawer, #toast-container, #ctx-menu,
       .filter-bar, .quick-add-bar, .bulk-toolbar, .modal-backdrop, .cmdk-backdrop,
-      .item-check, .section-head .toolbar, #read-only-banner,
+      .item-check, .item-check-hit, .section-head .toolbar, #read-only-banner,
       .header-workspace-tabs, .items-controls, #back-to-top, .brand-mark { display: none !important; }
       header { position: static; border-bottom: 1px solid #ccc; }
       body { background: #fff; color: #000; font-size: 12px; }
@@ -304,7 +304,7 @@
       .kpi-row { grid-template-columns: repeat(2, 1fr); }
       .review-range-bar > * { flex: 1 1 100%; }
       .item { grid-template-columns: auto auto auto minmax(0, 1fr) auto; }
-      .item-check { display: none; }
+      .item-check, .item-check-hit { display: none; }
       .source { grid-column: 1 / -1; }
       form.stack { grid-template-columns: 1fr; }
       .detail-drawer { padding: .5rem; }
@@ -491,6 +491,7 @@
 
       /* Selection must work here, so undo the desktop rule that hid it. */
       .item-check { display: block; }
+      .item-check-hit { display: inline-flex; }
       .item {
         grid-template-columns: auto auto auto minmax(0, 1fr);
         row-gap: .2rem;
@@ -773,4 +774,11 @@
       .header-workspace-tabs:has(> .nav-more[open]) > .nav-primary { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
       .header-workspace-tabs > .nav-more[open] { flex: 1 1 100%; min-width: 0; }
       .header-workspace-tabs > .nav-more[open] > .nav-advanced { max-width: 100%; }
+    }
+    @media (pointer: coarse), (max-width: 680px) {
+      /* #1072: 44x44 CSS px effective touch targets. The checkbox itself stays
+         small; its wrapping label carries the hit area without opening the
+         record drawer. */
+      .item-check-hit { min-width: 44px; min-height: 44px; }
+      label.inline { min-height: 44px; min-width: 44px; padding-inline: .25rem; }
     }

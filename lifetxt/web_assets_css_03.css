@@ -314,7 +314,7 @@
     .git-log-hash { font-family:monospace; color:var(--muted); min-width:4.5rem; }
     .git-log-msg { flex:1; }
     /* ── Editor import raw ───────────────────────────────────────── */
-    #import-raw-row { display:none; margin-top:.5rem; }
+    #import-raw-row { margin-top:.5rem; }
     #import-raw-input { width:100%; font-family:monospace; font-size:.8rem; }
     /* ── Heatmap month labels ────────────────────────────────────── */
     .heatmap-months { display:grid; grid-template-columns:repeat(53,1fr); gap:2px; margin-bottom:.2rem; }

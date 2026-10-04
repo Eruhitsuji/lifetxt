@@ -1,5 +1,10 @@
 # Remote CLI／TUIからの参照・編集
 
+意味論レベルの parity 操作として `show`、`search`、`today`、`edit`、
+`status`、`reopen`、`delete --yes`、`timeline` を利用できます。サーバー側の
+projection と権威 mutation 契約を再利用し、未対応の操作はクライアントで
+近似せず失敗させます。mutation conflict は自動再試行しません。
+
 ## 基本アイテム操作
 
 `lifetxt remote setup` でデフォルト profile を設定した後は、profile 名を

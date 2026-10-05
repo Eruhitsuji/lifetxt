@@ -83,6 +83,8 @@ _WEB_NO_REVISION_PATHS = frozenset(
         "/api/shorthand/parse",
         "/api/quick/resolve",
         "/api/timer",
+        # The upload performs its own guarded multi-target attachment transaction.
+        "/api/attachments/upload",
     )
 )
 

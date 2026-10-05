@@ -342,6 +342,7 @@ class SafetyFoundationTests(unittest.TestCase):
             "freebusy-v1.schema.json",
             "semantic-as-of-v1.schema.json",
         }
+        expected.add("attachment-upload-receipt-v1.schema.json")
         self.assertEqual(expected, set(bundle))
         for schema in bundle.values():
             self.assertTrue(schema["$id"].startswith("https://"))

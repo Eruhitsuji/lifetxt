@@ -2810,6 +2810,9 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             raise HTTPException(status_code=400, detail=error_detail(exc))
         return {"line": int(line_no), "deleted": deleted}
 
+    from .web_attachment_upload import register_upload_routes
+
+    register_upload_routes(app)
     return app
 
 

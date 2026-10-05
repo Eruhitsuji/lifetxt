@@ -31,7 +31,7 @@ def bootstrap():
     install_schema_validation_v2()
     install_safety_compat_v2()
 
-    for version in range(4, 32):
+    for version in range(4, 33):
         module = __import__(
             f"lifetxt.schema_extensions_v{version}",
             fromlist=[f"install_schema_extensions_v{version}"],

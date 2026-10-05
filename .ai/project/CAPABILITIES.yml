@@ -1,6 +1,37 @@
 schema_version: 1
 
 capabilities:
+  - id: cap-web-browser-safe-attachment-upload
+    name: Browser-safe managed attachment upload API
+    summary: Bounded raw-file upload with strict source revision, server-generated create-only
+      storage and path-free receipts.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+    - req-web-browser-safe-attachment-upload
+    implementation_locations:
+    - lifetxt/schema_extensions_v32.py
+    - lifetxt/_legacy_bootstrap.py
+    - lifetxt/web_attachment_upload.py
+    - lifetxt/webapp.py
+    - lifetxt/surface_runtime.py
+    public_interfaces:
+    - GET/POST /api/attachments/upload
+    - attachment-upload-receipt-v1.schema.json
+    tests_or_evidence:
+    - tests/test_web_attachment_upload.py
+    - .ai/project/changes/web-browser-safe-attachment-upload/verification.yml
+    related_issues:
+    - https://github.com/Eruhitsuji/lifetxt/issues/1095
+    - https://github.com/Eruhitsuji/lifetxt/issues/1094
+    - https://github.com/Eruhitsuji/lifetxt/issues/1099
+    related_pull_requests: []
+    reuse_policy: Extend existing attachment_transactions, mutation CAS and Web auth/read-only;
+      no provider/resolver or generic v1 changes.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
   - id: cap-core-import-boundary
     name: Platform-neutral Core import boundary
     summary: Explicit small import surface for authoritative parser and shared Core operations, with legacy integration bootstrap kept out of package-root import.

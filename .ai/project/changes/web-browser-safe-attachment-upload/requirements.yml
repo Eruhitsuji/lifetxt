@@ -1,0 +1,24 @@
+schema_version: 1
+requirements:
+- id: req-web-browser-safe-attachment-upload
+  kind: NEW
+  statement: Browser clients can upload one bounded file to an existing writable item
+    without acquiring local path or overwrite authority.
+  acceptance_criteria:
+  - One raw file attaches through existing attachment transaction
+  - Client filename never provides filesystem authority
+  - Create-only random managed target under configured root
+  - Strict full source revision before receive and under transaction CAS
+  - Known and chunked oversize rejected before unbounded materialization
+  - Total receive deadline and active upload bound
+  - MIME/executable/symlink/nonregular restrictions
+  - Marker and same-origin policy; existing Bearer/read-only preserved
+  - Path-free versioned receipt and bounded errors
+  - Partial failure compensation/recovery is explicit
+  - Existing CLI/TUI/MCP and Remote attachment v1 unchanged
+  constraints:
+  - reuse attachment_transactions.put_attachment
+  - no new dependency/config setting
+  - no implicit resource-resolution authority
+  owner: Eruhitsuji
+open_questions: []

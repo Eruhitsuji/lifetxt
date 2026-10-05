@@ -1007,3 +1007,78 @@ from `/api/config` when the page returns to the foreground or crosses a date
 boundary. Browser-local calendar time is never authoritative.
 The main Web UI header provides direct links to Planner and Quick Capture. The
 Planner and Capture surfaces retain their explicit links back to the main Web UI.
+
+## Browser-safe attachment uploads
+
+`GET /api/attachments/upload` returns path-free policy metadata: the effective
+`max_upload_bytes`, writable state, 30-second total body-receive timeout and
+maximum of two active uploads (including commit work) per app instance.
+The byte limit is `min(10 MiB, attachments.max_file_bytes)`, using that setting's
+existing `max_bytes` fallback. No new setting or dependency is required.
+
+`POST /api/attachments/upload` attaches one file to an existing item in the
+configured writable source. Send raw bytes, not JSON/Base64/multipart, using:
+
+| Header | Value |
+| --- | --- |
+| `Content-Type` | `application/octet-stream` |
+| `X-Lifetxt-Upload` | `1` |
+| `X-Lifetxt-Item-Id` | Unique compact item ID |
+| `X-Lifetxt-Filename` | UTF-8 percent-encoded basename; JS `encodeURIComponent(file.name)` |
+| `X-Lifetxt-Expected-Revision` | Exact lowercase 64-character source SHA-256 from the revision API |
+| `Authorization` | Existing `Bearer TOKEN` when API-token authentication is configured |
+
+Example with `BASE_URL`, `TOKEN` and a freshly obtained `SOURCE_REVISION`:
+
+```sh
+curl "$BASE_URL/api/attachments/upload" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/octet-stream" \
+  -H "X-Lifetxt-Upload: 1" \
+  -H "X-Lifetxt-Item-Id: t1" \
+  -H "X-Lifetxt-Filename: report.pdf" \
+  -H "X-Lifetxt-Expected-Revision: $SOURCE_REVISION" \
+  --data-binary @report.pdf
+```
+
+The server creates a random target in the attachment root's `web-uploads`
+namespace. Filename is display metadata, never filesystem authority. Requests
+cannot specify paths, query parameters, replacement, symlink/executable overrides,
+compressed bodies or duplicate contract headers. Traversal, absolute/Windows
+paths, reserved names, controls/bidi text, symlinked directories, non-regular
+collisions, executable extensions and common executable signatures are rejected.
+Existing MIME allow/deny policy applies to both filename-associated MIME and
+conservative content classification: PDF/PNG/JPEG/GIF/ZIP signatures, UTF-8 text,
+otherwise `application/octet-stream`. This is not malware scanning or full
+format validation. Returned filenames must be rendered as text, never HTML.
+
+The request marker requires browser preflight. Browser calls are same-origin;
+when `Origin` is present it must match the actual request scheme/host/port.
+No CORS is added, and the endpoint does not itself trust forwarding headers.
+TLS proxies must use the server's approved proxy-trust configuration to present
+the correct request origin. Use HTTPS or an authenticated encrypted tunnel for
+non-loopback traffic; Bearer tokens alone do not encrypt bytes or credentials.
+The full deployment policy remains #1097.
+
+201 responses follow `attachment-upload-receipt-v1.schema.json`: version,
+random `attachment_id`, `display_name`, byte size, MIME, full source revision and
+full attachment revision. No canonical file value, filesystem/journal/temp paths
+or open commands are returned. `attachment_id` is a receipt identity, not a
+bearer token or resolvable download URL; future projection/resolution contracts
+remain #1100/#1101. The local item stores a normal relative hashed `file:` via
+the existing compensated journal transaction. Its 16-hex stored hash differs
+from the full revisions. No upload spool files are used; recovery journals
+remain local evidence, with at-rest encryption outside this task (#1098).
+
+Failures: 400 invalid input; 401/403 auth/read-only/origin; 404 unavailable item;
+409 stale revision/collision/storage conflict; 413 size; 415 content/MIME/encoding;
+408 incomplete/timeout; 428 missing revision; 429 busy; 503 transaction/storage
+failure. Errors contain bounded path-free codes/messages. Do not silently retry
+409 against a newer revision. A lost response after commit may mean success:
+refresh authoritative state before explicitly retrying. For 503, the local
+operator must inspect transaction recovery before resubmission.
+
+This is API-only; the picker UX is #1096. No download, preview, provider adapter,
+URL fetch, archive expansion or synchronization is added. Existing generic
+item/edit/Markdown and trusted local CLI/TUI/MCP contracts remain unchanged;
+a safe receipt does not make legacy raw surfaces external-safe (#1100).

@@ -20,7 +20,8 @@ capabilities:
     - .ai/project/changes/at-rest-confidentiality-policy/verification.yml
     related_issues:
     - https://github.com/Eruhitsuji/lifetxt/issues/1098
-    related_pull_requests: []
+    related_pull_requests:
+    - https://github.com/Eruhitsuji/lifetxt/pull/1108
     reuse_policy: Reuse cap-durable-transaction-recovery and cap-lifetxt-backup-v1;
       no alternate encryption/storage implementation.
     replacement:

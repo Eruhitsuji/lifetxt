@@ -28,7 +28,8 @@ capabilities:
     - .ai/project/changes/web-secure-transport/verification.yml
     related_issues:
     - https://github.com/Eruhitsuji/lifetxt/issues/1097
-    related_pull_requests: []
+    related_pull_requests:
+    - https://github.com/Eruhitsuji/lifetxt/pull/1107
     reuse_policy: Reuse remote.trusted_proxies and existing upload/Remote auth; no alternate
       mutation or resource resolver.
     replacement:

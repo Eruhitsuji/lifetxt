@@ -44,6 +44,7 @@ _CSS_RESOURCE_NAMES = (
     "web_assets_css_03.css",
     "web_assets_css_04.css",
     "web_assets_css_06.css",
+    "web_assets_css_07.css",
     "web_assets_css_05.css",
 )
 _JS_RESOURCE_NAMES = (
@@ -67,6 +68,7 @@ _JS_RESOURCE_NAMES = (
     "web_assets_js_18.js",
     "web_assets_js_19.js",
     "web_assets_js_20.js",
+    "web_assets_js_21.js",
 )
 
 
@@ -86,9 +88,9 @@ def web_resource_bytes(name: str) -> bytes:
 
 def _assemble_planner_html() -> str:
     template = _read_resource("web_planner.html")
-    return template.replace("__PLANNER_CSS__", _read_resource("web_planner.css")).replace(
-        "__PLANNER_JS__", _read_resource("web_planner.js")
-    )
+    return template.replace(
+        "__PLANNER_CSS__", _read_resource("web_planner.css")
+    ).replace("__PLANNER_JS__", _read_resource("web_planner.js"))
 
 
 PLANNER_HTML_PAGE = _assemble_planner_html()

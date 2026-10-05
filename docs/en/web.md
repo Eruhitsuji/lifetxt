@@ -1078,7 +1078,16 @@ failure. Errors contain bounded path-free codes/messages. Do not silently retry
 refresh authoritative state before explicitly retrying. For 503, the local
 operator must inspect transaction recovery before resubmission.
 
-This is API-only; the picker UX is #1096. No download, preview, provider adapter,
+The Web UI picker (#1096), described below, consumes this contract.
+No download, preview, provider adapter,
 URL fetch, archive expansion or synchronization is added. Existing generic
 item/edit/Markdown and trusted local CLI/TUI/MCP contracts remain unchanged;
 a safe receipt does not make legacy raw surfaces external-safe (#1100).
+
+## Attach a file from the Web UI
+
+Open an existing record's detail screen and use **Attachments → Choose attachment → Upload attachment**. The record must be writable and have an item ID. The filename, byte size and effective server limit appear before submission. Empty, known oversize and unsafe filenames are rejected locally; the server also enforces size, type and permissions. There is no upload in the new-record or unsaved editor form.
+
+A successful upload refreshes the record and shows only its display name, media type and size. The latest receipt is kept only for this browser session; it is not a download link or an attachment inventory. Existing references get a generic summary in Overview. Explicit raw record/editor views and existing APIs retain their operator-oriented representation. No preview/download or provider UI is added.
+
+While uploading, controls prevent duplicate submission. A conflict does not retry against a newer revision: use **Refresh record**, review the record and select the file again. Authentication, read-only and validation failures are visible. A lost response or server recovery error may follow a committed upload, so inspect the refreshed attachment references before trying again. Keep the page open until the operation finishes. Closing or navigating away releases the selected file from the UI; it cannot undo an already-sent request. Upload bytes and receipt metadata are not stored in browser storage.

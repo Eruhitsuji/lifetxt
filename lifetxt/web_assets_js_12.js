@@ -39,6 +39,7 @@
     }
 
     function closeDrawer(urlMode = "replace") {
+      if (typeof disposeAttachmentUpload === "function") disposeAttachmentUpload();
       closeManagedModal(document.getElementById("detail-drawer"));
       drawerItem = null;
       if (urlMode === "none") return;
@@ -53,6 +54,7 @@
     function drawerEdit() {
       if (!drawerItem) return;
       if (!drawerItem.editable) { showToast("This record is read-only.", "warning"); return; }
+      if (typeof disposeAttachmentUpload === "function") disposeAttachmentUpload();
       drawerEditing = true;
       document.getElementById("drawer-head-btns").innerHTML =
         `<button class="primary" onclick="drawerSaveEdit()">Save</button>` +
@@ -127,6 +129,7 @@
 
     function drawerDoneDate() {
       if (!drawerItem?.editable || drawerItem.type !== "T" || ["[x]", "[-]"].includes(drawerItem.status)) return;
+      if (typeof disposeAttachmentUpload === "function") disposeAttachmentUpload();
       drawerEditing = true;
       document.getElementById("drawer-head-btns").innerHTML =
         `<button class="secondary" onclick="drawerCancelEdit()">Cancel</button>`;

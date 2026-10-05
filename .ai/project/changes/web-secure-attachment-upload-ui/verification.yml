@@ -1,0 +1,116 @@
+schema_version: 1
+verification:
+  executed:
+  - type: targeted-js-and-web
+    command: python -m unittest tests.test_web_attachment_upload_ui tests.test_web_assets
+      tests.test_web_i18n tests.test_web_drawer_edit_js tests.test_web_ui_regressions
+      tests.test_web_more_nav_js tests.test_web_mobile tests.test_web_a11y_controls
+      tests.test_web_context_create_js tests.test_surface_runtime tests.test_remote_attachment_contracts_v6
+      tests.test_core_import_boundary tests.test_web_attachment_upload
+    requirement_ids:
+    - req-web-secure-attachment-upload-ui
+    result: 190 tests OK, no skips; packaged JS behavior, existing editor/capture/filter/i18n
+      and server contracts
+    executed_at: '2026-10-05'
+    status: passed
+  - type: real-browser
+    command: LIFETXT_BROWSER_BIN=<Chromium headless shell> python -m unittest tests.test_web_attachment_upload_browser
+    requirement_ids:
+    - req-web-secure-attachment-upload-ui
+    result: 4 tests OK, no skips; 1280px/390px EN/JA; native file selection, actual
+      201 persistence, actual 409 stale revision, actual 415 executable content rejection,
+      configured custom clock precondition. Test-only middleware supplies 401/403/503
+      faults and pending delay; read-only policy/record state, no stored upload metadata
+      and 44px controls verified.
+    executed_at: '2026-10-05'
+    status: passed
+  - type: no-web
+    command: PYTHONNOUSERSITE=1 python -m unittest tests.test_web_attachment_upload_ui
+      tests.test_web_attachment_upload_browser tests.test_core_import_boundary
+    requirement_ids:
+    - req-web-secure-attachment-upload-ui
+    result: 17 tests OK, 4 Web/browser cases explicitly skipped without Web dependencies;
+      final clock guidance included
+    executed_at: '2026-10-05'
+    status: passed
+    executed_on_local_commit: 983c0acda61c53f47ec3dc995b7136f3ae046952
+  - type: resource-warning
+    command: python -W error::ResourceWarning -m unittest tests.test_config_validation
+      tests.test_archive_plan_v1 tests.test_safety_foundation
+    requirement_ids:
+    - req-web-secure-attachment-upload-ui
+    result: 101 tests OK, 3 optional cases skipped
+    executed_at: '2026-10-05'
+    status: passed
+  - type: static
+    command: python -m ruff check lifetxt tests scripts; python -m ruff format --check
+      lifetxt/web_assets.py tests/test_web_attachment_upload_ui.py tests/test_web_attachment_upload_browser.py;
+      python -m mypy --follow-imports=skip --ignore-missing-imports lifetxt/diagnostic_contract.py;
+      node --check <assembled UI>; git diff --check
+    requirement_ids:
+    - req-web-secure-attachment-upload-ui
+    result: Lint, approved typing boundary, JS syntax and whitespace passed; new tests
+      formatted. Existing web_assets.py formatter adjustment then verified by 13 asset
+      tests.
+    executed_at: '2026-10-05'
+    status: passed
+  - type: documentation-and-core
+    command: python scripts/validate_release_docs.py --output <scratch report>; python
+      -m lifetxt check examples/minimal_life.txt
+    requirement_ids:
+    - req-web-secure-attachment-upload-ui
+    result: Documentation errors 0; core check 10 items OK
+    executed_at: '2026-10-05'
+    status: passed
+  - type: final-focused-regression
+    command: LIFETXT_BROWSER_BIN=<Chromium headless shell> python -m unittest tests.test_web_attachment_upload_ui
+      tests.test_web_attachment_upload_browser tests.test_web_assets tests.test_web_selection_contrast
+      tests.test_web_i18n
+    requirement_ids:
+    - req-web-secure-attachment-upload-ui
+    result: 58 tests OK, no skips; final CSS order, localization and clock-error guidance
+      included
+    executed_at: '2026-10-05'
+    status: passed
+  - type: full-regression
+    command: LIFETXT_BROWSER_BIN=<Chromium headless shell> MPLBACKEND=Agg python -m
+      unittest discover
+    requirement_ids:
+    - req-web-secure-attachment-upload-ui
+    result: 5112 tests OK in 314.108s, 35 optional/environment skips. Final code includes
+      CSS ordering and clock guidance; real hostile-name upload receipt also passes.
+      Initial run had one stylesheet-order failure, corrected without changing the
+      existing assertion.
+    executed_at: '2026-10-05'
+    status: passed
+  - type: committed-traceability-and-closeout
+    command: python -m unittest tests.test_traceability_gate tests.test_change_package_closeout;
+      evaluate_traceability_gate(origin/main, PR 1106)
+    requirement_ids:
+    - req-web-secure-attachment-upload-ui
+    result: 17 tests OK; exact PR URL gate true against the committed diff
+    executed_at: '2026-10-05'
+    status: passed
+    executed_on_local_commit: 079b5f9c
+  gaps:
+  - description: Physical iOS/Android devices and Safari/Firefox were not exercised;
+      representative Chromium phone emulation is the browser evidence. Independent
+      human security/integration review and required CI remain pending.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1096
+review_ledger:
+- reviewer: Codex implementer
+  review_type: implementation-security-and-integration-self-review
+  target_commit: 3a3e99f4db8d60e7dede478b090fc388be638e6f
+  result: findings_fixed
+  finding_count: 6
+  completed_at: '2026-10-05'
+- reviewer: independent human reviewer
+  review_type: security-and-integration
+  target_commit: pending
+  result: pending
+  finding_count: 0
+  completed_at: null
+verified_code_tree: 8e6ae608149015cb7736ebc55d16d3b531ebea20
+evidence_note: Commands executed against the corresponding working-tree source; publication
+  tree and every blob were checked byte-for-byte. Subsequent PR linkage changes are
+  metadata only.

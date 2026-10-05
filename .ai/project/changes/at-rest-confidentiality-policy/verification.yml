@@ -6,31 +6,31 @@ verification:
     result: 'Disposable bytes target: final and before/after artifacts equal sample
       bytes; redacted export excludes payload; ZIP entries not encrypted and contain
       only selected file; restored bytes match. Temporary workspace removed.'
-    commit: SOURCE_COMMIT_PENDING
+    commit: 561a1e6ffeffdb1075d087556a98d33ba07b6eb5
     status: passed
   - type: targeted-regression
     command: Explicit lifetxt.bootstrap_legacy_surfaces(); unittest tests.test_transaction_journal_v3
       tests.test_backup_restore_v6 tests.test_backup tests.test_backup_cli tests.test_backup_remote
       tests.test_attachments tests.test_attachment_transactions_v4 tests.test_ubuntu_server_backup_docs
     result: 205 tests passed; 1 environment-dependent skip.
-    commit: SOURCE_COMMIT_PENDING
+    commit: 561a1e6ffeffdb1075d087556a98d33ba07b6eb5
     status: passed
   - type: governance
     command: python -m unittest tests.test_traceability_gate tests.test_change_package_closeout
     result: 17 tests passed; registries and all six package files parsed.
-    commit: SOURCE_COMMIT_PENDING
+    commit: 561a1e6ffeffdb1075d087556a98d33ba07b6eb5
     status: passed
   - type: documentation
     command: python scripts/validate_release_docs.py --output .cache/1098/release-docs.json;
       relative Markdown link existence check for both policy docs; git diff --check
     result: Release docs validation ok=true/errors=0; all local policy links resolve;
       no whitespace errors.
-    commit: SOURCE_COMMIT_PENDING
+    commit: 561a1e6ffeffdb1075d087556a98d33ba07b6eb5
     status: passed
   - type: core-smoke
     command: python -m lifetxt check examples/minimal_life.txt
     result: 'OK: 10 item(s).'
-    commit: SOURCE_COMMIT_PENDING
+    commit: 561a1e6ffeffdb1075d087556a98d33ba07b6eb5
     status: passed
   gaps:
   - No production platform-encryption/recovery or rclone-provider compatibility test;
@@ -38,7 +38,7 @@ verification:
 review_ledger:
 - reviewer: Codex implementer self-review
   review_type: source-inventory-security-design-bilingual
-  target_commit: SOURCE_COMMIT_PENDING
+  target_commit: 561a1e6ffeffdb1075d087556a98d33ba07b6eb5
   result: passed-informational-only
   finding_count: 0
   completed_at: '2026-10-05'

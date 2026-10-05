@@ -2,6 +2,34 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-secure-attachment-upload-ui
+      capability_id: cap-web-secure-attachment-upload-ui
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1094
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1096
+      pull_request: null
+      changed_files_or_scope:
+        - lifetxt/web_assets.py
+        - lifetxt/web_assets_js_04.js
+        - lifetxt/web_assets_js_01.js
+        - lifetxt/web_assets_js_10.js
+        - lifetxt/web_assets_js_12.js
+        - lifetxt/web_assets_js_21.js
+        - lifetxt/web_assets_css_07.css
+        - tests/test_web_assets.py
+        - tests/test_web_attachment_upload_ui.py
+        - tests/test_web_attachment_upload_browser.py
+        - tests/browser_attachment_upload_probe.mjs
+        - docs/en/web.md
+        - docs/ja/web.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+        - .ai/project/changes/web-secure-attachment-upload-ui
+      tests_or_evidence:
+        - tests.test_web_attachment_upload_ui
+        - tests.test_web_attachment_upload_browser
+        - tests.test_web_drawer_edit_js
+        - tests.test_web_attachment_upload
+      status: implemented
     - requirement_id: req-web-browser-safe-attachment-upload
       capability_id: cap-web-browser-safe-attachment-upload
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1094

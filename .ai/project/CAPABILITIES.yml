@@ -1,6 +1,38 @@
 schema_version: 1
 
 capabilities:
+  - id: cap-web-secure-attachment-upload-ui
+    name: Secure Web attachment upload interaction
+    summary: Single-file picker, bounded validation, exact source precondition and safe
+      session receipt in record detail.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+    - req-web-secure-attachment-upload-ui
+    implementation_locations:
+    - lifetxt/web_assets.py
+    - lifetxt/web_assets_js_04.js
+    - lifetxt/web_assets_js_01.js
+    - lifetxt/web_assets_js_10.js
+    - lifetxt/web_assets_js_12.js
+    - lifetxt/web_assets_js_21.js
+    - lifetxt/web_assets_css_07.css
+    public_interfaces:
+    - Web record-detail Overview
+    - GET/POST /api/attachments/upload (reuse)
+    tests_or_evidence:
+    - tests.test_web_attachment_upload_ui
+    - tests.test_web_attachment_upload_browser
+    related_issues:
+    - https://github.com/Eruhitsuji/lifetxt/issues/1096
+    - https://github.com/Eruhitsuji/lifetxt/issues/1095
+    related_pull_requests: []
+    reuse_policy: Extend existing record drawer and browser-safe upload API; no alternate
+      writer or resolver.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
   - id: cap-web-browser-safe-attachment-upload
     name: Browser-safe managed attachment upload API
     summary: Bounded raw-file upload with strict source revision, server-generated create-only

@@ -1,0 +1,51 @@
+schema_version: 1
+change:
+  id: web-browser-safe-attachment-upload
+  title: Bounded browser-safe managed attachment upload API
+  status: implemented
+  change_type: Feature
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1095
+  related_pull_request:
+  - https://github.com/Eruhitsuji/lifetxt/pull/1104
+  base_commit: dd24b7c2f6a6720d119dcfb8f51cecc9528ccce8
+  target_release: null
+scope:
+  in_scope:
+  - raw bounded upload
+  - create-only managed storage
+  - strict source CAS
+  - safe receipt
+  - auth/origin/content policy
+  - verification and docs
+  out_of_scope:
+  - Web UI
+  - resource resolver/download
+  - provider integration
+  - Format change
+  - transport/at-rest policy implementation
+  write_scope:
+  - lifetxt/web_attachment_upload.py
+  - lifetxt/webapp.py
+  - lifetxt/surface_runtime.py
+  - tests/test_web_attachment_upload.py
+  - dist/schemas/attachment-upload-receipt-v1.schema.json
+  - docs/en/web.md
+  - docs/ja/web.md
+  - .ai/project/CAPABILITIES.yml
+  - .ai/project/TRACEABILITY.yml
+  - .ai/project/changes/web-browser-safe-attachment-upload
+  - lifetxt/schema_extensions_v32.py
+  - lifetxt/_legacy_bootstrap.py
+  - tests/test_schema_extensions_v2.py
+  - tests/test_ticket_custom_field_public_contract.py
+  - tests/test_safety_cli.py
+  - tests/test_ticket_workflow_surfaces.py
+  - tests/test_safety_foundation.py
+  forbidden_scope:
+  - .ai/managed/**
+human_approvals_required:
+- independent security and integration review
+- Merge Authority approval

@@ -1,0 +1,32 @@
+schema_version: 1
+links:
+- requirement_id: req-web-browser-safe-attachment-upload
+  capability_id: cap-web-browser-safe-attachment-upload
+  epic: https://github.com/Eruhitsuji/lifetxt/issues/1094
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1095
+  pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1104
+  changed_files_or_scope:
+  - lifetxt/web_attachment_upload.py
+  - lifetxt/webapp.py
+  - lifetxt/surface_runtime.py
+  - tests/test_web_attachment_upload.py
+  - dist/schemas/attachment-upload-receipt-v1.schema.json
+  - docs/en/web.md
+  - docs/ja/web.md
+  - .ai/project/CAPABILITIES.yml
+  - .ai/project/TRACEABILITY.yml
+  - .ai/project/changes/web-browser-safe-attachment-upload
+  - lifetxt/schema_extensions_v32.py
+  - lifetxt/_legacy_bootstrap.py
+  - tests/test_schema_extensions_v2.py
+  - tests/test_ticket_custom_field_public_contract.py
+  - tests/test_safety_cli.py
+  - tests/test_ticket_workflow_surfaces.py
+  - tests/test_safety_foundation.py
+  tests_or_evidence:
+  - 'tests.test_web_attachment_upload: bounds, authority, CAS, compensation and disclosure'
+  - 'tests.test_attachments, tests.test_attachment_transactions_v4, tests.test_remote_attachment_contracts_v6,
+    tests.test_surface_runtime: compatibility'
+  status: implemented
+gaps:
+- Independent human security/integration review and merge pending.

@@ -976,3 +976,71 @@ PlannerのTodayはworkspaceのタイムゾーンで解決され、画面復帰�
 権威あるTodayとして使用しません。
 メインWeb UIのヘッダーからPlannerとQuick Captureへ直接移動できます。PlannerとCaptureには、
 従来どおりメインWeb UIへ戻る明示的なリンクを残しています。
+
+## ブラウザ向け添付アップロードAPI
+
+`GET /api/attachments/upload`は内部pathを含まない上限・書込可否を返します。
+`max_upload_bytes`は10 MiBと既存`attachments.max_file_bytes`（既存`max_bytes`
+fallbackを含む）の小さい方です。新設定・依存は追加しません。body受信の総時間は30秒、
+受信とcommitを含む同一app instanceの同時uploadは2件までです。
+
+`POST /api/attachments/upload`は書込先sourceの既存項目へ1ファイルを添付します。
+bodyはraw bytesです。JSON/Base64/multipartではありません。
+
+| Header | 値 |
+| --- | --- |
+| `Content-Type` | `application/octet-stream` |
+| `X-Lifetxt-Upload` | `1` |
+| `X-Lifetxt-Item-Id` | 一意なcompact項目ID |
+| `X-Lifetxt-Filename` | UTF-8 percent-encoded basename。JSでは`encodeURIComponent(file.name)` |
+| `X-Lifetxt-Expected-Revision` | revision APIの正確なsource SHA-256、64桁小文字hex |
+| `Authorization` | 既存API token設定時の`Bearer TOKEN` |
+
+`BASE_URL`・`TOKEN`・取得直後の`SOURCE_REVISION`を使う例:
+
+```sh
+curl "$BASE_URL/api/attachments/upload" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/octet-stream" \
+  -H "X-Lifetxt-Upload: 1" \
+  -H "X-Lifetxt-Item-Id: t1" \
+  -H "X-Lifetxt-Filename: report.pdf" \
+  -H "X-Lifetxt-Expected-Revision: $SOURCE_REVISION" \
+  --data-binary @report.pdf
+```
+
+保存先は添付rootの`web-uploads`namespaceにserverがrandom生成しcreate-onlyで保存します。
+filenameは表示metadataです。path・query・置換・symlink/executable override・圧縮body・
+契約header重複は受理しません。traversal・絶対/Windows path・予約名・control/bidi文字・
+symlink directory・非regular collision・実行拡張子・一般的な実行binary signatureを
+拒否します。MIME allow/denyはfilename由来と実内容の保守的な分類の両方へ適用します。
+PDF/PNG/JPEG/GIF/ZIP signature、UTF-8 text以外は`application/octet-stream`です。
+malware scanや文書全体の検証ではありません。返却filenameはDOMへtextとして描画します。
+
+要求markerはbrowser preflightを必要とします。ブラウザ要求はsame-originで、`Origin`が
+あれば実際のrequestのscheme/host/portと照合します。CORSは追加せず、endpointが
+forwarding headerを独自に信頼することもありません。TLS proxyではserverの承認済み
+proxy trust設定でrequest originを正しく伝えてください。non-loopbackにはHTTPSまたは
+認証付き暗号化tunnelを使用します。Bearer tokenだけではfile/tokenを暗号化できません。
+配備policyは#1097です。
+
+成功は201、`attachment-upload-receipt-v1.schema.json`のversion、random
+`attachment_id`、`display_name`、byte数、MIME、完全なsource/attachment revisionを
+返します。内部file値、filesystem/journal/temp path、open commandは含みません。
+`attachment_id`はreceiptの識別子で、認証情報・download URLではありません。将来の
+projection/resolutionは#1100/#1101です。local項目は既存の補償・復旧付きjournal
+transactionを通して通常の相対path付き`file:`を保存します。保存用16桁hashと完全な
+返却revisionは別です。upload用spoolは使用せずlocal journalの復旧evidenceは保持します。
+at-rest暗号化は#1098の別課題です。
+
+不正入力400、認証/readonly/origin401/403、項目なし404、stale/衝突/storage409、
+超過413、content/MIME/encoding415、未完/timeout408、revisionなし428、混雑429、
+transaction/storage失敗503です。errorは内部pathを含まないbounded code/messageです。
+409を新revisionで黙って再送しません。commit後のresponse喪失は成功の場合もあるため、
+正規stateを再取得して明示的に再試行します。503ではlocal operatorがtransaction recoveryを
+調査してから再送してください。
+
+今回はAPIのみでpicker UXは#1096です。download・preview・provider・URL取得・archive
+展開・同期は追加しません。既存generic item/edit/Markdown APIやlocal CLI/TUI/MCPの
+表現は維持します。safe receiptだけでlegacy raw surface全体を外部向けに安全化したとは
+扱いません（#1100）。

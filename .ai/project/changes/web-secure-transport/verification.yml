@@ -61,6 +61,21 @@ verification:
     requirement_ids: *id001
     executed_at: '2026-10-05'
     status: passed
+  - type: full-regression
+    command: MPLBACKEND=Agg python -m unittest discover
+    result: 5118 tests in 282.219s; OK (skipped=57). Final Remote-origin addition
+      separately covered by focused 88-test run.
+    requirement_ids:
+    - req-web-secure-transport
+    executed_at: '2026-10-05'
+    status: passed
+  - type: traceability-and-closeout
+    command: python -m unittest tests.test_traceability_gate tests.test_change_package_closeout
+    result: Final PR URL-linked committed diff passes 17 tests.
+    requirement_ids:
+    - req-web-secure-transport
+    executed_at: '2026-10-05'
+    status: passed
   gaps:
   - description: Required PR CI and independent human security/integration review
       pending. nginx/TLS certificates not deployed in this environment.
@@ -78,7 +93,7 @@ verification:
 review_ledger:
 - reviewer: Codex implementer
   review_type: self-review-security-and-compatibility
-  target_commit: pending
+  target_commit: a889826910209ed449b05b021f70b3ccbb7da66e
   result: findings_fixed
   finding_count: 1
   completed_at: '2026-10-05'

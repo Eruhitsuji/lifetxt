@@ -367,3 +367,10 @@ part of this first slice.
 Every admitted remote write requires an exact `If-Match` revision. Missing revisions fail with `REVISION_REQUIRED`; stale revisions fail with `REVISION_CONFLICT`.
 
 `POST /api/remote/v1/write-check` verifies authentication, write scope, browser-session CSRF/origin protection, and exact revision handling. It always returns `authoritative_mutation: false`. Authoritative Remote mutations remain disabled until an operation publishes and enforces complete permission, privacy, event-history, clock, idempotency, multi-target transaction, and recovery contracts.
+
+
+For writable non-loopback Web deployment, require HTTPS or an authenticated
+encrypted tunnel. Bearer authentication and `--insecure-public` do not encrypt
+traffic. `serve`/`web` preserve the immediate peer by disabling Uvicorn proxy
+middleware; configure existing `remote.trusted_proxies` for TLS proxies.
+See [Web transport security](web-transport-security.md) for deployment and upgrade steps.

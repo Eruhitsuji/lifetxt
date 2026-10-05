@@ -44,6 +44,7 @@ class ServeSingleWorkerTests(unittest.TestCase):
                 with mock.patch.dict(os.environ, {"WEB_CONCURRENCY": "4"}):
                     command_serve(self.args())
         self.assertEqual(1, run.call_args.kwargs.get("workers"))
+        self.assertIs(False, run.call_args.kwargs.get("proxy_headers"))
 
     def test_serve_passes_workers_1_even_without_web_concurrency_set(self):
         from lifetxt.cli import command_serve
@@ -53,6 +54,7 @@ class ServeSingleWorkerTests(unittest.TestCase):
                 os.environ.pop("WEB_CONCURRENCY", None)
                 command_serve(self.args())
         self.assertEqual(1, run.call_args.kwargs.get("workers"))
+        self.assertIs(False, run.call_args.kwargs.get("proxy_headers"))
 
 
 @unittest.skipIf(uvicorn is None, "web extras unavailable")
@@ -93,6 +95,41 @@ class WebCliTests(unittest.TestCase):
                 command_web(self.args())
         create_app.assert_called_once()
         self.assertEqual(1, run.call_args.kwargs.get("workers"))
+        self.assertIs(False, run.call_args.kwargs.get("proxy_headers"))
+
+    def test_transport_warning_only_for_writable_non_loopback(self):
+        import contextlib
+        import io
+        from lifetxt.cli import command_web
+
+        for host, read_only, expected in (
+            ("127.0.0.1", False, False),
+            ("::1", False, False),
+            ("localhost", False, False),
+            ("0.0.0.0", False, True),
+            ("192.0.2.1", False, True),
+            ("::", False, True),
+            ("0.0.0.0", True, False),
+        ):
+            with self.subTest(host=host, read_only=read_only):
+                output = io.StringIO()
+                args = self.args(
+                    host=host,
+                    read_only=read_only,
+                    config_data={"api": {"token": "test-secret-do-not-log"}},
+                )
+                with (
+                    mock.patch("lifetxt.webapp.create_app", return_value=object()),
+                    mock.patch("lifetxt.cli._preflight_bind"),
+                    mock.patch("uvicorn.run"),
+                    contextlib.redirect_stderr(output),
+                ):
+                    command_web(args)
+                self.assertEqual(expected, "WARNING:" in output.getvalue())
+                self.assertNotIn("test-secret-do-not-log", output.getvalue())
+                if expected:
+                    self.assertIn("HTTPS", output.getvalue())
+                    self.assertIn("encrypted tunnel", output.getvalue())
 
     def test_web_no_open_never_starts_a_browser_thread(self):
         from lifetxt.cli import command_web

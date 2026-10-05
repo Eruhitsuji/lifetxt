@@ -6823,6 +6823,14 @@ def _prepare_serve(args):
                 "Refusing to start a writable public Web server without an API token. "
                 "Use --token-env ENVVAR, --read-only, or --insecure-public."
             )
+    if _is_public_bind_host(host) and not read_only:
+        sys.stderr.write(
+            "WARNING: writable non-loopback Web transport requires HTTPS at a "
+            "trusted reverse proxy or an authenticated encrypted tunnel. "
+            "Bearer tokens do not encrypt attachment bytes, credentials, "
+            "capability/signed URLs or mutations. Restrict backend access; "
+            "see docs/en/web-transport-security.md.\n"
+        )
     _preflight_bind(host, port)
     app = create_app(
         paths=paths, writable_path=writable_path, config=config, read_only=read_only
@@ -6844,7 +6852,9 @@ def command_serve(args):
     # neither lifetxt nor WEB_CONCURRENCY as the cause. serve is
     # single-process by design, so pin workers=1 explicitly rather than
     # let the environment decide.
-    uvicorn.run(app, host=host, port=port, workers=1)
+    # Preserve the immediate peer for remote.trusted_proxies. Never inherit
+    # Uvicorn's independent forwarding trust (including environment overrides).
+    uvicorn.run(app, host=host, port=port, workers=1, proxy_headers=False)
     return 0
 
 
@@ -6912,7 +6922,9 @@ def command_web(args):
         ).start()
     # See command_serve's own comment: single-process by design, so workers
     # is always pinned to 1 regardless of a stray WEB_CONCURRENCY value.
-    uvicorn.run(app, host=host, port=port, workers=1)
+    # Preserve the immediate peer for remote.trusted_proxies. Never inherit
+    # Uvicorn's independent forwarding trust (including environment overrides).
+    uvicorn.run(app, host=host, port=port, workers=1, proxy_headers=False)
     return 0
 
 

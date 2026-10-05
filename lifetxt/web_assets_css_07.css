@@ -1,0 +1,15 @@
+    .attachment-upload {
+      margin-top: 1rem;
+      padding: .85rem;
+      border: 1px solid var(--line);
+      border-radius: var(--r-md);
+      min-width: 0;
+    }
+    .attachment-upload label { display: block; margin-bottom: .4rem; }
+    .attachment-upload input { width: 100%; min-width: 0; box-sizing: border-box; }
+    .attachment-upload input::file-selector-button { min-height: 44px; }
+    .attachment-upload .actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+    .attachment-upload button { min-height: 44px; }
+    .attachment-upload p { overflow-wrap: anywhere; }
+    .attachment-upload-name { unicode-bidi: plaintext; }
+    .attachment-upload [role="status"] { min-height: 1.5em; }

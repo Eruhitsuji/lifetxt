@@ -1,0 +1,49 @@
+schema_version: 1
+change:
+  id: web-secure-attachment-upload-ui
+  title: Secure single-file attachment upload in record detail
+  status: implemented
+  change_type: Feature
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1096
+  related_pull_request:
+  - https://github.com/Eruhitsuji/lifetxt/pull/1106
+  base_commit: 09919a973c8dc6f54934f18e22f79d31f62c7761
+scope:
+  in_scope:
+  - single-file picker
+  - stable source revision
+  - bounded selection
+  - safe receipt
+  - pending/failure lifecycle
+  - mobile and desktop verification
+  out_of_scope:
+  - server contract
+  - download/preview
+  - provider UI
+  - global raw API redaction
+  - Format/config/dependency changes
+  write_scope:
+  - lifetxt/web_assets.py
+  - lifetxt/web_assets_js_04.js
+  - lifetxt/web_assets_js_01.js
+  - lifetxt/web_assets_js_10.js
+  - lifetxt/web_assets_js_12.js
+  - lifetxt/web_assets_js_21.js
+  - lifetxt/web_assets_css_07.css
+  - tests/test_web_assets.py
+  - tests/test_web_attachment_upload_ui.py
+  - tests/test_web_attachment_upload_browser.py
+  - tests/browser_attachment_upload_probe.mjs
+  - docs/en/web.md
+  - docs/ja/web.md
+  - .ai/project/CAPABILITIES.yml
+  - .ai/project/TRACEABILITY.yml
+  - .ai/project/changes/web-secure-attachment-upload-ui
+  forbidden_scope:
+  - .ai/managed/**
+human_approvals_required:
+- independent security/integration review
+- Merge Authority approval

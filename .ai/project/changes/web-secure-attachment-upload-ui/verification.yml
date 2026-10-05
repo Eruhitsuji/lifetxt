@@ -29,9 +29,11 @@ verification:
       tests.test_web_attachment_upload_browser tests.test_core_import_boundary
     requirement_ids:
     - req-web-secure-attachment-upload-ui
-    result: 16 tests OK, 4 Web/browser cases explicitly skipped without Web dependencies
+    result: 17 tests OK, 4 Web/browser cases explicitly skipped without Web dependencies;
+      final clock guidance included
     executed_at: '2026-10-05'
     status: passed
+    executed_on_local_commit: 983c0acda61c53f47ec3dc995b7136f3ae046952
   - type: resource-warning
     command: python -W error::ResourceWarning -m unittest tests.test_config_validation
       tests.test_archive_plan_v1 tests.test_safety_foundation
@@ -81,6 +83,15 @@ verification:
       existing assertion.
     executed_at: '2026-10-05'
     status: passed
+  - type: committed-traceability-and-closeout
+    command: python -m unittest tests.test_traceability_gate tests.test_change_package_closeout;
+      evaluate_traceability_gate(origin/main, PR 1106)
+    requirement_ids:
+    - req-web-secure-attachment-upload-ui
+    result: 17 tests OK; exact PR URL gate true against the committed diff
+    executed_at: '2026-10-05'
+    status: passed
+    executed_on_local_commit: 079b5f9c
   gaps:
   - description: Physical iOS/Android devices and Safari/Firefox were not exercised;
       representative Chromium phone emulation is the browser evidence. Independent
@@ -89,7 +100,7 @@ verification:
 review_ledger:
 - reviewer: Codex implementer
   review_type: implementation-security-and-integration-self-review
-  target_commit: pending publication
+  target_commit: 3a3e99f4db8d60e7dede478b090fc388be638e6f
   result: findings_fixed
   finding_count: 6
   completed_at: '2026-10-05'
@@ -99,3 +110,7 @@ review_ledger:
   result: pending
   finding_count: 0
   completed_at: null
+verified_code_tree: 8e6ae608149015cb7736ebc55d16d3b531ebea20
+evidence_note: Commands executed against the corresponding working-tree source; publication
+  tree and every blob were checked byte-for-byte. Subsequent PR linkage changes are
+  metadata only.

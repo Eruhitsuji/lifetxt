@@ -1,0 +1,54 @@
+schema_version: 1
+change:
+  id: web-secure-transport
+  title: Secure writable Web transport policy and explicit proxy origin boundary
+  status: implemented
+  change_type: Security
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1097
+  related_pull_request:
+  - https://github.com/Eruhitsuji/lifetxt/pull/1107
+  base_commit: ca664d6b1f4c3c7ce9a3d8885859ea81fa20166b
+  target_release: null
+scope:
+  in_scope:
+  - transport policy
+  - non-loopback startup warning
+  - explicit immediate-peer proxy trust
+  - upload/Remote browser origin validation
+  - deployment docs and nginx example
+  out_of_scope:
+  - provider/resource model
+  - download endpoint
+  - at-rest encryption
+  - new configuration setting
+  - deployment or merge
+  write_scope:
+  - lifetxt/web_transport.py
+  - lifetxt/web_attachment_upload.py
+  - lifetxt/remote_web.py
+  - lifetxt/cli.py
+  - tests/test_web_transport.py
+  - tests/test_web_attachment_upload.py
+  - tests/test_serve_cli.py
+  - tests/test_remote_web_v20.py
+  - contrib/nginx/lifetxt.conf.example
+  - docs/en/web-transport-security.md
+  - docs/ja/web-transport-security.md
+  - docs/deployment/ubuntu-server.md
+  - docs/en/web.md
+  - docs/ja/web.md
+  - docs/en/remote.md
+  - docs/ja/remote.md
+  - docs/en/cli.md
+  - docs/ja/cli.md
+  - .ai/project/CAPABILITIES.yml
+  - .ai/project/TRACEABILITY.yml
+  - .ai/project/changes/web-secure-transport
+  forbidden_scope:
+  - .ai/managed/**
+human_approvals_required:
+- independent security and integration review
+- Merge Authority approval

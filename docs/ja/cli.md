@@ -3496,3 +3496,9 @@ python -m lifetxt template apply weekly_review --append life.txt --dry-run
 ## 通常のメモ
 
 [CLI・Web・Planner・TUI・MCPで共通の通常メモを利用する](ordinary-notes.md)。
+
+
+書き込み可能なnon-loopback Web配置にはHTTPSまたは認証付き暗号化トンネルが必要です。
+Bearer認証や`--insecure-public`は通信を暗号化しません。`serve`/`web`はUvicornのproxy処理を
+無効化して直接接続元を保持するため、TLS proxyには既存の`remote.trusted_proxies`を設定します。
+配置・upgrade手順は[Web通信のセキュリティ](web-transport-security.md)を参照してください。

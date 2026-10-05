@@ -8,13 +8,14 @@ import stat
 import threading
 import unicodedata
 import uuid
-from urllib.parse import unquote_to_bytes, urlsplit
+from urllib.parse import unquote_to_bytes
 
 from . import attachment_transactions as attachments
 from . import mutation
 from .ids import id_key_from_config
 from .parser import parse_text
 from .safety_foundation import format_version_report
+from .web_transport import expected_origin, origin_parts
 
 
 UPLOAD_PATH = "/api/attachments/upload"
@@ -96,7 +97,7 @@ def check_source(life_path, config, item_id, expected):
         )
 
 
-def check_transport(request):
+def check_transport(request, config=None):
     headers = request.headers
     for key in (
         "content-length",
@@ -118,27 +119,14 @@ def check_transport(request):
         raise UploadError(
             "UPLOAD_MARKER_REQUIRED", "Upload request marker is required.", 403
         )
+    incoming = expected_origin(request, config)
+    if incoming is None:
+        raise UploadError("ORIGIN_FORBIDDEN", "Upload origin is not allowed.", 403)
     origin = headers.get("origin")
-    if origin:
-        try:
-            parsed = urlsplit(origin)
-            incoming = urlsplit(str(request.url))
-            port = lambda u: u.port or (443 if u.scheme == "https" else 80)
-            same = (
-                parsed.scheme in ("http", "https")
-                and parsed.scheme == incoming.scheme
-                and parsed.hostname == incoming.hostname
-                and port(parsed) == port(incoming)
-                and not parsed.username
-                and not parsed.password
-                and not parsed.path
-                and not parsed.query
-                and not parsed.fragment
-            )
-        except ValueError:
-            same = False
-        if not same:
-            raise UploadError("ORIGIN_FORBIDDEN", "Upload origin is not allowed.", 403)
+    if origin and (
+        origin_parts(origin) is None or origin_parts(origin) != origin_parts(incoming)
+    ):
+        raise UploadError("ORIGIN_FORBIDDEN", "Upload origin is not allowed.", 403)
     if headers.get("sec-fetch-site") in ("cross-site", "same-site"):
         raise UploadError(
             "ORIGIN_FORBIDDEN", "Uploads require same-origin requests.", 403
@@ -351,7 +339,7 @@ def register_upload_routes(app):
         try:
             if app.state.read_only:
                 raise UploadError("READ_ONLY", "Uploads are disabled.", 403)
-            check_transport(request)
+            check_transport(request, app.state.config)
             revision = expected_revision(request.headers)
             item_id = request.headers.get("x-lifetxt-item-id", "")
             if not re.fullmatch(r"[!-~]{1,128}", item_id):

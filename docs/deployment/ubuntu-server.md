@@ -291,14 +291,21 @@ non-zero result as an unsupported deployment: remove the rule, leave Remote
 
 ## 4. Reverse proxy
 
-`lifetxt serve` binds `127.0.0.1` only by design
-(`cap-serve-single-worker-default`; there is no supported way to make it
-listen on a public interface directly). Put a reverse proxy in front of it
-for TLS termination, access logging, and Basic Auth or another access
-control layer of your choosing — `lifetxt` itself has no built-in
-authentication for the plain Web UI (Remote Safe Mode's bearer-token auth is
-a separate, opt-in surface; see [remote.md](../en/remote.md) if you need
-it).
+The supplied systemd service binds `127.0.0.1`. The CLI can bind non-loopback
+with its authentication gate, but this runbook recommends a loopback backend
+behind a TLS-terminating reverse proxy. Bearer authentication alone does not
+encrypt attachment bytes, credentials or capability/signed URLs. Require HTTPS
+or an authenticated encrypted tunnel on every untrusted hop; private LAN
+addresses are not sufficient. The ordinary Web UI also needs an access-control
+layer; Remote Safe Mode is a separate opt-in surface.
+
+Configure `remote.trusted_proxies` to the immediate proxy only (for this example,
+`["127.0.0.1/32"]`, even without Remote enabled), restart, overwrite/strip client
+forwarding headers, validate external Host/port, and prevent direct backend
+access. `serve`/`web` disable Uvicorn's implicit header trust. The complete
+[English policy](../en/web-transport-security.md) /
+[日本語の配置・通信方針](../ja/web-transport-security.md) describes VPN/SSH,
+same-origin upload checks, upgrade behavior and sensitive URL logging/caching.
 
 An nginx example is in [`contrib/nginx/lifetxt.conf.example`](../../contrib/nginx/lifetxt.conf.example).
 It proxies to the loopback bind only and leaves TLS certificate setup

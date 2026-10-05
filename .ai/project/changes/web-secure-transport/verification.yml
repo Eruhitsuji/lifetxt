@@ -1,0 +1,105 @@
+schema_version: 1
+verification:
+  executed:
+  - type: focused-proxy-upload-remote-regression
+    command: Explicit lifetxt.bootstrap_legacy_surfaces(); unittest tests.test_remote_web_v19
+      tests.test_remote_web_v20 tests.test_remote_attachment_contracts_v6 tests.test_surface_runtime
+      tests.test_web_transport tests.test_web_attachment_upload tests.test_serve_cli
+    result: 88 tests OK; no skips. Includes HTTPS proxy Remote login/Secure cookie
+      and refusal despite explicit allowed_origins.
+    requirement_ids: &id001
+    - req-web-secure-transport
+    executed_at: '2026-10-05'
+    status: passed
+  - type: real-uvicorn-backend
+    command: Disposable loopback Uvicorn server with proxy_headers=False, FORWARDED_ALLOW_IPS=*
+      and urllib upload requests
+    result: Untrusted forwarding 403 with unchanged source; explicitly trusted loopback
+      proxy headers 201 with changed source. Servers stopped. Simulated TLS-termination
+      metadata; no real TLS/nginx deployment.
+    requirement_ids: *id001
+    executed_at: '2026-10-05'
+    status: passed
+  - type: no-web-boundary
+    command: .transport-no-web/bin/python -m unittest tests.test_web_transport tests.test_web_attachment_upload
+      tests.test_serve_cli tests.test_core_import_boundary
+    result: 52 tests OK, 37 explicitly skipped without Web extras.
+    requirement_ids: *id001
+    executed_at: '2026-10-05'
+    status: passed
+  - type: resource-warning
+    command: python -W error::ResourceWarning -m unittest tests.test_config_validation
+      tests.test_archive_plan_v1 tests.test_safety_foundation
+    result: 101 tests OK, 3 skips.
+    requirement_ids: *id001
+    executed_at: '2026-10-05'
+    status: passed
+  - type: deployment-regression
+    command: python -m unittest tests.test_server_init tests.test_server_update
+    result: 186 tests OK, 1 skip.
+    requirement_ids: *id001
+    executed_at: '2026-10-05'
+    status: passed
+  - type: static
+    command: python -m ruff check lifetxt tests scripts; ruff format --check changed
+      formatted modules; mypy --follow-imports=skip --ignore-missing-imports lifetxt/diagnostic_contract.py;
+      git diff --check
+    result: All pass; existing unformatted CLI/Remote modules retain surrounding style.
+    requirement_ids: *id001
+    executed_at: '2026-10-05'
+    status: passed
+  - type: docs-and-core
+    command: python scripts/validate_release_docs.py --output .cache/transport-docs.json;
+      python -m lifetxt check examples/minimal_life.txt
+    result: Documentation errors 0; core check OK, 10 items.
+    requirement_ids: *id001
+    executed_at: '2026-10-05'
+    status: passed
+  - type: package-closeout
+    command: python -m unittest tests.test_change_package_closeout
+    result: 3 tests OK.
+    requirement_ids: *id001
+    executed_at: '2026-10-05'
+    status: passed
+  - type: full-regression
+    command: MPLBACKEND=Agg python -m unittest discover
+    result: 5118 tests in 282.219s; OK (skipped=57). Final Remote-origin addition
+      separately covered by focused 88-test run.
+    requirement_ids:
+    - req-web-secure-transport
+    executed_at: '2026-10-05'
+    status: passed
+  - type: traceability-and-closeout
+    command: python -m unittest tests.test_traceability_gate tests.test_change_package_closeout
+    result: Final PR URL-linked committed diff passes 17 tests.
+    requirement_ids:
+    - req-web-secure-transport
+    executed_at: '2026-10-05'
+    status: passed
+  gaps:
+  - description: Required PR CI and independent human security/integration review
+      pending. nginx/TLS certificates not deployed in this environment.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1097
+  notes:
+  - 'Initial direct targeted run without legacy bootstrap failed (22 failures/11 errors):
+    tests captured pre-bootstrap Web/MCP callables. Re-run with explicit production
+    bootstrap passed all 88 tests. No unrelated source change was made for this existing
+    test-entry requirement.'
+  - Full discovery began before the final Remote malformed-origin regression addition;
+    final changed behavior is separately covered by the 88-test run. Working tree
+    was edited during discovery.
+  - No actual nginx/TLS, public network or VPN service was provisioned; operator deployment
+    checks remain required.
+review_ledger:
+- reviewer: Codex implementer
+  review_type: self-review-security-and-compatibility
+  target_commit: a889826910209ed449b05b021f70b3ccbb7da66e
+  result: findings_fixed
+  finding_count: 1
+  completed_at: '2026-10-05'
+- reviewer: independent human reviewer
+  review_type: security-and-integration
+  target_commit: pending
+  result: pending
+  finding_count: 0
+  completed_at: null

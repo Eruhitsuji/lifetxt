@@ -329,6 +329,7 @@
     }
 
     function openDrawer(item, urlMode = "push") {
+      disposeAttachmentUpload();
       drawerEditing = false;
       drawerItem = item;
       syncDrawerUrlForItem(item, urlMode);
@@ -348,6 +349,9 @@
       const REF_KEYS = new Set(["depends_on", "parent", "blocks", "related", "ref"]);
       let fieldsHtml = `<div class="drawer-section-title">Fields</div><div class="drawer-fields">`;
       for (const [key, values] of Object.entries(item.details || {})) {
+        // Attachment locators remain available in the explicit raw record.
+        // The normal overview does not turn storage paths into browser links.
+        if (key === "file" || key === "dir") continue;
         const valHtml = (values || []).map(v => {
           if (REF_KEYS.has(key)) {
             return `<a class="drawer-link" onclick="drawerNavigate(${escapeHtml(jsLiteral(String(v)))})">${escapeHtml(String(v))}</a>`;
@@ -407,6 +411,7 @@
         `</section>`;
       rememberRecentItem(item);
       openManagedModal(drawer, ".drawer-close-btn");
+      mountAttachmentUpload(item, document.getElementById("drawer-tab-overview"));
       loadDependencyLinks(item);
       loadBlockerChain(item);
       if (item.type === "M" && itemId) loadDrawerMessageThread(item);

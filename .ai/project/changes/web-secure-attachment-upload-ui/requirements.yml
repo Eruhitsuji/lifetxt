@@ -1,0 +1,20 @@
+schema_version: 1
+requirements:
+- id: req-web-secure-attachment-upload-ui
+  kind: NEW
+  statement: Users attach one local file to an existing writable record through a
+    bounded, revision-aware and text-safe Web interaction.
+  acceptance_criteria:
+  - Selected name and byte size use DOM text APIs
+  - Known oversize/empty/unsafe names rejected before reading
+  - Policy/read-only/generated/missing-ID gates fail closed
+  - Exact stable source revision plus marker and encoded basename accompany raw File
+  - Pending submission prevents duplicates including navigation
+  - Conflict and ambiguous outcome require explicit refresh; no auto retry
+  - Success refreshes affected item and uses path-free receipt metadata
+  - Receipt ID is not a URL or authorization
+  - No upload bytes, credentials, receipt or capability URLs persisted or logged
+  - Desktop/mobile EN/JA browser evidence includes success, failure and conflict
+  - Existing no-file editor and capture behavior preserved
+  owner: Eruhitsuji
+open_questions: []

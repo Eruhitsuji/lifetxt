@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/attachment-upload-receipt-v1.schema.json",
+  "title": "lifetxt browser attachment upload receipt v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "attachment_id",
+    "display_name",
+    "size_bytes",
+    "media_type",
+    "source_revision",
+    "attachment_revision"
+  ],
+  "properties": {
+    "contract_version": {
+      "const": "1"
+    },
+    "attachment_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{32}$",
+      "description": "Upload receipt identity; not authorization or a download locator."
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255
+    },
+    "size_bytes": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10485760
+    },
+    "media_type": {
+      "type": "string",
+      "enum": [
+        "text/plain",
+        "application/octet-stream",
+        "application/pdf",
+        "application/zip",
+        "image/png",
+        "image/jpeg",
+        "image/gif"
+      ]
+    },
+    "source_revision": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "attachment_revision": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

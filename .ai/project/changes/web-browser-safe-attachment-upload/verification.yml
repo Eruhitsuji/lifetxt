@@ -1,0 +1,108 @@
+schema_version: 1
+verification:
+  executed:
+  - type: targeted-upload
+    command: python -m unittest tests.test_web_attachment_upload
+    requirement_ids:
+    - req-web-browser-safe-attachment-upload
+    result: 33 tests OK, no skips; final review includes cancellation, actual receive
+      deadline, generated-source policy, OpenAPI and schema.
+    executed_at: '2026-10-05'
+    status: passed
+  - type: regression
+    command: python -m unittest tests.test_remote_attachment_contracts_v6 tests.test_surface_runtime
+    requirement_ids:
+    - req-web-browser-safe-attachment-upload
+    result: 26 tests OK, no skips
+    executed_at: '2026-10-05'
+    status: passed
+  - type: contract-and-compatibility
+    command: python -m unittest tests.test_web_attachment_upload tests.test_schema_extensions_v2
+      tests.test_attachments tests.test_attachment_transactions_v4 tests.test_remote_attachment_contracts_v6
+      tests.test_surface_runtime tests.test_remote_workspace_snapshot tests.test_change_package_closeout
+      tests.test_core_import_boundary
+    result: 176 tests OK, no skips; final OpenAPI addition separately verified by
+      33-test upload suite
+    requirement_ids:
+    - req-web-browser-safe-attachment-upload
+    executed_at: '2026-10-05'
+    status: passed
+  - type: resource-warning
+    command: python -W error::ResourceWarning -m unittest tests.test_config_validation
+      tests.test_archive_plan_v1 tests.test_safety_foundation
+    result: 101 tests OK, no skips
+    requirement_ids:
+    - req-web-browser-safe-attachment-upload
+    executed_at: '2026-10-05'
+    status: passed
+  - type: no-web-import-boundary
+    command: PYTHONNOUSERSITE=1 PYTHONPATH=<checkout> python -m unittest tests.test_web_attachment_upload
+      tests.test_core_import_boundary tests.test_attachments tests.test_attachment_transactions_v4
+    result: 131 tests OK, 23 Web-only tests explicitly skipped in environment without
+      Web dependencies
+    requirement_ids:
+    - req-web-browser-safe-attachment-upload
+    executed_at: '2026-10-05'
+    status: passed
+  - type: real-server-smoke
+    command: Uvicorn TCP server + urllib HTTP GET/POST /api/attachments/upload
+    result: policy 200, upload 201, stale 409, oversize 413, cross-origin 403; stored
+      bytes/source revision verified; server shut down
+    requirement_ids:
+    - req-web-browser-safe-attachment-upload
+    executed_at: '2026-10-05'
+    status: passed
+  - type: static
+    command: python -m ruff check lifetxt tests scripts; python -m ruff format --check
+      changed modules; python -m mypy --follow-imports=skip --ignore-missing-imports
+      lifetxt/diagnostic_contract.py; git diff --check
+    result: lint, changed-module format, approved typing boundary and whitespace pass
+    requirement_ids:
+    - req-web-browser-safe-attachment-upload
+    executed_at: '2026-10-05'
+    status: passed
+  - type: docs-and-core-smoke
+    command: python scripts/validate_release_docs.py --output <scratch report>; python
+      -m lifetxt check examples/minimal_life.txt
+    result: 'documentation errors 0; core check OK: 10 items'
+    requirement_ids:
+    - req-web-browser-safe-attachment-upload
+    executed_at: '2026-10-05'
+    status: passed
+  - type: full-regression
+    command: MPLBACKEND=Agg python -m unittest discover
+    result: 'Ran 5093 tests in 295.565s
+
+
+      OK (skipped=49); final small upload/OpenAPI review additions are also checked
+      by the separate 33-test suite'
+    requirement_ids:
+    - req-web-browser-safe-attachment-upload
+    executed_at: '2026-10-05'
+    status: passed
+  - type: traceability-and-closeout
+    command: python -m unittest tests.test_traceability_gate tests.test_change_package_closeout
+      (against committed diff)
+    result: 17 tests OK after YAML sequence indentation is corrected; final PR URL
+      linkage is validated after creation
+    requirement_ids:
+    - req-web-browser-safe-attachment-upload
+    executed_at: '2026-10-05'
+    status: passed
+  gaps:
+  - description: 'Independent human security/integration review and required PR CI
+      pending; real browser UX is separately #1096.'
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1095
+review_ledger:
+- reviewer: Codex implementer
+  review_type: self-review-security-and-compatibility
+  target_commit: working-tree
+  result: findings_fixed
+  finding_count: 5
+  completed_at: '2026-10-05'
+- reviewer: independent human reviewer
+  review_type: security-and-integration
+  target_commit: pending
+  result: pending
+  finding_count: 0
+  completed_at: null

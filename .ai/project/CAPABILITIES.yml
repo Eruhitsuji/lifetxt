@@ -1,6 +1,40 @@
 schema_version: 1
 
 capabilities:
+  - id: cap-web-secure-transport
+    name: Secure Web transport policy and explicit proxy origin
+    summary: Non-loopback writable startup diagnostics and shared effective-origin checks
+      at an explicit immediate-peer trust boundary.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+    - req-web-secure-transport
+    implementation_locations:
+    - lifetxt/web_transport.py
+    - lifetxt/web_attachment_upload.py
+    - lifetxt/remote_web.py
+    - lifetxt/cli.py
+    - contrib/nginx/lifetxt.conf.example
+    public_interfaces:
+    - lifetxt serve/web
+    - POST /api/attachments/upload
+    - Remote browser same-origin validation
+    - remote.trusted_proxies (reuse)
+    tests_or_evidence:
+    - tests.test_web_transport
+    - tests.test_web_attachment_upload
+    - tests.test_serve_cli
+    - tests.test_remote_web_v20
+    - .ai/project/changes/web-secure-transport/verification.yml
+    related_issues:
+    - https://github.com/Eruhitsuji/lifetxt/issues/1097
+    related_pull_requests: []
+    reuse_policy: Reuse remote.trusted_proxies and existing upload/Remote auth; no alternate
+      mutation or resource resolver.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
   - id: cap-web-secure-attachment-upload-ui
     name: Secure Web attachment upload interaction
     summary: Single-file picker, bounded validation, exact source precondition and safe

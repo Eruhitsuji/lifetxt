@@ -1,0 +1,25 @@
+schema_version: 1
+requirements:
+- id: req-web-secure-transport
+  kind: NEW
+  statement: Sensitive Web/API traffic uses HTTPS or authenticated encrypted transport
+    across all untrusted hops, with explicit proxy-origin trust and actionable non-loopback
+    warnings.
+  acceptance_criteria:
+  - Document local-host, private LAN, encrypted VPN/SSH and public threat models
+  - Bearer auth and opaque identifiers do not replace confidentiality or integrity
+  - Cover attachment bytes, credentials, private metadata, mutations and possession-granting
+    URLs
+  - TLS-terminating proxy is normative; protect backend and all untrusted hops
+  - Disable implicit Uvicorn proxy trust and use existing immediate-peer trusted_proxies
+  - Same-origin upload and Remote browser behavior behind HTTPS proxy; refuse ambiguous
+    trusted headers
+  - Warn writable non-loopback binds without logging credentials; preserve existing
+    auth and Remote HTTPS gates
+  - English/Japanese deployment/Web documentation, compatibility and rollback guidance
+  constraints:
+  - no new dependency or configuration setting
+  - reuse upload transactions and remote trust list
+  - HTTP scheme cannot prove absence of an external encrypted tunnel
+  owner: Eruhitsuji
+open_questions: []

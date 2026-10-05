@@ -29,7 +29,6 @@ from .remote_access import (
     require_exact_revision,
     require_https,
     require_scope,
-    trusted_peer,
     validate_remote_storage,
 )
 from .remote_backend import read_resource, resource_catalog, snapshot, source_revision
@@ -83,17 +82,14 @@ def _remote(config):
 
 
 def _expected_origin(request, config):
-    host = request.headers.get("host") or request.url.netloc
-    scheme = request.url.scheme
-    client_host = request.client.host if request.client else None
-    if trusted_peer(config, client_host):
-        forwarded = request.headers.get("x-forwarded-proto")
-        forwarded_host = request.headers.get("x-forwarded-host")
-        if forwarded:
-            scheme = forwarded.split(",")[0].strip()
-        if forwarded_host:
-            host = forwarded_host.split(",")[0].strip()
-    return "%s://%s" % (scheme, host)
+    from .web_transport import expected_origin
+
+    origin = expected_origin(request, config)
+    if origin is None:
+        raise RemoteAccessError(
+            "ORIGIN_FORBIDDEN", "The browser request origin is not allowed.", 403
+        )
+    return origin
 
 
 def _audit_safely(config, event):

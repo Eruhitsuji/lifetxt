@@ -2168,7 +2168,7 @@ Options:
 | `--port PORT` | Bind port; defaults to `8000` |
 | `--read-only` | Disable write endpoints except `/api/check-line`; useful for public or wall-display deployments |
 | `--token-env ENVVAR` | Read the API bearer token from an environment variable and require `Authorization: Bearer TOKEN` on API routes |
-| `--insecure-public` | Explicitly allow a non-loopback writable server without a bearer token; intended only for trusted local networks |
+| `--insecure-public` | Explicitly allow a non-loopback writable server without a bearer token; use only with an independently protected transport |
 | `--mcp` | Run the stdio MCP server instead of the FastAPI HTTP server |
 
 When `--host` binds a non-loopback address such as `0.0.0.0`, writable mode
@@ -4517,3 +4517,10 @@ delivery by hand first.
 ## Ordinary Notes
 
 [Shared ordinary Notes across CLI, Web, Planner, TUI and MCP](ordinary-notes.md).
+
+
+For writable non-loopback Web deployment, require HTTPS or an authenticated
+encrypted tunnel. Bearer authentication and `--insecure-public` do not encrypt
+traffic. `serve`/`web` preserve the immediate peer by disabling Uvicorn proxy
+middleware; configure existing `remote.trusted_proxies` for TLS proxies.
+See [Web transport security](web-transport-security.md) for deployment and upgrade steps.

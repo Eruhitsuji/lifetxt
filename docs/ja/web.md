@@ -1017,12 +1017,13 @@ symlink directory・非regular collision・実行拡張子・一般的な実行b
 PDF/PNG/JPEG/GIF/ZIP signature、UTF-8 text以外は`application/octet-stream`です。
 malware scanや文書全体の検証ではありません。返却filenameはDOMへtextとして描画します。
 
-要求markerはbrowser preflightを必要とします。ブラウザ要求はsame-originで、`Origin`が
-あれば実際のrequestのscheme/host/portと照合します。CORSは追加せず、endpointが
-forwarding headerを独自に信頼することもありません。TLS proxyではserverの承認済み
-proxy trust設定でrequest originを正しく伝えてください。non-loopbackにはHTTPSまたは
-認証付き暗号化tunnelを使用します。Bearer tokenだけではfile/tokenを暗号化できません。
-配備policyは#1097です。
+要求markerはbrowser preflightを必要とします。`Origin`がある場合は、直接の要求または
+明示的に信頼したproxyの実効scheme/host/portと一致する必要があります。CORSは追加しません。
+`serve`/`web`はUvicornの暗黙のforwarding信頼を無効化します。TLS終端には
+`remote.trusted_proxies`を設定してください。書き込み可能なnon-loopback bindはHTTPSまたは
+認証付き暗号化トンネルが必要なことを警告します。Bearer tokenは平文HTTPを保護しません。
+設定・脅威モデル・upgrade・機密capability/署名付きURLの扱いは
+[配置・通信方針](web-transport-security.md)を参照してください。
 
 成功は201、`attachment-upload-receipt-v1.schema.json`のversion、random
 `attachment_id`、`display_name`、byte数、MIME、完全なsource/attachment revisionを

@@ -70,3 +70,9 @@ non-terminal journal が見つかった場合は、action を選ぶ前に inspec
 ## Remaining boundaries
 
 real power-loss fault injection、すべての legacy write migration、すべての attachment handler、compound work-session capability enforcement、real terminal/browser/SMTP/platform verification は残る P0 work です。
+
+
+機密dataの保存時には、最終添付・atomic-write directory・正確なjournal artifact・
+保持する復旧コピー・backup先をまとめて保護してください。lifetxtはそれらを暗号化せず、
+OS-private evidence profileは権限の境界です。脅威モデル・コピー一覧・鍵と復旧・platform
+暗号化の運用手順は[保存時の機密性](at-rest-confidentiality.md)を参照してください。

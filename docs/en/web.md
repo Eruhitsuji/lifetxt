@@ -1092,3 +1092,10 @@ Open an existing record's detail screen and use **Attachments → Choose attachm
 A successful upload refreshes the record and shows only its display name, media type and size. The latest receipt is kept only for this browser session; it is not a download link or an attachment inventory. Existing references get a generic summary in Overview. Explicit raw record/editor views and existing APIs retain their operator-oriented representation. No preview/download or provider UI is added.
 
 While uploading, controls prevent duplicate submission. A conflict does not retry against a newer revision: use **Refresh record**, review the record and select the file again. Authentication, read-only and validation failures are visible. A lost response or server recovery error may follow a committed upload, so inspect the refreshed attachment references before trying again. Keep the page open until the operation finishes. Closing or navigating away releases the selected file from the UI; it cannot undo an already-sent request. Upload bytes and receipt metadata are not stored in browser storage.
+
+
+For sensitive at-rest data, protect final attachments, atomic-write directories,
+exact journal artifacts, retained recovery copies and backup destinations together.
+lifetxt does not encrypt those files; its OS-private evidence profile is a permission
+boundary. See [at-rest confidentiality](at-rest-confidentiality.md) for the threat
+model, copy inventory, keys/recovery and platform-encryption deployment procedure.

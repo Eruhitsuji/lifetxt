@@ -25,7 +25,8 @@ capabilities:
     - https://github.com/Eruhitsuji/lifetxt/issues/1095
     - https://github.com/Eruhitsuji/lifetxt/issues/1094
     - https://github.com/Eruhitsuji/lifetxt/issues/1099
-    related_pull_requests: []
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/1104
     reuse_policy: Extend existing attachment_transactions, mutation CAS and Web auth/read-only;
       no provider/resolver or generic v1 changes.
     replacement:

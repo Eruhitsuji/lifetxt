@@ -1,0 +1,59 @@
+schema_version: 1
+verification:
+  executed:
+  - type: storage-inventory
+    command: PYTHONPATH=. python .cache/1098/probe.py
+    result: 'Disposable bytes target: final and before/after artifacts equal sample
+      bytes; redacted export excludes payload; ZIP entries not encrypted and contain
+      only selected file; restored bytes match. Temporary workspace removed.'
+    commit: SOURCE_COMMIT_PENDING
+    status: passed
+  - type: targeted-regression
+    command: Explicit lifetxt.bootstrap_legacy_surfaces(); unittest tests.test_transaction_journal_v3
+      tests.test_backup_restore_v6 tests.test_backup tests.test_backup_cli tests.test_backup_remote
+      tests.test_attachments tests.test_attachment_transactions_v4 tests.test_ubuntu_server_backup_docs
+    result: 205 tests passed; 1 environment-dependent skip.
+    commit: SOURCE_COMMIT_PENDING
+    status: passed
+  - type: governance
+    command: python -m unittest tests.test_traceability_gate tests.test_change_package_closeout
+    result: 17 tests passed; registries and all six package files parsed.
+    commit: SOURCE_COMMIT_PENDING
+    status: passed
+  - type: documentation
+    command: python scripts/validate_release_docs.py --output .cache/1098/release-docs.json;
+      relative Markdown link existence check for both policy docs; git diff --check
+    result: Release docs validation ok=true/errors=0; all local policy links resolve;
+      no whitespace errors.
+    commit: SOURCE_COMMIT_PENDING
+    status: passed
+  - type: core-smoke
+    command: python -m lifetxt check examples/minimal_life.txt
+    result: 'OK: 10 item(s).'
+    commit: SOURCE_COMMIT_PENDING
+    status: passed
+  gaps:
+  - No production platform-encryption/recovery or rclone-provider compatibility test;
+    deployment-specific operator responsibility.
+review_ledger:
+- reviewer: Codex implementer self-review
+  review_type: source-inventory-security-design-bilingual
+  target_commit: SOURCE_COMMIT_PENDING
+  result: passed-informational-only
+  finding_count: 0
+  completed_at: '2026-10-05'
+- reviewer: independent human reviewer
+  review_type: security-design-policy-acceptance
+  target_commit: pending
+  result: pending
+  finding_count: 0
+  completed_at: null
+release_evidence:
+  migration_notes: Documentation only; no runtime, configuration or format migration.
+  rollback_plan: Revert policy/docs; deployment encryption changes require their own
+    recovery plan.
+  operations_evidence:
+  - No deployment or key material created.
+  - Compared English/Japanese threat, 12-copy inventory, key lifecycle and future
+    crypto gates against implementation and official kernel/BitLocker/rclone references;
+    no policy acceptance claimed by implementer.

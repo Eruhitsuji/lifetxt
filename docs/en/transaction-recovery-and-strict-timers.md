@@ -257,3 +257,10 @@ When a non-terminal journal is found, inspect before choosing an action:
 2. `resume` only when finishing the recorded commit is still the intended outcome.
 3. `compensate` when the recorded before revisions are the desired recovery point.
 4. `abandon` only after evidence has been backed up and a human operator has accepted that no automated action should continue.
+
+
+For sensitive at-rest data, protect final attachments, atomic-write directories,
+exact journal artifacts, retained recovery copies and backup destinations together.
+lifetxt does not encrypt those files; its OS-private evidence profile is a permission
+boundary. See [at-rest confidentiality](at-rest-confidentiality.md) for the threat
+model, copy inventory, keys/recovery and platform-encryption deployment procedure.

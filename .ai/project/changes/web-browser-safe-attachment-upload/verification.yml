@@ -83,8 +83,7 @@ verification:
   - type: traceability-and-closeout
     command: python -m unittest tests.test_traceability_gate tests.test_change_package_closeout
       (against committed diff)
-    result: 17 tests OK after YAML sequence indentation is corrected; final PR URL
-      linkage is validated after creation
+    result: 17 tests OK; final PR URL linkage also validated against committed diff.
     requirement_ids:
     - req-web-browser-safe-attachment-upload
     executed_at: '2026-10-05'
@@ -96,7 +95,7 @@ verification:
 review_ledger:
 - reviewer: Codex implementer
   review_type: self-review-security-and-compatibility
-  target_commit: working-tree
+  target_commit: 0d3355f04299e5833ce0a2bf1e045f3f9d4ba70c
   result: findings_fixed
   finding_count: 5
   completed_at: '2026-10-05'

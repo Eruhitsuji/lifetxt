@@ -26,7 +26,8 @@ capabilities:
     related_issues:
     - https://github.com/Eruhitsuji/lifetxt/issues/1096
     - https://github.com/Eruhitsuji/lifetxt/issues/1095
-    related_pull_requests: []
+    related_pull_requests:
+    - https://github.com/Eruhitsuji/lifetxt/pull/1106
     reuse_policy: Extend existing record drawer and browser-safe upload API; no alternate
       writer or resolver.
     replacement:

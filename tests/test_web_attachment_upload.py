@@ -180,6 +180,64 @@ class UploadAPITests(unittest.TestCase):
             UPLOAD_PATH, content=content, headers=self.headers(**overrides)
         )
 
+    def test_tls_proxy_origin_uses_explicit_immediate_peer_trust(self):
+        from lifetxt.webapp import create_app
+
+        self.config["remote"] = {"trusted_proxies": ["127.0.0.1/32"]}
+        app = create_app(
+            [str(self.path)], writable_path=str(self.path), config=self.config
+        )
+        with TestClient(app, client=("127.0.0.1", 12345)) as client:
+            response = client.post(
+                UPLOAD_PATH,
+                content=b"hello",
+                headers=self.headers(
+                    **{
+                        "Host": "backend.internal:8000",
+                        "X-Forwarded-Host": "life.example.test:8443",
+                        "X-Forwarded-Proto": "https",
+                        "Origin": "https://life.example.test:8443",
+                    }
+                ),
+            )
+        self.assertEqual(201, response.status_code, response.text)
+        self.assertNotEqual(self.before, self.path.read_bytes())
+
+    def test_spoofed_and_ambiguous_proxy_origins_never_mutate(self):
+        from lifetxt.webapp import create_app
+
+        self.config["remote"] = {"trusted_proxies": ["127.0.0.1/32"]}
+        app = create_app(
+            [str(self.path)], writable_path=str(self.path), config=self.config
+        )
+        for peer, forwarded in (
+            ("192.0.2.1", [("X-Forwarded-Proto", "https")]),
+            ("127.0.0.1", [("X-Forwarded-Proto", "https,http")]),
+            (
+                "127.0.0.1",
+                [("X-Forwarded-Proto", "https"), ("X-Forwarded-Proto", "http")],
+            ),
+            (
+                "127.0.0.1",
+                [("X-Forwarded-Proto", "https"), ("X-Forwarded-Host", "other.test")],
+            ),
+        ):
+            with (
+                self.subTest(peer=peer, forwarded=forwarded),
+                TestClient(app, client=(peer, 12345)) as client,
+            ):
+                response = client.post(
+                    UPLOAD_PATH,
+                    content=b"hello",
+                    headers=[
+                        *self.headers(**{"Origin": "https://testserver"}).items(),
+                        *forwarded,
+                    ],
+                )
+            self.assertEqual(403, response.status_code, response.text)
+            self.assertEqual(self.before, self.path.read_bytes())
+            self.assertFalse(self.root.exists())
+
     def assert_safe(self, response):
         text = response.text
         for sensitive in (

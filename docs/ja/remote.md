@@ -358,3 +358,9 @@ actor IDがある場合に表示し、memberの改名・削除後も安定IDをf
 admissionされるremote writeにはexactな`If-Match` revisionが必要です。revisionがなければ`REVISION_REQUIRED`、staleなら`REVISION_CONFLICT`になります。
 
 `POST /api/remote/v1/write-check`は認証、write scope、browser-session CSRF／Origin、exact revisionを検証しますが、常に`authoritative_mutation: false`です。permission、privacy、event history、clock、idempotency、multi-target transaction、recoveryを完全に公開・強制できるoperationだけが、将来authoritative Remote mutationの対象になります。
+
+
+書き込み可能なnon-loopback Web配置にはHTTPSまたは認証付き暗号化トンネルが必要です。
+Bearer認証や`--insecure-public`は通信を暗号化しません。`serve`/`web`はUvicornのproxy処理を
+無効化して直接接続元を保持するため、TLS proxyには既存の`remote.trusted_proxies`を設定します。
+配置・upgrade手順は[Web通信のセキュリティ](web-transport-security.md)を参照してください。

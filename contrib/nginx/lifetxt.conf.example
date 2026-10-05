@@ -44,13 +44,25 @@ server {
     # allow 203.0.113.0/24;   # REPLACE_ME: your real allowed range
     # deny all;
 
+    # Configure remote.trusted_proxies: ["127.0.0.1/32"] in lifetxt.
+    # serve/web disable implicit Uvicorn forwarding trust. See
+    # docs/en/web-transport-security.md; keep the backend loopback-only.
     location / {
         proxy_pass http://127.0.0.1:8765;
         proxy_http_version 1.1;
-        proxy_set_header Host $host;
+        # Fixed validated external authority; add :PORT for non-default HTTPS.
+        # Reject unknown Host values in a separate default_server.
+        proxy_set_header Host REPLACE_ME.example.com;
+        proxy_set_header X-Forwarded-Host REPLACE_ME.example.com;
         proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-For $remote_addr;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Forwarded "";
+        # Remove client assertions unless the proxy explicitly authenticates
+        # and supplies a verified Remote principal instead.
+        proxy_set_header X-Lifetxt-Principal "";
+        proxy_hide_header Referrer-Policy;
+        add_header Referrer-Policy "no-referrer" always;
 
         # The Web UI's Server-Sent Events / live-update connections are
         # long-lived; do not let a default proxy timeout cut them off.
@@ -59,11 +71,13 @@ server {
     }
 }
 
-# Redirect plain HTTP to HTTPS. If you terminate TLS somewhere else (a CDN,
+# Reject plain HTTP. If you terminate TLS somewhere else (a CDN,
 # a different load balancer), drop this block instead of doubling up.
 server {
     listen 80;
     listen [::]:80;
     server_name REPLACE_ME.example.com;
-    return 301 https://$host$request_uri;
+    # Do not redirect credentials or uploads sent over HTTP: they were
+    # already exposed. Clients must start with HTTPS, including API requests.
+    return 400;
 }

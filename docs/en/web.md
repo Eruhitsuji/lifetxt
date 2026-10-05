@@ -1052,13 +1052,14 @@ conservative content classification: PDF/PNG/JPEG/GIF/ZIP signatures, UTF-8 text
 otherwise `application/octet-stream`. This is not malware scanning or full
 format validation. Returned filenames must be rendered as text, never HTML.
 
-The request marker requires browser preflight. Browser calls are same-origin;
-when `Origin` is present it must match the actual request scheme/host/port.
-No CORS is added, and the endpoint does not itself trust forwarding headers.
-TLS proxies must use the server's approved proxy-trust configuration to present
-the correct request origin. Use HTTPS or an authenticated encrypted tunnel for
-non-loopback traffic; Bearer tokens alone do not encrypt bytes or credentials.
-The full deployment policy remains #1097.
+The request marker requires browser preflight. When present, `Origin` must
+match the effective scheme/host/port from the direct request or an explicitly
+trusted immediate proxy. No CORS is added. `serve`/`web` disable implicit Uvicorn
+forwarding trust; configure `remote.trusted_proxies` for TLS termination.
+Writable non-loopback binds warn that HTTPS or an authenticated encrypted tunnel
+is required; Bearer tokens alone do not protect plaintext HTTP. See the
+[transport/deployment policy](web-transport-security.md) for setup, threat model,
+upgrade behavior and confidential capability/signed URL handling.
 
 201 responses follow `attachment-upload-receipt-v1.schema.json`: version,
 random `attachment_id`, `display_name`, byte size, MIME, full source revision and

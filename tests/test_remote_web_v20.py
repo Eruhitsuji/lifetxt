@@ -85,6 +85,50 @@ class RemoteWebV20Tests(unittest.TestCase):
         self.assertEqual("alice", response.json()["principal"]["id"])
         self.assertNotIn("token_env", response.json()["principal"])
 
+    def test_https_proxy_login_and_ambiguous_origin_with_explicit_allowlist(self):
+        self.config["remote"].update(
+            {
+                "trusted_proxies": ["127.0.0.1/32"],
+                "allow_loopback_http": False,
+                "allowed_origins": ["https://life.example.test:8443"],
+            }
+        )
+        with TestClient(
+            create_app(
+                paths=[self.path],
+                writable_path=self.path,
+                config=self.config,
+                read_only=True,
+            ),
+            client=("127.0.0.1", 12345),
+        ) as client:
+            headers = dict(
+                self.v2,
+                **{
+                    "Origin": "https://life.example.test:8443",
+                    "X-Forwarded-Proto": "https",
+                    "X-Forwarded-Host": "life.example.test:8443",
+                },
+            )
+            response = client.post(
+                "/api/remote/v1/browser/login",
+                headers=headers,
+                json={"token": "secret-v20"},
+            )
+            self.assertEqual(200, response.status_code, response.text)
+            self.assertIn("secure", response.headers["set-cookie"].lower())
+            for host in (
+                "life.example.test:8443,attacker.test",
+                "user@life.example.test:8443",
+                "",
+            ):
+                response = client.post(
+                    "/api/remote/v1/browser/login",
+                    headers=dict(headers, **{"X-Forwarded-Host": host}),
+                    json={"token": "secret-v20"},
+                )
+                self.assertEqual(403, response.status_code, response.text)
+
     def test_browser_login_session_csrf_logout(self):
         login_headers = dict(self.v2, Origin=self.origin)
         response = self.client.post(

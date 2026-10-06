@@ -1,0 +1,8 @@
+schema_version: 1
+links:
+- requirement_id: req-attachment-chunk-exact-byte-integrity
+  capability_id: cap-confined-attachment-snapshot
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1115
+  tests_or_evidence:
+  - tests.test_attachment_chunk_snapshot
+  status: in_progress

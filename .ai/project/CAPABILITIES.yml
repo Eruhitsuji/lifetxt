@@ -618,7 +618,8 @@ capabilities:
       - native Linux x86_64/AArch64 mutation CI
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/900
-    related_pull_requests: []
+    related_pull_requests:
+    - https://github.com/Eruhitsuji/lifetxt/pull/1120
     reuse_policy: extend_existing_lifetxt_mini_phase_1_read_core
     replacement:
       replaces: []

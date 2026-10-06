@@ -6,16 +6,17 @@ traceability:
       capability_id: cap-confined-attachment-snapshot
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1115
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1117
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1120
       tests_or_evidence:
-      - tests.test_attachment_snapshot_package
-      - docs/en/attachment-snapshot-helper.md
-      - docs/ja/attachment-snapshot-helper.md
-      status: in_progress
+        - tests.test_attachment_snapshot_package
+        - docs/en/attachment-snapshot-helper.md
+        - docs/ja/attachment-snapshot-helper.md
+      status: implemented
       changed_files_or_scope:
-      - scripts/build_attachment_snapshot_helper.py
-      - MANIFEST.in
-      - pyproject.toml
-      - docs/*/attachment-snapshot-helper.md
+        - scripts/build_attachment_snapshot_helper.py
+        - MANIFEST.in
+        - pyproject.toml
+        - docs/*/attachment-snapshot-helper.md
     - requirement_id: req-resource-reference-confined-read
       capability_id: cap-confined-attachment-snapshot
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1115

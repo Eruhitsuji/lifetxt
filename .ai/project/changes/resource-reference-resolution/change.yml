@@ -2,7 +2,7 @@ schema_version: 1
 change:
   id: resource-reference-resolution
   title: Refine restricted Remote-v2 resource-reference consumer before schema publication
-  status: proposed
+  status: in-review
   change_type: Security
   assurance_level: High
   owner: Eruhitsuji

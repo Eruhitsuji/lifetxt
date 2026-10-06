@@ -3,29 +3,35 @@ schema_version: 1
 capabilities:
   - id: cap-confined-attachment-snapshot
     name: Optional Linux confined attachment snapshots
-    summary: Internal native root-relative bounded regular-file snapshot seam; packaging
-      and supervisor added in dependent tasks.
+    summary: Private optional Linux confined snapshot workers with pinned helper verification,
+      bounded supervision and a legacy exact-byte chunk adapter.
     status: experimental
     owner: Eruhitsuji
     source_requirements:
-    - req-resource-reference-confined-read
-    - req-attachment-chunk-exact-byte-integrity
+      - req-resource-reference-confined-read
+      - req-attachment-chunk-exact-byte-integrity
     implementation_locations:
-    - native/resource_snapshot.c
-    - lifetxt/attachment_snapshot.py
-    - lifetxt/attachment_transactions.py (read_attachment_chunk only)
-    - scripts/build_attachment_snapshot_helper.py
-    - docs/en/attachment-snapshot-helper.md
-    - docs/ja/attachment-snapshot-helper.md
+      - native/resource_snapshot.c
+      - lifetxt/attachment_snapshot.py
+      - lifetxt/attachment_transactions.py (read_attachment_chunk only)
+      - scripts/build_attachment_snapshot_helper.py
+      - docs/en/attachment-snapshot-helper.md
+      - docs/ja/attachment-snapshot-helper.md
     public_interfaces:
-    - Internal LTXS1 protocol only
+      - Internal LTXS1 protocol only
     tests_or_evidence:
-    - tests.test_native_attachment_snapshot
+      - tests.test_native_attachment_snapshot
+      - tests.test_attachment_snapshot_package
+      - tests.test_attachment_snapshot
+      - tests.test_attachment_chunk_snapshot
+      - tests.test_remote_attachment_contracts_v6
     related_issues:
-    - https://github.com/Eruhitsuji/lifetxt/issues/1116
-    - https://github.com/Eruhitsuji/lifetxt/issues/1115
+      - https://github.com/Eruhitsuji/lifetxt/issues/1115
+      - https://github.com/Eruhitsuji/lifetxt/issues/1116
+      - https://github.com/Eruhitsuji/lifetxt/issues/1117
+      - https://github.com/Eruhitsuji/lifetxt/issues/1118
     related_pull_requests:
-    - https://github.com/Eruhitsuji/lifetxt/pull/1119
+      - https://github.com/Eruhitsuji/lifetxt/pull/1119
     reuse_policy: Reuse attachment transactions and domain policy; no resolver or authority
       store.
   - id: cap-resource-reference-projection-contract
@@ -678,7 +684,8 @@ capabilities:
       - SHA-256 verification before publication
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/904
-    related_pull_requests: []
+    related_pull_requests:
+    - https://github.com/Eruhitsuji/lifetxt/pull/1122
     reuse_policy: extend_existing_lifetxt-mini-ci-and-release-conventions
     replacement:
       replaces: []

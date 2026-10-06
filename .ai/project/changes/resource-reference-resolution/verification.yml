@@ -1,50 +1,89 @@
 schema_version: 1
 verification:
-  executed: []
+  executed:
+  - type: bilingual-contract
+    command: python .cache/1110/check_contract.py
+    result: 'PASS: 8 EN/JA JSON round trips, grammar negatives, 8 sections, 6 proposed
+      schema names, 10 catalog pairs, bounds, local links, YAML and unique capability'
+    commit: 4a3077d5de7d7c2877b68092decc945ae430de43
+    status: passed
+  - type: governance
+    command: python -m unittest tests.test_traceability_gate tests.test_change_package_closeout
+    result: 17 tests, OK
+    commit: 4a3077d5de7d7c2877b68092decc945ae430de43
+    status: passed
+  - type: legacy-compatibility
+    command: lifetxt.bootstrap_legacy_surfaces(); unittest tests.test_attachments
+      tests.test_attachment_transactions_v4 tests.test_remote_attachment_contracts_v6
+      tests.test_remote_workspace_snapshot
+    result: 110 tests, OK, 5 optional Web environment skips; full output captured
+      locally; not proof of future resolver enforcement
+    commit: 4a3077d5de7d7c2877b68092decc945ae430de43
+    status: passed
+  - type: release-docs
+    command: python scripts/validate_release_docs.py --output .cache/1110/release-docs.json
+    result: ok=true, errors=0
+    commit: 4a3077d5de7d7c2877b68092decc945ae430de43
+    status: passed
+  - type: core-smoke
+    command: python -m lifetxt check examples/minimal_life.txt
+    result: 'OK: 10 items'
+    commit: 4a3077d5de7d7c2877b68092decc945ae430de43
+    status: passed
+  - type: scope-main-whitespace
+    command: git diff --check; git diff --name-only origin/main -- lifetxt tests dist/schemas
+      .ai/managed; git fetch origin main; git rev-list --count HEAD..origin/main
+    result: No forbidden-scope or legacy-schema changes; main unchanged at d06b9e39;
+      checked document tree matches remote review commit tree 560fc39eecc73fc5b8d8ef2f641e8ac1c29b2810
+    commit: 4a3077d5de7d7c2877b68092decc945ae430de43
+    status: passed
   acceptance_mapping:
-    - criterion: AC1
-      sections: 1, 2, 3
-      status: owner-approval-pending
-    - criterion: AC2
-      sections: 3, 4, 5, 6
-      status: proposed
-    - criterion: AC3
-      sections: 4, 5, 7
-      status: proposed
-    - criterion: AC4
-      sections: 3
-      status: proposed
-    - criterion: AC5
-      sections: 2, 3, 6
-      status: proposed
-    - criterion: AC6
-      sections: 8
-      status: blocked-by-concrete-approval
+  - criterion: AC1
+    sections: 1, 2, 3
+    status: owner-approval-pending
+  - criterion: AC2
+    sections: 3, 4, 5, 6
+    status: proposed
+  - criterion: AC3
+    sections: 4, 5, 7
+    status: proposed
+  - criterion: AC4
+    sections: 3
+    status: proposed
+  - criterion: AC5
+    sections: 2, 3, 6
+    status: proposed
+  - criterion: AC6
+    sections: 8
+    status: blocked-by-concrete-approval
   gaps:
-    - Concrete consumer/envelope/authorization acceptance pending; no schemas or matching schema tests added.
-    - No runtime resolver/delivery; offline examples do not prove authorization enforcement.
-    - Independent human design/security and integration reviews pending.
+  - Concrete consumer/envelope/authorization acceptance pending; no schemas or matching
+    schema tests added.
+  - No runtime resolver/delivery; offline examples do not prove authorization enforcement.
+  - Independent human design/security and integration reviews pending.
 review_ledger:
-  - reviewer: Codex implementer self-review
-    review_type: design-security-bilingual
-    target_commit: null
-    result: pending
-    finding_count: 0
-    completed_at: null
-  - reviewer: independent human owner
-    review_type: concrete-consumer-design-security-approval
-    target_commit: null
-    result: pending
-    finding_count: 0
-    completed_at: null
-  - reviewer: independent human Merge Authority
-    review_type: integration
-    target_commit: null
-    result: pending
-    finding_count: 0
-    completed_at: null
+- reviewer: Codex implementer self-review
+  review_type: design-security-bilingual
+  target_commit: 4a3077d5de7d7c2877b68092decc945ae430de43
+  result: passed-informational-only
+  finding_count: 0
+  completed_at: '2026-10-06'
+- reviewer: independent human owner
+  review_type: concrete-consumer-design-security-approval
+  target_commit: null
+  result: pending
+  finding_count: 0
+  completed_at: null
+- reviewer: independent human Merge Authority
+  review_type: integration
+  target_commit: null
+  result: pending
+  finding_count: 0
+  completed_at: null
 release_evidence:
   migration_notes: Proposal only; no configuration, schema, data or runtime change.
   rollback_plan: Revert only this task's documentation/package/registry additions.
   operations_evidence:
-    - No deployment, credentials, provider fetch or new capability advertisement.
+  - No deployment, credentials, provider fetch or new capability advertisement.
+  - Self-review fixed raw-manifest bootstrap dependency and unsupported-version grammar.
+    Same source tree inspected; independent human approvals remain pending.

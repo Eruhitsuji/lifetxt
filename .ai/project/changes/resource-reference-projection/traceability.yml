@@ -1,0 +1,18 @@
+schema_version: 1
+links:
+- requirement_id: req-resource-reference-projection
+  capability_id: cap-resource-reference-projection-contract
+  epic: https://github.com/Eruhitsuji/lifetxt/issues/1099
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1100
+  pull_request: null
+  tests_or_evidence:
+  - docs/en/resource-reference-projection.md
+  - docs/ja/resource-reference-projection.md
+  - .ai/project/changes/resource-reference-projection/verification.yml
+  status: implemented
+  changed_files_or_scope:
+  - docs/en/resource-reference-projection.md
+  - docs/ja/resource-reference-projection.md
+  - .ai/project/CAPABILITIES.yml
+  - .ai/project/TRACEABILITY.yml
+  - .ai/project/changes/resource-reference-projection/**

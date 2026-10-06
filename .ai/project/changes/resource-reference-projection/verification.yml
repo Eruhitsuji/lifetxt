@@ -1,0 +1,96 @@
+schema_version: 1
+verification:
+  executed:
+  - type: contract-documentation
+    command: python .cache/1100/check_contract.py
+    result: 8 JSON fixtures; EN/JA parity; 9 sections each; positive/negative grammar
+      cases; local links; package and registries parse.
+    commit: 3b5365de8e9d4d1f9244733c07e08026bcb5c3cb
+    status: passed
+  - type: compatibility-governance
+    command: lifetxt.bootstrap_legacy_surfaces(); unittest tests.test_attachments
+      tests.test_attachment_transactions_v4 tests.test_remote_attachment_contracts_v6
+      tests.test_remote_workspace_snapshot tests.test_traceability_gate tests.test_change_package_closeout
+    result: 127 tests, OK; 5 Web-environment-dependent skips. Existing behavior only,
+      not proof of future contract enforcement.
+    commit: 3b5365de8e9d4d1f9244733c07e08026bcb5c3cb
+    status: passed
+  - type: final-governance
+    command: python -m unittest tests.test_traceability_gate tests.test_change_package_closeout
+    result: 17 tests, OK after final YAML indentation fix.
+    commit: 3b5365de8e9d4d1f9244733c07e08026bcb5c3cb
+    status: passed
+  - type: release-docs
+    command: python scripts/validate_release_docs.py --output .cache/1100-release-docs.json
+    result: ok=true; errors=0
+    commit: 3b5365de8e9d4d1f9244733c07e08026bcb5c3cb
+    status: passed
+  - type: core-smoke
+    command: python -m lifetxt check examples/minimal_life.txt
+    result: 'OK: 10 item(s).'
+    commit: 3b5365de8e9d4d1f9244733c07e08026bcb5c3cb
+    status: passed
+  - type: scope-whitespace-integration
+    command: git diff --check; git diff --name-only HEAD -- lifetxt tests dist/schemas
+      .ai/managed; git fetch origin main; git rev-list --count HEAD..origin/main
+    result: No whitespace errors or forbidden-scope changes. Latest main unchanged
+      at d229e87b.
+    commit: 3b5365de8e9d4d1f9244733c07e08026bcb5c3cb
+    status: passed
+  acceptance_mapping:
+  - criterion: AC1
+    sections: 2, 3, 6
+    evidence: Matching EN/JA design sections and serialized review examples
+  - criterion: AC2
+    sections: 2, 3
+    evidence: Matching EN/JA design sections and serialized review examples
+  - criterion: AC3
+    sections: 4, 6
+    evidence: Matching EN/JA design sections and serialized review examples
+  - criterion: AC4
+    sections: 4, 5
+    evidence: Matching EN/JA design sections and serialized review examples
+  - criterion: AC5
+    sections: '7'
+    evidence: Matching EN/JA design sections and serialized review examples
+  - criterion: AC6
+    sections: '8'
+    evidence: Matching EN/JA design sections and serialized review examples
+  - criterion: AC7
+    sections: '4'
+    evidence: Matching EN/JA design sections and serialized review examples
+  - criterion: AC8
+    sections: 1, 8, 9
+    evidence: Matching EN/JA design sections and serialized review examples
+  gaps:
+  - No runtime projection/resolver exists; examples and compatibility tests cannot
+    prove future enforcement.
+  - Independent human security/design and integration reviews pending latest PR head.
+review_ledger:
+- reviewer: Codex implementer self-review
+  review_type: security-design-compatibility-bilingual
+  target_commit: 3b5365de8e9d4d1f9244733c07e08026bcb5c3cb
+  result: passed-informational-only
+  finding_count: 0
+  completed_at: '2026-10-06'
+- reviewer: independent human reviewer
+  review_type: security-design-contract-acceptance
+  target_commit: null
+  result: pending
+  finding_count: 0
+  completed_at: null
+- reviewer: independent human reviewer / Merge Authority
+  review_type: integration
+  target_commit: null
+  result: pending
+  finding_count: 0
+  completed_at: null
+release_evidence:
+  migration_notes: Documentation only; existing Format, endpoints and schemas unchanged.
+  rollback_plan: Revert this documentation/package/registry change; no data or runtime
+    migration.
+  operations_evidence:
+  - No deployment, network fetch, provider login or credential store created.
+  - Self-review corrected first descriptor discovery versus resolving requests, source-digest
+    correlation, receipt entropy, lifecycle/restore continuity, search and raw-route
+    downgrade boundaries. Final independent human reviews remain pending.

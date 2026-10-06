@@ -1,0 +1,42 @@
+schema_version: 1
+change:
+  id: resource-reference-projection
+  title: Specify opaque attachment projection and complete disclosure coverage
+  status: implemented
+  change_type: Security
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1100
+  related_pull_request: null
+  base_commit: d229e87b4c3ac67b36c12d1ae1462b9e1f03220e
+  target_release: null
+scope:
+  in_scope:
+  - One EN/JA shared resource-reference design contract
+  - Identifier/revision lifecycle, disclosure, negotiation and compatibility
+  - High change package and registry links
+  out_of_scope:
+  - runtime/endpoints/lookup database
+  - schemas without concrete consumer approval
+  - Format/provider changes
+  - byte sync/download/fetch
+  - deployment/merge
+  write_scope:
+  - docs/en/resource-reference-projection.md
+  - docs/ja/resource-reference-projection.md
+  - .ai/project/CAPABILITIES.yml
+  - .ai/project/TRACEABILITY.yml
+  - .ai/project/changes/resource-reference-projection/**
+  forbidden_scope:
+  - .ai/managed/**
+  - lifetxt/**
+  - tests/**
+  - dist/schemas/**
+  - dependencies
+  shared_files:
+  - .ai/project/CAPABILITIES.yml
+  - .ai/project/TRACEABILITY.yml
+human_approvals_required:
+- independent security/design contract acceptance
+- independent integration review and Merge Authority approval

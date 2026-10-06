@@ -5,6 +5,17 @@ traceability:
     - requirement_id: req-resource-reference-confined-read
       capability_id: cap-confined-attachment-snapshot
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1115
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1118
+      tests_or_evidence:
+      - tests.test_attachment_snapshot
+      status: in_progress
+      changed_files_or_scope:
+      - lifetxt/attachment_snapshot.py
+      - tests/test_attachment_snapshot.py
+      - .ai/project/changes/linux-snapshot-supervisor/**
+    - requirement_id: req-resource-reference-confined-read
+      capability_id: cap-confined-attachment-snapshot
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1115
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1117
       pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1120
       tests_or_evidence:

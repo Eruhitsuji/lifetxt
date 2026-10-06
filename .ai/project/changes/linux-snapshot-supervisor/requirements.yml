@@ -1,0 +1,14 @@
+schema_version: 1
+requirements:
+- id: req-resource-reference-confined-read
+  statement: Consume only a trusted bounded snapshot and retain live slots through
+    cancellation and physical worker reap.
+  acceptance_criteria:
+  - Pinned helper FD and bounded manifest/protocol validation
+  - Fresh root/file metadata revalidation and full SHA-256 of same immutable bytes
+  - Max2 live process slots and optional one/principal, no queue
+  - Caller monotonic deadline <=30s; slot retained through actual reap even when caller
+    returns
+  - Safe unsupported/limit/stale errors and ownership/FD cleanup
+  owner: Eruhitsuji
+open_questions: []

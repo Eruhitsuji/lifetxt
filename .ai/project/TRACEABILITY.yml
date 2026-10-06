@@ -2,6 +2,22 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-resource-explicit-fetch-policy
+      capability_id: cap-external-resource-fetch-policy-contract
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1103
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1129
+      pull_request: null
+      tests_or_evidence:
+        - docs/en/external-resource-fetch-policy.md
+        - docs/ja/external-resource-fetch-policy.md
+        - .ai/project/changes/external-resource-fetch-policy/verification.yml
+      status: proposed
+      changed_files_or_scope:
+        - docs/en/external-resource-fetch-policy.md
+        - docs/ja/external-resource-fetch-policy.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+        - .ai/project/changes/external-resource-fetch-policy/**
     - requirement_id: req-resource-reference-bounded-delivery
       capability_id: cap-resource-reference-runtime
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1114

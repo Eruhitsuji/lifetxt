@@ -23,7 +23,8 @@ capabilities:
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/1103
       - https://github.com/Eruhitsuji/lifetxt/issues/1129
-    related_pull_requests: []
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/1130
     reuse_policy: Reuse existing attachment writer/current permission/CAS and upload/resource
       contracts; no connector, secret store or parallel authority.
     notes: Task A only. N01-N17 unimplemented/unrun; B-D require owner-selected concrete

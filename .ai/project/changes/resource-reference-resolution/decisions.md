@@ -24,3 +24,15 @@
 
 - Final metadata review: package state is in-review once the Draft PR is linked;
   this does not approve its proposed design or mark schema delivery implemented.
+
+## Concrete approval and Ready supersession (2026-10-06)
+
+Owner explicitly approved the prior-turn concrete proposal. Approval record: https://github.com/Eruhitsuji/lifetxt/issues/1110#issuecomment-6015909957. Earlier pending-design notes above describe the proposal stage and are superseded. Ready refinement selects schema_extensions_v33.py, the existing bootstrap extension range, six generated schemas and tests/test_resource_reference_contract.py. No runtime/settings/legacy schema change. Independent integration/merge review is still pending.
+
+- Direct compatibility maintenance updates five existing bundle inventory/count tests
+  from 86 to 92 and adds the six exact filenames to the inventory set; assertions
+  remain strict. Generated old artifacts are preserved unchanged.
+- Self-review corrected traceability list indentation; the initial full run exposed
+  that package parse error, the outdated inventories and missing editable installation.
+  Full output is retained; revalidation uses the configured dev setup in an isolated
+  environment. No source changed while the initial full run was executing.

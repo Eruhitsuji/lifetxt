@@ -51,27 +51,33 @@ verification:
   acceptance_mapping:
   - criterion: AC1
     sections: 1, 2, 3
-    status: owner-approval-pending
+    evidence: Owner approval record / EN-JA contract / tests.test_resource_reference_contract
+    status: verified-contract-only
   - criterion: AC2
     sections: 3, 4, 5, 6
-    status: proposed
+    evidence: Owner approval record / EN-JA contract / tests.test_resource_reference_contract
+    status: verified-contract-only
   - criterion: AC3
     sections: 4, 5, 7
-    status: proposed
+    evidence: Owner approval record / EN-JA contract / tests.test_resource_reference_contract
+    status: verified-contract-only
   - criterion: AC4
-    sections: 3
-    status: proposed
+    sections: '3'
+    evidence: Owner approval record / EN-JA contract / tests.test_resource_reference_contract
+    status: verified-contract-only
   - criterion: AC5
     sections: 2, 3, 6
-    status: proposed
+    evidence: Owner approval record / EN-JA contract / tests.test_resource_reference_contract
+    status: verified-contract-only
   - criterion: AC6
-    sections: 8
-    status: blocked-by-concrete-approval
+    sections: '8'
+    evidence: Owner approval record / EN-JA contract / tests.test_resource_reference_contract
+    status: verified-contract-only
   gaps:
-  - Concrete consumer/envelope/authorization acceptance pending; no schemas or matching
-    schema tests added.
-  - No runtime resolver/delivery; offline examples do not prove authorization enforcement.
-  - Independent human design/security and integration reviews pending.
+  - No runtime consumer/resolver/delivery; schemas do not prove semantic authorization
+    or platform readiness.
+  - Independent human implementation security/integration review and merge approval
+    pending final head.
 review_ledger:
 - reviewer: Codex implementer self-review
   review_type: design-security-bilingual
@@ -81,10 +87,11 @@ review_ledger:
   completed_at: '2026-10-06'
 - reviewer: independent human owner
   review_type: concrete-consumer-design-security-approval
-  target_commit: null
-  result: pending
+  target_commit: efd63637554279bd53c57d57b989613a9e314e70
+  result: accepted-concrete-design-only
   finding_count: 0
-  completed_at: null
+  completed_at: '2026-10-06'
+  approval_record: https://github.com/Eruhitsuji/lifetxt/issues/1110#issuecomment-6015909957
 - reviewer: independent human Merge Authority
   review_type: integration
   target_commit: null
@@ -92,8 +99,10 @@ review_ledger:
   finding_count: 0
   completed_at: null
 release_evidence:
-  migration_notes: Proposal only; no configuration, schema, data or runtime change.
-  rollback_plan: Revert only this task's documentation/package/registry additions.
+  migration_notes: New separately named schema-only contract; legacy v1 remains byte-identical.
+    No settings/runtime/data migration.
+  rollback_plan: Revert six schemas, v33 extension/bootstrap registration, contract
+    test and task-specific docs/package/registry changes; no data rollback.
   operations_evidence:
   - No deployment, credentials, provider fetch or new capability advertisement.
   - Self-review fixed raw-manifest bootstrap dependency and unsupported-version grammar.

@@ -1,15 +1,16 @@
-# Restricted resource-reference consumer v1 (approval proposal)
+# Restricted resource-reference consumer v1 (approved schema contract)
 
 [日本語](../ja/resource-reference-resolution.md)
 
 ## 1. Status and adoption gate
 
 #1110 refines the owner-accepted #1101 recommendation and the adopted
-[projection contract](resource-reference-projection.md). This concrete contract is
-**proposed for owner security/design approval**. No new route, configuration setting,
-schema, capability, resolver, binding store or byte operation is implemented here.
-The task remains in requirements/design refinement until that approval is recorded;
-a request to work on the issue is not recorded as approval of this new envelope.
+[projection contract](resource-reference-projection.md). This concrete contract was
+**approved by the owner on 2026-10-06** ([approval record](https://github.com/Eruhitsuji/lifetxt/issues/1110#issuecomment-6015909957)).
+This task publishes six new schemas through the existing extension pipeline. No new
+route, configuration setting, advertised runtime capability, resolver, binding store
+or byte operation is implemented here. Independent integration/security review and
+merge approval of the delivered schemas remain required.
 
 The first consumer is a dedicated **restricted Remote protocol 2, bearer-only client**
 for explicitly enrolled local regular files. It uses existing Remote authentication,
@@ -27,7 +28,7 @@ Other platforms or missing prerequisites fail closed without advertising the fea
 
 ## 2. Authorization configuration and isolation
 
-The proposed future operator policy consists of these explicit decisions. These are
+The approved policy for future operator configuration consists of these explicit decisions. These are
 contract concepts, **not currently accepted lifetxt configuration keys**. Configuration
 implementation must later update registry/default/type/provenance/restart/secret/version
 metadata, `config explain`, EN/JA docs, fixtures and migration/downgrade tests together.
@@ -66,7 +67,7 @@ success. Missing/unsupported/duplicate/comma-combined negotiation values fail wi
 406 `UNSUPPORTED_CONTRACT`; there is no automatic downgrade. Revalidate principal
 mode, selected workspace and policy for every request, even with matching headers.
 
-| Method and proposed route | Operation | Membership | Write-clock/read-only classification |
+| Method and contract route | Operation | Membership | Write-clock/read-only classification |
 | --- | --- | --- | --- |
 | POST /api/remote/v1/resource-references/discover | Item-scoped descriptor discovery | Explicit read | Read-only, exempt from mutation clock only for this exact pair |
 | POST /api/remote/v1/resource-references/full | Exact-revision full bytes | Explicit read + attachment:read | Read-only, same narrowly scoped exemption |
@@ -322,12 +323,12 @@ executable endpoints**. Metadata label is allowed; optional digest/size/MIME are
 | Revoke/change between chunks or during full send | 404/409 before headers, abort after headers; discard partial bytes. |
 | Generic Web anonymous or same credential exposes raw workspace | Refuse safe-consumer enablement, even if these three responses are safe. |
 
-## 8. Schema publication plan and verification boundary
+## 8. Published schemas, usage and verification boundary
 
-After explicit owner approval of sections 1–7, refine #1110 to Ready and add
-`lifetxt/schema_extensions_v33.py` (or next unused extension number if main advanced)
-through the existing schema-extension bootstrap and generator/sample pipeline. Proposed
-new outputs, all named resource-reference-* rather than attachment legacy v1:
+Following owner approval and Ready refinement, `lifetxt/schema_extensions_v33.py`
+publishes these six contracts through the existing schema-extension bootstrap and
+generator/sample pipeline. New outputs use resource-reference-* names and preserve
+attachment legacy v1:
 
 - resource-reference-descriptor-v1.schema.json
 - resource-reference-discovery-request-v1.schema.json
@@ -340,13 +341,36 @@ Schemas are draft 2020-12, closed objects, fixed string contract version, exact 
 identifier grammar, explicit required fields, bounded integers, finite MIME and fixed
 code/message pair alternatives. The discovery result embeds/reuses the same descriptor
 shape. Binary 200 bodies are governed by section 5, not misrepresented as JSON schemas.
-Matching tests will cover positive/negative schema validation, unknown nested fields,
+Matching tests cover positive/negative schema validation, unknown nested fields,
 digest grammar, nonboolean bounds, samples/generator parity and EN/JA examples. Keep
 every existing attachment v1 generated schema byte-for-byte unchanged. Tests must also
 state which semantic gates JSON Schema does not prove; no runtime claim from round trips.
 
-Approval-stage verification covers EN/JA JSON parity/round trips, identifier examples,
-local references, package/registry parsing, scope and legacy-schema nonchanges. No schema
-or contract test implementation is authorized yet. Required independent human design/
-security and integration reviews remain pending. Revert docs/package/task-specific
-registry additions for rollback; no data migration, deployment or release involved.
+Generate the bundle with `python -m lifetxt format schemas DIRECTORY`. The six files already
+exist under `dist/schemas/`; their samples are registered in the existing release
+sample pipeline. Run `python -m unittest tests.test_resource_reference_contract`
+with the existing optional jsonschema validator installed to validate examples,
+negative cases and generator parity. A validator-free run checks publication and
+legacy artifacts but skips JSON Schema validation explicitly. This task adds no
+mandatory dependency. Example use with an independently prepared JSON request:
+
+```python
+import json
+from jsonschema import Draft202012Validator
+
+with open("dist/schemas/resource-reference-full-request-v1.schema.json", encoding="utf-8") as handle:
+    schema = json.load(handle)
+with open("request.json", encoding="utf-8") as handle:
+    Draft202012Validator(schema).validate(json.load(handle))
+```
+
+This validates the envelope shape; it does not send a request or authorize bytes.
+HTTP/transport/member/action checks, request wire limit/duplicate JSON keys, policy,
+randomness, enrollment/revision continuity, platform proof and transfer bounds remain
+requirements for #1111/#1113/#1114. Full/chunk operations still are not executable.
+
+Verification covers EN/JA JSON/schema round trips, grammar/unknown-field/digest/bound
+negatives, generator/sample parity, legacy attachment v1 byte hashes, package and
+traceability checks. Integration/security review of the final head remains independent
+and pending. Rollback reverts only these docs/schemas/test/bootstrap registration and
+task-specific package/registry additions; no data migration or deployment is involved.

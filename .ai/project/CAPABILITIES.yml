@@ -24,7 +24,8 @@ capabilities:
     - https://github.com/Eruhitsuji/lifetxt/issues/1100
     - https://github.com/Eruhitsuji/lifetxt/issues/1099
     - https://github.com/Eruhitsuji/lifetxt/issues/1101
-    related_pull_requests: []
+    related_pull_requests:
+    - https://github.com/Eruhitsuji/lifetxt/pull/1109
     reuse_policy: Extend existing upload/UI and Remote snapshot disclosure seams; reuse
       attachment transactions, principal policy and exact CAS. No new writer/authority
       engine.

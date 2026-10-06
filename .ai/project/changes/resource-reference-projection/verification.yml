@@ -5,7 +5,7 @@ verification:
     command: python .cache/1100/check_contract.py
     result: 8 JSON fixtures; EN/JA parity; 9 sections each; positive/negative grammar
       cases; local links; package and registries parse.
-    commit: 3b5365de8e9d4d1f9244733c07e08026bcb5c3cb
+    commit: d6d387b06b3cc69d48d0a360b5e322399ccf9759
     status: passed
   - type: compatibility-governance
     command: lifetxt.bootstrap_legacy_surfaces(); unittest tests.test_attachments
@@ -13,29 +13,29 @@ verification:
       tests.test_remote_workspace_snapshot tests.test_traceability_gate tests.test_change_package_closeout
     result: 127 tests, OK; 5 Web-environment-dependent skips. Existing behavior only,
       not proof of future contract enforcement.
-    commit: 3b5365de8e9d4d1f9244733c07e08026bcb5c3cb
+    commit: d6d387b06b3cc69d48d0a360b5e322399ccf9759
     status: passed
   - type: final-governance
     command: python -m unittest tests.test_traceability_gate tests.test_change_package_closeout
     result: 17 tests, OK after final YAML indentation fix.
-    commit: 3b5365de8e9d4d1f9244733c07e08026bcb5c3cb
+    commit: d6d387b06b3cc69d48d0a360b5e322399ccf9759
     status: passed
   - type: release-docs
     command: python scripts/validate_release_docs.py --output .cache/1100-release-docs.json
     result: ok=true; errors=0
-    commit: 3b5365de8e9d4d1f9244733c07e08026bcb5c3cb
+    commit: d6d387b06b3cc69d48d0a360b5e322399ccf9759
     status: passed
   - type: core-smoke
     command: python -m lifetxt check examples/minimal_life.txt
     result: 'OK: 10 item(s).'
-    commit: 3b5365de8e9d4d1f9244733c07e08026bcb5c3cb
+    commit: d6d387b06b3cc69d48d0a360b5e322399ccf9759
     status: passed
   - type: scope-whitespace-integration
     command: git diff --check; git diff --name-only HEAD -- lifetxt tests dist/schemas
       .ai/managed; git fetch origin main; git rev-list --count HEAD..origin/main
     result: No whitespace errors or forbidden-scope changes. Latest main unchanged
       at d229e87b.
-    commit: 3b5365de8e9d4d1f9244733c07e08026bcb5c3cb
+    commit: d6d387b06b3cc69d48d0a360b5e322399ccf9759
     status: passed
   acceptance_mapping:
   - criterion: AC1
@@ -69,7 +69,7 @@ verification:
 review_ledger:
 - reviewer: Codex implementer self-review
   review_type: security-design-compatibility-bilingual
-  target_commit: 3b5365de8e9d4d1f9244733c07e08026bcb5c3cb
+  target_commit: d6d387b06b3cc69d48d0a360b5e322399ccf9759
   result: passed-informational-only
   finding_count: 0
   completed_at: '2026-10-06'

@@ -941,6 +941,58 @@ CONFIG_REGISTRY = OrderedDict(
 )
 
 
+# New isolated-consumer settings; metadata stays in the authoritative registry.
+from .resource_reference_policy import DEFAULTS as _RESOURCE_DEFAULTS
+
+for _key, _value in _RESOURCE_DEFAULTS.items():
+    _type = (
+        "boolean"
+        if isinstance(_value, bool)
+        else "object"
+        if isinstance(_value, dict)
+        else "array<object>"
+        if isinstance(_value, list)
+        else "string|null"
+        if _value is None
+        else "string"
+    )
+    CONFIG_REGISTRY["remote.resource_references." + _key] = _entry(
+        _type,
+        _value,
+        "Isolated bearer-only resource-reference-v1 consumer setting; explicit operator configuration, disabled by default.",
+        restart_required=_key != "metadata",
+        since="1.0.3",
+    )
+    if isinstance(_value, dict):
+        for _subkey, _default in _value.items():
+            CONFIG_REGISTRY["remote.resource_references." + _key + "." + _subkey] = (
+                _entry(
+                    "boolean" if isinstance(_default, bool) else "integer",
+                    _default,
+                    "Current disclosure opt-in."
+                    if _key == "metadata"
+                    else "Hard ceiling; configured limits may only be lowered.",
+                    restart_required=_key != "metadata",
+                    since="1.0.3",
+                )
+            )
+CONFIG_REGISTRY["remote.resource_references"] = _entry(
+    "object",
+    _RESOURCE_DEFAULTS,
+    "Default-disabled dedicated resource-reference-v1 listener; never cohost generic Web routes.",
+    restart_required=True,
+    since="1.0.3",
+)
+CONFIG_REGISTRY["remote.principals.*.disclosure_mode"] = _entry(
+    "string",
+    "trusted",
+    "Dedicated restricted-resource bearer mode. Changing mode requires new credentials and restart; no browser/proxy session exchange.",
+    restart_required=True,
+    allowed=["trusted", "restricted-resource"],
+    since="1.0.3",
+)
+
+
 def explain_key(dotted):
     """Return registry metadata for ``dotted``, matching wildcard entries."""
     dotted = str(dotted)

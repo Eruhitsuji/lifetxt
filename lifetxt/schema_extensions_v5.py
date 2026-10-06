@@ -201,6 +201,8 @@ def _report_profile():
 
 
 def schema_bundle_v5():
+    from .schema_extensions_v34 import resource_remote_schema
+
     source = {
         "oneOf": [
             {"type": "string", "minLength": 1},
@@ -257,6 +259,7 @@ def schema_bundle_v5():
                     "title": "lifetxt configuration v1",
                     "type": "object",
                     "properties": {
+                        "remote": resource_remote_schema(),
                         "config_version": {"type": "integer", "minimum": 1},
                         "default_workspace": {"type": "string"},
                         "web": {

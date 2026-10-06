@@ -2,12 +2,16 @@ schema_version: 1
 verification:
   executed:
   - command: python -m unittest tests.test_attachment_snapshot_package tests.test_native_attachment_snapshot
-    result: 11 tests OK; repeated helper build and manifest/source/binary digest match
+    result: '12 tests OK: 9 native + 3 package build/manifest tests.'
+    status: passed
+  - command: Core wheel/sdist inspection and clean-wheel optional helper install smoke
+      on final integration tree
+    result: Machine binary excluded from wheel, source/build script retained in sdist;
+      missing helper denied, installed helper runtime with empty PATH passed.
     status: passed
   gaps:
   - Real socket creation blocked by environment; no D-state/disk fault injection
   - Other architecture/libc/OS and actual non-overlay filesystem hosts unverified
-  - 'Runtime clean-install smoke and tamper checks depend on #1118'
 review_ledger:
 - reviewer: Codex self-review
   review_type: security-implementation

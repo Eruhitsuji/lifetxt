@@ -2,13 +2,14 @@ schema_version: 1
 change:
   id: linux-snapshot-helper-package
   title: Explicit optional helper build and distribution
-  status: in_progress
+  status: implemented
   change_type: Security
   assurance_level: High
   owner: Eruhitsuji
   accountable_owner: Eruhitsuji
   related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1117
   base_commit: 90750df1e6a6b94f109686d51fdc47b03a9109bc
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1120
 scope:
   in_scope:
   - Explicit helper build/install and integrity manifest

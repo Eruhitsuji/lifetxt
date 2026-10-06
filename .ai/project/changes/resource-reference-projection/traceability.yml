@@ -4,7 +4,7 @@ links:
   capability_id: cap-resource-reference-projection-contract
   epic: https://github.com/Eruhitsuji/lifetxt/issues/1099
   task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1100
-  pull_request: null
+  pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1109
   tests_or_evidence:
   - docs/en/resource-reference-projection.md
   - docs/ja/resource-reference-projection.md

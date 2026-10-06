@@ -8,12 +8,12 @@ traceability:
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1116
       pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1119
       tests_or_evidence:
-      - tests.test_native_attachment_snapshot
-      status: in_progress
+        - tests.test_native_attachment_snapshot
+      status: implemented
       changed_files_or_scope:
-      - native/resource_snapshot.c
-      - tests/test_native_attachment_snapshot.py
-      - .ai/project/changes/linux-native-snapshot/**
+        - native/resource_snapshot.c
+        - tests/test_native_attachment_snapshot.py
+        - .ai/project/changes/linux-native-snapshot/**
     - requirement_id: req-resource-reference-projection
       capability_id: cap-resource-reference-projection-contract
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1099

@@ -1,0 +1,64 @@
+schema_version: 1
+verification:
+  executed:
+  - command: Baseline 90750df1 read_attachment_chunk AST loaded into regression harness
+    result: 'Expected two failures: returned BBBB vs AAAA, and unbounded attachment_revision
+      called before cap. Harness expectation corrected from failure/error split to
+      two unittest AssertionError failures.'
+    status: passed
+  - command: Web-extra venv; bootstrap_legacy_surfaces(); unittest attachment/transaction/remote/native/package/supervisor/chunk
+      modules
+    result: 136 tests OK, no skips. Python 3.12.14; FastAPI 0.142.2 / httpx2 2.13.1.
+    status: passed
+  - command: python -m unittest tests.test_core_import_boundary tests.test_supported_runtime;
+      Python3.10 AST grammar check
+    result: 5 tests OK; changed code parses as Python3.10; actual 3.10 host not run.
+    status: passed
+  - command: pip wheel --no-deps --no-build-isolation; setuptools build_sdist; artifact
+      inspection
+    result: Core wheel excludes native executable/manifest; sdist includes native
+      source and build script.
+    status: passed
+  - command: Clean offline wheel install in temp venv, explicit helper build/install,
+      PATH empty runtime smoke
+    result: Missing helper statically denied; installed helper returns AAAA and exact
+      full digest. Initial harness required existing bootstrap_legacy_surfaces; corrected
+      and passed.
+    status: passed
+  - command: python -m ruff check lifetxt tests scripts; changed-files format check;
+      git diff --check
+    result: Passed after installing declared optional dev ruff 0.16.10.
+    status: passed
+  - command: Final Web-extra stack modules plus core boundary/runtime and governance
+      checks
+    result: 158 tests OK, no skips. Native/package/supervisor/adapter source unchanged
+      by final metadata merge.
+    status: passed
+  gaps:
+  - Actual Python3.10, other OS/architecture/libc and non-overlay filesystem deployments
+    unverified
+  - UNIX socket fixture denied EPERM by environment; devices not actually opened
+  - No actual D-state/disk fault injection; simulated blocking workers retain slots
+  - Initial stalled/malformed and envelope fixture assumptions corrected; failed logs
+    retained in scratch; only final runs are evidence
+  - Independent human implementation/security/integration reviews and final CI pending
+review_ledger:
+- reviewer: Codex self-review
+  review_type: implementation-security-compatibility
+  target_commit: b617d0297550b39b1357c78293fc3486a9efca42
+  result: passed-informational-only
+  finding_count: 0
+- reviewer: independent human
+  review_type: implementation-security
+  target_commit: null
+  result: pending
+- reviewer: independent human / Merge Authority
+  review_type: integration
+  target_commit: null
+  result: pending
+release_evidence:
+  rollback_plan: Stop server/remove helper+manifest/restart to fail closed; reverting
+    adapter reintroduces old reader risks and needs explicit review.
+  migration_notes: Feature-specific Linux official/others unofficial; missing-helper/unsafe
+    roots or files denied; other operations/normal ten-field shape preserved. No data
+    migration.

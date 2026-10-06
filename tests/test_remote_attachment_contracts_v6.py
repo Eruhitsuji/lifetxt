@@ -5,6 +5,10 @@ import json
 import os
 import tempfile
 import unittest
+import platform
+import shutil
+from pathlib import Path
+from unittest.mock import patch
 from datetime import datetime, timezone
 
 from lifetxt import mcp, mutation, webapp
@@ -82,17 +86,42 @@ class RemoteAttachmentContractTests(unittest.TestCase):
         )
         self.assertEqual(200, inspected.status_code, inspected.text)
         self.assertTrue(inspected.json()["ok"])
-        chunk = client.get(
-            "/api/attachments/chunk",
-            params={
-                "path": "./bundle.zip",
-                "limit": 8,
-                "attachment_revision": package_revision,
-            },
-        )
-        self.assertEqual(200, chunk.status_code, chunk.text)
-        self.assertEqual(4, len(base64.b64decode(chunk.json()["content_base64"])))
-        self.assertEqual(4, chunk.json()["limit"])
+        params = {
+            "path": "./bundle.zip",
+            "limit": 8,
+            "attachment_revision": package_revision,
+        }
+        if (
+            platform.system() == "Linux"
+            and platform.machine() == "x86_64"
+            and shutil.which("cc")
+        ):
+            from lifetxt import attachment_snapshot
+            from scripts.build_attachment_snapshot_helper import NAME, build_helper
+
+            with tempfile.TemporaryDirectory() as package:
+                build_helper(Path(package) / NAME)
+                with patch.object(
+                    attachment_snapshot,
+                    "_package_directory",
+                    return_value=Path(package),
+                ):
+                    chunk = client.get("/api/attachments/chunk", params=params)
+            self.assertEqual(200, chunk.status_code, chunk.text)
+            self.assertEqual(4, len(base64.b64decode(chunk.json()["content_base64"])))
+            self.assertEqual(4, chunk.json()["limit"])
+        else:
+            chunk = client.get("/api/attachments/chunk", params=params)
+            self.assertEqual(400, chunk.status_code, chunk.text)
+        from lifetxt import attachment_snapshot
+
+        with patch.object(
+            attachment_snapshot, "_package_directory", return_value=Path(self.root)
+        ):
+            unavailable = client.get("/api/attachments/chunk", params=params)
+        self.assertEqual(400, unavailable.status_code)
+        self.assertEqual("ATTACHMENT_CONTRACT", unavailable.json()["error"])
+        self.assertEqual(attachment_snapshot.UNAVAILABLE, unavailable.json()["message"])
         status = client.get("/api/attachments/transactions/web-package-1")
         self.assertEqual(200, status.status_code)
         self.assertTrue(status.json()["found"])
@@ -156,6 +185,14 @@ class RemoteAttachmentContractTests(unittest.TestCase):
             context,
         )
         self.assertTrue(state["found"])
+        from lifetxt import attachment_snapshot
+
+        with patch.object(
+            attachment_snapshot, "_package_directory", return_value=Path(self.root)
+        ):
+            with self.assertRaisesRegex(ValueError, "unavailable") as unavailable:
+                mcp.call_tool("attachment_read_chunk", {"path": "./mcp.zip"}, context)
+        self.assertEqual(attachment_snapshot.UNAVAILABLE, str(unavailable.exception))
         schemas = {row["name"]: row for row in mcp.tool_schemas()}
         self.assertIn("attachment_read_chunk", schemas)
         self.assertTrue(schemas["attachment_read_chunk"]["annotations"]["readOnlyHint"])

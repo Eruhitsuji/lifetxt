@@ -48,6 +48,25 @@ verification:
     base_commit: bd8fca5af0b1cefb99e43798fe397bb72cd95370
     tested_documents_sha256: *id001
     status: passed
+  - type: committed-governance-and-publication
+    command: python -m unittest tests.test_traceability_gate tests.test_change_package_closeout;
+      git rev-parse HEAD^{tree}; GitHub create_tree SHA equality; git fetch origin/main
+    result: 17 tests OK on the committed tree. Published tree 25136be3835f34c57047c6eb5d9b996cd35eebe3
+      exactly matches local reviewed tree. Main unchanged. GitHub connector used after
+      normal git push lacked authentication.
+    commit: 9141f312360cee415a7b7e97de67f1887062858e
+    status: passed
+  - type: final-pr-link-governance
+    command: python .cache/1129/check_contract.py; python -m unittest tests.test_traceability_gate
+      tests.test_change_package_closeout
+    result: Bilingual document fingerprints unchanged; all mechanical checks pass.
+      17 governance tests OK after PR linkage and in-review metadata. Independent
+      final-head human review remains pending.
+    base_commit: 9141f312360cee415a7b7e97de67f1887062858e
+    working_tree_changes:
+    - Task-only PR URL registry/package links
+    - Package in-review and evidence metadata
+    status: passed
   acceptance_mapping:
   - criterion: AC1
     sections:
@@ -121,7 +140,7 @@ verification:
 review_ledger:
 - reviewer: Codex implementer
   review_type: design-security-bilingual-self-review
-  target_commit: null
+  target_commit: 9141f312360cee415a7b7e97de67f1887062858e
   result: passed-informational-only
   finding_count: 4
   completed_at: '2026-10-07'

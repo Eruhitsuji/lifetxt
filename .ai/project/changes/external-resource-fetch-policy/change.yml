@@ -2,13 +2,13 @@ schema_version: 1
 change:
   id: external-resource-fetch-policy
   title: Document approved explicit external fetch/import policy
-  status: in-progress
+  status: in-review
   change_type: Security
   assurance_level: High
   owner: Eruhitsuji
   accountable_owner: Eruhitsuji
   related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1129
-  related_pull_request: null
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1130
   base_commit: bd8fca5af0b1cefb99e43798fe397bb72cd95370
   target_release: null
 scope:

@@ -1,6 +1,34 @@
 schema_version: 1
 
 capabilities:
+  - id: cap-external-resource-fetch-policy-contract
+    name: Explicit external fetch/import design contract
+    summary: Bilingual approved-direction policy for inert references, explicit network
+      reach, validated peer/egress, bounded complete content and CAS-guarded imports;
+      documentation only.
+    status: experimental
+    owner: Eruhitsuji
+    source_requirements:
+      - req-resource-explicit-fetch-policy
+    implementation_locations:
+      - docs/en/external-resource-fetch-policy.md
+      - docs/ja/external-resource-fetch-policy.md
+      - .ai/project/changes/external-resource-fetch-policy
+    public_interfaces:
+      - Design-only conceptual profile/intent; no runtime API, schema, setting or scope
+    tests_or_evidence:
+      - docs/en/external-resource-fetch-policy.md
+      - docs/ja/external-resource-fetch-policy.md
+      - .ai/project/changes/external-resource-fetch-policy/verification.yml
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/1103
+      - https://github.com/Eruhitsuji/lifetxt/issues/1129
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/1130
+    reuse_policy: Reuse existing attachment writer/current permission/CAS and upload/resource
+      contracts; no connector, secret store or parallel authority.
+    notes: Task A only. N01-N17 unimplemented/unrun; B-D require owner-selected concrete
+      consumer/destinations and independent human review.
   - id: cap-resource-reference-runtime
     name: Restricted opaque-resource binding resolution and download
     summary: Default-disabled isolated bearer-only consumer with current authorization and exact snapshots; no automatic capability advertisement.

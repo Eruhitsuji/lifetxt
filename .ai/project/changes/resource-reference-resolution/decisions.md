@@ -36,3 +36,10 @@ Owner explicitly approved the prior-turn concrete proposal. Approval record: htt
   that package parse error, the outdated inventories and missing editable installation.
   Full output is retained; revalidation uses the configured dev setup in an isolated
   environment. No source changed while the initial full run was executing.
+
+- Final committed-gate review preserves indented sequence items in the shared
+  traceability record; syntactically valid indentless YAML was not recognized by
+  the existing evidence gate. The gate was not changed or weakened. Final full
+  dev suite: 5,161 tests OK (349 optional/environment skips); committed focused
+  checks: 29 OK. Independent implementation/security/integration approvals remain
+  pending the published final head.

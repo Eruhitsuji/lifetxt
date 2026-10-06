@@ -48,6 +48,59 @@ verification:
     - change.yml package state in-review
     - decisions.md metadata correction
     status: passed
+  - type: contract-and-direct-compatibility
+    command: .venv/bin/python -m unittest tests.test_resource_reference_contract tests.test_change_package_closeout
+      tests.test_traceability_gate tests.test_schema_extensions_v2 tests.test_safety_cli
+      tests.test_safety_foundation tests.test_ticket_custom_field_public_contract
+      tests.test_ticket_workflow_surfaces tests.test_git_commit_worker_cli
+    result: 76 tests OK, 2 optional Web skips; twelve new contract tests pass with
+      validator
+    commit: 16e65209124a320eeb564d7fa9cd1b067c823343
+    status: passed
+  - type: committed-traceability-and-contract
+    command: .venv/bin/python -m unittest tests.test_traceability_gate tests.test_change_package_closeout
+      tests.test_resource_reference_contract
+    result: 29 tests OK after preserving the shared registry sequence indentation
+      required by the traceability gate
+    commit: 16e65209124a320eeb564d7fa9cd1b067c823343
+    status: passed
+  - type: schema-release-registry
+    command: lifetxt.bootstrap_legacy_surfaces(); release_policy.schema_validation_report(.)
+    result: ok=true, 92 schemas/92 samples, network-free Registry, zero duplicate
+      IDs and zero errors
+    commit: 16e65209124a320eeb564d7fa9cd1b067c823343
+    status: passed
+  - type: lint-format-types
+    command: .venv/bin/python -m ruff check lifetxt tests scripts; ruff format --check
+      changed Python files; mypy --follow-imports=skip --ignore-missing-imports lifetxt/diagnostic_contract.py
+    result: Lint clean; 8 changed Python files formatted; approved type boundary clean
+    commit: 16e65209124a320eeb564d7fa9cd1b067c823343
+    status: passed
+  - type: full-dev-suite
+    command: MPLBACKEND=Agg .venv/bin/python -m unittest discover > .cache/1110/full-final.log
+      2>&1
+    result: 5161 tests in 282.715s, OK, 349 optional/environment skips. Python 3.12.14,
+      bash, configured isolated dev setup; no Web extras. BashCompletionExecutionTests
+      ran. During execution only task traceability sequence indentation/git commit
+      metadata changed; runtime source and tests stayed unchanged. Committed gates
+      were rerun successfully afterward.
+    commit: 16e65209124a320eeb564d7fa9cd1b067c823343
+    status: passed
+  - type: release-docs-core-smoke
+    command: .venv/bin/python scripts/validate_release_docs.py --output .cache/1110/final-release-docs.json;
+      .venv/bin/python -m lifetxt check examples/minimal_life.txt
+    result: Release docs errors=0; minimal fixture 10 items OK
+    commit: 16e65209124a320eeb564d7fa9cd1b067c823343
+    status: passed
+  - type: legacy-bytes-generation
+    command: tests.test_resource_reference_contract; python -m lifetxt format schemas
+      DIRECTORY --format json; git diff --name-only origin/main -- dist/schemas/attachment-*-v1.schema.json
+      .ai/managed; git diff --check
+    result: Five legacy attachment v1 SHA-256 byte hashes unchanged; six new artifacts
+      match generator byte-for-byte; no managed-standard changes; whitespace clean.
+      CLI examples corrected and tested.
+    commit: 16e65209124a320eeb564d7fa9cd1b067c823343
+    status: passed
   acceptance_mapping:
   - criterion: AC1
     sections: 1, 2, 3
@@ -78,6 +131,20 @@ verification:
     or platform readiness.
   - Independent human implementation security/integration review and merge approval
     pending final head.
+  resolved_failures:
+  - command: Initial global-python full unittest discover
+    result: 5157 tests, 10 failures and 2 errors, 351 skips. Six failures were outdated
+      schema count/inventory expectations, four were subprocess missing editable installation;
+      two errors were task traceability YAML indentation. Full output captured locally.
+      Python 3.12.14/bash, BashCompletionExecutionTests ran, source unchanged during
+      that run.
+    resolution: Strict expectations updated to 92/six new names, task YAML corrected,
+      configured isolated dev setup; final full suite passed.
+  - command: Committed traceability gate
+    result: 'One failure: valid indentless YAML lists were not recognized by the existing
+      meaningful-evidence gate.'
+    resolution: Preserved existing indented shared-registry sequence convention; no
+      test or gate weakened. Final 29 focused checks and full suite pass.
 review_ledger:
 - reviewer: Codex implementer self-review
   review_type: design-security-bilingual
@@ -98,6 +165,18 @@ review_ledger:
   result: pending
   finding_count: 0
   completed_at: null
+- reviewer: Codex implementer self-review
+  review_type: schema-code-security-compatibility-integration
+  target_commit: 16e65209124a320eeb564d7fa9cd1b067c823343
+  result: passed-informational-only
+  finding_count: 0
+  completed_at: '2026-10-06'
+- reviewer: independent human reviewer
+  review_type: schema-implementation-security
+  target_commit: null
+  result: pending
+  finding_count: 0
+  completed_at: null
 release_evidence:
   migration_notes: New separately named schema-only contract; legacy v1 remains byte-identical.
     No settings/runtime/data migration.
@@ -111,3 +190,6 @@ release_evidence:
     fixes it without claiming design approval or modifying the check. Python 3.12.14,
     bash; no test files changed while tests ran; BashCompletionExecutionTests not
     selected in focused suite.
+  - Owner concrete design accepted before implementation; no runtime endpoint/capability/settings/dependency
+    change. Resolved inventory, YAML, editable-install and committed-gate findings
+    are recorded. Existing byte contracts unchanged.

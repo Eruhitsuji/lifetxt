@@ -1,6 +1,40 @@
 schema_version: 1
 
 capabilities:
+  - id: cap-resource-reference-projection-contract
+    name: Versioned opaque attachment projection design contract
+    summary: Documentation-only contract for random scoped identity, exact revision
+      binding, full disclosure coverage and negotiated compatibility; no runtime consumer
+      or resolver implemented.
+    status: experimental
+    owner: Eruhitsuji
+    source_requirements:
+    - req-resource-reference-projection
+    implementation_locations:
+    - docs/en/resource-reference-projection.md
+    - docs/ja/resource-reference-projection.md
+    - .ai/project/changes/resource-reference-projection
+    public_interfaces:
+    - Proposed resource-reference-v1 descriptor (design only; not advertised)
+    tests_or_evidence:
+    - docs/en/resource-reference-projection.md
+    - docs/ja/resource-reference-projection.md
+    - .ai/project/changes/resource-reference-projection/verification.yml
+    related_issues:
+    - https://github.com/Eruhitsuji/lifetxt/issues/1100
+    - https://github.com/Eruhitsuji/lifetxt/issues/1099
+    - https://github.com/Eruhitsuji/lifetxt/issues/1101
+    related_pull_requests:
+    - https://github.com/Eruhitsuji/lifetxt/pull/1109
+    reuse_policy: Extend existing upload/UI and Remote snapshot disclosure seams; reuse
+      attachment transactions, principal policy and exact CAS. No new writer/authority
+      engine.
+    notes: Detailed contract acceptance pending human PR review. No endpoint or schema
+      implements this capability.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
   - id: cap-at-rest-confidentiality-policy
     name: Attachment and recovery at-rest confidentiality policy
     summary: Bilingual storage inventory, threat/key model and platform-encryption baseline
@@ -83,6 +117,7 @@ capabilities:
     - Web record-detail Overview
     - GET/POST /api/attachments/upload (reuse)
     tests_or_evidence:
+    - docs/en/resource-reference-projection.md # prospective contract; runtime unchanged
     - tests.test_web_attachment_upload_ui
     - tests.test_web_attachment_upload_browser
     related_issues:
@@ -114,6 +149,7 @@ capabilities:
     - GET/POST /api/attachments/upload
     - attachment-upload-receipt-v1.schema.json
     tests_or_evidence:
+    - docs/en/resource-reference-projection.md # prospective contract; runtime unchanged
     - tests/test_web_attachment_upload.py
     - .ai/project/changes/web-browser-safe-attachment-upload/verification.yml
     related_issues:
@@ -440,6 +476,7 @@ capabilities:
       - GET /api/remote/v1/snapshot with X-Lifetxt-Remote-Version 2
       - GET /api/remote/v1/capabilities feature workspace-sync-snapshot
     tests_or_evidence:
+      - docs/en/resource-reference-projection.md # prospective contract; runtime unchanged
       - tests.test_remote_workspace_snapshot
       - tests.test_remote_backend_v20
       - tests.test_remote_web_v20

@@ -1,0 +1,17 @@
+schema_version: 1
+verification:
+  executed:
+  - command: python -W error::ResourceWarning -m unittest tests.test_native_attachment_snapshot
+    result: 9 tests OK, including deterministic native growth between fstat and first
+      read rejected at cap+1; Linux6.18.44 x86_64/glibc/Python3.12.14
+    status: passed
+  gaps:
+  - Real socket creation blocked by environment; no D-state/disk fault injection
+  - Other architecture/libc/OS and actual non-overlay filesystem hosts unverified
+review_ledger:
+- reviewer: Codex self-review
+  review_type: security-implementation
+  result: passed-informational-only; independent review pending
+- reviewer: independent human
+  review_type: integration/security
+  result: pending

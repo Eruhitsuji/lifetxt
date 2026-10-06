@@ -1,0 +1,30 @@
+schema_version: 1
+change:
+  id: linux-native-snapshot
+  title: Linux confined snapshot native primitive
+  status: in_progress
+  change_type: Security
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1116
+  base_commit: 90750df1e6a6b94f109686d51fdc47b03a9109bc
+scope:
+  in_scope:
+  - native snapshot worker protocol and synthetic tests
+  out_of_scope:
+  - packaging
+  - Python supervision
+  - public adapters
+  - authorization engine
+  write_scope:
+  - native/resource_snapshot.c
+  - tests/test_native_attachment_snapshot.py
+  - .ai/project/changes/linux-native-snapshot/**
+  - .ai/project/CAPABILITIES.yml
+  - .ai/project/TRACEABILITY.yml
+  forbidden_scope:
+  - .ai/managed/**
+human_approvals_required:
+- independent implementation/security review
+- integration and merge authority approval

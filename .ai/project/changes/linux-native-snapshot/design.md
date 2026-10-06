@@ -1,0 +1,7 @@
+# Native snapshot design
+
+The private worker inherits an owned root FD. Stdin carries `LTXS1 cap path_length\n` and <=4095 relative pathname bytes. Stdout carries `LTXS1 size root_dev root_ino file_dev file_ino mtime_sec mtime_nsec ctime_sec ctime_nsec\n` followed by exactly size bytes; errors emit no payload (exit 2 unsupported, 3 denied, 4 limit, 5 stale). Headers are bounded and no filename enters argv/stderr.
+
+O_PATH openat2 inspects a root-relative path before opening any readable handle. The worker admits ordinary local filesystem classes (ext4/xfs/btrfs/tmpfs/overlay); this is conservative type policy, not real-host certification. Network/FUSE/pseudo filesystems are unavailable. Root and regular files must be owned by root/current uid and not group/world writable. Own-FD procfs conversion pins the same inode. Symlinks, hardlinks, mount crossings and nonregular targets fail closed. Metadata before/after, observed byte length and a fresh declared-path handle must agree before output. SHA-256 of these exact immutable bytes belongs to the consuming supervisor.
+
+Only trusted configured roots/local writers are in scope. Parent must securely acquire and revalidate current root identity. A pinned FD alone does not prove current root authority. A malicious same-uid/privileged writer is outside the guarantee. O(size) read/space, bounded by policy cap, at most cap+1 bytes; no time guarantee for regular-file kernel I/O. Supervisor slots/kill/reap are a downstream task.

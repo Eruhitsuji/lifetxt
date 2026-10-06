@@ -6,7 +6,7 @@ traceability:
       capability_id: cap-resource-reference-runtime
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1114
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1125
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1127
       tests_or_evidence:
         - tests.test_resource_reference_policy
         - tests.test_remote_resource_download
@@ -18,7 +18,7 @@ traceability:
       capability_id: cap-resource-reference-runtime
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1114
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1126
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1127
       tests_or_evidence:
         - tests.test_resource_reference_policy
         - tests.test_remote_resource_download
@@ -30,7 +30,7 @@ traceability:
       capability_id: cap-resource-reference-runtime
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1101
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1111
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1127
       tests_or_evidence:
         - .ai/project/changes/resource-reference-binding-lifecycle/design.md
         - .ai/project/changes/resource-reference-binding-lifecycle/verification.yml
@@ -41,7 +41,7 @@ traceability:
       capability_id: cap-resource-reference-runtime
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1101
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1113
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1127
       tests_or_evidence:
         - .ai/project/changes/resource-reference-resolution-runtime/design.md
         - .ai/project/changes/resource-reference-resolution-runtime/verification.yml
@@ -52,7 +52,7 @@ traceability:
       capability_id: cap-resource-reference-runtime
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1101
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1114
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1127
       tests_or_evidence:
         - .ai/project/changes/resource-reference-bounded-delivery/design.md
         - .ai/project/changes/resource-reference-bounded-delivery/verification.yml

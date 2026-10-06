@@ -34,6 +34,11 @@ verification:
   - command: Installed console-script parity; declared mypy boundary; scripts/smoke_test.py
     result: Passed; console-script test rerun with virtualenv on PATH.
     status: passed
+  - command: LIFETXT_TRACEABILITY_GATE_BASE=1736f66c709b10adb5d4ab34d4a38012297802ce
+      LIFETXT_TRACEABILITY_GATE_PR_URL=https://github.com/Eruhitsuji/lifetxt/pull/1127
+      .venv/bin/python -m unittest tests.test_traceability_gate tests.test_change_package_closeout
+    result: 17 tests, OK against committed metadata and actual PR URL.
+    status: passed
   gaps:
   - tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1114
     reason: Local tests do not certify deployed proxy/listener isolation, all supported

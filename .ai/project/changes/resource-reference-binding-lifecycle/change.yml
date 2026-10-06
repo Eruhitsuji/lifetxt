@@ -8,8 +8,8 @@ change:
   owner: Eruhitsuji
   accountable_owner: Eruhitsuji
   related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1111
-  related_pull_request: null
-  phase: developer-verification
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1127
+  phase: integration-review
 scope:
   in_scope:
   - Approved scoped runtime implementation and verification

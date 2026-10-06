@@ -19,7 +19,8 @@ capabilities:
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/1110
       - https://github.com/Eruhitsuji/lifetxt/issues/1101
-    related_pull_requests: []
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/1124
     reuse_policy: Reuse projection contract, Remote workspace snapshot seams, principal scopes, collaboration membership and exact snapshot/CAS; no new writer or authority store.
     notes: Concrete owner approval pending; no schema, endpoint or configuration setting delivered yet.
   - id: cap-confined-attachment-snapshot

@@ -1,0 +1,29 @@
+schema_version: 1
+requirements:
+- id: req-resource-reference-projection
+  kind: ADDED
+  statement: Define a versioned opaque attachment projection and complete restricted-client
+    disclosure contract before resolver consumers are finalized.
+  acceptance_criteria:
+  - Specify grammar, limits, version, issuance, lifecycle, binding and uniform missing/ambiguous/removed
+    outcomes.
+  - Use random server-side lookup identity and explicit cross-workspace/read-only/existing-local/id-less
+    fail-closed rules.
+  - Require current principal/workspace/source/item/resource/action authorization
+    and exact applicable revisions; ID alone never authorizes bytes.
+  - Allowlist label/kind/size/MIME/revisions with no locator/journal/temp/open-command/private
+    provider leakage; digest follows policy.
+  - Inventory item/details/raw/Markdown/search/errors/capabilities/history/audit/manifest
+    surfaces without alternate-field or capability-URL bypass.
+  - Preserve legacy attachment v1 schemas and operator-selected local MCP; opt-in
+    negotiated contract with no restricted-client downgrade.
+  - Distinguish short stored hash, full byte digest, provider version and whole-source
+    revision.
+  - Publish matching EN/JA approved-direction design docs, capability/traceability
+    and High package; no schema without concrete consumer.
+  constraints:
+  - Documentation only; no runtime or existing v1 schema edits
+  - 'Parent #1099 approved; detailed contract adoption awaits independent human PR
+    review'
+  owner: Eruhitsuji
+open_questions: []

@@ -31,7 +31,7 @@ def bootstrap():
     install_schema_validation_v2()
     install_safety_compat_v2()
 
-    for version in range(4, 34):
+    for version in range(4, 35):
         module = __import__(
             f"lifetxt.schema_extensions_v{version}",
             fromlist=[f"install_schema_extensions_v{version}"],
@@ -71,3 +71,6 @@ def bootstrap():
     install_ticket_workflow_surfaces()
     install_remote_ticket_writes()
     install_remote_item_writes()
+    from .remote_resource_download import install_resource_download
+
+    install_resource_download()

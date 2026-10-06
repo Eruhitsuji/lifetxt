@@ -256,6 +256,22 @@ def validate_config(config, use_jsonschema=True):
     config = config or {}
     rows = []
     rows.extend(_version_diagnostics(config))
+    from .resource_reference_policy import policy, validate_principals
+
+    try:
+        resource_policy = policy(config)
+        if resource_policy["enabled"]:
+            validate_principals(config)
+    except (ValueError, TypeError, OverflowError):
+        rows.append(
+            diagnostic(
+                "error",
+                "C011",
+                "Invalid restricted resource configuration.",
+                "Use bounded resource-reference-v1 settings and isolated unique bearer principals.",
+                "remote.resource_references",
+            )
+        )
     _walk_secrets(config, "", rows)
     rows.extend(_workspace_diagnostics(config))
     from .collaboration import config_membership_diagnostics

@@ -44,6 +44,8 @@ class SnapshotStale(ValueError):
 class Snapshot:
     data: bytes
     revision: str
+    identity: tuple = ()
+    continuity: tuple = ()
 
 
 def _package_directory():
@@ -219,7 +221,12 @@ def _parse(output, cap, before, root):
         ) != _fingerprint(before):
             raise SnapshotStale()
         data = bytes(payload)
-        return Snapshot(data, hashlib.sha256(data).hexdigest())
+        return Snapshot(
+            data,
+            hashlib.sha256(data).hexdigest(),
+            (rd, ri, dev, ino),
+            (rd, ri) + _fingerprint(before),
+        )
     except (UnicodeError, ValueError) as exc:
         if isinstance(exc, (SnapshotStale, SnapshotUnavailable)):
             raise
@@ -299,9 +306,12 @@ def read_snapshot(
     seconds=MAX_SECONDS,
     cancel=None,
     principal=None,
+    completed=None,
 ):
     """Return verified bytes, or fail closed. Admission is per process, no queue."""
     global _active
+    if completed is not None:
+        completed.set()
     if (
         platform.system() != "Linux"
         or platform.machine() != "x86_64"
@@ -335,6 +345,9 @@ def read_snapshot(
         if principal is not None:
             _principals.add(principal)
 
+    if completed is not None:
+        completed.clear()
+
     def worker():
         global _active
         try:
@@ -349,6 +362,8 @@ def read_snapshot(
                 if principal is not None:
                     _principals.discard(principal)
             done.set()
+            if completed is not None:
+                completed.set()
 
     thread = threading.Thread(target=worker, name="attachment-snapshot", daemon=True)
     try:
@@ -369,4 +384,6 @@ def read_snapshot(
                 _active -= 1
                 if principal is not None:
                     _principals.discard(principal)
+            if completed is not None:
+                completed.set()
         raise

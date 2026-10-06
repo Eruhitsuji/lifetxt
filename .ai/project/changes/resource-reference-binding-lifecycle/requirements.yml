@@ -1,0 +1,22 @@
+schema_version: 1
+requirements:
+- id: req-resource-reference-binding-lifecycle
+  kind: ADDED
+  owner: Eruhitsuji
+  statement: Durable opaque binding lifecycle
+  acceptance_criteria:
+  - 128 independently random bits for references, tokens and generation namespaces;
+    collision-safe issuance.
+  - Private SQLite identity index, with authority only in current source/config/membership.
+  - Read-only enrollment of unique authored item/current association; uncertainty
+    never yields a usable reference.
+  - Detach/recreate/source uncertainty invalidation without positional/path identity
+    inference.
+  - Fresh public-reference epoch on every process start and recovery; no stable-restart
+    mode.
+  - 10,000 active/50,000 total state bound, including tokens/tombstones, bounded transaction
+    admission.
+  constraints:
+  - 'Normative approved #1110 wire contract'
+  - No capability advertisement until complete runtime evidence
+open_questions: []

@@ -314,6 +314,20 @@ certificate path from the example without replacing it with your own.
 
 ## 5. Backup and restore
 
+For sensitive deployments, protect the workspace, attachment root, journal root,
+atomic-write directories, retained recovery copies, backup/restore mounts and
+OS/proxy spill storage with established platform encryption plus private ACLs.
+`os-private-v1` checks permissions and reports no application encryption; it does
+not detect LUKS/BitLocker. `.ltbackup` and update backups are not encrypted by
+lifetxt, and only selected files are copied. Source-disk encryption does not
+protect a copied off-host archive. Manage platform and backup recovery keys
+separately, and validate restoration on protected storage. See the
+[English at-rest policy](../en/at-rest-confidentiality.md) /
+[日本語の保存時保護・運用手順](../ja/at-rest-confidentiality.md) for the full
+copy inventory, threat model, rotation/lost-key behavior and operator checks.
+No encryption or key migration is performed by these lifetxt commands.
+
+
 Use three different recovery mechanisms for three different failure classes:
 
 | Mechanism | Protects against | Does not replace |

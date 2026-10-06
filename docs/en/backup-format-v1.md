@@ -131,3 +131,13 @@ command reports that failure and never falls back to an older backup.
 See [`lifetxt backup`](cli.md) for `create`/`status`/`verify`/`restore`/
 `prune`, and the [Ubuntu Server production runbook](../deployment/ubuntu-server.md#5-backup-and-restore)
 for scheduled local/off-host operation and a conservative restore drill.
+
+
+## Confidentiality
+
+`.ltbackup` is an unencrypted ZIP archive. Source disk encryption does not follow
+files copied from an unlocked filesystem. Protect the local archive, atomic temp
+and restore destination, and protect off-host copies independently. Only explicit
+selected files are included; attachment references do not automatically add their
+bytes or journal directories. See [at-rest confidentiality](at-rest-confidentiality.md)
+for the inventory, platform/backup key custody and restore requirements.

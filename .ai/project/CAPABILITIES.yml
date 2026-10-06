@@ -1,6 +1,33 @@
 schema_version: 1
 
 capabilities:
+  - id: cap-at-rest-confidentiality-policy
+    name: Attachment and recovery at-rest confidentiality policy
+    summary: Bilingual storage inventory, threat/key model and platform-encryption baseline
+      with independent backup protection.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+    - req-at-rest-confidentiality-policy
+    implementation_locations:
+    - docs/en/at-rest-confidentiality.md
+    - docs/ja/at-rest-confidentiality.md
+    public_interfaces:
+    - operator storage/backup/recovery runbook
+    tests_or_evidence:
+    - docs/en/at-rest-confidentiality.md
+    - docs/ja/at-rest-confidentiality.md
+    - .ai/project/changes/at-rest-confidentiality-policy/verification.yml
+    related_issues:
+    - https://github.com/Eruhitsuji/lifetxt/issues/1098
+    related_pull_requests:
+    - https://github.com/Eruhitsuji/lifetxt/pull/1108
+    reuse_policy: Reuse cap-durable-transaction-recovery and cap-lifetxt-backup-v1;
+      no alternate encryption/storage implementation.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
   - id: cap-web-secure-transport
     name: Secure Web transport policy and explicit proxy origin
     summary: Non-loopback writable startup diagnostics and shared effective-origin checks

@@ -1,4 +1,4 @@
-# 制限付きresource-reference consumer v1（承認案）
+# 制限付きresource-reference consumer v1（承認済みschema契約）
 
 [English](../en/resource-reference-resolution.md)
 
@@ -6,10 +6,10 @@
 
 #1110は、ownerが採択した#1101の勧告と採択済みの
 [projection契約](resource-reference-projection.md)を具体化します。この契約は
-**ownerのセキュリティ・設計承認を求める提案**です。新しいroute、設定、schema、
-capability、resolver、binding store、byte操作はまだ実装していません。
-承認記録が残るまでは要件・設計具体化の段階です。Issueへの対応依頼を、
-今回新しく定義したenvelopeへの承認として記録しません。
+**2026-10-06にownerが承認しました**（[承認記録](https://github.com/Eruhitsuji/lifetxt/issues/1110#issuecomment-6015909957)）。
+本Issueでは既存extension pipelineでschema六種を公開します。新しいroute、設定、
+広告するruntime capability、resolver、binding store、byte操作は実装していません。
+公開schemaの独立integration/security reviewとmerge承認は引き続き必要です。
 
 最初のconsumerは、明示的に登録したlocal regular fileを扱う専用の
 **restricted Remote protocol 2、bearer専用client**です。既存のRemote認証、
@@ -28,7 +28,7 @@ bounded supervisionが必要で、Linuxというだけでは対応済みにな�
 
 ## 2. 認可設定と分離
 
-将来のoperator policyとして、次の明示的な決定を提案します。これらは契約上の概念で、
+将来のoperator設定に適用する承認済みpolicyとして、次の明示的な決定を定義します。これらは契約上の概念で、
 **現在lifetxtが受け付ける設定keyではありません**。設定の実装時にはregistryの
 既定値・型・provenance・restart・secret・version情報、`config explain`、日英docs、
 fixture、migration/downgrade testを同時に更新します。
@@ -66,7 +66,7 @@ Schema公開はconsumerの有効化を意味しません。
 `UNSUPPORTED_CONTRACT`とし、自動downgradeしません。headerが一致しても毎requestで
 principal mode、selected workspace、policyを再検証します。
 
-| Methodと提案route | 操作 | Membership | Write-clock/read-only分類 |
+| Methodと契約route | 操作 | Membership | Write-clock/read-only分類 |
 | --- | --- | --- | --- |
 | POST /api/remote/v1/resource-references/discover | Item単位descriptor discovery | 明示read | Read-only。この正確な組合せだけmutation clock免除 |
 | POST /api/remote/v1/resource-references/full | Exact-revision full bytes | 明示read + attachment:read | Read-only。同じ限定的免除 |
@@ -318,12 +318,11 @@ raw alternate accessが残る場合、安全な新route出力だけでは不十�
 | Chunk間/full send中のrevoke/change | Header前は404/409、後はabort。partial bytesを破棄。 |
 | Generic Webがanonymous/同じcredentialでraw workspaceを開示 | 三つの応答が安全でもsafe consumer有効化を拒否。 |
 
-## 8. Schema公開計画と検証の境界
+## 8. 公開schema、使用方法と検証の境界
 
-第1～7節へのownerの明示承認後、#1110をReadyへ具体化して
-`lifetxt/schema_extensions_v33.py`（main更新で使用済みなら次の未使用番号）を既存の
-schema-extension bootstrap、generator/sample pipelineへ追加します。新outputはlegacy
-attachment v1ではなくresource-reference-*の名前で、次を提案します。
+Owner承認とReady具体化に基づき、`lifetxt/schema_extensions_v33.py`から既存の
+schema-extension bootstrap、generator/sample pipelineを通して次の六種を公開します。
+新outputはresource-reference-*の名前で、legacy attachment v1を維持します。
 
 - resource-reference-descriptor-v1.schema.json
 - resource-reference-discovery-request-v1.schema.json
@@ -340,7 +339,30 @@ field、digest文法、nonboolean bound、sample/generator parity、日英例を
 既存attachment v1 generated schemaはすべてbyte単位で維持します。JSON Schemaでは証明
 できないsemantic gateも明記し、round tripでruntimeを証明したことにはしません。
 
-承認段階の検証は日英JSON parity/round trip、identifier例、local reference、package/registry
-parse、scope、legacy schema非変更です。まだschema/contract test実装の許可はありません。
-独立した人間による設計・security/integration reviewは未完了です。Rollbackはdocs/package/
-task固有registry追加のrevertで、data migration/deployment/releaseはありません。
+Bundle生成は`python -m lifetxt format schemas DIRECTORY`です。六ファイルは既に
+`dist/schemas/`へ公開し、sampleは既存release sample pipelineへ登録しています。
+既存の任意validatorであるjsonschemaを導入した環境で
+`python -m unittest tests.test_resource_reference_contract`を実行すると、例・異常系・
+generator parityを検証します。validatorなしの場合は公開とlegacy artifactを確認し、
+JSON Schema検証は明示的にskipします。mandatory dependencyは追加していません。
+別途用意したJSON requestを検証する例は次のとおりです。
+
+```python
+import json
+from jsonschema import Draft202012Validator
+
+with open("dist/schemas/resource-reference-full-request-v1.schema.json", encoding="utf-8") as handle:
+    schema = json.load(handle)
+with open("request.json", encoding="utf-8") as handle:
+    Draft202012Validator(schema).validate(json.load(handle))
+```
+
+これはenvelopeの形を検証し、request送信やbyte認可は行いません。HTTP/transport/member/
+action確認、wire上限・重複JSON key、policy、randomness、enrollment/revision continuity、
+platform proof、transfer boundsは#1111/#1113/#1114の要件です。full/chunk操作はまだ
+実行できません。
+
+検証は日英JSON/schema round trip、grammar/unknown-field/digest/bound異常系、generator/
+sample parity、legacy attachment v1のbyte hash、package/traceability checkです。
+最終headの独立integration/security reviewは未完了です。Rollbackはこのdocs/schema/test/
+bootstrap登録、task固有package/registry追加のrevertであり、data migration/deploymentなしです。

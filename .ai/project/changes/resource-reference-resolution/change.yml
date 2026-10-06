@@ -2,7 +2,7 @@ schema_version: 1
 change:
   id: resource-reference-resolution
   title: Refine restricted Remote-v2 resource-reference consumer before schema publication
-  status: in-review
+  status: implemented
   change_type: Security
   assurance_level: High
   owner: Eruhitsuji
@@ -12,29 +12,42 @@ change:
   target_release: null
 scope:
   in_scope:
-    - Proposed EN/JA concrete consumer, envelopes, authorization and fixed limits
-    - Task-specific capability/traceability and six-file High change package
+  - Approved EN/JA consumer/envelopes/authorization contract
+  - Six new resource-reference schemas through existing extension/bootstrap/generator
+  - Matching schema contract and compatibility tests
+  - Task-specific registries and High change package
   out_of_scope:
-    - Schema generation before explicit concrete-design approval
-    - Runtime resolver, binding persistence, endpoint, browser or configuration changes
-    - Format/provider/fetch or generic attachment sync
-    - Merge, release and deployment
+  - Runtime resolver, binding persistence, endpoint, browser or configuration changes
+  - Format/provider/fetch or generic attachment sync
+  - Merge, release and deployment
   write_scope:
-    - docs/en/resource-reference-resolution.md
-    - docs/ja/resource-reference-resolution.md
-    - .ai/project/changes/resource-reference-resolution/**
-    - .ai/project/CAPABILITIES.yml (new task entry only)
-    - .ai/project/TRACEABILITY.yml (new task chain only)
+  - docs/en/resource-reference-resolution.md
+  - docs/ja/resource-reference-resolution.md
+  - .ai/project/changes/resource-reference-resolution/**
+  - .ai/project/CAPABILITIES.yml (new task entry only)
+  - .ai/project/TRACEABILITY.yml (new task chain only)
+  - lifetxt/schema_extensions_v33.py
+  - lifetxt/_legacy_bootstrap.py (extension range only)
+  - dist/schemas/resource-reference-*-v1.schema.json
+  - tests/test_resource_reference_contract.py
+  - tests/test_schema_extensions_v2.py (bundle inventory/count expectation only)
+  - tests/test_safety_cli.py (bundle inventory/count expectation only)
+  - tests/test_ticket_custom_field_public_contract.py (bundle inventory/count expectation
+    only)
+  - tests/test_ticket_workflow_surfaces.py (bundle inventory/count expectation only)
+  - tests/test_safety_foundation.py (bundle inventory/count expectation only)
   forbidden_scope:
-    - .ai/managed/**
-    - lifetxt/** (until concrete design approval and Ready)
-    - tests/** (until concrete design approval and Ready)
-    - dist/schemas/** (until concrete design approval and Ready)
-    - dependencies
+  - .ai/managed/**
+  - Existing attachment v1 schemas
+  - Runtime/Format/provider/fetch/configuration/dependency changes
   shared_files:
-    - .ai/project/CAPABILITIES.yml
-    - .ai/project/TRACEABILITY.yml
+  - .ai/project/CAPABILITIES.yml
+  - .ai/project/TRACEABILITY.yml
 human_approvals_required:
-  - Concrete consumer/envelope/authorization configuration acceptance before schemas
-  - Independent security/design and integration review on latest head
-  - Merge Authority approval
+- Independent human integration/security review of delivered schemas
+- Merge Authority approval
+design_approval:
+  owner: Eruhitsuji
+  date: '2026-10-06'
+  record: https://github.com/Eruhitsuji/lifetxt/issues/1110#issuecomment-6015909957
+  scope: EN/JA sections 1-7 and section 8 schema publication plan accepted

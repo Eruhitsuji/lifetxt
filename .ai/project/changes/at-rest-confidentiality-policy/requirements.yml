@@ -1,0 +1,22 @@
+schema_version: 1
+requirements:
+- id: req-at-rest-confidentiality-policy
+  kind: ADDED
+  statement: Define the confidentiality boundary and supported at-rest baseline for
+    every lifetxt-held attachment/recovery/backup copy before application encryption
+    is implemented.
+  acceptance_criteria:
+  - Inventory final, temporary, journal, archived, backup, restore, exported and future
+    provider-staged copies against implementation.
+  - Compare offline disk, stolen backup, local user and privileged/process compromise
+    threats.
+  - Define key custody, rotation, recovery, lost-key and historical-copy responsibilities.
+  - Explain transparent revision/MIME/transaction/external-tool behavior and separate
+    future application encryption from E2EE.
+  - Publish equivalent English/Japanese normative policy and operator verification;
+    exclude exclusively provider-held bytes and prevent secret URL disclosure.
+  constraints:
+  - No encryption code or format/config/dependency migration
+  - High assurance; human approval required for policy acceptance
+  owner: Eruhitsuji
+open_questions: []

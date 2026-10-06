@@ -1,0 +1,12 @@
+schema_version: 1
+links:
+- requirement_id: req-at-rest-confidentiality-policy
+  capability_id: cap-at-rest-confidentiality-policy
+  epic: https://github.com/Eruhitsuji/lifetxt/issues/1094
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1098
+  pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1108
+  tests_or_evidence:
+  - docs/en/at-rest-confidentiality.md
+  - docs/ja/at-rest-confidentiality.md
+  - .ai/project/changes/at-rest-confidentiality-policy/verification.yml
+  status: implemented

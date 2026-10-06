@@ -1,0 +1,43 @@
+schema_version: 1
+change:
+  id: at-rest-confidentiality-policy
+  title: Evaluate confidentiality of attachments and recovery data at rest
+  status: implemented
+  change_type: Security
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1098
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1108
+  base_commit: eeabd7ed79ce2f14db2168cfb4eb0c5710f61569
+  target_release: null
+scope:
+  in_scope:
+  - source-backed storage inventory
+  - threat and key custody assessment
+  - English/Japanese normative operator guidance
+  out_of_scope:
+  - encryption implementation
+  - provider resolver design
+  - TLS
+  - UI
+  - production deployment
+  write_scope:
+  - docs/en/at-rest-confidentiality.md
+  - docs/ja/at-rest-confidentiality.md
+  - related Web/recovery/backup/deployment documentation
+  - .ai/project/CAPABILITIES.yml
+  - .ai/project/TRACEABILITY.yml
+  - .ai/project/changes/at-rest-confidentiality-policy/**
+  forbidden_scope:
+  - .ai/managed/**
+  - runtime code
+  - configuration schema/defaults
+  - dependencies
+  shared_files:
+  - .ai/project/CAPABILITIES.yml
+  - .ai/project/TRACEABILITY.yml
+  - docs/deployment/ubuntu-server.md
+human_approvals_required:
+- independent security/design review
+- Merge Authority policy acceptance

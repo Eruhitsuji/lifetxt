@@ -6,29 +6,24 @@ traceability:
       capability_id: cap-confined-attachment-snapshot
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1101
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1115
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1122
       tests_or_evidence:
-      - tests.test_attachment_chunk_snapshot
-      - tests.test_remote_attachment_contracts_v6
-      - tests/native_snapshot_growth.c
-      - .ai/project/changes/attachment-chunk-exact-snapshot/verification.yml
-      status: in_progress
+        - tests.test_attachment_chunk_snapshot
+        - tests.test_remote_attachment_contracts_v6
+        - tests/native_snapshot_growth.c
+        - .ai/project/changes/attachment-chunk-exact-snapshot/verification.yml
+      status: implemented
       changed_files_or_scope:
-      - lifetxt/attachment_transactions.py
-      - lifetxt/attachment_snapshot.py
-      - tests/test_attachment_chunk_snapshot.py
-      - tests/test_remote_attachment_contracts_v6.py
-      - tests/native_snapshot_growth.c
-      - tests/test_native_attachment_snapshot.py
-      - tests/test_attachment_snapshot.py
-      - scripts/build_attachment_snapshot_helper.py
-      - tests/test_attachment_snapshot_package.py
-      - docs/en/web.md
-      - docs/ja/web.md
-      - docs/en/remote.md
-      - docs/ja/remote.md
-      - .ai/project/changes/** task-specific entries
-      - .ai/project/CAPABILITIES.yml
-      - .ai/project/TRACEABILITY.yml
+        - lifetxt/attachment_transactions.py
+        - tests/test_attachment_chunk_snapshot.py
+        - tests/test_remote_attachment_contracts_v6.py
+        - docs/en/web.md
+        - docs/ja/web.md
+        - docs/en/remote.md
+        - docs/ja/remote.md
+        - .ai/project/changes/attachment-chunk-exact-snapshot/**
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
     - requirement_id: req-resource-reference-confined-read
       capability_id: cap-confined-attachment-snapshot
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1115

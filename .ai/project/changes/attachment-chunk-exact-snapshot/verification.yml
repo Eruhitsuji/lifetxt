@@ -29,6 +29,11 @@ verification:
       git diff --check
     result: Passed after installing declared optional dev ruff 0.16.10.
     status: passed
+  - command: Final Web-extra stack modules plus core boundary/runtime and governance
+      checks
+    result: 158 tests OK, no skips. Native/package/supervisor/adapter source unchanged
+      by final metadata merge.
+    status: passed
   gaps:
   - Actual Python3.10, other OS/architecture/libc and non-overlay filesystem deployments
     unverified
@@ -36,12 +41,11 @@ verification:
   - No actual D-state/disk fault injection; simulated blocking workers retain slots
   - Initial stalled/malformed and envelope fixture assumptions corrected; failed logs
     retained in scratch; only final runs are evidence
-  - Governance traceability requires concrete PR URLs, added after PR creation; independent
-    human review and CI pending
+  - Independent human implementation/security/integration reviews and final CI pending
 review_ledger:
 - reviewer: Codex self-review
   review_type: implementation-security-compatibility
-  target_commit: null
+  target_commit: b617d0297550b39b1357c78293fc3486a9efca42
   result: passed-informational-only
   finding_count: 0
 - reviewer: independent human

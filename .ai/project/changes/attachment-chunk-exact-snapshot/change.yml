@@ -1,0 +1,39 @@
+schema_version: 1
+change:
+  id: attachment-chunk-exact-snapshot
+  title: Bind attachment chunks to one exact-byte confined snapshot
+  status: in_progress
+  change_type: Bug
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1115
+  base_commit: 90750df1e6a6b94f109686d51fdc47b03a9109bc
+scope:
+  in_scope:
+  - Legacy chunk adapter uses approved snapshot seam
+  - Preserve normal ten-field shape and clamps; deny unsupported/unsafe conditions
+  - ABA and cap-before-hash regressions, Web/MCP compatibility and native growth fault
+    fixture
+  out_of_scope:
+  - Opaque resolver/store/download endpoint
+  - Format or provider changes
+  - Source mutation
+  - Authorization engine
+  - Release/deployment
+  write_scope:
+  - lifetxt/attachment_transactions.py
+  - tests/test_attachment_chunk_snapshot.py
+  - tests/test_remote_attachment_contracts_v6.py
+  - docs/en/web.md
+  - docs/ja/web.md
+  - docs/en/remote.md
+  - docs/ja/remote.md
+  - .ai/project/changes/attachment-chunk-exact-snapshot/**
+  - .ai/project/CAPABILITIES.yml
+  - .ai/project/TRACEABILITY.yml
+  forbidden_scope:
+  - .ai/managed/**
+human_approvals_required:
+- independent implementation/security review
+- integration and merge authority approval

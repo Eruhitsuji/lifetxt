@@ -9,9 +9,11 @@ capabilities:
     owner: Eruhitsuji
     source_requirements:
     - req-resource-reference-confined-read
+    - req-attachment-chunk-exact-byte-integrity
     implementation_locations:
     - native/resource_snapshot.c
     - lifetxt/attachment_snapshot.py
+    - lifetxt/attachment_transactions.py (read_attachment_chunk only)
     - scripts/build_attachment_snapshot_helper.py
     - docs/en/attachment-snapshot-helper.md
     - docs/ja/attachment-snapshot-helper.md

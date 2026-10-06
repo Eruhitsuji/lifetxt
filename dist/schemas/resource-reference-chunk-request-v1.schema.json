@@ -1,0 +1,56 @@
+{
+  "$comment": "Schema publication does not enable or advertise a consumer. Transport, JSON wire limits/duplicate keys, random issuance, authorization, safe disclosure, continuity and exact revision binding require separate semantic enforcement.",
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/resource-reference-chunk-request-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "contract_version": {
+      "const": "1"
+    },
+    "length": {
+      "maximum": 65536,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "offset": {
+      "maximum": 10485760,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "resource_ref": {
+      "maxLength": 39,
+      "minLength": 39,
+      "pattern": "^att:v1:[0-9a-f]{32}(?![\\s\\S])",
+      "type": "string"
+    },
+    "resource_revision": {
+      "maxLength": 39,
+      "minLength": 39,
+      "pattern": "^rev:v1:[0-9a-f]{32}(?![\\s\\S])",
+      "type": "string"
+    },
+    "source_revision": {
+      "maxLength": 39,
+      "minLength": 39,
+      "pattern": "^rev:v1:[0-9a-f]{32}(?![\\s\\S])",
+      "type": "string"
+    },
+    "workspace_id": {
+      "maxLength": 64,
+      "minLength": 64,
+      "pattern": "^[0-9a-f]{64}(?![\\s\\S])",
+      "type": "string"
+    }
+  },
+  "required": [
+    "contract_version",
+    "workspace_id",
+    "resource_ref",
+    "source_revision",
+    "resource_revision",
+    "offset",
+    "length"
+  ],
+  "title": "lifetxt resource-reference-chunk-request-v1",
+  "type": "object"
+}

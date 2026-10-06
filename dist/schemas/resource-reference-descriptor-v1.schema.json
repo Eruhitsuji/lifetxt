@@ -1,0 +1,84 @@
+{
+  "$comment": "Schema publication does not enable or advertise a consumer. Transport, JSON wire limits/duplicate keys, random issuance, authorization, safe disclosure, continuity and exact revision binding require separate semantic enforcement.",
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/resource-reference-descriptor-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "content_digest": {
+      "additionalProperties": false,
+      "properties": {
+        "algorithm": {
+          "const": "sha256"
+        },
+        "value": {
+          "maxLength": 64,
+          "minLength": 64,
+          "pattern": "^[0-9a-f]{64}(?![\\s\\S])",
+          "type": "string"
+        }
+      },
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "type": "object"
+    },
+    "contract_version": {
+      "const": "1"
+    },
+    "display_name": {
+      "description": "Unicode scalar text, at most 512 UTF-8 bytes. Safe authored label/canonical item identity must also satisfy current disclosure policy; this pattern is not locator classification.",
+      "maxLength": 128,
+      "minLength": 1,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069\\ud800-\\udfff]+(?![\\s\\S])",
+      "type": "string"
+    },
+    "kind": {
+      "const": "file"
+    },
+    "media_type": {
+      "enum": [
+        "application/octet-stream",
+        "text/plain",
+        "application/pdf",
+        "image/png",
+        "image/jpeg",
+        "image/gif"
+      ],
+      "type": "string"
+    },
+    "resource_ref": {
+      "maxLength": 39,
+      "minLength": 39,
+      "pattern": "^att:v1:[0-9a-f]{32}(?![\\s\\S])",
+      "type": "string"
+    },
+    "resource_revision": {
+      "maxLength": 39,
+      "minLength": 39,
+      "pattern": "^rev:v1:[0-9a-f]{32}(?![\\s\\S])",
+      "type": "string"
+    },
+    "size_bytes": {
+      "maximum": 10485760,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "source_revision": {
+      "maxLength": 39,
+      "minLength": 39,
+      "pattern": "^rev:v1:[0-9a-f]{32}(?![\\s\\S])",
+      "type": "string"
+    }
+  },
+  "required": [
+    "contract_version",
+    "resource_ref",
+    "kind",
+    "display_name",
+    "source_revision",
+    "resource_revision"
+  ],
+  "title": "lifetxt resource-reference-descriptor-v1",
+  "type": "object"
+}

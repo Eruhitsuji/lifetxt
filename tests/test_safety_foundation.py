@@ -343,6 +343,16 @@ class SafetyFoundationTests(unittest.TestCase):
             "semantic-as-of-v1.schema.json",
         }
         expected.add("attachment-upload-receipt-v1.schema.json")
+        expected.update(
+            {
+                "resource-reference-descriptor-v1.schema.json",
+                "resource-reference-discovery-request-v1.schema.json",
+                "resource-reference-discovery-result-v1.schema.json",
+                "resource-reference-full-request-v1.schema.json",
+                "resource-reference-chunk-request-v1.schema.json",
+                "resource-reference-error-v1.schema.json",
+            }
+        )
         self.assertEqual(expected, set(bundle))
         for schema in bundle.values():
             self.assertTrue(schema["$id"].startswith("https://"))

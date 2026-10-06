@@ -1,0 +1,131 @@
+{
+  "$comment": "Schema publication does not enable or advertise a consumer. Transport, JSON wire limits/duplicate keys, random issuance, authorization, safe disclosure, continuity and exact revision binding require separate semantic enforcement.",
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/resource-reference-error-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "error": {
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "properties": {
+            "code": {
+              "const": "AUTHENTICATION_REQUIRED"
+            },
+            "message": {
+              "const": "Authentication required."
+            }
+          }
+        },
+        {
+          "properties": {
+            "code": {
+              "const": "INVALID_REFERENCE"
+            },
+            "message": {
+              "const": "Invalid resource reference."
+            }
+          }
+        },
+        {
+          "properties": {
+            "code": {
+              "const": "REVISION_REQUIRED"
+            },
+            "message": {
+              "const": "Expected revisions required."
+            }
+          }
+        },
+        {
+          "properties": {
+            "code": {
+              "const": "INVALID_REQUEST"
+            },
+            "message": {
+              "const": "Invalid request."
+            }
+          }
+        },
+        {
+          "properties": {
+            "code": {
+              "const": "RESOURCE_UNAVAILABLE"
+            },
+            "message": {
+              "const": "Resource unavailable."
+            }
+          }
+        },
+        {
+          "properties": {
+            "code": {
+              "const": "STALE_REVISION"
+            },
+            "message": {
+              "const": "Refresh the resource descriptor."
+            }
+          }
+        },
+        {
+          "properties": {
+            "code": {
+              "const": "UNSUPPORTED_CONTRACT"
+            },
+            "message": {
+              "const": "Contract unavailable."
+            }
+          }
+        },
+        {
+          "properties": {
+            "code": {
+              "const": "OPERATION_UNSUPPORTED"
+            },
+            "message": {
+              "const": "Operation unavailable."
+            }
+          }
+        },
+        {
+          "properties": {
+            "code": {
+              "const": "RESOURCE_LIMIT"
+            },
+            "message": {
+              "const": "Resource limit reached."
+            }
+          }
+        },
+        {
+          "properties": {
+            "code": {
+              "const": "RESOURCE_BUSY"
+            },
+            "message": {
+              "const": "Resource service unavailable."
+            }
+          }
+        }
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "error"
+  ],
+  "title": "lifetxt resource-reference-error-v1",
+  "type": "object"
+}

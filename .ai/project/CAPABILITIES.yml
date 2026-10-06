@@ -1,6 +1,31 @@
 schema_version: 1
 
 capabilities:
+  - id: cap-resource-reference-resolution-contract
+    name: Restricted Remote-v2 resource-reference schema contract
+    summary: Approved bearer-only discovery/full/chunk and authorization contract with six published schemas; no runtime consumer advertised.
+    status: experimental
+    owner: Eruhitsuji
+    source_requirements:
+      - req-resource-reference-resolution-contract
+    implementation_locations:
+      - lifetxt/schema_extensions_v33.py
+      - dist/schemas/resource-reference-*-v1.schema.json
+      - docs/en/resource-reference-resolution.md
+      - docs/ja/resource-reference-resolution.md
+      - .ai/project/changes/resource-reference-resolution
+    public_interfaces:
+      - Published resource-reference-v1 JSON schemas; no runtime advertisement
+    tests_or_evidence:
+      - tests.test_resource_reference_contract
+      - .ai/project/changes/resource-reference-resolution/verification.yml
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/1110
+      - https://github.com/Eruhitsuji/lifetxt/issues/1101
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/1124
+    reuse_policy: Reuse projection contract, Remote workspace snapshot seams, principal scopes, collaboration membership and exact snapshot/CAS; no new writer or authority store.
+    notes: Owner accepted the concrete design on 2026-10-06. Six schemas published; no endpoint or configuration setting delivered.
   - id: cap-confined-attachment-snapshot
     name: Optional Linux confined attachment snapshots
     summary: Private optional Linux confined snapshot workers with pinned helper verification,

@@ -1,0 +1,38 @@
+{
+  "$comment": "Schema publication does not enable or advertise a consumer. Transport, JSON wire limits/duplicate keys, random issuance, authorization, safe disclosure, continuity and exact revision binding require separate semantic enforcement.",
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/resource-reference-discovery-request-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "contract_version": {
+      "const": "1"
+    },
+    "item_id": {
+      "description": "Unicode scalar text, at most 512 UTF-8 bytes. Safe authored label/canonical item identity must also satisfy current disclosure policy; this pattern is not locator classification.",
+      "maxLength": 128,
+      "minLength": 1,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069\\ud800-\\udfff]+(?![\\s\\S])",
+      "type": "string"
+    },
+    "source_id": {
+      "maxLength": 64,
+      "minLength": 64,
+      "pattern": "^[0-9a-f]{64}(?![\\s\\S])",
+      "type": "string"
+    },
+    "workspace_id": {
+      "maxLength": 64,
+      "minLength": 64,
+      "pattern": "^[0-9a-f]{64}(?![\\s\\S])",
+      "type": "string"
+    }
+  },
+  "required": [
+    "contract_version",
+    "workspace_id",
+    "source_id",
+    "item_id"
+  ],
+  "title": "lifetxt resource-reference-discovery-request-v1",
+  "type": "object"
+}

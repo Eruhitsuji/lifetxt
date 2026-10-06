@@ -1,0 +1,195 @@
+schema_version: 1
+verification:
+  executed:
+  - type: bilingual-contract
+    command: python .cache/1110/check_contract.py
+    result: 'PASS: 8 EN/JA JSON round trips, grammar negatives, 8 sections, 6 proposed
+      schema names, 10 catalog pairs, bounds, local links, YAML and unique capability'
+    commit: 4a3077d5de7d7c2877b68092decc945ae430de43
+    status: passed
+  - type: governance
+    command: python -m unittest tests.test_traceability_gate tests.test_change_package_closeout
+    result: 17 tests, OK
+    commit: 4a3077d5de7d7c2877b68092decc945ae430de43
+    status: passed
+  - type: legacy-compatibility
+    command: lifetxt.bootstrap_legacy_surfaces(); unittest tests.test_attachments
+      tests.test_attachment_transactions_v4 tests.test_remote_attachment_contracts_v6
+      tests.test_remote_workspace_snapshot
+    result: 110 tests, OK, 5 optional Web environment skips; full output captured
+      locally; not proof of future resolver enforcement
+    commit: 4a3077d5de7d7c2877b68092decc945ae430de43
+    status: passed
+  - type: release-docs
+    command: python scripts/validate_release_docs.py --output .cache/1110/release-docs.json
+    result: ok=true, errors=0
+    commit: 4a3077d5de7d7c2877b68092decc945ae430de43
+    status: passed
+  - type: core-smoke
+    command: python -m lifetxt check examples/minimal_life.txt
+    result: 'OK: 10 items'
+    commit: 4a3077d5de7d7c2877b68092decc945ae430de43
+    status: passed
+  - type: scope-main-whitespace
+    command: git diff --check; git diff --name-only origin/main -- lifetxt tests dist/schemas
+      .ai/managed; git fetch origin main; git rev-list --count HEAD..origin/main
+    result: No forbidden-scope or legacy-schema changes; main unchanged at d06b9e39;
+      checked document tree matches remote review commit tree 560fc39eecc73fc5b8d8ef2f641e8ac1c29b2810
+    commit: 4a3077d5de7d7c2877b68092decc945ae430de43
+    status: passed
+  - type: final-metadata-governance
+    command: python -m unittest tests.test_traceability_gate tests.test_change_package_closeout;
+      python .cache/1110/check_contract.py; git diff --check origin/main
+    result: Final PR-link check first failed because proposed package state contradicts
+      a non-null PR link. Corrected package state to in-review; 17 tests and bilingual
+      check then OK, whitespace clean. No runtime/schema changes.
+    base_commit: 472824f713e466ea17deab6fe7e59db45cf7bbce
+    working_tree_changes:
+    - change.yml package state in-review
+    - decisions.md metadata correction
+    status: passed
+  - type: contract-and-direct-compatibility
+    command: .venv/bin/python -m unittest tests.test_resource_reference_contract tests.test_change_package_closeout
+      tests.test_traceability_gate tests.test_schema_extensions_v2 tests.test_safety_cli
+      tests.test_safety_foundation tests.test_ticket_custom_field_public_contract
+      tests.test_ticket_workflow_surfaces tests.test_git_commit_worker_cli
+    result: 76 tests OK, 2 optional Web skips; twelve new contract tests pass with
+      validator
+    commit: 16e65209124a320eeb564d7fa9cd1b067c823343
+    status: passed
+  - type: committed-traceability-and-contract
+    command: .venv/bin/python -m unittest tests.test_traceability_gate tests.test_change_package_closeout
+      tests.test_resource_reference_contract
+    result: 29 tests OK after preserving the shared registry sequence indentation
+      required by the traceability gate
+    commit: 16e65209124a320eeb564d7fa9cd1b067c823343
+    status: passed
+  - type: schema-release-registry
+    command: lifetxt.bootstrap_legacy_surfaces(); release_policy.schema_validation_report(.)
+    result: ok=true, 92 schemas/92 samples, network-free Registry, zero duplicate
+      IDs and zero errors
+    commit: 16e65209124a320eeb564d7fa9cd1b067c823343
+    status: passed
+  - type: lint-format-types
+    command: .venv/bin/python -m ruff check lifetxt tests scripts; ruff format --check
+      changed Python files; mypy --follow-imports=skip --ignore-missing-imports lifetxt/diagnostic_contract.py
+    result: Lint clean; 8 changed Python files formatted; approved type boundary clean
+    commit: 16e65209124a320eeb564d7fa9cd1b067c823343
+    status: passed
+  - type: full-dev-suite
+    command: MPLBACKEND=Agg .venv/bin/python -m unittest discover > .cache/1110/full-final.log
+      2>&1
+    result: 5161 tests in 282.715s, OK, 349 optional/environment skips. Python 3.12.14,
+      bash, configured isolated dev setup; no Web extras. BashCompletionExecutionTests
+      ran. During execution only task traceability sequence indentation/git commit
+      metadata changed; runtime source and tests stayed unchanged. Committed gates
+      were rerun successfully afterward.
+    commit: 16e65209124a320eeb564d7fa9cd1b067c823343
+    status: passed
+  - type: release-docs-core-smoke
+    command: .venv/bin/python scripts/validate_release_docs.py --output .cache/1110/final-release-docs.json;
+      .venv/bin/python -m lifetxt check examples/minimal_life.txt
+    result: Release docs errors=0; minimal fixture 10 items OK
+    commit: 16e65209124a320eeb564d7fa9cd1b067c823343
+    status: passed
+  - type: legacy-bytes-generation
+    command: tests.test_resource_reference_contract; python -m lifetxt format schemas
+      DIRECTORY --format json; git diff --name-only origin/main -- dist/schemas/attachment-*-v1.schema.json
+      .ai/managed; git diff --check
+    result: Five legacy attachment v1 SHA-256 byte hashes unchanged; six new artifacts
+      match generator byte-for-byte; no managed-standard changes; whitespace clean.
+      CLI examples corrected and tested.
+    commit: 16e65209124a320eeb564d7fa9cd1b067c823343
+    status: passed
+  acceptance_mapping:
+  - criterion: AC1
+    sections: 1, 2, 3
+    evidence: Owner approval record / EN-JA contract / tests.test_resource_reference_contract
+    status: verified-contract-only
+  - criterion: AC2
+    sections: 3, 4, 5, 6
+    evidence: Owner approval record / EN-JA contract / tests.test_resource_reference_contract
+    status: verified-contract-only
+  - criterion: AC3
+    sections: 4, 5, 7
+    evidence: Owner approval record / EN-JA contract / tests.test_resource_reference_contract
+    status: verified-contract-only
+  - criterion: AC4
+    sections: '3'
+    evidence: Owner approval record / EN-JA contract / tests.test_resource_reference_contract
+    status: verified-contract-only
+  - criterion: AC5
+    sections: 2, 3, 6
+    evidence: Owner approval record / EN-JA contract / tests.test_resource_reference_contract
+    status: verified-contract-only
+  - criterion: AC6
+    sections: '8'
+    evidence: Owner approval record / EN-JA contract / tests.test_resource_reference_contract
+    status: verified-contract-only
+  gaps:
+  - No runtime consumer/resolver/delivery; schemas do not prove semantic authorization
+    or platform readiness.
+  - Independent human implementation security/integration review and merge approval
+    pending final head.
+  resolved_failures:
+  - command: Initial global-python full unittest discover
+    result: 5157 tests, 10 failures and 2 errors, 351 skips. Six failures were outdated
+      schema count/inventory expectations, four were subprocess missing editable installation;
+      two errors were task traceability YAML indentation. Full output captured locally.
+      Python 3.12.14/bash, BashCompletionExecutionTests ran, source unchanged during
+      that run.
+    resolution: Strict expectations updated to 92/six new names, task YAML corrected,
+      configured isolated dev setup; final full suite passed.
+  - command: Committed traceability gate
+    result: 'One failure: valid indentless YAML lists were not recognized by the existing
+      meaningful-evidence gate.'
+    resolution: Preserved existing indented shared-registry sequence convention; no
+      test or gate weakened. Final 29 focused checks and full suite pass.
+review_ledger:
+- reviewer: Codex implementer self-review
+  review_type: design-security-bilingual
+  target_commit: 4a3077d5de7d7c2877b68092decc945ae430de43
+  result: passed-informational-only
+  finding_count: 0
+  completed_at: '2026-10-06'
+- reviewer: independent human owner
+  review_type: concrete-consumer-design-security-approval
+  target_commit: efd63637554279bd53c57d57b989613a9e314e70
+  result: accepted-concrete-design-only
+  finding_count: 0
+  completed_at: '2026-10-06'
+  approval_record: https://github.com/Eruhitsuji/lifetxt/issues/1110#issuecomment-6015909957
+- reviewer: independent human Merge Authority
+  review_type: integration
+  target_commit: null
+  result: pending
+  finding_count: 0
+  completed_at: null
+- reviewer: Codex implementer self-review
+  review_type: schema-code-security-compatibility-integration
+  target_commit: 16e65209124a320eeb564d7fa9cd1b067c823343
+  result: passed-informational-only
+  finding_count: 0
+  completed_at: '2026-10-06'
+- reviewer: independent human reviewer
+  review_type: schema-implementation-security
+  target_commit: null
+  result: pending
+  finding_count: 0
+  completed_at: null
+release_evidence:
+  migration_notes: New separately named schema-only contract; legacy v1 remains byte-identical.
+    No settings/runtime/data migration.
+  rollback_plan: Revert six schemas, v33 extension/bootstrap registration, contract
+    test and task-specific docs/package/registry changes; no data rollback.
+  operations_evidence:
+  - No deployment, credentials, provider fetch or new capability advertisement.
+  - Self-review fixed raw-manifest bootstrap dependency and unsupported-version grammar.
+    Same source tree inspected; independent human approvals remain pending.
+  - Reviewing the linked Draft exposed a package-state gate failure; in-review state
+    fixes it without claiming design approval or modifying the check. Python 3.12.14,
+    bash; no test files changed while tests ran; BashCompletionExecutionTests not
+    selected in focused suite.
+  - Owner concrete design accepted before implementation; no runtime endpoint/capability/settings/dependency
+    change. Resolved inventory, YAML, editable-install and committed-gate findings
+    are recorded. Existing byte contracts unchanged.

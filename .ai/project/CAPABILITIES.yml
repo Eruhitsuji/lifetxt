@@ -646,7 +646,8 @@ capabilities:
       - native Linux x86_64/AArch64 today CI
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/902
-    related_pull_requests: []
+    related_pull_requests:
+    - https://github.com/Eruhitsuji/lifetxt/pull/1121
     reuse_policy: extend_existing_lifetxt-mini-phase-2-safe-mutation
     replacement:
       replaces: []

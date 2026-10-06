@@ -3,9 +3,9 @@ verification:
   executed:
   - command: python -W error::ResourceWarning -m unittest tests.test_attachment_snapshot
       tests.test_attachment_snapshot_package tests.test_native_attachment_snapshot
-    result: 26 tests OK. Real helper snapshot, root/leaf replacement, tamper/missing
-      helper, FD cleanup; injected stalled workers retain slots and principal key;
-      real interruptible process killed/reaped.
+    result: '28 tests OK: 9 native + 3 package + 16 supervisor; source version pin,
+      clean child env, root/file identity, malformed output, real interruptible process
+      cleanup and mocked stuck-work slot retention.'
     status: passed
   gaps:
   - Real socket creation blocked by environment; no D-state/disk fault injection

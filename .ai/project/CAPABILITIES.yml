@@ -1,6 +1,27 @@
 schema_version: 1
 
 capabilities:
+  - id: cap-confined-attachment-snapshot
+    name: Optional Linux confined attachment snapshots
+    summary: Internal native root-relative bounded regular-file snapshot seam; packaging
+      and supervisor added in dependent tasks.
+    status: experimental
+    owner: Eruhitsuji
+    source_requirements:
+    - req-resource-reference-confined-read
+    implementation_locations:
+    - native/resource_snapshot.c
+    public_interfaces:
+    - Internal LTXS1 protocol only
+    tests_or_evidence:
+    - tests.test_native_attachment_snapshot
+    related_issues:
+    - https://github.com/Eruhitsuji/lifetxt/issues/1116
+    - https://github.com/Eruhitsuji/lifetxt/issues/1115
+    related_pull_requests:
+    - https://github.com/Eruhitsuji/lifetxt/pull/1119
+    reuse_policy: Reuse attachment transactions and domain policy; no resolver or authority
+      store.
   - id: cap-resource-reference-projection-contract
     name: Versioned opaque attachment projection design contract
     summary: Documentation-only contract for random scoped identity, exact revision

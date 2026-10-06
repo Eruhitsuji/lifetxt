@@ -1,0 +1,13 @@
+schema_version: 1
+requirements:
+- id: req-resource-reference-confined-read
+  statement: Reject unsafe resolution and return only one bounded regular-file snapshot
+    using an owned root FD.
+  acceptance_criteria:
+  - Root-anchored no-symlink/no-magic/no-mount-crossing openat2
+  - O_PATH inspection before readable conversion; regular, nlink1, ownership and size
+  - cap+1 bounded read, unchanged metadata and fresh declared-path identity
+  - No guessed syscall numbers, runtime compiler, raw exception logging or portable
+    fallback
+  owner: Eruhitsuji
+open_questions: []

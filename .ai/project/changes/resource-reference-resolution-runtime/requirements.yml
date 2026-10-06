@@ -1,0 +1,23 @@
+schema_version: 1
+requirements:
+- id: req-resource-reference-resolution
+  kind: ADDED
+  owner: Eruhitsuji
+  statement: Current-authority descriptor resolver
+  acceptance_criteria:
+  - Reload current principal, workspace membership, source role/item visibility and
+    resource policy for every operation.
+  - Lookup within selected install/workspace; require unique canonical item and exact
+    committed association.
+  - Discovery revalidates one consistent authorized snapshot; byte action requires
+    both exact opaque tokens.
+  - Uniform unavailable for hidden/removed/ambiguous/corrupt entries; stale only after
+    association and authority.
+  - Allowlisted descriptors with Attachment default; independent size/MIME/digest
+    disclosure opt-in.
+  - No source mutation, caller path, provider fetch, OS command or directory opening
+    action.
+  constraints:
+  - 'Normative approved #1110 wire contract'
+  - No capability advertisement until complete runtime evidence
+open_questions: []

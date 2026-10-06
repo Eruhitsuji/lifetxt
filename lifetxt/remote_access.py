@@ -86,6 +86,8 @@ def principal_registry(config):
                 ("token_env", row.get("token_env")),
             )
         )
+        if "disclosure_mode" in row:
+            result[principal_id]["disclosure_mode"] = row["disclosure_mode"]
     return result
 
 
@@ -110,7 +112,7 @@ def _token_for(row):
     return os.environ.get(str(name)) if name else None
 
 
-def authenticate_token(token, config):
+def authenticate_token(token, config, *, allow_restricted=False):
     supplied = str(token or "")
     if not supplied:
         raise RemoteAccessError("UNAUTHORIZED", "A bearer token is required.", 401)
@@ -120,6 +122,11 @@ def authenticate_token(token, config):
         if expected and not row["disabled"] and hmac.compare_digest(supplied, expected):
             matches.append(row)
     if len(matches) == 1:
+        if (
+            matches[0].get("disclosure_mode") == "restricted-resource"
+            and not allow_restricted
+        ):
+            raise RemoteAccessError("UNAUTHORIZED", "The bearer token is invalid.", 401)
         return matches[0], "bearer"
     if len(matches) > 1:
         raise RemoteAccessError(
@@ -162,7 +169,11 @@ def authenticate(headers, client_host, config):
     asserted = headers.get(proxy_header)
     if asserted and _trusted_peer(remote, client_host):
         row = registry.get(asserted)
-        if row and not row["disabled"]:
+        if (
+            row
+            and not row["disabled"]
+            and row.get("disclosure_mode") != "restricted-resource"
+        ):
             return row, "trusted-proxy"
         raise RemoteAccessError(
             "UNKNOWN_PRINCIPAL", "Trusted proxy asserted an unknown principal.", 401

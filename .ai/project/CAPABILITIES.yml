@@ -1,6 +1,36 @@
 schema_version: 1
 
 capabilities:
+  - id: cap-resource-reference-runtime
+    name: Restricted opaque-resource binding resolution and download
+    summary: Default-disabled isolated bearer-only consumer with current authorization and exact snapshots; no automatic capability advertisement.
+    status: experimental
+    owner: Eruhitsuji
+    source_requirements:
+      - req-resource-reference-binding-lifecycle
+      - req-resource-reference-resolution
+      - req-resource-reference-bounded-delivery
+    implementation_locations:
+      - lifetxt/resource_reference_store.py
+      - lifetxt/resource_reference_resolution.py
+      - lifetxt/resource_reference_policy.py
+      - lifetxt/remote_resource_download.py
+    public_interfaces:
+      - Explicitly negotiated resource-reference-v1 discovery/full/chunk POST on isolated ASGI app
+    tests_or_evidence:
+      - tests.test_resource_reference_store
+      - tests.test_resource_reference_resolution
+      - tests.test_resource_reference_policy
+      - tests.test_remote_resource_download
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/1111
+      - https://github.com/Eruhitsuji/lifetxt/issues/1113
+      - https://github.com/Eruhitsuji/lifetxt/issues/1114
+      - https://github.com/Eruhitsuji/lifetxt/issues/1125
+      - https://github.com/Eruhitsuji/lifetxt/issues/1126
+    related_pull_requests: []
+    reuse_policy: Reuse approved schema, membership, item visibility, attachment policy and confined Linux snapshot reader. Identity index is not permission authority.
+    notes: Fresh epoch at every startup; no stable restart IDs. TLS, helper/root/filesystem and no other generic listener are operator requirements. Independent latest-head human review pending.
   - id: cap-resource-reference-resolution-contract
     name: Restricted Remote-v2 resource-reference schema contract
     summary: Approved bearer-only discovery/full/chunk and authorization contract with six published schemas; no runtime consumer advertised.

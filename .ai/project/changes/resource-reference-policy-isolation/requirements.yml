@@ -1,0 +1,23 @@
+schema_version: 1
+requirements:
+- id: req-resource-reference-bounded-delivery
+  kind: ADDED
+  owner: Eruhitsuji
+  statement: Restricted bounded HTTP delivery
+  acceptance_criteria:
+  - Default-disabled Remote 2/resource-reference-v1 dedicated bearer-only consumer;
+    deny alternate routes.
+  - Three exact typed POST operations; 2KiB body, no query/path/token URL input and
+    no browser/proxy identity.
+  - Exact read classification works on read-only sources/server without weakening
+    mutation guards.
+  - 10MiB file, 64KiB chunk, two process/one principal active operations, no queue
+    and 30s overall deadline.
+  - Require both revisions, complete snapshot integrity and authority checks before/every
+    bounded emission.
+  - Safe binary attachment responses, static sanitized failures/audits, no CORS/redirect/inline
+    preview.
+  constraints:
+  - 'Normative approved #1110 wire contract'
+  - No capability advertisement until complete runtime evidence
+open_questions: []

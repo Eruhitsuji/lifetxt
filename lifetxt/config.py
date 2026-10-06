@@ -304,6 +304,10 @@ def config_template():
             ),
         ]
     )
+    from .resource_reference_policy import DEFAULTS
+    from copy import deepcopy
+
+    data["remote"] = {"enabled": False, "resource_references": deepcopy(DEFAULTS)}
     return data
 
 

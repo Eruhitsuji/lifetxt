@@ -1,0 +1,80 @@
+schema_version: 1
+verification:
+  executed:
+  - command: Focused resource/runtime/reader/schema/governance and legacy Remote access
+      v19/v20 unittest modules
+    result: 118 tests passed, including real socket HTTP, rollback replay, audit alias
+      rejection, exact snapshots, permissions, source continuity and legacy Remote
+      auth tests.
+    status: passed
+    base_commit: 1736f66c709b10adb5d4ab34d4a38012297802ce
+  - command: ruff check lifetxt tests scripts; mypy declared boundary; config explain/check;
+      CLI minimal fixture
+    result: Passed; no mandatory dependency added. Existing optional jsonschema/httpx
+      installed for verification.
+    status: passed
+  - command: MPLBACKEND=Agg .venv/bin/python -m unittest discover -v
+    result: 5218 tests, OK, 42 environment/optional skips; 309.121s; full output retained
+      locally in .test-output.log. Runtime commit 08adee20; subsequent changes are
+      optional-test availability guards, docs and verification metadata.
+    status: passed
+    base_commit: 1736f66c709b10adb5d4ab34d4a38012297802ce
+  - command: 'Web environment: HTTP module + ReportConfigContractTests + release policy'
+    result: 41 tests, OK after final optional-dependency guards and docs. Real socket
+      HTTP test executed.
+    status: passed
+  - command: 'No-Web environment: store/resolution/policy/HTTP/attachment snapshot
+      modules'
+    result: 69 tests, OK, 14 HTTP cases skipped because existing optional Starlette
+      transport is absent. 55 domain/native/policy cases passed; no mandatory dependency
+      added.
+    status: passed
+  - command: Installed console-script parity; declared mypy boundary; scripts/smoke_test.py
+    result: Passed; console-script test rerun with virtualenv on PATH.
+    status: passed
+  gaps:
+  - tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1114
+    reason: Local tests do not certify deployed proxy/listener isolation, all supported
+      filesystems or disk/D-state physical cleanup; worker slots remain held when
+      stop is unconfirmed.
+  - tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1114
+    reason: Independent latest-head human security/integration and merge review pending.
+test_plan:
+  scope: Acceptance and threat scenarios in design.md; run targeted tests, existing
+    contracts, full suite, lint/format and CLI smoke after runtime implementation.
+  planned_runtime_modules:
+  - lifetxt/resource_reference_store.py
+  - tests/test_resource_reference_store.py
+  design_checks:
+  - python -m unittest tests.test_change_package_closeout tests.test_resource_reference_contract
+  - git diff --check
+  - Parse all new YAML with yaml.safe_load
+review_ledger:
+- reviewer: Codex implementer self-review
+  review_type: implementation/security/contracts/integration
+  result: Informational; resolved findings recorded in decisions.md. Not final independent
+    approval.
+- reviewer: Eruhitsuji
+  review_type: concrete design
+  result: Accepted in active session 2026-10-07; integration/merge acceptance remains
+    separate.
+- reviewer: independent human Merge Authority
+  review_type: latest-head security/integration
+  result: pending
+release_evidence:
+  rollback_plan: Before implementation revert proposal only. Runtime rollback described
+    in design; no authority-state restore or automatic deletion.
+  operations_evidence:
+  - Default-disabled dedicated app replaces entire generic Web router when explicitly
+    opted in; no production state, credential, source mutation, deployment or automatic
+    capability advertisement.
+  - Initial incomplete full suite stopped before final metadata/test correction; retained
+    local output, no pass claim. Source tree not changed while that run was active.
+  - Global ruff format --check reports pre-existing formatting in unrelated files;
+    modified files are formatted separately. No unrelated reformat.
+  - 'First completed full suite at b5e5db32: 5218 tests, one config schema parity
+    failure, 42 skips. Fixed by sharing the new remote schema with the existing v5
+    generator; assertions unchanged. Final full suite to be rerun.'
+  - Initial no-Web HTTP invocation exposed an unguarded existing optional Starlette/Uvicorn
+    dependency. Availability guards and EN/JA installation guidance now match the
+    existing optional Web boundary; HTTP tests still execute in the Web lane.

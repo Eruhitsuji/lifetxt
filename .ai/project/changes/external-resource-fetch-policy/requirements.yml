@@ -1,0 +1,37 @@
+schema_version: 1
+requirements:
+- id: req-resource-explicit-fetch-policy
+  kind: ADDED
+  owner: Eruhitsuji
+  statement: Persist the owner-accepted explicit fetch/import design as an inspectable
+    bilingual contract before network consumers exist.
+  acceptance_criteria:
+  - AC1 preserve inert reference/display and separate open/mediation/fetch/import/render/sync
+  - AC2 define default-disabled grants and operator-owned typed profile/intent with
+    current authority
+  - AC3 specify strict initial public HTTPS/443/GET origins/path/query and secret
+    classification
+  - AC4 specify redirect/IPv4/IPv6/DNS-peer/egress/proxy/credential enforcement
+  - AC5 record exact proposed budgets without registering settings
+  - AC6 bound physical work and validate full body/content/MIME/executables/managed
+    target
+  - AC7 minimize all disclosure surfaces and at-rest copies without historical erasure
+    claims
+  - AC8 reuse exact source CAS/attachment transaction and define partial recovery/replay/idempotency
+  - AC9 publish unimplemented negative cases and enablement gates
+  - AC10 align bilingual docs, examples, links, registries and High evidence; independent
+    human reviews remain required
+  - AC11 gate B-D on concrete owner-selected consumer/destinations and exclude providers/Format/runtime
+  constraints:
+  - Documentation only; no runtime advertisement or selected destination
+  - Reuse attachment transaction/current permissions/CAS, no parallel writer or secret
+    store
+  - High human design/security/integration review before merge
+open_questions:
+- question: Which concrete surface and approved public destinations should B-D serve?
+  blocks: Future B-D runtime work only; does not block Task A documentation
+  owner: Eruhitsuji
+- question: Which consumer-specific wire bounds, supervised commit budget and replay
+    persistence enforce the contract?
+  blocks: Future consumer readiness/enablement, not documentation
+  owner: Eruhitsuji

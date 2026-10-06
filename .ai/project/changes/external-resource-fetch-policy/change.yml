@@ -1,0 +1,49 @@
+schema_version: 1
+change:
+  id: external-resource-fetch-policy
+  title: Document approved explicit external fetch/import policy
+  status: in-review
+  change_type: Security
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1129
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1130
+  base_commit: bd8fca5af0b1cefb99e43798fe397bb72cd95370
+  target_release: null
+scope:
+  in_scope:
+  - Bilingual normative design-only policy
+  - Conceptual typed profile/intent and secret-free example
+  - High evidence and design-only registry chain
+  out_of_scope:
+  - Runtime, configuration, scopes, endpoints or schema publication
+  - Concrete consumer/destination/provider/account setup or network PoC
+  - Format, generic sync, merge/release/deployment
+  write_scope:
+  - docs/en/external-resource-fetch-policy.md
+  - docs/ja/external-resource-fetch-policy.md
+  - .ai/project/CAPABILITIES.yml
+  - .ai/project/TRACEABILITY.yml
+  - .ai/project/changes/external-resource-fetch-policy/**
+  forbidden_scope:
+  - .ai/managed/**
+  - lifetxt/**
+  - tests/**
+  - dist/schemas/**
+  - runtime configuration/dependencies
+  shared_files:
+  - .ai/project/CAPABILITIES.yml
+  - .ai/project/TRACEABILITY.yml
+  integrator: Eruhitsuji
+  integration_order: Task-specific registry additions on latest origin/main; merge
+    new main if needed
+  conflict_risk: Concurrent registry edits; retain existing entries unchanged
+design_approval:
+  owner: Eruhitsuji
+  date: '2026-10-07'
+  record: https://github.com/Eruhitsuji/lifetxt/issues/1103#issuecomment-6027182964
+  scope: Investigation policy and Task A authoring accepted; final PR reviews separate
+human_approvals_required:
+- Independent latest-head design/security review
+- Independent integration review and Merge Authority approval

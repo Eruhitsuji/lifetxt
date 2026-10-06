@@ -37,6 +37,17 @@ verification:
       checked document tree matches remote review commit tree 560fc39eecc73fc5b8d8ef2f641e8ac1c29b2810
     commit: 4a3077d5de7d7c2877b68092decc945ae430de43
     status: passed
+  - type: final-metadata-governance
+    command: python -m unittest tests.test_traceability_gate tests.test_change_package_closeout;
+      python .cache/1110/check_contract.py; git diff --check origin/main
+    result: Final PR-link check first failed because proposed package state contradicts
+      a non-null PR link. Corrected package state to in-review; 17 tests and bilingual
+      check then OK, whitespace clean. No runtime/schema changes.
+    base_commit: 472824f713e466ea17deab6fe7e59db45cf7bbce
+    working_tree_changes:
+    - change.yml package state in-review
+    - decisions.md metadata correction
+    status: passed
   acceptance_mapping:
   - criterion: AC1
     sections: 1, 2, 3
@@ -87,3 +98,7 @@ release_evidence:
   - No deployment, credentials, provider fetch or new capability advertisement.
   - Self-review fixed raw-manifest bootstrap dependency and unsupported-version grammar.
     Same source tree inspected; independent human approvals remain pending.
+  - Reviewing the linked Draft exposed a package-state gate failure; in-review state
+    fixes it without claiming design approval or modifying the check. Python 3.12.14,
+    bash; no test files changed while tests ran; BashCompletionExecutionTests not
+    selected in focused suite.

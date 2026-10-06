@@ -21,3 +21,6 @@
   inspection cap from #1100; no unsupported-version reinterpretation.
 - Pending owner decision: accept EN/JA sections 1–7 and schema pipeline plan; then
   refine issue/contract write scope to Ready and continue on the same PR.
+
+- Final metadata review: package state is in-review once the Draft PR is linked;
+  this does not approve its proposed design or mark schema delivery implemented.

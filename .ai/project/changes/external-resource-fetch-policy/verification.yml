@@ -1,0 +1,150 @@
+schema_version: 1
+verification:
+  executed:
+  - type: bilingual-contract
+    command: python .cache/1129/check_contract.py
+    result: 12 numbered sections each; 1 equal JSON example/full source hash; 8 matching
+      budget IDs/numeric rows; 17 negative cases each; 8 local links; YAML and unique
+      capability OK. Semantic EN/JA review performed by implementer, not independently
+      approved.
+    base_commit: bd8fca5af0b1cefb99e43798fe397bb72cd95370
+    tested_documents_sha256: &id001
+      docs/en/external-resource-fetch-policy.md: 5a2d94fe1981b14e2f6119b296d5fb2d8b488dca0b8923098991942414a4c1b4
+      docs/ja/external-resource-fetch-policy.md: bf99f31899467a55307fc457faf3443e4fdf723f13c89cd2cbf15cebbb4222fb
+    status: passed
+  - type: governance
+    command: python -m unittest tests.test_traceability_gate tests.test_change_package_closeout
+    result: 17 tests, OK, no skips; complete output retained locally.
+    base_commit: bd8fca5af0b1cefb99e43798fe397bb72cd95370
+    tested_documents_sha256: *id001
+    status: passed
+  - type: compatibility
+    command: python -m unittest tests.test_attachments tests.test_attachment_transactions_v4
+      tests.test_web_attachment_upload tests.test_web_transport
+    result: 134 tests, OK, 26 Web extras-dependent UploadAPITests skipped; 108 executed
+      successfully. Existing behavior only, not SSRF/future fetch validation. Python
+      3.12.14/Linux/bash; source/tests unchanged during run; BashCompletionExecutionTests
+      not selected.
+    base_commit: bd8fca5af0b1cefb99e43798fe397bb72cd95370
+    tested_documents_sha256: *id001
+    status: passed
+  - type: release-docs
+    command: python scripts/validate_release_docs.py --output .cache/1129/release-docs.json
+    result: ok=true, errors=0 for existing release-critical docs. Task-specific links
+      checked separately by bilingual check.
+    base_commit: bd8fca5af0b1cefb99e43798fe397bb72cd95370
+    tested_documents_sha256: *id001
+    status: passed
+  - type: core-smoke
+    command: python -m lifetxt check examples/minimal_life.txt
+    result: 'OK: 10 items.'
+    base_commit: bd8fca5af0b1cefb99e43798fe397bb72cd95370
+    tested_documents_sha256: *id001
+    status: passed
+  - type: scope-whitespace
+    command: git diff --check; task allowed-path inventory
+    result: Whitespace clean; only the two documents, six-file High package and task
+      registry entries. No runtime/tests/schema/managed changes.
+    base_commit: bd8fca5af0b1cefb99e43798fe397bb72cd95370
+    tested_documents_sha256: *id001
+    status: passed
+  acceptance_mapping:
+  - criterion: AC1
+    sections:
+    - 1
+    - 2
+    evidence: Matching EN/JA contract and documented matrix; design-only evidence
+  - criterion: AC2
+    sections:
+    - 2
+    - 3
+    evidence: Matching EN/JA contract and documented matrix; design-only evidence
+  - criterion: AC3
+    sections:
+    - 3
+    - 4
+    evidence: Matching EN/JA contract and documented matrix; design-only evidence
+  - criterion: AC4
+    sections:
+    - 4
+    - 5
+    - 6
+    evidence: Matching EN/JA contract and documented matrix; design-only evidence
+  - criterion: AC5
+    sections:
+    - 7
+    evidence: Matching EN/JA contract and documented matrix; design-only evidence
+  - criterion: AC6
+    sections:
+    - 7
+    - 9
+    evidence: Matching EN/JA contract and documented matrix; design-only evidence
+  - criterion: AC7
+    sections:
+    - 8
+    evidence: Matching EN/JA contract and documented matrix; design-only evidence
+  - criterion: AC8
+    sections:
+    - 9
+    evidence: Matching EN/JA contract and documented matrix; design-only evidence
+  - criterion: AC9
+    sections:
+    - 10
+    - 11
+    evidence: Matching EN/JA contract and documented matrix; design-only evidence
+  - criterion: AC10
+    sections:
+    - 1
+    - 12
+    evidence: Matching EN/JA contract and documented matrix; design-only evidence
+  - criterion: AC11
+    sections:
+    - 11
+    evidence: Matching EN/JA contract and documented matrix; design-only evidence
+  gaps:
+  - reason: No future fetch connector/consumer exists; N01-N17 are unexecuted requirements
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1129
+    status: not-implemented
+  - reason: Independent human design/security/integration review pending latest PR
+      head
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1129
+    status: pending-review
+  retained_contract_evidence:
+    sections_each: 12
+    equal_json_examples: 1
+    matching_budget_ids: 8
+    negative_cases_each: 17
+    local_links: 8
+    yaml_and_unique_capability: passed
+    scope: design-only
+    documents_sha256: *id001
+review_ledger:
+- reviewer: Codex implementer
+  review_type: design-security-bilingual-self-review
+  target_commit: null
+  result: passed-informational-only
+  finding_count: 4
+  completed_at: '2026-10-07'
+  tested_documents_sha256: *id001
+  resolution: All four documentation findings corrected; decisions.md records them;
+    no final independent approval.
+- reviewer: independent human reviewer
+  review_type: design-security
+  target_commit: null
+  result: pending
+  finding_count: 0
+  completed_at: null
+- reviewer: independent human Merge Authority
+  review_type: integration
+  target_commit: null
+  result: pending
+  finding_count: 0
+  completed_at: null
+release_evidence:
+  migration_notes: Design-only documentation; no runtime, schema, settings, Format
+    or data migration.
+  rollback_plan: Revert only Task A docs/package/registry changes; no data cleanup
+    or deployment.
+  operations_evidence:
+  - No network PoC, secret store, provider login or destination setup
+  - B-D remain gated; no feature advertised

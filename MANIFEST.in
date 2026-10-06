@@ -1,0 +1,4 @@
+include native/resource_snapshot.c
+include scripts/build_attachment_snapshot_helper.py
+exclude lifetxt/_attachment_snapshot_helper
+exclude lifetxt/.attachment-snapshot-helper.json

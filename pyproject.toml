@@ -66,6 +66,11 @@ lifetxt = [
   "web_icon_*.png",
 ]
 
+# The optional native executable is installed explicitly for its host. A core
+# pure-Python wheel must never silently contain a machine-specific binary.
+[tool.setuptools.exclude-package-data]
+lifetxt = ["_attachment_snapshot_helper", ".attachment-snapshot-helper.json"]
+
 [tool.ruff]
 required-version = ">=0.16.1"
 target-version = "py310"

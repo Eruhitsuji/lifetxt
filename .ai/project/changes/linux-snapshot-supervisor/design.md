@@ -1,0 +1,7 @@
+# Snapshot supervisor
+
+Private read_snapshot(root, relative, cap, expected) consumes LTXS1. Fixed module-adjacent helper/manifest are checked for owned non-writable regular files, bounded size, architecture/libc/protocol, ELF and binary digest. Execute the pinned FD through procfs, not a mutable pathname/PATH. Acquire root by fresh O_PATH/NOFOLLOW directory walk from /; reject unsafe ancestors except root-owned sticky ancestors. Root/file owner and mode plus dev/inode/size/mtime/ctime are checked again through fresh handles after process exit. No source/item/principal authority is invented here.
+
+Admission has two live slots per process and optional one per trusted caller principal key, no queue. Each bounded supervision thread owns its native process/FDs. Caller waits only until cancellation or monotonic deadline (<=30s). A blocked spawn/open/kernel read/kill/reap/hash cannot make the caller spawn replacements: its slot remains held until actual worker completion. Physical cleanup can stall indefinitely in D-state; availability may fail closed. Thread daemonization is not a shutdown/reap guarantee. This is local writer trust, not protection from malicious same-uid or privileged processes.
+
+Pipe output is bounded cap+512 and exact frame length. Frozen bytes and SHA256 use the same snapshot; metadata/digest mismatch is stale. Resource work is O(cap), memory includes native buffer, pipe parsing/copies and subsequent base64 in caller; cap is policy, not only returned chunk length. No unbounded communicate/read or runtime compile.

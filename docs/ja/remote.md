@@ -364,3 +364,11 @@ admissionされるremote writeにはexactな`If-Match` revisionが必要です�
 Bearer認証や`--insecure-public`は通信を暗号化しません。`serve`/`web`はUvicornのproxy処理を
 無効化して直接接続元を保持するため、TLS proxyには既存の`remote.trusted_proxies`を設定します。
 配置・upgrade手順は[Web通信のセキュリティ](web-transport-security.md)を参照してください。
+
+
+## 添付chunkのOS方針
+
+chunk読取りには[任意導入の安全なLinux helper](attachment-snapshot-helper.md)が必要です。
+この機能はLinuxを公式対象とし、他OSは当面非公式です。必要条件を確認できない場合は
+chunk取得を拒否します。既存response fieldsとoffset/limit clampを維持し、他の添付操作には
+既存方針が適用されます。

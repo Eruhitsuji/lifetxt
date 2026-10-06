@@ -1099,3 +1099,12 @@ exact journal artifacts, retained recovery copies and backup destinations togeth
 lifetxt does not encrypt those files; its OS-private evidence profile is a permission
 boundary. See [at-rest confidentiality](at-rest-confidentiality.md) for the threat
 model, copy inventory, keys/recovery and platform-encryption deployment procedure.
+
+
+## Attachment chunk platform policy
+
+Chunk reads require the [optional confined Linux helper](attachment-snapshot-helper.md).
+Linux is the official target; other OS are unofficial for this feature.
+Without verified prerequisites, chunk reads fail closed. Existing response
+fields and offset/limit clamping are preserved; other attachment operations
+retain their existing policies.

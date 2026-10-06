@@ -1,0 +1,53 @@
+schema_version: 1
+change:
+  id: resource-reference-resolution
+  title: Refine restricted Remote-v2 resource-reference consumer before schema publication
+  status: implemented
+  change_type: Security
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1110
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1124
+  target_release: null
+scope:
+  in_scope:
+  - Approved EN/JA consumer/envelopes/authorization contract
+  - Six new resource-reference schemas through existing extension/bootstrap/generator
+  - Matching schema contract and compatibility tests
+  - Task-specific registries and High change package
+  out_of_scope:
+  - Runtime resolver, binding persistence, endpoint, browser or configuration changes
+  - Format/provider/fetch or generic attachment sync
+  - Merge, release and deployment
+  write_scope:
+  - docs/en/resource-reference-resolution.md
+  - docs/ja/resource-reference-resolution.md
+  - .ai/project/changes/resource-reference-resolution/**
+  - .ai/project/CAPABILITIES.yml (new task entry only)
+  - .ai/project/TRACEABILITY.yml (new task chain only)
+  - lifetxt/schema_extensions_v33.py
+  - lifetxt/_legacy_bootstrap.py (extension range only)
+  - dist/schemas/resource-reference-*-v1.schema.json
+  - tests/test_resource_reference_contract.py
+  - tests/test_schema_extensions_v2.py (bundle inventory/count expectation only)
+  - tests/test_safety_cli.py (bundle inventory/count expectation only)
+  - tests/test_ticket_custom_field_public_contract.py (bundle inventory/count expectation
+    only)
+  - tests/test_ticket_workflow_surfaces.py (bundle inventory/count expectation only)
+  - tests/test_safety_foundation.py (bundle inventory/count expectation only)
+  forbidden_scope:
+  - .ai/managed/**
+  - Existing attachment v1 schemas
+  - Runtime/Format/provider/fetch/configuration/dependency changes
+  shared_files:
+  - .ai/project/CAPABILITIES.yml
+  - .ai/project/TRACEABILITY.yml
+human_approvals_required:
+- Independent human integration/security review of delivered schemas
+- Merge Authority approval
+design_approval:
+  owner: Eruhitsuji
+  date: '2026-10-06'
+  record: https://github.com/Eruhitsuji/lifetxt/issues/1110#issuecomment-6015909957
+  scope: EN/JA sections 1-7 and section 8 schema publication plan accepted

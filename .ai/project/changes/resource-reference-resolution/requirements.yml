@@ -1,0 +1,24 @@
+schema_version: 1
+requirements:
+- id: req-resource-reference-resolution-contract
+  kind: ADDED
+  owner: Eruhitsuji
+  statement: Refine the restricted Remote-v2 consumer before publishing separately
+    versioned schemas.
+  acceptance_criteria:
+  - AC1 owner accepts Remote-v2-only scope, explicit attachment:read and secure transport.
+  - AC2 define discovery/full/chunk envelopes, negotiation, exact tokens, uniform
+    outcomes and fixed limits.
+  - AC3 define typed bounds and optional disclosure with no Range/latest fallback
+    and edge scenarios.
+  - AC4 classify exact POST pairs as read with explicit workspace membership and narrow
+    clock exemption.
+  - AC5 deny alternate raw routes and shared credentials/sessions; partial coverage
+    cannot advertise.
+  - AC6 publish new schemas only after concrete consumer and authorization approval;
+    preserve legacy v1.
+  constraints:
+  - No runtime implementation or configuration setting introduced
+  - Concrete owner design approved on 2026-10-06; runtime/integration/merge acceptance
+    is separate
+open_questions: []

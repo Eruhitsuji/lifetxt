@@ -6,7 +6,7 @@ traceability:
       capability_id: cap-resource-reference-resolution-contract
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1101
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1110
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1124
       tests_or_evidence:
         - docs/en/resource-reference-resolution.md
         - docs/ja/resource-reference-resolution.md

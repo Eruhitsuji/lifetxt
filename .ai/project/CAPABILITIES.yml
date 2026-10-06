@@ -11,6 +11,7 @@ capabilities:
     - req-resource-reference-confined-read
     implementation_locations:
     - native/resource_snapshot.c
+    - lifetxt/attachment_snapshot.py
     - scripts/build_attachment_snapshot_helper.py
     - docs/en/attachment-snapshot-helper.md
     - docs/ja/attachment-snapshot-helper.md

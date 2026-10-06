@@ -1,0 +1,23 @@
+schema_version: 1
+verification:
+  executed:
+  - command: python -W error::ResourceWarning -m unittest tests.test_attachment_snapshot
+      tests.test_attachment_snapshot_package tests.test_native_attachment_snapshot
+    result: 26 tests OK. Real helper snapshot, root/leaf replacement, tamper/missing
+      helper, FD cleanup; injected stalled workers retain slots and principal key;
+      real interruptible process killed/reaped.
+    status: passed
+  gaps:
+  - Real socket creation blocked by environment; no D-state/disk fault injection
+  - Other architecture/libc/OS and actual non-overlay filesystem hosts unverified
+  - First malformed-frame fixture omitted stdin exchange and stalled; corrected fixture
+    completes real exchange before substituting output; earlier in-flight run modified
+    during testing, not final evidence
+  - Disk/D-state physical cancellation and Windows/macOS equivalent primitives unverified
+review_ledger:
+- reviewer: Codex self-review
+  review_type: security-implementation
+  result: informational; independent review pending
+- reviewer: independent human
+  review_type: integration/security
+  result: pending

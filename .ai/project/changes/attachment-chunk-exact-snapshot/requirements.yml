@@ -1,0 +1,13 @@
+schema_version: 1
+requirements:
+- id: req-attachment-chunk-exact-byte-integrity
+  statement: Every legacy returned chunk and full revision derive from one verified
+    bounded snapshot, never a pathname hash/read/hash sequence.
+  acceptance_criteria:
+  - Deterministic three-open ABA fails on baseline, passes after
+  - Oversize rejected before hash/read; native cap+1 detects growth
+  - Preserve ten fields, configured file cap, clamps and optional expected revision
+  - Linux official / others unofficial; absent or unsafe prerequisites denied
+  - Reuse internal confined snapshot seam and existing Web/MCP error behavior
+  owner: Eruhitsuji
+open_questions: []

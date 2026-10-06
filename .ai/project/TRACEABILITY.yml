@@ -2,6 +2,92 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-attachment-chunk-exact-byte-integrity
+      capability_id: cap-confined-attachment-snapshot
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1101
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1115
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1123
+      tests_or_evidence:
+        - tests.test_attachment_chunk_snapshot
+        - tests.test_remote_attachment_contracts_v6
+        - .ai/project/changes/attachment-chunk-exact-snapshot/verification.yml
+      status: implemented
+      changed_files_or_scope:
+        - Integration into main of the unchanged final snapshot tree from PR 1122
+        - lifetxt/attachment_transactions.py
+        - tests/test_attachment_chunk_snapshot.py
+        - tests/test_remote_attachment_contracts_v6.py
+        - docs/*/web.md
+        - docs/*/remote.md
+    - requirement_id: req-resource-reference-confined-read
+      capability_id: cap-confined-attachment-snapshot
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1115
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1118
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1123
+      tests_or_evidence:
+        - tests.test_attachment_snapshot
+        - tests.test_attachment_snapshot_package
+        - .ai/project/changes/linux-snapshot-supervisor/verification.yml
+        - .ai/project/changes/linux-snapshot-helper-package/verification.yml
+      status: implemented
+      changed_files_or_scope:
+        - Integration into main of PR 1120 and closed unmerged PR 1121
+        - lifetxt/attachment_snapshot.py
+        - scripts/build_attachment_snapshot_helper.py
+        - MANIFEST.in
+        - pyproject.toml
+        - docs/*/attachment-snapshot-helper.md
+        - tests/test_attachment_snapshot.py
+        - tests/test_attachment_snapshot_package.py
+    - requirement_id: req-attachment-chunk-exact-byte-integrity
+      capability_id: cap-confined-attachment-snapshot
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1101
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1115
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1122
+      tests_or_evidence:
+        - tests.test_attachment_chunk_snapshot
+        - tests.test_remote_attachment_contracts_v6
+        - tests/native_snapshot_growth.c
+        - .ai/project/changes/attachment-chunk-exact-snapshot/verification.yml
+      status: implemented
+      changed_files_or_scope:
+        - lifetxt/attachment_transactions.py
+        - tests/test_attachment_chunk_snapshot.py
+        - tests/test_remote_attachment_contracts_v6.py
+        - docs/en/web.md
+        - docs/ja/web.md
+        - docs/en/remote.md
+        - docs/ja/remote.md
+        - .ai/project/changes/attachment-chunk-exact-snapshot/**
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+    - requirement_id: req-resource-reference-confined-read
+      capability_id: cap-confined-attachment-snapshot
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1115
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1118
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1121
+      tests_or_evidence:
+        - tests.test_attachment_snapshot
+      status: implemented
+      changed_files_or_scope:
+        - lifetxt/attachment_snapshot.py
+        - tests/test_attachment_snapshot.py
+        - .ai/project/changes/linux-snapshot-supervisor/**
+    - requirement_id: req-resource-reference-confined-read
+      capability_id: cap-confined-attachment-snapshot
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1115
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1117
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1120
+      tests_or_evidence:
+        - tests.test_attachment_snapshot_package
+        - docs/en/attachment-snapshot-helper.md
+        - docs/ja/attachment-snapshot-helper.md
+      status: implemented
+      changed_files_or_scope:
+        - scripts/build_attachment_snapshot_helper.py
+        - MANIFEST.in
+        - pyproject.toml
+        - docs/*/attachment-snapshot-helper.md
     - requirement_id: req-resource-reference-confined-read
       capability_id: cap-confined-attachment-snapshot
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1115

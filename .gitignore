@@ -16,6 +16,7 @@ __pycache__/
 # directory, which has no tracked content.
 *.egg-info/
 /build/
+/lifetxt/_attachment_snapshot_helper
 
 # PyInstaller standalone binary output (#570). dist/schemas/ above is the
 # only tracked content anywhere under dist/.

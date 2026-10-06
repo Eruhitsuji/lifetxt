@@ -1060,3 +1060,11 @@ download・preview・provider・URL取得・archive
 保持する復旧コピー・backup先をまとめて保護してください。lifetxtはそれらを暗号化せず、
 OS-private evidence profileは権限の境界です。脅威モデル・コピー一覧・鍵と復旧・platform
 暗号化の運用手順は[保存時の機密性](at-rest-confidentiality.md)を参照してください。
+
+
+## 添付chunkのOS方針
+
+chunk読取りには[任意導入の安全なLinux helper](attachment-snapshot-helper.md)が必要です。
+この機能はLinuxを公式対象とし、他OSは当面非公式です。必要条件を確認できない場合は
+chunk取得を拒否します。既存response fieldsとoffset/limit clampを維持し、他の添付操作には
+既存方針が適用されます。

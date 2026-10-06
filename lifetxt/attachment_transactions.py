@@ -748,22 +748,26 @@ def read_attachment_chunk(
     """Return one bounded base64-ready attachment chunk with revision metadata."""
     import base64
 
-    config = config or {}
-    target, _root = resolve_attachment_target(
-        life_path, stored_path, root=_attachment_root(config, life_path)
+    from .attachment_snapshot import (
+        read_snapshot,
+        SnapshotLimit,
+        SnapshotStale,
+        SnapshotUnavailable,
     )
-    if not os.path.isfile(target):
-        raise AttachmentTransactionError(
-            "Attachment target is not a regular file: %s" % target
-        )
-    revision = attachment_revision(target)
-    if (
-        attachment_expected_revision not in (None, "")
-        and str(attachment_expected_revision) != revision
-    ):
-        raise AttachmentTransactionError(
-            "Attachment revision changed before chunk read."
-        )
+
+    config = config or {}
+    base = os.path.dirname(os.path.abspath(life_path))
+    root = os.path.abspath(_attachment_root(config, life_path))
+    raw = str(stored_path or "").strip()
+    if not raw:
+        raise AttachmentTransactionError("Attachment path must not be empty.")
+    candidate = raw.replace("\\", os.sep)
+    target = os.path.abspath(
+        candidate if os.path.isabs(candidate) else os.path.join(base, candidate)
+    )
+    relative = os.path.relpath(target, root)
+    if relative == os.pardir or relative.startswith(os.pardir + os.sep):
+        raise AttachmentTransactionError("Attachment path escapes the configured root.")
     settings = _attachment_settings(config)
     section = (
         config.get("attachments") if isinstance(config.get("attachments"), dict) else {}
@@ -775,19 +779,17 @@ def read_attachment_chunk(
         1, min(int(limit), settings["max_file_bytes"], remote_max, 1024 * 1024)
     )
     bounded_offset = max(0, int(offset))
-    size = os.path.getsize(target)
-    if size > settings["max_file_bytes"]:
-        raise AttachmentTransactionError(
-            "Attachment exceeds the configured file limit."
+    try:
+        snapshot = read_snapshot(
+            root, relative, settings["max_file_bytes"], attachment_expected_revision
         )
+    except (SnapshotLimit, SnapshotStale, SnapshotUnavailable) as exc:
+        raise AttachmentTransactionError(str(exc)) from None
+    revision = snapshot.revision
+    size = len(snapshot.data)
     if bounded_offset > size:
         raise AttachmentTransactionError("Attachment chunk offset exceeds file size.")
-    with open(target, "rb") as handle:
-        handle.seek(bounded_offset)
-        data = handle.read(bounded_limit)
-    latest = attachment_revision(target)
-    if latest != revision:
-        raise AttachmentTransactionError("Attachment changed during chunk read.")
+    data = snapshot.data[bounded_offset : bounded_offset + bounded_limit]
     next_offset = bounded_offset + len(data)
     return OrderedDict(
         (

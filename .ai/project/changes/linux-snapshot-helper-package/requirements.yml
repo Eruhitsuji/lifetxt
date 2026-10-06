@@ -1,0 +1,12 @@
+schema_version: 1
+requirements:
+- id: req-resource-reference-confined-read
+  statement: Explicitly build and install a pinned optional Linux helper without adding
+    a core dependency or runtime compiler.
+  acceptance_criteria:
+  - Build source preserved in sdist, machine binary excluded from pure wheel
+  - Fixed package-adjacent executable/manifest with SHA-256/protocol/arch/libc
+  - Linux x86_64 glibc build-time smoke and clean install
+  - EN/JA installation/trust/compatibility/deadline/disable runbook
+  owner: Eruhitsuji
+open_questions: []

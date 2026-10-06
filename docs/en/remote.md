@@ -374,3 +374,12 @@ encrypted tunnel. Bearer authentication and `--insecure-public` do not encrypt
 traffic. `serve`/`web` preserve the immediate peer by disabling Uvicorn proxy
 middleware; configure existing `remote.trusted_proxies` for TLS proxies.
 See [Web transport security](web-transport-security.md) for deployment and upgrade steps.
+
+
+## Attachment chunk platform policy
+
+Chunk reads require the [optional confined Linux helper](attachment-snapshot-helper.md).
+Linux is the official target; other OS are unofficial for this feature.
+Without verified prerequisites, chunk reads fail closed. Existing response
+fields and offset/limit clamping are preserved; other attachment operations
+retain their existing policies.

@@ -230,6 +230,216 @@
       },
       "type": "object"
     },
+    "remote": {
+      "properties": {
+        "principals": {
+          "oneOf": [
+            {
+              "items": {
+                "properties": {
+                  "disclosure_mode": {
+                    "default": "trusted",
+                    "enum": [
+                      "trusted",
+                      "restricted-resource"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "type": "array"
+            },
+            {
+              "additionalProperties": {
+                "properties": {
+                  "disclosure_mode": {
+                    "default": "trusted",
+                    "enum": [
+                      "trusted",
+                      "restricted-resource"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "type": "object"
+            }
+          ]
+        },
+        "resource_references": {
+          "additionalProperties": false,
+          "default": {
+            "contract_version": "1",
+            "enabled": false,
+            "enrolled_items": [],
+            "limits": {
+              "active_principal": 1,
+              "active_process": 2,
+              "chunk_bytes": 65536,
+              "deadline_seconds": 30,
+              "file_bytes": 10485760,
+              "rate_principal": 30,
+              "rate_process": 120
+            },
+            "metadata": {
+              "digest": false,
+              "label": false,
+              "mime": false,
+              "size": false
+            },
+            "store_path": null,
+            "workspace_id": null
+          },
+          "properties": {
+            "contract_version": {
+              "const": "1",
+              "default": "1"
+            },
+            "enabled": {
+              "default": false,
+              "type": "boolean"
+            },
+            "enrolled_items": {
+              "default": [],
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "attachment": {
+                    "maxLength": 4095,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "item_id": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "source_id": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "source_id",
+                  "item_id",
+                  "attachment"
+                ],
+                "type": "object"
+              },
+              "maxItems": 10000,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "limits": {
+              "additionalProperties": false,
+              "default": {
+                "active_principal": 1,
+                "active_process": 2,
+                "chunk_bytes": 65536,
+                "deadline_seconds": 30,
+                "file_bytes": 10485760,
+                "rate_principal": 30,
+                "rate_process": 120
+              },
+              "properties": {
+                "active_principal": {
+                  "default": 1,
+                  "maximum": 1,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "active_process": {
+                  "default": 2,
+                  "maximum": 2,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "chunk_bytes": {
+                  "default": 65536,
+                  "maximum": 65536,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "deadline_seconds": {
+                  "default": 30,
+                  "maximum": 30,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "file_bytes": {
+                  "default": 10485760,
+                  "maximum": 10485760,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "rate_principal": {
+                  "default": 30,
+                  "maximum": 30,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "rate_process": {
+                  "default": 120,
+                  "maximum": 120,
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              },
+              "type": "object"
+            },
+            "metadata": {
+              "additionalProperties": false,
+              "default": {
+                "digest": false,
+                "label": false,
+                "mime": false,
+                "size": false
+              },
+              "properties": {
+                "digest": {
+                  "default": false,
+                  "type": "boolean"
+                },
+                "label": {
+                  "default": false,
+                  "type": "boolean"
+                },
+                "mime": {
+                  "default": false,
+                  "type": "boolean"
+                },
+                "size": {
+                  "default": false,
+                  "type": "boolean"
+                }
+              },
+              "type": "object"
+            },
+            "store_path": {
+              "default": null,
+              "maxLength": 4095,
+              "minLength": 1,
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "workspace_id": {
+              "default": null,
+              "pattern": "^[0-9a-f]{64}$",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
     "reports": {
       "additionalProperties": {
         "additionalProperties": false,

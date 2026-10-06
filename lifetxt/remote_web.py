@@ -261,7 +261,11 @@ def install_remote_web():
                         current = principal_registry(app.state.config).get(
                             session.get("principal", {}).get("id")
                         )
-                        if not current or current.get("disabled"):
+                        if (
+                            not current
+                            or current.get("disabled")
+                            or current.get("disclosure_mode") == "restricted-resource"
+                        ):
                             app.state.remote_session_store.revoke(session_id)
                             raise RemoteAccessError(
                                 "SESSION_REVOKED",

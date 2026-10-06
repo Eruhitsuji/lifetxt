@@ -1,0 +1,24 @@
+{
+  "config_version": 1,
+  "default_workspace": "resources",
+  "workspaces": {
+    "resources": {
+      "sources": [{"path": "../minimal_life.txt", "writable": false}],
+      "collaboration": {"members": {"resource-reader": {"role": "owner"}}}
+    }
+  },
+  "remote": {
+    "enabled": false,
+    "browser_ui": false,
+    "principals": [{"id": "resource-reader", "role": "reader", "scopes": ["attachment:read"], "disclosure_mode": "restricted-resource", "token_env": "LIFETXT_RESOURCE_BEARER"}],
+    "resource_references": {
+      "enabled": false,
+      "contract_version": "1",
+      "workspace_id": "7870fd31c3d0f38f75593e51413bed93d25111608ff338283ae46106971d1c00",
+      "store_path": "/srv/lifetxt-private/bindings.sqlite",
+      "enrolled_items": [],
+      "metadata": {"label": false, "size": false, "mime": false, "digest": false},
+      "limits": {"file_bytes": 10485760, "chunk_bytes": 65536, "active_process": 2, "active_principal": 1, "rate_principal": 30, "rate_process": 120, "deadline_seconds": 30}
+    }
+  }
+}

@@ -1,0 +1,43 @@
+schema_version: 1
+change:
+  id: resource-reference-resolution-runtime
+  title: Current-authority descriptor resolver
+  status: implemented
+  change_type: Security
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1113
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1127
+  phase: integration-review
+scope:
+  in_scope:
+  - Approved scoped runtime implementation and verification
+  write_scope:
+  - lifetxt/resource_reference_resolution.py
+  - tests/test_resource_reference_resolution.py
+  - .ai/project/changes/resource-reference-resolution-runtime/**
+  - .ai/project/CAPABILITIES.yml (task entry)
+  - .ai/project/TRACEABILITY.yml (task entry)
+  proposed_runtime_write_scope:
+  - lifetxt/resource_reference_resolution.py
+  - tests/test_resource_reference_resolution.py
+  - .ai/project/changes/resource-reference-resolution-runtime/**
+  - .ai/project/TRACEABILITY.yml (task-specific entry only)
+  out_of_scope:
+  - Merge/release/deployment
+  - Stable reference reuse across process restarts
+  - Browser/provider/local/legacy consumer expansion
+  forbidden_scope:
+  - .ai/managed/**
+  - Existing attachment v1 schema changes
+  - New mandatory dependencies
+human_approvals_required:
+- Independent latest-head implementation/security and integration review
+- Merge Authority approval
+design_approval:
+  status: accepted
+  owner: Eruhitsuji
+  date: '2026-10-07'
+  record: 'Active session: explicit owner approval after concrete three-decision proposal;
+    recorded in task Issue body.'

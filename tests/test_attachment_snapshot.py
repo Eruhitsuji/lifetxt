@@ -47,6 +47,18 @@ class SnapshotSupervisorTests(unittest.TestCase):
     def read(self, **kwargs):
         return reader.read_snapshot(self.root, "file", 7, **kwargs)
 
+    def test_completion_event_and_private_source_continuity(self):
+        complete = threading.Event()
+        first = self.read(completed=complete)
+        self.assertTrue(complete.wait(1))
+        self.assertEqual(4, len(first.identity))
+        self.assertEqual(7, len(first.continuity))
+        self.file.write_bytes(b"BBBBBBB")
+        self.file.write_bytes(b"AAAAAAA")
+        restored = self.read()
+        self.assertEqual(first.revision, restored.revision)
+        self.assertNotEqual(first.continuity, restored.continuity)
+
     def test_single_snapshot_exact_digest(self):
         result = self.read()
         self.assertEqual(b"AAAAAAA", result.data)

@@ -1,0 +1,40 @@
+schema_version: 1
+change:
+  id: resource-reference-resolution
+  title: Refine restricted Remote-v2 resource-reference consumer before schema publication
+  status: proposed
+  change_type: Security
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1110
+  related_pull_request: null
+  target_release: null
+scope:
+  in_scope:
+    - Proposed EN/JA concrete consumer, envelopes, authorization and fixed limits
+    - Task-specific capability/traceability and six-file High change package
+  out_of_scope:
+    - Schema generation before explicit concrete-design approval
+    - Runtime resolver, binding persistence, endpoint, browser or configuration changes
+    - Format/provider/fetch or generic attachment sync
+    - Merge, release and deployment
+  write_scope:
+    - docs/en/resource-reference-resolution.md
+    - docs/ja/resource-reference-resolution.md
+    - .ai/project/changes/resource-reference-resolution/**
+    - .ai/project/CAPABILITIES.yml (new task entry only)
+    - .ai/project/TRACEABILITY.yml (new task chain only)
+  forbidden_scope:
+    - .ai/managed/**
+    - lifetxt/** (until concrete design approval and Ready)
+    - tests/** (until concrete design approval and Ready)
+    - dist/schemas/** (until concrete design approval and Ready)
+    - dependencies
+  shared_files:
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+human_approvals_required:
+  - Concrete consumer/envelope/authorization configuration acceptance before schemas
+  - Independent security/design and integration review on latest head
+  - Merge Authority approval

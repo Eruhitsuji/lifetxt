@@ -1,0 +1,50 @@
+schema_version: 1
+verification:
+  executed: []
+  acceptance_mapping:
+    - criterion: AC1
+      sections: 1, 2, 3
+      status: owner-approval-pending
+    - criterion: AC2
+      sections: 3, 4, 5, 6
+      status: proposed
+    - criterion: AC3
+      sections: 4, 5, 7
+      status: proposed
+    - criterion: AC4
+      sections: 3
+      status: proposed
+    - criterion: AC5
+      sections: 2, 3, 6
+      status: proposed
+    - criterion: AC6
+      sections: 8
+      status: blocked-by-concrete-approval
+  gaps:
+    - Concrete consumer/envelope/authorization acceptance pending; no schemas or matching schema tests added.
+    - No runtime resolver/delivery; offline examples do not prove authorization enforcement.
+    - Independent human design/security and integration reviews pending.
+review_ledger:
+  - reviewer: Codex implementer self-review
+    review_type: design-security-bilingual
+    target_commit: null
+    result: pending
+    finding_count: 0
+    completed_at: null
+  - reviewer: independent human owner
+    review_type: concrete-consumer-design-security-approval
+    target_commit: null
+    result: pending
+    finding_count: 0
+    completed_at: null
+  - reviewer: independent human Merge Authority
+    review_type: integration
+    target_commit: null
+    result: pending
+    finding_count: 0
+    completed_at: null
+release_evidence:
+  migration_notes: Proposal only; no configuration, schema, data or runtime change.
+  rollback_plan: Revert only this task's documentation/package/registry additions.
+  operations_evidence:
+    - No deployment, credentials, provider fetch or new capability advertisement.

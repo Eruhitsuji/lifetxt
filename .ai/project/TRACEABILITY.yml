@@ -2,6 +2,22 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-resource-reference-resolution-contract
+      capability_id: cap-resource-reference-resolution-contract
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1101
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1110
+      pull_request: null
+      tests_or_evidence:
+        - docs/en/resource-reference-resolution.md
+        - docs/ja/resource-reference-resolution.md
+        - .ai/project/changes/resource-reference-resolution/verification.yml
+      status: proposed
+      changed_files_or_scope:
+        - docs/en/resource-reference-resolution.md
+        - docs/ja/resource-reference-resolution.md
+        - .ai/project/changes/resource-reference-resolution/**
+        - .ai/project/CAPABILITIES.yml (task entry)
+        - .ai/project/TRACEABILITY.yml (task chain)
     - requirement_id: req-attachment-chunk-exact-byte-integrity
       capability_id: cap-confined-attachment-snapshot
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1101

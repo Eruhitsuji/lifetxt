@@ -18,7 +18,8 @@ capabilities:
     related_issues:
     - https://github.com/Eruhitsuji/lifetxt/issues/1116
     - https://github.com/Eruhitsuji/lifetxt/issues/1115
-    related_pull_requests: []
+    related_pull_requests:
+    - https://github.com/Eruhitsuji/lifetxt/pull/1119
     reuse_policy: Reuse attachment transactions and domain policy; no resolver or authority
       store.
   - id: cap-resource-reference-projection-contract

@@ -5,4 +5,5 @@ links:
   task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1116
   tests_or_evidence:
   - tests.test_native_attachment_snapshot
-  status: in_progress
+  status: implemented
+  pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1119

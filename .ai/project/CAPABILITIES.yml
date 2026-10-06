@@ -28,7 +28,8 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/1114
       - https://github.com/Eruhitsuji/lifetxt/issues/1125
       - https://github.com/Eruhitsuji/lifetxt/issues/1126
-    related_pull_requests: []
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/1127
     reuse_policy: Reuse approved schema, membership, item visibility, attachment policy and confined Linux snapshot reader. Identity index is not permission authority.
     notes: Fresh epoch at every startup; no stable restart IDs. TLS, helper/root/filesystem and no other generic listener are operator requirements. Independent latest-head human review pending.
   - id: cap-resource-reference-resolution-contract

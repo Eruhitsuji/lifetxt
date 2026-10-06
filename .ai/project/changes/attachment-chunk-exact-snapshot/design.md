@@ -1,0 +1,7 @@
+# Exact attachment chunks
+
+Existing path normalization is lexical to derive a root-relative internal locator, not proof of confinement. The native reader/supervisor verifies owned current root, regular-file association and size policy. Returned snapshot bytes determine full SHA-256, size, slice and EOF. No attachment_revision/getsize/path-based payload reopen in read_attachment_chunk. Existing ten-field shape and offset/limit clamps are retained; optional expected revision rejects mismatch. Source does not mutate. Web keeps its existing ATTACHMENT_CONTRACT/400 error wrapper; MCP direct dispatcher retains its exception contract. Static unavailable errors expose no new locator/digest/OS details.
+
+Linux is the official feature target; other OS unofficial. Missing helper, unsupported syscall/procfs/arch/libc/local-FS conditions or unsafe file/root is rejected with no fallback. This compatibility change was explicitly accepted in #1115. Native/supervisor dependencies are stacked reviewed tasks, not a second reader. Full snapshot cost O(configured cap), independent of returned chunk size; memory includes native and Python copies, max2 live slots. This fix does not implement new principal/resource reference authority or restricted consumer negotiation.
+
+Stack self-review added native-source version pin, sanitized child environment, native growth fixture and distribution smoke in their owning prerequisite PRs. This adapter PR adds the ABA/bounds regressions and accurate Web/MCP wrapper compatibility tests.

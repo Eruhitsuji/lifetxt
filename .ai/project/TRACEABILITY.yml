@@ -24,6 +24,9 @@ traceability:
         contents, including explicit empty strings. Valid datetime prefixes,
         inclusive bounds, 90-day defaults and configured timezone dates are tested.
         No new option or stricter accepted-date syntax is introduced.
+        CI repair: timezone fixtures use defaults.timezone, not a root timezone
+        key. Focused contracts pass under UTC, America/New_York and Asia/Tokyo
+        host timezones without weakening the configured-date assertions.
       release_or_deployment: Next normal release; compatibility-preserving bug fix.
       status: in_review
     - requirement_id: req-temporal-life-review-cross-surface
@@ -45,6 +48,9 @@ traceability:
         existing builder and subprocess feature tests. Uses fixed UTC clocks and
         native event fixtures, asserting counts, IDs, bounds and truncation;
         option spies wrap the real builder including custom ID-key forwarding.
+        CI repair: timezone fixtures use defaults.timezone, not a root timezone
+        key. Focused contracts pass under UTC, America/New_York and Asia/Tokyo
+        host timezones without weakening the configured-date assertions.
       release_or_deployment: Next normal release; test hardening only.
       status: in_review
     - requirement_id: req-core-cli-plot-contract-tests
@@ -66,6 +72,9 @@ traceability:
         PNG command routing without adding a second chart implementation.
         Real SVG output is parsed and compared to fixture-derived bucket counts;
         output files and inputs are isolated in temporary directories.
+        CI repair: timezone fixtures use defaults.timezone, not a root timezone
+        key. Focused contracts pass under UTC, America/New_York and Asia/Tokyo
+        host timezones without weakening the configured-date assertions.
       release_or_deployment: Next normal release; test hardening only.
       status: in_review
     - requirement_id: req-core-import-boundary-refactor

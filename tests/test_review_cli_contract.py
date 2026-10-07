@@ -21,7 +21,9 @@ class ReviewCliContractTests(CliContractTestCase):
         directory = self.stack.enter_context(tempfile.TemporaryDirectory())
         self.path = Path(directory) / "life.txt"
         self.config_path = Path(directory) / "config.json"
-        self.config_path.write_text('{"timezone": "UTC"}', encoding="utf-8")
+        self.config_path.write_text(
+            '{"defaults": {"timezone": "UTC"}}', encoding="utf-8"
+        )
         install_cli_timezone_context(cli)
         self.stack.enter_context(
             mock.patch(
@@ -147,7 +149,7 @@ class ReviewCliContractTests(CliContractTestCase):
 
     def test_adapter_forwards_bounds_project_limit_and_configured_id_key(self):
         self.config_path.write_text(
-            '{"timezone": "UTC", "ids": {"key": "uid"}}', encoding="utf-8"
+            '{"defaults": {"timezone": "UTC"}, "ids": {"key": "uid"}}', encoding="utf-8"
         )
         with mock.patch(
             "lifetxt.temporal_review.build_temporal_review", wraps=build_temporal_review

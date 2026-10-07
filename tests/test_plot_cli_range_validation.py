@@ -19,7 +19,7 @@ class PlotRangeValidationTests(CliContractTestCase):
         self.path = Path(directory) / "life.txt"
         install_cli_timezone_context(cli)
         config_path = Path(directory) / "config.json"
-        config_path.write_text('{"timezone": "UTC"}', encoding="utf-8")
+        config_path.write_text('{"defaults": {"timezone": "UTC"}}', encoding="utf-8")
         self.stack.enter_context(
             mock.patch("lifetxt.config.find_config_path", return_value=str(config_path))
         )
@@ -96,7 +96,9 @@ class PlotRangeValidationTests(CliContractTestCase):
 
     def test_default_bounds_follow_configured_timezone_date(self):
         config_path = self.path.with_name("config.json")
-        config_path.write_text('{"timezone": "Asia/Tokyo"}', encoding="utf-8")
+        config_path.write_text(
+            '{"defaults": {"timezone": "Asia/Tokyo"}}', encoding="utf-8"
+        )
         self.path.write_text(
             "[x] T Before done:2026-04-01\n"
             "[x] T First done:2026-04-02\n"

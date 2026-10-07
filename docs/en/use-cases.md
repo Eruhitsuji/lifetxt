@@ -2,6 +2,18 @@
 
 This guide describes practical setups using features currently implemented in lifetxt. See [CLI](./cli.md), [Web](./web.md), [AI/MCP](./ai-integration.md), and the [format specification](./life_txt_format_spec.md) for complete references.
 
+## Text-editor-only / restricted / offline environments
+
+Use life.txt as a plain-text task management format with only an approved text
+editor. No installation, CLI, Python, Git, Web UI, external SaaS, or network is
+needed. The [text-editor-only workflow](./text-editor-only-workflow.md) explains
+weekly files plus `someday.txt`, daily review, manual carry-forward with `[>]`,
+and literal text search. This is an optional operational pattern, not a format
+requirement; ordinary single-file use remains valid.
+
+The remaining sections describe software-based setups; their installation and
+maintenance commands are not prerequisites for the editor-only workflow.
+
 ## Common setup
 
 ```sh

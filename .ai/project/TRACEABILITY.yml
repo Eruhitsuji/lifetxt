@@ -8,10 +8,10 @@ traceability:
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1132
       pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1133
       changed_files_or_scope:
-        - tests/test_core_cli_entrypoint.py
+        - tests/test_coverage_core_cli_entrypoint.py
         - .ai/project/TRACEABILITY.yml
       tests_or_evidence:
-        - tests.test_core_cli_entrypoint
+        - tests.test_coverage_core_cli_entrypoint
         - tests.test_extra_cli (existing deterministic review selector success coverage)
         - targeted branch coverage for lifetxt/entrypoint.py and lifetxt/cli.py common-main routing
         - full unittest suite and minimal life.txt CLI smoke

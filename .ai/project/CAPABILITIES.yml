@@ -4316,7 +4316,8 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/1134
       - https://github.com/Eruhitsuji/lifetxt/issues/1136
       - https://github.com/Eruhitsuji/lifetxt/issues/1138
-    related_pull_requests: []
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/1139
     reuse_policy: >-
       Reuse the existing Core parser, date parser, elapsed parser and SVG/PNG
       helpers; keep plot presentation behavior compatible and validate public

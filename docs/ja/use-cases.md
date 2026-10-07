@@ -2,6 +2,18 @@
 
 この guide は、現在 lifetxt に実装済みの機能だけを使った実用 setup をまとめます。完全な reference は [CLI](./cli.md)、[Web](./web.md)、[AI/MCP](./ai-integration.md)、[format specification](./life_txt_format_spec.md) を参照してください。
 
+## テキストエディタのみ / 制限環境 / オフライン環境
+
+許可されたテキストエディタだけで、life.txtをプレーンテキストのタスク管理
+フォーマットとして使えます。インストール、CLI、Python、Git、Web UI、外部SaaS、
+ネットワークは不要です。[テキストエディタだけで使う運用ガイド](./text-editor-only-workflow.md)
+では、週次ファイルと `someday.txt`、日次レビュー、`[>]` を使った手動持ち越し、
+文字列検索を説明します。フォーマット要件ではなく任意の運用パターンであり、
+通常の単一ファイル運用も引き続き利用できます。
+
+以下の各節はソフトウェアを利用する運用例です。インストールや保守コマンドは、
+テキストエディタのみの運用には必要ありません。
+
 ## Common setup
 
 ```sh

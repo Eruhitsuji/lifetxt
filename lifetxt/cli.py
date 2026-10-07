@@ -11807,7 +11807,6 @@ def command_plot(args):
 
     config = _config(args)
     paths = _normalize_paths(getattr(args, "paths", None) or [], config) or ["life.txt"]
-    items, _ = _parse_life_inputs(paths, config)
 
     chart = getattr(args, "chart", "all")
     group = getattr(args, "group", "weekly")
@@ -11827,10 +11826,16 @@ def command_plot(args):
     today = timezone_today()
     start = (
         _parse_date_only(start_str)
-        if start_str
+        if start_str is not None
         else (today - datetime.timedelta(days=90))
     )
-    end = _parse_date_only(end_str) if end_str else today
+    end = _parse_date_only(end_str) if end_str is not None else today
+    if start is None:
+        raise ValueError("Invalid from date %r. Use YYYY-MM-DD." % (start_str,))
+    if end is None:
+        raise ValueError("Invalid to date %r. Use YYYY-MM-DD." % (end_str,))
+
+    items, _ = _parse_life_inputs(paths, config)
 
     if project_filter:
         items = [

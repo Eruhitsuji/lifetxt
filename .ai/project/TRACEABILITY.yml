@@ -6,7 +6,7 @@ traceability:
       capability_id: cap-core-import-boundary
       epic: https://github.com/Eruhitsuji/lifetxt/issues/882
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1132
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1135
       changed_files_or_scope:
         - tests/test_core_cli_entrypoint.py
         - .ai/project/TRACEABILITY.yml
@@ -17,14 +17,22 @@ traceability:
         - tests.test_extra_cli
         - tests.test_cli_error_recovery
         - tests.test_core_import_boundary
+        - MPLBACKEND=Agg python -m coverage run --branch -m unittest discover
+        - python scripts/check_coverage_regression.py .coverage-final.json scripts/coverage-baseline.json
         - python -m lifetxt check examples/minimal_life.txt
       notes: >-
         Test-only hardening of entrypoint routing, global-option forwarding,
         review selectors and legacy common-main error/exit contracts.
+        Python 3.12.14 / coverage 7.16.2 dev-only full-suite comparison against
+        main 804d35a8 measured entrypoint branches 70/104 (67.31%) before and
+        99/104 (95.19%) after. cli.py common-main/extraction lines 328-403
+        improved from 46/68 lines and 13/22 branches to 68/68 and 22/22.
+        Full suite passed 5259 tests with 382 skips; focused module passed
+        26 tests, including with the timezone wrapper installed first.
         Remaining review/plot subprocess measurement blind spots are tracked
         by https://github.com/Eruhitsuji/lifetxt/issues/1134.
       release_or_deployment: Next normal release; no public behavior change.
-      status: implemented
+      status: verified
     - requirement_id: req-resource-reference-dev-coverage-recovery
       capability_id: cap-resource-reference-runtime
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1128

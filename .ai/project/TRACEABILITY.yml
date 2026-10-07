@@ -21,7 +21,9 @@ traceability:
         Validate explicit plot date bounds immediately after reuse of the
         existing date parser so malformed values fail through the established
         CLI ValueError contract before chart processing, independent of input
-        contents. No new option or stricter accepted-date syntax is introduced.
+        contents, including explicit empty strings. Valid datetime prefixes,
+        inclusive bounds, 90-day defaults and configured timezone dates are tested.
+        No new option or stricter accepted-date syntax is introduced.
       release_or_deployment: Next normal release; compatibility-preserving bug fix.
       status: in_review
     - requirement_id: req-temporal-life-review-cross-surface
@@ -40,7 +42,9 @@ traceability:
       notes: >-
         Add deterministic public CLI adapter coverage for Temporal Life Review
         serialization, option forwarding and error contracts while retaining
-        existing builder and subprocess feature tests.
+        existing builder and subprocess feature tests. Uses fixed UTC clocks and
+        native event fixtures, asserting counts, IDs, bounds and truncation;
+        option spies wrap the real builder including custom ID-key forwarding.
       release_or_deployment: Next normal release; test hardening only.
       status: in_review
     - requirement_id: req-core-cli-plot-contract-tests
@@ -60,6 +64,8 @@ traceability:
         Add deterministic in-process plot CLI contracts for chart selection,
         grouping, inclusive bounds, project filtering, text/sparkline, SVG and
         PNG command routing without adding a second chart implementation.
+        Real SVG output is parsed and compared to fixture-derived bucket counts;
+        output files and inputs are isolated in temporary directories.
       release_or_deployment: Next normal release; test hardening only.
       status: in_review
     - requirement_id: req-core-import-boundary-refactor

@@ -4312,7 +4312,7 @@ capabilities:
     tests_or_evidence:
       - tests.test_plot_cli_range_validation
       - tests.test_plot_cli_contract
-      - tests.test_cui_extensions PlotPngFallbackTests
+      - tests.test_cui_extensions.PlotPngFallbackTests
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/1134
       - https://github.com/Eruhitsuji/lifetxt/issues/1136

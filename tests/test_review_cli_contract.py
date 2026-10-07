@@ -1,174 +1,224 @@
-"""Public review CLI contracts for temporal and error boundaries (#1137)."""
+"""Review adapter contracts for #1137, using the real temporal builder."""
 
+import datetime
 import json
-import os
+from pathlib import Path
 import tempfile
 from unittest import mock
 
-from lifetxt import entrypoint
+from lifetxt import cli, entrypoint
 from lifetxt.native_history import build_item_event
+from lifetxt.runtime_safety_v2 import install_cli_timezone_context
 from lifetxt.serializer import item_to_line
 from lifetxt.temporal_review import build_temporal_review
+from lifetxt.timezone_policy import clock_context
 from tests.test_core_cli_entrypoint import CliContractTestCase
 
 
-REVISION = "a" * 64
-
-
 class ReviewCliContractTests(CliContractTestCase):
-    def _make_file(self, text):
-        handle = tempfile.NamedTemporaryFile(
-            mode="w", suffix=".txt", delete=False, encoding="utf-8"
+    def setUp(self):
+        super().setUp()
+        directory = self.stack.enter_context(tempfile.TemporaryDirectory())
+        self.path = Path(directory) / "life.txt"
+        self.config_path = Path(directory) / "config.json"
+        self.config_path.write_text('{"timezone": "UTC"}', encoding="utf-8")
+        install_cli_timezone_context(cli)
+        self.stack.enter_context(
+            mock.patch(
+                "lifetxt.config.find_config_path", return_value=str(self.config_path)
+            )
         )
-        handle.write(text)
-        handle.flush()
-        handle.close()
-        self.addCleanup(lambda: os.path.exists(handle.name) and os.unlink(handle.name))
-        return handle.name
+        self.stack.enter_context(
+            clock_context(datetime.datetime(2026, 6, 30, tzinfo=datetime.timezone.utc))
+        )
+        events = [
+            build_item_event(
+                "done",
+                event,
+                "2026-06-10T%s:00:00Z" % hour,
+                sequence,
+                "TX-%d" % sequence,
+                "a" * 64,
+                **fields,
+            )
+            for sequence, event, hour, fields in (
+                (
+                    1,
+                    "created",
+                    "10",
+                    {"item_kind": "T", "item_title": "Done", "after_status": "[ ]"},
+                ),
+                (2, "completed", "12", {"before_status": "[ ]", "after_status": "[x]"}),
+            )
+        ]
+        self.history = "\n".join(item_to_line(event) for event in events) + "\n"
+        self.path.write_text(
+            "[x] T Done id:done project:p\n"
+            "[ ] T Open id:open project:p\n"
+            "[ ] T Other id:other project:q\n" + self.history,
+            encoding="utf-8",
+        )
 
-    def _run(self, *argv):
+    def run_review(self, *options, temporal=True):
         self.stdout.seek(0)
         self.stdout.truncate()
         self.stderr.seek(0)
         self.stderr.truncate()
-        code = entrypoint.main(list(argv))
-        return code, self.stdout.getvalue(), self.stderr.getvalue()
-
-    def _temporal_fixture(self):
-        created = build_item_event(
-            "task-1",
-            "created",
-            "2026-06-01T09:00:00Z",
-            1,
-            "ITX-task-1-000001",
-            REVISION,
-            item_kind="T",
-            item_title="Temporal task",
-            after_status="[ ]",
-        )
-        completed = build_item_event(
-            "task-1",
-            "completed",
-            "2026-06-02T10:00:00Z",
-            2,
-            "ITX-task-1-000002",
-            REVISION,
-            before_status="[ ]",
-            after_status="[x]",
-            completed_at="2026-06-02T10:00:00Z",
-        )
-        return self._make_file(
-            '[x] T "Temporal task" id:task-1 project:alpha\n'
-            + item_to_line(created)
-            + "\n"
-            + item_to_line(completed)
-            + "\n"
-        )
-
-    def test_temporal_text_json_jsonl_and_pretty_json_are_deterministic(self):
-        path = self._temporal_fixture()
-        base = (
-            "review",
-            path,
-            "--temporal",
-            "--since",
-            "2026-06-01",
-            "--until",
-            "2026-06-03",
-        )
-
-        code, out, err = self._run(*base)
-        self.assertEqual(0, code, err)
-        self.assertIn(
-            "Temporal Life Review: 2026-06-01T00:00:00+00:00 .. "
-            "2026-06-03T23:59:59.999999+00:00",
-            out,
-        )
-        self.assertIn("events: 2", out)
-        self.assertIn("completed: 1", out)
-
-        for fmt in ("json", "jsonl"):
-            with self.subTest(fmt=fmt):
-                code, out, err = self._run(*base, "--format", fmt)
-                self.assertEqual(0, code, err)
-                self.assertEqual(1, out.count("\n"))
-                payload = json.loads(out)
-                self.assertEqual("temporal-life-review-v1", payload["schema"])
-                self.assertEqual(2, payload["counts"]["events"])
-                self.assertEqual(1, payload["counts"]["completed"])
-
-        code, out, err = self._run(*base, "--format", "json", "--pretty")
-        self.assertEqual(0, code, err)
-        self.assertGreater(out.count("\n"), 1)
-        self.assertIn('\n  "period": {', out)
-        self.assertEqual(2, json.loads(out)["counts"]["events"])
-
-    def test_temporal_adapter_forwards_public_cli_options(self):
-        path = self._temporal_fixture()
-        with mock.patch(
-            "lifetxt.temporal_review.build_temporal_review",
-            wraps=build_temporal_review,
-        ) as delegate:
-            code, out, err = self._run(
-                "review",
-                path,
+        original = self.path.read_bytes(), self.config_path.read_bytes()
+        argv = ["review", str(self.path)]
+        if temporal:
+            argv += [
                 "--temporal",
                 "--since",
                 "2026-06-01",
                 "--until",
-                "2026-06-03",
-                "--limit",
-                "7",
+                "2026-06-30",
                 "--project",
-                "alpha",
-                "--format",
-                "json",
-            )
-
-        self.assertEqual(0, code, err)
-        self.assertEqual("temporal-life-review-v1", json.loads(out)["schema"])
-        delegate.assert_called_once()
-        _items = delegate.call_args.args[0]
-        self.assertGreaterEqual(len(_items), 1)
+                "p",
+            ]
+        result = entrypoint.main(argv + list(options))
         self.assertEqual(
+            (self.path.read_bytes(), self.config_path.read_bytes()), original
+        )
+        return result
+
+    def assert_period_and_counts(self, result):
+        self.assertEqual(result["schema"], "temporal-life-review-v1")
+        self.assertEqual(
+            result["period"],
+            {
+                "since": "2026-06-01T00:00:00+00:00",
+                "until": "2026-06-30T23:59:59.999999+00:00",
+            },
+        )
+        self.assertEqual(
+            result["counts"],
+            {
+                "events": 2,
+                "changed": 0,
+                "completed": 1,
+                "reopened_or_rescheduled": 0,
+                "carry_forward": 1,
+            },
+        )
+        self.assertEqual([row["target_id"] for row in result["completed"]], ["done"])
+        self.assertEqual(result["carry_forward"], [{"id": "open", "title": "Open"}])
+        self.assertEqual(self.stderr.getvalue(), "")
+
+    def test_json_and_jsonl_keep_real_builder_data_and_compact_output(self):
+        for fmt, pretty in (("json", False), ("jsonl", False), ("jsonl", True)):
+            with self.subTest(format=fmt, pretty=pretty):
+                self.assertEqual(
+                    self.run_review("--format", fmt, *(["--pretty"] if pretty else [])),
+                    0,
+                )
+                output = self.stdout.getvalue()
+                self.assertEqual(len(output.splitlines()), 1)
+                self.assert_period_and_counts(json.loads(output))
+
+    def test_pretty_json_retains_same_data(self):
+        self.assertEqual(self.run_review("--format", "json", "--pretty"), 0)
+        output = self.stdout.getvalue()
+        self.assertGreater(len(output.splitlines()), 1)
+        self.assertIn('\n  "schema":', output)
+        self.assert_period_and_counts(json.loads(output))
+
+    def test_text_displays_period_counts_and_limitations(self):
+        self.assertEqual(self.run_review(), 0)
+        output = self.stdout.getvalue()
+        self.assertIn(
+            "Temporal Life Review: 2026-06-01T00:00:00+00:00 .. 2026-06-30T23:59:59.999999+00:00",
+            output,
+        )
+        self.assertIn("  events: 2\n", output)
+        self.assertIn("  completed: 1\n", output)
+        self.assertIn("  carry forward: 1\n", output)
+        self.assertIn("  Limitations:", output)
+        self.assertEqual(self.stderr.getvalue(), "")
+
+    def test_complete_history_text_has_no_limitations_line(self):
+        self.path.write_text(
+            "[x] T Done id:done project:p\n" + self.history, encoding="utf-8"
+        )
+        self.assertEqual(self.run_review(), 0)
+        self.assertIn("  completed: 1\n", self.stdout.getvalue())
+        self.assertNotIn("Limitations:", self.stdout.getvalue())
+        self.assertEqual(self.stderr.getvalue(), "")
+
+    def test_adapter_forwards_bounds_project_limit_and_configured_id_key(self):
+        self.config_path.write_text(
+            '{"timezone": "UTC", "ids": {"key": "uid"}}', encoding="utf-8"
+        )
+        with mock.patch(
+            "lifetxt.temporal_review.build_temporal_review", wraps=build_temporal_review
+        ) as builder:
+            self.assertEqual(self.run_review("--format", "json", "--limit", "1"), 0)
+        builder.assert_called_once()
+        self.assertEqual(
+            builder.call_args.kwargs,
             {
                 "since": "2026-06-01",
-                "until": "2026-06-03",
+                "until": "2026-06-30",
                 "week": False,
-                "limit": 7,
-                "project": "alpha",
+                "limit": 1,
+                "project": "p",
+                "id_key": "uid",
+            },
+        )
+        self.assertEqual(
+            [item.title for item in builder.call_args.args[0]][:3],
+            ["Done", "Open", "Other"],
+        )
+        self.assertEqual(self.stderr.getvalue(), "")
+
+    def test_week_adapter_forwards_week_and_uses_frozen_date(self):
+        with mock.patch(
+            "lifetxt.temporal_review.build_temporal_review", wraps=build_temporal_review
+        ) as builder:
+            self.assertEqual(
+                self.run_review(
+                    "--temporal", "--week", "--format", "json", temporal=False
+                ),
+                0,
+            )
+        self.assertEqual(
+            builder.call_args.kwargs,
+            {
+                "since": None,
+                "until": None,
+                "week": True,
+                "limit": 100,
+                "project": None,
                 "id_key": "id",
             },
-            delegate.call_args.kwargs,
+        )
+        result = json.loads(self.stdout.getvalue())
+        self.assertEqual(result["period"]["since"], "2026-06-29T00:00:00+00:00")
+        self.assertEqual(result["period"]["until"], "2026-07-05T23:59:59.999999+00:00")
+        self.assertEqual(self.stderr.getvalue(), "")
+
+    def test_real_limit_bounds_events_and_reports_truncation(self):
+        self.assertEqual(self.run_review("--format", "json", "--limit", "1"), 0)
+        result = json.loads(self.stdout.getvalue())
+        self.assertEqual(result["counts"]["events"], 1)
+        self.assertEqual(result["counts"]["completed"], 0)
+        self.assertEqual(result["event_counts"], {"created": 1})
+        self.assertIn("event_limit_truncated", result["limitations"])
+        self.assertEqual(self.stderr.getvalue(), "")
+
+    def test_week_conflict_uses_public_error_contract(self):
+        self.assert_error(
+            self.run_review("--week"), "--week cannot be combined with --since/--until."
         )
 
-    def test_temporal_week_conflict_is_a_clean_cli_error(self):
-        path = self._make_file('[ ] T "Open task" id:task-1\n')
-        code, out, err = self._run(
-            "review",
-            path,
-            "--temporal",
-            "--week",
-            "--since",
-            "2026-06-01",
-        )
-        self.assertEqual(1, code)
-        self.assertEqual("", out)
-        self.assertIn("ERROR: --week cannot be combined with --since/--until.", err)
-        self.assertNotIn("Traceback", err)
-
-    def test_legacy_invalid_ranges_are_clean_public_cli_errors(self):
-        path = self._make_file("[x] T Done done:2026-06-10\n")
-        cases = (
-            (("--month", "2026-13"), "Invalid month"),
-            (("--from", "bad"), "Invalid from date"),
-            (("--to", "bad"), "Invalid to date"),
-        )
-        for args, expected in cases:
-            with self.subTest(args=args):
-                code, out, err = self._run("review", path, *args)
-                self.assertEqual(1, code)
-                self.assertEqual("", out)
-                self.assertIn("ERROR:", err)
-                self.assertIn(expected, err)
-                self.assertNotIn("Traceback", err)
+    def test_legacy_invalid_month_and_dates_use_public_error_contract(self):
+        for option, value, label, guidance in (
+            ("--month", "2026/06", "month", "YYYY-MM"),
+            ("--from", "2026-02-30", "from date", "YYYY-MM-DD"),
+            ("--to", "bad", "to date", "YYYY-MM-DD"),
+        ):
+            with self.subTest(option=option):
+                self.assert_error(
+                    self.run_review(option, value, temporal=False),
+                    "Invalid %s %r. Use %s." % (label, value, guidance),
+                )

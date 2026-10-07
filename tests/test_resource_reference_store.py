@@ -8,7 +8,11 @@ import threading
 import unittest
 from unittest.mock import patch
 
-from lifetxt.resource_reference_store import BindingStore, BindingUnavailable
+from lifetxt.resource_reference_store import (
+    BindingStore,
+    BindingUnavailable,
+    BindingBusy,
+)
 
 H = hashlib.sha256(b"fixture").hexdigest()
 
@@ -104,12 +108,36 @@ class BindingStoreTests(unittest.TestCase):
             BindingStore(self.path)
         self.assertIsNotNone(self.store.connection)
 
+    def test_busy_admission_never_partially_allocates(self):
+        self.store.lock.acquire()
+        try:
+            with self.assertRaises(BindingBusy):
+                self.enroll()
+        finally:
+            self.store.lock.release()
+        self.assertEqual(
+            0,
+            self.store.connection.execute("SELECT count(*) FROM bindings").fetchone()[
+                0
+            ],
+        )
+        self.assertEqual([], self.store.item_bindings("a" * 64, "b" * 64, "task"))
+        self.assertIsNotNone(self.enroll())
+
     def test_concurrent_unique_allocation(self):
         refs, errors = [], []
 
         def work(i):
             try:
-                refs.append(self.enroll(item=str(i)))
+                # Admission is deliberately bounded; loaded CI hosts may refuse
+                # a caller before it enters a transaction. Retry only that case.
+                for attempt in range(32):
+                    try:
+                        refs.append(self.enroll(item=str(i)))
+                        break
+                    except BindingBusy:
+                        if attempt == 31:
+                            raise
             except Exception as exc:
                 errors.append(exc)
 

@@ -336,7 +336,9 @@ class LegacyCliCommonMainTests(unittest.TestCase):
             result = self.cli.main(["today", "--config", "broken.json"])
 
         self.assertEqual(1, result)
-        self.assertEqual("ERROR: Could not read config: broken.json\n", error.getvalue())
+        self.assertEqual(
+            "ERROR: Could not read config: broken.json\\n", error.getvalue()
+        )
         command.assert_not_called()
 
     def test_workspace_resolution_failure_is_normalized_before_command_execution(self):

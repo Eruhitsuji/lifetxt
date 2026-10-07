@@ -2,6 +2,26 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-core-import-boundary-refactor
+      capability_id: cap-core-import-boundary
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/882
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1132
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1133
+      changed_files_or_scope:
+        - tests/test_core_cli_entrypoint.py
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests.test_core_cli_entrypoint
+        - tests.test_extra_cli (existing deterministic review selector success coverage)
+        - targeted branch coverage for lifetxt/entrypoint.py and lifetxt/cli.py common-main routing
+        - full unittest suite and minimal life.txt CLI smoke
+      release_or_deployment: next normal release
+      notes: >-
+        Test-only hardening of the existing Core CLI entrypoint/legacy dispatch
+        contract. Production CLI behavior, taxonomy/help coverage and per-command
+        handler semantics are unchanged; routing delegates are mocked to avoid
+        network, server, browser and real-user-file side effects.
+      status: implemented
     - requirement_id: req-resource-reference-dev-coverage-recovery
       capability_id: cap-resource-reference-runtime
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1128

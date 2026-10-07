@@ -2,6 +2,19 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-resource-reference-dev-coverage-recovery
+      capability_id: cap-resource-reference-runtime
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1128
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1131
+      changed_files_or_scope:
+        - tests/test_coverage_resource_reference_boundaries.py
+        - tests/test_resource_reference_store.py
+        - .ai/project/changes/resource-reference-coverage-recovery/**
+      tests_or_evidence:
+        - tests.test_coverage_resource_reference_boundaries
+        - tests.test_resource_reference_store
+        - .ai/project/changes/resource-reference-coverage-recovery/verification.yml
+      status: implemented
     - requirement_id: req-resource-explicit-fetch-policy
       capability_id: cap-external-resource-fetch-policy-contract
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1103

@@ -10,6 +10,7 @@ tests.
 import argparse
 import contextlib
 import datetime
+import importlib.util
 import io
 import sys
 import types
@@ -25,6 +26,28 @@ def _module_with_main(name, *, return_value=0, side_effect=None):
     delegate = mock.Mock(return_value=return_value, side_effect=side_effect)
     module.main = delegate
     return module, delegate
+
+def _load_unpatched_cli_module():
+    """Load cli.py under an isolated module name.
+
+    Legacy bootstrap intentionally wraps the live ``lifetxt.cli.main`` process
+    globally. Full-suite order must not decide whether these tests exercise the
+    raw common-main control flow, so load the same source file under a private
+    module name instead of mutating/reloading the live module.
+    """
+    from lifetxt import cli as live_cli
+
+    module_name = "lifetxt._core_cli_1132_test_subject"
+    spec = importlib.util.spec_from_file_location(module_name, live_cli.__file__)
+    if spec is None or spec.loader is None:
+        raise RuntimeError("Could not load isolated lifetxt.cli test subject.")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.modules.pop(module_name, None)
+    return module
 
 
 class CoreCliEntrypointDispatchTests(unittest.TestCase):
@@ -302,9 +325,7 @@ class CoreCliEntrypointDispatchTests(unittest.TestCase):
 class LegacyCliCommonMainTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        from lifetxt import cli
-
-        cls.cli = cli
+        cls.cli = _load_unpatched_cli_module()
 
     def test_missing_config_and_workspace_values_preserve_exit_one(self):
         cases = (

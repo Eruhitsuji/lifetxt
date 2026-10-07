@@ -2,6 +2,29 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-core-import-boundary-refactor
+      capability_id: cap-core-import-boundary
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/882
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1132
+      pull_request: null
+      changed_files_or_scope:
+        - tests/test_core_cli_entrypoint.py
+        - .ai/project/TRACEABILITY.yml
+        - .ai/project/CAPABILITIES.yml
+      tests_or_evidence:
+        - tests.test_core_cli_entrypoint
+        - tests.test_cli_taxonomy
+        - tests.test_extra_cli
+        - tests.test_cli_error_recovery
+        - tests.test_core_import_boundary
+        - python -m lifetxt check examples/minimal_life.txt
+      notes: >-
+        Test-only hardening of entrypoint routing, global-option forwarding,
+        review selectors and legacy common-main error/exit contracts.
+        Remaining review/plot subprocess measurement blind spots are tracked
+        by https://github.com/Eruhitsuji/lifetxt/issues/1134.
+      release_or_deployment: Next normal release; no public behavior change.
+      status: implemented
     - requirement_id: req-resource-reference-dev-coverage-recovery
       capability_id: cap-resource-reference-runtime
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1128

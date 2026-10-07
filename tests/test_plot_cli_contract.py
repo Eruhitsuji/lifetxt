@@ -1,302 +1,256 @@
-"""Deterministic plot CLI chart/output contracts (#1138)."""
+"""Deterministic public plot data/output contracts for #1138."""
 
+import datetime
 import os
+from pathlib import Path
 import tempfile
 from unittest import mock
+import xml.etree.ElementTree as ET
 
 from lifetxt import cli, entrypoint
+from lifetxt.runtime_safety_v2 import install_cli_timezone_context
+from lifetxt.timezone_policy import clock_context
 from tests.test_core_cli_entrypoint import CliContractTestCase
 
 
-PLOT_SOURCE = (
-    '[x] T "Alpha first" done:2026-06-01 project:alpha due:2026-06-01\n'
-    '[x] T "Alpha second" done:2026-06-07 project:alpha due:2026-06-30\n'
-    '[x] T "Beta task" done:2026-06-08 project:beta do:2026-06-08\n'
-    '[x] H "Stretch" done:2026-06-01 project:alpha\n'
-    '[x] H "Stretch" done:2026-06-02 project:alpha\n'
-    '[N] J "Mood one" mood:happy on:2026-06-01 project:alpha\n'
-    '[N] J "Mood two" mood:calm on:2026-06-08 project:beta\n'
-    '[x] T "Timed alpha" done:2026-06-15 elapsed:90m project:alpha\n'
-    '[x] T "Timed beta" done:2026-06-15 elapsed:30m project:beta\n'
+FIXTURE = (
+    "[x] T First done:2026-06-01 project:p elapsed:1h30m\n"
+    "[x] T Middle done:2026-06-10 project:p\n"
+    "[x] T Other done:2026-06-10 project:q elapsed:30m\n"
+    "[x] T Last done:2026-06-30 project:p\n"
+    "[x] T Before done:2026-05-31 project:p\n"
+    "[x] T After done:2026-07-01 project:p\n"
+    "[ ] T Open project:p\n"
+    '[x] H "Read & Learn" done:2026-06-01 done:2026-06-10 done:2026-07-01 project:p\n'
+    "[ ] H Walk project:p\n"
+    "[N] J First created:2026-06-01 mood:happy project:p\n"
+    "[N] J Last created:2026-06-30 mood:calm project:p\n"
+    "[N] J Undated mood:happy project:p\n"
+    "[N] J Outside created:2026-07-01 mood:sad project:p\n"
+    "[ ] E Plan due:2026-06-01 do:2026-06-10 project:p\n"
+    "[ ] D Last due:2026-06-30 project:p\n"
+    "[ ] D Outside due:2026-07-01 project:p\n"
 )
 
 
 class PlotCliContractTests(CliContractTestCase):
-    def _make_file(self, text=PLOT_SOURCE):
-        handle = tempfile.NamedTemporaryFile(
-            mode="w", suffix=".txt", delete=False, encoding="utf-8"
+    def setUp(self):
+        super().setUp()
+        directory = self.stack.enter_context(tempfile.TemporaryDirectory())
+        self.path = Path(directory) / "life.txt"
+        self.path.write_text(FIXTURE, encoding="utf-8")
+        self.config_path = Path(directory) / "config.json"
+        self.config_path.write_text('{"timezone": "UTC"}', encoding="utf-8")
+        install_cli_timezone_context(cli)
+        self.stack.enter_context(
+            mock.patch(
+                "lifetxt.config.find_config_path", return_value=str(self.config_path)
+            )
         )
-        handle.write(text)
-        handle.flush()
-        handle.close()
-        self.addCleanup(lambda: os.path.exists(handle.name) and os.unlink(handle.name))
-        return handle.name
+        self.stack.enter_context(
+            clock_context(datetime.datetime(2026, 6, 30, tzinfo=datetime.timezone.utc))
+        )
+        self.stack.enter_context(
+            mock.patch.object(cli.os, "get_terminal_size", side_effect=OSError)
+        )
+        self.expected = {
+            "Tasks Completed (weekly)": {"2026-W23": 1, "2026-W24": 2, "2026-W27": 1},
+            "Habit Completions (total, 2026-06-01 to 2026-06-30)": {"Read & Learn": 2},
+            "Mood Distribution (2026-06-01 to 2026-06-30)": {"calm": 1, "happy": 2},
+            "Elapsed Time by Project": {"p": 90, "q": 30},
+            "Deadline Density (weekly)": {"2026-W23": 1, "2026-W24": 1, "2026-W27": 1},
+        }
 
-    def _run(self, *argv):
+    def run_plot(self, *options):
         self.stdout.seek(0)
         self.stdout.truncate()
         self.stderr.seek(0)
         self.stderr.truncate()
-        code = entrypoint.main(list(argv))
-        return code, self.stdout.getvalue(), self.stderr.getvalue()
-
-    def test_chart_families_render_fixture_derived_values(self):
-        path = self._make_file()
-        cases = (
-            ("tasks", ("Tasks Completed (daily)", "2026-06-01", "2026-06-08")),
-            ("habits", ("Habit Completions", "Stretch", "2")),
-            ("mood", ("Mood Distribution", "happy", "calm")),
-            ("elapsed", ("Elapsed Time by Project", "alpha", "1h30m", "beta", "30m")),
-            ("deadlines", ("Deadline Density (daily)", "2026-06-01", "2026-06-30")),
-        )
-        for chart, expected in cases:
-            with self.subTest(chart=chart):
-                code, out, err = self._run(
-                    "plot",
-                    path,
-                    "--chart",
-                    chart,
-                    "--group",
-                    "daily",
-                    "--from",
-                    "2026-06-01",
-                    "--to",
-                    "2026-06-30",
-                    "--width",
-                    "70",
-                )
-                self.assertEqual(0, code, err)
-                for token in expected:
-                    self.assertIn(token, out)
-
-    def test_task_grouping_daily_weekly_and_monthly(self):
-        path = self._make_file(
-            "[x] T A done:2026-06-01\n"
-            "[x] T B done:2026-06-07\n"
-            "[x] T C done:2026-06-08\n"
-        )
-        cases = (
-            ("daily", ("2026-06-01", "2026-06-07", "2026-06-08")),
-            ("weekly", ("2026-W23", "2026-W24")),
-            ("monthly", ("2026-06",)),
-        )
-        for group, expected in cases:
-            with self.subTest(group=group):
-                code, out, err = self._run(
-                    "plot",
-                    path,
-                    "--chart",
-                    "tasks",
-                    "--group",
-                    group,
-                    "--from",
-                    "2026-06-01",
-                    "--to",
-                    "2026-06-30",
-                    "--width",
-                    "70",
-                )
-                self.assertEqual(0, code, err)
-                for token in expected:
-                    self.assertIn(token, out)
-
-        code, out, err = self._run(
-            "plot",
-            path,
-            "--chart",
-            "tasks",
-            "--group",
-            "weekly",
-            "--from",
-            "2026-06-01",
-            "--to",
-            "2026-06-30",
-            "--width",
-            "70",
-        )
-        self.assertEqual(0, code, err)
-        week_23 = next(line for line in out.splitlines() if "2026-W23" in line)
-        week_24 = next(line for line in out.splitlines() if "2026-W24" in line)
-        self.assertTrue(week_23.rstrip().endswith("2"))
-        self.assertTrue(week_24.rstrip().endswith("1"))
-
-    def test_range_is_inclusive_at_both_boundaries(self):
-        path = self._make_file(
-            "[x] T Start done:2026-06-01\n"
-            "[x] T Middle done:2026-06-15\n"
-            "[x] T End done:2026-06-30\n"
-        )
-        code, out, err = self._run(
-            "plot",
-            path,
-            "--chart",
-            "tasks",
-            "--group",
-            "daily",
-            "--from",
-            "2026-06-01",
-            "--to",
-            "2026-06-30",
-            "--width",
-            "70",
-        )
-        self.assertEqual(0, code, err)
-        self.assertIn("2026-06-01", out)
-        self.assertIn("2026-06-15", out)
-        self.assertIn("2026-06-30", out)
-
-    def test_project_filter_applies_before_all_chart_families(self):
-        path = self._make_file()
-        code, out, err = self._run(
-            "plot",
-            path,
-            "--chart",
-            "all",
-            "--project",
-            "alpha",
-            "--from",
-            "2026-06-01",
-            "--to",
-            "2026-06-30",
-            "--width",
-            "70",
-        )
-        self.assertEqual(0, code, err)
-        self.assertIn("happy", out)
-        self.assertNotIn("calm", out)
-        self.assertIn("alpha", out)
-        self.assertNotIn("beta", out)
-
-    def test_text_and_sparkline_outputs_are_deterministic_for_data_and_empty_input(self):
-        path = self._make_file("[x] T A done:2026-06-01\n[x] T B done:2026-06-08\n")
-        code, out, err = self._run(
-            "plot",
-            path,
-            "--chart",
-            "tasks",
-            "--group",
-            "weekly",
-            "--from",
-            "2026-06-01",
-            "--to",
-            "2026-06-30",
-            "--width",
-            "50",
-            "--sparkline",
-        )
-        self.assertEqual(0, code, err)
-        self.assertIn("## Tasks Completed (weekly)", out)
-        self.assertIn("## Sparklines", out)
-        self.assertIn("Tasks:", out)
-        self.assertNotIn("(empty)", out)
-
-        empty = self._make_file("")
-        code, out, err = self._run(
-            "plot",
-            empty,
-            "--chart",
-            "tasks",
-            "--from",
-            "2026-06-01",
-            "--to",
-            "2026-06-30",
-            "--width",
-            "50",
-            "--sparkline",
-        )
-        self.assertEqual(0, code, err)
-        self.assertIn("## Sparklines", out)
-        self.assertIn("Tasks:     (empty)", out)
-
-    def test_empty_svg_is_valid_and_reports_no_plot_data(self):
-        path = self._make_file("")
-        code, out, err = self._run(
-            "plot",
-            path,
-            "--chart",
-            "tasks",
-            "--from",
-            "2026-06-01",
-            "--to",
-            "2026-06-30",
-            "--format",
-            "svg",
-        )
-        self.assertEqual(0, code, err)
-        self.assertIn('<svg xmlns="http://www.w3.org/2000/svg"', out)
-        self.assertIn("No plot data.", out)
-
-    def test_svg_output_can_be_written_to_a_file(self):
-        path = self._make_file("[x] T Done done:2026-06-10\n")
-        with tempfile.TemporaryDirectory() as tmp:
-            output = os.path.join(tmp, "plot.svg")
-            code, out, err = self._run(
+        original = self.path.read_bytes(), self.config_path.read_bytes()
+        result = entrypoint.main(
+            [
                 "plot",
-                path,
-                "--chart",
-                "tasks",
+                str(self.path),
                 "--from",
                 "2026-06-01",
                 "--to",
                 "2026-06-30",
-                "--format",
-                "svg",
-                "-o",
-                output,
-            )
-            self.assertEqual(0, code, err)
-            self.assertEqual("", out)
-            with open(output, encoding="utf-8") as handle:
-                svg = handle.read()
-        self.assertIn("<svg", svg)
-        self.assertIn("Tasks Completed (weekly)", svg)
-
-    def test_png_requires_output_path_at_the_command_boundary(self):
-        path = self._make_file("[x] T Done done:2026-06-10\n")
-        code, out, err = self._run(
-            "plot",
-            path,
-            "--chart",
-            "tasks",
-            "--from",
-            "2026-06-01",
-            "--to",
-            "2026-06-30",
-            "--format",
-            "png",
+                *options,
+            ]
         )
-        self.assertEqual(1, code)
-        self.assertEqual("", out)
-        self.assertEqual("ERROR: --format png requires -o/--output.\n", err)
-
-    def test_png_command_delegates_rendering_with_semantic_plot_data(self):
-        path = self._make_file("[x] T Done done:2026-06-10\n")
-        with tempfile.TemporaryDirectory() as tmp:
-            output = os.path.join(tmp, "plot.png")
-            with mock.patch.object(cli, "_plot_data_to_png") as renderer:
-                code, out, err = self._run(
-                    "plot",
-                    path,
-                    "--chart",
-                    "tasks",
-                    "--group",
-                    "daily",
-                    "--from",
-                    "2026-06-01",
-                    "--to",
-                    "2026-06-30",
-                    "--format",
-                    "png",
-                    "-o",
-                    output,
-                )
-
-        self.assertEqual(0, code, err)
-        self.assertEqual("", out)
-        renderer.assert_called_once()
-        plot_data, output_path = renderer.call_args.args
-        self.assertEqual(output, output_path)
         self.assertEqual(
-            {"2026-06-10": 1},
-            dict(plot_data["Tasks Completed (daily)"]),
+            (self.path.read_bytes(), self.config_path.read_bytes()), original
         )
+        return result
+
+    def svg_data(self, output):
+        root = ET.fromstring(output)
+        self.assertEqual(root.tag, "{http://www.w3.org/2000/svg}svg")
+        result = {}
+        section = None
+        label = None
+        for element in root:
+            if element.tag != "{http://www.w3.org/2000/svg}text":
+                continue
+            if element.get("class") == "section":
+                section = element.text
+                result[section] = {}
+            elif element.get("class") == "axis":
+                result[section][label] = int(element.text)
+            elif section is not None and element.get("class") is None:
+                label = element.text
+        return result
+
+    def test_all_chart_families_and_selection_render_fixture_values(self):
+        for chart, title in zip(
+            ("tasks", "habits", "mood", "elapsed", "deadlines", "all"),
+            (*self.expected, None),
+        ):
+            with self.subTest(chart=chart):
+                self.assertEqual(self.run_plot("--chart", chart, "--format", "svg"), 0)
+                expected = (
+                    self.expected if title is None else {title: self.expected[title]}
+                )
+                self.assertEqual(self.svg_data(self.stdout.getvalue()), expected)
+                self.assertEqual(self.stderr.getvalue(), "")
+
+    def test_task_and_deadline_buckets_and_inclusive_bounds(self):
+        for group, tasks, deadlines in (
+            (
+                "daily",
+                {"2026-06-01": 1, "2026-06-10": 2, "2026-06-30": 1},
+                {"2026-06-01": 1, "2026-06-10": 1, "2026-06-30": 1},
+            ),
+            (
+                "weekly",
+                {"2026-W23": 1, "2026-W24": 2, "2026-W27": 1},
+                {"2026-W23": 1, "2026-W24": 1, "2026-W27": 1},
+            ),
+            ("monthly", {"2026-06": 4}, {"2026-06": 3}),
+        ):
+            for chart, title, values in (
+                ("tasks", "Tasks Completed", tasks),
+                ("deadlines", "Deadline Density", deadlines),
+            ):
+                with self.subTest(chart=chart, group=group):
+                    self.assertEqual(
+                        self.run_plot(
+                            "--chart", chart, "--group", group, "--format", "svg"
+                        ),
+                        0,
+                    )
+                    self.assertEqual(
+                        self.svg_data(self.stdout.getvalue()),
+                        {"%s (%s)" % (title, group): values},
+                    )
+                    self.assertEqual(self.stderr.getvalue(), "")
+
+    def test_project_filter_applies_to_real_chart_data(self):
+        self.assertEqual(self.run_plot("--project", "p", "--format", "svg"), 0)
+        expected = dict(self.expected)
+        expected["Tasks Completed (weekly)"] = {
+            "2026-W23": 1,
+            "2026-W24": 1,
+            "2026-W27": 1,
+        }
+        expected["Elapsed Time by Project"] = {"p": 90}
+        self.assertEqual(self.svg_data(self.stdout.getvalue()), expected)
+        self.assertEqual(self.stderr.getvalue(), "")
+
+    def test_text_width_and_auto_detection_fallback(self):
+        for width, bars in ((40, 10), (60, 30), (200, 40), (0, 40)):
+            with self.subTest(width=width):
+                self.assertEqual(
+                    self.run_plot(
+                        "--chart", "tasks", "--group", "monthly", "--width", str(width)
+                    ),
+                    0,
+                )
+                self.assertEqual(
+                    self.stdout.getvalue(),
+                    "\n## Tasks Completed (monthly)\n  2026-06      %s 4\n\n"
+                    % ("#" * bars),
+                )
+                self.assertEqual(self.stderr.getvalue(), "")
+        with mock.patch.object(
+            cli.os, "get_terminal_size", return_value=os.terminal_size((50, 20))
+        ):
+            self.assertEqual(self.run_plot("--chart", "tasks", "--group", "monthly"), 0)
+        self.assertIn("#" * 20 + " 4\n", self.stdout.getvalue())
+
+    def test_text_all_charts_has_counts_and_formatted_elapsed(self):
+        self.assertEqual(self.run_plot("--width", "40"), 0)
+        output = self.stdout.getvalue()
+        for title in self.expected:
+            self.assertIn("## " + title + "\n", output)
+        self.assertIn("2026-W24     ########## 2\n", output)
+        self.assertIn("calm         #####..... 1\n", output)
+        self.assertIn("happy        ########## 2\n", output)
+        self.assertIn("p              ########## 1h30m\n", output)
+        self.assertIn("q              ###....... 30m\n", output)
+        self.assertEqual(self.stderr.getvalue(), "")
+
+    def test_sparklines_show_fixture_trends_and_empty_input(self):
+        self.assertEqual(self.run_plot("--sparkline", "--width", "40"), 0)
+        output = self.stdout.getvalue()
+        self.assertIn("  Tasks:     ▄█▄  (1..2)\n", output)
+        self.assertIn("  Habits:    ██  (1..1)\n", output)
+        self.assertIn("  Deadlines: ███  (1..1)\n", output)
+        self.path.write_text("", encoding="utf-8")
+        self.assertEqual(self.run_plot("--sparkline", "--width", "40"), 0)
+        self.assertEqual(
+            self.stdout.getvalue(),
+            "\n## Sparklines\n  Tasks:     (empty)\n  Habits:    (empty)\n  Deadlines: (empty)\n\n",
+        )
+        self.assertEqual(self.stderr.getvalue(), "")
+
+    def test_empty_text_and_svg_keep_no_data_contract(self):
+        self.path.write_text("", encoding="utf-8")
+        self.assertEqual(self.run_plot(), 0)
+        self.assertEqual(self.stdout.getvalue(), "\n")
+        self.assertEqual(self.run_plot("--format", "svg"), 0)
+        output = self.stdout.getvalue()
+        self.assertEqual(self.svg_data(output), {})
+        self.assertIn("No plot data.", output)
+        self.assertEqual(self.stderr.getvalue(), "")
+
+    def test_svg_output_writes_only_requested_temporary_file(self):
+        output_path = self.path.with_name("chart.svg")
+        self.assertEqual(self.run_plot("--format", "svg", "-o", str(output_path)), 0)
+        self.assertEqual(
+            self.svg_data(output_path.read_text(encoding="utf-8")), self.expected
+        )
+        self.assertEqual(self.stdout.getvalue(), "")
+        self.assertEqual(self.stderr.getvalue(), "")
+        self.assertEqual(
+            {path.name for path in self.path.parent.iterdir()},
+            {"life.txt", "config.json", "chart.svg"},
+        )
+
+    def test_png_requires_output_for_empty_and_populated_input(self):
+        for content in (FIXTURE, ""):
+            with self.subTest(empty=not content):
+                self.path.write_text(content, encoding="utf-8")
+                with mock.patch.object(cli, "_plot_data_to_png") as renderer:
+                    self.assert_error(
+                        self.run_plot("--format", "png"),
+                        "--format png requires -o/--output.",
+                    )
+                renderer.assert_not_called()
+
+    def test_png_routes_real_aggregate_data_and_dependency_errors(self):
+        output_path = str(self.path.with_name("chart.png"))
+        with mock.patch.object(cli, "_plot_data_to_png") as renderer:
+            self.assertEqual(self.run_plot("--format", "png", "-o", output_path), 0)
+        renderer.assert_called_once_with(self.expected, output_path)
+        self.assertEqual(self.stdout.getvalue(), "")
+        self.assertEqual(self.stderr.getvalue(), "")
+        message = (
+            "--format png requires matplotlib. Install matplotlib or use --format svg."
+        )
+        with mock.patch.object(
+            cli, "_plot_data_to_png", side_effect=ValueError(message)
+        ):
+            self.assert_error(
+                self.run_plot("--format", "png", "-o", output_path), message
+            )

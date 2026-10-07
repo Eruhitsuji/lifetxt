@@ -337,7 +337,7 @@ class LegacyCliCommonMainTests(unittest.TestCase):
 
         self.assertEqual(1, result)
         self.assertEqual(
-            "ERROR: Could not read config: broken.json\\n", error.getvalue()
+            "ERROR: Could not read config: broken.json\n", error.getvalue()
         )
         command.assert_not_called()
 

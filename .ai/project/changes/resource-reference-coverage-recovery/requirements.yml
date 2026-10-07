@@ -1,0 +1,15 @@
+schema_version: 1
+requirements:
+  - id: req-resource-reference-dev-coverage-recovery
+    kind: ADDED
+    statement: Verify resource-reference validation and identity-store boundaries in the dev-only coverage environment without weakening existing compatibility evidence.
+    owner: Eruhitsuji
+    acceptance_criteria:
+      - Dependency-free tests verify strict envelopes, single-worker operator policy, principal isolation and fail-closed binding behavior.
+      - Python 3.12 dev-only full suite passes and branch coverage meets the unchanged 59.00 percent minimum.
+      - Concurrent enrollment checks retry only bounded BindingBusy admission and still require all eight unique allocations; held-lock refusal leaves no partial registration.
+      - Existing optional-Web skips and HTTP tests remain intact.
+      - Recovery PR links Incident 1128 and retains cause and verification evidence.
+      - Incident closure and normal merges await successful full main compatibility after human merge.
+    constraints: [No runtime/API changes, no dependency additions, no threshold reduction, no removed checks]
+open_questions: []

@@ -1,0 +1,121 @@
+schema_version: 1
+verification:
+  executed:
+  - type: pre-change-reproduction
+    command: MPLBACKEND=Agg python -m coverage run --branch -m unittest discover;
+      python -m coverage json; python scripts/check_coverage_regression.py coverage.json
+      scripts/coverage-baseline.json
+    commit: f69639c6d19f13e85dab5d7afb35513cfacadeb4
+    status: reproduced
+    result: 5214 tests passed, skipped=384; 13238/22550 branches (58.7051 percent)
+      fails unchanged 59.00 percent minimum.
+    executed_at: '2026-10-07'
+  - type: final-dev-only-coverage
+    command: MPLBACKEND=Agg python -m coverage run --branch -m unittest discover;
+      python -m coverage json; python scripts/check_coverage_regression.py coverage.json
+      scripts/coverage-baseline.json
+    status: passed
+    result: 5233 tests passed in 307.333s, skipped=384; 13367/22614 branches (59.1094
+      percent) meets unchanged 59.00 percent minimum.
+    executed_at: '2026-10-07'
+  - type: dev-only-targeted
+    command: python -m unittest tests.test_coverage_resource_reference_boundaries
+      tests.test_resource_reference_policy tests.test_resource_reference_store tests.test_resource_reference_resolution
+      tests.test_remote_resource_download
+    status: passed
+    result: 71 tests passed, skipped=14 optional HTTP cases.
+    executed_at: '2026-10-07'
+  - type: Web-targeted
+    command: python -m unittest tests.test_coverage_resource_reference_boundaries
+      tests.test_resource_reference_policy tests.test_resource_reference_store tests.test_resource_reference_resolution
+      tests.test_remote_resource_download
+    status: passed
+    result: 71 tests passed, no skips, including real Uvicorn socket adapter.
+    executed_at: '2026-10-07'
+  - type: controlled-contention
+    command: BindingStoreTests.test_concurrent_unique_allocation with _quota wrapped
+      in a 0.12-second delay; fresh store per invocation
+    status: passed
+    result: Original test reproduced failure; repaired test passed under identical
+      contention. Final source passed 5 consecutive Web-environment repetitions, 8
+      unique allocations each.
+    executed_at: '2026-10-07'
+  - type: held-lock-regression
+    command: python -m unittest tests.test_resource_reference_store.BindingStoreTests.test_busy_admission_never_partially_allocates
+    status: passed
+    result: 'Included in final full and targeted runs: BindingBusy refusal preserves
+      zero bindings, then enrollment succeeds after lock release.'
+    executed_at: '2026-10-07'
+  - type: metadata-and-CI-contract
+    command: python -m unittest tests.test_coverage_resource_reference_boundaries
+      tests.test_traceability_gate tests.test_change_package_closeout tests.test_ci_recovery_contract
+      tests.test_ci_path_routing tests.test_release_policy
+    status: passed
+    result: 61 tests passed with legacy initialization from the resource boundary
+      module.
+    executed_at: '2026-10-07'
+  - type: static
+    command: ruff format --check tests/test_coverage_resource_reference_boundaries.py
+      tests/test_resource_reference_store.py; ruff check tests/test_coverage_resource_reference_boundaries.py
+      tests/test_resource_reference_store.py; mypy --follow-imports=skip --ignore-missing-imports
+      lifetxt/diagnostic_contract.py
+    status: passed
+    result: Formatting/lint passed for both changed Python files; stable diagnostic
+      contract mypy passed.
+    executed_at: '2026-10-07'
+  - type: integration
+    command: python -m lifetxt check examples/minimal_life.txt
+    status: passed
+    result: 'OK: 10 items.'
+    executed_at: '2026-10-07'
+  - type: routing-and-YAML
+    command: yaml.safe_load on changed YAML; compatibility_checks([tests/test_coverage_resource_reference_boundaries.py]);
+      git diff --check
+    status: passed
+    result: YAML parses; existing routing selects both no-Web and dev-only coverage;
+      no whitespace errors.
+    executed_at: '2026-10-07'
+  environment:
+    dev_only: Linux, Bash, Python 3.12.14, pip install -e .[dev]; coverage 7.16.2;
+      HTTPX2 present, FastAPI/Uvicorn/Starlette/HTTPX absent.
+    Web: Linux, Bash, Python 3.12.14; FastAPI 0.142.2, Uvicorn 0.54.0, Starlette 1.7.0,
+      HTTPX2 2.13.1.
+    bash_completion: BashCompletionExecutionTests ran; skip reason is null.
+    working_tree: No source or tracked-file edits during final full coverage. Records
+      finalized afterwards; tested source fingerprints below.
+  source_fingerprints: &id001
+    tests/test_coverage_resource_reference_boundaries.py: b892e852ff335e73f200e70df1869fc3d4a9e96f
+    tests/test_resource_reference_store.py: 7fb88a0fead576f16120547afd6feaf9a37bc226
+  gaps:
+  - description: Separate latest-head human implementation/integration review, required
+      PR CI, and successful post-merge full main compatibility with automatic Incident
+      closure remain required.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1128
+  diagnosed_runs:
+  - type: selective-initialization-order
+    result: Initial metadata-only selective invocation had 3 release-policy failures
+      before legacy bootstrap. Final selective invocation loads the resource boundary
+      module first (canonical legacy bootstrap) and passes all 61 tests; unchanged
+      full suites pass. Python 3.12.14/Bash, no tracked edits during that selective
+      run; BashCompletionExecutionTests outside selective scope.
+review_ledger:
+- reviewer: Codex (implementer)
+  review_type: developer-self-review
+  target_source_fingerprints: *id001
+  result: No blocking findings after correcting the original lock-admission test assumption;
+    checked exact envelopes, token retirement, partial-allocation refusal, test isolation,
+    bounded retry and unchanged runtime/thresholds. Not independent approval.
+- reviewer: Eruhitsuji
+  review_type: implementation
+  target_commit: pending
+  result: pending
+- reviewer: Eruhitsuji
+  review_type: integration
+  target_commit: pending
+  result: pending
+release_evidence:
+  migration_notes: None; tests and recovery records only.
+  rollback_plan: Human-approved revert of recovery PR; runtime/data unchanged, coverage
+    gap would return.
+  operations_evidence:
+  - Incident 1128 remains open until a successful full main compatibility run.

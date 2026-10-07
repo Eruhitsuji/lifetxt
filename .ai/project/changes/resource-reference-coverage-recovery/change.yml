@@ -1,0 +1,29 @@
+schema_version: 1
+change:
+  id: resource-reference-coverage-recovery
+  title: Restore dev-only resource-reference boundary coverage
+  status: implemented
+  change_type: Bug
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1128
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1131
+  base_commit: f69639c6d19f13e85dab5d7afb35513cfacadeb4
+  phase: integration-review
+scope:
+  in_scope: [Dependency-free resource-reference boundary tests, retained recovery evidence]
+  write_scope:
+    - tests/test_coverage_resource_reference_boundaries.py
+    - tests/test_resource_reference_store.py
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+    - .ai/project/changes/resource-reference-coverage-recovery/**
+  forbidden_scope: [lifetxt/**, .ai/managed/**, dependency manifests, CI workflows, coverage thresholds]
+  out_of_scope: [Runtime changes, new features, merge, release, deployment, incident closure before full main success]
+  shared_files: [.ai/project/CAPABILITIES.yml, .ai/project/TRACEABILITY.yml]
+  integration_owner: Eruhitsuji
+  integration_order: Recovery before ordinary feature merges
+  size: S
+  complexity_score: 5
+human_approvals_required: [Independent latest-head implementation review, independent integration review, human merge]

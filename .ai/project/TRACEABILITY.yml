@@ -2,6 +2,66 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-core-cli-plot-range-validation
+      capability_id: cap-core-cli-plot
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1134
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1136
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1139
+      changed_files_or_scope:
+        - lifetxt/cli.py
+        - tests/test_plot_cli_range_validation.py
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests.test_plot_cli_range_validation
+        - tests.test_plot_cli_contract
+        - tests.test_core_cli_entrypoint
+        - python -m lifetxt check examples/minimal_life.txt
+      notes: >-
+        Validate explicit plot date bounds immediately after reuse of the
+        existing date parser so malformed values fail through the established
+        CLI ValueError contract before chart processing, independent of input
+        contents. No new option or stricter accepted-date syntax is introduced.
+      release_or_deployment: Next normal release; compatibility-preserving bug fix.
+      status: in_review
+    - requirement_id: req-temporal-life-review-cross-surface
+      capability_id: cap-temporal-life-review
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1134
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1137
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1139
+      changed_files_or_scope:
+        - tests/test_review_cli_contract.py
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests.test_review_cli_contract
+        - tests.test_temporal_review
+        - existing review CLI tests in tests.test_lifetxt
+      notes: >-
+        Add deterministic public CLI adapter coverage for Temporal Life Review
+        serialization, option forwarding and error contracts while retaining
+        existing builder and subprocess feature tests.
+      release_or_deployment: Next normal release; test hardening only.
+      status: in_review
+    - requirement_id: req-core-cli-plot-contract-tests
+      capability_id: cap-core-cli-plot
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1134
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1138
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1139
+      changed_files_or_scope:
+        - tests/test_plot_cli_contract.py
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests.test_plot_cli_contract
+        - tests.test_cui_extensions.PlotPngFallbackTests
+        - existing SVG smoke coverage in tests.test_lifetxt
+      notes: >-
+        Add deterministic in-process plot CLI contracts for chart selection,
+        grouping, inclusive bounds, project filtering, text/sparkline, SVG and
+        PNG command routing without adding a second chart implementation.
+      release_or_deployment: Next normal release; test hardening only.
+      status: in_review
     - requirement_id: req-core-import-boundary-refactor
       capability_id: cap-core-import-boundary
       epic: https://github.com/Eruhitsuji/lifetxt/issues/882

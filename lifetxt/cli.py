@@ -11830,7 +11830,11 @@ def command_plot(args):
         if start_str
         else (today - datetime.timedelta(days=90))
     )
+    if start_str and start is None:
+        raise ValueError("Invalid --from %r." % start_str)
     end = _parse_date_only(end_str) if end_str else today
+    if end_str and end is None:
+        raise ValueError("Invalid --to %r." % end_str)
 
     if project_filter:
         items = [

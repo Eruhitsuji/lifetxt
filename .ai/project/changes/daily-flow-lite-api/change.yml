@@ -11,6 +11,7 @@ change:
   size: S
   complexity: 6/10
   base_commit: 2c37d97e
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1152
 scope:
   write_scope:
   - lifetxt/webapp.py

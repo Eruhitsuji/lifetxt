@@ -8,6 +8,7 @@ from .agenda import agenda_records
 from .timeutil import parse_date_or_datetime
 from .timezone_policy import date_boundaries
 from .workspace_timeline import workspace_timeline
+from .native_timeline import _is_history
 
 
 def _date_bound(value, end=False):
@@ -69,11 +70,11 @@ def build_temporal_review(
     upcoming = []
     if until:
         boundary = parse_date_or_datetime(until, is_end=True)
-        upcoming_items = items
+        upcoming_items = [item for item in items if not _is_history(item)]
         if project:
             upcoming_items = [
                 item
-                for item in items
+                for item in upcoming_items
                 if project in [str(value) for value in item.details.get("project", [])]
             ]
         # Agenda uses datetime.max as its open-ended sentinel and limits

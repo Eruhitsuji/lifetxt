@@ -5,7 +5,7 @@ verification:
     command: python -m unittest tests.test_read_scope tests.test_temporal_review_scope
       tests.test_web_planner tests.test_temporal_review tests.test_workspace_timeline
       tests.test_review_cli_contract
-    result: 57 tests passed
+    result: 58 tests passed
     status: passed
   - type: static
     command: python -m ruff check lifetxt tests scripts; python -m compileall -q lifetxt
@@ -26,17 +26,19 @@ verification:
 review_ledger:
 - reviewer: Codex
   review_type: self-review
-  target_commit: null
-  result: passed
-  finding_count: 0
+  target_commit: 162917586af8c1120031fe6e78ed8363e5944ed8
+  result: findings_fixed
+  finding_count: 1
   viewpoints:
   - Agenda concrete end sentinel
   - finite recurring expansion reused
   - ongoing span overlap and workspace date boundary
   - upcoming scope/project isolation and chronological limit
   - read-only source bytes unchanged
-  notes: Minimal shared builder fix; no recurrence engine or public parameter/schema
-    changes.
+  notes: Self-review found future-dated native evidence could be listed as an upcoming
+    agenda target. Fixed by excluding native history from upcoming projection; valid
+    and malformed associated evidence remains in timeline validation and native Note
+    records do not become carry-forward tasks.
 - reviewer: Eruhitsuji
   review_type: independent
   target_commit: null

@@ -5,7 +5,7 @@ verification:
     command: python -m unittest tests.test_read_scope tests.test_temporal_review_scope
       tests.test_web_planner tests.test_temporal_review tests.test_workspace_timeline
       tests.test_review_cli_contract
-    result: 57 tests passed
+    result: 58 tests passed
     status: passed
   - type: no_web
     command: .venv-ci-no-web/bin/python -m unittest tests.test_read_scope tests.test_temporal_review_scope
@@ -47,7 +47,7 @@ verification:
 review_ledger:
 - reviewer: Codex
   review_type: self-review
-  target_commit: null
+  target_commit: 162917586af8c1120031fe6e78ed8363e5944ed8
   result: passed
   finding_count: 0
   viewpoints:

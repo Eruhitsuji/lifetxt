@@ -124,3 +124,20 @@ and rerun the existing metadata checks. If actual device tests or source repairs
 are required, keep the corresponding gap open and track the concrete work.
 
 Metadata verification: six changed/new YAML files parsed; local report/probe/decision links valid; original verification and post_merge_reconciliation mappings retained unchanged; all three owner decisions still awaiting_owner; experimental status unchanged. Existing 17 closeout/traceability tests and scoped probe format/lint passed.
+
+## Partial user confirmation — 2026-10-09 08:58 JST
+
+The owner reports A1/A2 checked and requests recording the current result.
+Source: [issue1159 dated record](https://github.com/Eruhitsuji/lifetxt/issues/1159#issuecomment-6071421086).
+
+| Item | Checklist scope | Recorded result |
+| --- | --- | --- |
+| A1 | Planner Today rendering and scrolling | user_confirmed |
+| A2 | Morning/Daytime/Evening/Standard switching and continued access to unfinished tasks | user_confirmed |
+
+This supersedes the aggregate device status only to partial_user_confirmation.
+The original not_run snapshot remains historical. Detailed observations, defect
+status, device/OS/browser/language and tested commit were not supplied; do not
+infer them or label every individual expectation passed. A3–A9 and V1–V3 remain
+unconfirmed; no human screen-reader test or overall device pass is recorded.
+This report does not authorize the three pending owner dispositions. #1159 remains open.

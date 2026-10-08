@@ -33,3 +33,34 @@ decisions:
   rationale: Unavailable in executor environment. Proposed accepted-not-run disposition only for current
     experimental state; no device/accessibility pass claim.
   owner_response: null
+device_evidence_reports:
+- reported_at: 2026-10-09 08:58 JST
+  reporter: Eruhitsuji
+  source_record: https://github.com/Eruhitsuji/lifetxt/issues/1159#issuecomment-6071421086
+  status: partial_user_confirmation
+  tested_commit: null
+  device: null
+  os_version: null
+  browser_version: null
+  language: null
+  confirmed:
+  - id: A1
+    check: Planner Today rendering and scrolling
+    result: user_confirmed
+  - id: A2
+    check: Morning/Daytime/Evening/Standard switching and continued access to unfinished tasks
+    result: user_confirmed
+  unconfirmed:
+  - A3
+  - A4
+  - A5
+  - A6
+  - A7
+  - A8
+  - A9
+  - V1
+  - V2
+  - V3
+  limitations: User reports A1/A2 checked; detailed observations, defect status and environment are not
+    supplied. No comprehensive device pass or VoiceOver evidence inferred.
+  owner_disposition: not_supplied

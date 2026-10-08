@@ -38,6 +38,8 @@ capabilities:
       - .ai/project/changes/daily-flow-lite-cli/verification.yml
       - .ai/project/changes/daily-flow-lite-core/verification.yml
     related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/1158
+      - https://github.com/Eruhitsuji/lifetxt/issues/1159
       - https://github.com/Eruhitsuji/lifetxt/issues/1147
       - https://github.com/Eruhitsuji/lifetxt/issues/1142
       - https://github.com/Eruhitsuji/lifetxt/issues/1143
@@ -50,7 +52,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/pull/1150
       - https://github.com/Eruhitsuji/lifetxt/pull/1151
     reuse_policy: Reuse next actionable/dependency predicates, exact CLI rank seam, existing scopes, matrix context, timezone interpreters and freebusy interval algebra. No new priority or recurrence engine.
-    notes: Shared core merged via PR1150. CLI admits explicit local active scope with exact snapshots and one bounded retry; workspace archives excluded by default. Web/API auth remains a consumer obligation; Planner Day is an opt-in canonical GET projection with explicit window and stale-response invalidation; latest-head independent Planner review pending.
+    notes: Shared core merged via PR1150. CLI admits explicit local active scope with exact snapshots and one bounded retry; workspace archives excluded by default. Web/API auth remains a consumer obligation; Planner Day is an opt-in canonical GET projection with explicit window and stale-response invalidation; PR1150/1151/1152/1153 merged with successful final-head PR CI. Historical independent review remains unverified, tracked by #1159; dated evidence: .ai/project/changes/daily-flow-lite-core/post-merge-evidence.md. Capability remains experimental.
   - id: cap-external-resource-fetch-policy-contract
     name: Explicit external fetch/import design contract
     summary: Bilingual approved-direction policy for inert references, explicit network

@@ -1,3 +1,4 @@
+# Pre-merge reports are retained below; dated reconciliation is authoritative for current status.
 schema_version: 1
 verification:
   executed:
@@ -67,13 +68,51 @@ verification:
     result: Initial published tree 2c1f412981d0e5c5bbf07848625e5a01e550c94f matches
       local reviewed/tested tree; final delta is PR linkage/evidence metadata only.
     status: passed
-  planned:
+  historical_pre_merge_planned:
   - Independent final-head High review and CI
   - No IO/auth consumer integration or real mobile verification in this core task
-  review_ledger:
+  historical_pre_merge_review_ledger:
   - reviewer: Codex
     review_type: implementer_self_review
     result: completed; not independent approval
   - reviewer: Eruhitsuji
     review_type: independent_design_security_integration
     result: pending
+
+post_merge_reconciliation:
+  observed_at: 2026-10-09 JST
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1158
+  evidence_report: post-merge-evidence.md
+  implementation_status: implemented
+  previous_change_status: in-review
+  supersedes: Historical pre-merge planned/remaining/review ledgers; original executed reports are preserved,
+    not rerun.
+  merge:
+    status: merged
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1150
+    head_commit: 5fd10dd94fd53737eb97f4a42a51e912ed7ea36d
+    merge_commit: b7dbda4031410a80693c6960c00af00c32ed3ced
+  ci:
+    status: passed
+    target_commit: 5fd10dd94fd53737eb97f4a42a51e912ed7ea36d
+    scope: Listed final-head PR runs; no main/release or optional-test completion claim.
+    runs:
+    - name: lifetxt-mini CI
+      url: https://github.com/Eruhitsuji/lifetxt/actions/runs/37763729446
+      status: completed
+      conclusion: success
+    - name: CI
+      url: https://github.com/Eruhitsuji/lifetxt/actions/runs/37763729437
+      status: completed
+      conclusion: success
+  independent_review:
+    status: unverified
+    submitted_reviews: 0
+    target_commit: 5fd10dd94fd53737eb97f4a42a51e912ed7ea36d
+    source: https://api.github.com/repos/Eruhitsuji/lifetxt/pulls/1150/reviews
+    reason: No submitted GitHub reviews found; external human review may exist. Merge is not review evidence.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1159
+  high_risk_acceptance:
+    status: unverified
+    reason: Design approval and merge do not establish separate final-head High risk acceptance.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1159

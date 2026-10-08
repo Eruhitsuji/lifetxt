@@ -11,4 +11,9 @@ links:
       - tests.test_freebusy_cli
       - tests.test_extra_cli
       - tests.test_cli_taxonomy
-    status: in_review
+    status: implemented
+
+evidence_gaps:
+  - status: unverified
+    reason: Historical independent review and applicable High risk/device evidence remain unresolved.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1159

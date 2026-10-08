@@ -21,12 +21,19 @@ verification:
     status: passed
   - type: unit
     command: MPLBACKEND=Agg python -m unittest discover
-    result: Final combined tree verification pending execution
-    status: pending
+    result: Full suite running against frozen final source tree; result pending
+    status: running
+    implementation_tree: 245d095cf95fb4e78525f06c0d5417a2e86dc259
+  - type: no_web
+    command: .venv-ci-no-web/bin/python -m unittest tests.test_read_scope tests.test_temporal_review_scope
+      tests.test_temporal_review tests.test_workspace_timeline tests.test_web_planner
+      tests.test_review_cli_contract
+    result: 58 tests run; 28 skipped; passed
+    status: passed
 review_ledger:
 - reviewer: Codex
   review_type: self-review
-  target_commit: 162917586af8c1120031fe6e78ed8363e5944ed8
+  target_commit: 6003cf653c2e0f32bfe566e241782df0f6c5b13b
   result: findings_fixed
   finding_count: 1
   viewpoints:

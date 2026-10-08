@@ -1,0 +1,51 @@
+schema_version: 1
+change:
+  id: daily-flow-lite-api
+  title: Read-only Daily Flow Lite Web API
+  status: in-review
+  change_type: Feature
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1146
+  size: S
+  complexity: 6/10
+  base_commit: 2c37d97e
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1152
+scope:
+  write_scope:
+  - lifetxt/webapp.py
+  - lifetxt/daily_flow_web.py
+  - lifetxt/surface_runtime.py
+  - lifetxt/surface_runtime_compat.py
+  - tests/test_web_daily_flow.py
+  - docs/en/web.md
+  - docs/ja/web.md
+  - .ai/project/CAPABILITIES.yml
+  - .ai/project/TRACEABILITY.yml
+  - .ai/project/changes/daily-flow-lite-api/**
+  forbidden_scope:
+  - .ai/managed/**
+  - Shared scheduling algorithm, auth redesign, UI, Remote/MCP, Format, data writes
+  shared_files:
+  - lifetxt/webapp.py
+  - lifetxt/daily_flow_web.py
+  - lifetxt/surface_runtime.py
+  - lifetxt/surface_runtime_compat.py
+  - docs/en/web.md
+  - docs/ja/web.md
+  - .ai/project/CAPABILITIES.yml
+  - .ai/project/TRACEABILITY.yml
+  integrator: Eruhitsuji
+  integration_order: After merged PR1150/1151; recheck origin/main before publication
+  rollback: Revert additive route, exact-route runtime exclusions, tests/docs/metadata;
+    no migration
+design_approval:
+  owner: Eruhitsuji
+  date: 2026-10-08 21:21 JST
+  record: https://github.com/Eruhitsuji/lifetxt/issues/1146#issuecomment-6059751455
+  scope: Required GET date/day_start/day_end, optional area/saved_view, local Bearer
+    admission, workspace timezone, canonical model and fail-closed output
+human_approvals_required:
+- Independent final-head implementation/security review
+- Independent integration review and High risk acceptance/merge

@@ -1108,3 +1108,51 @@ Linux is the official target; other OS are unofficial for this feature.
 Without verified prerequisites, chunk reads fail closed. Existing response
 fields and offset/limit clamping are preserved; other attachment operations
 retain their existing policies.
+
+## Read-only Daily Flow Lite API
+
+Request proposals explicitly; no background calculation or automatic writes:
+
+```text
+GET /api/daily-flow?date=2031-02-03&day_start=09:00&day_end=17:00
+```
+
+All three parameters are required. Date must be a valid `YYYY-MM-DD` (excluding
+9999-12-31); clocks use `HH:MM`, 00:00–23:59. End must follow start; `day_end=00:00`
+means next midnight. Optional `area` or `saved_view` (one only, up to 256 characters)
+selects candidate Tasks, never the fixed occupancy used to certify free time.
+Timezone follows the first active source directive and workspace configuration;
+unresolved local/host is rejected. There are no timezone, ranking or rest overrides.
+
+The JSON is the unchanged shared `daily-flow-lite-v1` / `lite-greedy-v1` model:
+`timeline` distinguishes fixed appointments and unsaved candidates; `instants`,
+`free`, `unplaced`, structured `why`, `diagnostics`, `completeness`, `evaluated_at`,
+`timezone`, `scope`, `source_revision`, `window` and `policy` retain core semantics.
+Opaque source tokens and exact-byte SHA-256 revisions support stale detection;
+reload before using proposals. They do not authorize writes. `Cache-Control: no-store`.
+
+This local Web endpoint inherits `api.token` Bearer authentication and full access
+to registered server inputs, including their record titles. It is not a Remote
+principal-filtered endpoint; Remote tokens/cookies do not grant local access.
+Do not expose a local full-workspace reader to clients requiring record-level
+visibility isolation. Restricted-resource Remote credentials remain denied by the
+existing legacy-route guard. No additional source can be requested by a query.
+Workspace archive-role files are excluded; unregistered workspace sources are
+never added. Other registered active files remain occupancy/dependency context.
+
+Missing parameters/oversize query values return 422; invalid date/window/timezone
+or selector returns a generic 400; configured Bearer auth failures return 401.
+Valid computations, including partial/blocked results, return 200: inspect
+`completeness`, not HTTP status alone. `occupancy_unavailable` is generic with no
+partially read records, filenames, hidden counts or free slots. Unsupported
+recurrence/unknown-duration/DST diagnostics are inherited from the shared core;
+unknown occupancy never certifies free time. Complete `insufficient_capacity` is
+separate from incomplete occupancy. Missing/corrupt/oversize sources fail closed.
+
+Reads are bounded to 16 MB per file / 4 million decoded characters overall, plus
+shared model limits (10,000 context items, 20,000 dependency edges, 1,000 candidate
+Tasks/events and 2,048 slots). No occupancy is silently truncated. One whole
+snapshot retry detects changes; repeated changes return `source_changed` with no
+placements. No snapshot can prevent edits after publication. No record, journal,
+undo or proposal is written. Existing startup revision-metrics initialization is
+unchanged. Planner UI integration is separate (#1147).

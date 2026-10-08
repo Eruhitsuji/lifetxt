@@ -1,0 +1,86 @@
+schema_version: 1
+verification:
+  status: verified-awaiting-independent-review
+  test_plan:
+  - Model equality and deterministic order
+  - Auth before source/revision reads, existing restricted guard
+  - Archive/unregistered exclusion, missing/corrupt/bounded snapshot and retry
+  - Validation/date/current/DST, unsupported occupancy and capacity
+  - Read-only no-file-change assertions, old revision/API contracts, EN/JA docs
+  review_ledger:
+  - reviewer: Codex (implementer)
+    review_type: self-review
+    result: completed-not-independent-approval
+    finding_count: 2
+    findings:
+    - Legacy pre-read/write compatibility transaction bypassed own safe snapshot;
+      exact-path exclusions added
+    - Legacy post-read writable revision raised on corrupt input and leaked ETag on
+      denied auth; exact-path exclusion added
+    target_commit: 888d1d984da3d87161d487f76a98404f222c3d2e
+  - reviewer: Eruhitsuji
+    review_type: implementation/security/integration
+    target_commit: latest PR1152 head
+    result: pending
+  environment: Python 3.12.14 / Linux / Bash; tracked working tree unchanged during
+    full suite; existing ResourceWarnings/optional skips retained; full output captured.
+  executed:
+  - command: MPLBACKEND=Agg python -m unittest discover
+    result: Ran 5388 tests in 368.273s  OK (skipped=66)
+    status: passed
+  - command: python -m unittest tests.test_web_daily_flow tests.test_daily_flow tests.test_daily_flow_cli
+      tests.test_surface_runtime tests.test_revision_migration_metrics tests.test_revision_telemetry_v2
+      tests.test_web_planner tests.test_change_package_closeout tests.test_traceability_gate
+    result: 160 passed (before final two dedicated security regressions); complete
+      dedicated final suite is 16 passed
+    status: passed
+  - command: python -m unittest tests.test_web_daily_flow tests.test_remote_resource_download
+      tests.test_revision_telemetry_v2 tests.test_revision_migration_metrics
+    result: 53 passed
+    status: passed
+  - command: python -m coverage run --branch --source=lifetxt.daily_flow_web -m unittest
+      tests.test_web_daily_flow; python -m coverage report -m
+    result: 16 passed; adapter combined statement/branch coverage 87%; 51 statements,
+      4 missed, 20 branches, 5 partial; no threshold changes
+    status: passed
+  - command: python -m ruff check lifetxt tests scripts
+    result: All checks passed
+    status: passed
+  - command: python -m mypy --follow-imports=skip --ignore-missing-imports lifetxt/diagnostic_contract.py
+    result: Configured one-file boundary passed
+    status: passed
+  - command: python -m lifetxt check examples/minimal_life.txt
+    result: 10 items OK
+    status: passed
+  - command: python scripts/validate_release_docs.py --output .cache/1146-release-docs.json
+    result: ok=true, errors=0
+    status: passed
+  - command: python -m unittest tests.test_web_daily_flow tests.test_traceability_gate
+      tests.test_change_package_closeout
+    result: 33 tests OK on final runtime and finalized evidence package before PR
+      linking
+    status: passed
+  acceptance_mapping:
+    AC1: Exact core-model equality, deterministic output, native OpenAPI required
+      parameters and GET-only route
+    AC2: Bearer/restricted rejection before snapshot/revision read; no ETag or record
+      leak; path query cannot admit files
+    AC3: Workspace archives and unregistered inputs not read; saved-view candidates
+      retain fixed occupancy
+    AC4: No source/artifact change per request, byte revisions change, one-race retry
+      and repeated-race source_changed, input bounds
+    AC5: Generic missing/corrupt results, safe query/scope/timezone errors, DST/current
+      boundary, parse error/partial inventory/unknown duration vs complete capacity
+    AC6: Full suite plus runtime/revision/planner compatibility; exact-route exclusions
+      only
+    AC7: EN/JA docs tests and release-doc validation, capability/traceability/High
+      package
+  runtime_evidence:
+    local_commit: 96426e3e
+    published_commit: 888d1d984da3d87161d487f76a98404f222c3d2e
+    tree: 6e851f734e322a4a8b8e2f683de843427ca673dc
+    publication: Identical local/published tree verified. Subsequent commit changes
+      PR-link/evidence metadata only.
+  metadata_regression:
+    finding: Committed-head traceability gate rejected indentless evidence sequences; nested list indentation corrected to match repository gate.
+    result: Final committed-head traceability and PR URL gate rerun below; runtime unchanged.

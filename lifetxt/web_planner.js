@@ -6,6 +6,72 @@
   const $=id=>document.getElementById(id), params=new URLSearchParams(location.search);let scopeArea=params.get('area')||'',scopeView=params.get('saved_view')||'',todaySyncTimer=null;
   let requestedLang=params.get("lang"),lang=["en","ja"].includes(requestedLang)?requestedLang:((navigator.language||"en").slice(0,2)==="ja"?"ja":"en"), t=copy.en, today="", date="", view=["week","month"].includes(params.get("view"))?params.get("view"):"day", writable=false, edit=null, pending=false, sourceRevision="";
 
+  const focusCopy = {
+    en: {focusTitle:"Focus now", focusMode:"Today emphasis", focusAuto:"Auto", focusMorning:"Morning", focusDaytime:"Daytime", focusEvening:"Evening", focusStandard:"Standard", focusTimes:"Automatic time bands (workspace time)", focusMorningStart:"Morning starts", focusDaytimeStart:"Daytime starts", focusEveningStart:"Evening starts", focusSettingsHelp:"Morning < Daytime < Evening. Night continues until the next morning. Saved only in this browser.", focusInvalid:"Enter HH:MM times with Morning < Daytime < Evening.", focusMorningHelp:"Today's appointments, priority tasks and the suggested day plan.", focusDaytimeHelp:"Next appointment, remaining tasks and current or upcoming suggestions. Suggestions are not actuals.", focusEveningHelp:"Recorded completions, habits and journal. Unfinished work remains available.", focusStandardHelp:"Standard display. Auto uses workspace time; unavailable or stale time falls back here.", focusUpcoming:"Current / upcoming suggestion", focusNext:"Next appointment", focusCompleted:"Recorded completions", focusUnavailable:"Could not load completion evidence. Retry by reloading the day."},
+    ja: {focusTitle:"今の注目", focusMode:"今日の強調表示", focusAuto:"自動", focusMorning:"朝", focusDaytime:"日中", focusEvening:"夜", focusStandard:"標準", focusTimes:"自動判定の時間帯（workspace時刻）", focusMorningStart:"朝の開始", focusDaytimeStart:"日中の開始", focusEveningStart:"夜の開始", focusSettingsHelp:"朝 < 日中 < 夜の順に設定します。夜は翌朝まで続きます。このブラウザーだけに保存します。", focusInvalid:"HH:MM形式で、朝 < 日中 < 夜の順に設定してください。", focusMorningHelp:"今日の予定・優先タスクと、1日の提案プランを確認します。", focusDaytimeHelp:"次の予定・残りタスクと、現在以降の提案を確認します。提案は実績ではありません。", focusEveningHelp:"記録された完了・習慣・日誌を振り返ります。未完了の作業も引き続き確認できます。", focusStandardHelp:"標準表示です。自動判定はworkspace時刻を使い、時刻が不明・古い場合はこの表示に戻ります。", focusUpcoming:"現在以降の提案", focusNext:"次の予定", focusCompleted:"記録された完了", focusUnavailable:"完了記録を読み込めませんでした。日表示を再読み込みしてください。"}
+  };
+  const defaultTimeBands = {morning:"05:00", daytime:"11:00", evening:"18:00"};
+  let focusMode = "auto", workspaceClock = null, clockSyncPending = false;
+  let focusAgenda = [], focusReview = null, focusDataReady = false;
+  function validTimeBands(value) {
+    return value && ["morning","daytime","evening"].every(k => typeof value[k] === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(value[k])) && value.morning < value.daytime && value.daytime < value.evening;
+  }
+  function acceptWorkspaceClock(config, started) {
+    workspaceClock = null;
+    const raw = config.current_datetime;
+    if (typeof raw !== "string" || !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d[+-]\d\d:\d\d$/.test(raw) || raw.slice(0,10) !== config.today || performance.now()-started > 10000) return;
+    const epoch = Date.parse(raw), offset = (Number(raw.slice(-5,-3))*60+Number(raw.slice(-2))) * (raw.at(-6)==="-"?-1:1);
+    if (!Number.isFinite(epoch) || Math.abs(offset)>840) return;
+    workspaceClock = {epoch, offset, received:performance.now()};
+  }
+  function workspaceInstant() {
+    if (!workspaceClock) return null;
+    const age = performance.now()-workspaceClock.received;
+    if (age < 0 || age > 120000) return null;
+    const epoch = workspaceClock.epoch+age, local = new Date(epoch+workspaceClock.offset*60000);
+    if (local.toISOString().slice(0,10)!==today) return null;
+    return {epoch, hhmm:local.toISOString().slice(11,16)};
+  }
+  function activeFocusMode() {
+    if (view!=="day" || dayPosition()!=="today") return "standard";
+    if (focusMode!=="auto") return focusMode;
+    const instant = workspaceInstant();
+    if (!instant) return "standard";
+    const bands = preference().time_bands, time = instant.hhmm;
+    return time < bands.morning || time >= bands.evening ? "evening" : time < bands.daytime ? "morning" : "daytime";
+  }
+  function focusTarget(id) {
+    if (id==="flow") return $("flow-panel");
+    if (id==="review") return $("review-panel");
+    return $(id)?.closest("section");
+  }
+  function updateFocus() {
+    const mode = activeFocusMode(), enabled = view==="day" && dayPosition()==="today";
+    $("today-focus").hidden = !enabled;
+    $("today-focus").dataset.mode = mode;
+    $("focus-status").textContent = t["focus"+mode[0].toUpperCase()+mode.slice(1)] + " · " + t["focus"+mode[0].toUpperCase()+mode.slice(1)+"Help"];
+    $("focus-links").replaceChildren();
+    document.querySelectorAll(".focus-time-marker").forEach(n=>n.remove());
+    document.querySelectorAll(".focus-emphasis,.focus-upcoming").forEach(n=>n.classList.remove("focus-emphasis","focus-upcoming"));
+    if (!enabled || mode==="standard") return;
+    const ids = {morning:["schedule","tasks","flow"], daytime:["schedule","tasks","flow"], evening:["review","habits","journal"]}[mode];
+    for (const id of ids) {
+      const node = focusTarget(id);
+      if (!node || node.hidden || (!focusDataReady && id!=="flow")) continue;
+      node.classList.add("focus-emphasis");
+      const link = document.createElement("a");
+      link.href = "#"+(id==="flow"?"flow-heading":id==="review"?"review-panel":id);
+      link.textContent = id==="flow"?t.flowTitle:id==="review"?t.focusCompleted:t[id];
+      link.onclick = () => { if(id==="flow") $("flow-disclosure").open=true; const target=$(link.hash.slice(1));target.tabIndex=-1;target.focus(); };
+      $("focus-links").append(link);
+    }
+    const instant = workspaceInstant();
+    if (mode==="daytime" && instant && focusDataReady && !focusTarget("schedule").hidden) {
+      const matches = focusAgenda.filter(r=>r.type==="E").flatMap(r=>(r.matches||[]).map(m=>({title:r.title,start:m.start}))).filter(m=>typeof m.start==="string" && m.start.startsWith(today+"T") && m.start.slice(11,16)>=instant.hhmm).sort((a,b)=>a.start.localeCompare(b.start));
+      if (matches.length) {const p=document.createElement("p");p.textContent=t.focusNext+": "+matches[0].start.slice(11,16)+" · "+matches[0].title;$("focus-links").append(p);}
+    }
+    if (mode==="daytime" && instant) document.querySelectorAll(".flow-candidate").forEach(n=>{if(Date.parse(n.dataset.end)>instant.epoch){n.classList.add("focus-upcoming");const label=document.createElement("small");label.className="focus-time-marker";label.textContent=t.focusUpcoming;n.append(label)}});
+  }
   const flowCopy = {
     en: {
       flowTitle: "Suggested Daily Flow",
@@ -273,6 +339,7 @@
     for (const row of data.timeline) {
       const li = flowNode("li", undefined, timeline),
         article = flowNode("article", undefined, li, "flow-card flow-" + row.kind);
+      article.dataset.end = row.end;
       flowNode("strong", kinds[row.kind] || t.flowUnknown, article);
       flowNode("p", row.start + " → " + row.end, article);
       const ref = row.item || row.candidate;
@@ -401,6 +468,7 @@
       )
         throw Error("Invalid response");
       renderFlow(data);
+      updateFocus();
     } catch (error) {
       if (generation === flowGeneration && error.name !== "AbortError") {
         $("flow-result").replaceChildren();
@@ -413,7 +481,7 @@
       }
     }
   }
-  function translate(){t=copy[lang];Object.assign(t,flowCopy[lang]);Object.assign(t,lang==="ja"?{emptyNotes:"通常のメモはありません。",moreNotes:"さらに表示",editNote:"編集",viewSelector:"Plannerの表示",anchorDate:"表示の基準日",month:"月",monthTitle:"月間プランナー",previousMonth:"前の月",nextMonth:"次の月",densityNone:"予定なし",densityLow:"少ない",densityMedium:"普通",densityHigh:"多い",items:"件",outsideMonth:"表示月の外",scope:"スコープ",all:"すべて",customize:"カスタマイズ",sections:"Dayセクション",density:"密度",comfortable:"標準",compact:"コンパクト",apply:"適用",reset:"workspaceの既定値に戻す",moveUp:"上へ",moveDown:"下へ",showSection:"表示"}:{emptyNotes:"No ordinary Notes.",moreNotes:"Load more",editNote:"Edit",viewSelector:"Planner view",anchorDate:"View anchor date",month:"Month",monthTitle:"Month Planner",previousMonth:"Previous month",nextMonth:"Next month",densityNone:"No dated items",densityLow:"Low density",densityMedium:"Medium density",densityHigh:"High density",items:"items",outsideMonth:"Outside selected month",scope:"Scope",all:"All",customize:"Customize",sections:"Day sections",density:"Density",comfortable:"Comfortable",compact:"Compact",apply:"Apply",reset:"Reset to workspace defaults",moveUp:"Move up",moveDown:"Move down",showSection:"Show"});document.documentElement.lang=lang;document.querySelectorAll("[data-i18n]").forEach(n=>n.textContent=t[n.dataset.i18n]||n.textContent);$('view-switch').setAttribute("aria-label",t.viewSelector);document.title=(view==="week"?t.weekTitle:view==="month"?t.monthTitle:t.title)+" · life.txt"}
+  function translate(){t=copy[lang];Object.assign(t,flowCopy[lang],focusCopy[lang]);Object.assign(t,lang==="ja"?{emptyNotes:"通常のメモはありません。",moreNotes:"さらに表示",editNote:"編集",viewSelector:"Plannerの表示",anchorDate:"表示の基準日",month:"月",monthTitle:"月間プランナー",previousMonth:"前の月",nextMonth:"次の月",densityNone:"予定なし",densityLow:"少ない",densityMedium:"普通",densityHigh:"多い",items:"件",outsideMonth:"表示月の外",scope:"スコープ",all:"すべて",customize:"カスタマイズ",sections:"Dayセクション",density:"密度",comfortable:"標準",compact:"コンパクト",apply:"適用",reset:"workspaceの既定値に戻す",moveUp:"上へ",moveDown:"下へ",showSection:"表示"}:{emptyNotes:"No ordinary Notes.",moreNotes:"Load more",editNote:"Edit",viewSelector:"Planner view",anchorDate:"View anchor date",month:"Month",monthTitle:"Month Planner",previousMonth:"Previous month",nextMonth:"Next month",densityNone:"No dated items",densityLow:"Low density",densityMedium:"Medium density",densityHigh:"High density",items:"items",outsideMonth:"Outside selected month",scope:"Scope",all:"All",customize:"Customize",sections:"Day sections",density:"Density",comfortable:"Comfortable",compact:"Compact",apply:"Apply",reset:"Reset to workspace defaults",moveUp:"Move up",moveDown:"Move down",showSection:"Show"});document.documentElement.lang=lang;document.querySelectorAll("[data-i18n]").forEach(n=>n.textContent=t[n.dataset.i18n]||n.textContent);$('view-switch').setAttribute("aria-label",t.viewSelector);document.title=(view==="week"?t.weekTitle:view==="month"?t.monthTitle:t.title)+" · life.txt"}
   async function api(path,options={}){const r=await fetch(path,options);const raw=await r.text();let d={};try{d=raw?JSON.parse(raw):{}}catch{}if(!r.ok)throw Error(d.message||d.detail||"Request failed");return d}
   const vals=(item,key)=>Array.isArray(item?.details?.[key])?item.details[key]:item?.details?.[key]?[item.details[key]]:[];
   const pathFor=i=>i.id?"/api/items/id/"+encodeURIComponent(i.id):i.line&&i.editable?"/api/items/"+encodeURIComponent(i.line):null;
@@ -422,7 +490,23 @@
   function list(target,items,render){target.replaceChildren();if(!items.length){const p=document.createElement("p");p.className="empty";p.textContent=t.empty;target.append(p);return}items.forEach(x=>render(x))}
   function updateUrl(){const u=new URL(location.href);if(view!=="day"||date!==today)u.searchParams.set("date",date);else u.searchParams.delete("date");if(view!=="day")u.searchParams.set("view",view);else u.searchParams.delete("view");if(scopeArea)u.searchParams.set("area",scopeArea);else u.searchParams.delete("area");if(scopeView)u.searchParams.set("saved_view",scopeView);else u.searchParams.delete("saved_view");lang==="en"?u.searchParams.delete("lang"):u.searchParams.set("lang",lang);history.replaceState({},"",u.pathname+u.search)}
   function scopeQuery(){const p=new URLSearchParams();if(scopeArea)p.set('area',scopeArea);if(scopeView)p.set('saved_view',scopeView);return p.toString()?("&"+p.toString()):''}
-  async function syncToday(){try{const config=await api('/api/config');if(/^\d{4}-\d\d-\d\d$/.test(config.today)&&config.today!==today){today=config.today;updateTemporalContext();applyPlannerPreference();await load();document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")syncToday()});window.addEventListener("focus",syncToday);todaySyncTimer=setInterval(syncToday,60000)}}catch(_){}}
+  async function syncToday() {
+    updateFocus();
+    if (clockSyncPending || document.visibilityState === "hidden") return;
+    clockSyncPending = true;
+    const started = performance.now();
+    try {
+      const config = await api('/api/config');
+      if (!/^\d{4}-\d\d-\d\d$/.test(config.today)) throw Error("Invalid date");
+      acceptWorkspaceClock(config, started);
+      const changed = config.today !== today;
+      today = config.today;
+      if (changed) {updateTemporalContext();applyPlannerPreference();await load();}
+    } catch (_) {workspaceClock = null;}
+    finally {clockSyncPending = false; updateFocus();}
+  }
+  function resumeClock() { workspaceClock = null; updateFocus(); syncToday(); }
+
   function setView(next){view=next;translate();$('day-view').hidden=view!=="day";$('week-view').hidden=view!=="week";$('month-view').hidden=view!=="month";$('view-day').setAttribute("aria-pressed",String(view==="day"));$('view-week').setAttribute("aria-pressed",String(view==="week"));$('view-month').setAttribute("aria-pressed",String(view==="month"));$('title').textContent=view==="week"?t.weekTitle:view==="month"?t.monthTitle:t.title;updateUrl();load()}
   const dayDate=(value,delta)=>{const [y,m,d]=value.split('-').map(Number);return new Date(Date.UTC(y,m-1,d+delta)).toISOString().slice(0,10)}; function dayPosition(){return date<today?"past":date>today?"future":"today"} function temporalLabel(){return {past:t.past,today:t.todayState,future:t.future}[dayPosition()]} function updateTemporalContext(){const node=$("temporal-context");if(!node)return;const position=dayPosition();node.dataset.position=position;$("day-view").dataset.position=position;node.textContent=temporalLabel()+" · "+date;node.setAttribute("aria-label",temporalLabel()+", "+date)}
   function weekStart(value){const weekday=new Date(value+"T00:00:00Z").getUTCDay();return dayDate(value,-((weekday+6)%7))}
@@ -444,7 +528,28 @@
     $('more-notes').hidden=!notesPage?.has_more;
     $('more-notes').disabled=notesBusy;
   }
-  function renderReview(review){const panel=$('review-panel');panel.hidden=dayPosition()!=="past";if(panel.hidden)return;$('review-summary').textContent=(review.counts?.events||0)+" events · "+(review.complete?"complete":"incomplete");const rows=[...(review.completed||[]),...(review.changed||[]),...(review.reopened_or_rescheduled||[])];const expanded=panel.dataset.expanded==="true";list($('review-activity'),rows.slice(0,expanded?rows.length:5),row=>card($('review-activity'),row.title||row.event||"",row.event||"",null));$('more-review').hidden=expanded||rows.length<=5;$('more-review').onclick=()=>{panel.dataset.expanded="true";renderReview(review)}}
+  function renderReview(review) {
+    const panel = $("review-panel");
+    panel.hidden = dayPosition()==="future" || preference().hidden_sections.includes("review");
+    if (panel.hidden) return;
+    $("more-review").hidden = true;
+    if (!review) {
+      $("review-summary").textContent = t.focusUnavailable;
+      $("review-activity").replaceChildren();
+      return;
+    }
+    if (dayPosition()==="today") {
+      $("review-summary").textContent = t.focusCompleted+" · "+(review.complete?t.flowComplete:t.flowPartial);
+      list($("review-activity"),review.completed||[],row=>card($("review-activity"),row.target?.title||row.title||"",t.focusCompleted,null));
+      return;
+    }
+    $("review-summary").textContent = (review.counts?.events||0)+" events · "+(review.complete?"complete":"incomplete");
+    const rows = [...(review.completed||[]),...(review.changed||[]),...(review.reopened_or_rescheduled||[])], expanded = panel.dataset.expanded==="true";
+    list($("review-activity"),rows.slice(0,expanded?rows.length:5),row=>card($("review-activity"),row.target?.title||row.title||row.event||"",row.event||"",null));
+    $("more-review").hidden = expanded||rows.length<=5;
+    $("more-review").onclick = ()=>{panel.dataset.expanded="true";renderReview(review)};
+  }
+
   async function moreNotes(){
     if(notesBusy||!notesPage?.has_more)return;
     const generation=loadGeneration,selectedDate=date,previous=notesPage;
@@ -457,33 +562,35 @@
     }catch(e){if(generation===loadGeneration)$('feedback').textContent=t.error+e.message}
     finally{if(generation===loadGeneration){notesBusy=false;renderNotes()}}
   }
-  async function load(){resetFlow();const generation=++loadGeneration;notesBusy=false;notesPage=null;noteRows=[];renderNotes();if(!date)return;$('date').value=date;updateTemporalContext();$('date').setAttribute("aria-label",view!=="day"?t.anchorDate:t.choose);updateUrl();$('day-view').hidden=view!=="day";$('week-view').hidden=view!=="week";$('month-view').hidden=view!=="month";$('dock').hidden=view!=="day";$('view-day').setAttribute("aria-pressed",String(view==="day"));$('view-week').setAttribute("aria-pressed",String(view==="week"));$('view-month').setAttribute("aria-pressed",String(view==="month"));$('title').textContent=view==="week"?t.weekTitle:view==="month"?t.monthTitle:t.title;$('prev').setAttribute("aria-label",view==="week"?t.previousWeek:view==="month"?t.previousMonth:t.previousDay);$('next').setAttribute("aria-label",view==="week"?t.nextWeek:view==="month"?t.nextMonth:t.nextDay);if(view==="week"){await loadWeek();return}if(view==="month"){await loadMonth();return}$('feedback').textContent=t.loading;
-    try{const [day,agenda,habits,notes,journals,tasks,review]=await Promise.all([api('/api/command-center?date='+date+scopeQuery()),api('/api/agenda?from='+date+'&to='+date+scopeQuery()),api('/api/items?type=H&open_only=true'),api('/api/notes?date='+date+'&limit='+NOTE_PAGE_SIZE+scopeQuery()),api('/api/items?type=J'),api('/api/items?type=T&open_only=true'),dayPosition()==="past"?api('/api/temporal-review?date='+date+'&limit=100'+scopeQuery()):Promise.resolve(null)]);
+  async function load(){focusDataReady=false;focusAgenda=[];focusReview=null;renderReview(null);resetFlow();updateFocus();const generation=++loadGeneration;notesBusy=false;notesPage=null;noteRows=[];renderNotes();if(!date)return;$('date').value=date;updateTemporalContext();$('date').setAttribute("aria-label",view!=="day"?t.anchorDate:t.choose);updateUrl();$('day-view').hidden=view!=="day";$('week-view').hidden=view!=="week";$('month-view').hidden=view!=="month";$('dock').hidden=view!=="day";$('view-day').setAttribute("aria-pressed",String(view==="day"));$('view-week').setAttribute("aria-pressed",String(view==="week"));$('view-month').setAttribute("aria-pressed",String(view==="month"));$('title').textContent=view==="week"?t.weekTitle:view==="month"?t.monthTitle:t.title;$('prev').setAttribute("aria-label",view==="week"?t.previousWeek:view==="month"?t.previousMonth:t.previousDay);$('next').setAttribute("aria-label",view==="week"?t.nextWeek:view==="month"?t.nextMonth:t.nextDay);if(view==="week"){await loadWeek();return}if(view==="month"){await loadMonth();return}$('feedback').textContent=t.loading;
+    try{const [day,agenda,habits,notes,journals,tasks,review]=await Promise.all([api('/api/command-center?date='+date+scopeQuery()),api('/api/agenda?from='+date+'&to='+date+scopeQuery()),api('/api/items?type=H&open_only=true'),api('/api/notes?date='+date+'&limit='+NOTE_PAGE_SIZE+scopeQuery()),api('/api/items?type=J'),api('/api/items?type=T&open_only=true'),dayPosition()!=="future"?api('/api/temporal-review?date='+date+'&limit=100'+scopeQuery()).catch(()=>null):Promise.resolve(null)]);
       if(generation!==loadGeneration)return;
+      focusAgenda=agenda.records||[];focusReview=review;focusDataReady=true;
       sourceRevision=tasks.source_revision||habits.source_revision||notes.source_revision||sourceRevision;
       list($('schedule'),(agenda.records||[]).filter(x=>["E","R","D"].includes(x.type)),x=>card($('schedule'),x.title,[x.when,x.status].filter(Boolean).join(' · '),null,null,x));
       const refs=[...(day.due_today||[]),...(date===today?(day.next_actions||[]):[])].filter(x=>x.kind==="T"&&!x.blocked);const rows=(tasks.items||[]).filter(i=>refs.some(r=>(r.id&&r.id===i.id)||(r.source===i.source&&r.line===i.line)||r.title===i.title));
       list($('tasks'),rows,i=>{const action=dayPosition()==="today"&&writable&&i.editable?async()=>{await api(i.id?pathFor(i)+"/complete":pathFor(i),{method:i.id?"POST":"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(i.id?{date}:{status:"[x]",type:i.type,title:i.title,details:i.details||{}})});await load()}:null;card($('tasks'),i.title,vals(i,'due')[0]||'',action,action?t.done:"",i)});
       list($('habits'),(habits.items||[]).filter(i=>!['[x]','[-]'].includes(i.status)),i=>{const finished=vals(i,'done').includes(date);const action=dayPosition()==="today"&&writable&&i.editable&&!finished?async()=>{const ds=vals(i,'done');if(!ds.includes(date))ds.push(date);await api(pathFor(i),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:i.status,type:i.type,title:i.title,details:{...i.details,done:ds}})});await load()}:null;card($('habits'),i.title,finished?"✓":i.status,action,action?t.done:"",i)});
       notesPage=notes;noteRows=notes.items||[];renderNotes();
-      $('review-panel').dataset.expanded="false";renderReview(review||{});
+      $('review-panel').dataset.expanded="false";renderReview(review);
       const j=(journals.items||[]).find(i=>vals(i,'on').some(d=>String(d).slice(0,10)===date));$('journal').textContent=j?(vals(j,'body')[0]||j.title):t.empty;$('edit-journal').dataset.id=j?.id||'';$('edit-journal').disabled=!writable;
+      applyPlannerPreference();
       $('feedback').textContent=date===today?t.today:date;
     }catch(e){if(generation===loadGeneration)$('feedback').textContent=t.error+' '+e.message}}
   function shift(n){date=view==="month"?monthShift(monthStart(date),n):dayDate(date,n*(view==="week"?7:1));load()}
   const sectionIds=["schedule","tasks","habits","notes","journal","review"];
   let plannerDefaults={sections:sectionIds,hidden_sections:[],density:"comfortable"},plannerPreference=null;
-  function normalizePlannerPreference(value){const source=value||plannerDefaults,sections=Array.isArray(source.sections)?source.sections:sectionIds,ordered=[...new Set(sections.filter(id=>sectionIds.includes(id))),...sectionIds.filter(id=>!sections.includes(id))];return {sections:ordered,hidden_sections:[...new Set((Array.isArray(source.hidden_sections)?source.hidden_sections:[]).filter(id=>sectionIds.includes(id)))],density:["comfortable","compact"].includes(source.density)?source.density:"comfortable"}}
+  function normalizePlannerPreference(value){const source=value||plannerDefaults,sections=Array.isArray(source.sections)?source.sections:sectionIds,ordered=[...new Set(sections.filter(id=>sectionIds.includes(id))),...sectionIds.filter(id=>!sections.includes(id))];return {sections:ordered,hidden_sections:[...new Set((Array.isArray(source.hidden_sections)?source.hidden_sections:[]).filter(id=>sectionIds.includes(id)))],density:["comfortable","compact"].includes(source.density)?source.density:"comfortable",time_bands:validTimeBands(source.time_bands)?{...source.time_bands}:{...defaultTimeBands}}}
   function preference(){if(plannerPreference)return plannerPreference;try{const raw=localStorage.getItem("lifetxt_planner_prefs_v1");plannerPreference=raw?normalizePlannerPreference(JSON.parse(raw)):normalizePlannerPreference(plannerDefaults)}catch(_){plannerPreference=normalizePlannerPreference(plannerDefaults)}return plannerPreference}
-  function applyPlannerPreference(){const pref=preference(),day=$('day-view');day.classList.toggle('density-compact',pref.density==='compact');for(const id of sectionIds){const node=$(id)?.closest('section');if(node)node.hidden=pref.hidden_sections.includes(id)}for(const id of pref.sections){const node=$(id)?.closest('section');if(node)day.append(node)} }
-  function renderPreferenceControls(){const pref=preference(),target=$('section-preferences');target.replaceChildren();for(const id of pref.sections){const row=document.createElement('div');row.className='preference-row';row.dataset.section=id;const label=document.createElement('label'),check=document.createElement('input');check.type='checkbox';check.checked=!pref.hidden_sections.includes(id);check.dataset.section=id;label.append(check,' ',id);const up=document.createElement('button'),down=document.createElement('button');up.type=down.type='button';up.textContent=t.moveUp;down.textContent=t.moveDown;up.setAttribute('aria-label',t.moveUp+' '+id);down.setAttribute('aria-label',t.moveDown+' '+id);up.onclick=()=>{const before=row.previousElementSibling;if(before)target.insertBefore(row,before)};down.onclick=()=>{const after=row.nextElementSibling;if(after)target.insertBefore(after,row)};row.append(label,up,down);target.append(row)}$('density').value=pref.density}
+  function applyPlannerPreference(){const pref=preference(),day=$('day-view');day.classList.toggle('density-compact',pref.density==='compact');for(const id of sectionIds){const node=focusTarget(id);if(node)node.hidden=pref.hidden_sections.includes(id)}for(const id of pref.sections){const node=focusTarget(id);if(node)day.append(node)} if(focusDataReady)renderReview(focusReview);updateFocus(); }
+  function renderPreferenceControls(){const pref=preference(),target=$('section-preferences');target.replaceChildren();for(const id of pref.sections){const row=document.createElement('div');row.className='preference-row';row.dataset.section=id;const label=document.createElement('label'),check=document.createElement('input');check.type='checkbox';check.checked=!pref.hidden_sections.includes(id);check.dataset.section=id;label.append(check,' ',id);const up=document.createElement('button'),down=document.createElement('button');up.type=down.type='button';up.textContent=t.moveUp;down.textContent=t.moveDown;up.setAttribute('aria-label',t.moveUp+' '+id);down.setAttribute('aria-label',t.moveDown+' '+id);up.onclick=()=>{const before=row.previousElementSibling;if(before)target.insertBefore(row,before)};down.onclick=()=>{const after=row.nextElementSibling;if(after)target.insertBefore(after,row)};row.append(label,up,down);target.append(row)}$('density').value=pref.density;for(const k of ["morning","daytime","evening"])$("focus-"+k).value=pref.time_bands[k];$("focus-settings-error").textContent="";}
   function savePlannerPreference(value){plannerPreference=normalizePlannerPreference(value);try{localStorage.setItem("lifetxt_planner_prefs_v1",JSON.stringify(plannerPreference))}catch(_){ }applyPlannerPreference()}
   function openEditor(kind,item=null){if(!writable)return;edit={kind,item};$('editor-heading').textContent=kind==='J'?t.journal:t.notes;$('editor-title').value=item?.title||(kind==='J'?'Journal '+date:'');$('editor-body').value=vals(item,'body')[0]||'';$('editor-feedback').textContent='';$('editor').showModal();$('editor-title').focus()}
-  async function boot(){translate();$('more-notes').onclick=moreNotes;$('customize').onclick=()=>{renderPreferenceControls();$('customize-dialog').showModal()};$('customize-form').onsubmit=e=>{e.preventDefault();const rows=[...$('section-preferences').children],hidden=rows.filter(row=>!row.querySelector('input').checked).map(row=>row.dataset.section);savePlannerPreference({sections:rows.map(row=>row.dataset.section),hidden_sections:hidden,density:$('density').value});$('customize-dialog').close()};$('reset-customization').onclick=()=>{plannerPreference=normalizePlannerPreference(plannerDefaults);try{localStorage.removeItem("lifetxt_planner_prefs_v1")}catch(_){ }applyPlannerPreference();renderPreferenceControls()};$('prev').onclick=()=>shift(-1);$('next').onclick=()=>shift(1);$('today').onclick=()=>{date=today;load()};$('prev').setAttribute('aria-label',t.previousDay);$('next').setAttribute('aria-label',t.nextDay);$('view-day').onclick=()=>setView('day');$('view-week').onclick=()=>setView('week');$('view-month').onclick=()=>setView('month');$('date').onchange=()=>{if(/^\d{4}-\d\d-\d\d$/.test($('date').value)){date=$('date').value;load()}};
+  async function boot(){translate();$("focus-mode").onchange=()=>{focusMode=$("focus-mode").value;updateFocus();};const clockStarted=performance.now();$('more-notes').onclick=moreNotes;$('customize').onclick=()=>{renderPreferenceControls();$('customize-dialog').showModal()};$('customize-form').onsubmit=e=>{e.preventDefault();const rows=[...$('section-preferences').children],hidden=rows.filter(row=>!row.querySelector('input').checked).map(row=>row.dataset.section);const bands=Object.fromEntries(["morning","daytime","evening"].map(k=>[k,$("focus-"+k).value]));if(!validTimeBands(bands)){$("focus-settings-error").textContent=t.focusInvalid;$("focus-morning").focus();return;}savePlannerPreference({time_bands:bands,sections:rows.map(row=>row.dataset.section),hidden_sections:hidden,density:$('density').value});$('customize-dialog').close()};$('reset-customization').onclick=()=>{plannerPreference=normalizePlannerPreference(plannerDefaults);try{localStorage.removeItem("lifetxt_planner_prefs_v1")}catch(_){ }applyPlannerPreference();renderPreferenceControls()};$('prev').onclick=()=>shift(-1);$('next').onclick=()=>shift(1);$('today').onclick=()=>{date=today;load()};$('prev').setAttribute('aria-label',t.previousDay);$('next').setAttribute('aria-label',t.nextDay);$('view-day').onclick=()=>setView('day');$('view-week').onclick=()=>setView('week');$('view-month').onclick=()=>setView('month');$('date').onchange=()=>{if(/^\d{4}-\d\d-\d\d$/.test($('date').value)){date=$('date').value;load()}};
     $('open-capture').onclick=()=>writable&&$('capture-dialog').showModal();$('capture-form').onsubmit=async e=>{e.preventDefault();if(pending||!writable)return;pending=true;const b=$('capture-form').querySelector('[type=submit]');b.disabled=true;try{await api('/api/items/capture',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:$('capture-text').value,expected_source_revision:typeof sourceRevision==='string'?sourceRevision:''})});$('capture-text').value='';$('capture-dialog').close();$('feedback').textContent=t.captured;await load()}catch(err){$('capture-feedback').textContent=t.captureError+err.message}finally{pending=false;b.disabled=false}};
     $('new-note').onclick=()=>openEditor('N');$('edit-journal').onclick=async()=>{const j=(await api('/api/items?type=J')).items||[];openEditor('J',j.find(i=>vals(i,'on').some(d=>String(d).slice(0,10)===date))||null)};
     $('editor-form').onsubmit=async e=>{e.preventDefault();if(!edit)return;const {kind,item}=edit,body=$('editor-body').value.trim();if(kind==='J'&&!body){$('editor-feedback').textContent=t.journalRequired;return}const details={...(item?.details||{})};if(body)details.body=[body];else delete details.body;if(kind==='J'&&!details.on)details.on=[date];const payload={status:'[N]',type:kind,title:$('editor-title').value.trim(),details};try{await api(item?pathFor(item):'/api/items',{method:item?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});$('editor').close();$('feedback').textContent=t.saved;await load()}catch(err){$('editor-feedback').textContent=t.saveError+err.message}};
-    document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>$(b.dataset.close).close());const [config,health,areas,views]=await Promise.all([api('/api/config'),api('/api/health'),api('/api/areas'),api('/api/saved-views')]);today=config.today;plannerDefaults=normalizePlannerPreference(config.web?.planner);const scopeSelect=$("scope");(areas.areas||[]).forEach(a=>{const o=document.createElement("option");o.value="area:"+a.name;o.textContent="Area: "+a.name;scopeSelect.append(o)});(views.views||[]).forEach(v=>{const o=document.createElement("option");o.value="saved_view:"+v.name;o.textContent="Saved View: "+v.name;scopeSelect.append(o)});scopeSelect.value=scopeArea?("area:"+scopeArea):scopeView?("saved_view:"+scopeView):"";scopeSelect.onchange=()=>{const value=scopeSelect.value;scopeArea=value.startsWith("area:")?value.slice(5):"";scopeView=value.startsWith("saved_view:")?value.slice(11):"";updateUrl();load()};writable=!health.read_only&&Boolean(health.writable_path);['open-capture','new-note','edit-journal'].forEach(id=>$(id).disabled=!writable);if(!writable)$('feedback').textContent=t.readonly;date=/^\d{4}-\d\d-\d\d$/.test(params.get('date')||'')?params.get('date'):today;applyPlannerPreference();await load();document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")syncToday()});window.addEventListener("focus",syncToday);todaySyncTimer=setInterval(syncToday,60000)}
+    document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>$(b.dataset.close).close());const [config,health,areas,views]=await Promise.all([api('/api/config'),api('/api/health'),api('/api/areas'),api('/api/saved-views')]);today=config.today;acceptWorkspaceClock(config,clockStarted);plannerDefaults=normalizePlannerPreference(config.web?.planner);const scopeSelect=$("scope");(areas.areas||[]).forEach(a=>{const o=document.createElement("option");o.value="area:"+a.name;o.textContent="Area: "+a.name;scopeSelect.append(o)});(views.views||[]).forEach(v=>{const o=document.createElement("option");o.value="saved_view:"+v.name;o.textContent="Saved View: "+v.name;scopeSelect.append(o)});scopeSelect.value=scopeArea?("area:"+scopeArea):scopeView?("saved_view:"+scopeView):"";scopeSelect.onchange=()=>{const value=scopeSelect.value;scopeArea=value.startsWith("area:")?value.slice(5):"";scopeView=value.startsWith("saved_view:")?value.slice(11):"";updateUrl();load()};writable=!health.read_only&&Boolean(health.writable_path);['open-capture','new-note','edit-journal'].forEach(id=>$(id).disabled=!writable);if(!writable)$('feedback').textContent=t.readonly;date=/^\d{4}-\d\d-\d\d$/.test(params.get('date')||'')?params.get('date'):today;applyPlannerPreference();await load();document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")resumeClock();else{workspaceClock=null;updateFocus();}});window.addEventListener("focus",resumeClock);todaySyncTimer=setInterval(syncToday,60000)}
   function bootError(e){$('feedback').textContent=t.error+e.message;['open-capture','new-note','edit-journal'].forEach(id=>$(id).disabled=true)}
   $('flow-form').addEventListener('submit',requestFlow);['flow-start','flow-end'].forEach(id=>$(id).addEventListener('input',resetFlow));$('flow-disclosure').addEventListener('toggle',()=>{if(!$('flow-disclosure').open)resetFlow()});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>boot().catch(bootError),{once:true});else boot().catch(bootError);

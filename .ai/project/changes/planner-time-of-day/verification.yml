@@ -1,0 +1,53 @@
+schema_version: 1
+verification:
+  executed:
+    - type: unit
+      command: MPLBACKEND=Agg python -m unittest discover
+      result: 5390 tests passed; 66 skipped; exit 0
+      status: passed
+      notes: Run began before final presentation-only refinements; final focused API and browser suites were rerun. Existing ResourceWarnings retained in captured output. Python 3.12.14, Bash; BashCompletionExecutionTests ran. Working tree changed while run was in flight; final focused verification covers changed files.
+    - type: targeted
+      command: python -m unittest tests.test_web_planner tests.test_web_installability tests.test_web_i18n tests.test_web_clock_public_config tests.test_change_package_closeout tests.test_traceability_gate
+      result: 82 tests passed
+      status: passed
+      implementation_tree: 6d8faa5fce27c02aa4b943d31aefc1098ca5f41b
+    - type: browser
+      command: python -m unittest tests.test_web_planner_browser
+      result: 2 tests passed, Chromium 153, six phone/short-height EN-JA scenarios and state/race tests
+      status: passed
+      implementation_tree: 6d8faa5fce27c02aa4b943d31aefc1098ca5f41b
+      notes: Browser executable supplied via LIFETXT_BROWSER_BIN; browser is a scratch verification dependency, not a project/runtime dependency.
+    - type: static
+      command: node --check lifetxt/web_planner.js; node --check tests/browser_planner_probe.mjs; python -m ruff check lifetxt tests scripts; python -m compileall -q lifetxt tests scripts; python -m mypy --follow-imports=skip --ignore-missing-imports lifetxt/diagnostic_contract.py
+      status: passed
+      result: JS syntax, lint, compile and configured typing boundary passed
+    - type: integration
+      command: python -m lifetxt check examples/minimal_life.txt
+      result: OK, 10 items
+      status: passed
+    - type: format
+      command: python -m ruff format --check tests/test_web_planner.py tests/test_web_planner_browser.py
+      result: Changed tests formatted
+      status: passed
+    - type: format_baseline
+      command: python -m ruff format --check lifetxt tests scripts
+      result: 72 pre-existing files would be reformatted; baseline main webapp.py also fails format check
+      status: known_baseline_failure
+    - type: manual
+      command: iPhone device and human screen-reader verification
+      result: Not available in this environment; native accessibility roles, keyboard-focus and geometry checked in Chromium
+      status: not_run
+review_ledger:
+  - reviewer: Codex
+    review_type: self-review
+    target_commit: dfc5e410a2d72d9137af949905125451d8de1980
+    result: findings_fixed
+    finding_count: 6
+    findings: [hidden review links, stale loading emphasis, actual nested completion titles, null review on Past, text label for upcoming candidates, existing scoped-history gap tracked in 1154]
+  - reviewer: Eruhitsuji
+    review_type: independent
+    target_commit: null
+    result: pending
+release_evidence:
+  migration_notes: No authoritative migration; older clients may discard the local time_bands extension when saving preferences.
+  rollback_plan: Revert isolated UI and additive config timestamp.

@@ -13,3 +13,7 @@ it would exclude distant nonrecurring rows and change the shared Agenda policy.
 
 Risks: recurrence is finite under the existing Agenda policy; ongoing spans
 overlapping the period-end boundary can appear, per existing Agenda semantics.
+
+Upcoming projection explicitly excludes native history records (including
+malformed payloads), while timeline validation retains them. Carry-forward
+continues to include only Task targets; native history consists of Note records.

@@ -121,3 +121,40 @@ class TemporalReviewTests(unittest.TestCase):
             )
         for key in ("upcoming", "carry_forward"):
             self.assertEqual(["Work"], [row["title"] for row in result[key]])
+
+    def test_native_history_is_evidence_not_a_current_agenda_or_task_target(self):
+        from lifetxt.native_history import build_item_event
+
+        items, _ = parse_text("[ ] T Work id:work due:2031-02-04\n")
+        event = build_item_event(
+            "work",
+            "created",
+            "2031-02-05T12:00:00Z",
+            1,
+            "ITX-work-1",
+            "a" * 64,
+            item_kind="T",
+            item_title="Work",
+            after_status="[ ]",
+        )
+        items.append(event)
+        malformed = build_item_event(
+            "work",
+            "completed",
+            "2031-02-05T13:00:00Z",
+            2,
+            "ITX-work-2",
+            "a" * 64,
+            before_status="[ ]",
+            after_status="[x]",
+        )
+        malformed.details["custom"] = ["invalid"]
+        malformed.title = "History_only"
+        items.append(malformed)
+        with timezone_context("UTC"):
+            result = build_temporal_review(
+                items, since="2031-02-03", until="2031-02-03", timezone_name="UTC"
+            )
+        for key in ("upcoming", "carry_forward"):
+            self.assertEqual(["Work"], [row["title"] for row in result[key]])
+        self.assertTrue(result["diagnostics"])

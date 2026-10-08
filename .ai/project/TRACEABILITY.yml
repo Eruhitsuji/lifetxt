@@ -5,6 +5,7 @@ traceability:
     - requirement_id: req-daily-flow-post-merge-review-evidence
       capability_id: cap-daily-flow-planner-lite
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1159
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1161
       changed_files_or_scope:
         - .ai/project/changes/daily-flow-lite-core/post-merge-review.md
         - .ai/project/changes/daily-flow-lite-core/post-merge-owner-decision.yml

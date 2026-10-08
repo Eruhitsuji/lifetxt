@@ -5,6 +5,33 @@ traceability:
     - requirement_id: req-daily-flow-planner-lite
       capability_id: cap-daily-flow-planner-lite
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1142
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1146
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1152
+      changed_files_or_scope:
+        - lifetxt/webapp.py
+        - lifetxt/daily_flow_web.py
+        - lifetxt/surface_runtime.py
+        - lifetxt/surface_runtime_compat.py
+        - tests/test_web_daily_flow.py
+        - docs/en/web.md
+        - docs/ja/web.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+        - .ai/project/changes/daily-flow-lite-api/**
+      tests_or_evidence:
+        - tests.test_web_daily_flow
+        - tests.test_daily_flow
+        - tests.test_surface_runtime
+        - tests.test_revision_migration_metrics
+        - tests.test_revision_telemetry_v2
+        - .ai/project/changes/daily-flow-lite-api/verification.yml
+      notes: Owner approved GET contract/local auth admission; High final-head human review
+        required. No scheduler/auth/UI rewrite.
+      release_or_deployment: Next normal release; additive API, no migration.
+      status: in_review
+    - requirement_id: req-daily-flow-planner-lite
+      capability_id: cap-daily-flow-planner-lite
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1142
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1145
       pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1151
       changed_files_or_scope:

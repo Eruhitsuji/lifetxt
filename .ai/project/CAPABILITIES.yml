@@ -33,6 +33,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/1145
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/1150
+      - https://github.com/Eruhitsuji/lifetxt/pull/1151
     reuse_policy: Reuse next actionable/dependency predicates, exact CLI rank seam, existing scopes, matrix context, timezone interpreters and freebusy interval algebra. No new priority or recurrence engine.
     notes: Shared core merged via PR1150. CLI admits explicit local active scope with exact snapshots and one bounded retry; workspace archives excluded by default. Web/API auth remains a consumer obligation; latest-head independent CLI review pending.
   - id: cap-external-resource-fetch-policy-contract

@@ -406,7 +406,9 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
                 current_clock_config, main_config=app.state.config
             )
         workspace_timezone = resolve_timezone_name(app.state.config)
+        from .timezone_policy import now as timezone_now
 
+        current_datetime = timezone_now(workspace_timezone)
         return {
             "paths": app.state.paths,
             "writable_path": app.state.writable_path,
@@ -415,7 +417,8 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             # calendar-day differences against the same reference date the
             # CLI/TUI already use, rather than the browser's own local date
             # -- a CodeX review finding against #658.
-            "today": timezone_today(workspace_timezone).isoformat(),
+            "today": current_datetime.date().isoformat(),
+            "current_datetime": current_datetime.isoformat(timespec="seconds"),
             # Shared Status/presence authoring vocabulary.  ``state:`` remains
             # free-form; the Web editor presents these values as suggestions
             # and keeps an explicit Custom path for every other value.

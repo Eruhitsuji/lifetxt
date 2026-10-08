@@ -1198,3 +1198,44 @@ live status and screen-reader lists; layout follows the existing safe-area,
 dark-mode and reduced-motion styles. Automated Chromium checks cover phone
 widths 320/360/390/430 and short heights; physical iOS/VoiceOver verification
 remains a human check.
+
+### Time-of-day emphasis in Planner Today
+
+In **Day → Today**, **Focus now** defaults to **Auto**. Workspace time selects
+Morning (05:00–11:00), Daytime (11:00–18:00), or Evening (18:00–next 05:00).
+Select Morning / Daytime / Evening / Standard to override the emphasis for the
+current page only; reload returns to Auto. Past, Future, Week and Month keep their
+existing meaning.
+
+Morning links to Schedule, Tasks and Suggested Daily Flow. Daytime highlights the
+next fixed appointment and current/upcoming candidate cards in an explicitly
+requested Daily Flow result. Evening links to recorded completions, Habits and
+Journal. Completion evidence comes from the existing scoped Temporal Review,
+not from a proposed plan or the current task status; bounded/incomplete review
+and read errors remain labeled. Suggestions are never saved, completed or
+rescheduled by this display. Flow reasons, unplaced tasks and diagnostics remain
+available, and suggestions are never requested automatically.
+
+**Customize → Automatic time bands** accepts HH:MM start times with
+Morning < Daytime < Evening; Evening wraps to the next Morning. Defaults are
+05:00 / 11:00 / 18:00. Values are stored only in this browser's existing
+`lifetxt_planner_prefs_v1` preferences as `time_bands` (`morning`, `daytime`,
+`evening`). Reset restores defaults; legacy or invalid values fall back to these
+defaults without changing section order, visibility or density. If browser storage
+is unavailable, changes last only for the current page. Older clients ignore the
+added field; saving with an older client can discard it. There is no cross-device
+sync, server configuration key, `config explain` entry or life.txt migration.
+Hidden sections do not reappear through the Focus links. Standard removes
+emphasis without hiding unfinished work; Quick Capture stays accessible.
+
+`GET /api/config` now adds `current_datetime`, an offset-aware ISO 8601 workspace
+current timestamp. It and `today` use one server clock snapshot. Existing fields
+and authentication are unchanged; the response remains `Cache-Control: no-store`.
+Planner reuses the existing one-minute config synchronization and focus/visibility
+resume checks. It advances a server sample only with monotonic elapsed time, never
+with the device's wall clock. Missing/invalid, over-two-minute-old, different-date,
+failed or slow (>10s) samples fall back to Standard in Auto. Resuming discards the
+old sample before refreshing; no new polling endpoint or Daily Flow rerun is added.
+
+Known limitation: area/Saved View review may omit associated native history;
+incomplete evidence remains labeled. Tracked in #1154.

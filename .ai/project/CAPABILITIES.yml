@@ -414,6 +414,7 @@ capabilities:
     status: active
     owner: Eruhitsuji
     source_requirements:
+      - req-planner-time-of-day-adaptive-today
       - req-planner-day-experience
       - req-planner-day-schedule
       - req-planner-day-actions
@@ -443,6 +444,7 @@ capabilities:
       - docs/en/web.md
       - docs/ja/web.md
     public_interfaces:
+      - GET /api/config (additive current_datetime workspace clock)
       - GET /planner
       - GET /planner.webmanifest
       - GET /api/command-center?date=YYYY-MM-DD (optional)
@@ -456,6 +458,7 @@ capabilities:
       - tests.test_web_assets
       - tests.test_web_i18n
     related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/1149
       - https://github.com/Eruhitsuji/lifetxt/issues/1020
       - https://github.com/Eruhitsuji/lifetxt/issues/991
       - https://github.com/Eruhitsuji/lifetxt/issues/992

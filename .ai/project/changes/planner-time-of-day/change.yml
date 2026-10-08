@@ -1,0 +1,17 @@
+schema_version: 1
+change:
+  id: planner-time-of-day
+  title: Planner Today time-of-day emphasis
+  status: implemented
+  change_type: Feature
+  assurance_level: Standard
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1149
+  related_pull_request: null
+scope:
+  in_scope: [Today emphasis, browser-local custom time bands, additive workspace current_datetime]
+  out_of_scope: [scheduling, automatic writes, server config keys, auth changes]
+  write_scope: [lifetxt/web_planner.js, lifetxt/web_planner.html, lifetxt/web_planner.css, lifetxt/webapp.py, tests/test_web_planner.py, tests/test_web_planner_browser.py, tests/browser_planner_probe.mjs, docs/en/web.md, docs/ja/web.md, .ai/project]
+  forbidden_scope: [.ai/managed, lifetxt/daily_flow.py, lifetxt/freebusy.py, lifetxt/nextaction.py]
+human_approvals_required: [independent review, merge]

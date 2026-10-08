@@ -1,0 +1,14 @@
+schema_version: 1
+requirements:
+  - id: req-planner-time-of-day-adaptive-today
+    kind: ADDED
+    statement: Adapt Today emphasis using workspace time, with manual override and custom browser-local boundaries.
+    acceptance_criteria:
+      - Auto and manual modes affect presentation only on Today.
+      - Custom start times validate ordering and survive reload in this browser.
+      - Unknown or stale time falls back to Standard; browser wall clock is not authoritative.
+      - Existing visibility, order, density, scope, diagnostics and canonical Daily Flow order remain authoritative.
+      - Evening completion evidence is scoped authoritative history, never proposed execution.
+      - EN/JA, keyboard, narrow and short-height layouts remain usable.
+    owner: Eruhitsuji
+open_questions: []

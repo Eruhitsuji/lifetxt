@@ -1,0 +1,11 @@
+schema_version: 1
+verification:
+  executed: []
+review_ledger:
+  - reviewer: Eruhitsuji
+    review_type: independent
+    target_commit: null
+    result: pending
+release_evidence:
+  migration_notes: No authoritative migration; older clients may discard the local time_bands extension when saving preferences.
+  rollback_plan: Revert isolated UI and additive config timestamp.

@@ -1,0 +1,16 @@
+schema_version: 1
+requirements:
+- id: req-daily-flow-planner-lite
+  kind: ADDED
+  owner: Eruhitsuji
+  statement: Generate deterministic, explainable, bounded, read-only single-day task
+    proposals from explicitly admitted snapshots using existing domain engines.
+  acceptance_criteria:
+  - AC1 shared actionable/dependency/rank/time/freebusy semantics reused
+  - AC2 same input yields same canonical result; no source mutation
+  - AC3 fixed/candidate/rest/buffer/free/instants/unplaced/why/provenance/completeness
+  - AC4 F1-F20 fail-safe boundary cases; IO/auth delegated explicitly
+  - AC5 resource preflight before expansion/conflicts and candidate caps preserve
+    inventory
+  - AC6 representative 1000T+100E timing/memory evidence
+  - AC7 EN/JA documentation and registry/traceability; no CLI/API/UI/Format changes

@@ -1,0 +1,40 @@
+schema_version: 1
+change:
+  id: daily-flow-lite-core
+  title: Shared read-only Daily Flow Lite core
+  status: in-review
+  change_type: Feature
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1144
+  related_pull_request: null
+  base_commit: 222d8db37c1b51e9b32871805ff80b5d4ce37740
+  size: S
+  complexity: 6/10
+scope:
+  write_scope:
+  - lifetxt/daily_flow*.py
+  - tests/test_daily_flow*.py
+  - docs/en/daily-flow-lite-contract.md
+  - docs/ja/daily-flow-lite-contract.md
+  - .ai/project/CAPABILITIES.yml
+  - .ai/project/TRACEABILITY.yml
+  - .ai/project/changes/daily-flow-lite-core/**
+  forbidden_scope:
+  - CLI/Web/Format/freebusy/next semantics
+  - .ai/managed/**
+  - generated schemas/configuration
+  shared_files:
+  - .ai/project/CAPABILITIES.yml
+  - .ai/project/TRACEABILITY.yml
+  integrator: Eruhitsuji
+  rollback: Revert additive core, tests and metadata; no persisted changes
+design_approval:
+  owner: Eruhitsuji
+  date: '2026-10-08'
+  record: https://github.com/Eruhitsuji/lifetxt/issues/1143
+  scope: 'D1-D3 accepted; #1144 implementation through PR explicitly requested'
+human_approvals_required:
+- Independent latest-head requirements/design/security review
+- Integration/merge approval

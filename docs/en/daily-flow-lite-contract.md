@@ -1,10 +1,10 @@
 # Daily Flow Lite: proposed scheduling contract
 
-Investigation #1143 for Epic #1142. **Proposal, awaiting @Eruhitsuji's
-requirements/design approval. No scheduler, command, endpoint or UI ships here.**
+Investigation #1143 for Epic #1142. **D1-D3 approved by @Eruhitsuji on 2026-10-08 (#1143 / PR #1148).
+#1144 implements the shared pure core only; CLI, endpoint and UI remain separate.**
 The Japanese companion is [here](../ja/daily-flow-lite-contract.md).
 
-## Task and approval boundary
+## Original investigation boundary (#1143)
 
 Phase: Requirements & Design; Investigation; S; complexity 4/10 (scope 1,
 dependencies 1, uncertainty 1, verification 1, operations 0); Standard assurance.
@@ -15,7 +15,7 @@ No runtime, Format 1.0, generated schema, configuration or managed-standard edit
 
 Traceability: proposed `req-daily-flow-planner-lite` -> proposed
 `cap-daily-flow-planner-lite` -> #1142 -> #1143 -> design PR/evidence. These IDs
-are proposals, not entries claiming a shipped capability; register during #1144.
+are registered as the experimental shared core by #1144; transport consumers remain separate.
 Child Issues remain inbox until approval, dependency completion and readiness.
 Rollback: revert this additive documentation; no user data changes.
 
@@ -43,10 +43,10 @@ project. Effort: [Format 1.0](life_txt_format_spec.md),
 Source revisions must reuse the repository's existing snapshot/revision helpers
 selected during #1144; do not invent a Git-only revision (plain files work too).
 
-## Human decisions needed
+## Approved decisions and separate consumer gates
 
-Approval of this memo's policies is required before #1144 is Ready. Owner:
-@Eruhitsuji. Approval should name D1-D3; editing a draft is not acceptance.
+Owner @Eruhitsuji approved D1-D3 in #1143. The decision table below retains
+the evaluated alternatives. CLI/API interfaces and final merge remain separate gates.
 
 | Decision | Recommended policy | Alternative / tradeoff |
 | --- | --- | --- |
@@ -233,8 +233,9 @@ and revisions support stale detection only, not write permission or CAS adoption
 
 ## Diagnostics and future acceptance fixtures
 
-Expected outcomes below are **future contract tests**, not tests of a shipped
-scheduler. Existing freebusy diagnostic codes are preserved within diagnostics;
+These are the accepted contract cases; #1144 core tests exercise them, with
+IO/auth portions represented by explicit input certification flags, not implemented
+consumer integration. Existing freebusy diagnostic codes are preserved within diagnostics;
 Daily Flow adds effects without changing their meaning.
 
 | Fixture / trigger | Code and expected result |
@@ -350,3 +351,74 @@ tests.test_extra_cli`: **46 tests passed**, covering CLI ranking/explanations.
 Link consistency and documentation validation
 are recorded in the PR. Runtime/code quality/security changes: not applicable;
 design review covers determinism, occupancy certainty, privacy and compatibility.
+
+
+## Shared-core implementation (#1144)
+
+`lifetxt.daily_flow.build_daily_flow` now consumes parsed, authorized snapshots
+and returns this versioned model without filesystem/network access. The caller
+must explicitly certify `occupancy_complete`; false returns generic blocked data
+without exposing inventory/slots. `snapshot_consistent=False` similarly blocks.
+Parser errors supplied via `input_diagnostics` suppress placements and occupancy
+certification. Snapshot reads, path admission/canonicalization, one bounded retry
+and actual auth/read visibility remain consumer responsibilities. No file discovery
+or archived-week import occurs inside the core.
+
+```python
+from lifetxt.parser import parse_text
+from lifetxt.daily_flow import build_daily_flow
+
+items, diagnostics = parse_text("[ ] T Review id:review est:30m\n")
+proposal = build_daily_flow(
+    items, date="2026-10-09", day_start="09:00", day_end="12:00",
+    timezone="Asia/Tokyo", evaluated_at="2026-10-08T18:00+09:00",
+    occupancy_complete=True, input_diagnostics=diagnostics,
+    policy={"break_minutes": 10, "buffer_minutes": 5},
+)
+# proposal["timeline"] is unsaved; no life.txt write occurs.
+```
+
+Explicit `timezone` must be a resolved named/fixed-offset zone, not `local`.
+Missing/invalid date/window/policy raises ValueError; uncertain input returns a
+blocked model. Model `free` contains the certified unreserved gaps only when
+placement is permitted; unknown occupancy never exposes apparent free gaps.
+Unplaced order uses source token/line/ID. Reasons are code/params for transport
+renderers to localize; the core does not generate language-dependent prose.
+
+Optional `context_items` participates in dependency/identity checks only.
+Optional `source_revisions` maps normalized admitted source names to existing
+SHA-256 snapshot digests from `mutation.read_text_snapshot`; consumers must verify
+currentness. Without those digests the core hashes canonical parsed records with
+`mutation.hash_text` and labels basis `parsed_snapshot` (not a byte revision/CAS
+token). Caller-supplied digests are `source_snapshot`. Source names are normalized
+lexically and represented as hashes; symlink/case admission must happen upstream.
+Sources missing from supplied metadata retain explicitly labelled parsed hashes.
+
+Additional admission bounds: 40,000 detail values, 4,000,000 total text characters,
+1,024 title characters, 4,096 characters per detail value/key/source. Values may
+only reduce hard limits. Exceeding input bounds yields blocked summary; no work
+or occupancy is silently truncated. `on` x `at` expansion is bounded before
+normalization, and conflict-pair upper bounds precede shared freebusy enumeration.
+All source/task/event details remain unchanged; suggestions do not unlock tasks.
+
+CLI/Web/Planner consumers are still #1145/#1146/#1147. F16 core tests exercise
+currentness/visibility flags; they do not prove file IO retry or Web authorization.
+No public endpoint, generated schema, configuration setting or Format key is added.
+Run `python -m unittest tests.test_daily_flow tests.test_daily_flow_performance`
+for boundary/seeded invariants/scale; run
+`python -m tests.test_daily_flow_performance --benchmark` for reproducible evidence.
+The benchmark records parse and pure-core timing separately; performance is
+environment-qualified, not asserted as a flaky unit-test threshold.
+
+The initial timezone adapter conservatively rejects a relevant complete event
+span longer than two days when certifying transitions; it never scans an
+unbounded temporal range. Correct expansion/support requires a separate certified
+adapter. This may block otherwise safe multi-day appointments, even in UTC.
+
+Measured reference environment: Python 3.12.14, Linux x86_64, deterministic seed 0,
+3 warmups + 20 runs; parse measured separately, tracemalloc on a separate run.
+Many-gaps core p95: 96.55ms / incremental peak 2.93MiB; dense-overlap core p95:
+212.53ms / peak 13.48MiB (1,000T+100E each). Both meet the proposed 250ms/32MiB
+reference targets. These are this environment's observations, not portable SLAs.
+43 dedicated core/scale tests cover the contract; final focused regressions include
+179 tests. Independent final-head human approval remains pending.

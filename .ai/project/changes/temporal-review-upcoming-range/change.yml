@@ -1,0 +1,33 @@
+schema_version: 1
+change:
+  id: temporal-review-upcoming-range
+  title: Use the Agenda end-bound contract for Temporal Review upcoming rows
+  status: implemented
+  change_type: Fix
+  assurance_level: Standard
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1156
+  related_pull_request: null
+scope:
+  in_scope:
+  - existing Agenda open-ended range sentinel
+  - upcoming project/scope restrictions
+  out_of_scope:
+  - new recurrence engine
+  - new response fields
+  - authoritative writes
+  write_scope:
+  - lifetxt/temporal_review.py
+  - tests/test_temporal_review.py
+  - tests/test_temporal_review_scope.py
+  - docs/en/web.md
+  - docs/ja/web.md
+  - .ai/project/CAPABILITIES.yml
+  - .ai/project/TRACEABILITY.yml
+  - .ai/project/changes/temporal-review-upcoming-range/**
+  forbidden_scope:
+  - .ai/managed/**
+human_approvals_required:
+- independent review
+- merge

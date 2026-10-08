@@ -38,6 +38,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/1146
       - https://github.com/Eruhitsuji/lifetxt/issues/1145
     related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/1152
       - https://github.com/Eruhitsuji/lifetxt/pull/1150
       - https://github.com/Eruhitsuji/lifetxt/pull/1151
     reuse_policy: Reuse next actionable/dependency predicates, exact CLI rank seam, existing scopes, matrix context, timezone interpreters and freebusy interval algebra. No new priority or recurrence engine.

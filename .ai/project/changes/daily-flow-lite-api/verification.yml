@@ -17,9 +17,10 @@ verification:
       exact-path exclusions added
     - Legacy post-read writable revision raised on corrupt input and leaked ETag on
       denied auth; exact-path exclusion added
+    target_commit: 888d1d984da3d87161d487f76a98404f222c3d2e
   - reviewer: Eruhitsuji
     review_type: implementation/security/integration
-    target_commit: latest PR head
+    target_commit: latest PR1152 head
     result: pending
   environment: Python 3.12.14 / Linux / Bash; tracked working tree unchanged during
     full suite; existing ResourceWarnings/optional skips retained; full output captured.
@@ -54,6 +55,11 @@ verification:
   - command: python scripts/validate_release_docs.py --output .cache/1146-release-docs.json
     result: ok=true, errors=0
     status: passed
+  - command: python -m unittest tests.test_web_daily_flow tests.test_traceability_gate
+      tests.test_change_package_closeout
+    result: 33 tests OK on final runtime and finalized evidence package before PR
+      linking
+    status: passed
   acceptance_mapping:
     AC1: Exact core-model equality, deterministic output, native OpenAPI required
       parameters and GET-only route
@@ -69,3 +75,12 @@ verification:
       only
     AC7: EN/JA docs tests and release-doc validation, capability/traceability/High
       package
+  runtime_evidence:
+    local_commit: 96426e3e
+    published_commit: 888d1d984da3d87161d487f76a98404f222c3d2e
+    tree: 6e851f734e322a4a8b8e2f683de843427ca673dc
+    publication: Identical local/published tree verified. Subsequent commit changes
+      PR-link/evidence metadata only.
+  metadata_regression:
+    finding: Committed-head traceability gate rejected indentless evidence sequences; nested list indentation corrected to match repository gate.
+    result: Final committed-head traceability and PR URL gate rerun below; runtime unchanged.

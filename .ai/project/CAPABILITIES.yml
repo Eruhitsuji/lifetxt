@@ -978,10 +978,14 @@ capabilities:
     status: active
     owner: Eruhitsuji
     source_requirements:
+      - req-temporal-review-upcoming-range
+      - req-temporal-review-scoped-history
       - req-temporal-life-review
       - req-temporal-life-review-cross-surface
       - req-planner-past-review-timeline
     implementation_locations:
+      - lifetxt/read_scope.py
+      - tests/test_temporal_review_scope.py
       - lifetxt/temporal_review.py
       - lifetxt/cli.py
       - lifetxt/webapp.py
@@ -995,12 +999,17 @@ capabilities:
       - GET /api/temporal-review
       - MCP get_temporal_review
     tests_or_evidence:
+      - tests.test_read_scope
+      - tests.test_temporal_review_scope
       - tests.test_temporal_review
       - tests.test_review_cli_contract
     related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/1156
+      - https://github.com/Eruhitsuji/lifetxt/issues/1154
       - https://github.com/Eruhitsuji/lifetxt/issues/808
       - https://github.com/Eruhitsuji/lifetxt/issues/1137
     related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/1157
       - https://github.com/Eruhitsuji/lifetxt/pull/1139
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     replacement:

@@ -1,0 +1,14 @@
+schema_version: 1
+requirements:
+- id: req-temporal-review-upcoming-range
+  kind: MODIFIED
+  statement: Build future Temporal Review agenda rows with the existing concrete end-bound
+    and bounded recurrence contract.
+  acceptance_criteria:
+  - Dated due/on/from-to rows no longer fail with None end bound.
+  - Shared 366-day recurrence expansion and chronological output limit are preserved.
+  - Workspace timezone, selected area/Saved View and project restrictions remain authoritative.
+  - Unscoped and read-only reads work without synthesizing completion evidence.
+  - Native history is validation evidence, never a current agenda/task target.
+  owner: Eruhitsuji
+open_questions: []

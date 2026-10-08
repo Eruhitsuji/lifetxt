@@ -1,0 +1,15 @@
+schema_version: 1
+requirements:
+- id: req-temporal-review-scoped-history
+  kind: MODIFIED
+  statement: Preserve native history associated with authoritative selected Temporal
+    Review targets without cross-scope disclosure.
+  acceptance_criteria:
+  - Area and Saved View preserve selected targets native events.
+  - No unselected target/history/upcoming/carry-forward data is returned.
+  - Malformed, missing and duplicate history retains existing validation and completeness.
+  - Ambiguous selected identity or parent association returns a generic HTTP 400.
+  - Unscoped behavior, ordering, limits, custom id key and read-only operation remain
+    compatible.
+  owner: Eruhitsuji
+open_questions: []

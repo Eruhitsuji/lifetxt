@@ -155,10 +155,12 @@ class PlannerTests(unittest.TestCase):  # pragma: no cover -- covered in web-ext
         )
         scoped = self.client.get("/api/temporal-review?date=2031-02-03&area=Work")
         self.assertEqual(200, scoped.status_code)
-        # Shared scope currently omits native history; the UI must retain its
-        # incomplete flag rather than inventing completions from status/done.
+        # Creation evidence is missing, but recorded completions remain visible.
         self.assertFalse(scoped.json()["complete"])
-        self.assertEqual([], scoped.json()["completed"])
+        self.assertEqual(
+            ["Completed_Work"],
+            [row["target"]["title"] for row in scoped.json()["completed"]],
+        )
         self.assertEqual(before, Path(self.path).read_bytes())
 
     def test_week_range_uses_shared_agenda_occurrences_and_excludes_undated_tasks(self):

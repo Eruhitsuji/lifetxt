@@ -2,8 +2,8 @@ schema_version: 1
 
 capabilities:
   - id: cap-daily-flow-planner-lite
-    name: Shared read-only Daily Flow Lite core
-    summary: Deterministic bounded single-day proposals with certified occupancy, full-estimate tasks, reasons and uncertainty; no transport or writes.
+    name: Read-only Daily Flow Lite core and CLI
+    summary: Deterministic bounded single-day proposals with certified occupancy, full-estimate tasks, reasons and uncertainty; additive read-only flow CLI, no record writes.
     status: experimental
     owner: Eruhitsuji
     source_requirements:
@@ -12,20 +12,30 @@ capabilities:
       - lifetxt/daily_flow.py
       - lifetxt/daily_flow_model.py
       - lifetxt/daily_flow_time.py
+      - lifetxt/daily_flow_cli.py
+      - lifetxt/cli.py (flow parser and dispatcher)
+      - lifetxt/entrypoint.py (flow-only snapshot-aware route)
+      - lifetxt/cli_taxonomy.py
     public_interfaces:
-      - Internal Python build_daily_flow; no CLI/API/UI or generated schema registered
+      - Internal Python build_daily_flow
+      - lifetxt flow [path ...] --date YYYY-MM-DD --day-start HH:MM --day-end HH:MM [--format text|json]
+      - No API/UI or generated schema registered
     tests_or_evidence:
       - tests.test_daily_flow
       - tests.test_daily_flow_performance
+      - tests.test_daily_flow_cli
+      - .ai/project/changes/daily-flow-lite-cli/verification.yml
       - .ai/project/changes/daily-flow-lite-core/verification.yml
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/1142
       - https://github.com/Eruhitsuji/lifetxt/issues/1143
       - https://github.com/Eruhitsuji/lifetxt/issues/1144
+      - https://github.com/Eruhitsuji/lifetxt/issues/1145
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/1150
+      - https://github.com/Eruhitsuji/lifetxt/pull/1151
     reuse_policy: Reuse next actionable/dependency predicates, exact CLI rank seam, existing scopes, matrix context, timezone interpreters and freebusy interval algebra. No new priority or recurrence engine.
-    notes: Requires explicitly certified authorized snapshots. Caller IO/retry/auth gates remain in consumers; independent implementation review pending.
+    notes: Shared core merged via PR1150. CLI admits explicit local active scope with exact snapshots and one bounded retry; workspace archives excluded by default. Web/API auth remains a consumer obligation; latest-head independent CLI review pending.
   - id: cap-external-resource-fetch-policy-contract
     name: Explicit external fetch/import design contract
     summary: Bilingual approved-direction policy for inert references, explicit network

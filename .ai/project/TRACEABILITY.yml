@@ -5,6 +5,7 @@ traceability:
     - requirement_id: req-daily-flow-post-merge-closeout
       capability_id: cap-daily-flow-planner-lite
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1158
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1160
       changed_files_or_scope:
         - .ai/project/changes/daily-flow-lite-core
         - .ai/project/changes/daily-flow-lite-cli

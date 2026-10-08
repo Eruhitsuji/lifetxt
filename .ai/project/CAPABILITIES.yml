@@ -452,6 +452,7 @@ capabilities:
       - GET /api/notes (shared ordinary Notes in five-row pages)
       - Existing agenda, item, capture and mutation APIs
     tests_or_evidence:
+      - tests.test_web_planner_browser (Today bands, customization, freshness, scoped presentation and phone matrix)
       - tests.test_web_planner
       - tests.test_web_installability
       - tests.test_web_mobile_capture
@@ -473,6 +474,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/1006
       - https://github.com/Eruhitsuji/lifetxt/issues/1018
     related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/1155
       - https://github.com/Eruhitsuji/lifetxt/pull/999
       - https://github.com/Eruhitsuji/lifetxt/pull/1004
       - https://github.com/Eruhitsuji/lifetxt/pull/1007

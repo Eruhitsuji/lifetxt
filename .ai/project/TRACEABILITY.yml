@@ -16783,7 +16783,7 @@ traceability:
       capability_id: cap-web-mobile-planner
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1142
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1149
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1155
       changed_files_or_scope:
         - lifetxt/web_planner.js
         - lifetxt/web_planner.html
@@ -16799,7 +16799,7 @@ traceability:
         - tests.test_web_planner_browser
       notes: Owner approved default bands, browser-only customization and additive workspace current_datetime; presentation only, no plan mutation.
       release_or_deployment: null
-      status: implemented
+      status: verified
 
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception

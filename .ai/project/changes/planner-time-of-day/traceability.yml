@@ -4,7 +4,11 @@ links:
     capability_id: cap-web-mobile-planner
     epic: https://github.com/Eruhitsuji/lifetxt/issues/1142
     task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1149
-    pull_request: null
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1155
     tests_or_evidence: [tests.test_web_planner, tests.test_web_planner_browser]
-    status: implemented
-gaps: []
+    status: verified
+gaps:
+  - requirement_id: req-planner-time-of-day-adaptive-today
+    reason: Existing area/Saved View scope may omit associated native completion history; incomplete evidence remains labeled, never fabricated.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1154
+    status: tracked

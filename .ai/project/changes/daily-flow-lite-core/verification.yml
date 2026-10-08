@@ -63,6 +63,10 @@ verification:
     result: 10 items OK; release docs ok=true/errors=0. Bilingual task-relative links,
       package YAML and unique capability IDs verified separately.
     status: passed
+  - command: GitHub create_tree SHA compared with local HEAD^{tree}
+    result: Initial published tree 2c1f412981d0e5c5bbf07848625e5a01e550c94f matches
+      local reviewed/tested tree; final delta is PR linkage/evidence metadata only.
+    status: passed
   planned:
   - Independent final-head High review and CI
   - No IO/auth consumer integration or real mobile verification in this core task

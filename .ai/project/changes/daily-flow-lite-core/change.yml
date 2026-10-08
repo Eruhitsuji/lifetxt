@@ -8,7 +8,7 @@ change:
   owner: Eruhitsuji
   accountable_owner: Eruhitsuji
   related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1144
-  related_pull_request: null
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1150
   base_commit: 222d8db37c1b51e9b32871805ff80b5d4ce37740
   size: S
   complexity: 6/10

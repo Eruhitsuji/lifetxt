@@ -1,0 +1,49 @@
+schema_version: 1
+change:
+  id: daily-flow-lite-cli
+  title: Read-only Daily Flow Lite CLI
+  status: implementing
+  change_type: Feature
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1145
+  related_pull_request: pending
+  base_commit: b7dbda40
+  size: S
+  complexity: 5/10
+scope:
+  write_scope:
+    - lifetxt/cli.py (additive parser/dispatcher only)
+    - lifetxt/entrypoint.py (flow-only routing, avoid speculative timezone reads)
+    - lifetxt/daily_flow_cli.py
+    - lifetxt/cli_taxonomy.py
+    - tests/test_daily_flow_cli.py
+    - docs/en/cli.md
+    - docs/ja/cli.md
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+    - .ai/project/changes/daily-flow-lite-cli/**
+  forbidden_scope:
+    - .ai/managed/**
+    - Web, Format, generated schemas, configuration keys, record writes
+    - Shared scheduling algorithm and legacy command semantics
+  shared_files:
+    - lifetxt/cli.py
+    - lifetxt/entrypoint.py
+    - lifetxt/cli_taxonomy.py
+    - docs/en/cli.md
+    - docs/ja/cli.md
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+  integrator: Eruhitsuji
+  integration_order: After merged PR1150; check latest main before publication
+  rollback: Revert additive CLI/tests/docs/metadata; no user data migration
+design_approval:
+  owner: Eruhitsuji
+  date: '2026-10-08'
+  record: https://github.com/Eruhitsuji/lifetxt/issues/1145
+  scope: flow name, required date/day-start/day-end, text default, optional format json
+human_approvals_required:
+  - Independent latest-head implementation and integration review
+  - Final High assurance risk acceptance and merge

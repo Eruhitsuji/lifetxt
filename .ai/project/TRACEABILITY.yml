@@ -5,7 +5,7 @@ traceability:
     - requirement_id: req-temporal-review-upcoming-range
       capability_id: cap-temporal-life-review
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1156
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1157
       changed_files_or_scope:
         - lifetxt/temporal_review.py
         - tests/test_temporal_review.py
@@ -25,7 +25,7 @@ traceability:
     - requirement_id: req-temporal-review-scoped-history
       capability_id: cap-temporal-life-review
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1154
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1157
       changed_files_or_scope:
         - lifetxt/read_scope.py
         - lifetxt/webapp.py

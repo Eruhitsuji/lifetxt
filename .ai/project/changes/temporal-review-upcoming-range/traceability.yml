@@ -3,7 +3,7 @@ links:
 - requirement_id: req-temporal-review-upcoming-range
   capability_id: cap-temporal-life-review
   task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1156
-  pull_request: null
+  pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1157
   tests_or_evidence:
   - tests.test_temporal_review
   - tests.test_temporal_review_scope

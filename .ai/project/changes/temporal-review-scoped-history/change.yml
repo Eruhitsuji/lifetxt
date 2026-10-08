@@ -1,0 +1,34 @@
+schema_version: 1
+change:
+  id: temporal-review-scoped-history
+  title: Preserve selected targets native history in scoped Temporal Review
+  status: implemented
+  change_type: Fix
+  assurance_level: Standard
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1154
+  related_pull_request: null
+scope:
+  in_scope:
+  - Temporal Review target/history selection and safe ambiguity rejection
+  out_of_scope:
+  - generic reader semantics
+  - authoritative writes
+  - response schema changes
+  write_scope:
+  - lifetxt/read_scope.py
+  - lifetxt/webapp.py
+  - tests/test_read_scope.py
+  - tests/test_temporal_review_scope.py
+  - tests/test_web_planner.py
+  - docs/en/web.md
+  - docs/ja/web.md
+  - .ai/project/CAPABILITIES.yml
+  - .ai/project/TRACEABILITY.yml
+  - .ai/project/changes/temporal-review-scoped-history/**
+  forbidden_scope:
+  - .ai/managed/**
+human_approvals_required:
+- independent review
+- merge

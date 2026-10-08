@@ -1,0 +1,46 @@
+schema_version: 1
+verification:
+  executed:
+  - type: targeted
+    command: python -m unittest tests.test_read_scope tests.test_temporal_review_scope
+      tests.test_web_planner tests.test_temporal_review tests.test_workspace_timeline
+      tests.test_review_cli_contract
+    result: 57 tests passed
+    status: passed
+  - type: static
+    command: python -m ruff check lifetxt tests scripts; python -m compileall -q lifetxt
+      tests scripts
+    result: Repository lint and compile passed
+    status: passed
+  - type: format
+    command: python -m ruff format --check lifetxt/read_scope.py lifetxt/temporal_review.py
+      tests/test_read_scope.py tests/test_temporal_review.py tests/test_temporal_review_scope.py
+      tests/test_web_planner.py
+    result: All six formatted files passed; existing webapp.py format baseline left
+      unchanged
+    status: passed
+  - type: unit
+    command: MPLBACKEND=Agg python -m unittest discover
+    result: Final combined tree verification pending execution
+    status: pending
+review_ledger:
+- reviewer: Codex
+  review_type: self-review
+  target_commit: null
+  result: passed
+  finding_count: 0
+  viewpoints:
+  - Agenda concrete end sentinel
+  - finite recurring expansion reused
+  - ongoing span overlap and workspace date boundary
+  - upcoming scope/project isolation and chronological limit
+  - read-only source bytes unchanged
+  notes: Minimal shared builder fix; no recurrence engine or public parameter/schema
+    changes.
+- reviewer: Eruhitsuji
+  review_type: independent
+  target_commit: null
+  result: pending
+release_evidence:
+  migration_notes: None; read-only projection fix.
+  rollback_plan: Revert the isolated upcoming composition fix.

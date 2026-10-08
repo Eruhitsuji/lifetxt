@@ -26,3 +26,54 @@ def resolve_read_scope(items, config, *, area=None, saved_view=None):
             "name": str(area),
         }
     return items, None
+
+
+def resolve_temporal_read_scope(
+    items, config, *, area=None, saved_view=None, id_key="id"
+):
+    """Retain selected targets and attributable native evidence for review.
+
+    Selectors still run over the authoritative snapshot, including Saved View
+    sorting and limits. Generic readers continue to use ``resolve_read_scope``.
+    Associated malformed payloads remain available to the native validators.
+    """
+    from collections import Counter
+
+    from .native_timeline import _is_history
+
+    selected, metadata = resolve_read_scope(
+        items, config, area=area, saved_view=saved_view
+    )
+    if metadata is None:
+        return items, None
+
+    targets = [item for item in selected if not _is_history(item)]
+    identities = Counter(
+        str(value)
+        for item in items
+        if not _is_history(item)
+        for value in set(item.details.get(id_key, []))
+    )
+    selected_ids = set()
+    ambiguous = "read scope: ambiguous native history association."
+    for target in targets:
+        values = target.details.get(id_key, [])
+        if len(values) != 1:
+            # Workspace Timeline already reports targets without a unique ID.
+            continue
+        target_id = str(values[0])
+        if identities[target_id] != 1:
+            raise ValueError(ambiguous)
+        selected_ids.add(target_id)
+
+    history = []
+    for item in items:
+        if not _is_history(item):
+            continue
+        parents = [str(value) for value in item.details.get("parent", [])]
+        if not selected_ids.intersection(parents):
+            continue
+        if len(parents) != 1:
+            raise ValueError(ambiguous)
+        history.append(item)
+    return targets + history, metadata

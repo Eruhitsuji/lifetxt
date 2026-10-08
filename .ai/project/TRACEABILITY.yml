@@ -2,6 +2,49 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-temporal-review-upcoming-range
+      capability_id: cap-temporal-life-review
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1156
+      pull_request: null
+      changed_files_or_scope:
+        - lifetxt/temporal_review.py
+        - tests/test_temporal_review.py
+        - tests/test_temporal_review_scope.py
+        - docs/en/web.md
+        - docs/ja/web.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+        - .ai/project/changes/temporal-review-upcoming-range/**
+      tests_or_evidence:
+        - tests.test_temporal_review
+        - tests.test_temporal_review_scope
+      notes: 'Owner requested joint #1154/#1156 repair; reuse the Agenda concrete end
+        sentinel and recurrence cap, preserve project/scope and read-only behavior.'
+      release_or_deployment: null
+      status: verified
+    - requirement_id: req-temporal-review-scoped-history
+      capability_id: cap-temporal-life-review
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1154
+      pull_request: null
+      changed_files_or_scope:
+        - lifetxt/read_scope.py
+        - lifetxt/webapp.py
+        - tests/test_read_scope.py
+        - tests/test_temporal_review_scope.py
+        - tests/test_web_planner.py
+        - docs/en/web.md
+        - docs/ja/web.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+        - .ai/project/changes/temporal-review-scoped-history/**
+      tests_or_evidence:
+        - tests.test_read_scope
+        - tests.test_temporal_review_scope
+        - tests.test_web_planner
+      notes: Owner approved scoped native-history association and generic HTTP 400 for
+        ambiguity; no authoritative writes or unrelated reader changes.
+      release_or_deployment: null
+      status: verified
     - requirement_id: req-daily-flow-planner-lite
       capability_id: cap-daily-flow-planner-lite
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1142

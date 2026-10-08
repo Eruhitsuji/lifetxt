@@ -69,7 +69,16 @@ def build_temporal_review(
     upcoming = []
     if until:
         boundary = parse_date_or_datetime(until, is_end=True)
-        for row in agenda_records(items, boundary, None):
+        upcoming_items = items
+        if project:
+            upcoming_items = [
+                item
+                for item in items
+                if project in [str(value) for value in item.details.get("project", [])]
+            ]
+        # Agenda uses datetime.max as its open-ended sentinel and limits
+        # recurrence expansion to its existing finite lookahead.
+        for row in agenda_records(upcoming_items, boundary, datetime.datetime.max):
             upcoming.append(
                 OrderedDict(
                     (

@@ -1513,17 +1513,20 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             raise HTTPException(status_code=400, detail=error_detail(exc))
         items, diagnostics = read_life_inputs(app.state.paths, app.state.config)
         raise_for_errors(diagnostics)
-        from .read_scope import resolve_read_scope
+        from .read_scope import resolve_temporal_read_scope
 
-        items, scope = resolve_read_scope(items, app.state.config, area=area, saved_view=saved_view)
         try:
+            id_key = id_key_from_config(app.state.config)
+            items, scope = resolve_temporal_read_scope(
+                items, app.state.config, area=area, saved_view=saved_view, id_key=id_key
+            )
             result = build_temporal_review(
                 items,
                 since=since,
                 until=until,
                 limit=limit,
                 project=project,
-                id_key=id_key_from_config(app.state.config),
+                id_key=id_key,
                 timezone_name=current_timezone_name(),
             )
             result["scope"] = scope

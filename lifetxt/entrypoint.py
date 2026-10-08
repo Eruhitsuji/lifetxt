@@ -198,6 +198,15 @@ def _legacy_main(argv):
     _install_tui_bindings_config_extension()
     _install_custom_fields_config_extension()
     from . import cli as cli_module
+
+    cleaned, _config_path, _workspace = cli_module._extract_config_arg(argv)
+    if cleaned and cleaned[0] == "flow":
+        # Flow certifies timezone from its admitted snapshots, not speculative
+        # candidate files (which may include excluded workspace archives).
+        from .daily_flow_cli import main as flow_main
+
+        return flow_main(argv)
+
     from .archive_safety_v3 import archive_safety_context
     from .runtime_safety_v2 import install_cli_timezone_context
 

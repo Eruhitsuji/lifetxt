@@ -96,6 +96,7 @@ python -m lifetxt timeline ID [path ...] [--since ISO] [--until ISO] [--event TY
 python -m lifetxt timeline --workspace-timeline [path ...] [--since ISO] [--until ISO] [--event TYPE] [--project NAME] [--limit N] [--json]
 python -m lifetxt history-check [path ...] [--id ID] [--commit-limit N] [--json]
 python -m lifetxt freebusy [path ...] --from START --to END
+python -m lifetxt flow [path ...] --date YYYY-MM-DD --day-start HH:MM --day-end HH:MM [--format text|json]
 python -m lifetxt item-uri format ID [--base-url URL] [--json]
 python -m lifetxt item-uri parse URI [--json]
 python -m lifetxt backup verify BACKUP
@@ -196,6 +197,7 @@ python -m lifetxt vm run program.life.txt --entry s1
 | `temporal` | Show one item's derived temporal context: overdue/due/staleness and nearby dated items (see [life-hub.md](life-hub.md)) |
 | `thread` | Show current or Git-backed historical lifecycle threads, revision diffs, derived temporal context, and consistency warnings (see [life-hub.md](life-hub.md)) |
 | `freebusy` | Show busy/free time intervals and overlap conflicts for `E`/`R` items within a datetime range (see [life-hub.md](life-hub.md)) |
+| `flow` | Read-only single-day task placement suggestions, fixed blocks, unplaced reasons and diagnostics; canonical JSON (see [Daily Flow Lite](#daily-flow-lite-flow)) |
 | `item-uri` | Format/parse the host-independent `lifetxt://item/<id>` logical record link (see [item-links.md](item-links.md)) |
 | `query` | Filter items with the shared query language (see [query.md](query.md)) |
 | `view` | List, inspect, and run saved views (named queries) (see [query.md](query.md)) |
@@ -235,7 +237,7 @@ including its `--json` machine-readable form for scripts and AI clients.
 | Category | Commands |
 |---|---|
 | Getting Started / Daily | `tour`, `help`, `init`, `quick` (`add`), `today`, `next`, `agenda`, `show`, `edit`, `done`, `complete`, `progress`, `clone`, `reopen`, `due`, `review`, `assist`, `state`, `start`, `stop`, `assign`, `timer`, `notify` |
-| Query / Explore | `filter`, `list`, `search`, `find`, `query`, `view`, `summary`, `inbox`, `health`, `temporal`, `timeline`, `history-check`, `thread`, `lifecycle-stats`, `freebusy`, `count`, `status`, `recent`, `item-uri`, `notes` |
+| Query / Explore | `filter`, `list`, `search`, `find`, `query`, `view`, `summary`, `inbox`, `health`, `temporal`, `timeline`, `history-check`, `thread`, `lifecycle-stats`, `freebusy`, `flow`, `count`, `status`, `recent`, `item-uri`, `notes` |
 | Projects / People / Collaboration | `project`, `portfolio`, `area`, `person`, `group`, `who`, `message`, `proposal`, `ticket`, `version`, `sprint` |
 | Structure / Data Integrity | `check`, `integrity`, `maintenance`, `storage`, `ids`, `links`, `backlinks`, `sources`, `tag`, `lint`, `deps`, `diff`, `snapshot`, `undo`, `cleanup`, `files` |
 | Import / Export / Reports | `convert`, `import`, `export`, `import-ics`, `sync-ics`, `to-json`, `to-jsonl`, `to-csv`, `from-json`, `from-jsonl`, `from-csv`, `from-markdown`, `from-todo`, `to-ics`, `markdown`, `stats`, `plot`, `export-heatmap`, `standup`, `invoice`, `share`, `digest`, `report` |
@@ -261,6 +263,72 @@ commands -- add `--json` (or `--format json`) for the machine-readable form.
 This category/audience/command metadata lives in one place,
 `lifetxt/cli_taxonomy.py`, so `--help`, `help`, and this table cannot drift
 from each other without failing `tests/test_cli_taxonomy.py`.
+
+### Daily Flow Lite (`flow`)
+
+`flow` is an opt-in time-placement view, not a replacement or alias for `today`,
+`next`, `agenda`, or `freebusy`. It calls the [shared Lite core](daily-flow-lite-contract.md)
+without a CLI scheduling algorithm and never writes `do:`, events, configuration,
+IDs, proposals, locks, undo files, or source records.
+
+```sh
+lifetxt flow life.txt --date 2026-10-09 --day-start 09:00 --day-end 17:00
+lifetxt flow life.txt meetings.life.txt --date 2026-10-09 --day-start 09:00 --day-end 17:00 --format json
+lifetxt --workspace daily flow --date 2026-10-09 --day-start 09:00 --day-end 17:00
+```
+
+All three date/window flags are required. Date is exactly `YYYY-MM-DD`, times
+exactly `HH:MM`; end must follow start, except `00:00` means exclusive next
+midnight. No guessed workday, `today` token, hidden timezone conversion or
+cross-midnight planning other than that end boundary. Timezone uses the first
+resolved input's `#! timezone:` directive, then `defaults.timezone`, then the
+existing host policy. A concrete IANA name or UTC is required; unresolved
+`local`/`host` fails with instructions to set a directive or configuration.
+The resolved zone, offset-bearing window and one sampled `evaluated_at` are
+visible. On the selected current day, elapsed time cannot be proposed again.
+
+Explicit paths override configured paths. Otherwise the existing active
+workspace/config paths are used, with workspace `archive` roles excluded; the
+fallback is `life.txt`, not implicit stdin. `-` explicitly reads stdin once.
+Existing directory/glob expansion is reused: every matching file you explicitly
+select is treated as active, so keep archives outside selected directories/globs.
+There is no archive discovery/import, or filesystem-wide search. Real-path
+aliases are deduplicated. All admitted active files contribute occupancy and
+dependencies; no candidate-only filter hides meetings.
+
+Text distinguishes `[fixed]`, `[candidate]`, `[policy_break]`, `[buffer]`, point
+markers and certified residual free intervals. All unplaced primary/secondary
+reason codes, structured `why` parameters, diagnostics, inventory/completeness,
+source token/line/ID and revisions are shown. Text controls are escaped.
+This initial command exposes no policy override: break/buffer default to zero
+under the core policy. Tasks need a stable `id:` and a single positive `est:`;
+full estimates are used, never remaining time inferred from `elapsed:`.
+Capacity failure is `insufficient_capacity`, not a fabricated shorter task.
+
+`--format json` writes the canonical `daily-flow-lite-v1` object directly to
+stdout, preserving model fields/row order; parser messages and failure guidance
+go to stderr. Stable inputs, effective configuration, zone and reference clock
+produce identical JSON; real invocations have different `evaluated_at` values.
+File revisions are existing exact-byte SHA-256 snapshot hashes (BOM/CRLF included).
+Stdin uses the core's explicitly labelled `parsed_snapshot` fallback. The core
+lists revisions only for sources contributing parsed items, not empty files.
+
+The complete selected path set and file hashes are checked after model building.
+A changed snapshot retries once with the same reference clock, then returns the
+generic blocked `source_changed` model; this is a read-time check, not a lock or
+guarantee against edits after publication. Config is the effective in-memory
+snapshot loaded for this invocation, not a live configuration watch.
+Missing/unreadable sources or malformed CLI inputs fail without a plan. Input
+bounds are 16 MB per file and 4 million decoded characters across selected inputs,
+plus the shared core's item/edge/expansion limits; no busy data is silently truncated.
+
+Exit status: `0` for a complete model (including ordinary insufficient capacity),
+`1` for partial/blocked models or input failures, `2` for argparse usage errors.
+Partial models may retain safe candidates but visibly report missing/invalid
+estimates or bounded inventory. Blocked models show uncertainty and no candidates;
+recurrence, incomplete/ambiguous occupancy, DST-transition days, past dates and
+relevant event spans longer than two days remain unsupported, including long UTC
+spans. Fix diagnostics or narrow/refresh inputs; do not treat unknown occupancy as free.
 
 ### 1.2 Localization
 

@@ -1,0 +1,20 @@
+schema_version: 1
+verification:
+  executed: []
+  pending:
+    - Targeted CLI/core/compatibility tests and configured lint/type checks
+    - Captured full suite
+  review_ledger:
+    - reviewer: Codex (implementer)
+      review_type: self-review
+      target_commit: working tree
+      result: pending
+      finding_count: 0
+    - reviewer: Eruhitsuji
+      review_type: implementation
+      target_commit: latest PR head required
+      result: pending
+    - reviewer: Eruhitsuji
+      review_type: integration
+      target_commit: latest PR head required
+      result: pending

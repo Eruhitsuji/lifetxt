@@ -8,4 +8,9 @@ links:
   tests:
   - tests.test_daily_flow
   - tests.test_daily_flow_performance
-  status: in_review
+  status: implemented
+
+evidence_gaps:
+  - status: unverified
+    reason: Historical independent review and applicable High risk/device evidence remain unresolved.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1159

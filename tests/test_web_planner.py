@@ -99,20 +99,67 @@ class PlannerTests(unittest.TestCase):  # pragma: no cover -- covered in web-ext
             400, self.client.get("/api/command-center?date=2031-02-30").status_code
         )
 
-    def test_config_today_passes_workspace_timezone_to_policy(self):
+    def test_config_datetime_and_today_use_one_workspace_clock_snapshot(self):
+        import datetime
+
+        instant = datetime.datetime(
+            2031,
+            2,
+            3,
+            23,
+            59,
+            59,
+            tzinfo=datetime.timezone(datetime.timedelta(hours=9)),
+        )
         with (
             patch("lifetxt.webapp.resolve_timezone_name", return_value="Asia/Tokyo"),
-            patch(
-                "lifetxt.webapp.timezone_today",
-                side_effect=lambda name=None: (
-                    self.assertEqual("Asia/Tokyo", name)
-                    or __import__("datetime").date(2031, 2, 3)
-                ),
-            ),
+            patch("lifetxt.timezone_policy.now", return_value=instant) as clock,
         ):
             response = self.client.get("/api/config")
         self.assertEqual(200, response.status_code)
         self.assertEqual("2031-02-03", response.json()["today"])
+        self.assertEqual(
+            "2031-02-03T23:59:59+09:00", response.json()["current_datetime"]
+        )
+        self.assertIn(unittest.mock.call("Asia/Tokyo"), clock.call_args_list)
+        self.assertEqual("no-store", response.headers["cache-control"])
+
+    def test_today_completion_evidence_is_read_only_and_scoped(self):
+        Path(self.path).write_text(
+            "[x] T Completed_Work id:done-work area:Work done:2031-02-03\n"
+            "[x] T Completed_Home id:done-home area:Home done:2031-02-03\n",
+            encoding="utf-8",
+        )
+        from lifetxt.native_history import build_item_event
+        from lifetxt.serializer import item_to_line
+
+        with Path(self.path).open("a", encoding="utf-8") as handle:
+            for index, target in enumerate(["done-work", "done-home"]):
+                event = build_item_event(
+                    target,
+                    "completed",
+                    "2031-02-03T12:00:00Z",
+                    1,
+                    "ITX-" + str(index),
+                    "a" * 64,
+                    before_status="[ ]",
+                    after_status="[x]",
+                )
+                handle.write(item_to_line(event) + "\n")
+        before = Path(self.path).read_bytes()
+        response = self.client.get("/api/temporal-review?date=2031-02-03")
+        self.assertEqual(200, response.status_code)
+        self.assertEqual(
+            {"Completed_Work", "Completed_Home"},
+            {r["target"]["title"] for r in response.json()["completed"]},
+        )
+        scoped = self.client.get("/api/temporal-review?date=2031-02-03&area=Work")
+        self.assertEqual(200, scoped.status_code)
+        # Shared scope currently omits native history; the UI must retain its
+        # incomplete flag rather than inventing completions from status/done.
+        self.assertFalse(scoped.json()["complete"])
+        self.assertEqual([], scoped.json()["completed"])
+        self.assertEqual(before, Path(self.path).read_bytes())
 
     def test_week_range_uses_shared_agenda_occurrences_and_excludes_undated_tasks(self):
         response = self.client.get("/api/agenda?from=2031-02-03&to=2031-02-09")

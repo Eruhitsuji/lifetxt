@@ -16779,6 +16779,28 @@ traceability:
       release_or_deployment: null
       status: implemented
 
+    - requirement_id: req-planner-time-of-day-adaptive-today
+      capability_id: cap-web-mobile-planner
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1142
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1149
+      pull_request: null
+      changed_files_or_scope:
+        - lifetxt/web_planner.js
+        - lifetxt/web_planner.html
+        - lifetxt/web_planner.css
+        - lifetxt/webapp.py
+        - tests/test_web_planner.py
+        - tests/test_web_planner_browser.py
+        - tests/browser_planner_probe.mjs
+        - docs/en/web.md
+        - docs/ja/web.md
+      tests_or_evidence:
+        - tests.test_web_planner
+        - tests.test_web_planner_browser
+      notes: Owner approved default bands, browser-only customization and additive workspace current_datetime; presentation only, no plan mutation.
+      release_or_deployment: null
+      status: implemented
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

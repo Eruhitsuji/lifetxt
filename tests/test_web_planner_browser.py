@@ -58,6 +58,75 @@ class PlannerBrowserTests(unittest.TestCase):
             os.unlink(filename)
         self.assertEqual(0, run.returncode, run.stderr or run.stdout)
         result = json.loads(run.stdout)
+        for item in result["focusMatrix"]:
+            with self.subTest(focus_viewport=(item["width"], item["height"])):
+                self.assertEqual("morning", item["initial"])
+                self.assertLessEqual(item["scrollWidth"], item["width"])
+                self.assertGreaterEqual(item["minHeight"], 44)
+                self.assertTrue(item["accessible"])
+                self.assertTrue(item["readonly"])
+                self.assertEqual("A", item["focused"])
+                self.assertEqual(0, item["flowCalls"])
+                self.assertEqual({"GET"}, set(item["methods"]))
+                self.assertIn("#schedule", item["modes"]["morning"]["links"])
+                self.assertIn("#tasks", item["modes"]["daytime"]["links"])
+                self.assertIn("#flow-heading", item["modes"]["daytime"]["links"])
+                self.assertIn("#review-panel", item["modes"]["evening"]["links"])
+                self.assertIn("Authored completion", item["modes"]["evening"]["text"])
+                self.assertEqual(0, item["modes"]["standard"]["emphasis"])
+        focus = result["focusStates"]
+        self.assertEqual(
+            [
+                "evening",
+                "morning",
+                "morning",
+                "daytime",
+                "daytime",
+                "evening",
+                "evening",
+            ],
+            focus["boundaries"],
+        )
+        for key in ["missing", "mismatched", "error", "pending", "stale"]:
+            self.assertEqual("standard", focus[key])
+        self.assertEqual("evening", focus["manualUnknown"])
+        self.assertEqual("daytime", focus["browserSkew"])
+        self.assertEqual(1, focus["candidate"]["highlight"])
+        self.assertEqual("Current / upcoming suggestion", focus["candidate"]["label"])
+        self.assertTrue(focus["candidate"]["unplaced"])
+        self.assertEqual(
+            ["fixed", "candidate", "policy_break", "buffer"],
+            [
+                name.split()[1].removeprefix("flow-")
+                for name in focus["candidate"]["cards"]
+            ],
+        )
+        self.assertEqual(0, focus["standardCandidate"])
+        self.assertEqual("auto", focus["persisted"]["mode"])
+        self.assertEqual("morning", focus["persisted"]["band"])
+        self.assertEqual("07:00", focus["persisted"]["pref"]["morning"])
+        self.assertEqual("morning", focus["custom"]["mode"])
+        self.assertEqual("12:00", focus["custom"]["pref"]["time_bands"]["daytime"])
+        self.assertTrue(focus["invalid"]["open"])
+        self.assertTrue(focus["invalid"]["error"])
+        self.assertEqual("12:00", focus["invalid"]["stored"])
+        self.assertTrue(focus["hidden"]["reviewHidden"])
+        self.assertNotIn("#review-panel", focus["hidden"]["links"])
+        self.assertIn("saved_view=Focus", focus["hidden"]["url"])
+        self.assertIn("tz=UTC", focus["hidden"]["url"])
+        self.assertNotIn("#schedule", focus["hiddenSchedule"]["links"])
+        self.assertNotIn("Next appointment", focus["hiddenSchedule"]["text"])
+        self.assertIsNone(focus["reset"])
+        self.assertTrue(focus["future"]["hidden"])
+        self.assertEqual(0, focus["future"]["emphasis"])
+        self.assertEqual("morning", focus["newDay"]["mode"])
+        self.assertIn("Today", focus["newDay"]["temporal"])
+        self.assertEqual(
+            ["05:00", "11:00", "18:00"],
+            [focus["malformed"][k] for k in ["morning", "daytime", "evening"]],
+        )
+        self.assertTrue(focus["malformed"]["compact"])
+        self.assertTrue(focus["malformed"]["scheduleHidden"])
         for item in result["flowMatrix"]:
             with self.subTest(flow_viewport=(item["width"], item["height"])):
                 self.assertEqual(0, item["optIn"])

@@ -1,11 +1,11 @@
 # Daily Flow Lite：日次提案の設計契約案
 
-親 #1142、調査 #1143 の成果物です。**未承認の設計案であり、新しい
-スケジューラ・CLI・API・UI は実装していません。**
+親 #1142、調査 #1143 の成果物です。**D1〜D3は2026-10-08に承認済み（#1143 / PR #1148）です。
+#1144では共有pure coreのみを実装し、CLI・API・UIは後続Issueで扱います。**
 詳細な型・疑似コード・検証仕様は [英語版](../en/daily-flow-lite-contract.md) と
 同じ判断に基づきます。両版に差があれば、承認前に修正してください。
 
-## 作業契約・判断の境界
+## 調査時の作業契約・判断の境界（#1143）
 
 Requirements & Design / Investigation / S / complexity 4/10
 （範囲1・依存1・不確実性1・検証1・運用0）/ Standard。
@@ -15,7 +15,7 @@ adaptive-default、Kanban、W-modelを継承します。実行担当はCodex、�
 
 追跡は proposed `req-daily-flow-planner-lite` → proposed
 `cap-daily-flow-planner-lite` → #1142 → #1143 → 設計PR・検証証拠。
-これらは機能提供済みを示す登録ではなく、正式登録は #1144 の作業です。
+これらは #1144 でexperimentalな共有coreとして登録します。consumer実装は別作業です。
 ロールバックは追加資料のrevertで、ユーザーデータの移行はありません。
 後続Issueは判断承認・依存完了・Ready条件成立までinboxを維持します。
 
@@ -38,10 +38,10 @@ area/saved_viewはread_scopeの既存選択器（同時指定不可）、project
 再利用します。Format 1.0のestは見積作業量、elapsedは累積実績です。
 **est−elapsedが残作業時間であるという契約はありません。**
 
-## 承認が必要な判断
+## 承認済み判断・別途必要なconsumerの判断
 
-決定者は @Eruhitsuji です。D1〜D3を明示して承認するまで #1144 をReadyに
-しません。資料作成の依頼を設計方針の承認とは扱いません。
+決定者は @Eruhitsuji です。D1〜D3は #1143 で承認済みです。以下の表は検討した代替案を残したものです。
+CLI/APIの公開契約と最終mergeは別の判断です。
 
 | 判断 | 推奨案 | 代替案・影響 |
 | --- | --- | --- |
@@ -246,3 +246,68 @@ test_timezone_policy_v2を実行し、**65テスト成功**。
 将来schedulerのfixture実行や性能達成を示す結果ではありません。
 リンク・文書検証はPRに記録します。今回はruntime変更がないため実装向けformat/
 lint/type全体は対象外。設計レビューでは決定性・占有保証・privacy・互換性を確認します。
+
+
+## 共有coreの実装（#1144）
+
+`lifetxt.daily_flow.build_daily_flow`をPythonから呼び出せます。読み取り済みの
+認可されたsnapshotを受け取り、ファイル・ネットワークへアクセスしません。
+`occupancy_complete`はcallerが明示する必須引数です。falseなら情報を漏らさない
+blocked結果となり、枠や一覧を返しません。`snapshot_consistent=False`も配置停止。
+`input_diagnostics`のparser errorも占有保証・配置を止めます。ファイル読取、pathの
+認可・canonical化、bounded retry、Webの可視性保証はconsumerの責任です。
+coreによるファイル探索・過去週importはありません。
+
+```python
+from lifetxt.parser import parse_text
+from lifetxt.daily_flow import build_daily_flow
+
+items, diagnostics = parse_text("[ ] T Review id:review est:30m\n")
+proposal = build_daily_flow(
+    items, date="2026-10-09", day_start="09:00", day_end="12:00",
+    timezone="Asia/Tokyo", evaluated_at="2026-10-08T18:00+09:00",
+    occupancy_complete=True, input_diagnostics=diagnostics,
+    policy={"break_minutes": 10, "buffer_minutes": 5},
+)
+# proposal["timeline"]は未保存の提案です。ファイルへ書き込みません。
+```
+
+timezoneは解決済みzoneを明示し、localは受け付けません。日付・時間帯・policyの
+不正はValueError、不確実な入力はblocked結果です。`free`は配置可能な場合だけ
+残りの保証済み空き枠を返し、占有不明なら見かけの空き枠を返しません。
+unplacedはsource token/line/ID順。whyはcode/paramsで、consumerがEN/JAへ表示します。
+
+`context_items`は依存・ID確認だけに参加。`source_revisions`は正規化済みsource名と
+既存snapshotのSHA-256を指定でき、callerがcurrentnessを保証します。既存
+mutation.read_text_snapshotのdigestを利用します。未指定ならmutation.hash_textで
+parsed recordsをhashし、basisはparsed_snapshotと明示します。file byte revisionや
+CAS tokenとは主張しません。指定digestはsource_snapshotです。sourceは字句的に
+正規化してhash表示し、symlink/caseの同一性は上流のadmissionで解決します。
+一部sourceのdigestがなければ、そのsourceはparsed_snapshotと表示します。
+
+追加上限：detail values40,000、総text4,000,000文字、title1,024文字、
+各detail value/key/source4,096文字。hard limitを減らす指定だけ許可します。
+超過はblocked summaryとなり、占有を黙って切り捨てません。on×atの組合せ展開前、
+conflict列挙前にも上限を確認します。元データを変更せず、提案で依存をunlockしません。
+
+F16はcurrentness/visibility flagのcore検証で、ファイルretryやWeb認可の実装証明
+ではありません。CLI/API/Plannerは #1145/#1146/#1147。公開endpoint・generated
+schema・設定キー・Format keyは追加していません。
+
+`python -m unittest tests.test_daily_flow tests.test_daily_flow_performance`で
+境界・seed付き不変条件・規模テスト、
+`python -m tests.test_daily_flow_performance --benchmark`で再現可能な性能測定。
+parseとcoreを分離し、環境付きの証拠を残します。unit testに不安定な速度閾値は
+入れません。
+
+初期timezone adapterは、対象日に関係する完全な予定が2日を超える場合、
+transition保証の探索を上限で止めて配置を停止します。UTCの安全な複数日予定でも
+停止し得る保守的な制限です。無制限な日時scanや、保証していない空き枠表示を
+避けます。対応拡大には別の認証済みadapterが必要です。
+
+測定環境はPython 3.12.14/Linux x86_64、seed0、warmup3回・測定20回。
+parseは別測定、tracemallocも別run。各1,000T＋100Eで、通常caseのcore p95は
+96.55ms/追加peak2.93MiB、密な重複caseは212.53ms/13.48MiBでした。
+基準目標250ms/32MiBを満たしていますが、他環境のSLAを保証する値ではありません。
+core/規模の専用43テスト、最終focused regression179テストで契約を検証。
+最終headの独立した人間のレビュー・merge判断は未完了です。

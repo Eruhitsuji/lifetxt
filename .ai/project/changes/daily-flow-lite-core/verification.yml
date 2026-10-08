@@ -1,0 +1,75 @@
+schema_version: 1
+verification:
+  executed:
+  - command: MPLBACKEND=Agg python -m unittest discover
+    result: 5318 tests OK, skipped=382; existing optional dependencies/external environment
+      skips. Final core refinements subsequently rerun with current focused suite.
+    status: passed
+  - command: python -m unittest tests.test_daily_flow tests.test_daily_flow_performance
+      tests.test_extra_cli tests.test_freebusy tests.test_freebusy_cli tests.test_nextaction
+      tests.test_priority_matrix tests.test_read_scope tests.test_timezone_policy_v2
+      tests.test_traceability_gate tests.test_change_package_closeout
+    result: 179 tests passed on final runtime; includes 43 new core/scale tests and
+      30 seeded invariant scenarios.
+    status: passed
+  - command: python -m tests.test_daily_flow_performance --benchmark
+    result:
+      python: 3.12.14
+      os: Linux
+      machine: x86_64
+      cpu: x86_64
+      seed: 0
+      scenarios:
+      - scenario: many-gaps
+        tasks: 1000
+        events: 100
+        warmup: 3
+        runs: 20
+        core_p50_ms: 73.59579850003684
+        core_p95_ms: 96.55236500020692
+        parse_p50_ms: 25.05786450001324
+        parse_p95_ms: 30.13808500008963
+        incremental_peak_mib: 2.9240541458129883
+        candidate_count: 380
+        complete_inventory_count: 1000
+      - scenario: dense-overlap
+        tasks: 1000
+        events: 100
+        warmup: 3
+        runs: 20
+        core_p50_ms: 177.81505249990914
+        core_p95_ms: 212.52613799970277
+        parse_p50_ms: 28.872679499954756
+        parse_p95_ms: 42.64276499998232
+        incremental_peak_mib: 13.473775863647461
+        candidate_count: 450
+        complete_inventory_count: 1000
+    status: passed
+  - command: python -m coverage run --branch --source=lifetxt.daily_flow,lifetxt.daily_flow_model,lifetxt.daily_flow_time
+      -m unittest tests.test_daily_flow tests.test_daily_flow_performance
+    result: 99% combined line/branch coverage in the 40-test run, before three final
+      additional scope/identity tests; no threshold weakened.
+    status: passed
+  - command: python -m ruff format --check lifetxt/daily_flow*.py tests/test_daily_flow*.py;
+      python -m ruff check lifetxt tests scripts
+    result: Changed five Python files formatted; full configured lint passes. Global
+      format check found pre-existing unrelated formatting drift; not rewritten.
+    status: passed-scoped
+  - command: python -m mypy --follow-imports=skip --ignore-missing-imports lifetxt/diagnostic_contract.py
+    result: Success, configured one-file type boundary unchanged.
+    status: passed
+  - command: python -m lifetxt check examples/minimal_life.txt; python scripts/validate_release_docs.py
+      --output .cache/1144-release-doc-validation.json
+    result: 10 items OK; release docs ok=true/errors=0. Bilingual task-relative links,
+      package YAML and unique capability IDs verified separately.
+    status: passed
+  planned:
+  - Independent final-head High review and CI
+  - No IO/auth consumer integration or real mobile verification in this core task
+  review_ledger:
+  - reviewer: Codex
+    review_type: implementer_self_review
+    result: completed; not independent approval
+  - reviewer: Eruhitsuji
+    review_type: independent_design_security_integration
+    result: pending

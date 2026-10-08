@@ -1,6 +1,30 @@
 schema_version: 1
 
 capabilities:
+  - id: cap-daily-flow-planner-lite
+    name: Shared read-only Daily Flow Lite core
+    summary: Deterministic bounded single-day proposals with certified occupancy, full-estimate tasks, reasons and uncertainty; no transport or writes.
+    status: experimental
+    owner: Eruhitsuji
+    source_requirements:
+      - req-daily-flow-planner-lite
+    implementation_locations:
+      - lifetxt/daily_flow.py
+      - lifetxt/daily_flow_model.py
+      - lifetxt/daily_flow_time.py
+    public_interfaces:
+      - Internal Python build_daily_flow; no CLI/API/UI or generated schema registered
+    tests_or_evidence:
+      - tests.test_daily_flow
+      - tests.test_daily_flow_performance
+      - .ai/project/changes/daily-flow-lite-core/verification.yml
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/1142
+      - https://github.com/Eruhitsuji/lifetxt/issues/1143
+      - https://github.com/Eruhitsuji/lifetxt/issues/1144
+    related_pull_requests: []
+    reuse_policy: Reuse next actionable/dependency predicates, exact CLI rank seam, existing scopes, matrix context, timezone interpreters and freebusy interval algebra. No new priority or recurrence engine.
+    notes: Requires explicitly certified authorized snapshots. Caller IO/retry/auth gates remain in consumers; independent implementation review pending.
   - id: cap-external-resource-fetch-policy-contract
     name: Explicit external fetch/import design contract
     summary: Bilingual approved-direction policy for inert references, explicit network

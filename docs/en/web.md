@@ -1237,5 +1237,19 @@ with the device's wall clock. Missing/invalid, over-two-minute-old, different-da
 failed or slow (>10s) samples fall back to Standard in Auto. Resuming discards the
 old sample before refreshing; no new polling endpoint or Daily Flow rerun is added.
 
-Known limitation: area/Saved View review may omit associated native history;
-incomplete evidence remains labeled. Tracked in #1154.
+Area/Saved View Temporal Review selects targets using the existing selector,
+then retains their native item/progress/ticket/time-entry history even when
+history records lack area or other view fields. Saved View ordering and limits
+still select the targets; the review event limit applies to their history.
+Unselected targets and history are excluded. Malformed associated history stays
+available for diagnostics, and missing history remains incomplete; current
+status/done never creates a historical completion. Ambiguous target identities
+or multiple parent values involving a selected target return HTTP 400 with a
+generic message. The response schema and unscoped behavior are unchanged.
+
+Future agenda composition uses the shared Agenda open-ended range sentinel.
+Dated tasks/events return upcoming rows in Agenda order, capped by the review
+limit and restricted to the selected scope and project. Recurring items use
+Agenda's existing finite 366-day lookahead; distant nonrecurring dates remain
+eligible. Ongoing spans overlapping the period-end boundary can also appear.
+This repairs #1156 without changing response fields or writing life.txt.

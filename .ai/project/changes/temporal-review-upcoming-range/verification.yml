@@ -21,14 +21,28 @@ verification:
     status: passed
   - type: unit
     command: MPLBACKEND=Agg python -m unittest discover
-    result: Full suite running against frozen final source tree; result pending
-    status: running
+    result: 5416 tests run; 66 skipped; exit 0; 442.692 seconds
+    status: passed
     implementation_tree: 245d095cf95fb4e78525f06c0d5417a2e86dc259
+    notes: Final source files frozen during run. PR-link metadata was updated during
+      the run; final metadata gates are rerun separately. Existing unrelated ResourceWarnings
+      retained; focused ResourceWarning gate passed.
   - type: no_web
     command: .venv-ci-no-web/bin/python -m unittest tests.test_read_scope tests.test_temporal_review_scope
       tests.test_temporal_review tests.test_workspace_timeline tests.test_web_planner
       tests.test_review_cli_contract
     result: 58 tests run; 28 skipped; passed
+    status: passed
+  - type: traceability
+    command: LIFETXT_TRACEABILITY_GATE_PR_URL=https://github.com/Eruhitsuji/lifetxt/pull/1157
+      python -m unittest tests.test_traceability_gate tests.test_change_package_closeout
+    result: 17 tests passed with the actual PR URL; rerun after final evidence commit
+    status: passed
+  - type: cli_integration
+    command: python -m lifetxt review --temporal --since 2031-02-03 --until 2031-02-03
+      --format json <temporary life.txt fixture>
+    result: Exit 0; due/event future rows chronological; no invented completions;
+      source bytes unchanged
     status: passed
 review_ledger:
 - reviewer: Codex

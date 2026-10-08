@@ -2,14 +2,14 @@ schema_version: 1
 change:
   id: daily-flow-lite-cli
   title: Read-only Daily Flow Lite CLI
-  status: implementing
+  status: in-review
   change_type: Feature
   assurance_level: High
   owner: Eruhitsuji
   accountable_owner: Eruhitsuji
   related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1145
-  related_pull_request: pending
-  base_commit: b7dbda40
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1151
+  base_commit: b7dbda4031410a80693c6960c00af00c32ed3ced
   size: S
   complexity: 5/10
 scope:

@@ -4,11 +4,11 @@ links:
     capability: cap-daily-flow-planner-lite
     epic: https://github.com/Eruhitsuji/lifetxt/issues/1142
     task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1145
-    pull_request: pending
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1151
     tests:
       - tests.test_daily_flow_cli
       - tests.test_daily_flow
       - tests.test_freebusy_cli
       - tests.test_extra_cli
       - tests.test_cli_taxonomy
-    status: implemented
+    status: in_review

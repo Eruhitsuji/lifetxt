@@ -6,7 +6,7 @@ traceability:
       capability_id: cap-daily-flow-planner-lite
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1142
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1145
-      pull_request: pending
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1151
       changed_files_or_scope:
         - lifetxt/cli.py (additive flow parser/dispatch)
         - lifetxt/entrypoint.py (flow-only snapshot-aware route)
@@ -29,7 +29,7 @@ traceability:
         exact snapshots with single retry, no records/network/archives auto-import.
         High implementation/integration human review required on latest PR head.
       release_or_deployment: Next normal release; additive CLI, no migration.
-      status: implemented
+      status: in_review
     - requirement_id: req-daily-flow-planner-lite
       capability_id: cap-daily-flow-planner-lite
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1142

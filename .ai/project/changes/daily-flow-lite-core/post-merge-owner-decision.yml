@@ -1,0 +1,35 @@
+schema_version: 1
+task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1159
+date: 2026-10-09 JST
+target_commit: f3c141d6d4ab1778344679b5982b3432010aa83e
+owner: Eruhitsuji
+status: awaiting_owner
+source_record: null
+assurance_level: Standard
+capability_status: experimental
+not_historical_approval: true
+decisions:
+- id: historical-independent-review
+  scope: PR1148/1150/1151/1152/1153/1155/1157
+  status: awaiting_owner
+  proposed_disposition: Accept documented residual evidence gap for the existing experimental state, or
+    provide attributable review/test evidence.
+  rationale: No submitted reviews found. New AI assessment and focused verification are available; do
+    not infer review from merge or the posting account.
+  owner_response: null
+- id: high-risk-acceptance
+  scope: PR1150 shared core, PR1151 local CLI, PR1152 local Web API
+  status: awaiting_owner
+  proposed_disposition: Accept documented residual evidence gap for the existing experimental state, or
+    provide attributable review/test evidence.
+  rationale: Retain experimental state and known Lite/auth/filesystem/snapshot limits; no permission or
+    release change.
+  owner_response: null
+- id: device-accessibility
+  scope: PR1155 physical iPhone/Safari and human screen-reader
+  status: awaiting_owner
+  proposed_disposition: Accept documented residual evidence gap for the existing experimental state, or
+    provide attributable review/test evidence.
+  rationale: Unavailable in executor environment. Proposed accepted-not-run disposition only for current
+    experimental state; no device/accessibility pass claim.
+  owner_response: null

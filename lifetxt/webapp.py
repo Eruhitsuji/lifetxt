@@ -1664,6 +1664,37 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         records = latest_status_records(items, person=person, active_only=active_only)
         return {"count": len(records), "records": records}
 
+    @app.get("/api/daily-flow")
+    def get_daily_flow_route(
+        response: Response,
+        selected_date: str = Query(..., alias="date", max_length=10),
+        day_start: str = Query(..., max_length=5),
+        day_end: str = Query(..., max_length=5),
+        area: str = Query(None, max_length=256),
+        saved_view: str = Query(None, max_length=256),
+    ):
+        """Opt-in, unsaved Daily Flow Lite; canonical daily-flow-lite-v1 JSON."""
+        from .daily_flow_web import daily_flow_response
+
+        response.headers["Cache-Control"] = "no-store"
+        try:
+            return daily_flow_response(
+                app.state.paths,
+                app.state.config,
+                date=selected_date,
+                day_start=day_start,
+                day_end=day_end,
+                area=area,
+                saved_view=saved_view,
+            )
+        except ValueError:
+            # Scope/config errors can contain authored data or source paths.
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid Daily Flow date, window, timezone or candidate scope.",
+                headers={"Cache-Control": "no-store"},
+            ) from None
+
     @app.get("/api/command-center")
     def get_command_center_route(
         horizon=None, person=None, mode="today", saved_view=None, area=None,

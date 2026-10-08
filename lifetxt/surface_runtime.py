@@ -431,6 +431,10 @@ def _patch_webapp():
             _rewrite_named_review_query(request)
             method = request.method.upper()
             path = request.url.path
+            # This GET-only projection owns its multi-source read snapshot and
+            # has no mutation/revision contract, including rejected methods.
+            if path == "/api/daily-flow":
+                return await call_next(request)
             unsafe = method in ("POST", "PUT", "PATCH", "DELETE")
             guarded = (
                 unsafe

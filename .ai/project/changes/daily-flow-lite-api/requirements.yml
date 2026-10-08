@@ -1,0 +1,20 @@
+schema_version: 1
+requirements:
+- id: req-daily-flow-planner-lite
+  kind: ADDED
+  owner: Eruhitsuji
+  statement: Expose canonical shared proposals through opt-in read-only local Web
+    API with bounded source snapshots and existing full-workspace authorization.
+  acceptance_criteria:
+  - AC1 GET-only explicit date/window, same canonical shared model with deterministic
+    order
+  - AC2 Existing Bearer and restricted legacy guard, no unauthorized source/revision
+    read or inference
+  - AC3 Active registered inputs only; exclude workspace archives, full occupancy
+    with candidate scope
+  - AC4 Byte revisions, one snapshot retry, bounded resources and no per-request writes
+  - AC5 Safe validation/IO errors; distinguish unknown occupancy, partial inventory
+    and capacity
+  - AC6 Existing endpoints and runtime contracts remain compatible; no UI or auth
+    redesign
+  - AC7 EN/JA usage, native OpenAPI parameters, tests, capability/traceability/evidence

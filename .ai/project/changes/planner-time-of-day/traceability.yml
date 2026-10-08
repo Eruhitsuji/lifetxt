@@ -11,4 +11,11 @@ gaps:
   - requirement_id: req-planner-time-of-day-adaptive-today
     reason: Existing area/Saved View scope may omit associated native completion history; incomplete evidence remains labeled, never fabricated.
     tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1154
-    status: tracked
+    status: resolved
+    resolved_by: https://github.com/Eruhitsuji/lifetxt/pull/1157
+    notes: Post-merge scope repair observed; prior missing evidence is not synthesized.
+
+evidence_gaps:
+  - status: unverified
+    reason: Historical independent review and applicable High risk/device evidence remain unresolved.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1159

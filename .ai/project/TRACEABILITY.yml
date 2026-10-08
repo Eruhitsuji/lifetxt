@@ -2,6 +2,23 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-daily-flow-post-merge-closeout
+      capability_id: cap-daily-flow-planner-lite
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1158
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1160
+      changed_files_or_scope:
+        - .ai/project/changes/daily-flow-lite-core
+        - .ai/project/changes/daily-flow-lite-cli
+        - .ai/project/changes/daily-flow-lite-api
+        - .ai/project/changes/planner-time-of-day
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests.test_change_package_closeout
+        - tests.test_traceability_gate
+        - .ai/project/changes/daily-flow-lite-core/post-merge-evidence.md
+      notes: Metadata-only reconciliation; historical review/High risk/device gaps tracked by issue 1159. No runtime changes or stability promotion.
+      status: implemented
     - requirement_id: req-temporal-review-upcoming-range
       capability_id: cap-temporal-life-review
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1156
@@ -67,9 +84,12 @@ traceability:
         - tests.test_web_daily_flow
       notes: Standard assurance opt-in GET-only Day projection; canonical shared model
         order and evidence, explicit window, stale-result invalidation, EN/JA, accessible
-        mobile UI. Human independent latest-head review and CI pending; no core/API writes.
+        mobile UI. Historical pre-merge review/CI waiting note superseded by the dated reconciliation; no core/API writes.
+      post_merge_evidence: .ai/project/changes/daily-flow-lite-core/post-merge-evidence.md
+      evidence_gap: https://github.com/Eruhitsuji/lifetxt/issues/1159
+      notes_closeout: Merged and final-head PR CI passed; independent review unverified, not inferred from merge.
       release_or_deployment: Next normal release; additive UI, no migration.
-      status: in_review
+      status: implemented
     - requirement_id: req-daily-flow-planner-lite
       capability_id: cap-daily-flow-planner-lite
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1142
@@ -95,8 +115,11 @@ traceability:
         - .ai/project/changes/daily-flow-lite-api/verification.yml
       notes: Owner approved GET contract/local auth admission; High final-head human review
         required. No scheduler/auth/UI rewrite.
+      post_merge_evidence: .ai/project/changes/daily-flow-lite-core/post-merge-evidence.md
+      evidence_gap: https://github.com/Eruhitsuji/lifetxt/issues/1159
+      notes_closeout: Merged and final-head PR CI passed; independent review unverified, not inferred from merge.
       release_or_deployment: Next normal release; additive API, no migration.
-      status: in_review
+      status: implemented
     - requirement_id: req-daily-flow-planner-lite
       capability_id: cap-daily-flow-planner-lite
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1142
@@ -123,8 +146,11 @@ traceability:
         by owner on 2026-10-08 20:26 JST. Reuse canonical core unchanged, local
         exact snapshots with single retry, no records/network/archives auto-import.
         High implementation/integration human review required on latest PR head.
+      post_merge_evidence: .ai/project/changes/daily-flow-lite-core/post-merge-evidence.md
+      evidence_gap: https://github.com/Eruhitsuji/lifetxt/issues/1159
+      notes_closeout: Merged and final-head PR CI passed; independent review unverified, not inferred from merge.
       release_or_deployment: Next normal release; additive CLI, no migration.
-      status: in_review
+      status: implemented
     - requirement_id: req-daily-flow-planner-lite
       capability_id: cap-daily-flow-planner-lite
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1142
@@ -149,8 +175,11 @@ traceability:
         file admission/IO retry, configuration keys, generated schema or Format changes.
         Explicit caller occupancy/currentness flags prevent untrusted placement;
         source hashes distinguish parsed snapshots from actual byte revisions.
+      post_merge_evidence: .ai/project/changes/daily-flow-lite-core/post-merge-evidence.md
+      evidence_gap: https://github.com/Eruhitsuji/lifetxt/issues/1159
+      notes_closeout: Merged and final-head PR CI passed; independent review unverified, not inferred from merge.
       release_or_deployment: Next normal release; additive internal core.
-      status: in_review
+      status: implemented
     - requirement_id: req-core-cli-plot-range-validation
       capability_id: cap-core-cli-plot
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1134
@@ -16841,6 +16870,9 @@ traceability:
         - tests.test_web_planner
         - tests.test_web_planner_browser
       notes: Owner approved default bands, browser-only customization and additive workspace current_datetime; presentation only, no plan mutation.
+      post_merge_evidence: .ai/project/changes/daily-flow-lite-core/post-merge-evidence.md
+      evidence_gap: https://github.com/Eruhitsuji/lifetxt/issues/1159
+      notes_closeout: PR1155 merged, final-head CI passed; device verification not_run and independent review unverified. Prior scope gap resolved by PR1157.
       release_or_deployment: null
       status: verified
 

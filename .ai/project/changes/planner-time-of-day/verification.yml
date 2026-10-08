@@ -1,3 +1,4 @@
+# Pre-merge reports are retained below; dated reconciliation is authoritative for current status.
 schema_version: 1
 verification:
   executed:
@@ -37,7 +38,7 @@ verification:
       command: iPhone device and human screen-reader verification
       result: Not available in this environment; native accessibility roles, keyboard-focus and geometry checked in Chromium
       status: not_run
-review_ledger:
+historical_pre_merge_review_ledger:
   - reviewer: Codex
     review_type: self-review
     target_commit: dfc5e410a2d72d9137af949905125451d8de1980
@@ -51,3 +52,46 @@ review_ledger:
 release_evidence:
   migration_notes: No authoritative migration; older clients may discard the local time_bands extension when saving preferences.
   rollback_plan: Revert isolated UI and additive config timestamp.
+
+post_merge_reconciliation:
+  observed_at: 2026-10-09 JST
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1158
+  evidence_report: ../daily-flow-lite-core/post-merge-evidence.md
+  implementation_status: implemented
+  previous_change_status: implemented
+  supersedes: Historical pre-merge planned/remaining/review ledgers; original executed reports are preserved,
+    not rerun.
+  merge:
+    status: merged
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1155
+    head_commit: 7d5aee0cbb5b9d7e867b774100b591598b1a4e71
+    merge_commit: 6225edd4697ee851f3507626d405f86eea423309
+  ci:
+    status: passed
+    target_commit: 7d5aee0cbb5b9d7e867b774100b591598b1a4e71
+    scope: Listed final-head PR runs; no main/release or optional-test completion claim.
+    runs:
+    - name: CI
+      url: https://github.com/Eruhitsuji/lifetxt/actions/runs/37851777979
+      status: completed
+      conclusion: success
+    - name: lifetxt-mini CI
+      url: https://github.com/Eruhitsuji/lifetxt/actions/runs/37851778140
+      status: completed
+      conclusion: success
+  independent_review:
+    status: unverified
+    submitted_reviews: 0
+    target_commit: 7d5aee0cbb5b9d7e867b774100b591598b1a4e71
+    source: https://api.github.com/repos/Eruhitsuji/lifetxt/pulls/1155/reviews
+    reason: No submitted GitHub reviews found; external human review may exist. Merge is not review evidence.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1159
+  device_accessibility:
+    status: not_run
+    reason: Real iPhone and human screen-reader evidence unavailable; historical Chromium tests retained.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1159
+  resolved_scope_gap:
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1154
+    status: resolved
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1157
+    merge_commit: 7e74b715ae9c11dc6ed2a765c3aa620e3600a512

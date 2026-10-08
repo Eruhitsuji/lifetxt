@@ -4,5 +4,10 @@ links:
   capability: cap-daily-flow-planner-lite
   issue: https://github.com/Eruhitsuji/lifetxt/issues/1146
   evidence: verification.yml
-  status: in-review
+  status: implemented
   pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1152
+
+evidence_gaps:
+  - status: unverified
+    reason: Historical independent review and applicable High risk/device evidence remain unresolved.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1159

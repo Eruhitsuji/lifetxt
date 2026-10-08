@@ -58,6 +58,53 @@ class PlannerBrowserTests(unittest.TestCase):
             os.unlink(filename)
         self.assertEqual(0, run.returncode, run.stderr or run.stdout)
         result = json.loads(run.stdout)
+        for item in result["flowMatrix"]:
+            with self.subTest(flow_viewport=(item["width"], item["height"])):
+                self.assertEqual(0, item["optIn"])
+                self.assertLessEqual(item["scrollWidth"], item["width"])
+                self.assertTrue(item["accessible"])
+                self.assertTrue(item["readonly"])
+                self.assertTrue(item["unplaced"])
+                self.assertEqual(0, item["emptyImages"])
+                self.assertGreaterEqual(item["buttonHeight"], 44)
+                self.assertGreaterEqual(item["inputHeight"], 44)
+                self.assertEqual(
+                    [
+                        "flow-card flow-" + kind
+                        for kind in ["fixed", "candidate", "policy_break", "buffer"]
+                    ],
+                    item["cards"],
+                )
+                self.assertIn("area=Work", item["request"])
+                self.assertIn("date=2031-02-04", item["request"])
+                self.assertNotIn("tz=", item["request"])
+                self.assertIn("tz=UTC", item["url"])
+                self.assertEqual({"GET"}, set(item["methods"]))
+        states = result["flowStates"]
+        self.assertIn("Blocked", states["blocked"]["status"])
+        self.assertIn("Recurring occupancy is unsupported", states["blocked"]["text"])
+        self.assertIn("Partial", states["partial"]["status"])
+        self.assertIn("limit_exceeded", states["partial"]["text"])
+        self.assertIn("No timeline entries", states["empty"]["text"])
+        self.assertIn("Access denied", states["auth"]["status"])
+        self.assertIn("Could not load", states["error"]["status"])
+        self.assertIn("Could not load", states["bad-schema"]["status"])
+        self.assertIn("HH:MM", states["invalid"]["status"])
+        self.assertIn("HH:MM", states["windowInvalid"]["status"])
+        self.assertEqual(0, states["windowInvalid"]["cards"])
+        self.assertEqual(0, states["dateRace"]["cards"])
+        self.assertEqual(0, states["scopeRace"])
+        self.assertEqual(0, states["weekRace"])
+        self.assertEqual(4, states["requestRace"]["cards"])
+        self.assertTrue(states["keyboardClosed"])
+        self.assertGreater(states["keyboardRequested"], 1)
+        self.assertTrue(states["details"]["open"])
+        self.assertIn("est: 30m", states["details"]["text"])
+        self.assertIn("saved_view=Focus", states["savedView"]["request"])
+        self.assertIn("tz=UTC", states["savedView"]["url"])
+        self.assertTrue(states["past"]["disabled"])
+        self.assertIn("過去", states["past"]["status"])
+        self.assertEqual(0, states["past"]["calls"])
         matrix = result["matrix"]
         self.assertEqual([320, 360, 390, 430, 667, 390], [x["width"] for x in matrix])
         for item in matrix:

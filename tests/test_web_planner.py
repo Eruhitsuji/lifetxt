@@ -54,6 +54,39 @@ class PlannerTests(unittest.TestCase):  # pragma: no cover -- covered in web-ext
             "/capture", self.client.get("/manifest.webmanifest").json()["start_url"]
         )
 
+    def test_planner_daily_flow_reads_existing_model_without_mutation(self):
+        from datetime import datetime, timezone
+
+        original = Path(self.path).read_bytes()
+        client = TestClient(
+            webapp.create_app(
+                paths=[self.path],
+                writable_path=self.path,
+                read_only=True,
+                config={"defaults": {"timezone": "Asia/Tokyo"}},
+            )
+        )
+        page = client.get("/planner")
+        self.assertEqual(200, page.status_code)
+        self.assertIn('id="flow-form"', page.text)
+        self.assertIn('id="flow-disclosure"', page.text)
+        with patch(
+            "lifetxt.daily_flow_web.now",
+            return_value=datetime(2031, 2, 2, tzinfo=timezone.utc),
+        ):
+            response = client.get(
+                "/api/daily-flow",
+                params={"date": "2031-02-03", "day_start": "09:00", "day_end": "17:00"},
+            )
+        self.assertEqual(200, response.status_code)
+        result = response.json()
+        self.assertEqual("daily-flow-lite-v1", result["schema"])
+        self.assertEqual("Asia/Tokyo", result["timezone"])
+        self.assertEqual("blocked", result["completeness"]["state"])
+        self.assertTrue(result["diagnostics"])
+        self.assertIn("missing_estimate", {x["reason"] for x in result["unplaced"]})
+        self.assertEqual(original, Path(self.path).read_bytes())
+
     def test_command_center_uses_selected_date_and_rejects_invalid_date(self):
         response = self.client.get("/api/command-center?date=2031-02-03")
         self.assertEqual(200, response.status_code)
@@ -67,8 +100,15 @@ class PlannerTests(unittest.TestCase):  # pragma: no cover -- covered in web-ext
         )
 
     def test_config_today_passes_workspace_timezone_to_policy(self):
-        with patch("lifetxt.webapp.resolve_timezone_name", return_value="Asia/Tokyo"), patch(
-            "lifetxt.webapp.timezone_today", side_effect=lambda name=None: self.assertEqual("Asia/Tokyo", name) or __import__("datetime").date(2031, 2, 3)
+        with (
+            patch("lifetxt.webapp.resolve_timezone_name", return_value="Asia/Tokyo"),
+            patch(
+                "lifetxt.webapp.timezone_today",
+                side_effect=lambda name=None: (
+                    self.assertEqual("Asia/Tokyo", name)
+                    or __import__("datetime").date(2031, 2, 3)
+                ),
+            ),
         ):
             response = self.client.get("/api/config")
         self.assertEqual(200, response.status_code)
@@ -118,7 +158,15 @@ class PlannerTests(unittest.TestCase):  # pragma: no cover -- covered in web-ext
 
     def test_public_config_normalizes_planner_preferences(self):
         planner = webapp.public_web_config(
-            {"web": {"planner": {"sections": ["journal", "journal", "future"], "hidden_sections": ["habits", "future"], "density": "invalid"}}}
+            {
+                "web": {
+                    "planner": {
+                        "sections": ["journal", "journal", "future"],
+                        "hidden_sections": ["habits", "future"],
+                        "density": "invalid",
+                    }
+                }
+            }
         )["planner"]
         self.assertEqual(
             ["journal", "schedule", "tasks", "habits", "notes", "review"],
@@ -140,10 +188,10 @@ class PlannerTests(unittest.TestCase):  # pragma: no cover -- covered in web-ext
             'id="month-grid"',
             'id="temporal-context"',
             'id="review-panel"',
-            '/api/temporal-review?date=',
-            'reviewActivity',
-            'dayPosition()',
-            'data-position',
+            "/api/temporal-review?date=",
+            "reviewActivity",
+            "dayPosition()",
+            "data-position",
             "weekStart(value)",
             "loadMonth()",
             "densityText(count)",
@@ -156,8 +204,10 @@ class PlannerTests(unittest.TestCase):  # pragma: no cover -- covered in web-ext
                 self.assertIn(expected, PLANNER_HTML_PAGE)
 
     def test_temporal_day_semantics_use_workspace_today_and_gate_completion(self):
-        self.assertIn('config.today', PLANNER_HTML_PAGE)
-        self.assertIn('date<today?"past":date>today?"future":"today"', PLANNER_HTML_PAGE)
+        self.assertIn("config.today", PLANNER_HTML_PAGE)
+        self.assertIn(
+            'date<today?"past":date>today?"future":"today"', PLANNER_HTML_PAGE
+        )
         self.assertIn('dayPosition()==="today"&&writable', PLANNER_HTML_PAGE)
         self.assertIn('past:"過去"', PLANNER_HTML_PAGE)
         self.assertIn('future:"未来"', PLANNER_HTML_PAGE)
@@ -167,7 +217,7 @@ class PlannerTests(unittest.TestCase):  # pragma: no cover -- covered in web-ext
             'id="detail-dialog"',
             "showDetail(record,match)",
             "row.setAttribute('role','button')",
-            "expected_source_revision:typeof sourceRevision===\'string\'?sourceRevision:\'\'",
+            "expected_source_revision:typeof sourceRevision==='string'?sourceRevision:''",
             "sourceRevision=tasks.source_revision",
         ):
             self.assertIn(expected, PLANNER_HTML_PAGE)

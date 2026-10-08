@@ -5,7 +5,415 @@
   let notesPage=null, noteRows=[], notesBusy=false, loadGeneration=0;
   const $=id=>document.getElementById(id), params=new URLSearchParams(location.search);let scopeArea=params.get('area')||'',scopeView=params.get('saved_view')||'',todaySyncTimer=null;
   let requestedLang=params.get("lang"),lang=["en","ja"].includes(requestedLang)?requestedLang:((navigator.language||"en").slice(0,2)==="ja"?"ja":"en"), t=copy.en, today="", date="", view=["week","month"].includes(params.get("view"))?params.get("view"):"day", writable=false, edit=null, pending=false, sourceRevision="";
-  function translate(){t=copy[lang];Object.assign(t,lang==="ja"?{emptyNotes:"通常のメモはありません。",moreNotes:"さらに表示",editNote:"編集",viewSelector:"Plannerの表示",anchorDate:"表示の基準日",month:"月",monthTitle:"月間プランナー",previousMonth:"前の月",nextMonth:"次の月",densityNone:"予定なし",densityLow:"少ない",densityMedium:"普通",densityHigh:"多い",items:"件",outsideMonth:"表示月の外",scope:"スコープ",all:"すべて",customize:"カスタマイズ",sections:"Dayセクション",density:"密度",comfortable:"標準",compact:"コンパクト",apply:"適用",reset:"workspaceの既定値に戻す",moveUp:"上へ",moveDown:"下へ",showSection:"表示"}:{emptyNotes:"No ordinary Notes.",moreNotes:"Load more",editNote:"Edit",viewSelector:"Planner view",anchorDate:"View anchor date",month:"Month",monthTitle:"Month Planner",previousMonth:"Previous month",nextMonth:"Next month",densityNone:"No dated items",densityLow:"Low density",densityMedium:"Medium density",densityHigh:"High density",items:"items",outsideMonth:"Outside selected month",scope:"Scope",all:"All",customize:"Customize",sections:"Day sections",density:"Density",comfortable:"Comfortable",compact:"Compact",apply:"Apply",reset:"Reset to workspace defaults",moveUp:"Move up",moveDown:"Move down",showSection:"Show"});document.documentElement.lang=lang;document.querySelectorAll("[data-i18n]").forEach(n=>n.textContent=t[n.dataset.i18n]||n.textContent);$('view-switch').setAttribute("aria-label",t.viewSelector);document.title=(view==="week"?t.weekTitle:view==="month"?t.monthTitle:t.title)+" · life.txt"}
+
+  const flowCopy = {
+    en: {
+      flowTitle: "Suggested Daily Flow",
+      flowUnsaved: "Read-only suggestions, not saved or executed. Fixed appointments stay fixed.",
+      flowStart: "Window start",
+      flowEnd: "Window end (00:00 = next midnight)",
+      flowRequest: "Get suggestions",
+      flowReady:
+        "Enter an explicit window and request suggestions for this day. No automatic refresh.",
+      flowPast:
+        "Suggestions are unsupported for past dates. Use Review / Activity for historical evidence.",
+      flowLoading: "Loading read-only suggestions…",
+      flowError: "Could not load suggestions. Check the window, scope and connection, then retry.",
+      flowAuth: "Access denied. Use an authorized Web session; suggestions need read access only.",
+      flowInvalid: "Enter both times as HH:MM, with end after start (00:00 means next midnight). If valid, check workspace timezone and scope.",
+      flowComplete: "Complete",
+      flowPartial: "Partial — some records could not be used",
+      flowBlocked: "Blocked — no safe candidate placement",
+      flowUnknown: "Unknown",
+      flowCertified: "Certified",
+      flowInventory: "Inventory",
+      flowOccupancy: "Occupancy",
+      flowBounded: "Bounded",
+      flowWarning: "Incomplete suggestions. Unknown occupancy must not be treated as free time.",
+      flowEmpty: "No timeline entries in this window. See unplaced tasks and diagnostics below.",
+      flowWhy: "Why",
+      flowMinutes: "minutes",
+      flowFixed: "Fixed appointment (not movable)",
+      flowCandidate: "Suggested task (not saved)",
+      flowBreak: "Suggested break (not saved)",
+      flowBuffer: "Suggested buffer (not saved)",
+      flowInstants: "Point reminders / events (do not reserve time)",
+      flowUnplaced: "Unplaced tasks",
+      flowDiagnostics: "Diagnostics",
+      flowProvenance: "Source / revision and request context",
+      flowEvaluated: "Evaluated at",
+      flowWindow: "Window / effective window",
+      flowNone: "None",
+      flowDetail: "Open current item details",
+      flowDetailError: "Current details unavailable or item changed. Request suggestions again.",
+      flowSource: "Source token / line",
+      flowCode: "Code / parameters",
+      flowReasons: "Completeness reasons",
+      flowDeadline: "Deadline status",
+      flowMet: "Met",
+      flowMissed: "Missed",
+      flowNoDeadline: "No deadline",
+    },
+    ja: {
+      flowTitle: "今日のおすすめ / Daily Flow",
+      flowUnsaved: "読み取り専用の提案です。未保存・未実行です。固定予定は移動しません。",
+      flowStart: "対象時間の開始",
+      flowEnd: "対象時間の終了（00:00 は翌日午前0時）",
+      flowRequest: "おすすめを取得",
+      flowReady: "この日の対象時間を明示して取得してください。自動更新はしません。",
+      flowPast:
+        "過去の日付の提案には対応していません。実績はレビュー / アクティビティで確認してください。",
+      flowLoading: "読み取り専用の提案を取得中…",
+      flowError: "提案を取得できませんでした。時間・スコープ・接続を確認して再試行してください。",
+      flowAuth:
+        "アクセスが拒否されました。認証済みのWebセッションを使用してください。必要なのは読み取り権限のみです。",
+      flowInvalid:
+        "開始と終了をHH:MMで指定し、終了を開始より後にしてください（00:00 は翌日午前0時）。正しい場合はworkspaceのタイムゾーンとスコープも確認してください。",
+      flowComplete: "完全",
+      flowPartial: "一部のみ — 利用できない記録があります",
+      flowBlocked: "取得不可 — 安全な候補配置ができません",
+      flowUnknown: "不明",
+      flowCertified: "確認済み",
+      flowInventory: "対象データ",
+      flowOccupancy: "予定の占有情報",
+      flowBounded: "件数制限あり",
+      flowWarning: "不完全な提案です。不明な占有情報を空き時間として扱わないでください。",
+      flowEmpty:
+        "この時間帯に表示できる予定・候補はありません。未配置タスクと診断を確認してください。",
+      flowWhy: "理由",
+      flowMinutes: "分",
+      flowFixed: "固定予定（移動不可）",
+      flowCandidate: "提案タスク（未保存）",
+      flowBreak: "提案休憩（未保存）",
+      flowBuffer: "提案余裕時間（未保存）",
+      flowInstants: "時点の通知・予定（時間を占有しません）",
+      flowUnplaced: "未配置タスク",
+      flowDiagnostics: "診断",
+      flowProvenance: "参照元・リビジョンと取得条件",
+      flowEvaluated: "評価日時",
+      flowWindow: "対象時間 / 有効時間",
+      flowNone: "なし",
+      flowDetail: "現在の記録の詳細を開く",
+      flowDetailError:
+        "現在の詳細を取得できないか、記録が変更されています。提案を再取得してください。",
+      flowSource: "参照元トークン / 行",
+      flowCode: "コード / パラメーター",
+      flowReasons: "完全性の理由",
+      flowDeadline: "期限の判定",
+      flowMet: "期限内",
+      flowMissed: "超過",
+      flowNoDeadline: "期限なし",
+    },
+  };
+  // Translate engine evidence only; eligibility, ordering and scheduling stay server-side.
+  const flowReasons = {
+    eligible_task: ["Eligible actionable task", "実行可能な候補タスク"],
+    full_estimate: ["Uses the full authored estimate", "記録された見積もり全体を使用"],
+    historical_elapsed: [
+      "Historical elapsed time is not subtracted",
+      "過去の実績時間は差し引きません",
+    ],
+    priority_context: ["Shared priority and urgency context", "共通の優先度・緊急度の情報"],
+    earliest_fit: [
+      "Earliest safe slot in canonical priority order",
+      "共通の優先順位で最初の安全な空き枠",
+    ],
+    deadline_missed: ["Placement misses the deadline", "配置すると期限を超過"],
+    reserved_after_task: ["Reserved after the task", "タスクの後に確保"],
+    fixed_attendance: ["Authored fixed attendance", "記録された固定予定"],
+    missing_estimate: ["No authored estimate", "見積もり未記入"],
+    ambiguous_estimate: ["Multiple estimates", "見積もりが複数"],
+    invalid_estimate: ["Estimate is invalid or nonpositive", "見積もりが不正または正の値でない"],
+    insufficient_capacity: ["No slot fits the full estimate", "見積もり全体が収まる枠がありません"],
+    unresolved_dependency: ["Dependency is unresolved", "依存先が未解決"],
+    missing_identity: ["Missing full item ID", "記録の完全なIDがありません"],
+    not_actionable: ["Task is not actionable", "実行可能なタスクではありません"],
+    future_intent: ["Authored intent is after this day", "記録された実行日はこの日より後"],
+    ambiguous_do: ["Multiple intent dates", "実行日の指定が複数"],
+    ambiguous_due: ["Multiple deadlines", "期限の指定が複数"],
+    invalid_do: ["Invalid intent date", "実行日が不正"],
+    invalid_due: ["Invalid deadline", "期限が不正"],
+    invalid_elapsed: ["Invalid historical elapsed time", "過去の実績時間が不正"],
+    occupancy_unavailable: [
+      "Active source snapshot unavailable",
+      "有効な参照元のスナップショットを取得できません",
+    ],
+    source_changed: [
+      "Sources changed during the read; retry",
+      "取得中に参照元が変更されました。再取得してください",
+    ],
+    unsupported_timezone_window: [
+      "DST or timezone window unsupported",
+      "夏時間・タイムゾーンの時間帯に未対応",
+    ],
+    past_date_unsupported: ["Past dates unsupported", "過去の日付には未対応"],
+    window_elapsed: ["Requested window has elapsed", "指定した時間帯は終了しています"],
+    input_parse_error: ["Input contains parse errors", "入力に解析エラーがあります"],
+    ambiguous_identity: ["Duplicate or ambiguous item IDs", "記録のIDが重複または曖昧"],
+    ambiguous_source: ["Conflicting source rows", "参照元の行が競合"],
+    occupancy_unknown: ["Busy time cannot be certified", "占有時間を確認できません"],
+    limit_exceeded: ["Safe resource limit exceeded", "安全な処理上限を超過"],
+    skipped_recurring: ["Recurring occupancy is unsupported", "繰り返し予定の占有時間には未対応"],
+    missing_time_detail: ["Time detail is missing", "時刻の詳細がありません"],
+    incomplete_period: ["Incomplete event period", "予定の期間情報が不完全"],
+    invalid_time_value: ["Invalid time value", "時刻の値が不正"],
+    invalid_span: ["Invalid event span", "予定の期間が不正"],
+    plan_blocked: [
+      "Safe planning is blocked; see diagnostics",
+      "安全な提案を作成できません。診断を確認してください",
+    ],
+    conflict: ["Fixed appointments overlap", "固定予定が重複"],
+    unknown_duration: ["Event duration is unknown", "予定の所要時間が不明"],
+  };
+  let flowGeneration = 0,
+    flowController = null,
+    flowDetailGeneration = 0;
+  function flowText(code) {
+    return flowReasons[code]?.[lang === "ja" ? 1 : 0] || t.flowUnknown + " (" + String(code) + ")";
+  }
+  function flowNode(tag, text, parent, className) {
+    const node = document.createElement(tag);
+    if (text !== undefined) node.textContent = text;
+    if (className) node.className = className;
+    if (parent) parent.append(node);
+    return node;
+  }
+  function resetFlow() {
+    ++flowGeneration;
+    ++flowDetailGeneration;
+    flowController?.abort();
+    flowController = null;
+    $("flow-result").replaceChildren();
+    $("flow-result").setAttribute("aria-busy", "false");
+    $("flow-request").disabled = dayPosition() === "past";
+    $("flow-status").textContent = dayPosition() === "past" ? t.flowPast : t.flowReady;
+  }
+  function flowEvidence(parent, rows) {
+    if (!rows?.length) return;
+    const list = flowNode("ul", undefined, parent, "flow-reasons");
+    for (const row of rows) {
+      const li = flowNode("li", flowText(row.code), list);
+      flowNode(
+        "small",
+        t.flowCode +
+          ": " +
+          row.code +
+          (Object.keys(row.params || {}).length ? " · " + JSON.stringify(row.params) : ""),
+        li,
+      );
+    }
+  }
+  async function flowDetails(ref) {
+    const generation = ++flowDetailGeneration,
+      context = flowGeneration;
+    try {
+      const data = await api("/api/items/id/" + encodeURIComponent(ref.id));
+      if (generation !== flowDetailGeneration || context !== flowGeneration || view !== "day") return;
+      const record = data.item;
+      if (!record || record.id !== ref.id) throw Error("changed");
+      showDetail(record);
+    } catch (_) {
+      if (generation === flowDetailGeneration && context === flowGeneration)
+        $("flow-status").textContent = t.flowDetailError;
+    }
+  }
+  function flowReference(parent, ref) {
+    if (!ref) return;
+    flowNode(
+      "p",
+      t.flowSource + ": " + ref.source + " / " + (ref.line ?? "—"),
+      parent,
+      "flow-source",
+    );
+    if (ref.id) {
+      flowNode("small", "ID: " + ref.id, parent);
+      const b = flowNode("button", t.flowDetail, parent);
+      b.type = "button";
+      b.addEventListener("click", () => flowDetails(ref));
+    }
+  }
+  function flowDisclosure(parent, label) {
+    const d = flowNode("details", undefined, parent, "flow-disclosure");
+    flowNode("summary", label, d);
+    return d;
+  }
+  function renderFlow(data) {
+    const target = $("flow-result");
+    target.replaceChildren();
+    const c = data.completeness;
+    const state =
+      { complete: t.flowComplete, partial: t.flowPartial, blocked: t.flowBlocked }[c.state] ||
+      t.flowUnknown;
+    $("flow-status").textContent = state + " · " + data.date + " · " + data.timezone;
+    flowNode("p", t.flowUnsaved, target, "flow-notice");
+    flowNode(
+      "p",
+      t.flowOccupancy +
+        ": " +
+        (c.occupancy === "certified" ? t.flowCertified : t.flowUnknown) +
+        " · " +
+        t.flowInventory +
+        ": " +
+        (c.inventory === "complete" ? t.flowComplete : t.flowBounded),
+      target,
+    );
+    if (c.state !== "complete") flowNode("p", t.flowWarning, target, "flow-notice");
+    if (c.reasons?.length)
+      flowEvidence(
+        flowDisclosure(target, t.flowReasons + " (" + c.reasons.length + ")"),
+        c.reasons.map((code) => ({ code })),
+      );
+    const kinds = {
+      fixed: t.flowFixed,
+      candidate: t.flowCandidate,
+      policy_break: t.flowBreak,
+      buffer: t.flowBuffer,
+    };
+    const timeline = flowNode("ol", undefined, target, "flow-timeline");
+    for (const row of data.timeline) {
+      const li = flowNode("li", undefined, timeline),
+        article = flowNode("article", undefined, li, "flow-card flow-" + row.kind);
+      flowNode("strong", kinds[row.kind] || t.flowUnknown, article);
+      flowNode("p", row.start + " → " + row.end, article);
+      const ref = row.item || row.candidate;
+      if (ref) flowNode("h3", ref.title, article);
+      const minutes =
+        row.duration_minutes ??
+        row.why?.find((r) => r.code === "reserved_after_task")?.params?.minutes ??
+        (Date.parse(row.end) - Date.parse(row.start)) / 60000;
+      if (Number.isFinite(minutes)) flowNode("p", minutes + " " + t.flowMinutes, article);
+      if (row.deadline_status)
+        flowNode(
+          "p",
+          t.flowDeadline +
+            ": " +
+            ({ met: t.flowMet, missed: t.flowMissed, none: t.flowNoDeadline }[row.deadline_status] ||
+              t.flowUnknown),
+          article,
+        );
+      flowEvidence(article, row.why);
+      flowReference(flowDisclosure(article, t.flowProvenance), ref);
+    }
+    if (!data.timeline.length) flowNode("p", t.flowEmpty, target);
+    const instants = flowDisclosure(target, t.flowInstants + " (" + data.instants.length + ")");
+    for (const row of data.instants) {
+      const article = flowNode("article", undefined, instants, "flow-card");
+      flowNode("h3", row.item?.title, article);
+      flowNode("p", row.at, article);
+      flowReference(article, row.item);
+    }
+    const unplaced = flowDisclosure(target, t.flowUnplaced + " (" + data.unplaced.length + ")");
+    for (const row of data.unplaced) {
+      const article = flowNode("article", undefined, unplaced, "flow-card");
+      flowNode("h3", row.item?.title, article);
+      flowNode("p", flowText(row.reason), article);
+      flowEvidence(article, row.why);
+      for (const code of row.secondary || []) flowNode("p", flowText(code), article);
+      flowReference(article, row.item);
+    }
+    if (!data.unplaced.length) flowNode("p", t.flowNone, unplaced);
+    const diagnostics = flowDisclosure(
+      target,
+      t.flowDiagnostics + " (" + data.diagnostics.length + ")",
+    );
+    for (const row of data.diagnostics) {
+      const article = flowNode("article", undefined, diagnostics, "flow-card");
+      if (row.item) flowNode("h3", row.item.title, article);
+      flowEvidence(article, [row]);
+      flowReference(article, row.item);
+    }
+    if (!data.diagnostics.length) flowNode("p", t.flowNone, diagnostics);
+    const provenance = flowDisclosure(target, t.flowProvenance);
+    flowNode("p", t.flowEvaluated + ": " + data.evaluated_at, provenance);
+    if (data.window)
+      flowNode(
+        "p",
+        t.flowWindow +
+          ": " +
+          data.window.start +
+          " → " +
+          data.window.end +
+          " / " +
+          data.window.effective_start +
+          " → " +
+          data.window.effective_end,
+        provenance,
+      );
+    flowNode(
+      "pre",
+      JSON.stringify(
+        {
+          schema: data.schema,
+          policy_version: data.policy_version,
+          scope: data.scope,
+          policy: data.policy,
+          source_revision: data.source_revision,
+        },
+        null,
+        2,
+      ),
+      provenance,
+    );
+  }
+  async function requestFlow(event) {
+    event.preventDefault();
+    resetFlow();
+    if (view !== "day" || dayPosition() === "past") return;
+    const start = $("flow-start").value,
+      end = $("flow-end").value;
+    if (
+      !/^([01]\d|2[0-3]):[0-5]\d$/.test(start) ||
+      !/^([01]\d|2[0-3]):[0-5]\d$/.test(end) ||
+      (end !== "00:00" && end <= start)
+    ) {
+      $("flow-status").textContent = t.flowInvalid;
+      return;
+    }
+    const generation = flowGeneration,
+      controller = new AbortController();
+    flowController = controller;
+    $("flow-result").setAttribute("aria-busy", "true");
+    $("flow-status").textContent = t.flowLoading;
+    const query = new URLSearchParams({ date, day_start: start, day_end: end });
+    if (scopeArea) query.set("area", scopeArea);
+    if (scopeView) query.set("saved_view", scopeView);
+    try {
+      const response = await fetch("/api/daily-flow?" + query, {
+        signal: controller.signal,
+        cache: "no-store",
+      });
+      if (generation !== flowGeneration) return;
+      if (!response.ok) {
+        $("flow-status").textContent = [401, 403].includes(response.status)
+          ? t.flowAuth
+          : [400, 422].includes(response.status)
+            ? t.flowInvalid
+            : t.flowError;
+        return;
+      }
+      const data = await response.json();
+      if (generation !== flowGeneration) return;
+      if (
+        data.schema !== "daily-flow-lite-v1" ||
+        data.date !== date ||
+        !data.completeness ||
+        !["timeline", "instants", "unplaced", "diagnostics"].every((k) => Array.isArray(data[k]))
+      )
+        throw Error("Invalid response");
+      renderFlow(data);
+    } catch (error) {
+      if (generation === flowGeneration && error.name !== "AbortError") {
+        $("flow-result").replaceChildren();
+        $("flow-status").textContent = t.flowError;
+      }
+    } finally {
+      if (generation === flowGeneration) {
+        flowController = null;
+        $("flow-result").setAttribute("aria-busy", "false");
+      }
+    }
+  }
+  function translate(){t=copy[lang];Object.assign(t,flowCopy[lang]);Object.assign(t,lang==="ja"?{emptyNotes:"通常のメモはありません。",moreNotes:"さらに表示",editNote:"編集",viewSelector:"Plannerの表示",anchorDate:"表示の基準日",month:"月",monthTitle:"月間プランナー",previousMonth:"前の月",nextMonth:"次の月",densityNone:"予定なし",densityLow:"少ない",densityMedium:"普通",densityHigh:"多い",items:"件",outsideMonth:"表示月の外",scope:"スコープ",all:"すべて",customize:"カスタマイズ",sections:"Dayセクション",density:"密度",comfortable:"標準",compact:"コンパクト",apply:"適用",reset:"workspaceの既定値に戻す",moveUp:"上へ",moveDown:"下へ",showSection:"表示"}:{emptyNotes:"No ordinary Notes.",moreNotes:"Load more",editNote:"Edit",viewSelector:"Planner view",anchorDate:"View anchor date",month:"Month",monthTitle:"Month Planner",previousMonth:"Previous month",nextMonth:"Next month",densityNone:"No dated items",densityLow:"Low density",densityMedium:"Medium density",densityHigh:"High density",items:"items",outsideMonth:"Outside selected month",scope:"Scope",all:"All",customize:"Customize",sections:"Day sections",density:"Density",comfortable:"Comfortable",compact:"Compact",apply:"Apply",reset:"Reset to workspace defaults",moveUp:"Move up",moveDown:"Move down",showSection:"Show"});document.documentElement.lang=lang;document.querySelectorAll("[data-i18n]").forEach(n=>n.textContent=t[n.dataset.i18n]||n.textContent);$('view-switch').setAttribute("aria-label",t.viewSelector);document.title=(view==="week"?t.weekTitle:view==="month"?t.monthTitle:t.title)+" · life.txt"}
   async function api(path,options={}){const r=await fetch(path,options);const raw=await r.text();let d={};try{d=raw?JSON.parse(raw):{}}catch{}if(!r.ok)throw Error(d.message||d.detail||"Request failed");return d}
   const vals=(item,key)=>Array.isArray(item?.details?.[key])?item.details[key]:item?.details?.[key]?[item.details[key]]:[];
   const pathFor=i=>i.id?"/api/items/id/"+encodeURIComponent(i.id):i.line&&i.editable?"/api/items/"+encodeURIComponent(i.line):null;
@@ -49,7 +457,7 @@
     }catch(e){if(generation===loadGeneration)$('feedback').textContent=t.error+e.message}
     finally{if(generation===loadGeneration){notesBusy=false;renderNotes()}}
   }
-  async function load(){const generation=++loadGeneration;notesBusy=false;notesPage=null;noteRows=[];renderNotes();if(!date)return;$('date').value=date;updateTemporalContext();$('date').setAttribute("aria-label",view!=="day"?t.anchorDate:t.choose);updateUrl();$('day-view').hidden=view!=="day";$('week-view').hidden=view!=="week";$('month-view').hidden=view!=="month";$('dock').hidden=view!=="day";$('view-day').setAttribute("aria-pressed",String(view==="day"));$('view-week').setAttribute("aria-pressed",String(view==="week"));$('view-month').setAttribute("aria-pressed",String(view==="month"));$('title').textContent=view==="week"?t.weekTitle:view==="month"?t.monthTitle:t.title;$('prev').setAttribute("aria-label",view==="week"?t.previousWeek:view==="month"?t.previousMonth:t.previousDay);$('next').setAttribute("aria-label",view==="week"?t.nextWeek:view==="month"?t.nextMonth:t.nextDay);if(view==="week"){await loadWeek();return}if(view==="month"){await loadMonth();return}$('feedback').textContent=t.loading;
+  async function load(){resetFlow();const generation=++loadGeneration;notesBusy=false;notesPage=null;noteRows=[];renderNotes();if(!date)return;$('date').value=date;updateTemporalContext();$('date').setAttribute("aria-label",view!=="day"?t.anchorDate:t.choose);updateUrl();$('day-view').hidden=view!=="day";$('week-view').hidden=view!=="week";$('month-view').hidden=view!=="month";$('dock').hidden=view!=="day";$('view-day').setAttribute("aria-pressed",String(view==="day"));$('view-week').setAttribute("aria-pressed",String(view==="week"));$('view-month').setAttribute("aria-pressed",String(view==="month"));$('title').textContent=view==="week"?t.weekTitle:view==="month"?t.monthTitle:t.title;$('prev').setAttribute("aria-label",view==="week"?t.previousWeek:view==="month"?t.previousMonth:t.previousDay);$('next').setAttribute("aria-label",view==="week"?t.nextWeek:view==="month"?t.nextMonth:t.nextDay);if(view==="week"){await loadWeek();return}if(view==="month"){await loadMonth();return}$('feedback').textContent=t.loading;
     try{const [day,agenda,habits,notes,journals,tasks,review]=await Promise.all([api('/api/command-center?date='+date+scopeQuery()),api('/api/agenda?from='+date+'&to='+date+scopeQuery()),api('/api/items?type=H&open_only=true'),api('/api/notes?date='+date+'&limit='+NOTE_PAGE_SIZE+scopeQuery()),api('/api/items?type=J'),api('/api/items?type=T&open_only=true'),dayPosition()==="past"?api('/api/temporal-review?date='+date+'&limit=100'+scopeQuery()):Promise.resolve(null)]);
       if(generation!==loadGeneration)return;
       sourceRevision=tasks.source_revision||habits.source_revision||notes.source_revision||sourceRevision;
@@ -77,5 +485,6 @@
     $('editor-form').onsubmit=async e=>{e.preventDefault();if(!edit)return;const {kind,item}=edit,body=$('editor-body').value.trim();if(kind==='J'&&!body){$('editor-feedback').textContent=t.journalRequired;return}const details={...(item?.details||{})};if(body)details.body=[body];else delete details.body;if(kind==='J'&&!details.on)details.on=[date];const payload={status:'[N]',type:kind,title:$('editor-title').value.trim(),details};try{await api(item?pathFor(item):'/api/items',{method:item?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});$('editor').close();$('feedback').textContent=t.saved;await load()}catch(err){$('editor-feedback').textContent=t.saveError+err.message}};
     document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>$(b.dataset.close).close());const [config,health,areas,views]=await Promise.all([api('/api/config'),api('/api/health'),api('/api/areas'),api('/api/saved-views')]);today=config.today;plannerDefaults=normalizePlannerPreference(config.web?.planner);const scopeSelect=$("scope");(areas.areas||[]).forEach(a=>{const o=document.createElement("option");o.value="area:"+a.name;o.textContent="Area: "+a.name;scopeSelect.append(o)});(views.views||[]).forEach(v=>{const o=document.createElement("option");o.value="saved_view:"+v.name;o.textContent="Saved View: "+v.name;scopeSelect.append(o)});scopeSelect.value=scopeArea?("area:"+scopeArea):scopeView?("saved_view:"+scopeView):"";scopeSelect.onchange=()=>{const value=scopeSelect.value;scopeArea=value.startsWith("area:")?value.slice(5):"";scopeView=value.startsWith("saved_view:")?value.slice(11):"";updateUrl();load()};writable=!health.read_only&&Boolean(health.writable_path);['open-capture','new-note','edit-journal'].forEach(id=>$(id).disabled=!writable);if(!writable)$('feedback').textContent=t.readonly;date=/^\d{4}-\d\d-\d\d$/.test(params.get('date')||'')?params.get('date'):today;applyPlannerPreference();await load();document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")syncToday()});window.addEventListener("focus",syncToday);todaySyncTimer=setInterval(syncToday,60000)}
   function bootError(e){$('feedback').textContent=t.error+e.message;['open-capture','new-note','edit-journal'].forEach(id=>$(id).disabled=true)}
+  $('flow-form').addEventListener('submit',requestFlow);['flow-start','flow-end'].forEach(id=>$(id).addEventListener('input',resetFlow));$('flow-disclosure').addEventListener('toggle',()=>{if(!$('flow-disclosure').open)resetFlow()});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>boot().catch(bootError),{once:true});else boot().catch(bootError);
 })();

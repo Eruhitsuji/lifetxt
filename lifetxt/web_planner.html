@@ -11,6 +11,12 @@
 <div class="date-row"><button id="prev" aria-label="Previous day">‹</button><label for="date" data-i18n="choose">Choose date</label><input id="date" type="date" aria-label="Selected day"><button id="next" aria-label="Next day">›</button></div><p id="temporal-context" class="temporal-context" role="status" aria-live="polite"></p><p id="feedback" role="status" aria-live="polite"></p></section>
 <div class="scope-row"><label for="scope" data-i18n="scope">Scope</label><select id="scope" aria-label="Planner scope"><option value="" data-i18n="all">All</option></select></div>
 <div id="day-view">
+<section id="flow-panel" class="panel" aria-labelledby="flow-heading"><details id="flow-disclosure">
+<summary id="flow-heading" data-i18n="flowTitle">Suggested Daily Flow</summary>
+<p data-i18n="flowUnsaved">Read-only suggestions, not saved or executed. Fixed appointments stay fixed.</p>
+<form id="flow-form"><div class="flow-window"><label for="flow-start"><span data-i18n="flowStart">Window start</span><input id="flow-start" type="time" required step="60"></label><label for="flow-end"><span data-i18n="flowEnd">Window end (00:00 = next midnight)</span><input id="flow-end" type="time" required step="60"></label></div><button id="flow-request" type="submit" data-i18n="flowRequest">Get suggestions</button></form>
+<p id="flow-status" role="status" aria-live="polite"></p><div id="flow-result" aria-busy="false"></div>
+</details></section>
 <section class="panel"><h2 data-i18n="schedule">Schedule</h2><div id="schedule" aria-live="polite"></div></section>
 <section class="panel"><h2 data-i18n="tasks">Tasks</h2><div id="tasks" aria-live="polite"></div></section>
 <section class="panel"><h2 data-i18n="habits">Habits</h2><div id="habits" aria-live="polite"></div></section>

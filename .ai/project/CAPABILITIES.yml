@@ -22,7 +22,8 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/1142
       - https://github.com/Eruhitsuji/lifetxt/issues/1143
       - https://github.com/Eruhitsuji/lifetxt/issues/1144
-    related_pull_requests: []
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/1150
     reuse_policy: Reuse next actionable/dependency predicates, exact CLI rank seam, existing scopes, matrix context, timezone interpreters and freebusy interval algebra. No new priority or recurrence engine.
     notes: Requires explicitly certified authorized snapshots. Caller IO/retry/auth gates remain in consumers; independent implementation review pending.
   - id: cap-external-resource-fetch-policy-contract

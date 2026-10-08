@@ -1,0 +1,76 @@
+schema_version: 1
+verification:
+  runtime_evidence:
+    local_commit: 0d15214f
+    published_commit: a2e0835c863a5e01b1d9e1ce6fe93bad7b5deb87
+    tree: fbeedf5bc1aa8ff78ec5d69e929e02b97b8880b0
+    publication: Identical local/published tree verified; subsequent changes are evidence/PR-link metadata only.
+    environment: Python 3.12.14, Linux, Bash; BashCompletionExecutionTests ran, not skipped.
+    isolation: Tracked working tree unchanged while both full suite runs were in flight.
+  executed:
+    - command: MPLBACKEND=Agg python -m unittest discover
+      commit: a2e0835c863a5e01b1d9e1ce6fe93bad7b5deb87
+      result: 5368 tests OK, skipped=382, 305.866 seconds; final corrected runtime. Existing ResourceWarnings and optional/external skips retained; complete log captured.
+      status: passed
+    - command: python -m unittest tests.test_daily_flow_cli tests.test_daily_flow tests.test_daily_flow_performance tests.test_cli_taxonomy tests.test_completion_surfaces tests.test_completion_values tests.test_freebusy_cli tests.test_extra_cli tests.test_timezone_policy_v2 tests.test_workspace_foundation tests.test_change_package_closeout tests.test_traceability_gate
+      commit: a2e0835c863a5e01b1d9e1ce6fe93bad7b5deb87
+      result: 326 tests OK, skipped=10; 43 dedicated CLI acceptance/regression tests.
+      status: passed
+    - command: python -m unittest tests.test_core_cli_entrypoint tests.test_extra_cli tests.test_roundtrip_golden.BashCompletionExecutionTests
+      commit: a2e0835c863a5e01b1d9e1ce6fe93bad7b5deb87
+      result: 76 tests passed, no skips; routing and executable Bash compatibility.
+      status: passed
+    - command: python -m coverage run --branch --source=lifetxt.daily_flow_cli -m unittest tests.test_daily_flow_cli; python -m coverage report -m
+      commit: a2e0835c863a5e01b1d9e1ce6fe93bad7b5deb87
+      result: 92% combined line/branch coverage; 168 statements, 8 missed, 72 branches, 10 partial. No existing threshold weakened.
+      status: passed
+    - command: python -m ruff check lifetxt tests scripts
+      commit: a2e0835c863a5e01b1d9e1ce6fe93bad7b5deb87
+      result: Full configured lint passed.
+      status: passed
+    - command: python -m ruff format --check lifetxt/daily_flow_cli.py lifetxt/entrypoint.py lifetxt/cli_taxonomy.py tests/test_daily_flow_cli.py
+      commit: a2e0835c863a5e01b1d9e1ce6fe93bad7b5deb87
+      result: Four files formatted; cli.py changed parser range formatted separately with ruff --range. Existing unrelated whole-repository formatting drift not rewritten.
+      status: passed-scoped
+    - command: python -m mypy --follow-imports=skip --ignore-missing-imports lifetxt/diagnostic_contract.py
+      commit: a2e0835c863a5e01b1d9e1ce6fe93bad7b5deb87
+      result: Configured one-file type boundary passed; no boundary expansion claimed.
+      status: passed
+    - command: python -m lifetxt check examples/minimal_life.txt
+      commit: a2e0835c863a5e01b1d9e1ce6fe93bad7b5deb87
+      result: 10 items OK.
+      status: passed
+    - command: python scripts/validate_release_docs.py --output .cache/1145-release-docs.json
+      commit: a2e0835c863a5e01b1d9e1ce6fe93bad7b5deb87
+      result: ok=true, errors=0; EN/JA usage and taxonomy docs updated, YAML validated by governance tests.
+      status: passed
+    - command: python -m unittest tests.test_daily_flow_cli.DailyFlowCliTests.test_default_workspace_timezone_does_not_prescan_excluded_archive tests.test_daily_flow_cli.DailyFlowCliTests.test_flow_never_uses_legacy_timezone_prescan
+      result: Both reproduced red on prior route; green in final 43-test CLI suite. Legacy prescan read excluded archives/unrelated candidate files; fixed with flow-only snapshot route.
+      status: passed-regression
+  acceptance_mapping:
+    AC1: Exact shared JSON equality, reference-clock determinism, source ordering and direct typed text rendering.
+    AC2: Required/invalid flags, timezone precedence/offsets, next midnight, DST/past/elapsed fail-safe.
+    AC3: Fixed/candidate/break/buffer/instants/free/unplaced/secondary/why/diagnostics/revisions/control escaping.
+    AC4: Multi-file/workspace archives/defaults/globs/aliases/stdin, exact BOM/CRLF hash, retry/hash/source-set races, no legacy prescan.
+    AC5: Missing/undecodable/special/oversize sources, aggregate bound, parser errors, unknown attendance, estimate and candidate caps.
+    AC6: Shared core/rank/freebusy/extra/taxonomy/completion/timezone/workspace/routing/Bash suites plus full suite.
+    AC7: Source bytes/directory inventory unchanged, EN/JA usage/help/taxonomy, capability and PR traceability.
+  remaining:
+    - Latest-head independent implementation/integration review and High risk acceptance
+    - PR CI and human merge approval
+    - Web/API/auth integration and hostile-filesystem confinement outside CLI scope
+  review_ledger:
+    - reviewer: Codex (implementer)
+      review_type: self-review
+      target_commit: a2e0835c863a5e01b1d9e1ce6fe93bad7b5deb87
+      result: completed-not-independent-approval
+      finding_count: 3
+      findings: Archive default scope, incremental aggregate bound, speculative timezone prescan fixed with tests; no unresolved blocking implementer findings.
+    - reviewer: Eruhitsuji
+      review_type: implementation
+      target_commit: latest PR head required
+      result: pending
+    - reviewer: Eruhitsuji
+      review_type: integration
+      target_commit: latest PR head required
+      result: pending

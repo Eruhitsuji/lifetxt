@@ -98,6 +98,7 @@ python -m lifetxt timeline ID [path ...] [--since ISO] [--until ISO] [--event TY
 python -m lifetxt timeline --workspace-timeline [path ...] [--since ISO] [--until ISO] [--event TYPE] [--project NAME] [--limit N] [--json]
 python -m lifetxt history-check [path ...] [--id ID] [--commit-limit N] [--json]
 python -m lifetxt freebusy [path ...] --from START --to END
+python -m lifetxt flow [path ...] --date YYYY-MM-DD --day-start HH:MM --day-end HH:MM [--format text|json]
 python -m lifetxt item-uri format ID [--base-url URL] [--json]
 python -m lifetxt item-uri parse URI [--json]
 python -m lifetxt backup verify BACKUP
@@ -199,6 +200,7 @@ python -m lifetxt vm run program.life.txt --entry s1
 | `history-check` | Native 履歴と Git の意味的な変更を読み取り専用で照合する ([native-git-history-consistency.md](native-git-history-consistency.md) 参照) |
 | `thread` | currentまたはGit-backed historical lifecycle thread、revision diff、派生 temporal context、consistency warningを表示する ([life-hub.md](life-hub.md) 参照) |
 | `freebusy` | 期間内の `E`/`R` items について busy/free time interval と重複 conflict を表示する ([life-hub.md](life-hub.md) 参照) |
+| `flow` | 読み取り専用の日次配置案、固定予定、未配置理由・診断とcanonical JSON（[Daily Flow Lite](#daily-flow-lite-flow)参照） |
 | `item-uri` | ホスト非依存な `lifetxt://item/<id>` 論理 record link を format/parse する ([item-links.md](item-links.md) 参照) |
 | `query` | 共通 query 言語で item を絞り込む ([query.md](query.md) 参照) |
 | `view` | saved view (名前付き query) を list / 検査 / 実行する ([query.md](query.md) 参照) |
@@ -245,7 +247,7 @@ audience、そしてこの表と同じカテゴリ分類を表示します。
 | カテゴリ | コマンド |
 |---|---|
 | Getting Started / Daily | `tour`、`help`、`init`、`quick` (`add`)、`today`、`next`、`agenda`、`show`、`edit`、`done`、`complete`、`progress`、`clone`、`reopen`、`due`、`review`、`assist`、`state`、`start`、`stop`、`assign`、`timer`、`notify` |
-| Query / Explore | `filter`、`search`、`find`、`query`、`view`、`summary`、`inbox`、`health`、`temporal`、`timeline`、`history-check`、`thread`、`lifecycle-stats`、`freebusy`、`count`、`status`、`recent`、`item-uri`、`notes` |
+| Query / Explore | `filter`、`search`、`find`、`query`、`view`、`summary`、`inbox`、`health`、`temporal`、`timeline`、`history-check`、`thread`、`lifecycle-stats`、`freebusy`、`flow`、`count`、`status`、`recent`、`item-uri`、`notes` |
 | Projects / People / Collaboration | `project`、`portfolio`、`area`、`person`、`group`、`who`、`message`、`proposal`、`ticket`、`version`、`sprint` |
 | Structure / Data Integrity | `check`、`integrity`、`maintenance`、`storage`、`ids`、`links`、`backlinks`、`sources`、`tag`、`lint`、`deps`、`diff`、`snapshot`、`undo`、`cleanup`、`files` |
 | Import / Export / Reports | `convert`、`import`、`export`、`import-ics`、`sync-ics`、`to-json`、`to-jsonl`、`to-csv`、`from-json`、`from-jsonl`、`from-csv`、`from-markdown`、`from-todo`、`to-ics`、`markdown`、`stats`、`plot`、`export-heatmap`、`standup`、`invoice`、`share`、`digest`、`report` |
@@ -271,6 +273,63 @@ destructive の分類、コピー可能な例、related command が表示され�
 category / audience / command のメタデータは `lifetxt/cli_taxonomy.py`
 一箇所にまとまっているため、`--help`、`help`、この表が互いに drift する
 と `tests/test_cli_taxonomy.py` が fail します。
+
+### Daily Flow Lite (`flow`)
+
+`flow` は明示的に利用する時間配置ビューです。`today`、`next`、`agenda`、
+`freebusy` の置換・alias ではありません。[共有Liteコア](daily-flow-lite-contract.md)
+の結果を表示するだけで、CLI独自の配置アルゴリズムはありません。
+`do:`・予定・設定・ID・proposal・lock・undo・元ファイルは書き換えません。
+
+```sh
+lifetxt flow life.txt --date 2026-10-09 --day-start 09:00 --day-end 17:00
+lifetxt flow life.txt meetings.life.txt --date 2026-10-09 --day-start 09:00 --day-end 17:00 --format json
+lifetxt --workspace daily flow --date 2026-10-09 --day-start 09:00 --day-end 17:00
+```
+
+日付・開始・終了の3フラグは必須です。日付は厳密な `YYYY-MM-DD`、時刻は
+`HH:MM`。終了は開始より後とし、終了の `00:00` のみ翌日午前0時の排他的境界です。
+推測した勤務時間、`today` トークン、暗黙のタイムゾーン変換や他の日跨ぎはありません。
+タイムゾーンは最初に解決された入力の `#! timezone:`、設定の `defaults.timezone`、
+既存host policyの順です。具体的なIANA名またはUTCが必要で、未解決の `local`/
+`host` は指定方法を案内して失敗します。解決したzone・offset付き時間帯・1回取得した
+`evaluated_at` を表示し、対象が当日なら経過済み時間には配置しません。
+
+明示pathが設定より優先されます。省略時は既存workspace/configの入力を使い、
+workspaceの `archive` roleを除外します。fallbackは `life.txt` で、stdinではありません。
+`-` ならstdinを1回読み取ります。既存directory/glob展開を使い、明示選択した全ファイルを
+activeとして扱うため、archiveは選択directory/glob外に置いてください。
+archiveの自動発見・importや全ファイルシステム検索はありません。realpathのaliasは重複排除し、
+読み取ったactive全ファイルを予定・依存関係の判定に使います。候補filterで会議を隠しません。
+
+テキストは `[fixed]`、`[candidate]`、`[policy_break]`、`[buffer]`、瞬間マーカー、
+certifiedな残り空き時間を区別します。未配置のprimary/secondary理由、構造化 `why`、
+診断、inventory/completeness、source token・行・ID・revisionを表示し、制御文字はescapeします。
+初期CLIにpolicy overrideはなく、休憩・bufferはコア既定の0です。Taskには安定した `id:` と
+単一の正の `est:` が必要です。`elapsed:` から残り時間を推測せず見積全体を使用し、
+容量不足は `insufficient_capacity` として返します。短いTaskを捏造しません。
+
+`--format json` はcanonical `daily-flow-lite-v1` オブジェクトをstdoutへ直接出力し、
+モデルのフィールドと行順を維持します。parserメッセージ・失敗案内はstderrです。
+入力・実効設定・zone・基準時刻が同じならJSONも同じですが、通常実行ごとに
+`evaluated_at` は変わります。ファイルrevisionは既存snapshotの正確なbyte SHA-256
+（BOM/CRLF含む）です。stdinは `parsed_snapshot` と明示したfallbackを使います。
+コアは解析itemを含むsourceのみrevision一覧に載せ、空ファイルは載せません。
+
+モデル構築後に選択path集合とfile hashを再確認します。変更があれば同じ基準時刻で
+1回だけ再試行し、再度変われば汎用のblocked `source_changed` を返します。
+読み取り時の検査でありlockでも出力後の変更に対する保証でもありません。
+設定は今回読み込んだ実効in-memory snapshotで、live watchではありません。
+不足・読み取り不能sourceや不正CLI入力は計画を出さず失敗します。
+入力上限は1ファイル16 MB、選択全体400万decoded文字と、共有コアのitem/edge/展開上限です。
+busyデータを黙って切り捨てません。
+
+終了コードはcompleteモデルが `0`（通常の容量不足も含む）、partial/blockedや入力失敗が
+`1`、argparse用法エラーが `2` です。partialは安全な候補を残す場合がありますが、
+見積不足・不正見積・inventory上限を明示します。blockedは不確実性を表示して候補を出しません。
+繰り返し、不完全・曖昧な占有、DST切替日、過去日、対象に関係する2日超の予定span
+（UTCでも）は未対応です。診断を修正し入力を絞る・再読み込みしてください。
+不明な占有を空きとして扱わないでください。
 
 ### 1.2 多言語化 (Localization)
 

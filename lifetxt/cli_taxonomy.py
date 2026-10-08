@@ -294,6 +294,7 @@ CATEGORIES = OrderedDict(
                     "thread",
                     "lifecycle-stats",
                     "freebusy",
+                    "flow",
                     "count",
                     "status",
                     "recent",
@@ -849,6 +850,9 @@ def command_safety(name):
 #: through `lifetxt help`. Commands without an entry here report an empty
 #: `examples` list rather than a guessed one.
 _EXAMPLES = {
+    "flow": (
+        "lifetxt flow life.txt --date 2026-10-09 --day-start 09:00 --day-end 17:00",
+    ),
     "tour": ("lifetxt tour",),
     "init": ("lifetxt init",),
     "quick": ('lifetxt add "Buy milk"',),

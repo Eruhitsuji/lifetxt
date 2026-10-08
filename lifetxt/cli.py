@@ -2015,6 +2015,39 @@ def build_parser():
     freebusy_command.add_argument("--json", action="store_true", help="Emit JSON.")
     freebusy_command.set_defaults(func=command_freebusy)
 
+    flow_command = subparsers.add_parser(
+        "flow", help="Read-only Daily Flow Lite time-placement suggestions (not today)."
+    )
+    flow_command.add_argument(
+        "paths",
+        nargs="*",
+        metavar="path",
+        help="Active input file(s), directory/glob, or - for stdin. Defaults to "
+        "workspace/config paths or life.txt; never auto-includes archives.",
+    )
+    flow_command.add_argument(
+        "--date",
+        required=True,
+        metavar="YYYY-MM-DD",
+        help="Explicit workspace calendar date.",
+    )
+    flow_command.add_argument(
+        "--day-start", required=True, metavar="HH:MM", help="Explicit window start."
+    )
+    flow_command.add_argument(
+        "--day-end",
+        required=True,
+        metavar="HH:MM",
+        help="Exclusive window end; 00:00 means next midnight.",
+    )
+    flow_command.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Text timeline or canonical daily-flow-lite-v1 JSON.",
+    )
+    flow_command.set_defaults(func=command_flow)
+
     vm_command = subparsers.add_parser(
         "vm",
         help="Opt-in, isolated lifetxt VM: run a Turing-complete 2-counter "
@@ -15385,6 +15418,12 @@ def _write_temporal_diff(result):
             None,
             "  Comparison incomplete: %s\n" % ", ".join(result["limitations"]),
         )
+
+
+def command_flow(args):
+    from .daily_flow_cli import command_flow as run_flow
+
+    return run_flow(args)
 
 
 def command_freebusy(args):

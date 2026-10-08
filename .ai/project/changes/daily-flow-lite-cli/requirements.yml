@@ -1,0 +1,14 @@
+schema_version: 1
+requirements:
+  - id: req-daily-flow-planner-lite
+    kind: ADDED
+    owner: Eruhitsuji
+    statement: Expose canonical shared Daily Flow Lite proposals through an additive read-only local CLI with explicit date/window and visible uncertainty.
+    acceptance_criteria:
+      - AC1 Canonical JSON parity and direct text rendering, stable model row ordering
+      - AC2 Strict explicit date/window, workspace timezone, offsets, DST fail-safe
+      - AC3 Fixed/candidate/rest/buffer/point/free/unplaced/why/revisions/diagnostics visible
+      - AC4 Active multifile/workspace paths, no auto-archives, byte snapshots with one retry
+      - AC5 Missing/invalid inputs, estimates, occupancy and bounds never fabricate a complete plan
+      - AC6 Existing today/next/agenda/freebusy behavior and command metadata remain compatible
+      - AC7 Tests, EN/JA help/usage, capability and traceability; no writes or migration

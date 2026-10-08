@@ -2,8 +2,8 @@ schema_version: 1
 
 capabilities:
   - id: cap-daily-flow-planner-lite
-    name: Read-only Daily Flow Lite core and CLI
-    summary: Deterministic bounded single-day proposals with certified occupancy, full-estimate tasks, reasons and uncertainty; additive read-only flow CLI, no record writes.
+    name: Read-only Daily Flow Lite core, CLI and Web API
+    summary: Deterministic bounded single-day proposals with certified occupancy, full-estimate tasks, reasons and uncertainty; additive read-only flow CLI and Web API, no record writes.
     status: experimental
     owner: Eruhitsuji
     source_requirements:
@@ -12,6 +12,8 @@ capabilities:
       - lifetxt/daily_flow.py
       - lifetxt/daily_flow_model.py
       - lifetxt/daily_flow_time.py
+      - lifetxt/daily_flow_web.py
+      - lifetxt/webapp.py (GET daily-flow)
       - lifetxt/daily_flow_cli.py
       - lifetxt/cli.py (flow parser and dispatcher)
       - lifetxt/entrypoint.py (flow-only snapshot-aware route)
@@ -19,10 +21,13 @@ capabilities:
     public_interfaces:
       - Internal Python build_daily_flow
       - lifetxt flow [path ...] --date YYYY-MM-DD --day-start HH:MM --day-end HH:MM [--format text|json]
-      - No API/UI or generated schema registered
+      - GET /api/daily-flow (required date/day_start/day_end; optional area/saved_view)
+      - No UI or standalone generated response schema registered
     tests_or_evidence:
       - tests.test_daily_flow
       - tests.test_daily_flow_performance
+      - tests.test_web_daily_flow
+      - .ai/project/changes/daily-flow-lite-api/verification.yml
       - tests.test_daily_flow_cli
       - .ai/project/changes/daily-flow-lite-cli/verification.yml
       - .ai/project/changes/daily-flow-lite-core/verification.yml
@@ -30,6 +35,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/1142
       - https://github.com/Eruhitsuji/lifetxt/issues/1143
       - https://github.com/Eruhitsuji/lifetxt/issues/1144
+      - https://github.com/Eruhitsuji/lifetxt/issues/1146
       - https://github.com/Eruhitsuji/lifetxt/issues/1145
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/1150

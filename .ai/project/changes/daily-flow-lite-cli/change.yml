@@ -2,7 +2,7 @@ schema_version: 1
 change:
   id: daily-flow-lite-cli
   title: Read-only Daily Flow Lite CLI
-  status: in-review
+  status: implemented
   change_type: Feature
   assurance_level: High
   owner: Eruhitsuji

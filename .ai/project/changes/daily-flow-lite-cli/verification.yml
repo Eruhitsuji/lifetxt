@@ -1,3 +1,4 @@
+# Pre-merge reports are retained below; dated reconciliation is authoritative for current status.
 schema_version: 1
 verification:
   runtime_evidence:
@@ -55,11 +56,11 @@ verification:
     AC5: Missing/undecodable/special/oversize sources, aggregate bound, parser errors, unknown attendance, estimate and candidate caps.
     AC6: Shared core/rank/freebusy/extra/taxonomy/completion/timezone/workspace/routing/Bash suites plus full suite.
     AC7: Source bytes/directory inventory unchanged, EN/JA usage/help/taxonomy, capability and PR traceability.
-  remaining:
+  historical_pre_merge_remaining:
     - Latest-head independent implementation/integration review and High risk acceptance
     - PR CI and human merge approval
     - Web/API/auth integration and hostile-filesystem confinement outside CLI scope
-  review_ledger:
+  historical_pre_merge_review_ledger:
     - reviewer: Codex (implementer)
       review_type: self-review
       target_commit: a2e0835c863a5e01b1d9e1ce6fe93bad7b5deb87
@@ -74,3 +75,41 @@ verification:
       review_type: integration
       target_commit: latest PR head required
       result: pending
+
+post_merge_reconciliation:
+  observed_at: 2026-10-09 JST
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1158
+  evidence_report: ../daily-flow-lite-core/post-merge-evidence.md
+  implementation_status: implemented
+  previous_change_status: in-review
+  supersedes: Historical pre-merge planned/remaining/review ledgers; original executed reports are preserved,
+    not rerun.
+  merge:
+    status: merged
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1151
+    head_commit: b8715763b749d7481a67b5ebc9004bdb960ba7ae
+    merge_commit: 2c37d97e0c27d94a4a85a261d6c5ecb69c678484
+  ci:
+    status: passed
+    target_commit: b8715763b749d7481a67b5ebc9004bdb960ba7ae
+    scope: Listed final-head PR runs; no main/release or optional-test completion claim.
+    runs:
+    - name: CI
+      url: https://github.com/Eruhitsuji/lifetxt/actions/runs/37774267435
+      status: completed
+      conclusion: success
+    - name: lifetxt-mini CI
+      url: https://github.com/Eruhitsuji/lifetxt/actions/runs/37774267544
+      status: completed
+      conclusion: success
+  independent_review:
+    status: unverified
+    submitted_reviews: 0
+    target_commit: b8715763b749d7481a67b5ebc9004bdb960ba7ae
+    source: https://api.github.com/repos/Eruhitsuji/lifetxt/pulls/1151/reviews
+    reason: No submitted GitHub reviews found; external human review may exist. Merge is not review evidence.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1159
+  high_risk_acceptance:
+    status: unverified
+    reason: Design approval and merge do not establish separate final-head High risk acceptance.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1159

@@ -1155,4 +1155,46 @@ Tasks/events and 2,048 slots). No occupancy is silently truncated. One whole
 snapshot retry detects changes; repeated changes return `source_changed` with no
 placements. No snapshot can prevent edits after publication. No record, journal,
 undo or proposal is written. Existing startup revision-metrics initialization is
-unchanged. Planner UI integration is separate (#1147).
+unchanged. Planner Day offers an opt-in projection described below.
+
+
+## Suggested Daily Flow in Planner Day
+
+Open `/planner` and select **Day** and a today/future date. Expand **Suggested
+Daily Flow**, enter an explicit start and end (for example 09:00 and 17:00), then
+choose **Get suggestions**. End 00:00 means the following midnight. This works
+in read-only mode and makes a GET to the existing Daily Flow API only when
+requested. The selected `area` / `saved_view` filters candidate Tasks; fixed
+occupancy remains workspace-wide. Dates use workspace today and the response
+uses the workspace timezone; browser timezone and URL timezone values never
+override the Daily Flow engine. Other URL state is preserved.
+
+The chronological list retains the engine order and labels fixed appointments,
+unsaved suggested Tasks, breaks and buffers separately. Candidates show their
+full estimate, deadline outcome and reasons. The API currently uses zero break
+and buffer defaults, so these rows appear only when supplied by the shared
+model; this UI introduces no policy override. **Not saved or executed** applies
+to proposals, never to the authored fixed appointment itself. There is no
+apply, complete or drag control here. Past dates show an unsupported message;
+use Review / Activity for actual history.
+
+Complete / partial / blocked and occupancy certainty are displayed prominently.
+Expand **Unplaced tasks**, **Diagnostics**, point events, completeness reasons
+and **Source / revision and request context** for all returned evidence. Unknown
+recurrence, unsupported DST, malformed input and missing estimates stay visible;
+no timeline entries or insufficient capacity do not imply successful placement.
+Source tokens and revisions are inspectable without raw paths. **Open current
+item details** reads the existing record by its full ID and uses the normal
+Planner detail dialog; records without IDs retain provenance without guessed links.
+
+Changing date, scope, view, workspace today, or either window field clears the
+result and ignores outstanding responses. Close the disclosure to discard it.
+Request again after editing a record or before relying on a proposal: changes
+after the snapshot cannot be detected automatically. Loading, empty, invalid
+window, access-denied and network/server errors have explicit status messages;
+retry with the same button. No plan is stored in a file or browser storage.
+Native disclosures, labelled form fields and buttons support keyboard/touch,
+live status and screen-reader lists; layout follows the existing safe-area,
+dark-mode and reduced-motion styles. Automated Chromium checks cover phone
+widths 320/360/390/430 and short heights; physical iOS/VoiceOver verification
+remains a human check.

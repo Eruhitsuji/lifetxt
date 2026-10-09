@@ -2,6 +2,26 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-bulk-native-export-and-append
+      capability_id: cap-import-export-format-expansion
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1172
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1175
+      changed_files_or_scope:
+        - lifetxt/webapp.py
+        - lifetxt/web_assets.html
+        - lifetxt/web_assets_js_05.js
+        - lifetxt/web_assets_js_14.js
+        - docs/en/web.md
+        - docs/ja/web.md
+      tests_or_evidence:
+        - py_compile lifetxt/webapp.py lifetxt/web_assets.py
+        - git diff --check
+      notes: >-
+        Web-native filtered export, parser-backed multi-record preview, and
+        bounded revision-protected atomic batch append for #1172/#1173/#1174.
+        Reuses the existing parser, serializer, filter engine, and mutation
+        CAS contract; no Format 1.0 change.
+      status: implemented
     - requirement_id: req-next-one-read-only
       capability_id: cap-next-actionable-convergence
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1170

@@ -1,0 +1,15 @@
+schema_version: 1
+links:
+  - requirement_id: req-planner-web-revision-contract
+    capability_id: cap-web-mobile-planner
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1162
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1163
+    tests_or_evidence:
+      - tests.test_web_planner_revisions
+      - tests.test_web_planner
+      - tests.test_surface_runtime
+      - tests.test_revision_migration_metrics
+    status: implemented
+gaps:
+  - description: Deployed Planner behavior and fresh zero-legacy-write window
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/290

@@ -2,6 +2,29 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-daily-flow-post-merge-review-evidence
+      capability_id: cap-daily-flow-planner-lite
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1159
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1161
+      changed_files_or_scope:
+        - .ai/project/changes/daily-flow-lite-core/post-merge-review.md
+        - .ai/project/changes/daily-flow-lite-core/post-merge-owner-decision.yml
+        - .ai/project/changes/daily-flow-lite-core/post-merge-asgi-probe.py
+        - .ai/project/changes/daily-flow-lite-core/verification.yml
+        - .ai/project/changes/daily-flow-lite-cli/verification.yml
+        - .ai/project/changes/daily-flow-lite-api/verification.yml
+        - .ai/project/changes/planner-time-of-day/verification.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests.test_daily_flow
+        - tests.test_daily_flow_cli
+        - tests.test_web_daily_flow
+        - tests.test_temporal_review_scope
+        - tests.test_change_package_closeout
+        - tests.test_traceability_gate
+        - .ai/project/changes/daily-flow-lite-core/post-merge-review.md
+      notes: Dated AI technical assessment only; historical independent review, High risk acceptance and physical device gaps remain tracked in 1159 until explicit owner disposition. No runtime changes or stability promotion.
+      status: proposed
     - requirement_id: req-daily-flow-post-merge-closeout
       capability_id: cap-daily-flow-planner-lite
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1158

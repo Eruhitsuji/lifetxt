@@ -427,7 +427,7 @@ occurrence 生成にはまだ対応していません。
 | Key | 意味 | 例 |
 |---|---|---|
 | `reason` | キャンセル、延期、不確定の理由 | `reason:"Schedule changed"` |
-| `moved_to` | 延期先の日付または置き換え item | `moved_to:2026-06-10` |
+| `moved_to` | 延期先の日付または日時 | `moved_to:2026-06-10` |
 
 ### 7.10 System keys
 
@@ -683,6 +683,10 @@ moved_to reason updated note
 ```
 
 `M` では配信延期を表せます。
+
+`moved_to:` は延期先の日付または日時だけに使用します。item の置換先を
+IDで関連付ける場合は `replaced_by:<id>` を使用してください。`moved_to:`
+は item 参照ではなく、他の record との ID 解決も行いません。
 
 ### 10.6 Pending Or Uncertain (`[?]`)
 

@@ -622,6 +622,55 @@ particular, it teaches `do:` as intended execution time and `due:` as a
 deadline, resolves relative dates from the actual conversation date/timezone,
 and tells an AI not to invent IDs or metadata.
 
+### A copyable Prompt Profile workflow
+
+You may give an AI the repository URL as a reference, but a URL is not proof
+that the model fetched or read the profile. For a predictable result, paste
+the complete official [`prompts/lifetxt-assistant.md`](../../prompts/lifetxt-assistant.md)
+into the conversation. No lifetxt install, MCP setup, or workspace access is
+required for drafting.
+
+1. Ask the AI to **Convert** your words into lifetxt lines. Treat the result as
+   a proposal, not as a saved record.
+2. Ask it to **Explain** and **Review** the result. Self-review is useful but
+   is not a substitute for checking the original wording yourself.
+3. If lifetxt is installed, run
+   `python -m lifetxt check draft.txt --format json` and read the diagnostics.
+   If it is not installed, skip this step; do not install another service just
+   to check a draft.
+4. Compare every date and dependency with the original wording, then save it
+   yourself. `check` can find syntax and some structural problems; it cannot
+   prove that the AI preserved your meaning.
+
+Pay particular attention to an uncertain choice such as “the 20th or 22nd”
+(do not turn it into a confirmed date or interval), “request review” versus
+“review complete” (the dependency must name the required achieved state), and
+`do:` versus `due:`. Also check references and invented metadata. `M` and `R`
+can record messages or reminders, but recording a conditional action does not
+execute it or send a notification.
+
+For example, a simple request may produce:
+
+```text
+[ ] T Submit_the_draft do:2026-10-20
+```
+
+For “submit on the 20th or 22nd after review is complete”, keep the choice
+unresolved and point to the completion item only if that item exists, for
+example:
+
+```text
+[?] T Submit_the_draft note:"Candidate dates: 2026-10-20 or 2026-10-22; confirm one after review_complete" depends_on:review_complete
+```
+
+These examples use existing Format 1.0 keys and should be checked when the CLI
+is available. They are guidance, not a guarantee of external model accuracy.
+The observations behind this workflow came from the limited 30-output study
+in [#1164](https://github.com/Eruhitsuji/lifetxt/issues/1164); five outputs were
+unavailable and real-device automation was not verified. See the implemented
+[Prompt Profile in #813](https://github.com/Eruhitsuji/lifetxt/issues/813), and
+do not infer the pending check-only API proposal in [#823](https://github.com/Eruhitsuji/lifetxt/issues/823).
+
 ```sh
 # hand a filtered slice to a model
 lifetxt filter life.txt --open --project work --format json | llm "what should I do first?"

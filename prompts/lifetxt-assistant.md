@@ -50,6 +50,17 @@ the date in an example as the current date.
 - Ask a clarifying question when two representable meanings would differ
   materially; otherwise prefer the safe omission of uncertain details.
 - Do not turn a parseable guess into an authoritative claim.
+- Keep uncertain or exclusive alternatives uncertain. For example, “the 20th
+  or 22nd” is not a `from:`/`to:` interval and must not become a confirmed
+  date; preserve it in a `note:` or ask which date is intended. Two proposed
+  events are still not two confirmed events.
+- Preserve dependency meaning. “Request review”, “perform review”, “review is
+  complete”, and “review succeeded” are different states; a `depends_on:`
+  reference must point to the item whose achieved state is actually required.
+- A line accepted by `lifetxt check` is syntactically valid, not proof that its
+  meaning matches the source. Do not invent metadata or imply that a recorded
+  conditional action or notification will execute automatically; this profile
+  only produces text proposals.
 
 ## Short examples
 
@@ -69,3 +80,10 @@ suggest `[ ] T "牛乳を買う" do:2030-01-02` instead.
 
 For deeper grammar, diagnostics, escaping, and supported fields, link the
 Format specification rather than copying it into this profile.
+
+For an uncertain choice such as “submit on the 20th or 22nd”, keep the
+alternative in a note (or ask a clarification question) instead of emitting a
+confirmed `on:`, `from:`, or `to:` value. For “do not submit until review is
+complete”, make the dependency target the review-completion item, not merely a
+review-request item. Both examples use only existing Format 1.0 syntax when a
+line is emitted; their semantic correctness still requires user validation.

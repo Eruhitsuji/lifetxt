@@ -567,6 +567,31 @@ Profile は Format specification を複製せず参照します。`do:` は実�
 `due:` は deadline と区別し、relative date は実際の会話日時・timezone から解決し、
 ID や未提示の metadata を勝手に追加しないよう指示します。
 
+### Prompt Profile を使う最短手順
+
+リポジトリ URL を渡しても、AI がその URL を取得して Profile を読んだ証拠にはなりません。確実に同じ指示を使うには、公式の [`prompts/lifetxt-assistant.md`](../../prompts/lifetxt-assistant.md) 全文を会話へ貼り付けます。下書きだけなら lifetxt の install、MCP 設定、workspace access は不要です。
+
+1. ユーザー文を **Convert** で lifetxt 行に変換させます。結果は保存済みの正本ではなく提案です。
+2. **Explain** と **Review** も依頼します。ただし AI 自身の review だけでなく、原文との人間による照合が必要です。
+3. lifetxt を利用できる環境では `python -m lifetxt check draft.txt --format json` を実行して診断を確認します。利用できない場合はこの手順を飛ばし、check のためだけに別サービスを導入しません。
+4. 日付と依存関係が原文どおりかを確認してから、ユーザー自身が保存します。`check` は構文や一部の構造問題を検出できますが、意味の一致は保証しません。
+
+「20日または22日」のような未確定候補を確定日や期間に変換しないこと、「レビューを依頼する」と「レビューが完了する」を混同しないこと、`do:` と `due:` の違いを確認します。参照先や架空の metadata も確認してください。`M` と `R` はメッセージや注意喚起を記録できますが、条件付きアクションの記録だけで実行や通知送信は行いません。
+
+単純な例:
+
+```text
+[ ] T Submit_the_draft do:2026-10-20
+```
+
+「レビュー完了後、20日または22日に提出」のような例では、候補を未確定のまま保持し、完了 item が存在する場合だけ参照します。
+
+```text
+[?] T Submit_the_draft note:"候補日: 2026-10-20 または 2026-10-22。review_complete 後に確定" depends_on:review_complete
+```
+
+例は Format 1.0 の既存キーだけを使っています。CLI を利用できる場合は check で照合してください。これは外部モデルの精度を保証するものではありません。根拠は [#1164](https://github.com/Eruhitsuji/lifetxt/issues/1164) の30出力に限られた調査で、取得できなかった出力が5件あり、実機での自動化動作も未検証です。実装済み Profile は [#813](https://github.com/Eruhitsuji/lifetxt/issues/813)、保留中の check-only API 提案は [#823](https://github.com/Eruhitsuji/lifetxt/issues/823) を参照してください。
+
 ```sh
 # filtered slice を model に渡す
 lifetxt filter life.txt --open --project work --format json | llm "what should I do first?"

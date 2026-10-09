@@ -42,6 +42,20 @@ class ReferenceKeysCoverageTests(unittest.TestCase):
         _items, diagnostics = parse_text("[ ] T Old id:old replaced_by:nonexistent\n")
         self.assertTrue(any(d.code == "W215" for d in diagnostics))
 
+    def test_moved_to_is_a_date_not_an_item_reference(self):
+        _items, diagnostics = parse_text(
+            "[>] E Deferred moved_to:2026-10-16\n"
+        )
+        self.assertFalse(any(d.code == "W203" for d in diagnostics))
+        self.assertFalse(any(d.code == "W215" for d in diagnostics))
+
+    def test_replaced_by_is_the_item_replacement_relation(self):
+        _items, diagnostics = parse_text(
+            "[ ] T Old id:old replaced_by:new\n[ ] T New id:new\n"
+        )
+        self.assertFalse(any(d.code == "W203" for d in diagnostics))
+        self.assertFalse(any(d.code == "W215" for d in diagnostics))
+
     def test_duplicate_of_self_reference_warns(self):
         _items, diagnostics = parse_text("[ ] T Self id:s duplicate_of:s\n")
         self.assertTrue(any(d.code == "W216" for d in diagnostics))

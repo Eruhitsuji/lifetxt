@@ -3,7 +3,7 @@ links:
   - requirement_id: req-planner-web-revision-contract
     capability_id: cap-web-mobile-planner
     task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1162
-    pull_request: null
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1163
     tests_or_evidence:
       - tests.test_web_planner_revisions
       - tests.test_web_planner

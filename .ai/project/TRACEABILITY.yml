@@ -5,12 +5,13 @@ traceability:
     - requirement_id: req-planner-web-revision-contract
       capability_id: cap-web-mobile-planner
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1162
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1163
       changed_files_or_scope:
         - lifetxt/web_planner.js
         - tests/test_web_planner.py
         - tests/test_web_planner_revisions.py
         - tests/planner_revision_probe.mjs
+        - tests/quick_input_clients.mjs
         - docs/en/web.md
         - docs/ja/web.md
         - .ai/project/changes/planner-web-revisions

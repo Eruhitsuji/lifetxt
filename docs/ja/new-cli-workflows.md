@@ -4,6 +4,48 @@
 
 ## Actionable work
 
+### 次の1件だけを取得（読み取り専用）
+
+```sh
+lifetxt next life.txt --one
+lifetxt next life.txt --one --json
+lifetxt next life.txt --one --rank --project research
+# 作業後、返されたレコードの id を明示して完了する:
+lifetxt done task_report life.txt
+lifetxt next life.txt --one
+```
+
+`--one` は先頭1件を完全な正規life.txtレコードとして出力し、表の見出しや
+説明を付けません。`--json`（`--one` 専用）、または `--one --format json` は
+`{"item":"[ ] T Report id:task_report","source":"/path/life.txt","line":1}`
+を返します。`item` は完全な `id:` を含む正規レコード文字列です。
+`source` と1始まりの `line` により、IDがないレコードも特定できます。
+標準入力（`-`）の `source` は `-` です。`--pretty` はJSONの整形のみ行います。
+
+候補がない場合はテキストが空、JSONが `null` となり、終了コードは **0** です。
+入力や設定の不正・読み取り失敗は終了コード **1** のエラーとなり、候補なしとは
+区別されます。不正なオプションの組合せは **2** です。`--one` は `--limit`、
+`--why`、`-o`/`--output` と併用できません。元ファイル、設定、タイムスタンプ、
+メタデータ、アーカイブ、出力ファイルへの書き込みは行いません。
+
+入力パス、設定済み・既定のworkspace、`--user`、`--project`、`--context`、
+タイムゾーン解決は既存の `next` と共通です。選択された入力だけを読み、
+workspaceのアーカイブや別workspaceを暗黙に追加しません。明示的に指定した
+パスはその指定通りに扱います。
+
+候補判定・同順位の処理は既存CLIの `command_next` をそのまま利用します。
+全入力間の依存関係を解決し、priority、due、created、元の行番号で並べます。
+それでも同順位なら入力順を維持します。`--rank` は解決済みタイムゾーンで
+既存の期限超過優先 `_rank_key` を利用します。時間配置を行う機能ではなく、
+未来の日付を持つレコードも既存ルールに従って候補になります。
+`today` の `next_actions` は `nextaction.next_action_items` を使い、priorityの
+別名やdue/do/行番号の順序が異なります。Daily Flowは `_rank_key` に加え、
+見積り・ID・開始可能時刻・空き時間を確認します。これらを混ぜずCLIの判定を
+維持します。通常の `next` は従来の複数件の表、`--one` なしの
+`--format json` は従来の配列を返します。
+
+### 従来の候補一覧
+
 ```sh
 lifetxt next life.txt
 lifetxt next life.txt --project research --limit 10

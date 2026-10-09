@@ -15595,6 +15595,24 @@ traceability:
         Format 1.0 and provider-neutral behavior are unchanged.
       status: proposed
 
+    - requirement_id: req-provider-independent-ai-prompt-profile
+      capability_id: cap-ai-prompt-profile
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1166
+      pull_request: null
+      changed_files_or_scope:
+        - docs/en/ai-integration.md
+        - docs/ja/ai-integration.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - git diff --check
+      release_or_deployment: null
+      notes: >-
+        Bilingual documentation of the Prompt Profile to check and human-review
+        workflow, with explicit limits from #1164 and references to #813/#823.
+      status: proposed
+
     - requirement_id: req-temporal-life-review
       capability_id: cap-temporal-life-review
       epic: https://github.com/Eruhitsuji/lifetxt/issues/808

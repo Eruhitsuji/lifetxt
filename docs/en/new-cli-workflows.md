@@ -4,6 +4,50 @@ This guide covers the workflow commands added in the 2026-07-20 roadmap implemen
 
 ## Actionable work
 
+### One immediate action (read-only)
+
+```sh
+lifetxt next life.txt --one
+lifetxt next life.txt --one --json
+lifetxt next life.txt --one --rank --project research
+# Work on the returned record, then explicitly complete its id:
+lifetxt done task_report life.txt
+lifetxt next life.txt --one
+```
+
+`--one` prints only the first selected item as one full canonical life.txt
+record, with no table header or explanation. `--json` (only with `--one`), or
+`--one --format json`, returns
+`{"item":"[ ] T Report id:task_report","source":"/path/life.txt","line":1}`.
+`item` is the canonical record string, including its full `id:` if present;
+`source` and the one-based `line` locate records without IDs too. For stdin
+(`-`), `source` is `-`. `--pretty` formats JSON without changing its shape.
+
+No actionable item means empty text or JSON `null`, with exit code **0**.
+Malformed/unreadable input or configuration is an error (exit **1**), not an
+empty result. Invalid flag combinations exit **2**. `--one` cannot combine
+with `--limit`, `--why`, or `-o`/`--output`: it never writes source files,
+configuration, timestamps, metadata, archives, or output files.
+
+Paths, configured/default workspace, `--user`, `--project`, `--context`,
+and timezone resolution follow existing `next` conventions. Only selected
+input paths are read; workspace archives and unrelated workspaces are not
+implicitly added. Explicitly supplied paths are used as supplied.
+
+Selection and tie-breaking reuse the existing CLI `command_next` unchanged:
+actionability/dependencies across all loaded inputs, then priority, due date,
+created date, and source line (stable input order for remaining ties).
+`--rank` uses the existing overdue-first `_rank_key` in the resolved timezone.
+This is an actionable list, not a scheduler: future-dated records remain
+eligible under the existing rules. Today's `next_actions` uses
+`nextaction.next_action_items`, which has different priority aliases and
+due/do/line ordering; Daily Flow uses `_rank_key` plus estimate, identity,
+release-time, and capacity checks. `--one` preserves CLI semantics instead of
+blending these engines. Bare `next` retains its existing multi-item table;
+`--format json` without `--one` retains its existing array.
+
+### Existing action list
+
 ```sh
 lifetxt next life.txt
 lifetxt next life.txt --project research --limit 10

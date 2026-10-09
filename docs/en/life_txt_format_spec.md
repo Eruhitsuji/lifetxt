@@ -479,7 +479,7 @@ daily/weekly `BYDAY`.
 | Key | Meaning | Example |
 |---|---|---|
 | `reason` | Reason for cancellation, deferral, or uncertainty | `reason:"Schedule changed"` |
-| `moved_to` | New date or replacement item after deferral | `moved_to:2026-06-10` |
+| `moved_to` | New date or datetime after deferral | `moved_to:2026-06-10` |
 
 ### 7.10 System Keys
 
@@ -875,7 +875,9 @@ Recommended keys:
 moved_to reason updated note
 ```
 
-Use `moved_to:` for the new date or replacement item.
+Use `moved_to:` for the new date or datetime only. To link an item to its
+replacement, use the ID relation `replaced_by:<id>`; `moved_to:` is not an item
+reference and is not resolved against other records.
 For `M`, `[>]` can mean delivery was postponed.
 
 ### 10.6 Pending Or Uncertain (`[?]`)

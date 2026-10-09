@@ -85,6 +85,16 @@ def command_next(args, config_data):
                 item.line or 0,
             )
         )
+    if getattr(args, "one", False):
+        item = selected[0] if selected else None
+        if args.format == "json":
+            result = (
+                {"item": item_to_line(item), "source": item.source, "line": item.line}
+                if item is not None
+                else None
+            )
+            return _emit(_json_text(result, args.pretty), None)
+        return _emit(item_to_line(item) + "\n" if item is not None else "", None)
     if args.limit:
         selected = selected[: args.limit]
     explanations = {}

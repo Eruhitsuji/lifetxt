@@ -89,6 +89,29 @@ python -m lifetxt serve "projects/**/*.life.txt" --write-file life.txt --read-on
 Use `--read-only` for public dashboards or always-on displays where users
 should be able to inspect and validate records but not change source files.
 
+### Planner write revisions
+
+Planner Quick Capture, Note/Journal creation and editing, Task completion and
+Habit recording send `If-Match` using the authoritative Web revision. The client
+reads `ETag` / `X-Lifetxt-Revision`, discovers `/api/revision` if needed, and
+retains successful response revisions. This works in both `observe` and
+`required` modes without legacy-write fallback. No setting change is needed.
+
+Edits retain the revision of the record read; Quick Capture retains the revision
+when opened. Background reads do not upgrade those pending writes. A stale
+write returns a conflict without automatic replay. The form and its input stay
+open; copy your draft, reload the day, review the latest record and then retry.
+Task/Habit errors appear in the Planner feedback area. Missing revision discovery
+fails without sending an unguarded write. Capture keeps `expected_source_revision`
+in JSON for client compatibility, but the generic `If-Match` header is the write
+precondition; that JSON field is not a substitute for it.
+
+After deploying the #1162 fix, exercise these actions and verify that
+`/api/revision-metrics` does not increase `legacy_fallback_total`. Preserve the
+failed observation evidence before an authorized reset, then start a fresh
+14-day zero-legacy-write observation under #290. Merge or local tests alone do
+not complete #289/#290 or authorize switching production to `required` (#291).
+
 ## MCP Server
 
 For MCP-compatible AI clients, run the dependency-free stdio MCP server:
@@ -405,6 +428,7 @@ Messages, Team, Status, Notifications, Stats, Graph, Display, or Kiosk), and not
 competes for space. The
 record editor opens as a centered modal from `＋ New`, and clicking an item
 opens a centered record detail modal.
+
 
 ### Beginner Authoring Mode
 

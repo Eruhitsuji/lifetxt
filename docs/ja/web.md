@@ -73,6 +73,29 @@ python -m lifetxt serve "projects/**/*.life.txt" --write-file life.txt --read-on
 公開用 dashboard や常時表示 display など、閲覧と行 validation は許可しつつ
 source file を変更させたくない場合は `--read-only` を使います。
 
+### Plannerの更新リビジョン
+
+PlannerのQuick Capture、Note・Journalの作成／編集、タスク完了、習慣の記録は、
+Webの正規リビジョンを `If-Match` ヘッダーで送信します。`ETag` /
+`X-Lifetxt-Revision` から取得し、必要なら `/api/revision` で発見して、成功した応答の
+リビジョンを保持します。`observe` / `required` のどちらでも互換フォールバックを
+使わずに更新できます。この修正を使うための設定変更は不要です。
+
+編集は対象レコードを読み取った時点、Quick Captureはフォームを開いた時点の
+リビジョンを使います。バックグラウンドの読み取りで、編集中の更新前提条件を
+差し替えることはありません。競合時は自動再送せず、フォームと入力を保持します。
+入力を控えてから日表示を再読み込みし、最新の内容を確認してやり直してください。
+タスク・習慣のエラーはPlannerのフィードバック欄に表示します。リビジョンを取得
+できない場合は、前提条件なしで送信しません。CaptureのJSONにある
+`expected_source_revision` はクライアント互換用として維持しますが、更新の前提条件は
+汎用の `If-Match` ヘッダーであり、JSONフィールドで代用することはできません。
+
+#1162の修正をデプロイした後、各操作で `/api/revision-metrics` の
+`legacy_fallback_total` が増えないことを確認してください。失敗した観測証跡を保存し、
+承認済みのリセット後に #290 の14日間連続ゼロ観測を再開します。マージやローカル
+テストだけで #289/#290 が完了したり、本番を `required` に切り替えられるわけでは
+ありません（#291）。
+
 ## MCP Server
 
 MCP-compatible AI client から使う場合は、外部依存なしの stdio MCP server を起動できます。
@@ -316,6 +339,7 @@ layout は「1画面1コンテンツ」を基本とします。header の view b
 Team、Status、Notifications、Stats、Graph、Display、Kiosk)だけが全幅で表示され、他の
 コンテンツと画面を奪い合いません。record editor は `＋ New` から中央 modal として開き、item を
 クリックした詳細表示も中央の record detail modal として表示します。
+
 
 ### Beginner Authoring Mode
 

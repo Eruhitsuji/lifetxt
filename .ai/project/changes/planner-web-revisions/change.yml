@@ -8,7 +8,7 @@ change:
   owner: Eruhitsuji
   accountable_owner: Eruhitsuji
   related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1162
-  related_pull_request: null
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1163
 scope:
   in_scope: [Planner mutation headers, snapshot-bound edits, conflict feedback, regression coverage]
   out_of_scope: [server contract redesign, route exemptions, production reset, deployment, configuration changes]
@@ -17,6 +17,7 @@ scope:
     - tests/test_web_planner.py
     - tests/test_web_planner_revisions.py
     - tests/planner_revision_probe.mjs
+    - tests/quick_input_clients.mjs
     - docs/en/web.md
     - docs/ja/web.md
     - .ai/project/CAPABILITIES.yml

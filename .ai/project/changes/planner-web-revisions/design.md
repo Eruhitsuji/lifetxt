@@ -53,3 +53,7 @@ Shared registry/docs files are integrated serially on the task branch by Codex;
 Eruhitsuji is integration/merge authority. Resolve any intervening main changes
 semantically. Revert this isolated client fix if necessary; there is no migration.
 The main Web bridge and server middleware remain byte-for-byte unchanged.
+
+The existing shared Quick-input handler harness supplies the frozen capture
+revision when invoking the extracted Planner handler; full integration coverage
+continues to execute the real open/submit lifecycle.

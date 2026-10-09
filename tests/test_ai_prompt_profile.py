@@ -22,6 +22,10 @@ class PromptProfileTests(unittest.TestCase):
             "Do not add `id:` by default",
             "Do not invent `project:`",
             "actual conversation date",
+            "uncertain or exclusive alternatives",
+            "Preserve dependency meaning",
+            "syntactically valid, not proof",
+            "will execute automatically",
         ):
             self.assertIn(phrase, profile)
 

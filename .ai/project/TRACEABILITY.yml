@@ -15582,7 +15582,7 @@ traceability:
       capability_id: cap-ai-prompt-profile
       epic: https://github.com/Eruhitsuji/lifetxt/issues/500
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1165
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1169
       changed_files_or_scope:
         - prompts/lifetxt-assistant.md
         - .ai/project/CAPABILITIES.yml
@@ -15599,7 +15599,7 @@ traceability:
       capability_id: cap-ai-prompt-profile
       epic: https://github.com/Eruhitsuji/lifetxt/issues/500
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1166
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1169
       changed_files_or_scope:
         - docs/en/ai-integration.md
         - docs/ja/ai-integration.md
@@ -15611,6 +15611,24 @@ traceability:
       notes: >-
         Bilingual documentation of the Prompt Profile to check and human-review
         workflow, with explicit limits from #1164 and references to #813/#823.
+      status: proposed
+
+    - requirement_id: req-provider-independent-ai-prompt-profile
+      capability_id: cap-ai-prompt-profile
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/500
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1168
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1169
+      changed_files_or_scope:
+        - docs/en/life_txt_format_spec.md
+        - docs/ja/life_txt_format_spec.md
+        - tests/test_links.py
+      tests_or_evidence:
+        - tests.test_links.ReferenceKeysCoverageTests
+        - git diff --check
+      release_or_deployment: null
+      notes: >-
+        Clarifies the existing date-only moved_to behavior and directs item
+        replacement references to replaced_by, following #1167.
       status: proposed
 
     - requirement_id: req-temporal-life-review

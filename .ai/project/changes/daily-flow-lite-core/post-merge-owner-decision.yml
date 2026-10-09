@@ -1,0 +1,66 @@
+schema_version: 1
+task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1159
+date: 2026-10-09 JST
+target_commit: f3c141d6d4ab1778344679b5982b3432010aa83e
+owner: Eruhitsuji
+status: awaiting_owner
+source_record: null
+assurance_level: Standard
+capability_status: experimental
+not_historical_approval: true
+decisions:
+- id: historical-independent-review
+  scope: PR1148/1150/1151/1152/1153/1155/1157
+  status: awaiting_owner
+  proposed_disposition: Accept documented residual evidence gap for the existing experimental state, or
+    provide attributable review/test evidence.
+  rationale: No submitted reviews found. New AI assessment and focused verification are available; do
+    not infer review from merge or the posting account.
+  owner_response: null
+- id: high-risk-acceptance
+  scope: PR1150 shared core, PR1151 local CLI, PR1152 local Web API
+  status: awaiting_owner
+  proposed_disposition: Accept documented residual evidence gap for the existing experimental state, or
+    provide attributable review/test evidence.
+  rationale: Retain experimental state and known Lite/auth/filesystem/snapshot limits; no permission or
+    release change.
+  owner_response: null
+- id: device-accessibility
+  scope: PR1155 physical iPhone/Safari and human screen-reader
+  status: awaiting_owner
+  proposed_disposition: Accept documented residual evidence gap for the existing experimental state, or
+    provide attributable review/test evidence.
+  rationale: Unavailable in executor environment. Proposed accepted-not-run disposition only for current
+    experimental state; no device/accessibility pass claim.
+  owner_response: null
+device_evidence_reports:
+- reported_at: 2026-10-09 08:58 JST
+  reporter: Eruhitsuji
+  source_record: https://github.com/Eruhitsuji/lifetxt/issues/1159#issuecomment-6071421086
+  status: partial_user_confirmation
+  tested_commit: null
+  device: null
+  os_version: null
+  browser_version: null
+  language: null
+  confirmed:
+  - id: A1
+    check: Planner Today rendering and scrolling
+    result: user_confirmed
+  - id: A2
+    check: Morning/Daytime/Evening/Standard switching and continued access to unfinished tasks
+    result: user_confirmed
+  unconfirmed:
+  - A3
+  - A4
+  - A5
+  - A6
+  - A7
+  - A8
+  - A9
+  - V1
+  - V2
+  - V3
+  limitations: User reports A1/A2 checked; detailed observations, defect status and environment are not
+    supplied. No comprehensive device pass or VoiceOver evidence inferred.
+  owner_disposition: not_supplied

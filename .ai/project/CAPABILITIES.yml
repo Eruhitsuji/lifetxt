@@ -1139,6 +1139,7 @@ capabilities:
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/500
       - https://github.com/Eruhitsuji/lifetxt/issues/813
+      - https://github.com/Eruhitsuji/lifetxt/issues/1165
     related_pull_requests: []
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     replacement:

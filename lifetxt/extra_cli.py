@@ -90,9 +90,21 @@ def _build_parser(command):
         parser.add_argument("--user")
         parser.add_argument("--project")
         parser.add_argument("--context")
-        parser.add_argument("--limit", type=int, default=20)
-        parser.add_argument(
+        selection = parser.add_mutually_exclusive_group()
+        selection.add_argument("--limit", type=int, default=20)
+        selection.add_argument(
+            "--one",
+            action="store_true",
+            help="Print one canonical record (empty output if none), without writing files.",
+        )
+        output_format = parser.add_mutually_exclusive_group()
+        output_format.add_argument(
             "--format", choices=("text", "json", "life"), default="text"
+        )
+        output_format.add_argument(
+            "--json",
+            action="store_true",
+            help="With --one, emit one item/source/line object, or null if none.",
         )
         parser.add_argument("--pretty", action="store_true")
         parser.add_argument("-o", "--output")
@@ -575,7 +587,33 @@ def main(argv=None, config_path=None, workspace_name=None):
     parser = _build_parser(command)
     args = parser.parse_args(argv[1:])
     _require_subcommand(command, parser, args)
+    if command == "next":
+        if args.json and not args.one:
+            parser.error(
+                "--json requires --one; use --format json for the existing list."
+            )
+        if args.one and (args.why or args.output):
+            parser.error("--one cannot be combined with --why or --output.")
+        if args.json:
+            args.format = "json"
     config_data = _load_config(config_path, workspace_name=workspace_name)
+    if (
+        command == "next"
+        and args.one
+        and not args.paths
+        and config_data.get("_active_workspace")
+    ):
+        from .workspace import resolve_workspace
+
+        scope = resolve_workspace(config_data, config_data["_active_workspace"])
+        archives = set(scope["archive_paths"])
+        args.paths = [
+            path for path in scope["default_visible_paths"] if path not in archives
+        ]
+        if not args.paths:
+            raise ValueError(
+                "Workspace has no active input paths for next --one; provide explicit paths."
+            )
     timezone_name = _timezone_for_args(args, config_data)
     with timezone_context(timezone_name):
         return _dispatch(command, args, config_data, config_path)

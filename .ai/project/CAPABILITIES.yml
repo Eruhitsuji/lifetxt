@@ -3583,6 +3583,7 @@ capabilities:
       - lifetxt.nextaction.blocked_map
     tests_or_evidence:
       - tests.test_next_one (single canonical record / minimal JSON / null, inherited ordering and filters, scope, errors, no writes)
+      - "1170/1171 verification on 2026-10-09: focused next/Flow suites 167 tests OK; full discovery 5434 tests OK (skipped=66); changed-file format, repository lint, configured mypy and minimal-file integration passed"
       - tests/test_nextaction.py IsActionableTests, NextActionItemsTests, BlockedMapTests
       - "tests/test_extra_cli.py: next now includes Deferred/Recurring/Habit kinds, excludes someday-tagged open items, includes an item once its closed dependency is resolved, still excludes a dangling depends_on reference, and resolves blocking across multiple files passed on one invocation"
       - tests/test_cui_extensions.py (full suite, including the TUI /next blocked-row regression this convergence fixes) -> Ran 145 tests, OK
@@ -3596,6 +3597,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/1170
       - https://github.com/Eruhitsuji/lifetxt/issues/138
     related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/1171
       - https://github.com/Eruhitsuji/lifetxt/pull/141
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-

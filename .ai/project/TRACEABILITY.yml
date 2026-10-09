@@ -5,6 +5,7 @@ traceability:
     - requirement_id: req-next-one-read-only
       capability_id: cap-next-actionable-convergence
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1170
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1171
       changed_files_or_scope:
         - lifetxt/extra_cli.py
         - lifetxt/extra_core.py
@@ -16,6 +17,8 @@ traceability:
         - tests.test_extra_cli
         - tests.test_nextaction
         - tests.test_extended_workspace_resolution
+        - "2026-10-09 implementation tree 01e4c21d795a2d42d28975445bafc0dca42afb32: focused next/Flow suites 167 tests OK; MPLBACKEND=Agg python -m unittest discover 5434 tests OK (skipped=66)"
+        - "Changed-file ruff format --check, repository ruff check, configured mypy diagnostic boundary, minimal_life.txt integration, installed CLI text/JSON smoke and git diff --check passed. Repository format check has 72 unformatted files, all reproduced from origin/main ddb2dbfb."
       notes: Owner approved opt-in --one instead of replacing existing next defaults; Standard assurance, S. Uses existing CLI eligibility and sort, optional rank and timezone. Default workspace scope excludes archives/hidden sources; explicit inputs override. No new engine, API, format, config or writes. Independent human review and final CI remain PR merge gates.
       status: implemented
     - requirement_id: req-planner-web-revision-contract

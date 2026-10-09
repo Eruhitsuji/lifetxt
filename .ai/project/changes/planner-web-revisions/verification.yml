@@ -1,0 +1,45 @@
+schema_version: 1
+verification:
+  executed:
+    - type: regression
+      command: python -m unittest tests.test_web_planner_revisions
+      status: passed
+      result: Both observe and required modes passed; real Planner JavaScript handlers against disposable ASGI servers, zero legacy fallback, successful capture/create/update/complete, stale snapshots, response token refresh, no replay, retained input and fail-closed discovery.
+      notes: Node DOM shim exercises handlers, not browser rendering. Baseline main script fails both cases (empty capture source revision in observe; rejected capture in required). Restored implementation passes.
+    - type: targeted
+      command: python -m unittest tests.test_web_planner_revisions tests.test_web_planner tests.test_surface_runtime tests.test_revision_migration_metrics tests.test_revision_telemetry_v2 tests.test_web_mobile_capture tests.test_shared_surface_mutation_routing tests.test_web_assets tests.test_web_installability tests.test_web_i18n
+      status: passed
+      result: 116 tests passed.
+    - type: static
+      command: python -m ruff check lifetxt tests scripts; python -m ruff format --check tests/test_web_planner.py tests/test_web_planner_revisions.py; node --check lifetxt/web_planner.js; node --check tests/planner_revision_probe.mjs; python -m mypy --follow-imports=skip --ignore-missing-imports lifetxt/diagnostic_contract.py; git diff --check
+      status: passed
+      result: Lint, changed Python formatting, JavaScript syntax, configured typing boundary and whitespace checks passed.
+    - type: integration
+      command: python -m lifetxt check examples/minimal_life.txt
+      status: passed
+      result: OK, 10 items.
+  limitations:
+    - Browser rendering and physical-device tests not run; Chromium unavailable and attempted download was truncated. Node test is not browser-engine evidence.
+    - Deployment, metrics preservation/reset and new 14-day observation not performed; tracked by issue 290.
+review_ledger:
+  - reviewer: Codex
+    review_type: self-review
+    target_commit: null
+    result: findings_fixed
+    findings:
+      - Capture source_revision was absent from list responses; retain authoritative header instead of empty source token.
+      - Bind edited records to read revisions so background config reads cannot authorize stale content.
+      - Catch Task/Habit errors, bound duplicate submissions and copy Habit done values before constructing writes.
+      - Correct audit assumption that capture JSON supplies independently enforced CAS; current enforcement is the generic header.
+  - reviewer: Eruhitsuji
+    review_type: implementation
+    target_commit: null
+    result: pending
+  - reviewer: Eruhitsuji
+    review_type: integration
+    target_commit: null
+    result: pending
+release_evidence:
+  migration_notes: No schema, configuration or server contract change.
+  rollback_plan: Revert isolated client fix and accompanying tests/docs; no data migration.
+  high_risk_acceptance: pending human review before merge

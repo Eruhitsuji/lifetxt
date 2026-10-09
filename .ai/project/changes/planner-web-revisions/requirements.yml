@@ -1,0 +1,15 @@
+schema_version: 1
+requirements:
+  - id: req-planner-web-revision-contract
+    kind: FIXED
+    statement: All authoritative Planner writes use the existing generic Web revision precondition without compatibility fallback.
+    acceptance_criteria:
+      - Discover and retain ETag or X-Lifetxt-Revision; fail closed without a token.
+      - Capture, Note, Journal, Task and Habit updates send If-Match in observe and required modes.
+      - Retain response revisions after success without upgrading already-open edits or old record snapshots.
+      - Preserve capture JSON compatibility field without relying on it for enforcement.
+      - Stale writes fail without replay or overwrite, preserve form input and display EN/JA reload guidance.
+      - No change to the main Web bridge, route classification, data model or configuration.
+      - Demonstrate zero legacy fallback and document post-deployment evidence separately.
+    owner: Eruhitsuji
+open_questions: []

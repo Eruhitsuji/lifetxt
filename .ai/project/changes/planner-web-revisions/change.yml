@@ -1,0 +1,26 @@
+schema_version: 1
+change:
+  id: planner-web-revisions
+  title: Participate in the generic Web revision contract from Planner
+  status: implemented
+  change_type: Bug
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1162
+  related_pull_request: null
+scope:
+  in_scope: [Planner mutation headers, snapshot-bound edits, conflict feedback, regression coverage]
+  out_of_scope: [server contract redesign, route exemptions, production reset, deployment, configuration changes]
+  write_scope:
+    - lifetxt/web_planner.js
+    - tests/test_web_planner.py
+    - tests/test_web_planner_revisions.py
+    - tests/planner_revision_probe.mjs
+    - docs/en/web.md
+    - docs/ja/web.md
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+    - .ai/project/changes/planner-web-revisions/**
+  forbidden_scope: [.ai/managed/**, lifetxt/surface_runtime.py, authentication, data format]
+human_approvals_required: [implementation review, integration review, High risk acceptance, merge]

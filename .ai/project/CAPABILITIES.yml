@@ -416,6 +416,7 @@ capabilities:
     status: active
     owner: Eruhitsuji
     source_requirements:
+      - req-planner-web-revision-contract
       - req-planner-time-of-day-adaptive-today
       - req-planner-day-experience
       - req-planner-day-schedule
@@ -454,6 +455,7 @@ capabilities:
       - GET /api/notes (shared ordinary Notes in five-row pages)
       - Existing agenda, item, capture and mutation APIs
     tests_or_evidence:
+      - tests.test_web_planner_revisions (actual JS handlers, observe/required, zero legacy fallback and stale conflicts)
       - tests.test_web_planner_browser (Today bands, customization, freshness, scoped presentation and phone matrix)
       - tests.test_web_planner
       - tests.test_web_installability
@@ -461,6 +463,7 @@ capabilities:
       - tests.test_web_assets
       - tests.test_web_i18n
     related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/1162
       - https://github.com/Eruhitsuji/lifetxt/issues/1149
       - https://github.com/Eruhitsuji/lifetxt/issues/1020
       - https://github.com/Eruhitsuji/lifetxt/issues/991

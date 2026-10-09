@@ -2,6 +2,26 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-planner-web-revision-contract
+      capability_id: cap-web-mobile-planner
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1162
+      pull_request: null
+      changed_files_or_scope:
+        - lifetxt/web_planner.js
+        - tests/test_web_planner.py
+        - tests/test_web_planner_revisions.py
+        - tests/planner_revision_probe.mjs
+        - docs/en/web.md
+        - docs/ja/web.md
+        - .ai/project/changes/planner-web-revisions
+      tests_or_evidence:
+        - tests.test_web_planner_revisions
+        - tests.test_web_planner
+        - tests.test_surface_runtime
+        - tests.test_revision_migration_metrics
+        - tests.test_revision_telemetry_v2
+      notes: Client-only correction; snapshot-bound If-Match for all Planner writes, fail-closed discovery, no automatic conflict retry; production observation remains with 289/290/291.
+      status: implemented
     - requirement_id: req-daily-flow-post-merge-review-evidence
       capability_id: cap-daily-flow-planner-lite
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1159

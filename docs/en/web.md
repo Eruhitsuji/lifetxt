@@ -139,6 +139,19 @@ tools.
 5. Choose **Preview** to inspect the logical record count and warnings/errors. Input remains editable after a parse error. **Preview again after every edit**; syntactic acceptance does not prove that an AI-generated record preserves the intended meaning.
 6. For writable workspaces, **すべて追加 / Add all** becomes available after a successful preview. Confirm to append the entire batch through `POST /api/items/batch` (500 records / 512 KiB maximum). Failed or conflicting writes keep the input and are not retried automatically. After an uncertain network failure, check the authoritative Items/file before attempting another save.
 
+Batch validation checks every configured ID value across the complete Web read
+workspace and every ID value in the submitted records, including custom
+`ids.key` / `api.id_key` fields. Any collision returns `DUPLICATE_ID` and leaves
+the writable file unchanged. The check uses the current read snapshot; changes
+to another source are not part of the writable file's atomic revision and may
+require retrying after refresh.
+
+The preview and batch endpoints reject an input `#! format_version:` directive
+that is newer than the current supported version with `UNSUPPORTED_FORMAT`.
+They also reject a writable file declaring an unsupported version with the
+existing `UNSUPPORTED_FORMAT_VERSION` error rather than rewriting or silently
+dropping the declaration.
+
 Bulk input **creates new records only**. It does not update existing records or synchronize automatically with AI services. Review exported text for sensitive data before pasting it into an external AI chat.
 
 See the [manual sharing guide](./ai-integration.md#manual-sharing-with-an-external-ai)

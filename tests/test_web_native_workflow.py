@@ -44,6 +44,8 @@ const elements = {
   "bulk-input-add": add,
 };
 let batchCalls = [];
+let batchHeaders = [];
+let healthCalls = 0;
 const context = {
   TextEncoder,
   t: text => text,
@@ -58,10 +60,11 @@ const context = {
   },
   window: {confirm: () => true},
   api: async (path, opts) => {
-    if (path === "/api/items/preview") return {ok: true, item_count: 2, diagnostics: [], context_token: "token"};
-    if (path === "/api/health") return {writable_path: "life.txt", source_revision: "r1", read_only: false};
+    if (path === "/api/items/preview") return {ok: true, item_count: 2, diagnostics: [], context_token: "token", source_revision: "r1", review_scope: {context: "fixed_paths"}};
+    if (path === "/api/health") {healthCalls++; throw Error("Health must not refresh a reviewed revision");}
     if (path === "/api/items/batch") {
       batchCalls.push(JSON.parse(opts.body));
+      batchHeaders.push(opts.headers);
       return {ok: true, saved: 2};
     }
     throw Error("Unexpected API: " + path);
@@ -89,6 +92,9 @@ async function main() {
   assert.equal(batchCalls.length, 1);
   assert.equal(batchCalls[0].text, "[ ] T Changed\n[ ] T Another\n");
   assert.equal(batchCalls[0].expected_source_revision, "r1");
+  assert.equal(batchCalls[0].context_token, "token");
+  assert.equal(batchHeaders[0]["If-Match"], "r1");
+  assert.equal(healthCalls, 0);
   assert.equal(modal.hidden, true, "modal closes after success");
   assert.equal(modal.classList.contains("open"), false);
 
@@ -106,13 +112,13 @@ async function main() {
   assert.equal(add.disabled, true, "a stale async preview must not enable saving");
   context.api = oldApi;
   const full = {
-    ok: true, item_count: 12, context_token: "full-token",
+    ok: true, item_count: 12, context_token: "full-token", source_revision: "r1",
     items: Array.from({length: 12}, (_, i) => ({
       title: "Record " + i, details: {body: ["<script>literal body " + i + "</script>"], due: ["2026-10-12"]},
     })),
     diagnostics: Array.from({length: 12}, (_, i) => ({
       severity: "warning", code: "W215", scope: "batch", source: "batch", line: i + 1, message: "Missing " + i,
-    })), review_scope: {source_count: 2, omitted_records: 0, omitted_diagnostics: 0},
+    })), review_scope: {context: "checked_manifest", source_count: 2, omitted_records: 0, omitted_diagnostics: 0},
   };
   context.api = async (path, opts) => path === "/api/items/preview" ? full : oldApi(path, opts);
   await context.previewBulkInput();
@@ -125,14 +131,94 @@ async function main() {
   context.api = async (path, opts) => path === "/api/items/preview" ? {...full, read_only: true} : oldApi(path, opts);
   await context.previewBulkInput();
   assert.equal(add.disabled, true, "read-only review never enables Add all");
-  context.api = async () => {throw Error("Context unavailable. Reload sources.");};
+  context.api = async () => {throw Object.assign(Error("private path must not appear"), {detail:{reason:"source_membership_changed"}});};
   await context.previewBulkInput();
   assert.equal(add.disabled, true, "failed review cannot enable Add all");
-  assert.ok(preview.textContent.includes("Reload sources"));
+  assert.ok(preview.textContent.includes("Reload the server"));
+  assert.ok(!preview.textContent.includes("private path"));
   assert.equal(input.disabled, false, "review failure leaves correction/retry usable");
   context.api = oldApi;
   await context.previewBulkInput();
   assert.equal(add.disabled, false, "a fresh successful review recovers");
+  context.api = async () => ({ok:true, item_count:1, diagnostics:[]});
+  await context.previewBulkInput();
+  assert.equal(add.disabled, true, "text-only parse response is not a contextual review");
+  const errors = [
+    [409, "CONTEXT_CHANGED", "source_membership_changed", "Reload the server"],
+    [409, "CONTEXT_CHANGED", "source_unavailable", "Check the sources"],
+    [409, "CONTEXT_CHANGED", "snapshot_unstable", "Wait for edits"],
+    [409, "CONTEXT_CHANGED", "context_or_input_changed", "Workspace or input changed"],
+    [409, "CONFLICT", "", "Writable file changed"],
+    [409, "CLOCK_SKEW", "", "Check device time"],
+    [403, "READ_ONLY", "", "Read-only"],
+    [422, "DUPLICATE_ID", "", "Duplicate IDs"],
+    [422, "VALIDATION_ERROR", "", "Syntax or validation"],
+    [413, "INPUT_TOO_LARGE", "", "512 KiB"],
+    [428, "REVISION_REQUIRED", "", "Refresh the page"],
+    [500, "", "", "Inspect Items and IDs"],
+    [undefined, "", "", "Inspect Items and IDs"],
+  ];
+  for (const [status, code, reason, message] of errors) {
+    let attempts = 0;
+    context.api = async (path, opts) => {
+      if (path === "/api/items/preview") return full;
+      if (path === "/api/items/batch") {
+        attempts++;
+        assert.equal(JSON.parse(opts.body).context_token, "full-token");
+        assert.equal(opts.headers["If-Match"], "r1");
+        throw Object.assign(Error("private path or token"), {status, detail:{error:code, reason}});
+      }
+      throw Error("Unexpected request " + path);
+    };
+    const retainedText = input.value;
+    await context.previewBulkInput();
+    assert.equal(add.disabled, false, "explicit successful re-Preview recovers");
+    await context.addAllBulkInput();
+    assert.equal(add.disabled, true, "failed save clears reviewed binding");
+    assert.equal(input.value, retainedText, "failed save keeps input");
+    assert.equal(input.disabled, false, "correction remains available");
+    assert.ok(preview.textContent.includes(message), preview.textContent);
+    assert.ok(!preview.textContent.includes("private path or token"));
+    await context.addAllBulkInput();
+    assert.equal(attempts, 1, "never retry without explicit re-Preview");
+  }
+  context.api = oldApi;
+  await context.previewBulkInput();
+  context.window.confirm = () => {context.closeBulkInput(); context.openBulkInput(); return true;};
+  const callsBeforeReset = batchCalls.length;
+  await context.addAllBulkInput();
+  assert.equal(batchCalls.length, callsBeforeReset, "same-text modal reset invalidates confirmation generation");
+  assert.equal(add.disabled, true);
+  context.window.confirm = () => true;
+  let resolveSave, pendingCalls = 0;
+  context.api = async (path, opts) => {
+    if (path === "/api/items/preview") return full;
+    pendingCalls++;
+    return new Promise(resolve => {resolveSave = resolve;});
+  };
+  await context.previewBulkInput();
+  const savePending = context.addAllBulkInput();
+  await context.addAllBulkInput();
+  await context.previewBulkInput();
+  context.closeBulkInput();
+  assert.equal(modal.hidden, false, "pending save prevents modal close");
+  assert.equal(input.disabled, true);
+  assert.equal(pendingCalls, 1, "double click never sends a second batch");
+  resolveSave({ok:true, saved:12});
+  await savePending;
+  assert.equal(modal.hidden, true);
+  context.openBulkInput();
+  input.value = "[ ] T A\n[ ] T B\n";
+  context.api = oldApi;
+  const notices = [];
+  context.showToast = (message, type) => notices.push({message, type});
+  context.loadItems = async () => {throw Error("Refresh only failed");};
+  await context.previewBulkInput();
+  await context.addAllBulkInput();
+  assert.equal(modal.hidden, true, "known successful save remains closed");
+  assert.equal(input.value, "", "known success clears input despite failed refresh");
+  assert.equal(notices.at(-1).type, "warning");
+  assert.ok(notices.at(-1).message.includes("Records saved"));
   context.closeBulkInput();
   assert.equal(modal.hidden, true);
   assert.equal(body.classList.contains("modal-open"), false);
@@ -204,11 +290,11 @@ class NativeWebWorkflowTests(unittest.TestCase):
     def test_items_txt_export_is_visible_and_bulk_modal_uses_css_open(self):
         page = web_assets.HTML_PAGE
         self.assertIn('id="items-export-life"', page)
-        self.assertIn('onclick="exportItems(\'life\')"', page)
+        self.assertIn("onclick=\"exportItems('life')\"", page)
         self.assertIn('oninput="invalidateBulkPreview()"', page)
         self.assertEqual(page.count("function openBulkInput()"), 1)
         self.assertEqual(page.count("function previewBulkInput()"), 1)
-        self.assertIn('.modal-backdrop.open { display: flex; }', page)
+        self.assertIn(".modal-backdrop.open { display: flex; }", page)
 
     def _run_node(self, expression, runner):
         match = re.search(expression, web_assets.HTML_PAGE, re.DOTALL)
@@ -221,14 +307,18 @@ class NativeWebWorkflowTests(unittest.TestCase):
         )
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
 
-    @unittest.skipUnless(shutil.which("node"), "node is required for browser handler VM checks")
+    @unittest.skipUnless(
+        shutil.which("node"), "node is required for browser handler VM checks"
+    )
     def test_bulk_modal_preview_and_atomic_save_wiring(self):
         self._run_node(
             r"// All bulk handlers live at page scope;.*?(?=    // ── Dark mode)",
             _BULK_NODE_CHECK,
         )
 
-    @unittest.skipUnless(shutil.which("node"), "node is required for native export VM checks")
+    @unittest.skipUnless(
+        shutil.which("node"), "node is required for native export VM checks"
+    )
     def test_native_export_uses_correct_scope_and_checks_response(self):
         self._run_node(
             r"    // ── Export filtered items.*?(?=    // ── Undo for destructive actions)",

@@ -1,0 +1,43 @@
+schema_version: 1
+change:
+  id: bulk-context-repreview
+  title: Require contextual re-Preview after native bulk conflicts
+  status: implemented
+  change_type: Feature
+  assurance_level: Standard
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1189
+  related_pull_request:
+  - https://github.com/Eruhitsuji/lifetxt/pull/1193
+  base_commit: 4343fcd492c5017ca1461088f7edce1a998c4ad6
+  target_release: null
+scope:
+  in_scope:
+  - retain Preview binding
+  - truthful recovery UI/i18n
+  - Node VM and existing real browser smoke
+  - EN/JA docs
+  out_of_scope:
+  - 'save API #1188'
+  - Format/auth/sync
+  - global atomicity
+  - 'generic #289 audit'
+  - 'full #317 device matrix'
+  write_scope:
+  - lifetxt/web_assets_js_15.js
+  - lifetxt/web_assets_js_01.js
+  - tests/test_web_native_workflow.py
+  - tests/test_web_assets.py
+  - tests/test_web_ui_regressions_browser.py
+  - tests/browser_ui_regressions_probe.mjs
+  - docs/en/web.md
+  - docs/ja/web.md
+  - .ai/project/CAPABILITIES.yml
+  - .ai/project/TRACEABILITY.yml
+  - .ai/project/changes/bulk-context-repreview
+  forbidden_scope:
+  - .ai/managed/**
+human_approvals_required:
+- independent latest-head review
+- human merge approval

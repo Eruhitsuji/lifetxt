@@ -1,0 +1,15 @@
+schema_version: 1
+links:
+- requirement_id: req-native-bulk-context-repreview
+  capability_id: cap-import-export-format-expansion
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1189
+  pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1193
+  status: implemented
+  implementation:
+  - lifetxt/web_assets_js_15.js
+  - lifetxt/web_assets_js_01.js
+  tests:
+  - tests/test_web_native_workflow.py
+  - tests/test_web_assets.py
+  - tests/test_web_ui_regressions_browser.py
+  - tests/browser_ui_regressions_probe.mjs

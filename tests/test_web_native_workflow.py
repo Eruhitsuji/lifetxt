@@ -264,7 +264,7 @@ class NativeWebWorkflowTests(unittest.TestCase):
                     json={"text": batch, "expected_source_revision": revision},
                 )
                 self.assertEqual(response.status_code, 422, response.text)
-                self.assertEqual(response.json()["detail"]["error"], "DUPLICATE_ID")
+                self.assertEqual(response.json()["error"], "DUPLICATE_ID")
                 with open(writable, encoding="utf-8") as handle:
                     self.assertEqual(handle.read(), before)
 
@@ -283,7 +283,7 @@ class NativeWebWorkflowTests(unittest.TestCase):
                 json={"line": "#! format_version: 2\n[ ] T Future id:future\n"},
             )
             self.assertEqual(preview.status_code, 422, preview.text)
-            self.assertEqual(preview.json()["detail"]["error"], "UNSUPPORTED_FORMAT")
+            self.assertEqual(preview.json()["error"], "UNSUPPORTED_FORMAT")
             revision = client.get("/api/health").json()["source_revision"]
             batch = client.post(
                 "/api/items/batch",
@@ -293,7 +293,7 @@ class NativeWebWorkflowTests(unittest.TestCase):
                 },
             )
             self.assertEqual(batch.status_code, 422, batch.text)
-            self.assertEqual(batch.json()["detail"]["error"], "UNSUPPORTED_FORMAT")
+            self.assertEqual(batch.json()["error"], "UNSUPPORTED_FORMAT")
             with open(path, "w", encoding="utf-8") as handle:
                 handle.write("#! format_version: 2\n[ ] T Future id:future\n")
             new_revision = client.get("/api/health").json()["source_revision"]
@@ -305,7 +305,7 @@ class NativeWebWorkflowTests(unittest.TestCase):
                 },
             )
             self.assertEqual(rejected.status_code, 409, rejected.text)
-            self.assertEqual(rejected.json()["detail"]["error"], "UNSUPPORTED_FORMAT")
+            self.assertEqual(rejected.json()["error"], "UNSUPPORTED_FORMAT")
 
 
 if __name__ == "__main__":

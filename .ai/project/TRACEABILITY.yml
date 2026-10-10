@@ -5,6 +5,7 @@ traceability:
     - requirement_id: req-safe-manual-ai-sharing-ai-prompt-profile
       capability_id: cap-ai-prompt-profile
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1184
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1186
       changed_files_or_scope:
         - docs/ja/ai-integration.md
         - docs/en/ai-integration.md
@@ -23,6 +24,7 @@ traceability:
     - requirement_id: req-safe-manual-ai-sharing-import-export-format-expansion
       capability_id: cap-import-export-format-expansion
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1184
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1186
       changed_files_or_scope:
         - docs/ja/ai-integration.md
         - docs/en/ai-integration.md

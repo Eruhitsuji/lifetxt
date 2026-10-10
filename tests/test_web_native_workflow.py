@@ -7,7 +7,7 @@ import subprocess
 import tempfile
 import unittest
 
-from lifetxt import web_assets, webapp
+from lifetxt import mutation, web_assets, webapp
 
 
 _BULK_NODE_CHECK = r"""
@@ -199,7 +199,7 @@ class NativeWebWorkflowTests(unittest.TestCase):
     def test_native_api_preview_batch_and_full_export(self):
         try:
             from fastapi.testclient import TestClient
-        except ImportError:
+        except (ImportError, RuntimeError):
             self.skipTest("Web optional dependencies unavailable")
         with tempfile.TemporaryDirectory() as folder:
             path = os.path.join(folder, "life.txt")
@@ -234,6 +234,78 @@ class NativeWebWorkflowTests(unittest.TestCase):
             self.assertIn(again.status_code, (409, 422))
             with open(path, encoding="utf-8") as handle:
                 self.assertEqual(handle.read(), before)
+
+    def test_batch_rejects_all_workspace_and_all_batch_id_collisions(self):
+        try:
+            from fastapi.testclient import TestClient
+        except (ImportError, RuntimeError):
+            self.skipTest("Web optional dependencies unavailable")
+        with tempfile.TemporaryDirectory() as folder:
+            writable = os.path.join(folder, "life.txt")
+            other = os.path.join(folder, "archive.txt")
+            with open(writable, "w", encoding="utf-8") as handle:
+                handle.write("[ ] T Writable id:shared\n")
+            with open(other, "w", encoding="utf-8") as handle:
+                handle.write("[ ] T Other id:from-other\n")
+            client = TestClient(
+                webapp.create_app(paths=[writable, other], writable_path=writable)
+            )
+            revision = client.get("/api/health").json()["source_revision"]
+            with open(writable, encoding="utf-8") as handle:
+                before = handle.read()
+            for batch in (
+                "[ ] T New id:from-other\n",
+                "[ ] T New id:shared\n",
+                "[ ] T A id:batch\n[ ] T B id:batch\n",
+                "[ ] T A id:first id:from-other\n",
+            ):
+                response = client.post(
+                    "/api/items/batch",
+                    json={"text": batch, "expected_source_revision": revision},
+                )
+                self.assertEqual(response.status_code, 422, response.text)
+                self.assertEqual(response.json()["error"], "DUPLICATE_ID")
+                with open(writable, encoding="utf-8") as handle:
+                    self.assertEqual(handle.read(), before)
+
+    def test_batch_rejects_unsupported_input_and_writable_format(self):
+        try:
+            from fastapi.testclient import TestClient
+        except (ImportError, RuntimeError):
+            self.skipTest("Web optional dependencies unavailable")
+        with tempfile.TemporaryDirectory() as folder:
+            path = os.path.join(folder, "life.txt")
+            with open(path, "w", encoding="utf-8") as handle:
+                handle.write("[ ] T Existing id:existing\n")
+            client = TestClient(webapp.create_app(paths=[path], writable_path=path))
+            preview = client.post(
+                "/api/items/parse",
+                json={"line": "#! format_version: 2\n[ ] T Future id:future\n"},
+            )
+            self.assertEqual(preview.status_code, 422, preview.text)
+            self.assertEqual(preview.json()["error"], "UNSUPPORTED_FORMAT")
+            revision = client.get("/api/health").json()["source_revision"]
+            batch = client.post(
+                "/api/items/batch",
+                json={
+                    "text": "#! format_version: 2\n[ ] T Future id:future\n",
+                    "expected_source_revision": revision,
+                },
+            )
+            self.assertEqual(batch.status_code, 422, batch.text)
+            self.assertEqual(batch.json()["error"], "UNSUPPORTED_FORMAT")
+            with open(path, "w", encoding="utf-8") as handle:
+                handle.write("#! format_version: 2\n[ ] T Future id:future\n")
+            new_revision = mutation.read_text_snapshot(path).content_hash
+            rejected = client.post(
+                "/api/items/batch",
+                json={
+                    "text": "[ ] T New id:new\n",
+                    "expected_source_revision": new_revision,
+                },
+            )
+            self.assertEqual(rejected.status_code, 409, rejected.text)
+            self.assertEqual(rejected.json()["error"], "UNSUPPORTED_FORMAT_VERSION")
 
 
 if __name__ == "__main__":

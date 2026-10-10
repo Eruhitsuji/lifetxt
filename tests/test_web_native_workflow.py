@@ -305,7 +305,7 @@ class NativeWebWorkflowTests(unittest.TestCase):
                 },
             )
             self.assertEqual(rejected.status_code, 409, rejected.text)
-            self.assertEqual(rejected.json()["error"], "UNSUPPORTED_FORMAT")
+            self.assertEqual(rejected.json()["error"], "UNSUPPORTED_FORMAT_VERSION")
 
 
 if __name__ == "__main__":

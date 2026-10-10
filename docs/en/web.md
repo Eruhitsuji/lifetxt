@@ -142,9 +142,9 @@ tools.
 Batch validation checks every configured ID value across the complete Web read
 workspace and every ID value in the submitted records, including custom
 `ids.key` / `api.id_key` fields. Any collision returns `DUPLICATE_ID` and leaves
-the writable file unchanged. The check uses the current read snapshot; changes
-to another source are not part of the writable file's atomic revision and may
-require retrying after refresh.
+the writable file unchanged. Native Add all also rejects changes detected since
+contextual Preview and requires re-Preview. The final writable CAS covers one
+file; another source can still change after the last snapshot before write.
 
 The legacy parse and batch endpoints reject an input `#! format_version:`
 directive newer than the supported version with `UNSUPPORTED_FORMAT`.
@@ -231,10 +231,30 @@ This is one destination CAS. A nonwritable source may change **after the final
 snapshot and before write**, including a late duplicate ID; there is no
 serializable workspace-wide transaction. External config edits require restart.
 The token is a change detector, not authorization or evidence a human read the
-review. Check meaning and unconfigured sources yourself. Native UI token
-submission and conflict recovery are introduced separately in #1189; until then
-UI Add all uses the legacy route. Retain input after failure; inspect Items/IDs
-before retrying an uncertain network outcome.
+review. Check meaning and unconfigured sources yourself.
+
+### Native bulk recovery
+
+1. Open **Bulk input**, paste records, and choose **Preview**. Expand original
+   input, each record and diagnostics; warnings alone permit adding. Read-only
+   workspaces permit Preview only. A text-only parse is insufficient for Add all.
+2. Review the meaning, then choose **Add all**. The UI submits that Preview's
+   exact text/token/revision in the body and If-Match. It never refreshes health
+   to replace the reviewed revision.
+3. Context or writable CAS409 saves nothing, retains input and disables Add all.
+   Follow the reason: check unavailable sources, wait for concurrent edits, or
+   restart the server to re-resolve changed source membership. Explicitly choose
+   Preview again and review the updated result before adding.
+4. Duplicate422 asks for ID correction; other validation422 asks for input
+   correction. Read-only403, byte413 and missing review/revision each explain
+   the next action. Unknown/network outcomes ask you to inspect **Items and IDs**
+   before re-Preview/retry. There is no automatic resubmission.
+
+Edits, modal reset, failed Preview/save and late replies invalidate the binding.
+Keyboard focus enters the input; native details/summary exposes all records,
+status is announced by the live region, and Escape closes the idle modal. After
+known successful save, a failed Items refresh reports that the records were saved.
+This does not provide multi-source atomicity or guarantee semantic correctness.
 
 ## REST API
 

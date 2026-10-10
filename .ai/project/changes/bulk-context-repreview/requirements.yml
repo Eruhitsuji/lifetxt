@@ -1,0 +1,22 @@
+schema_version: 1
+requirements:
+- id: req-native-bulk-context-repreview
+  kind: NEW
+  statement: Native bulk UI retains contextual Preview binding and requires explicit
+    re-review after failure.
+  owner: Eruhitsuji
+  acceptance_criteria:
+  - Submit exact text/token/Preview revision in body and If-Match without health refresh.
+  - Parser-only/readonly/error/late/reset/edit reviews never enable contextual Add
+    all.
+  - Context/CAS/readonly/validation/duplicate/limit/uncertain outcomes have distinct
+    EN/JA recovery.
+  - All failed saves retain input and invalidate old binding, with no automatic retry.
+  - Fresh explicit contextual Preview re-enables save; manual meaning review remains
+    required.
+  - Node VM and real Chromium engine cover other-source change rejecting Add all,
+    then re-Preview and successful save.
+  - All proposed records and diagnostics remain inspectable and keyboard accessible.
+  constraints:
+  - 'Use approved #1188 API; no client parser/fingerprint or workspace atomicity claim.'
+open_questions: []

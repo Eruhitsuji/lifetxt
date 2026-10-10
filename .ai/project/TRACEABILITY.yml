@@ -2,6 +2,26 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-native-flow-regression-repair
+      capability_id: cap-import-export-format-expansion
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1177
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1178
+      changed_files_or_scope:
+        - lifetxt/webapp.py
+        - lifetxt/web_assets.html
+        - lifetxt/web_assets_js_01.js
+        - lifetxt/web_assets_js_05.js
+        - lifetxt/web_assets_js_15.js
+        - docs/en/web.md
+        - docs/ja/web.md
+      tests_or_evidence:
+        - node web asset concatenation syntax check
+        - git diff --check
+      notes: >-
+        Restore the end-to-end native export and bulk preview/explicit batch-save
+        flow after #1175. Reuse the shared parser, filter/read-scope resolver,
+        source revision, and batch mutation contract without changing Format 1.0.
+      status: implemented
     - requirement_id: req-web-bulk-native-export-and-append
       capability_id: cap-import-export-format-expansion
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1172

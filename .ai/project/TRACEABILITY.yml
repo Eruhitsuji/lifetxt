@@ -2,6 +2,26 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-workspace-context-preview-revision-boundary
+      capability_id: cap-import-export-format-expansion
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1183
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1187
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1190
+      changed_files_or_scope:
+        - lifetxt/workspace_context_snapshot.py
+        - tests/test_workspace_context_snapshot.py
+      tests_or_evidence:
+        - tests.test_workspace_context_snapshot
+        - tests.test_web_native_workflow
+      notes: >-
+        Read-only bounded exact-byte workspace snapshot identities, deterministic
+        config/effective-source membership hash and safe change categories
+        for future contextual Preview (#1182) and stale-save guard (#1188).
+        Fixed path scope is distinct from opt-in manifest re-resolution;
+        no endpoint/API, writer or full-workspace transaction was added.
+        Independent PR review and final CI remain pending.
+      release_or_deployment: null
+      status: implemented
     - requirement_id: req-safe-manual-ai-sharing-ai-prompt-profile
       capability_id: cap-ai-prompt-profile
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1184

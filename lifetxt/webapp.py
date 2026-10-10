@@ -57,7 +57,8 @@ from .stats import (
 from .markdown import item_markdown_payload
 from .model import Diagnostic, Item
 from .notifier import notification_records
-from .parser import parse_text
+from .parser import FORMAT_VERSION, parse_text
+from .safety_foundation import format_version_report
 from .personal_context import (
     changed_details,
     context_capsule,
@@ -1282,6 +1283,17 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             check_ids=False,
             check_references=False,
         )
+        if parsed_items.format_version_state == "unsupported":
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "error": "UNSUPPORTED_FORMAT",
+                    "message": "Migrate the input to the current format before saving.",
+                    "format_version": parsed_items.format_version,
+                    "current_format_version": FORMAT_VERSION,
+                    "saved": 0,
+                },
+            )
         has_error = any(d.severity == "error" for d in diagnostics)
         response_items = []
         for item in parsed_items:
@@ -1309,24 +1321,51 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             raise HTTPException(status_code=413, detail="Batch input is limited to 512 KiB.")
         key = id_key_from_config(app.state.config)
         parsed, diagnostics = parse_text(text, id_key=key)
+        if parsed.format_version_state == "unsupported":
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "error": "UNSUPPORTED_FORMAT",
+                    "message": "Migrate the input to the current format before saving.",
+                    "format_version": parsed.format_version,
+                    "current_format_version": FORMAT_VERSION,
+                    "saved": 0,
+                },
+            )
         if len(parsed) > 500 or not parsed or _has_error(diagnostics):
             raise HTTPException(status_code=422, detail={"error": "VALIDATION_ERROR", "message": "Batch validation failed.", "detail": diagnostics_to_output(diagnostics), "count": len(parsed), "saved": 0})
         snapshot = mutation.read_text_snapshot(app.state.writable_path, allow_missing=True)
         current, current_diagnostics = parse_text(snapshot.text, id_key=key)
+        writable_format = format_version_report(snapshot.text)
+        if writable_format["state"] == "unsupported":
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "error": "UNSUPPORTED_FORMAT",
+                    "message": writable_format["message"],
+                    "format_version": writable_format["declared"],
+                    "current_format_version": writable_format["current"],
+                    "saved": 0,
+                },
+            )
         if _has_error(current_diagnostics):
             raise HTTPException(status_code=409, detail={"error": "VALIDATION_ERROR", "message": "Writable file is invalid.", "detail": diagnostics_to_output(current_diagnostics), "saved": 0})
-        existing_ids = collect_item_ids(current, key=key)
-        batch_ids = []
+        workspace_items, _workspace_diagnostics = read_life_inputs(
+            app.state.paths, app.state.config
+        )
+        existing_ids = collect_item_ids(workspace_items, key=key)
+        existing_ids.update(collect_item_ids(current, key=key))
+        batch_ids = set()
         for item in parsed:
             item_diags = validate_item(item)
             if _has_error(item_diags):
                 raise HTTPException(status_code=422, detail={"error": "VALIDATION_ERROR", "message": "Batch item is invalid.", "detail": diagnostics_to_output(item_diags), "saved": 0})
             values = item.details.get(key, [])
-            if values:
-                value = str(values[0])
+            for raw_value in values:
+                value = str(raw_value)
                 if value in existing_ids or value in batch_ids:
                     raise HTTPException(status_code=422, detail={"error": "DUPLICATE_ID", "message": "Duplicate item id: %s" % value, "saved": 0})
-                batch_ids.append(value)
+                batch_ids.add(value)
         expected = payload.get("expected_source_revision") or payload.get("expected_revision")
         if not expected:
             raise HTTPException(status_code=428, detail={"error": "REVISION_REQUIRED", "message": "expected_source_revision is required.", "current_revision": snapshot.content_hash, "saved": 0})

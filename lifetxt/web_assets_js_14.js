@@ -434,26 +434,7 @@
           return;
         }
 
-    function openBulkInput() {
-      const modal = document.getElementById("bulk-input-modal");
-      if (modal) { modal.hidden = false; document.getElementById("bulk-input-text")?.focus(); }
-    }
-    function closeBulkInput() { const modal = document.getElementById("bulk-input-modal"); if (modal) modal.hidden = true; }
-    let bulkPreviewRevision = 0;
-    async function previewBulkInput() {
-      const text = document.getElementById("bulk-input-text")?.value || "";
-      const root = document.getElementById("bulk-input-preview");
-      const revision = ++bulkPreviewRevision;
-      if (!root) return;
-      root.textContent = "Checking…";
-      try {
-        const data = await api("/api/items/parse", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({line:text})});
-        if (revision !== bulkPreviewRevision) return;
-        const errors = (data.diagnostics || []).filter(d => d.severity === "error");
-        root.textContent = `${data.item_count || 0} logical record(s), ${errors.length} error(s). ` +
-          (errors.length ? errors.map(d => `${d.code}: ${d.message}`).join(" ") : "Preview only; saving is intentionally unavailable until the safe batch API is connected.");
-      } catch (error) { if (revision === bulkPreviewRevision) root.textContent = error.message || String(error); }
-    }
+
         const item = (parseData.items || [])[0];
         if (!item) { showToast("No item parsed from line.", "error"); return; }
         document.getElementById("edit-status").value = item.status;

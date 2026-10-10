@@ -1,0 +1,9 @@
+schema_version: 1
+links:
+  - requirement_id: req-contextual-native-batch-preview
+    capability_id: cap-import-export-format-expansion
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1182
+    pull_request: null
+    status: implemented
+    implementation: [lifetxt/batch_preview.py, lifetxt/webapp.py, lifetxt/web_assets_js_15.js]
+    tests: [tests/test_batch_preview.py, tests/test_web_native_workflow.py]

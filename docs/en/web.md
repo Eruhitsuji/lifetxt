@@ -136,7 +136,7 @@ tools.
 2. Choose the visible **⇩ life.txt (.txt)** button next to the Items heading. The existing **Filters → Export… → life.txt (.txt)** menu remains available.
 3. Download the native Format 1.0 UTF-8 text file. The Items display `Limit` is ignored; check the selected filters before sharing the content. A selected Saved View follows its configured scope (including its own view limit), and a selected Area exports its open items.
 4. Select **複数レコード / Bulk input**, then paste multiple native life.txt records. For example, paste `[ ] T "Review materials" do:2026-10-12` and `[ ] T "Submit report" due:2026-10-15` on separate lines.
-5. Choose **Preview** to inspect the logical record count and warnings/errors. Input remains editable after a parse error. **Preview again after every edit**; syntactic acceptance does not prove that an AI-generated record preserves the intended meaning.
+5. Choose **Preview** to review the batch against the configured workspace. Expand each record to inspect its complete details/body and compare with **Original input**. Expand **Diagnostics** to review every warning/error and its batch or numbered workspace-source location. **Preview again after every edit**; acceptance does not prove that an AI-generated record preserves the intended meaning.
 6. For writable workspaces, **すべて追加 / Add all** becomes available after a successful preview. Confirm to append the entire batch through `POST /api/items/batch` (500 records / 512 KiB maximum). Failed or conflicting writes keep the input and are not retried automatically. After an uncertain network failure, check the authoritative Items/file before attempting another save.
 
 Batch validation checks every configured ID value across the complete Web read
@@ -157,7 +157,54 @@ Bulk input **creates new records only**. It does not update existing records or 
 See the [manual sharing guide](./ai-integration.md#manual-sharing-with-an-external-ai)
 for inspecting the full export before sending it, supplying dates and unshared-reference
 context, reviewing new proposals, and handling Chrome overwrite failures. Zero Preview
-warnings do not guarantee complete reference validation or correct meaning.
+warnings do not guarantee correct meaning, references outside configured sources, or an unchanged workspace at save time.
+
+### Contextual Preview API
+
+`POST /api/items/preview` accepts `{"text":"[ ] T New id:new ref:existing\n"}`.
+It reads a bounded #1187 workspace snapshot and validates the existing records
+plus all proposed records with shared Core. Existing and forward references
+resolve together. W215 (unresolved reference), W227 (dependency cycle), W218
+(ambiguous reference), W203 (date), and W106 (custom key) remain warnings.
+All ID values participate; collisions are blocking `DUPLICATE_ID` errors
+with `core_code: W213`. Existing workspace errors are identified separately
+and disable Add all. Warnings alone do not prevent saving.
+
+The response includes `ok`, `item_count`, complete proposed `items`, all
+`diagnostics` (severity/code/category/line/source and `scope: batch|workspace`),
+`context_token`, `input_digest`, `source_revision`, `read_only`, and `review_scope`.
+Source labels are `batch` or `workspace:N`, following the configured source order;
+private source paths and existing workspace record bodies are not returned.
+`review_scope.record_count` is workspace plus batch; `workspace_record_count`
+and `batch_record_count` separate them. `workspace_records_returned` is false.
+`omitted_records` counts omitted **proposed** records; `omitted_diagnostics`
+counts omitted diagnostics. Both are zero: review is complete within its scope.
+
+`input_digest` is SHA-256 of the exact submitted UTF-8 string, without newline
+normalization. `context_token` is `batch-preview-v1:` plus SHA-256 of the
+ASCII `context fingerprint + ":" + input_digest`. It is a change identity,
+not an authorization token. Read-only workspaces can review but cannot add.
+The legacy `POST /api/items/parse` stays text-only and keeps its existing
+request/response contract; `POST /api/items/batch` is unchanged.
+
+Limits remain 500 logical proposed records and 512 KiB of submitted UTF-8 text.
+Malformed fields return 400 (invalid/missing JSON may return framework 422),
+oversized text 413, unsupported input Format or record-count overflow 422.
+Unstable, unreadable, missing required sources, or unavailable context return
+503 `CONTEXT_UNAVAILABLE` with a safe reason and no token. Correct the sources
+and review again; manifest/glob membership mismatches require re-resolution by
+reloading/restarting the server. Named manifests and legacy `paths` globs/directories are re-resolved
+on each snapshot scan; plain explicit paths report `fixed_paths` scope.
+A writable target outside the effective read list requires source resolution.
+External config-file edits require reload/restart; the token covers effective
+runtime config. Acquisition uses bounded repeated reads, not a global lock.
+
+The UI invalidates edited or late-response reviews. This Preview checks Core
+syntax/schema, IDs and references, not intent or sources outside the configured
+workspace. **Save does not yet enforce the context token**: #1188 adds server
+revalidation, and #1189 owns subsequent conflict/re-review recovery. There is
+no cross-source atomicity guarantee. After save failures, retain the input,
+review again, and check Items before retrying an uncertain network outcome.
 
 ## REST API
 
@@ -170,6 +217,7 @@ warnings do not guarantee complete reference validation or correct meaning.
 | `POST` | `/api/personal-context/{id}/reconfirm` | Explicitly reconfirm one stale, writable Personal Context record. Requires the page's `source_revision`; updates only `updated:` through the exact-ID CAS path and returns `409` on concurrent changes. |
 | `POST` | `/api/personal-context/preview` | Validate up to 25 bootstrap facts and preview their exact ordinary Note records without writing or assigning IDs |
 | `POST` | `/api/items/parse` | Parse a raw life.txt line/body block and return parsed item data without writing |
+| `POST` | `/api/items/preview` | Read-only workspace + batch Core review, complete proposed records/diagnostics and exact-input-bound context token |
 | `POST` | `/api/items/batch` | Validate and atomically append a bounded batch of native life.txt records; requires the current source revision and never partially saves |
 | `GET` | `/api/items/export` | Export the complete server-side filtered Items set as UTF-8 native life.txt; display `limit` is ignored |
 

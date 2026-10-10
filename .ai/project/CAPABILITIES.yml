@@ -10566,12 +10566,16 @@ capabilities:
     status: active
     owner: Eruhitsuji
     source_requirements:
+      - req-contextual-native-batch-preview
       - req-export-unified-dispatcher
       - req-native-life-import-export
       - req-sqlite-interchange-implementation
       - req-lifetxtz-implementation
       - req-unified-format-conversion
     implementation_locations:
+      - lifetxt/batch_preview.py
+      - lifetxt/workspace_context_snapshot.py
+      - tests/test_batch_preview.py
       - lifetxt/conversion.py
       - lifetxt/cli.py
       - lifetxt/_extra_convert_impl.py
@@ -10593,6 +10597,7 @@ capabilities:
       - docs/en/format-sqlite-interchange-v1.md
       - docs/en/format-lifetxtz-v1.md
     public_interfaces:
+      - POST /api/items/preview
       - lifetxt convert --from FORMAT --to FORMAT [path ...]
       - lifetxt convert --capabilities
       - lifetxt.conversion.convert_text

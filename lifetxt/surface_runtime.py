@@ -80,6 +80,7 @@ _WEB_NO_REVISION_PATHS = frozenset(
     (
         "/api/check-line",
         "/api/items/parse",
+        "/api/items/preview",
         "/api/shorthand/parse",
         "/api/quick/resolve",
         "/api/timer",
@@ -730,7 +731,7 @@ def _install_browser_revision_bridge(html):
 (function () {
   const nativeFetch = window.fetch.bind(window);
   let revision = null;
-  const excluded = new Set(['/api/check-line', '/api/items/parse', '/api/shorthand/parse', '/api/timer']);
+  const excluded = new Set(['/api/check-line', '/api/items/parse', '/api/items/preview', '/api/shorthand/parse', '/api/timer']);
   function pathOf(input) {
     try { return new URL(typeof input === 'string' ? input : input.url, window.location.href).pathname; }
     catch (_) { return ''; }

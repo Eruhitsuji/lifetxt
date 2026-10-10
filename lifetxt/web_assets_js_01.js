@@ -55,6 +55,23 @@
     // data-no-i18n and the walker skips those subtrees entirely.
     const UI_STRINGS = {
       ja: {
+        "Workspace review": "ワークスペースのレビュー",
+        "Records": "レコード",
+        "Errors": "エラー",
+        "Warnings": "警告",
+        "Original input": "入力原文",
+        "Diagnostics": "診断",
+        "No diagnostics": "診断なし",
+        "Review coverage": "検証範囲",
+        "Sources": "参照元",
+        "Omitted proposed records": "省略した提案レコード数",
+        "Only configured server sources are checked. External config edits require a server reload.": "検証するのはサーバーに設定された参照元のみです。外部で設定を編集した場合はサーバーの再読み込みが必要です。",
+        "Omitted diagnostics": "省略診断数",
+        "Review meaning manually. This review does not yet guard against workspace changes before save.": "意味はあなたが確認してください。このレビューは、保存前のワークスペース変更をまだ防止しません。",
+        "Read-only workspace: preview only.": "読み取り専用：レビューのみ可能です。",
+        "Source revision unavailable; saving disabled.": "リビジョンを取得できないため保存できません。",
+        "Review the meaning, then choose Add all.": "意味を確認してから「すべて追加」を選択してください。",
+
         "The browser clock check failed. Check device time and server clock settings, then refresh this record.": "ブラウザーの時刻検証に失敗しました。端末の時刻とサーバーの時刻設定を確認し、レコードを再読み込みしてください。",
         "Could not check upload availability. Refresh record to try again.": "添付の利用可否を確認できませんでした。レコードを再読み込みしてください。",
         "Attachments": "添付ファイル",

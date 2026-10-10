@@ -370,6 +370,11 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
 
     @app.get("/api/health")
     def health():
+        source_revision = None
+        if app.state.writable_path:
+            source_revision = mutation.read_text_snapshot(
+                app.state.writable_path, allow_missing=True
+            ).content_hash
         return {
             "ok": True,
             "paths": app.state.paths,
@@ -377,6 +382,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             "config_path": app.state.config.get("_path"),
             "user": config_user_name(app.state.config),
             "read_only": app.state.read_only,
+            "source_revision": source_revision,
         }
 
     @app.get("/api/backup/status")
@@ -1339,6 +1345,17 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         params = dict(request.query_params)
         sort, order = params.get("sort", "line"), params.get("order", "asc")
         items, _diagnostics = read_life_inputs(app.state.paths, app.state.config)
+        from .read_scope import resolve_read_scope
+
+        try:
+            items, _scope = resolve_read_scope(
+                items,
+                app.state.config,
+                area=params.get("area"),
+                saved_view=params.get("saved_view"),
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
         range_start, range_end = parse_optional_time_range(params.get("after"), params.get("before"))
         filtered = filter_items(items, text=params.get("text") or params.get("q"),
             ordinary_notes=_bool_query(params.get("ordinary_notes")), open_only=_bool_query(params.get("open_only")),

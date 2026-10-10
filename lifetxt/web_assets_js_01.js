@@ -642,6 +642,8 @@
         "複数レコード / Bulk input": "複数レコード / Bulk input",
         "Paste native life.txt records. Preview is read-only; it does not save anything.": "life.txt の複数レコードを貼り付けます。プレビューは読み取り専用で、保存は行いません。",
 
+        "すべて追加 / Add all": "すべて追加 / Add all",
+        "Preview ready. Review the input, then choose Add all.": "previewを確認してから「すべて追加」を選んでください。",
         // Contextual help (data-help / CONTROL_HELP / VIEW_HELP), shown on
         // hover or keyboard focus via showUiHelp().
         "Toggle light and dark theme. Add ?theme=light or ?theme=dark to force a wall-display theme.":

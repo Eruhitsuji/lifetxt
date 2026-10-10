@@ -141,6 +141,11 @@ tools.
 
 Bulk input **creates new records only**. It does not update existing records or synchronize automatically with AI services. Review exported text for sensitive data before pasting it into an external AI chat.
 
+See the [manual sharing guide](./ai-integration.md#manual-sharing-with-an-external-ai)
+for inspecting the full export before sending it, supplying dates and unshared-reference
+context, reviewing new proposals, and handling Chrome overwrite failures. Zero Preview
+warnings do not guarantee complete reference validation or correct meaning.
+
 ## REST API
 
 | Method | Path | Purpose |

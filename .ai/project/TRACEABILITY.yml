@@ -2,6 +2,42 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-safe-manual-ai-sharing-ai-prompt-profile
+      capability_id: cap-ai-prompt-profile
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1184
+      changed_files_or_scope:
+        - docs/ja/ai-integration.md
+        - docs/en/ai-integration.md
+        - docs/ja/web.md
+        - docs/en/web.md
+      tests_or_evidence:
+        - tests.test_ai_prompt_profile
+        - tests.test_web_native_workflow
+        - Bilingual acceptance review, fictional record Core diagnostics, and local link/anchor checks
+      notes: >-
+        Document manual selection before sharing, explicit date/timezone and
+        Profile commit context, unshared references, new-record-only review and
+        append, custom-key limitations, and observed Chrome overwrite recovery.
+        No product, Format, Profile, or API change. Independent review pending.
+      status: implemented
+    - requirement_id: req-safe-manual-ai-sharing-import-export-format-expansion
+      capability_id: cap-import-export-format-expansion
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1184
+      changed_files_or_scope:
+        - docs/ja/ai-integration.md
+        - docs/en/ai-integration.md
+        - docs/ja/web.md
+        - docs/en/web.md
+      tests_or_evidence:
+        - tests.test_ai_prompt_profile
+        - tests.test_web_native_workflow
+        - Bilingual acceptance review, fictional record Core diagnostics, and local link/anchor checks
+      notes: >-
+        Document manual selection before sharing, explicit date/timezone and
+        Profile commit context, unshared references, new-record-only review and
+        append, custom-key limitations, and observed Chrome overwrite recovery.
+        No product, Format, Profile, or API change. Independent review pending.
+      status: implemented
     - requirement_id: req-web-native-flow-regression-completion
       capability_id: cap-import-export-format-expansion
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1177

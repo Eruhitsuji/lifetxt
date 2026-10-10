@@ -39,6 +39,44 @@ traceability:
         Profile commit context, unshared references, new-record-only review and
         append, custom-key limitations, and observed Chrome overwrite recovery.
         No product, Format, Profile, or API change. Independent review pending.
+    - requirement_id: req-web-batch-global-id-and-format-safety
+      capability_id: cap-import-export-format-expansion
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1180
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1185
+      changed_files_or_scope:
+        - lifetxt/webapp.py
+        - tests/test_web_native_workflow.py
+        - docs/en/web.md
+        - docs/ja/web.md
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - Web native batch regression tests for cross-source, batch-local, and multi-value ID collisions
+        - Web native batch regression tests for unsupported input and writable format versions
+        - node web asset syntax check and git diff --check
+      notes: >-
+        Reject every configured ID value across the current Web read snapshot
+        and every submitted batch record without partial writes. The cross-file
+        check is deliberately read-snapshot scoped; it does not claim atomicity
+        across independently changing source files.
+      status: implemented
+    - requirement_id: req-web-batch-format-version-contract
+      capability_id: cap-import-export-format-expansion
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1181
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1185
+      changed_files_or_scope:
+        - lifetxt/webapp.py
+        - tests/test_web_native_workflow.py
+        - docs/en/web.md
+        - docs/ja/web.md
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - ParseResult format_version_state regression coverage for preview and batch rejection
+        - Writable unsupported format version returns stable UNSUPPORTED_FORMAT instead of 500
+        - No input or writable file mutation on rejection
+      notes: >-
+        Reuse the parser's authoritative format metadata and the shared format
+        version report. Timezone and other directives remain distinct and are
+        not migrated by Web batch input.
       status: implemented
     - requirement_id: req-web-native-flow-regression-completion
       capability_id: cap-import-export-format-expansion

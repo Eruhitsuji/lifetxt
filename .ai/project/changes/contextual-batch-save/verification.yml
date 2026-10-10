@@ -46,6 +46,13 @@ verification:
     command: python -m unittest tests.test_change_package_closeout tests.test_traceability_gate
     result: 17 passed, no skips
     status: passed
+  - type: ci-traceability-repair
+    command: LIFETXT_TRACEABILITY_GATE_BASE=8cb4c679455a6ec722161377fdd9ee456073d6e6
+      LIFETXT_TRACEABILITY_GATE_PR_URL=https://github.com/Eruhitsuji/lifetxt/pull/1192
+      python -m unittest tests.test_traceability_gate
+    result: CI identified incorrectly indented new sequence entries; normalized new
+      chain lists and verified exact PR gate locally.
+    status: passed
 review_ledger:
 - reviewer: Eruhitsuji
   review_type: requirements

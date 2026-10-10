@@ -7,20 +7,20 @@ traceability:
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1188
       pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1192
       changed_files_or_scope:
-      - lifetxt/batch_save.py
-      - lifetxt/batch_preview.py
-      - lifetxt/webapp.py
-    - lifetxt/surface_runtime.py
-      - tests/test_batch_save.py
-      - docs/en/web.md
-      - docs/ja/web.md
-      - .ai/project/CAPABILITIES.yml
-      - .ai/project/TRACEABILITY.yml
-      - .ai/project/changes/contextual-batch-save
+        - lifetxt/batch_save.py
+        - lifetxt/batch_preview.py
+        - lifetxt/webapp.py
+        - lifetxt/surface_runtime.py
+        - tests/test_batch_save.py
+        - docs/en/web.md
+        - docs/ja/web.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+        - .ai/project/changes/contextual-batch-save
       tests_or_evidence:
-      - tests.test_batch_save
-      - tests.test_batch_preview
-      - tests.test_surface_runtime
+        - tests.test_batch_save
+        - tests.test_batch_preview
+        - tests.test_surface_runtime
       notes: Opt-in exact-input workspace guard, shared Core revalidation, legacy compatibility
         and deterministic remaining race evidence. No global atomicity; independent reviews
         pending.

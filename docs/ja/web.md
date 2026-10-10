@@ -124,7 +124,11 @@ MCP tool は `list_items`、`get_item`、`create_item`、`update_item`、
 
 Batch の検証では、Web の読み取りワークスペース全体にある設定済み ID と、送信した各レコードの全 ID 値を比較します。`ids.key` / `api.id_key` によるカスタムキーにも対応し、衝突時は `DUPLICATE_ID` を返して書き込み可能ファイルを変更しません。この検証は現在の読み取りスナップショットを対象とし、別ソースの変更を writable file の revision として原子的には扱いません。必要に応じて再読み込みして再試行してください。
 
-Preview と batch は、現在の対応バージョンより新しい `#! format_version:` 宣言を入力側では `UNSUPPORTED_FORMAT` として拒否します。書き込み可能ファイルが未対応バージョンを宣言している場合は、既存契約の `UNSUPPORTED_FORMAT_VERSION` を返し、宣言を削除・黙って変換しません。
+既存parseとbatchは、現在の対応バージョンより新しい入力 `#! format_version:` 宣言を
+`UNSUPPORTED_FORMAT` として拒否します。ワークスペースを含むPreviewでは、
+未対応宣言のある既存参照元をworkspace errorとして表示し、追加を止めます。
+Native batchは、書込先の未対応宣言を既存契約の `UNSUPPORTED_FORMAT_VERSION` で拒否し、
+宣言を削除・黙って変換しません。
 
 この画面は**新しいレコードの追加**に対応します。既存レコードの一括置換やAIとの自動同期には対応しません。外部生成AIにエクスポート内容を貼る場合は、機密情報が含まれないことを確認してください。
 

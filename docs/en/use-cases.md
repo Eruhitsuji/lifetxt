@@ -145,6 +145,15 @@ Use `--read-only` for public dashboards and wall displays. Put internet-facing d
 
 ## AI clients
 
+For ordinary chats such as ChatGPT, use the
+[Prompt Profile](./ai-integration.md#a-copyable-prompt-profile-workflow) to draft,
+explain, and review text without installing lifetxt. With a running Web UI, use
+[manual export → AI → Preview → approved Add all](./ai-integration.md#manual-sharing-with-an-external-ai)
+for new-record proposals. Neither needs MCP, an AI API, or a plugin; inspect
+the sharing copy before sending it and check meaning before saving.
+
+For connected workspace access through a compatible stdio MCP client:
+
 ```sh
 python -m lifetxt mcp life.txt
 python -m lifetxt mcp life.txt .generated/google_calendar.life.txt --write-file life.txt

@@ -124,6 +124,8 @@ MCP tool は `list_items`、`get_item`、`create_item`、`update_item`、
 | `POST` | `/api/personal-context/{id}/reconfirm` | staleかつwritableなPersonal Context recordを明示的に再確認する。pageの`source_revision`を要求し、exact-IDのCAS経路で`updated:`だけを更新する。並行変更時は`409`で安全側に失敗する |
 | `POST` | `/api/personal-context/preview` | 最大25件のbootstrap factを検証し、ID付与・書き込みなしで通常Note recordの正確な形をpreview |
 | `POST` | `/api/items/parse` | raw life.txt 行または body block を解析し、書き込まずに parsed item を返す |
+| `POST` | `/api/items/batch` | bounded な複数 native record を全件検証し、source revision の CAS 付きで原子的に追記する。部分保存は行わない |
+| `GET` | `/api/items/export` | Items の実効フィルタ結果を表示用 `limit` 無視で UTF-8 native life.txt として出力 |
 | `POST` | `/api/items/raw` | 検証済み raw life.txt 行を書き込み先ファイルへ追記 |
 | `GET` | `/api/items/{id}` | 正規の exact-ID 取得 (#837)。数字のみの path segment は下位互換のため 1-based line number として扱われ（旧 `GET /api/items/{line_no}` と同じ）、それ以外（および一致する行が無い数字 ID）は `GET /api/items/id/{id}` と同じ検索で正規 `id:` として解決する。未知の ID は `404` |
 | `GET` | `/api/items/id/{id}` | exact `id:` で item を取得 |

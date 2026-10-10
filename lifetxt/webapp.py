@@ -1267,6 +1267,8 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         if not str(line).strip():
             return {"ok": True, "item_count": 0, "diagnostics": [], "items": []}
         text = str(line).rstrip("\n") + "\n"
+        if len(text.encode("utf-8")) > 512 * 1024:
+            raise HTTPException(status_code=413, detail="Preview input is limited to 512 KiB.")
         id_key = id_key_from_config(app.state.config)
         parsed_items, diagnostics = parse_text(
             text,
@@ -1288,6 +1290,72 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             "items": response_items,
             "diagnostics": diagnostics_to_output(diagnostics),
         }
+
+    @app.post("/api/items/batch", status_code=201)
+    def create_items_batch(payload=Body(...)):
+        """Validate and append a complete native batch in one CAS mutation."""
+        if app.state.read_only or not app.state.writable_path:
+            raise HTTPException(status_code=403, detail={"error": "READ_ONLY", "message": "No writable file configured."})
+        if not isinstance(payload, dict) or not isinstance(payload.get("text"), str):
+            raise HTTPException(status_code=400, detail="text is required.")
+        text = payload["text"]
+        if len(text.encode("utf-8")) > 512 * 1024:
+            raise HTTPException(status_code=413, detail="Batch input is limited to 512 KiB.")
+        key = id_key_from_config(app.state.config)
+        parsed, diagnostics = parse_text(text, id_key=key)
+        if len(parsed) > 500 or not parsed or _has_error(diagnostics):
+            raise HTTPException(status_code=422, detail={"error": "VALIDATION_ERROR", "message": "Batch validation failed.", "detail": diagnostics_to_output(diagnostics), "count": len(parsed), "saved": 0})
+        snapshot = mutation.read_text_snapshot(app.state.writable_path, allow_missing=True)
+        current, current_diagnostics = parse_text(snapshot.text, id_key=key)
+        if _has_error(current_diagnostics):
+            raise HTTPException(status_code=409, detail={"error": "VALIDATION_ERROR", "message": "Writable file is invalid.", "detail": diagnostics_to_output(current_diagnostics), "saved": 0})
+        existing_ids = collect_item_ids(current, key=key)
+        batch_ids = []
+        for item in parsed:
+            item_diags = validate_item(item)
+            if _has_error(item_diags):
+                raise HTTPException(status_code=422, detail={"error": "VALIDATION_ERROR", "message": "Batch item is invalid.", "detail": diagnostics_to_output(item_diags), "saved": 0})
+            values = item.details.get(key, [])
+            if values:
+                value = str(values[0])
+                if value in existing_ids or value in batch_ids:
+                    raise HTTPException(status_code=422, detail={"error": "DUPLICATE_ID", "message": "Duplicate item id: %s" % value, "saved": 0})
+                batch_ids.append(value)
+        expected = payload.get("expected_source_revision") or payload.get("expected_revision")
+        if not expected:
+            raise HTTPException(status_code=428, detail={"error": "REVISION_REQUIRED", "message": "expected_source_revision is required.", "current_revision": snapshot.content_hash, "saved": 0})
+        if expected != snapshot.content_hash:
+            raise HTTPException(status_code=409, detail={"error": "CONFLICT", "expected_revision": expected, "current_revision": snapshot.content_hash, "saved": 0})
+        addition = "\n".join(item_to_line(item) for item in parsed) + "\n"
+        try:
+            result = mutation.write_text(app.state.writable_path, transform=lambda current_text: current_text + ("\n" if current_text and not current_text.endswith(("\n", "\r")) else "") + addition, expected_hash=snapshot.content_hash, operation="web batch create")
+        except mutation.MutationConflict as exc:
+            raise HTTPException(status_code=409, detail={"error": "CONFLICT", "expected_revision": exc.expected_hash, "current_revision": exc.actual_hash, "saved": 0})
+        return {"ok": True, "count": len(parsed), "saved": len(parsed), "source_revision": result.snapshot.content_hash, "items": [api_item(item, app.state.writable_path, key) for item in parsed]}
+
+    @app.get("/api/items/export")
+    def export_items(request: Request, response: Response):
+        """Export the server-side filtered set, deliberately ignoring display limit."""
+        params = dict(request.query_params)
+        sort, order = params.get("sort", "line"), params.get("order", "asc")
+        items, _diagnostics = read_life_inputs(app.state.paths, app.state.config)
+        range_start, range_end = parse_optional_time_range(params.get("after"), params.get("before"))
+        filtered = filter_items(items, text=params.get("text") or params.get("q"),
+            ordinary_notes=_bool_query(params.get("ordinary_notes")), open_only=_bool_query(params.get("open_only")),
+            statuses=_csv_values(params.get("status")), kinds=_csv_values(params.get("kind") or params.get("type")),
+            projects=_csv_values(params.get("project")), tags=_csv_values(params.get("tag")), tag_all=_csv_values(params.get("tag_all")),
+            exclude_tags=_csv_values(params.get("exclude_tag")), users=_csv_values(params.get("user")), persons=_csv_values(params.get("person")),
+            owners=_csv_values(params.get("owner")), assignees=_csv_values(params.get("assignee")), attendees=_csv_values(params.get("attendee")),
+            senders=_csv_values(params.get("sender")), recipients=_csv_values(params.get("recipient")), teams=_csv_values(params.get("team")),
+            range_start=range_start, range_end=range_end,
+            user_aliases=config_user_aliases(app.state.config), team_members=config_team_members(app.state.config), team_aliases=config_team_aliases(app.state.config), tag_aliases=config_tag_aliases(app.state.config), fuzzy=_bool_query(params.get("fuzzy")))
+        filtered = sort_items(filtered, sort, order)
+        body = "\n".join((getattr(item, "source_text", None) or item_to_line(item)) for item in filtered)
+        if body: body += "\n"
+        response.headers["Content-Disposition"] = "attachment; filename=lifetxt-filtered-%s.txt" % timezone_today().isoformat()
+        response.headers["X-Lifetxt-Count"] = str(len(filtered))
+        response.headers["Content-Type"] = "text/plain; charset=utf-8"
+        return Response(content=body, media_type="text/plain", headers={"Content-Disposition": response.headers["Content-Disposition"], "X-Lifetxt-Count": str(len(filtered))})
 
     @app.get("/api/graph")
     def get_graph(

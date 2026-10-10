@@ -141,6 +141,8 @@ tools.
 | `POST` | `/api/personal-context/{id}/reconfirm` | Explicitly reconfirm one stale, writable Personal Context record. Requires the page's `source_revision`; updates only `updated:` through the exact-ID CAS path and returns `409` on concurrent changes. |
 | `POST` | `/api/personal-context/preview` | Validate up to 25 bootstrap facts and preview their exact ordinary Note records without writing or assigning IDs |
 | `POST` | `/api/items/parse` | Parse a raw life.txt line/body block and return parsed item data without writing |
+| `POST` | `/api/items/batch` | Validate and atomically append a bounded batch of native life.txt records; requires the current source revision and never partially saves |
+| `GET` | `/api/items/export` | Export the complete server-side filtered Items set as UTF-8 native life.txt; display `limit` is ignored |
 | `POST` | `/api/items/raw` | Append a validated raw life.txt line to the writable file |
 | `GET` | `/api/items/{id}` | Canonical exact-ID read (#837): a purely numeric path segment is interpreted as a 1-based line number for backward compatibility, matching the historical `GET /api/items/{line_no}` route; anything else (and any numeric segment matching no line) is resolved as a canonical `id:`, sharing the exact same lookup as `GET /api/items/id/{id}` below. Unknown IDs return `404`. |
 | `GET` | `/api/items/id/{id}` | Get an item by exact `id:` |

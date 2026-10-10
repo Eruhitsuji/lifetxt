@@ -120,6 +120,16 @@
     function exportItems(format) {
       const items = currentItems || [];
       if (!items.length) { showToast("No items to export.", "warning"); return; }
+      if (format === "life") {
+        const params = new URLSearchParams(location.search);
+        params.delete("limit");
+        const a = document.createElement("a");
+        a.href = `/api/items/export?${params.toString()}`;
+        a.download = `lifetxt-filtered-${new Date().toISOString().slice(0, 10)}.txt`;
+        a.click();
+        showToast(`Exported ${items.length} item(s) as life.txt.`, "success");
+        return;
+      }
       let content, mime, ext;
       if (format === "json") {
         content = JSON.stringify(items.map(i => ({

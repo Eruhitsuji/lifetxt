@@ -69,8 +69,17 @@
         const count = Number(data.item_count || 0);
         const summary = count + " logical record(s), " + errors.length +
           " error(s), " + warnings.length + " warning(s).";
+        // Keep each record and diagnostic inspectable without rendering raw HTML.
+        const snippets = (data.items || []).slice(0, 10).map((item, index) =>
+          "#" + (index + 1) + " " + (item.status || "") + " " +
+          (item.type || "") + " " + (item.title || ""));
+        const messages = diagnostics.slice(0, 10).map(d =>
+          (d.line ? "Line " + d.line + ": " : "") +
+          (d.code || d.severity || "diagnostic") + " " + (d.message || ""));
+        const details = [snippets.join(" / "), messages.join(" / ")].filter(Boolean).join(" / ");
+        const explanation = details ? " " + details : "";
         if (!data.ok || errors.length || !count || count > 500) {
-          root.textContent = summary + (count > 500 ? " Maximum 500 records." :
+          root.textContent = summary + explanation + (count > 500 ? " Maximum 500 records." :
             errors.length ? " " + errors.map(d => d.code + ": " + d.message).join(" ") :
             " Nothing to save.");
           return;
@@ -79,15 +88,15 @@
         const health = await api("/api/health", {cache:"no-store"});
         if (revision !== bulkPreviewRevision || input.value !== text) return;
         if (health.read_only || !health.writable_path) {
-          root.textContent = summary + " Read-only workspace: preview only.";
+          root.textContent = summary + explanation + " Read-only workspace: preview only.";
           return;
         }
         if (!health.source_revision) {
-          root.textContent = summary + " Source revision unavailable; saving disabled.";
+          root.textContent = summary + explanation + " Source revision unavailable; saving disabled.";
           return;
         }
         bulkPreviewText = text;
-        root.textContent = summary + " Review the meaning, then choose Add all.";
+        root.textContent = summary + explanation + " Review the meaning, then choose Add all.";
         document.getElementById("bulk-input-add").disabled = false;
       } catch (error) {
         if (revision === bulkPreviewRevision) {

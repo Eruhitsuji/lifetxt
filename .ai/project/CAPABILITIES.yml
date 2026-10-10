@@ -10566,6 +10566,7 @@ capabilities:
     status: active
     owner: Eruhitsuji
     source_requirements:
+      - req-native-bulk-context-repreview
       - req-contextual-native-batch-save
       - req-contextual-native-batch-preview
       - req-export-unified-dispatcher

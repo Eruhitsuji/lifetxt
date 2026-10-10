@@ -1,0 +1,70 @@
+schema_version: 1
+verification:
+  planned: []
+  executed:
+  - type: focused-integration-compatibility
+    command: python -m unittest tests.test_web_native_workflow tests.test_web_i18n
+      tests.test_web_assets tests.test_batch_save tests.test_batch_preview tests.test_surface_runtime
+      tests.test_workspace_context_snapshot tests.test_change_package_closeout tests.test_traceability_gate
+    result: 124 passed, no skips; includes pending double-click, known-success refresh
+      and safe recovery reason matrix
+    status: passed
+    requirement_ids:
+    - req-native-bulk-context-repreview
+  - type: real-browser
+    command: LIFETXT_BROWSER_BIN=<Chrome headless shell> python -m unittest tests.test_web_ui_regressions_browser
+    result: 5 passed, no skips; real Chrome155 engine/CDP and real two-source uvicorn
+      server; EN/JA12-record review, other-source edit, no-save409, no auto-retry,
+      explicit re-Preview, one successful save, keyboard details/Escape; existing
+      viewport8 matrix retained
+    status: passed
+    requirement_ids:
+    - req-native-bulk-context-repreview
+  - type: process
+    command: python -m unittest tests.test_traceability_gate tests.test_change_package_closeout
+    result: 17 passed, no skips; normalized new sequence indentation after parent
+      CI feedback
+    status: passed
+  - type: lint
+    command: python -m ruff check lifetxt tests scripts
+    result: passed
+    status: passed
+  - type: typing
+    command: python -m mypy --follow-imports=skip --ignore-missing-imports lifetxt/diagnostic_contract.py
+    result: passed
+    status: passed
+  - type: integration
+    command: python -m lifetxt check examples/minimal_life.txt
+    result: 10 items OK
+    status: passed
+  - type: format
+    command: python -m ruff format --check tests/test_web_native_workflow.py tests/test_web_ui_regressions_browser.py
+      tests/test_web_assets.py
+    result: touched tests formatted; baseline whole repo75 pre-existing files not
+      reformatted
+    status: passed
+review_ledger:
+- reviewer: Eruhitsuji
+  review_type: requirements
+  target_commit: null
+  result: approved contextual token UI and recovery plan 2026-10-10
+  finding_count: 0
+  completed_at: '2026-10-10'
+- reviewer: independent reviewer
+  review_type: implementation
+  target_commit: null
+  result: pending
+  finding_count: 0
+  completed_at: null
+- reviewer: ChatGPT implementer
+  review_type: developer self-review
+  target_commit: 41c2f4c1
+  result: verified binding/generation, explicit If-Match, safe reason translations,
+    no replay, known-success refresh behavior and browser evidence; independent review
+    pending
+  finding_count: 0
+  completed_at: '2026-10-10'
+release_evidence:
+  migration_notes: 'No migration; UI adopts opt-in API #1188.'
+  rollback_plan: Revert UI PR to previous native bulk flow.
+  operations_evidence: []

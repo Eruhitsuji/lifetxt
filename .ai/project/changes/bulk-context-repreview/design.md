@@ -1,0 +1,9 @@
+# Native bulk contextual recovery
+
+Retain a single reviewed binding containing exact input text, context token and source revision after successful contextual Preview. Use the retained revision in the save body and explicit If-Match, preventing the generic bridge from substituting a newer revision. Do not fetch health to enable or save. Require server context scope and revision; parser-only responses cannot authorize Add all.
+
+Clear binding and increment review generation on input/reset, Preview failure or save failure. Gate delayed replies and confirmation by exact input and generation. Block concurrent save, keep original input on failure, never resubmit. Distinct translated messages for context changed/unavailable/unstable/restart-required, destination CAS, readonly, syntax/schema vs duplicate, bounds, missing revision and uncertain network/unknown errors. Only allowlisted reason categories influence UI copy; no raw tokens, paths or server error bodies.
+
+Reuse full DOM textContent review with native details/summary and live status region. Manual meaning review and remaining final-snapshot-to-write nonwritable race are explicit. Existing Chromium CDP browser regression probe runs against a real two-source server: Preview, edit other source, Add all rejects without change; old binding disabled, no retry; explicit re-Preview enables save once. Retain #317 external matrix and #289 generic audit ownership.
+
+Pending saves disable editing and prevent closing/Preview/double submission. A known successful save remains successful if the subsequent Items refresh fails; its warning requests Items refresh, not a save retry. Existing clock guard failures get clock-specific guidance; unknown409/transport outcomes remain uncertain rather than being falsely labeled writable conflict.

@@ -650,22 +650,163 @@ Pay particular attention to an uncertain choice such as “the 20th or 22nd”
 can record messages or reminders, but recording a conditional action does not
 execute it or send a notification.
 
-For example, a simple request may produce:
+#### Copyable Convert / Explain / Review requests
+
+Recommended: paste the full official Profile first, then the Convert request
+below. **All dates and context below are fictional, not the current date or
+your workspace.** Replace them with your actual reference datetime, timezone,
+scope, source wording, and the commit identifying the Profile text you supplied.
+The Profile has no separate version number; Format 1.0 and the Profile path/commit
+identify different things. Do not resolve relative dates without that context.
 
 ```text
-[ ] T Submit_the_draft do:2026-10-20
+Mode: Convert. Use the official lifetxt Assistant Prompt Profile supplied in this conversation.
+Reference datetime: 2030-10-10T09:00:00+09:00; timezone: Asia/Tokyo.
+Format: 1.0. Profile: prompts/lifetxt-assistant.md @ b8b5b6384fc692030969a00d84bd7ec5dbf5572d.
+Scope: new-record drafts only; no workspace access or existing reference records supplied.
+Source: Hold one client meeting on October 20 or 22, 2030, from 14:00 to 15:30. The date awaits their reply.
+Preserve the source language. Keep alternatives uncertain; do not turn them into an interval or a confirmed date.
+Do not invent dates, times, IDs, dependencies, priority, assignees, notification times, or service capabilities.
+Ask about missing datetime/timezone or any materially different interpretation; otherwise omit unsupported details.
+Output only generated life.txt records inside a code block labeled lifetxt, with no commentary inside it.
+Put reasons, uncertainties, assumptions, and questions outside the block. Do not save or execute anything.
 ```
 
-For “submit on the 20th or 22nd after review is complete”, keep the choice
-unresolved and point to the completion item only if that item exists, for
-example:
+Lightweight alternative: supply the official Profile URL instead of its text,
+then the same request/context above. For example:
 
 ```text
-[?] T Submit_the_draft note:"Candidate dates: 2026-10-20 or 2026-10-22; confirm one after review_complete" depends_on:review_complete
+Read the official Profile at https://github.com/Eruhitsuji/lifetxt/blob/b8b5b6384fc692030969a00d84bd7ec5dbf5572d/prompts/lifetxt-assistant.md before Convert.
+If you cannot retrieve it, ask me to paste the full text; do not claim to have read it.
 ```
 
-These examples use existing Format 1.0 keys and should be checked when the CLI
-is available. They are guidance, not a guarantee of external model accuracy.
+A pasted URL or the model's claim is not evidence of retrieval or understanding;
+record reference use as unknown unless independently verified. Prefer direct
+text when you cannot verify retrieval. Neither route guarantees compliance.
+
+Save the first record block **unchanged** as `draft-initial.txt` before follow-up.
+Copy only its contents, not the fences or explanation. Use these separate turns
+with the same source/context and the exact initial block attached or still visible:
+
+```text
+Mode: Explain. Explain the initial draft against the original source without changing or reprinting its record block.
+Discuss kind, do/due/on/at/from/to, timezone, recurrence, references and achieved prerequisite state, and unsupported assumptions.
+Keep the initial text intact; list uncertainty and clarification questions separately.
+```
+
+```text
+Mode: Review. Compare the exact initial draft with the original source and the supplied Profile/context.
+Check exclusive dates, dependency achievement, invented metadata/notification times, and claims of automatic execution.
+Do not overwrite the initial draft. List findings and questions outside record blocks.
+If correction is needed, provide a separate complete replacement block labeled lifetxt, containing records only; otherwise say no correction is proposed.
+Do not create IDs or reference targets absent from the supplied context. Do not save or execute anything.
+```
+
+Keep explanations and each corrected version separately (`draft-revised-1.txt`,
+etc.); check each record block independently. Never concatenate the initial and
+corrected drafts for validation or Bulk input. AI self-review is not independent
+proof that either version is correct.
+
+#### Semantic failure contrasts
+
+These are fictional teaching examples based on the failure classes observed in
+[#1164's first-period summary](https://github.com/Eruhitsuji/lifetxt/issues/1164#issuecomment-6080057300),
+not verbatim model outputs or new LLM observations. Dates are illustrative.
+The blocks below use Format 1.0; **even the wrong-meaning blocks can pass check**.
+
+For the meeting source in Convert, this wrong conversion commits to a continuous
+interval (a confirmed `on:2030-10-20` would also incorrectly select one date):
+
+```lifetxt
+[ ] E "Client meeting" from:2030-10-20T14:00 to:2030-10-22T15:30
+```
+
+Preserve exactly one undecided occurrence and the supplied time instead:
+
+```lifetxt
+[?] E "Client meeting" note:"One day only: 2030-10-20 or 2030-10-22; time 14:00-15:30; awaiting reply"
+```
+
+`[?]` and `note:` preserve uncertainty; they do not implement candidate-date
+selection or scheduling. A retained custom key such as `candidate_on:` may
+produce W106 and has no guaranteed standard candidate-date semantics.
+
+Dependency source: “Review has been requested, but is not complete. Submit only
+after review completes.” For this example **the user supplies the three records
+and IDs below** as fictional workspace context; do not generate such IDs by
+default. This wrong dependency is already resolved by the completed request:
+
+```lifetxt
+[x] T "Request review" id:review_request
+[ ] T "Complete review" id:review_complete
+[ ] T "Submit draft" depends_on:review_request
+```
+
+The corrected draft targets the required achievement, not the request:
+
+```lifetxt
+[x] T "Request review" id:review_request
+[ ] T "Complete review" id:review_complete
+[ ] T "Submit draft" depends_on:review_complete
+```
+
+Both examples are self-contained for check, not batches to add to an existing
+workspace. The request's completion date was not supplied, so `done:` is omitted
+and check emits W103; do not invent a date just to remove that warning.
+If the required record/ID is unknown, ask or retain the condition in
+a note rather than inventing a target. Core treats a canceled/no-longer-open
+prerequisite as resolved; that does not prove successful review or approval.
+Do not equate “complete” with “approved” unless the source does so.
+
+For “work on the draft on October 20, 2030” (not a deadline), the wrong choice is:
+
+```lifetxt
+[ ] T "Work on draft" due:2030-10-20
+```
+
+Use the intended execution date instead; use `due:` for “finish by”:
+
+```lifetxt
+[ ] T "Work on draft" do:2030-10-20
+```
+
+Choose `R` for an attention cue and `M` for a message/notification request, not
+interchangeably with a task. Without a supplied notification time, do not invent
+`notify_at:` or an “hour before” reminder. A record alone does not send a Teams
+message, notify, execute a task, or cancel it conditionally; separately configured
+supported tooling and permissions would be needed. Do not invent that setup.
+
+#### Human review checklist and verification boundaries
+
+| Check | What you verify |
+| --- | --- |
+| Syntax | Record kinds, status, quoting, keys, and complete continuation bodies. Keep the initial and corrected blocks separate. |
+| References / warnings | Every diagnostic, ID uniqueness, missing/ambiguous targets, dependency cycles, and whether required references were omitted from sharing. |
+| Meaning / dates / dependencies | Original wording, `do:` versus `due:`, date/time/timezone, recurrence, exclusive candidates versus intervals, and the target's achieved state. |
+| Non-invention | No unsupplied IDs, metadata, assignees, notification times, or claims of sending/automation capabilities. |
+| External sharing | Minimum necessary scope; inspect titles/details/bodies and remove secrets before sending. Unshared facts remain unknown. |
+
+- **CLI available:** run `python -m lifetxt check draft-initial.txt --format json`
+  (the same command works for `draft.txt`), then each revised file separately.
+  Read errors and warnings even with exit 0; standalone check lacks unshared
+  workspace records and cannot prove intended meaning.
+- **Web available:** use [manual sharing](#manual-sharing-with-an-external-ai)
+  and contextual Preview, inspect all records/diagnostics, then explicitly
+  approve Add all for new proposals only. After an edit or conflict, re-Preview
+  and review again. Accepted Preview is neither semantic proof nor automatic
+  safe saving; it has the workspace/save boundaries described there.
+- **Nothing can be installed:** compare the draft visually with the official
+  [Format specification](./life_txt_format_spec.md) and original wording.
+  Record mechanical validation as **not run**; do not describe an AI's review
+  as a passed parser check. Save the chosen draft yourself only after review.
+
+This addition makes the requests and version separation explicit and the examples
+mechanically inspectable. **Improved external-model accuracy is untested**, and
+no new LLM evaluation is required. If you choose to observe again, reuse #1164's
+A (dependency) or B (exclusive date) only where relevant, recording model/version,
+datetime, reference condition, initial/corrected outputs, and check/meaning results
+separately. Do not infer success rates from the earlier 30 output units.
+
 The observations behind this workflow came from the limited 30-output study
 in [#1164](https://github.com/Eruhitsuji/lifetxt/issues/1164); five outputs were
 unavailable and real-device automation was not verified. See the implemented

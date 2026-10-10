@@ -1277,13 +1277,14 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         if len(text.encode("utf-8")) > 512 * 1024:
             raise HTTPException(status_code=413, detail="Preview input is limited to 512 KiB.")
         id_key = id_key_from_config(app.state.config)
-        parsed_items, diagnostics = parse_text(
+        parse_result = parse_text(
             text,
             id_key=id_key,
             check_ids=False,
             check_references=False,
         )
-        if parsed_items.format_version_state == "unsupported":
+        parsed_items, diagnostics = parse_result
+        if parse_result.format_version_state == "unsupported":
             raise HTTPException(
                 status_code=422,
                 detail={
@@ -1320,8 +1321,9 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         if len(text.encode("utf-8")) > 512 * 1024:
             raise HTTPException(status_code=413, detail="Batch input is limited to 512 KiB.")
         key = id_key_from_config(app.state.config)
-        parsed, diagnostics = parse_text(text, id_key=key)
-        if parsed.format_version_state == "unsupported":
+        parse_result = parse_text(text, id_key=key)
+        parsed, diagnostics = parse_result
+        if parse_result.format_version_state == "unsupported":
             raise HTTPException(
                 status_code=422,
                 detail={

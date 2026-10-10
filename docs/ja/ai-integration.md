@@ -1,6 +1,16 @@
 # AI 連携
 
-lifetxt は stdio 上の MCP (Model Context Protocol) server を同梱しています。AI client は file format を推測するのではなく、型付き tool を通じて `life.txt` を読み書きできます。この文書では setup、tool surface、安全 model、data を local-first に保つ使い方を説明します。
+lifetxt は通常の生成AIチャットとの手動テキスト共有でも、対応clientとstdio MCP
+(Model Context Protocol) serverの接続でも利用できます。環境に合う経路を選んでください。
+
+| 経路 | 必要な環境とアクセス範囲 | 案内 |
+| --- | --- | --- |
+| Prompt Profileで下書き | AIチャットとテキストエディタ。lifetxtのinstall、MCP、API、プラグインは不要。AIが読めるのは共有したテキストだけで、workspaceへ保存できない。 | [Prompt Profileの手順](#prompt-profile-を使う最短手順) |
+| Webとの手動往復 | 起動済みlifetxt Web UIへのアクセス。AI API、MCP、プラグインは不要。選択したレコードをexportし、確認したコピーを共有して、新規提案を自分でPreview・承認追加する。 | [手動共有](#外部aiへ手動共有する手順) |
+| MCP接続 | lifetxtのinstallとstdio commandを起動できるclient。型付きworkspace読み取り・提案・変更の範囲はpermission profileによる。 | [MCP Quick Start](#1-quick-start) |
+
+最初の2経路はChatGPT、Claude、Gemini、local modelなどで利用できます。
+この文書では人間による確認手順と、MCPのsetup・安全modelを説明します。
 
 - [1. Quick Start](#1-quick-start)
 - [2. Client Configuration](#2-client-configuration)
@@ -203,21 +213,17 @@ deploy された `lifetxt serve`/sync timer が書き込むのと同じ `life.tx
 
 ### ChatGPT
 
-現時点では未対応です。ChatGPT の Developer Mode custom connector は
-URL で到達可能な Streamable HTTP または SSE server を要求します -- ChatGPT
-には URL を貼り付けるだけで、Claude Desktop・Claude Code・Gemini CLI の
-ように local command を起動することはありません。`lifetxt mcp` は stdio
-にのみ対応しているため直接指定することはできず、上記の SSH pattern も
-役に立ちません。ChatGPT の connector UI には、そもそも `ssh` のような
-command を指定する項目自体が存在しないためです。
+ChatGPTでは[Prompt Profileの手順](#prompt-profile-を使う最短手順)で下書き・説明・
+レビューを行うか、[Webとの手動往復](#外部aiへ手動共有する手順)で新規提案を
+自分で確認して追加します。どちらもMCP、AI API、プラグインは不要で、チャットへ
+自動的なworkspaceアクセスを与えません。
 
-ChatGPT 組み込みの Google Drive connector も代替にはなりません。
-Docs、Sheets、Slides、PDF、CSV に限定されており、lifetxt の連携が必要と
-する任意の構造化 file を読み書きできないためです。
-
-現時点で推奨できる回避策はありません。ChatGPT の connector model が
-変わった場合、または lifetxt 自身が Streamable HTTP MCP transport を
-追加した場合（まだ決定されていない、別の大きな決定事項です）に見直します。
+lifetxtのstdio MCP serverをChatGPTへそのまま登録する接続は未対応です。
+`lifetxt mcp` が提供するのはlocal stdin/stdout commandで、URLから到達できる
+MCP transportではありません。上記SSH patternもcommandを起動するclientが
+必要で、URL endpointを作るものではありません。HTTP MCP transportやadapterの
+追加は別の機能判断です。この接続上の制約は、通常チャットでの手動下書きや
+レビューを妨げません。
 
 ---
 
@@ -547,21 +553,18 @@ sandbox し、network への到達を一切許可したくない場合は、`--p
 
 ## 9. Without MCP
 
-MCP は必須ではありません。command を実行できる model なら CLI と組み合わせられます。
+MCP は必須ではありません。通常のAIチャットへテキストをコピー＆ペーストして
+支援を受けられます。lifetxtをinstall済みならCLIでlocal validationやconversionも行えます。
 
 最も軽い使い方として、provider-independent な [lifetxt Assistant Prompt
 Profile](../../prompts/lifetxt-assistant.md) を使えます。ChatGPT、Claude、
-Gemini、local model などに貼り付けるか link を渡すだけで、lifetxt の
+Gemini、local model などに貼り付けて利用でき、lifetxt の
 install、MCP 設定、workspace access は不要です。Convert、Explain、Review
 を提供し、生成結果は validation と保存まで draft として扱います。
 
-役割は分かれています。
-
-| Path | 用途 |
-| --- | --- |
-| Prompt Profile | text assistance のみ。workspace access と自動 write はない |
-| CLI/API | local validation、conversion、明示的な automation |
-| MCP | 接続した workspace の typed read/proposal/mutation |
+[冒頭の経路比較](#ai-連携)で下書き、Web手動共有、MCP接続を区別しています。
+テキスト支援でCLI/APIの利用は任意であり、チャットへ自動的なworkspaceアクセスを
+与えるものではありません。
 
 Profile は Format specification を複製せず参照します。`do:` は実行予定時刻、
 `due:` は deadline と区別し、relative date は実際の会話日時・timezone から解決し、
@@ -612,20 +615,39 @@ ID や未提示の metadata を勝手に追加しないよう指示します。
    テキストエディタで別に行い、元のexport全体をBulk inputへ再投入しません。
 5. AI出力のコードフェンスと説明を外し、追加したいレコードだけを **Bulk input**
    に貼り付けて **Preview** します。error/warning、元の依頼との意味の一致、
-   日付・依存・既存項目との重複を照合します。本文・詳細は貼付原文で全文確認し、
-   入力を変更したら再Previewします。
+   日付・依存・既存項目との重複を照合します。**入力原文 / Original input**、全提案レコードの
+   詳細・本文、**診断 / Diagnostics**、**検証範囲 / Review coverage**を展開して確認します。
+   先頭10件だけではなく全提案・全診断を確認できます。入力を変更したら再Previewします。
 6. 確認できた場合だけ **Add all** と確認ダイアログで保存し、Itemsや実ファイルで
    保存先・件数・内容を確認します。通信失敗で結果が不明なら、再送前に正本を確認します。
    IDなしの同内容は再投入すると複製されます。
 
-現行PreviewはID・参照関係全体を検査せず、画面の概要は先頭10レコードと診断10件
-までです。**warning 0は安全や意味の一致の保証ではありません**。必要ならローカルで
-`python -m lifetxt check draft.txt --format json` も使います。単独exportのW215は
-参照先が共有対象外である可能性があり、実workspaceで不存在と決めつけないでください。
-Preview時点のworkspaceを固定して保存する保証もありません。全workspaceのID一意性、
-未対応Format宣言、文脈Preview、revision境界の改善は
-[#1180](https://github.com/Eruhitsuji/lifetxt/issues/1180)〜
-[#1183](https://github.com/Eruhitsuji/lifetxt/issues/1183)で別途追跡しています。
+Previewは共通Coreを使い、提案レコードとWebで設定された全読み取りsourceを対象に、
+構文、設定されたIDの全値、参照、依存循環を検査します。既存参照と前方参照を一緒に
+解決し、ID重複やworkspaceのerrorはAdd allを止めます。未解決・曖昧な参照と依存循環は
+warningのままで、warningだけでは保存を止めません。入力の未対応Format宣言は拒否され、
+workspace sourceの未対応Formatも追加を止めます。read-only workspaceはPreviewのみです。
+上限は提案500レコード・UTF-8入力512 KiBです。全提案と全診断を表示しますが、既存
+workspaceレコードの本文は返しません。
+
+Add allは確認した入力そのものと、そのPreviewの `context_token`・`source_revision`
+（`If-Match`にも同じrevision）を送信し、serverが実効workspaceを再検査して保存します。
+入力・文脈の変更や書き込み先の競合は **409** で保存されず、入力を保持してAdd allを
+無効にします。表示された原因を解消し、明示的に**再Preview**して新しい結果を確認し、
+改めてAdd allを承認してください。新しいrevisionへ差し替えたり、無確認で再送したり
+しません。ID重複・validation errorは修正後に再Previewし、未対応Formatは宣言を削除
+するのではなく明示的に移行します。sourceが利用できない場合、source構成・config変更、
+入力上限、通信結果が不明な場合の対処は[一括入力の回復手順](./web.md#bulk-inputの競合回復)
+と[文脈Preview契約](./web.md#ワークスペースを含むpreview-api)を参照してください。
+
+**warning 0でも原文との意味の一致、未共有・未設定sourceの事実、機密保護は保証されません。**
+ローカルの `python -m lifetxt check draft.txt --format json` は任意の追加検査です。
+単独draft/exportのW215は参照先が共有対象外という可能性があり、実workspaceで不存在と
+決めつけないでください。文脈に紐づく保存はworkspace全体のatomic transactionではなく、
+最終snapshot後から書き込み先の保存までに別sourceが変わる余地があります。外部configの
+編集はserverのreload/restartが必要です。tokenは変更を検知するもので、人間が読んだ証拠や
+アクセス許可ではありません。Preview成功後も上記の共有前確認と意味の照合を維持してください。
+正確な境界は[保存契約](./web.md#contextを再検証する保存api)を参照してください。
 
 #### 手動で添える文脈の例
 

@@ -146,6 +146,14 @@ public dashboard や wall display では `--read-only` を使います。interne
 
 ## AI clients
 
+ChatGPTなどの通常チャットでは[Prompt Profile](./ai-integration.md#prompt-profile-を使う最短手順)
+で下書き・説明・レビューを行え、lifetxtのinstallは不要です。起動済みWeb UIを使うなら、
+新規提案を[手動でexport → AI → Preview → 承認してAdd all](./ai-integration.md#外部aiへ手動共有する手順)
+できます。どちらもMCP、AI API、プラグインは不要で、送信前に共有用コピーを確認し、
+保存前に意味を照合します。
+
+対応するstdio MCP clientでworkspaceへ接続する場合:
+
 ```sh
 python -m lifetxt mcp life.txt
 python -m lifetxt mcp life.txt .generated/google_calendar.life.txt --write-file life.txt

@@ -13,10 +13,16 @@
   edge case、surface差異の正規ガイド
 - [config.md](./config.md): configuration files と effective settings
 - [web.md](./web.md): optional FastAPI/Web UI surface
-- [ai-integration.md](./ai-integration.md): MCP と AI client usage
+- [ai-integration.md](./ai-integration.md): AIでの下書き、Web手動共有、MCP client usage
 - [personal-context.md](./personal-context.md): AIを使った Personal Context /
   Personal DB の作成・維持・再利用
 - [use-cases.md](./use-cases.md): practical setups
+
+通常のAIチャットを使うなら、lifetxtのinstall不要の
+[Prompt Profileの手順](./ai-integration.md#prompt-profile-を使う最短手順)から始めるか、
+起動済みWeb UIで[export → AI → Preview → 承認してAdd all](./ai-integration.md#外部aiへ手動共有する手順)
+を使えます。どちらもMCP、AI API、プラグインは不要です。対応clientをworkspaceへ
+接続するMCPは、アクセス範囲とsetup要件が別の選択肢です。
 
 ## Minimal life.txt
 
@@ -37,7 +43,7 @@
 
 | Topic | Document |
 | --- | --- |
-| AI/MCP integration | [ai-integration.md](./ai-integration.md) |
+| AI下書き・手動共有・MCP連携 | [ai-integration.md](./ai-integration.md) |
 | AIによる Personal Context / Personal DB | [personal-context.md](./personal-context.md) |
 | CLI reference | [cli.md](./cli.md) |
 | CI responsibilities | [ci-responsibilities.md](./ci-responsibilities.md) |

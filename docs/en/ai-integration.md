@@ -1,9 +1,17 @@
 # AI Integration
 
-lifetxt ships an MCP (Model Context Protocol) server over stdio, so an AI client
-can read and edit your `life.txt` through typed tools instead of guessing at the
-file format. This document covers setup, the tool surface, the safety model, and
-the local-first patterns that keep your data yours.
+You can use lifetxt with an ordinary generative-AI chat through manual text
+sharing, or connect a compatible client to its stdio MCP (Model Context Protocol)
+server. Choose the path that fits your environment:
+
+| Path | Requirements and access | Start here |
+| --- | --- | --- |
+| Prompt Profile drafting | An AI chat and a text editor; no lifetxt install, MCP, API, or plugin. The AI sees only the text you share and cannot save your workspace. | [Prompt Profile workflow](#a-copyable-prompt-profile-workflow) |
+| Manual Web round trip | Access to a running lifetxt Web UI; no AI API, MCP, or plugin. Export selected records, share a reviewed copy, then Preview and explicitly add new proposals yourself. | [Manual sharing](#manual-sharing-with-an-external-ai) |
+| MCP connection | Installed lifetxt and a client that can launch a stdio command. Typed workspace reads, proposals, and mutations depend on the selected permission profile. | [MCP Quick Start](#1-quick-start) |
+
+The first two paths work with ChatGPT, Claude, Gemini, or a local model. This
+guide covers their human review steps as well as MCP setup and safety.
 
 - [1. Quick Start](#1-quick-start)
 - [2. Client Configuration](#2-client-configuration)
@@ -209,21 +217,17 @@ client's writes to a dedicated proposal/inbox file instead of the same
 
 ### ChatGPT
 
-Not currently supported. ChatGPT's Developer Mode custom connector requires a
-URL-reachable Streamable HTTP or SSE server -- you paste a URL into ChatGPT;
-it never spawns a local command the way Claude Desktop, Claude Code, or
-Gemini CLI do. `lifetxt mcp` only speaks stdio, so it cannot be pointed at
-directly, and the SSH pattern above does not help either, since ChatGPT's
-connector UI has no "run this command" option to point at `ssh` in the first
-place.
+For ChatGPT, use the [Prompt Profile workflow](#a-copyable-prompt-profile-workflow)
+to draft, explain, or review text, or the [manual Web round trip](#manual-sharing-with-an-external-ai)
+to review and add new proposals yourself. Neither requires MCP, an AI API, or
+a plugin, and neither gives the chat automatic workspace access.
 
-ChatGPT's built-in Google Drive connector is not a substitute: it is scoped
-to Docs, Sheets, Slides, PDFs, and CSVs, and cannot read or write the
-arbitrary structured files a lifetxt integration needs.
-
-No workaround is currently recommended. This is revisited if ChatGPT's
-connector model changes, or if lifetxt adds a Streamable HTTP MCP transport
-of its own -- a separate, larger decision that has not been made.
+Direct registration of the lifetxt stdio MCP server with ChatGPT is not
+supported: `lifetxt mcp` exposes a local stdin/stdout command, not a
+URL-reachable MCP transport. The SSH pattern above still requires a client
+that launches commands; it does not create a URL endpoint. A future HTTP MCP
+transport or adapter would be a separate feature decision. This connection
+limitation does not prevent manual drafting or review in an ordinary chat.
 
 ---
 
@@ -600,22 +604,19 @@ want a client sandboxed to the local workspace with no network reach at all.
 
 ## 9. Without MCP
 
-MCP is not required. The CLI composes well with any model that can run commands:
+MCP is not required. An ordinary AI chat can help with text you copy and paste;
+if lifetxt is installed, the CLI also provides local validation and conversion.
 
 For the lightest-weight workflow, use the provider-independent [lifetxt
 Assistant Prompt Profile](../../prompts/lifetxt-assistant.md). It can be pasted
-or linked into ChatGPT, Claude, Gemini, a local model, or another AI service
+into ChatGPT, Claude, Gemini, a local model, or another AI service
 without installing lifetxt, configuring MCP, or granting workspace access. It
 supports Convert, Explain, and Review modes and treats generated text as a
 draft until you validate it.
 
-The integration levels are intentionally separate:
-
-| Path | Access and purpose |
-| --- | --- |
-| Prompt Profile | Text assistance only; no workspace access or automatic writes |
-| CLI/API | Local validation, conversion, and explicit automation |
-| MCP | Connected typed workspace read/proposal/mutation workflows |
+The [path comparison at the top of this guide](#ai-integration) separates
+drafting, manual Web sharing, and connected MCP access. CLI/API use is optional
+for the text workflow; it does not give the chat automatic workspace access.
 
 The profile references the Format specification rather than duplicating it. In
 particular, it teaches `do:` as intended execution time and `due:` as a
@@ -695,23 +696,48 @@ with these checks:
 5. Remove code fences and explanatory prose from the AI output. Paste only the
    records you want to add into **Bulk input**, then choose **Preview**. Check
    errors/warnings, meaning against your request, dates, dependencies, and
-   duplicates against existing items. Inspect every body and detail in the
-   pasted source text. Preview again after any edit.
+   duplicates against existing items. Expand **Original input**, every proposed
+   record's details/body, **Diagnostics**, and **Review coverage**; all proposed
+   records and diagnostics are available, not just the first ten. Preview again
+   after any edit.
 6. Only after review, choose **Add all** and confirm. Check the destination,
    count, and content in Items or the actual file. If a network failure leaves
    the result uncertain, inspect the authoritative data before retrying.
    Re-submitting identical content without IDs creates duplicates.
 
-The current Preview does not check IDs or references as a whole; its on-screen
-summary shows only the first ten records and ten diagnostics. **Zero warnings
-is not a safety or semantic guarantee**. If needed, also run
-`python -m lifetxt check draft.txt --format json` locally. W215 on a standalone
-export may mean the reference was excluded from sharing, not that it is absent
-from the workspace. Saving also does not guarantee the workspace is unchanged
-since Preview. Workspace-wide ID uniqueness, unsupported Format declarations,
-contextual Preview, and revision boundaries are tracked separately in
-[#1180](https://github.com/Eruhitsuji/lifetxt/issues/1180) through
-[#1183](https://github.com/Eruhitsuji/lifetxt/issues/1183).
+Preview uses shared Core to check syntax, configured ID values, references, and
+dependency cycles across the proposed records and every configured Web read
+source. Existing and forward references resolve together. Duplicate IDs and
+workspace errors block Add all; unresolved/ambiguous references and dependency
+cycles remain warnings, so warnings alone do not prevent saving. Unsupported
+input Format declarations are rejected; an unsupported workspace source also
+blocks adding. Read-only workspaces allow Preview only. Limits are 500 proposed
+records and 512 KiB of UTF-8 input. The review shows all proposed records and
+diagnostics, but does not return existing workspace record bodies.
+
+Add all submits the exact reviewed input with its `context_token` and Preview
+`source_revision` (also sent as `If-Match`). The server rechecks the effective
+workspace before saving. Changed input/context or a writable-file conflict
+returns **409**, saves nothing, retains the input, and disables Add all. Fix
+the reported cause, explicitly **Preview again**, review the new result, then
+confirm Add all again. Do not substitute a newer revision or resubmit blindly.
+Correct duplicate IDs or validation errors before re-Preview; migrate an
+unsupported Format explicitly rather than deleting its declaration. For
+unavailable sources, source membership/config changes, input limits, or uncertain
+network outcomes, follow [Native bulk recovery](./web.md#native-bulk-recovery)
+and the [contextual Preview contract](./web.md#contextual-preview-api).
+
+**Zero warnings do not guarantee agreement with the original meaning, facts
+from unshared or unconfigured sources, or confidentiality.** Local
+`python -m lifetxt check draft.txt --format json` is an optional additional
+check; W215 on a standalone draft/export can mean a reference was excluded
+from sharing rather than absent from the workspace. Context-bound saving is
+not a workspace-wide atomic transaction: another source can still change
+after the final snapshot and before the destination write. External config
+edits require server reload/restart. The token detects changes; it does not
+prove human review or authorize access. Keep the sharing and meaning checks
+above even when Preview succeeds. See the [save contract](./web.md#contextual-save-api)
+for the precise boundary.
 
 #### Example of manually supplied context
 

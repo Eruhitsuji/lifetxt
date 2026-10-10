@@ -1,0 +1,41 @@
+schema_version: 1
+change:
+  id: contextual-batch-save
+  title: Reject stale contextual batch saves
+  status: implemented
+  change_type: Feature
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1188
+  related_pull_request: []
+  base_commit: 8cb4c679
+  target_release: null
+scope:
+  in_scope:
+  - opt-in context save guard
+  - single destination CAS
+  - legacy compatibility
+  - race evidence
+  - EN/JA docs
+  out_of_scope:
+  - 'recovery UI #1189'
+  - Format change
+  - global lock/atomicity
+  write_scope:
+  - lifetxt/batch_save.py
+  - lifetxt/batch_preview.py
+  - lifetxt/webapp.py
+  - lifetxt/surface_runtime.py
+  - tests/test_batch_save.py
+  - docs/en/web.md
+  - docs/ja/web.md
+  - .ai/project/CAPABILITIES.yml
+  - .ai/project/TRACEABILITY.yml
+  - .ai/project/changes/contextual-batch-save
+  forbidden_scope:
+  - .ai/managed/**
+human_approvals_required:
+- independent implementation review
+- independent integration review
+- human merge approval

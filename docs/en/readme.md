@@ -16,10 +16,17 @@ Start with:
   shorthand, precedence, edge cases, and surface differences.
 - [config.md](./config.md) for configuration files and effective settings.
 - [web.md](./web.md) for the optional FastAPI/Web UI surface.
-- [ai-integration.md](./ai-integration.md) for MCP and AI client usage.
+- [ai-integration.md](./ai-integration.md) for AI text drafting, manual Web sharing, and MCP client usage.
 - [personal-context.md](./personal-context.md) for AI-assisted Personal Context /
   Personal DB authoring, maintenance, and reuse.
 - [use-cases.md](./use-cases.md) for practical setups.
+
+Using an ordinary AI chat? Start with the
+[Prompt Profile workflow](./ai-integration.md#a-copyable-prompt-profile-workflow)
+without installing lifetxt, or use a running Web UI for
+[export → AI → Preview → approved Add all](./ai-integration.md#manual-sharing-with-an-external-ai).
+Neither requires MCP, an AI API, or a plugin. MCP connects compatible clients
+to a workspace and has separate access and setup requirements.
 
 ## Minimal life.txt
 
@@ -40,7 +47,7 @@ Every Markdown file under `docs/en/` is listed here.
 
 | Topic | Document |
 | --- | --- |
-| AI/MCP integration | [ai-integration.md](./ai-integration.md) |
+| AI drafting, manual sharing, and MCP integration | [ai-integration.md](./ai-integration.md) |
 | Personal Context / Personal DB with AI | [personal-context.md](./personal-context.md) |
 | CLI reference | [cli.md](./cli.md) |
 | CI responsibilities | [ci-responsibilities.md](./ci-responsibilities.md) |

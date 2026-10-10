@@ -3,65 +3,162 @@
       }
     }
 
-    // Bulk input is intentionally defined after the raw-import catch block so
-    // inline handlers resolve it in the page scope (#1177).
+    // All bulk handlers live at page scope; CSS displays modals only with .open.
     let bulkPreviewRevision = 0;
     let bulkPreviewText = "";
+    let bulkSavePending = false;
+    let bulkLastFocused = null;
+
+    function invalidateBulkPreview() {
+      ++bulkPreviewRevision;
+      bulkPreviewText = "";
+      const add = document.getElementById("bulk-input-add");
+      if (add) add.disabled = true;
+      const preview = document.getElementById("bulk-input-preview");
+      if (preview) preview.textContent = "Input changed. Preview again before Add all.";
+    }
+
     function openBulkInput() {
       const modal = document.getElementById("bulk-input-modal");
-      if (modal) { modal.hidden = false; document.getElementById("bulk-input-text")?.focus(); }
+      if (!modal) return;
+      bulkLastFocused = document.activeElement;
+      invalidateBulkPreview();
+      modal.hidden = false;
+      modal.classList.add("open");
+      document.body.classList.add("modal-open");
+      document.getElementById("bulk-input-text")?.focus();
     }
+
     function closeBulkInput() {
+      if (bulkSavePending) return;
       const modal = document.getElementById("bulk-input-modal");
-      if (modal) modal.hidden = true;
+      if (!modal) return;
+      invalidateBulkPreview();
+      modal.classList.remove("open");
+      modal.hidden = true;
+      if (!document.querySelector(".modal-backdrop.open")) {
+        document.body.classList.remove("modal-open");
+      }
+      bulkLastFocused?.focus?.();
+      bulkLastFocused = null;
     }
+
     async function previewBulkInput() {
+      if (bulkSavePending) return;
       const input = document.getElementById("bulk-input-text");
       const root = document.getElementById("bulk-input-preview");
-      const text = input?.value || "";
-      const revision = ++bulkPreviewRevision;
-      bulkPreviewText = "";
-      if (!root) return;
+      if (!input || !root) return;
+      const text = input.value;
+      invalidateBulkPreview();
+      const revision = bulkPreviewRevision;
+      if (!text.trim()) { root.textContent = "Paste at least one life.txt record."; return; }
+      if (new TextEncoder().encode(text).length > 512 * 1024) {
+        root.textContent = "Batch input is limited to 512 KiB.";
+        return;
+      }
       root.textContent = "Checking…";
       try {
-        const data = await api("/api/items/parse", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({line:text})});
-        if (revision !== bulkPreviewRevision) return;
-        const errors = (data.diagnostics || []).filter(d => d.severity === "error");
-        bulkPreviewText = errors.length ? "" : text;
-        root.textContent = `${data.item_count || 0} logical record(s), ${errors.length} error(s). ` +
-          (errors.length ? errors.map(d => `${d.code}: ${d.message}`).join(" ") : "Preview ready. Review the input, then choose Add all.");
-        const add = document.getElementById("bulk-input-add");
-        if (add) add.disabled = errors.length > 0 || !data.item_count;
+        const data = await api("/api/items/parse", {
+          method: "POST", headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({line: text}),
+        });
+        if (revision !== bulkPreviewRevision || input.value !== text) return;
+        const diagnostics = data.diagnostics || [];
+        const errors = diagnostics.filter(d => d.severity === "error");
+        const warnings = diagnostics.filter(d => d.severity === "warning");
+        const count = Number(data.item_count || 0);
+        const summary = count + " logical record(s), " + errors.length +
+          " error(s), " + warnings.length + " warning(s).";
+        if (!data.ok || errors.length || !count || count > 500) {
+          root.textContent = summary + (count > 500 ? " Maximum 500 records." :
+            errors.length ? " " + errors.map(d => d.code + ": " + d.message).join(" ") :
+            " Nothing to save.");
+          return;
+        }
+        // A preview can be used in read-only mode, but saving never can.
+        const health = await api("/api/health", {cache:"no-store"});
+        if (revision !== bulkPreviewRevision || input.value !== text) return;
+        if (health.read_only || !health.writable_path) {
+          root.textContent = summary + " Read-only workspace: preview only.";
+          return;
+        }
+        if (!health.source_revision) {
+          root.textContent = summary + " Source revision unavailable; saving disabled.";
+          return;
+        }
+        bulkPreviewText = text;
+        root.textContent = summary + " Review the meaning, then choose Add all.";
+        document.getElementById("bulk-input-add").disabled = false;
       } catch (error) {
-        if (revision === bulkPreviewRevision) root.textContent = error.message || String(error);
+        if (revision === bulkPreviewRevision) {
+          root.textContent = "Preview failed: " + (error.message || String(error));
+        }
       }
     }
+
     async function addAllBulkInput() {
-      if (!bulkPreviewText) { showToast("Preview the input successfully before saving.", "warning"); return; }
+      const input = document.getElementById("bulk-input-text");
       const add = document.getElementById("bulk-input-add");
-      if (add?.disabled) return;
-      if (!window.confirm("Add all previewed records? This is an explicit write.")) return;
-      if (add) add.disabled = true;
+      if (bulkSavePending || !input || !add || add.disabled) return;
+      if (!bulkPreviewText || input.value !== bulkPreviewText) {
+        invalidateBulkPreview();
+        showToast("Input changed. Preview again before saving.", "warning");
+        return;
+      }
+      if (!window.confirm("Add all previewed records? This writes to life.txt.")) return;
+      if (input.value !== bulkPreviewText) {
+        invalidateBulkPreview();
+        return;
+      }
+      bulkSavePending = true;
+      input.disabled = true;
+      add.disabled = true;
       try {
-        const health = await api("/api/health");
-        if (health.read_only || !health.writable_path) throw Object.assign(new Error("This workspace is read-only."), {status:403});
-        if (!health.source_revision) throw Object.assign(new Error("Refresh the workspace before saving: source revision is unavailable."), {status:428});
-        const result = await api("/api/items/batch", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({text:bulkPreviewText, expected_source_revision:health.source_revision})});
-        showToast(`Added ${result.saved || result.count || 0} record(s).`, "success");
-        document.getElementById("bulk-input-text").value = "";
-        bulkPreviewText = "";
+        const health = await api("/api/health", {cache:"no-store"});
+        if (health.read_only || !health.writable_path) {
+          throw Object.assign(new Error("This workspace is read-only."), {status:403});
+        }
+        if (!health.source_revision) {
+          throw Object.assign(new Error("Source revision unavailable."), {status:428});
+        }
+        const result = await api("/api/items/batch", {
+          method: "POST", headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({
+            text: bulkPreviewText, expected_source_revision: health.source_revision,
+          }),
+        });
+        if (!result.ok || !result.saved) throw new Error("Save result is uncertain.");
+        showToast("Added " + result.saved + " record(s).", "success");
+        input.value = "";
+        bulkSavePending = false;
+        input.disabled = false;
         closeBulkInput();
         await loadItems();
       } catch (error) {
-        if (add) add.disabled = false;
-        const message = error.status === 409 ? "The file changed. Refresh and review the input before trying again." :
-          error.status === 403 ? "This workspace is read-only; preview remains available." :
+        bulkSavePending = false;
+        input.disabled = false;
+        // On any failure require fresh review, never silently resend.
+        invalidateBulkPreview();
+        const message = error.status === 409 ?
+          "File changed. Review and preview again before retrying." :
+          error.status === 403 ? "Read-only workspace: nothing was saved." :
           error.status === 422 ? "Validation failed; no records were saved." :
-          error.status === 413 ? "The batch exceeds the 512 KiB limit." :
-          `Save failed: ${error.message || error}`;
+          error.status === 413 ? "Batch exceeds the 512 KiB limit." :
+          error.status === 428 ? "Source revision is unavailable; nothing was sent." :
+          "Save outcome uncertain. Check Items before retrying to avoid duplicates.";
+        const root = document.getElementById("bulk-input-preview");
+        if (root) root.textContent = message;
         showToast(message, "error");
       }
     }
+
+    document.addEventListener("keydown", event => {
+      const modal = document.getElementById("bulk-input-modal");
+      if (event.key === "Escape" && modal && !modal.hidden && !bulkSavePending) {
+        event.preventDefault();
+        closeBulkInput();
+      }
+    });
 
     // ── Dark mode ─────────────────────────────────────────────────
     (function initDarkMode() {

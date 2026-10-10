@@ -43,6 +43,45 @@
       bulkLastFocused = null;
     }
 
+    function renderBulkReview(root, data, text) {
+      root.textContent = "";
+      const summary = document.createElement("p");
+      summary.textContent = t("Workspace review") + ": " + data.item_count + " " + t("Records") +
+        ", " + (data.diagnostics || []).filter(d => d.severity === "error").length + " " + t("Errors") +
+        ", " + (data.diagnostics || []).filter(d => d.severity === "warning").length + " " + t("Warnings");
+      root.appendChild(summary);
+      const section = (label, content) => {
+        const details = document.createElement("details");
+        const heading = document.createElement("summary");
+        heading.textContent = label;
+        const body = document.createElement("pre");
+        body.style.whiteSpace = "pre-wrap";
+        body.style.overflowWrap = "anywhere";
+        body.textContent = content;
+        details.appendChild(heading);
+        details.appendChild(body);
+        root.appendChild(details);
+      };
+      section(t("Original input"), text);
+      (data.items || []).forEach((item, index) => {
+        section("#" + (index + 1) + " " + item.title, JSON.stringify({
+          status: item.status, type: item.type, title: item.title,
+          details: item.details, text: item.text,
+        }, null, 2));
+      });
+      section(t("Diagnostics"), (data.diagnostics || []).map(d =>
+        d.severity + " " + d.code + " [" + d.scope + " " + (d.source || "") +
+        (d.line ? ":" + d.line : "") + "] " + d.message).join("\n") || t("No diagnostics"));
+      const scope = data.review_scope || {};
+      section(t("Review coverage"), t("Sources") + ": " + (scope.source_count || 0) +
+        "\n" + t("Omitted proposed records") + ": " + (scope.omitted_records || 0) +
+        "\n" + t("Omitted diagnostics") + ": " + (scope.omitted_diagnostics || 0) +
+        "\n" + t("Only configured server sources are checked. External config edits require a server reload."));
+      const note = document.createElement("p");
+      note.textContent = t("Review meaning manually. This review does not yet guard against workspace changes before save.");
+      root.appendChild(note);
+    }
+
     async function previewBulkInput() {
       if (bulkSavePending) return;
       const input = document.getElementById("bulk-input-text");
@@ -58,45 +97,29 @@
       }
       root.textContent = "Checking…";
       try {
-        const data = await api("/api/items/parse", {
+        const data = await api("/api/items/preview", {
           method: "POST", headers: {"Content-Type":"application/json"},
-          body: JSON.stringify({line: text}),
+          body: JSON.stringify({text: text}),
         });
         if (revision !== bulkPreviewRevision || input.value !== text) return;
         const diagnostics = data.diagnostics || [];
         const errors = diagnostics.filter(d => d.severity === "error");
-        const warnings = diagnostics.filter(d => d.severity === "warning");
         const count = Number(data.item_count || 0);
-        const summary = count + " logical record(s), " + errors.length +
-          " error(s), " + warnings.length + " warning(s).";
-        // Keep each record and diagnostic inspectable without rendering raw HTML.
-        const snippets = (data.items || []).slice(0, 10).map((item, index) =>
-          "#" + (index + 1) + " " + (item.status || "") + " " +
-          (item.type || "") + " " + (item.title || ""));
-        const messages = diagnostics.slice(0, 10).map(d =>
-          (d.line ? "Line " + d.line + ": " : "") +
-          (d.code || d.severity || "diagnostic") + " " + (d.message || ""));
-        const details = [snippets.join(" / "), messages.join(" / ")].filter(Boolean).join(" / ");
-        const explanation = details ? " " + details : "";
-        if (!data.ok || errors.length || !count || count > 500) {
-          root.textContent = summary + explanation + (count > 500 ? " Maximum 500 records." :
-            errors.length ? " " + errors.map(d => d.code + ": " + d.message).join(" ") :
-            " Nothing to save.");
-          return;
-        }
+        renderBulkReview(root, data, text);
+        if (!data.ok || errors.length || !count || count > 500 || !data.context_token) return;
         // A preview can be used in read-only mode, but saving never can.
         const health = await api("/api/health", {cache:"no-store"});
         if (revision !== bulkPreviewRevision || input.value !== text) return;
-        if (health.read_only || !health.writable_path) {
-          root.textContent = summary + explanation + " Read-only workspace: preview only.";
+        if (data.read_only || health.read_only || !health.writable_path) {
+          root.appendChild(document.createTextNode(t("Read-only workspace: preview only.")));
           return;
         }
         if (!health.source_revision) {
-          root.textContent = summary + explanation + " Source revision unavailable; saving disabled.";
+          root.appendChild(document.createTextNode(t("Source revision unavailable; saving disabled.")));
           return;
         }
         bulkPreviewText = text;
-        root.textContent = summary + explanation + " Review the meaning, then choose Add all.";
+        root.appendChild(document.createTextNode(t("Review the meaning, then choose Add all.")));
         document.getElementById("bulk-input-add").disabled = false;
       } catch (error) {
         if (revision === bulkPreviewRevision) {

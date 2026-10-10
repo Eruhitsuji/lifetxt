@@ -1,0 +1,19 @@
+schema_version: 1
+requirements:
+  - id: req-contextual-native-batch-preview
+    kind: NEW
+    statement: Review proposed native records with the exact captured effective workspace using shared Core.
+    owner: Eruhitsuji
+    acceptance_criteria:
+      - Existing and batch-forward references resolve together.
+      - Core warnings retain severity; all-value ID collisions are blocking errors.
+      - All proposed body/details, original input and diagnostics remain inspectable with scope and omission counts.
+      - Exact-input-bound token is emitted only for available bounded context.
+      - Read-only review, legacy API compatibility, edit/late-response invalidation are preserved.
+      - Limits are 500 proposed records and 512 KiB exact UTF-8 input.
+      - Unavailable context fails closed without private paths or source body disclosure.
+      - EN/JA documentation and capability/traceability describe checked and unchecked scope.
+    constraints:
+      - Reuse workspace_context_snapshot and shared Core parser/ID/reference diagnostics.
+      - No save-context guarantee until issue 1188; no global atomicity.
+open_questions: []

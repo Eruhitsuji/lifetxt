@@ -227,6 +227,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             "/api/quick/resolve",
             "/api/check-line",
             "/api/items/parse",
+            "/api/items/preview",
             "/api/personal-context/preview",
             "/api/remote/v1/browser/login",
             "/api/remote/v1/browser/logout",
@@ -1265,6 +1266,41 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             "item_count": len(parsed_items),
             "diagnostics": diagnostics_to_output(diagnostics),
         }
+
+    @app.post("/api/items/preview")
+    def preview_items_batch(payload=Body(...)):
+        from .batch_preview import PreviewInputError, preview_batch
+        from .workspace_context_snapshot import WorkspaceContextUnavailable
+
+        if not isinstance(payload, dict):
+            raise HTTPException(status_code=400, detail={"error": "TEXT_REQUIRED"})
+        try:
+            return preview_batch(
+                payload.get("text"),
+                app.state.paths,
+                app.state.writable_path,
+                app.state.config,
+                app.state.read_only,
+                api_item,
+            )
+        except PreviewInputError as exc:
+            raise HTTPException(
+                status_code=exc.status, detail={"error": exc.code}
+            ) from None
+        except WorkspaceContextUnavailable as exc:
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "error": "CONTEXT_UNAVAILABLE",
+                    "reason": exc.reason,
+                    "message": "Workspace review unavailable. Check sources and reload the server before reviewing again.",
+                },
+            ) from None
+        except (RecursionError, UnicodeError):
+            raise HTTPException(
+                status_code=503,
+                detail={"error": "CONTEXT_UNAVAILABLE", "reason": "review_unavailable"},
+            ) from None
 
     @app.post("/api/items/parse")
     def parse_item_line(payload=Body(...)):

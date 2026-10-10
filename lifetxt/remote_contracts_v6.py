@@ -399,6 +399,7 @@ def _patch_web():
             parser_only = request.url.path in {
                 "/api/check-line",
                 "/api/items/parse",
+                "/api/items/preview",
                 "/api/shorthand/parse",
                 "/api/quick/resolve",
             }

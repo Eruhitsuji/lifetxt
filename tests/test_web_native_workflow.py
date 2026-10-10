@@ -27,7 +27,15 @@ const modal = {hidden: true, classList: classes()};
 const body = {classList: classes()};
 const opener = {focus() {}};
 const input = {value: "", disabled: false, focus() {this.focused = true;}};
-const preview = {textContent: ""};
+function node() {
+  return {
+    style: {}, children: [], value: "",
+    get textContent() {return this.value;},
+    set textContent(value) {this.value = value; this.children = [];},
+    appendChild(child) {this.children.push(child);},
+  };
+}
+const preview = node();
 const add = {disabled: true};
 const elements = {
   "bulk-input-modal": modal,
@@ -38,8 +46,11 @@ const elements = {
 let batchCalls = [];
 const context = {
   TextEncoder,
+  t: text => text,
   document: {
     body,
+    createElement: node,
+    createTextNode: text => ({textContent: text}),
     activeElement: opener,
     getElementById: id => elements[id],
     querySelector: selector => selector === ".modal-backdrop.open" && modal.classList.contains("open") ? modal : null,
@@ -47,7 +58,7 @@ const context = {
   },
   window: {confirm: () => true},
   api: async (path, opts) => {
-    if (path === "/api/items/parse") return {ok: true, item_count: 2, diagnostics: []};
+    if (path === "/api/items/preview") return {ok: true, item_count: 2, diagnostics: [], context_token: "token"};
     if (path === "/api/health") return {writable_path: "life.txt", source_revision: "r1", read_only: false};
     if (path === "/api/items/batch") {
       batchCalls.push(JSON.parse(opts.body));
@@ -85,7 +96,7 @@ async function main() {
   input.value = "[ ] T Stale\n";
   let resolveParse;
   const oldApi = context.api;
-  context.api = async (path, opts) => path === "/api/items/parse" ?
+  context.api = async (path, opts) => path === "/api/items/preview" ?
     new Promise(resolve => { resolveParse = resolve; }) : oldApi(path, opts);
   const pending = context.previewBulkInput();
   input.value = "[ ] T New\n";
@@ -94,6 +105,34 @@ async function main() {
   await pending;
   assert.equal(add.disabled, true, "a stale async preview must not enable saving");
   context.api = oldApi;
+  const full = {
+    ok: true, item_count: 12, context_token: "full-token",
+    items: Array.from({length: 12}, (_, i) => ({
+      title: "Record " + i, details: {body: ["<script>literal body " + i + "</script>"], due: ["2026-10-12"]},
+    })),
+    diagnostics: Array.from({length: 12}, (_, i) => ({
+      severity: "warning", code: "W215", scope: "batch", source: "batch", line: i + 1, message: "Missing " + i,
+    })), review_scope: {source_count: 2, omitted_records: 0, omitted_diagnostics: 0},
+  };
+  context.api = async (path, opts) => path === "/api/items/preview" ? full : oldApi(path, opts);
+  await context.previewBulkInput();
+  assert.equal(add.disabled, false, "warnings alone permit adding");
+  const sections = preview.children.filter(n => n.children?.length === 2);
+  assert.equal(sections.length, 15, "original, all 12 records, diagnostics and coverage are inspectable");
+  assert.ok(sections[12].children[1].textContent.includes("literal body 11"), "last body is not truncated");
+  assert.ok(sections[13].children[1].textContent.includes("Missing 11"), "last diagnostic is not truncated");
+  assert.equal(sections[1].children[1].children.length, 0, "body markup stays text");
+  context.api = async (path, opts) => path === "/api/items/preview" ? {...full, read_only: true} : oldApi(path, opts);
+  await context.previewBulkInput();
+  assert.equal(add.disabled, true, "read-only review never enables Add all");
+  context.api = async () => {throw Error("Context unavailable. Reload sources.");};
+  await context.previewBulkInput();
+  assert.equal(add.disabled, true, "failed review cannot enable Add all");
+  assert.ok(preview.textContent.includes("Reload sources"));
+  assert.equal(input.disabled, false, "review failure leaves correction/retry usable");
+  context.api = oldApi;
+  await context.previewBulkInput();
+  assert.equal(add.disabled, false, "a fresh successful review recovers");
   context.closeBulkInput();
   assert.equal(modal.hidden, true);
   assert.equal(body.classList.contains("modal-open"), false);

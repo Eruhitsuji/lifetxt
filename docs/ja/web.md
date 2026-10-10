@@ -113,6 +113,17 @@ MCP tool は `list_items`、`get_item`、`create_item`、`update_item`、
 複数 file を読み込む場合、read tool は全 file を走査し、write tool は `--write-file` のみを変更します。
 `--read-only` を付けると write tool は無効になります。
 
+## Itemsからlife.txtを出力／複数レコードを一括追加
+
+1. Web UIの **Items** タブを開き、検索・状態・種類などで絞り込みます。
+2. Items見出しの右側にある **⇩ life.txt (.txt)** を押します。従来の **Filters → Export… → life.txt (.txt)** からも出力できます。
+3. ブラウザが条件に一致するネイティブFormat 1.0のUTF-8 `.txt` ファイルをダウンロードします。表示件数用の `Limit` は無視します。出力前に現在のフィルタと送信先を確認してください。Saved Viewを選択中はそのView定義（固有のlimitを含む）、Areaを選択中はそのAreaのopen itemだけが対象です。
+4. **複数レコード / Bulk input** を選び、ネイティブのlife.txtを複数レコード貼り付けます（例: `[ ] T "資料を確認する" do:2026-10-12` の次行に `[ ] T "報告書を提出する" due:2026-10-15`）。
+5. **Preview** で論理レコード数・warning/errorを確認します。エラー時も原文は残ります。**入力内容を変更したら必ず再Preview**してください。構文が通ってもAI生成文が元の意図に合うかはユーザーが確認します。
+6. 書き込み可能な場合にだけ **すべて追加 / Add all** が有効になります。確認ダイアログを承認すると、既存の `POST /api/items/batch` で全件を一度に追加します（最大500レコード／512 KiB）。失敗・競合時は入力を保持し、自動再送しません。通信失敗で保存結果が不明なときは、Itemsや実ファイルを確認してからやり直してください。
+
+この画面は**新しいレコードの追加**に対応します。既存レコードの一括置換やAIとの自動同期には対応しません。外部生成AIにエクスポート内容を貼る場合は、機密情報が含まれないことを確認してください。
+
 ## REST API
 
 | Method | Path | 目的 |
@@ -127,11 +138,7 @@ MCP tool は `list_items`、`get_item`、`create_item`、`update_item`、
 | `POST` | `/api/items/batch` | bounded な複数 native record を全件検証し、source revision の CAS 付きで原子的に追記する。部分保存は行わない |
 | `GET` | `/api/items/export` | Items の実効フィルタ結果を表示用 `limit` 無視で UTF-8 native life.txt として出力 |
 
-複数レコード入力は、ユーザーが明示的に「すべて追加」を選ぶまで読み取り専用の
-previewです。previewは共通parserを使い、エラー時も貼り付けた原文を保持します。
-保存時は現在のsource revisionを付けたboundedな`/api/items/batch`を1回だけ呼びます。
-競合・検証エラー・読み取り専用・サイズ超過では自動再送せず、入力を確認できます。
-native exportにはSaved View/Areaの実効スコープが反映され、表示用limitは無視されます。
+
 | `POST` | `/api/items/raw` | 検証済み raw life.txt 行を書き込み先ファイルへ追記 |
 | `GET` | `/api/items/{id}` | 正規の exact-ID 取得 (#837)。数字のみの path segment は下位互換のため 1-based line number として扱われ（旧 `GET /api/items/{line_no}` と同じ）、それ以外（および一致する行が無い数字 ID）は `GET /api/items/id/{id}` と同じ検索で正規 `id:` として解決する。未知の ID は `404` |
 | `GET` | `/api/items/id/{id}` | exact `id:` で item を取得 |

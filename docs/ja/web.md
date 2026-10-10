@@ -165,7 +165,7 @@ batch／番号付きworkspace参照元・行を表示し、**検証範囲** に�
 変更検出のidentityであり、保存の認可tokenではありません。
 読み取り専用でもレビューできますが、追加はできません。
 既存の `POST /api/items/parse` は入力文字列のみの解析を維持し、
-`POST /api/items/batch` の入出力・保存処理も変更しません。
+`POST /api/items/batch` はtoken未指定の既存clientの契約を維持します。
 
 上限は提案500論理レコード／入力UTF-8 512 KiBです。
 不正なフィールドは400（JSON不正・本文欠落はframeworkの422の場合あり）、
@@ -178,10 +178,37 @@ batch／番号付きworkspace参照元・行を表示し、**検証範囲** に�
 外部での設定ファイル編集は再読み込み／再起動が必要で、tokenは実効runtime configを含みます。
 snapshotは回数制限付きの再読取で、workspace全体のlockではありません。
 
-検証範囲はCoreの構文・schema・ID・参照です。意図や未共有の参照元までは検証しません。
-**保存時のcontext token照合はまだありません**。#1188が保存直前の再検証、
-#1189が競合後の再レビュー・回復UIを担当します。複数参照元全体の原子性は保証しません。
-保存失敗後は入力を保持して再レビューし、通信結果が不明な場合はItems／原本を確認してから再試行してください。
+### contextを再検証する保存API
+
+`POST /api/items/batch` に `context_token` を指定すると保存直前にworkspaceを再検証します。
+
+```json
+{"text":"[ ] T New id:new ref:existing\n","context_token":"batch-preview-v1:<小文字hex64桁>","expected_source_revision":"<Previewのsource_revision>"}
+```
+
+`If-Match` も同じPreviewのrevisionを指定します。サーバーはworkspaceを再取得し、
+共通Coreで既存＋提案を再検証します。新しいhealthのrevisionで古いtokenを有効にはできません。
+入力／contextの変化や取得不能は409 `CONTEXT_CHANGED`、`saved: 0`、
+`repreview_required: true` と安全な `reason` を返します。hash不一致は
+`context_or_input_changed`、取得不能は `source_unavailable`／`snapshot_unstable`／
+`source_membership_changed` 等です。stateless tokenから変更した参照元を特定できません。
+参照元を修正して再Previewしてください。起動時に展開したglob等の構成変化は
+サーバーの再読み込み／再起動が必要です。エラーにtoken・privateパス・既存本文を返しません。
+
+不正なtoken（明示nullを含む）は400 `CONTEXT_TOKEN_INVALID`、本文のrevision欠落は
+428 `REVISION_REQUIRED`。入力上限／未対応Formatは413／422を維持します。
+token照合後、変更のないcontextで検証エラーがある場合は422 `VALIDATION_ERROR`／
+`DUPLICATE_ID`、`saved: 0`。警告は警告のままです。endpoint内ではcontext不一致を
+重複IDより優先します。既存の認証・時計・If-Match middlewareは先に判定され、
+古いIf-Matchや書込直前の保存先競合は409 `CONFLICT`、読み取り専用は403です。
+token未指定の既存clientはrevisionのみの従来契約を維持します。
+
+保証は保存先1ファイルのCASです。**最終snapshot後から書込までに他の参照元が変わる
+余地があり、遅れて重複IDが追加される場合もあります**。workspace全体の直列化・原子性は
+保証しません。外部の設定編集は再起動が必要です。tokenは変更検出用で、認可や人間が
+レビューした証拠ではありません。意図や未設定の参照元はあなたが確認してください。
+UIからのtoken送信と競合回復は#1189で追加します。それまではUI Add allは従来の保存です。
+失敗後は入力を保持し、通信結果が不明な場合はItems／IDを確認してから再試行してください。
 
 ## REST API
 

@@ -1,4 +1,4 @@
-"""Read-only contextual native batch review; save enforcement is separate."""
+"""Shared contextual native batch review over exact captured source bytes."""
 
 import copy
 import hashlib
@@ -23,7 +23,8 @@ class PreviewInputError(ValueError):
         super().__init__(code)
 
 
-def preview_batch(text, paths, writable_path, config, read_only, serialize_item):
+def review_batch(text, paths, writable_path, config, read_only, serialize_item):
+    """Return public review plus private parsed records and captured context."""
     if not isinstance(text, str):
         raise PreviewInputError(400, "TEXT_REQUIRED")
     if len(text.encode("utf-8")) > 512 * 1024:
@@ -114,7 +115,7 @@ def preview_batch(text, paths, writable_path, config, read_only, serialize_item)
             (context.fingerprint + ":" + digest).encode("ascii")
         ).hexdigest()
     )
-    return {
+    response = {
         "ok": bool(batch) and not any(row["severity"] == "error" for row in output),
         "item_count": len(batch),
         "items": items,
@@ -135,9 +136,16 @@ def preview_batch(text, paths, writable_path, config, read_only, serialize_item)
             "checks": ["syntax", "schema", "ids", "references", "dependency_cycles"],
             "limitations": [
                 "human_meaning_review",
-                "save_context_not_enforced",
                 "no_cross_source_atomicity",
                 "external_config_requires_restart",
             ],
         },
     }
+
+    return response, batch, context
+
+
+def preview_batch(text, paths, writable_path, config, read_only, serialize_item):
+    return review_batch(text, paths, writable_path, config, read_only, serialize_item)[
+        0
+    ]

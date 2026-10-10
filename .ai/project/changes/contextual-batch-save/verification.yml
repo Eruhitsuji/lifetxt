@@ -1,0 +1,78 @@
+schema_version: 1
+verification:
+  planned: []
+  executed:
+  - type: broad-focused
+    command: python -m unittest tests.test_batch_save tests.test_batch_preview tests.test_web_native_workflow
+      tests.test_workspace_context_snapshot tests.test_surface_runtime tests.test_remote_attachment_contracts_v6
+      tests.test_web_i18n tests.test_web_assets tests.test_change_package_closeout
+      tests.test_capability_matrix tests.test_supported_runtime tests.test_traceability_gate
+      tests.test_clock_skew_v5 tests.test_core_import_boundary
+    result: 149 passed, no skips before final privacy test addition; final guard changes
+      checked below
+    requirement_ids:
+    - req-contextual-native-batch-save
+    status: passed
+  - type: final-contextual-privacy-races
+    command: python -m unittest tests.test_batch_save tests.test_surface_runtime
+    result: 34 passed, no skips on final code including header/body snapshot race
+    requirement_ids:
+    - req-contextual-native-batch-save
+    status: passed
+  - type: legacy-web
+    command: python -m unittest tests.test_lifetxt.LifeTxtWebConfigAndCheckLineTests
+      tests.test_lifetxt.LifeTxtWebApiTests tests.test_lifetxt.LifeTxtWebappHelperTests
+      tests.test_lifetxt.LifeTxtWebAppTests
+    result: 108 passed, no skips
+    status: passed
+  - type: lint
+    command: python -m ruff check lifetxt tests scripts
+    result: passed
+    status: passed
+  - type: typing
+    command: python -m mypy --follow-imports=skip --ignore-missing-imports lifetxt/diagnostic_contract.py
+    result: passed
+    status: passed
+  - type: integration
+    command: python -m lifetxt check examples/minimal_life.txt
+    result: 10 items OK
+    status: passed
+  - type: format
+    command: python -m ruff format --check lifetxt tests scripts
+    result: 75 existing baseline files would be reformatted; new modules formatted;
+      endpoint/middleware ranges formatted without unrelated changes
+    status: failed
+  - type: process
+    command: python -m unittest tests.test_change_package_closeout tests.test_traceability_gate
+    result: 17 passed, no skips
+    status: passed
+review_ledger:
+- reviewer: Eruhitsuji
+  review_type: requirements
+  target_commit: null
+  result: approved opt-in API and assurance in chat 2026-10-10
+  finding_count: 0
+  completed_at: '2026-10-10'
+- reviewer: independent reviewer
+  review_type: implementation
+  target_commit: null
+  result: pending
+  finding_count: 0
+  completed_at: null
+- reviewer: independent reviewer
+  review_type: integration
+  target_commit: null
+  result: pending
+  finding_count: 0
+  completed_at: null
+- reviewer: ChatGPT implementer
+  review_type: developer self-review
+  target_commit: null
+  result: fixed private-path middleware errors for opt-in requests and corrected saved
+    item source; not independent approval
+  finding_count: 0
+  completed_at: '2026-10-10'
+release_evidence:
+  migration_notes: No data migration. Legacy clients omit context_token.
+  rollback_plan: Revert PR; no persisted token state or schema change.
+  operations_evidence: []

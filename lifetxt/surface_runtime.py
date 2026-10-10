@@ -447,6 +447,19 @@ def _patch_webapp():
             transaction = None
             token = None
             operation = _web_operation(method, path)
+
+            async def guarded_error_response(status, content):
+                # Only opt-in contextual batches get the private-path-free
+                # projection. Legacy middleware error contracts stay intact.
+                if path == "/api/items/batch":
+                    try:
+                        payload = await request.json()
+                    except ValueError:
+                        payload = None
+                    if isinstance(payload, dict) and "context_token" in payload:
+                        content = {"error": content["error"], "saved": 0}
+                return JSONResponse(status_code=status, content=content)
+
             if guarded:
                 header_supplied = (
                     "if-match" in request.headers
@@ -456,11 +469,9 @@ def _patch_webapp():
                 if raw_expected is None:
                     raw_expected = request.headers.get("x-lifetxt-expected-revision")
                 if not header_supplied:
-                    return JSONResponse(
-                        status_code=428,
-                        content=precondition_payload(
-                            app.state.writable_path, operation
-                        ),
+                    return await guarded_error_response(
+                        428,
+                        precondition_payload(app.state.writable_path, operation),
                     )
                 try:
                     transaction = SurfaceTransaction(
@@ -469,18 +480,16 @@ def _patch_webapp():
                         operation,
                     )
                 except ExpectedRevisionRequired:
-                    return JSONResponse(
-                        status_code=428,
-                        content=precondition_payload(
-                            app.state.writable_path, operation
-                        ),
+                    return await guarded_error_response(
+                        428,
+                        precondition_payload(app.state.writable_path, operation),
                     )
                 except MutationConflict as exc:
-                    return JSONResponse(status_code=409, content=conflict_payload(exc))
+                    return await guarded_error_response(409, conflict_payload(exc))
                 except UnsupportedFormatVersion as exc:
-                    return JSONResponse(
-                        status_code=409,
-                        content=unsupported_format_payload(exc, operation),
+                    return await guarded_error_response(
+                        409,
+                        unsupported_format_payload(exc, operation),
                     )
                 token = _ACTIVE_TRANSACTION.set(transaction)
             try:
@@ -489,13 +498,11 @@ def _patch_webapp():
                     try:
                         revision = transaction.commit()
                     except MutationConflict as exc:
-                        return JSONResponse(
-                            status_code=409, content=conflict_payload(exc)
-                        )
+                        return await guarded_error_response(409, conflict_payload(exc))
                     except UnsupportedFormatVersion as exc:
-                        return JSONResponse(
-                            status_code=409,
-                            content=unsupported_format_payload(exc, operation),
+                        return await guarded_error_response(
+                            409,
+                            unsupported_format_payload(exc, operation),
                         )
                 else:
                     revision = current_revision(app.state.writable_path)

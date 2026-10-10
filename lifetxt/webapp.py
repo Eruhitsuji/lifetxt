@@ -1354,6 +1354,19 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         if not isinstance(payload, dict) or not isinstance(payload.get("text"), str):
             raise HTTPException(status_code=400, detail="text is required.")
         text = payload["text"]
+        if "context_token" in payload:
+            from .batch_save import BatchSaveError, save_contextual_batch
+
+            try:
+                return save_contextual_batch(
+                    payload,
+                    app.state.paths,
+                    app.state.writable_path,
+                    app.state.config,
+                    api_item,
+                )
+            except BatchSaveError as exc:
+                raise HTTPException(status_code=exc.status, detail=exc.detail) from None
         if len(text.encode("utf-8")) > 512 * 1024:
             raise HTTPException(status_code=413, detail="Batch input is limited to 512 KiB.")
         key = id_key_from_config(app.state.config)

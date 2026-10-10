@@ -123,11 +123,15 @@
       if (format === "life") {
         const params = new URLSearchParams(location.search);
         params.delete("limit");
+        const savedView = document.getElementById("saved-view-select")?.value || "";
+        const area = document.getElementById("area-select")?.value || "";
+        if (savedView) params.set("saved_view", savedView);
+        if (area) params.set("area", area);
         const a = document.createElement("a");
         a.href = `/api/items/export?${params.toString()}`;
         a.download = `lifetxt-filtered-${new Date().toISOString().slice(0, 10)}.txt`;
         a.click();
-        showToast(`Exported ${items.length} item(s) as life.txt.`, "success");
+        showToast("Native export started. The downloaded file contains the complete filtered set.", "success");
         return;
       }
       let content, mime, ext;

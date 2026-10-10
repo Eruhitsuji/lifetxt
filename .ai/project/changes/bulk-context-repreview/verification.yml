@@ -58,7 +58,7 @@ review_ledger:
   completed_at: null
 - reviewer: ChatGPT implementer
   review_type: developer self-review
-  target_commit: 41c2f4c1
+  target_commit: 35d40c6d09a42c47ff6bfc59ee77ca133408854a
   result: verified binding/generation, explicit If-Match, safe reason translations,
     no replay, known-success refresh behavior and browser evidence; independent review
     pending

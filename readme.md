@@ -38,6 +38,14 @@ and long-term vision.
 Use the format specification for file grammar and key semantics. Use the CLI
 guide for command compatibility, filters, output formats, and conversion rules.
 
+For ordinary AI chats such as ChatGPT, start with the
+[Prompt Profile drafting workflow](./docs/en/ai-integration.md#a-copyable-prompt-profile-workflow)
+without installing lifetxt, or use the Web UI's
+[manual export → AI → Preview → approved Add all workflow](./docs/en/ai-integration.md#manual-sharing-with-an-external-ai).
+Both need no MCP, AI API, or plugin; you choose what to share and save.
+See the [Japanese guide](./docs/ja/ai-integration.md#9-without-mcp).
+Connected MCP access is a separate option for compatible clients.
+
 ## Getting Started
 
 lifetxt supports Python 3.10 or newer.

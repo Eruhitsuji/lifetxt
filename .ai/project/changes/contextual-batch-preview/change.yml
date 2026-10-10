@@ -1,0 +1,33 @@
+schema_version: 1
+change:
+  id: contextual-batch-preview
+  title: Contextual native batch review
+  status: implemented
+  change_type: Feature
+  assurance_level: Standard
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1182
+  related_pull_request: []
+  base_commit: 607ca5c9
+  target_release: null
+scope:
+  in_scope: [read-only contextual Preview, full proposed-record review, exact-input token, compatibility tests, EN/JA docs]
+  out_of_scope: [save context enforcement, recovery UI extension, Format change, synchronization, global atomicity]
+  write_scope:
+    - lifetxt/batch_preview.py
+    - lifetxt/webapp.py
+    - lifetxt/web_assets_js_01.js
+    - lifetxt/web_assets_js_15.js
+    - lifetxt/surface_runtime.py
+    - lifetxt/remote_contracts_v6.py
+    - tests/test_batch_preview.py
+    - tests/test_web_assets.py
+    - tests/test_web_native_workflow.py
+    - docs/en/web.md
+    - docs/ja/web.md
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+    - .ai/project/changes/contextual-batch-preview
+  forbidden_scope: [.ai/managed/**, native batch writer]
+human_approvals_required: [independent latest-head review, human merge approval]

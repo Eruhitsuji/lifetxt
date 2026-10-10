@@ -2,6 +2,35 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-contextual-native-batch-preview
+      capability_id: cap-import-export-format-expansion
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1182
+      pull_request: null
+      changed_files_or_scope:
+        - lifetxt/batch_preview.py
+        - lifetxt/webapp.py
+        - lifetxt/web_assets_js_01.js
+        - lifetxt/web_assets_js_15.js
+        - lifetxt/surface_runtime.py
+        - lifetxt/remote_contracts_v6.py
+        - tests/test_batch_preview.py
+        - tests/test_web_assets.py
+        - tests/test_web_native_workflow.py
+        - docs/en/web.md
+        - docs/ja/web.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/changes/contextual-batch-preview
+      tests_or_evidence:
+        - tests.test_batch_preview
+        - tests.test_web_native_workflow
+        - tests.test_workspace_context_snapshot
+      notes: >-
+        Additive read-only contextual native batch review with shared Core diagnostics,
+        exact-input-bound workspace identity and complete proposed record review.
+        Save context enforcement and recovery remain #1188/#1189; independent review
+        and final CI remain pending. No Format change or global atomicity.
+      release_or_deployment: null
+      status: implemented
     - requirement_id: req-workspace-context-preview-revision-boundary
       capability_id: cap-import-export-format-expansion
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1183

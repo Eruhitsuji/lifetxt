@@ -16,8 +16,8 @@ from lifetxt import web_assets, webapp
 
 
 REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
-# #1096 adds the packaged attachment upload UI and text-safe receipt.
-LEGACY_PRISTINE_GIT_BLOB_SHA = "b8d79f29c9703681d47a02333dc4411a67d81305"
+# #1182 adds contextual native bulk review and complete text-safe details.
+LEGACY_PRISTINE_GIT_BLOB_SHA = "73d02eb33ddbce6c1610627b991e1f7605488b0b"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )

@@ -638,6 +638,10 @@
         "Status closed.": "ステータスを終了しました。",
         "Close failed:": "終了に失敗:",
 
+        "life.txt (.txt)": "life.txt（テキスト）",
+        "複数レコード / Bulk input": "複数レコード / Bulk input",
+        "Paste native life.txt records. Preview is read-only; it does not save anything.": "life.txt の複数レコードを貼り付けます。プレビューは読み取り専用で、保存は行いません。",
+
         // Contextual help (data-help / CONTROL_HELP / VIEW_HELP), shown on
         // hover or keyboard focus via showUiHelp().
         "Toggle light and dark theme. Add ?theme=light or ?theme=dark to force a wall-display theme.":

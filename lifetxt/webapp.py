@@ -1366,7 +1366,10 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             senders=_csv_values(params.get("sender")), recipients=_csv_values(params.get("recipient")), teams=_csv_values(params.get("team")),
             range_start=range_start, range_end=range_end,
             user_aliases=config_user_aliases(app.state.config), team_members=config_team_members(app.state.config), team_aliases=config_team_aliases(app.state.config), tag_aliases=config_tag_aliases(app.state.config), fuzzy=_bool_query(params.get("fuzzy")))
-        filtered = sort_items(filtered, sort, order)
+        # A Saved View owns its sort/order. UI calls export without explicit
+        # sort parameters when the view is active, preserving the same row order.
+        if not (params.get("saved_view") and "sort" not in params and "order" not in params):
+            filtered = sort_items(filtered, sort, order)
         body = "\n".join((getattr(item, "source_text", None) or item_to_line(item)) for item in filtered)
         if body: body += "\n"
         response.headers["Content-Disposition"] = "attachment; filename=lifetxt-filtered-%s.txt" % timezone_today().isoformat()

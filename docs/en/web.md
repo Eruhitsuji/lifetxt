@@ -148,8 +148,9 @@ require retrying after refresh.
 
 The preview and batch endpoints reject an input `#! format_version:` directive
 that is newer than the current supported version with `UNSUPPORTED_FORMAT`.
-They also reject a writable file declaring an unsupported version with the same
-stable error rather than rewriting or silently dropping the declaration.
+They also reject a writable file declaring an unsupported version with the
+existing `UNSUPPORTED_FORMAT_VERSION` error rather than rewriting or silently
+dropping the declaration.
 
 Bulk input **creates new records only**. It does not update existing records or synchronize automatically with AI services. Review exported text for sensitive data before pasting it into an external AI chat.
 

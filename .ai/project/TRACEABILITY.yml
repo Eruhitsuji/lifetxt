@@ -2,6 +2,31 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-native-flow-regression-completion
+      capability_id: cap-import-export-format-expansion
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1177
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1179
+      changed_files_or_scope:
+        - lifetxt/web_assets.html
+        - lifetxt/web_assets_js_05.js
+        - lifetxt/web_assets_js_14.js
+        - lifetxt/web_assets_js_15.js
+        - lifetxt/webapp.py
+        - tests/test_web_assets.py
+        - tests/test_web_native_workflow.py
+        - docs/en/web.md
+        - docs/ja/web.md
+      tests_or_evidence:
+        - JS V8 simulated DOM interaction for modal visibility and preview invalidation
+        - JS V8 native export scope and HTTP error behavior checks
+        - tests.test_web_native_workflow (to be run by PR CI)
+      notes: >-
+        Follow-up to PR #1178: make Bulk input dialog visible and preserve
+        reviewed preview text; expose native txt export in the Items header;
+        align normal filter/Saved View/Area native exports with the actual
+        row scope and avoid false download success; no public API or Format
+        change. Await independent browser and integration review.
+      status: implemented
     - requirement_id: req-web-native-flow-regression-repair
       capability_id: cap-import-export-format-expansion
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1177

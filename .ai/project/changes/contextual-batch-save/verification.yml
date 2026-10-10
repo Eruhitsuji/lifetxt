@@ -67,7 +67,7 @@ review_ledger:
   completed_at: null
 - reviewer: ChatGPT implementer
   review_type: developer self-review
-  target_commit: null
+  target_commit: 20e88cbea0833f7f7f7c6814db3ee14d6376b1f2
   result: fixed private-path middleware errors for opt-in requests and corrected saved
     item source; not independent approval
   finding_count: 0

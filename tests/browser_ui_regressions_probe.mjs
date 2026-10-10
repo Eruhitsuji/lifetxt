@@ -4,7 +4,7 @@ import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 
-const [browserPath, baseURL] = process.argv.slice(2);
+const [browserPath, baseURL, otherSource, writableSource] = process.argv.slice(2);
 if (!browserPath || !baseURL) throw new Error("browser path and base URL are required");
 const profile = await mkdtemp(path.join(os.tmpdir(), "lifetxt-browser-probe-"));
 const browser = spawn(browserPath, [
@@ -228,7 +228,64 @@ try {
     }
     links[href] = await evaluate("location.pathname");
   }
-  process.stdout.write(JSON.stringify({viewports: results, links}));
+  const bulk = [];
+  if (!otherSource || !writableSource) throw new Error("bulk smoke requires isolated source fixture paths");
+  for (const lang of ["en", "ja"]) {
+    await command("Page.navigate", {url: `${baseURL}/?lang=${lang}`});
+    for (let attempt = 0; attempt < 100; attempt++) {
+      if (await evaluate("typeof openBulkInput === 'function' && appConfig !== null")) break;
+      await delay(50);
+    }
+    const text = Array.from({length:12}, (_, i) => `[N] N Bulk_${lang}_${i} id:bulk-${lang}-${i} body:"Browser body ${i}" ref:missing-browser`).join("\n") + "\n";
+    const setup = await evaluate(`(async () => {
+      window.confirm = () => true;
+      window.__bulkBatchCalls = 0;
+      const originalFetch = window.fetch;
+      window.fetch = (url, options) => {
+        if (String(url).includes("/api/items/batch")) ++window.__bulkBatchCalls;
+        return originalFetch(url, options);
+      };
+      openBulkInput();
+      const input = document.getElementById("bulk-input-text");
+      const focused = document.activeElement === input;
+      input.value = ${JSON.stringify(text)};
+      input.dispatchEvent(new Event("input", {bubbles:true}));
+      await previewBulkInput();
+      const root = document.getElementById("bulk-input-preview");
+      const sections = root.querySelectorAll("details");
+      const allRecords = sections.length === 15 && root.textContent.includes("Browser body 11");
+      sections[0].querySelector("summary").focus();
+      return {focused, allRecords, eligible:!document.getElementById("bulk-input-add").disabled};
+    })()`);
+    if (!setup.eligible) throw new Error("real contextual Preview did not enable Add all");
+    await key("Enter");
+    const keyboardDetails = await evaluate('document.querySelector("#bulk-input-preview details").open');
+    const before = await readFile(writableSource, "utf8");
+    await writeFile(otherSource, `[ ] T "Changed context ${lang}" id:context-other\n`, "utf8");
+    const failure = await evaluate(`(async () => {
+      await addAllBulkInput();
+      const input = document.getElementById("bulk-input-text");
+      const disabled = document.getElementById("bulk-input-add").disabled;
+      const message = document.getElementById("bulk-input-preview").textContent;
+      await addAllBulkInput();
+      return {disabled, message, inputRetained:input.value === ${JSON.stringify(text)}, noRetry:window.__bulkBatchCalls === 1};
+    })()`);
+    const noSave = before === await readFile(writableSource, "utf8");
+    const recovery = await evaluate(`(async () => {
+      await previewBulkInput();
+      const recovered = !document.getElementById("bulk-input-add").disabled;
+      await addAllBulkInput();
+      return {recovered, closed:document.getElementById("bulk-input-modal").hidden, batchCalls:window.__bulkBatchCalls};
+    })()`);
+    const saved = await readFile(writableSource, "utf8");
+    const savedOnce = Array.from({length:12}, (_, i) => saved.split(`id:bulk-${lang}-${i} `).length - 1).every(count => count === 1);
+    await evaluate("openBulkInput()");
+    await command("Input.dispatchKeyEvent", {type:"keyDown", key:"Escape", code:"Escape", windowsVirtualKeyCode:27});
+    await command("Input.dispatchKeyEvent", {type:"keyUp", key:"Escape", code:"Escape", windowsVirtualKeyCode:27});
+    const escapeClosed = await evaluate('document.getElementById("bulk-input-modal").hidden');
+    bulk.push({lang, focused:setup.focused, allRecords:setup.allRecords, keyboardDetails, noSave, ...failure, ...recovery, savedOnce, escapeClosed});
+  }
+  process.stdout.write(JSON.stringify({viewports: results, links, bulk}));
 
 } finally {
   if (socket) socket.close();

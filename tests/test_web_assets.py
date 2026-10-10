@@ -16,8 +16,8 @@ from lifetxt import web_assets, webapp
 
 
 REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
-# #1182 adds contextual native bulk review and complete text-safe details.
-LEGACY_PRISTINE_GIT_BLOB_SHA = "73d02eb33ddbce6c1610627b991e1f7605488b0b"
+# #1189 retains contextual binding and adds translated recovery to the bulk UI.
+LEGACY_PRISTINE_GIT_BLOB_SHA = "ff035449dee178b2a634cb5dd111a2e1a50bb9f1"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )

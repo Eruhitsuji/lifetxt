@@ -2,6 +2,30 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-native-bulk-context-repreview
+      capability_id: cap-import-export-format-expansion
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1189
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1193
+      changed_files_or_scope:
+        - lifetxt/web_assets_js_15.js
+        - lifetxt/web_assets_js_01.js
+        - tests/test_web_native_workflow.py
+        - tests/test_web_assets.py
+        - tests/test_web_ui_regressions_browser.py
+        - tests/browser_ui_regressions_probe.mjs
+        - docs/en/web.md
+        - docs/ja/web.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+        - .ai/project/changes/bulk-context-repreview
+      tests_or_evidence:
+        - tests.test_web_native_workflow
+        - tests.test_web_ui_regressions_browser
+      notes: 'Retained contextual binding, no health refresh, explicit safe EN/JA recovery
+        and real browser other-source race smoke. Parent #1192; no global atomicity. Independent
+        review pending.'
+      release_or_deployment: null
+      status: implemented
     - requirement_id: req-contextual-native-batch-save
       capability_id: cap-import-export-format-expansion
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1188

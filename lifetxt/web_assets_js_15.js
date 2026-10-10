@@ -6,16 +6,18 @@
     // All bulk handlers live at page scope; CSS displays modals only with .open.
     let bulkPreviewRevision = 0;
     let bulkPreviewText = "";
+    let bulkPreviewBinding = null;
     let bulkSavePending = false;
     let bulkLastFocused = null;
 
     function invalidateBulkPreview() {
       ++bulkPreviewRevision;
       bulkPreviewText = "";
+      bulkPreviewBinding = null;
       const add = document.getElementById("bulk-input-add");
       if (add) add.disabled = true;
       const preview = document.getElementById("bulk-input-preview");
-      if (preview) preview.textContent = "Input changed. Preview again before Add all.";
+      if (preview) preview.textContent = t("Input changed. Preview again before Add all.");
     }
 
     function openBulkInput() {
@@ -78,7 +80,7 @@
         "\n" + t("Omitted diagnostics") + ": " + (scope.omitted_diagnostics || 0) +
         "\n" + t("Only configured server sources are checked. External config edits require a server reload."));
       const note = document.createElement("p");
-      note.textContent = t("Review meaning manually. This review does not yet guard against workspace changes before save.");
+      note.textContent = t("Review meaning manually. Saving rechecks this workspace; other sources can still change after the final snapshot.");
       root.appendChild(note);
     }
 
@@ -90,12 +92,12 @@
       const text = input.value;
       invalidateBulkPreview();
       const revision = bulkPreviewRevision;
-      if (!text.trim()) { root.textContent = "Paste at least one life.txt record."; return; }
+      if (!text.trim()) { root.textContent = t("Paste at least one life.txt record."); return; }
       if (new TextEncoder().encode(text).length > 512 * 1024) {
-        root.textContent = "Batch input is limited to 512 KiB.";
+        root.textContent = t("Batch input is limited to 512 KiB.");
         return;
       }
-      root.textContent = "Checking…";
+      root.textContent = t("Checking…");
       try {
         const data = await api("/api/items/preview", {
           method: "POST", headers: {"Content-Type":"application/json"},
@@ -106,39 +108,68 @@
         const errors = diagnostics.filter(d => d.severity === "error");
         const count = Number(data.item_count || 0);
         renderBulkReview(root, data, text);
-        if (!data.ok || errors.length || !count || count > 500 || !data.context_token) return;
-        // A preview can be used in read-only mode, but saving never can.
-        const health = await api("/api/health", {cache:"no-store"});
-        if (revision !== bulkPreviewRevision || input.value !== text) return;
-        if (data.read_only || health.read_only || !health.writable_path) {
+        if (!data.ok || errors.length || !count || count > 500) {
+          root.appendChild(document.createTextNode(t("Correct the errors and preview again; warnings alone do not block saving.")));
+          return;
+        }
+        if (!data.context_token || !data.source_revision ||
+            !["fixed_paths", "checked_manifest"].includes(data.review_scope?.context)) {
+          root.appendChild(document.createTextNode(t("Workspace review unavailable; preview again before saving.")));
+          return;
+        }
+        if (data.read_only) {
           root.appendChild(document.createTextNode(t("Read-only workspace: preview only.")));
           return;
         }
-        if (!health.source_revision) {
-          root.appendChild(document.createTextNode(t("Source revision unavailable; saving disabled.")));
-          return;
-        }
+        bulkPreviewBinding = {text, token: data.context_token, sourceRevision: data.source_revision};
         bulkPreviewText = text;
         root.appendChild(document.createTextNode(t("Review the meaning, then choose Add all.")));
         document.getElementById("bulk-input-add").disabled = false;
       } catch (error) {
         if (revision === bulkPreviewRevision) {
-          root.textContent = "Preview failed: " + (error.message || String(error));
+          root.textContent = bulkContextRecovery(error.detail?.reason, false);
         }
       }
+    }
+
+    function bulkContextRecovery(reason, noSave = true) {
+      const message = ["source_membership_changed", "source_resolution_required", "manifest_unavailable"].includes(reason) ?
+        t("Workspace sources changed or could not be resolved. Reload the server, then preview and review again.") :
+        reason === "source_unavailable" ?
+        t("A workspace source is unavailable. Check the sources, then preview and review again.") :
+        reason === "snapshot_unstable" ?
+        t("Workspace changed during review. Wait for edits to finish, then preview and review again.") :
+        t("Workspace or input changed, or review is unavailable. Preview and review again before adding.");
+      return (noSave ? t("Nothing was saved.") + " " : "") + message;
+    }
+
+    function bulkSaveRecovery(error) {
+      const code = error.detail?.error || error.code;
+      if (error.status === 409 && code === "CONTEXT_CHANGED") return bulkContextRecovery(error.detail?.reason);
+      if (code === "UNSUPPORTED_FORMAT_VERSION" || code === "UNSUPPORTED_FORMAT") return t("Workspace or input Format is unsupported. Nothing was saved. Migrate it, then preview again.");
+      if (error.status === 409 && code === "CONFLICT") return t("Writable file changed. Nothing was saved. Preview and review again before retrying.");
+      if (code === "CLOCK_SKEW" || code === "CLIENT_TIME_REQUIRED") return t("Browser clock check failed. Nothing was saved. Check device time and preview again.");
+      if (error.status === 403) return t("Read-only workspace: nothing was saved. Preview remains available.");
+      if (error.status === 422 && code === "DUPLICATE_ID") return t("Duplicate IDs: nothing was saved. Correct the IDs, then preview again.");
+      if (error.status === 422) return t("Syntax or validation errors: nothing was saved. Correct the input, then preview again.");
+      if (error.status === 413) return t("Batch exceeds the 512 KiB limit. Nothing was saved. Reduce the input and preview again.");
+      if (error.status === 428 || code === "CONTEXT_TOKEN_INVALID") return t("Review or revision is unavailable. Nothing was saved. Refresh the page and preview again.");
+      return t("Save outcome uncertain. Inspect Items and IDs before previewing and retrying to avoid duplicates.");
     }
 
     async function addAllBulkInput() {
       const input = document.getElementById("bulk-input-text");
       const add = document.getElementById("bulk-input-add");
       if (bulkSavePending || !input || !add || add.disabled) return;
-      if (!bulkPreviewText || input.value !== bulkPreviewText) {
+      const binding = bulkPreviewBinding;
+      const revision = bulkPreviewRevision;
+      if (!binding || !bulkPreviewText || input.value !== binding.text) {
         invalidateBulkPreview();
-        showToast("Input changed. Preview again before saving.", "warning");
+        showToast(t("Input changed. Preview again before saving."), "warning");
         return;
       }
-      if (!window.confirm("Add all previewed records? This writes to life.txt.")) return;
-      if (input.value !== bulkPreviewText) {
+      if (!window.confirm(t("Add all previewed records? This writes to life.txt."))) return;
+      if (input.value !== binding.text || revision !== bulkPreviewRevision) {
         invalidateBulkPreview();
         return;
       }
@@ -146,17 +177,10 @@
       input.disabled = true;
       add.disabled = true;
       try {
-        const health = await api("/api/health", {cache:"no-store"});
-        if (health.read_only || !health.writable_path) {
-          throw Object.assign(new Error("This workspace is read-only."), {status:403});
-        }
-        if (!health.source_revision) {
-          throw Object.assign(new Error("Source revision unavailable."), {status:428});
-        }
         const result = await api("/api/items/batch", {
-          method: "POST", headers:{"Content-Type":"application/json"},
+          method: "POST", headers:{"Content-Type":"application/json", "If-Match": binding.sourceRevision},
           body:JSON.stringify({
-            text: bulkPreviewText, expected_source_revision: health.source_revision,
+            text: binding.text, context_token: binding.token, expected_source_revision: binding.sourceRevision,
           }),
         });
         if (!result.ok || !result.saved) throw new Error("Save result is uncertain.");
@@ -165,19 +189,14 @@
         bulkSavePending = false;
         input.disabled = false;
         closeBulkInput();
-        await loadItems();
+        try { await loadItems(); }
+        catch (_) { showToast(t("Records saved. Items could not refresh; refresh Items to inspect the result."), "warning"); }
       } catch (error) {
         bulkSavePending = false;
         input.disabled = false;
         // On any failure require fresh review, never silently resend.
         invalidateBulkPreview();
-        const message = error.status === 409 ?
-          "File changed. Review and preview again before retrying." :
-          error.status === 403 ? "Read-only workspace: nothing was saved." :
-          error.status === 422 ? "Validation failed; no records were saved." :
-          error.status === 413 ? "Batch exceeds the 512 KiB limit." :
-          error.status === 428 ? "Source revision is unavailable; nothing was sent." :
-          "Save outcome uncertain. Check Items before retrying to avoid duplicates.";
+        const message = bulkSaveRecovery(error);
         const root = document.getElementById("bulk-input-preview");
         if (root) root.textContent = message;
         showToast(message, "error");

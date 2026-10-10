@@ -32,7 +32,13 @@ class WebUIRegressionsBrowserTests(unittest.TestCase):
             records.write_text(
                 '[ ] T "Browser fixture" id:drawer-test\n', encoding="utf-8"
             )
-            app = create_app(paths=[str(records)], writable_path=str(records))
+            other = Path(directory) / "context.txt"
+            other.write_text(
+                '[ ] T "Context fixture" id:context-other\n', encoding="utf-8"
+            )
+            app = create_app(
+                paths=[str(records), str(other)], writable_path=str(records)
+            )
             with socket.socket() as listener:
                 listener.bind(("127.0.0.1", 0))
                 base_url = f"http://127.0.0.1:{listener.getsockname()[1]}"
@@ -50,10 +56,12 @@ class WebUIRegressionsBrowserTests(unittest.TestCase):
                             str(ROOT / "tests/browser_ui_regressions_probe.mjs"),
                             browser_path(),
                             base_url,
+                            str(other),
+                            str(records),
                         ],
                         capture_output=True,
                         text=True,
-                        timeout=90,
+                        timeout=180,
                     )
                 finally:
                     server.should_exit = True
@@ -133,6 +141,30 @@ class WebUIRegressionsBrowserTests(unittest.TestCase):
                     self.assertGreaterEqual(
                         drawer["rect"]["height"], 44 if case["width"] == 390 else 37
                     )
+
+    def test_contextual_bulk_conflict_requires_explicit_repreview(self):
+        self.assertEqual({"en", "ja"}, {row["lang"] for row in self.evidence["bulk"]})
+        for row in self.evidence["bulk"]:
+            with self.subTest(lang=row["lang"]):
+                for key in (
+                    "focused",
+                    "allRecords",
+                    "keyboardDetails",
+                    "noSave",
+                    "inputRetained",
+                    "disabled",
+                    "noRetry",
+                    "recovered",
+                    "savedOnce",
+                    "closed",
+                    "escapeClosed",
+                ):
+                    self.assertTrue(row[key], key)
+                self.assertIn(
+                    "保存していません" if row["lang"] == "ja" else "Nothing was saved",
+                    row["message"],
+                )
+                self.assertEqual(2, row["batchCalls"])
 
     def test_more_links_keep_native_keyboard_navigation(self):
         self.assertEqual(

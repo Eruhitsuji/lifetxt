@@ -639,6 +639,8 @@
         "Close failed:": "終了に失敗:",
 
         "life.txt (.txt)": "life.txt（テキスト）",
+        "Download all matching Items as native life.txt (.txt); display limit is ignored": "表示件数の制限を無視して、条件に一致する全アイテムをネイティブlife.txt（.txt）で出力します。",
+        "Download filtered life.txt (.txt)": "絞り込み結果をlife.txt（.txt）としてダウンロード",
         "複数レコード / Bulk input": "複数レコード / Bulk input",
         "Paste native life.txt records. Preview is read-only; it does not save anything.": "life.txt の複数レコードを貼り付けます。プレビューは読み取り専用で、保存は行いません。",
 

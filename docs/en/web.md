@@ -130,6 +130,17 @@ loaded source files. With multiple files, reads scan every configured path while
 write tools modify only `--write-file`; pass `--read-only` to disable write
 tools.
 
+## Native life.txt export and bulk input in Items
+
+1. Open **Items** and apply the desired text, status, and kind filters.
+2. Choose the visible **⇩ life.txt (.txt)** button next to the Items heading. The existing **Filters → Export… → life.txt (.txt)** menu remains available.
+3. Download the native Format 1.0 UTF-8 text file. The Items display `Limit` is ignored; check the selected filters before sharing the content. A selected Saved View follows its configured scope (including its own view limit), and a selected Area exports its open items.
+4. Select **複数レコード / Bulk input**, then paste multiple native life.txt records. For example, paste `[ ] T "Review materials" do:2026-10-12` and `[ ] T "Submit report" due:2026-10-15` on separate lines.
+5. Choose **Preview** to inspect the logical record count and warnings/errors. Input remains editable after a parse error. **Preview again after every edit**; syntactic acceptance does not prove that an AI-generated record preserves the intended meaning.
+6. For writable workspaces, **すべて追加 / Add all** becomes available after a successful preview. Confirm to append the entire batch through `POST /api/items/batch` (500 records / 512 KiB maximum). Failed or conflicting writes keep the input and are not retried automatically. After an uncertain network failure, check the authoritative Items/file before attempting another save.
+
+Bulk input **creates new records only**. It does not update existing records or synchronize automatically with AI services. Review exported text for sensitive data before pasting it into an external AI chat.
+
 ## REST API
 
 | Method | Path | Purpose |
@@ -144,13 +155,7 @@ tools.
 | `POST` | `/api/items/batch` | Validate and atomically append a bounded batch of native life.txt records; requires the current source revision and never partially saves |
 | `GET` | `/api/items/export` | Export the complete server-side filtered Items set as UTF-8 native life.txt; display `limit` is ignored |
 
-Bulk input is a read-only preview until the user explicitly selects **Add all**.
-The preview uses the shared parser, preserves the pasted source on errors, and
-the save action sends one bounded request to `/api/items/batch` with the current
-source revision. A conflict, validation error, read-only workspace, or size
-limit leaves the input available for review and does not retry automatically.
-Saved View and Area selections are included in native export; export ignores the
-display row limit.
+
 | `POST` | `/api/items/raw` | Append a validated raw life.txt line to the writable file |
 | `GET` | `/api/items/{id}` | Canonical exact-ID read (#837): a purely numeric path segment is interpreted as a 1-based line number for backward compatibility, matching the historical `GET /api/items/{line_no}` route; anything else (and any numeric segment matching no line) is resolved as a canonical `id:`, sharing the exact same lookup as `GET /api/items/id/{id}` below. Unknown IDs return `404`. |
 | `GET` | `/api/items/id/{id}` | Get an item by exact `id:` |

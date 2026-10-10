@@ -186,7 +186,7 @@ normalization. `context_token` is `batch-preview-v1:` plus SHA-256 of the
 ASCII `context fingerprint + ":" + input_digest`. It is a change identity,
 not an authorization token. Read-only workspaces can review but cannot add.
 The legacy `POST /api/items/parse` stays text-only and keeps its existing
-request/response contract; `POST /api/items/batch` is unchanged.
+request/response contract. Batch clients omitting `context_token` retain the legacy contract.
 
 Limits remain 500 logical proposed records and 512 KiB of submitted UTF-8 text.
 Malformed fields return 400 (invalid/missing JSON may return framework 422),
@@ -200,12 +200,41 @@ A writable target outside the effective read list requires source resolution.
 External config-file edits require reload/restart; the token covers effective
 runtime config. Acquisition uses bounded repeated reads, not a global lock.
 
-The UI invalidates edited or late-response reviews. This Preview checks Core
-syntax/schema, IDs and references, not intent or sources outside the configured
-workspace. **Save does not yet enforce the context token**: #1188 adds server
-revalidation, and #1189 owns subsequent conflict/re-review recovery. There is
-no cross-source atomicity guarantee. After save failures, retain the input,
-review again, and check Items before retrying an uncertain network outcome.
+### Contextual save API
+
+`POST /api/items/batch` opts into workspace revalidation when `context_token` is present:
+
+```json
+{"text":"[ ] T New id:new ref:existing\n","context_token":"batch-preview-v1:<64 lowercase hex digits>","expected_source_revision":"<Preview source_revision>"}
+```
+
+Send `If-Match` with that same Preview revision. The server reacquires the effective
+workspace and reruns shared Core before writing. A fresh health revision cannot
+make an old token valid. Changed input/context or unavailable context returns
+409 `CONTEXT_CHANGED`, `saved: 0`, `repreview_required: true` and a safe `reason`.
+A hash mismatch reports `context_or_input_changed`; unavailable context reports
+the safe acquisition reason (e.g. `source_unavailable`, `snapshot_unstable`,
+`source_membership_changed`). The stateless token cannot identify which source
+changed. Fix sources and re-Preview; changed startup-expanded membership needs
+server reload/restart. No tokens, private paths or existing bodies appear in errors.
+
+A malformed/present-null token returns400 `CONTEXT_TOKEN_INVALID`; absent body
+revision returns428 `REVISION_REQUIRED`. Input bounds/unsupported Format retain
+413/422. After token comparison, unchanged invalid review returns422
+`VALIDATION_ERROR` or `DUPLICATE_ID`, `saved: 0`; warnings remain warnings.
+Within the endpoint stale context precedes duplicate validation. Existing
+auth/clock/If-Match middleware guards still run first; stale If-Match or a late
+writable race returns409 `CONFLICT`. Read-only remains403. Legacy clients
+omitting the token retain existing revision-only behavior.
+
+This is one destination CAS. A nonwritable source may change **after the final
+snapshot and before write**, including a late duplicate ID; there is no
+serializable workspace-wide transaction. External config edits require restart.
+The token is a change detector, not authorization or evidence a human read the
+review. Check meaning and unconfigured sources yourself. Native UI token
+submission and conflict recovery are introduced separately in #1189; until then
+UI Add all uses the legacy route. Retain input after failure; inspect Items/IDs
+before retrying an uncertain network outcome.
 
 ## REST API
 

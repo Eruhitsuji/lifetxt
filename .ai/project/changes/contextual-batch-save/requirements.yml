@@ -1,0 +1,19 @@
+schema_version: 1
+requirements:
+- id: req-contextual-native-batch-save
+  kind: NEW
+  statement: Reject stale contextual native batch saves before one-destination CAS.
+  owner: Eruhitsuji
+  acceptance_criteria:
+  - Fresh health cannot bypass an old Preview token.
+  - Other source/config/order/scope/missing/glob changes reject without saving.
+  - Recompute shared Core review over captured context; stale context precedes duplicates.
+  - Unchanged valid context saves once; invalid batch never partially saves; warnings
+    retain severity.
+  - Read-only, limits, If-Match and final writable CAS remain enforced.
+  - Legacy revision-only clients retain their contract and all-value uniqueness.
+  - Errors never echo token, private paths or source bodies.
+  - Deterministic race proves nonwritable final-scan-to-write gap.
+  constraints:
+  - No multi-source serializability or authentication claim.
+open_questions: []

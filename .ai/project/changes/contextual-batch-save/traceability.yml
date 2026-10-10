@@ -1,0 +1,16 @@
+schema_version: 1
+links:
+- requirement_id: req-contextual-native-batch-save
+  capability_id: cap-import-export-format-expansion
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1188
+  pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1192
+  status: implemented
+  implementation:
+  - lifetxt/batch_save.py
+  - lifetxt/batch_preview.py
+  - lifetxt/webapp.py
+  - lifetxt/surface_runtime.py
+  tests:
+  - tests/test_batch_save.py
+  - tests/test_batch_preview.py
+  - tests/test_surface_runtime.py

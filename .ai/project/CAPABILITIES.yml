@@ -10566,6 +10566,7 @@ capabilities:
     status: active
     owner: Eruhitsuji
     source_requirements:
+      - req-contextual-native-batch-save
       - req-contextual-native-batch-preview
       - req-export-unified-dispatcher
       - req-native-life-import-export
@@ -10573,6 +10574,8 @@ capabilities:
       - req-lifetxtz-implementation
       - req-unified-format-conversion
     implementation_locations:
+      - lifetxt/batch_save.py
+      - tests/test_batch_save.py
       - lifetxt/batch_preview.py
       - lifetxt/workspace_context_snapshot.py
       - tests/test_batch_preview.py

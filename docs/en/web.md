@@ -146,11 +146,12 @@ the writable file unchanged. The check uses the current read snapshot; changes
 to another source are not part of the writable file's atomic revision and may
 require retrying after refresh.
 
-The preview and batch endpoints reject an input `#! format_version:` directive
-that is newer than the current supported version with `UNSUPPORTED_FORMAT`.
-They also reject a writable file declaring an unsupported version with the
-existing `UNSUPPORTED_FORMAT_VERSION` error rather than rewriting or silently
-dropping the declaration.
+The legacy parse and batch endpoints reject an input `#! format_version:`
+directive newer than the supported version with `UNSUPPORTED_FORMAT`.
+Contextual Preview identifies an unsupported existing source as a workspace
+error and disables Add all. Native batch retains the existing
+`UNSUPPORTED_FORMAT_VERSION` rejection for an unsupported writable file;
+it does not rewrite or silently drop the declaration.
 
 Bulk input **creates new records only**. It does not update existing records or synchronize automatically with AI services. Review exported text for sensitive data before pasting it into an external AI chat.
 

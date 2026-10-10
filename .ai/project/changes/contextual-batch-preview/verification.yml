@@ -2,6 +2,14 @@ schema_version: 1
 verification:
   planned: []
   executed:
+    - type: broad-local-discovery
+      command: MPLBACKEND=Agg python -m unittest discover
+      result: >-
+        Interrupted (exit 130) during long-running legacy suite; no full-pass claim.
+        One transient change-package evidence failure was observed while records
+        were still being finalized; corrected package passes targeted checks.
+        Final full suite is delegated to PR CI.
+      status: interrupted
     - type: compatibility-and-integration
       command: python -m unittest tests.test_batch_preview tests.test_web_native_workflow tests.test_workspace_context_snapshot tests.test_surface_runtime tests.test_remote_attachment_contracts_v6 tests.test_web_i18n tests.test_web_assets tests.test_change_package_closeout tests.test_capability_matrix tests.test_supported_runtime tests.test_traceability_gate tests.test_clock_skew_v5 tests.test_core_import_boundary
       requirement_ids: [req-contextual-native-batch-preview]
@@ -50,6 +58,12 @@ review_ledger:
     result: pending
     finding_count: 0
     completed_at: null
+  - reviewer: ChatGPT implementer
+    review_type: developer self-review
+    target_commit: e450d0b08d492daae741c63ca348c5be5c46e0d8
+    result: verified implementation tree; legacy glob/config membership coverage added
+    finding_count: 0
+    completed_at: '2026-10-10'
 release_evidence:
   migration_notes: No data or Format migration; legacy APIs unchanged.
   rollback_plan: Revert this PR; no persistent state change.

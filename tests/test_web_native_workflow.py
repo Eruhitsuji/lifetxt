@@ -7,7 +7,7 @@ import subprocess
 import tempfile
 import unittest
 
-from lifetxt import web_assets, webapp
+from lifetxt import mutation, web_assets, webapp
 
 
 _BULK_NODE_CHECK = r"""
@@ -257,7 +257,7 @@ class NativeWebWorkflowTests(unittest.TestCase):
                 "[ ] T New id:from-other\n",
                 "[ ] T New id:shared\n",
                 "[ ] T A id:batch\n[ ] T B id:batch\n",
-                "[ ] T A id:first id:second\n",
+                "[ ] T A id:first id:from-other\n",
             ):
                 response = client.post(
                     "/api/items/batch",
@@ -296,7 +296,7 @@ class NativeWebWorkflowTests(unittest.TestCase):
             self.assertEqual(batch.json()["error"], "UNSUPPORTED_FORMAT")
             with open(path, "w", encoding="utf-8") as handle:
                 handle.write("#! format_version: 2\n[ ] T Future id:future\n")
-            new_revision = client.get("/api/health").json()["source_revision"]
+            new_revision = mutation.read_text_snapshot(path).content_hash
             rejected = client.post(
                 "/api/items/batch",
                 json={

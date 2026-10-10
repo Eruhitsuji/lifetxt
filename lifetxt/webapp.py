@@ -1290,7 +1290,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
                 detail={
                     "error": "UNSUPPORTED_FORMAT",
                     "message": "Migrate the input to the current format before saving.",
-                    "format_version": parsed_items.format_version,
+                    "format_version": parse_result.format_version,
                     "current_format_version": FORMAT_VERSION,
                     "saved": 0,
                 },
@@ -1329,7 +1329,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
                 detail={
                     "error": "UNSUPPORTED_FORMAT",
                     "message": "Migrate the input to the current format before saving.",
-                    "format_version": parsed.format_version,
+                    "format_version": parse_result.format_version,
                     "current_format_version": FORMAT_VERSION,
                     "saved": 0,
                 },

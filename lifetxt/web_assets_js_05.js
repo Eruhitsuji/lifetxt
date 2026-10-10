@@ -117,23 +117,55 @@
     }
 
     // ── Export filtered items (CSV / JSON / Markdown) ──────────────
-    function exportItems(format) {
+    async function exportItems(format) {
       const items = currentItems || [];
-      if (!items.length) { showToast("No items to export.", "warning"); return; }
       if (format === "life") {
-        const params = new URLSearchParams(location.search);
-        params.delete("limit");
+        // Saved Views and Areas replace the Items row set. Do not carry stale
+        // controls/URL filters into that export and accidentally widen/narrow it.
         const savedView = document.getElementById("saved-view-select")?.value || "";
         const area = document.getElementById("area-select")?.value || "";
+        const params = savedView || area ? new URLSearchParams() : itemQueryParams();
+        params.delete("limit");
         if (savedView) params.set("saved_view", savedView);
-        if (area) params.set("area", area);
-        const a = document.createElement("a");
-        a.href = `/api/items/export?${params.toString()}`;
-        a.download = `lifetxt-filtered-${new Date().toISOString().slice(0, 10)}.txt`;
-        a.click();
-        showToast("Native export started. The downloaded file contains the complete filtered set.", "success");
+        if (area) {
+          params.set("area", area);
+          params.set("open_only", "true"); // Area UI displays open_items only.
+        }
+        try {
+          // Fetch first, then initiate the download: never report success on
+          // an HTTP failure and never send an unintended unscoped download.
+          const response = await fetch("/api/items/export?" + params.toString(), {
+            cache: "no-store",
+          });
+          if (!response.ok) {
+            let message = "HTTP " + response.status;
+            try {
+              const data = await response.json();
+              message = data.message || data.detail || message;
+            } catch (_) { /* no JSON error payload */ }
+            throw new Error(String(message));
+          }
+          const count = Number(response.headers.get("X-Lifetxt-Count"));
+          if (!Number.isSafeInteger(count) || count < 0) {
+            throw new Error("The server did not return a valid export count.");
+          }
+          if (!count) { showToast("No matching items to export.", "warning"); return; }
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = "lifetxt-filtered-" + new Date().toISOString().slice(0, 10) + ".txt";
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+          showToast("Prepared native life.txt download with " + count + " item(s).", "success");
+        } catch (error) {
+          showToast("Native life.txt export failed: " + (error.message || error), "error");
+        }
         return;
       }
+      if (!items.length) { showToast("No items to export.", "warning"); return; }
       let content, mime, ext;
       if (format === "json") {
         content = JSON.stringify(items.map(i => ({

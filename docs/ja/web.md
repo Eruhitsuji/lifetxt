@@ -119,18 +119,69 @@ MCP tool は `list_items`、`get_item`、`create_item`、`update_item`、
 2. Items見出しの右側にある **⇩ life.txt (.txt)** を押します。従来の **Filters → Export… → life.txt (.txt)** からも出力できます。
 3. ブラウザが条件に一致するネイティブFormat 1.0のUTF-8 `.txt` ファイルをダウンロードします。表示件数用の `Limit` は無視します。出力前に現在のフィルタと送信先を確認してください。Saved Viewを選択中はそのView定義（固有のlimitを含む）、Areaを選択中はそのAreaのopen itemだけが対象です。
 4. **複数レコード / Bulk input** を選び、ネイティブのlife.txtを複数レコード貼り付けます（例: `[ ] T "資料を確認する" do:2026-10-12` の次行に `[ ] T "報告書を提出する" due:2026-10-15`）。
-5. **Preview** で論理レコード数・warning/errorを確認します。エラー時も原文は残ります。**入力内容を変更したら必ず再Preview**してください。構文が通ってもAI生成文が元の意図に合うかはユーザーが確認します。
+5. **Preview** で既存workspace＋提案batchの診断を確認します。各レコードの全文・detailsと入力原文を展開して照合できます。エラー時も原文は残ります。**入力内容を変更したら必ず再Preview**してください。構文が通ってもAI生成文が元の意図に合うかはユーザーが確認します。
 6. 書き込み可能な場合にだけ **すべて追加 / Add all** が有効になります。確認ダイアログを承認すると、既存の `POST /api/items/batch` で全件を一度に追加します（最大500レコード／512 KiB）。失敗・競合時は入力を保持し、自動再送しません。通信失敗で保存結果が不明なときは、Itemsや実ファイルを確認してからやり直してください。
 
 Batch の検証では、Web の読み取りワークスペース全体にある設定済み ID と、送信した各レコードの全 ID 値を比較します。`ids.key` / `api.id_key` によるカスタムキーにも対応し、衝突時は `DUPLICATE_ID` を返して書き込み可能ファイルを変更しません。この検証は現在の読み取りスナップショットを対象とし、別ソースの変更を writable file の revision として原子的には扱いません。必要に応じて再読み込みして再試行してください。
 
-Preview と batch は、現在の対応バージョンより新しい `#! format_version:` 宣言を入力側では `UNSUPPORTED_FORMAT` として拒否します。書き込み可能ファイルが未対応バージョンを宣言している場合は、既存契約の `UNSUPPORTED_FORMAT_VERSION` を返し、宣言を削除・黙って変換しません。
+既存parseとbatchは、現在の対応バージョンより新しい入力 `#! format_version:` 宣言を
+`UNSUPPORTED_FORMAT` として拒否します。ワークスペースを含むPreviewでは、
+未対応宣言のある既存参照元をworkspace errorとして表示し、追加を止めます。
+Native batchは、書込先の未対応宣言を既存契約の `UNSUPPORTED_FORMAT_VERSION` で拒否し、
+宣言を削除・黙って変換しません。
 
 この画面は**新しいレコードの追加**に対応します。既存レコードの一括置換やAIとの自動同期には対応しません。外部生成AIにエクスポート内容を貼る場合は、機密情報が含まれないことを確認してください。
 
 外部AIへ渡す前の全文選別、未共有参照先・日時の補足、新規提案の確認、Chromeでの
 同名保存先への上書き失敗の対処は[手動共有ガイド](./ai-integration.md#外部aiへ手動共有する手順)
-を参照してください。Previewのwarning 0は参照関係全体の検証や意味の一致の保証ではありません。
+を参照してください。Previewのwarning 0は、設定外の参照元、保存時までworkspaceが不変であること、意味の一致の保証ではありません。
+
+### ワークスペースを含むPreview API
+
+`POST /api/items/preview` は `{"text":"[ ] T New id:new ref:existing\n"}` を受け取ります。
+#1187のbounded snapshotから既存workspaceと提案batchを共有Coreで照合します。
+既存参照とbatch内の先行参照を解決し、W215（未解決）、W227（依存循環）、
+W218（曖昧な参照）、W203（日時）、W106（custom key）はwarningのまま表示します。
+全ID値の衝突は `core_code: W213` を持つ `DUPLICATE_ID` errorとして追加を止めます。
+既存workspaceのerrorも区別して表示し、追加を止めます。warningだけなら追加できます。
+
+Itemsの **複数レコード / Bulk input → Preview** で、各レコードを展開して本文・日時・
+参照を含む全detailsを確認し、**入力原文** と照合してください。**診断** に全診断と
+batch／番号付きworkspace参照元・行を表示し、**検証範囲** に参照元数と省略件数を表示します。
+編集後は再度Previewが必要です。入力を編集した場合や古い応答が遅れて届いた場合、
+古いレビューでは追加できません。意味はあなたが確認してください。
+
+応答は `ok`、`item_count`、全提案 `items`、全 `diagnostics`
+（severity/code/category/line/source、`scope: batch|workspace`）、`context_token`、
+`input_digest`、`source_revision`、`read_only`、`review_scope` です。
+参照元は設定順の `workspace:N` または `batch` で、privateな参照元パスと既存レコード本文は返しません。
+`review_scope.record_count` は既存＋提案、`workspace_record_count`／`batch_record_count` は各件数、
+`workspace_records_returned` はfalseです。`omitted_records` は省略した**提案**レコード数、
+`omitted_diagnostics` は省略診断数で、いずれも0です。
+
+`input_digest` は改行を正規化しない入力UTF-8文字列そのもののSHA-256です。
+`context_token` は `batch-preview-v1:` ＋ ASCIIの
+`context fingerprint + ":" + input_digest` のSHA-256です。
+変更検出のidentityであり、保存の認可tokenではありません。
+読み取り専用でもレビューできますが、追加はできません。
+既存の `POST /api/items/parse` は入力文字列のみの解析を維持し、
+`POST /api/items/batch` の入出力・保存処理も変更しません。
+
+上限は提案500論理レコード／入力UTF-8 512 KiBです。
+不正なフィールドは400（JSON不正・本文欠落はframeworkの422の場合あり）、
+容量超過は413、未対応Format宣言／件数超過は422です。
+参照元の読取不能・必要ファイル欠落・不安定なsnapshot等は503 `CONTEXT_UNAVAILABLE` と
+安全なreasonを返し、tokenを返しません。参照元を修正して再レビューしてください。
+名前付きmanifestと旧形式 `paths` のglob／ディレクトリはscanごとに再解決し、サーバーが使用している参照元との不一致は
+再読み込み／再起動による再解決が必要です。明示的な固定パスは `fixed_paths` の範囲です。
+書込先が実効参照元一覧に含まれない場合も再解決が必要です。
+外部での設定ファイル編集は再読み込み／再起動が必要で、tokenは実効runtime configを含みます。
+snapshotは回数制限付きの再読取で、workspace全体のlockではありません。
+
+検証範囲はCoreの構文・schema・ID・参照です。意図や未共有の参照元までは検証しません。
+**保存時のcontext token照合はまだありません**。#1188が保存直前の再検証、
+#1189が競合後の再レビュー・回復UIを担当します。複数参照元全体の原子性は保証しません。
+保存失敗後は入力を保持して再レビューし、通信結果が不明な場合はItems／原本を確認してから再試行してください。
 
 ## REST API
 
@@ -143,6 +194,7 @@ Preview と batch は、現在の対応バージョンより新しい `#! format
 | `POST` | `/api/personal-context/{id}/reconfirm` | staleかつwritableなPersonal Context recordを明示的に再確認する。pageの`source_revision`を要求し、exact-IDのCAS経路で`updated:`だけを更新する。並行変更時は`409`で安全側に失敗する |
 | `POST` | `/api/personal-context/preview` | 最大25件のbootstrap factを検証し、ID付与・書き込みなしで通常Note recordの正確な形をpreview |
 | `POST` | `/api/items/parse` | raw life.txt 行または body block を解析し、書き込まずに parsed item を返す |
+| `POST` | `/api/items/preview` | 既存workspace＋提案batchのCoreレビュー。全提案・全診断と入力原文に結び付くcontext tokenを返す |
 | `POST` | `/api/items/batch` | bounded な複数 native record を全件検証し、source revision の CAS 付きで原子的に追記する。部分保存は行わない |
 | `GET` | `/api/items/export` | Items の実効フィルタ結果を表示用 `limit` 無視で UTF-8 native life.txt として出力 |
 

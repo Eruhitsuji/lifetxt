@@ -21,7 +21,7 @@ import calendar
 from collections import OrderedDict
 from datetime import date, datetime, time, timedelta
 
-from .timeutil import LifeDateTime, offset_comparison_pair
+from .timeutil import LifeDateTime, offset_comparison_pair, parse_date_or_datetime
 
 
 RRULE_PREFIX = "RRULE:"
@@ -87,10 +87,13 @@ def parse_rule(value, interval=None, count=None, until=None):
             freq=NAME_TO_FREQ[name],
             interval=interval or 1,
             count=count,
-            until=until,
+            until=_parse_until(until),
         )
 
     parts = parse_rrule_parts(text)
+    for key in SUPPORTED_PARTS:
+        if key in parts and not parts[key].strip():
+            raise RecurrenceError("RRULE %s must not be empty." % key)
     freq = str(parts.get("FREQ", "")).upper()
     if freq not in FREQ_NAMES:
         raise RecurrenceError(
@@ -103,7 +106,7 @@ def parse_rule(value, interval=None, count=None, until=None):
         freq=freq,
         interval=_positive_int(parts.get("INTERVAL"), interval or 1),
         count=_positive_int(parts.get("COUNT"), count),
-        until=_parse_until(parts.get("UNTIL")) or until,
+        until=_parse_until(parts.get("UNTIL")) or _parse_until(until),
         byday=_parse_byday(parts.get("BYDAY")),
         bymonthday=_parse_int_list(
             parts.get("BYMONTHDAY"), "BYMONTHDAY", 1, 31, allow_negative=True
@@ -111,6 +114,10 @@ def parse_rule(value, interval=None, count=None, until=None):
         bymonth=_parse_int_list(parts.get("BYMONTH"), "BYMONTH", 1, 12),
         wkst=_parse_wkst(parts.get("WKST")),
     )
+    if freq == "WEEKLY" and rule["bymonthday"]:
+        raise RecurrenceError("BYMONTHDAY is not supported with FREQ=WEEKLY.")
+    if freq in ("DAILY", "WEEKLY") and any(position for position, _ in rule["byday"]):
+        raise RecurrenceError("BYDAY positions apply only to MONTHLY or YEARLY.")
     rule["unsupported"] = [key for key in parts if key.upper() not in SUPPORTED_PARTS]
     return rule
 
@@ -177,7 +184,7 @@ def _parse_byday(value):
     for token in str(value).split(","):
         token = token.strip().upper()
         if not token:
-            continue
+            raise RecurrenceError("BYDAY must not contain an empty entry.")
         position = 0
         code = token
         if len(token) > 2:
@@ -201,7 +208,7 @@ def _parse_int_list(value, name, low, high, allow_negative=False):
     for token in str(value).split(","):
         token = token.strip()
         if not token:
-            continue
+            raise RecurrenceError("%s must not contain an empty entry." % name)
         try:
             number = int(token)
         except ValueError:
@@ -216,25 +223,30 @@ def _parse_int_list(value, name, low, high, allow_negative=False):
 
 
 def _parse_until(value):
-    text = str(value or "").strip()
-    if not text:
+    """Inclusive end: whole dates cover their day, explicit offsets survive."""
+    if value is None or value == "":
         return None
-    cleaned = text.rstrip("Zz")
-    # A date-only UNTIL covers that whole day. Treating it as midnight would
-    # drop an occurrence that happens later on the final day.
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, date):
+        return LifeDateTime.combine(value, time(23, 59, 59, 999999))
+    text = str(value).strip()
+    parsed = parse_date_or_datetime(text, is_end=True)
+    if parsed is not None:
+        if "T" not in text:
+            parsed = parsed.replace(microsecond=999999)
+        return parsed
     for pattern, whole_day in (
+        ("%Y%m%dT%H%M%S%z", False),
         ("%Y%m%dT%H%M%S", False),
-        ("%Y-%m-%dT%H:%M:%S", False),
-        ("%Y-%m-%dT%H:%M", False),
         ("%Y%m%d", True),
-        ("%Y-%m-%d", True),
     ):
         try:
-            parsed = datetime.strptime(cleaned, pattern)
+            parsed = LifeDateTime.strptime(text, pattern)
         except ValueError:
             continue
         if whole_day:
-            return parsed.replace(hour=23, minute=59, second=59)
+            return parsed.replace(hour=23, minute=59, second=59, microsecond=999999)
         return parsed
     raise RecurrenceError("UNTIL value %r is not a date or datetime." % value)
 
@@ -277,7 +289,12 @@ def expand(rule, start, after=None, before=None, limit=None):
 
     results = []
     emitted = 0
-    for moment in _candidates(rule, start):
+    candidate_end = before
+    if rule["until"] is not None and (
+        candidate_end is None or _later(candidate_end, rule["until"])
+    ):
+        candidate_end = rule["until"]
+    for moment in _candidates(rule, start, candidate_end):
         if rule["until"] is not None and _later(moment, rule["until"]):
             break
         if before is not None and _later(moment, before):
@@ -302,7 +319,7 @@ def _later(left, right):
     return left > right
 
 
-def _candidates(rule, start):
+def _candidates(rule, start, before=None):
     """Yield every moment the rule matches, in order, from ``start``."""
     name = rule["name"]
     interval = rule["interval"]
@@ -360,6 +377,17 @@ def _candidates(rule, start):
         guard = 0
         while guard < SAFETY_ITERATIONS:
             guard += 1
+            if year > datetime.max.year or (
+                before is not None
+                and _later(
+                    LifeDateTime.combine(
+                        date(year, month, 1),
+                        moment_time.replace(hour=0, minute=0, second=0, microsecond=0),
+                    ),
+                    before,
+                )
+            ):
+                return
             if not bymonth or month in bymonth:
                 for moment in _month_occurrences(year, month, start, rule, moment_time):
                     if not _later(start, moment):
@@ -375,7 +403,17 @@ def _candidates(rule, start):
         guard = 0
         while guard < SAFETY_ITERATIONS:
             guard += 1
+            if year > datetime.max.year:
+                return
             for month in months:
+                if before is not None and _later(
+                    LifeDateTime.combine(
+                        date(year, month, 1),
+                        moment_time.replace(hour=0, minute=0, second=0, microsecond=0),
+                    ),
+                    before,
+                ):
+                    return
                 for moment in _month_occurrences(year, month, start, rule, moment_time):
                     if not _later(start, moment):
                         yield moment
@@ -391,12 +429,13 @@ def _month_occurrences(year, month, start, rule, moment_time):
     bymonthday = rule["bymonthday"]
     days_in_month = calendar.monthrange(year, month)[1]
 
-    days = set()
+    month_days = set()
     if bymonthday:
         for number in bymonthday:
             day = number if number > 0 else days_in_month + number + 1
             if 1 <= day <= days_in_month:
-                days.add(day)
+                month_days.add(day)
+    weekday_days = set()
     if byday:
         for position, weekday in byday:
             matches = [
@@ -405,14 +444,20 @@ def _month_occurrences(year, month, start, rule, moment_time):
                 if date(year, month, day).weekday() == weekday
             ]
             if position == 0:
-                days.update(matches)
+                weekday_days.update(matches)
             elif position > 0 and position <= len(matches):
-                days.add(matches[position - 1])
+                weekday_days.add(matches[position - 1])
             elif position < 0 and -position <= len(matches):
-                days.add(matches[position])
-    if not days:
-        # No BYDAY/BYMONTHDAY: keep the anchor's day, clamped to short months.
-        days.add(min(start.day, days_in_month))
+                weekday_days.add(matches[position])
+    if byday and bymonthday:
+        days = weekday_days & month_days
+    elif byday:
+        days = weekday_days
+    elif bymonthday:
+        days = month_days
+    else:
+        # Only an unfiltered rule inherits the anchor day in short months.
+        days = {min(start.day, days_in_month)}
 
     for day in sorted(days):
         yield LifeDateTime.combine(date(year, month, day), moment_time)
@@ -552,4 +597,4 @@ def _first_until(item):
     values = item.details.get("until") or []
     if not values:
         return None
-    return _as_datetime(values[0])
+    return _parse_until(values[0])

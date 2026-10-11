@@ -630,7 +630,7 @@ def next_repeat_occurrence(item, repeat_base, completion_date):
     if next_dt is None:
         return anchor_key, None, rule
     until = rule.get("until")
-    if until is not None and next_dt > until:
+    if until is not None and _earlier(until, next_dt):
         return anchor_key, None, rule
     return anchor_key, next_dt, rule
 
@@ -857,35 +857,12 @@ def _parse_rrule_byday(value):
 
 
 def _parse_rrule_until(value):
-    if not value:
-        return None
+    from .recurrence import RecurrenceError, _parse_until
 
-    parsed = parse_date_or_datetime(value, is_end=True)
-    if parsed is not None:
-        return parsed
-
-    text = str(value).strip().upper()
     try:
-        if re.match(r"^\d{8}$", text):
-            parsed_date = datetime.strptime(text, "%Y%m%d").date()
-            return datetime.combine(parsed_date, time(23, 59, 59))
-        if re.match(r"^\d{8}T\d{6}Z$", text):
-            return (
-                datetime.strptime(text[:-1] + "+0000", "%Y%m%dT%H%M%S%z")
-                .astimezone()
-                .replace(tzinfo=None)
-            )
-        if re.match(r"^\d{8}T\d{6}[+-]\d{4}$", text):
-            return (
-                datetime.strptime(text, "%Y%m%dT%H%M%S%z")
-                .astimezone()
-                .replace(tzinfo=None)
-            )
-        if re.match(r"^\d{8}T\d{6}$", text):
-            return datetime.strptime(text, "%Y%m%dT%H%M%S")
-    except ValueError:
+        return _parse_until(value)
+    except RecurrenceError:
         return None
-    return None
 
 
 def _positive_int_text(value, default):
@@ -1154,7 +1131,7 @@ def _add_years(value, years):
 
 def _repeat_until(item):
     for value in item.details.get("until", []):
-        parsed = parse_date_or_datetime(value, is_end=True)
+        parsed = _parse_rrule_until(value)
         if parsed is not None:
             return parsed
     return None

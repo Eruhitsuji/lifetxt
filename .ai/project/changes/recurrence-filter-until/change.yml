@@ -1,0 +1,25 @@
+schema_version: 1
+change:
+  id: recurrence-filter-until
+  title: Intersect recurrence filters and preserve inclusive UNTIL instants
+  status: implemented
+  change_type: Bug
+  assurance_level: High
+  owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1236
+  related_pull_request: null
+  size: S
+  complexity: 6/10
+scope:
+  write_scope: [lifetxt/recurrence.py, lifetxt/agenda.py, tests/test_recurrence_contract.py, tests/test_recurrence_wkst.py, docs/en/life_txt_format_spec.md, docs/ja/life_txt_format_spec.md, life_txt_format_spec.md, .ai/project/changes/recurrence-filter-until, .ai/project/CAPABILITIES.yml, .ai/project/TRACEABILITY.yml]
+  forbidden_scope: [authorization, saved-data rewrite, global timezone policy, .ai/managed]
+  shared_files: [CAPABILITIES.yml, TRACEABILITY.yml]
+  integrator: Eruhitsuji
+  integration_order: Engine first, diagnostic routing second; independent MCP test-only PR may merge separately.
+  rollback: Revert PR; no data migration.
+design_approval:
+  owner: Eruhitsuji
+  date: '2026-10-11'
+  record: https://github.com/Eruhitsuji/lifetxt/issues/1227
+  scope: Owner approved recorded filter/UNTIL proposal; separate Bug implementation contract 1236.
+human_approvals_required: [Independent implementation review, Independent integration review, Merge authority approval]

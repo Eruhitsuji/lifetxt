@@ -1,0 +1,3 @@
+[N] J "研究日誌" id:log on:2030-10-11 mood:calm weather:sunny loc:lab
+| 文献を読んだ。
+[ ] T "要約を書く" do:2030-10-12 ref:log

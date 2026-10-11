@@ -19,6 +19,8 @@ from .timeutil import (
     parse_date_or_datetime,
     parse_datetime,
     parse_time,
+    parse_anchored_time,
+    offset_comparison_pair,
     format_datetime as format_life_datetime,
 )
 
@@ -552,7 +554,7 @@ def _add_at_matches(matches, item, range_start, range_end):
             _add_match(matches, "at", point, point, range_start, range_end)
             continue
 
-        at_time = _parse_time_value(value)
+        at_time = _authored_time(value)
         if at_time is None:
             continue
         if on_dates:
@@ -562,9 +564,9 @@ def _add_at_matches(matches, item, range_start, range_end):
         elif (range_end.date() - range_start.date()).days > 366:
             candidate_dates = [_first_matching_date_for_time(range_start, at_time)]
         else:
-            candidate_dates = _range_dates(range_start, range_end)
+            candidate_dates = _range_dates(range_start, range_end, at_time)
         for candidate_date in candidate_dates:
-            point = datetime.combine(candidate_date, at_time)
+            point = parse_anchored_time(value, candidate_date)
             _add_match(matches, "at", point, point, range_start, range_end)
 
 
@@ -690,7 +692,7 @@ def _add_repeat_matches(matches, item, range_start, range_end):
     key, anchor_start, anchor_end = anchor
     if anchor_end is None:
         anchor_end = anchor_start
-    if anchor_end < anchor_start:
+    if _earlier(anchor_end, anchor_start):
         anchor_end = anchor_start
 
     repeat_name = rule["repeat"]
@@ -701,7 +703,7 @@ def _add_repeat_matches(matches, item, range_start, range_end):
     effective_end = range_end
     if range_end == datetime.max:
         effective_end = effective_start + timedelta(days=366)
-    if until is not None and until < effective_end:
+    if until is not None and _earlier(until, effective_end):
         effective_end = until
 
     if _add_shared_rrule_matches(
@@ -745,13 +747,13 @@ def _add_repeat_matches(matches, item, range_start, range_end):
         count,
     )
     emitted = 0
-    while current <= effective_end and emitted < _MAX_REPEAT_MATCHES:
+    while not _earlier(effective_end, current) and emitted < _MAX_REPEAT_MATCHES:
         if count is not None and occurrence_index > count:
             break
-        if until is not None and current > until:
+        if until is not None and _earlier(until, current):
             break
 
-        current_end = current + (anchor_end - anchor_start)
+        current_end = current + _elapsed(anchor_end, anchor_start)
         _add_match(
             matches,
             "repeat:%s" % key,
@@ -765,7 +767,7 @@ def _add_repeat_matches(matches, item, range_start, range_end):
         emitted += 1
 
         next_current = _next_repeat_datetime(current, repeat_name, interval)
-        if next_current <= current:
+        if not _earlier(current, next_current):
             break
         current = next_current
         occurrence_index += 1
@@ -922,7 +924,7 @@ def _add_shared_rrule_matches(
     if rule is None or not (rule["byday"] or rule["bymonthday"] or rule["bymonth"]):
         return False
 
-    duration = anchor_end - anchor_start
+    duration = _elapsed(anchor_end, anchor_start)
     try:
         occurrences = expand(
             rule,
@@ -968,7 +970,7 @@ def _add_rrule_byday_matches(
     range_end,
     repeat_label,
 ):
-    duration = anchor_end - anchor_start
+    duration = _elapsed(anchor_end, anchor_start)
     emitted = 0
     occurrence_index = 1
     for current in _rrule_byday_candidates(
@@ -1046,7 +1048,7 @@ def _repeat_anchor(item, range_start, range_end):
         if point is not None:
             return "at", point, point
 
-        at_time = _parse_time_value(value)
+        at_time = _authored_time(value)
         if at_time is None:
             continue
         on_dates = _item_on_dates(item)
@@ -1057,7 +1059,7 @@ def _repeat_anchor(item, range_start, range_end):
             if on_dates
             else _first_matching_date_for_time(range_start, at_time)
         )
-        point = datetime.combine(anchor_date, at_time)
+        point = parse_anchored_time(value, anchor_date)
         return "at", point, point
 
     for value in item.details.get("on", []):
@@ -1078,15 +1080,15 @@ def _align_repeat_start(
     repeat_value, anchor_start, anchor_end, interval, range_start, count
 ):
     occurrence_index = 1
-    duration = anchor_end - anchor_start
+    duration = _elapsed(anchor_end, anchor_start)
     target = range_start - duration
-    if target <= anchor_start:
+    if not _earlier(anchor_start, target):
         return anchor_start, occurrence_index
 
     if repeat_value == "daily":
         step_seconds = timedelta(days=interval).total_seconds()
         skipped = max(
-            0, int((target - anchor_start).total_seconds() // step_seconds) - 1
+            0, int(_elapsed(target, anchor_start).total_seconds() // step_seconds) - 1
         )
         if count is not None and skipped >= count:
             return anchor_start + timedelta(days=interval * skipped), skipped + 1
@@ -1095,18 +1097,18 @@ def _align_repeat_start(
     if repeat_value == "weekly":
         step_seconds = timedelta(weeks=interval).total_seconds()
         skipped = max(
-            0, int((target - anchor_start).total_seconds() // step_seconds) - 1
+            0, int(_elapsed(target, anchor_start).total_seconds() // step_seconds) - 1
         )
         if count is not None and skipped >= count:
             return anchor_start + timedelta(weeks=interval * skipped), skipped + 1
         return anchor_start + timedelta(weeks=interval * skipped), skipped + 1
 
     current = anchor_start
-    while current < target:
+    while _earlier(current, target):
         if count is not None and occurrence_index >= count:
             break
         next_current = _next_repeat_datetime(current, repeat_value, interval)
-        if next_current <= current:
+        if not _earlier(current, next_current):
             break
         current = next_current
         occurrence_index += 1
@@ -1197,10 +1199,10 @@ def _add_match(
 
 def _overlaps(start, end, range_start, range_end):
     if end is None:
-        return start < range_end
+        return _earlier(start, range_end)
     if end == start:
-        return range_start <= start < range_end
-    return start < range_end and end > range_start
+        return not _earlier(start, range_start) and _earlier(start, range_end)
+    return _earlier(start, range_end) and _earlier(range_start, end)
 
 
 def _is_unbounded_range(range_start, range_end):
@@ -1258,6 +1260,21 @@ def _parse_datetime_value(value):
     return parse_datetime(value)
 
 
+def _authored_time(value):
+    point = parse_anchored_time(value, datetime(2000, 1, 1).date())
+    return point.timetz() if point is not None else None
+
+
+def _earlier(left, right):
+    left, right = offset_comparison_pair(left, right)
+    return left < right
+
+
+def _elapsed(left, right):
+    left, right = offset_comparison_pair(left, right)
+    return left - right
+
+
 def _parse_time_value(value):
     return parse_time(value)
 
@@ -1273,16 +1290,24 @@ def _item_on_dates(item):
 
 
 def _first_matching_date_for_time(range_start, at_time):
-    candidate_date = range_start.date()
+    candidate_date = _clock_date(range_start, at_time)
     point = datetime.combine(candidate_date, at_time)
-    if point < range_start:
+    if _earlier(point, range_start):
         candidate_date = candidate_date + timedelta(days=1)
     return candidate_date
 
 
-def _range_dates(range_start, range_end):
-    current = range_start.date()
-    last = range_end.date()
+def _clock_date(boundary, at_time):
+    if at_time.tzinfo is None:
+        return boundary.date()
+    from .timezone_policy import interpret_datetime
+
+    return interpret_datetime(boundary).astimezone(at_time.tzinfo).date()
+
+
+def _range_dates(range_start, range_end, at_time):
+    current = _clock_date(range_start, at_time)
+    last = _clock_date(range_end, at_time)
     values = []
     while current <= last:
         values.append(current)

@@ -10038,6 +10038,48 @@ capabilities:
       replaced_by: null
       deprecation_issue: null
 
+  - id: cap-undo-snapshot-restore
+    name: Undo snapshot stack restore and preview
+    summary: >-
+      `lifetxt undo PATH` restores a file from the most recent write-operation
+      snapshot in its per-file undo stack and consumes that snapshot;
+      `--list` shows the stack's timestamps and originating operations.
+      `--dry-run` previews which snapshot would be restored (timestamp and
+      operation) without writing to the target file or consuming the
+      snapshot, so the stack is left untouched. `--list` and `--dry-run` are
+      mutually exclusive.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-undo-dry-run-preview
+    implementation_locations:
+      - lifetxt/cli.py
+      - tests/test_lifetxt.py
+    public_interfaces:
+      - lifetxt undo PATH
+      - lifetxt undo PATH --list
+      - lifetxt undo PATH --dry-run
+    tests_or_evidence:
+      - "python -m unittest tests.test_lifetxt.LifeTxtUndoCliTests -> dry-run preview leaves the target file and snapshot untouched (confirmed by a subsequent real undo still working), dry-run with no history is graceful, --list+--dry-run together is rejected"
+      - "confirmed via git stash that test_undo_restores_previous_content's failure is a pre-existing, unrelated flake reproducible on main without this change"
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - ruff check lifetxt/cli.py tests/test_lifetxt.py -> clean
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/1253
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/1254
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      No existing capability entry covered the pre-existing `undo`/`--list`
+      command before this change; this entry documents it alongside the new
+      `--dry-run` preview branch, which reuses the same snapshot-directory
+      resolution and timestamp/operation parsing as `--list` rather than a
+      second implementation.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
   - id: cap-progress-direct-set
     name: "`lifetxt progress --set` direct assignment"
     summary: >-

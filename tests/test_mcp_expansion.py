@@ -7,6 +7,12 @@ import tempfile
 import unittest
 from unittest import mock
 
+from lifetxt import bootstrap_legacy_surfaces
+
+# This suite exercises legacy consumers. Complete their public initialization
+# before taking snapshots of functions and immutable classification sets.
+bootstrap_legacy_surfaces()
+
 from lifetxt.mcp import (
     ASSIST_EXTRA_TOOLS,
     DESTRUCTIVE_TOOLS,

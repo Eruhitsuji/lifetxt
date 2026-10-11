@@ -2,6 +2,19 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-mcp-test-import-order-determinism
+      capability_id: cap-surface-capability-consistency
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1238
+      pull_request: null
+      changed_files_or_scope:
+        - tests/test_mcp_expansion.py
+        - tests/test_mcp_import_order.py
+      tests_or_evidence:
+        - 333 focused MCP/import-order/Core boundary/traceability tests passed
+        - Full discovery passed 5493 tests, 447 optional skips
+        - 569 selected consumer tests passed without external bootstrap wrapper
+      status: implemented
+      notes: Test-only explicit legacy initialization before snapshots; no runtime or authorization change; human review pending.
     - requirement_id: req-recurrence-diagnostic-expansion-consistency
       capability_id: cap-recurrence-expansion
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1237

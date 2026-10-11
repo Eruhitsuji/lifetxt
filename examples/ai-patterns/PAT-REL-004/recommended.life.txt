@@ -1,0 +1,2 @@
+[ ] T "レビューを完了する" id:review blocks:submit
+[ ] T "提出する" id:submit depends_on:review

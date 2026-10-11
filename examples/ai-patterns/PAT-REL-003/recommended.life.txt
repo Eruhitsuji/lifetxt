@@ -1,0 +1,3 @@
+[ ] T "草案" id:draft
+[N] N "参考資料" id:reading
+[N] N "草案メモ" id:memo ref:draft related:reading

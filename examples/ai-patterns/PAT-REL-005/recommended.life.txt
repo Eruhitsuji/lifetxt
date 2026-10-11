@@ -1,0 +1,3 @@
+[>] T "旧手順" id:old replaced_by:new
+[ ] T "新手順" id:new
+[-] T "重複手順" id:copy duplicate_of:new reason:"重複"

@@ -1,0 +1,8 @@
+schema_version: 1
+links:
+  - requirement: req-recurrence-filter-until-consistency
+    capability: cap-recurrence-expansion
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1236
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1239
+    tests: [tests.test_recurrence_contract, tests.test_recurrence, tests.test_recurrence_wkst, tests.test_offset_recurrence]
+    status: implemented

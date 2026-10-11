@@ -483,16 +483,28 @@ time filter では一致対象にしません。
 | `FREQ` | `DAILY`、`WEEKLY`、`MONTHLY`、`YEARLY` |
 | `INTERVAL`、`COUNT`、`UNTIL` | 正の間隔・回数。回数は series anchor から数え、終了日時は inclusive |
 | `BYDAY` | 全4頻度で通常の曜日。`2MO`、`-1FR` などの序数は monthly/yearly で対象月内の曜日として評価 |
-| `BYMONTHDAY` | `1`–`31`、負値 `-1`–`-31`（`-1` は月末）。weekly では無視 |
+| `BYMONTHDAY` | `1`–`31`、負値 `-1`–`-31`（`-1` は月末）。weekly では指定不可 |
 | `BYMONTH` | 対象月 `1`–`12` |
 | `WKST` | 週の開始曜日、既定 `MO`。weekly `BYDAY` の順序と interval の週境界に影響 |
 
-`UNTIL` は life.txt の date/datetime または `20260630`、
-`20260630T090000` などの iCalendar basic 形式を使えます。
-daily/weekly の序数付き `BYDAY` は序数を無視し、`W223` を出します。
-monthly/yearly の `BYDAY` と `BYMONTHDAY` は RFC 形式の積集合ではなく
-**和集合**です。選択した日の集合が空になると、現在の engine は anchor の日へ
-fallback し、短い月では月末へ丸めます。これらは実装上の制限であり、RFC 準拠の主張ではありません。
+`UNTIL` は life.txt の date/datetime と、`20260630`、
+`20260630T090000Z`、`20260630T180000+0900` などの iCalendar basic 形式を使えます。
+日付だけの終了日は小数秒を含むその日の全体を含みます。兄弟キー `until:` と
+RRULE `UNTIL` は同じ境界です。明示offsetは保持して瞬間として比較し、
+naiveな境界との比較では解決済みtimezoneを使います。
+daily/weekly の序数付き `BYDAY` と weekly の `BYMONTHDAY` は、
+共通parserで拒否し、黙って無視しません。
+
+monthly/yearly の `BYDAY` と `BYMONTHDAY` は両方指定すると**積集合**です。
+指定した条件に合う日がなければ候補は0件です。条件のないmonthly/yearlyだけが
+anchorの日を引き継ぎ、短い月では月末へ丸めます。これは対応subsetであり、
+RFC全体への準拠を意味しません。
+
+互換性: `MONTHLY;BYMONTHDAY=31;BYDAY=2MO` は従来31日と第2月曜日の
+両方でしたが、修正後は候補0件です。`BYDAY=6MO` もanchorへfallbackしません。
+日付のみの兄弟キー `until:` は終了日の途中にある予定も含むようになります。
+既存seriesは `lifetxt rrule` / `agenda` で生成日を再確認してください。
+保存済みlife.txtの書換えはありません。
 
 未対応キー（`BYSETPOS`、`BYHOUR` など）は text として保持され、`W223` で
 警告されますが、対応部分は展開される場合があります。例えば

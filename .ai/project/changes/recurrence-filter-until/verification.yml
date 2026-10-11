@@ -1,0 +1,23 @@
+schema_version: 1
+verification:
+  executed:
+    - command: python -m unittest tests.test_recurrence_contract tests.test_recurrence tests.test_recurrence_wkst tests.test_offset_recurrence
+      result: 98 tests passed after adding empty-period bound regression.
+      status: passed
+    - command: python -m ruff check lifetxt/recurrence.py lifetxt/agenda.py tests/test_recurrence_contract.py tests/test_recurrence_wkst.py
+      result: Passed; modified runtime and new test formatted.
+      status: passed
+    - command: Focused recurrence, timezone, freebusy, traceability and closeout suites
+      result: 183 tests passed after adding empty values and year ceiling cases.
+      status: passed
+    - command: python -m ruff check lifetxt tests scripts
+      result: Passed.
+      status: passed
+    - command: python -m mypy --follow-imports=skip --ignore-missing-imports lifetxt/diagnostic_contract.py
+      result: Passed existing type boundary.
+      status: passed
+    - command: python -m lifetxt check examples/minimal_life.txt
+      result: OK, 10 items.
+      status: passed
+  remaining:
+    - Independent implementation and integration reviews, CI and human merge approval

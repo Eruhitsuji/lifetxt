@@ -14,6 +14,34 @@ it. See [docs/en/philosophy.md](./docs/en/philosophy.md) (or
 [docs/ja/philosophy.md](./docs/ja/philosophy.md)) for the full philosophy
 and long-term vision.
 
+## For AI Assistants
+
+When asked to convert, explain, or review lifetxt text, first read the official
+[Assistant Prompt Profile](./prompts/lifetxt-assistant.md). Consult the
+authoritative Format 1.0 specification ([English](./docs/en/life_txt_format_spec.md)
+/ [Japanese](./docs/ja/life_txt_format_spec.md)) as needed; the profile guides
+semantic choices and does not replace the specification.
+
+Return draft life.txt lines with explanations, questions, and uncertainty
+outside the record block. Follow the profile's rules for relative dates and
+non-invention. Do not access or write the user's authoritative life.txt, or
+promise automatic execution. If browsing is unavailable or a reference cannot
+be fetched, explicitly say it is unverified; a supplied URL is not proof of
+reading or conformance. Report mechanical validation as **not run** unless it
+was actually executed; syntax acceptance does not prove meaning was preserved.
+
+With a browsing-capable AI, users can start with only a request and this
+repository URL (AI discovery and compliance are not guaranteed):
+
+```text
+「明日散歩に行く」をlifetxt形式に変換してください。
+https://github.com/Eruhitsuji/lifetxt
+```
+
+See [Without MCP](./docs/en/ai-integration.md#9-without-mcp)
+([日本語](./docs/ja/ai-integration.md#9-without-mcp)) for the manual workflow,
+including directly supplying the profile if needed, validation, and human review.
+
 ## Documentation
 
 - [English documentation](./docs/en/readme.md)

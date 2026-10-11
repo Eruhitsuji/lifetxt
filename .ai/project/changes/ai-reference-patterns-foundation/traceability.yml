@@ -3,5 +3,5 @@ requirement_id: req-provider-independent-ai-prompt-profile
 capability_id: cap-ai-prompt-profile
 parent_issue: https://github.com/Eruhitsuji/lifetxt/issues/1200
 task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1201
-pull_request: null
+pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1212
 evidence: tests.test_ai_patterns and per-fixture Core reports

@@ -2,6 +2,19 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-recurrence-documentation-current-subset
+      capability_id: cap-recurrence-expansion
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1225
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1228
+      changed_files_or_scope:
+        - docs/en/life_txt_format_spec.md
+        - docs/ja/life_txt_format_spec.md
+        - life_txt_format_spec.md
+      tests_or_evidence:
+        - tests.test_recurrence and tests.test_recurrence_wkst
+        - Issue1217 CLI fixture evidence
+      status: implemented
+      notes: Existing subset documentation only; owner approved 2026-10-11; human review pending.
     - requirement_id: req-provider-independent-ai-prompt-profile
       capability_id: cap-ai-prompt-profile
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1200

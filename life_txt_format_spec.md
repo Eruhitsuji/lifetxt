@@ -282,8 +282,9 @@ as zero minutes.
 Supported simple `repeat:` values are `daily`, `weekly`, `monthly`, `yearly`,
 and `weekdays`. `RRULE:...` values may be stored for interoperability. Built-in
 agenda and time-filter expansion supports a dependency-free RRULE subset:
-`FREQ=DAILY|WEEKLY|MONTHLY|YEARLY`, `INTERVAL`, `COUNT`, `UNTIL`, and
-daily/weekly `BYDAY`.
+`FREQ=DAILY|WEEKLY|MONTHLY|YEARLY`, `INTERVAL`, `COUNT`, `UNTIL`,
+`BYDAY`, `BYMONTHDAY`, `BYMONTH`, and `WKST`. Section 8.1 describes their
+frequency-specific limits; this is not full RFC 5545 support.
 
 `repeat_base` only affects the `complete` CLI command and the `complete_item`
 MCP tool, which materialize the next occurrence of a repeat-enabled task
@@ -291,8 +292,8 @@ instance (see CLI docs section 13.9). It has no effect on agenda's virtual
 expansion. `repeat_base:due` (the default, also settable via
 `defaults.repeat_base` in config) advances from the item's current `due:`/
 `do:` value and requires one to be present. `repeat_base:done` advances from
-the completion date instead. `BYDAY` RRULE values are not yet supported by
-`complete`'s materialization.
+the completion date instead. `complete` materializes supported `BYDAY`, `BYMONTHDAY`, and `BYMONTH`
+RRULE occurrences through the same recurrence engine.
 
 ### 7.7 Message Keys
 
@@ -392,12 +393,40 @@ range uses a date-only end such as `--to 2026-06-12`, tools interpret the end as
 keeps fractional-second values on the selected day, such as
 `2026-06-12T23:59:59.5`, inside the requested range.
 
-For `repeat:RRULE:...`, the built-in subset reads `FREQ`, `INTERVAL`, `COUNT`,
-and `UNTIL`; `BYDAY` is supported for `FREQ=DAILY` and `FREQ=WEEKLY`. `UNTIL`
-may use life.txt datetime syntax or iCalendar basic forms such as `20260630`
-and `20260630T090000`. More complex RRULE features are preserved as text but
-are not expanded by the dependency-free core. `check` emits recurrence warning
-`W223` when it detects unsupported RRULE features.
+For `repeat:RRULE:...`, the existing dependency-free engine reads the following
+subset. Accepted vocabulary does not guarantee every combination is meaningful.
+
+| Part | Existing expansion behavior |
+|---|---|
+| `FREQ` | `DAILY`, `WEEKLY`, `MONTHLY`, `YEARLY` |
+| `INTERVAL`, `COUNT`, `UNTIL` | Positive interval/count; count starts at the series anchor; inclusive end |
+| `BYDAY` | Plain weekdays for all four frequencies; ordinal forms such as `2MO` and `-1FR` for monthly/yearly, evaluated within each selected month |
+| `BYMONTHDAY` | Month days `1`–`31` and negative days `-1`–`-31` (`-1` means the last day); ignored for weekly rules |
+| `BYMONTH` | Selected months `1`–`12` |
+| `WKST` | Week start, default `MO`; affects weekly `BYDAY` order and interval grouping |
+
+`UNTIL` accepts life.txt date/datetime or iCalendar basic forms such as
+`20260630` and `20260630T090000`. Daily/weekly ordinal `BYDAY` ignores the
+position and emits `W223`. Monthly/yearly `BYDAY` and `BYMONTHDAY` select a
+**union**, rather than an RFC-style intersection. If their selected day set is
+empty, the current engine falls back to the anchor day, clamped for short
+months. These are implementation limitations, not a claim of RFC compliance.
+
+Unsupported keys (for example `BYSETPOS` or `BYHOUR`) are retained as text and
+warned about with `W223`; the supported portion may still expand. For example,
+`FREQ=MONTHLY;BYDAY=2MO;BYHOUR=9` expands the second Monday at the anchor time,
+not necessarily 09:00. Unsupported frequencies do not generate recurrence
+matches. Warnings normally leave `check` exit status at zero: acceptance does
+not certify the intended schedule. The `rrule` command also reports unsupported
+parts. Agenda also has a legacy dispatch gap for plain monthly/yearly `BYDAY`,
+even though the shared engine reads it. Invalid supported values and
+fallback/diagnostic gaps are tracked by
+[#1227](https://github.com/Eruhitsuji/lifetxt/issues/1227).
+
+Expansion is bounded by count/end/window and safety ceilings. Verify concrete
+occurrences for the intended range. Offset-aware anchor/expansion defects are
+tracked by [#1218](https://github.com/Eruhitsuji/lifetxt/issues/1218) and
+[#1226](https://github.com/Eruhitsuji/lifetxt/issues/1226).
 
 ## 9. Type-Specific Recommended Keys
 

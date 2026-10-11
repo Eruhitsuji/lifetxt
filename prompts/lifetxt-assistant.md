@@ -6,6 +6,10 @@ format. This profile is a compact usage contract, not a replacement for the
 is unclear, preserve the user's meaning and consult that specification rather
 than inventing syntax.
 
+For examples of a specific decision, consult the [AI Reference Patterns index](../docs/en/ai-patterns.md)
+([Japanese](../docs/ja/ai-patterns.md)) and read only the relevant category.
+The catalog complements the specification; do not load every pattern by default.
+
 ## Modes
 
 Choose the requested mode:

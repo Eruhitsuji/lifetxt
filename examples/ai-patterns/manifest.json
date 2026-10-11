@@ -1,0 +1,415 @@
+{
+  "schema_version": 1,
+  "format_version": "1.0",
+  "parent_issue": 1200,
+  "patterns": [
+    {
+      "id": "PAT-TYPE-001",
+      "topic": "Taskの実行",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-TYPE-002",
+      "topic": "Eventの開催",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-TYPE-003",
+      "topic": "Deadlineの締切",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-TYPE-004",
+      "topic": "Reminderの注意喚起",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-TYPE-005",
+      "topic": "Habitの習慣",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-TYPE-006",
+      "topic": "Noteの持続的情報",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-TYPE-007",
+      "topic": "Statusの在席状態",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-TYPE-008",
+      "topic": "Messageの伝達依頼",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-TYPE-009",
+      "topic": "Journalの日時付き記録",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-STATUS-001",
+      "topic": "未完了",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-STATUS-002",
+      "topic": "進行中とprogress/elapsed",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-STATUS-003",
+      "topic": "完了と既知または不明のdone",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-STATUS-004",
+      "topic": "キャンセルとreason",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-STATUS-005",
+      "topic": "移動日時moved_toと置換IDの区別",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-STATUS-006",
+      "topic": "保留・未確定",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-STATUS-007",
+      "topic": "Note/Journal専用の[N]",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-TIME-001",
+      "topic": "doの実行予定",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-TIME-002",
+      "topic": "dueの期限",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-TIME-003",
+      "topic": "onの終日予定",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-TIME-004",
+      "topic": "atの単独日時とon+時刻",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-TIME-005",
+      "topic": "from/toの区間",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-TIME-006",
+      "topic": "doneの完了日時",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-TIME-007",
+      "topic": "offsetとUTC",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-TIME-008",
+      "topic": "秒・小数秒・時刻のみ",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-TIME-009",
+      "topic": "基準日時付き相対日付と欠測時",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-TIME-010",
+      "topic": "notify_at/from/to・ack・snooze_until",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-REC-001",
+      "topic": "daily/weekdays",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-REC-002",
+      "topic": "weeklyと起点",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-REC-003",
+      "topic": "monthly/yearlyと暦境界",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-REC-004",
+      "topic": "interval",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-REC-005",
+      "topic": "count/untilの終端",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-REC-006",
+      "topic": "RRULEのdaily/weekly BYDAY",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-REC-007",
+      "topic": "未対応RRULE・例外日の保持と非展開",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-REC-008",
+      "topic": "日付起点なしatと有界範囲",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-REL-001",
+      "topic": "id一意性と既存ID文脈",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-REL-002",
+      "topic": "parentとインデント推論",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-REL-003",
+      "topic": "ref/relatedの役割",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-REL-004",
+      "topic": "depends_on/blocksの方向と解決状態",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-REL-005",
+      "topic": "duplicate_of/replaced_by",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-REL-006",
+      "topic": "follows/realizesと非自動推論",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-REL-007",
+      "topic": "欠落・自己参照・曖昧ID・循環の境界",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-REL-008",
+      "topic": "複数ファイル参照と部分共有",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-GRAM-001",
+      "topic": "bare/quoted titleとkey:value",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-GRAM-002",
+      "topic": "引用符・backslashのescape",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-GRAM-003",
+      "topic": "反復keyと人物役割・tag",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-GRAM-004",
+      "topic": "custom keyの保持と意味の限界",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-GRAM-005",
+      "topic": "物理行backslash継続と不正境界",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-GRAM-006",
+      "topic": "body継続・空行・孤立継続",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-GRAM-007",
+      "topic": "Markdown本文・HTML非実行",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-GRAM-008",
+      "topic": "コメント・ヘッダー・file/dir・opaque暗号値",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-COM-001",
+      "topic": "Task+Deadline+Reminder",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-COM-002",
+      "topic": "反復ハイブリッド会議と準備",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-COM-003",
+      "topic": "研究計画・実験・メモの階層",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-COM-004",
+      "topic": "日誌から別Taskへ",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-COM-005",
+      "topic": "チーム在席と人物・期間",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-COM-006",
+      "topic": "Message threadと通知期間・確認",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-COM-007",
+      "topic": "予定→実績→延期・置換workflow",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-COM-008",
+      "topic": "提供済みmetadata・添付参照・record拡張境界",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-PIT-001",
+      "topic": "排他的候補日≠期間・確定日",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-PIT-002",
+      "topic": "レビュー依頼≠完了",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-PIT-003",
+      "topic": "完了・キャンセル≠成功・承認",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-PIT-004",
+      "topic": "do≠due・条件評価日≠期限",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-PIT-005",
+      "topic": "未共有参照・人物名≠ID",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-PIT-006",
+      "topic": "ID・担当・priority等の非創作",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-PIT-007",
+      "topic": "未知key≠公式候補日・検索機能",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-PIT-008",
+      "topic": "記録≠Teams送信・条件自動実行",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-PIT-009",
+      "topic": "実取得≠URL提示・自己申告・check≠意味",
+      "state": "planned",
+      "validation": "not run"
+    },
+    {
+      "id": "PAT-PIT-010",
+      "topic": "Reviewの原文保持・初回/修正版の分離",
+      "state": "planned",
+      "validation": "not run"
+    }
+  ]
+}

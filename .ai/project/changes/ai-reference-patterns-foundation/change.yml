@@ -1,0 +1,7 @@
+schema_version: 1
+change_id: ai-reference-patterns-foundation
+status: active
+issue: https://github.com/Eruhitsuji/lifetxt/issues/1201
+parent_issue: https://github.com/Eruhitsuji/lifetxt/issues/1200
+change_type: Feature
+assurance_level: Standard

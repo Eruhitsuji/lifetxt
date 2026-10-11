@@ -55,6 +55,8 @@ class RecoveryGateTests(unittest.TestCase):
             COVERAGE_RESULT="skipped",
             NO_WEB_SELECTED="true",
             COVERAGE_SELECTED="false",
+            PYTHON310_RESULT="skipped",
+            PYTHON310_SELECTED="false",
         )
         for changes, expected in [
             ({}, 0),
@@ -63,6 +65,11 @@ class RecoveryGateTests(unittest.TestCase):
             ({"NO_WEB_RESULT": "skipped"}, 1),
             ({"COVERAGE_SELECTED": "true"}, 1),
             ({"COVERAGE_SELECTED": "true", "COVERAGE_RESULT": "success"}, 0),
+            ({"PYTHON310_SELECTED": "true", "PYTHON310_RESULT": "success"}, 0),
+            ({"PYTHON310_SELECTED": "true", "PYTHON310_RESULT": "failure"}, 1),
+            ({"PYTHON310_SELECTED": "true", "PYTHON310_RESULT": "cancelled"}, 1),
+            ({"PYTHON310_SELECTED": "true", "PYTHON310_RESULT": "skipped"}, 1),
+            ({"PYTHON310_RESULT": "failure"}, 1),
             (
                 {
                     "PATH_CATEGORY": "docs-only",

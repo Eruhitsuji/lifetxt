@@ -15820,6 +15820,30 @@ traceability:
         implementing this entry is opened.
       status: implemented
 
+    - requirement_id: req-deferred-next-branch-readiness
+      capability_id: cap-ci-responsibility-separation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1234
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1259
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1261
+      changed_files_or_scope:
+        - .ai/project/BRANCH_STRATEGY.json
+        - scripts/check_branch_readiness.py
+        - tests/test_branch_readiness.py
+        - docs/development/branch-readiness.md
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - Python 3.10.22, 3.11.17 and 3.12.14, five readiness tests passed each
+        - Actual repository audit reports main-only consistency and deferred migration
+        - Negative fixtures reject invalid metadata, names and conflicting sources
+        - JSON output and read-only filesystem checks passed
+        - Ruff changed Python files and git diff check passed
+      status: implemented
+      notes: >-
+        Current branch roles remain main; next is deferred. Metadata is
+        descriptive, not a switch. Offline checks emit change_required and
+        manual_required evidence; external rulesets and server state are never
+        inferred ready. Human adoption, review and merge remain separate.
+
   required_chain:
     - Requirement
     - Capability

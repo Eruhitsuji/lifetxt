@@ -64,6 +64,40 @@ class CiWorkflowResponsibilityTests(unittest.TestCase):
             "outputs['run-coverage']", self.jobs["coverage-baseline"]["if"]
         )
 
+    def test_python_312_reports_slowest_tests_without_new_suite_runs(self):
+        web = next(
+            step for step in self.jobs["test"]["steps"]
+            if step["name"] == "Run unit tests"
+        )["run"]
+        self.assertIn('if [[ "${{ matrix.python-version }}" == "3.12" ]]; then', web)
+        self.assertIn("duration_args=()", web)
+        self.assertIn("duration_args=(--durations=20)", web)
+        self.assertIn('python -m unittest discover "${duration_args[@]}"', web)
+        self.assertIn("set -o pipefail", web)
+        self.assertIn("| tee unit-tests-${{ matrix.python-version }}.log", web)
+
+        no_web = next(
+            step for step in self.jobs["no-web-extras"]["steps"]
+            if step["name"] == "Run unit tests without extras"
+        )["run"]
+        self.assertIn(
+            "python -m unittest discover --durations=20 2>&1 | tee unit-tests-no-web.log",
+            no_web,
+        )
+        self.assertIn("set -o pipefail", no_web)
+
+        coverage = next(
+            step for step in self.jobs["coverage-baseline"]["steps"]
+            if step["name"] == "Run tests and write coverage evidence"
+        )["run"]
+        self.assertIn(
+            "coverage run --branch -m unittest discover --durations=20 "
+            "2>&1 | tee coverage-tests.log",
+            coverage,
+        )
+        self.assertIn("set -o pipefail", coverage)
+        self.assertIn("python scripts/check_coverage_regression.py", coverage)
+
     def test_no_web_lane_installs_yaml_without_web_extras(self):
         job = self.jobs["no-web-extras"]
         install = next(

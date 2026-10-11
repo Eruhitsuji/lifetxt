@@ -3067,7 +3067,7 @@
               "--format",
               "json"
             ],
-            "engine_commit": "runtime-to-be-recorded",
+            "engine_commit": "1aca8d632a7c86706ebe8b5999f45be2bef660bc",
             "exit": 0,
             "stderr": "examples/ai-patterns/PAT-REC-007/recommended.life.txt:1: WARNING W223: RRULE keys are stored but not expanded by the dependency-free core: BYSETPOS.\n",
             "repair_issue": "https://github.com/Eruhitsuji/lifetxt/issues/1237"

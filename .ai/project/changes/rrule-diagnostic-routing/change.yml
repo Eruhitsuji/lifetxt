@@ -7,7 +7,7 @@ change:
   assurance_level: Standard
   owner: Eruhitsuji
   related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1237
-  related_pull_request: null
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1240
   size: S
   complexity: 5/10
 scope:

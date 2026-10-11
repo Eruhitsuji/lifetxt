@@ -1,9 +1,9 @@
 import os
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import unittest
+from pathlib import Path
 
 from scripts.classify_ci_paths import classify, compatibility_checks
 
@@ -141,6 +141,7 @@ class CiPathRoutingTests(unittest.TestCase):
             )
             self.assertIn("run-no-web=true\n", result.stdout)
             self.assertIn("run-coverage=true\n", result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

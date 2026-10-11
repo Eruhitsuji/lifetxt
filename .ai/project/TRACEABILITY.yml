@@ -2,6 +2,48 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-ci-incident-operational-recovery-evidence
+      capability_id: cap-ci-responsibility-separation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1234
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1264
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1266
+      changed_files_or_scope:
+        - .github/workflows/ci.yml
+        - tests/test_ci_recovery_contract.py
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - Executable workflow fixtures preserve attempt 2, cancelled jobs, API failure, latest full-success closure and human comments
+        - Python 3.12 focused CI and catalog checks, 63 passed
+        - PR 1266 required CI remains pending until its final-head run succeeds
+      status: implemented
+      notes: >-
+        Extend existing main recovery-first Incident records with recovery
+        attempt and SHA. Automatic closure means operational recovery only;
+        cause confidence and recovery PR stay unknown without explicit evidence.
+        Preserve metadata links and human investigation comments without storing
+        raw logs or introducing automatic retry or merge.
+    - requirement_id: req-ci-ai-catalog-bounded-independent-cli-checks
+      capability_id: cap-ci-responsibility-separation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1234
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1265
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1266
+      changed_files_or_scope:
+        - scripts/check_ai_patterns.py
+        - tests/test_ai_patterns.py
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - Python 3.10 and 3.11 no-Web catalog checks, 13 passed each
+        - Serial and parallel full reports match for 68 patterns and 92 fixtures
+        - Fixed-environment serial 24.874s and 24.273s, final four-worker 8.588s and 8.833s
+        - Planned-state, order, timeout, spawn and worker failure, invalid JSON, exit, stderr, agenda and path-escape fixtures
+        - PR 1266 required CI and dev-only coverage retain the existing quality gates
+      status: implemented
+      notes: >-
+        Reuse fresh CLI subprocesses with unchanged environment and 30-second
+        timeout. Bound checks to at most four workers and drain them before
+        serial agenda/version checks. Preserve manifest order and full diagnostic
+        evidence; workers=1 provides a serial baseline. No new CI lane, mandatory
+        dependency, coverage threshold change or next branch introduction.
     - requirement_id: req-ci-slowest-unittest-durations-observability
       capability_id: cap-ci-responsibility-separation
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1234

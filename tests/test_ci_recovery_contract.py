@@ -112,6 +112,7 @@ github.paginate = async (method, args) => {
 };
 github.rest.actions.listWorkflowRuns = async () => ({data: {workflow_runs: f.runs || [{id: 10, status: 'completed', conclusion: 'failure', html_url: 'run-url'}]}});
 for (const method of ['create', 'update', 'createComment']) github.rest.issues[method] = async args => calls.push([method, args]);
+process.env.GITHUB_RUN_ATTEMPT = String(f.attempt || 1);
 process.env.MAIN_GATE_RESULT = f.result || 'failure';
 process.env.FULL_COMPATIBILITY = f.full === false ? 'false' : 'true';
 (async () => {await new (Object.getPrototypeOf(async function(){}).constructor)('github', 'context', 'core', script)(github, context, core); console.log(JSON.stringify(calls));})().catch(e => {console.error(e); process.exit(1)});
@@ -186,6 +187,59 @@ process.env.FULL_COMPATIBILITY = f.full === false ? 'false' : 'true';
             )
             self.assertFalse(
                 any(name in ("update", "create", "createComment") for name, _ in calls)
+            )
+
+    def test_recovery_records_attempt_sha_and_unknown_without_changing_human_body(self):
+        incident = dict(
+            self.incident(), body="Human cause confirmed; recovery PR: none"
+        )
+        calls = self.run_script(
+            "ci-visibility",
+            dict(
+                result="success",
+                attempt=2,
+                issues=[incident],
+                pulls=self.failure()["pulls"],
+            ),
+        )
+        body = next(args["body"] for name, args in calls if name == "createComment")
+        for evidence in (
+            "attempt 2",
+            "/commit/merge-sha",
+            "Operational recovery",
+            "latest full main",
+            "Cause confidence: unknown",
+            "Recovery PR: unknown",
+            "none only when explicitly confirmed",
+            "Existing human investigation",
+        ):
+            self.assertIn(evidence, body)
+        update = next(args for name, args in calls if name == "update")
+        self.assertNotIn("body", update)
+        self.assertNotIn("source-pr-url", body)
+        self.assertEqual("closed", update["state"])
+
+    def test_cancelled_jobs_keep_cause_unknown(self):
+        fixture = self.failure()
+        fixture["jobs"][0].update(conclusion="cancelled", steps=[])
+        calls = self.run_script("ci-visibility", fixture)
+        body = next(args["body"] for name, args in calls if name == "create")
+        self.assertIn("cancelled", body)
+        self.assertIn("Cause confidence: unknown", body)
+        self.assertIn("Recovery PR: unknown", body)
+
+    def test_source_lookup_failure_does_not_promote_unknown_to_none(self):
+        calls = self.run_script("ci-visibility", dict(self.failure(), prError=True))
+        body = next(args["body"] for name, args in calls if name == "create")
+        self.assertIn("not resolved", body)
+        self.assertIn("Cause confidence: unknown", body)
+        self.assertIn("Recovery PR: unknown", body)
+
+    def test_metadata_api_failure_cannot_close_incident(self):
+        with self.assertRaises(subprocess.CalledProcessError):
+            self.run_script(
+                "ci-visibility",
+                dict(result="success", apiError=True, issues=[self.incident()]),
             )
 
     def test_red_pending_unknown_and_healthy_health_are_advisory(self):

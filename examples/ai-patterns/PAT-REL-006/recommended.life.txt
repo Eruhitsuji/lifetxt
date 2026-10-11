@@ -1,0 +1,3 @@
+[ ] E "訪問計画" id:plan on:2030-10-14
+[x] E "前回訪問" id:previous on:2030-10-07 done:2030-10-07
+[x] E "今回訪問" id:actual on:2030-10-14 done:2030-10-14 realizes:plan follows:previous

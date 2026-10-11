@@ -1,0 +1,1 @@
+[ ] E "外部の定例予定" on:2030-10-14 repeat:RRULE:FREQ=MONTHLY;BYDAY=MO;BYSETPOS=2 note:"2030-11-11は休み（例外自動展開は未設定）"

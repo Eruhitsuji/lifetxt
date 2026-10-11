@@ -1800,50 +1800,1459 @@
     {
       "id": "PAT-REC-001",
       "topic": "daily/weekdays",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "2030年10月14日から平日だけ9時に朝の確認をする。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "weekdaysは月〜金。dailyとの違いを明示する。",
+        "en": "weekdays selects Monday through Friday rather than every day."
+      },
+      "spec": [
+        "§7.6, §8.1"
+      ],
+      "sources": [
+        "../../../examples/recurrence_time_life.txt",
+        "../../../examples/habits_reminders_life.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "This does not automatically exclude public holidays. Use full at datetimes for offset-aware recurrence; #1218 tracks the split on/offset-time anchor discrepancy."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/recurrence.md",
+        "en": "docs/en/ai-patterns/recurrence.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-REC-001/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "1a9eed5fc0ad71adf018362bab25a36790355de4ad294fe26428e91e74085935",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-REC-001/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          },
+          "agenda": {
+            "from": "2030-10-14",
+            "to": "2030-11-14",
+            "timezone": "UTC",
+            "expected": [
+              {
+                "when": "2030-10-14T09:00+09:00",
+                "key": "repeat:at",
+                "line": 1,
+                "status": "[ ]",
+                "type": "H",
+                "blocked": false,
+                "title": "朝の確認",
+                "matches": [
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-10-14T09:00+09:00",
+                    "repeat": "weekdays",
+                    "occurrence_index": 1
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-10-15T09:00+09:00",
+                    "repeat": "weekdays",
+                    "occurrence_index": 2
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-10-16T09:00+09:00",
+                    "repeat": "weekdays",
+                    "occurrence_index": 3
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-10-17T09:00+09:00",
+                    "repeat": "weekdays",
+                    "occurrence_index": 4
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-10-18T09:00+09:00",
+                    "repeat": "weekdays",
+                    "occurrence_index": 5
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-10-21T09:00+09:00",
+                    "repeat": "weekdays",
+                    "occurrence_index": 6
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-10-22T09:00+09:00",
+                    "repeat": "weekdays",
+                    "occurrence_index": 7
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-10-23T09:00+09:00",
+                    "repeat": "weekdays",
+                    "occurrence_index": 8
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-10-24T09:00+09:00",
+                    "repeat": "weekdays",
+                    "occurrence_index": 9
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-10-25T09:00+09:00",
+                    "repeat": "weekdays",
+                    "occurrence_index": 10
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-10-28T09:00+09:00",
+                    "repeat": "weekdays",
+                    "occurrence_index": 11
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-10-29T09:00+09:00",
+                    "repeat": "weekdays",
+                    "occurrence_index": 12
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-10-30T09:00+09:00",
+                    "repeat": "weekdays",
+                    "occurrence_index": 13
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-10-31T09:00+09:00",
+                    "repeat": "weekdays",
+                    "occurrence_index": 14
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-11-01T09:00+09:00",
+                    "repeat": "weekdays",
+                    "occurrence_index": 15
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-11-04T09:00+09:00",
+                    "repeat": "weekdays",
+                    "occurrence_index": 16
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-11-05T09:00+09:00",
+                    "repeat": "weekdays",
+                    "occurrence_index": 17
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-11-06T09:00+09:00",
+                    "repeat": "weekdays",
+                    "occurrence_index": 18
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-11-07T09:00+09:00",
+                    "repeat": "weekdays",
+                    "occurrence_index": 19
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-11-08T09:00+09:00",
+                    "repeat": "weekdays",
+                    "occurrence_index": 20
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-11-11T09:00+09:00",
+                    "repeat": "weekdays",
+                    "occurrence_index": 21
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-11-12T09:00+09:00",
+                    "repeat": "weekdays",
+                    "occurrence_index": 22
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-11-13T09:00+09:00",
+                    "repeat": "weekdays",
+                    "occurrence_index": 23
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-11-14T09:00+09:00",
+                    "repeat": "weekdays",
+                    "occurrence_index": 24
+                  }
+                ],
+                "details": {
+                  "at": [
+                    "2030-10-14T09:00+09:00"
+                  ],
+                  "repeat": [
+                    "weekdays"
+                  ]
+                },
+                "text": "[ ] H \"朝の確認\" at:2030-10-14T09:00+09:00 repeat:weekdays",
+                "generated": true,
+                "source": "examples/ai-patterns/PAT-REC-001/recommended.life.txt",
+                "occurrence_start": "2030-10-14T09:00+09:00",
+                "occurrence_index": 1,
+                "repeat_rule": "weekdays"
+              }
+            ],
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "agenda",
+              "examples/ai-patterns/PAT-REC-001/recommended.life.txt",
+              "--from",
+              "2030-10-14",
+              "--to",
+              "2030-11-14",
+              "--format",
+              "json"
+            ],
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "exit": 0,
+            "stderr": ""
+          }
+        }
+      ]
     },
     {
       "id": "PAT-REC-002",
       "topic": "weeklyと起点",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "2030年10月14日（月）10時から11時の会議を毎週開催する。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "開始/終了区間を起点として毎週展開する。",
+        "en": "The timed interval anchors weekly expansion."
+      },
+      "spec": [
+        "§7.6, §8.1"
+      ],
+      "sources": [
+        "../../../examples/recurrence_time_life.txt",
+        "../../../examples/habits_reminders_life.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "Check that the anchor weekday matches the source request."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/recurrence.md",
+        "en": "docs/en/ai-patterns/recurrence.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-REC-002/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "ba7651c2653e5cfe6905191c62209e535d50f8b63c883e6c0125f62363037059",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-REC-002/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          },
+          "agenda": {
+            "from": "2030-10-14",
+            "to": "2030-11-14",
+            "timezone": "UTC",
+            "expected": [
+              {
+                "when": "2030-10-14T10:00+09:00..2030-10-14T11:00+09:00",
+                "key": "repeat:from/to",
+                "line": 1,
+                "status": "[ ]",
+                "type": "E",
+                "blocked": false,
+                "title": "定例会議",
+                "matches": [
+                  {
+                    "key": "repeat:from/to",
+                    "start": "2030-10-14T10:00+09:00",
+                    "end": "2030-10-14T11:00+09:00",
+                    "repeat": "weekly",
+                    "occurrence_index": 1
+                  },
+                  {
+                    "key": "repeat:from/to",
+                    "start": "2030-10-21T10:00+09:00",
+                    "end": "2030-10-21T11:00+09:00",
+                    "repeat": "weekly",
+                    "occurrence_index": 2
+                  },
+                  {
+                    "key": "repeat:from/to",
+                    "start": "2030-10-28T10:00+09:00",
+                    "end": "2030-10-28T11:00+09:00",
+                    "repeat": "weekly",
+                    "occurrence_index": 3
+                  },
+                  {
+                    "key": "repeat:from/to",
+                    "start": "2030-11-04T10:00+09:00",
+                    "end": "2030-11-04T11:00+09:00",
+                    "repeat": "weekly",
+                    "occurrence_index": 4
+                  },
+                  {
+                    "key": "repeat:from/to",
+                    "start": "2030-11-11T10:00+09:00",
+                    "end": "2030-11-11T11:00+09:00",
+                    "repeat": "weekly",
+                    "occurrence_index": 5
+                  }
+                ],
+                "details": {
+                  "from": [
+                    "2030-10-14T10:00+09:00"
+                  ],
+                  "to": [
+                    "2030-10-14T11:00+09:00"
+                  ],
+                  "repeat": [
+                    "weekly"
+                  ]
+                },
+                "text": "[ ] E \"定例会議\" from:2030-10-14T10:00+09:00 to:2030-10-14T11:00+09:00 repeat:weekly",
+                "generated": true,
+                "source": "examples/ai-patterns/PAT-REC-002/recommended.life.txt",
+                "occurrence_start": "2030-10-14T10:00+09:00",
+                "occurrence_end": "2030-10-14T11:00+09:00",
+                "occurrence_index": 1,
+                "repeat_rule": "weekly"
+              }
+            ],
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "agenda",
+              "examples/ai-patterns/PAT-REC-002/recommended.life.txt",
+              "--from",
+              "2030-10-14",
+              "--to",
+              "2030-11-14",
+              "--format",
+              "json"
+            ],
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "exit": 0,
+            "stderr": ""
+          }
+        }
+      ]
     },
     {
       "id": "PAT-REC-003",
       "topic": "monthly/yearlyと暦境界",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "2030年1月31日9時から毎月、棚卸しをする。年次版も示す。年次版は2032年2月29日9時起点で毎年確認する。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "monthly/yearlyは暦に依存する。月末・閏日はCoreの展開結果を確認する。実測では月次が1/31→2/28→3/28、年次が2032/2/29→2033/2/28→2036/2/28。元の月末/閏日へ戻るとは保証しない。",
+        "en": "Monthly and yearly rules depend on the calendar; verify month-end and leap-day expansion with Core. Observed monthly dates are Jan 31 → Feb 28 → Mar 28; yearly Feb 29, 2032 clamps to Feb 28 in 2033 and remains Feb 28 in 2036. Returning to the original month-end/leap-day is not guaranteed."
+      },
+      "spec": [
+        "§7.6, §8.1"
+      ],
+      "sources": [
+        "../../../examples/recurrence_time_life.txt",
+        "../../../examples/habits_reminders_life.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "Do not guess how a month without day 31 is handled. Use full at datetimes for offset-aware recurrence; #1218 tracks the split on/offset-time anchor discrepancy."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/recurrence.md",
+        "en": "docs/en/ai-patterns/recurrence.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-REC-003/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "e0b93b6bf4f2cacab9331c161445da70799583c1fdd8c2c0ed17af83651a9bbd",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-REC-003/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          },
+          "agenda": {
+            "from": "2030-01-01",
+            "to": "2030-03-31",
+            "timezone": "UTC",
+            "expected": [
+              {
+                "when": "2030-01-31T09:00+09:00",
+                "key": "repeat:do",
+                "line": 1,
+                "status": "[ ]",
+                "type": "T",
+                "blocked": false,
+                "title": "棚卸しをする",
+                "matches": [
+                  {
+                    "key": "repeat:do",
+                    "start": "2030-01-31T09:00+09:00",
+                    "repeat": "monthly",
+                    "occurrence_index": 1
+                  },
+                  {
+                    "key": "repeat:do",
+                    "start": "2030-02-28T09:00+09:00",
+                    "repeat": "monthly",
+                    "occurrence_index": 2
+                  },
+                  {
+                    "key": "repeat:do",
+                    "start": "2030-03-28T09:00+09:00",
+                    "repeat": "monthly",
+                    "occurrence_index": 3
+                  }
+                ],
+                "details": {
+                  "do": [
+                    "2030-01-31T09:00+09:00"
+                  ],
+                  "repeat": [
+                    "monthly"
+                  ]
+                },
+                "text": "[ ] T \"棚卸しをする\" do:2030-01-31T09:00+09:00 repeat:monthly",
+                "generated": true,
+                "source": "examples/ai-patterns/PAT-REC-003/recommended.life.txt",
+                "occurrence_start": "2030-01-31T09:00+09:00",
+                "occurrence_index": 1,
+                "repeat_rule": "monthly"
+              }
+            ],
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "agenda",
+              "examples/ai-patterns/PAT-REC-003/recommended.life.txt",
+              "--from",
+              "2030-01-01",
+              "--to",
+              "2030-03-31",
+              "--format",
+              "json"
+            ],
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "exit": 0,
+            "stderr": ""
+          }
+        },
+        {
+          "name": "yearly",
+          "path": "examples/ai-patterns/PAT-REC-003/yearly.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "8009989d44d2d246276e85f43552a6cc3a329c816b44e3a094fd304414f4a9e7",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-REC-003/yearly.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          },
+          "agenda": {
+            "from": "2032-02-01",
+            "to": "2036-03-01",
+            "timezone": "UTC",
+            "expected": [
+              {
+                "when": "2032-02-29T09:00+09:00",
+                "key": "repeat:at",
+                "line": 1,
+                "status": "[ ]",
+                "type": "H",
+                "blocked": false,
+                "title": "年次確認",
+                "matches": [
+                  {
+                    "key": "repeat:at",
+                    "start": "2032-02-29T09:00+09:00",
+                    "repeat": "yearly",
+                    "occurrence_index": 1
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2033-02-28T09:00+09:00",
+                    "repeat": "yearly",
+                    "occurrence_index": 2
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2034-02-28T09:00+09:00",
+                    "repeat": "yearly",
+                    "occurrence_index": 3
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2035-02-28T09:00+09:00",
+                    "repeat": "yearly",
+                    "occurrence_index": 4
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2036-02-28T09:00+09:00",
+                    "repeat": "yearly",
+                    "occurrence_index": 5
+                  }
+                ],
+                "details": {
+                  "at": [
+                    "2032-02-29T09:00+09:00"
+                  ],
+                  "repeat": [
+                    "yearly"
+                  ]
+                },
+                "text": "[ ] H \"年次確認\" at:2032-02-29T09:00+09:00 repeat:yearly",
+                "generated": true,
+                "source": "examples/ai-patterns/PAT-REC-003/yearly.life.txt",
+                "occurrence_start": "2032-02-29T09:00+09:00",
+                "occurrence_index": 1,
+                "repeat_rule": "yearly"
+              }
+            ],
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "agenda",
+              "examples/ai-patterns/PAT-REC-003/yearly.life.txt",
+              "--from",
+              "2032-02-01",
+              "--to",
+              "2036-03-01",
+              "--format",
+              "json"
+            ],
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "exit": 0,
+            "stderr": ""
+          }
+        }
+      ]
     },
     {
       "id": "PAT-REC-004",
       "topic": "interval",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "2030年10月14日から2週間ごとに振り返る。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "interval:2はrepeatの単位で2週間ごと。",
+        "en": "interval:2 means every two units of the selected weekly rule."
+      },
+      "spec": [
+        "§7.6, §8.1"
+      ],
+      "sources": [
+        "../../../examples/recurrence_time_life.txt",
+        "../../../examples/habits_reminders_life.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "count:2 limits occurrences rather than setting the interval."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/recurrence.md",
+        "en": "docs/en/ai-patterns/recurrence.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-REC-004/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "bc649f272c086aa4f6dd0024d1a7cadd59e56c2f57fff02409e3b577ce0ebcf3",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-REC-004/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          },
+          "agenda": {
+            "from": "2030-10-14",
+            "to": "2030-11-14",
+            "timezone": "UTC",
+            "expected": [
+              {
+                "when": "2030-10-14T00:00..2030-10-14T23:59:59",
+                "key": "repeat:on",
+                "line": 1,
+                "status": "[ ]",
+                "type": "H",
+                "blocked": false,
+                "title": "振り返る",
+                "matches": [
+                  {
+                    "key": "repeat:on",
+                    "start": "2030-10-14T00:00",
+                    "end": "2030-10-14T23:59:59",
+                    "repeat": "weekly",
+                    "occurrence_index": 1
+                  },
+                  {
+                    "key": "repeat:on",
+                    "start": "2030-10-28T00:00",
+                    "end": "2030-10-28T23:59:59",
+                    "repeat": "weekly",
+                    "occurrence_index": 2
+                  },
+                  {
+                    "key": "repeat:on",
+                    "start": "2030-11-11T00:00",
+                    "end": "2030-11-11T23:59:59",
+                    "repeat": "weekly",
+                    "occurrence_index": 3
+                  }
+                ],
+                "details": {
+                  "on": [
+                    "2030-10-14"
+                  ],
+                  "repeat": [
+                    "weekly"
+                  ],
+                  "interval": [
+                    "2"
+                  ]
+                },
+                "text": "[ ] H \"振り返る\" on:2030-10-14 repeat:weekly interval:2",
+                "generated": true,
+                "source": "examples/ai-patterns/PAT-REC-004/recommended.life.txt",
+                "occurrence_start": "2030-10-14T00:00",
+                "occurrence_end": "2030-10-14T23:59:59",
+                "occurrence_index": 1,
+                "repeat_rule": "weekly"
+              }
+            ],
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "agenda",
+              "examples/ai-patterns/PAT-REC-004/recommended.life.txt",
+              "--from",
+              "2030-10-14",
+              "--to",
+              "2030-11-14",
+              "--format",
+              "json"
+            ],
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "exit": 0,
+            "stderr": ""
+          }
+        }
+      ]
     },
     {
       "id": "PAT-REC-005",
       "topic": "count/untilの終端",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "2030年10月14日から毎日、最大3回、10月16日まで測定する。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "countは起点からの回数、untilは包含する終端。両制約を確認する。",
+        "en": "count limits occurrences from the anchor; until is inclusive. Verify both bounds."
+      },
+      "spec": [
+        "§7.6, §8.1"
+      ],
+      "sources": [
+        "../../../examples/recurrence_time_life.txt",
+        "../../../examples/habits_reminders_life.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "Do not confuse a query end boundary with recurrence until."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/recurrence.md",
+        "en": "docs/en/ai-patterns/recurrence.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-REC-005/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "3d3f3c1a74741597d7895f8dea058c35301ebb78369c67b8f5cbb862d03aef0a",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-REC-005/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          },
+          "agenda": {
+            "from": "2030-10-14",
+            "to": "2030-11-14",
+            "timezone": "UTC",
+            "expected": [
+              {
+                "when": "2030-10-14T00:00..2030-10-14T23:59:59",
+                "key": "repeat:on",
+                "line": 1,
+                "status": "[ ]",
+                "type": "H",
+                "blocked": false,
+                "title": "測定する",
+                "matches": [
+                  {
+                    "key": "repeat:on",
+                    "start": "2030-10-14T00:00",
+                    "end": "2030-10-14T23:59:59",
+                    "repeat": "daily",
+                    "occurrence_index": 1
+                  },
+                  {
+                    "key": "repeat:on",
+                    "start": "2030-10-15T00:00",
+                    "end": "2030-10-15T23:59:59",
+                    "repeat": "daily",
+                    "occurrence_index": 2
+                  },
+                  {
+                    "key": "repeat:on",
+                    "start": "2030-10-16T00:00",
+                    "end": "2030-10-16T23:59:59",
+                    "repeat": "daily",
+                    "occurrence_index": 3
+                  }
+                ],
+                "details": {
+                  "on": [
+                    "2030-10-14"
+                  ],
+                  "repeat": [
+                    "daily"
+                  ],
+                  "count": [
+                    "3"
+                  ],
+                  "until": [
+                    "2030-10-16"
+                  ]
+                },
+                "text": "[ ] H \"測定する\" on:2030-10-14 repeat:daily count:3 until:2030-10-16",
+                "generated": true,
+                "source": "examples/ai-patterns/PAT-REC-005/recommended.life.txt",
+                "occurrence_start": "2030-10-14T00:00",
+                "occurrence_end": "2030-10-14T23:59:59",
+                "occurrence_index": 1,
+                "repeat_rule": "daily"
+              }
+            ],
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "agenda",
+              "examples/ai-patterns/PAT-REC-005/recommended.life.txt",
+              "--from",
+              "2030-10-14",
+              "--to",
+              "2030-11-14",
+              "--format",
+              "json"
+            ],
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "exit": 0,
+            "stderr": ""
+          }
+        }
+      ]
     },
     {
       "id": "PAT-REC-006",
       "topic": "RRULEのdaily/weekly BYDAY",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "2030年10月14日から月曜と水曜の7時に学習する。最大6回。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "dependency-free subsetでweekly BYDAYを使う。daily BYDAYもsubset対象。",
+        "en": "Use weekly BYDAY in the dependency-free subset; daily BYDAY is also supported."
+      },
+      "spec": [
+        "§7.6, §8.1"
+      ],
+      "sources": [
+        "../../../examples/recurrence_time_life.txt",
+        "../../../examples/habits_reminders_life.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "This does not imply support for the full RRULE standard. Use full at datetimes for offset-aware recurrence; #1218 tracks the split on/offset-time anchor discrepancy. In this RRULE observation, expanded agenda times lose the offset. The stored authored value is preserved; instant-comparison fidelity is under investigation in #1218."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/recurrence.md",
+        "en": "docs/en/ai-patterns/recurrence.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-REC-006/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "9b9e6d4ac797a92502c6d951d86c49770237d5f94a3c28e22d9983f67da1ac65",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-REC-006/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          },
+          "agenda": {
+            "from": "2030-10-14",
+            "to": "2030-11-14",
+            "timezone": "UTC",
+            "expected": [
+              {
+                "when": "2030-10-14T07:00",
+                "key": "repeat:at",
+                "line": 1,
+                "status": "[ ]",
+                "type": "H",
+                "blocked": false,
+                "title": "学習する",
+                "matches": [
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-10-14T07:00",
+                    "repeat": "RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=6",
+                    "occurrence_index": 1
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-10-16T07:00",
+                    "repeat": "RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=6",
+                    "occurrence_index": 2
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-10-21T07:00",
+                    "repeat": "RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=6",
+                    "occurrence_index": 3
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-10-23T07:00",
+                    "repeat": "RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=6",
+                    "occurrence_index": 4
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-10-28T07:00",
+                    "repeat": "RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=6",
+                    "occurrence_index": 5
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-10-30T07:00",
+                    "repeat": "RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=6",
+                    "occurrence_index": 6
+                  }
+                ],
+                "details": {
+                  "at": [
+                    "2030-10-14T07:00+09:00"
+                  ],
+                  "repeat": [
+                    "RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=6"
+                  ]
+                },
+                "text": "[ ] H \"学習する\" at:2030-10-14T07:00+09:00 repeat:RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=6",
+                "generated": true,
+                "source": "examples/ai-patterns/PAT-REC-006/recommended.life.txt",
+                "occurrence_start": "2030-10-14T07:00",
+                "occurrence_index": 1,
+                "repeat_rule": "RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=6"
+              }
+            ],
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "agenda",
+              "examples/ai-patterns/PAT-REC-006/recommended.life.txt",
+              "--from",
+              "2030-10-14",
+              "--to",
+              "2030-11-14",
+              "--format",
+              "json"
+            ],
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "exit": 0,
+            "stderr": ""
+          }
+        }
+      ]
     },
     {
       "id": "PAT-REC-007",
       "topic": "未対応RRULE・例外日の保持と非展開",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "毎月第2月曜を外部RRULE（FREQ=MONTHLY;BYDAY=MO;BYSETPOS=2）から記録する。起点2030年10月14日。11月11日は休みとだけメモする。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "BYSETPOSは現Core対象外でW223。保存はできても展開結果は空。この例は記録用途の境界例で、実行可能な定例予定とは扱わない。",
+        "en": "BYSETPOS is unsupported by current Core and gives W223. Storage succeeds but observed expansion is empty; this boundary example is not an executable recurring schedule."
+      },
+      "spec": [
+        "§7.6, §8.1"
+      ],
+      "sources": [
+        "../../../examples/recurrence_time_life.txt",
+        "../../../examples/habits_reminders_life.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "The note does not implement a recurrence exception. #1217 tracks current ordinal BYDAY/BYMONTHDAY/BYMONTH/WKST support beyond the narrow specification wording."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/recurrence.md",
+        "en": "docs/en/ai-patterns/recurrence.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-REC-007/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": [
+              [
+                "warning",
+                "W223",
+                1
+              ]
+            ]
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "58bc7fac2f0eeff58b53eeddf58627787efc1678a2127500619573b68f52e989",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-REC-007/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": [
+                {
+                  "severity": "warning",
+                  "code": "W223",
+                  "category": "recurrence",
+                  "message": "RRULE keys are stored but not expanded by the dependency-free core: BYSETPOS.",
+                  "source": "examples/ai-patterns/PAT-REC-007/recommended.life.txt",
+                  "line": 1,
+                  "hint": "Use only RRULE parts supported by lifetxt recurrence expansion."
+                }
+              ]
+            }
+          },
+          "agenda": {
+            "from": "2030-10-14",
+            "to": "2030-11-14",
+            "timezone": "UTC",
+            "expected": [],
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "agenda",
+              "examples/ai-patterns/PAT-REC-007/recommended.life.txt",
+              "--from",
+              "2030-10-14",
+              "--to",
+              "2030-11-14",
+              "--format",
+              "json"
+            ],
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "exit": 0,
+            "stderr": "examples/ai-patterns/PAT-REC-007/recommended.life.txt:1: WARNING W223: RRULE keys are stored but not expanded by the dependency-free core: BYSETPOS.\n"
+          }
+        }
+      ]
     },
     {
       "id": "PAT-REC-008",
       "topic": "日付起点なしatと有界範囲",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "起点日は未定だが毎日18時にストレッチする。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "起点なしatは浮動時刻で、有界範囲のみで展開する。",
+        "en": "at without a date anchor is floating and expands only in a bounded range."
+      },
+      "spec": [
+        "§7.6, §8.1"
+      ],
+      "sources": [
+        "../../../examples/recurrence_time_life.txt",
+        "../../../examples/habits_reminders_life.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "One-sided time filters intentionally ignore this unanchored value."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/recurrence.md",
+        "en": "docs/en/ai-patterns/recurrence.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-REC-008/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "facc144f89c02ae5427518d64a4daf60d4169d2d35de241da35d5137efbf62d7",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-REC-008/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          },
+          "agenda": {
+            "from": "2030-10-14",
+            "to": "2030-11-14",
+            "timezone": "UTC",
+            "expected": [
+              {
+                "when": "2030-10-14T09:00",
+                "key": "repeat:at",
+                "line": 1,
+                "status": "[ ]",
+                "type": "H",
+                "blocked": false,
+                "title": "ストレッチする",
+                "matches": [
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-10-14T09:00",
+                    "repeat": "daily",
+                    "occurrence_index": 1
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-10-15T09:00",
+                    "repeat": "daily",
+                    "occurrence_index": 2
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-10-16T09:00",
+                    "repeat": "daily",
+                    "occurrence_index": 3
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-10-17T09:00",
+                    "repeat": "daily",
+                    "occurrence_index": 4
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-10-18T09:00",
+                    "repeat": "daily",
+                    "occurrence_index": 5
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-10-19T09:00",
+                    "repeat": "daily",
+                    "occurrence_index": 6
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-10-20T09:00",
+                    "repeat": "daily",
+                    "occurrence_index": 7
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-10-21T09:00",
+                    "repeat": "daily",
+                    "occurrence_index": 8
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-10-22T09:00",
+                    "repeat": "daily",
+                    "occurrence_index": 9
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-10-23T09:00",
+                    "repeat": "daily",
+                    "occurrence_index": 10
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-10-24T09:00",
+                    "repeat": "daily",
+                    "occurrence_index": 11
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-10-25T09:00",
+                    "repeat": "daily",
+                    "occurrence_index": 12
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-10-26T09:00",
+                    "repeat": "daily",
+                    "occurrence_index": 13
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-10-27T09:00",
+                    "repeat": "daily",
+                    "occurrence_index": 14
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-10-28T09:00",
+                    "repeat": "daily",
+                    "occurrence_index": 15
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-10-29T09:00",
+                    "repeat": "daily",
+                    "occurrence_index": 16
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-10-30T09:00",
+                    "repeat": "daily",
+                    "occurrence_index": 17
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-10-31T09:00",
+                    "repeat": "daily",
+                    "occurrence_index": 18
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-11-01T09:00",
+                    "repeat": "daily",
+                    "occurrence_index": 19
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-11-02T09:00",
+                    "repeat": "daily",
+                    "occurrence_index": 20
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-11-03T09:00",
+                    "repeat": "daily",
+                    "occurrence_index": 21
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-11-04T09:00",
+                    "repeat": "daily",
+                    "occurrence_index": 22
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-11-05T09:00",
+                    "repeat": "daily",
+                    "occurrence_index": 23
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-11-06T09:00",
+                    "repeat": "daily",
+                    "occurrence_index": 24
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-11-07T09:00",
+                    "repeat": "daily",
+                    "occurrence_index": 25
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-11-08T09:00",
+                    "repeat": "daily",
+                    "occurrence_index": 26
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-11-09T09:00",
+                    "repeat": "daily",
+                    "occurrence_index": 27
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-11-10T09:00",
+                    "repeat": "daily",
+                    "occurrence_index": 28
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-11-11T09:00",
+                    "repeat": "daily",
+                    "occurrence_index": 29
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-11-12T09:00",
+                    "repeat": "daily",
+                    "occurrence_index": 30
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-11-13T09:00",
+                    "repeat": "daily",
+                    "occurrence_index": 31
+                  },
+                  {
+                    "key": "repeat:at",
+                    "start": "2030-11-14T09:00",
+                    "repeat": "daily",
+                    "occurrence_index": 32
+                  }
+                ],
+                "details": {
+                  "at": [
+                    "18:00+09:00"
+                  ],
+                  "repeat": [
+                    "daily"
+                  ]
+                },
+                "text": "[ ] H \"ストレッチする\" at:18:00+09:00 repeat:daily",
+                "generated": true,
+                "source": "examples/ai-patterns/PAT-REC-008/recommended.life.txt",
+                "occurrence_start": "2030-10-14T09:00",
+                "occurrence_index": 1,
+                "repeat_rule": "daily"
+              }
+            ],
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "agenda",
+              "examples/ai-patterns/PAT-REC-008/recommended.life.txt",
+              "--from",
+              "2030-10-14",
+              "--to",
+              "2030-11-14",
+              "--format",
+              "json"
+            ],
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "exit": 0,
+            "stderr": ""
+          }
+        }
+      ]
     },
     {
       "id": "PAT-REL-001",

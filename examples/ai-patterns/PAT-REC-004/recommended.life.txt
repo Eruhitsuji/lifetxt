@@ -1,0 +1,1 @@
+[ ] H "振り返る" on:2030-10-14 repeat:weekly interval:2

@@ -506,15 +506,19 @@ RFC全体への準拠を意味しません。
 既存seriesは `lifetxt rrule` / `agenda` で生成日を再確認してください。
 保存済みlife.txtの書換えはありません。
 
-未対応キー（`BYSETPOS`、`BYHOUR` など）は text として保持され、`W223` で
-警告されますが、対応部分は展開される場合があります。例えば
-`FREQ=MONTHLY;BYDAY=2MO;BYHOUR=9` は第2月曜日を anchor の時刻で展開し、
-09:00 を保証しません。未対応の頻度は recurrence match を生成しません。
-warning のみなら通常 `check` の終了コードは 0 です。受理は意図した日程の保証では
-ありません。共通 engine が読む通常の monthly/yearly `BYDAY` にも、agenda の
-legacy dispatch が展開しない不一致があります。`rrule` command も未対応部分を報告します。不正な対応キーの値と
-診断・fallback の不一致は [#1227](https://github.com/Eruhitsuji/lifetxt/issues/1227)
-で追跡しています。
+不正な対応値（`WKST=XX`、`BYMONTHDAY=32`、`BYMONTH=13` など）、
+未対応の組合せ・キー・頻度には `W223` を出します。agendaは単純な規則へ
+黙って置き換えず、記述されたanchorを通常のrecordとして残し、繰返し候補は
+生成しません。life.txtの未知custom fieldは有効で、そのまま保持します。
+通常のmonthly/yearly `BYDAY` も序数付きと同じ共通engineで展開します。
+
+warningのみなら通常 `check` の終了コードは0ですが、`--warnings-as-errors` では
+非0です。保存やcheckでの受理は意図した日程の保証ではありません。
+`rrule` のpreviewは別途未対応キーを報告し、対応部分だけを展開する場合があります。
+それをagendaが規則全体に対応する意味と解釈しないでください。例えばagendaは
+`FREQ=MONTHLY;BYDAY=2MO;BYHOUR=9` を繰返し展開しません。
+この診断・展開経路の修正は [#1227](https://github.com/Eruhitsuji/lifetxt/issues/1227)
+に基づきます。
 
 requested date/time range は half-open interval `[start, end)` として扱います。
 date-only の end boundary、例えば `--to 2026-06-12` は `2026-06-13T00:00`

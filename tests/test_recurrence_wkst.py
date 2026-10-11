@@ -176,7 +176,7 @@ class ValidatorAgreesWithTheEngineTests(unittest.TestCase):
         )
 
         self.assertTrue(weekly)
-        self.assertIn("ignored for FREQ=WEEKLY", weekly[0])
+        self.assertIn("not supported for FREQ=WEEKLY", weekly[0])
         self.assertEqual([], monthly)
 
     def test_a_malformed_weekday_still_warns(self):

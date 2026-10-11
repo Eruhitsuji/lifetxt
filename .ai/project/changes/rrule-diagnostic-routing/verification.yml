@@ -1,0 +1,14 @@
+schema_version: 1
+verification:
+  executed:
+    - command: Recurrence, parser and agenda focused regression suites
+      result: 178 tests passed before final added weekdays control.
+      status: passed
+    - command: python -m ruff check lifetxt tests scripts
+      result: Passed before final test control addition.
+      status: passed
+    - command: RRULE diagnostics, shared recurrence, parser, agenda, traceability and change closeout suites
+      result: 196 tests passed including weekdays shortcut control.
+      status: passed
+  remaining:
+    - Final focused/full discovery results, independent review, CI and merge approval

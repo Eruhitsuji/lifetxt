@@ -1,0 +1,24 @@
+schema_version: 1
+change:
+  id: rrule-diagnostic-routing
+  title: Align RRULE warnings with agenda routing
+  status: implemented
+  change_type: Bug
+  assurance_level: Standard
+  owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1237
+  related_pull_request: null
+  size: S
+  complexity: 5/10
+scope:
+  write_scope: [lifetxt/validator.py, lifetxt/agenda.py, tests/test_rrule_diagnostics.py, tests/test_lifetxt.py, tests/test_recurrence_wkst.py, docs/en/life_txt_format_spec.md, docs/ja/life_txt_format_spec.md, life_txt_format_spec.md, docs/en/ai-patterns/recurrence.md, docs/ja/ai-patterns/recurrence.md, examples/ai-patterns/manifest.json, .ai/project/changes/rrule-diagnostic-routing, .ai/project/TRACEABILITY.yml, .ai/project/CAPABILITIES.yml]
+  forbidden_scope: [authorization, stored-data rewrite, new engine, .ai/managed]
+  shared_files: [CAPABILITIES.yml, TRACEABILITY.yml, agenda.py]
+  integrator: Eruhitsuji
+  integration_order: After PR1239 engine contract; MCP test task follows to avoid shared registry conflicts.
+  rollback: Revert routing PR before engine PR if reversing the stack.
+design_approval:
+  owner: Eruhitsuji
+  date: '2026-10-11'
+  record: https://github.com/Eruhitsuji/lifetxt/issues/1227
+human_approvals_required: [Independent latest-head review, Merge authority approval]

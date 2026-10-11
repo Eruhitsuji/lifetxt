@@ -206,9 +206,9 @@
 
 **前提:** 架空例。基準日時は2030-10-11T12:00:00+09:00、利用者TZはAsia/Tokyo。日時は明示されたものだけ使用。ID/人物/metadataは入力に指定したものだけ。例の参照recordも検査文脈として同梱し、既存recordを再追加する手順とはしない。
 
-**理由:** BYSETPOSは現Core対象外でW223。保存はできても展開結果は空。この例は記録用途の境界例で、実行可能な定例予定とは扱わない。
+**理由:** BYSETPOSは現Core対象外でW223。保存はできてもagendaは繰返し候補を生成せず、記述されたanchorだけを通常recordとして残す。この例は記録用途の境界例で、実行可能な定例予定とは扱わない。
 
-**注意・反例:** noteの休み指定は自動的な繰り返し例外ではない。既存のordinal BYDAY/BYMONTHDAY/BYMONTH/WKSTと部分展開の制限はFormat §8.1で説明（#1217/#1225）。この通常のmonthly BYDAY入力で実測された空の展開はlegacy dispatchの不一致（#1227）であり、未対応キーを含む全規則に一般化しない。
+**注意・反例:** noteの休み指定は自動的な繰り返し例外ではない。既存のordinal BYDAY/BYMONTHDAY/BYMONTH/WKSTと部分展開の制限はFormat §8.1で説明（#1217/#1225）。下記の過去の空出力はlegacy dispatchの不一致によるもの。#1237では未対応RRULEの繰返し生成を明示的にskipし、通常のanchorだけを残す。現在の出力と過去の証跡はmanifestで分けて保持する。
 
 **推奨例** ([canonical fixture](../../../examples/ai-patterns/PAT-REC-007/recommended.life.txt))
 

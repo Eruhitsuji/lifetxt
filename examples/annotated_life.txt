@@ -1,0 +1,25 @@
+# Annotated example workspace
+#
+# Demonstrates several record kinds and common detail keys together in one
+# realistic file. See docs/en/getting-started.md for the step-by-step guide
+# this file accompanies.
+
+# Tasks: project, tag, and priority details narrow and prioritize work.
+[ ] T "Renew passport" project:admin priority:high due:2026-11-01
+[ ] T "Review pull request" project:work tag:code-review priority:normal
+[x] T "Pay electricity bill" project:admin done:2026-10-05
+
+# Deferred: explicitly parked, revisited later rather than due now.
+[ ] D "Plan vacation" project:personal tag:someday
+
+# Events: on: for an all-day span, from:/to: for a timed meeting.
+[ ] E "Team offsite" project:work on:2026-10-20
+[ ] E "Dentist appointment" project:personal from:2026-10-15T09:30 to:2026-10-15T10:15
+
+# Habit: repeat: marks a recurring commitment rather than a one-off task.
+[ ] H "Morning run" project:health repeat:daily
+
+# Note: free-form context with a multi-line body.
+[N] N "Meeting notes: Q4 planning"
+| Agreed to prioritize the migration work before year end.
+| Follow up with finance on the budget by next Friday.

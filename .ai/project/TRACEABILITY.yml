@@ -10716,6 +10716,31 @@ traceability:
         instruction to open the pull request.
       status: implemented
 
+    - requirement_id: req-annotated-example-workspace
+      capability_id: cap-beginner-minimal-profile
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1250
+      pull_request: null
+      changed_files_or_scope:
+        - "Add examples/annotated_life.txt, a larger realistic annotated life.txt combining Task/Deferred/Event/Habit/Note kinds with project:/tag:/priority:/repeat: detail keys, as a second, richer example alongside the existing Level-1-only getting_started_life.txt"
+        - examples/annotated_life.txt
+        - docs/en/getting-started.md
+        - docs/ja/getting-started.md
+      tests_or_evidence:
+        - "python -m lifetxt check examples/annotated_life.txt -> OK: 8 item(s)"
+        - "python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)"
+        - "python scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> {\"errors\": 0, \"ok\": true}"
+        - "confirmed tests.test_release_policy's one pre-existing unrelated failure (test_release_manifest_has_deterministic_fingerprint, missing schema samples for many unrelated schemas) reproduces identically on main via git stash, unaffected by this change"
+      release_or_deployment: null
+      notes: >-
+        Quick assurance, documentation-only, XS-sized per the issue's own
+        scope: no parser, Format, CLI, or code behavior change. Extends
+        cap-beginner-minimal-profile rather than creating a new capability,
+        since this is the same example-curation/getting-started-docs scope
+        #558 already established. pull_request is filled in once the pull
+        request implementing this entry is opened.
+      status: implemented
+
     - requirement_id: req-lifetxt-vm-opt-in-turing-complete
       capability_id: cap-lifetxt-vm
       epic: null

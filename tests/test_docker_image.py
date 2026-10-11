@@ -156,7 +156,13 @@ def _build_docker_image(image_tag: str) -> None:
 class DockerBuildDiagnosticsTests(unittest.TestCase):
     def test_failed_build_exposes_bytes_text_missing_and_invalid_utf8(self):
         cases = (
-            ("bytes", b"build step\n", b"registry offline\n", "build step", "registry offline"),
+            (
+                "bytes",
+                b"build step\n",
+                b"registry offline\n",
+                "build step",
+                "registry offline",
+            ),
             ("text", "plain stdout", "plain stderr", "plain stdout", "plain stderr"),
             ("missing", None, None, "<no output captured>", "<no output captured>"),
             ("invalid utf8", b"bad:\xff", b"error:\xff", "bad:\ufffd", "error:\ufffd"),

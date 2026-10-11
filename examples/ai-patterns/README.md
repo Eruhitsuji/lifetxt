@@ -46,6 +46,11 @@ their current checkout separately. No successful result is written over the
 fixtures or expectations automatically. Fixed-range recurrence queries also
 compare their full agenda JSON. Runs use UTC and never use `now`.
 
+The checker selects `validation.config.json` and `LIFETXT_TIMEZONE=UTC`
+explicitly and clears inherited `LIFETXT_*` overrides. Subprocess text is UTF-8.
+This keeps results independent of a contributor's personal config, language,
+host timezone, and default console encoding; it does not edit that config.
+
 Counterexamples: A = syntax error, B = validator warning, C = valid code with
 wrong source meaning, D = unsupported capability claim. C and D can also carry
 warnings; their meaning/capability label is not a prediction of diagnostics.

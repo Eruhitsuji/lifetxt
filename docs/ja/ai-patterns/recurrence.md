@@ -177,7 +177,7 @@
 
 **理由:** dependency-free subsetでweekly BYDAYを使う。daily BYDAYもsubset対象。
 
-**注意・反例:** RRULE全体が実装済みという意味ではない。offset付き繰り返しは完全なat日時で記録する。on+offset付き時刻の起点差は#1218で追跡。このRRULE実測ではagendaの展開時刻からoffsetが落ちた。保存された元値とは別に、実時刻比較の忠実性は#1218で確認する。
+**注意・反例:** RRULE全体への対応ではない。下記の過去source観測では展開offsetが消失したが、#1226でこの消失とon/offset時刻のanchorずれ（#1218）を修正。現在のagenda検証はoffsetを保持し、UTCの窓を実時刻で比較する。manifestは旧出力をagenda_historyへ保存し、新出力とengine commitを併記する。
 
 **推奨例** ([canonical fixture](../../../examples/ai-patterns/PAT-REC-006/recommended.life.txt))
 
@@ -247,6 +247,8 @@
 ````lifetxt
 [ ] H "ストレッチする" at:18:00+09:00 repeat:daily
 ````
+
+**offset修正:** #1226でfloating occurrenceの記述offsetも保持する。現在のagenda結果とengine commitは過去checkの証跡と分けて記録し、旧agenda出力はagenda_historyへ保存。
 
 **検証:** Core 1.0.3; engine source commit `97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3`. 実測済み。独立reviewは未完了。CLI受理は意味保証ではない。
 

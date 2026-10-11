@@ -424,9 +424,14 @@ fallback/diagnostic gaps are tracked by
 [#1227](https://github.com/Eruhitsuji/lifetxt/issues/1227).
 
 Expansion is bounded by count/end/window and safety ceilings. Verify concrete
-occurrences for the intended range. Offset-aware anchor/expansion defects are
-tracked by [#1218](https://github.com/Eruhitsuji/lifetxt/issues/1218) and
-[#1226](https://github.com/Eruhitsuji/lifetxt/issues/1226).
+occurrences for the intended range. Explicit-offset clocks are combined with the
+anchor date before interpretation. Generated weekly/monthly/yearly candidates
+retain the authored offset; agenda/recurrence window comparisons interpret naive
+boundaries in the resolved timezone. This repair is tracked by
+[#1218](https://github.com/Eruhitsuji/lifetxt/issues/1218) /
+[#1226](https://github.com/Eruhitsuji/lifetxt/issues/1226). Other legacy comparison
+callers retain their existing behavior; named-zone/DST recurrence policy is not
+extended by this fixed-offset repair.
 
 ## 9. Type-Specific Recommended Keys
 

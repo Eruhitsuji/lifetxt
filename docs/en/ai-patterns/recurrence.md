@@ -177,7 +177,7 @@ Full diagnostic messages, input SHA-256, and commands are in the [manifest](../.
 
 **Reason:** Use weekly BYDAY in the dependency-free subset; daily BYDAY is also supported.
 
-**Pitfall:** This does not imply support for the full RRULE standard. Use full at datetimes for offset-aware recurrence; #1218 tracks the split on/offset-time anchor discrepancy. In this RRULE observation, expanded agenda times lose the offset. The stored authored value is preserved; instant-comparison fidelity is under investigation in #1218.
+**Pitfall:** This does not imply support for the full RRULE standard. The historical source observation below lost the expanded offset. #1226 repairs that loss and the split on/offset-time anchor discrepancy (#1218); current agenda evidence retains authored offsets and checks the UTC window by instant. The manifest preserves the old output in agenda_history alongside the repaired output and engine commit.
 
 **Recommended** ([canonical fixture](../../../examples/ai-patterns/PAT-REC-006/recommended.life.txt))
 
@@ -247,6 +247,8 @@ Full diagnostic messages, input SHA-256, and commands are in the [manifest](../.
 ````lifetxt
 [ ] H "ストレッチする" at:18:00+09:00 repeat:daily
 ````
+
+**Offset repair:** #1226 retains the authored offset for floating occurrences. The current agenda result and its engine commit are recorded separately from historical check evidence; previous agenda output remains in agenda_history.
 
 **Validation:** Core 1.0.3; engine source commit `97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3`. Executed; independent review pending. CLI acceptance is not semantic proof.
 

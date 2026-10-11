@@ -2,6 +2,22 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-offset-recurrence-anchor-fidelity
+      capability_id: cap-recurrence-expansion
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1226
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1229
+      changed_files_or_scope:
+        - lifetxt/timeutil.py
+        - lifetxt/agenda.py
+        - lifetxt/recurrence.py
+        - tests/test_offset_recurrence.py
+        - examples/ai-patterns/manifest.json
+      tests_or_evidence:
+        - tests.test_offset_recurrence before-fix failures and after-fix matrix
+        - tests.test_recurrence and tests.test_recurrence_wkst
+        - tests.test_timezone_aware and tests.test_timezone_policy_v2
+      status: implemented
+      notes: Owner approved High/M on 2026-10-11; authored offsets and configured windows only; human independent review pending.
     - requirement_id: req-recurrence-documentation-current-subset
       capability_id: cap-recurrence-expansion
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1225

@@ -508,9 +508,13 @@ requested date/time range は half-open interval `[start, end)` として扱い�
 date-only の end boundary、例えば `--to 2026-06-12` は `2026-06-13T00:00`
 として解釈し、同日 `23:59:59.5` は含め、翌日 `00:00` ちょうどは除外します。
 展開は回数・終了・要求範囲と safety ceiling で制限されます。意図した範囲の
-具体的な occurrence を確認してください。offset 付き anchor/展開の不具合は
-[#1218](https://github.com/Eruhitsuji/lifetxt/issues/1218) と
-[#1226](https://github.com/Eruhitsuji/lifetxt/issues/1226) で追跡しています。
+具体的な occurrence を確認してください。明示offsetの時刻はanchorの日付と結合してから
+解釈します。weekly/monthly/yearlyの生成候補も記述されたoffsetを保持し、
+agenda/recurrenceの窓比較ではnaiveな境界を解決済みtimezoneで解釈します。
+修正は [#1218](https://github.com/Eruhitsuji/lifetxt/issues/1218) /
+[#1226](https://github.com/Eruhitsuji/lifetxt/issues/1226) で追跡。
+他のlegacy比較callerの動作は維持し、固定offsetの修正で名前付きzone/DSTの
+繰り返しpolicyを拡張したとは扱いません。
 
 ## 9. type 別 recommended keys
 

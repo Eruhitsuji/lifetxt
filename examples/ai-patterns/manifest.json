@@ -6,56 +6,596 @@
     {
       "id": "PAT-TYPE-001",
       "topic": "Taskの実行",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "牛乳を買う。日時はまだ決めていない。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "具体的な行動をTで記録し、未指定の期限・予定日・IDを加えない。",
+        "en": "Use T for an actionable item; no time, deadline, or ID was supplied."
+      },
+      "spec": [
+        "§2–3, §9, §13–14"
+      ],
+      "sources": [
+        "../../../examples/tasks_life.txt",
+        "../../../examples/events_life.txt",
+        "../../../examples/habits_reminders_life.txt",
+        "../../../examples/messages_life.txt",
+        "../../../examples/diary_life.txt",
+        "../../../examples/status_presence.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "Missing time is intentional, not an error."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/types.md",
+        "en": "docs/en/ai-patterns/types.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-TYPE-001/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "3926bdec276691ead51a3149b2f87858977765c34a310840e425fd365187c4cf",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-TYPE-001/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          }
+        }
+      ]
     },
     {
       "id": "PAT-TYPE-002",
       "topic": "Eventの開催",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "2030年10月14日10時に会議がある。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "開催される出来事をEで記録する。終了時刻を推測しない。",
+        "en": "Use E for an occurrence; preserve the known start without inventing an end."
+      },
+      "spec": [
+        "§2–3, §9, §13–14"
+      ],
+      "sources": [
+        "../../../examples/tasks_life.txt",
+        "../../../examples/events_life.txt",
+        "../../../examples/habits_reminders_life.txt",
+        "../../../examples/messages_life.txt",
+        "../../../examples/diary_life.txt",
+        "../../../examples/status_presence.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "An action task and a calendar occurrence express different intentions."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/types.md",
+        "en": "docs/en/ai-patterns/types.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-TYPE-002/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "633eae7db308370d7892a74e012afaa546118f2ee30d60727527f3ea4a2e14f1",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-TYPE-002/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          }
+        }
+      ]
     },
     {
       "id": "PAT-TYPE-003",
       "topic": "Deadlineの締切",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "申請の受付締切は2030年10月20日17時。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "Dは作業そのものではなく受付の限界時刻を表す。",
+        "en": "D records a cutoff rather than the work needed to meet it."
+      },
+      "spec": [
+        "§2–3, §9, §13–14"
+      ],
+      "sources": [
+        "../../../examples/tasks_life.txt",
+        "../../../examples/events_life.txt",
+        "../../../examples/habits_reminders_life.txt",
+        "../../../examples/messages_life.txt",
+        "../../../examples/diary_life.txt",
+        "../../../examples/status_presence.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "The deadline does not create or execute a submission task."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/types.md",
+        "en": "docs/en/ai-patterns/types.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-TYPE-003/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "6ee8e69f1ae702a5e586c171fdff00c41571c9516f26caa8301fc745e3412b5e",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-TYPE-003/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          }
+        }
+      ]
     },
     {
       "id": "PAT-TYPE-004",
       "topic": "Reminderの注意喚起",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "2030年10月14日18時に図書館への電話を思い出すための記録を作る。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "注意喚起の意図をRで表す。",
+        "en": "Use R for an attention cue."
+      },
+      "spec": [
+        "§2–3, §9, §13–14"
+      ],
+      "sources": [
+        "../../../examples/tasks_life.txt",
+        "../../../examples/events_life.txt",
+        "../../../examples/habits_reminders_life.txt",
+        "../../../examples/messages_life.txt",
+        "../../../examples/diary_life.txt",
+        "../../../examples/status_presence.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "A generated record alone does not schedule device delivery."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/types.md",
+        "en": "docs/en/ai-patterns/types.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-TYPE-004/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "b82c0361c7582a6cb84b67d0919d5eb98e1e03753bcd7c28842e27519cba1d1f",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-TYPE-004/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          }
+        }
+      ]
     },
     {
       "id": "PAT-TYPE-005",
       "topic": "Habitの習慣",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "毎日18時に英語を学習する習慣を記録する。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "繰り返す実践をHで表す。起点日は未指定なので時刻だけを保持する。",
+        "en": "H describes repeated practice; retain the floating time because no start date was supplied."
+      },
+      "spec": [
+        "§2–3, §9, §13–14"
+      ],
+      "sources": [
+        "../../../examples/tasks_life.txt",
+        "../../../examples/events_life.txt",
+        "../../../examples/habits_reminders_life.txt",
+        "../../../examples/messages_life.txt",
+        "../../../examples/diary_life.txt",
+        "../../../examples/status_presence.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "Floating-time expansion needs a bounded requested range."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/types.md",
+        "en": "docs/en/ai-patterns/types.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-TYPE-005/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "c2de30a0927bed97c6f79f5713be8bebc7507a4d6137d57595bfaa2859835eb0",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-TYPE-005/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          }
+        }
+      ]
     },
     {
       "id": "PAT-TYPE-006",
       "topic": "Noteの持続的情報",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "資料には図を増やすというメモを残す。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "継続的に参照する情報はN、状態は[N]にする。",
+        "en": "N is enduring information and uses [N]."
+      },
+      "spec": [
+        "§2–3, §9, §13–14"
+      ],
+      "sources": [
+        "../../../examples/tasks_life.txt",
+        "../../../examples/events_life.txt",
+        "../../../examples/habits_reminders_life.txt",
+        "../../../examples/messages_life.txt",
+        "../../../examples/diary_life.txt",
+        "../../../examples/status_presence.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "Do not turn a memo into an unfinished action without a request."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/types.md",
+        "en": "docs/en/ai-patterns/types.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-TYPE-006/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "abdade2252e946fdbd7c45f094563aad5bdd4d98c60b238833ae73eaaeefd374",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-TYPE-006/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          }
+        }
+      ]
     },
     {
       "id": "PAT-TYPE-007",
       "topic": "Statusの在席状態",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "自分は2030年10月14日9時から集中作業中。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "Sは在席状態で、日時とstateを持つ。対象の自分はperson:self。",
+        "en": "S records presence with a datetime and state; person:self identifies the supplied target."
+      },
+      "spec": [
+        "§2–3, §9, §13–14"
+      ],
+      "sources": [
+        "../../../examples/tasks_life.txt",
+        "../../../examples/events_life.txt",
+        "../../../examples/habits_reminders_life.txt",
+        "../../../examples/messages_life.txt",
+        "../../../examples/diary_life.txt",
+        "../../../examples/status_presence.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "Do not claim that this updates an external chat presence."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/types.md",
+        "en": "docs/en/ai-patterns/types.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-TYPE-007/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "e8c1892ae661067518785c815fdb27931cf9fd05da769c8faca9eaf2518681a3",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-TYPE-007/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          }
+        }
+      ]
     },
     {
       "id": "PAT-TYPE-008",
       "topic": "Messageの伝達依頼",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "2030年10月14日9時に自分からaliceへ資料レビュー依頼を送るための記録。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "Mで送信者・受信者・通知日時を記録する。本文は依頼されていないので創作しない。",
+        "en": "M records sender, recipient, and notification time; do not compose an unsupplied message body."
+      },
+      "spec": [
+        "§2–3, §9, §13–14"
+      ],
+      "sources": [
+        "../../../examples/tasks_life.txt",
+        "../../../examples/events_life.txt",
+        "../../../examples/habits_reminders_life.txt",
+        "../../../examples/messages_life.txt",
+        "../../../examples/diary_life.txt",
+        "../../../examples/status_presence.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "A request to send is different from a message already sent."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/types.md",
+        "en": "docs/en/ai-patterns/types.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-TYPE-008/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "8ba0bf876ce4dfecf5d9c2e38646ee1f2ff40c86e427a473db7964b10cb4d353",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-TYPE-008/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          }
+        }
+      ]
     },
     {
       "id": "PAT-TYPE-009",
       "topic": "Journalの日時付き記録",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "2030年10月11日の研究日誌。今日は関連文献を読んだ。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "日付のある振り返りはJにし、長い内容はbody継続行へ置く。",
+        "en": "J is a dated reflection; the continuation line is its body."
+      },
+      "spec": [
+        "§2–3, §9, §13–14"
+      ],
+      "sources": [
+        "../../../examples/tasks_life.txt",
+        "../../../examples/events_life.txt",
+        "../../../examples/habits_reminders_life.txt",
+        "../../../examples/messages_life.txt",
+        "../../../examples/diary_life.txt",
+        "../../../examples/status_presence.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "Use [N] for J; do not automatically synthesize tasks from an experience."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/types.md",
+        "en": "docs/en/ai-patterns/types.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-TYPE-009/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "98b140ad95bf436e0dc58d9c4c377ea73b3bc4340643b2c2cec197918e2cf96c",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-TYPE-009/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          }
+        }
+      ]
     },
     {
       "id": "PAT-STATUS-001",

@@ -1,0 +1,13 @@
+schema_version: 1
+requirements:
+  - id: req-offset-recurrence-anchor-fidelity
+    kind: FIXED
+    owner: Eruhitsuji
+    statement: Preserve authored offset instants through agenda anchors, recurrence candidates and configured-zone window comparisons.
+    acceptance_criteria:
+      - Split and full anchors agree across positive and negative midnight displacements.
+      - Weekly BYDAY, monthly ordinal and yearly BYMONTH retain time, seconds, fractions and offset.
+      - Host timezone and clock season do not change affected configured-UTC inclusion.
+      - Half-open windows, count and RRULE date UNTIL retain intended boundaries.
+      - Naive controls and global legacy comparison callers remain compatible.
+      - Shared consumers, catalog evidence and bilingual docs are consistent.

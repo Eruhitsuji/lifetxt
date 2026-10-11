@@ -251,4 +251,3 @@ Full diagnostic messages, input SHA-256, and commands are in the [manifest](../.
 **Sources:** [Format 1.0](../life_txt_format_spec.md) §7–14 + owning feature docs; [Profile](../../../prompts/lifetxt-assistant.md). [source 1](../../../examples/minimal_life.txt) / [source 2](../../../examples/team_status_life.txt) / [source 3](../../../examples/diary_life.txt) / [source 4](../../../examples/hierarchy_life.txt)
 
 Feature-specific record contracts: [projects](../projects.md), [tickets](../tickets.md).
-

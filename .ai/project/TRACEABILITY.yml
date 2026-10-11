@@ -24,6 +24,30 @@ traceability:
         merge; preserve existing path selection for edits, docs and test-only
         changes, no-Web isolation, main Python matrix and coverage threshold.
         Human review and merge remain required.
+    - requirement_id: req-python310-focused-datetime-premerge
+      capability_id: cap-ci-responsibility-separation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1234
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1257
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1262
+      changed_files_or_scope:
+        - scripts/classify_ci_paths.py
+        - .github/workflows/ci.yml
+        - tests/test_ci_path_routing.py
+        - tests/test_ci_workflow_responsibilities.py
+        - tests/test_ci_recovery_contract.py
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - Python 3.12 routing, workflow, executable aggregate and offset tests, 35 passed
+        - Python 3.10.22 offset recurrence tests, nine passed
+        - Old fractional-second fromisoformat fixture reproduces ValueError on Python 3.10
+        - Actual workflow aggregate rejects selected failure, cancellation and unexpected skip
+        - Ruff changed files and git diff check passed
+      status: implemented
+      notes: >-
+        PR-only core Python 3.10 job checks known datetime regression when
+        relevant paths or CI dependencies change. Main full compatibility,
+        no-Web boundary, branch coverage and human approval are retained.
+        Focused checks do not guarantee unrelated modules' Python compatibility.
     - requirement_id: req-recurrence-diagnostic-expansion-consistency
       capability_id: cap-recurrence-expansion
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1237

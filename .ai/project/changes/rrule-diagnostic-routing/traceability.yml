@@ -1,0 +1,8 @@
+schema_version: 1
+links:
+  - requirement: req-recurrence-diagnostic-expansion-consistency
+    capability: cap-recurrence-expansion
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1237
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1240
+    tests: [tests.test_rrule_diagnostics, tests.test_recurrence, tests.test_ai_patterns]
+    status: implemented

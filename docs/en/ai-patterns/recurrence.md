@@ -206,9 +206,9 @@ Full diagnostic messages, input SHA-256, and commands are in the [manifest](../.
 
 **Context:** Fictional example. Fixed baseline: 2030-10-11T12:00:00+09:00; user timezone: Asia/Tokyo. Use only supplied dates, IDs, people, and metadata. Referenced existing records are included for independent validation, not to be appended again to a live workspace.
 
-**Reason:** BYSETPOS is unsupported by current Core and gives W223. Storage succeeds but observed expansion is empty; this boundary example is not an executable recurring schedule.
+**Reason:** BYSETPOS is unsupported by current Core and gives W223. Storage succeeds, but agenda generates no recurrence; it retains the authored anchor as an ordinary record. This boundary example is not an executable recurring schedule.
 
-**Pitfall:** The note does not implement a recurrence exception. Format §8.1 describes existing ordinal BYDAY/BYMONTHDAY/BYMONTH/WKST support and partial expansion limits (#1217/#1225). The empty expansion observed for this specific plain monthly BYDAY input is a legacy dispatch gap tracked by #1227; do not generalize it to every unsupported-key rule.
+**Pitfall:** The note does not implement a recurrence exception. Format §8.1 describes existing ordinal BYDAY/BYMONTHDAY/BYMONTH/WKST support and partial expansion limits (#1217/#1225). The historical empty output below came from a legacy dispatch gap. #1237 now skips unsupported RRULE recurrence explicitly and retains the ordinary authored anchor; current output and old evidence are kept separately in the manifest.
 
 **Recommended** ([canonical fixture](../../../examples/ai-patterns/PAT-REC-007/recommended.life.txt))
 

@@ -380,6 +380,16 @@ def _validate_rrule_value(item, value):
         if byday_warning:
             diagnostics.append(_rrule_warning(item, byday_warning))
 
+    # Keep established warning messages, but validate all otherwise-clean
+    # supported values/combinations using the engine that will expand them.
+    if not diagnostics:
+        from .recurrence import RecurrenceError, parse_rule
+
+        try:
+            parse_rule(value)
+        except RecurrenceError as error:
+            diagnostics.append(_rrule_warning(item, str(error)))
+
     return diagnostics
 
 
@@ -429,10 +439,9 @@ def _rrule_byday_warning(freq, value):
         if weekday not in _RRULE_WEEKDAYS:
             return "RRULE BYDAY should list weekday codes such as MO,WE,FR."
         if position and freq and freq not in _POSITIONAL_BYDAY_FREQS:
-            # Expansion drops the number here, so the rule would quietly mean
-            # "every Monday" rather than the second one.
+            # Ordinals cannot mean a position within a daily/weekly period.
             return (
-                "RRULE BYDAY position %s is ignored for FREQ=%s; positions apply "
+                "RRULE BYDAY position %s is not supported for FREQ=%s; positions apply "
                 "to FREQ=MONTHLY or FREQ=YEARLY." % (position, freq)
             )
     return None

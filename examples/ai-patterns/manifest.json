@@ -4885,50 +4885,544 @@
     {
       "id": "PAT-COM-001",
       "topic": "Task+Deadline+Reminder",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "ユーザー指定ID writeで10月14日に報告書を書き、20日17時締切(deadline)。20日9時に思い出す(reminder)。年2030。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "作業・受付期限・注意喚起を区別する。Dは必要な独立締切概念がある場合だけ追加する。",
+        "en": "Separate work, cutoff, and attention cue; add D only when an independent deadline concept is useful."
+      },
+      "spec": [
+        "§7–14 + owning feature docs"
+      ],
+      "sources": [
+        "../../../examples/minimal_life.txt",
+        "../../../examples/team_status_life.txt",
+        "../../../examples/diary_life.txt",
+        "../../../examples/hierarchy_life.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "Do not add a redundant D merely to multiply records."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/composite.md",
+        "en": "docs/en/ai-patterns/composite.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-COM-001/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "9289f582b846586bae0dddf4fe91d8bf0ee0f8c667a7088fb883c13f63fd87d0",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-COM-001/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          }
+        }
+      ]
     },
     {
       "id": "PAT-COM-002",
       "topic": "反復ハイブリッド会議と準備",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "毎週月曜14〜15時に会議室3とTeamsで定例。初回2030年10月14日。自分の進捗まとめは同日12時締切。11時に思い出す。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "開催区間・準備期限・明示された通知時刻を別recordにする。",
+        "en": "Separate meeting interval, preparation deadline, and the explicitly supplied reminder time."
+      },
+      "spec": [
+        "§7–14 + owning feature docs"
+      ],
+      "sources": [
+        "../../../examples/minimal_life.txt",
+        "../../../examples/team_status_life.txt",
+        "../../../examples/diary_life.txt",
+        "../../../examples/hierarchy_life.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "The Teams note is not a contract for creating a meeting or sending messages."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/composite.md",
+        "en": "docs/en/ai-patterns/composite.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-COM-002/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "2ada43ce39f9da5de5971b9ea4f077a59d88247228e60cf2cd993bb993f8641f",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-COM-002/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          }
+        }
+      ]
     },
     {
       "id": "PAT-COM-003",
       "topic": "研究計画・実験・メモの階層",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "研究計画researchの子に文献調査lit、次に実験exp。lit完了が実験の前提。メモも研究計画の子。IDはユーザー提供。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "包含parentと作業順depends_onを別々に表す。",
+        "en": "Parent inclusion and prerequisite order are distinct relationships."
+      },
+      "spec": [
+        "§7–14 + owning feature docs"
+      ],
+      "sources": [
+        "../../../examples/minimal_life.txt",
+        "../../../examples/team_status_life.txt",
+        "../../../examples/diary_life.txt",
+        "../../../examples/hierarchy_life.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "Indentation alone does not define dependency order."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/composite.md",
+        "en": "docs/en/ai-patterns/composite.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-COM-003/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "b2ced6548842c8696edcf4ad75ef12294acb6f98f822420a3702bd27f15d29a5",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-COM-003/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          }
+        }
+      ]
     },
     {
       "id": "PAT-COM-004",
       "topic": "日誌から別Taskへ",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "2030年10月11日の日誌logに『文献を読んだ』。別に翌日『要約を書く』Taskをlog参照で追加。ID logはユーザー提供。日誌のmoodはcalm、weatherはsunny、場所labと明示する。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "過去記録Jと未来行動Tを分け、ユーザー指定の関連をrefで保つ。",
+        "en": "Separate the past journal from the future task and preserve the requested link via ref."
+      },
+      "spec": [
+        "§7–14 + owning feature docs"
+      ],
+      "sources": [
+        "../../../examples/minimal_life.txt",
+        "../../../examples/team_status_life.txt",
+        "../../../examples/diary_life.txt",
+        "../../../examples/hierarchy_life.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "Do not squeeze the whole diary into a task title."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/composite.md",
+        "en": "docs/en/ai-patterns/composite.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-COM-004/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "d6b5a8f2024a690f38c0d4ccb48b652c403872dc0be743491478299df67f25b0",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-COM-004/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          }
+        }
+      ]
     },
     {
       "id": "PAT-COM-005",
       "topic": "チーム在席と人物・期間",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "ユーザー提供の状態スナップショット：aliceの2030年10月14日9〜10時の集中期間は終了済み。bobは同日9時30分から会議中で終了時刻不明。2人のteamはresearch、groupはlab_group、serviceはteams、visibilityはteam。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "提供済みスナップショットの閉じた期間は[x]、終了不明の期間は[/]で別recordにする。外部サービスで現在観測した状態とは主張しない。",
+        "en": "In the supplied snapshot, use [x] for the closed interval and [/] for the interval whose end is unknown. These are supplied records, not claims of observed live service state."
+      },
+      "spec": [
+        "§7–14 + owning feature docs"
+      ],
+      "sources": [
+        "../../../examples/minimal_life.txt",
+        "../../../examples/team_status_life.txt",
+        "../../../examples/diary_life.txt",
+        "../../../examples/hierarchy_life.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "person and assignee have different roles; do not promise external synchronization."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/composite.md",
+        "en": "docs/en/ai-patterns/composite.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-COM-005/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "7657421a46db3f81a9eb27303326803f3d738af15820bec1bd983b1fa1136770",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-COM-005/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          }
+        }
+      ]
     },
     {
       "id": "PAT-COM-006",
       "topic": "Message threadと通知期間・確認",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "ユーザー提供threadのレビュー依頼は自分→alice、2030年10月14日9時送信済み。replyはalice→自分の確認済み返信、9時5分。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "parentはthread関係。メッセージ送信/確認とレビュー作業完了を混同しない。",
+        "en": "parent represents a message thread; sent or acknowledged messages do not prove review completion."
+      },
+      "spec": [
+        "§7–14 + owning feature docs"
+      ],
+      "sources": [
+        "../../../examples/minimal_life.txt",
+        "../../../examples/team_status_life.txt",
+        "../../../examples/diary_life.txt",
+        "../../../examples/hierarchy_life.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "Do not turn the reply time into a successful review date."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/composite.md",
+        "en": "docs/en/ai-patterns/composite.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-COM-006/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "75b8351ef97676684c58effe9b9f4ae2b80c10cb7e34af5b371837813b585be1",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-COM-006/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          }
+        }
+      ]
     },
     {
       "id": "PAT-COM-007",
       "topic": "予定→実績→延期・置換workflow",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "旧訪問oldは延期しnewへ置換、2030年10月22日が新予定。actualはnewを実現した実績。IDと実績日もユーザー提供。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "延期先日時・計画置換・実績が実現する計画を分離する。現Coreのtype別custom警告W106は保持し、置換/実現の公式意味を別keyへ改変しない。",
+        "en": "Separate the new date, replacement plan, and actual-to-plan realization. Retain current type-specific W106 warnings without rewriting specified replacement/realization semantics into another key."
+      },
+      "spec": [
+        "§7–14 + owning feature docs"
+      ],
+      "sources": [
+        "../../../examples/minimal_life.txt",
+        "../../../examples/team_status_life.txt",
+        "../../../examples/diary_life.txt",
+        "../../../examples/hierarchy_life.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "Do not synthesize actuals from a plan; this source explicitly supplies the actual."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/composite.md",
+        "en": "docs/en/ai-patterns/composite.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-COM-007/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": [
+              [
+                "warning",
+                "W106",
+                1
+              ],
+              [
+                "warning",
+                "W106",
+                3
+              ]
+            ]
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "c5dea25d2b94ffdfd246ea9a3a061fcb7151e2d65c9954f98513495458a57fb3",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-COM-007/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": [
+                {
+                  "severity": "warning",
+                  "code": "W106",
+                  "category": "style",
+                  "message": "Detail key 'replaced_by' is custom for type E; it will be preserved.",
+                  "source": "examples/ai-patterns/PAT-COM-007/recommended.life.txt",
+                  "line": 1,
+                  "hint": "Keep the custom key if intentional, or rename it to a documented key for this item type."
+                },
+                {
+                  "severity": "warning",
+                  "code": "W106",
+                  "category": "style",
+                  "message": "Detail key 'realizes' is custom for type E; it will be preserved.",
+                  "source": "examples/ai-patterns/PAT-COM-007/recommended.life.txt",
+                  "line": 3,
+                  "hint": "Keep the custom key if intentional, or rename it to a documented key for this item type."
+                }
+              ]
+            }
+          }
+        }
+      ]
     },
     {
       "id": "PAT-COM-008",
       "topic": "提供済みmetadata・添付参照・record拡張境界",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "project:research、tag:designの会議recordを残す。2030年10月14日。参照資料はFormat仕様。record:meetingを指定。関連ユーザーalice、想定1時間、作成2030年10月10日・更新10月11日、URL https://example.com/designも指定。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "指定されたmetadataを保持する。recordはbase typeを増やさず、機能所有文書の約束に従う。",
+        "en": "Preserve supplied metadata; record conventions layer on the base type and follow their owning feature documentation."
+      },
+      "spec": [
+        "§7–14 + owning feature docs"
+      ],
+      "sources": [
+        "../../../examples/minimal_life.txt",
+        "../../../examples/team_status_life.txt",
+        "../../../examples/diary_life.txt",
+        "../../../examples/hierarchy_life.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "Preserving an unknown record value does not guarantee support by every feature."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/composite.md",
+        "en": "docs/en/ai-patterns/composite.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-COM-008/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "66c829ebf25ae44c115ff1807b1560628a8ee129931baaa3fc75ce19ed79754a",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-COM-008/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          }
+        }
+      ]
     },
     {
       "id": "PAT-PIT-001",

@@ -2988,6 +2988,7 @@ capabilities:
     owner: Eruhitsuji
     source_requirements:
       - req-cross-surface-consistency
+      - req-mcp-test-import-order-determinism
     implementation_locations:
       - lifetxt/safety_foundation.py
       - lifetxt/surface_runtime.py
@@ -3003,6 +3004,8 @@ capabilities:
       - MCP resource lifetxt://capabilities
       - .ai/project/CAPABILITY_DRIFT_EXCEPTIONS.json
     tests_or_evidence:
+      - tests/test_mcp_import_order.py
+      - tests/test_mcp_expansion.py
       - tests/test_surface_runtime.py SurfaceRuntimeTests.test_cli_mcp_and_resource_capabilities_match_registry_gate
       - tests/test_surface_runtime.py WebSurfaceRuntimeTests.test_web_capabilities_match_registry_gate
       - tests/test_surface_runtime.py WebSurfaceRuntimeTests.test_live_web_command_catalog_matches_tui_registry_gate

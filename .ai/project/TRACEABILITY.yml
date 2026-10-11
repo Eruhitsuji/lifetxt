@@ -20,6 +20,30 @@ traceability:
         Add slowest 20 test duration reporting to existing unittest suites
         without another CI run, preserving older Python invocations, no-Web
         boundary, 59 percent coverage threshold, and human merge approval.
+    - requirement_id: req-public-schema-independent-inventory
+      capability_id: cap-ci-responsibility-separation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1234
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1247
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1258
+      changed_files_or_scope:
+        - tests/schema_contract.py
+        - tests/test_public_schema_contract.py
+        - tests/fixtures/public_schema_contract.json
+        - tests/test_schema_extensions_v2.py
+        - tests/test_safety_cli.py
+        - docs/development/public-schema-contract.md
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - Python 3.12 targeted schema and progress tests, 33 passed with optional dependencies
+        - Python 3.10.22 and 3.11.17 targeted tests, 42 passed, 5 optional skips each
+        - Negative fixtures reject added, removed, replaced, duplicate-ID and altered schemas
+        - Ruff new helper and tests passed; existing diagnostic mypy boundary passed
+      status: implemented
+      notes: >-
+        Independent reviewed filename, versioned identifier and canonical JSON
+        digest snapshot replaces fixed counts. Preserve 92 registered bundle
+        schemas plus explicitly declared standalone progress-delta publication.
+        Required CI and independent human review remain merge prerequisites.
     - requirement_id: req-ci-pr-added-product-module-coverage
       capability_id: cap-ci-responsibility-separation
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1234

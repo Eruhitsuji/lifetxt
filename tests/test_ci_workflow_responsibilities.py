@@ -48,6 +48,56 @@ class CiWorkflowResponsibilityTests(unittest.TestCase):
                 name,
             )
 
+    def test_new_product_modules_are_passed_to_pr_coverage_classifier(self):
+        classify = self.jobs["classify-changes"]["steps"][-1]["run"]
+        self.assertIn(": > added-paths.txt", classify)
+        self.assertIn(
+            'git diff --diff-filter=A --name-only "$BASE_SHA" "$HEAD_SHA" > added-paths.txt',
+            classify,
+        )
+        self.assertIn(
+            "python scripts/classify_ci_paths.py changed-paths.txt "
+            "--added-paths-file added-paths.txt --github-output",
+            classify,
+        )
+        self.assertIn(
+            "outputs['run-coverage']", self.jobs["coverage-baseline"]["if"]
+        )
+
+    def test_python_312_reports_slowest_tests_without_new_suite_runs(self):
+        web = next(
+            step for step in self.jobs["test"]["steps"]
+            if step["name"] == "Run unit tests"
+        )["run"]
+        self.assertIn('if [[ "${{ matrix.python-version }}" == "3.12" ]]; then', web)
+        self.assertIn("duration_args=()", web)
+        self.assertIn("duration_args=(--durations=20)", web)
+        self.assertIn('python -m unittest discover "${duration_args[@]}"', web)
+        self.assertIn("set -o pipefail", web)
+        self.assertIn("| tee unit-tests-${{ matrix.python-version }}.log", web)
+
+        no_web = next(
+            step for step in self.jobs["no-web-extras"]["steps"]
+            if step["name"] == "Run unit tests without extras"
+        )["run"]
+        self.assertIn(
+            "python -m unittest discover --durations=20 2>&1 | tee unit-tests-no-web.log",
+            no_web,
+        )
+        self.assertIn("set -o pipefail", no_web)
+
+        coverage = next(
+            step for step in self.jobs["coverage-baseline"]["steps"]
+            if step["name"] == "Run tests and write coverage evidence"
+        )["run"]
+        self.assertIn(
+            "coverage run --branch -m unittest discover --durations=20 "
+            "2>&1 | tee coverage-tests.log",
+            coverage,
+        )
+        self.assertIn("set -o pipefail", coverage)
+        self.assertIn("python scripts/check_coverage_regression.py", coverage)
+
     def test_no_web_lane_installs_yaml_without_web_extras(self):
         job = self.jobs["no-web-extras"]
         install = next(
@@ -77,6 +127,7 @@ class CiWorkflowResponsibilityTests(unittest.TestCase):
                 "no-web-extras",
                 "coverage-baseline",
                 "main-health",
+                "python310-focused",
             },
             set(gate["needs"]),
         )
@@ -86,6 +137,22 @@ class CiWorkflowResponsibilityTests(unittest.TestCase):
             "Optional dependency compatibility",
             self.jobs["optional-dependency-compatibility"]["name"],
         )
+
+    def test_python310_datetime_check_is_pr_only_and_core_only(self):
+        job = self.jobs["python310-focused"]
+        self.assertEqual(
+            "${{ github.event_name == 'pull_request' && needs['classify-changes'].outputs['run-python310-focused'] == 'true' }}",
+            job["if"],
+        )
+        self.assertEqual(["classify-changes"], job["needs"])
+        self.assertEqual("3.10", job["steps"][1]["with"]["python-version"])
+        self.assertEqual("python -m pip install -e .", job["steps"][2]["run"])
+        self.assertIn("tests.test_offset_recurrence", job["steps"][3]["run"])
+        self.assertIn("set -o pipefail", job["steps"][3]["run"])
+        self.assertNotIn("python310-focused", self.jobs["main-gate"]["needs"])
+        env = self.jobs["pr-gate"]["steps"][0]["env"]
+        self.assertIn("run-python310-focused", env["PYTHON310_SELECTED"])
+        self.assertIn("python310-focused", env["PYTHON310_RESULT"])
 
     def test_main_gate_aggregates_all_compatibility_responsibilities(self):
         gate = self.jobs["main-gate"]

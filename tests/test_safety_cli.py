@@ -7,6 +7,7 @@ import unittest
 
 from lifetxt import entrypoint
 from lifetxt.extra_cli import _build_parser
+from tests.schema_contract import load_contract
 
 
 class SafetyCliTests(unittest.TestCase):
@@ -148,8 +149,9 @@ class SafetyCliTests(unittest.TestCase):
         )
         self.assertEqual(0, code, stderr)
         report = json.loads(stdout)
-        self.assertEqual(92, len(report["files"]))
-        self.assertEqual(92, len(os.listdir(directory)))
+        self.assertEqual(set(load_contract()), set(report["files"]))
+        self.assertEqual(len(report["files"]), len(set(report["files"])))
+        self.assertEqual(set(load_contract()), set(os.listdir(directory)))
         for name in (
             "release-manifest-v1.schema.json",
             "revision-metrics-v1.schema.json",

@@ -17,6 +17,155 @@ traceability:
         - Final combined full discovery passed 5513 tests, 447 optional skips
       status: implemented
       notes: Test-only explicit legacy initialization before snapshots; no runtime or authorization change; human review pending.
+    - requirement_id: req-docker-build-failure-diagnostics
+      capability_id: cap-ci-responsibility-separation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1234
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1267
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1268
+      changed_files_or_scope:
+        - tests/test_docker_image.py
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests.test_docker_image.DockerBuildDiagnosticsTests
+        - Docker build failures retain command, exit code, stdout and stderr for missing, bytes, text and invalid UTF-8 output
+        - Existing real Docker build and run smoke tests are unchanged and remain enabled wherever Docker is available
+        - PR 1268 required CI and independent review pending
+      status: implemented
+      notes: >-
+        Reuse existing checked Docker build and existing CI failure logs.
+        Enrich failure diagnostics without skipping Docker smoke coverage or
+        automatically retrying builds. The prior Docker build's root cause
+        remains unknown; output must not be copied into public issue comments.
+    - requirement_id: req-ci-incident-operational-recovery-evidence
+      capability_id: cap-ci-responsibility-separation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1234
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1264
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1266
+      changed_files_or_scope:
+        - .github/workflows/ci.yml
+        - tests/test_ci_recovery_contract.py
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - Executable workflow fixtures preserve attempt 2, cancelled jobs, API failure, latest full-success closure and human comments
+        - Python 3.12 focused CI and catalog checks, 63 passed
+        - PR 1266 required CI remains pending until its final-head run succeeds
+      status: implemented
+      notes: >-
+        Extend existing main recovery-first Incident records with recovery
+        attempt and SHA. Automatic closure means operational recovery only;
+        cause confidence and recovery PR stay unknown without explicit evidence.
+        Preserve metadata links and human investigation comments without storing
+        raw logs or introducing automatic retry or merge.
+    - requirement_id: req-ci-ai-catalog-bounded-independent-cli-checks
+      capability_id: cap-ci-responsibility-separation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1234
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1265
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1266
+      changed_files_or_scope:
+        - scripts/check_ai_patterns.py
+        - tests/test_ai_patterns.py
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - Python 3.10 and 3.11 no-Web catalog checks, 13 passed each
+        - Serial and parallel full reports match for 68 patterns and 92 fixtures
+        - Fixed-environment serial 24.874s and 24.273s, final four-worker 8.588s and 8.833s
+        - Planned-state, order, timeout, spawn and worker failure, invalid JSON, exit, stderr, agenda and path-escape fixtures
+        - PR 1266 required CI and dev-only coverage retain the existing quality gates
+      status: implemented
+      notes: >-
+        Reuse fresh CLI subprocesses with unchanged environment and 30-second
+        timeout. Bound checks to at most four workers and drain them before
+        serial agenda/version checks. Preserve manifest order and full diagnostic
+        evidence; workers=1 provides a serial baseline. No new CI lane, mandatory
+        dependency, coverage threshold change or next branch introduction.
+    - requirement_id: req-ci-slowest-unittest-durations-observability
+      capability_id: cap-ci-responsibility-separation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1234
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1255
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1256
+      changed_files_or_scope:
+        - .github/workflows/ci.yml
+        - tests/test_ci_workflow_responsibilities.py
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests.test_ci_workflow_responsibilities
+        - Python 3.12 unittest --durations official CLI contract
+        - Existing Web, no-Web, and coverage job logs on PR CI (pending)
+      status: implemented
+      notes: >-
+        Add slowest 20 test duration reporting to existing unittest suites
+        without another CI run, preserving older Python invocations, no-Web
+        boundary, 59 percent coverage threshold, and human merge approval.
+    - requirement_id: req-public-schema-independent-inventory
+      capability_id: cap-ci-responsibility-separation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1234
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1247
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1258
+      changed_files_or_scope:
+        - tests/schema_contract.py
+        - tests/test_public_schema_contract.py
+        - tests/fixtures/public_schema_contract.json
+        - tests/test_schema_extensions_v2.py
+        - tests/test_safety_cli.py
+        - docs/development/public-schema-contract.md
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - Python 3.12 targeted schema and progress tests, 33 passed with optional dependencies
+        - Python 3.10.22 and 3.11.17 targeted tests, 42 passed, 5 optional skips each
+        - Negative fixtures reject added, removed, replaced, duplicate-ID and altered schemas
+        - Ruff new helper and tests passed; existing diagnostic mypy boundary passed
+      status: implemented
+      notes: >-
+        Independent reviewed filename, versioned identifier and canonical JSON
+        digest snapshot replaces fixed counts. Preserve 92 registered bundle
+        schemas plus explicitly declared standalone progress-delta publication.
+        Required CI and independent human review remain merge prerequisites.
+    - requirement_id: req-ci-pr-added-product-module-coverage
+      capability_id: cap-ci-responsibility-separation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1234
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1244
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1252
+      changed_files_or_scope:
+        - scripts/classify_ci_paths.py
+        - .github/workflows/ci.yml
+        - tests/test_ci_path_routing.py
+        - tests/test_ci_workflow_responsibilities.py
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests.test_ci_path_routing
+        - tests.test_ci_workflow_responsibilities
+        - disposable Git diff confirms added modules are selected, edited files are not
+        - final PR required CI pending at time of implementation
+      status: implemented
+      notes: >-
+        For an added lifetxt Python module, run dev-only branch coverage before
+        merge; preserve existing path selection for edits, docs and test-only
+        changes, no-Web isolation, main Python matrix and coverage threshold.
+        Human review and merge remain required.
+    - requirement_id: req-python310-focused-datetime-premerge
+      capability_id: cap-ci-responsibility-separation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1234
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1257
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1262
+      changed_files_or_scope:
+        - scripts/classify_ci_paths.py
+        - .github/workflows/ci.yml
+        - tests/test_ci_path_routing.py
+        - tests/test_ci_workflow_responsibilities.py
+        - tests/test_ci_recovery_contract.py
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - Python 3.12 routing, workflow, executable aggregate and offset tests, 35 passed
+        - Python 3.10.22 offset recurrence tests, nine passed
+        - Old fractional-second fromisoformat fixture reproduces ValueError on Python 3.10
+        - Actual workflow aggregate rejects selected failure, cancellation and unexpected skip
+        - Ruff changed files and git diff check passed
+      status: implemented
+      notes: >-
+        PR-only core Python 3.10 job checks known datetime regression when
+        relevant paths or CI dependencies change. Main full compatibility,
+        no-Web boundary, branch coverage and human approval are retained.
+        Focused checks do not guarantee unrelated modules' Python compatibility.
     - requirement_id: req-recurrence-diagnostic-expansion-consistency
       capability_id: cap-recurrence-expansion
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1237
@@ -10731,6 +10880,30 @@ traceability:
         instruction to open the pull request.
       status: implemented
 
+    - requirement_id: req-annotated-example-workspace
+      capability_id: cap-beginner-minimal-profile
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1250
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1251
+      changed_files_or_scope:
+        - "Add examples/annotated_life.txt, a larger realistic annotated life.txt combining Task/Deferred/Event/Habit/Note kinds with project:/tag:/priority:/repeat: detail keys, as a second, richer example alongside the existing Level-1-only getting_started_life.txt"
+        - examples/annotated_life.txt
+        - docs/en/getting-started.md
+        - docs/ja/getting-started.md
+      tests_or_evidence:
+        - "python -m lifetxt check examples/annotated_life.txt -> OK: 8 item(s)"
+        - "python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)"
+        - "python scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> {\"errors\": 0, \"ok\": true}"
+        - "confirmed tests.test_release_policy's one pre-existing unrelated failure (test_release_manifest_has_deterministic_fingerprint, missing schema samples for many unrelated schemas) reproduces identically on main via git stash, unaffected by this change"
+      release_or_deployment: null
+      notes: >-
+        Quick assurance, documentation-only, XS-sized per the issue's own
+        scope: no parser, Format, CLI, or code behavior change. Extends
+        cap-beginner-minimal-profile rather than creating a new capability,
+        since this is the same example-curation/getting-started-docs scope
+        #558 already established.
+      status: implemented
+
     - requirement_id: req-lifetxt-vm-opt-in-turing-complete
       capability_id: cap-lifetxt-vm
       epic: null
@@ -15747,6 +15920,30 @@ traceability:
         implementing this entry is opened.
       status: implemented
 
+    - requirement_id: req-deferred-next-branch-readiness
+      capability_id: cap-ci-responsibility-separation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1234
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1259
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1261
+      changed_files_or_scope:
+        - .ai/project/BRANCH_STRATEGY.json
+        - scripts/check_branch_readiness.py
+        - tests/test_branch_readiness.py
+        - docs/development/branch-readiness.md
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - Python 3.10.22, 3.11.17 and 3.12.14, five readiness tests passed each
+        - Actual repository audit reports main-only consistency and deferred migration
+        - Negative fixtures reject invalid metadata, names and conflicting sources
+        - JSON output and read-only filesystem checks passed
+        - Ruff changed Python files and git diff check passed
+      status: implemented
+      notes: >-
+        Current branch roles remain main; next is deferred. Metadata is
+        descriptive, not a switch. Offline checks emit change_required and
+        manual_required evidence; external rulesets and server state are never
+        inferred ready. Human adoption, review and merge remain separate.
+
   required_chain:
     - Requirement
     - Capability
@@ -17490,6 +17687,28 @@ traceability:
       notes_closeout: PR1155 merged, final-head CI passed; device verification not_run and independent review unverified. Prior scope gap resolved by PR1157.
       release_or_deployment: null
       status: verified
+
+    - requirement_id: req-undo-dry-run-preview
+      capability_id: cap-undo-snapshot-restore
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1253
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1254
+      changed_files_or_scope:
+        - Add --dry-run to lifetxt undo, previewing which snapshot would be restored without writing to the target file or consuming the snapshot; reject --list+--dry-run together
+        - lifetxt/cli.py
+        - tests/test_lifetxt.py
+      tests_or_evidence:
+        - "tests/test_lifetxt.py LifeTxtUndoCliTests: dry-run preview leaves the target file and undo stack untouched, and a real undo still works afterward (snapshot not consumed); dry-run with no history reports the existing graceful message; --list+--dry-run together is rejected with a named error"
+        - "confirmed via git stash that test_undo_restores_previous_content's failure is a pre-existing, unrelated flake reproducible on main without this change"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff check lifetxt/cli.py tests/test_lifetxt.py -> clean
+      release_or_deployment: null
+      notes: >-
+        Self-scoped XS-sized CLI addition (below the .ai/project/changes/README.md
+        change-package threshold: Standard assurance). Reuses the existing
+        snapshot-directory resolution and the same timestamp/operation parsing
+        --list already uses, rather than a second implementation.
+      status: implemented
 
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception

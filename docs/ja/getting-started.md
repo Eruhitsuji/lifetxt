@@ -114,6 +114,12 @@ command と同じ parser を使うので、この vocabulary だけで書ける�
 `filter`、`agenda`、`tui`、`serve` など他のすべての surface でもそのまま
 動きます。
 
+より多くの record kind と detail key(Task、Deferred、Event、Habit、Note、
+`project:`/`tag:`/`priority:`/`repeat:`)を組み合わせた、より大きな注釈付きの
+example は
+[`examples/annotated_life.txt`](../../examples/annotated_life.txt)
+を参照してください。
+
 数行書いたら、`lifetxt today` が日々の入口になります:
 
 ```sh

@@ -7710,10 +7710,12 @@ capabilities:
       - docs/ja/life_txt_format_spec.md
       - readme.md
       - examples/getting_started_life.txt
+      - examples/annotated_life.txt
     public_interfaces:
       - docs/en/getting-started.md
       - docs/ja/getting-started.md
       - examples/getting_started_life.txt
+      - examples/annotated_life.txt
     tests_or_evidence:
       - "python -m lifetxt check examples/getting_started_life.txt -> OK: 4 item(s)"
       - "every Level 1 example line (T/E/N types, [ ]/[x]/[N] statuses, due/on/from/to, | body continuation) combined into one fixture and checked with python -m lifetxt check --format json -> zero diagnostics"
@@ -7723,8 +7725,11 @@ capabilities:
       - python -m unittest tests.test_release_policy tests.test_surface_runtime.TuiDocumentationDriftTests -> Ran 13 tests, OK
       - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
       - git diff --check -> clean
+      - "python -m lifetxt check examples/annotated_life.txt -> OK: 8 item(s) (#1250)"
+      - "scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> {\"errors\": 0, \"ok\": true} (#1250, after adding the annotated_life.txt cross-reference to both getting-started.md files)"
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/558
+      - https://github.com/Eruhitsuji/lifetxt/issues/1250
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/559
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
@@ -10032,6 +10037,48 @@ capabilities:
       rather than a second item-editing implementation. Part of the
       daily-cli-convenience-batch (#664-#668), implemented on its own
       child branch merged into feature/daily-cli-convenience-batch.
+    replacement:
+      replaces: []
+      replaced_by: null
+      deprecation_issue: null
+
+  - id: cap-undo-snapshot-restore
+    name: Undo snapshot stack restore and preview
+    summary: >-
+      `lifetxt undo PATH` restores a file from the most recent write-operation
+      snapshot in its per-file undo stack and consumes that snapshot;
+      `--list` shows the stack's timestamps and originating operations.
+      `--dry-run` previews which snapshot would be restored (timestamp and
+      operation) without writing to the target file or consuming the
+      snapshot, so the stack is left untouched. `--list` and `--dry-run` are
+      mutually exclusive.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-undo-dry-run-preview
+    implementation_locations:
+      - lifetxt/cli.py
+      - tests/test_lifetxt.py
+    public_interfaces:
+      - lifetxt undo PATH
+      - lifetxt undo PATH --list
+      - lifetxt undo PATH --dry-run
+    tests_or_evidence:
+      - "python -m unittest tests.test_lifetxt.LifeTxtUndoCliTests -> dry-run preview leaves the target file and snapshot untouched (confirmed by a subsequent real undo still working), dry-run with no history is graceful, --list+--dry-run together is rejected"
+      - "confirmed via git stash that test_undo_restores_previous_content's failure is a pre-existing, unrelated flake reproducible on main without this change"
+      - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      - ruff check lifetxt/cli.py tests/test_lifetxt.py -> clean
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/1253
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/1254
+    reuse_policy: prefer_reuse_or_extension_before_new_implementation
+    notes: >-
+      No existing capability entry covered the pre-existing `undo`/`--list`
+      command before this change; this entry documents it alongside the new
+      `--dry-run` preview branch, which reuses the same snapshot-directory
+      resolution and timestamp/operation parsing as `--list` rather than a
+      second implementation.
     replacement:
       replaces: []
       replaced_by: null

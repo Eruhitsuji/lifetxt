@@ -1,0 +1,378 @@
+{
+  "bundle": {
+    "archive-operation-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/archive-operation-v1.schema.json",
+      "sha256": "2e2c0658e20dfa60bd11b32ff4d04d84800ec0adb57762698b65b92bee5d7c9e"
+    },
+    "archive-plan-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/archive-plan-v1.schema.json",
+      "sha256": "63d5af41d0ce43111e087c08a3b141197a11afca6da504a06099b369c230eb86"
+    },
+    "area-summary-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/area-summary-v1.schema.json",
+      "sha256": "50a9a73a9ac11d82d95c62926736d7ca679b7b362142ad66b3d8be0a199a1744"
+    },
+    "attachment-chunk-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/attachment-chunk-v1.schema.json",
+      "sha256": "0bdc9b4d7c62793a21c066e703edf430ff7a4993b3179d4da6628d662556a323"
+    },
+    "attachment-open-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/attachment-open-v1.schema.json",
+      "sha256": "9e13bf0f83f04af56d570f5d5688696049cef4223938fb14314617df8ae50777"
+    },
+    "attachment-remote-operation-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/attachment-remote-operation-v1.schema.json",
+      "sha256": "1950dcfed8cfa3cf9a85eb2411fb9b696e9d67f1f7bff91c75306da2e75f95d2"
+    },
+    "attachment-transaction-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/attachment-transaction-v1.schema.json",
+      "sha256": "54d4503b5b355fe46b11fd017877fdfb3c5dcfb97ee43250f2db0b69211854d1"
+    },
+    "attachment-upload-receipt-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/attachment-upload-receipt-v1.schema.json",
+      "sha256": "36f4c10031f99f5d508e8ba66efe505a9c51cd1cff43633a0a6f8647d92d1831"
+    },
+    "backup-integrity-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/backup-integrity-v1.schema.json",
+      "sha256": "bb00a99ed7e95edb41c97454d4435488808ec93962093de637ee5a2da908cc53"
+    },
+    "capability-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/capability-v1.schema.json",
+      "sha256": "2849cc066b8ad81204c5d70e56691d0793565c3f1b739c602eb7317e31965c4e"
+    },
+    "clock-boundary-audit-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/clock-boundary-audit-v1.schema.json",
+      "sha256": "ee67fbf181812cea7bed2827c2a0e620f93f853601657560590068e73e95413e"
+    },
+    "clock-skew-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/clock-skew-v1.schema.json",
+      "sha256": "933700a18d2698c88d32059a175d4b49751cbbc19fa4d5ffc008cf8ea3c91ddd"
+    },
+    "command-center-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/command-center-v1.schema.json",
+      "sha256": "0545b407fcbca99b0e0f76e6d3ba1540d4df89dd8b7da068278541add41df021"
+    },
+    "config-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/config-v1.schema.json",
+      "sha256": "8de906332d2b7b0c0e59cc92f4b295769698913ea6435b68d10874ecfba6d0a1"
+    },
+    "conflict-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/conflict-v1.schema.json",
+      "sha256": "95c5a8d3f82be2def3cdd57c0e4bdcb4d711562113eaba43a7f7b03fb4ca4bba"
+    },
+    "delegated-mutation-proposal-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/delegated-mutation-proposal-v1.schema.json",
+      "sha256": "586d6381c100244ba5f78d89b40590fe27610d17b86bcf815029b9590619a023"
+    },
+    "delivery-state-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/delivery-state-v1.schema.json",
+      "sha256": "e2f391cc61827d32ee71720060e42580fb41233a3a8205e4916c744f02135de7"
+    },
+    "diagnostic-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/diagnostic-v1.schema.json",
+      "sha256": "939d8c0749fffb2688ffa295c3511298b049f487645cc3f19686f1558760aee9"
+    },
+    "directory-package-inspection-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/directory-package-inspection-v1.schema.json",
+      "sha256": "d75afe3b70c6ea39c8219bf093fc04346073d3d6c852bda7f2cf8cfd8cb81abf"
+    },
+    "directory-package-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/directory-package-v1.schema.json",
+      "sha256": "1733b8a5b10e03a1352e39c99bf4274d3900e1a54f1dcc9feaead79215337a4d"
+    },
+    "doctor-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/doctor-v1.schema.json",
+      "sha256": "e11cf4aaaf68045eb7e95bee9787e3068c4dda55bf86f67177f9ae727a2af476"
+    },
+    "editor-session-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/editor-session-v1.schema.json",
+      "sha256": "b957afebf595b5585f058f48521edb60f1f5f3d3cadbb66f3ae2752d5b4776ea"
+    },
+    "fault-drill-matrix-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/fault-drill-matrix-v1.schema.json",
+      "sha256": "19c741bfc8b62b8f2de2ca4481125c472abe32f9d78d84542eff324478499fcf"
+    },
+    "fault-injection-report-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/fault-injection-report-v1.schema.json",
+      "sha256": "1be39b76aee602bcf7cbd05e83c2b24454b5eeb3f910eab5ff77bc4241c0fcc2"
+    },
+    "freebusy-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/freebusy-v1.schema.json",
+      "sha256": "4e6a765a64dc733539a95e202d3a03ad3ec96b083aefb0ad0dc4c92139d369f6"
+    },
+    "global-search-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/global-search-v1.schema.json",
+      "sha256": "68cf1056d50d2e60bdbcb26cd18c1a5f727a713ce09e1ec24f6b586a36840316"
+    },
+    "group-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/group-v1.schema.json",
+      "sha256": "aec503a7adfa6b56c9977264e2eb026e4714600d2aa9211cdfcefdc88f939dd7"
+    },
+    "inbox-proposal-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/inbox-proposal-v1.schema.json",
+      "sha256": "703f693ae1e21eef7f4f8ab11c4f8eadbede4764e1fbcddae60210c8aed64e60"
+    },
+    "item-event-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/item-event-v1.schema.json",
+      "sha256": "cca0a46e027a3169e2220b1f44ec4aa347a12f41181ba6db6b246649445bae03"
+    },
+    "item-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/item-v1.schema.json",
+      "sha256": "c5319c4c98721224c50fb5e7daa99b6ce9ea12ffcbd21da01d518db6c4f3f56d"
+    },
+    "json-export-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/json-export-v1.schema.json",
+      "sha256": "70d94ebcd912b0626464afb7d8d491fdf5d557e6524d97e23e1620e0cb7c2e7c"
+    },
+    "multi-target-result-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/multi-target-result-v1.schema.json",
+      "sha256": "2d276d72fc586ce80ea3d90d2da104a675b49f0ed37fb2983edea757f25264e2"
+    },
+    "native-git-history-consistency-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/native-git-history-consistency-v1.schema.json",
+      "sha256": "751437350e2e7b36d27b42afcf3bc9a6cb6a25c58af9ee5a6e3614d406ed39f6"
+    },
+    "person-overview-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/person-overview-v1.schema.json",
+      "sha256": "564b556255cc170205202d9d33ddce32ba1904153a89afd874a585eacf7a8335"
+    },
+    "project-registry-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/project-registry-v1.schema.json",
+      "sha256": "c0a8540ed2e789750f615b9063c6fa58331f542b0a6af8a338bb7b863ef525b4"
+    },
+    "project-summary-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/project-summary-v1.schema.json",
+      "sha256": "283b4bde961644e879c7ed226c83e0768c0e8482521e80381602e9cf237fe5fc"
+    },
+    "proposal-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/proposal-v1.schema.json",
+      "sha256": "e61cef4fe2398ff1549e562c23aa3fda33feed92fff48cabcc2601102966cee6"
+    },
+    "query-plan-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/query-plan-v1.schema.json",
+      "sha256": "099c3e11c787a5f7fa38343e0f3c83527c8b35ec5a4c02509137ec17c465ff5a"
+    },
+    "recipient-resolution-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/recipient-resolution-v1.schema.json",
+      "sha256": "6c37da6fd447aa65996d187d01332da70c0245a3bb6bddc2f7bf352d652980a2"
+    },
+    "release-manifest-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/release-manifest-v1.schema.json",
+      "sha256": "2e7b4b80a2016a0b39a4fff361b0be3d9d7ebd9af7342fc900e6f36252273941"
+    },
+    "remote-access-policy-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/remote-access-policy-v1.schema.json",
+      "sha256": "4ddc1987dea93449671f331a9ae399e168f29e02fe52ceb685af9fcf54246336"
+    },
+    "remote-audit-event-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/remote-audit-event-v1.schema.json",
+      "sha256": "2f64c3c4f38a47e6f6d4a85faf4789edf3e37a1995df15715d7d90f30386bb4c"
+    },
+    "remote-browser-session-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/remote-browser-session-v1.schema.json",
+      "sha256": "d2a9d39bd33f89dcf9c049073dba52a322b5cbfad84913f726371e163351a183"
+    },
+    "remote-capability-v2.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/remote-capability-v2.schema.json",
+      "sha256": "ce2fa09bad8a1107c8c3c28fd7883955de2a8ac7ed05def9ce4b8b561a5071ea"
+    },
+    "remote-diagnostics-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/remote-diagnostics-v1.schema.json",
+      "sha256": "a90f7ae3f77ac6ec0adc1aa875fdac11fe220880c92942e826511c98c6d53148"
+    },
+    "remote-principal-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/remote-principal-v1.schema.json",
+      "sha256": "2ddfe1a60a590b5a1ad0092fac8325da928c17af3b27114dcfa595b53268f112"
+    },
+    "remote-profile-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/remote-profile-v1.schema.json",
+      "sha256": "7665f64be18125d8f5f925b7adf1f787278fb87d1c5c45d00ff73d01a951f53a"
+    },
+    "remote-profile-v2.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/remote-profile-v2.schema.json",
+      "sha256": "fb3886d674262ddbc2d77d74cd0b7cac12a525d07eaed69ca84adaa9f5e28ef1"
+    },
+    "remote-profile-v3.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/remote-profile-v3.schema.json",
+      "sha256": "e4335d34be3eaeec2330cefa18dbdfa371aebead4e67c0888222c9c70ceae631"
+    },
+    "remote-read-response-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/remote-read-response-v1.schema.json",
+      "sha256": "c8cf79b762362d7c40b9f16728cc1d167519fe6c06f7e80d6837866f842a9641"
+    },
+    "remote-session-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/remote-session-v1.schema.json",
+      "sha256": "5e178e61a4eba8662b2d68186cd37ac2fd97cfa3a33d093ea25bcb944410977b"
+    },
+    "remote-snapshot-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/remote-snapshot-v1.schema.json",
+      "sha256": "09e2cf654eea54528c7496b8a356c00e642efaaed844382f2fc761967aef8505"
+    },
+    "remote-ticket-mutation-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/remote-ticket-mutation-v1.schema.json",
+      "sha256": "014cc4a20548931e1b01067d3788d24842825338a03ae42c859fa5782a26d72f"
+    },
+    "remote-write-clock-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/remote-write-clock-v1.schema.json",
+      "sha256": "22d8834c5b434cbece0ec11f653d7601d2a0c88699509b14cf65f5f2491af14c"
+    },
+    "resource-reference-chunk-request-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/resource-reference-chunk-request-v1.schema.json",
+      "sha256": "1331f36237ad3a7384f10057aa67bd11c5eea80663b0fa8bf03b82295c6ac08c"
+    },
+    "resource-reference-descriptor-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/resource-reference-descriptor-v1.schema.json",
+      "sha256": "25f63cb20f7b4f4d812cb280f42b5b7a2637367c0bebb66242b86f4537820799"
+    },
+    "resource-reference-discovery-request-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/resource-reference-discovery-request-v1.schema.json",
+      "sha256": "f440fe04b10a088acf5399c99abe1d58cff618d7f0fc135d721d1e8d7e6ccecd"
+    },
+    "resource-reference-discovery-result-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/resource-reference-discovery-result-v1.schema.json",
+      "sha256": "a7ef92de16c4fddb277181b41544bd8408d6e6ae6c5b2f0936e5fb6505c2a280"
+    },
+    "resource-reference-error-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/resource-reference-error-v1.schema.json",
+      "sha256": "6718f138293916535b7e66c04fe2d934c9df1c7a460b2b9ff8221836360c5090"
+    },
+    "resource-reference-full-request-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/resource-reference-full-request-v1.schema.json",
+      "sha256": "c49705f33551b270a303ec2dec97413ffabe1798ba2ea182bc536bed7c9cc563"
+    },
+    "revision-metrics-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/revision-metrics-v1.schema.json",
+      "sha256": "54e57ef314394e26df675f9163d25571ad39002f9aff9b45e30d94b3dc2a5e02"
+    },
+    "revision-migration-evidence-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/revision-migration-evidence-v1.schema.json",
+      "sha256": "95287eba693d98e4d06d595bd08a1a78b2c18e2966a7e1eca16c08bc850141a1"
+    },
+    "saved-view-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/saved-view-v1.schema.json",
+      "sha256": "81019e7b458741e6faa5bd11fdd96ff5d7c97efd22e8b7f2f87c62010ad4c15f"
+    },
+    "semantic-as-of-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/semantic-as-of-v1.schema.json",
+      "sha256": "3b6844e68e567b7acca613bcb02679244bb97750f4827e3b262f3e1d5200f524"
+    },
+    "semantic-write-result-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/semantic-write-result-v1.schema.json",
+      "sha256": "71afdcecb70cef9470a16539baff15d585ce51142daf898e267161618e55a281"
+    },
+    "support-bundle-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/support-bundle-v1.schema.json",
+      "sha256": "24a95981d9f0c97b27f32b5b35fd333c23684abf1da748bc948177ea4000cd20"
+    },
+    "temporal-context-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/temporal-context-v1.schema.json",
+      "sha256": "96aee9b81ef9026ed5cb2ff228b26f05678765850425d722cdb48afddd0cf7e0"
+    },
+    "temporal-diff-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/temporal-diff-v1.schema.json",
+      "sha256": "19ed00e8379ea72bc031a88ec836aabff6b4b834ac472ee5071a0cbb6745c6f6"
+    },
+    "temporal-thread-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/temporal-thread-v1.schema.json",
+      "sha256": "1a458f4f5352db830658dd7369cf06cce813e12c2b7cc83735181946994ca042"
+    },
+    "temporal-timeline-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/temporal-timeline-v1.schema.json",
+      "sha256": "6a3b80320a0e9fb825ec58ce21c6e332389f7ff0c5b2655f372dd99d4dc433ef"
+    },
+    "ticket-activity-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/ticket-activity-v1.schema.json",
+      "sha256": "b42b64c6b876637fbae6c28ca4620039bd332729e56272789bba0f042c446ff0"
+    },
+    "ticket-custom-field-registry-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/ticket-custom-field-registry-v1.schema.json",
+      "sha256": "1aaa97a82233e5d52c6db0936e2d82383fe7c047e21b810961767deaa1049018"
+    },
+    "ticket-event-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/ticket-event-v1.schema.json",
+      "sha256": "d58f367dca8a250622fcd0e0870bb3d9a21536f1b4cd3662f28f2e310a77c98d"
+    },
+    "ticket-field-registry-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/ticket-field-registry-v1.schema.json",
+      "sha256": "fe7a1887c88bc0098c220fdcd22ba05a211df61b4efc8b5faa2617d76588512a"
+    },
+    "ticket-planning-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/ticket-planning-v1.schema.json",
+      "sha256": "87025985cb2798bb14b2ac7f7a0eca6b59961dd2111542029b32b60cf12355d0"
+    },
+    "ticket-project-report-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/schemas/ticket-project-report-v1.schema.json",
+      "sha256": "be4cff3fe4a1310ebf3d533e2d30107f6c48899a723a5de71890d651f74a5363"
+    },
+    "ticket-sprint-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/ticket-sprint-v1.schema.json",
+      "sha256": "7969d1fd42742a0e38acb978c734a3ed28657873dd50feaae641f01fefc6c38a"
+    },
+    "ticket-time-entry-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/ticket-time-entry-v1.schema.json",
+      "sha256": "3abbc0514c32a5c41a7bd9328e11c5623e176bdcc969d270068d2de0a9d87869"
+    },
+    "ticket-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/ticket-v1.schema.json",
+      "sha256": "86e044197f9bba615670735c68670cf88a361d2833091c54a60f6adb2b2bfbb7"
+    },
+    "ticket-version-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/ticket-version-v1.schema.json",
+      "sha256": "7fa55ce975bc332c64e04bed4d16f801bf76883b0076672b847202dbf0659fe7"
+    },
+    "ticket-workflow-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/ticket-workflow-v1.schema.json",
+      "sha256": "1e5d993cd76e3504eafbd76e5067f4dbc94cf0470efb43346c3441a6fb1b1f2a"
+    },
+    "timer-operation-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/timer-operation-v1.schema.json",
+      "sha256": "7eaf3079daaade99421db1ace99571a2e4e19535bdbc86d22f84bd24fe8d17d2"
+    },
+    "timezone-policy-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/timezone-policy-v1.schema.json",
+      "sha256": "009b2fedc0a2c6942abe8c775f0f36c54e388d1547549ffc8dc95d0a383ff20a"
+    },
+    "transaction-journal-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/transaction-journal-v1.schema.json",
+      "sha256": "4b339441f14c61bde130b8b249abc4a0eb0c1dc3cb8336d7e341f740897baecf"
+    },
+    "transaction-policy-admin-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/transaction-policy-admin-v1.schema.json",
+      "sha256": "17e2f8d797262e18d0dc21241ef1ed531704bf68eb535bd7623710b40ff72746"
+    },
+    "transaction-policy-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/transaction-policy-v1.schema.json",
+      "sha256": "e67d275141dfe57dd812ccdbf7809a26aae82526bd4476e8eccc716c9b2cc174"
+    },
+    "transaction-preflight-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/transaction-preflight-v1.schema.json",
+      "sha256": "28da9f83dbac35a6e41978c75e49995b483406fd9b5bb3705a2ac9a56d6b3a37"
+    },
+    "transaction-recovery-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/transaction-recovery-v1.schema.json",
+      "sha256": "9ce65ede6e933119c9c835f0134d703aa95b16510110367b3abd11e02862e084"
+    },
+    "transaction-restore-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/transaction-restore-v1.schema.json",
+      "sha256": "09e77eadc654e7b9d4409318e38bb54176aa5e72d33f59933059c29167d120fe"
+    },
+    "work-session-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/work-session-v1.schema.json",
+      "sha256": "7f5ec1214dd325689dd0529d9ad3f92788bf6eb5f396856f8d93a048bf07db7a"
+    },
+    "workspace-diagnostics-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/workspace-diagnostics-v1.schema.json",
+      "sha256": "267db5727917e3b6da843deac0ed80fc2603aac7996bef1c4cecb3b5746920c7"
+    },
+    "workspace-source-manifest-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/workspace-source-manifest-v1.schema.json",
+      "sha256": "0d99a6513d177cd46c6314ad8cd30de1bd3e1277161b34a9e5c76c7ed7c9d794"
+    }
+  },
+  "standalone": {
+    "progress-delta-v1.schema.json": {
+      "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/dist/schemas/progress-delta-v1.schema.json",
+      "sha256": "24fca8b7b6cdee9e4a428bb55be863148499f3d74f35a8fb4390be60b1621731"
+    }
+  }
+}

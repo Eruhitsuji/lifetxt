@@ -1,0 +1,1 @@
+[ ] M "確認依頼" sender:self recipient:alice notify_from:2030-10-14T09:00+09:00 notify_to:2030-10-14T17:00+09:00 ack:2030-10-14T09:05+09:00 snooze_until:2030-10-14T09:30+09:00

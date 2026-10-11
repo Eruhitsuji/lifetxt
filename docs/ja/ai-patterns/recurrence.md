@@ -208,7 +208,7 @@
 
 **理由:** BYSETPOSは現Core対象外でW223。保存はできても展開結果は空。この例は記録用途の境界例で、実行可能な定例予定とは扱わない。
 
-**注意・反例:** noteの休み指定は自動的な繰り返し例外ではない。現在Coreのordinal BYDAY/BYMONTHDAY/BYMONTH/WKSTも、仕様の狭いsubset説明とのずれとして#1217で追跡。
+**注意・反例:** noteの休み指定は自動的な繰り返し例外ではない。既存のordinal BYDAY/BYMONTHDAY/BYMONTH/WKSTと部分展開の制限はFormat §8.1で説明（#1217/#1225）。この通常のmonthly BYDAY入力で実測された空の展開はlegacy dispatchの不一致（#1227）であり、未対応キーを含む全規則に一般化しない。
 
 **推奨例** ([canonical fixture](../../../examples/ai-patterns/PAT-REC-007/recommended.life.txt))
 

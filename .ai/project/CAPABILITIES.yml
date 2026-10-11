@@ -1,6 +1,32 @@
 schema_version: 1
 
 capabilities:
+  - id: cap-recurrence-expansion
+    name: Existing dependency-free recurrence expansion
+    summary: Existing RRULE subset, agenda and completion expansion with documented partial-expansion limitations; not full RFC support.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+      - req-recurrence-documentation-current-subset
+    implementation_locations:
+      - lifetxt/recurrence.py
+      - lifetxt/agenda.py
+      - lifetxt/validator.py
+      - docs/en/life_txt_format_spec.md
+      - docs/ja/life_txt_format_spec.md
+    public_interfaces:
+      - lifetxt agenda
+      - lifetxt rrule
+      - lifetxt complete
+    tests_or_evidence:
+      - tests.test_recurrence
+      - tests.test_recurrence_wkst
+      - Issue1217 independent CLI fixtures
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/1217
+      - https://github.com/Eruhitsuji/lifetxt/issues/1225
+      - https://github.com/Eruhitsuji/lifetxt/issues/1227
+    reuse_policy: Register existing engine, no new runtime capability in documentation task.
   - id: cap-daily-flow-planner-lite
     name: Read-only Daily Flow Lite core, CLI, Web API and Planner Day
     summary: Deterministic bounded single-day proposals with certified occupancy, full-estimate tasks, reasons and uncertainty; additive read-only flow CLI, Web API and opt-in Planner Day projection, no record writes.

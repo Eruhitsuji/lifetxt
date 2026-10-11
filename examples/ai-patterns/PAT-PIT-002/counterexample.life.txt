@@ -1,0 +1,3 @@
+[x] T "レビューを依頼する" id:request done:2030-10-11
+[ ] T "レビューを完了する" id:complete
+[ ] T "提出する" depends_on:request

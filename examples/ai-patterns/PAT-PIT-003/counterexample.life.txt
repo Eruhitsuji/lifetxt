@@ -1,0 +1,2 @@
+[-] T "レビューする" id:review reason:"中止"
+[ ] T "提出する" depends_on:review

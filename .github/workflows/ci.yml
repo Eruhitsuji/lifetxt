@@ -633,6 +633,8 @@ jobs:
                 `- Merge commit: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/commit/${context.sha}`,
                 `- Source PR: ${sources.length ? sources.map(pr => pr.html_url).join(", ") : "not resolved; inspect merge commit"}`,
                 `- Failure artifacts and logs: ${runUrl}#artifacts`,
+                "- Cause confidence: unknown (automatic observation; inspect investigation comments)",
+                "- Recovery PR: unknown (none requires an explicit investigation finding)",
                 "",
                 "### Failed jobs and steps",
                 ...failedJobs.map(job => `- [${job.name}](${job.html_url}): ${job.conclusion}; failed steps: ${(job.steps || []).filter(step => step.conclusion === "failure").map(step => step.name).join(", ") || "see job log"}`),
@@ -653,6 +655,17 @@ jobs:
                 await github.rest.issues.create({...repo, title, body});
               }
             } else if (existing && process.env.FULL_COMPATIBILITY === "true") {
-              await github.rest.issues.createComment({...repo, issue_number: existing.number, body: `CI recovered successfully: ${runUrl}`});
+              const body = [
+                `CI recovered successfully: ${runUrl}`,
+                "",
+                "- Operational recovery: latest full main compatibility run succeeded",
+                `- Recovery run: ${runUrl} (attempt ${process.env.GITHUB_RUN_ATTEMPT || "1"})`,
+                `- Recovery SHA: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/commit/${context.sha}`,
+                "- Cause confidence: unknown (success alone does not establish root cause or a fix)",
+                "- Recovery PR: unknown (a source PR is not evidence of a causal recovery fix)",
+                "",
+                "Automatic closure records operational recovery only. Existing human investigation comments remain authoritative; record recovery PR as none only when explicitly confirmed unnecessary. Log expiry or API limits do not establish a cause.",
+              ].join("\n");
+              await github.rest.issues.createComment({...repo, issue_number: existing.number, body});
               await github.rest.issues.update({...repo, issue_number: existing.number, state: "closed", state_reason: "completed"});
             }

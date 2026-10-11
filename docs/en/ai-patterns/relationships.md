@@ -305,4 +305,3 @@ Counterexample class: **B (validator warning)**. Meaning/capability requires sou
 Full diagnostic messages, input SHA-256, and commands are in the [manifest](../../../examples/ai-patterns/manifest.json). Meaning review is the author's source comparison, not independent approval.
 
 **Sources:** [Format 1.0](../life_txt_format_spec.md) §5.1, §7.1–7.2; [Profile](../../../prompts/lifetxt-assistant.md). [source 1](../../../examples/linked_life.txt) / [source 2](../../../examples/hierarchy_life.txt)
-

@@ -26,6 +26,7 @@ jobs:
       run-heavy: ${{ steps.classify.outputs.run-heavy }}
       run-no-web: ${{ steps.classify.outputs.run-no-web }}
       run-coverage: ${{ steps.classify.outputs.run-coverage }}
+      run-python310-focused: ${{ steps.classify.outputs.run-python310-focused }}
     steps:
       - name: Check out repository history
         uses: actions/checkout@v5
@@ -39,10 +40,12 @@ jobs:
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" || -z "$BASE_SHA" || "$BASE_SHA" == "0000000000000000000000000000000000000000" ]]; then
             : > changed-paths.txt
+            : > added-paths.txt
           else
             git diff --name-only "$BASE_SHA" "$HEAD_SHA" > changed-paths.txt
+            git diff --diff-filter=A --name-only "$BASE_SHA" "$HEAD_SHA" > added-paths.txt
           fi
-          python scripts/classify_ci_paths.py changed-paths.txt --github-output "$GITHUB_OUTPUT"
+          python scripts/classify_ci_paths.py changed-paths.txt --added-paths-file added-paths.txt --github-output "$GITHUB_OUTPUT"
 
   test:
     name: Python ${{ matrix.python-version }} with Web extras
@@ -76,7 +79,11 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          python -m unittest discover 2>&1 | tee unit-tests-${{ matrix.python-version }}.log
+          duration_args=()
+          if [[ "${{ matrix.python-version }}" == "3.12" ]]; then
+            duration_args=(--durations=20)
+          fi
+          python -m unittest discover "${duration_args[@]}" 2>&1 | tee unit-tests-${{ matrix.python-version }}.log
 
       - name: Upload unit test log on failure
         if: failure()
@@ -93,6 +100,32 @@ jobs:
 
       - name: Run release smoke test
         run: python scripts/smoke_test.py
+
+  python310-focused:
+    name: Python 3.10 focused datetime regression
+    needs: [classify-changes]
+    if: ${{ github.event_name == 'pull_request' && needs['classify-changes'].outputs['run-python310-focused'] == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+      - name: Install core package
+        run: python -m pip install -e .
+      - name: Run focused datetime regression
+        shell: bash
+        run: |
+          set -o pipefail
+          python -m unittest tests.test_offset_recurrence -v 2>&1 | tee python310-focused.log
+      - name: Upload focused failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: python310-focused
+          path: python310-focused.log
 
   resource-warning-gate:
     name: ResourceWarning regression gate
@@ -151,7 +184,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          python -m unittest discover 2>&1 | tee unit-tests-no-web.log
+          python -m unittest discover --durations=20 2>&1 | tee unit-tests-no-web.log
 
       - name: Upload no-Web unit test log on failure
         if: failure()
@@ -279,7 +312,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          coverage run --branch -m unittest discover 2>&1 | tee coverage-tests.log
+          coverage run --branch -m unittest discover --durations=20 2>&1 | tee coverage-tests.log
           coverage report -m | tee coverage-summary.txt
           coverage json -o coverage.json
           python scripts/check_coverage_regression.py coverage.json scripts/coverage-baseline.json
@@ -451,7 +484,7 @@ jobs:
   pr-gate:
     name: PR gate
     if: ${{ always() && github.event_name == 'pull_request' }}
-    needs: [classify-changes, test, type-check, release-document-validation, traceability-gate, no-web-extras, coverage-baseline, main-health]
+    needs: [classify-changes, test, type-check, release-document-validation, traceability-gate, no-web-extras, coverage-baseline, python310-focused, main-health]
     runs-on: ubuntu-latest
     steps:
       - name: Require every PR responsibility to pass
@@ -465,6 +498,8 @@ jobs:
           HEALTH_RESULT: ${{ needs['main-health'].result }}
           NO_WEB_SELECTED: ${{ needs['classify-changes'].outputs['run-no-web'] }}
           COVERAGE_SELECTED: ${{ needs['classify-changes'].outputs['run-coverage'] }}
+          PYTHON310_RESULT: ${{ needs['python310-focused'].result }}
+          PYTHON310_SELECTED: ${{ needs['classify-changes'].outputs['run-python310-focused'] }}
           PATH_CATEGORY: ${{ needs['classify-changes'].outputs.category }}
         run: |
           python - <<'PY'
@@ -485,6 +520,7 @@ jobs:
           for name, result_key, selected_key in (
               ("no-web", "NO_WEB_RESULT", "NO_WEB_SELECTED"),
               ("coverage", "COVERAGE_RESULT", "COVERAGE_SELECTED"),
+              ("python310-focused", "PYTHON310_RESULT", "PYTHON310_SELECTED"),
           ):
               value = os.environ[result_key]
               results[name] = value
@@ -597,6 +633,8 @@ jobs:
                 `- Merge commit: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/commit/${context.sha}`,
                 `- Source PR: ${sources.length ? sources.map(pr => pr.html_url).join(", ") : "not resolved; inspect merge commit"}`,
                 `- Failure artifacts and logs: ${runUrl}#artifacts`,
+                "- Cause confidence: unknown (automatic observation; inspect investigation comments)",
+                "- Recovery PR: unknown (none requires an explicit investigation finding)",
                 "",
                 "### Failed jobs and steps",
                 ...failedJobs.map(job => `- [${job.name}](${job.html_url}): ${job.conclusion}; failed steps: ${(job.steps || []).filter(step => step.conclusion === "failure").map(step => step.name).join(", ") || "see job log"}`),
@@ -617,6 +655,17 @@ jobs:
                 await github.rest.issues.create({...repo, title, body});
               }
             } else if (existing && process.env.FULL_COMPATIBILITY === "true") {
-              await github.rest.issues.createComment({...repo, issue_number: existing.number, body: `CI recovered successfully: ${runUrl}`});
+              const body = [
+                `CI recovered successfully: ${runUrl}`,
+                "",
+                "- Operational recovery: latest full main compatibility run succeeded",
+                `- Recovery run: ${runUrl} (attempt ${process.env.GITHUB_RUN_ATTEMPT || "1"})`,
+                `- Recovery SHA: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/commit/${context.sha}`,
+                "- Cause confidence: unknown (success alone does not establish root cause or a fix)",
+                "- Recovery PR: unknown (a source PR is not evidence of a causal recovery fix)",
+                "",
+                "Automatic closure records operational recovery only. Existing human investigation comments remain authoritative; record recovery PR as none only when explicitly confirmed unnecessary. Log expiry or API limits do not establish a cause.",
+              ].join("\n");
+              await github.rest.issues.createComment({...repo, issue_number: existing.number, body});
               await github.rest.issues.update({...repo, issue_number: existing.number, state: "closed", state_reason: "completed"});
             }

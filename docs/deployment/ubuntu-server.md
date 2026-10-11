@@ -557,6 +557,74 @@ short:
   slower; this wait runs only after code validation and service restart, and
   it does not perform another git/package/data/service mutation.
 
+### Checking unreleased `main` on an existing server
+
+A maintainer may validate code already merged into `main` **before** publishing
+a version tag. This is an explicit opt-in alternative to following the latest
+published release; it does not change the normal tagged-release process.
+
+In the *existing*, host-specific `server-update.json`, set these keys while
+preserving the rest of the deployment configuration (Python environment,
+services, backup paths, update lock, integrity checks, and health URL):
+
+```json
+{
+  "branch": "main",
+  "ref": "main"
+}
+```
+
+The object above shows only the relevant keys, **not** a replacement for the
+whole config. `branch` requires the server's source checkout to **already**
+be on `main` and refuses a mismatched branch. It does not perform a
+`git switch`. `ref` is the fetched upstream branch name. By contrast,
+**omitting `ref` selects the latest published release or tag** rather than
+following `main`. Keep production data outside the checkout as recommended
+in section 2, and do not edit live secrets or user data in the source tree.
+
+For a deliberate real-environment validation:
+
+1. Check that the **latest full `main` CI run passed** for the candidate
+   commit; record its exact Git SHA and CI URL. Do not use a green PR run
+   alone as a substitute for the full `main` checks.
+2. Confirm the checkout branch is `main`, the working tree is clean, and
+   current backups and rollback instructions are usable. For an environment
+   that must remain on published stable code, prefer an **isolated** test
+   instance with its own write targets and service/venv directories.
+3. Review the proposed update without applying it:
+
+   ```sh
+   sudo -u lifetxt /opt/lifetxt/venv/bin/lifetxt server-update \
+     --server-config /etc/lifetxt/server-update.json
+   ```
+
+   Read the reported `current_commit`, `target_commit`, changed files,
+   review reasons, and planned service/backup actions. Verify the target SHA
+   is the candidate with successful `main` CI; if it moved, re-review or
+   choose another controlled update window.
+4. Apply only after the maintainer authorizes the deployment:
+
+   ```sh
+   sudo -u lifetxt /opt/lifetxt/venv/bin/lifetxt server-update \
+     --server-config /etc/lifetxt/server-update.json --yes
+   ```
+
+   If the high-impact gate returns `review_required`, inspect the entire
+   review block and use its exact-SHA `approved_command` (with
+   `--approve <target-sha>`) after approval. The updater refuses approval
+   for an out-of-date target; do not bypass the gate.
+5. Verify the resulting SHA, configured integrity checks, service/health
+   status, and the specific real user interactions being tested. Report
+   unexpected behavior in a linked GitHub Issue, including candidate SHA
+   and sanitized evidence. A local smoke pass **does not** automatically
+   approve a formal release tag.
+
+A validation failure *after* the code was updated can intentionally leave
+services stopped instead of restarting unvalidated code. Follow the backup
+and manual rollback guidance below; do not assume `server-update` automatically
+restores the previous code or data. A manual rollback/deployment is a separate
+human-authorized operation.
+
 **Rollback**, if an update produces a broken state that `server-update`'s
 own failure handling did not already recover from: restore the backup
 (section 5), then check out the pre-update commit recorded in the update

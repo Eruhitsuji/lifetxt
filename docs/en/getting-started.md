@@ -112,6 +112,11 @@ That is the entire Level 1 vocabulary. `check` uses the same parser as every
 other command, so anything you can write with only this vocabulary already
 works with `filter`, `agenda`, `tui`, `serve`, and every other surface.
 
+For a larger, annotated example combining more record kinds and detail keys
+(Task, Deferred, Event, Habit, Note, with `project:`/`tag:`/`priority:`/
+`repeat:`), see
+[`examples/annotated_life.txt`](../../examples/annotated_life.txt).
+
 Once you have written a few lines, `lifetxt today` is the daily entry point:
 
 ```sh

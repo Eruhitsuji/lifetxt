@@ -37,9 +37,10 @@ def classify(paths):
     return "full"
 
 
-def compatibility_checks(paths):
-    """Select dependency-sensitive PR checks without restoring the OS matrix."""
+def compatibility_checks(paths, added_paths=()):
+    """Select PR checks, including coverage for newly added product modules."""
     normalized = [path.strip().removeprefix("./") for path in paths if path.strip()]
+    added = [path.strip().removeprefix("./") for path in added_paths if path.strip()]
     coverage = not normalized or any(
         path in {"pyproject.toml", "setup.cfg", "setup.py", ".coveragerc"}
         or path.startswith(
@@ -53,24 +54,56 @@ def compatibility_checks(paths):
         )
         for path in normalized
     )
+    # New product modules may lower branch coverage even when other PR checks pass.
+    # Preserve the existing selection behavior for edits to existing modules.
+    coverage = coverage or any(
+        path.startswith("lifetxt/") and path.endswith(".py") for path in added
+    )
     no_web = coverage or any(
         path.startswith(("tests/", "lifetxt/", "scripts/")) for path in normalized
     )
     return no_web, coverage
 
 
+def python310_focused(paths):
+    """Select the known datetime compatibility regression, not a full matrix."""
+    normalized = [path.strip().removeprefix("./") for path in paths if path.strip()]
+    targets = {
+        "lifetxt/agenda.py",
+        "lifetxt/recurrence.py",
+        "lifetxt/timeutil.py",
+        "lifetxt/timezone_policy.py",
+        "tests/test_offset_recurrence.py",
+        "scripts/classify_ci_paths.py",
+        ".github/workflows/ci.yml",
+        "pyproject.toml",
+        "setup.cfg",
+        "setup.py",
+    }
+    return not normalized or any(
+        path in targets or path.startswith("requirements") for path in normalized
+    )
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("paths_file")
     parser.add_argument("--github-output")
+    parser.add_argument("--added-paths-file", type=Path)
     args = parser.parse_args()
     paths = Path(args.paths_file).read_text(encoding="utf-8").splitlines()
     category = classify(paths)
-    no_web, coverage = compatibility_checks(paths)
+    added_paths = (
+        args.added_paths_file.read_text(encoding="utf-8").splitlines()
+        if args.added_paths_file is not None
+        else ()
+    )
+    no_web, coverage = compatibility_checks(paths, added_paths=added_paths)
     output = f"category={category}\nrun-heavy={'false' if category == 'docs-only' else 'true'}\n"
     output += (
         f"run-no-web={str(no_web).lower()}\nrun-coverage={str(coverage).lower()}\n"
     )
+    output += f"run-python310-focused={str(python310_focused(paths)).lower()}\n"
     if args.github_output:
         with open(args.github_output, "a", encoding="utf-8") as handle:
             handle.write(output)

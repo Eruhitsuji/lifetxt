@@ -4298,6 +4298,14 @@ def build_parser():
         action="store_true",
         help="List the undo stack with timestamps and operation names.",
     )
+    undo_cmd.add_argument(
+        "--dry-run",
+        action="store_true",
+        help=(
+            "Show which snapshot would be restored without writing to the "
+            "file or consuming the snapshot."
+        ),
+    )
     undo_cmd.set_defaults(func=command_undo)
 
     review_cmd = subparsers.add_parser(
@@ -9585,6 +9593,8 @@ def command_undo(args):
     path = args.path
     if not path or path == "-":
         raise ValueError("undo requires a file path.")
+    if getattr(args, "list", False) and getattr(args, "dry_run", False):
+        raise ValueError("undo accepts either --list or --dry-run, not both.")
     basename = os.path.basename(path)
     undo_dir = os.path.join(_undo_cache_dir(config), basename)
 
@@ -9618,6 +9628,24 @@ def command_undo(args):
 
     snapshot = entries[-1]
     snapshot_path = os.path.join(undo_dir, snapshot)
+
+    if getattr(args, "dry_run", False):
+        parts = snapshot.rsplit(".", 2)
+        if len(parts) == 3:
+            ts_raw, op, _ = parts
+            try:
+                dt = datetime.datetime.strptime(ts_raw, "%Y%m%d_%H%M%S")
+                ts_str = dt.strftime("%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                ts_str = ts_raw
+                op = "?"
+        else:
+            ts_str, op = snapshot, "?"
+        sys.stdout.write(
+            "[dry-run] Would restore %s from snapshot %s (op=%s)\n" % (path, ts_str, op)
+        )
+        return 0
+
     try:
         content = read_text(snapshot_path)
     except OSError as exc:

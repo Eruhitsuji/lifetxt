@@ -3,6 +3,8 @@
 import json
 import hashlib
 import tempfile
+import subprocess
+import threading
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -150,6 +152,196 @@ class PatternCatalogTests(unittest.TestCase):
             self.assertTrue(
                 any("planned patterns remain" in e for e in final["errors"])
             )
+
+
+class ParallelCatalogTests(unittest.TestCase):
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.root = Path(self.directory.name)
+        self.manifest = json.loads(
+            (ROOT / "examples/ai-patterns/manifest.json").read_text()
+        )
+        for entry in self.manifest["patterns"]:
+            entry.update(state="planned", validation="not run")
+        for i, entry in enumerate(self.manifest["patterns"][:2]):
+            source = f"[ ] T Fixture{i}\n"
+            fixture = f"fixture{i}.txt"
+            (self.root / fixture).write_text(source)
+            docs = {}
+            marker = f"{entry['id']}/recommended"
+            for lang in ("ja", "en"):
+                name = f"fixture{i}-{lang}.md"
+                docs[lang] = name
+                (self.root / name).write_text(
+                    f'<a id="{entry["id"].lower()}"></a>\n<!-- fixture:{marker} -->\n'
+                    f"```lifetxt\n{source}```\n"
+                )
+            entry.update(
+                state="implemented",
+                input="task",
+                context="fictional",
+                reason="test",
+                spec=["spec"],
+                sources=["test"],
+                meaning_review="test",
+                docs=docs,
+                variants=[
+                    dict(
+                        name="recommended",
+                        classification="recommended",
+                        path=fixture,
+                        expected=dict(exit=0, diagnostics=[]),
+                        observed=dict(
+                            engine_commit="test",
+                            core_version="test",
+                            sha256=hashlib.sha256(source.encode()).hexdigest(),
+                            result=dict(exit=0, diagnostics=[]),
+                        ),
+                    )
+                ],
+            )
+        self.write_manifest()
+
+    def write_manifest(self):
+        path = self.root / "examples/ai-patterns/manifest.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(self.manifest))
+
+    @staticmethod
+    def cli(root, args):
+        return dict(
+            command=["python", "-m", "lifetxt", *args],
+            exit=0,
+            stdout="test" if args == ["--version"] else "[]",
+            stderr="",
+        )
+
+    def test_parallel_completion_keeps_serial_report_and_planned_semantics(self):
+        with patch("scripts.check_ai_patterns.run_cli", side_effect=self.cli):
+            serial = validate(self.root, workers=1)
+        second_started = threading.Event()
+
+        def out_of_order(root, args):
+            if args[0] == "check":
+                if args[1] == "fixture0.txt":
+                    if not second_started.wait(2):
+                        raise RuntimeError("second check was not launched concurrently")
+                else:
+                    second_started.set()
+            return self.cli(root, args)
+
+        with patch("scripts.check_ai_patterns.run_cli", side_effect=out_of_order):
+            parallel = validate(self.root, workers=2)
+        self.assertEqual(serial, parallel)
+        self.assertEqual(2, parallel["checked_fixtures"])
+        self.assertEqual(66, len(parallel["planned"]))
+        self.assertIn("66 planned patterns remain (not run)", parallel["errors"])
+        with patch("scripts.check_ai_patterns.run_cli", side_effect=self.cli):
+            self.assertEqual(
+                [], validate(self.root, allow_planned=True, workers=2)["errors"]
+            )
+
+    def test_failed_worker_or_cli_output_does_not_hide_later_fixtures(self):
+        for failure in (
+            subprocess.TimeoutExpired("check", 30),
+            OSError("spawn failed"),
+            RuntimeError("worker failed"),
+            "invalid-json",
+            "nonzero",
+            "stderr",
+        ):
+            with self.subTest(failure=failure):
+
+                def cli(root, args):
+                    result = self.cli(root, args)
+                    if args[:2] == ["check", "fixture0.txt"]:
+                        if isinstance(failure, Exception):
+                            raise failure
+                        if failure == "invalid-json":
+                            result["stdout"] = "invalid"
+                        elif failure == "nonzero":
+                            result["exit"] = 1
+                        else:
+                            result["stderr"] = "unexpected stderr"
+                    return result
+
+                with patch("scripts.check_ai_patterns.run_cli", side_effect=cli):
+                    report = validate(self.root, allow_planned=True, workers=2)
+                self.assertTrue(report["errors"])
+                self.assertTrue(
+                    any("PAT-TYPE-001/recommended" in e for e in report["errors"])
+                )
+                self.assertIn(
+                    "PAT-TYPE-002/recommended", [r["id"] for r in report["results"]]
+                )
+
+    def test_agenda_mismatch_and_stale_docs_are_preserved(self):
+        self.manifest["patterns"][0]["variants"][0]["agenda"] = dict(
+            **{"from": "2030-01-01", "to": "2030-01-02"},
+            expected=[{"expected": "event"}],
+        )
+        self.write_manifest()
+        (self.root / "fixture0-ja.md").write_text("stale document")
+        with patch("scripts.check_ai_patterns.run_cli", side_effect=self.cli):
+            serial = validate(self.root, allow_planned=True, workers=1)
+            parallel = validate(self.root, allow_planned=True, workers=2)
+        self.assertEqual(serial, parallel)
+        self.assertTrue(serial["errors"])
+        # Restore the document to reach agenda validation after fence extraction.
+        text = (self.root / "fixture0-en.md").read_text()
+        (self.root / "fixture0-ja.md").write_text(text)
+        with patch("scripts.check_ai_patterns.run_cli", side_effect=self.cli):
+            report = validate(self.root, allow_planned=True, workers=2)
+        self.assertTrue(any("agenda expansion changed" in e for e in report["errors"]))
+
+    def test_agenda_waits_until_all_independent_checks_finish(self):
+        self.manifest["patterns"][0]["variants"][0]["agenda"] = {
+            "from": "2030-01-01",
+            "to": "2030-01-02",
+            "expected": [],
+        }
+        self.write_manifest()
+        both_started = threading.Barrier(2)
+        second_finished = threading.Event()
+
+        def cli(root, args):
+            if args[0] == "check":
+                both_started.wait(timeout=2)
+                if args[1] == "fixture1.txt":
+                    # Keep a later check active after the first fixture is ready.
+                    threading.Event().wait(0.05)
+                    second_finished.set()
+            elif args[0] == "agenda" and not second_finished.is_set():
+                raise RuntimeError("agenda overlaps unfinished checks")
+            return self.cli(root, args)
+
+        with patch("scripts.check_ai_patterns.run_cli", side_effect=cli):
+            report = validate(self.root, allow_planned=True, workers=2)
+        self.assertEqual([], report["errors"])
+
+    def test_escaping_path_is_never_prefetched(self):
+        self.manifest["patterns"][0]["variants"][0]["path"] = "../outside.txt"
+        self.write_manifest()
+        with patch("scripts.check_ai_patterns.run_cli", side_effect=self.cli) as cli:
+            report = validate(self.root, allow_planned=True, workers=2)
+        self.assertTrue(report["errors"])
+        self.assertFalse(
+            any("../outside.txt" in call.args[1] for call in cli.call_args_list)
+        )
+
+    def test_worker_limit_and_existing_subprocess_timeout(self):
+        for workers in (0, 5, -1, True, 1.5):
+            with self.subTest(workers=workers), self.assertRaises(ValueError):
+                validate(self.root, workers=workers)
+        with patch(
+            "scripts.check_ai_patterns.subprocess.run",
+            return_value=subprocess.CompletedProcess([], 0, "[]", ""),
+        ) as run:
+            run_cli(self.root, ["check", "fixture0.txt", "--format", "json"])
+        self.assertEqual(30, run.call_args.kwargs["timeout"])
+        self.assertEqual(self.root, run.call_args.kwargs["cwd"])
+        self.assertEqual("UTC", run.call_args.kwargs["env"]["LIFETXT_TIMEZONE"])
 
 
 if __name__ == "__main__":

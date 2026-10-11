@@ -160,6 +160,47 @@ def parse_time(value):
     return None
 
 
+def parse_anchored_time(value, anchor_date):
+    """Combine an authored date and clock before interpreting its offset.
+
+    Keep legacy parse_time callers unchanged; agenda needs the authored instant,
+    rather than a host-local clock with its calendar-day displacement removed.
+    """
+    if not isinstance(value, str) or not TIME_RE.match(value):
+        return None
+    parsed = parse_datetime(anchor_date.isoformat() + "T" + value)
+    return parsed
+
+
+def offset_comparison_pair(left, right):
+    """Comparison-only instants for agenda/recurrence, under resolved policy.
+
+    Naive-only comparisons retain their existing wall-time meaning. Mixed pairs
+    localize the naive side in the configured zone; authored offsets stay intact.
+    Unbounded range sentinels are never localized (which could overflow).
+    """
+    if not (_is_aware(left) or _is_aware(right)):
+        return left, right
+    from .timezone_policy import interpret_datetime
+    from datetime import timezone
+
+    def plain(value):
+        if not _is_aware(value) and value in (datetime.min, datetime.max):
+            return value
+        instant = interpret_datetime(value).astimezone(timezone.utc)
+        return datetime(
+            instant.year,
+            instant.month,
+            instant.day,
+            instant.hour,
+            instant.minute,
+            instant.second,
+            instant.microsecond,
+        )
+
+    return plain(left), plain(right)
+
+
 def parse_date_or_datetime(value, is_end=False):
     parsed = parse_datetime(value)
     if parsed is not None:

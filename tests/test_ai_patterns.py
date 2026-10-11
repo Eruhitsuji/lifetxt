@@ -24,30 +24,24 @@ class PatternCatalogTests(unittest.TestCase):
         )
         for sample in samples:
             with self.subTest(sample=sample["id"]):
-                with tempfile.NamedTemporaryFile(
-                    mode="w", suffix=".txt", encoding="utf-8"
-                ) as stream:
-                    stream.write(sample["valid_lifetxt"] + "\n")
-                    stream.flush()
-                    result = run_cli(ROOT, ["check", stream.name, "--format", "json"])
+                with tempfile.TemporaryDirectory() as directory:
+                    path = Path(directory) / "input.txt"
+                    path.write_text(sample["valid_lifetxt"] + "\n", encoding="utf-8")
+                    result = run_cli(ROOT, ["check", str(path), "--format", "json"])
                     self.assertEqual(0, result["exit"])
                     self.assertEqual([], json.loads(result["stdout"]))
 
     def test_warning_is_not_an_error_or_clean_success(self):
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".txt", encoding="utf-8"
-        ) as stream:
-            stream.write("[?] E Meeting candidate_on:2030-10-20\n")
-            stream.flush()
-            result = run_cli(ROOT, ["check", stream.name, "--format", "json"])
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "input.txt"
+            path.write_text("[?] E Meeting candidate_on:2030-10-20\n", encoding="utf-8")
+            result = run_cli(ROOT, ["check", str(path), "--format", "json"])
             self.assertEqual(0, result["exit"])
             self.assertEqual("W106", json.loads(result["stdout"])[0]["code"])
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".txt", encoding="utf-8"
-        ) as stream:
-            stream.write("[ ] T Task due=2030-10-20\n")
-            stream.flush()
-            result = run_cli(ROOT, ["check", stream.name, "--format", "json"])
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "input.txt"
+            path.write_text("[ ] T Task due=2030-10-20\n", encoding="utf-8")
+            result = run_cli(ROOT, ["check", str(path), "--format", "json"])
             self.assertEqual(1, result["exit"])
             self.assertEqual("E010", json.loads(result["stdout"])[0]["code"])
 

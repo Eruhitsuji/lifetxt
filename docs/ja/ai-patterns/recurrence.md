@@ -259,4 +259,3 @@
 全診断メッセージ・入力SHA-256・コマンドは[manifest](../../../examples/ai-patterns/manifest.json)に記録。意味レビューは著者による原入力との照合（独立承認ではない）。
 
 **出典:** [Format 1.0](../life_txt_format_spec.md) §7.6, §8.1; [Profile](../../../prompts/lifetxt-assistant.md). [source 1](../../../examples/recurrence_time_life.txt) / [source 2](../../../examples/habits_reminders_life.txt)
-

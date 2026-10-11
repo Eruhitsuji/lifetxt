@@ -686,6 +686,13 @@ def _add_repeat_matches(matches, item, range_start, range_end):
     repeat_value = _first_detail_value(item, "repeat")
     rule = _repeat_rule(item, repeat_value)
     if rule is None:
+        # Retain the authored anchor as an ordinary match, never invent a
+        # recurrence from an invalid or unsupported RRULE.
+        if str(repeat_value or "").upper().startswith(_RRULE_PREFIX):
+            anchor = _repeat_anchor(item, range_start, range_end)
+            if anchor is not None:
+                key, start, end = anchor
+                _add_match(matches, key, start, end, range_start, range_end)
         return
 
     anchor = _repeat_anchor(item, range_start, range_end)
@@ -793,33 +800,22 @@ def _repeat_rule(item, repeat_value):
     if not text.upper().startswith(_RRULE_PREFIX):
         return None
 
-    parts = _parse_rrule_parts(text)
-    repeat_name = _RRULE_FREQ_TO_REPEAT.get(parts.get("FREQ", ""))
-    if repeat_name is None:
-        return None
+    from .recurrence import RecurrenceError, rule_for_item
 
-    byday = _parse_rrule_byday(parts.get("BYDAY"))
-    if byday and repeat_name not in ("daily", "weekly"):
+    try:
+        shared_rule = rule_for_item(item)
+    except RecurrenceError:
         return None
-
+    if shared_rule is None or shared_rule["unsupported"]:
+        return None
     return OrderedDict(
         [
             ("label", text),
-            ("repeat", repeat_name),
-            (
-                "interval",
-                _positive_int_text(
-                    parts.get("INTERVAL"), _positive_int_detail(item, "interval", 1)
-                ),
-            ),
-            (
-                "count",
-                _positive_int_text(
-                    parts.get("COUNT"), _positive_int_detail(item, "count", None)
-                ),
-            ),
-            ("until", _parse_rrule_until(parts.get("UNTIL")) or _repeat_until(item)),
-            ("byday", byday),
+            ("repeat", shared_rule["name"]),
+            ("interval", shared_rule["interval"]),
+            ("count", shared_rule["count"]),
+            ("until", shared_rule["until"]),
+            ("byday", tuple(sorted({day for _, day in shared_rule["byday"]}))),
         ]
     )
 
@@ -890,17 +886,20 @@ def _add_shared_rrule_matches(
 ):
     """Expand a BY*-bearing RRULE with the shared recurrence engine.
 
-    The local parser understands only plain BYDAY, so positional forms such as
-    1MO or -1FR, plus BYMONTHDAY and BYMONTH, used to be dropped and the series
-    silently collapsed to the anchor. Returns False when the rule is outside
-    the shared subset so the caller can keep its own arithmetic.
+    Return False only for plain rules that use legacy arithmetic. Invalid or
+    unsupported rules are handled without generating a replacement series.
     """
+    if not str(repeat_label).upper().startswith(_RRULE_PREFIX):
+        return False  # Short names (including weekdays) keep their arithmetic.
+
     from .recurrence import RecurrenceError, expand, rule_for_item
 
     try:
         rule = rule_for_item(item)
     except RecurrenceError:
-        return False
+        return True  # Handled: no legacy fallback for an invalid shared rule.
+    if rule is not None and rule["unsupported"]:
+        return True
     if rule is None or not (rule["byday"] or rule["bymonthday"] or rule["bymonth"]):
         return False
 
@@ -913,7 +912,7 @@ def _add_shared_rrule_matches(
             limit=_MAX_REPEAT_MATCHES,
         )
     except RecurrenceError:
-        return False
+        return True  # No fabricated legacy series after failed expansion.
 
     emitted = 0
     for occurrence_index, current in enumerate(occurrences, 1):

@@ -7,6 +7,7 @@ capabilities:
     status: active
     owner: Eruhitsuji
     source_requirements:
+      - req-recurrence-diagnostic-expansion-consistency
       - req-recurrence-filter-until-consistency
       - req-recurrence-documentation-current-subset
       - req-offset-recurrence-anchor-fidelity
@@ -21,6 +22,7 @@ capabilities:
       - lifetxt rrule
       - lifetxt complete
     tests_or_evidence:
+      - tests.test_rrule_diagnostics
       - tests.test_recurrence_contract
       - tests.test_offset_recurrence
       - tests.test_recurrence
@@ -32,6 +34,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/1226
       - https://github.com/Eruhitsuji/lifetxt/issues/1227
       - https://github.com/Eruhitsuji/lifetxt/issues/1236
+      - https://github.com/Eruhitsuji/lifetxt/issues/1237
     reuse_policy: Register existing engine, no new runtime capability in documentation task.
   - id: cap-daily-flow-planner-lite
     name: Read-only Daily Flow Lite core, CLI, Web API and Planner Day

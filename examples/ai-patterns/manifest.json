@@ -3020,7 +3020,40 @@
             "from": "2030-10-14",
             "to": "2030-11-14",
             "timezone": "UTC",
-            "expected": [],
+            "expected": [
+              {
+                "when": "2030-10-14T00:00..2030-10-14T23:59:59",
+                "key": "on",
+                "line": 1,
+                "status": "[ ]",
+                "type": "E",
+                "blocked": false,
+                "title": "外部の定例予定",
+                "matches": [
+                  {
+                    "key": "on",
+                    "start": "2030-10-14T00:00",
+                    "end": "2030-10-14T23:59:59"
+                  }
+                ],
+                "details": {
+                  "on": [
+                    "2030-10-14"
+                  ],
+                  "repeat": [
+                    "RRULE:FREQ=MONTHLY;BYDAY=MO;BYSETPOS=2"
+                  ],
+                  "note": [
+                    "2030-11-11は休み（例外自動展開は未設定）"
+                  ]
+                },
+                "text": "[ ] E \"外部の定例予定\" on:2030-10-14 repeat:RRULE:FREQ=MONTHLY;BYDAY=MO;BYSETPOS=2 note:\"2030-11-11は休み（例外自動展開は未設定）\"",
+                "generated": false,
+                "source": "examples/ai-patterns/PAT-REC-007/recommended.life.txt",
+                "occurrence_start": "2030-10-14T00:00",
+                "occurrence_end": "2030-10-14T23:59:59"
+              }
+            ],
             "command": [
               "python",
               "-m",
@@ -3034,10 +3067,35 @@
               "--format",
               "json"
             ],
-            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "engine_commit": "runtime-to-be-recorded",
             "exit": 0,
-            "stderr": "examples/ai-patterns/PAT-REC-007/recommended.life.txt:1: WARNING W223: RRULE keys are stored but not expanded by the dependency-free core: BYSETPOS.\n"
-          }
+            "stderr": "examples/ai-patterns/PAT-REC-007/recommended.life.txt:1: WARNING W223: RRULE keys are stored but not expanded by the dependency-free core: BYSETPOS.\n",
+            "repair_issue": "https://github.com/Eruhitsuji/lifetxt/issues/1237"
+          },
+          "agenda_history": [
+            {
+              "from": "2030-10-14",
+              "to": "2030-11-14",
+              "timezone": "UTC",
+              "expected": [],
+              "command": [
+                "python",
+                "-m",
+                "lifetxt",
+                "agenda",
+                "examples/ai-patterns/PAT-REC-007/recommended.life.txt",
+                "--from",
+                "2030-10-14",
+                "--to",
+                "2030-11-14",
+                "--format",
+                "json"
+              ],
+              "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+              "exit": 0,
+              "stderr": "examples/ai-patterns/PAT-REC-007/recommended.life.txt:1: WARNING W223: RRULE keys are stored but not expanded by the dependency-free core: BYSETPOS.\n"
+            }
+          ]
         }
       ]
     },

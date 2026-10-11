@@ -424,15 +424,19 @@ falls back to the anchor. A date-only sibling `until:` now includes occurrences
 later on its final day. Recheck existing series with `lifetxt rrule` / `agenda`
 before relying on generated dates. No saved life.txt records are rewritten.
 
-Unsupported keys (for example `BYSETPOS` or `BYHOUR`) are retained as text and
-warned about with `W223`; the supported portion may still expand. For example,
-`FREQ=MONTHLY;BYDAY=2MO;BYHOUR=9` expands the second Monday at the anchor time,
-not necessarily 09:00. Unsupported frequencies do not generate recurrence
-matches. Warnings normally leave `check` exit status at zero: acceptance does
-not certify the intended schedule. The `rrule` command also reports unsupported
-parts. Agenda also has a legacy dispatch gap for plain monthly/yearly `BYDAY`,
-even though the shared engine reads it. Invalid supported values and
-fallback/diagnostic gaps are tracked by
+Invalid supported values (such as `WKST=XX`, `BYMONTHDAY=32`, or `BYMONTH=13`),
+unsupported combinations, keys, and frequencies emit `W223`. Agenda does not
+silently substitute a simpler rule: it keeps the authored anchor as an ordinary
+record and generates no recurrence matches. Unknown custom life.txt fields
+remain valid and are preserved. Plain monthly/yearly `BYDAY` uses the shared
+engine, just like positional forms.
+
+Warnings normally leave `check` exit status at zero; `--warnings-as-errors`
+returns nonzero. Successful storage or `check` acceptance does not certify the
+intended schedule. The `rrule` preview separately reports unsupported keys and
+may preview only the supported portion; do not interpret that preview as agenda
+support for the full rule. For example, agenda does not expand
+`FREQ=MONTHLY;BYDAY=2MO;BYHOUR=9`. This diagnostic/dispatch repair follows
 [#1227](https://github.com/Eruhitsuji/lifetxt/issues/1227).
 
 Expansion is bounded by count/end/window and safety ceilings. Verify concrete

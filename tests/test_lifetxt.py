@@ -504,9 +504,8 @@ class LifeTxtParserTests(unittest.TestCase):
         messages = "\n".join(d.message for d in warnings)
         self.assertIn("FREQ=HOURLY", messages)
         self.assertIn("BYSETPOS", messages)
-        # A position is ignored for weekly rules, so the rule would quietly
-        # mean "every Monday" rather than the second one.
-        self.assertIn("ignored for FREQ=WEEKLY", messages)
+        # Weekly positions are rejected rather than interpreted as every Monday.
+        self.assertIn("not supported for FREQ=WEEKLY", messages)
         self.assertIn("COUNT", messages)
 
     def test_expandable_rrule_features_do_not_warn(self):

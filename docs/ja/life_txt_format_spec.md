@@ -387,15 +387,16 @@ numerator 差ではなく ratio（表示時は percentage points）です。負�
 simple `repeat:` として `daily`、`weekly`、`monthly`、`yearly`、`weekdays`
 を推奨します。`RRULE:...` は外部互換のため保存でき、組み込み agenda と
 time filter は dependency-free な subset として `FREQ=DAILY|WEEKLY|MONTHLY|YEARLY`、
-`INTERVAL`、`COUNT`、`UNTIL`、daily/weekly の `BYDAY` を展開します。
+`INTERVAL`、`COUNT`、`UNTIL`、`BYDAY`、`BYMONTHDAY`、`BYMONTH`、`WKST`
+を読みます。頻度ごとの制限は 8.1 節を参照してください。RFC 5545 全体への対応ではありません。
 
 `repeat_base` は CLI の `complete` command と MCP の `complete_item` tool
 （repeat 付き task instance の次回 occurrence を生成する機能。CLI docs の
 13.9 節を参照）にのみ影響し、agenda の仮想展開には影響しません。
 `repeat_base:due`（デフォルト。config の `defaults.repeat_base` でも設定可）
 は item の現在の `due:`/`do:` から進み、値が無ければエラーになります。
-`repeat_base:done` は完了日から進みます。`BYDAY` の RRULE は `complete` の
-occurrence 生成にはまだ対応していません。
+`repeat_base:done` は完了日から進みます。`complete` は対応する `BYDAY`、`BYMONTHDAY`、`BYMONTH` の RRULE を
+共通 recurrence engine で展開して次の occurrence を生成します。
 
 ### 7.7 Message keys
 
@@ -472,16 +473,43 @@ agenda と time filter は、`from/to`、`at` + `on`、bounded range 内の floa
 simple repeat を展開します。`interval:2` は 2 単位ごとの繰り返し、`count:`
 は anchor から数えた最大 occurrence 数、`until:` は inclusive な終了日時です。
 `on:` のない floating `at:` は安定した日付 anchor がないため、片側だけの
-time filter では一致対象にしません。`repeat:RRULE:...` では `FREQ`、
-`INTERVAL`、`COUNT`、`UNTIL` を読み、`FREQ=DAILY` / `FREQ=WEEKLY` では
-`BYDAY` も利用できます。`UNTIL` は life.txt の datetime 構文または
-`20260630`、`20260630T090000` のような iCalendar basic 形式を使えます。
+time filter では一致対象にしません。
+
+`repeat:RRULE:...` の既存 dependency-free engine は次の subset を読みます。
+語彙として受理されても、すべての組合せの意味が保証されるわけではありません。
+
+| Part | 既存の展開動作 |
+|---|---|
+| `FREQ` | `DAILY`、`WEEKLY`、`MONTHLY`、`YEARLY` |
+| `INTERVAL`、`COUNT`、`UNTIL` | 正の間隔・回数。回数は series anchor から数え、終了日時は inclusive |
+| `BYDAY` | 全4頻度で通常の曜日。`2MO`、`-1FR` などの序数は monthly/yearly で対象月内の曜日として評価 |
+| `BYMONTHDAY` | `1`–`31`、負値 `-1`–`-31`（`-1` は月末）。weekly では無視 |
+| `BYMONTH` | 対象月 `1`–`12` |
+| `WKST` | 週の開始曜日、既定 `MO`。weekly `BYDAY` の順序と interval の週境界に影響 |
+
+`UNTIL` は life.txt の date/datetime または `20260630`、
+`20260630T090000` などの iCalendar basic 形式を使えます。
+daily/weekly の序数付き `BYDAY` は序数を無視し、`W223` を出します。
+monthly/yearly の `BYDAY` と `BYMONTHDAY` は RFC 形式の積集合ではなく
+**和集合**です。選択した日の集合が空になると、現在の engine は anchor の日へ
+fallback し、短い月では月末へ丸めます。これらは実装上の制限であり、RFC 準拠の主張ではありません。
+
+未対応キー（`BYSETPOS`、`BYHOUR` など）は text として保持され、`W223` で
+警告されますが、対応部分は展開される場合があります。例えば
+`FREQ=MONTHLY;BYDAY=2MO;BYHOUR=9` は第2月曜日を anchor の時刻で展開し、
+09:00 を保証しません。未対応の頻度は recurrence match を生成しません。
+warning のみなら通常 `check` の終了コードは 0 です。受理は意図した日程の保証では
+ありません。`rrule` command も未対応部分を報告します。不正な対応キーの値と
+診断・fallback の不一致は [#1227](https://github.com/Eruhitsuji/lifetxt/issues/1227)
+で追跡しています。
+
 requested date/time range は half-open interval `[start, end)` として扱います。
 date-only の end boundary、例えば `--to 2026-06-12` は `2026-06-13T00:00`
 として解釈し、同日 `23:59:59.5` は含め、翌日 `00:00` ちょうどは除外します。
-より複雑な RRULE は text として保持しますが、dependency-free core では展開しません。
-`check` は対応外の RRULE feature を検出した場合、recurrence warning `W223`
-を出します。
+展開は回数・終了・要求範囲と safety ceiling で制限されます。意図した範囲の
+具体的な occurrence を確認してください。offset 付き anchor/展開の不具合は
+[#1218](https://github.com/Eruhitsuji/lifetxt/issues/1218) と
+[#1226](https://github.com/Eruhitsuji/lifetxt/issues/1226) で追跡しています。
 
 ## 9. type 別 recommended keys
 

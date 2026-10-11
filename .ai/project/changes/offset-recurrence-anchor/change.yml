@@ -1,0 +1,46 @@
+schema_version: 1
+change:
+  id: offset-recurrence-anchor
+  title: Preserve fixed-offset agenda and recurrence instants
+  status: implemented
+  change_type: Bug
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1229
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1226
+  base_commit: b9dc6fbcd947d4a5daed9b7be2da5ed712fe51dc
+  runtime_evidence_commit: 45604071d969a69a4062c5ac031782e260df3143
+  size: M
+  complexity: 6/10
+scope:
+  write_scope:
+    - lifetxt/agenda.py
+    - lifetxt/recurrence.py
+    - lifetxt/timeutil.py
+    - tests/test_offset_recurrence.py
+    - docs/en/life_txt_format_spec.md
+    - docs/ja/life_txt_format_spec.md
+    - life_txt_format_spec.md
+    - docs/en/ai-patterns/recurrence.md
+    - docs/ja/ai-patterns/recurrence.md
+    - examples/ai-patterns/manifest.json
+    - .ai/project/changes/offset-recurrence-anchor
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+  forbidden_scope:
+    - Global legacy comparison policy
+    - RFC recurrence algebra and invalid-rule fallback
+    - User workspace or mutation contracts
+    - .ai/managed
+  shared_files: [CAPABILITIES.yml, TRACEABILITY.yml]
+  integrator: Eruhitsuji
+  rollback: Revert runtime, tests and current catalog evidence; no persisted user data changes.
+design_approval:
+  owner: Eruhitsuji
+  date: '2026-10-11'
+  record: https://github.com/Eruhitsuji/lifetxt/issues/1226
+  scope: User requested all proposed tasks; High/M scope accepted. Catalog evidence updates required by observed regression.
+human_approvals_required:
+  - Independent latest-head implementation and integration review
+  - Merge authority approval

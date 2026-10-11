@@ -1,0 +1,12 @@
+schema_version: 1
+links:
+  - requirement: req-offset-recurrence-anchor-fidelity
+    capability: cap-recurrence-expansion
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1226
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1229
+    tests:
+      - tests.test_offset_recurrence
+      - tests.test_recurrence
+      - tests.test_recurrence_wkst
+      - tests.test_ai_patterns
+    status: implemented

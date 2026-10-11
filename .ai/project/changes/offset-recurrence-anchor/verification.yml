@@ -1,0 +1,29 @@
+schema_version: 1
+verification:
+  executed:
+    - command: python -m unittest tests.test_offset_recurrence
+      result: Initial six tests failed with 15 failures and 3 errors on pre-fix runtime; subsequent expanded eight tests passed.
+      status: passed
+      target_commit: 45604071d969a69a4062c5ac031782e260df3143
+    - command: python -m unittest tests.test_offset_recurrence tests.test_recurrence tests.test_recurrence_wkst tests.test_timezone_aware tests.test_timezone_policy_v2 tests.test_freebusy tests.test_freebusy_cli tests.test_cli_timezone_context_v2
+      result: 169 focused tests passed including eight regressions, recurrence, timezone, freebusy, CLI timezone, traceability and change-package closeout.
+      status: passed
+    - command: MPLBACKEND=Agg python -m unittest discover
+      result: Initial full run 5485 tests, 449 skipped, five failures. One catalog test reported two changed agenda expectations; four CLI cases lacked editable install (one reported as help failure). Fixed environment with declared setup and preserved catalog history before re-verification.
+      status: failed-before-reconciliation
+      environment: Python 3.12.14, Linux, Bash; working tree unchanged during this run; full log retained locally. Existing ResourceWarnings present.
+    - command: python -m ruff check lifetxt tests scripts
+      result: Passed; changed four Python files formatted.
+      status: passed
+    - command: python -m mypy --follow-imports=skip --ignore-missing-imports lifetxt/diagnostic_contract.py
+      result: Success, configured type boundary unchanged.
+      status: passed
+    - command: python -m unittest tests.test_ai_patterns tests.test_git_commit_worker_cli tests.test_offset_recurrence
+      result: 19 tests passed after preserving historical catalog evidence and running declared editable setup.
+      status: passed
+    - command: python -m lifetxt check examples/minimal_life.txt
+      result: OK, 10 items.
+      status: passed
+  remaining:
+    - Final head CI and independent human review
+    - Physical UI and non-Linux device verification not executed

@@ -79,7 +79,11 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          python -m unittest discover 2>&1 | tee unit-tests-${{ matrix.python-version }}.log
+          duration_args=()
+          if [[ "${{ matrix.python-version }}" == "3.12" ]]; then
+            duration_args=(--durations=20)
+          fi
+          python -m unittest discover "${duration_args[@]}" 2>&1 | tee unit-tests-${{ matrix.python-version }}.log
 
       - name: Upload unit test log on failure
         if: failure()
@@ -180,7 +184,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          python -m unittest discover 2>&1 | tee unit-tests-no-web.log
+          python -m unittest discover --durations=20 2>&1 | tee unit-tests-no-web.log
 
       - name: Upload no-Web unit test log on failure
         if: failure()
@@ -308,7 +312,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          coverage run --branch -m unittest discover 2>&1 | tee coverage-tests.log
+          coverage run --branch -m unittest discover --durations=20 2>&1 | tee coverage-tests.log
           coverage report -m | tee coverage-summary.txt
           coverage json -o coverage.json
           python scripts/check_coverage_regression.py coverage.json scripts/coverage-baseline.json

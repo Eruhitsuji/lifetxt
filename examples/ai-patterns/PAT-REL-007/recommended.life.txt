@@ -1,0 +1,2 @@
+[ ] T "前提" id:a
+[ ] T "後続" id:b depends_on:a

@@ -1,0 +1,2 @@
+[ ] T "草案を書く" id:task_draft
+[ ] T "別の草案" id:task_draft

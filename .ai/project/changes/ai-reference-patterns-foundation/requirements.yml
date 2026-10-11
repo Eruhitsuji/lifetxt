@@ -1,0 +1,6 @@
+schema_version: 1
+requirements:
+  - id: req-provider-independent-ai-prompt-profile
+    change_kind: MODIFIED
+    summary: Independently check canonical AI examples and their bilingual copies without a model service.
+    acceptance: Unique 68 planned slots; planned fails final gate; expected and observed diagnostics remain distinct.

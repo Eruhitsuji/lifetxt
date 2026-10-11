@@ -16,6 +16,7 @@ import unittest
 import urllib.error
 import urllib.request
 from pathlib import Path
+from unittest import mock
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DOCKERFILE = REPO_ROOT / "Dockerfile"
@@ -121,19 +122,91 @@ class ComposeFileStaticContractTests(unittest.TestCase):
         )
 
 
+def _build_docker_image(image_tag: str) -> None:
+    """Run the Docker smoke build, exposing captured diagnostics on failure."""
+    command = ["docker", "build", "-t", image_tag, "."]
+    try:
+        subprocess.run(
+            command,
+            cwd=str(REPO_ROOT),
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+    except subprocess.CalledProcessError as exc:
+        def captured_text(value):
+            if value is None:
+                return "<no output captured>"
+            if isinstance(value, bytes):
+                return value.decode("utf-8", errors="replace")
+            return value
+
+        raise RuntimeError(
+            "Docker build failed (command=%r, exit status=%s)\n"
+            "stdout:\n%s\nstderr:\n%s"
+            % (
+                exc.cmd,
+                exc.returncode,
+                captured_text(exc.stdout),
+                captured_text(exc.stderr),
+            )
+        ) from exc
+
+
+class DockerBuildDiagnosticsTests(unittest.TestCase):
+    def test_failed_build_exposes_bytes_text_missing_and_invalid_utf8(self):
+        cases = (
+            ("bytes", b"build step\n", b"registry offline\n", "build step", "registry offline"),
+            ("text", "plain stdout", "plain stderr", "plain stdout", "plain stderr"),
+            ("missing", None, None, "<no output captured>", "<no output captured>"),
+            ("invalid utf8", b"bad:\xff", b"error:\xff", "bad:\ufffd", "error:\ufffd"),
+        )
+        for name, stdout, stderr, want_stdout, want_stderr in cases:
+            with self.subTest(name=name):
+                failure = subprocess.CalledProcessError(
+                    17,
+                    ["docker", "build", "-t", "test-tag", "."],
+                    output=stdout,
+                    stderr=stderr,
+                )
+                with mock.patch(
+                    "tests.test_docker_image.subprocess.run", side_effect=failure
+                ) as run:
+                    with self.assertRaises(RuntimeError) as caught:
+                        _build_docker_image("test-tag")
+                report = str(caught.exception)
+                self.assertIn("exit status=17", report)
+                self.assertIn("'docker', 'build', '-t', 'test-tag', '.'", report)
+                self.assertIn("stdout:\n%s" % want_stdout, report)
+                self.assertIn("stderr:\n%s" % want_stderr, report)
+                self.assertIs(caught.exception.__cause__, failure)
+                run.assert_called_once_with(
+                    ["docker", "build", "-t", "test-tag", "."],
+                    cwd=str(REPO_ROOT),
+                    check=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
+
+    def test_successful_build_still_runs_checked_with_pipes(self):
+        with mock.patch("tests.test_docker_image.subprocess.run") as run:
+            _build_docker_image("test-tag")
+        run.assert_called_once_with(
+            ["docker", "build", "-t", "test-tag", "."],
+            cwd=str(REPO_ROOT),
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+
+
 @unittest.skipUnless(*_docker_available())
 class DockerImageBuildAndRunTests(unittest.TestCase):
     IMAGE_TAG = "lifetxt:test-docker-image-suite"
 
     @classmethod
     def setUpClass(cls):
-        subprocess.run(
-            ["docker", "build", "-t", cls.IMAGE_TAG, "."],
-            cwd=str(REPO_ROOT),
-            check=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
+        _build_docker_image(cls.IMAGE_TAG)
 
     @classmethod
     def tearDownClass(cls):

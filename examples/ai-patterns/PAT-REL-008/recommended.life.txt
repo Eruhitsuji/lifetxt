@@ -1,0 +1,2 @@
+[x] T "レビュー完了" id:review_done done:2030-10-11
+[ ] T "提出する" depends_on:review_done

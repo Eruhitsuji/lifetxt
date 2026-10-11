@@ -2732,7 +2732,8 @@
         "by": "implementer",
         "result": "source compared",
         "independent_review": "pending",
-        "note": "This does not imply support for the full RRULE standard. Use full at datetimes for offset-aware recurrence; #1218 tracks the split on/offset-time anchor discrepancy. In this RRULE observation, expanded agenda times lose the offset. The stored authored value is preserved; instant-comparison fidelity is under investigation in #1218."
+        "note": "Historical offset loss reproduced and repaired by #1226; current expansion retains authored offset and uses configured-zone window comparisons. Full RFC support is not claimed.",
+        "historical_note": "This does not imply support for the full RRULE standard. Use full at datetimes for offset-aware recurrence; #1218 tracks the split on/offset-time anchor discrepancy. In this RRULE observation, expanded agenda times lose the offset. The stored authored value is preserved; instant-comparison fidelity is under investigation in #1218."
       },
       "docs": {
         "ja": "docs/ja/ai-patterns/recurrence.md",
@@ -2771,7 +2772,7 @@
             "timezone": "UTC",
             "expected": [
               {
-                "when": "2030-10-14T07:00",
+                "when": "2030-10-16T07:00+09:00",
                 "key": "repeat:at",
                 "line": 1,
                 "status": "[ ]",
@@ -2781,37 +2782,31 @@
                 "matches": [
                   {
                     "key": "repeat:at",
-                    "start": "2030-10-14T07:00",
-                    "repeat": "RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=6",
-                    "occurrence_index": 1
-                  },
-                  {
-                    "key": "repeat:at",
-                    "start": "2030-10-16T07:00",
+                    "start": "2030-10-16T07:00+09:00",
                     "repeat": "RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=6",
                     "occurrence_index": 2
                   },
                   {
                     "key": "repeat:at",
-                    "start": "2030-10-21T07:00",
+                    "start": "2030-10-21T07:00+09:00",
                     "repeat": "RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=6",
                     "occurrence_index": 3
                   },
                   {
                     "key": "repeat:at",
-                    "start": "2030-10-23T07:00",
+                    "start": "2030-10-23T07:00+09:00",
                     "repeat": "RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=6",
                     "occurrence_index": 4
                   },
                   {
                     "key": "repeat:at",
-                    "start": "2030-10-28T07:00",
+                    "start": "2030-10-28T07:00+09:00",
                     "repeat": "RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=6",
                     "occurrence_index": 5
                   },
                   {
                     "key": "repeat:at",
-                    "start": "2030-10-30T07:00",
+                    "start": "2030-10-30T07:00+09:00",
                     "repeat": "RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=6",
                     "occurrence_index": 6
                   }
@@ -2827,8 +2822,8 @@
                 "text": "[ ] H \"学習する\" at:2030-10-14T07:00+09:00 repeat:RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=6",
                 "generated": true,
                 "source": "examples/ai-patterns/PAT-REC-006/recommended.life.txt",
-                "occurrence_start": "2030-10-14T07:00",
-                "occurrence_index": 1,
+                "occurrence_start": "2030-10-16T07:00+09:00",
+                "occurrence_index": 2,
                 "repeat_rule": "RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=6"
               }
             ],
@@ -2845,9 +2840,103 @@
               "--format",
               "json"
             ],
-            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "engine_commit": "45604071d969a69a4062c5ac031782e260df3143",
             "exit": 0,
-            "stderr": ""
+            "stderr": "",
+            "repair_issue": "https://github.com/Eruhitsuji/lifetxt/issues/1226",
+            "measured_local_commit": "6010ad4e0ca25f2835a727f28b26943a863b2206"
+          },
+          "agenda_history": [
+            {
+              "from": "2030-10-14",
+              "to": "2030-11-14",
+              "timezone": "UTC",
+              "expected": [
+                {
+                  "when": "2030-10-14T07:00",
+                  "key": "repeat:at",
+                  "line": 1,
+                  "status": "[ ]",
+                  "type": "H",
+                  "blocked": false,
+                  "title": "学習する",
+                  "matches": [
+                    {
+                      "key": "repeat:at",
+                      "start": "2030-10-14T07:00",
+                      "repeat": "RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=6",
+                      "occurrence_index": 1
+                    },
+                    {
+                      "key": "repeat:at",
+                      "start": "2030-10-16T07:00",
+                      "repeat": "RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=6",
+                      "occurrence_index": 2
+                    },
+                    {
+                      "key": "repeat:at",
+                      "start": "2030-10-21T07:00",
+                      "repeat": "RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=6",
+                      "occurrence_index": 3
+                    },
+                    {
+                      "key": "repeat:at",
+                      "start": "2030-10-23T07:00",
+                      "repeat": "RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=6",
+                      "occurrence_index": 4
+                    },
+                    {
+                      "key": "repeat:at",
+                      "start": "2030-10-28T07:00",
+                      "repeat": "RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=6",
+                      "occurrence_index": 5
+                    },
+                    {
+                      "key": "repeat:at",
+                      "start": "2030-10-30T07:00",
+                      "repeat": "RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=6",
+                      "occurrence_index": 6
+                    }
+                  ],
+                  "details": {
+                    "at": [
+                      "2030-10-14T07:00+09:00"
+                    ],
+                    "repeat": [
+                      "RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=6"
+                    ]
+                  },
+                  "text": "[ ] H \"学習する\" at:2030-10-14T07:00+09:00 repeat:RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=6",
+                  "generated": true,
+                  "source": "examples/ai-patterns/PAT-REC-006/recommended.life.txt",
+                  "occurrence_start": "2030-10-14T07:00",
+                  "occurrence_index": 1,
+                  "repeat_rule": "RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=6"
+                }
+              ],
+              "command": [
+                "python",
+                "-m",
+                "lifetxt",
+                "agenda",
+                "examples/ai-patterns/PAT-REC-006/recommended.life.txt",
+                "--from",
+                "2030-10-14",
+                "--to",
+                "2030-11-14",
+                "--format",
+                "json"
+              ],
+              "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+              "exit": 0,
+              "stderr": ""
+            }
+          ],
+          "post_repair_meaning_review": {
+            "by": "implementer",
+            "result": "authored offset retained; UTC window filters by instant",
+            "independent_review": "pending",
+            "engine_commit": "45604071d969a69a4062c5ac031782e260df3143"
           }
         }
       ]
@@ -3017,7 +3106,7 @@
             "timezone": "UTC",
             "expected": [
               {
-                "when": "2030-10-14T09:00",
+                "when": "2030-10-14T18:00+09:00",
                 "key": "repeat:at",
                 "line": 1,
                 "status": "[ ]",
@@ -3027,193 +3116,193 @@
                 "matches": [
                   {
                     "key": "repeat:at",
-                    "start": "2030-10-14T09:00",
+                    "start": "2030-10-14T18:00+09:00",
                     "repeat": "daily",
                     "occurrence_index": 1
                   },
                   {
                     "key": "repeat:at",
-                    "start": "2030-10-15T09:00",
+                    "start": "2030-10-15T18:00+09:00",
                     "repeat": "daily",
                     "occurrence_index": 2
                   },
                   {
                     "key": "repeat:at",
-                    "start": "2030-10-16T09:00",
+                    "start": "2030-10-16T18:00+09:00",
                     "repeat": "daily",
                     "occurrence_index": 3
                   },
                   {
                     "key": "repeat:at",
-                    "start": "2030-10-17T09:00",
+                    "start": "2030-10-17T18:00+09:00",
                     "repeat": "daily",
                     "occurrence_index": 4
                   },
                   {
                     "key": "repeat:at",
-                    "start": "2030-10-18T09:00",
+                    "start": "2030-10-18T18:00+09:00",
                     "repeat": "daily",
                     "occurrence_index": 5
                   },
                   {
                     "key": "repeat:at",
-                    "start": "2030-10-19T09:00",
+                    "start": "2030-10-19T18:00+09:00",
                     "repeat": "daily",
                     "occurrence_index": 6
                   },
                   {
                     "key": "repeat:at",
-                    "start": "2030-10-20T09:00",
+                    "start": "2030-10-20T18:00+09:00",
                     "repeat": "daily",
                     "occurrence_index": 7
                   },
                   {
                     "key": "repeat:at",
-                    "start": "2030-10-21T09:00",
+                    "start": "2030-10-21T18:00+09:00",
                     "repeat": "daily",
                     "occurrence_index": 8
                   },
                   {
                     "key": "repeat:at",
-                    "start": "2030-10-22T09:00",
+                    "start": "2030-10-22T18:00+09:00",
                     "repeat": "daily",
                     "occurrence_index": 9
                   },
                   {
                     "key": "repeat:at",
-                    "start": "2030-10-23T09:00",
+                    "start": "2030-10-23T18:00+09:00",
                     "repeat": "daily",
                     "occurrence_index": 10
                   },
                   {
                     "key": "repeat:at",
-                    "start": "2030-10-24T09:00",
+                    "start": "2030-10-24T18:00+09:00",
                     "repeat": "daily",
                     "occurrence_index": 11
                   },
                   {
                     "key": "repeat:at",
-                    "start": "2030-10-25T09:00",
+                    "start": "2030-10-25T18:00+09:00",
                     "repeat": "daily",
                     "occurrence_index": 12
                   },
                   {
                     "key": "repeat:at",
-                    "start": "2030-10-26T09:00",
+                    "start": "2030-10-26T18:00+09:00",
                     "repeat": "daily",
                     "occurrence_index": 13
                   },
                   {
                     "key": "repeat:at",
-                    "start": "2030-10-27T09:00",
+                    "start": "2030-10-27T18:00+09:00",
                     "repeat": "daily",
                     "occurrence_index": 14
                   },
                   {
                     "key": "repeat:at",
-                    "start": "2030-10-28T09:00",
+                    "start": "2030-10-28T18:00+09:00",
                     "repeat": "daily",
                     "occurrence_index": 15
                   },
                   {
                     "key": "repeat:at",
-                    "start": "2030-10-29T09:00",
+                    "start": "2030-10-29T18:00+09:00",
                     "repeat": "daily",
                     "occurrence_index": 16
                   },
                   {
                     "key": "repeat:at",
-                    "start": "2030-10-30T09:00",
+                    "start": "2030-10-30T18:00+09:00",
                     "repeat": "daily",
                     "occurrence_index": 17
                   },
                   {
                     "key": "repeat:at",
-                    "start": "2030-10-31T09:00",
+                    "start": "2030-10-31T18:00+09:00",
                     "repeat": "daily",
                     "occurrence_index": 18
                   },
                   {
                     "key": "repeat:at",
-                    "start": "2030-11-01T09:00",
+                    "start": "2030-11-01T18:00+09:00",
                     "repeat": "daily",
                     "occurrence_index": 19
                   },
                   {
                     "key": "repeat:at",
-                    "start": "2030-11-02T09:00",
+                    "start": "2030-11-02T18:00+09:00",
                     "repeat": "daily",
                     "occurrence_index": 20
                   },
                   {
                     "key": "repeat:at",
-                    "start": "2030-11-03T09:00",
+                    "start": "2030-11-03T18:00+09:00",
                     "repeat": "daily",
                     "occurrence_index": 21
                   },
                   {
                     "key": "repeat:at",
-                    "start": "2030-11-04T09:00",
+                    "start": "2030-11-04T18:00+09:00",
                     "repeat": "daily",
                     "occurrence_index": 22
                   },
                   {
                     "key": "repeat:at",
-                    "start": "2030-11-05T09:00",
+                    "start": "2030-11-05T18:00+09:00",
                     "repeat": "daily",
                     "occurrence_index": 23
                   },
                   {
                     "key": "repeat:at",
-                    "start": "2030-11-06T09:00",
+                    "start": "2030-11-06T18:00+09:00",
                     "repeat": "daily",
                     "occurrence_index": 24
                   },
                   {
                     "key": "repeat:at",
-                    "start": "2030-11-07T09:00",
+                    "start": "2030-11-07T18:00+09:00",
                     "repeat": "daily",
                     "occurrence_index": 25
                   },
                   {
                     "key": "repeat:at",
-                    "start": "2030-11-08T09:00",
+                    "start": "2030-11-08T18:00+09:00",
                     "repeat": "daily",
                     "occurrence_index": 26
                   },
                   {
                     "key": "repeat:at",
-                    "start": "2030-11-09T09:00",
+                    "start": "2030-11-09T18:00+09:00",
                     "repeat": "daily",
                     "occurrence_index": 27
                   },
                   {
                     "key": "repeat:at",
-                    "start": "2030-11-10T09:00",
+                    "start": "2030-11-10T18:00+09:00",
                     "repeat": "daily",
                     "occurrence_index": 28
                   },
                   {
                     "key": "repeat:at",
-                    "start": "2030-11-11T09:00",
+                    "start": "2030-11-11T18:00+09:00",
                     "repeat": "daily",
                     "occurrence_index": 29
                   },
                   {
                     "key": "repeat:at",
-                    "start": "2030-11-12T09:00",
+                    "start": "2030-11-12T18:00+09:00",
                     "repeat": "daily",
                     "occurrence_index": 30
                   },
                   {
                     "key": "repeat:at",
-                    "start": "2030-11-13T09:00",
+                    "start": "2030-11-13T18:00+09:00",
                     "repeat": "daily",
                     "occurrence_index": 31
                   },
                   {
                     "key": "repeat:at",
-                    "start": "2030-11-14T09:00",
+                    "start": "2030-11-14T18:00+09:00",
                     "repeat": "daily",
                     "occurrence_index": 32
                   }
@@ -3229,7 +3318,7 @@
                 "text": "[ ] H \"ストレッチする\" at:18:00+09:00 repeat:daily",
                 "generated": true,
                 "source": "examples/ai-patterns/PAT-REC-008/recommended.life.txt",
-                "occurrence_start": "2030-10-14T09:00",
+                "occurrence_start": "2030-10-14T18:00+09:00",
                 "occurrence_index": 1,
                 "repeat_rule": "daily"
               }
@@ -3247,9 +3336,259 @@
               "--format",
               "json"
             ],
-            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "engine_commit": "45604071d969a69a4062c5ac031782e260df3143",
             "exit": 0,
-            "stderr": ""
+            "stderr": "",
+            "repair_issue": "https://github.com/Eruhitsuji/lifetxt/issues/1226",
+            "measured_local_commit": "6010ad4e0ca25f2835a727f28b26943a863b2206"
+          },
+          "agenda_history": [
+            {
+              "from": "2030-10-14",
+              "to": "2030-11-14",
+              "timezone": "UTC",
+              "expected": [
+                {
+                  "when": "2030-10-14T09:00",
+                  "key": "repeat:at",
+                  "line": 1,
+                  "status": "[ ]",
+                  "type": "H",
+                  "blocked": false,
+                  "title": "ストレッチする",
+                  "matches": [
+                    {
+                      "key": "repeat:at",
+                      "start": "2030-10-14T09:00",
+                      "repeat": "daily",
+                      "occurrence_index": 1
+                    },
+                    {
+                      "key": "repeat:at",
+                      "start": "2030-10-15T09:00",
+                      "repeat": "daily",
+                      "occurrence_index": 2
+                    },
+                    {
+                      "key": "repeat:at",
+                      "start": "2030-10-16T09:00",
+                      "repeat": "daily",
+                      "occurrence_index": 3
+                    },
+                    {
+                      "key": "repeat:at",
+                      "start": "2030-10-17T09:00",
+                      "repeat": "daily",
+                      "occurrence_index": 4
+                    },
+                    {
+                      "key": "repeat:at",
+                      "start": "2030-10-18T09:00",
+                      "repeat": "daily",
+                      "occurrence_index": 5
+                    },
+                    {
+                      "key": "repeat:at",
+                      "start": "2030-10-19T09:00",
+                      "repeat": "daily",
+                      "occurrence_index": 6
+                    },
+                    {
+                      "key": "repeat:at",
+                      "start": "2030-10-20T09:00",
+                      "repeat": "daily",
+                      "occurrence_index": 7
+                    },
+                    {
+                      "key": "repeat:at",
+                      "start": "2030-10-21T09:00",
+                      "repeat": "daily",
+                      "occurrence_index": 8
+                    },
+                    {
+                      "key": "repeat:at",
+                      "start": "2030-10-22T09:00",
+                      "repeat": "daily",
+                      "occurrence_index": 9
+                    },
+                    {
+                      "key": "repeat:at",
+                      "start": "2030-10-23T09:00",
+                      "repeat": "daily",
+                      "occurrence_index": 10
+                    },
+                    {
+                      "key": "repeat:at",
+                      "start": "2030-10-24T09:00",
+                      "repeat": "daily",
+                      "occurrence_index": 11
+                    },
+                    {
+                      "key": "repeat:at",
+                      "start": "2030-10-25T09:00",
+                      "repeat": "daily",
+                      "occurrence_index": 12
+                    },
+                    {
+                      "key": "repeat:at",
+                      "start": "2030-10-26T09:00",
+                      "repeat": "daily",
+                      "occurrence_index": 13
+                    },
+                    {
+                      "key": "repeat:at",
+                      "start": "2030-10-27T09:00",
+                      "repeat": "daily",
+                      "occurrence_index": 14
+                    },
+                    {
+                      "key": "repeat:at",
+                      "start": "2030-10-28T09:00",
+                      "repeat": "daily",
+                      "occurrence_index": 15
+                    },
+                    {
+                      "key": "repeat:at",
+                      "start": "2030-10-29T09:00",
+                      "repeat": "daily",
+                      "occurrence_index": 16
+                    },
+                    {
+                      "key": "repeat:at",
+                      "start": "2030-10-30T09:00",
+                      "repeat": "daily",
+                      "occurrence_index": 17
+                    },
+                    {
+                      "key": "repeat:at",
+                      "start": "2030-10-31T09:00",
+                      "repeat": "daily",
+                      "occurrence_index": 18
+                    },
+                    {
+                      "key": "repeat:at",
+                      "start": "2030-11-01T09:00",
+                      "repeat": "daily",
+                      "occurrence_index": 19
+                    },
+                    {
+                      "key": "repeat:at",
+                      "start": "2030-11-02T09:00",
+                      "repeat": "daily",
+                      "occurrence_index": 20
+                    },
+                    {
+                      "key": "repeat:at",
+                      "start": "2030-11-03T09:00",
+                      "repeat": "daily",
+                      "occurrence_index": 21
+                    },
+                    {
+                      "key": "repeat:at",
+                      "start": "2030-11-04T09:00",
+                      "repeat": "daily",
+                      "occurrence_index": 22
+                    },
+                    {
+                      "key": "repeat:at",
+                      "start": "2030-11-05T09:00",
+                      "repeat": "daily",
+                      "occurrence_index": 23
+                    },
+                    {
+                      "key": "repeat:at",
+                      "start": "2030-11-06T09:00",
+                      "repeat": "daily",
+                      "occurrence_index": 24
+                    },
+                    {
+                      "key": "repeat:at",
+                      "start": "2030-11-07T09:00",
+                      "repeat": "daily",
+                      "occurrence_index": 25
+                    },
+                    {
+                      "key": "repeat:at",
+                      "start": "2030-11-08T09:00",
+                      "repeat": "daily",
+                      "occurrence_index": 26
+                    },
+                    {
+                      "key": "repeat:at",
+                      "start": "2030-11-09T09:00",
+                      "repeat": "daily",
+                      "occurrence_index": 27
+                    },
+                    {
+                      "key": "repeat:at",
+                      "start": "2030-11-10T09:00",
+                      "repeat": "daily",
+                      "occurrence_index": 28
+                    },
+                    {
+                      "key": "repeat:at",
+                      "start": "2030-11-11T09:00",
+                      "repeat": "daily",
+                      "occurrence_index": 29
+                    },
+                    {
+                      "key": "repeat:at",
+                      "start": "2030-11-12T09:00",
+                      "repeat": "daily",
+                      "occurrence_index": 30
+                    },
+                    {
+                      "key": "repeat:at",
+                      "start": "2030-11-13T09:00",
+                      "repeat": "daily",
+                      "occurrence_index": 31
+                    },
+                    {
+                      "key": "repeat:at",
+                      "start": "2030-11-14T09:00",
+                      "repeat": "daily",
+                      "occurrence_index": 32
+                    }
+                  ],
+                  "details": {
+                    "at": [
+                      "18:00+09:00"
+                    ],
+                    "repeat": [
+                      "daily"
+                    ]
+                  },
+                  "text": "[ ] H \"ストレッチする\" at:18:00+09:00 repeat:daily",
+                  "generated": true,
+                  "source": "examples/ai-patterns/PAT-REC-008/recommended.life.txt",
+                  "occurrence_start": "2030-10-14T09:00",
+                  "occurrence_index": 1,
+                  "repeat_rule": "daily"
+                }
+              ],
+              "command": [
+                "python",
+                "-m",
+                "lifetxt",
+                "agenda",
+                "examples/ai-patterns/PAT-REC-008/recommended.life.txt",
+                "--from",
+                "2030-10-14",
+                "--to",
+                "2030-11-14",
+                "--format",
+                "json"
+              ],
+              "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+              "exit": 0,
+              "stderr": ""
+            }
+          ],
+          "post_repair_meaning_review": {
+            "by": "implementer",
+            "result": "authored offset retained; UTC window filters by instant",
+            "independent_review": "pending",
+            "engine_commit": "45604071d969a69a4062c5ac031782e260df3143"
           }
         }
       ]

@@ -1,0 +1,41 @@
+schema_version: 1
+verification:
+  executed:
+    - command: python -m unittest tests.test_offset_recurrence
+      result: Initial six tests failed with 15 failures and 3 errors on pre-fix runtime; subsequent expanded eight tests passed on this runtime; ninth projection-sort regression verified in final focused evidence below.
+      status: passed
+      target_commit: 45604071d969a69a4062c5ac031782e260df3143
+    - command: python -m unittest tests.test_offset_recurrence tests.test_recurrence tests.test_recurrence_wkst tests.test_timezone_aware tests.test_timezone_policy_v2 tests.test_freebusy tests.test_freebusy_cli tests.test_cli_timezone_context_v2
+      result: 170 focused tests passed including nine regressions, recurrence, timezone, freebusy, CLI timezone, traceability and change-package closeout.
+      target_commit: 3d77aa267db86e1fe493bb9f5c5bc244d017a1b9
+      status: passed
+    - command: MPLBACKEND=Agg python -m unittest discover
+      result: Initial full run 5485 tests, 449 skipped, five failures. One catalog test reported two changed agenda expectations; four CLI cases lacked editable install (one reported as help failure). Fixed environment with declared setup and preserved catalog history before re-verification.
+      status: failed-before-reconciliation
+      environment: Python 3.12.14, Linux, Bash; working tree unchanged during this run; full log retained locally. Existing ResourceWarnings present.
+    - command: python -m ruff check lifetxt tests scripts
+      result: Passed; changed four Python files formatted.
+      status: passed
+    - command: python -m mypy --follow-imports=skip --ignore-missing-imports lifetxt/diagnostic_contract.py
+      result: Success, configured type boundary unchanged.
+      status: passed
+    - command: python -m unittest tests.test_ai_patterns tests.test_git_commit_worker_cli tests.test_offset_recurrence
+      result: 19 tests passed after preserving historical catalog evidence and running declared editable setup.
+      status: passed
+    - command: python -m lifetxt check examples/minimal_life.txt
+      result: OK, 10 items.
+      status: passed
+    - command: MPLBACKEND=Agg python -m unittest discover
+      result: 5487 tests passed, 449 skipped, after setup/catalog reconciliation; before final small sorting repair. Same runtime as published repair f43c97b717c14498e793de31f7fb0767fe3f4f9d. No runtime files modified during run; evidence metadata updated near the end.
+      status: passed
+      target_commit: f43c97b717c14498e793de31f7fb0767fe3f4f9d
+    - command: Bootstrap legacy surfaces, then load selected CLI/Web/MCP/TUI/Remote/report/catalog suites
+      result: 569 tests passed, 50 optional-Web skips on final sorting runtime. Without explicit bootstrap, same 12 MCP test-order failures reproduce on unchanged baseline and repaired runtime; tracked separately.
+      target_commit: 3d77aa267db86e1fe493bb9f5c5bc244d017a1b9
+      status: passed-with-baseline-order-gap
+    - command: python -m unittest tests.test_roundtrip_golden.BashCompletionExecutionTests
+      result: Four tests passed; Bash completion execution ran, not skipped.
+      status: passed
+  remaining:
+    - Final head CI and independent human review
+    - Physical UI and non-Linux device verification not executed

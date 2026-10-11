@@ -21,6 +21,8 @@ import calendar
 from collections import OrderedDict
 from datetime import date, datetime, time, timedelta
 
+from .timeutil import LifeDateTime, offset_comparison_pair
+
 
 RRULE_PREFIX = "RRULE:"
 
@@ -276,16 +278,16 @@ def expand(rule, start, after=None, before=None, limit=None):
     results = []
     emitted = 0
     for moment in _candidates(rule, start):
-        if rule["until"] is not None and moment > rule["until"]:
+        if rule["until"] is not None and _later(moment, rule["until"]):
             break
-        if before is not None and moment > before:
+        if before is not None and _later(moment, before):
             break
         # COUNT counts from the series start, not from `after`, so a windowed
         # view still reflects where the series really ends.
         emitted += 1
         if rule["count"] is not None and emitted > rule["count"]:
             break
-        if after is not None and moment < after:
+        if after is not None and _later(after, moment):
             if emitted >= SAFETY_ITERATIONS:
                 break
             continue
@@ -295,6 +297,11 @@ def expand(rule, start, after=None, before=None, limit=None):
     return results
 
 
+def _later(left, right):
+    left, right = offset_comparison_pair(left, right)
+    return left > right
+
+
 def _candidates(rule, start):
     """Yield every moment the rule matches, in order, from ``start``."""
     name = rule["name"]
@@ -302,7 +309,7 @@ def _candidates(rule, start):
     byday = rule["byday"]
     bymonthday = rule["bymonthday"]
     bymonth = rule["bymonth"]
-    moment_time = start.time()
+    moment_time = start.timetz()
 
     if name == "daily":
         current = start
@@ -332,10 +339,10 @@ def _candidates(rule, start):
                 guard += 1
                 for weekday in ordered:
                     offset = (weekday - wkst) % 7
-                    moment = datetime.combine(
+                    moment = LifeDateTime.combine(
                         week_start + timedelta(days=offset), moment_time
                     )
-                    if moment >= start and _matches_month(moment, bymonth):
+                    if not _later(start, moment) and _matches_month(moment, bymonth):
                         yield moment
                 week_start = week_start + timedelta(weeks=interval)
             return
@@ -355,7 +362,7 @@ def _candidates(rule, start):
             guard += 1
             if not bymonth or month in bymonth:
                 for moment in _month_occurrences(year, month, start, rule, moment_time):
-                    if moment >= start:
+                    if not _later(start, moment):
                         yield moment
             year, month = _shift_month(year, month, interval)
         return
@@ -370,7 +377,7 @@ def _candidates(rule, start):
             guard += 1
             for month in months:
                 for moment in _month_occurrences(year, month, start, rule, moment_time):
-                    if moment >= start:
+                    if not _later(start, moment):
                         yield moment
             year += interval
         return
@@ -408,7 +415,7 @@ def _month_occurrences(year, month, start, rule, moment_time):
         days.add(min(start.day, days_in_month))
 
     for day in sorted(days):
-        yield datetime.combine(date(year, month, day), moment_time)
+        yield LifeDateTime.combine(date(year, month, day), moment_time)
 
 
 def _matches_filters(moment, byday, bymonthday, bymonth):

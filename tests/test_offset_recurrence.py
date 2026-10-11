@@ -46,11 +46,22 @@ class OffsetRecurrenceTests(unittest.TestCase):
                     full = [m["start"] for m in full]
                     self.assertEqual(full, split)
                     self.assertTrue(
-                        all(datetime.fromisoformat(v).tzinfo is not None for v in split)
+                        all(
+                            datetime.strptime(
+                                v,
+                                "%Y-%m-%dT%H:%M:%S.%f%z"
+                                if "." in v
+                                else "%Y-%m-%dT%H:%M%z",
+                            ).tzinfo
+                            is not None
+                            for v in split
+                        )
                     )
 
     def test_aware_candidates_all_frequencies(self):
-        start = datetime.fromisoformat("2030-10-14T07:00:12.25+09:00")
+        start = datetime.strptime(
+            "2030-10-14T07:00:12.25+09:00", "%Y-%m-%dT%H:%M:%S.%f%z"
+        )
         for rule in (
             "FREQ=DAILY",
             "FREQ=WEEKLY;BYDAY=MO,WE",

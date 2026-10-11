@@ -1120,7 +1120,8 @@ capabilities:
     summary: >-
       A directly linkable, no-install prompt contract for converting,
       explaining, and reviewing common lifetxt text without workspace access,
-      provider-specific behavior, or automatic writes.
+      provider-specific behavior, or automatic writes. Includes a bilingual,
+      canonical 68-case AI reference catalog with offline diagnostic/copy checks.
     status: active
     owner: Eruhitsuji
     source_requirements:
@@ -1132,15 +1133,36 @@ capabilities:
       - docs/ja/ai-integration.md
       - readme.md
       - tests/test_ai_prompt_profile.py
+      - docs/en/ai-patterns.md
+      - docs/ja/ai-patterns.md
+      - examples/ai-patterns
+      - scripts/check_ai_patterns.py
+      - tests/test_ai_patterns.py
     public_interfaces:
       - prompts/lifetxt-assistant.md
+      - docs/en/ai-patterns.md
+      - docs/ja/ai-patterns.md
     tests_or_evidence:
       - tests/test_ai_prompt_profile.py
+      - tests/test_ai_patterns.py
+      - scripts/check_ai_patterns.py (68 patterns, 92 fixture units, 9 fixed-range agenda checks)
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/500
       - https://github.com/Eruhitsuji/lifetxt/issues/813
       - https://github.com/Eruhitsuji/lifetxt/issues/1165
       - https://github.com/Eruhitsuji/lifetxt/issues/1166
+      - https://github.com/Eruhitsuji/lifetxt/issues/1200
+      - https://github.com/Eruhitsuji/lifetxt/issues/1201
+      - https://github.com/Eruhitsuji/lifetxt/issues/1202
+      - https://github.com/Eruhitsuji/lifetxt/issues/1203
+      - https://github.com/Eruhitsuji/lifetxt/issues/1204
+      - https://github.com/Eruhitsuji/lifetxt/issues/1205
+      - https://github.com/Eruhitsuji/lifetxt/issues/1206
+      - https://github.com/Eruhitsuji/lifetxt/issues/1207
+      - https://github.com/Eruhitsuji/lifetxt/issues/1208
+      - https://github.com/Eruhitsuji/lifetxt/issues/1209
+      - https://github.com/Eruhitsuji/lifetxt/issues/1210
+      - https://github.com/Eruhitsuji/lifetxt/issues/1211
     related_pull_requests: []
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     replacement:

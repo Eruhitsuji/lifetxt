@@ -1,0 +1,3 @@
+[>] E "旧訪問" id:old on:2030-10-14 moved_to:2030-10-22 replaced_by:new
+[ ] E "新訪問計画" id:new on:2030-10-22
+[x] E "訪問実績" id:actual on:2030-10-22 done:2030-10-22 realizes:new

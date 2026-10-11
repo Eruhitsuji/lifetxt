@@ -1,0 +1,1 @@
+[ ] E "設計会議" on:2030-10-14 project:research tag:design record:meeting file:../../../docs/en/life_txt_format_spec.md user:alice est:1h created:2030-10-10 updated:2030-10-11 url:https://example.com/design

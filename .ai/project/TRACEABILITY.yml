@@ -2,6 +2,25 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-docker-build-failure-diagnostics
+      capability_id: cap-ci-responsibility-separation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1234
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1267
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1268
+      changed_files_or_scope:
+        - tests/test_docker_image.py
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests.test_docker_image.DockerBuildDiagnosticsTests
+        - Docker build failures retain command, exit code, stdout and stderr for missing, bytes, text and invalid UTF-8 output
+        - Existing real Docker build and run smoke tests are unchanged and remain enabled wherever Docker is available
+        - PR 1268 required CI and independent review pending
+      status: implemented
+      notes: >-
+        Reuse existing checked Docker build and existing CI failure logs.
+        Enrich failure diagnostics without skipping Docker smoke coverage or
+        automatically retrying builds. The prior Docker build's root cause
+        remains unknown; output must not be copied into public issue comments.
     - requirement_id: req-ci-incident-operational-recovery-evidence
       capability_id: cap-ci-responsibility-separation
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1234

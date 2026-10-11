@@ -1,0 +1,23 @@
+schema_version: 1
+verification:
+  executed:
+    - command: Recurrence, parser and agenda focused regression suites
+      result: 178 tests passed before final added weekdays control.
+      status: passed
+    - command: python -m ruff check lifetxt tests scripts
+      result: Passed before final test control addition.
+      status: passed
+    - command: RRULE diagnostics, shared recurrence, parser, agenda, traceability and change closeout suites
+      result: 196 tests passed including weekdays shortcut control.
+      status: passed
+    - command: PYTHONPATH=<checkout> MPLBACKEND=Agg python -m unittest discover
+      result: 5512 tests passed, 447 optional skips; final runtime unchanged during run.
+      status: passed
+    - command: python -m unittest tests.test_ai_patterns
+      result: 7 tests passed after historical catalog reconciliation.
+      status: passed
+    - command: python -m mypy --follow-imports=skip --ignore-missing-imports lifetxt/diagnostic_contract.py
+      result: Passed.
+      status: passed
+  remaining:
+    - Independent review, CI and merge approval

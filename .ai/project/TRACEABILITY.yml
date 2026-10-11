@@ -2,6 +2,25 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-recurrence-diagnostic-expansion-consistency
+      capability_id: cap-recurrence-expansion
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1237
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1240
+      changed_files_or_scope:
+        - lifetxt/validator.py
+        - lifetxt/agenda.py
+        - tests/test_rrule_diagnostics.py
+        - tests/test_lifetxt.py
+        - tests/test_recurrence_wkst.py
+        - docs/en/life_txt_format_spec.md
+        - docs/ja/life_txt_format_spec.md
+        - examples/ai-patterns/manifest.json
+      tests_or_evidence:
+        - 196 focused RRULE, recurrence, parser, agenda and traceability tests passed
+        - tests.test_rrule_diagnostics
+        - Full discovery passed 5512 tests, 447 optional skips
+      status: implemented
+      notes: Owner-approved follow-up to 1227; W223 and skip-generated/retain-ordinary-anchor contract; depends on 1236; human review pending.
     - requirement_id: req-recurrence-filter-until-consistency
       capability_id: cap-recurrence-expansion
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1236

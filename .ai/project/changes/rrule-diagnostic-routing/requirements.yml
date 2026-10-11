@@ -1,0 +1,12 @@
+schema_version: 1
+requirements:
+  - id: req-recurrence-diagnostic-expansion-consistency
+    kind: FIXED
+    owner: Eruhitsuji
+    statement: Diagnose supported RRULE values and never silently substitute a generated legacy series.
+    acceptance_criteria:
+      - Invalid supported values/combinations yield W223; default check exit zero, warnings-as-errors nonzero.
+      - Unsupported RRULEs retain ordinary authored anchors and generate no recurrence.
+      - Plain monthly/yearly BYDAY routes through existing shared expansion.
+      - Unknown custom fields, simple shortcuts including weekdays, COUNT/window and ordinary anchors remain supported.
+      - Current bilingual docs/catalog outputs agree with runtime while historical evidence is preserved.

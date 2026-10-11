@@ -1,0 +1,1 @@
+[ ] T "牛乳を買う" id:milk project:life priority:A assignee:self

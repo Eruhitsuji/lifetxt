@@ -26,6 +26,7 @@ jobs:
       run-heavy: ${{ steps.classify.outputs.run-heavy }}
       run-no-web: ${{ steps.classify.outputs.run-no-web }}
       run-coverage: ${{ steps.classify.outputs.run-coverage }}
+      run-python310-focused: ${{ steps.classify.outputs.run-python310-focused }}
     steps:
       - name: Check out repository history
         uses: actions/checkout@v5
@@ -99,6 +100,32 @@ jobs:
 
       - name: Run release smoke test
         run: python scripts/smoke_test.py
+
+  python310-focused:
+    name: Python 3.10 focused datetime regression
+    needs: [classify-changes]
+    if: ${{ github.event_name == 'pull_request' && needs['classify-changes'].outputs['run-python310-focused'] == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+      - name: Install core package
+        run: python -m pip install -e .
+      - name: Run focused datetime regression
+        shell: bash
+        run: |
+          set -o pipefail
+          python -m unittest tests.test_offset_recurrence -v 2>&1 | tee python310-focused.log
+      - name: Upload focused failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: python310-focused
+          path: python310-focused.log
 
   resource-warning-gate:
     name: ResourceWarning regression gate
@@ -457,7 +484,7 @@ jobs:
   pr-gate:
     name: PR gate
     if: ${{ always() && github.event_name == 'pull_request' }}
-    needs: [classify-changes, test, type-check, release-document-validation, traceability-gate, no-web-extras, coverage-baseline, main-health]
+    needs: [classify-changes, test, type-check, release-document-validation, traceability-gate, no-web-extras, coverage-baseline, python310-focused, main-health]
     runs-on: ubuntu-latest
     steps:
       - name: Require every PR responsibility to pass
@@ -471,6 +498,8 @@ jobs:
           HEALTH_RESULT: ${{ needs['main-health'].result }}
           NO_WEB_SELECTED: ${{ needs['classify-changes'].outputs['run-no-web'] }}
           COVERAGE_SELECTED: ${{ needs['classify-changes'].outputs['run-coverage'] }}
+          PYTHON310_RESULT: ${{ needs['python310-focused'].result }}
+          PYTHON310_SELECTED: ${{ needs['classify-changes'].outputs['run-python310-focused'] }}
           PATH_CATEGORY: ${{ needs['classify-changes'].outputs.category }}
         run: |
           python - <<'PY'
@@ -491,6 +520,7 @@ jobs:
           for name, result_key, selected_key in (
               ("no-web", "NO_WEB_RESULT", "NO_WEB_SELECTED"),
               ("coverage", "COVERAGE_RESULT", "COVERAGE_SELECTED"),
+              ("python310-focused", "PYTHON310_RESULT", "PYTHON310_SELECTED"),
           ):
               value = os.environ[result_key]
               results[name] = value

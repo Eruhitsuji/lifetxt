@@ -1,0 +1,2 @@
+[ ] T "資料を作る" owner:alice assignee:bob tag:重要 tag:研究
+[ ] E "会議" on:2030-10-14 attendee:alice attendee:bob

@@ -2,6 +2,23 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-recurrence-filter-until-consistency
+      capability_id: cap-recurrence-expansion
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1236
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1239
+      changed_files_or_scope:
+        - lifetxt/recurrence.py
+        - lifetxt/agenda.py
+        - tests/test_recurrence_contract.py
+        - tests/test_recurrence_wkst.py
+        - docs/en/life_txt_format_spec.md
+        - docs/ja/life_txt_format_spec.md
+        - life_txt_format_spec.md
+      tests_or_evidence:
+        - 183 focused recurrence/timezone/freebusy/traceability tests passed
+        - tests.test_recurrence_contract
+      status: implemented
+      notes: Owner approved High S follow-up to 1227; intersections, explicit empty periods and inclusive offset UNTIL; human independent review pending.
     - requirement_id: req-offset-regression-python310-compatibility
       capability_id: cap-recurrence-expansion
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1232

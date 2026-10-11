@@ -5,6 +5,21 @@ traceability:
     - requirement_id: req-provider-independent-ai-prompt-profile
       capability_id: cap-ai-prompt-profile
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1200
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1208
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1221
+      changed_files_or_scope:
+        - docs/ja/ai-patterns
+        - docs/en/ai-patterns
+        - examples/ai-patterns
+      tests_or_evidence:
+        - Per-fixture existing Core check with expected and full observed diagnostics
+        - Canonical JA/EN fence and local link checks; input-to-meaning implementer review
+      notes: COM catalog entries only; fictional supplied context; human independent review pending. Stacked dependency on prior child branch.
+      release_or_deployment: null
+      status: implemented
+    - requirement_id: req-provider-independent-ai-prompt-profile
+      capability_id: cap-ai-prompt-profile
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1200
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1206
       pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1220
       changed_files_or_scope:

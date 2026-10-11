@@ -1,0 +1,3 @@
+[ ] T "報告書を書く" id:write do:2030-10-14 due:2030-10-20T17:00+09:00
+[ ] D "報告書締切" id:deadline due:2030-10-20T17:00+09:00 ref:write
+[ ] R "報告書提出を思い出す" id:reminder at:2030-10-20T09:00+09:00 ref:write

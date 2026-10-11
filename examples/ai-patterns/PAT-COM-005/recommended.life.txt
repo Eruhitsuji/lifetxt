@@ -1,0 +1,2 @@
+[x] S "集中" from:2030-10-14T09:00+09:00 to:2030-10-14T10:00+09:00 person:alice state:focus team:research group:lab_group service:teams visibility:team
+[/] S "会議中" from:2030-10-14T09:30+09:00 person:bob state:meeting team:research group:lab_group service:teams visibility:team

@@ -48,6 +48,22 @@ class CiWorkflowResponsibilityTests(unittest.TestCase):
                 name,
             )
 
+    def test_new_product_modules_are_passed_to_pr_coverage_classifier(self):
+        classify = self.jobs["classify-changes"]["steps"][-1]["run"]
+        self.assertIn(": > added-paths.txt", classify)
+        self.assertIn(
+            'git diff --diff-filter=A --name-only "$BASE_SHA" "$HEAD_SHA" > added-paths.txt',
+            classify,
+        )
+        self.assertIn(
+            "python scripts/classify_ci_paths.py changed-paths.txt "
+            "--added-paths-file added-paths.txt --github-output",
+            classify,
+        )
+        self.assertIn(
+            "outputs['run-coverage']", self.jobs["coverage-baseline"]["if"]
+        )
+
     def test_no_web_lane_installs_yaml_without_web_extras(self):
         job = self.jobs["no-web-extras"]
         install = next(

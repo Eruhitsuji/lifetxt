@@ -10408,6 +10408,59 @@ class LifeTxtUndoCliTests(unittest.TestCase):
             self.assertEqual(0, code, stderr)
             self.assertIn("No undo history", normalize_newlines(stdout))
 
+    def test_undo_dry_run_previews_without_mutating(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg = self._cfg(tmp)
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Task_one id:T001\n")
+            run_cli("--config", cfg, "done", life_file, "T001")
+            with open(life_file, encoding="utf-8") as fh:
+                content_after_done = fh.read()
+
+            stdout, stderr, code = run_cli(
+                "--config", cfg, "undo", life_file, "--dry-run"
+            )
+            self.assertEqual(0, code, stderr)
+            self.assertIn("[dry-run]", normalize_newlines(stdout))
+            self.assertIn("op=done", normalize_newlines(stdout))
+
+            # Neither the target file nor the undo stack were touched.
+            with open(life_file, encoding="utf-8") as fh:
+                self.assertEqual(content_after_done, fh.read())
+            list_stdout, _, _ = run_cli("--config", cfg, "undo", life_file, "--list")
+            self.assertIn("1 snapshot(s)", normalize_newlines(list_stdout))
+
+            # The real undo still works afterward (snapshot was not consumed).
+            stdout, stderr, code = run_cli("--config", cfg, "undo", life_file)
+            self.assertEqual(0, code, stderr)
+            self.assertIn("Restored", normalize_newlines(stdout))
+
+    def test_undo_dry_run_with_no_history_is_graceful(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg = self._cfg(tmp)
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Task_one\n")
+            stdout, stderr, code = run_cli(
+                "--config", cfg, "undo", life_file, "--dry-run"
+            )
+            self.assertEqual(0, code, stderr)
+            self.assertIn("No undo history", normalize_newlines(stdout))
+
+    def test_undo_list_and_dry_run_together_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg = self._cfg(tmp)
+            life_file = os.path.join(tmp, "life.txt")
+            with open(life_file, "w", encoding="utf-8") as f:
+                f.write("[ ] T Task_one id:T001\n")
+            run_cli("--config", cfg, "done", life_file, "T001")
+            stdout, stderr, code = run_cli(
+                "--config", cfg, "undo", life_file, "--list", "--dry-run"
+            )
+            self.assertNotEqual(0, code)
+            self.assertIn("either --list or --dry-run", stderr)
+
     def test_undo_quick_backup(self):
         with tempfile.TemporaryDirectory() as tmp:
             cfg = self._cfg(tmp)

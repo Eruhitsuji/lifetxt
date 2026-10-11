@@ -60,7 +60,6 @@ class CiPathRoutingTests(unittest.TestCase):
             compatibility_checks(["docs/en/web.md", "tests/test_quick_input.py"]),
         )
 
-
     def test_new_product_python_module_triggers_pr_coverage(self):
         # Regression: PR #1127 added modules but skipped coverage; main then failed.
         self.assertEqual(
@@ -120,11 +119,11 @@ class CiPathRoutingTests(unittest.TestCase):
             changed = Path(directory) / "changed-paths.txt"
             added = Path(directory) / "added-paths.txt"
             changed.write_text(
-                "lifetxt/resource_reference_resolution.py\\ntests/test_resource_reference_resolution.py\\n",
+                "lifetxt/resource_reference_resolution.py\ntests/test_resource_reference_resolution.py\n",
                 encoding="utf-8",
             )
             added.write_text(
-                "lifetxt/resource_reference_resolution.py\\n",
+                "lifetxt/resource_reference_resolution.py\n",
                 encoding="utf-8",
             )
             result = subprocess.run(
@@ -140,9 +139,8 @@ class CiPathRoutingTests(unittest.TestCase):
                 text=True,
                 check=True,
             )
-            self.assertIn("run-no-web=true\\n", result.stdout)
-            self.assertIn("run-coverage=true\\n", result.stdout)
-
+            self.assertIn("run-no-web=true\n", result.stdout)
+            self.assertIn("run-coverage=true\n", result.stdout)
 
 if __name__ == "__main__":
     unittest.main()

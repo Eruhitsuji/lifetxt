@@ -7706,10 +7706,12 @@ capabilities:
       - docs/ja/life_txt_format_spec.md
       - readme.md
       - examples/getting_started_life.txt
+      - examples/annotated_life.txt
     public_interfaces:
       - docs/en/getting-started.md
       - docs/ja/getting-started.md
       - examples/getting_started_life.txt
+      - examples/annotated_life.txt
     tests_or_evidence:
       - "python -m lifetxt check examples/getting_started_life.txt -> OK: 4 item(s)"
       - "every Level 1 example line (T/E/N types, [ ]/[x]/[N] statuses, due/on/from/to, | body continuation) combined into one fixture and checked with python -m lifetxt check --format json -> zero diagnostics"
@@ -7719,8 +7721,11 @@ capabilities:
       - python -m unittest tests.test_release_policy tests.test_surface_runtime.TuiDocumentationDriftTests -> Ran 13 tests, OK
       - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
       - git diff --check -> clean
+      - "python -m lifetxt check examples/annotated_life.txt -> OK: 8 item(s) (#1250)"
+      - "scripts/validate_release_docs.py --output .cache/release-doc-validation.json -> {\"errors\": 0, \"ok\": true} (#1250, after adding the annotated_life.txt cross-reference to both getting-started.md files)"
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/558
+      - https://github.com/Eruhitsuji/lifetxt/issues/1250
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/559
     reuse_policy: prefer_reuse_or_extension_before_new_implementation

@@ -604,6 +604,8 @@ want a client sandboxed to the local workspace with no network reach at all.
 
 ## 9. Without MCP
 
+For specific examples, use the [AI Reference Patterns index](./ai-patterns.md) and read only the relevant category.
+
 MCP is not required. An ordinary AI chat can help with text you copy and paste;
 if lifetxt is installed, the CLI also provides local validation and conversion.
 

@@ -20,7 +20,9 @@ When asked to convert, explain, or review lifetxt text, first read the official
 [Assistant Prompt Profile](./prompts/lifetxt-assistant.md). Consult the
 authoritative Format 1.0 specification ([English](./docs/en/life_txt_format_spec.md)
 / [Japanese](./docs/ja/life_txt_format_spec.md)) as needed; the profile guides
-semantic choices and does not replace the specification.
+semantic choices and does not replace the specification. Use the
+[AI Reference Patterns index](./docs/en/ai-patterns.md)
+([日本語](./docs/ja/ai-patterns.md)) for a specific example as needed.
 
 Return draft life.txt lines with explanations, questions, and uncertainty
 outside the record block. Follow the profile's rules for relative dates and

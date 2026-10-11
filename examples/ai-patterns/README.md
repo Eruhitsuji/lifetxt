@@ -67,3 +67,14 @@ document any retirement without recycling the ID. Additions beyond the agreed
 
 No external LLM calls, credentials, live user files, paid services, or network
 access are needed. External effectiveness observation is optional in #1164.
+
+## Published catalog
+
+[English index](../../docs/en/ai-patterns.md) / [Japanese index](../../docs/ja/ai-patterns.md).
+The final catalog contains 68 patterns and 92 independent fixture units, with nine
+fixed-range agenda checks. Tests and source comparison are separate from pending
+independent human review and main integration. See #1217/#1218 for tracked limits.
+
+Manifest source links use the same relative base as the corresponding language
+page in `docs/<lang>/ai-patterns/`; `docs` maps those pages explicitly. Specification
+section numbers refer to the linked authoritative Format document.

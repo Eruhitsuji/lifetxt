@@ -553,6 +553,8 @@ sandbox し、network への到達を一切許可したくない場合は、`--p
 
 ## 9. Without MCP
 
+必要な具体例は[公式記述パターンカタログ](./ai-patterns.md)から分類ごとに参照できます。全件の一括読込は不要です。
+
 MCP は必須ではありません。通常のAIチャットへテキストをコピー＆ペーストして
 支援を受けられます。lifetxtをinstall済みならCLIでlocal validationやconversionも行えます。
 

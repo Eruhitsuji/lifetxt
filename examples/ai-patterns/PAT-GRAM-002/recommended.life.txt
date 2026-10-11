@@ -1,0 +1,1 @@
+[N] N "\"life.txt\"を読む" note:"C:\\docs"

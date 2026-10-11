@@ -1,0 +1,4 @@
+#! timezone: Asia/Tokyo
+# 資料は相対パス参照で保持
+[N] N "資料メモ" file:../../../docs/en/life_txt_format_spec.md dir:../../../docs/en note:enc:XSK:QUJD
+[ ] E "取り込んだ予定" on:2030-10-14 source:ics uid:event-2030@example.com id:event-2030@example.com url:https://example.com/event

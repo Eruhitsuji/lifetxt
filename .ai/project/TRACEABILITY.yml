@@ -2,6 +2,18 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-offset-regression-python310-compatibility
+      capability_id: cap-recurrence-expansion
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1232
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1233
+      changed_files_or_scope:
+        - tests/test_offset_recurrence.py
+      tests_or_evidence:
+        - Python 3.10.22 before-fix nine tests failed with four errors
+        - Python 3.10.22 and 3.12.14 focused recurrence suites each passed 87 tests
+        - Main CI run 38124230297 job 114425145020
+      status: verified
+      notes: Test-only Standard XS recovery for incident 1231; independent stdlib strptime preserves fractional and offset assertions. Full main recovery CI and human review pending.
     - requirement_id: req-offset-recurrence-anchor-fidelity
       capability_id: cap-recurrence-expansion
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1226

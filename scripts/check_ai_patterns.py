@@ -10,6 +10,7 @@ import re
 import subprocess
 import sys
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor, wait
 from pathlib import Path
 from urllib.parse import unquote
 
@@ -26,6 +27,8 @@ GROUPS = {
     "PIT": 10,
 }
 KINDS = {"recommended", "A", "B", "C", "D"}
+MAX_WORKERS = 4
+DEFAULT_WORKERS = min(MAX_WORKERS, os.cpu_count() or 1)
 
 
 def inside(root: Path, name: str) -> Path:
@@ -115,8 +118,45 @@ def check_links(root: Path, doc: Path) -> list[str]:
     return errors
 
 
-def validate(root: Path = ROOT, allow_planned: bool = False) -> dict:
+def validate(
+    root: Path = ROOT, allow_planned: bool = False, workers: int = DEFAULT_WORKERS
+) -> dict:
+    """Check independent fixtures concurrently; assemble evidence in catalog order.
+
+    Each check still starts a fresh CLI with its original timeout/environment.
+    Agenda and version checks stay serial. Use workers=1 for a serial baseline.
+    """
+    if (
+        isinstance(workers, bool)
+        or not isinstance(workers, int)
+        or not 1 <= workers <= MAX_WORKERS
+    ):
+        raise ValueError(f"workers must be an integer from 1 to {MAX_WORKERS}")
     manifest = json.loads(inside(root, str(CATALOG)).read_text(encoding="utf-8"))
+    if workers == 1:
+        return _validate(root, allow_planned, manifest, {})
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        checks = {}
+        for entry_index, entry in enumerate(manifest["patterns"]):
+            if entry["state"] != "implemented":
+                continue
+            for variant_index, variant in enumerate(entry.get("variants", [])):
+                try:
+                    # Never send an escaping fixture path to a subprocess.
+                    path = inside(root, variant["path"])
+                    if not path.is_file():
+                        continue
+                except (KeyError, ValueError, OSError):
+                    continue
+                checks[entry_index, variant_index] = executor.submit(
+                    run_cli, root, ["check", variant["path"], "--format", "json"]
+                )
+        # Drain checks before serial agenda/version commands to honor the process cap.
+        wait(checks.values())
+        return _validate(root, allow_planned, manifest, checks)
+
+
+def _validate(root: Path, allow_planned: bool, manifest: dict, checks: dict) -> dict:
     errors, results, docs, planned = [], [], set(), []
     entries = manifest["patterns"]
     ids = [e["id"] for e in entries]
@@ -125,7 +165,7 @@ def validate(root: Path = ROOT, allow_planned: bool = False) -> dict:
     }
     if len(ids) != len(set(ids)) or set(ids) != expected_ids:
         errors.append("manifest IDs must uniquely cover the approved 68 slots")
-    for entry in entries:
+    for entry_index, entry in enumerate(entries):
         pid = entry["id"]
         if entry["state"] == "planned":
             planned.append(pid)
@@ -152,7 +192,7 @@ def validate(root: Path = ROOT, allow_planned: bool = False) -> dict:
             errors.append(
                 f"{pid}: unique variants and one recommended fixture required"
             )
-        for variant in variants:
+        for variant_index, variant in enumerate(variants):
             marker = f"{pid}/{variant['name']}"
             try:
                 path = inside(root, variant["path"])
@@ -170,7 +210,17 @@ def validate(root: Path = ROOT, allow_planned: bool = False) -> dict:
                         errors.append(
                             f"{marker}: {lang} differs from canonical fixture"
                         )
-                result = run_cli(root, ["check", variant["path"], "--format", "json"])
+                future = checks.get((entry_index, variant_index))
+                if future is None:
+                    result = run_cli(
+                        root, ["check", variant["path"], "--format", "json"]
+                    )
+                else:
+                    try:
+                        result = future.result()
+                    except Exception as exc:
+                        # Associate worker failures with their fixture and keep checking.
+                        raise subprocess.SubprocessError(str(exc)) from exc
                 diagnostics = json.loads(result["stdout"])
                 actual = {"exit": result["exit"], "diagnostics": diagnostics}
                 actual_codes = [
@@ -263,8 +313,15 @@ def main() -> int:
         type=Path,
         help="Optional local JSON evidence (not a fixture update).",
     )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        choices=range(1, MAX_WORKERS + 1),
+        default=DEFAULT_WORKERS,
+        help="Maximum independent CLI checks (1 = serial; default: %(default)s).",
+    )
     args = parser.parse_args()
-    report = validate(allow_planned=args.allow_planned)
+    report = validate(allow_planned=args.allow_planned, workers=args.workers)
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(

@@ -20,7 +20,9 @@ from scripts.check_ai_patterns import (
 class PatternCatalogTests(unittest.TestCase):
     def test_existing_profile_examples_with_real_core(self):
         samples = json.loads(
-            (ROOT / "examples/lifetxt_ai_prompt_conformance.json").read_text()
+            (ROOT / "examples/lifetxt_ai_prompt_conformance.json").read_text(
+                encoding="utf-8"
+            )
         )
         for sample in samples:
             with self.subTest(sample=sample["id"]):
@@ -61,7 +63,9 @@ class PatternCatalogTests(unittest.TestCase):
             self.assertEqual(2, len(check_links(root, doc)))
 
     def test_missing_and_duplicate_slots_are_rejected(self):
-        manifest = json.loads((ROOT / "examples/ai-patterns/manifest.json").read_text())
+        manifest = json.loads(
+            (ROOT / "examples/ai-patterns/manifest.json").read_text(encoding="utf-8")
+        )
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             path = root / "examples/ai-patterns/manifest.json"
@@ -72,7 +76,9 @@ class PatternCatalogTests(unittest.TestCase):
             self.assertTrue(any("uniquely cover" in e for e in report["errors"]))
 
     def test_stale_copy_and_unexpected_diagnostics_fail_the_gate(self):
-        manifest = json.loads((ROOT / "examples/ai-patterns/manifest.json").read_text())
+        manifest = json.loads(
+            (ROOT / "examples/ai-patterns/manifest.json").read_text(encoding="utf-8")
+        )
         # Isolate one implemented slot regardless of the catalog's current stage.
         for entry in manifest["patterns"]:
             entry.update(state="planned", validation="not run")

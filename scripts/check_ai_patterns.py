@@ -36,13 +36,21 @@ def inside(root: Path, name: str) -> Path:
 
 
 def run_cli(root: Path, args: list[str]) -> dict:
-    env = dict(os.environ, TZ="UTC", PYTHONHASHSEED="0")
+    env = {k: v for k, v in os.environ.items() if not k.startswith("LIFETXT_")}
+    env.update(
+        TZ="UTC",
+        PYTHONHASHSEED="0",
+        PYTHONIOENCODING="utf-8",
+        LIFETXT_TIMEZONE="UTC",
+        LIFETXT_CONFIG=str(ROOT / "examples/ai-patterns/validation.config.json"),
+    )
     result = subprocess.run(
         [sys.executable, "-m", "lifetxt", *args],
         cwd=root,
         env=env,
         capture_output=True,
         text=True,
+        encoding="utf-8",
         timeout=30,
         check=False,
     )

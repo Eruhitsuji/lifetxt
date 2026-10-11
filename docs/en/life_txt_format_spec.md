@@ -563,16 +563,28 @@ subset. Accepted vocabulary does not guarantee every combination is meaningful.
 | `FREQ` | `DAILY`, `WEEKLY`, `MONTHLY`, `YEARLY` |
 | `INTERVAL`, `COUNT`, `UNTIL` | Positive interval/count; count starts at the series anchor; inclusive end |
 | `BYDAY` | Plain weekdays for all four frequencies; ordinal forms such as `2MO` and `-1FR` for monthly/yearly, evaluated within each selected month |
-| `BYMONTHDAY` | Month days `1`–`31` and negative days `-1`–`-31` (`-1` means the last day); ignored for weekly rules |
+| `BYMONTHDAY` | Month days `1`–`31` and negative days `-1`–`-31` (`-1` means the last day); not allowed for weekly rules |
 | `BYMONTH` | Selected months `1`–`12` |
 | `WKST` | Week start, default `MO`; affects weekly `BYDAY` order and interval grouping |
 
-`UNTIL` accepts life.txt date/datetime or iCalendar basic forms such as
-`20260630` and `20260630T090000`. Daily/weekly ordinal `BYDAY` ignores the
-position and emits `W223`. Monthly/yearly `BYDAY` and `BYMONTHDAY` select a
-**union**, rather than an RFC-style intersection. If their selected day set is
-empty, the current engine falls back to the anchor day, clamped for short
-months. These are implementation limitations, not a claim of RFC compliance.
+`UNTIL` accepts life.txt date/datetime and iCalendar basic forms such as
+`20260630`, `20260630T090000Z`, and `20260630T180000+0900`. Date-only
+ends include the entire day (including fractional seconds), for both sibling
+`until:` and RRULE `UNTIL`. Explicit offsets are retained and compared as
+instants; naive boundaries use the resolved timezone when compared with offsets.
+Daily/weekly ordinal `BYDAY` and weekly `BYMONTHDAY` are rejected by the shared
+parser rather than silently ignored.
+
+Monthly/yearly `BYDAY` and `BYMONTHDAY` use an **intersection** when both are
+present. An explicit filter with no matching day produces no occurrence; only
+an unfiltered monthly/yearly rule inherits the anchor day, clamped for short
+months. This is a supported subset, not a claim of full RFC compliance.
+
+Compatibility: `MONTHLY;BYMONTHDAY=31;BYDAY=2MO` previously selected both the
+31st and second Monday; now it produces no occurrences. `BYDAY=6MO` no longer
+falls back to the anchor. A date-only sibling `until:` now includes occurrences
+later on its final day. Recheck existing series with `lifetxt rrule` / `agenda`
+before relying on generated dates. No saved life.txt records are rewritten.
 
 Unsupported keys (for example `BYSETPOS` or `BYHOUR`) are retained as text and
 warned about with `W223`; the supported portion may still expand. For example,

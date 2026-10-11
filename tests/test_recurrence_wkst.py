@@ -119,9 +119,8 @@ class DescriptionAccuracyTests(unittest.TestCase):
     def test_weekly_does_not_claim_a_position_it_ignores(self):
         # Weekly expansion drops the number, so describing "2nd Monday" while
         # returning every Monday was a lie about what would happen.
-        self.assertEqual(
-            "Every week on Monday", recurrence.describe("RRULE:FREQ=WEEKLY;BYDAY=2MO")
-        )
+        with self.assertRaises(recurrence.RecurrenceError):
+            recurrence.describe("RRULE:FREQ=WEEKLY;BYDAY=2MO")
 
     def test_monthly_still_names_the_position(self):
         self.assertEqual(

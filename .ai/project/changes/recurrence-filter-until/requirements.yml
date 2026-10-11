@@ -1,0 +1,14 @@
+schema_version: 1
+requirements:
+  - id: req-recurrence-filter-until-consistency
+    kind: FIXED
+    owner: Eruhitsuji
+    statement: Generated dates must satisfy explicit filters and inclusive UNTIL boundaries.
+    acceptance_criteria:
+      - Monthly/yearly BYDAY and BYMONTHDAY intersect; explicit empty sets yield zero.
+      - Only unfiltered short-month anchors clamp; negative and ordinal filters remain supported.
+      - Weekly BYMONTHDAY and daily/weekly positional BYDAY are rejected instead of ignored.
+      - Sibling and RRULE date-only UNTIL include fractional day end; explicit offsets retain instant meaning.
+      - COUNT/window bounds, completion comparisons and authored offsets are preserved.
+      - Empty monthly/yearly periods stop at window/end/year ceilings rather than overflow.
+      - No user-data rewrite; bilingual compatibility notes describe changed generated dates.

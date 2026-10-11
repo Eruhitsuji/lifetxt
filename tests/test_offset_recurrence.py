@@ -119,6 +119,49 @@ class OffsetRecurrenceTests(unittest.TestCase):
             ["2030-10-14T07:00", "2030-10-15T07:00"], [m["start"] for m in result]
         )
 
+    def test_cli_nonrecurring_primary_and_sort_are_host_independent(self):
+        root = str(Path(__file__).resolve().parents[1])
+        with tempfile.TemporaryDirectory() as temp:
+            p = Path(temp)
+            (p / "config.json").write_text(
+                '{"defaults":{"timezone":"UTC"}}', encoding="utf-8"
+            )
+            (p / "life.txt").write_text(
+                "[ ] E Split on:2030-10-14 at:07:00+09:00\n"
+                "[ ] E Middle at:2030-10-13T23:00\n",
+                encoding="utf-8",
+            )
+            rows = []
+            for host in ("UTC", "Asia/Tokyo", "America/New_York"):
+                env = dict(os.environ, TZ=host, LIFETXT_TIMEZONE="UTC", PYTHONPATH=root)
+                result = subprocess.run(
+                    [
+                        sys.executable,
+                        "-m",
+                        "lifetxt",
+                        "--config",
+                        str(p / "config.json"),
+                        "agenda",
+                        str(p / "life.txt"),
+                        "--from",
+                        "2030-10-13",
+                        "--to",
+                        "2030-10-15",
+                        "--format",
+                        "json",
+                    ],
+                    cwd=temp,
+                    env=env,
+                    capture_output=True,
+                    text=True,
+                )
+                self.assertEqual(0, result.returncode, result.stderr)
+                rows.append(json.loads(result.stdout))
+            self.assertEqual(rows[0], rows[1])
+            self.assertEqual(rows[0], rows[2])
+            self.assertEqual(["Split", "Middle"], [r["title"] for r in rows[0]])
+            self.assertEqual("2030-10-14T07:00+09:00", rows[0][0]["occurrence_start"])
+
     def test_cli_hosts_and_seasons_are_equivalent(self):
         root = str(Path(__file__).resolve().parents[1])
         with tempfile.TemporaryDirectory() as temp:

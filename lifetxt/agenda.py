@@ -13,7 +13,10 @@ from .model import (
     normalize_type,
 )
 from .serializer import item_to_line
-from .timezone_policy import local_now_naive
+from .timezone_policy import (
+    local_now_naive,
+    comparison_datetime as policy_comparison_datetime,
+)
 from .timeutil import (
     parse_date,
     parse_date_or_datetime,
@@ -1316,12 +1319,19 @@ def _range_dates(range_start, range_end, at_time):
 
 
 def _match_sort_key(match):
-    return (_parse_datetime_value(match["start"]) or datetime.max, match["key"])
+    return (
+        policy_comparison_datetime(
+            _parse_datetime_value(match["start"]) or datetime.max
+        ),
+        match["key"],
+    )
 
 
 def _record_sort_key(record):
     primary = record["matches"][0]
-    start = _parse_datetime_value(primary["start"]) or datetime.max
+    start = policy_comparison_datetime(
+        _parse_datetime_value(primary["start"]) or datetime.max
+    )
     return (start, record.get("line", 0), record["type"], record["title"])
 
 

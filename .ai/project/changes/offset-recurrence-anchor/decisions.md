@@ -22,3 +22,10 @@ work and PR linkage. No independently authored runtime changes were discarded.
 
 Implementer self-review is not independent approval. Human implementation and
 integration review must inspect the final PR head before merge.
+
+Final self-review also corrected agenda match/record sorting to use configured-zone
+comparison copies, so a split nonrecurring event's primary match is stable across
+UTC/Tokyo/New York hosts. Its subprocess regression passes. The selected consumer
+suite exposed an existing lazy-bootstrap test snapshot order dependency; unchanged
+baseline has the same 12 failures, explicit bootstrap passes. Follow-up #1230 owns
+that investigation; no authorization or global bootstrap code changed here.

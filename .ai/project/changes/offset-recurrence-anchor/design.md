@@ -26,3 +26,8 @@ Existing consumer suites supply integration coverage, not physical-device QA.
 The first full suite found two AI catalog output changes. The current expected
 agenda outputs are remeasured while agenda_history preserves the source evidence.
 The fixtures and historical check provenance are not altered.
+
+Projection sorting uses existing timezone_policy comparison copies in the resolved
+zone, while serialized primary matches retain their original offsets. Sorting
+changes were verified with 170 focused tests and 569 selected consumer tests after
+the previously successful full-suite run. Independent human review is pending.

@@ -600,44 +600,545 @@
     {
       "id": "PAT-STATUS-001",
       "topic": "未完了",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "資料を準備する。まだ着手していない。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "[ ]は未完了で、着手日時を推測しない。",
+        "en": "[ ] means unfinished; no start time is inferred."
+      },
+      "spec": [
+        "§2, §7.5, §10, §14"
+      ],
+      "sources": [
+        "../../../examples/tasks_life.txt",
+        "../../../examples/events_life.txt",
+        "../../../examples/messages_life.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "Not every open task needs a deadline."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/statuses.md",
+        "en": "docs/en/ai-patterns/statuses.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-STATUS-001/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "c8dd1c136002dce33056397b74e5bfaa45519cd3453c9b1d5db65069321e97ed",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-STATUS-001/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          }
+        }
+      ]
     },
     {
       "id": "PAT-STATUS-002",
       "topic": "進行中とprogress/elapsed",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "資料を作成中。進捗3/10、実作業時間は25分。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "[/]と数量的progressは別情報。elapsedには実績時間を記録する。",
+        "en": "Workflow status, quantitative progress, and actual elapsed time are separate facts."
+      },
+      "spec": [
+        "§2, §7.5, §10, §14"
+      ],
+      "sources": [
+        "../../../examples/tasks_life.txt",
+        "../../../examples/events_life.txt",
+        "../../../examples/messages_life.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "100% does not automatically complete the item; authoritative history belongs to the progress feature."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/statuses.md",
+        "en": "docs/en/ai-patterns/statuses.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-STATUS-002/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "932215bd43eea1c0624ff851182f4e04c331d399967d6edcd3947f10acf4b98c",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-STATUS-002/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          }
+        }
+      ]
     },
     {
       "id": "PAT-STATUS-003",
       "topic": "完了と既知または不明のdone",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "机の片付けは完了した。完了日は覚えていない。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "完了状態だけを保持する。doneが不明なためW103を意図して残す。",
+        "en": "Preserve completion without inventing done; W103 is intentional when the completion date is unknown."
+      },
+      "spec": [
+        "§2, §7.5, §10, §14"
+      ],
+      "sources": [
+        "../../../examples/tasks_life.txt",
+        "../../../examples/events_life.txt",
+        "../../../examples/messages_life.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "Do not fabricate today's date to silence the warning."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/statuses.md",
+        "en": "docs/en/ai-patterns/statuses.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-STATUS-003/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": [
+              [
+                "warning",
+                "W103",
+                1
+              ]
+            ]
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "eaf7290442f8a627e0ae0829c7dd4811337ff31d765ede2746e7847cf1e1f924",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-STATUS-003/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": [
+                {
+                  "severity": "warning",
+                  "code": "W103",
+                  "category": "workflow",
+                  "message": "Completed items should usually include done:DATE.",
+                  "source": "examples/ai-patterns/PAT-STATUS-003/recommended.life.txt",
+                  "line": 1,
+                  "hint": "Add done:YYYY-MM-DD when the completion date is known."
+                }
+              ]
+            }
+          }
+        }
+      ]
     },
     {
       "id": "PAT-STATUS-004",
       "topic": "キャンセルとreason",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "夕食会をキャンセルした。理由は参加者不足。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "[-]と与えられた理由を保持し、開催日を推測しない。",
+        "en": "Retain canceled status and the supplied reason without guessing an event date."
+      },
+      "spec": [
+        "§2, §7.5, §10, §14"
+      ],
+      "sources": [
+        "../../../examples/tasks_life.txt",
+        "../../../examples/events_life.txt",
+        "../../../examples/messages_life.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "Cancellation is not evidence of successful execution."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/statuses.md",
+        "en": "docs/en/ai-patterns/statuses.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-STATUS-004/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "2738e37fc2afe29fd9b1829802043a1d5f6d2765619ea15364d7360173382532",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-STATUS-004/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          }
+        }
+      ]
     },
     {
       "id": "PAT-STATUS-005",
       "topic": "移動日時moved_toと置換IDの区別",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "図書返却を2030年10月22日に延期。理由は出張。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "延期先の日時にはmoved_toを使う。置換item IDはreplaced_byで別に表す。",
+        "en": "moved_to stores the new date; replaced_by is the separate item-ID replacement relation."
+      },
+      "spec": [
+        "§2, §7.5, §10, §14"
+      ],
+      "sources": [
+        "../../../examples/tasks_life.txt",
+        "../../../examples/events_life.txt",
+        "../../../examples/messages_life.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "Do not put an item ID into moved_to."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/statuses.md",
+        "en": "docs/en/ai-patterns/statuses.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-STATUS-005/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "1aa82b9f208bd01baaa2b08d5140f28054e2dcd7a92e447173b861a2b6f62954",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-STATUS-005/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          }
+        },
+        {
+          "name": "counterexample",
+          "path": "examples/ai-patterns/PAT-STATUS-005/counterexample.life.txt",
+          "classification": "B",
+          "expected": {
+            "exit": 0,
+            "diagnostics": [
+              [
+                "warning",
+                "W203",
+                1
+              ]
+            ]
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "ac49daea6dc21131f3c313a0784cbadf5d1a8e3fa11ad9119852423dc9c9074c",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-STATUS-005/counterexample.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": [
+                {
+                  "severity": "warning",
+                  "code": "W203",
+                  "category": "time",
+                  "message": "moved_to: should use YYYY-MM-DD or YYYY-MM-DDTHH:MM, optionally with :SS, fractional seconds, and timezone.",
+                  "source": "examples/ai-patterns/PAT-STATUS-005/counterexample.life.txt",
+                  "line": 1,
+                  "hint": "Rewrite the value as YYYY-MM-DD or YYYY-MM-DDTHH:MM."
+                }
+              ]
+            }
+          }
+        }
+      ]
     },
     {
       "id": "PAT-STATUS-006",
       "topic": "保留・未確定",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "顧客との会議は未確定。返答待ち。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "[?]で未確定のまま記録する。日時未指定なら省略する。",
+        "en": "[?] preserves uncertainty; omit a date that was not supplied."
+      },
+      "spec": [
+        "§2, §7.5, §10, §14"
+      ],
+      "sources": [
+        "../../../examples/tasks_life.txt",
+        "../../../examples/events_life.txt",
+        "../../../examples/messages_life.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "Uncertainty is not permission to invent candidate dates."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/statuses.md",
+        "en": "docs/en/ai-patterns/statuses.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-STATUS-006/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "e6a85cb68e6cf28b780331be3c8dd2952beb35cf96e7124a4bbc17e92529496d",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-STATUS-006/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          }
+        }
+      ]
     },
     {
       "id": "PAT-STATUS-007",
       "topic": "Note/Journal専用の[N]",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "設計のメモを残す。Noteを完了Taskとは扱わない。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "N/Jの状態は[N]。一般Taskの完了とは異なる。",
+        "en": "N and J use [N], not a task completion state."
+      },
+      "spec": [
+        "§2, §7.5, §10, §14"
+      ],
+      "sources": [
+        "../../../examples/tasks_life.txt",
+        "../../../examples/events_life.txt",
+        "../../../examples/messages_life.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "[N] T is diagnosed as an incompatible type/status combination."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/statuses.md",
+        "en": "docs/en/ai-patterns/statuses.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-STATUS-007/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "60cb214468ae9466ddbcdad5bbb9aab7e270ee810aafbb9075f5fb38d91f4e26",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-STATUS-007/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          }
+        },
+        {
+          "name": "counterexample",
+          "path": "examples/ai-patterns/PAT-STATUS-007/counterexample.life.txt",
+          "classification": "B",
+          "expected": {
+            "exit": 0,
+            "diagnostics": [
+              [
+                "warning",
+                "W101",
+                1
+              ]
+            ]
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "5fced7e52fa3097df25724301f9c67b8dcaf97b959cdac731b36af4903698600",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-STATUS-007/counterexample.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": [
+                {
+                  "severity": "warning",
+                  "code": "W101",
+                  "category": "workflow",
+                  "message": "The [N] status is recommended only with note type N or journal type J.",
+                  "source": "examples/ai-patterns/PAT-STATUS-007/counterexample.life.txt",
+                  "line": 1,
+                  "hint": "Use type N or J with [N], or choose a workflow status for this item type."
+                }
+              ]
+            }
+          }
+        }
+      ]
     },
     {
       "id": "PAT-TIME-001",

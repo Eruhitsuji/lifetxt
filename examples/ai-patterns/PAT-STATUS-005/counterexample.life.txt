@@ -1,0 +1,1 @@
+[>] T "図書を返却する" moved_to:return_new

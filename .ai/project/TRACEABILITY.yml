@@ -17500,6 +17500,28 @@ traceability:
       release_or_deployment: null
       status: verified
 
+    - requirement_id: req-undo-dry-run-preview
+      capability_id: cap-undo-snapshot-restore
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1253
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1254
+      changed_files_or_scope:
+        - Add --dry-run to lifetxt undo, previewing which snapshot would be restored without writing to the target file or consuming the snapshot; reject --list+--dry-run together
+        - lifetxt/cli.py
+        - tests/test_lifetxt.py
+      tests_or_evidence:
+        - "tests/test_lifetxt.py LifeTxtUndoCliTests: dry-run preview leaves the target file and undo stack untouched, and a real undo still works afterward (snapshot not consumed); dry-run with no history reports the existing graceful message; --list+--dry-run together is rejected with a named error"
+        - "confirmed via git stash that test_undo_restores_previous_content's failure is a pre-existing, unrelated flake reproducible on main without this change"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff check lifetxt/cli.py tests/test_lifetxt.py -> clean
+      release_or_deployment: null
+      notes: >-
+        Self-scoped XS-sized CLI addition (below the .ai/project/changes/README.md
+        change-package threshold: Standard assurance). Reuses the existing
+        snapshot-directory resolution and the same timestamp/operation parsing
+        --list already uses, rather than a second implementation.
+      status: implemented
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

@@ -1,0 +1,1 @@
+[ ] H "測定する" on:2030-10-14 repeat:daily count:3 until:2030-10-16

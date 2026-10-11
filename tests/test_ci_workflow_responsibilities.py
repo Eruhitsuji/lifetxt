@@ -93,6 +93,7 @@ class CiWorkflowResponsibilityTests(unittest.TestCase):
                 "no-web-extras",
                 "coverage-baseline",
                 "main-health",
+                "python310-focused",
             },
             set(gate["needs"]),
         )
@@ -102,6 +103,22 @@ class CiWorkflowResponsibilityTests(unittest.TestCase):
             "Optional dependency compatibility",
             self.jobs["optional-dependency-compatibility"]["name"],
         )
+
+    def test_python310_datetime_check_is_pr_only_and_core_only(self):
+        job = self.jobs["python310-focused"]
+        self.assertEqual(
+            "${{ github.event_name == 'pull_request' && needs['classify-changes'].outputs['run-python310-focused'] == 'true' }}",
+            job["if"],
+        )
+        self.assertEqual(["classify-changes"], job["needs"])
+        self.assertEqual("3.10", job["steps"][1]["with"]["python-version"])
+        self.assertEqual("python -m pip install -e .", job["steps"][2]["run"])
+        self.assertIn("tests.test_offset_recurrence", job["steps"][3]["run"])
+        self.assertIn("set -o pipefail", job["steps"][3]["run"])
+        self.assertNotIn("python310-focused", self.jobs["main-gate"]["needs"])
+        env = self.jobs["pr-gate"]["steps"][0]["env"]
+        self.assertIn("run-python310-focused", env["PYTHON310_SELECTED"])
+        self.assertIn("python310-focused", env["PYTHON310_RESULT"])
 
     def test_main_gate_aggregates_all_compatibility_responsibilities(self):
         gate = self.jobs["main-gate"]

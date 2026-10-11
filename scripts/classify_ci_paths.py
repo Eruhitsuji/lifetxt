@@ -65,6 +65,26 @@ def compatibility_checks(paths, added_paths=()):
     return no_web, coverage
 
 
+def python310_focused(paths):
+    """Select the known datetime compatibility regression, not a full matrix."""
+    normalized = [path.strip().removeprefix("./") for path in paths if path.strip()]
+    targets = {
+        "lifetxt/agenda.py",
+        "lifetxt/recurrence.py",
+        "lifetxt/timeutil.py",
+        "lifetxt/timezone_policy.py",
+        "tests/test_offset_recurrence.py",
+        "scripts/classify_ci_paths.py",
+        ".github/workflows/ci.yml",
+        "pyproject.toml",
+        "setup.cfg",
+        "setup.py",
+    }
+    return not normalized or any(
+        path in targets or path.startswith("requirements") for path in normalized
+    )
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("paths_file")
@@ -83,6 +103,7 @@ def main():
     output += (
         f"run-no-web={str(no_web).lower()}\nrun-coverage={str(coverage).lower()}\n"
     )
+    output += f"run-python310-focused={str(python310_focused(paths)).lower()}\n"
     if args.github_output:
         with open(args.github_output, "a", encoding="utf-8") as handle:
             handle.write(output)

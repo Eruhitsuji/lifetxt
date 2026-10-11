@@ -1896,50 +1896,788 @@
     {
       "id": "PAT-GRAM-001",
       "topic": "bare/quoted titleとkey:value",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "スペースを含む『Write Report』というTask。場所はRoom A、日付2030年10月14日に実施。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "スペースを含むtitle/valueを引用し、ファイルではkey:valueを使う。bare titleは空白なしの場合に使える。",
+        "en": "Quote titles and values with spaces and use key:value in files; bare titles are allowed without spaces."
+      },
+      "spec": [
+        "§1.1, §4–7, §11–12, §15–16"
+      ],
+      "sources": [
+        "../../../examples/json_roundtrip_life.txt",
+        "../../../examples/markdown_life.txt",
+        "../../../examples/attachments_life.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "Do not confuse CLI helper key=value input with file syntax."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/grammar.md",
+        "en": "docs/en/ai-patterns/grammar.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-GRAM-001/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "7e12b43507213392dedfbbe48b4b64d45a2118e3702c641c7ed86d484cfc3f0e",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-GRAM-001/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          }
+        },
+        {
+          "name": "counterexample",
+          "path": "examples/ai-patterns/PAT-GRAM-001/counterexample.life.txt",
+          "classification": "A",
+          "expected": {
+            "exit": 1,
+            "diagnostics": [
+              [
+                "error",
+                "E010",
+                1
+              ]
+            ]
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "ce1710e20026766e8c7837739cc829fd47eff9681acce7dc0f533318dd563f0c",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-GRAM-001/counterexample.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 1,
+              "diagnostics": [
+                {
+                  "severity": "error",
+                  "code": "E010",
+                  "category": "syntax",
+                  "message": "Expected detail in key:value form.",
+                  "source": "examples/ai-patterns/PAT-GRAM-001/counterexample.life.txt",
+                  "line": 1,
+                  "column": 22,
+                  "hint": "Write details as key:value with no space around the colon."
+                }
+              ]
+            }
+          }
+        }
+      ]
     },
     {
       "id": "PAT-GRAM-002",
       "topic": "引用符・backslashのescape",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "メモのtitleは『\"life.txt\"を読む』、noteは文字列『C:\\docs』。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "引用文字列内でdouble quoteとbackslashをescapeする。",
+        "en": "Escape double quotes and backslashes inside quoted strings."
+      },
+      "spec": [
+        "§1.1, §4–7, §11–12, §15–16"
+      ],
+      "sources": [
+        "../../../examples/json_roundtrip_life.txt",
+        "../../../examples/markdown_life.txt",
+        "../../../examples/attachments_life.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "JSON escaping and life.txt escaping are separate layers."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/grammar.md",
+        "en": "docs/en/ai-patterns/grammar.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-GRAM-002/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "06e83ea302d6179e0b1273cf63909513aa2e270543988717a4c383148e04e60e",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-GRAM-002/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          }
+        }
+      ]
     },
     {
       "id": "PAT-GRAM-003",
       "topic": "反復keyと人物役割・tag",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "資料Taskの責任者alice、担当bob、tagは重要と研究。会議参加者はaliceとbob。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "反復keyで複数値を表し、人物の役割はowner/assignee/attendeeで区別する。",
+        "en": "Repeat keys for multiple values and distinguish accountable owner, assignee, and attendees."
+      },
+      "spec": [
+        "§1.1, §4–7, §11–12, §15–16"
+      ],
+      "sources": [
+        "../../../examples/json_roundtrip_life.txt",
+        "../../../examples/markdown_life.txt",
+        "../../../examples/attachments_life.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "A comma-joined string is not automatically two structured people."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/grammar.md",
+        "en": "docs/en/ai-patterns/grammar.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-GRAM-003/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "8f0af862a3ec0741d37bae4bc19128734045019ebb41510925c3c13260d98adb",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-GRAM-003/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          }
+        }
+      ]
     },
     {
       "id": "PAT-GRAM-004",
       "topic": "custom keyの保持と意味の限界",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "候補日は2030年10月20日。candidate_onというユーザー指定custom keyで保存したい。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "custom keyを保持する。W106は意図した診断で、公式候補日機能を示さない。",
+        "en": "Preserve the requested custom key; intentional W106 does not confer standard candidate-date semantics."
+      },
+      "spec": [
+        "§1.1, §4–7, §11–12, §15–16"
+      ],
+      "sources": [
+        "../../../examples/json_roundtrip_life.txt",
+        "../../../examples/markdown_life.txt",
+        "../../../examples/attachments_life.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "Do not promise standard temporal search or scheduling support for this key."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/grammar.md",
+        "en": "docs/en/ai-patterns/grammar.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-GRAM-004/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": [
+              [
+                "warning",
+                "W106",
+                1
+              ]
+            ]
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "3d1f60a7abde797c31c61d0a420bd46dc0534d034f0b18a2920d47a8d68f1d01",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-GRAM-004/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": [
+                {
+                  "severity": "warning",
+                  "code": "W106",
+                  "category": "style",
+                  "message": "Detail key 'candidate_on' is custom for type E; it will be preserved.",
+                  "source": "examples/ai-patterns/PAT-GRAM-004/recommended.life.txt",
+                  "line": 1,
+                  "hint": "Keep the custom key if intentional, or rename it to a documented key for this item type."
+                }
+              ]
+            }
+          }
+        }
+      ]
     },
     {
       "id": "PAT-GRAM-005",
       "topic": "物理行backslash継続と不正境界",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "長いTask行を物理行2行で記述する。2030年10月20日締切。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "末尾backslashは次の物理行を結合し、継続行の先頭空白を除く。",
+        "en": "A trailing backslash joins physical lines and strips leading spaces on the continued line."
+      },
+      "spec": [
+        "§1.1, §4–7, §11–12, §15–16"
+      ],
+      "sources": [
+        "../../../examples/json_roundtrip_life.txt",
+        "../../../examples/markdown_life.txt",
+        "../../../examples/attachments_life.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "A bare trailing backslash at EOF is invalid; do not join into a | body line."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/grammar.md",
+        "en": "docs/en/ai-patterns/grammar.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-GRAM-005/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "6381d4b4a6f134a7738257273ae49b04ac4066e9af82b8777d4afc5f2d83917e",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-GRAM-005/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          }
+        },
+        {
+          "name": "counterexample",
+          "path": "examples/ai-patterns/PAT-GRAM-005/counterexample.life.txt",
+          "classification": "A",
+          "expected": {
+            "exit": 1,
+            "diagnostics": [
+              [
+                "error",
+                "E020",
+                1
+              ],
+              [
+                "warning",
+                "W003",
+                1
+              ]
+            ]
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "92cc63f07c003d7f646c5f16792a03b5e8645b10fc6efc812e4a479364bbacc2",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-GRAM-005/counterexample.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 1,
+              "diagnostics": [
+                {
+                  "severity": "error",
+                  "code": "E020",
+                  "category": "syntax",
+                  "message": "Line continuation backslash must be followed by another line.",
+                  "source": "examples/ai-patterns/PAT-GRAM-005/counterexample.life.txt",
+                  "line": 1,
+                  "column": 17,
+                  "span": {
+                    "start": {
+                      "line": 1,
+                      "column": 17
+                    },
+                    "end": {
+                      "line": 1,
+                      "column": 18
+                    }
+                  },
+                  "hint": "Add the continued line after the trailing backslash, or remove the backslash."
+                },
+                {
+                  "severity": "warning",
+                  "code": "W003",
+                  "category": "semantic",
+                  "message": "Trailing spaces are not part of the life.txt grammar.",
+                  "source": "examples/ai-patterns/PAT-GRAM-005/counterexample.life.txt",
+                  "line": 1,
+                  "column": 16,
+                  "hint": "Remove the trailing spaces after the final detail."
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "joined-body",
+          "path": "examples/ai-patterns/PAT-GRAM-005/joined-body.life.txt",
+          "classification": "A",
+          "expected": {
+            "exit": 1,
+            "diagnostics": [
+              [
+                "error",
+                "E021",
+                2
+              ],
+              [
+                "error",
+                "E010",
+                1
+              ],
+              [
+                "error",
+                "E010",
+                1
+              ],
+              [
+                "error",
+                "E010",
+                1
+              ]
+            ]
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "77404ff2bc264989d47ce2ca4d65f6d431694f928db94f96a1752f42b419c50b",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-GRAM-005/joined-body.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 1,
+              "diagnostics": [
+                {
+                  "severity": "error",
+                  "code": "E021",
+                  "category": "syntax",
+                  "message": "Line continuation cannot continue into a body continuation line.",
+                  "source": "examples/ai-patterns/PAT-GRAM-005/joined-body.life.txt",
+                  "line": 2,
+                  "column": 1,
+                  "span": {
+                    "start": {
+                      "line": 2,
+                      "column": 1
+                    },
+                    "end": {
+                      "line": 2,
+                      "column": 14
+                    }
+                  },
+                  "hint": "Continue into a normal item line instead of a body continuation line."
+                },
+                {
+                  "severity": "error",
+                  "code": "E010",
+                  "category": "syntax",
+                  "message": "Expected detail in key:value form.",
+                  "source": "examples/ai-patterns/PAT-GRAM-005/joined-body.life.txt",
+                  "line": 1,
+                  "column": 14,
+                  "hint": "Write details as key:value with no space around the colon."
+                },
+                {
+                  "severity": "error",
+                  "code": "E010",
+                  "category": "syntax",
+                  "message": "Expected detail in key:value form.",
+                  "source": "examples/ai-patterns/PAT-GRAM-005/joined-body.life.txt",
+                  "line": 1,
+                  "column": 16,
+                  "hint": "Write details as key:value with no space around the colon."
+                },
+                {
+                  "severity": "error",
+                  "code": "E010",
+                  "category": "syntax",
+                  "message": "Expected detail in key:value form.",
+                  "source": "examples/ai-patterns/PAT-GRAM-005/joined-body.life.txt",
+                  "line": 1,
+                  "column": 23,
+                  "hint": "Write details as key:value with no space around the colon."
+                }
+              ]
+            }
+          }
+        }
+      ]
     },
     {
       "id": "PAT-GRAM-006",
       "topic": "body継続・空行・孤立継続",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "設計メモの本文を2段落で残す。第一段落は目的、第二段落は制約。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "|行は直前recordのbodyになり、裸の|は空の本文行。",
+        "en": "| lines attach body to the previous record; a bare | preserves a blank body line."
+      },
+      "spec": [
+        "§1.1, §4–7, §11–12, §15–16"
+      ],
+      "sources": [
+        "../../../examples/json_roundtrip_life.txt",
+        "../../../examples/markdown_life.txt",
+        "../../../examples/attachments_life.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "A | line without a preceding record is a syntax error."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/grammar.md",
+        "en": "docs/en/ai-patterns/grammar.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-GRAM-006/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "5d3bba305c7f7a536080f1fc1d5a84c90f3cb017ba9e991437c87a0d8a37f4de",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-GRAM-006/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          }
+        },
+        {
+          "name": "counterexample",
+          "path": "examples/ai-patterns/PAT-GRAM-006/counterexample.life.txt",
+          "classification": "A",
+          "expected": {
+            "exit": 1,
+            "diagnostics": [
+              [
+                "error",
+                "E019",
+                1
+              ]
+            ]
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "20f12fcf06f04f3a8d7d0957a2c9b6d47f6d1e0d049bf8d31cabf1ddf136caba",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-GRAM-006/counterexample.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 1,
+              "diagnostics": [
+                {
+                  "severity": "error",
+                  "code": "E019",
+                  "category": "syntax",
+                  "message": "Continuation lines must follow a life.txt item.",
+                  "source": "examples/ai-patterns/PAT-GRAM-006/counterexample.life.txt",
+                  "line": 1,
+                  "column": 1,
+                  "span": {
+                    "start": {
+                      "line": 1,
+                      "column": 1
+                    },
+                    "end": {
+                      "line": 1,
+                      "column": 9
+                    }
+                  },
+                  "hint": "Move the continuation below an item line, or convert it to a normal item."
+                }
+              ]
+            }
+          }
+        }
+      ]
     },
     {
       "id": "PAT-GRAM-007",
       "topic": "Markdown本文・HTML非実行",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "メモ本文にMarkdown見出し、太字、リスト、コード例をそのまま保存する。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "Markdownはbodyの表示用。parserは原文を保持し、record文法は変えない。",
+        "en": "Markdown is display markup in the body; the parser preserves text without changing record grammar."
+      },
+      "spec": [
+        "§1.1, §4–7, §11–12, §15–16"
+      ],
+      "sources": [
+        "../../../examples/json_roundtrip_life.txt",
+        "../../../examples/markdown_life.txt",
+        "../../../examples/attachments_life.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "Safe renderers escape raw HTML and do not execute code examples."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/grammar.md",
+        "en": "docs/en/ai-patterns/grammar.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-GRAM-007/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "527a2f03da8a26a25c3ef64cf5f888d07f03a16ada6feeeae4e8b9f084ad71d4",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-GRAM-007/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          }
+        }
+      ]
     },
     {
       "id": "PAT-GRAM-008",
       "topic": "コメント・ヘッダー・file/dir・opaque暗号値",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "日本時間のファイルで、資料参照と暗号化済みopaque値をメモする。サンプル暗号文字列は復号可能性を保証しない。外部から取得したイベントのsourceはics、uidとidはevent-2030@example.com、2030年10月14日開催、参照URLはhttps://example.com/event。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "これはheader/commentを含むdocument例。file/dirはlife.txtの場所を基準に解決し、enc値はopaqueに保存する。",
+        "en": "This is a document-level example with header/comments; attachments resolve from the life.txt location and enc text remains opaque."
+      },
+      "spec": [
+        "§1.1, §4–7, §11–12, §15–16"
+      ],
+      "sources": [
+        "../../../examples/json_roundtrip_life.txt",
+        "../../../examples/markdown_life.txt",
+        "../../../examples/attachments_life.txt"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "Ordinary check is separate from file/hash verification and decryption; never embed keys or secrets."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/grammar.md",
+        "en": "docs/en/ai-patterns/grammar.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-GRAM-008/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "3b9a18e0cdc17169428331bdd2b2bc64deb60605cdfd7d2547f98e341a32ff2c",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-GRAM-008/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          }
+        }
+      ]
     },
     {
       "id": "PAT-COM-001",

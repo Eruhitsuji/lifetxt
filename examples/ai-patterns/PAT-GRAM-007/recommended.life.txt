@@ -1,0 +1,7 @@
+[N] N "Markdownメモ"
+| ## 方針
+| **原文を保存**
+| - 後で確認
+| ```python
+| print("example")
+| ```

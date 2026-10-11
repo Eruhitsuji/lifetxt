@@ -208,7 +208,7 @@ Full diagnostic messages, input SHA-256, and commands are in the [manifest](../.
 
 **Reason:** BYSETPOS is unsupported by current Core and gives W223. Storage succeeds but observed expansion is empty; this boundary example is not an executable recurring schedule.
 
-**Pitfall:** The note does not implement a recurrence exception. #1217 tracks current ordinal BYDAY/BYMONTHDAY/BYMONTH/WKST support beyond the narrow specification wording.
+**Pitfall:** The note does not implement a recurrence exception. Format §8.1 describes existing ordinal BYDAY/BYMONTHDAY/BYMONTH/WKST support and partial expansion limits (#1217/#1225). The empty expansion observed for this specific plain monthly BYDAY input is a legacy dispatch gap tracked by #1227; do not generalize it to every unsupported-key rule.
 
 **Recommended** ([canonical fixture](../../../examples/ai-patterns/PAT-REC-007/recommended.life.txt))
 

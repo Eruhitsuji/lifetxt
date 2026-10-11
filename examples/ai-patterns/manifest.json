@@ -5917,32 +5917,478 @@
     {
       "id": "PAT-PIT-006",
       "topic": "ID・担当・priority等の非創作",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "牛乳を買う。担当者、priority、project、通知日時は指定しない。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "最小限の行を返す。追加metadataを推測しない。",
+        "en": "Return the minimal line without inferring metadata."
+      },
+      "spec": [
+        "Profile; AI guide §9; #1164"
+      ],
+      "sources": [
+        "https://github.com/Eruhitsuji/lifetxt/issues/1164#issuecomment-6078516662",
+        "https://github.com/Eruhitsuji/lifetxt/issues/1164#issuecomment-6078553354",
+        "https://github.com/Eruhitsuji/lifetxt/issues/1164#issuecomment-6079794954",
+        "https://github.com/Eruhitsuji/lifetxt/issues/1164#issuecomment-6080057300",
+        "../ai-integration.md#9-without-mcp"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "The counterexample's added metadata can be valid syntax while absent from the source."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/pitfalls-b.md",
+        "en": "docs/en/ai-patterns/pitfalls-b.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-PIT-006/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "3926bdec276691ead51a3149b2f87858977765c34a310840e425fd365187c4cf",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-PIT-006/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          }
+        },
+        {
+          "name": "counterexample",
+          "path": "examples/ai-patterns/PAT-PIT-006/counterexample.life.txt",
+          "classification": "C",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "5dfdb0b723002db60ab435622ac0a046468c5e828e935486577529a29ddcbbdd",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-PIT-006/counterexample.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          }
+        }
+      ]
     },
     {
       "id": "PAT-PIT-007",
       "topic": "未知key≠公式候補日・検索機能",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "会議は2030年10月20日か22日。公式候補日機能を使えるか説明してから下書きを作る。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "既存Formatで候補をnoteへ保持する。custom keyは保持できても標準機能ではない。",
+        "en": "Use note to preserve candidates in existing Format; custom-key preservation is not a standard candidate feature."
+      },
+      "spec": [
+        "Profile; AI guide §9; #1164"
+      ],
+      "sources": [
+        "https://github.com/Eruhitsuji/lifetxt/issues/1164#issuecomment-6078516662",
+        "https://github.com/Eruhitsuji/lifetxt/issues/1164#issuecomment-6078553354",
+        "https://github.com/Eruhitsuji/lifetxt/issues/1164#issuecomment-6079794954",
+        "https://github.com/Eruhitsuji/lifetxt/issues/1164#issuecomment-6080057300",
+        "../ai-integration.md#9-without-mcp"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "Removing W106 alone does not establish semantics or feature support."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/pitfalls-b.md",
+        "en": "docs/en/ai-patterns/pitfalls-b.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-PIT-007/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "34279b7ab23a5569cf6875ec723355676484d6a58cdb5292bbef96a18de9e391",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-PIT-007/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          }
+        },
+        {
+          "name": "counterexample",
+          "path": "examples/ai-patterns/PAT-PIT-007/counterexample.life.txt",
+          "classification": "B",
+          "expected": {
+            "exit": 0,
+            "diagnostics": [
+              [
+                "warning",
+                "W106",
+                1
+              ]
+            ]
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "f43ca37e82303886c28f49d696e739aaf9d0a9f37793f596226756f29b254d81",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-PIT-007/counterexample.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": [
+                {
+                  "severity": "warning",
+                  "code": "W106",
+                  "category": "style",
+                  "message": "Detail key 'candidate_on' is custom for type E; it will be preserved.",
+                  "source": "examples/ai-patterns/PAT-PIT-007/counterexample.life.txt",
+                  "line": 1,
+                  "hint": "Keep the custom key if intentional, or rename it to a documented key for this item type."
+                }
+              ]
+            }
+          }
+        }
+      ]
     },
     {
       "id": "PAT-PIT-008",
       "topic": "記録≠Teams送信・条件自動実行",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "2030年10月14日9時にaliceへTeamsで返答依頼を送る記録。回答済みならキャンセルしたいが、その自動処理は設定していない。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "送信要求と条件を記録するだけ。文面や外部接続を創作しない。",
+        "en": "Record the request and condition only; do not invent message text or external connectivity."
+      },
+      "spec": [
+        "Profile; AI guide §9; #1164"
+      ],
+      "sources": [
+        "https://github.com/Eruhitsuji/lifetxt/issues/1164#issuecomment-6078516662",
+        "https://github.com/Eruhitsuji/lifetxt/issues/1164#issuecomment-6078553354",
+        "https://github.com/Eruhitsuji/lifetxt/issues/1164#issuecomment-6079794954",
+        "https://github.com/Eruhitsuji/lifetxt/issues/1164#issuecomment-6080057300",
+        "../ai-integration.md#9-without-mcp"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "The wrong claim is that the counterexample guarantees Teams delivery and automatic cancellation after a reply; check cannot detect that prose claim."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/pitfalls-b.md",
+        "en": "docs/en/ai-patterns/pitfalls-b.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-PIT-008/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "f02fb1ccca2e89eb1a3891ac73889a3f5b55faf3c8c302868c0dec3311281b6d",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-PIT-008/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          }
+        },
+        {
+          "name": "counterexample",
+          "path": "examples/ai-patterns/PAT-PIT-008/counterexample.life.txt",
+          "classification": "D",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "c601fefc674e8406723c8891a4abc7eec8bd921cdb3498384c3d6435d8edd4c7",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-PIT-008/counterexample.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          }
+        }
+      ]
     },
     {
       "id": "PAT-PIT-009",
       "topic": "実取得≠URL提示・自己申告・check≠意味",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "資料URLを提示したが、AIは取得できなかった。構文検査も未実行。入力『2030年10月14日に散歩する』の下書きだけ作る。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "生成時は参照未確認・check not runと明示する。本カタログ著者の後日の実測とは別状態。",
+        "en": "At generation time disclose unverified retrieval and check not run; that is separate from the catalog author's later validation."
+      },
+      "spec": [
+        "Profile; AI guide §9; #1164"
+      ],
+      "sources": [
+        "https://github.com/Eruhitsuji/lifetxt/issues/1164#issuecomment-6078516662",
+        "https://github.com/Eruhitsuji/lifetxt/issues/1164#issuecomment-6078553354",
+        "https://github.com/Eruhitsuji/lifetxt/issues/1164#issuecomment-6079794954",
+        "https://github.com/Eruhitsuji/lifetxt/issues/1164#issuecomment-6080057300",
+        "../ai-integration.md#9-without-mcp"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "For the same line, an unexecuted claim of retrieved sources, passed CLI, and guaranteed meaning is wrong."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/pitfalls-b.md",
+        "en": "docs/en/ai-patterns/pitfalls-b.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-PIT-009/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "11a72a8cda6be897f23151d0b3a877fc95ce2e9caa502dfa073e29772d40c607",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-PIT-009/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          }
+        },
+        {
+          "name": "counterexample",
+          "path": "examples/ai-patterns/PAT-PIT-009/counterexample.life.txt",
+          "classification": "D",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "11a72a8cda6be897f23151d0b3a877fc95ce2e9caa502dfa073e29772d40c607",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-PIT-009/counterexample.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          }
+        }
+      ]
     },
     {
       "id": "PAT-PIT-010",
       "topic": "Reviewの原文保持・初回/修正版の分離",
-      "state": "planned",
-      "validation": "not run"
+      "state": "implemented",
+      "validation": "executed",
+      "input": "Review対象は『[ ] T 草案 due:2030-10-20』。元の意図は20日に作業する。原文を保持して修正案を別に返す。",
+      "context": {
+        "baseline": "2030-10-11T12:00:00+09:00",
+        "timezone": "Asia/Tokyo",
+        "fixture_context": "fictional supplied IDs/people/metadata; referenced context included; original input language retained"
+      },
+      "reason": {
+        "ja": "元行は意味反例として別fixtureに保存し、Review提案だけdoへ修正する。",
+        "en": "Keep the original as a separate wrong-meaning fixture and change only the proposed Review version to do."
+      },
+      "spec": [
+        "Profile; AI guide §9; #1164"
+      ],
+      "sources": [
+        "https://github.com/Eruhitsuji/lifetxt/issues/1164#issuecomment-6078516662",
+        "https://github.com/Eruhitsuji/lifetxt/issues/1164#issuecomment-6078553354",
+        "https://github.com/Eruhitsuji/lifetxt/issues/1164#issuecomment-6079794954",
+        "https://github.com/Eruhitsuji/lifetxt/issues/1164#issuecomment-6080057300",
+        "../ai-integration.md#9-without-mcp"
+      ],
+      "meaning_review": {
+        "by": "implementer",
+        "result": "source compared",
+        "independent_review": "pending",
+        "note": "Initial and corrected versions are not a batch to append together."
+      },
+      "docs": {
+        "ja": "docs/ja/ai-patterns/pitfalls-b.md",
+        "en": "docs/en/ai-patterns/pitfalls-b.md"
+      },
+      "variants": [
+        {
+          "name": "recommended",
+          "path": "examples/ai-patterns/PAT-PIT-010/recommended.life.txt",
+          "classification": "recommended",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "05b0b619f33c4901cbe2d97a59975fce97c12ff83af4fb921a48a2dd3dc7beeb",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-PIT-010/recommended.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          }
+        },
+        {
+          "name": "counterexample",
+          "path": "examples/ai-patterns/PAT-PIT-010/counterexample.life.txt",
+          "classification": "C",
+          "expected": {
+            "exit": 0,
+            "diagnostics": []
+          },
+          "observed": {
+            "engine_commit": "97aa9b52c231f9aad5ba1403e8ed230d69f4d2a3",
+            "core_version": "lifetxt 1.0.3",
+            "sha256": "c9e20d5d8443585f9de1aae8080bc1da060aec66451aee158ba63d992d7f9070",
+            "command": [
+              "python",
+              "-m",
+              "lifetxt",
+              "check",
+              "examples/ai-patterns/PAT-PIT-010/counterexample.life.txt",
+              "--format",
+              "json"
+            ],
+            "result": {
+              "exit": 0,
+              "diagnostics": []
+            }
+          }
+        }
+      ]
     }
   ]
 }

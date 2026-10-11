@@ -10720,7 +10720,7 @@ traceability:
       capability_id: cap-beginner-minimal-profile
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1250
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1251
       changed_files_or_scope:
         - "Add examples/annotated_life.txt, a larger realistic annotated life.txt combining Task/Deferred/Event/Habit/Note kinds with project:/tag:/priority:/repeat: detail keys, as a second, richer example alongside the existing Level-1-only getting_started_life.txt"
         - examples/annotated_life.txt
@@ -10737,8 +10737,7 @@ traceability:
         scope: no parser, Format, CLI, or code behavior change. Extends
         cap-beginner-minimal-profile rather than creating a new capability,
         since this is the same example-curation/getting-started-docs scope
-        #558 already established. pull_request is filled in once the pull
-        request implementing this entry is opened.
+        #558 already established.
       status: implemented
 
     - requirement_id: req-lifetxt-vm-opt-in-turing-complete

@@ -474,3 +474,63 @@ coverage and CI workflow changes also select dev-only coverage. Docs-only PRs sk
 these heavy jobs. The no-Web environment has no FastAPI/Uvicorn/HTTPX/HTTPX2;
 dev-only coverage includes dev tools but no Web extras. Optional Web tests explicitly
 skip there and run in the Web extras suite. Coverage thresholds are unchanged.
+
+## AI Multi-Issue Execution and Final PR Destination (current main-only workflow)
+
+This project currently integrates ordinary changes into `main`. The presence of
+a temporary integration branch **does not** imply a permanent `develop` or
+`next` branch or authorization to change the final pull request target.
+Do not infer a new default from earlier conversations or remembered workflows.
+
+When the maintainer requests "implement multiple Issues and create the final
+PR" (or the equivalent in Japanese), the default task contract is:
+
+1. **Discover and verify before implementation.** Fetch the latest
+   `AGENTS.md`, the assigned Issues and relevant comments, the current
+   `origin/main`, `.ai/project/MERGE_POLICY.yml`, and the applicable managed
+   development, review, task-readiness, and traceability rules. Verify
+   `status:ready`, acceptance criteria, write scopes, dependencies, assurance
+   levels, and any human approvals; do not silently implement blocked work.
+2. **Record the integration contract.** In the implementation plan or parent
+   Issue, explicitly name the Issue numbers, the source ref (`origin/main`),
+   each work branch, any `integration/*` branch, the final PR base
+   (**`main`**), expected checks, and the steps that require human approval.
+   Confirm the base on GitHub again immediately before opening the final PR.
+3. **Choose the smallest appropriate branch structure.** One Issue normally
+   uses one dedicated `feature/*` or `fix/*` branch and a PR into `main`.
+   For several related Issues, a temporary `integration/*` branch may be
+   created from `main` to collect separately reviewable work. Integration
+   branches are optional, not a prerequisite for a batch.
+4. **Work autonomously within the approved scope.** For each ready Issue,
+   implement, run relevant project commands and focused checks, perform a
+   self-review and correct its findings, then verify the combined result.
+   When opening sub-PRs into an integration branch, apply the same required
+   CI, review-freshness, and traceability rules at both PR levels; do not
+   bypass checks merely to avoid intermediate workflow runs. Record the
+   integration PR's own traceability step without replacing sub-PR records.
+5. **Finish at the human approval boundary.** Create the final PR with
+   `base=main`, link all included Issues, describe executed tests and
+   unresolved risks, and state any required CI still pending. The AI does not
+   autonomously merge this PR, create a release tag, publish, change live
+   server settings, or deploy. Merge, release, and deployment remain human
+   decisions under `.ai/managed/core/AI_HUMAN_INTERACTION.md`.
+
+Example task contract (illustrative Issue numbers, not active tasks):
+
+```text
+Issues: #1301, #1302, #1303
+Source: origin/main
+Mode: related multi-Issue integration
+Optional integration branch: integration/1300
+Final PR: integration/1300 -> main
+Verification: focused checks per Issue; required checks on each PR level
+Human approval: final merge; any release/deployment
+Out of scope: next/develop introduction and release tagging
+```
+
+If an Issue requires a different PR target or the maintainer explicitly
+approves a different flow, record that decision *before* implementation and
+review the associated merge policy. Never substitute `main` for a missing
+requested branch (or vice versa) without making the conflict visible.
+This section specializes project execution guidance; the common managed
+standards remain authoritative for non-overridable safety and review gates.

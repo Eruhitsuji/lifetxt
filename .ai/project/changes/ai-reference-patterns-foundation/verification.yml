@@ -1,0 +1,9 @@
+schema_version: 1
+verification:
+  - command: python -m unittest tests.test_ai_patterns tests.test_ai_prompt_profile
+    result: passed (9 tests)
+  - command: python scripts/check_ai_patterns.py --allow-planned
+    result: passed structural gate; 68 planned and zero implemented fixtures
+  - command: git diff --check
+    result: passed
+independent_review: pending human

@@ -2,6 +2,22 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-provider-independent-ai-prompt-profile
+      capability_id: cap-ai-prompt-profile
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1200
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1201
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1212
+      changed_files_or_scope:
+        - examples/ai-patterns
+        - scripts/check_ai_patterns.py
+        - tests/test_ai_patterns.py
+        - .ai/project/changes/ai-reference-patterns-foundation
+      tests_or_evidence:
+        - tests.test_ai_patterns (7 catalog checks) and tests.test_ai_prompt_profile (2 tests)
+        - Structural catalog gate; all 68 slots explicitly planned/not run
+      notes: Canonical fixture and bilingual synchronization foundation only; no Core or model calls. Independent review pending.
+      release_or_deployment: null
+      status: implemented
     - requirement_id: req-native-bulk-context-repreview
       capability_id: cap-import-export-format-expansion
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1189

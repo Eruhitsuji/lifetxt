@@ -1,0 +1,5 @@
+[ ] T "研究計画" id:research
+  [ ] T "文献調査" id:lit
+  [ ] T "実験" id:exp depends_on:lit
+  [N] N "研究メモ"
+  | 実験条件を確認する。

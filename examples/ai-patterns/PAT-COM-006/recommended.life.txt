@@ -1,0 +1,2 @@
+[x] M "レビュー依頼" id:thread sender:self recipient:alice done:2030-10-14T09:00+09:00
+[x] M "依頼を確認した返信" id:reply parent:thread sender:alice recipient:self done:2030-10-14T09:05+09:00 ack:2030-10-14T09:05+09:00

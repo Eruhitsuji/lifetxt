@@ -251,4 +251,3 @@
 **出典:** [Format 1.0](../life_txt_format_spec.md) §7–14 + owning feature docs; [Profile](../../../prompts/lifetxt-assistant.md). [source 1](../../../examples/minimal_life.txt) / [source 2](../../../examples/team_status_life.txt) / [source 3](../../../examples/diary_life.txt) / [source 4](../../../examples/hierarchy_life.txt)
 
 機能固有recordの詳細は[projects](../projects.md), [tickets](../tickets.md).
-

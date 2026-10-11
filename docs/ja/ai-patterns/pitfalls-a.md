@@ -204,4 +204,3 @@
 全診断メッセージ・入力SHA-256・コマンドは[manifest](../../../examples/ai-patterns/manifest.json)に記録。意味レビューは著者による原入力との照合（独立承認ではない）。
 
 **出典:** [Format 1.0](../life_txt_format_spec.md) Profile; AI guide §9; #1164; [Profile](../../../prompts/lifetxt-assistant.md). [source 1](https://github.com/Eruhitsuji/lifetxt/issues/1164#issuecomment-6078516662) / [source 2](https://github.com/Eruhitsuji/lifetxt/issues/1164#issuecomment-6078553354) / [source 3](https://github.com/Eruhitsuji/lifetxt/issues/1164#issuecomment-6079794954) / [source 4](https://github.com/Eruhitsuji/lifetxt/issues/1164#issuecomment-6080057300) / [source 5](../ai-integration.md#9-without-mcp)
-

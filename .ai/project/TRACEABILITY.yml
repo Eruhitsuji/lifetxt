@@ -5,7 +5,7 @@ traceability:
     - requirement_id: req-recurrence-filter-until-consistency
       capability_id: cap-recurrence-expansion
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1236
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1239
       changed_files_or_scope:
         - lifetxt/recurrence.py
         - lifetxt/agenda.py

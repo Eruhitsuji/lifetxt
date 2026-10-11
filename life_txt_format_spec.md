@@ -418,7 +418,9 @@ warned about with `W223`; the supported portion may still expand. For example,
 not necessarily 09:00. Unsupported frequencies do not generate recurrence
 matches. Warnings normally leave `check` exit status at zero: acceptance does
 not certify the intended schedule. The `rrule` command also reports unsupported
-parts. Invalid supported values and fallback/diagnostic gaps are tracked by
+parts. Agenda also has a legacy dispatch gap for plain monthly/yearly `BYDAY`,
+even though the shared engine reads it. Invalid supported values and
+fallback/diagnostic gaps are tracked by
 [#1227](https://github.com/Eruhitsuji/lifetxt/issues/1227).
 
 Expansion is bounded by count/end/window and safety ceilings. Verify concrete

@@ -499,7 +499,8 @@ fallback し、短い月では月末へ丸めます。これらは実装上の�
 `FREQ=MONTHLY;BYDAY=2MO;BYHOUR=9` は第2月曜日を anchor の時刻で展開し、
 09:00 を保証しません。未対応の頻度は recurrence match を生成しません。
 warning のみなら通常 `check` の終了コードは 0 です。受理は意図した日程の保証では
-ありません。`rrule` command も未対応部分を報告します。不正な対応キーの値と
+ありません。共通 engine が読む通常の monthly/yearly `BYDAY` にも、agenda の
+legacy dispatch が展開しない不一致があります。`rrule` command も未対応部分を報告します。不正な対応キーの値と
 診断・fallback の不一致は [#1227](https://github.com/Eruhitsuji/lifetxt/issues/1227)
 で追跡しています。
 

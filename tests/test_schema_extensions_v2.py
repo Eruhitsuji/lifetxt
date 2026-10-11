@@ -9,6 +9,7 @@ from lifetxt.doctor import doctor_report
 from lifetxt.mcp import McpContext
 from lifetxt.release_policy import schema_validation_report
 from lifetxt.safety_foundation import schema_bundle
+from tests.schema_contract import load_contract
 
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -24,9 +25,9 @@ def has_draft_2020_validator():
 
 
 class SchemaExtensionsV2Tests(unittest.TestCase):
-    def test_bundle_contains_ninety_two_generated_and_published_documents(self):
+    def test_bundle_matches_reviewed_public_document_names(self):
         bundle = schema_bundle()
-        self.assertEqual(92, len(bundle))
+        self.assertEqual(set(load_contract()), set(bundle))
         for name, generated in bundle.items():
             path = os.path.join(ROOT, "dist", "schemas", name)
             self.assertTrue(os.path.exists(path), name)
@@ -39,8 +40,8 @@ class SchemaExtensionsV2Tests(unittest.TestCase):
         if optional["validator_available"]:
             strict = schema_validation_report(ROOT, require_validator=True)
             self.assertTrue(strict["ok"], strict)
-            self.assertEqual(92, strict["schema_count"])
-            self.assertEqual(92, strict["sample_count"])
+            self.assertEqual(len(load_contract()), strict["schema_count"])
+            self.assertEqual(len(load_contract()), strict["sample_count"])
             self.assertEqual(
                 "network-free referencing.Registry over published bundle",
                 strict["reference_resolution"],

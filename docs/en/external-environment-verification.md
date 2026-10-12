@@ -264,6 +264,33 @@ the tracker and traceability metadata. An unavailable host, failure, or missing
 terminal evidence remains `unverified` or `blocked`; it is not converted into
 a support claim by inference.
 
+## Attachment reload / browser restart / journal recovery (#1290)
+
+Run `python -m unittest tests.test_web_revision_recovery_browser -v` with the
+#1288 browser prerequisites. The actual upload drawer sends a bounded synthetic
+file against required-mode HTTP. A test-only fault at `after_journal_publish`
+leaves a prepared journal, unchanged source/blob bytes and 503 uncertainty UI,
+without a success receipt. Page reload and a fully terminated browser followed
+by a new process and disposable profile are separate scenarios: neither replays
+the upload or pretends the uncommitted transaction completed.
+
+A test-only operator endpoint explicitly invokes the existing journal `resume`
+contract (not a new production browser recovery feature). The same journal
+commits once; refresh sees the attachment reference with no duplicate/replay.
+A concurrent HTTP writer causes a 409 with unchanged source/blob bytes. Explicit
+refresh acquires a new revision and a selected new file succeeds. Missing and
+malformed outgoing preconditions fail through existing UI with unchanged
+source/blobs/journals. Evidence records real engine, commit, fault point,
+statuses, browser process/profile change and replay/duplicate checks in
+`attachment-recovery.json` under `LIFETXT_REVISION_EVIDENCE_DIR`.
+
+**Work-session frontend coverage remains incomplete (#1294).** There is no
+shipped caller of `/api/work-session` in the Web/Planner JavaScript. The slash
+command timer calls `/api/timer`, a distinct contract. Existing
+`tests.test_work_session_v4` verifies backend transactions, not frontend
+start/stop/edit. This test must not close #1290/#317 or replace the missing UI
+evidence with console fetch/TestClient. No offline resume/autofix is introduced.
+
 ## Real browser revision smoke (#1288)
 
 Run `python -m unittest tests.test_web_revision_browser -v` with Web extras,

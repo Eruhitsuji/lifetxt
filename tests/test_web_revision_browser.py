@@ -19,6 +19,27 @@ from tests.test_web_planner_browser import browser_path
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def require_revision_browser(test):
+    missing = []
+    if not all(importlib.util.find_spec(x) for x in ("fastapi", "uvicorn")):
+        missing.append("Web extras")
+    if not shutil.which("node"):
+        missing.append("Node 22+ native WebSocket")
+    elif subprocess.run(
+        ["node", "-e", "process.exit(typeof WebSocket === 'function' ? 0 : 1)"],
+        timeout=10,
+        capture_output=True,
+    ).returncode:
+        missing.append("Node 22+ native WebSocket")
+    if not browser_path():
+        missing.append("Chrome/Chromium")
+    if missing:
+        reason = "Real revision browser dependency missing: " + ", ".join(missing)
+        if os.environ.get("LIFETXT_REQUIRE_REVISION_BROWSER") == "1":
+            test.fail(reason)
+        test.skipTest(reason)
+
+
 class RevisionBrowserTests(unittest.TestCase):
     def test_observe(self):
         self.run_probe("observe")
@@ -27,24 +48,7 @@ class RevisionBrowserTests(unittest.TestCase):
         self.run_probe("required")
 
     def run_probe(self, mode):
-        missing = []
-        if not all(importlib.util.find_spec(x) for x in ("fastapi", "uvicorn")):
-            missing.append("Web extras")
-        if not shutil.which("node"):
-            missing.append("Node 22+ native WebSocket")
-        elif subprocess.run(
-            ["node", "-e", "process.exit(typeof WebSocket === 'function' ? 0 : 1)"],
-            timeout=10,
-            capture_output=True,
-        ).returncode:
-            missing.append("Node 22+ native WebSocket")
-        if not browser_path():
-            missing.append("Chrome/Chromium")
-        if missing:
-            reason = "Real revision browser dependency missing: " + ", ".join(missing)
-            if os.environ.get("LIFETXT_REQUIRE_REVISION_BROWSER") == "1":
-                self.fail(reason)
-            self.skipTest(reason)
+        require_revision_browser(self)
 
         import uvicorn
         from fastapi.responses import Response

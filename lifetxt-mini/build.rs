@@ -11,7 +11,13 @@ fn main() {
         .next()
         .and_then(|line| line.split('"').nth(1))
         .filter(|value| {
-            value.split('.').count() == 3 && value.chars().all(|c| c.is_ascii_digit() || c == '.')
+            let parts: Vec<_> = value.split('.').collect();
+            (parts.len() == 3 || parts.len() == 4)
+                && parts.iter().all(|part| {
+                    !part.is_empty()
+                        && part.chars().all(|c| c.is_ascii_digit())
+                        && (part.len() == 1 || !part.starts_with('0'))
+                })
         })
         .unwrap_or_else(|| {
             panic!(

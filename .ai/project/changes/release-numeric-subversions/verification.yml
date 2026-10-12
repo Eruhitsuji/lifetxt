@@ -1,0 +1,53 @@
+schema_version: 1
+verification:
+  planned: []
+  executed:
+  - type: unit
+    command: python -m unittest tests.test_release_subversions tests.test_set_tauri_desktop_version
+      tests.test_check_release_tag_version tests.test_lifetxt.LifeTxtUpdateCheckCliTests
+      tests.test_mini_release_workflow tests.test_core_import_boundary tests.test_traceability_gate
+      tests.test_change_package_closeout
+    requirement_ids:
+    - req-release-numeric-subversions
+    status: passed
+    result: 60 tests passed
+  - type: docs
+    command: python scripts/validate_release_docs.py --output .cache/release-doc-validation-1302.json
+    status: passed
+    result: errors=0, ok=true
+  - type: native
+    command: python scripts/check_mini_subversion_build.py
+    status: not_run
+    reason: Cargo not installed locally; added to existing native x86_64/AArch64 CI
+  - type: desktop
+    command: cargo tauri build and native installation/upgrade
+    status: not_run
+    reason: OS runners required; must be checked during release
+  - type: lint
+    command: ruff check lifetxt tests scripts
+    status: passed
+  - type: format
+    command: ruff format --check changed Python files
+    status: partial
+    reason: Nine changed Python files clean; lifetxt/cli.py has five pre-existing
+      unrelated formatting regions, left unchanged.
+review_ledger:
+- reviewer: Codex (implementer)
+  review_type: implementation self-review
+  target_commit: null
+  result: completed
+  finding_count: 3
+  completed_at: '2026-10-12'
+  notes: Fixed binary parser truncation, Cargo lock verification and macOS plist transport;
+    independent review is pending.
+- reviewer: independent reviewer / Eruhitsuji
+  review_type: integration
+  target_commit: null
+  result: pending
+  finding_count: 0
+  completed_at: null
+release_evidence:
+  migration_notes: No life.txt syntax/data changes. Ordinary version unchanged. Metadata
+    encoding documented.
+  rollback_plan: Revert PR before publication; do not move published tags.
+  operations_evidence: []

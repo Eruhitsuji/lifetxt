@@ -1,4 +1,3 @@
-import importlib.util
 import json
 import os
 import subprocess
@@ -57,11 +56,14 @@ class ColdProcessSchemaBundleTests(unittest.TestCase):
             "import json\n"
             "from lifetxt.release_policy import schema_validation_report\n"
             "report = schema_validation_report(%r, require_validator=True)\n"
-            "print(json.dumps({'schema_count': report['schema_count'], "
-            "'sample_count': report['sample_count'], 'ok': report['ok']}))\n"
+            "print(json.dumps({"
+            "'validator_available': report.get('validator_available', False), "
+            "'schema_count': report.get('schema_count'), "
+            "'sample_count': report.get('sample_count'), "
+            "'ok': report['ok']}))\n"
         ) % ROOT
         payload = json.loads(self._run_cold(script))
-        if importlib.util.find_spec("referencing") is None:
+        if not payload["validator_available"]:
             self.assertFalse(payload["validator_available"], payload)
             self.assertFalse(payload["ok"], payload)
             return

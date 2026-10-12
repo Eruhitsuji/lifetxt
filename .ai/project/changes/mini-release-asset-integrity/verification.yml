@@ -1,0 +1,29 @@
+schema_version: 1
+verification:
+  executed:
+  - command: python -m unittest tests.test_mini_release_workflow tests.test_merge_sha256sums
+      tests.test_standalone_binaries_checksum_newline tests.test_check_release_tag_version
+    status: passed
+    result: 23 tests passed, including 8 new executed shell/fixture regressions; no
+      skips.
+  - command: Normal bootstrap followed by 8 Mini/checksum/release evidence/policy/packaging
+      modules
+    status: passed
+    result: 43 tests passed. Unbootstrapped isolated run failed 3 existing legacy-composition-dependent
+      policy tests; normal bootstrap corrected the invocation, no unrelated policy
+      code changed.
+  - command: Run the new suite against the original workflow in a temporary file
+    status: passed
+    result: 'Before fix: 8 tests with 5 failures/1 error, reproducing cwd/checksum/manifest-checkout
+      defects; final 8 tests pass. No repository files reverted during verification.'
+  - command: python -m ruff check lifetxt tests scripts
+    status: passed
+    result: Configured global lint passed; changed test formatted.
+  external:
+  - status: not-run
+    reason: 'Production tag/upload/native Mini binary execution is separate #911 release
+      evidence.'
+  review:
+  - status: pending
+    reason: Independent latest-head requirements/security/implementation/integration
+      review and merge are maintainer-owned.

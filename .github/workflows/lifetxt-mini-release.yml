@@ -49,7 +49,7 @@ jobs:
           ldd "$binary" 2>&1 | tee artifact-ldd.txt || true
           grep -Eqi 'statically linked|not a dynamic executable' artifact-ldd.txt
           "$binary" --version
-          python scripts/check_lifetxt_mini_version.py --binary "$PWD/$binary" --tag "${{ inputs.tag || github.ref_name }}"
+          python ../scripts/check_lifetxt_mini_version.py --binary "$PWD/$binary" --tag "${{ inputs.tag || github.ref_name }}"
           "$binary" --help
           "$binary" check fixtures/mixed-life.txt
           "$binary" today --date 2026-09-24 fixtures/mixed-life.txt
@@ -63,7 +63,7 @@ jobs:
           mkdir -p dist/lifetxt-mini
           name="lifetxt-mini-${TAG}-linux-${TARGET%%-*}"
           cp "lifetxt-mini/target/${TARGET}/release/lifetxt-mini" "dist/lifetxt-mini/${name}"
-          sha256sum "dist/lifetxt-mini/${name}" > "dist/lifetxt-mini/${name}.sha256"
+          (cd dist/lifetxt-mini && sha256sum "$name" > "${name}.sha256")
           rustc -Vv > "dist/lifetxt-mini/${name}.build-info"
       - uses: actions/upload-artifact@v6
         with:
@@ -77,6 +77,10 @@ jobs:
     permissions:
       contents: write
     steps:
+      # The merger must come from the same tagged source as the artifacts.
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.ref_name }}
       - uses: actions/download-artifact@v6
         with:
           pattern: lifetxt-mini-*
@@ -87,9 +91,27 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
         run: |
-          cd dist/lifetxt-mini
-          for checksum in *.sha256; do sha256sum -c "$checksum"; done
-          cat *.sha256 > SHA256SUMS
-          printf '%s\n' "lifetxt-mini $TAG" "Python-free strict-subset Mini Runtime Profile" "Official targets: Linux x86_64 and AArch64" "Verify: sha256sum -c SHA256SUMS" > RELEASE-NOTES.md
-          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "$TAG" --generate-notes
-          gh release upload "$TAG" * --clobber
+          (
+            cd dist/lifetxt-mini
+            for checksum in *.sha256; do sha256sum -c "$checksum"; done
+            cat *.sha256 > SHA256SUMS
+            printf '%s\n' "lifetxt-mini $TAG" "Python-free strict-subset Mini Runtime Profile" "Official targets: Linux x86_64 and AArch64" "Verify: sha256sum -c SHA256SUMS" > RELEASE-NOTES.md
+          )
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            # Another primary workflow may create the release concurrently.
+            gh release create "$TAG" --title "$TAG" --generate-notes || gh release view "$TAG" >/dev/null
+          fi
+          manifest_present=$(gh release view "$TAG" --json assets --jq 'any(.assets[]; .name == "SHA256SUMS")')
+          case "$manifest_present" in
+            true)
+              # A declared asset must download successfully; do not swallow errors.
+              gh release download "$TAG" --pattern SHA256SUMS --output existing-SHA256SUMS --clobber
+              python scripts/merge_sha256sums.py existing-SHA256SUMS dist/lifetxt-mini/SHA256SUMS --output dist/lifetxt-mini/SHA256SUMS
+              ;;
+            false) ;;
+            *) echo "Unexpected release asset inventory" >&2; exit 1 ;;
+          esac
+          # Preserve the manifest observed above. This read/merge/upload is not
+          # an atomic cross-workflow transaction: #911 requires a final manifest
+          # reconciliation after all primary release uploads complete.
+          gh release upload "$TAG" dist/lifetxt-mini/* --clobber

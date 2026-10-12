@@ -1,0 +1,33 @@
+schema_version: 1
+change:
+  id: mini-release-asset-integrity
+  title: Correct Mini release paths and preserve the observed shared checksum manifest
+  status: implemented
+  change_type: Bug
+  assurance_level: High
+  size: S
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1287
+  base_commit: 2e934f270a7c8c52c91afadfe1a6ad8d41a0e989
+scope:
+  write_scope:
+  - .github/workflows/lifetxt-mini-release.yml
+  - tests/test_mini_release_workflow.py
+  - .ai/project/TRACEABILITY.yml
+  - .ai/project/changes/mini-release-asset-integrity/**
+  - '#911 handoff'
+  forbidden_scope:
+  - .ai/managed/**
+  - other channel workflow rewrites
+  - runtime/Format changes
+  - tags/releases/assets/publish operations
+  rollback: Revert PR; release authority handles any already-published assets.
+design_approval:
+  owner: Eruhitsuji
+  date: '2026-10-12'
+  record: 'Visible conversation request: #1287の対応をお願いします．'
+  scope: Repair existing release integrity contract; no publication requested.
+human_approvals_required:
+- Independent latest-head implementation/integration review
+- Maintainer merge before v1.0.4 tag

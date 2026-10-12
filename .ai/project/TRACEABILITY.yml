@@ -2,6 +2,31 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-release-numeric-subversions
+      capability_id: cap-stable-release-governance
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1302
+      pull_request: null
+      changed_files_or_scope:
+        - Release X.Y.Z.N support with omitted N equal to zero
+        - Core update comparison, Mini build/version validation, Cargo mapping
+        - Desktop SemVer and Apple identity metadata, GHCR numeric raw tags
+        - Distribution docs and regression tests
+      tests_or_evidence:
+        - "python -m unittest tests.test_release_subversions tests.test_set_tauri_desktop_version tests.test_check_release_tag_version tests.test_lifetxt.LifeTxtUpdateCheckCliTests tests.test_mini_release_workflow tests.test_core_import_boundary tests.test_traceability_gate tests.test_change_package_closeout -> 60 tests passed"
+        - "python scripts/check_lifetxt_mini_version.py --tag v1.0.4 -> consistent"
+        - "python -m lifetxt check examples/minimal_life.txt -> OK: 10 items"
+      release_or_deployment: >-
+        Preparation only; no version bump, tag, release or native upgrade claim.
+        SemVer metadata maps X.Y.Z.N to X.Y.Z+N, but release comparison
+        uses the original four numeric components. macOS native metadata
+        does not order subversions; exact release identity is stored separately.
+      notes: >-
+        Maintainer approved ordinary three-component releases with optional
+        numeric subversions, treating X.Y.Z and X.Y.Z.0 as equivalent.
+        Reuses stable release governance and distribution capabilities.
+        Independent review and native Cargo/Desktop verification remain required.
+      status: implemented
+
     - requirement_id: req-release-v1-0-4-version-bump
       capability_id: cap-stable-release-governance
       epic: null

@@ -9045,6 +9045,17 @@ class LifeTxtUpdateCheckCliTests(unittest.TestCase):
         self.assertIsNone(_parse_simple_version("not-a-version"))
         self.assertIsNone(_parse_simple_version(""))
 
+    def test_zero_subversion_is_equivalent_and_subversions_sort_numerically(self):
+        from lifetxt.cli import _parse_simple_version
+
+        self.assertEqual(
+            _parse_simple_version("v1.0.4"), _parse_simple_version("v1.0.4.0")
+        )
+        versions = ["1.0.4", "1.0.4.1", "1.0.4.2", "1.0.4.10", "1.0.5"]
+        parsed = [_parse_simple_version(version) for version in versions]
+        self.assertEqual(parsed, sorted(parsed))
+        self.assertEqual(len(set(parsed)), len(parsed))
+
     def test_reports_no_release_found_when_repository_has_neither(self):
         from lifetxt import cli
 
@@ -9089,6 +9100,21 @@ class LifeTxtUpdateCheckCliTests(unittest.TestCase):
         self.assertEqual("tag", payload["kind"])
         # 0.0.1 is older than any realistic running version.
         self.assertEqual("ahead_of_latest", payload["status"])
+
+    def test_update_check_treats_zero_as_equal_and_detects_subversion(self):
+        for latest, expected in (
+            ("v1.0.4.0", "up_to_date"),
+            ("v1.0.4.1", "update_available"),
+        ):
+            with (
+                self.subTest(latest=latest),
+                mock.patch("lifetxt.__version__", "1.0.4"),
+                mock.patch("lifetxt.cli.urlopen") as opener,
+            ):
+                opener.return_value = _FakeGithubResponse({"tag_name": latest})
+                stdout, code = _run_update_check(format_="json")
+            self.assertEqual(code, 0)
+            self.assertEqual(json.loads(stdout)["status"], expected)
 
     def test_reports_up_to_date_when_versions_match(self):
         from lifetxt import __version__

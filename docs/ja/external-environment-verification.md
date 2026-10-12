@@ -28,3 +28,21 @@ proxy fault（#1289）、process/profile restart・transaction recovery（#1290�
 実deployment observe（#288–292）、layout/accessibility（#318）の完了証拠ではありません。
 #1289/#1290は#1288のmergeまでblockedを維持します。最新headへの独立reviewとCIが
 merge条件として残ります。
+
+## Proxy fault・metricsのプロセス再起動（#1289）
+
+#1288と同じ実browser環境で `python -m unittest tests.test_web_revision_proxy_browser -v`
+を実行します。必須CIは `test_web_revision*browser.py` の全suiteを検出します。
+loopback限定proxyでETagのみを除去（X-Lifetxt-Revisionへの既存fallback）、両read
+tokenを除去（POSTせずUI errorで停止）、ETag書換え（409と全source byte不変）を
+再現します。正常proxyに戻した後の明示reload・retryを確認します。write precondition
+欠落はrequiredで428拒否、observeでは互換更新とcounterの追加1回計上を確認します。
+
+旧metrics fixtureには既存legacy利用2回・観測identity・廃止済み未知fieldを含めます。
+同じsource/明示metrics pathのUvicorn processを終了し、新processを起動して、全source
+byte・counter・route別count・観測identityの保持、現在mode/schema、旧未知fieldを
+exportしない既存contractを確認します。telemetry v3のidentity/relocation契約を再利用
+しますが、保存JSON schemaはversion 1です。browser reloadのみはserver restart証拠に
+しません。`LIFETXT_REVISION_EVIDENCE_DIR` の `proxy-observe.json` /
+`proxy-required.json` に実engine/Node/OS/commit、proxy条件、read header、status、
+metrics before/afterを記録します。

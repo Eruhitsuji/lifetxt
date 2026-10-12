@@ -18,7 +18,7 @@ print(json.dumps({
             [sys.executable, "-c", script], capture_output=True, text=True, check=True
         )
         payload = json.loads(result.stdout)
-        self.assertEqual(payload["version"], "1.0.4")
+        self.assertEqual(payload["version"], "1.0.4.1")
         self.assertNotIn("lifetxt.surface_runtime", payload["modules"])
         self.assertNotIn("lifetxt.remote_client", payload["modules"])
         self.assertNotIn("lifetxt.release_translation", payload["modules"])

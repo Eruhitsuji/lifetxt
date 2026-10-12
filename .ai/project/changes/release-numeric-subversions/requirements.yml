@@ -1,0 +1,18 @@
+schema_version: 1
+requirements:
+- id: req-release-numeric-subversions
+  kind: ADDED
+  statement: Keep X.Y.Z by default; support X.Y.Z.N with omitted N equal to zero.
+  acceptance_criteria:
+  - Numeric comparison orders subversions before the next patch
+  - Core and Mini runtime retain original release identity
+  - SemVer metadata explicitly maps N to numeric build metadata
+  - Docker immutable tags retain the original subversion
+  - Native platform metadata limitations are documented
+  constraints:
+  - No tag migration or publication in this change
+  - SemVer metadata cannot be used for release ordering
+  owner: Eruhitsuji
+open_questions:
+- Native Desktop installation/upgrade acceptance on each OS remains to be executed
+  during release.

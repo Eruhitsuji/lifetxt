@@ -40,6 +40,14 @@ class MiniReleaseWorkflowTests(unittest.TestCase):
         shutil.copyfile(
             ROOT / "lifetxt-mini/Cargo.toml", self.root / "lifetxt-mini/Cargo.toml"
         )
+        shutil.copyfile(
+            ROOT / "lifetxt-mini/Cargo.lock", self.root / "lifetxt-mini/Cargo.lock"
+        )
+        (self.root / "lifetxt").mkdir()
+        (self.root / "lifetxt/__init__.py").write_text("")
+        shutil.copyfile(
+            ROOT / "lifetxt/versioning.py", self.root / "lifetxt/versioning.py"
+        )
         self.env = dict(
             os.environ,
             TAG="v" + self.version,

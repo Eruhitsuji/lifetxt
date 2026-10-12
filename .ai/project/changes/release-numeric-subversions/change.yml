@@ -1,0 +1,47 @@
+schema_version: 1
+change:
+  id: release-numeric-subversions
+  title: Optional numeric release subversions
+  status: implemented
+  change_type: Operations
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1302
+  related_pull_request: null
+  base_commit: 0d4aa6a656a4c5d7b9c7af000c2299b977dfac5c
+  target_release: v1.0.4.1
+scope:
+  in_scope:
+  - Three/four-component release numbering and transport conversion
+  out_of_scope:
+  - Publishing
+  - Version bump
+  - Native automatic updater implementation
+  write_scope:
+  - lifetxt/versioning.py
+  - lifetxt/cli.py
+  - lifetxt-mini/build.rs
+  - scripts/check_lifetxt_mini_version.py
+  - scripts/check_release_tag_version.py
+  - scripts/set_tauri_desktop_version.py
+  - scripts/release_version_metadata.py
+  - scripts/check_mini_subversion_build.py
+  - .github/workflows/docker-publish.yml
+  - .github/workflows/lifetxt-mini-ci.yml
+  - tests/test_release_subversions.py
+  - tests/test_lifetxt.py
+  - tests/test_mini_release_workflow.py
+  - docs/en/distribution.md
+  - docs/ja/distribution.md
+  - .ai/project/TRACEABILITY.yml
+  - .ai/project/changes/release-numeric-subversions
+  forbidden_scope:
+  - .ai/managed/**
+  shared_files:
+  - .ai/project/TRACEABILITY.yml
+  - .github/workflows/docker-publish.yml
+human_approvals_required:
+- Independent implementation and integration review
+- Merge Authority
+- Release Authority before publication

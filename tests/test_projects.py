@@ -83,6 +83,43 @@ class ProjectAggregationTests(unittest.TestCase):
         self.assertEqual(1, rows["alice"]["overdue"])
         self.assertEqual(1, rows["bob"]["done"])
 
+    def test_health_reasons_disclose_open_info_and_unknown_risks_without_relabeling(self):
+        cases = (
+            ("info", "open", "green", "open info-severity risk"),
+            ("info", "closed", "green", "no open risks"),
+            ("urgent", "open", "green", "unrecognized severity"),
+            ("high", "open", "red", "open high-severity risk"),
+            ("medium", "open", "yellow", "open medium-severity risk"),
+        )
+        for severity, state, label, reason in cases:
+            with self.subTest(severity=severity, state=state):
+                items, _ = parse_text(
+                    "[N] N risk record:risk project:demo severity:%s state:%s\n"
+                    % (severity, state)
+                )
+                before = dict(items[0].details)
+                proj = projects.collect_projects(items, {}, TODAY)["demo"]
+                health = projects.compute_health(proj, TODAY)
+                self.assertEqual(label, health["label"])
+                self.assertTrue(any(reason in row for row in health["reasons"]))
+                if state == "open":
+                    self.assertFalse(
+                        any("no open risks" in row for row in health["reasons"])
+                    )
+                self.assertEqual(before, items[0].details)
+
+    def test_health_reports_unknown_risk_alongside_high_risk(self):
+        items, _ = parse_text(
+            "[N] N high record:risk project:demo severity:high state:open\n"
+            "[N] N unknown record:risk project:demo severity:urgent state:open\n"
+        )
+        proj = projects.collect_projects(items, {}, TODAY)["demo"]
+        health = projects.compute_health(proj, TODAY)
+        self.assertEqual("red", health["label"])
+        self.assertEqual("high", health["top_risk_severity"])
+        self.assertIn("open high-severity risk", health["reasons"])
+        self.assertIn("1 open risk(s) with unrecognized severity", health["reasons"])
+
     def test_alias_resolution_via_registry(self):
         config = {"projects": {"web": {"aliases": ["website"]}}}
         hub = projects.project_hub(self.items, config, "website", TODAY)

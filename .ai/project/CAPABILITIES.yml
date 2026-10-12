@@ -1,6 +1,28 @@
 schema_version: 1
 
 capabilities:
+  - id: cap-project-validation
+    name: Opt-in read-only Project risk diagnostics
+    summary: Warn about ambiguous or unrecognized risk scalar values without changing permissive parsing
+      or reports.
+    status: experimental
+    owner: Eruhitsuji
+    source_requirements:
+    - req-project-validation
+    implementation_locations:
+    - lifetxt/project_validation.py
+    - lifetxt/cli.py
+    - tests/test_project_validation.py
+    - docs/en/projects.md
+    - docs/ja/projects.md
+    public_interfaces:
+    - lifetxt project validate FILE --records risk --format json
+    - Local CLI only; no new Web/Remote/MCP surface
+    tests_or_evidence:
+    - tests.test_project_validation
+    related_issues:
+    - https://github.com/Eruhitsuji/lifetxt/issues/1281
+    reuse_policy: Reuse existing parser, configuration and transaction boundaries.
   - id: cap-recurrence-expansion
     name: Existing dependency-free recurrence expansion
     summary: Existing RRULE subset, agenda and completion expansion with documented partial-expansion limitations; not full RFC support.

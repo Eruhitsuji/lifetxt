@@ -1386,6 +1386,16 @@ def build_parser():
     )
     project_subparsers = project_command.add_subparsers(dest="project_command")
 
+    from .project_validation import command_project_validate
+
+    proj_validate = project_subparsers.add_parser(
+        "validate", help="Read-only opt-in semantic warnings for risk records."
+    )
+    _add_input_paths(proj_validate)
+    proj_validate.add_argument("--records", choices=("risk",), required=True)
+    proj_validate.add_argument("--format", choices=("text", "json"), default="text")
+    proj_validate.set_defaults(func=command_project_validate)
+
     proj_list = project_subparsers.add_parser(
         "list", help="List projects with progress and health."
     )

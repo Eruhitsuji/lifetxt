@@ -555,3 +555,41 @@ follow `record:ticket_event`/`record:time_entry` parents. Version and sprint
 registry entries are not moved by either command; an archived ticket's
 `version:`/`sprint:` detail values are left pointing at the still-active
 registry record.
+
+## Local single-file assignment batches
+
+Bulk v1 is limited to assignment, one existing writable local file, and 1–100
+unique explicit ticket IDs. A multi-file workspace, stdin, symlink target,
+generated/archive/reference source or read-only target is refused. It has no
+Remote endpoint, notification/provider dispatch or background queue. Assignee
+is a local field value; this does not establish remote membership or authority.
+Existing Ticket validation errors, ambiguous/missing IDs and invalid history
+reject the whole plan. Registry warnings retain existing permissive semantics.
+
+```sh
+lifetxt ticket file-revision life.txt
+lifetxt ticket bulk assign life.txt --id BUG-1 --id BUG-2 --assignee alice \
+  --revision EXACT_SHA256 --transaction-id batch.20261012 --dry-run > assignment-plan.json
+# Review changes/events, actor, timestamp, source and hashes in this separate file.
+lifetxt ticket bulk apply assignment-plan.json --plan-sha256 REVIEWED_PLAN_SHA256
+```
+
+`assign` is always preview-only, even without `--dry-run`. Never redirect the
+plan over the source file. JSON plan v1 binds the absolute canonical source,
+exact file revision, effective configuration hash, ID key, ordered IDs,
+assignee, actor, UTC event timestamp, transaction ID, changes/events and after
+revision. Apply requires the explicit digest you reviewed, checks the digest
+and rebuilds the complete deterministic plan. Any source/configuration/ID-key
+change requires a new preview. Plans are local operator artifacts, not signed
+authorization tokens; they contain ticket metadata and should be handled like
+the source. No raw configuration or credentials are included.
+
+Apply uses one locked compare-and-swap and atomic replacement for every ticket
+and its assignment event together. Any target validation failure, stale revision
+or write failure aborts without partially applying a batch. Unchanged assignments
+produce no event; an entirely unchanged batch performs no file write and can be
+repeated. A changing batch cannot be replayed at its old revision, and its
+transaction ID cannot be reused for another payload. Each changed ticket gets a
+unique derived transaction ID and the shared before-file revision. No durable
+receipt is created for an entirely unchanged batch. Plans are capped at 2 MiB
+when read by CLI apply. Both commands emit JSON to stdout; errors exit 1.

@@ -15,6 +15,21 @@ traceability:
         - tests.test_projects.ProjectAggregationTests.test_health_reports_unknown_risk_alongside_high_risk
       notes: Existing health labels, formula and stored values unchanged; independent maintainer review pending.
       status: implemented
+    - requirement_id: req-ticket-bulk
+      capability_id: cap-ticket-bulk
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1276
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1282
+      changed_files_or_scope:
+      - lifetxt/ticket_bulk.py
+      - lifetxt/ticket_workflow_cli.py
+      - tests/test_ticket_bulk.py
+      - docs/en/tickets.md
+      - docs/ja/tickets.md
+      tests_or_evidence:
+      - tests.test_ticket_bulk
+      - See change package verification.yml for executed checks
+      status: implemented
+      notes: User design approval 2026-10-12; independent latest-head High review and merge pending.
     - requirement_id: req-project-validation
       capability_id: cap-project-validation
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1275

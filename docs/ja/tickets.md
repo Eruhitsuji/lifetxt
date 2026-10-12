@@ -531,3 +531,38 @@ event／time／planning schemaと、exact-revision・同一ファイルcompound�
 versionとsprintのregistry entryはどちらのコマンドでも移動されません。
 archiveされたticketの`version:`／`sprint:`のdetail値は、稼働中のままの
 registry recordを指し続けます。
+
+## ローカル単一ファイルでのassignment一括更新
+
+bulk v1はassignmentのみ、既存の書き込み可能なローカル1ファイル、明示した
+重複なしのTicket ID 1–100件に限定します。複数ファイルworkspace、stdin、
+symlink、generated/archive/reference source、読み取り専用ファイルは拒否します。
+Remote endpoint、通知・provider送信、queueは追加しません。assigneeはローカルの
+field値であり、Remoteの所属や権限を保証するものではありません。Ticketの既存
+validation error、IDの欠落・曖昧性、不正なhistoryがあれば全件拒否します。
+registry warningの許容的な意味は維持します。
+
+```sh
+lifetxt ticket file-revision life.txt
+lifetxt ticket bulk assign life.txt --id BUG-1 --id BUG-2 --assignee alice \
+  --revision EXACT_SHA256 --transaction-id batch.20261012 --dry-run > assignment-plan.json
+# 別ファイルに保存したchanges/events、actor、時刻、source、hashを確認します。
+lifetxt ticket bulk apply assignment-plan.json --plan-sha256 REVIEWED_PLAN_SHA256
+```
+
+`assign` は `--dry-run` を省略してもpreview専用です。sourceファイルに出力を
+redirectしないでください。JSON plan v1はcanonical絶対path、ファイルrevision、
+実効設定hash、ID key、順序付きID集合、assignee、actor、UTC event時刻、transaction、
+changes/events、更新後revisionを固定します。applyは確認したdigestの明示を要求し、
+digest照合と決定的なplanの再構築を行います。source・設定・ID keyの変更後は
+再previewが必要です。planはローカルoperator向けの成果物で、署名付き権限tokenでは
+ありません。Ticket metadataを含むためsource同様に扱ってください。
+生の設定やcredentialは含めません。
+
+applyは全Ticketとassignment eventを1回のlock付きcompare-and-swapとatomic replaceで
+更新します。validation失敗、古いrevision、書き込み失敗では部分適用しません。
+変更のないassignmentにeventは作らず、全件no-opならファイルを書き込みません。
+全件no-opは再実行可能で、永続receiptを作りません。変更したbatchの古いrevisionでの
+再適用や、同じtransaction IDの別payloadへの再利用は拒否します。各eventには一意な
+派生transaction IDと共通の更新前ファイルrevisionを記録します。CLI applyのplan入力は
+2 MiBまでです。両コマンドともstdoutにJSONを出力し、失敗時の終了コードは1です。

@@ -114,6 +114,7 @@ traceability:
         import, unrelated to the two real CI failures) was found,
         confirmed pre-existing via git stash, and left unfixed as out of
         this issue's scope rather than silently expanded into.
+      status: implemented
 
     - requirement_id: req-mini-release-asset-integrity
       capability_id: cap-distribution-channels

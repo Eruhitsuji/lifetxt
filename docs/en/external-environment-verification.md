@@ -263,3 +263,36 @@ An environment may be called stable only when its row has all required
 the tracker and traceability metadata. An unavailable host, failure, or missing
 terminal evidence remains `unverified` or `blocked`; it is not converted into
 a support claim by inference.
+
+## Real browser revision smoke (#1288)
+
+Run `python -m unittest tests.test_web_revision_browser -v` with Web extras,
+Node 22+ (native WebSocket), and Chrome/Chromium. Set `LIFETXT_BROWSER_BIN`
+to the browser executable when it is not on PATH. Local missing dependencies
+produce an explicit skip; this is **not** browser pass evidence.
+`LIFETXT_REQUIRE_REVISION_BROWSER=1` makes a missing dependency fail, as in the
+CI `Real Chromium revision contract` job. Set
+`LIFETXT_REVISION_EVIDENCE_DIR=.cache/revision-browser` to retain JSON evidence.
+
+The disposable loopback Uvicorn fixture freezes the server clock and uses
+synthetic temporary life.txt data. Actual Planner capture forms acquire and
+send revision preconditions in observe and required modes. A separate HTTP
+writer invalidates an open form; rejection must preserve exact source bytes
+and retain the input with a reload error. A test-only fetch transport strips
+both preconditions and omits the revision-discovery cookie: required rejects
+with 428 without a write; observe permits legacy compatibility and records
+exactly one fallback. Normal frontend writes must record zero fallback.
+The fixture records the received precondition independently of the browser.
+File/source/workspace revision tokens are not interchangeable; this smoke uses
+a single writable source and checks capture's source snapshot explicitly.
+
+Evidence records browser engine/version, OS, Node, source commit, mode,
+statuses, metric counts and byte-preservation assertions. Only intentional
+409/428 capture responses and their browser error logs are allowed;
+unexpected console, exception, HTTP or network failures fail the probe.
+Browser commands, startup, subprocesses and cleanup have finite timeouts.
+CI uploads synthetic JSON; no production URLs, data or credentials are used.
+This does not establish proxy faults (#1289), process/profile restart and
+transaction recovery (#1290), deployment observation (#288–292), or layout
+and accessibility (#318). The dependent issues remain blocked until #1288
+merges. Independent latest-head review and CI remain merge gates.

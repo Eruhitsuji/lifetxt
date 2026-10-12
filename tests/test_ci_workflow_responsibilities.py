@@ -121,6 +121,7 @@ class CiWorkflowResponsibilityTests(unittest.TestCase):
             {
                 "classify-changes",
                 "test",
+                "revision-browser",
                 "type-check",
                 "release-document-validation",
                 "traceability-gate",
@@ -159,6 +160,7 @@ class CiWorkflowResponsibilityTests(unittest.TestCase):
         self.assertEqual(
             {
                 "test",
+                "revision-browser",
                 "classify-changes",
                 "resource-warning-gate",
                 "no-web-extras",

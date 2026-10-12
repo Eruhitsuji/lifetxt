@@ -468,6 +468,11 @@ def _install_commands(parser, cli_module):
     if actions is None:
         return parser
 
+    if "bulk" not in actions.choices:
+        from .ticket_bulk import install_bulk_parser
+
+        install_bulk_parser(actions)
+
     if "file-revision" not in actions.choices:
         command = actions.add_parser(
             "file-revision", help="Print the exact writable-file revision."

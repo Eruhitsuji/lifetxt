@@ -1,0 +1,12 @@
+schema_version: 1
+verification:
+  executed:
+  - command: python -m unittest tests.test_ticket_bulk tests.test_ticket_workflow_history
+      tests.test_ticket_revision_writes tests.test_ticket_projects tests.test_ticket_planning
+      tests.test_change_package_closeout tests.test_traceability_gate
+    status: passed
+    result: Focused suites passed; changed-file Ruff lint passed. Full integrated
+      discovery recorded in final handoff.
+  human_review:
+  - status: pending
+    reason: Independent latest-head High assurance review and merge are required.

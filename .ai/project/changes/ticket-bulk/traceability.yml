@@ -1,0 +1,8 @@
+schema_version: 1
+links:
+- requirement: req-ticket-bulk
+  capability: cap-ticket-bulk
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1282
+  tests:
+  - tests.test_ticket_bulk
+  status: implemented

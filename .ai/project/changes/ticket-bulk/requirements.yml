@@ -1,0 +1,15 @@
+schema_version: 1
+requirements:
+- id: req-ticket-bulk
+  kind: ADDED
+  owner: Eruhitsuji
+  statement: Preview at most 100 explicit single-file assignments and atomically apply
+    exactly the reviewed plan with activity events.
+  acceptance_criteria:
+  - 1..100 explicit unique IDs; single writable local file; assignment only
+  - frozen file/config/key/actor/time/transaction/change bindings and explicit reviewed
+    digest
+  - all targets and events in one CAS; any error or stale state gives zero partial
+    writes
+  - no-op assignments are event-free; all-noop has no durable receipt
+  - replay changing batches and transaction reuse rejected; no Remote/notifications/provider

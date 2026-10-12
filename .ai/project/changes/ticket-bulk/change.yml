@@ -1,0 +1,45 @@
+schema_version: 1
+change:
+  id: ticket-bulk
+  title: Frozen local Ticket assignment batches
+  status: implemented
+  change_type: Feature
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1282
+  base_commit: 1c411332a8fd5c0f6b670df5f19012e27766c405
+  size: M
+  split_justification: One bounded atomic assignment transaction; pure plan, apply
+    and adapter separated.
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1285
+scope:
+  write_scope:
+  - lifetxt/ticket_bulk.py
+  - lifetxt/ticket_workflow_cli.py
+  - tests/test_ticket_bulk.py
+  - docs/en/tickets.md
+  - docs/ja/tickets.md
+  - .ai/project/CAPABILITIES.yml
+  - .ai/project/TRACEABILITY.yml
+  - .ai/project/changes/ticket-bulk/**
+  forbidden_scope:
+  - .ai/managed/**
+  - cross-file mutation
+  - Remote/API/provider/notifications
+  rollback: Revert code and metadata; existing persisted activity remains readable.
+design_approval:
+  owner: Eruhitsuji
+  date: '2026-10-12'
+  record: 'Visible conversation approval: お願いします．'
+  scope:
+  - 1..100 explicit unique IDs; single writable local file; assignment only
+  - frozen file/config/key/actor/time/transaction/change bindings and explicit reviewed
+    digest
+  - all targets and events in one CAS; any error or stale state gives zero partial
+    writes
+  - no-op assignments are event-free; all-noop has no durable receipt
+  - replay changing batches and transaction reuse rejected; no Remote/notifications/provider
+human_approvals_required:
+- Independent latest-head requirements/design/security review
+- Integration/merge approval

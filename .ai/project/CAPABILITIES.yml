@@ -1,6 +1,28 @@
 schema_version: 1
 
 capabilities:
+  - id: cap-ticket-bulk
+    name: Frozen local Ticket assignment batches
+    summary: Preview at most 100 explicit single-file assignments and atomically apply exactly the
+      reviewed plan with activity events.
+    status: experimental
+    owner: Eruhitsuji
+    source_requirements:
+    - req-ticket-bulk
+    implementation_locations:
+    - lifetxt/ticket_bulk.py
+    - lifetxt/ticket_workflow_cli.py
+    - tests/test_ticket_bulk.py
+    - docs/en/tickets.md
+    - docs/ja/tickets.md
+    public_interfaces:
+    - lifetxt ticket bulk assign/apply
+    - Local CLI only; no new Web/Remote/MCP surface
+    tests_or_evidence:
+    - tests.test_ticket_bulk
+    related_issues:
+    - https://github.com/Eruhitsuji/lifetxt/issues/1282
+    reuse_policy: Reuse existing parser, configuration and transaction boundaries.
   - id: cap-project-validation
     name: Opt-in read-only Project risk diagnostics
     summary: Warn about ambiguous or unrecognized risk scalar values without changing permissive parsing

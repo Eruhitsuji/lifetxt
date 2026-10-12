@@ -81,6 +81,8 @@ try {
     assert.equal(await evaluate("document.getElementById('capture-dialog').open"),false);
   }
   const reads=await evaluate('probeReads');assert(reads.some(x=>x.etag && x.revision));
+  // Exercise the implicit browser resource deterministically on every engine.
+  assert.equal(await evaluate("fetch('/favicon.ico').then(response=>response.status)"),204);
   const failures=events.filter(x=>x.method==='Network.loadingFailed' || x.method==='Runtime.exceptionThrown' ||
     (x.method==='Runtime.consoleAPICalled' && x.params.type==='error') ||
     (x.method==='Network.responseReceived' && x.params.response.status>=400) ||

@@ -45,6 +45,7 @@ class RecoveryGateTests(unittest.TestCase):
             .rsplit("\nPY", 1)[0]
         )
         defaults = dict(
+            REVISION_BROWSER_RESULT="success",
             TEST_RESULT="success",
             TYPE_RESULT="success",
             DOCS_RESULT="success",
@@ -60,6 +61,9 @@ class RecoveryGateTests(unittest.TestCase):
         )
         for changes, expected in [
             ({}, 0),
+            ({"REVISION_BROWSER_RESULT": "failure"}, 1),
+            ({"REVISION_BROWSER_RESULT": "cancelled"}, 1),
+            ({"REVISION_BROWSER_RESULT": "skipped"}, 1),
             ({"NO_WEB_RESULT": "failure"}, 1),
             ({"NO_WEB_RESULT": "cancelled"}, 1),
             ({"NO_WEB_RESULT": "skipped"}, 1),
@@ -75,6 +79,7 @@ class RecoveryGateTests(unittest.TestCase):
                     "PATH_CATEGORY": "docs-only",
                     "TEST_RESULT": "skipped",
                     "TYPE_RESULT": "skipped",
+                    "REVISION_BROWSER_RESULT": "skipped",
                     "NO_WEB_SELECTED": "false",
                     "NO_WEB_RESULT": "skipped",
                 },

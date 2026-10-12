@@ -15,10 +15,15 @@ source/blob/journalを変更しません。`LIFETXT_REVISION_EVIDENCE_DIR` の
 `attachment-recovery.json` に実engine・commit・fault点・status・process/profile変更・
 再送/重複検証を記録します。offline resumeやautofixは実装しません。
 
-**work-sessionの実frontend coverageは未完了（#1294）です。** 現在のWeb/Planner JSには
-`/api/work-session`の呼出しがなく、slash timerは別contractの`/api/timer`を呼びます。
-`tests.test_work_session_v4`はbackend transaction証拠であり、画面のstart/stop/edit証拠では
-ありません。console fetch/TestClientを代替とせず、本検証だけで#1290/#317をcloseしません。
+**元の添付suite単独はwork-sessionの画面証拠ではありません。** 別途承認された
+#1296がTask drawerに実UIを提供します。`tests.test_web_revision_work_session_browser`
+はobserve/requiredのstart/stop/edit、item/timer/HTTP snapshot、stale/missing/invalid、
+重複/replay抑止、read-only/他record保護、固定clock、中断journal/operator resume、
+Page reloadと新process/profileを検証します。#1288と同じ環境で
+`python -m unittest tests.test_web_revision_work_session_browser -v` を実行します。
+`work-session-observe.json` / `work-session-required.json` に実engine/commit/modeを
+記録します。既存`/api/timer`やTestClientを画面証拠と同一視しません。#1290/#1294の
+close-outはfeature merge後の証拠記録まで保留します。
 
 ## 実ブラウザによるrevision smoke（#1288）
 

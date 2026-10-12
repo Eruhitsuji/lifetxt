@@ -769,9 +769,43 @@ traceability:
         after_journal_publish fault leaves prepared transaction and 503 UI. Page reload
         and fully new browser process/profile do not replay. Existing operator resume
         commits once; stale/missing/malformed preconditions stop, explicit refresh retries
-        with current revision. Work-session frontend is absent in current runtime;
-        console fetch and /api/timer are not accepted as equivalent evidence. This partial
-        evidence does not close 1290/317. Production unchanged; no new autofix/offline resume.
+        with current revision. Original work-session frontend gap is addressed separately
+        by Feature 1296 and tests.test_web_revision_work_session_browser. Console fetch
+        and /api/timer remain distinct from actual UI evidence. 1290/317 close-out waits
+        for feature merge and post-merge verification. No new autofix/offline resume.
+      release_or_deployment: null
+      status: implemented
+
+    - requirement_id: req-web-work-session-controls
+      capability_id: cap-web-work-session-controls
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/317
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1296
+      pull_request: null
+      changed_files_or_scope:
+        - lifetxt/web_assets_js_22.js
+        - lifetxt/web_assets.py
+        - lifetxt/web_assets_js_10.js
+        - lifetxt/web_assets_js_12.js
+        - tests/test_web_assets.py
+        - tests/test_web_drawer_edit_js.py
+        - tests/test_web_revision_work_session_browser.py
+        - tests/browser_revision_work_session_probe.mjs
+        - docs/en/web.md
+        - docs/ja/web.md
+        - docs/en/external-environment-verification.md
+        - docs/ja/external-environment-verification.md
+        - .ai/project/changes/web-work-session-ui/**
+      tests_or_evidence:
+        - tests.test_web_revision_work_session_browser
+        - tests.test_web_assets
+        - tests.test_web_drawer_edit_js
+        - tests.test_work_session_v4
+      notes: >-
+        Owner approved separate production UI scope via 1294. Standard Feature, M with
+        integrated snapshot/compound browser recovery justification. Existing API/Format
+        contracts reused, no schema/config changes. Actual UI start/stop/edit proof replaces
+        the missing-surface premise; 1290/1294 close-out waits for feature merge and
+        post-merge real-engine verification. Independent latest-head review/CI required.
       release_or_deployment: null
       status: implemented
 

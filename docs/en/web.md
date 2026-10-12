@@ -1408,3 +1408,25 @@ limit and restricted to the selected scope and project. Recurring items use
 Agenda's existing finite 366-day lookahead; distant nonrecurring dates remain
 eligible. Ongoing spans overlapping the period-end boundary can also appear.
 This repairs #1156 without changing response fields or writing life.txt.
+
+## Work sessions in the Task drawer
+
+Open an editable Task with an `id:` and use **Work session → Start work**.
+The existing compound transaction marks the Task in progress, starts its timer
+and opens busy presence. **Stop work** records elapsed time, closes presence
+and stops the timer; **Complete and stop** also completes the Task. Stop
+controls are available only for the session belonging to this Task/source.
+An unrelated running timer/session must be stopped from its own Task; the
+existing `/timer` slash command remains a separate API contract.
+
+The section freezes the displayed record's file revision and independent timer
+revision after consistent reads. Task **Edit** reuses the frozen file snapshot.
+Pending operations disable repeated submissions. Read-only, generated and
+missing-ID records cannot write. A conflict or rejected/uncertain result stops
+the controls; use **Refresh record**, inspect the authoritative state, and
+explicitly choose another action. No background replay or automatic retry is
+performed. Failed editing preserves input: copy it before cancelling and
+refreshing. If a transaction outcome is uncertain, ask the operator to inspect
+the existing journal recovery contract before retrying. Restarting the browser
+does not replay any session action. Normal observe and required UI writes send
+item/timer/HTTP revision preconditions and do not use legacy fallback.

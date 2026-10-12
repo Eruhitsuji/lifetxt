@@ -284,12 +284,17 @@ source/blobs/journals. Evidence records real engine, commit, fault point,
 statuses, browser process/profile change and replay/duplicate checks in
 `attachment-recovery.json` under `LIFETXT_REVISION_EVIDENCE_DIR`.
 
-**Work-session frontend coverage remains incomplete (#1294).** There is no
-shipped caller of `/api/work-session` in the Web/Planner JavaScript. The slash
-command timer calls `/api/timer`, a distinct contract. Existing
-`tests.test_work_session_v4` verifies backend transactions, not frontend
-start/stop/edit. This test must not close #1290/#317 or replace the missing UI
-evidence with console fetch/TestClient. No offline resume/autofix is introduced.
+**The original attachment suite does not prove work-session frontend coverage.** The separately approved
+feature #1296 supplies the real Task drawer controls and
+`tests.test_web_revision_work_session_browser` proves observe/required
+start/stop/edit with exact item/timer/HTTP snapshots, stale/missing/invalid
+preconditions, no duplicate/replay, read-only/other-record safety, fixed clock,
+interrupted journal/operator resume, and Page reload/new process+profile.
+Run `python -m unittest tests.test_web_revision_work_session_browser -v`
+with the #1288 prerequisites. JSON `work-session-observe.json` and
+`work-session-required.json` record actual engine/commit/mode. The existing
+`/api/timer` slash route and TestClient are not treated as this UI evidence.
+#1290/#1294 close-out still requires feature merge and post-merge evidence.
 
 ## Real browser revision smoke (#1288)
 

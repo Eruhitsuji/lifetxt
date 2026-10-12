@@ -1,0 +1,15 @@
+schema_version: 1
+verification:
+  executed:
+  - command: python -m unittest tests.test_web_revision_work_session_browser -v
+    status: passed
+    result: 2 actual HeadlessChrome153/Node24/Linux tests passed, observe and required, with required client time/fixed clock; no skips.
+  - command: Focused Web assets/drawer/attachment/timer/journal/CI/change-package regressions plus all real revision browser suites
+    status: passed
+    result: 92 tests passed; one Windows-only byte-range locking skip on Linux. Final fixture/evidence adjustments rerun in the focused browser suite.
+  review:
+  - status: pending
+    reason: Independent latest-head maintainer review and CI required.
+  external:
+  - status: not-run
+    reason: Production deployment, physical device and post-merge close-out are separate.

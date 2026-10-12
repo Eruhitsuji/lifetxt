@@ -239,5 +239,10 @@ VM は自身の program counter と counter state 以外に副作用を持たな
 arithmetic instruction、汎用 expression 構文、I/O instruction、runtime
 state の永続化、source code compiler、Web / TUI / MCP からの実行は、
 すべて意図的に v0 では実装しない。将来的に、`lifetxt vm check`、
-single-step trace、JSON state output、Brainfuck → lifetxt VM compiler
+single-step trace、checkpoint / resumption、Brainfuck → lifetxt VM compiler
 などが別 Issue として検討される可能性があるが、v0 の対象ではない。
+
+正常終了時の JSON state output（`vm run --json`）と静的なプログラムの
+graph export（`vm graph`）は v0 で既に利用できる。
+[現行設計ガイド](../design/counter-machine.md)では、実装済みの契約と
+歴史的な VM 実装前の提案を区別している。

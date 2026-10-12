@@ -1,0 +1,5 @@
+# Design
+
+Pure transform validates all selected tickets and final activity history before returning text. Preview stores metadata/events and predicted after-hash without source writes. Apply checks the caller-supplied reviewed SHA-256, configuration and ID key, rebuilds the frozen plan, then performs one existing locked mutation. Exact source CAS closes the preview/apply race. SHA-256 is an integrity binding, not authorization; plans are trusted local operator artifacts. Per-ticket event transaction IDs derive from a bounded batch ID and the full ticket ID hash. No-op batches intentionally have no durable receipt. Existing Ticket error severity is reused; registry warnings remain permissive. Only single-file writable workspace sources admitted; symlink and archive/generated/reference targets refused. Reuse existing parser, serializer, history validator and atomic mutation. Existing single-ticket commands unchanged.
+
+Review viewpoints: compatibility, deterministic output, configuration boundaries, failure behavior, no unintended writes. Test viewpoints: valid/default inputs, malformed inputs, stale state, preserved bytes and existing regression suites.

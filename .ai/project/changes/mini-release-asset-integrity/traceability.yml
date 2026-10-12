@@ -7,3 +7,4 @@ links:
   - tests.test_mini_release_workflow
   - tests.test_merge_sha256sums
   status: implemented
+  pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1291

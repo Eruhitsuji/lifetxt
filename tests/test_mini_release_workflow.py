@@ -148,6 +148,10 @@ class MiniReleaseWorkflowTests(unittest.TestCase):
             any(args[:2] == ["release", "upload"] for args in self.calls())
         )
 
+    @unittest.skipUnless(
+        sys.version_info >= (3, 11),
+        "Existing Mini build checker uses tomllib (build runner Python 3.11+)",
+    )
     def test_native_checker_runs_from_actual_working_directory(self):
         step = self.step("build", "Verify native static artifact")
         checker = next(

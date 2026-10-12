@@ -14,11 +14,20 @@ verification:
       code changed.
   - command: Run the new suite against the original workflow in a temporary file
     status: passed
-    result: 'Before fix: 8 tests with 5 failures/1 error, reproducing cwd/checksum/manifest-checkout
-      defects; final 8 tests pass. No repository files reverted during verification.'
+    result: 'Final 8 regressions against original workflow: 6 failures, 0 errors;
+      final fixed workflow passes all 8. Temporary workflow copy used; production
+      calls never run.'
   - command: python -m ruff check lifetxt tests scripts
     status: passed
     result: Configured global lint passed; changed test formatted.
+  - command: LIFETXT_TRACEABILITY_GATE_BASE=8d352c45 LIFETXT_TRACEABILITY_GATE_PR_URL=https://github.com/Eruhitsuji/lifetxt/pull/1291
+      python -m unittest tests.test_mini_release_workflow tests.test_merge_sha256sums
+      tests.test_standalone_binaries_checksum_newline tests.test_check_release_tag_version
+      tests.test_change_package_closeout tests.test_traceability_gate
+    status: passed
+    result: Final 40 tests passed, no skips. Native cwd checker test targets the existing
+      build checker Python 3.11+ requirement; other 7 shell tests also support Core
+      Python 3.10.
   external:
   - status: not-run
     reason: 'Production tag/upload/native Mini binary execution is separate #911 release
@@ -27,3 +36,16 @@ verification:
   - status: pending
     reason: Independent latest-head requirements/security/implementation/integration
       review and merge are maintainer-owned.
+review_ledger:
+- reviewer: Eruhitsuji
+  review_type: implementation
+  target_commit: Latest PR1291 head
+  result: pending
+  finding_count: 0
+  completed_at: null
+- reviewer: Eruhitsuji
+  review_type: integration
+  target_commit: Latest PR1291 head
+  result: pending
+  finding_count: 0
+  completed_at: null

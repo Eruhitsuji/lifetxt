@@ -1,3 +1,4 @@
+import importlib.util
 import json
 import os
 import subprocess
@@ -60,6 +61,10 @@ class ColdProcessSchemaBundleTests(unittest.TestCase):
             "'sample_count': report['sample_count'], 'ok': report['ok']}))\n"
         ) % ROOT
         payload = json.loads(self._run_cold(script))
+        if importlib.util.find_spec("referencing") is None:
+            self.assertFalse(payload["validator_available"], payload)
+            self.assertFalse(payload["ok"], payload)
+            return
         self.assertTrue(payload["ok"], payload)
         self.assertEqual(payload["schema_count"], payload["sample_count"])
         self.assertGreater(payload["schema_count"], 4)

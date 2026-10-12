@@ -240,6 +240,11 @@ counter state. It cannot:
 `DEC_JZ`, general expression syntax, I/O instructions, state persistence,
 a source-code compiler, and Web/TUI/MCP execution are all deliberately
 not implemented. Future, separate issues may add `lifetxt vm check`,
-single-step tracing, JSON state output, or a Brainfuck-to-lifetxt-VM
+single-step tracing, checkpoints/resumption, or a Brainfuck-to-lifetxt-VM
 compiler as a demonstration of Turing-completeness -- none of that is part
 of v0.
+
+Successful-run JSON state output (`vm run --json`) and static program graph
+export (`vm graph`) are already available in v0. The
+[current design guide](../design/counter-machine.md) distinguishes the
+implemented contract from the historical pre-VM proposal.

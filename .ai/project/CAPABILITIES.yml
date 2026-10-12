@@ -1,6 +1,26 @@
 schema_version: 1
 
 capabilities:
+  - id: cap-web-work-session-controls
+    name: Revision-bound Task drawer work sessions
+    summary: Start and stop compound work sessions from a writable Task drawer with frozen item/timer revisions and safe explicit recovery.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+    - req-web-work-session-controls
+    implementation_locations:
+    - lifetxt/web_assets_js_22.js
+    - lifetxt/web_assets_js_10.js
+    - lifetxt/web_assets_js_12.js
+    public_interfaces:
+    - Task drawer Work session Start / Stop / Complete and stop
+    - Existing /api/work-session and /api/items edit contracts
+    tests_or_evidence:
+    - tests.test_web_revision_work_session_browser
+    related_issues:
+    - https://github.com/Eruhitsuji/lifetxt/issues/1296
+    - https://github.com/Eruhitsuji/lifetxt/issues/1290
+    reuse_policy: Reuse existing compound transaction, timer, presence, clock and CAS contracts; no new API/Format/config.
   - id: cap-ticket-bulk
     name: Frozen local Ticket assignment batches
     summary: Preview at most 100 explicit single-file assignments and atomically apply exactly the

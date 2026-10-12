@@ -1347,3 +1347,21 @@ area／Saved ViewのTemporal Reviewは、既存の選択条件で対象を絞っ
 展開を使い、繰り返しでない遠い将来の日付も対象になります。レビュー期間の
 終端をまたぐ進行中の予定も含まれる場合があります。#1156を修正し、
 レスポンス項目の変更やlife.txtへの書き込みは行いません。
+
+## Task詳細画面の作業セッション
+
+編集可能で `id:` を持つTaskを開き、**作業セッション → 作業開始**を押します。
+既存の一括transactionによりTaskを進行中にし、timerを開始し、busyのpresenceを
+開きます。**作業停止**は経過時間を記録し、presenceを閉じ、timerを停止します。
+**完了して停止**はTaskの完了も同時に行います。他のTask/sourceのセッションは
+停止できません。そのTaskを開いて操作してください。既存の `/timer` slash command
+は別APIのままです。
+
+画面のrecordに対応するfile revisionと独立したtimer revisionを整合readで固定します。
+Taskの**Edit**も固定file snapshotを再利用します。保存中は二重送信を防ぎ、read-only、
+生成record、IDなしでは更新できません。競合・拒否・結果不明時は操作を止めます。
+**レコードを再読み込み**で最新状態を確認し、改めて操作してください。自動再試行や
+background replayはありません。編集失敗時の入力は保持するので、控えてから編集を
+キャンセルして再読込します。transaction結果が不明なら再試行前に管理者へ既存journal
+の復旧確認を依頼してください。browser restartは操作を再送しません。observe/required
+両modeとも通常UI更新はitem/timer/HTTP revisionを送信しlegacy fallbackを使いません。

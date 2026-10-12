@@ -1,0 +1,21 @@
+schema_version: 1
+verification:
+  executed:
+  - command: python -m unittest tests.test_web_revision_work_session_browser -v
+    status: passed
+    result: 2 actual HeadlessChrome153/Node24/Linux tests passed, observe and required, with required client time/fixed clock; no skips.
+  - command: Focused Web assets/drawer/attachment/timer/journal/CI/change-package regressions plus all real revision browser suites
+    status: passed
+    result: 92 tests passed; one Windows-only byte-range locking skip on Linux. Final fixture/evidence adjustments rerun in the focused browser suite.
+  - command: python -m unittest tests.test_web_deep_link_js (core-only) and deep-link/drawer/actual-browser recovery regression group
+    status: passed
+    result: CI fixture repair; 18 core-only deep-link tests and 30 combined tests passed with no skips. Actual disposal helper is extracted; upload refresh waits for a replacement ready view.
+  - command: Existing attachment upload browser smoke with URL-bound visible drawer and settled finite animations
+    status: passed
+    result: 4 desktop/mobile English/Japanese tests passed. Retains the strict 44px geometry assertion; route restoration and animation completion precede measurement.
+  review:
+  - status: pending
+    reason: Independent latest-head maintainer review and CI required.
+  external:
+  - status: not-run
+    reason: Production deployment, physical device and post-merge close-out are separate.

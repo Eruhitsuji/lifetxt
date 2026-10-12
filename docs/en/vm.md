@@ -50,6 +50,10 @@ $ lifetxt vm run program.life.txt --entry s1 --json
 | `--max-steps N` | Bound on executed instructions before failing loudly instead of looping forever. Default `100000`. `0` means unlimited -- an explicit opt-in. |
 | `--json` | Emit the final state as JSON instead of text. |
 
+For both `vm run` and `vm graph`, omitting positional paths uses configured
+input paths, or `life.txt` when none are configured. Pass `-` explicitly to
+read stdin; omitting paths does not select stdin.
+
 Exit code `0` means the program halted within the step limit. A non-zero
 exit means validation failed, the step limit was reached before `HALT`, or
 execution was interrupted with `Ctrl+C`.

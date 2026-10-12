@@ -127,6 +127,8 @@ class VmRunCliTests(unittest.TestCase):
         self.assertEqual(0, code, stderr)
         self.assertIn("--entry", stdout)
         self.assertIn("--max-steps", stdout)
+        self.assertIn("Defaults to config paths or life.txt.", " ".join(stdout.split()))
+        self.assertNotIn("Reads stdin when omitted", stdout)
 
 
 class VmGraphCliTests(unittest.TestCase):
@@ -195,6 +197,47 @@ class VmGraphCliTests(unittest.TestCase):
         self.assertEqual(0, code, stderr)
         self.assertIn("--entry", stdout)
         self.assertIn("--format", stdout)
+        self.assertIn("Defaults to config paths or life.txt.", " ".join(stdout.split()))
+        self.assertNotIn("Reads stdin when omitted", stdout)
+
+
+class VmInputSourceCliTests(unittest.TestCase):
+    def test_configured_default_and_explicit_stdin_sources_match_help(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            default_path = os.path.join(temp_dir, "life.txt")
+            configured_path = os.path.join(temp_dir, "configured.life.txt")
+            config_path = os.path.join(temp_dir, "settings.json")
+            with open(default_path, "w", encoding="utf-8") as handle:
+                handle.write("[N] N Default_halt id:default op:halt\n")
+            with open(configured_path, "w", encoding="utf-8") as handle:
+                handle.write("[N] N Configured_halt id:configured op:halt\n")
+            with open(config_path, "w", encoding="utf-8") as handle:
+                json.dump({"paths": [configured_path]}, handle)
+            for command in ("run", "graph"):
+                for mode, entry, paths, options, stdin in (
+                    ("default", "default", [], [], None),
+                    ("configured", "configured", [], ["--config", config_path], None),
+                    (
+                        "stdin",
+                        "stdin",
+                        ["-"],
+                        ["--config", config_path],
+                        "[N] N Stdin_halt id:stdin op:halt\n",
+                    ),
+                ):
+                    with self.subTest(command=command, source=mode):
+                        stdout, stderr, code = run_cli(
+                            *options,
+                            "vm",
+                            command,
+                            *paths,
+                            "--entry",
+                            entry,
+                            cwd=temp_dir,
+                            input_text=stdin,
+                        )
+                        self.assertEqual(0, code, stderr)
+                        self.assertIn("HALT" if command == "run" else entry, stdout)
 
 
 if __name__ == "__main__":

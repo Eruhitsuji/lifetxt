@@ -20,6 +20,7 @@ import subprocess
 import unittest
 
 from lifetxt.web_assets import HTML_PAGE
+from tests.test_web_drawer_edit_js import _extract_function
 
 
 def _extract_script():
@@ -62,7 +63,10 @@ def _extract_functions_under_test(full_script):
         clipboard_start,
     )
     deep_link_and_copy = full_script[clipboard_start:context_menu_start]
-    return "\n".join([url_sync, close_drawer, share_and_restore, deep_link_and_copy])
+    work_disposal = _extract_function(full_script, "function disposeWorkSession(")
+    return "\n".join(
+        [url_sync, work_disposal, close_drawer, share_and_restore, deep_link_and_copy]
+    )
 
 
 _HARNESS = """
@@ -94,6 +98,8 @@ global.closeManagedModal = () => {};
 global.openManagedModal = () => {};
 global.document = { getElementById: () => null };
 let drawerItem = null;
+let workSessionView = {ready: true};
+let drawerWorkEditBinding = {itemRevision: "fixture"};
 Object.defineProperty(global, "drawerItem", {
   get: () => drawerItem, set: (v) => { drawerItem = v; },
 });
@@ -157,6 +163,7 @@ closeDrawer();
 results.close_url = _href;
 results.close_mode = historyLog[historyLog.length - 1][0];
 results.close_drawer_item_cleared = drawerItem === null;
+results.close_work_binding_cleared = workSessionView === null && drawerWorkEditBinding === null;
 
 // -- closeDrawer("none") leaves the URL untouched (popstate restore) --------
 _href = "http://example.invalid/";
@@ -296,6 +303,7 @@ class DeepLinkJsTests(unittest.TestCase):
         self.assertIn("preset=urgent", results["close_url"])
         self.assertEqual("replace", results["close_mode"])
         self.assertTrue(results["close_drawer_item_cleared"])
+        self.assertTrue(results["close_work_binding_cleared"])
 
     def test_close_drawer_none_mode_does_not_touch_history(self):
         results = self._run()

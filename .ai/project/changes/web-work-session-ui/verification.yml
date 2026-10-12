@@ -7,6 +7,9 @@ verification:
   - command: Focused Web assets/drawer/attachment/timer/journal/CI/change-package regressions plus all real revision browser suites
     status: passed
     result: 92 tests passed; one Windows-only byte-range locking skip on Linux. Final fixture/evidence adjustments rerun in the focused browser suite.
+  - command: python -m unittest tests.test_web_deep_link_js (core-only) and deep-link/drawer/actual-browser recovery regression group
+    status: passed
+    result: CI fixture repair; 18 core-only deep-link tests and 30 combined tests passed with no skips. Actual disposal helper is extracted; upload refresh waits for a replacement ready view.
   review:
   - status: pending
     reason: Independent latest-head maintainer review and CI required.

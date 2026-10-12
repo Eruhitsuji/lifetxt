@@ -63,6 +63,6 @@ export async function launch(browserPath) {
       throw Error('Timed out: '+label);
     };
     for(const name of ['Page','Runtime','Network','Log'])await command(name+'.enable');
-    return {command,evaluate,wait,events,close,version:await command('Browser.getVersion')};
+    return {command,evaluate,wait,events,close,processId:browser.pid,profileId:path.basename(profile),version:await command('Browser.getVersion')};
   } catch(error) {await close();throw error;}
 }

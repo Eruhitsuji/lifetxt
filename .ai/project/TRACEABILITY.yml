@@ -745,6 +745,36 @@ traceability:
         - "Changed-file ruff format --check, repository ruff check, configured mypy diagnostic boundary, minimal_life.txt integration, installed CLI text/JSON smoke and git diff --check passed. Repository format check has 72 unformatted files, all reproduced from origin/main ddb2dbfb."
       notes: Owner approved opt-in --one instead of replacing existing next defaults; Standard assurance, S. Uses existing CLI eligibility and sort, optional rank and timezone. Default workspace scope excludes archives/hidden sources; explicit inputs override. No new engine, API, format, config or writes. Independent human review and final CI remain PR merge gates.
       status: implemented
+    - requirement_id: req-real-browser-attachment-revision-recovery
+      capability_id: cap-web-browser-safe-attachment-upload
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/317
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1290
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1295
+      changed_files_or_scope:
+        - tests/test_web_revision_recovery_browser.py
+        - tests/browser_revision_recovery_probe.mjs
+        - tests/browser_revision_support.mjs (process/profile evidence only)
+        - .github/workflows/ci.yml (revision browser suite discovery only)
+        - docs/en/external-environment-verification.md
+        - docs/ja/external-environment-verification.md
+      tests_or_evidence:
+        - tests.test_web_revision_recovery_browser
+        - tests.test_web_attachment_upload_browser
+        - tests.test_attachment_transactions_v4
+        - tests.test_work_session_v4 (backend only, not frontend)
+        - tests.test_transaction_journal_v3
+      evidence_gap: https://github.com/Eruhitsuji/lifetxt/issues/1294
+      notes: >-
+        Standard Test/Verification. Real attachment frontend with a test-only
+        after_journal_publish fault leaves prepared transaction and 503 UI. Page reload
+        and fully new browser process/profile do not replay. Existing operator resume
+        commits once; stale/missing/malformed preconditions stop, explicit refresh retries
+        with current revision. Work-session frontend is absent in current runtime;
+        console fetch and /api/timer are not accepted as equivalent evidence. This partial
+        evidence does not close 1290/317. Production unchanged; no new autofix/offline resume.
+      release_or_deployment: null
+      status: implemented
+
     - requirement_id: req-planner-web-revision-contract
       capability_id: cap-web-mobile-planner
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1162

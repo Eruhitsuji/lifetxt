@@ -17816,6 +17816,32 @@ traceability:
       release_or_deployment: null
       status: implemented
 
+    - requirement_id: req-real-browser-proxy-revision-and-metrics-restart
+      capability_id: cap-web-mobile-planner
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/317
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1289
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1293
+      changed_files_or_scope:
+        - tests/test_web_revision_proxy_browser.py
+        - tests/browser_revision_proxy_probe.mjs
+        - tests/test_web_revision_browser.py (shared dependency guard)
+        - .github/workflows/ci.yml (revision browser suite discovery only)
+        - docs/en/external-environment-verification.md
+        - docs/ja/external-environment-verification.md
+      tests_or_evidence:
+        - tests.test_web_revision_proxy_browser
+        - tests.test_revision_telemetry_v2
+        - tests.test_revision_telemetry_relocation_v3
+        - tests.test_revision_migration_metrics
+      notes: >-
+        Standard Test/Verification reuses the existing runtime contract and CDP helper.
+        Real loopback proxy strips/rewrites ETag, source bytes preserved on rejection,
+        old metric counters/identity survive actual server process restart. Persisted
+        telemetry schema remains 1; v3 refers to existing relocation/identity contract.
+        Production unchanged. Independent latest-head review and CI are merge gates.
+      release_or_deployment: null
+      status: implemented
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

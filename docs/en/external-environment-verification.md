@@ -296,3 +296,25 @@ This does not establish proxy faults (#1289), process/profile restart and
 transaction recovery (#1290), deployment observation (#288–292), or layout
 and accessibility (#318). The dependent issues remain blocked until #1288
 merges. Independent latest-head review and CI remain merge gates.
+
+## Proxy faults and metrics process restart (#1289)
+
+Run `python -m unittest tests.test_web_revision_proxy_browser -v` with the
+#1288 browser prerequisites. The mandatory CI job discovers all
+`test_web_revision*browser.py` suites. A test-only bounded loopback reverse proxy
+strips ETag alone (X-Lifetxt-Revision fallback remains), strips both read tokens
+(frontend must stop without a POST), or rewrites ETag (409; exact source bytes
+unchanged). Restore the proxy and explicitly reload before retrying. A missing
+write precondition is rejected in required mode (428); observe permits the
+legacy write and persists exactly one additional counter.
+
+The same synthetic fixture loads an older metrics document with two prior
+legacy writes, a stable observation identity and an obsolete field. Stop the
+Uvicorn process and launch a new process on the same source and metrics path.
+Verify source bytes, counters, per-route counts and observation identity survive,
+current mode/schema are reported, and the unknown old field is not exported.
+This is the existing telemetry v3 relocation/identity policy; the persisted
+JSON schema remains version 1. A browser reload alone is not restart evidence.
+JSON `proxy-observe.json` / `proxy-required.json` in
+`LIFETXT_REVISION_EVIDENCE_DIR` record actual engine/Node/OS/source commit, proxy
+conditions, read headers, response statuses and before/after metrics.

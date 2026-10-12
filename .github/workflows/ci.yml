@@ -130,7 +130,7 @@ jobs:
           LIFETXT_BROWSER_BIN: ${{ steps.chrome.outputs.chrome-path }}
           LIFETXT_REQUIRE_REVISION_BROWSER: "1"
           LIFETXT_REVISION_EVIDENCE_DIR: .cache/revision-browser
-        run: python -m unittest tests.test_web_revision_browser -v
+        run: python -m unittest discover -s tests -t . -p 'test_web_revision*browser.py' -v
       - name: Retain synthetic engine and revision evidence
         if: always()
         uses: actions/upload-artifact@v6

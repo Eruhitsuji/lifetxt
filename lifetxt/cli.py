@@ -9805,7 +9805,11 @@ def _parse_simple_version(text):
     match = re.match(r"^(\d+(?:\.\d+)*)", text)
     if not match:
         return None
-    return tuple(int(part) for part in match.group(1).split("."))
+    parts = tuple(int(part) for part in match.group(1).split("."))
+    # An omitted subversion is zero; preserve the historical 3-tuple shape.
+    if len(parts) == 4 and parts[-1] == 0:
+        parts = parts[:3]
+    return parts
 
 
 def _github_api_get(url, timeout):

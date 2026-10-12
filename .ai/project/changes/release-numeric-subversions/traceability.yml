@@ -1,0 +1,14 @@
+schema_version: 1
+links:
+- requirement_id: req-release-numeric-subversions
+  capability_id: cap-stable-release-governance
+  epic: null
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1302
+  pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1303
+  tests_or_evidence:
+  - tests.test_release_subversions
+  - tests.test_lifetxt.LifeTxtUpdateCheckCliTests
+  release_or_deployment: Preparation only; no publication
+  status: implemented
+gaps:
+- Native Cargo/Desktop execution requires CI/runners.

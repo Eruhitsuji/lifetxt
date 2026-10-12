@@ -18,6 +18,10 @@ try:
 except ImportError:  # Python 3.10 compatibility
     import tomli as tomllib
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from lifetxt.versioning import canonical_release
+
+
 _TAG_PATTERN = re.compile(r"^v(?P<version>\d+\.\d+\.\d+(?:[A-Za-z0-9.]+)?)$")
 
 
@@ -50,7 +54,12 @@ def main(argv=None):
     except ValueError as exc:
         print(str(exc), file=sys.stderr)
         return 1
-    if declared != from_tag:
+    try:
+        matches = canonical_release(declared) == canonical_release(from_tag)
+    except ValueError:
+        # Preserve the existing prerelease tag contract.
+        matches = declared == from_tag and not re.fullmatch(r"[0-9.]+", from_tag)
+    if not matches:
         print(
             "Tag %r (version %r) does not match pyproject.toml version %r"
             % (args.tag, from_tag, declared),

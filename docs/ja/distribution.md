@@ -703,3 +703,33 @@ lifetxt 自体の source を変更する contributor は、引き続き editable
 fast-forward するためにこの editable な git-backed install に依存します。
 `pip install lifetxt`（本ドキュメント）は別の、通常の end-user 向け経路で、
 git checkout の存在を前提としません。
+
+## リリース番号とサブバージョン
+
+通常の正式版は `vX.Y.Z` とし、必要な補正のみ `vX.Y.Z.N` を使用します。
+省略した `N` は0で、`v1.0.4` と `v1.0.4.0` は同じ版です。同じ版を別タグで
+重複公開せず、通常表記は3区切りを維持します。大小は4要素の数値として比較します。
+例: `1.0.4 = 1.0.4.0 < 1.0.4.1 < 1.0.4.2 < 1.0.4.10 < 1.0.5`。
+
+| 対象 | 通常版の例 | サブバージョンの例 |
+| --- | --- | --- |
+| Core、Mini CLI、Git tag、PyPI、配布manifest | `1.0.4` | `1.0.4.1` |
+| Cargoのpackage/lock、Tauri config | `1.0.4` | `1.0.4+1` |
+| GHCRの固定タグ | `1.0.4` / `v1.0.4` | `1.0.4.1` / `v1.0.4.1` |
+
+`+N` はSemVer必須メタデータへの変換です。SemVerの大小比較ではbuild metadataを
+無視するため、`1.0.4` と `1.0.4+1` は同順位ですが、両方とも `1.0.5` より古い版です。
+lifetxtの `update-check` / `update` は元の番号を使い、サブバージョンを数値比較します。
+CargoのMini crateは `publish = false` のままです。crate依存解決の順序に `+N` を使いません。
+
+バージョン更新時は `pyproject.toml` と `lifetxt/__init__.py` に同じ元番号を設定し、
+Miniの `Cargo.toml` / `Cargo.lock` には上表の変換番号を設定します。
+`python scripts/check_lifetxt_mini_version.py --tag v1.0.4.1` と、ビルド後の
+`--binary <Mini実行ファイル>` でCore/タグ/メタデータ/実出力を検証します。
+`python scripts/set_tauri_desktop_version.py --version 1.0.4.1` はTauri向け設定を生成します。
+
+DesktopのネイティブメタデータはOSの制約を受けます。Windows用の数値build番号は
+`N` を保持します（MSIの上限65535）。macOSの標準versionフィールドは3区切りに保ち、
+生成した `.release-version.plist` の `LifetxtReleaseVersion` に元番号を保存します。
+`+N` やmacOS標準フィールド単独でネイティブ自動更新の順序を保証しません。
+各OSへの実インストール/上書き更新はリリース時に別途確認してください。

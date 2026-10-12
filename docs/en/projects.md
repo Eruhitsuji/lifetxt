@@ -231,3 +231,5 @@ fields are accepted. No values are normalized or rewritten.
 Local JSON version 1 contains `contract_version`, `record_kind`, `read_only`,
 `risk_count`, and `diagnostics` using the existing diagnostic output shape.
 This is a local CLI inspection result, with no new Web/Remote/MCP surface.
+
+Severity comparison is case-insensitive, matching existing Project reports.

@@ -232,6 +232,39 @@ class TicketBulkTests(unittest.TestCase):
             with self.subTest(kwargs=kwargs), self.assertRaises(ValueError):
                 self.preview(["K0"], **kwargs)
 
+    def test_mixed_noop_and_ambiguous_scalar_targets(self):
+        original = self.path.read_bytes()
+        self.path.write_bytes(
+            original.replace(b"id:A tracker", b"id:A assignee:alice tracker")
+        )
+        plan = self.preview()
+        self.assertEqual([False, True], [row["changed"] for row in plan["changes"]])
+        self.apply(plan)
+        self.assertEqual(1, len(iter_ticket_events(self.items())))
+        for old, new in (
+            (b"id:A", b"id:A id:OTHER"),
+            (b"record:ticket id:A", b"record:ticket record:risk id:A"),
+        ):
+            self.path.write_bytes(original.replace(old, new))
+            before = self.path.read_bytes()
+            with self.assertRaises(ValueError):
+                self.preview()
+            self.assertEqual(before, self.path.read_bytes())
+
+    def test_invalid_existing_history_refuses_all_targets(self):
+        self.apply(self.preview())
+        data = self.path.read_bytes()
+        event = [
+            line
+            for line in data.splitlines(keepends=True)
+            if b"record:ticket_event" in line
+        ][0]
+        self.path.write_bytes(data + event)
+        before = self.path.read_bytes()
+        with self.assertRaises(ValueError):
+            self.preview(transaction_id="new.batch", assignee="bob")
+        self.assertEqual(before, self.path.read_bytes())
+
     def test_cli_preview_saved_plan_and_apply(self):
         conf = Path(self.temp.name) / "config.json"
         conf.write_text(json.dumps(self.config))

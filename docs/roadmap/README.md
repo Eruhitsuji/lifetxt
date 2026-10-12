@@ -97,7 +97,7 @@ Capabilities; neither archive is a competing product specification.
 - Requirement: `req-roadmap-issue-deduplication`.
 - Existing capability context: `cap-life-philosophy-documentation`; no runtime capability changes.
 - Investigation: #1269; implementation task: #1270.
-- Pull request: pending creation.
+- Pull request: [#1271](https://github.com/Eruhitsuji/lifetxt/pull/1271).
 - Evidence: source blob/byte equality, 191-item continuous index, 12 unchanged
   Deferred idea texts, 38 retained unclear IDs, live relative-link checks, and
   `git diff --check`.

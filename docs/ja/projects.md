@@ -226,3 +226,5 @@ closed/resolved/mitigated/doneです。severity/state省略時のmedium/open、
 ローカルJSON v1のフィールドはcontract_version、record_kind、read_only、
 risk_count、既存のdiagnostic出力形式を使うdiagnosticsです。
 Web/Remote/MCPの新しいsurfaceは追加しません。
+
+severityの比較は、既存Project reportと同様に大文字小文字を区別しません。

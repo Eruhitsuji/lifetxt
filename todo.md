@@ -1,401 +1,122 @@
 # lifetxt Roadmap and Deferred Ideas
 
-Last updated: 2026-08-22 (updated x133)
-
-This file is a roadmap and idea parking lot only. GitHub Issues are authoritative
-for actionable task execution, review state, and task status; `.ai/project/RULES.md`
-is authoritative for project rules, principles, and product boundaries; `docs/`
-and code are authoritative for implemented behavior.
-
-Completed implementation-status summaries are intentionally not maintained here.
-Add new work as roadmap bullets or Deferred Ideas. Move current-behavior
-documentation to `docs/` instead.
-
-Pending `Decide` bullets below are unscheduled decision prompts, not
-implementation tasks or rules, until a dedicated issue is filed or the decision
-is recorded in an authoritative document.
-
-## Post-Stable Priority Model
-
-lifetxt `v1.0.0` was published and promoted on 2026-08-22 (#454, #457, #464).
-The broad stabilization trackers #283 and #339 and the reduced Stable 1.0 gate
-in #454 are preserved as historical records of that work; they no longer set
-active priority for what happens next. #471 rebaselined this file against that
-completed state.
-
-Priority below separates *why work matters* from *whether exhaustive
-real-environment proof already exists*, per #454's own reduced-blocker
-definition: missing verification evidence for an already-implemented surface
-is not by itself higher priority than delivering new user-facing value.
-
-- `P0`: Correctness, data-integrity, or security regressions; anything that
-  would violate the published Format 1.0 / Stable compatibility contract
-  (`docs/en/release-compatibility-policy.md`); a release-artifact or
-  clean-install break. Escalate immediately regardless of what else is in
-  flight.
-- `P1`: The selected near-term product-development themes below, and the
-  maintenance/hardening work those themes directly depend on (permission,
-  privacy, and authenticated-role enforcement for surfaces a theme exposes;
-  config/workspace-context parity; the remaining Format/schema/diagnostic
-  completeness a theme's own acceptance criteria need).
-- `P2`: Everything classified `post_stable_quality` in
-  `.ai/project/STABLE_RELEASE.yml`'s `post_stable_roadmap` section (real Web
-  revision deployment rollout, attachment/compound-session recovery under
-  real failures, encrypted/access-controlled evidence storage, deterministic
-  timezone fixture expansion, real terminal/selector/SMTP/browser matrices,
-  and external-verification harness hardening), plus optional integrations,
-  advanced ticket/Agile views, Web UI customization, packaging/distribution,
-  editor/LSP tooling, and general maintainability. Pursue opportunistically;
-  promote an item to P0 the moment it stops being a missing-evidence gap and
-  becomes a concrete correctness or security defect, per #454's reduced
-  blocker definition.
-- `Deferred`: Ideas that should wait for a proven use case or a stable
-  foundation.
-
-See `.ai/project/STABLE_RELEASE.yml`'s `post_stable_roadmap` section for the
-explicit per-issue classification (`post_stable_quality`,
-`maintenance_or_correctness`, `product_enabler`, or `obsolete_or_superseded`)
-behind this model.
-
-## Selected Post-Stable Product Development Themes
-
-Ordered by near-term priority (P1). Each already has most of its data/engine
-layer implemented per `.ai/project/CAPABILITIES.yml`; the remaining gap is
-surface exposure and daily-workflow polish, not new architecture.
-
-1. **Unified Inbox, Daily Command Center, and Saved Views / life-area
-   navigation.** Turns the already-implemented proposal store
-   (`lifetxt/inbox.py`), next-action selection, `area:` support,
-   people/group overviews, and the shared CLI/MCP daily aggregation into an
-   everyday-use surface. Tracked by #472 (theme epic); first executable step:
-   #473 (design investigation).
-2. **Project & Portfolio Hub Web/TUI/saved-view exposure.** Surfaces the
-   already-implemented `ticket-project-report-v1` engine (CLI/MCP read
-   surfaces are done) to the surfaces people actually work in day to day, and
-   is a natural pairing with theme 1's command-center views.
-3. **Ticket workflow usability (list/detail/activity, lightweight Kanban).**
-   Builds UI on top of the already-implemented workflow/history/planning/
-   time-tracking core, reusing the daily-view patterns themes 1 and 2
-   establish.
-
-This does not reopen the completed Stable 1.0 gate, and does not require
-finishing the `P2` real-environment verification backlog first.
-
-Reference pointers:
-
-- Project principles and product boundaries: [`.ai/project/RULES.md`](.ai/project/RULES.md).
-- Counter-machine internal specification: [`docs/design/counter-machine.md`](docs/design/counter-machine.md).
-- Previous detailed roadmap snapshot: [`docs/roadmap-archive-2026-07-20.md`](docs/roadmap-archive-2026-07-20.md).
-- Stable 1.0 compatibility contract: [`docs/en/release-compatibility-policy.md`](docs/en/release-compatibility-policy.md).
-
----
-
-## P1: Remote Safe Mode follow-up
-
-- [ ] Harden browser and deployment identity beyond the implemented process-local absolute/idle expiry, rotation, logout, principal revalidation, restart invalidation, Origin/CSRF checks, secure cookie policy, login throttling, and single-worker enforcement. Define a production session deployment profile: either document single-process/session-affinity as an explicit supported boundary or add a durable shared session backend with atomic rotation/revocation and restart semantics. Add durable token rotation/revocation, hashed credential stores or external identity providers, proxy-chain and forwarded-host verification, replay-window policy, security-header/browser tests, session-key rotation, and incident-safe session invalidation.
-- [ ] Refresh the dependency-free Remote ticket detail and mutation client surface. Add bounded conflict presentation without automatic overwrite; per-operation denial reasons; project, group, and visibility constraint summaries; server read-only and write-adapter state; protocol/capability revision display; and typed custom-field role summaries.
-- [ ] Add capability-driven create/edit completion and validation for Remote ticket clients. Cover repeatable values, explicit unset semantics, typed date/datetime/duration normalization, and tracker/project applicability while keeping raw life.txt replacement unavailable.
-- [ ] Add permission-aware Remote detail, history, time-entry, version, sprint, dependency, watcher, and attachment read views before enabling their mutations.
-- [ ] Add Remote planning, relation, watcher, attachment, timer/work-session, provider-side-effect, and bulk mutations only through journal-backed revision sets with inspect/resume/compensate/abandon recovery, stable transaction IDs, dry-run previews, permission-aware per-target decisions, and bounded transaction inspection without local paths.
-- [ ] Add packaged-client HTTPS integration evidence for owner/editor/reader/auditor roles; allowed and denied projects/visibilities; disabled writes; read-only servers; stale revisions; concurrent writers; identical replay; conflicting transaction IDs; clock skew; proxy identity; TLS failure; timeouts; partial responses; disconnects; restart; and protocol compatibility.
-- [ ] Add real-terminal and profile-administration evidence for Windows Terminal, WSL without VS Code Remote mode, macOS Terminal, Linux terminals, narrow layouts, redirected streams, locale failures, Ctrl-C handling, missing profile/token environments, credential/profile administration, token rotation diagnostics, optional OS credential-store adapters, secret-free profile import/export, permission checks, version migration/refusal, request/audit correlation, and bounded incident diagnostic bundles.
-
-## P1: Format 1.0 and Data Semantics
-
-- [ ] Complete Format 1.0 enforcement beyond the mutation guard. Add parser-level version metadata, explicit `format migrate` and downgrade inspection, consistent unsupported-version errors in CLI/TUI/Web/MCP, newly-created-workspace policy, and a compatibility matrix covering format, canonical, schema, capability, revision, configuration, release-policy, transaction-journal, ticket-schema, ticket-workflow, ticket-event, and future counter-machine-result versions.
-- [ ] Complete `LIFETXT_CANON_V1`. Define quoting, escaping, detail ordering, repeated-key ordering, continuation representation, comments, directive placement, blank-line behavior, Unicode edge cases, and idempotent serializer output. Add golden input/output/diagnostic fixtures and prohibit intentional output changes without a migration note and corpus-version decision. Preserve repeated machine scalar details so strict runtime validation can reject ambiguity instead of silently selecting one value.
-- [ ] Enforce documented multi-file semantics. Make input/glob order deterministic and visible; enforce workspace-wide IDs during every write; define cross-file parent/link/archive/generated-file rules; preserve source metadata; require explicit write targets; and test partial-read, missing-file, permission, and path-alias cases. Include ticket/event/time-entry uniqueness, ticket-event parent integrity, and version/sprint references across files. The initial counter-machine runtime must remain single-explicit-file and must not inherit workspace paths or follow references into other files.
-- [ ] Expand the schema bundle beyond the current 52 documents where real contracts exist. Semantic writes, archive operations, attachment transactions, compound work sessions, transaction policy, backup integrity, fault reports, clock audit/skew, delegated mutation proposals, remote attachment operations/chunks/package inspection, transaction restore, remote-write clock metadata, versioned configuration, workspace manifests, project registry/summaries, command center, area summaries, query plans, saved views, groups, recipient resolution, delivery state, people, and Unified Inbox proposals are published and validated. Next add JSONL record schemas, endpoint-specific Web request/response envelopes, generic MCP tool/resource result envelopes, `ticket-v1`, `ticket-workflow-v1`, `ticket-event-v1`, `ticket-operation-v1`, `ticket-time-entry-v1`, `ticket-version-v1`, `ticket-sprint-v1`, normalized integration events, development-tool reference/event results, provider operation results, notification backend results, policy migration results, import/export manifests, and `counter-machine-result-v1`. Generate schemas from authoritative registries where possible and validate real responses rather than representative samples alone.
-- [ ] Extend stable diagnostics after F101-F134. Attachment path escape, symlink and executable policy violations, transaction retention and permission problems, unsupported newer journal versions, and incomplete backup integrity are now detected in addition to transaction interruption and divergence. Next add generated-file ownership violations, archive destination policy conflicts, directory-package attachment hazards, MIME-policy mismatches, mixed-source configuration conflicts, configuration/profile/include cycles, schema/capability mismatch, unsupported client and policy versions, failed policy migration, stale evidence archives, remote clock skew, invalid ticket tracker/status/priority/severity, forbidden workflow transitions, missing ticket-event parents, event-sequence conflicts, invalid duplicate/parent/dependency relations, version/sprint date conflicts, malformed time entries, and parser-native precise end spans. Define the counter-machine `C001`-`C012` namespace as runtime diagnostics with deterministic source location, item ID, detail key, message, hint, and ordering; do not replace the stable format-diagnostic namespace.
-- [ ] Route legacy `check --format json` to the stable diagnostic shape. Preserve `source`, `line`, `column`, `span`, `code`, `severity`, `message`, and `hint`; compare CLI/Web/MCP output using the same fixture table; publish compatibility guarantees; and provide a transition period for scripts that consumed the old shape. Decide whether non-executing machine validation belongs only in `run` or later in explicit `check --machine`; ordinary custom `machine:` details must not make normal `check` fail without opt-in.
-- [ ] Add conservative typo suggestions and `check --fix` only after canonical ordering/quoting is final. Every repair must be revision-checked, idempotent, reviewable as a diff, limited to unambiguous transformations, and disabled for unsupported format versions or interrupted transactions. Ticket workflow, relation, event, time-entry, and counter-machine repairs must remain report-only unless the transformation is mechanically reversible; missing labels and references must never be invented.
-- [ ] Extend the golden-corpus policy when a second released format/corpus version exists. Keep version-1 cases immutable, run all prior corpora against new parsers/serializers/diagnostics, add downgrade expectations, and require explicit migration/release notes before accepting intentional changes. Add counter-machine records as custom-key preservation cases without making the runtime model part of core grammar.
-
----
-
-## P1: Shared Surface Contracts
-
-- [ ] Expand the registry-backed operation layer into real surface-neutral implementations for query, add, update, delete, done, repeat completion, agenda, next selection, timezone conversion, links, messaging, proposals, saved views, workspaces, projects, portfolios, tickets, ticket transitions, ticket events/comments, ticket relations, ticket bulk operations, ticket time entries, versions, sprints, backlogs, development-tool references, integrations, remote access, timer actions, attachments, archive, and undo. Registry rows must identify required revisions, touched targets, validation schema, read-only availability, permission requirements, generated events, external side effects, recovery behavior, and supported surfaces.
-- [ ] Extend public-contract tests through CLI and TUI. Reuse the Web/MCP fixture semantics for create, stale/missing revisions, validation failure, lock timeout, read-only mode, unsupported format, missing capability, proposal staging, compound operations, multi-file partial failure, compensation, interrupted journals, and recovery failure. Add one shared ticket fixture matrix for creation, assignment, transition, comment, relation, watcher, time entry, bulk update, sprint planning, closure, reopen, and external reference proposals.
-- [ ] Complete the registry-derived command/capability drift gate. Generate CLI/TUI/Web/MCP availability from one registry; validate actual `/api/capabilities`, `get_capabilities`, and `lifetxt://capabilities`; include package/server version and installed/configured optional features; and require a documented exception for every surface mismatch. Ticket operations must not appear writable on a surface that cannot atomically preserve the ticket event or required time-entry side records. Register the initial counter-machine `run` operation as CLI-only, pure, and unavailable on Web/MCP/TUI/remote/automation surfaces.
-- [ ] Continue reducing the direct-write baseline. Digest/template append operations and fzf item actions now use semantic CAS operations, and obsolete compatibility allowances are removed. Next move every remaining configuration output to the atomic config writer, classify editor handoff and attachment import boundaries explicitly, retain generated-schema output only as a generated artifact, and fail review when an allowance lacks a reason, owner, removal condition, and roadmap item. Future ticket commands must use semantic operations from their first release rather than adding another direct-write compatibility path. Counter-machine execution must never add an authoritative-write allowance: stdout is default and `-o` may only atomically create/replace a distinct result file.
-- [ ] Move all extension dispatcher commands into the unified parser registry during the CLI module split. Generated help, shell completion, Web command palette, docs, and capability responses must consume the same option definitions without entrypoint special cases. Add ticket tracker/status/version/sprint/component/custom-field completion from the same registries. Define `run FILE --entry ID [--max-steps N] [--format life|json] [-o FILE]` in that registry without adding command-palette or remote execution.
-- [ ] Add structured proposal metadata and item-level diffs. Include source, provenance, assumptions, warnings, expected revisions for every target, side-effect plan, permission requirements, validation results, generated ticket events, external-development-tool actions, and compensation/recovery plan. Require an expected revision or explicit unsafe override before applying. The counter-machine runtime remains a pure execution result and must not be represented as a mutation proposal in its initial release.
-- [ ] Extend the shared query language and saved views to the remaining surfaces and semantics. The core now exists in [`lifetxt/query.py`](lifetxt/query.py) and [`lifetxt/saved_views.py`](lifetxt/saved_views.py): one grammar (membership fields, `field:a,b` OR values, date comparisons `<`/`>`/`<=`/`>=`/`!=`, `-tag`/`exclude_tag`, `open`, quoted text, arbitrary/custom detail equality), typed diagnostics (Q001 unknown field, Q002 bad date, Q003 empty value, Q004 bad operator), a compiled `query-plan-v1` schema, and `saved-view-v1`-shaped saved views under the `saved_views` config section with V001/V002 validation. Wired through the CLI (`query`, `view list|show|validate|run`) and MCP (`run_query`, `list_saved_views`, `run_saved_view`), with English/Japanese `docs/*/query.md`. Next reuse it in the TUI, Web, remote clients, project/portfolio/board/dashboard views, and automation; add explicit grouping/parentheses, timezone-aware date handling, ordering by multiple keys, and a documented version-migration path. Machine counters/instructions remain ordinary custom-detail Notes for explicit queries but are excluded from default action-oriented views.
-- [ ] Extend `doctor --workspace-safety` beyond automatic timer/journal discovery, transaction-state summary, attachment checks, transaction-policy checks, backup-integrity checks, terminal-journal cleanup, and redacted support-bundle export. Next discover directory/package attachment state, every resolved workspace source and write target, duplicate physical paths, configured schema and generated-file locations, remote profiles, ticket/workflow/version/sprint registries, event/time-entry stores, integration credentials by reference only, policy migration requirements, and remote clock skew; add interactive confirmation for stale-lock and recovery cleanup while retaining explicit `--force` for non-interactive use; validate support bundles against named privacy profiles; and add a bounded, access-controlled archive option for complete recovery evidence. The counter-machine runtime needs no workspace scan; optional doctor output may report only runtime availability and the documented default limit.
-- [ ] Decide which report commands need Web/MCP equivalents from demonstrated daily use. Avoid adding a surface only for symmetry; require a shared operation, schema, permission model, and query semantics first. The initial counter-machine runtime is intentionally CLI-only despite generated capability visibility.
-
----
-
-## P1: Configuration and Workspace Foundation
-
-- [ ] Complete `config_version` migration rules in the registry (multi-step upgrade/downgrade guidance and per-key `since`/`deprecated`/`replacement` coverage generation for docs). Write-gating for unsupported versions and read-only inspection already work. Include ticketing registry, workflow, custom-field, version/sprint, watcher, Git keyword, and development-integration settings in version coverage before those settings become public.
-- [ ] Complete per-workspace notification and cross-surface workspace-context parity. Named workspace source/write-target resolution, config-relative paths, TUI workspace selection/timezone context, active-workspace display, and compatibility-preserving extended CLI source resolution are implemented. Next make notification state/config derive from the selected workspace; verify Web, MCP, Remote Safe Mode, saved views, project/ticket reports, and future integrations all consume the same resolved manifest and active workspace identity; add switch-between-workspaces tests; and define behavior when a workspace is renamed, removed, unavailable, or mixes generated/read-only/archive sources.
-- [ ] Consolidate global CLI invocation context so the legacy parser, compatibility-preserving extended dispatcher, timezone bootstrap, TUI startup, and future command plugins cannot drift on `--config`, `--workspace`, profiles, environment overlays, or cwd-independent relative-path semantics. Introduce one shared resolver that returns the selected configuration source, active workspace, resolved input manifest, write target, generated/archive roles, timezone context, and provenance without persisting runtime-injected paths. Add a table-driven parity suite for `--config`/`--workspace` split and `=` forms, option ordering, default workspaces, explicit positional-path override, legacy top-level `paths`/`write_file`, unrelated current working directories, Unicode/space-containing paths, missing/renamed workspaces, profiles/environment overrides, and commands routed through both dispatchers.
-
----
-
-## P1: Project and Portfolio Management
-
-- [ ] Close out the #183 evidence ceiling and add a versioned Project archive plan/provenance workflow without re-blocking production. Preserve the recovered evidence hashes, timestamps, and operator notes; record malformed shell paste/redirection as the leading but unproven incident hypothesis and document that the exact 2026-08-09 command sequence is unrecoverable from retained history. Implement `archive-plan-v1` as a reviewable artifact containing the resolved workspace/config identity, exact source and destination revisions, selected item IDs, reference effects, archive destination, creation time, writer/process provenance, and journal/transaction identity. Add `project archive --apply-plan PLAN` (or an equivalent explicit apply operation) that rejects plan tampering, source/destination revision drift, workspace/config drift, changed selections, unsupported plan versions, and missing recovery evidence before any write-side work. Keep the current fresh-dry-run plus exact-revision production contract enabled while the plan format is additive; keep generic `archive` backward compatibility separate. Add operator documentation for one-line archive commands, `set -o noclobber` as an optional shell-side defense, evidence preservation, post-archive validation, and rollback/recovery. Add deterministic tests for plan generation/replay, stale/tampered plans, missing destinations, parser errors, external-reference changes, process/writer attribution, rejected-path byte-for-byte immutability, and journal/backup provenance.
-- [ ] Build one authoritative `record:<kind>` metadata registry and make every first-party record producer/consumer derive from it. Generic validation parity is now covered for the observed Project, Ticket, `ticket_event`, and `time_entry` production paths through the interim compatibility ownership table, including lifecycle-state and completion-date alignment; the registry remains necessary to remove duplicated key lists and cover the remaining first-party record families. Cover at least `project`, `milestone`, `risk`, `issue`, `decision`, `meeting`, `ticket`, `ticket_event`, `time_entry`, `version`, and `sprint`; define each record kind's allowed item types, owned keys, required/repeatable fields, typed value domains, lifecycle `state` semantics, ID/completion policy, visibility/write-role expectations, and conversion/migration rules. Reuse the registry in generic validation, Project/Ticket semantic validation, schema generation, CLI completion, generated-record builders, documentation/reference tables, and future Web/TUI forms. Add a CI self-validation gate that instantiates every first-party generated record and requires generic `check` to produce no false custom-field/state/completion warnings while preserving warnings for genuinely unknown custom metadata and retaining life.txt's permissive storage model.
-- [ ] Finish exposing the existing `project`/`portfolio` operations through TUI, Web, saved views, and remote read-only clients where capabilities permit. The main CLI, Project Hub, Portfolio, read-only MCP tools, project-alias normalization, shared reference/stale/terminal/severity settings, project archive, and capability discovery are implemented through `lifetxt/ticket_project_surfaces.py`; remaining adapters must consume the same complete `ticket-project-report-v1` object, preserve formulas/caveats/dependency-unknown counts, publish source revisions and privacy scope, and refuse unsupported schema versions instead of recalculating metrics locally.
-- [ ] Add semantic validation for milestone/risk/issue/decision/meeting records beyond generic first-party metadata recognition: severity enum, record-specific resolution/lifecycle states, decision/follow-up dates, affected milestone links, required fields, and cross-record references. Templates and record builders already exist. Keep generic `record:issue` available for project-level issues that do not need the development-ticket workflow; document optional conversion to `record:ticket` as an explicit previewed migration.
-- [ ] Add project permissions and privacy behavior for remote workspaces, team views, integrations, exports, AI context, notifications, tickets, ticket events, and time entries. Tests must cover duplicate project definitions, missing registries, cross-file tasks, archived/renamed projects, stale revisions, partial transactions, private tickets with shared events, and mixed private/shared records. Alias resolution and registry-only projects are already covered.
-
----
-
-## P1: Development Ticket Management Core
-
-- [ ] Finish cross-surface typed custom-field adoption. `ticketing.custom_fields` now supports string/integer/number/boolean/date/datetime/duration/enum definitions; required/default/repeatable behavior; enum, numeric-bound, length, and pattern validation; tracker/project applicability; filterable/searchable/privacy/editable-role/visible-role metadata; `ticket fields`; `ticket new --field`; filterable `ticket list --field|--has-field`; custom values in `ticket show`; TK006-TK010 diagnostics; exact-revision in-lock rejection; capability discovery; and `ticket-custom-field-registry-v1` while leaving unknown unconfigured life.txt keys valid. Next integrate searchable/filterable definitions with the shared query engine, completion, saved views, command center, TUI, Web, MCP, and remote read-only clients; enforce privacy and visible/editable roles server-side from authenticated project membership; redact secret/private values from reports, notifications, logs, exports, AI context, and capability documents where policy requires; add project/tracker alias resolution, schema migration/version refusal, index/cache invalidation, and older-client fixtures; and keep remote custom-field writes disabled until workflow/history/permission/clock/recovery contracts pass.
-- [ ] Extend exact-revision workflow/history/planning writes beyond the implemented same-file contract. `ticket transition|comment|reassign|change|watch|unwatch|log-time|plan`, `version` writes, and `sprint` writes now require an exact source revision; allocate event/time IDs and sequences under the shared lock; reject duplicate transaction IDs; validate ticket, history, correction, project-membership, capacity, and unresolved-member rules; and commit one authoritative file with one atomic replacement. Next publish revision sets and stable journal IDs for split ticket/event/time/planning sources, all-or-none bulk changes, notification stores, timer/work-session state, attachments, and project archive; add inspect/resume/compensate/abandon evidence and crash-boundary fixtures; and keep remote writes disabled until permission, clock, privacy, and multi-target recovery are complete.
-- [ ] Finish `ticket show` and project aggregation beyond the implemented activity/planning summary. Ticket views now expose event count/latest event, correction-aware time totals, version, sprint, and story points without duplicating the authoritative activity/planning reports. Next add attachment summaries, paginated/redacted event and time collections, cross-file source revisions, version/sprint attention, private-history visibility, and explicit schema-version refusal for Web/TUI/saved-view/remote consumers.
-- [ ] Finish ticket relation policy beyond the implemented shared link graph and cycle diagnostics. Define reciprocal-edge behavior, cross-project relation permissions, deleted/archived target semantics, duplicate-closure survivor recording, event/history generation for relation changes, and migration behavior for existing asymmetric `depends_on`/`blocks`, `duplicate_of`, and `replaced_by` assertions. Keep automatic reciprocal writes disabled until the transaction/event contract is explicit.
-- [ ] Add ticket-aware query fields, sorting, grouping, completion, and saved views for tracker, detailed status, priority, severity, reporter, assignee, watcher, component, category, version, sprint, estimate, elapsed, story points, and relation/external-reference state. The shared query language already handles arbitrary detail equality, so most ticket fields are queryable today; add registry-backed completion and dedicated sort keys.
-- [ ] Add previewed all-or-none `ticket bulk` operations for field changes, assignment, version/sprint planning, and allowed transitions. Validate every selected ticket and every required event before committing; do not default to partial success. Report conflicts, forbidden transitions, and excluded tickets individually while leaving all targets unchanged on failure.
-- [ ] Finish integrating `ticket-project-report-v1` into command center, health, workload, review, notification, TUI, Web, saved-view, and remote read-only surfaces. The main `ticket`/`project` CLI trees, Project Hub, Portfolio, read-only MCP, capability discovery, and standalone diagnostic commands now return or embed the shared report. Every remaining adapter must reuse the complete schema payload rather than recalculating open/by-status, blocked, dependency-unknown, overdue, unassigned, high-severity, stale, estimate/elapsed, or count-progress values; add explicit schema-version refusal and revision/privacy metadata before caching or remote delivery.
-- [ ] Finish registry-driven report ordering and validation. Integrated surfaces now derive terminal statuses from effective `ticketing.statuses` life-status mappings, derive high severities and stale windows from `ticketing.report`/`ticketing`, retain explicit CLI/MCP/library overrides, and embed the effective values in every report and capability document. Next resolve status display order and priority order from the registry, publish their provenance, add stable diagnostics for unknown/duplicate/contradictory ordering entries, and preserve deterministic fallback ordering for older configurations.
-- [ ] Add source-manifest, exact input-revision, generated-at, privacy/redaction, and cache-validity metadata to `ticket-project-report-v1` or a versioned result envelope before Web, saved-view, remote, notification, or AI-context consumers persist reports. Define how partial/unreadable/private sources affect `dependency_unknown` reasons and project totals, ensure capability discovery declares the metadata version, and add stale-report rejection tests without exposing unrelated ticket bodies.
-- [ ] Add cross-version schema/capability compatibility fixtures and integrate the now-authoritative `record:version`/`record:sprint` contracts into `ticket-project-report-v1` attention and project/portfolio views. The local planning report, backlog, roadmap, capacity/unresolved-member warnings, seven schemas, read-only MCP tools, and capability boundary are implemented; next define envelope/version negotiation, report revision/privacy metadata, older-client refusal/fallback, and deterministic release/sprint attention formulas.
-- [ ] Add local CLI fixtures and English/Japanese documentation for bug, feature, task, support, and security trackers; parent/subtask, duplicate, dependency, private/custom-field, cross-file, archive, and malformed-ticket cases; and migration from an existing Task or generic `record:issue` through an explicit diff/proposal. Main report-command, project-alias, Project Hub, Portfolio, MCP, capability integration, and first-party generic-validator parity fixtures now exist; keep expanding corpus coverage rather than duplicating adapter-specific metric tests.
-
----
-
-## P1: Ticket Workflow, History, Planning, and Time Tracking
-
-- [ ] Enforce workflow roles, transition-specific editable/visible fields, ticket/custom-field privacy, project membership, and administrative overrides from authenticated Web/remote identities rather than caller-supplied local role strings. Add workflow/config schema migration, unsupported-version refusal, alias resolution, permission-change races, and complete allowed/forbidden transition matrices for each tracker/project profile.
-- [ ] Extend the implemented exact ticket revision-set and journal-backed recovery contract to notification/delivery stores, timer/work-session state, reciprocal relation events, attachment references/packages, version/sprint lifecycle side records, and project archive. Preserve the implemented stable transaction IDs, exact touched revisions, generated-record previews, inspect/resume/compensate/abandon actions, and one-winner/one-conflict behavior; add crash-boundary and adverse-filesystem evidence for each newly admitted side store before enabling the corresponding remote workflow write.
-- [ ] Add explicit append-only administrative history operations for comment/body redaction, supersede, provider-history import, provenance verification, retention, compaction, and export. Never silently rewrite old events or correction entries; preserve hashes/IDs and record the authorized reason, actor, policy, and replacement relationship.
-- [ ] Implement watcher expansion and notification policy for transition, assignment, comment, due-date, relation/blocker, pull-request, build, version, close, and reopen events. Resolve users/groups deterministically, preserve original watcher references and resolved recipients, redact private fields, isolate delivery state from ticket completion, and recover partial delivery independently from the ticket/event commit.
-- [ ] Integrate the existing timer and compound work-session contracts through explicit proposals or revision-set transactions that can create time entries without double-counting legacy `elapsed:`. Add start/stop/resume/cancel/recovery mapping, timer/work-session references, correction approval, project/user/activity timesheets, estimate/remaining/variance reports, billing/export policy, and migration guidance.
-- [ ] Extend version/sprint planning with previewed carry-over, release-note inputs, parent-version validation across archives, WIP policy, active-sprint policy, commitment/completion, backlog age, cycle/lead time, throughput, estimate variance, velocity, and burndown. Publish formulas, source coverage, timezone boundaries, missing-data caveats, and never present forecasts as commitments.
-- [ ] Extend the focused local fixtures with cross-file interrupted commits, resume/compensation, same-time concurrent writers, duplicate/cyclic corrections, provider provenance, administrative redaction, private history, watcher expansion, timer recovery, version release/carry-over, capacity/WIP boundaries, older schemas, Windows/CRLF/BOM, and real Web/TUI/remote clients.
-
----
-
-## P1: Remote Safe Mode and Remote Workspace Access
-
-- [ ] Define and verify the production browser-session deployment profile. Choose either explicit single-process/session-affinity support or a durable shared session store with encrypted-at-rest identifiers, atomic rotation/revocation, bounded cleanup, clock/expiry consistency, multi-worker restart semantics, key rotation/recovery, administrative principal/session revocation, and incident-response evidence. Do not imply that the current process-local store survives restart or works across unsynchronized workers.
-- [ ] Add real browser-engine, TLS, and reverse-proxy evidence. Cover Chromium/Firefox/WebKit login-resume-logout, cookie `Secure`/path/SameSite behavior, CSRF and exact-Origin rejection, CSP nonce enforcement, forwarded-host/proto spoofing from untrusted peers, trusted multi-hop proxy configuration, IPv4/IPv6 CIDRs, certificate expiry/hostname failure, load-balancer affinity, old-cookie replay, disabled-principal races, login throttling, browser history/cache, and server restart.
-- [ ] Complete the shared local/remote backend abstraction. Promote the implemented Remote read dispatcher into a versioned `WorkspaceBackend` interface with equivalent `LocalFileBackend` and `RemoteApiBackend` operations so CLI/TUI/project/ticket/report code does not fork business rules. Preserve deterministic timezone/configuration context, source revisions, aggregate diagnostics, permission filtering, and capability discovery across both implementations.
-- [ ] Expand permission-aware read-only resource coverage to the remaining safe local surfaces: item show/filter/review/next, messages and delivery state, completion, graph summaries, portfolios, ticket detail/history/time-entry, version, sprint, dependency, watcher, attachment, backlog/roadmap, workspace source manifests without local paths, configuration/doctor compatibility summaries, transaction recovery status without artifacts, and attachment metadata/chunk contracts with explicit permission checks. Add a resource-specific schema, bounded parameters, and cross-surface equivalence fixtures before advertising each resource or enabling its mutation path.
-- [ ] Add bounded transport contracts for large and changing workspaces. Define stable ordering, cursor pagination, maximum page/response sizes, conditional requests using source/capability revisions, cache-control and ETag behavior, rate-limit headers, cancellation/timeouts, compressed responses, snapshot consistency across pages, and retry rules. Start with explicit refresh and bounded polling; add SSE/WebSocket only after ordering, reconnect, backpressure, missed-event, permission-change, and ticket-event semantics are specified and polling is demonstrably inadequate.
-- [ ] Expand capability/version negotiation beyond the implemented Remote protocol min/current and capability hash. Publish package/server, schema bundle, configuration, workspace manifest, transaction journal/policy, clock, ticket/custom-field/workflow/event/time/planning, attachment, and resource-contract versions plus optional-dependency availability. Define upgrade/downgrade rules, removed-feature behavior, unknown-field handling, minimum supported clients, and fixtures for versions 1/2/future, older schemas, partial feature sets, and proxies that remove or rewrite negotiation headers.
-- [ ] Harden Remote audit evidence. Replace best-effort bounded JSONL with an optional durable profile that has explicit write-failure behavior, OS access controls or encryption, integrity chaining/signatures, rotation/retention, backup/restore, administrator versus auditor permissions, privacy redaction, bounded export, request/session correlation, clock context, and schema/policy migration. Keep the audit target separate from authoritative inputs and transaction evidence.
-- [ ] Complete authorization/privacy matrices for every Remote resource and future action. Cover project aliases, empty versus explicit project grants, nested/disabled groups, team/private/secret records, owner/assignee changes, custom-field visibility/editability, private ticket history/time entries/comments, configuration changes during a session, stale principal snapshots, audit-reader separation, and aggregate/search side channels. Fail closed when metadata is missing or unsupported.
-- [ ] Harden dependency-free client and TUI adoption beyond the implemented Remote commands and interactive confirmation. Add ticket detail refresh, bounded conflict presentation without automatic overwrite, per-operation denial reasons, profile rename/default selection, optional OS credential-store adapters without making them mandatory, capability-aware command availability, pagination, cancellation, reconnect, real-terminal evidence, and explicit insecure-TLS development warnings. Profiles must continue to store no secret values.
-- [ ] Add richer diagnostics without leaking local state. Cover TLS/proxy trust, authentication method, session-store mode/capacity, authorization scope, clock skew, capability/schema/configuration/ticket-workflow mismatch, source availability/count, server read-only and write-adapter state, audit-store state, token rotation/profile migration state, rate limits, recovery-required transactions, ETag/header rewriting, and older-client compatibility using aggregate or redacted data only.
-- [ ] Route authoritative remote mutations only after each individual operation passes a published gate for exact revision, authenticated role/project/field permission, privacy/redaction, clock/replay policy, append-only history generation, idempotency, all touched multi-target revisions, journal recovery, provider side effects/compensation, conflict response schemas, retry behavior, and real-client interruption tests. Keep timer, attachment, archive, project/configuration, ticket workflow/time/bulk, undo, and integration actions disabled until their complete gates pass.
-- [ ] Validate remote conflicts against `conflict-v1.schema.json` and show expected revision, current revision, current visible item, attempted change, generated events, affected side records, and available recovery actions without leaking fields the principal cannot read. Never overwrite automatically or call a comparison a three-way merge without a retained base.
-
----
-
-## P1: Messaging, Groups, Watchers, and Delivery State
-
-- [ ] Add server-managed remote groups and group version migration on top of the local group directory. Local config-defined groups, nesting, cycles, disabled members, aliases, and deterministic expansion are done.
-- [ ] Extend shared message composition to TUI/Web/API surfaces (the CLI/MCP composition and resolved-set preview exist), and decide whether any delivery state should move from the authoritative record to an operational store for `delivered`/`failed`/resend transitions that a pure record cannot express.
-- [ ] Add recipient-specific snooze and per-recipient acknowledgement writes (the read side and `any`/`all`/count completion already exist; one recipient must still never complete an `all` message on its own — enforced in `acknowledgement_status`). Handle group membership changes after message creation.
-- [ ] Add delivery progress, resend controls, and partial-failure presentation to the Web Messages view and detail modal.
-- [ ] Add permission checks for group visibility, recipient discovery, messaging, delivery-state visibility, ticket watcher expansion, private-ticket notification content, and administrative changes.
-- [ ] Route terminal, desktop, email, Web, Slack, Teams, Discord, and future provider delivery through one backend contract that records outcomes without storing credentials in life.txt. Ticket notifications must reference stable ticket/event IDs and avoid leaking private fields.
-- [ ] Add tests for repeated recipients, direct-plus-group duplicates, nesting, cycles, empty groups, disabled members, partial delivery, acknowledgement completion, resend, membership changes, watcher additions/removals, and private ticket redaction.
-
----
-
-## P1: Integration Adapter Foundation
-
-- [ ] Publish a normalized integration-event schema and a provider capability model for inbound messages/events, outbound messages/actions, thread/reply references, attachments, acknowledgement, ticket/issue/pull-request/build references, health, and cursor state. Preserve provider IDs and provenance without treating provider-specific payloads as life.txt syntax.
-- [ ] Define one `IntegrationAdapter` contract for receive, normalize, preview, stage proposal, send, acknowledge, health, and capabilities. Inbound changes must default to reviewable Unified Inbox proposals unless an allow-listed operation has explicit direct-write permission and recovery semantics.
-- [ ] Add idempotency keys, provider cursors, duplicate suppression, bounded retry/backoff, rate-limit handling, partial-failure reporting, dead-letter inspection, restart-safe state, and redacted audit events. Provider outages must not block unrelated local lifetxt operations.
-- [ ] Add schema-validated mapping rules for provider account/workspace/channel/user/group/thread/project/issue repository to lifetxt workspace, project, ticket, component, version, area, recipient, tags, and proposal policy. Detect ambiguous identity and ticket mappings and require preview before broad rule activation.
-- [ ] Implement Slack and email first because existing digest/SMTP foundations can validate the outbound contract. For Slack, cover channel input, message output, thread replies, user/group mapping, ticket reference previews, watcher notification delivery, and digest delivery. For email, cover SMTP output, IMAP or provider-API input, thread/message IDs, sender/subject rules, reply behavior, ticket creation/comment proposals, and safe attachment references.
-- [ ] Implement Discord and Teams only after the common contract and Slack/email operational evidence are stable. Cover webhook/bot or API capability differences, channel/team mapping, replies, rate limits, permission scopes, ticket references, and provider-specific unsupported operations without faking symmetry.
-- [ ] Add `integration list|show|test|pull|preview|send|health` and expose configured/installed capability state through doctor, Web administration, and MCP without returning credentials. Add fixtures and provider sandboxes/mocks for duplicate delivery, cursor reset, rate limits, revoked credentials, partial send, malformed payloads, restart, proposal approval conflicts, duplicate ticket references, and deleted external objects.
-
----
-
-## P1: Development Toolchain Ticket Integration
-
-- [ ] Define stable external-reference metadata for repository, branch, commit, issue, pull request, review, build, deployment, and release objects. Store provider, repository identity, external ID, URL/reference, last-known state, checked timestamp, and provenance; keep full provider payloads and logs outside authoritative life.txt records.
-- [ ] Add `ticket git scan`, `ticket git link`, and ticket-aware Git-hook inspection using configurable reference keywords (`refs`, `relates`), closure keywords (`fixes`, `closes`), and optional duration syntax. Scanning must produce idempotent link/time/closure proposals by default; a commit message alone must not silently close a ticket.
-- [ ] Add GitHub and GitLab adapters for issue/pull-request references, branch/commit associations, review state, merge state, labels/milestones, and comment/closure proposals. Define one-way reference mode first; make bidirectional create/edit/close behavior opt-in, previewed, permission-scoped, idempotent, and conflict-aware.
-- [ ] Normalize CI/CD events for build started/passed/failed/canceled, deployment started/succeeded/failed, artifact/report reference, and environment. Link events to tickets through explicit IDs, branch/commit/PR association, or reviewed matching proposals; never infer a destructive ticket transition from a weak text match.
-- [ ] Add configurable transition guards such as “review requires a linked pull request,” “resolved requires successful required checks,” or “closed requires merged/deployed evidence.” Guards must be explainable, provider-capability aware, overrideable only by authorized users with a recorded reason, and disabled when evidence is stale or unavailable rather than falsely passing.
-- [ ] Add ticket-driven release planning outputs: unresolved-by-version, merged-but-open, fixed-without-release, release notes, changelog candidates, security/private exclusions, and deployment verification. Generated text must cite the ticket/event/reference inputs and remain reviewable before publication.
-- [ ] Add development-tool operations to CLI, TUI/Web administration, MCP, and doctor only through shared capability rows. Show credential scopes, cursor health, stale references, orphaned external objects, rate limits, last synchronization/proposal time, and whether an operation is read-only, proposal-only, or writable.
-- [ ] Add fixtures and sandbox tests for rewritten Git history, force-pushed branches, duplicate commit references, rebased/squashed pull requests, renamed repositories, transferred issues, deleted builds, flaky/retried CI runs, provider outages, stale review state, partial external writes, rate limits, revoked credentials, approval conflicts, and recovery after a local ticket update succeeds but the external action fails.
-
----
-
-## P1: Life Hub and Information Unification
-
-- [ ] Extend the Unified Inbox to more sources and richer proposal metadata. The core exists in [`lifetxt/inbox.py`](lifetxt/inbox.py): create-proposals are staged in an operational `proposal-v1`/`inbox-proposal-v1` store (never authoritative life.txt) from manual capture and MCP suggestions, with source, warnings, and provenance; wired through the CLI (`proposal list|add|show|edit|accept|reject|defer`) and MCP (`list_proposals` read-only, `stage_proposal`), documented in `docs/*/inbox.md`. Next add Web Share Target, remote changes, normalized integration/development-tool events, and imported issue/ticket candidates as sources; add assumptions, item-level diffs, and external side-effect plans to proposals; and support update/delete proposals beyond create.
-- [ ] Strengthen proposal acceptance checks. Accept/edit/reject/defer and atomic batch-apply exist and append through the validated, atomic `append_life_records` writer. Next enforce permission, expected-revision (currently append-safe only), ticket-workflow/event, multi-target, and recovery checks on accepted batches, and make batch-apply all-or-nothing rather than continue-past-failure where a transaction is required.
-- [ ] Extend the daily command-center aggregation into the TUI dashboard and Web Dashboard, and add timer/active-session, unacknowledged-message state, ticket review queues, blocked/high-severity/stale tickets, assigned review work, failed builds, and release attention once those backends expose them. The shared CLI/MCP aggregation already covers agenda, overdue/due-today, waiting, habits, captures, project attention, and safety warnings.
-- [ ] Round out `area:` as core: add area filtering to `filter`/`list` surfaces, shell/Web completion of area values, saved-view integration, ticket/project inheritance rules, and record-level validation. Grouping (`area list|show`), MCP exposure, documentation, and preset examples already exist.
-- [ ] Extend the person/group overview to ticket reports/assignments/watches/reviews and cross-item links once those exist. The core is done in [`lifetxt/people.py`](lifetxt/people.py): `person_overview` collects assigned/waiting/overdue work, sent/received messages, meetings, presence, projects (owner or assigned), and team/group memberships with alias resolution; `people_list` aggregates everyone; `group_overview` rolls up a group's members. Wired through the CLI (`person list|show|group`) and MCP (`list_people`, `get_person`, `get_group_overview`), published as `person-overview-v1.schema.json`, with English/Japanese `docs/*/people.md`.
-- [ ] Extend backlinks/related navigation beyond id references (`parent/ref/depends_on/blocks/related`) to also surface ticket events, duplicate/replacement relations, messages, decisions, meetings, people, groups, attachments, projects, milestones, versions, sprints, risks, commits, pull requests, builds, deployments, and external URLs. The id-based incoming-link core (`backlinks`, `get_backlinks`) is done.
-- [ ] Extend global search to ticket comments/events, attachment names, versions, sprints, commits, pull requests, and builds once those exist. The cross-entity core is done in [`lifetxt/global_search.py`](lifetxt/global_search.py): `find` and MCP `global_search` scan items (title, body, any detail incl. URLs and decisions), projects, people, groups, areas, and staged proposals, grouped by entity type with matched field and snippet, `--type`/`--limit` filters, published as `global-search-v1.schema.json`, documented in `docs/*/search.md`. Direct scanning is kept until benchmarks justify an index.
-- [ ] Add declarative automation only after proposals, audit logs, permissions, conflict-aware writes, transaction recovery, ticket workflow/history, integration idempotency, and credential boundaries are stable. Use allow-listed triggers/actions and never execute arbitrary code.
-- [ ] Consume provider and development-tool integrations through normalized adapter contracts. Store references/summaries when email, calendar, GitHub, GitLab, CI/CD, Slack, Teams, Discord, browser capture, or mobile sharing remains authoritative, and make every external side effect previewable and auditable.
-- [ ] Add privacy controls and redaction for personal, health, finance, family, work, security tickets, private comments, time entries, and customer data in shared views, remote responses, AI context, exports, support bundles, telemetry, integrations, and notifications.
-
----
-
-## P1: Timer and Notification Foundation
-
-- [ ] Decide and document the single-timer scope boundary before adding alarms, Pomodoro, or parallel timers.
-- [ ] Define one timer state model for start, stop, pause, resume, cancel, crash recovery, stale detection, associated items/tickets, timezone behavior, and schema versioning.
-- [ ] Complete timer capability enforcement after the implemented journal-backed start, stop, pause, resume, and cancel paths. Migrate compound work-session operations, define stale-state and restart semantics for every action, validate actual CLI/Web/MCP responses against `timer-operation-v1.schema.json`, and set capability enforcement true only when every advertised timer route exposes revisions and recovery behavior.
-- [ ] Decide whether alarm, Pomodoro, and timer logging belong in core or remain delegated to OS tools based on real usage and notification-backend maturity.
-- [ ] Add a notification backend abstraction for terminal, Linux, macOS, Windows, email, Web, Slack, Teams, and Discord delivery with typed results, provider capability checks, ticket/event references, privacy filters, and redacted diagnostics.
-- [ ] Add quiet hours, persisted acknowledgement, recurring-reminder acknowledgement, shared snooze presets, timezone-aware scheduling, retry policy, restart-safe watcher state, ticket-watcher event selection, and provider-specific rate-limit handling.
-
----
-
-## P1: Workflow Follow-ups
-
-- [ ] Expand deterministic-clock coverage beyond the implemented clock context and timer/time-only cases. Add one shared table for `next`, standup, invoice, review selectors, workload, journal defaults, notification watchers, completion dates, recurrence, ICS conversion, Web dashboard ranges, MCP resources, TUI commands, project/portfolio reports, ticket creation/transitions/events/time entries, sprint/version ranges, and integration timestamps across midnight, DST, non-hour offsets, and remote clock skew.
-- [ ] Add `next --explain` showing selection reasons and exclusions caused by blockers, deferred state, someday classification, user/project/context filters, ticket workflow state, or missing capabilities.
-- [ ] Add invoice policy documentation and fixtures for rounding, rates, currencies, missing projects, malformed elapsed values, ticket time-entry reconciliation, and timezone/date-boundary behavior.
-- [ ] Add standup team mode only after per-user output is stable; retain a script-friendly schema. Include assigned/in-review/blocked ticket summaries through the shared ticket query rather than a separate parser.
-- [ ] Add ICS round-trip fixtures for all-day events, offsets, attendees, recurrence, escaped text, UID collisions, timezone identifiers, DST boundaries, and cancellation.
-- [ ] Define overwrite/conflict behavior before bidirectional calendar synchronization or broader `sync-ics --merge-existing` behavior.
-- [ ] Add todo.txt and GitHub Markdown idempotency fixtures so repeated imports do not duplicate records. Extend the policy before importing GitHub/GitLab issues as ticket proposals.
-- [ ] Verify attachment opening on Windows/macOS/Linux, including spaces, symlinks, executables, outside-root paths, deleted files, ticket privacy, and transaction recovery.
-- [ ] Add a safe large-`dir:` hash cache keyed by path metadata and content-verification state.
-- [ ] Expose recurrence preview through agenda/Web/MCP by reusing `recurrence.expand` rather than re-deriving dates per surface.
-- [ ] Decide on `BYSETPOS`, `BYWEEKNO`, and `BYYEARDAY` only from real use; visible rejection remains the default.
-- [ ] Add an RRULE message drift guard so validator and engine semantics stay synchronized.
-- [ ] Add `RDATE` support alongside `EXDATE`.
-- [ ] Add rolling-window re-expansion so previously expanded files do not silently become stale.
-- [ ] Define how archive/undo and transaction recovery handle attachments whose paths move after the original operation, including attachment references held by archived tickets and events.
-
----
-
-## P2: Ticket UI and Agile Planning
-
-- [ ] Add TUI and Web Ticket List views with configurable columns, deterministic sorting/grouping, typed filters, saved queries, pagination/limits, project/version/sprint scopes, bulk selection, and visible query/effective-workspace context.
-- [ ] Add Ticket Detail views showing description, tracker/status/priority/severity, project/component/version/sprint, reporter/assignee/watchers, estimate/elapsed/remaining, relations/subtasks, attachments, append-only activity, time entries, commits/pull requests/builds, available transitions, permissions, current revision, and recovery state.
-- [ ] Add an Activity timeline that clearly distinguishes comments, authoritative ticket transitions, time entries, notification delivery, and external-provider observations. Preserve provenance and do not merge multiple records into an invented chronological certainty when timestamps or provider order are ambiguous.
-- [ ] Add Kanban views whose columns are configured ticket statuses or saved queries. Drag-and-drop must preview and invoke `ticket transition`, honor WIP/workflow/required-field rules, reject stale revisions, and recover ticket/event/notification updates together.
-- [ ] Add backlog, sprint planning, sprint board, version roadmap, and release overview views using the shared version/sprint/ticket aggregations. Show capacity, unestimated work, carry-over, blocked work, incomplete dependencies, and formula explanations.
-- [ ] Add calendar and Gantt-style planning only after date semantics, relation constraints, scaling, and performance are tested. Treat generated dates and dependency projections as views, not authoritative schedule rewrites; require an explicit operation for date changes.
-- [ ] Add configurable Agile metrics including throughput, cycle/lead time, estimate variance, velocity, and burndown only when data completeness is measurable. Display coverage and caveats beside every chart and avoid ranking individual developers by noisy activity counts.
-- [ ] Integrate ticket views with Web UI presets and configuration: software-project navigation, project/ticket dashboard cards, saved-query widgets, role-aware actions, mobile read/reply flows, kiosk/team boards, and per-project default views.
-- [ ] Add browser/TUI tests for keyboard navigation, screen readers, focus, narrow/mobile layouts, thousands of tickets/events, long comments, Unicode, private fields, invalid workflow configuration, stale drag-and-drop, bulk rollback, provider outage, interrupted transaction recovery, and broken saved-query migration.
-
----
-
-## P2: Deterministic Minimal Computation Runtime
-
-- [ ] Implement the CLI-only deterministic minimal computation runtime described
-  in [`docs/design/counter-machine.md`](docs/design/counter-machine.md) after
-  Format 1.0, canonical detail handling, stable diagnostics, and the unified
-  command registry are ready.
-
----
-
-## P2: Web UI Customization
-
-- [ ] Add a schema-validated Web settings UI backed by the shared configuration registry for supported `web.*` and ticket-view values with defaults, provenance, reset, preview, validation diagnostics, and restart-required indicators.
-- [ ] Make navigation configurable: visible views, order, default view, role/device presets, mobile navigation, ticket/project navigation, and administrative-only surfaces.
-- [ ] Add allow-listed custom dashboard cards using the shared saved-view/query model with title, query, grouping, range, limit, width, display mode, and ticket/project aggregation support.
-- [ ] Add drag/drop card ordering and add/remove controls while keeping text configuration authoritative and exportable.
-- [ ] Add configurable Items and Ticket columns, order, density, sorting, grouping, and type/tracker-specific fields.
-- [ ] Add configurable quick-add defaults, ticket tracker/default project, date formats, week start, icons, semantic colors, and view-specific empty states.
-- [ ] Add desktop/mobile previews and versioned configuration import/export with migration diagnostics.
-- [ ] Add personal, work, project, portfolio, software-development, team-board, kiosk, and mobile-capture presets composed from normal settings.
-- [ ] Add browser tests for invalid settings, missing tokens, contrast, responsive layouts, ticket-view presets, preset migration, import/export, provenance display, interrupted config updates, and broken-config recovery.
-
----
-
-## P2: CLI, Packaging, and Distribution
-
-- [ ] After the per-host external-verification JSON format has proven stable across the supported environment matrix, add a deterministic RC evidence-dossier aggregator that consumes those bundles, rejects stale/mismatched commit or artifact identities, preserves `manual_required`/`blocked` gaps, and produces one reviewable release-evidence index without upgrading support classifications automatically.
-- [ ] Route extension commands through the unified parser registry so help, docs, option completion, global invocation context, and workspace/config selection are authoritative. The compatibility dispatcher now resolves named workspaces correctly, but it remains a second routing path that can drift. Migrate it behind the shared registry/resolver and add parity tests before ticket, version, sprint, integration, development-tool, or counter-machine commands add another special case.
-- [ ] Cache completion values by path and metadata after benchmarks define invalidation behavior; apply the same cache to Web completion. Include ticket tracker/status/project/component/version/sprint/custom-field candidates without reparsing every event file on each keypress.
-- [ ] Complete command arguments in the Web command palette, including ticket IDs and registry-backed values. Do not expose counter-machine execution in the palette.
-- [ ] Add completion to `assist --interactive`.
-- [ ] Split `cli.py` into command-focused modules with a thin registry dispatcher; keep ticket commands in dedicated modules backed by shared operations rather than a monolithic command file. Keep the interpreter loop in `counter_machine.py`, not in CLI dispatch code.
-- [ ] Split `webapp.py` according to `docs/design/module-structure.md`: extract the embedded HTML/CSS/JS asset first, then move route groups behind explicit route/operation registries while preserving public API behavior.
-- [ ] Split `tui_app.py` into state, command, layout, rendering, and mutation/recovery presentation modules before adding the full ticket workspace.
-- [ ] Raise the supported Python baseline only after clean environment, wheel, dependency, and downstream compatibility verification.
-- [ ] Expand required CI to Ubuntu, Windows, and macOS with coverage and the dependency-free job. Keep the local ticket core and counter-machine runtime dependency-free; provider adapters and rich UI extras must remain optional.
-- [ ] Add `doctor --ci` only after legacy doctor and workspace-safety report schemas have a stable unified registry entry.
-- [x] Add release automation for tag, PyPI publication, and post-release smoke checks: `.github/workflows/release.yml` (#568) builds wheel/sdist with checksums/SBOM/provenance from an immutable tag, verifies the tag matches `pyproject.toml`'s version, installs the built wheel into a clean venv and smoke tests it, then publishes via PyPI Trusted Publishing and attaches the same artifacts to the GitHub Release. Not yet done: changelog automation and cryptographic artifact signing/attestation beyond the existing SBOM/provenance metadata; the actual PyPI Trusted Publisher linkage is a one-time maintainer action, documented in `docs/en/distribution.md`, not yet performed. See `cap-distribution-channels`.
-- [ ] Add release smoke checks for `run --help`, the two-counter sample, JSON-schema validation, finite step-limit failure, and installed-console behavior outside the repository.
-- [ ] Add `CONTRIBUTING.md`, issue templates, pre-commit, `SECURITY.md`, supported-version policy, and private vulnerability reporting.
-- [x] Standalone single-file distribution: `packaging/pyinstaller/lifetxt.spec` (#570) bundles core+web+tui into one PyInstaller-built executable for Windows/Linux/macOS, verified to run `--version`/`check`/`init`/`doctor`/`serve` with no separate Python install. Supersedes the zipapp idea (a full standalone binary needs no Python at all, which zipapp cannot provide). See `cap-distribution-channels` and `docs/en/distribution.md`.
-
----
-
-## P2: Configuration, Ticketing, Integration, and Runtime Documentation
-
-- [ ] Complete `docs/en/config.md` and `docs/ja/config.md` as task-oriented guides covering discovery order, minimum configuration, precedence, profiles, workspaces, source manifests, write targets, environment references, validation, effective values, and common personal/work/team/software-project examples.
-- [ ] Complete `config-reference.md` documents in English and Japanese. For every key, publish type, default, required status, allowed values, environment override, restart requirement, secret status, version introduced/deprecated, example, and related command. Include every ticketing, workflow, custom-field, watcher, version/sprint, Git keyword, development-integration, and future runtime setting.
-- [ ] Add dedicated English/Japanese `workspaces.md`, `integrations.md`, and `config-migration.md` guides covering path resolution, roles, glob expansion, read-only/generated/archive sources, provider credentials, proposal mode, mapping, retry/privacy/audit, compatibility, backup, rollback, and troubleshooting.
-- [ ] Add English/Japanese `tickets.md`, `ticket-workflows.md`, `ticket-planning.md`, and `development-integrations.md`. Cover Task versus generic project issue versus development ticket, tracker/status mapping, fields, relations, comments/events, permissions, watchers, time entries, versions, sprints, backlog, Git/PR/CI references, proposal/closure safety, recovery, privacy, examples, and troubleshooting.
-- [ ] Add English/Japanese `counter-machine.md`. Cover why Note records are used instead of `S`/`R`, the exact counter/instruction syntax, `inc`/`decjz`/`halt`, validation codes, step-limit semantics, output formats, exit codes, deterministic/safety restrictions, Turing-completeness assumptions, and non-goals.
-- [ ] Generate the mechanical reference tables and `config explain` registry data from the authoritative configuration schema/registry. CI must fail when a schema key lacks reference coverage, a deprecated key lacks migration guidance, a secret key lacks a security warning, a workflow status/transition lacks documentation, or checked-in examples are not schema-valid.
-- [ ] Add runnable example configurations and life.txt datasets for one file, multiple project files, generated calendars, personal/work profiles, remote access, Slack/email integrations, Teams/Discord placeholders, notifications, Web customization, Project/Portfolio views, a software project, bug/feature/security tickets, custom fields, workflows, versions, sprints, ticket events/time entries, Git references, CI proposals, and a minimal counter-machine program. Test examples on Windows-style and POSIX paths without committing credentials.
-
----
-
-## P2: Documentation, Editor, and LSP
-
-- [ ] Define authoritative documents for grammar, CLI behavior, Web/API behavior, schemas, configuration, ticketing/workflows, development integrations, deterministic optional runtimes, recovery, and examples.
-- [ ] Add English/Japanese parity checks for headings, code blocks, command names, stable examples, configuration/workspace/integration/ticket/runtime docs, revision/timezone/workspace-safety docs, and recovery docs.
-- [ ] Extract the Web Japanese dictionary into shared data usable by CLI/TUI/MCP. Include ticket UI terms through the same translation registry.
-- [ ] Define policy for languages beyond Japanese, fallback, partial dictionaries, and untranslated text.
-- [ ] Add worked examples and captures for TUI, Web, timer, statistics, review, graph, attachments, reports, Project/Portfolio management, ticket list/detail/activity/workflow/time/sprint/roadmap, integration proposals/output, Git/PR/CI references, counter-machine CLI execution, import/export, diagnostics, Format migration, configuration migration, revision negotiation, timezone behavior, multi-target recovery, remote workspaces, messaging, and saved views.
-- [ ] Document file splitting, generated/archive/cache files, configured source manifests, ticket/event/time-entry files, machine program/result files, multiple writers, backups, undo, Git recovery, remote workspaces, authentication, proposals, release policy, schema/configuration/ticket-workflow compatibility, telemetry retention, transaction journals, and recovery.
-- [ ] Expand lock/CAS documentation for cloud sync and network filesystems, stale evidence, manual cleanup, expected-revision examples, ticket/event compound conflicts, external provider partial failure, proxies, embedded versus public APIs, configuration writes, and multi-target limitations. Explain that the counter-machine input is never an authoritative write target and `-o` rejects the same resolved path.
-- [ ] Package VS Code grammar/snippets as an installable extension and generate keys from model definitions. Add ticket metadata and `record:ticket_event|time_entry|version|sprint` snippets from authoritative registries rather than duplicating key lists. Add `machine:counter` and `machine:instruction` snippets only after the runtime syntax is final.
-- [ ] Add directive/encrypted-value/folding/file-icon support and syntax-highlight snapshots.
-- [ ] Add a lossless parser/CST with spans before LSP edits.
-- [ ] Implement LSP diagnostics, then symbols, completion, hover, definitions, safe code actions, and workspace rename only after multi-file CAS/recovery is proven. Ticket relation navigation and safe tracker/status completion may use read-only indexes before ticket mutations are allowed. Future machine support may validate and navigate labels but must not execute programs.
-- [ ] Replace compatibility monkey-patches with direct modules during planned splits, preserving public behavior and tests at each removal.
-
----
-
-## P2: Reliability and Real-Environment Verification (Post-Stable, Non-Blocking)
-
-This was the pre-Stable-1.0 "P0: Release Safety and Correctness" section. #454
-reduced the Stable 1.0 gate to what `minimal_stabilization_rescope` in
-`.ai/project/STABLE_RELEASE.yml` actually required, and every item below was
-explicitly deferred from that gate rather than dropped (see that file's
-`deferred_from_gate` list and #471's `post_stable_roadmap` classification).
-Pursue this list opportunistically. Promote an item to `P0` immediately if it
-stops being a missing-evidence gap and turns into a concrete data-loss,
-correctness, or security defect; do not require finishing this list before
-resuming the product-development themes above.
-
-- [ ] Run `scripts/run_external_verification.py` on real Windows, WSL, Linux, and macOS hosts and attach the resulting one-file sanitized JSON bundles to the relevant post-Stable verification issues. Treat the automated host/release-profile results as host-scoped evidence only; complete interactive TUI, selector, browser, Web rollout, Remote, SMTP, external-filesystem, physical-interruption, and human release-decision scenarios through their dedicated procedures before claiming those surfaces verified. Harden the collector itself first where its own real-host runs found gaps (#437, #453).
-- [ ] Execute and finish the strict Web revision migration in a real deployment (#288-#292). The metrics store can be exported, relocated with an exact revision, optionally moved with a journaled source deletion, and verified without leaking its local path. Next deploy `web.revision_mode: observe`, preserve the store across package upgrades and deployment moves, document the exact observation start, migrate every supported browser/API client to revision discovery and `If-Match`, require a complete zero-use window, switch supported deployments to `required`, and remove the temporary fallback and compatibility cookie only after the evidence is reviewed. Add an end-to-end upgrade matrix covering container replacement, read-only old paths, permission changes, restored backups, rollback to an older server, attachment clients, work-session clients, future ticket clients, and recovery-required server startup.
-- [ ] Finish adapter-specific adoption of the delegated-process mutation contract. The shared CLI contract now runs an external command only against a private temporary copy; validates format version and parser diagnostics; persists a versioned owner-private proposal containing the exact authoritative revision, edited-content hash, diff hash, command, stdout/stderr, and complete edited text; supports restart-safe inspect/apply/reject; rejects proposal tampering; applies through authoritative CAS; revision-checks proposal state changes; and has one-winner/one-conflict plus process-restart fixtures. CLI, TUI, fzf, and peco editor sessions continue to use their safe temporary-copy contract. Next require plugin-provided mutations, arbitrary delegated commands, editor extensions that replace or rename files, integration adapters, and development-tool ticket adapters to emit or consume this proposal format rather than calling the writer directly. Add adapter identity/provenance, permission requirements, side-effect and compensation plans, process-timeout/cancellation policy, proposal retention/cleanup, sandbox policy, and one-winner/one-conflict/restart fixtures for each concrete adapter before advertising it as writable.
-- [ ] Finish real-client and adverse-recovery evidence for remote directory/package attachments (#297-#299). Web and MCP now expose directory-reference, deterministic package, reconcile, revision-checked open-plan, bounded chunk reads, embedded-manifest inspection, and transaction-status operations; publish exact item/attachment/metadata revisions and recovery actions through capabilities; confine package sources to a configured server-side root; reject path escapes, unsafe entries, stale targets, and oversized chunks; require caller-supplied stable package transaction IDs; return structured duplicate-ID journal state; and never execute a platform opener remotely. Writable MCP schemas also publish the optional client timestamp precondition. Next add protocol-level partial-send/disconnect, multi-chunk restart, changed-between-chunks, client crash/retry, compensation, abandoned/diverged journal, restored-backup, older-client, proxy, and large-file streaming fixtures with real Web/MCP clients. Add authorization/privacy tests for source roots and package contents, define retention for transaction lookup, and keep future ticket attachment automation disabled until those real-client and permission contracts pass.
-- [ ] Prove durable recovery under real power, storage, and platform failures (#304). The deterministic subprocess matrix now terminates a child with `os._exit` at 16 named boundaries around transaction-directory creation, before/after artifact persistence, journal publication, target commit, file fsync, replace, and parent-directory fsync; distinguishes unpublished orphan evidence from published journals; removes an orphan only after verifying both targets are unchanged; recovers dead-process locks through the normal stale-lock contract; supports automatic inspect/orphan-cleanup/resume selection, explicit compensation, and repeated terminal recovery; and publishes a schema-backed matrix report. Next cover delete, verification, compensation-write, terminal-cleanup, backup-copy, and restore-working-copy boundaries; corrupted/missing artifacts; disk-full, quota, permission/ownership changes, signals and abrupt termination variants; Windows replace; antivirus/indexer interference; cloud-synchronized directories; removable media; and network filesystems. Include future ticket-plus-event, ticket-plus-time-entry, bulk-ticket, and sprint-planning transactions. Publish the supported filesystem matrix and keep subprocess evidence separate from physical power-loss claims.
-- [ ] Complete protected evidence storage, authenticated authorization, and future policy/journal migration operations. Versioned policy documents, exact-revision writes, explicit old-policy migration, newer-version refusal, runtime policy loading, startup preflight, bounded audit records, force-gated archive rotation, evidence archives, backup integrity manifests, optional operator allow-list checks, and restore-from-backup are implemented. Restore verifies immutable evidence, performs `inspect` without a copy, performs `resume` or `compensate` only from a separate working copy, writes a new working integrity manifest, and reverifies the original backup after recovery. Next add encrypted or OS-access-controlled evidence profiles, key generation/rotation/recovery, archive encryption and retention integration, authenticated role/project authorization instead of caller-supplied operator strings, approval separation for destructive restore, migration functions for every future released policy and journal version, unsupported source/target refusal matrices, evidence redaction/export policy, and a complete escalation/runbook drill covering inspect, resume, compensate, abandon, restore, evidence preservation, incident ownership, and handoff.
-- [ ] Complete deterministic timezone fixtures and operationalize the implemented remote clock precondition. Direct host-clock calls remain release-gated. Web and MCP publish server-authoritative UTC reports and capability metadata. When `clock.require_remote_write_time` is enabled, every writable Web API request requires an offset-aware timestamp in the configured header and every writable MCP tool requires `client_time`; missing values fail with `CLIENT_TIME_REQUIRED`, invalid or excessive skew fails with `CLOCK_SKEW`, successful Web responses publish measured state/skew headers, and parser-only POST endpoints remain exempt because they do not mutate authoritative state. Next build one shared fixture table for CLI/file/config/host precedence, aware/naive values, time-only anchors, DST gaps/folds, non-hour offsets, midnight boundaries, historical timezone-rule changes, positive/negative skew, custom headers, proxies, replay windows, and threshold boundaries; run it through CLI, TUI, Web, MCP, notifications, saved views, import/export, projects, tickets, events, time entries, sprint/version boundaries, integrations, and work sessions; connect enforcement to authenticated sessions and audit events; and retire baseline clock allowances when their compatibility purpose disappears.
-- [ ] Verify the dependency-free TUI in real WSL, Windows Terminal, macOS, and Linux terminals (#312-#313). Cover colors, glyph fallback, narrow layouts, editor suspension, auto-reload, revision refresh, timezone display, semantic mutation conflicts, multi-file transactions, attachment status, compound work sessions, stale-lock guidance, and recovery from an interrupted operation. Add ticket list/detail/activity and transition-key verification when those views exist.
-- [ ] Verify `fzf` and `peco` actions end to end on Windows PowerShell and Unix-like shells (#314). The actions now route through semantic transforms, but real-shell verification must cover stale revisions, multi-selection, preview quoting, edit suspension, delete confirmation, non-ASCII paths, spaces, symlinks, mixed-source selections, all-or-none multi-file commits, and shell-specific exit-code propagation.
-- [ ] Verify SMTP delivery with safe test accounts (#315-#316). Cover STARTTLS negotiation, authentication failure, app-password guidance, multiple recipients, retry/backoff, watcher state, quiet hours, redacted logging, provider-specific message-size/rate-limit behavior, and future ticket-watcher notifications without committing secrets.
-- [ ] Add browser-engine smoke tests for the Web UI (#317-#318). Cover revision discovery, observe/required migration, persistent metrics export, ETag stripping/rewrite recovery, attachment and compound-work-session operations, mobile layout, keyboard navigation, command execution, undo, dialogs, charts, timeline edge cases, timezone display, stale revisions, accessibility focus, interrupted-transaction recovery, and browser restart. Add ticket detail/list/activity/bulk/board coverage when those surfaces are implemented. Keep FastAPI/TestClient tests as the lower-level API contract rather than describing them as browser coverage.
-
----
+Last organized: 2026-10-12 (#1269 audit; #1270 documentation cleanup).
+
+This file records development themes and conditional ideas, not an executable
+checklist or an implementation-status ledger.
+
+- [GitHub Issues](https://github.com/Eruhitsuji/lifetxt/issues) are authoritative
+  for actionable scope, acceptance criteria, priority, and task status.
+- [Project Rules](.ai/project/RULES.md) are authoritative for principles and
+  product boundaries.
+- [Capabilities](.ai/project/CAPABILITIES.yml), [docs](docs/), and code describe
+  available behavior. An issue being closed does not prove an entire old
+  roadmap proposal was implemented.
+- The [archive and scope index](docs/roadmap/README.md) preserve all 191 former
+  checkbox items and link to the item-by-item [#1269 audit](https://github.com/Eruhitsuji/lifetxt/issues/1269).
+  Moving an item there does not complete, cancel, or approve it.
+
+## Priority Model
+
+The post-Stable model from [#471](https://github.com/Eruhitsuji/lifetxt/issues/471)
+remains the baseline:
+
+- **P0:** Correctness, data-integrity, security, compatibility, or clean-install
+  regressions. The [release compatibility contract](docs/en/release-compatibility-policy.md)
+  remains binding.
+- **P1:** The selected product themes below and their necessary maintenance,
+  permission/privacy, workspace, and contract dependencies. A theme is not
+  blanket authorization to implement every archived proposal.
+- **P2:** Optional integrations, editor tooling, packaging, maintainability,
+  customization, and missing real-environment evidence. Promote concrete
+  defects to P0; missing evidence alone does not reopen the completed Stable
+  1.0 gate.
+- **Deferred:** Conditional ideas requiring a demonstrated use case or a
+  separate design decision.
+
+[STABLE_RELEASE.yml](.ai/project/STABLE_RELEASE.yml) retains the historical
+release classification and evidence. The old P1/P2 lists are not a second
+current backlog; select executable work through Issues.
+
+## Selected Product Themes
+
+These continue the themes selected in #471. Their existing engines and surface
+work must be reused; the historical issue links are context, not new tasks.
+
+- **Daily workspace:** Unified Inbox, Command Center, Saved Views, and Area
+  navigation. Context: [#472](https://github.com/Eruhitsuji/lifetxt/issues/472),
+  [#483](https://github.com/Eruhitsuji/lifetxt/issues/483),
+  [#484](https://github.com/Eruhitsuji/lifetxt/issues/484),
+  [#627](https://github.com/Eruhitsuji/lifetxt/issues/627), and
+  [#1033](https://github.com/Eruhitsuji/lifetxt/issues/1033).
+  Select remaining daily-workflow gaps rather than recreating the engines.
+- **Project and Portfolio:** Reuse the shared project/report operations when
+  exposing a missing surface. Context:
+  [#499](https://github.com/Eruhitsuji/lifetxt/issues/499),
+  [#605](https://github.com/Eruhitsuji/lifetxt/issues/605), and
+  [Project documentation](docs/en/ticket-projects.md).
+- **Ticket workflow usability:** List, detail, activity, and lightweight board
+  usability over existing workflow, history, planning, and time-entry contracts.
+  Context: [#126](https://github.com/Eruhitsuji/lifetxt/issues/126),
+  [#150](https://github.com/Eruhitsuji/lifetxt/issues/150), and
+  [ticket documentation](docs/en/tickets.md).
+  Read views, bulk mutations, and planning changes need separate bounded scopes.
+
+## Supporting Topics and Existing Tracking
+
+Use these entry points to find prior work before proposing a new issue.
+They neither reproduce existing acceptance criteria nor claim that a broad
+archived item is fully delivered.
+
+| Topic | Existing scope / reference |
+| --- | --- |
+| Format, diagnostics, schema, and surface consistency | [#319](https://github.com/Eruhitsuji/lifetxt/issues/319), [#320](https://github.com/Eruhitsuji/lifetxt/issues/320), [#49](https://github.com/Eruhitsuji/lifetxt/issues/49), [#676](https://github.com/Eruhitsuji/lifetxt/issues/676), [#1247](https://github.com/Eruhitsuji/lifetxt/issues/1247); [Format compatibility](docs/en/format-compatibility-matrix.md) |
+| Configuration and workspace safety | [#156](https://github.com/Eruhitsuji/lifetxt/issues/156), [#238](https://github.com/Eruhitsuji/lifetxt/issues/238), [#945](https://github.com/Eruhitsuji/lifetxt/issues/945); [configuration guide](docs/en/config.md) |
+| Remote access, authorization, and client usability | [#984](https://github.com/Eruhitsuji/lifetxt/issues/984), [#985](https://github.com/Eruhitsuji/lifetxt/issues/985), [#1062](https://github.com/Eruhitsuji/lifetxt/issues/1062), [#1066](https://github.com/Eruhitsuji/lifetxt/issues/1066), [#1114](https://github.com/Eruhitsuji/lifetxt/issues/1114); [Remote guide](docs/en/remote.md) |
+| Messaging, notification, provider and development-tool adapters | [#498](https://github.com/Eruhitsuji/lifetxt/issues/498), [#616](https://github.com/Eruhitsuji/lifetxt/issues/616), [#617](https://github.com/Eruhitsuji/lifetxt/issues/617); adapter proposals remain in the [scope index](docs/roadmap/README.md), not an approved generic SDK or integration service |
+| Timer, recurrence, import/export, and workflow polish | [#310](https://github.com/Eruhitsuji/lifetxt/issues/310), [#311](https://github.com/Eruhitsuji/lifetxt/issues/311), [#656](https://github.com/Eruhitsuji/lifetxt/issues/656), [#1217](https://github.com/Eruhitsuji/lifetxt/issues/1217), [#1227](https://github.com/Eruhitsuji/lifetxt/issues/1227); [CLI workflows](docs/en/new-cli-workflows.md) |
+| Web customization, CLI structure, distribution, docs, and editor tooling | [#1031](https://github.com/Eruhitsuji/lifetxt/issues/1031), [#1067](https://github.com/Eruhitsuji/lifetxt/issues/1067), [#1132](https://github.com/Eruhitsuji/lifetxt/issues/1132), [#568](https://github.com/Eruhitsuji/lifetxt/issues/568), [#570](https://github.com/Eruhitsuji/lifetxt/issues/570); [static VS Code extension](editors/vscode/lifetxt/README.md) |
+
+### Real-Environment Evidence
+
+Track deployment observation and strict revision rollout in
+[#288–#292](https://github.com/Eruhitsuji/lifetxt/issues/288), remote attachment
+restart/replay/bounds in [#297–#299](https://github.com/Eruhitsuji/lifetxt/issues/297),
+and browser revision/recovery/UI evidence in
+[#317](https://github.com/Eruhitsuji/lifetxt/issues/317) /
+[#318](https://github.com/Eruhitsuji/lifetxt/issues/318). Follow each linked issue's
+scope instead of maintaining the same scenario checklist here.
+
+The filesystem, TUI, selector, and SMTP evidence issues
+[#304](https://github.com/Eruhitsuji/lifetxt/issues/304),
+[#312](https://github.com/Eruhitsuji/lifetxt/issues/312),
+[#313](https://github.com/Eruhitsuji/lifetxt/issues/313),
+[#314](https://github.com/Eruhitsuji/lifetxt/issues/314),
+[#315](https://github.com/Eruhitsuji/lifetxt/issues/315), and
+[#316](https://github.com/Eruhitsuji/lifetxt/issues/316) were closed as
+`not_planned` at the audit point. That is not verification evidence; replan only
+when needed, preserving their procedures and the current support boundary.
+[External verification](docs/en/external-environment-verification.md) describes
+the distinction between automated host checks and manual evidence.
 
 ## Deferred Ideas
 
-- [ ] Consider named or parallel timers only if one active timer remains restrictive in real use.
-- [ ] Consider a local daemon only if notification watch, timer state, alarms, file reload, remote events, integration polling, ticket watcher delivery, development-tool polling, recovery, and automation genuinely require one process.
-- [ ] Consider PWA offline capture only after shared CAS, offline proposals, and explicit conflict review exist.
-- [ ] Consider general remote/local synchronization only after Format 1.0 and an ID-based retained-base merge model are stable.
-- [ ] Consider automatic Git pull/push/merge only after semantic history, remote proposals, credential delegation, recovery, and conflict review are stable.
-- [ ] Consider a plugin SDK only after schemas/mutation contracts are stable and an out-of-tree official adapter validates the design.
-- [ ] Consider a rebuildable search index only after ticket/event/global-search benchmarks show a practical bottleneck; the index must remain disposable and reconstructable from authoritative files.
-- [ ] Consider an additional human-edited configuration format only after the JSON schema, migration, comment-preservation requirements, canonicalization, and tooling costs are proven; do not support multiple partially equivalent formats prematurely.
-- [ ] Consider advanced Agile forecasting, cross-project dependency scheduling, resource leveling, and editable Gantt planning only after core ticket history and date completeness are measurable; do not present generated forecasts as authoritative plans.
-- [ ] Consider wiki, forum, repository browser, document hosting, help desk/SLA, and full Redmine replacement features only when a concrete lifetxt-native use case cannot be met by references, attachments, notes, messages, and external integrations.
-- [ ] Consider counter-machine tracing, checkpoints, resumption, alternate instructions, macros, compilation, visualization, Web/TUI/MCP/remote execution, or automation integration only after the CLI-only three-instruction runtime is implemented, benchmarked, security-reviewed, and demonstrably useful.
-- [ ] A future non-local computation surface must define hard CPU/time/memory/output limits, cancellation, concurrency isolation, authentication, rate limiting, audit, and denial-of-service controls; never reuse `--max-steps 0` outside explicit local CLI execution.
+These are unscheduled prompts, not implementation tasks or approved changes.
+The existing [online server-authoritative Remote flow](docs/en/remote-client-writes.md)
+does not implement a writable local replica, offline merge, or general
+bidirectional synchronization. The existing [VM](docs/en/vm.md) is opt-in,
+local, and CLI-only; the historical counter-machine design is not the current
+user contract. Keep those boundaries when evaluating the ideas below.
+
+- Consider named or parallel timers only if one active timer remains restrictive in real use.
+- Consider a local daemon only if notification watch, timer state, alarms, file reload, remote events, integration polling, ticket watcher delivery, development-tool polling, recovery, and automation genuinely require one process.
+- Consider PWA offline capture only after shared CAS, offline proposals, and explicit conflict review exist.
+- Consider general remote/local synchronization only after Format 1.0 and an ID-based retained-base merge model are stable.
+- Consider automatic Git pull/push/merge only after semantic history, remote proposals, credential delegation, recovery, and conflict review are stable.
+- Consider a plugin SDK only after schemas/mutation contracts are stable and an out-of-tree official adapter validates the design.
+- Consider a rebuildable search index only after ticket/event/global-search benchmarks show a practical bottleneck; the index must remain disposable and reconstructable from authoritative files.
+- Consider an additional human-edited configuration format only after the JSON schema, migration, comment-preservation requirements, canonicalization, and tooling costs are proven; do not support multiple partially equivalent formats prematurely.
+- Consider advanced Agile forecasting, cross-project dependency scheduling, resource leveling, and editable Gantt planning only after core ticket history and date completeness are measurable; do not present generated forecasts as authoritative plans.
+- Consider wiki, forum, repository browser, document hosting, help desk/SLA, and full Redmine replacement features only when a concrete lifetxt-native use case cannot be met by references, attachments, notes, messages, and external integrations.
+- Consider counter-machine tracing, checkpoints, resumption, alternate instructions, macros, compilation, visualization, Web/TUI/MCP/remote execution, or automation integration only after the CLI-only three-instruction runtime is implemented, benchmarked, security-reviewed, and demonstrably useful.
+- A future non-local computation surface must define hard CPU/time/memory/output limits, cancellation, concurrency isolation, authentication, rate limiting, audit, and denial-of-service controls; never reuse `--max-steps 0` outside explicit local CLI execution.

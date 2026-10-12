@@ -1,0 +1,17 @@
+schema_version: 1
+requirements:
+- id: req-mini-release-asset-integrity
+  owner: Eruhitsuji
+  kind: MODIFIED
+  statement: Mini tag release must find its version checker, verify basename checksums
+    and preserve the observed Core/standalone manifest.
+  acceptance_criteria:
+  - AC1 native checker resolves from Mini cwd
+  - AC2 both architecture checksums verify from download directory
+  - AC3 same tagged-source shared merger preserves existing entries; declared asset
+    download failures stop upload
+  - AC4 shell regression demonstrates original defects and fixed successful/refused
+    paths
+  - 'AC5 cross-workflow race limitations and final reconciliation are recorded on
+    #911'
+  - AC6 independent review/CI and maintainer merge before production tag

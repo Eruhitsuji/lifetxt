@@ -19,15 +19,16 @@ traceability:
       capability_id: cap-project-validation
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1275
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1281
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1284
       changed_files_or_scope:
-      - lifetxt/project_validation.py
-      - lifetxt/cli.py
-      - tests/test_project_validation.py
-      - docs/en/projects.md
-      - docs/ja/projects.md
+        - lifetxt/project_validation.py
+        - lifetxt/cli.py
+        - tests/test_project_validation.py
+        - docs/en/projects.md
+        - docs/ja/projects.md
       tests_or_evidence:
-      - tests.test_project_validation
-      - See change package verification.yml for executed checks
+        - tests.test_project_validation
+        - See change package verification.yml for executed checks
       status: implemented
       notes: User design approval 2026-10-12; independent latest-head High review and merge pending.
     - requirement_id: req-vm-path-help-consistency

@@ -2,6 +2,29 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-release-v1-0-4-1
+      capability_id: cap-stable-release-governance
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1298
+      pull_request: null
+      changed_files_or_scope:
+        - Core package/runtime version 1.0.4.1
+        - Mini Cargo/lock mapped version 1.0.4+1
+        - Core import-boundary version fixture and bilingual correction notes
+        - .ai/project/changes/release-v1-0-4-1
+      tests_or_evidence:
+        - "Core CLI/MCP: 1.0.4.1; tag and Mini metadata checks passed"
+        - "61 focused release/version tests passed; additional 60-test version/traceability suite passed"
+        - "release policy: ok=true, schema_count=92, sample_count=92, no failed checks"
+        - "wheel/sdist metadata Version=1.0.4.1; clean wheel install --version/check passed"
+        - "ruff check lifetxt tests scripts passed; release docs validation errors=0"
+      release_or_deployment: >-
+        Release preparation only. No tag movement or publication.
+        Merge and release require separate human authority approval.
+      notes: >-
+        Follows merged #1301 release-pipeline fixes and #1303 optional
+        numeric subversion support. No feature or Format 1.0 data change.
+      status: implemented
+
     - requirement_id: req-release-numeric-subversions
       capability_id: cap-stable-release-governance
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1302

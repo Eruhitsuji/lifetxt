@@ -1,0 +1,70 @@
+schema_version: 1
+verification:
+  planned: []
+  executed:
+  - type: version
+    command: python -m lifetxt --version; python scripts/check_release_tag_version.py
+      v1.0.4.1; python scripts/check_lifetxt_mini_version.py --tag v1.0.4.1
+    status: passed
+    result: Core CLI/MCP/tag=1.0.4.1; Cargo/lock mapped consistently
+  - type: unit
+    command: python -m unittest tests.test_release_subversions tests.test_set_tauri_desktop_version
+      tests.test_check_release_tag_version tests.test_lifetxt.LifeTxtUpdateCheckCliTests
+      tests.test_mini_release_workflow tests.test_core_import_boundary tests.test_release_policy
+      tests.test_check_release_policy_cli
+    status: passed
+    result: 61 tests passed (293.588s); focused version/traceability suite also passed
+      60 tests
+  - type: package
+    command: python -m build --no-isolation --outdir .cache/release-1.0.4.1; clean
+      wheel install and CLI smoke
+    status: passed
+    result: Wheel and sdist METADATA/PKG-INFO Version=1.0.4.1; clean wheel CLI --version/check
+      passed
+  - type: native
+    command: 'Mini four-part build CI from #1303'
+    status: passed
+    evidence: https://github.com/Eruhitsuji/lifetxt/actions/runs/38233442728
+    result: 'Native x86_64/AArch64 four-part build and version identity succeeded
+      on #1303 head; candidate metadata build requires this PR CI.'
+  - type: desktop
+    command: Desktop native installer/upgrade
+    status: not_run
+    reason: Deferred to release acceptance on OS runners
+  - type: release-policy
+    command: python scripts/check_release_policy.py --pretty
+    status: passed
+    result: ok=true; 92 schemas / 92 samples; network-free registry validation; no
+      failed checks
+  - type: lint
+    command: ruff check lifetxt tests scripts
+    status: passed
+  - type: docs
+    command: python scripts/validate_release_docs.py --output .cache/release-doc-validation-1.0.4.1.json
+    status: passed
+    result: errors=0, ok=true
+  - type: format
+    command: ruff format --check lifetxt/__init__.py tests/test_core_import_boundary.py
+    status: pre_existing_drift
+    reason: Both files have unchanged formatting regions; the same failure is reproduced
+      on origin/main. Version-only diff retained.
+review_ledger:
+- reviewer: Codex (implementer)
+  review_type: implementation self-review
+  target_commit: null
+  result: completed
+  finding_count: 0
+  completed_at: '2026-10-12'
+  notes: Checked limited version diff, mapped metadata, native CI provenance, release
+    notes and clean package smoke; independent review remains pending.
+- reviewer: independent reviewer / Eruhitsuji
+  review_type: integration
+  target_commit: null
+  result: pending
+  finding_count: 0
+  completed_at: null
+release_evidence:
+  migration_notes: No Format 1.0 change or data migration. Mini remains strict subset.
+  rollback_plan: Revert version PR before publication; never move the published v1.0.4
+    tag.
+  operations_evidence: []

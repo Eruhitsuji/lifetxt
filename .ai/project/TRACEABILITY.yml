@@ -2,6 +2,22 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-vm-path-help-consistency
+      capability_id: cap-lifetxt-vm
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1269
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1274
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1278
+      changed_files_or_scope:
+        - lifetxt/cli.py VM path help only
+        - tests/test_vm_cli.py
+        - docs/en/vm.md
+        - docs/ja/vm.md
+      tests_or_evidence:
+        - tests.test_vm_cli.VmInputSourceCliTests verifies default/configured/explicit stdin for run and graph
+        - tests.test_vm_cli verifies corrected help on both VM commands
+        - tests.test_vm
+      notes: Presentation-only help correction; path resolution and VM runtime unchanged. Independent maintainer review pending.
+      status: implemented
     - requirement_id: req-mcp-test-import-order-determinism
       capability_id: cap-surface-capability-consistency
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1238

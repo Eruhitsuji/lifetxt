@@ -50,6 +50,10 @@ $ lifetxt vm run program.life.txt --entry s1 --json
 | `--max-steps N` | 無限ループ防止の step limit。既定 `100000`。`0` は無制限実行（明示的 opt-in） |
 | `--json` | 最終 state を JSON で出力 |
 
+`vm run` と `vm graph` は、位置引数の path を省略すると設定された
+入力パスを使用し、未設定の場合は `life.txt` を使用する。stdin を読むには
+`-` を明示する。path の省略では stdin を選択しない。
+
 exit code `0` は step limit 内で `HALT` したことを意味する。0 以外は
 validation 失敗、`HALT` 前の step limit 到達、または `Ctrl+C` による
 中断を意味する。

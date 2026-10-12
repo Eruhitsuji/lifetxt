@@ -2059,7 +2059,12 @@ def build_parser():
         "run",
         help="Execute a lifetxt VM program from an explicit entry instruction.",
     )
-    _add_input_paths(vm_run_command)
+    vm_run_command.add_argument(
+        "paths",
+        nargs="*",
+        metavar="path",
+        help="Input file(s), or - for stdin. Defaults to config paths or life.txt.",
+    )
     vm_run_command.add_argument(
         "--entry",
         required=True,
@@ -2084,7 +2089,12 @@ def build_parser():
         "directed control-flow graph (mermaid or dot). Static only; never "
         "executes the program.",
     )
-    _add_input_paths(vm_graph_command)
+    vm_graph_command.add_argument(
+        "paths",
+        nargs="*",
+        metavar="path",
+        help="Input file(s), or - for stdin. Defaults to config paths or life.txt.",
+    )
     vm_graph_command.add_argument(
         "--entry",
         metavar="ID",

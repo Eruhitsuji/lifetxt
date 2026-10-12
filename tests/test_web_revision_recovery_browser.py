@@ -1,7 +1,7 @@
 """Attachment real frontend reload/restart and interrupted-journal recovery.
 
-Work-session UI evidence is unavailable: the shipped frontend calls /api/timer,
-not /api/work-session. This suite does not substitute browser-console API calls.
+Work-session UI evidence is provided by the separate work-session browser suite.
+This attachment suite does not substitute browser-console API calls.
 """
 
 import datetime

@@ -1,0 +1,5 @@
+schema_version: 1
+requirements:
+- id: req-web-work-session-controls
+  capability: cap-web-work-session-controls
+  acceptance: [actual drawer start/stop/edit, frozen independent item/timer/HTTP preconditions, pending no duplicate, explicit refresh on failure, read-only/other-task safety, journal recovery no replay, EN/JA]

@@ -94,5 +94,5 @@ try {
   }
   process.stdout.write(JSON.stringify({engine,node:process.version,os:process.platform,mode:'required',fault_point:'after_journal_publish',interrupted_status:failed.status,
     reload_no_replay:true,new_process_and_profile_no_replay:true,operator_resume:'committed',same_transaction:true,stale_status:stale.status,fresh_status:fresh.status,attachment_count:2,malformed_statuses:malformedStatuses,browser_process_changed:true,profile_changed:true,
-    work_session_frontend_verified:false,work_session_gap:'No shipped frontend caller of /api/work-session; /api/timer is distinct.'}));
+    work_session_frontend_verified:false,work_session_gap:'This attachment suite does not verify work-session controls; run the separate shipped-UI work-session probe.'}));
 } finally {if(browser)await browser.close();}

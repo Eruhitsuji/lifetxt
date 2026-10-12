@@ -317,6 +317,9 @@ registerId("toast-container", toastContainer);
 
 let drawerItem = null;
 let drawerEditing = false;
+let workSessionPending = false;
+let workSessionView = null;
+let drawerWorkEditBinding = null;
 Object.defineProperty(global, "drawerItem", { get: () => drawerItem, set: v => { drawerItem = v; } });
 Object.defineProperty(global, "drawerEditing", { get: () => drawerEditing, set: v => { drawerEditing = v; } });
 

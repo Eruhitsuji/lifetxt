@@ -71,8 +71,14 @@ try {
   };
   const mode = async value => { const response = await fetch(`${baseURL}/__test/mode/${value}`, {method:"POST"}); assert(response.ok); };
   const open = async () => {
-    await evaluate(`(async () => { const data = await api('/api/items/id/upload-test'); openDrawer(data.item, 'none'); })()`);
-    await wait("attachmentUploadView?.ready && !attachmentUploadView.needsRefresh && !attachmentUploadView.input.disabled", "upload ready");
+    await evaluate(`(async () => { const data = await api('/api/items/id/upload-test'); openDrawer(data.item, 'replace'); syncDrawerFromUrl(); })()`);
+    // Initial route restoration may still settle after the data list is ready.
+    // Bind the opened record to its URL, as normal UI navigation does, so that
+    // restoration cannot close a URL-less fixture drawer during measurement.
+    await wait("document.getElementById('detail-drawer').classList.contains('open') && attachmentUploadView?.ready && !attachmentUploadView.needsRefresh && !attachmentUploadView.input.disabled", "visible upload ready");
+    await evaluate(`Promise.all(document.getElementById('detail-drawer').getAnimations({subtree:true})
+      .filter(animation => Number.isFinite(animation.effect.getTiming().iterations))
+      .map(animation => animation.finished))`);
   };
   const select = async (name = "report.txt", size = 8) => evaluate(`(() => {
     const input = document.getElementById('attachment-upload-file');
@@ -102,7 +108,7 @@ try {
           title:panel.querySelector('h4').textContent};
       })()`);
       assert(layout.left >= 0 && layout.right <= width + 1);
-      assert(layout.buttonHeight >= 44);
+      assert(layout.buttonHeight >= 44, JSON.stringify({width, lang, layout}));
       assert.equal(layout.title, lang === "ja" ? "添付ファイル" : "Attachments");
       await select("too-large.txt", 65);
       const oversized = await evaluate("attachmentUploadView.file === null && attachmentUploadView.submit.disabled && testPosts.length === 0");

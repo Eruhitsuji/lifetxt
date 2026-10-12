@@ -1,0 +1,11 @@
+schema_version: 1
+requirements:
+- id: req-project-validation
+  kind: ADDED
+  owner: Eruhitsuji
+  statement: Warn about ambiguous or unrecognized risk scalar values without changing
+    permissive parsing or reports.
+  acceptance_criteria:
+  - risk-only warnings; default check unchanged
+  - medium/open defaults and implicit Projects valid
+  - 0 authoritative writes; text and JSON

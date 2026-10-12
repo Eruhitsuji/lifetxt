@@ -211,3 +211,25 @@ Every derived number states how it was computed:
   progress below 50%; `yellow` for overdue, blocked, or open medium/low risk;
   `green` otherwise. Each report lists its reasons and any missing-data
   limitations (for example, "overdue not evaluated: no reference date").
+
+## Explicit risk diagnostics
+
+`lifetxt project validate life.txt --records risk --format json` performs an
+opt-in, read-only review; `--format text` is the default. Normal `check` and
+Project reports retain their permissive behavior. Warnings return exit code 0;
+input/configuration errors still fail through the usual parser.
+
+Only records whose first `record:` value is `risk` (case-insensitive) are
+selected. PRV001 warns about repeated scalar `record`, `severity`, or `state`;
+PRV002 about severity outside critical/high/medium/low/info; PRV003 about
+noncanonical case of a recognized state; PRV004 about an unknown state; PRV005
+about a missing Project scope. Closed states are closed/resolved/mitigated/done,
+and open is canonical. Omitted severity/state retain medium/open defaults;
+unregistered implicit Projects, aliases, multiple Project values, and custom
+fields are accepted. No values are normalized or rewritten.
+
+Local JSON version 1 contains `contract_version`, `record_kind`, `read_only`,
+`risk_count`, and `diagnostics` using the existing diagnostic output shape.
+This is a local CLI inspection result, with no new Web/Remote/MCP surface.
+
+Severity comparison is case-insensitive, matching existing Project reports.

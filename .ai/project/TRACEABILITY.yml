@@ -44,7 +44,7 @@ traceability:
       capability_id: cap-stable-release-governance
       epic: null
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1300
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1301
       changed_files_or_scope:
         - Fix a schema_bundle cold-start call-ordering bug that made the
           v1.0.4 "Release" workflow's release-gate manifest report only 4

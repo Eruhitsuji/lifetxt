@@ -101,6 +101,44 @@ jobs:
       - name: Run release smoke test
         run: python scripts/smoke_test.py
 
+  revision-browser:
+    name: Real Chromium revision contract
+    needs: [classify-changes]
+    if: ${{ needs['classify-changes'].outputs['run-heavy'] == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Set up native WebSocket Node runtime
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+      - name: Set up Chrome
+        id: chrome
+        uses: browser-actions/setup-chrome@v1
+      - name: Install Web dependencies
+        run: |
+          python -m pip install -e ".[dev]"
+          python -m pip install -r requirements-web.txt
+      - name: Run real engine revision smoke (dependencies must not skip)
+        env:
+          LIFETXT_BROWSER_BIN: ${{ steps.chrome.outputs.chrome-path }}
+          LIFETXT_REQUIRE_REVISION_BROWSER: "1"
+          LIFETXT_REVISION_EVIDENCE_DIR: .cache/revision-browser
+        run: python -m unittest tests.test_web_revision_browser -v
+      - name: Retain synthetic engine and revision evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: revision-browser-evidence
+          path: .cache/revision-browser/*.json
+          if-no-files-found: warn
+
   python310-focused:
     name: Python 3.10 focused datetime regression
     needs: [classify-changes]
@@ -484,11 +522,12 @@ jobs:
   pr-gate:
     name: PR gate
     if: ${{ always() && github.event_name == 'pull_request' }}
-    needs: [classify-changes, test, type-check, release-document-validation, traceability-gate, no-web-extras, coverage-baseline, python310-focused, main-health]
+    needs: [classify-changes, test, type-check, release-document-validation, traceability-gate, no-web-extras, coverage-baseline, python310-focused, main-health, revision-browser]
     runs-on: ubuntu-latest
     steps:
       - name: Require every PR responsibility to pass
         env:
+          REVISION_BROWSER_RESULT: ${{ needs['revision-browser'].result }}
           TEST_RESULT: ${{ needs.test.result }}
           TYPE_RESULT: ${{ needs['type-check'].result }}
           DOCS_RESULT: ${{ needs['release-document-validation'].result }}
@@ -506,6 +545,7 @@ jobs:
           import os
 
           results = {
+              "revision-browser": os.environ["REVISION_BROWSER_RESULT"],
               "python-3.12": os.environ["TEST_RESULT"],
               "type-check": os.environ["TYPE_RESULT"],
               "docs": os.environ["DOCS_RESULT"],
@@ -515,7 +555,7 @@ jobs:
           expected = "skipped" if os.environ["PATH_CATEGORY"] == "docs-only" else "success"
           failed = {
               name: value for name, value in results.items()
-              if value != (expected if name in {"python-3.12", "type-check"} else "success")
+              if value != (expected if name in {"python-3.12", "type-check", "revision-browser"} else "success")
           }
           for name, result_key, selected_key in (
               ("no-web", "NO_WEB_RESULT", "NO_WEB_SELECTED"),
@@ -539,6 +579,7 @@ jobs:
       - test
       - classify-changes
       - resource-warning-gate
+      - revision-browser
       - no-web-extras
       - windows-core-smoke
       - macos-core-smoke
@@ -550,6 +591,7 @@ jobs:
     steps:
       - name: Require every main compatibility responsibility to pass
         env:
+          REVISION_BROWSER_RESULT: ${{ needs['revision-browser'].result }}
           TEST_RESULT: ${{ needs.test.result }}
           RESOURCE_RESULT: ${{ needs['resource-warning-gate'].result }}
           NO_WEB_RESULT: ${{ needs['no-web-extras'].result }}
@@ -565,6 +607,7 @@ jobs:
           import os
 
           results = {
+              "revision-browser": os.environ["REVISION_BROWSER_RESULT"],
               "python-matrix": os.environ["TEST_RESULT"],
               "resource-warning": os.environ["RESOURCE_RESULT"],
               "no-web": os.environ["NO_WEB_RESULT"],

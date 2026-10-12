@@ -305,6 +305,15 @@ def compute_health(proj, today=None):
     if top_severity in ("medium", "low") and label == "green":
         label = "yellow"
         reasons.append("open %s-severity risk" % top_severity)
+    if top_severity == "info":
+        reasons.append("open info-severity risk; below escalation thresholds")
+    unknown_risks = sum(
+        1
+        for risk in proj["risks"]
+        if risk["open"] and risk["severity"] not in SEVERITY_ORDER
+    )
+    if unknown_risks:
+        reasons.append("%d open risk(s) with unrecognized severity" % unknown_risks)
 
     if progress["percent"] is None:
         limitations.append("progress undefined: %s" % progress["undefined_reason"])

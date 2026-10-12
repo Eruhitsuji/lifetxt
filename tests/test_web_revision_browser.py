@@ -47,6 +47,7 @@ class RevisionBrowserTests(unittest.TestCase):
             self.skipTest(reason)
 
         import uvicorn
+        from fastapi.responses import Response
 
         from lifetxt import bootstrap_legacy_surfaces
 
@@ -66,6 +67,12 @@ class RevisionBrowserTests(unittest.TestCase):
                 },
             )
             writes = []
+
+            @app.get("/favicon.ico", status_code=204)
+            def fixture_favicon():
+                # Chromium may request this implicitly. Keep the revision fixture
+                # free of unrelated HTTP errors without weakening the error gate.
+                return Response(status_code=204)
 
             @app.middleware("http")
             async def observe_wire(request, call_next):

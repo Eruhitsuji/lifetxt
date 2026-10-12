@@ -17794,6 +17794,7 @@ traceability:
       changed_files_or_scope:
         - tests/test_web_revision_browser.py
         - tests/test_ci_workflow_responsibilities.py (required browser gate expectations)
+        - tests/test_ci_recovery_contract.py (browser gate result fixture and failure cases)
         - tests/browser_revision_probe.mjs
         - tests/browser_revision_support.mjs
         - .github/workflows/ci.yml
@@ -17803,12 +17804,15 @@ traceability:
         - tests.test_web_revision_browser (actual Chromium, observe and required)
         - tests.test_web_planner_revisions (HTTP plus DOM shim, auxiliary only)
         - tests.test_revision_migration_metrics
+        - tests.test_ci_recovery_contract
       notes: >-
         Standard Test/Verification reuses existing Planner/CAS capability, no runtime changes.
         Synthetic loopback fixture freezes clock; capture preconditions, stale source byte
         preservation, missing transport and observe legacy metric are distinguished.
         Required browser CI dependencies fail closed; independent latest-head human review
         and final CI remain pending. Proxy/recovery issues 1289/1290 remain merge-blocked.
+        PR1292 CI recovery supplies the fixture favicon without allowing unexpected HTTP
+        errors, and synchronizes the aggregate-gate fixture with the required browser job.
       release_or_deployment: null
       status: implemented
 

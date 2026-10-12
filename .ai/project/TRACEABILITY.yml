@@ -5,7 +5,7 @@ traceability:
     - requirement_id: req-release-numeric-subversions
       capability_id: cap-stable-release-governance
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1302
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1303
       changed_files_or_scope:
         - Release X.Y.Z.N support with omitted N equal to zero
         - Core update comparison, Mini build/version validation, Cargo mapping

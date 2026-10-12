@@ -36,6 +36,17 @@ hidden_imports += collect_submodules("uvicorn.protocols")
 hidden_imports += collect_submodules("uvicorn.lifespan")
 hidden_imports += collect_submodules("uvicorn.loops")
 
+# lifetxt/_legacy_bootstrap.py loads lifetxt.schema_extensions_v4 through
+# v34 via a dynamically constructed `__import__(f"lifetxt.schema_extensions_v{version}")`
+# inside a `for version in range(4, 35)` loop. PyInstaller's static import
+# analysis cannot resolve an f-string-interpolated module name, so every
+# one of these modules is otherwise silently excluded from the frozen
+# binary -- the bundled lifetxt then fails with ModuleNotFoundError the
+# first time bootstrap_legacy_surfaces() runs (see issue #1300).
+hidden_imports += [
+    "lifetxt.schema_extensions_v%d" % version for version in range(4, 35)
+]
+
 a = Analysis(
     [str(REPO_ROOT / "packaging" / "pyinstaller" / "lifetxt_launcher.py")],
     pathex=[str(REPO_ROOT)],

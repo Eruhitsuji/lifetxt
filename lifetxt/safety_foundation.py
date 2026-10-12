@@ -670,6 +670,9 @@ def release_gate(root, paths=None):
 def write_schema_bundle(directory):
     if not os.path.isdir(directory):
         os.makedirs(directory)
+    from . import bootstrap_legacy_surfaces
+
+    bootstrap_legacy_surfaces()
     schemas = schema_bundle()
     for name, value in schemas.items():
         path = os.path.join(directory, name)

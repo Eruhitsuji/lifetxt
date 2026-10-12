@@ -40,6 +40,82 @@ traceability:
         main, per #1298's own Phase B scope.
       status: implemented
 
+    - requirement_id: req-release-pipeline-schema-bootstrap-ordering
+      capability_id: cap-stable-release-governance
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1300
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1301
+      changed_files_or_scope:
+        - Fix a schema_bundle cold-start call-ordering bug that made the
+          v1.0.4 "Release" workflow's release-gate manifest report only 4
+          of ~92 schemas, and add lifetxt.schema_extensions_v4-v34 to the
+          PyInstaller spec's hiddenimports so the frozen standalone binary
+          no longer crashes with ModuleNotFoundError on first use
+        - lifetxt/release_policy.py
+        - lifetxt/safety_foundation.py
+        - scripts/check_release_policy.py
+        - packaging/pyinstaller/lifetxt.spec
+        - tests/test_release_policy.py
+        - tests/test_standalone_binary.py
+      tests_or_evidence:
+        - "live, cold subprocess, pre-fix: from lifetxt.release_policy import schema_validation_report; schema_validation_report('.', require_validator=True) -> {schema_count: 4, sample_count: 92, ok: false}; confirmed identical on a git worktree checked out at the pre-v1.0.4-version-bump commit"
+        - "live, cold subprocess, post-fix: the same call -> {schema_count: 92, sample_count: 92, ok: true}"
+        - "live: write_schema_bundle() has the identical bug (same pattern, same fix) -- confirmed cold-process before (4 schemas written) and after (92) the fix"
+        - "live: release_manifest(root, require_validator=False) called twice in the same cold process returned two DIFFERENT fingerprints pre-fix (schema_validation's extra registry_available/reference_resolution/duplicate_id_count fields appeared only on the second call, since schema_validation_v2.py's own monkey-patch chain hadn't finished installing before the first bare-name call dispatched); fixed by an explicit bootstrap_legacy_surfaces() call at the top of release_manifest() itself"
+        - "live: scripts/check_release_policy.py --pretty run cold, end to end, pre-fix would have reproduced schema_count: 4; post-fix -> ok: true, schema_count: 92, release_policy_definition and release_manifest_instance checks both present (previously missing entirely from a stale from lifetxt.release_policy import release_manifest binding captured before install_release_policy_compatibility() had run)"
+        - "tests/test_release_policy.py ColdProcessSchemaBundleTests (2 new tests, subprocess-based): schema_validation_report and write_schema_bundle both return the full bundle on a genuinely cold call; confirmed via git stash to fail against the pre-fix production code, then pass once restored"
+        - "tests/test_release_policy.py test_release_manifest_has_deterministic_fingerprint rewritten to run in a cold subprocess (the prior in-process version was itself order-dependent on whichever earlier test in the same shared process happened to warm bootstrap first, which is how this exact defect went undetected); confirmed deterministic and passing both in isolation and as part of the full module"
+        - "python -m unittest tests.test_release_policy tests.test_check_release_policy_cli tests.test_schema_extensions_v2 tests.test_core_import_boundary tests.test_traceability_gate tests.test_change_package_closeout -> Ran 52 tests, OK"
+        - "confirmed tests.test_safety_foundation.SafetyFoundationTests.test_schema_bundle_has_https_ids_and_required_documents is a pre-existing, unrelated order-dependent flake (same root-cause CLASS, but a separate stale import in tests/test_safety_foundation.py itself) that fails identically before and after this fix, both in isolation and at the full-module level -- confirmed via git stash against the unmodified pre-fix code; left unfixed as out of this issue's evidenced scope"
+        - "real PyInstaller 6.22.2 build (packaging/pyinstaller/lifetxt.spec), pre-fix: the frozen lifetxt.exe --version crashed with ModuleNotFoundError: No module named 'lifetxt.schema_extensions_v4', reproducing the exact Standalone binaries CI traceback locally"
+        - "real PyInstaller build, post-fix (hiddenimports includes lifetxt.schema_extensions_v4 through v34): lifetxt.exe --version -> lifetxt 1.0.4; lifetxt.exe check examples/minimal_life.txt -> OK: 10 item(s); lifetxt.exe init --yes and lifetxt.exe doctor in a clean scratch directory both exit 0"
+        - "tests/test_standalone_binary.py test_spec_declares_the_dynamically_loaded_schema_extension_modules (new): evaluates the spec's own hiddenimports list-comprehension expression and asserts it covers exactly schema_extensions_v4 through v34; confirmed via git stash to fail against the pre-fix spec, then pass once restored"
+        - "python -m unittest tests.test_standalone_binary.PyInstallerSpecStaticContractTests -> Ran 6 tests, OK"
+        - "python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)"
+        - "ruff check lifetxt tests scripts -> All checks passed"
+        - "ruff format --check lifetxt tests scripts -> clean for every file this change touches (78 pre-existing unrelated files elsewhere in the repo would be reformatted, confirmed unrelated to and untouched by this change)"
+      release_or_deployment: >-
+        Fixes two confirmed defects in the release pipeline itself
+        (release-gate manifest generation; standalone-binary bootstrap).
+        Both are pre-existing on main, predating the v1.0.4 version bump.
+        This change does not move, recreate, or re-publish the already-public
+        v1.0.4 git tag or any of its already-published artifacts (Docker
+        image, lifetxt-mini Release, Desktop installers); per #1298's own
+        task contract, deciding how to get a correct Release/Standalone-
+        binaries artifact set published (re-running the existing tag's
+        workflows against this fix via a new patch release, or another
+        approach) is an explicit maintainer decision, not made by this entry.
+      notes: >-
+        No new capability: reuses cap-stable-release-governance, the same
+        capability the v1.0.0-v1.0.4 release-preparation work was recorded
+        under, since this is release-pipeline correctness rather than a new
+        feature. Root cause: several functions reassigned in place by
+        lifetxt/_legacy_bootstrap.py's installer chain (schema_bundle,
+        write_schema_bundle, schema_validation_report, release_manifest)
+        called their own monkey-patched dependency as a bare name only
+        *after* triggering bootstrap as an internal side effect, which is
+        always too late for that specific call (Python resolves a call
+        expression's target name before entering the function body).
+        scripts/check_release_policy.py's own `from lifetxt.release_policy
+        import release_manifest` statement had the same hazard one level
+        higher: importing a name before bootstrap completes permanently
+        binds to the pre-wrapped function object, regardless of how many
+        times it is called afterward. Fixed by making every affected entry
+        point explicitly bootstrap first, rather than relying on each
+        function's own internal self-triggering side effect. A
+        module-level self-bootstrap inside lifetxt/release_policy.py
+        itself (which would close this defect class for every possible
+        future caller, not just the two evidenced ones) was considered and
+        rejected for this task: it risks circular-import ordering issues
+        across dozens of unrelated subsystems (remote, ticket, schema
+        extensions v4-v34) and is a larger, riskier structural change than
+        this issue's two concrete, evidenced CI failures justify. The same
+        defect class in tests/test_safety_foundation.py (a separate stale
+        import, unrelated to the two real CI failures) was found,
+        confirmed pre-existing via git stash, and left unfixed as out of
+        this issue's scope rather than silently expanded into.
+      status: implemented
+
     - requirement_id: req-mini-release-asset-integrity
       capability_id: cap-distribution-channels
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1287

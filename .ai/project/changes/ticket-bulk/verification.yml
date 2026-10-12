@@ -1,12 +1,39 @@
 schema_version: 1
 verification:
   executed:
-  - command: python -m unittest tests.test_ticket_bulk tests.test_ticket_workflow_history
-      tests.test_ticket_revision_writes tests.test_ticket_projects tests.test_ticket_planning
-      tests.test_change_package_closeout tests.test_traceability_gate
+  - command: python -m unittest tests.test_project_validation tests.test_projects
+      tests.test_ticket_bulk tests.test_ticket_workflow_history tests.test_ticket_revision_writes
+      tests.test_ticket_projects tests.test_ticket_planning tests.test_ticket_project_surfaces
+      tests.test_report_v2 tests.test_report_v2_cli tests.test_change_package_closeout
+      tests.test_traceability_gate
     status: passed
-    result: Focused suites passed; changed-file Ruff lint passed. Full integrated
-      discovery recorded in final handoff.
+    result: 208 related tests passed, 1 existing optional skip; includes 16 new risk/bulk
+      tests and explicit PR1284/1285 traceability gate runs (14 each) passed.
+  - command: python -m ruff check lifetxt tests scripts
+    status: passed
+    result: Configured global lint passed.
+  - command: python -m lifetxt check examples/minimal_life.txt
+    status: passed
+    result: 'OK: 10 items.'
+  - command: MPLBACKEND=Agg python -m unittest discover
+    status: passed
+    result: 5557 tests passed, skipped=449, 296.304s after repository-prescribed editable
+      setup. Two final batch boundary tests added after discovery started are covered
+      by the final 208-test focused run. Initial discovery failed four existing subprocess
+      import tests because editable install was missing; setup corrected and all six
+      worker/runtime checks passed before full rerun.
+  - command: python -m ruff format --check lifetxt/project_validation.py lifetxt/ticket_bulk.py
+      lifetxt/ticket_workflow_cli.py tests/test_project_validation.py tests/test_ticket_bulk.py
+    status: passed
+    result: 5 changed standalone modules/tests already formatted; unrelated pre-existing
+      cli.py formatting not rewritten.
+  - command: python -m mypy --follow-imports=skip --ignore-missing-imports lifetxt/diagnostic_contract.py
+    status: passed
+    result: Configured type boundary passed.
+  - command: python -W error::ResourceWarning -m unittest tests.test_config_validation
+      tests.test_archive_plan_v1 tests.test_safety_foundation
+    status: passed
+    result: 101 tests passed, 3 existing optional skips.
   human_review:
   - status: pending
     reason: Independent latest-head High assurance review and merge are required.

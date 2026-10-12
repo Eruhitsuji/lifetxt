@@ -207,3 +207,22 @@ projectに属さない履歴を、単に古いという理由だけで自動arch
   `red`、期限超過・ブロック・未対応の medium/low リスクがあれば `yellow`、それ以外は
   `green`。各レポートは理由と、データ不足による限界（例:「基準日が無いため期限超過は
   未評価」）を列挙します。
+
+## 明示的なrisk診断
+
+`lifetxt project validate life.txt --records risk --format json` で、明示的に
+選んだriskを読み取り専用で診断します。既定は `--format text` です。
+通常の `check` とProject集計の許容的な扱いは変わりません。warningだけなら
+終了コードは0、入力や設定のエラーは通常のparser経路で失敗します。
+
+最初の `record:` 値がriskのレコードだけを選びます（大文字小文字は不問）。
+PRV001はscalarのrecord/severity/stateの重複、PRV002は既知のseverity
+（critical/high/medium/low/info）以外、PRV003は既知stateの非標準な大文字小文字、
+PRV004は未知state、PRV005はProject未指定を警告します。標準stateはopenと
+closed/resolved/mitigated/doneです。severity/state省略時のmedium/open、
+未登録の暗黙Project、alias、複数Project、custom fieldは有効です。
+正規化や書き換えは行いません。
+
+ローカルJSON v1のフィールドはcontract_version、record_kind、read_only、
+risk_count、既存のdiagnostic出力形式を使うdiagnosticsです。
+Web/Remote/MCPの新しいsurfaceは追加しません。

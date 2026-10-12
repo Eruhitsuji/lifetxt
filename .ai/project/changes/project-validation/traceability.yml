@@ -1,0 +1,8 @@
+schema_version: 1
+links:
+- requirement: req-project-validation
+  capability: cap-project-validation
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1281
+  tests:
+  - tests.test_project_validation
+  status: implemented

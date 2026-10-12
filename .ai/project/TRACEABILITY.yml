@@ -2,6 +2,21 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-mini-release-asset-integrity
+      capability_id: cap-distribution-channels
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1287
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1291
+      changed_files_or_scope:
+        - .github/workflows/lifetxt-mini-release.yml
+        - tests/test_mini_release_workflow.py
+        - .ai/project/changes/mini-release-asset-integrity/**
+      tests_or_evidence:
+        - tests.test_mini_release_workflow (8 executed shell regressions)
+        - tests.test_merge_sha256sums
+        - 23 direct Mini/checksum/tag tests passed; 43 release regression tests passed after normal bootstrap
+        - Production/native evidence and final cross-workflow checksum reconciliation remain #911
+      status: implemented
+      notes: High assurance; existing merger reused; independent review/CI/merge pending; no publication performed.
     - requirement_id: req-project-health-risk-explanation
       capability_id: cap-report-v2-composition
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1269

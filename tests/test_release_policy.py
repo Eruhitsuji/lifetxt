@@ -1,5 +1,7 @@
 import json
 import os
+import subprocess
+import sys
 import tempfile
 
 try:
@@ -23,6 +25,61 @@ from lifetxt.release_policy_compat import (
 
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+class ColdProcessSchemaBundleTests(unittest.TestCase):
+    """Reproduce the release pipeline's own invocation shape: a fresh
+    interpreter that calls these functions before anything else in the
+    process has triggered lifetxt.bootstrap_legacy_surfaces().
+
+    An in-process call (even in its own test method) cannot prove this: by
+    the time any test method in this shared-process suite runs, some
+    earlier test has almost certainly already warmed the bootstrap chain,
+    which is exactly how this defect went undetected while reliably
+    failing the real "Release" and "Standalone binaries" CI workflows,
+    each of which invokes these entry points as the very first lifetxt
+    call in a brand-new process.
+    """
+
+    def _run_cold(self, script):
+        result = subprocess.run(
+            [sys.executable, "-c", script],
+            capture_output=True,
+            text=True,
+            cwd=ROOT,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        return result.stdout
+
+    def test_schema_validation_report_sees_the_full_bundle_on_a_cold_call(self):
+        script = (
+            "import json\n"
+            "from lifetxt.release_policy import schema_validation_report\n"
+            "report = schema_validation_report(%r, require_validator=True)\n"
+            "print(json.dumps({"
+            "'validator_available': report.get('validator_available', False), "
+            "'schema_count': report.get('schema_count'), "
+            "'sample_count': report.get('sample_count'), "
+            "'ok': report['ok']}))\n"
+        ) % ROOT
+        payload = json.loads(self._run_cold(script))
+        if not payload["validator_available"]:
+            self.assertFalse(payload["validator_available"], payload)
+            self.assertFalse(payload["ok"], payload)
+            return
+        self.assertTrue(payload["ok"], payload)
+        self.assertEqual(payload["schema_count"], payload["sample_count"])
+        self.assertGreater(payload["schema_count"], 4)
+
+    def test_write_schema_bundle_writes_the_full_bundle_on_a_cold_call(self):
+        script = (
+            "import json, tempfile\n"
+            "from lifetxt.safety_foundation import write_schema_bundle\n"
+            "names = write_schema_bundle(tempfile.mkdtemp())\n"
+            "print(json.dumps({'count': len(names)}))\n"
+        )
+        payload = json.loads(self._run_cold(script))
+        self.assertGreater(payload["count"], 4)
 
 
 class ReleasePolicyTests(unittest.TestCase):
@@ -153,8 +210,38 @@ class ReleasePolicyTests(unittest.TestCase):
         self.assertFalse(report["errors"])
 
     def test_release_manifest_has_deterministic_fingerprint(self):
-        first = release_manifest(ROOT, require_validator=False)
-        second = release_manifest(ROOT, require_validator=False)
+        # Run in a genuinely cold subprocess, matching how
+        # scripts/check_release_policy.py (the real "Release" CI
+        # workflow's own entry point) invokes this function: as the
+        # first lifetxt call in the process. An in-process call here
+        # cannot prove determinism, because by the time this test
+        # method runs, some earlier test in the same shared process has
+        # almost certainly already triggered bootstrap_legacy_surfaces()
+        # through some other call path, which silently masks a real
+        # stale-import-binding defect (see issue #1300): any module
+        # whose own `from lifetxt.release_policy import release_manifest`
+        # statement executes before that chain has installed its
+        # compatibility wrappers permanently binds to the pre-wrapped
+        # function, no matter how many times it is called afterward.
+        script = (
+            "import json, lifetxt\n"
+            "lifetxt.bootstrap_legacy_surfaces()\n"
+            "from lifetxt.release_policy import release_manifest\n"
+            "first = release_manifest(%r, require_validator=False)\n"
+            "second = release_manifest(%r, require_validator=False)\n"
+            "print(json.dumps({"
+            "'first': first, 'second': second"
+            "}))\n"
+        ) % (ROOT, ROOT)
+        result = subprocess.run(
+            [sys.executable, "-c", script],
+            capture_output=True,
+            text=True,
+            cwd=ROOT,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        payload = json.loads(result.stdout)
+        first, second = payload["first"], payload["second"]
         self.assertTrue(first["ok"], first)
         self.assertEqual(first["fingerprint"], second["fingerprint"])
         self.assertEqual(first["release_policy_version"], "1")

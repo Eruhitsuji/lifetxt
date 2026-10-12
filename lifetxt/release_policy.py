@@ -426,6 +426,9 @@ def schema_validation_report(root, require_validator=True):
                 ),
             )
         )
+    from . import bootstrap_legacy_surfaces
+
+    bootstrap_legacy_surfaces()
     generated = schema_bundle()
     published = OrderedDict()
     schema_dir = os.path.join(root, "dist", "schemas")
@@ -546,6 +549,9 @@ def write_route_baseline_report(root):
 
 
 def release_manifest(root, paths=None, require_validator=True):
+    from . import bootstrap_legacy_surfaces
+
+    bootstrap_legacy_surfaces()
     reports = OrderedDict()
     reports["mutation_cas"] = {"ok": bool(_cas_probe())}
     reports["timezone_roundtrip"] = {"ok": bool(_timezone_probe())}

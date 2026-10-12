@@ -38,6 +38,15 @@ def main(argv=None):
     )
     if root not in sys.path:
         sys.path.insert(0, root)
+    import lifetxt
+
+    # Install the legacy compatibility/schema-extension chain before
+    # importing release_manifest by name. That chain monkey-patches
+    # lifetxt.release_policy.release_manifest (and several functions it
+    # calls) in place; importing the bare name before the chain has run
+    # would permanently bind this module to the pre-bootstrap function,
+    # silently skipping every monkey-patched check (see issue #1300).
+    lifetxt.bootstrap_legacy_surfaces()
     from lifetxt.release_policy import release_manifest
 
     manifest = release_manifest(

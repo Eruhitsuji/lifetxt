@@ -11,6 +11,7 @@ quickly during development.
 
 from __future__ import annotations
 
+import re
 import subprocess
 import sys
 import tempfile
@@ -54,6 +55,35 @@ class PyInstallerSpecStaticContractTests(unittest.TestCase):
 
     def test_spec_produces_a_console_executable(self):
         self.assertIn("console=True", self.spec_text)
+
+    def test_spec_declares_the_dynamically_loaded_schema_extension_modules(self):
+        # lifetxt/_legacy_bootstrap.py imports lifetxt.schema_extensions_v4
+        # through v34 via a dynamically constructed `__import__(f"...")`
+        # inside a range(4, 35) loop, which PyInstaller's static import
+        # analysis cannot resolve. Without an explicit hiddenimports entry
+        # covering every one of these modules, the frozen binary fails
+        # with ModuleNotFoundError the first time
+        # bootstrap_legacy_surfaces() runs -- reproduced on both the
+        # "Standalone binaries" CI workflow and a real local PyInstaller
+        # build before this fix (issue #1300).
+        #
+        # The spec computes the hiddenimports entries from a range(), so
+        # the expanded module names never appear as literal text; extract
+        # and evaluate that one expression in isolation instead of
+        # executing the whole spec file (which references PyInstaller-
+        # provided names such as SPECPATH/Analysis/EXE that only exist
+        # inside a real PyInstaller build).
+        match = re.search(
+            r"hidden_imports \+= (\[.*?\])",
+            self.spec_text,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(
+            match, "could not find the schema_extensions hiddenimports entry"
+        )
+        declared = eval(match.group(1))  # noqa: S307 -- trusted repo source, not input
+        expected = {"lifetxt.schema_extensions_v%d" % v for v in range(4, 35)}
+        self.assertEqual(expected, set(declared))
 
 
 @unittest.skipUnless(*_pyinstaller_available())

@@ -1,0 +1,41 @@
+schema_version: 1
+change:
+  id: release-v1-0-4-1
+  title: Prepare correction release v1.0.4.1
+  status: implemented
+  change_type: Operations
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1298
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1304
+  base_commit: 907559f877c353cfa29716d52398c0ced525adfd
+  target_release: v1.0.4.1
+scope:
+  in_scope:
+  - Authoritative Core/Mini metadata version update
+  - Release notes and acceptance evidence
+  out_of_scope:
+  - Feature changes
+  - Tagging/publication
+  - Moving existing v1.0.4 tag
+  write_scope:
+  - pyproject.toml
+  - lifetxt/__init__.py
+  - lifetxt-mini/Cargo.toml
+  - lifetxt-mini/Cargo.lock
+  - tests/test_core_import_boundary.py
+  - docs/en/release-notes-v1.0.4.1.md
+  - docs/ja/release-notes-v1.0.4.1.md
+  - .ai/project/TRACEABILITY.yml
+  - .ai/project/changes/release-v1-0-4-1
+  forbidden_scope:
+  - .ai/managed/**
+  shared_files:
+  - pyproject.toml
+  - lifetxt-mini/Cargo.lock
+  - .ai/project/TRACEABILITY.yml
+human_approvals_required:
+- Independent implementation/integration review
+- Merge Authority
+- Release Authority before tag/publication

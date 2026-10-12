@@ -247,3 +247,28 @@ report = build_ticket_project_report(
 ```
 
 The input may contain normal lifetxt Item objects or mapping-shaped records. Non-ticket Tasks and records such as counter-machine Notes are ignored because discovery requires both item type `T` and `record: ticket`.
+
+## Saving and reusing on-demand reports
+
+Ticket Project reports are evaluated on demand. In report JSON v1,
+`reference_time` is the evaluation clock used by time-sensitive calculations;
+it is neither `generated_at` nor a source-file/workspace revision. A saved JSON
+file does not automatically become a current snapshot, cache entry or
+synchronization artifact. It cannot by itself prove that the source files,
+workspace membership, configuration or evaluation conditions are unchanged.
+
+For later comparison, keep the exact command/options, evaluation time,
+effective configuration context, source membership and source revisions/hashes
+alongside the saved output. Treat those notes as operator evidence, not a
+complete or atomic workspace snapshot guarantee. Rerun from current sources
+before relying on a report for a current-state decision; after any source or
+configuration change, regenerate it. Use the same explicit evaluation time for
+comparisons where supported, and do not interpret a difference as a source
+change unless the other conditions also match. Avoid including credentials in
+retained configuration notes; handle reports as potentially sensitive metadata.
+
+The current CLI and report v1 fields remain unchanged. A dedicated versioned
+report envelope with generation time, revision/configuration provenance and
+completeness, plus cache/API/invalidation semantics, requires a separate design
+and implementation issue. This documentation adds no storage, cache, API or
+freshness guarantee.

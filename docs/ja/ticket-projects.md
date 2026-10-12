@@ -246,3 +246,24 @@ report = build_ticket_project_report(
 ```
 
 入力にはlifetxtのItemオブジェクトまたは辞書形式のレコードを使用できます。チケット判定には項目種別 `T` と `record: ticket` の両方が必要なため、通常のTaskやカウンターマシン用Noteは集計対象になりません。
+
+## on-demand reportの保存と再利用
+
+Ticket Project reportは実行時に計算します。report JSON v1の `reference_time` は
+時間依存の計算に使う評価時刻であり、`generated_at` やsource/workspaceのrevision
+ではありません。JSONを保存しても、自動的に最新snapshot、cache、同期用成果物に
+なるわけではありません。保存JSONだけではsource、workspaceの構成、設定、評価条件が
+変わっていないことを証明できません。
+
+比較用に保存する場合は、正確なコマンド・option、評価時刻、実効設定のcontext、
+source集合、各sourceのrevision/hashを出力と併記してください。これらはoperatorの
+証跡であり、完全で原子的なworkspace snapshotの保証ではありません。現在の状態の
+判断に使う前に現在のsourceから再実行し、sourceや設定変更後は再生成してください。
+対応している場合は同じ明示的な評価時刻で比較し、他の条件も一致するまでは差分を
+source変更と断定しないでください。設定の証跡にcredentialを含めず、reportも機微な
+metadataを含み得るものとして扱ってください。
+
+既存CLIとreport v1のfieldは変更しません。生成時刻、revision・設定provenance、
+completenessを持つversion付きenvelope、およびcache/API/invalidationの意味は
+別の設計・実装issueで扱います。この文書更新では保存機構、cache、API、鮮度保証を
+追加しません。

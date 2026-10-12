@@ -1,4 +1,25 @@
 
+## 添付のreload・browser restart・journal回復（#1290）
+
+#1288と同じ実browser環境で `python -m unittest tests.test_web_revision_recovery_browser -v`
+を実行します。required modeの実upload drawerで有限サイズの合成fileを送信し、
+test-only fault `after_journal_publish` で中断します。prepared journalを残し、source/blob
+byte不変、503のuncertain UI、成功receiptなしを確認します。Page reloadと、browser終了後の
+新process/一時profile起動を別々に検証し、未確定transactionの成功表示・自動再送を防ぎます。
+
+既存journal `resume` を明示呼出しするtest-only operator endpointを使い、同じjournalを
+1回だけcommitします。本番browser recovery機能を追加するものではありません。refresh後の
+参照と重複/replayなし、別HTTP writerによる409時のsource/blob不変、明示refreshによる
+最新revision再取得後の成功を確認します。precondition欠落/不正も既存UIで停止し、
+source/blob/journalを変更しません。`LIFETXT_REVISION_EVIDENCE_DIR` の
+`attachment-recovery.json` に実engine・commit・fault点・status・process/profile変更・
+再送/重複検証を記録します。offline resumeやautofixは実装しません。
+
+**work-sessionの実frontend coverageは未完了（#1294）です。** 現在のWeb/Planner JSには
+`/api/work-session`の呼出しがなく、slash timerは別contractの`/api/timer`を呼びます。
+`tests.test_work_session_v4`はbackend transaction証拠であり、画面のstart/stop/edit証拠では
+ありません。console fetch/TestClientを代替とせず、本検証だけで#1290/#317をcloseしません。
+
 ## 実ブラウザによるrevision smoke（#1288）
 
 Web extras、Node 22以上（native WebSocket）、Chrome/Chromiumを用意し、

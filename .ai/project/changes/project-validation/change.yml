@@ -8,9 +8,10 @@ change:
   owner: Eruhitsuji
   accountable_owner: Eruhitsuji
   related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1281
-  base_commit: b48cd33dba7bf328080d530d4ff912fd8e16ccc6
+  base_commit: a8508a9a01d2b927a0ce5d64c721b0aa884ae1a2
   size: S
   split_justification: Independent opt-in diagnostic capability.
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1284
 scope:
   write_scope:
   - lifetxt/project_validation.py

@@ -17,7 +17,7 @@ from lifetxt import web_assets, webapp
 
 REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
 # #1189 retains contextual binding and adds translated recovery to the bulk UI.
-LEGACY_PRISTINE_GIT_BLOB_SHA = "ff035449dee178b2a634cb5dd111a2e1a50bb9f1"
+LEGACY_PRISTINE_GIT_BLOB_SHA = "0db3caa5d19dfb14511b7a61e86bb16f9e41f634"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )

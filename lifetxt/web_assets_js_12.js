@@ -39,6 +39,8 @@
     }
 
     function closeDrawer(urlMode = "replace") {
+      disposeWorkSession();
+      drawerWorkEditBinding = null;
       if (typeof disposeAttachmentUpload === "function") disposeAttachmentUpload();
       closeManagedModal(document.getElementById("detail-drawer"));
       drawerItem = null;
@@ -54,6 +56,12 @@
     function drawerEdit() {
       if (!drawerItem) return;
       if (!drawerItem.editable) { showToast("This record is read-only.", "warning"); return; }
+      if (workSessionPending) return;
+      if (workSessionView) {
+        if (!workSessionView.ready || workSessionView.needsRefresh) { showToast(workRefreshText(), "warning"); return; }
+        drawerWorkEditBinding = {itemRevision:workSessionView.itemRevision, clockHeader:workSessionView.clockHeader};
+        disposeWorkSession();
+      }
       if (typeof disposeAttachmentUpload === "function") disposeAttachmentUpload();
       drawerEditing = true;
       document.getElementById("drawer-head-btns").innerHTML =
@@ -99,7 +107,8 @@
     }
 
     async function drawerSaveEdit() {
-      if (!drawerItem || !drawerItem.editable) return;
+      if (!drawerItem || !drawerItem.editable || workSessionPending || drawerWorkEditBinding?.needsRefresh) return;
+      const workBinding = drawerWorkEditBinding;
       const saveLine = drawerItem.line;
       const titleEl = document.getElementById("drawer-edit-title");
       if (!titleEl || !titleEl.value.trim()) { showToast("Title is required.", "warning"); return; }
@@ -109,10 +118,11 @@
         title: titleEl.value.trim(),
         details: _structuredDetails("drawer-edit-details", "drawer-edit"),
       };
+      if (workBinding) workSessionPending = true;
       try {
         await api(`/api/items/${saveLine}`, {
           method: "PUT",
-          headers: {"Content-Type": "application/json"},
+          headers: workBinding ? workHeaders(workBinding) : {"Content-Type": "application/json"},
           body: JSON.stringify(payload),
         });
         drawerEditing = false;
@@ -121,8 +131,13 @@
         const updated = (currentItems || []).find(i => i.line === saveLine && i.editable);
         if (updated) openDrawer(updated);
       } catch(e) {
-        showActionableError("Could not save this record.", e, {retry: () => drawerSaveEdit()});
-      }
+        if (workBinding) {
+          workBinding.needsRefresh = true;
+          const feedback = document.createElement("p");feedback.id="work-session-edit-feedback";feedback.setAttribute("role","status");
+          feedback.textContent=workText("Could not save. Keep a copy of your input, cancel editing, refresh the record and review before retrying.", "保存できません。入力を控えてから編集をキャンセルし、レコードを再読み込みして確認してください。");
+          document.getElementById("drawer-body").append(feedback);
+        } else showActionableError("Could not save this record.", e, {retry: () => drawerSaveEdit()});
+      } finally { if (workBinding) workSessionPending = false; }
     }
 
     let drawerDoneSaving = false;

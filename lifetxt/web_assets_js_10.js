@@ -330,6 +330,8 @@
 
     function openDrawer(item, urlMode = "push") {
       disposeAttachmentUpload();
+      disposeWorkSession();
+      drawerWorkEditBinding = null;
       drawerEditing = false;
       drawerItem = item;
       syncDrawerUrlForItem(item, urlMode);
@@ -412,6 +414,7 @@
       rememberRecentItem(item);
       openManagedModal(drawer, ".drawer-close-btn");
       mountAttachmentUpload(item, document.getElementById("drawer-tab-overview"));
+      mountWorkSession(item, document.getElementById("drawer-tab-overview"));
       loadDependencyLinks(item);
       loadBlockerChain(item);
       if (item.type === "M" && itemId) loadDrawerMessageThread(item);

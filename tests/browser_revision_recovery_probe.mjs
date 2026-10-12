@@ -36,6 +36,10 @@ async function send(){
   await browser.wait(`uploadPosts.length===${before+1}&&!attachmentUploadPending`,'upload response');
   return browser.evaluate('uploadPosts.at(-1)');
 }
+async function refreshUpload(){
+  await browser.evaluate('window.revisionOldUploadView=attachmentUploadView;attachmentUploadView.refresh.click()');
+  await browser.wait("attachmentUploadView!==window.revisionOldUploadView&&attachmentUploadView?.ready&&!attachmentUploadView.needsRefresh&&!attachmentUploadPending&&!attachmentUploadView.input.disabled",'fresh upload view');
+}
 async function close(){allEvents.push(...browser.events);await browser.close();browser=null;}
 try {
   await start();const engine=browser.version.product;const firstProcess=browser.processId,firstProfile=browser.profileId;
@@ -58,8 +62,7 @@ try {
   const afterRestart=await api('/__test/state');assert.equal(afterRestart.source,interrupted.source);assert.equal(afterRestart.requests.length,postCount);
   const recovered=await api('/__test/operator-resume',{method:'POST'});assert.equal(recovered.state,'committed');
   assert.equal(recovered.id,interrupted.journals.find(x=>x.recovery_required).id);
-  await browser.evaluate('attachmentUploadView.refresh.click()');
-  await browser.wait("attachmentUploadView?.ready&&!attachmentUploadView.needsRefresh&&!attachmentUploadView.input.disabled",'operator recovery refresh');
+  await refreshUpload();
   const committed=await api('/__test/state');assert.notEqual(committed.source,interrupted.source);
   assert.equal(Object.keys(committed.attachments).length,1);assert(Object.values(committed.attachments).every(x=>Buffer.from(x,'hex').toString()==='synthetic'));
   assert.equal(committed.journals.filter(x=>x.recovery_required).length,0);assert.equal(committed.requests.length,postCount);
@@ -71,14 +74,14 @@ try {
   const beforeStale=await api('/__test/state');const stale=await send();assert.equal(stale.status,409);
   const afterStale=await api('/__test/state');assert.equal(beforeStale.source,afterStale.source);assert.deepEqual(beforeStale.attachments,afterStale.attachments);
   assert(await browser.evaluate('attachmentUploadView.needsRefresh&&attachmentUploadView.input.disabled'));
-  await browser.evaluate('attachmentUploadView.refresh.click()');await browser.wait("attachmentUploadView?.ready&&!attachmentUploadView.needsRefresh",'fresh source');
+  await refreshUpload();
   await select('fresh.txt');const fresh=await send();assert.equal(fresh.status,201);assert.notEqual(fresh.revision,stale.revision);
+  await browser.wait("attachmentUploadView?.ready&&!attachmentUploadView.needsRefresh&&!attachmentUploadPending&&!attachmentUploadView.input.disabled",'successful upload refreshed');
   const final=await api('/__test/state');assert.equal(Object.keys(final.attachments).length,2);assert.equal(final.requests.length,postCount+2);
   assert.equal(final.journals.filter(x=>x.recovery_required).length,0);assert.equal((Buffer.from(final.source,'hex').toString().match(/file:/g)||[]).length,2);
   const malformedStatuses=[];
   for(const fault of ['missing','invalid']) {
-    await browser.evaluate('attachmentUploadView.refresh.click()');
-    await browser.wait("attachmentUploadView?.ready&&!attachmentUploadView.needsRefresh",'refresh before transport fault');
+    await refreshUpload();
     await select(fault+'.txt');await browser.evaluate(`probeFault=${JSON.stringify(fault)}`);
     const beforeFault=await api('/__test/state');const rejection=await send();
     assert.equal(rejection.status,fault==='missing'?428:400);malformedStatuses.push(rejection.status);
@@ -94,5 +97,5 @@ try {
   }
   process.stdout.write(JSON.stringify({engine,node:process.version,os:process.platform,mode:'required',fault_point:'after_journal_publish',interrupted_status:failed.status,
     reload_no_replay:true,new_process_and_profile_no_replay:true,operator_resume:'committed',same_transaction:true,stale_status:stale.status,fresh_status:fresh.status,attachment_count:2,malformed_statuses:malformedStatuses,browser_process_changed:true,profile_changed:true,
-    work_session_frontend_verified:false,work_session_gap:'No shipped frontend caller of /api/work-session; /api/timer is distinct.'}));
+    work_session_frontend_verified:false,work_session_gap:'This attachment suite does not verify work-session controls; run the separate shipped-UI work-session probe.'}));
 } finally {if(browser)await browser.close();}

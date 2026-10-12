@@ -1,0 +1,20 @@
+schema_version: 1
+change:
+  id: web-work-session-ui
+  title: Revision-bound Task drawer work sessions
+  status: implemented
+  change_type: Feature
+  assurance_level: Standard
+  size: M
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1296
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1297
+scope:
+  forbidden_scope: [API contracts, Format, config schema, automatic retry, release/deployment]
+  rollback: Revert UI/test/docs additions; existing records require no migration.
+design_approval:
+  owner: Eruhitsuji
+  date: '2026-10-12'
+  record: Visible conversation accepted the separate Feature proposal from 1294.
+human_approvals_required: [independent latest-head review, merge]

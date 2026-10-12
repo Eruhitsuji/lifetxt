@@ -1,0 +1,8 @@
+schema_version: 1
+links:
+- requirement: req-web-work-session-controls
+  capability: cap-web-work-session-controls
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1296
+  pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1297
+  tests: [tests.test_web_revision_work_session_browser, tests.test_work_session_v4, tests.test_web_assets, tests.test_web_drawer_edit_js]
+  status: implemented

@@ -1,0 +1,39 @@
+schema_version: 1
+change:
+  id: project-validation
+  title: Opt-in read-only Project risk diagnostics
+  status: implemented
+  change_type: Feature
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1281
+  base_commit: b48cd33dba7bf328080d530d4ff912fd8e16ccc6
+  size: S
+  split_justification: Independent opt-in diagnostic capability.
+scope:
+  write_scope:
+  - lifetxt/project_validation.py
+  - lifetxt/cli.py
+  - tests/test_project_validation.py
+  - docs/en/projects.md
+  - docs/ja/projects.md
+  - .ai/project/CAPABILITIES.yml
+  - .ai/project/TRACEABILITY.yml
+  - .ai/project/changes/project-validation/**
+  forbidden_scope:
+  - .ai/managed/**
+  - cross-file mutation
+  - Remote/API/provider/notifications
+  rollback: Revert code and metadata; existing persisted activity remains readable.
+design_approval:
+  owner: Eruhitsuji
+  date: '2026-10-12'
+  record: 'Visible conversation approval: お願いします．'
+  scope:
+  - risk-only warnings; default check unchanged
+  - medium/open defaults and implicit Projects valid
+  - 0 authoritative writes; text and JSON
+human_approvals_required:
+- Independent latest-head requirements/design/security review
+- Integration/merge approval

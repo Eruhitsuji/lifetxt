@@ -1,0 +1,13 @@
+schema_version: 1
+requirements:
+- id: req-release-preflight-desktop
+  kind: ADDED
+  statement: Produce Desktop installers and verified bundled Core evidence from one immutable candidate without publishing.
+  acceptance_criteria:
+  - Preserve three native targets and reuse context/source/host/proof contracts
+  - Run version generation and native build only in a fresh generated checkout
+  - Verify actual bundled Core smoke, mapped version, plist, resource mapping and unchanged runtime bytes
+  - Require nonempty native installer inventory and format signatures; bind safe aliases to original public names
+  - Rehash payload after upload; keep bundled-core evidence private and manual GUI state not_verified
+  - No old workflow, public trigger, tag, secret, managed or shared-helper modifications
+  owner: Eruhitsuji

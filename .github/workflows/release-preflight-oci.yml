@@ -1,0 +1,109 @@
+name: OCI preflight (non-public)
+
+on:
+  workflow_call:
+    inputs:
+      candidate_json:
+        description: "Sealed candidate from the same trusted repository/controller run"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  oci:
+    name: Preflight (${{ matrix.target }})
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            target: oci-linux-amd64
+          - os: ubuntu-24.04-arm
+            target: oci-linux-arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Check out trusted controller
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: controller
+          persist-credentials: false
+
+      - name: Set up supported Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Validate candidate before selecting source ref
+        id: candidate
+        env:
+          CANDIDATE_JSON: ${{ inputs.candidate_json }}
+        run: |
+          python -c 'import os; from pathlib import Path; Path("candidate.json").write_text(os.environ["CANDIDATE_JSON"], encoding="utf-8")'
+          python controller/scripts/release_preflight_core.py prepare \
+            --candidate candidate.json --controller controller --output checkout.env
+          cat checkout.env >> "$GITHUB_OUTPUT"
+
+      - name: Check out immutable distribution source
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ steps.candidate.outputs.source_sha }}
+          path: source
+          persist-credentials: false
+
+      - name: Set up native OCI builder
+        uses: docker/setup-buildx-action@v3
+
+      - name: Install local digest-preserving transport and runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y skopeo podman
+
+      - name: Build once and smoke exact native OCI image
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          python controller/scripts/release_preflight_oci.py build \
+            --candidate candidate.json --controller controller --source source \
+            --target "$TARGET" --payload "payloads/$TARGET" --output oci-build-report.json
+
+      - name: Upload immutable target layout
+        id: payload
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ matrix.target }}-payload-${{ github.run_id }}-${{ github.run_attempt }}
+          path: payloads/${{ matrix.target }}/*
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Bind upload reference to unchanged OCI graph
+        env:
+          TARGET: ${{ matrix.target }}
+          PAYLOAD_ID: ${{ steps.payload.outputs.artifact-id }}
+          PAYLOAD_DIGEST: ${{ steps.payload.outputs.artifact-digest }}
+          PAYLOAD_NAME: ${{ matrix.target }}-payload-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          python controller/scripts/release_preflight_oci.py component \
+            --candidate candidate.json --controller controller --source source \
+            --target "$TARGET" --payload "payloads/$TARGET" --report oci-build-report.json \
+            --artifact-id "$PAYLOAD_ID" --artifact-name "$PAYLOAD_NAME" \
+            --artifact-digest "$PAYLOAD_DIGEST" --output oci-component.json
+
+      - name: Upload target proof separately
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ matrix.target }}-proof-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            candidate.json
+            oci-build-report.json
+            oci-component.json
+          if-no-files-found: error
+          retention-days: 30

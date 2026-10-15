@@ -1,0 +1,47 @@
+schema_version: 1
+verification:
+  executed:
+  - type: unit
+    command: python -m unittest tests.test_release_preflight_oci
+    status: passed
+    result: 14 tests passed, including fixture build/component, graph/archive faults, exact-import command orchestration and deterministic assembly
+    tested_commit: 3441b628
+  - type: regression
+    command: python -m unittest tests.test_release_preflight_oci tests.test_release_preflight_mini tests.test_release_preflight_desktop tests.test_release_preflight_standalone tests.test_release_preflight_core tests.test_release_preflight_proof tests.test_release_subversions tests.test_set_tauri_desktop_version tests.test_traceability_gate tests.test_change_package_closeout
+    status: passed
+    result: 112 tests passed
+    tested_commit: 3441b628
+  - type: lint
+    command: python -m ruff check scripts/release_preflight_oci.py scripts/release_preflight_oci_layout.py tests/test_release_preflight_oci.py
+    status: passed
+    tested_commit: 3441b628
+  - type: format
+    command: python -m ruff format --check scripts/release_preflight_oci.py scripts/release_preflight_oci_layout.py tests/test_release_preflight_oci.py
+    status: passed
+    tested_commit: 3441b628
+  - type: docs
+    command: python scripts/validate_release_docs.py --output /tmp/lifetxt-1320-docs.json
+    status: passed
+    result: errors=0, ok=true
+    tested_commit: 3441b628
+  - type: initial-failure
+    status: resolved
+    result: Initial OCI test run failed 2 of 14 tests because common proof requires unique oci-layout role. Retained original tar as one role instead of changing common schema; rerun all 14 passed, followed by 112 regression tests passed.
+    environment: Python 3.12, bash; BashCompletionExecutionTests not selected; no concurrent worktree mutation during suite
+  - type: native-oci
+    status: not_run
+    reason: No local Docker, Skopeo or Podman. Both native builds, storage transfer and real smoke remain required evidence in issue 1321
+  - type: workflow
+    status: not_run
+    reason: workflow_call only; actual caller/API/artifact transport integration is issue 1321
+review_ledger:
+- reviewer: Codex implementer
+  review_type: self-review
+  result: completed
+  notes: Checked archive safety, full graph retention, role uniqueness, digest distinctions, native checks, Web contract and no public transport. Independent reviews pending.
+- reviewer: independent implementation reviewer
+  review_type: implementation
+  result: pending
+- reviewer: independent integration reviewer / Eruhitsuji
+  review_type: integration
+  result: pending

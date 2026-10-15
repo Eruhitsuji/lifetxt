@@ -1,0 +1,15 @@
+schema_version: 1
+links:
+- requirement_id: req-release-preflight-oci
+  capability_id: cap-distribution-channels
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1320
+  pull_request: null
+  tests_or_evidence:
+  - tests.test_release_preflight_oci
+  - Producer/proof/version/traceability/closeout regression and release docs validation
+  release_or_deployment: None; non-public read-only producer only
+  status: in_progress
+gaps:
+- Native builds, real local storage transfer, both-arch smoke and Actions transport require issue 1321
+- Final index proof/API binding is controller integration in issue 1321; publication/approval in issue 1311
+- Independent implementation/integration reviews and human merge approval pending

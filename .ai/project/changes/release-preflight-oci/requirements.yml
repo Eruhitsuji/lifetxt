@@ -1,0 +1,13 @@
+schema_version: 1
+requirements:
+- id: req-release-preflight-oci
+  kind: ADDED
+  statement: Retain both native OCI image graphs and smoke the exact manifest without public writes or rebuild.
+  acceptance_criteria:
+  - Bind fixed candidate/source/controller/run/target/version/toolchain to artifact ID/hash/size and native checks
+  - Reject unsafe archives and incomplete, tampered or wrong-platform/version/non-root OCI graphs
+  - Require digest-preserving local import and actual CLI/version/UID/Web checks
+  - Retain original OCI tar bytes and revalidate after upload
+  - Provide deterministic no-rebuild multiarch index assembly requiring both targets
+  - Keep existing public workflow, Dockerfile, tags, secrets and shared proof contract unchanged
+  owner: Eruhitsuji

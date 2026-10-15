@@ -1,0 +1,116 @@
+name: Mini preflight (non-public)
+
+on:
+  workflow_call:
+    inputs:
+      candidate_json:
+        description: "Sealed candidate from the same trusted repository/controller run"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  mini:
+    name: Preflight (${{ matrix.target }})
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            target: mini-linux-x86_64
+            triple: x86_64-unknown-linux-musl
+          - os: ubuntu-24.04-arm
+            target: mini-linux-aarch64
+            triple: aarch64-unknown-linux-musl
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Check out trusted controller
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: controller
+          persist-credentials: false
+
+      - name: Set up supported Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Validate candidate before selecting source ref
+        id: candidate
+        env:
+          CANDIDATE_JSON: ${{ inputs.candidate_json }}
+        run: |
+          python -c 'import os; from pathlib import Path; Path("candidate.json").write_text(os.environ["CANDIDATE_JSON"], encoding="utf-8")'
+          python controller/scripts/release_preflight_core.py prepare \
+            --candidate candidate.json --controller controller --output checkout.env
+          cat checkout.env >> "$GITHUB_OUTPUT"
+
+      - name: Check out immutable distribution source
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ steps.candidate.outputs.source_sha }}
+          path: source
+          persist-credentials: false
+
+      - name: Set up native Rust target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.triple }}
+
+      - name: Set up Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: 0.13.0
+
+      - name: Install existing native builder
+        run: cargo install cargo-zigbuild --locked
+
+      - name: Build and verify native static Mini
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          python controller/scripts/release_preflight_mini.py build \
+            --candidate candidate.json --controller controller --source source \
+            --target "$TARGET" --payload "payloads/$TARGET" --output mini-build-report.json
+
+      - name: Upload immutable target payload
+        id: payload
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ matrix.target }}-payload-${{ github.run_id }}-${{ github.run_attempt }}
+          path: payloads/${{ matrix.target }}/*
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Bind upload reference to unchanged Mini bytes
+        env:
+          TARGET: ${{ matrix.target }}
+          PAYLOAD_ID: ${{ steps.payload.outputs.artifact-id }}
+          PAYLOAD_DIGEST: ${{ steps.payload.outputs.artifact-digest }}
+          PAYLOAD_NAME: ${{ matrix.target }}-payload-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          python controller/scripts/release_preflight_mini.py component \
+            --candidate candidate.json --controller controller --source source \
+            --target "$TARGET" --payload "payloads/$TARGET" --report mini-build-report.json \
+            --artifact-id "$PAYLOAD_ID" --artifact-name "$PAYLOAD_NAME" \
+            --artifact-digest "$PAYLOAD_DIGEST" --output mini-component.json
+
+      - name: Upload target proof separately
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ matrix.target }}-proof-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            candidate.json
+            mini-build-report.json
+            mini-component.json
+          if-no-files-found: error
+          retention-days: 30

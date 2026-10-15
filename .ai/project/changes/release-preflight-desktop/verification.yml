@@ -1,0 +1,44 @@
+schema_version: 1
+verification:
+  executed:
+  - type: unit
+    command: python -m unittest tests.test_release_preflight_desktop tests.test_release_preflight_standalone tests.test_release_preflight_core tests.test_release_preflight_proof
+    status: passed
+    result: Initial 54 tests passed; later full regression includes the added successful fixture-bundle case
+  - type: regression
+    command: python -m unittest tests.test_release_preflight_desktop tests.test_release_preflight_standalone tests.test_release_preflight_core tests.test_release_preflight_proof tests.test_release_subversions tests.test_set_tauri_desktop_version tests.test_traceability_gate tests.test_change_package_closeout
+    status: passed
+    result: 83 tests passed, including 13 Desktop tests; fixture Cargo success path seals the real report structure and produces a common component without claiming a native installer build
+  - type: docs
+    command: python scripts/validate_release_docs.py --output /tmp/lifetxt-1318-docs.json
+    status: passed
+    result: errors=0, ok=true
+  - type: lint
+    command: python -m ruff check scripts/release_preflight_desktop.py tests/test_release_preflight_desktop.py
+    status: passed
+  - type: format
+    command: python -m ruff format --check scripts/release_preflight_desktop.py tests/test_release_preflight_desktop.py
+    status: passed
+  - type: runtime-stage
+    command: release_preflight_desktop.stage in a dedicated Linux PyInstaller/web/tui venv
+    status: passed
+    source_sha: 07d8b31939da2297ab6117ef38944bc04b46f4e7
+    local_controller_sha: 55ddf36b30fee73dc0949a6e9b9a76bce3986bcb
+    result: Fresh generated checkout; actual runtime build and frozen version/check/init/doctor/Unicode/timezone smoke passed; 1.0.4.1 mapped to 1.0.4+1 and precise plist/resource mapping checked; original source/controller tracked-clean
+  - type: installer
+    status: not_run
+    reason: Local Cargo/Rust/WebKit unavailable; all native installer builds and Actions transfer require issue 1321 integration
+  - type: gui
+    status: not_run
+    reason: GUI install/upgrade/uninstall and extraction from every format are outside this producer's assurance scope
+review_ledger:
+- reviewer: Codex implementer
+  review_type: self-review
+  result: completed
+  notes: Preserved public names via safe aliases, kept bundled-core private, required manual verification state, rejected unrelated generated-checkout edits and report tamper; independent reviews pending
+- reviewer: independent implementation reviewer
+  review_type: implementation
+  result: pending
+- reviewer: independent integration reviewer / Eruhitsuji
+  review_type: integration
+  result: pending

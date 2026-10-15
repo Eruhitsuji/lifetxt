@@ -1,0 +1,127 @@
+name: Desktop preflight (non-public)
+
+on:
+  workflow_call:
+    inputs:
+      candidate_json:
+        description: "Sealed candidate from the same trusted repository/controller run"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  desktop:
+    name: Preflight (${{ matrix.target }})
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: desktop-windows-x86_64
+          - os: macos-latest
+            target: desktop-macos-arm64
+          - os: ubuntu-latest
+            target: desktop-linux-x86_64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Check out trusted controller
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: controller
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Validate candidate before selecting source ref
+        id: candidate
+        env:
+          CANDIDATE_JSON: ${{ inputs.candidate_json }}
+        run: |
+          python -c 'import os; from pathlib import Path; Path("candidate.json").write_text(os.environ["CANDIDATE_JSON"], encoding="utf-8")'
+          python controller/scripts/release_preflight_core.py prepare \
+            --candidate candidate.json --controller controller --output checkout.env
+          cat checkout.env >> "$GITHUB_OUTPUT"
+
+      - name: Check out immutable distribution source
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ steps.candidate.outputs.source_sha }}
+          path: source
+          persist-credentials: false
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux Tauri build dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Install native build dependencies and bundled extras
+        run: |
+          python -m pip install "./source[web,tui]" pyinstaller
+          cargo install tauri-cli --version "^2" --locked
+
+      - name: Stage and verify bundled Core in generated checkout
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          python controller/scripts/release_preflight_desktop.py stage \
+            --candidate candidate.json --controller controller --source source \
+            --work generated-desktop --target "$TARGET" --output desktop-stage.json
+
+      - name: Build and verify native installer inventory
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          python controller/scripts/release_preflight_desktop.py bundle \
+            --candidate candidate.json --controller controller --source source \
+            --work generated-desktop --target "$TARGET" --report desktop-stage.json \
+            --payload "payloads/$TARGET" --output desktop-bundle-report.json
+
+      - name: Upload immutable target payload
+        id: payload
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ matrix.target }}-payload-${{ github.run_id }}-${{ github.run_attempt }}
+          path: payloads/${{ matrix.target }}/*
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Bind upload reference to unchanged installer bytes
+        env:
+          TARGET: ${{ matrix.target }}
+          PAYLOAD_ID: ${{ steps.payload.outputs.artifact-id }}
+          PAYLOAD_DIGEST: ${{ steps.payload.outputs.artifact-digest }}
+          PAYLOAD_NAME: ${{ matrix.target }}-payload-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          python controller/scripts/release_preflight_desktop.py component \
+            --candidate candidate.json --controller controller --source source \
+            --target "$TARGET" --report desktop-bundle-report.json --payload "payloads/$TARGET" \
+            --artifact-id "$PAYLOAD_ID" --artifact-name "$PAYLOAD_NAME" \
+            --artifact-digest "$PAYLOAD_DIGEST" --output desktop-component.json
+
+      - name: Upload target proof and public-name mapping separately
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ matrix.target }}-proof-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            candidate.json
+            desktop-stage.json
+            desktop-bundle-report.json
+            desktop-component.json
+          if-no-files-found: error
+          retention-days: 30

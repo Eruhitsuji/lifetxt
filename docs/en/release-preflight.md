@@ -227,3 +227,55 @@ supported targets). The upload reference is supplied only to `component`.
 See the reusable workflow for exact commands. There is no standalone public
 dispatch action. Local Linux smoke does not claim Windows/macOS/ARM native
 coverage; those and actual Actions artifact transport remain #1321 acceptance.
+
+## Desktop producer (#1318)
+
+`release-preflight-desktop.yml` is a read-only `workflow_call` matrix for Windows
+x86_64, macOS arm64 and Linux x86_64. Pass the same sealed `candidate_json`.
+It reuses Core context/source checks and Standalone native-host and frozen
+smoke checks. It has no publish event, environment or secret. The old Desktop
+workflow and packaging scripts are unchanged.
+
+The helper's `stage` command creates a fresh local shared Git checkout at the
+exact source SHA. Only this generated checkout is used for the existing runtime
+builder and version setter. The original source/controller remain tracked-clean
+and are checked before/after the work. The generated bundled Core is actually
+executed outside source with the full Standalone smoke set. The version setter
+then applies the existing three/four-part transport mapping and precise Apple
+release plist. Configuration version, plist identity and the resource mapping
+`resources/bin/* -> bin/` are checked. Unexpected tracked edits (including a
+Cargo.lock change) or extra runtime resources fail closed. A successful stage
+report certifies the Core staging only, not an installer or a release.
+
+`bundle` revalidates stage identity and runtime hash, invokes `cargo tauri build`
+with a bounded 30-minute timeout, then rechecks the generated checkout/runtime.
+It requires native installer outputs, validates nonempty files and format
+signatures, and rejects duplicate public basenames. This is not deep validation
+or installation of every MSI/NSIS/DMG/deb/AppImage/rpm format. Rust and tauri-cli
+versions are recorded alongside Python/PyInstaller. GUI install/upgrade/uninstall
+and extraction of embedded Core from every format remain explicitly not_verified.
+The later publication verification must still inspect actual downloaded bytes.
+
+Desktop public names can contain spaces. Keep them unchanged: internal payloads
+use safe aliases such as `installer-001.deb`. The sealed bundle report's
+`installers` records each alias `path`, original `public_name`, and `format`.
+The separate proof artifact contains candidate, stage report, bundle report and
+common component. Before publishing, #1305/#1311/#1321 must verify that proof
+archive's trusted Actions digest and bind each mapping to the matching component
+file hash; then use the original public_name, never the internal alias. Public
+names reject separators/control characters and duplicates. They are metadata,
+not paths to concatenate into a local directory or interpolate into a shell.
+
+The payload's single `bundled-core` (or `.exe`) role is private evidence. It must
+not be uploaded as an extra release asset or added to the public canonical
+inventory. Only installer-role files map to public Desktop assets. This preserves
+schema 1 and public filenames without adding a new canonical checksum writer.
+After payload upload, `component` validates the installer mapping/signatures,
+runtime hash and exact file hashes against the report before emitting proof.
+
+Artifacts follow `<target>-payload-<run>-<attempt>` and
+`<target>-proof-<run>-<attempt>` with 30-day retention requested; the parent must
+collect all three targets rather than treat a matrix output as an inventory.
+See the reusable workflow for the `stage -> bundle -> upload -> component`
+commands. Native installer builds/Actions transport require the appropriate
+Rust/WebKit/OS runner; local runtime staging is not proof they already ran.

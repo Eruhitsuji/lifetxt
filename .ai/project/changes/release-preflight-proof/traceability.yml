@@ -3,7 +3,7 @@ links:
 - requirement_id: req-release-preflight-proof
   capability_id: cap-stable-release-governance
   task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1315
-  pull_request: null
+  pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1322
   tests_or_evidence:
   - tests.test_release_preflight_proof
   - Existing version regression and traceability/change-package gates

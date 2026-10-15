@@ -272,7 +272,7 @@ def build(candidate, controller, source, payload, output, target, context):
         "python": sys.version.split()[0],
         "rustc": rustc,
         "cargo": core.run(["cargo", "--version"], source),
-        "cargo-zigbuild": core.run(["cargo", "zigbuild", "--version"], source),
+        "cargo-zigbuild": core.run(["cargo-zigbuild", "--version"], source),
         "zig": core.run(["zig", "version"], source),
     }
     result = proof.sealed(

@@ -1,0 +1,51 @@
+schema_version: 1
+verification:
+  executed:
+  - type: unit
+    command: python -m unittest tests.test_release_preflight_core tests.test_release_preflight_proof
+      tests.test_release_subversions tests.test_release_evidence tests.test_traceability_gate
+      tests.test_change_package_closeout
+    status: passed
+    result: 57 tests passed, including 13 Core fault-injection/workflow safety tests
+      and 18 proof tests
+  - type: integration
+    command: release_preflight_core.build(candidate, controller, source, payload,
+      report, context), then finish/validate_component with local synthetic upload
+      reference
+    status: passed
+    result: Actual wheel/sdist/SBOM/provenance generated once; policy/safety/twine;
+      exact wheel and sdist installed in separate fresh venvs; module/console version/help/check
+      all passed; four-role payload rehashed and bound to a local fixture artifact
+      reference. No Actions upload, approval or publication.
+    source_sha: 4cc12c7ce34c30efe84b985fbb1de547e25a5f98
+    controller_sha: c33ee8ae4d316fedbca62a7621b6873243d8fb82
+    environment: Linux Python 3.12; PIP_NO_INDEX=1/PIP_FIND_LINKS with pre-fetched
+      setuptools/wheel/packaging wheels; initial index-based attempt did not complete
+      and produced no report
+  - type: docs
+    command: python scripts/validate_release_docs.py --output /tmp/lifetxt-1316-docs.json
+    status: passed
+    result: errors=0, ok=true
+  - type: lint
+    command: python -m ruff check scripts/release_preflight_core.py tests/test_release_preflight_core.py
+    status: passed
+  - type: format
+    command: python -m ruff format --check scripts/release_preflight_core.py tests/test_release_preflight_core.py
+    status: passed
+  - type: workflow
+    status: not_run
+    reason: Reusable producer has no standalone trigger; actual Actions transport/caller
+      integration belongs to issue 1321
+review_ledger:
+- reviewer: Codex implementer
+  review_type: self-review
+  result: completed
+  notes: Reject role/schema mismatch, rehash after upload, test source-import isolation;
+    add explicit wheel build dependency and bound subprocess/pip waits. Independent
+    reviews pending.
+- reviewer: independent implementation reviewer
+  review_type: implementation
+  result: pending
+- reviewer: independent integration reviewer / Eruhitsuji
+  review_type: integration
+  result: pending

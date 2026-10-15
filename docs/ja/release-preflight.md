@@ -118,3 +118,44 @@ keyをsortし、compact UTF-8、末尾改行なし、非ASCIIをescapeしない�
 SHAで同じ候補番号を再利用できます。tag確定後は番号をそのSHAへ予約します。部分公開は
 同じsource/bytesのみretryでき、ソース不具合の修正は人間が新補正版番号を指定/承認します。
 元artifact消失・bytes衝突では停止し、公開済みtagやbytesを差し替えません。
+
+## Core producer（#1316）
+
+`release-preflight-core.yml`はread-onlyの`workflow_call`専用producerです。
+push/release/manual公開trigger・environment・公開tokenはなく、checkout認証情報も
+保持しません。同じrepository/controller revisionの呼出元から、封印済み
+`candidate_json`を渡します。ユーザー向けdispatch操作はまだなく、全体の接続は
+#1321が担当します。
+
+repository/run/attemptとcontroller checkoutを照合してから、検証済みsource SHAだけを
+別directoryへcheckoutします。helperはtracked変更とソースの実versionを検査し、
+build/smoke後にもsource/controller identityを再確認します。これらはlocal/runの
+照合であり、信頼済みmain CI・version PR・人間承認のAPI照合は呼出元の責務です。
+
+既存release-policy/safety release gateを実行し、`release_evidence.generate`で
+wheel/sdistを一度生成します。両archiveのName/Version、SBOM、provenanceの
+source/run/file hash、twineを検証します。さらに**wheelとsdistの両方**を個別の
+新規venvへインストールし、ソース外の一時directoryからimport先がvenv内であること、
+module/consoleのversion/help/最小exampleを実行検証します。smoke subprocessへ
+PYTHONPATH/PYTHONHOMEを引き継ぎません。sdist installで生成するインストール用wheelを
+公開payloadへ差し替えることもありません。通常のfull unittestは重複実行しません。
+backend依存の取得にはpackage indexへの接続が必要な場合があります。
+
+upload payloadはwheel/sdist/SBOM/provenanceの4roleです。既存builderの中間
+SHA256SUMSはpayloadに入れず、#1305のcanonicalと競合させません。fileごとの
+hashはbuild report/proof、gate/build診断はActions job logに記録します。
+全検証の成功後のみreportを生成します。失敗時にlocal fileが残っても、そのjobは
+uploadへ進まず成功componentも生成しません。
+
+先に不変payloadをuploadし、返されたartifact-id/digestと
+`core-payload-<run>-<attempt>`という名前を、再検証した同一bytesのreportへ束縛します。
+`core-component.json`とcandidate/build reportは別artifact
+`core-proof-<run>-<attempt>`へ保存します。reusable outputsはpayloadのID/name/digestと
+component artifactのID/digestです。保持期間は30日を要求しますがrepositoryの制限に
+従います。期限切れは停止条件であり、古い承認で再buildしてよいという意味ではありません。
+公開Release/tag/registry/Latestは変更しません。Actions上の実転送と全13対象の
+orchestrationは#1321で統合受入を行います。
+
+local/offline検証では、標準のpip設定`PIP_FIND_LINKS`と`PIP_NO_INDEX`により、
+事前取得したbuild依存wheelhouseを使えます。依存の取得経路だけを変更し、payload
+bytesや新規venv・import先の検証は変えません。

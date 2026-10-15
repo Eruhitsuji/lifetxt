@@ -320,3 +320,54 @@ outputs are not an inventory. See the workflow for build/upload/component CLI.
 Without Cargo/Zig, local ELF/fixture tests do not certify a real Mini build,
 native AArch64 execution, conformance success or Actions artifact transport.
 Those remain required integration evidence in #1321 before publication enablement.
+
+## OCI producer (non-public)
+
+`release-preflight-oci.yml` accepts the same trusted `candidate_json` via
+workflow_call only. It uses native Ubuntu amd64/arm64 runners, contents:read,
+credential-free checkouts and no publishing environment or registry login.
+`release_preflight_oci.py build` validates controller/source/run/version and host,
+then runs Buildx once against the existing Dockerfile. It exports OCI media types
+without attestations (no extra unknown-platform manifests), adding immutable
+version/revision labels. This retains exact output, not reproducible-build claims.
+
+The payload is one `lifetxt-<tag>-linux-<arch>.oci.tar` (role `oci-layout`),
+preserving the original exporter bytes and the complete index/config/layer graph.
+The offline `release_preflight_oci_layout.py` rejects unsafe tar paths, links,
+sparse/duplicate entries, external descriptors, wrong sizes/hashes, unreferenced
+files, extra manifests and wrong arch/version/revision/non-root configuration.
+No archive extractall is used. Schema/digest checks are not a sandbox or an
+authentication substitute.
+
+Skopeo copies only from OCI layout to local containers-storage with
+`--preserve-digests`; failure never falls back to rebuild or conversion. Rootful
+Podman must report the original manifest digest AND config digest, plus native
+platform. The installed image, pinned by config ID and pull=never, runs actual
+version/help/check, uid=1000 and read-only Web health checks. The Web port binds
+only loopback; CLI smoke has no network. Containers are removed after Web checks.
+No registry transport, push, QEMU or package publication is used.
+
+The report distinguishes three hashes: `oci.manifest_digest` is also the common
+component `oci_digest`; `oci.config_digest` pins the tested local image ID;
+`oci.index_digest` hashes the retained per-arch index bytes. They are NOT the
+Actions archive SHA256. Buildx/Docker/Skopeo/Podman/Python versions and whole-tar
+hash/size are retained. `component` safely reopens the uploaded tar, revalidates
+its graph and compares the complete report before sealing the artifact reference.
+Payload/proof names include target/run/attempt, requesting 30-day retention.
+
+After authenticating both component proofs and Actions references (#1321), a
+controller can safely extract each archive into a fresh directory, then call
+`release_preflight_oci_layout.assemble(candidate, {target: layout_path, ...}, out)`.
+It requires both targets, validates both graphs, copies original blobs unchanged
+and writes a deterministic amd64-then-arm64 OCI index. The returned SHA256 is the
+final multiarch **index** digest. Retain these exact index bytes and all blobs;
+future publication must preserve all digests (Skopeo `--all --preserve-digests`),
+compare the remote index digest and fail on conversion. Do not rebuild, regenerate
+the index after approval, or use the per-arch digest as the multiarch digest.
+This helper does not authorize publication; final evidence binding is #1321 and
+human approval/transfer belongs to #1311. No canonical SHA256SUMS writer is added.
+
+Local fixture tests cover graph/archive faults, smoke-command failures and
+deterministic assembly, not real container execution. Docker/Skopeo/Podman are
+unavailable locally; both native builds, storage transfer and actual Actions
+transport remain explicitly unrun integration requirements in #1321.

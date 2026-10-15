@@ -2,6 +2,25 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-release-preflight-oci
+      capability_id: cap-distribution-channels
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1310
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1320
+      pull_request: null
+      changed_files_or_scope:
+        - .github/workflows/release-preflight-oci.yml
+        - scripts/release_preflight_oci.py
+        - scripts/release_preflight_oci_layout.py
+        - tests/test_release_preflight_oci.py
+        - docs/en/release-preflight.md
+        - docs/ja/release-preflight.md
+        - .ai/project/changes/release-preflight-oci
+      tests_or_evidence:
+        - OCI graph/archive/version/arch/non-root/digest-import/CLI/Web fault injection
+        - Fixture build-component and deterministic multiarch index/blob preservation
+        - Native builds and actual transfer explicitly not_run; required in issue 1321
+      release_or_deployment: None; public Dockerfile/workflow/tag/bytes unchanged
+      status: in_progress
     - requirement_id: req-release-preflight-mini
       capability_id: cap-distribution-channels
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1310

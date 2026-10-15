@@ -278,3 +278,47 @@ upload後のcomponentでELF/arch・厳密inventory・checksum/notes・report has
 componentコマンドはworkflowに記載しています。Cargo/ZigがないlocalのELF/fixture
 試験は、実Mini build・native AArch64・conformance・Actions転送の成功証拠では
 ありません。公開有効化前に必要なそれらの統合証拠は#1321へ残します。
+
+## OCI producer（非公開）
+
+`release-preflight-oci.yml`は同じ信頼済み`candidate_json`をworkflow_callだけで
+受け取り、Ubuntu amd64/arm64のnative runnerで実行します。contents:read、
+credentialを残さないcheckoutを使用し、公開environmentやregistry loginはありません。
+`release_preflight_oci.py build`でcontroller/source/run/version/hostを照合し、
+既存DockerfileをBuildxで一度だけbuildします。version/revision labelを付け、
+OCI形式・attestationなし（unknown-platformの追加manifestなし）でexportします。
+保持した出力の同一性を保証する方式で、再現可能buildの認定ではありません。
+
+payloadは元exporter bytesの`lifetxt-<tag>-linux-<arch>.oci.tar`1件
+（role: oci-layout）です。index/config/layerの全graphを保持します。
+`release_preflight_oci_layout.py`はtarの危険path/link/sparse/重複、外部descriptor、
+size/hash不一致、余剰file、複数manifest、arch/version/revision/non-root設定不一致を
+拒否します。extractallは使いません。schema/digest検査はsandboxや認証の代替ではありません。
+
+Skopeoの`--preserve-digests`でlayoutからローカルcontainers-storageへだけ転送し、
+失敗時に再buildや形式変換へ迂回しません。rootful Podmanのmanifest/config digestと
+native platformを照合し、config ID固定・pull=neverで実version/help/check・uid=1000・
+read-only Web healthを検証します。Web portはloopbackだけへbindし、CLI smokeの
+networkは無効です。Web containerは後処理で削除します。registry transport/push・
+QEMU・package公開は使いません。
+
+reportの`oci.manifest_digest`が共通componentの`oci_digest`、
+`oci.config_digest`が実行image ID、`oci.index_digest`が保持した単arch indexの
+hashです。Actions archive SHA256とは別物です。Buildx/Docker/Skopeo/Podman/Python
+versionとtar全体のhash/sizeも保存します。upload後のcomponentでtarを安全に再展開し、
+graphとreport全体を照合してartifact参照を封印します。payload/proof名は
+target/run/attempt別で30日保持を要求します。
+
+呼出元は両component proofとActions参照を認証した後（#1321）、各archiveをfresh
+directoryへ安全に展開し、`release_preflight_oci_layout.assemble(candidate,
+{target: layout_path, ...}, out)`を呼びます。両targetを必須とし、graphを再検証、
+元blobを変更せずコピーしてamd64→arm64順の決定的OCI indexを生成します。
+戻り値は最終multiarch **index** digestです。そのindex bytesと全blobを保持し、
+公開時は全digestを維持（Skopeo `--all --preserve-digests`）、remote index digestを
+照合し、変換が必要なら停止してください。承認後の再build/index再生成や、単arch
+manifest digestのmultiarch digestへの流用は禁止です。関数自体は公開権限を与えず、
+最終証跡の結合は#1321、人間承認/公開転送は#1311です。canonical writerは追加しません。
+
+local fixture試験はgraph/archive故障・smokeコマンド失敗・決定的組立を検証しますが、
+実containerの成功証拠ではありません。localにDocker/Skopeo/Podmanがないため、
+両arch native build・実storage転送・Actions転送は未実行として#1321に残します。

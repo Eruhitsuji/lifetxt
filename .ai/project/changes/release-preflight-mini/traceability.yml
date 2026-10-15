@@ -1,0 +1,15 @@
+schema_version: 1
+links:
+- requirement_id: req-release-preflight-mini
+  capability_id: cap-distribution-channels
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1319
+  pull_request: null
+  tests_or_evidence:
+  - tests.test_release_preflight_mini
+  - Shared producer/proof and version/traceability regression
+  - Real gcc static ELF acceptance and dynamic /bin/ls rejection (not Mini runtime evidence)
+  release_or_deployment: None; read-only non-public producer only
+  status: in_progress
+gaps:
+- Actual native Mini builds/conformance on both arches and Actions transport require issue 1321 integration
+- Independent implementation/integration reviews and human merge approval pending

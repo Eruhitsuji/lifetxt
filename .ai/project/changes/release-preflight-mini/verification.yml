@@ -1,0 +1,42 @@
+schema_version: 1
+verification:
+  executed:
+  - type: unit
+    command: python -m unittest tests.test_release_preflight_mini tests.test_release_preflight_desktop tests.test_release_preflight_standalone tests.test_release_preflight_core tests.test_release_preflight_proof
+    status: passed
+    result: 70 tests passed, including 15 Mini ELF/arch/static/smoke/evidence/fixture-build/workflow tests
+  - type: regression
+    command: python -m unittest tests.test_release_preflight_mini tests.test_release_preflight_desktop tests.test_release_preflight_standalone tests.test_release_preflight_core tests.test_release_preflight_proof tests.test_release_subversions tests.test_set_tauri_desktop_version tests.test_traceability_gate tests.test_change_package_closeout
+    status: passed
+    result: 98 tests passed
+  - type: docs
+    command: python scripts/validate_release_docs.py --output /tmp/lifetxt-1319-docs.json
+    status: passed
+    result: errors=0, ok=true
+  - type: lint
+    command: python -m ruff check scripts/release_preflight_mini.py tests/test_release_preflight_mini.py
+    status: passed
+  - type: format
+    command: python -m ruff format --check scripts/release_preflight_mini.py tests/test_release_preflight_mini.py
+    status: passed
+  - type: real-elf-fixture
+    status: passed
+    command: cc -static fixture C program, then release_preflight_mini.static_elf; also validate /bin/ls
+    result: Actual Linux x86_64 static ELF accepted; actual dynamic /bin/ls rejected for PT_INTERP; these are ELF parser evidence, not Mini build or conformance evidence
+  - type: native-mini
+    status: not_run
+    reason: Local Cargo/Zig unavailable; both native builds and actual conformance remain required integration evidence in issue 1321
+  - type: workflow
+    status: not_run
+    reason: Read-only reusable workflow has no standalone trigger; actual Actions upload/caller integration belongs to issue 1321
+review_ledger:
+- reviewer: Codex implementer
+  review_type: self-review
+  result: completed
+  notes: Validate dynamic headers/bounds and static PIE; keep locked tests/build and source conformance; verify Python alias, LF checksum/notes and post-upload bytes. Independent reviews pending.
+- reviewer: independent implementation reviewer
+  review_type: implementation
+  result: pending
+- reviewer: independent integration reviewer / Eruhitsuji
+  review_type: integration
+  result: pending

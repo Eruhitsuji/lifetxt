@@ -279,3 +279,44 @@ collect all three targets rather than treat a matrix output as an inventory.
 See the reusable workflow for the `stage -> bundle -> upload -> component`
 commands. Native installer builds/Actions transport require the appropriate
 Rust/WebKit/OS runner; local runtime staging is not proof they already ran.
+
+## Mini producer (#1319)
+
+`release-preflight-mini.yml` is a read-only `workflow_call` for native Linux
+x86_64 and AArch64, using the existing musl Rust targets and Zig 0.13.0 setup.
+Pass the same sealed `candidate_json`. It reuses actual Core context/source
+checks, native host validation and the common proof schema. The existing Mini
+publication workflow/crate/version/conformance scripts are unchanged.
+
+The helper first checks existing Core/Cargo/lock/tag version consistency, runs
+`cargo test --locked`, then `cargo zigbuild --locked --release` with the selected
+musl target. Test/build target directories are fresh temporary directories;
+old workspace target caches are not mistaken for new outputs. The resulting
+binary must be ELF64 little-endian for the expected machine (x86_64=62,
+AArch64=183), with bounded program headers, a load segment, no PT_INTERP and
+no DT_NEEDED/filter/auxiliary library dependency. Static PIE with a dynamic
+metadata table but no loader/dependencies is allowed. This replaces the old
+locale-dependent ldd-message classification; it is not a binary safety sandbox.
+
+Before checks are marked passed, the actual native Mini runs version/help/check/
+today and the existing binary-version and Core/Mini conformance scripts. The
+explicit test date and strict-subset Mini Runtime Profile identity are retained.
+The existing conformance script's `python` alias must resolve to the current
+supported interpreter. Failed/skip/missing checks cannot emit success proof.
+
+The payload preserves `lifetxt-mini-<tag>-linux-<arch>`, `.sha256`, `.build-info`
+and `RELEASE-NOTES.md`. Checksums and notes are LF-only. Build info records
+rustc -Vv; the report adds Cargo/cargo-zigbuild/Zig/Python versions, static ELF
+evidence and file hashes/sizes. Notes are byte-identical on both arches and
+retain the strict-subset boundary: the later public canonical inventory must
+deduplicate RELEASE-NOTES.md only if hashes match, and stop on a conflict.
+There is no per-producer canonical SHA256SUMS writer.
+
+Payload/proof artifacts use the same target/run/attempt naming and 30-day
+retention request as the other producers. After upload, `component` rechecks
+ELF/arch, exact inventory, checksum/notes and unchanged report hashes. The parent
+must collect both target proofs and verify trusted Actions IDs/digests; matrix
+outputs are not an inventory. See the workflow for build/upload/component CLI.
+Without Cargo/Zig, local ELF/fixture tests do not certify a real Mini build,
+native AArch64 execution, conformance success or Actions artifact transport.
+Those remain required integration evidence in #1321 before publication enablement.

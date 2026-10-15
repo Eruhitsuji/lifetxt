@@ -1,0 +1,146 @@
+name: Release preflight (non-public)
+
+# This entry has no publishing authority. Full integration is a manual main run.
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: "Immutable 40-lowercase-hex source SHA already merged into main"
+        required: true
+        type: string
+      version:
+        description: "Explicit X.Y.Z or X.Y.Z.N; no automatic version selection"
+        required: true
+        type: string
+      main_ci_run_id:
+        description: "Successful push/main CI run ID for exactly source_sha"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: preflight-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Prepare immutable candidate
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      candidate_json: ${{ steps.candidate.outputs.candidate_json }}
+      main_ci_json: ${{ steps.candidate.outputs.main_ci_json }}
+    steps:
+      - name: Check out trusted controller and main history
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.workflow_sha }}
+          fetch-depth: 0
+          path: controller
+          persist-credentials: false
+      - name: Set up supported Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Pin source and existing successful main compatibility gate
+        id: candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+          VERSION: ${{ inputs.version }}
+          MAIN_CI_RUN_ID: ${{ inputs.main_ci_run_id }}
+        run: |
+          python controller/scripts/release_preflight_collect.py prepare \
+            --source-sha "$SOURCE_SHA" --version "$VERSION" \
+            --main-ci-run-id "$MAIN_CI_RUN_ID" --controller controller \
+            --output candidate.json --github-output "$GITHUB_OUTPUT"
+
+  core:
+    name: Core
+    needs: [prepare]
+    permissions:
+      contents: read
+    uses: ./.github/workflows/release-preflight-core.yml
+    with:
+      candidate_json: ${{ needs.prepare.outputs.candidate_json }}
+
+  standalone:
+    name: Standalone
+    needs: [prepare, core]
+    permissions:
+      contents: read
+    uses: ./.github/workflows/release-preflight-standalone.yml
+    with:
+      candidate_json: ${{ needs.prepare.outputs.candidate_json }}
+
+  desktop:
+    name: Desktop
+    needs: [prepare, core, standalone]
+    permissions:
+      contents: read
+    uses: ./.github/workflows/release-preflight-desktop.yml
+    with:
+      candidate_json: ${{ needs.prepare.outputs.candidate_json }}
+
+  mini:
+    name: Mini
+    needs: [prepare, core]
+    permissions:
+      contents: read
+    uses: ./.github/workflows/release-preflight-mini.yml
+    with:
+      candidate_json: ${{ needs.prepare.outputs.candidate_json }}
+
+  oci:
+    name: OCI
+    needs: [prepare, core]
+    permissions:
+      contents: read
+    uses: ./.github/workflows/release-preflight-oci.yml
+    with:
+      candidate_json: ${{ needs.prepare.outputs.candidate_json }}
+
+  collect:
+    name: Verify all 13 targets
+    needs: [prepare, core, standalone, desktop, mini, oci]
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Check out trusted controller and main history
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.workflow_sha }}
+          fetch-depth: 0
+          path: controller
+          persist-credentials: false
+      - name: Set up supported Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Reconcile Actions provenance, exact bytes and final OCI index
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE_JSON: ${{ needs.prepare.outputs.candidate_json }}
+          MAIN_CI_JSON: ${{ needs.prepare.outputs.main_ci_json }}
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: |
+          python -c 'import os; from pathlib import Path; [(Path(name).write_text(os.environ[key], encoding="utf-8")) for name, key in [("candidate.json", "CANDIDATE_JSON"), ("main-ci.json", "MAIN_CI_JSON"), ("needs.json", "NEEDS_JSON")]]'
+          python controller/scripts/release_preflight_collect.py collect \
+            --controller controller --candidate candidate.json --main-ci main-ci.json \
+            --needs needs.json --output verified-preflight
+      - name: Upload non-authorizing proof bundle and exact multiarch OCI layout
+        uses: actions/upload-artifact@v6
+        with:
+          name: preflight-verified-${{ github.run_id }}-${{ github.run_attempt }}
+          path: verified-preflight/*
+          if-no-files-found: error
+          retention-days: 30

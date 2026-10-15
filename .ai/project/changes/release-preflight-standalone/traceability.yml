@@ -3,7 +3,7 @@ links:
 - requirement_id: req-release-preflight-standalone
   capability_id: cap-distribution-channels
   task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1317
-  pull_request: null
+  pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1324
   tests_or_evidence:
   - tests.test_release_preflight_standalone
   - Common Core/proof/version and traceability/change-package regression

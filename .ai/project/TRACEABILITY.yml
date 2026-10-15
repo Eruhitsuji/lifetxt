@@ -2,6 +2,25 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-release-preflight-desktop
+      capability_id: cap-distribution-channels
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1310
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1318
+      pull_request: null
+      changed_files_or_scope:
+        - .github/workflows/release-preflight-desktop.yml
+        - scripts/release_preflight_desktop.py
+        - tests/test_release_preflight_desktop.py
+        - docs/en/release-preflight.md
+        - docs/ja/release-preflight.md
+        - .ai/project/changes/release-preflight-desktop
+      tests_or_evidence:
+        - Generated checkout/version/resource/mapping/format/tamper and read-only workflow tests
+        - Real Linux bundled Core stage and frozen version/check/init/doctor/Unicode/timezone smoke
+      release_or_deployment: None; no public workflow/tag/secret changes
+      notes: Desktop installer names preserved in private alias mapping; native installer/Actions integration remains in 1321, GUI unverified.
+      status: in_progress
+
     - requirement_id: req-release-preflight-standalone
       capability_id: cap-distribution-channels
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1310

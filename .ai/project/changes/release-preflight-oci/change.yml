@@ -1,0 +1,32 @@
+schema_version: 1
+change:
+  id: release-preflight-oci
+  title: Non-public native OCI producer and exact digest retention
+  status: in_progress
+  change_type: Operations
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1320
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1327
+  base_commit: e68e980bb5ef67c1909282f77815afd4e3bdb839
+scope:
+  write_scope:
+  - .github/workflows/release-preflight-oci.yml
+  - scripts/release_preflight_oci.py
+  - scripts/release_preflight_oci_layout.py
+  - tests/test_release_preflight_oci.py
+  - docs/en/release-preflight.md
+  - docs/ja/release-preflight.md
+  - .ai/project/changes/release-preflight-oci
+  - .ai/project/TRACEABILITY.yml
+  forbidden_scope:
+  - .ai/managed/**
+  - .github/workflows/docker-publish.yml
+  - Dockerfile
+  - scripts/release_preflight_proof.py
+  - scripts/release_preflight_core.py
+  - scripts/release_preflight_standalone.py
+human_approvals_required:
+- Independent implementation and integration reviews
+- Human merge approval

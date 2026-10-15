@@ -1,0 +1,112 @@
+name: Standalone preflight (non-public)
+
+# Matrix outputs are not a target inventory: the parent must collect all five
+# target-named proof artifacts, verify their API identities, and aggregate them.
+on:
+  workflow_call:
+    inputs:
+      candidate_json:
+        description: "Sealed candidate from the same trusted repository/controller run"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  standalone:
+    name: Preflight (${{ matrix.target }})
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: standalone-windows-x86_64
+          - os: ubuntu-latest
+            target: standalone-linux-x86_64
+          - os: ubuntu-24.04-arm
+            target: standalone-linux-arm64
+          - os: macos-latest
+            target: standalone-macos-arm64
+          - os: macos-15-intel
+            target: standalone-macos-x86_64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Check out trusted controller
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: controller
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Validate candidate before selecting source ref
+        id: candidate
+        env:
+          CANDIDATE_JSON: ${{ inputs.candidate_json }}
+        run: |
+          python -c 'import os; from pathlib import Path; Path("candidate.json").write_text(os.environ["CANDIDATE_JSON"], encoding="utf-8")'
+          python controller/scripts/release_preflight_core.py prepare \
+            --candidate candidate.json --controller controller --output checkout.env
+          cat checkout.env >> "$GITHUB_OUTPUT"
+
+      - name: Check out immutable distribution source
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ steps.candidate.outputs.source_sha }}
+          path: source
+          persist-credentials: false
+
+      - name: Install native build dependencies and bundled extras
+        run: python -m pip install "./source[web,tui]" pyinstaller
+
+      - name: Build and smoke the native frozen executable
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          python controller/scripts/release_preflight_standalone.py build \
+            --candidate candidate.json --controller controller --source source \
+            --target "$TARGET" --payload "payloads/$TARGET" --report standalone-build-report.json
+
+      - name: Upload immutable target payload
+        id: payload
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ matrix.target }}-payload-${{ github.run_id }}-${{ github.run_attempt }}
+          path: payloads/${{ matrix.target }}/*
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Bind upload reference to unchanged frozen bytes
+        env:
+          TARGET: ${{ matrix.target }}
+          PAYLOAD_ID: ${{ steps.payload.outputs.artifact-id }}
+          PAYLOAD_DIGEST: ${{ steps.payload.outputs.artifact-digest }}
+          PAYLOAD_NAME: ${{ matrix.target }}-payload-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          python controller/scripts/release_preflight_standalone.py component \
+            --candidate candidate.json --controller controller --source source \
+            --target "$TARGET" --payload "payloads/$TARGET" --report standalone-build-report.json \
+            --artifact-id "$PAYLOAD_ID" --artifact-name "$PAYLOAD_NAME" \
+            --artifact-digest "$PAYLOAD_DIGEST" --output standalone-component.json
+
+      - name: Upload target proof separately
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ matrix.target }}-proof-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            candidate.json
+            standalone-build-report.json
+            standalone-component.json
+          if-no-files-found: error
+          retention-days: 30

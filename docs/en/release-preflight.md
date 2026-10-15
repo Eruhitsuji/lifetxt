@@ -181,3 +181,49 @@ For offline/local validation, standard pip settings such as `PIP_FIND_LINKS`
 and `PIP_NO_INDEX` can point smoke installs at a pre-fetched build-dependency
 wheelhouse. This changes dependency transport, not payload bytes or the clean
 venv/import checks.
+
+## Standalone producer (#1317)
+
+`release-preflight-standalone.yml` is a read-only `workflow_call` matrix for
+Windows x86_64, Linux x86_64/arm64 and macOS arm64/x86_64. It preserves the
+existing native runners and PyInstaller spec; the old publication workflow is
+unchanged. Pass the same sealed `candidate_json` used by the Core producer.
+The controller/source/run/version checks reuse the Core helper. The producer
+also checks the real OS, normalized host architecture and 64-bit interpreter
+before building, and rejects cross-target execution.
+
+The source's web/tui extras and PyInstaller are installed for the build. The
+frozen executable, not `python -m lifetxt`, runs outside source. Version must
+match the candidate exactly. `check`, `init --yes`, `doctor`, workspace checks,
+paths containing spaces/Japanese characters and Asia/Tokyo `check`/`today`
+smoke are retained. HOME and config/data/cache directories point at temporary
+smoke-only locations; PYTHONHOME/PYTHONPATH are removed. Failed builds/smokes
+produce no successful report or upload. Full source unit tests are not rerun.
+
+Each payload contains only its platform-qualified binary and LF-only `.sha256`
+file, preserving the existing public filenames. The sealed report records the
+source/controller/candidate/run/target, toolchain versions, successful checks,
+and both file hashes/sizes. After payload upload, the helper verifies the exact
+two-file inventory, checksum text and unchanged report/file digests before
+emitting a schema-1 Standalone component. A fresh checksum alone cannot certify
+a binary changed after smoke. Neither the component nor checksum authorizes
+publication or writes the future canonical SHA256SUMS.
+
+Payload artifacts use `<target>-payload-<run>-<attempt>`, and separate proof
+artifacts use `<target>-proof-<run>-<attempt>`. Each proof archive contains
+candidate/build report/component; the component references its payload archive
+ID/name/digest. Both request 30-day retention. Matrix outputs are deliberately
+not exposed as a five-target inventory: GitHub matrix outputs can select one
+completed job's values. #1321 must collect all five target-named proofs, verify
+their trusted API/run metadata and payload IDs/digests, and reject missing or
+duplicate targets. Keep downloaded payloads under their target namespaces.
+On Unix, restore execute permission on a downloaded binary before running a
+new smoke; artifact transport may normalize file modes. This does not change
+the file bytes/digest and is not a rebuild or payload replacement.
+
+The helper's `build` and `component` CLI arguments follow the Core producer,
+with an explicit `--target standalone-linux-x86_64` (or one of the other four
+supported targets). The upload reference is supplied only to `component`.
+See the reusable workflow for exact commands. There is no standalone public
+dispatch action. Local Linux smoke does not claim Windows/macOS/ARM native
+coverage; those and actual Actions artifact transport remain #1321 acceptance.

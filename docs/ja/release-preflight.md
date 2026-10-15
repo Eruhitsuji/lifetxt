@@ -159,3 +159,43 @@ orchestrationは#1321で統合受入を行います。
 local/offline検証では、標準のpip設定`PIP_FIND_LINKS`と`PIP_NO_INDEX`により、
 事前取得したbuild依存wheelhouseを使えます。依存の取得経路だけを変更し、payload
 bytesや新規venv・import先の検証は変えません。
+
+## Standalone producer（#1317）
+
+`release-preflight-standalone.yml`はWindows x86_64、Linux x86_64/arm64、
+macOS arm64/x86_64の5対象を扱うread-onlyの`workflow_call`です。既存native
+runner・PyInstaller specを維持し、旧公開workflowは変更しません。Coreと同じ
+封印済み`candidate_json`を渡します。controller/source/run/versionの照合は
+Core helperを再利用し、実OS・正規化host arch・64bit interpreterも照合して
+cross-target buildを拒否します。
+
+ソースのweb/tui extrasとPyInstallerをbuild環境へ入れ、ソース外でfrozen実行物
+そのものを起動します。versionは候補と完全一致を要求します。check、init --yes、
+doctor、workspace確認、空白・日本語を含むpath、Asia/Tokyoのcheck/today検証を
+維持します。HOME/config/data/cacheはsmoke専用一時directoryとし、
+PYTHONHOME/PYTHONPATHを除去します。build/smoke失敗時は成功reportやuploadへ
+進みません。通常のfull unittestは重複実行しません。
+
+payloadは既存のplatform別binary名とLF-onlyの.sha256だけです。封印reportに
+source/controller/candidate/run/target・toolchain・成功check・両fileのhash/sizeを
+記録します。payload upload後にも、厳密な2file inventory・checksum本文・
+report/file digestの不変性を確認して共通schemaのcomponentを生成します。
+binaryとchecksumを両方変更しても、smoke済みbytesとしては通りません。
+component/checksumは公開承認でもcanonical SHA256SUMSの更新でもありません。
+
+payload名は`<target>-payload-<run>-<attempt>`、別proof名は
+`<target>-proof-<run>-<attempt>`です。proofはcandidate/build report/componentを
+含み、componentがpayload archiveのID/name/digestを参照します。両方30日保持を
+要求します。matrix outputの最後の1件を全5対象の一覧とみなしてはいけません。
+そのため一覧outputは設けず、#1321が対象別proofを全件収集し、信頼済みAPI/run情報と
+payload ID/digestを照合して欠測・重複を拒否します。download先も対象別namespaceを
+維持してください。
+Unixでdownloadしたbinaryを再検証するときは実行権限を復元してください。artifact転送で
+file modeが正規化される場合があります。chmodはbytes/digestを変えず、再buildや
+payloadの差替えではありません。
+
+helperのbuild/component CLIはCore同様の引数に加え、
+`--target standalone-linux-x86_64`等の対応対象を明示します。upload参照はcomponent
+時だけ指定します。正確なコマンドはreusable workflowに記載し、単独の公開dispatchは
+設けません。local Linuxの成功をWindows/macOS/ARMのnative検証済みとは扱わず、
+それらとActions実転送は#1321の統合受入へ残します。

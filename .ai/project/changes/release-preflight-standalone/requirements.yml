@@ -1,0 +1,13 @@
+schema_version: 1
+requirements:
+- id: req-release-preflight-standalone
+  kind: ADDED
+  statement: Build each native Standalone target without publishing and bind successful frozen smoke and payload bytes to the fixed release candidate.
+  acceptance_criteria:
+  - Retain all five supported targets and reject wrong host, architecture and bitness
+  - Reuse actual controller/source/run/version checks before and after artifact work
+  - Execute frozen version, check, init, doctor, Unicode path and timezone tests outside source
+  - Emit LF-only per-binary checksum, sealed build report and separate immutable payload/proof artifacts
+  - Reject changed bytes, checksums, candidate identities, target roles and failed checks
+  - No legacy workflow, public trigger, publish permission or secret changes
+  owner: Eruhitsuji

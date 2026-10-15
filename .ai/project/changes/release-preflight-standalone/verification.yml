@@ -1,0 +1,43 @@
+schema_version: 1
+verification:
+  executed:
+  - type: unit
+    command: python -m unittest tests.test_release_preflight_standalone tests.test_release_preflight_core tests.test_release_preflight_proof
+    status: passed
+    result: 42 tests passed, including 11 Standalone fault-injection and workflow-boundary tests
+  - type: regression
+    command: python -m unittest tests.test_release_preflight_standalone tests.test_release_preflight_core tests.test_release_preflight_proof tests.test_release_subversions tests.test_traceability_gate tests.test_change_package_closeout
+    status: passed
+    result: 66 tests passed after committing the traceability entry; the earlier code-only staging commit correctly failed the missing-traceability gate
+  - type: docs
+    command: python scripts/validate_release_docs.py --output /tmp/lifetxt-1317-docs.json
+    status: passed
+    result: errors=0, ok=true
+  - type: lint
+    command: python -m ruff check scripts/release_preflight_standalone.py tests/test_release_preflight_standalone.py
+    status: passed
+  - type: format
+    command: python -m ruff format --check scripts/release_preflight_standalone.py tests/test_release_preflight_standalone.py
+    status: passed
+  - type: native
+    status: passed
+    command: release_preflight_standalone.build with dedicated clean build venv and immutable source worktree
+    result: Linux x86_64 PyInstaller build and actual frozen version/check/init/doctor/space and Japanese path/timezone check and today passed; LF checksum generated
+    source_sha: a56177746cc2fe33da1aa51e7385139596008506
+    local_controller_sha: 136f72eda2b831ec34947838d5723c87641dc781
+    environment: Linux x86_64 Python 3.12; dedicated web/tui/PyInstaller venv, pre-fetched dependency wheelhouse
+    component_validation: Passed finish and common validate_component against the real two-file payload using an explicitly synthetic local upload reference; no Actions upload was performed
+  - type: workflow
+    status: not_run
+    reason: Full native matrix and actual Actions upload/caller transport belong to issue 1321
+review_ledger:
+- reviewer: Codex implementer
+  review_type: self-review
+  result: completed
+  notes: Preserved five native targets and existing smoke; isolated smoke user state and matrix artifacts; checksum plus report digest prevents post-smoke replacement. Independent reviews pending.
+- reviewer: independent implementation reviewer
+  review_type: implementation
+  result: pending
+- reviewer: independent integration reviewer / Eruhitsuji
+  review_type: integration
+  result: pending

@@ -19,6 +19,14 @@ verification:
   - type: format
     command: python -m ruff format --check scripts/release_preflight_proof.py tests/test_release_preflight_proof.py
     status: passed
+  - type: docs
+    command: python scripts/validate_release_docs.py --output /tmp/lifetxt-1315-release-docs.json
+    status: passed
+    result: errors=0, ok=true
+  - type: release-policy
+    command: python scripts/check_release_policy.py --pretty
+    status: passed
+    result: All release-policy checks passed after installing missing local jsonschema/referencing test dependencies
   - type: workflow
     status: not_run
     reason: Workflows and publication are outside this task

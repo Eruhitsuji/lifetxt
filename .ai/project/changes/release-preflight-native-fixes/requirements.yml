@@ -1,0 +1,13 @@
+schema_version: 1
+requirements:
+- id: req-release-preflight-native-fixes
+  kind: ADDED
+  statement: Successful native build/smoke must not be rejected by incompatible builder-version invocation or semantically identical Tauri Cargo rewrite.
+  acceptance_criteria:
+  - Collect Mini cargo-zigbuild version through its supported root CLI, retaining failure propagation
+  - Compare generated Cargo TOML to immutable source blob and normalize only tauri-build string/table and absent/empty features
+  - Reject any other dependency, version, feature, package, source or tracked lock/file change
+  - Preserve source checkout, existing candidate/schema/native/static/conformance/version/resource/plist/runtime/installer checks
+  - Cover actual failing invocation and real-git generated-manifest normal and fault cases
+  - Retain full 13-target integration as required uncompleted runtime evidence in issue 1321
+  owner: Eruhitsuji

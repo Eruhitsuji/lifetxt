@@ -1,0 +1,15 @@
+schema_version: 1
+links:
+- requirement_id: req-release-preflight-native-fixes
+  capability_id: cap-distribution-channels
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1329
+  pull_request: null
+  tests_or_evidence:
+  - tests.test_release_preflight_desktop_manifest
+  - tests.test_release_preflight_mini
+  - Existing full 13-target fixture and producer/proof/version/traceability/closeout regressions
+  release_or_deployment: None; non-public preflight helper correction only
+  status: in_progress
+gaps:
+- Corrected native run across all 13 targets and final bundle evidence remain required in issue 1321
+- Independent implementation/integration review and human merge pending

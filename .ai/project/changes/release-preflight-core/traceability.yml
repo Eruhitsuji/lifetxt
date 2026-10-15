@@ -3,7 +3,7 @@ links:
 - requirement_id: req-release-preflight-core
   capability_id: cap-distribution-channels
   task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1316
-  pull_request: null
+  pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1323
   tests_or_evidence:
   - tests.test_release_preflight_core
   - Exact wheel/sdist build and clean-install smoke

@@ -1,0 +1,35 @@
+schema_version: 1
+verification:
+  executed:
+  - type: unit
+    command: python -m unittest tests.test_release_preflight_proof
+    status: passed
+    result: 18 tests, including subprocess CLI integration and filesystem tamper/fault cases
+  - type: regression
+    command: python -m unittest tests.test_release_preflight_proof tests.test_release_subversions tests.test_traceability_gate tests.test_change_package_closeout
+    status: passed
+    result: 42 tests passed, including 18 proof tests
+  - type: integration
+    command: python -m lifetxt check examples/minimal_life.txt
+    status: passed
+    result: 10 items accepted
+  - type: lint
+    command: python -m ruff check scripts/release_preflight_proof.py tests/test_release_preflight_proof.py
+    status: passed
+  - type: format
+    command: python -m ruff format --check scripts/release_preflight_proof.py tests/test_release_preflight_proof.py
+    status: passed
+  - type: workflow
+    status: not_run
+    reason: Workflows and publication are outside this task
+review_ledger:
+- reviewer: Codex implementer
+  review_type: self-review
+  result: completed
+  notes: Added explicit rejection of unlisted files and case aliases during review
+- reviewer: independent implementation reviewer
+  review_type: implementation
+  result: pending
+- reviewer: independent integration reviewer / Eruhitsuji
+  review_type: integration
+  result: pending

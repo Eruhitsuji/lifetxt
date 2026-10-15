@@ -1,0 +1,16 @@
+schema_version: 1
+links:
+- requirement_id: req-release-preflight-desktop
+  capability_id: cap-distribution-channels
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1318
+  pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1325
+  tests_or_evidence:
+  - tests.test_release_preflight_desktop
+  - Shared producer/proof and existing version/setter regression
+  - Real Linux bundled Core generation and source-outside frozen smoke
+  release_or_deployment: None; read-only preflight and private evidence only
+  status: in_progress
+gaps:
+- Native installer builds and Actions transport require issue 1321 integration
+- GUI installation/upgrade/uninstall and embedded runtime extraction from every format remain not_verified
+- Independent implementation/integration reviews and human merge approval pending

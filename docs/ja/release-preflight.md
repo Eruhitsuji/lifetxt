@@ -199,3 +199,47 @@ helperのbuild/component CLIはCore同様の引数に加え、
 時だけ指定します。正確なコマンドはreusable workflowに記載し、単独の公開dispatchは
 設けません。local Linuxの成功をWindows/macOS/ARMのnative検証済みとは扱わず、
 それらとActions実転送は#1321の統合受入へ残します。
+
+## Desktop producer（#1318）
+
+`release-preflight-desktop.yml`はWindows x86_64・macOS arm64・Linux x86_64の
+read-only `workflow_call`です。同じ封印済み`candidate_json`を渡します。
+Coreのcontext/source照合とStandaloneのnative host/frozen smokeを再利用し、
+公開event・environment・secretは持ちません。旧Desktop workflowとpackaging
+scriptは変更しません。
+
+stageコマンドは正確なsource SHAで新しいlocal shared Git checkoutを作り、その
+生成用checkout内だけで既存runtime builderとversion setterを実行します。元の
+source/controllerは前後でtracked cleanを確認します。bundled Coreそのものを
+ソース外で起動してStandalone同等のsmokeを行い、既存の3/4要素version変換・
+Appleの正確なrelease plist・resource mappingを検査します。生成用checkoutの
+予期しないtracked編集（Cargo.lock変更を含む）や余分なruntime resourceは拒否します。
+stage成功はCoreの準備完了であり、installer完成や公開承認ではありません。
+
+bundleはstage identityとruntime hashを再照合してcargo tauri buildを実行し、
+完了後にも再検証します。native Rust buildには30分のtimeoutを設けます。installerが
+実際に生成され、非空・形式signature・元file名の一意性を満たすことを確認します。
+全形式の深い構造検証やインストールを意味しません。Rust/tauri-cliのversionも記録します。
+GUI install/upgrade/uninstall、全形式からの内包Core抽出は明示的にnot_verifiedとし、
+後続の公開後検証でも実download物の確認が必要です。
+
+公開installer名には空白が入り得るため、元の公開名は維持し、CI payload内だけ
+installer-001.deb等の安全な別名を使います。封印bundle reportのinstallers配列に
+path/public_name/formatの対応を保存します。別proof artifactにはcandidate・stage・
+bundle report・共通componentを保存します。#1305/#1311/#1321は信頼済みActionsの
+proof archive digestを照合し、対応表をcomponentのfile hashへ結び付けてから、
+元public_nameで公開してください。aliasを公開名にしてはいけません。public_nameは
+separator/control文字と重複を拒否しますが、local path連結やshellへの直接展開にも
+使わないでください。
+
+payload内のbundled-core（Windowsは.exe）は非公開証跡です。追加のRelease assetや
+public canonical inventoryには入れません。公開Desktop assetはinstaller roleのみです。
+これにより既存schemaと公開名を維持し、canonical checksum writerも増やしません。
+payload upload後のcomponentでは対応表・形式signature・runtime/file hashの不変性を
+再検証します。
+
+artifact名は他producerと同じtarget別payload/proof形式、30日保持要求です。
+呼出元はmatrix outputを一覧とみなさず3対象を全件収集します。正確な
+stage→bundle→upload→componentコマンドはreusable workflowに記載しています。
+Rust/WebKit/各OS runnerが必要な実installer buildとActions転送は、local Core準備の
+成功とは区別して記録します。

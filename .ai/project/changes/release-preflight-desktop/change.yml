@@ -1,0 +1,33 @@
+schema_version: 1
+change:
+  id: release-preflight-desktop
+  title: Non-public native Desktop producer
+  status: in_progress
+  change_type: Operations
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1318
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1325
+  base_commit: 07d8b31939da2297ab6117ef38944bc04b46f4e7
+scope:
+  write_scope:
+  - .github/workflows/release-preflight-desktop.yml
+  - scripts/release_preflight_desktop.py
+  - tests/test_release_preflight_desktop.py
+  - docs/en/release-preflight.md
+  - docs/ja/release-preflight.md
+  - .ai/project/changes/release-preflight-desktop
+  - .ai/project/TRACEABILITY.yml
+  forbidden_scope:
+  - .ai/managed/**
+  - .github/workflows/desktop-installers.yml
+  - packaging/tauri-desktop/prepare_bundled_runtime.py
+  - packaging/pyinstaller/lifetxt.spec
+  - scripts/set_tauri_desktop_version.py
+  - scripts/release_preflight_core.py
+  - scripts/release_preflight_standalone.py
+  - scripts/release_preflight_proof.py
+human_approvals_required:
+- Independent implementation and integration reviews
+- Human merge approval

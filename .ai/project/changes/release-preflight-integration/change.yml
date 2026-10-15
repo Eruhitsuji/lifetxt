@@ -1,0 +1,32 @@
+schema_version: 1
+change:
+  id: release-preflight-integration
+  title: All-target read-only preflight collection
+  status: in_progress
+  change_type: Operations
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1321
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1328
+  base_commit: 72d64a6518c0b8a2869f1baad6d7003da3994367
+scope:
+  write_scope:
+  - .github/workflows/release-preflight.yml
+  - scripts/release_preflight_collect.py
+  - scripts/release_preflight_actions.py
+  - tests/test_release_preflight_collect.py
+  - tests/test_release_preflight_actions.py
+  - docs/en/release-preflight.md
+  - docs/ja/release-preflight.md
+  - .ai/project/changes/release-preflight-integration
+  - .ai/project/TRACEABILITY.yml
+  forbidden_scope:
+  - .ai/managed/**
+  - Existing public publication workflows and all producer workflows/helpers
+  - scripts/release_preflight_proof.py
+  - Format, Dockerfile, versions, tags, environments and secrets
+human_approvals_required:
+- Independent implementation and integration reviews
+- Human merge approval
+- Release approval remains a separate future gate, not implemented here

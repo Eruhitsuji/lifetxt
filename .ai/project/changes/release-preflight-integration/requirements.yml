@@ -1,0 +1,15 @@
+schema_version: 1
+requirements:
+- id: req-release-preflight-integration
+  kind: ADDED
+  statement: Bind every required primary target and exact OCI index to one non-authorizing proof bundle using trusted Actions API evidence.
+  acceptance_criteria:
+  - Pin explicit source/version/controller/run/attempt and link successful same-source push/main CI gate
+  - Execute five producer families with explicit Core/Standalone/Desktop dependencies
+  - Require all 13 successful jobs and required steps, paginated API artifact identity and future expiry
+  - Verify actual transport ZIP digest/size, safe extraction, downloaded payload bytes and original producer reports
+  - Retain Desktop public-name mappings and assemble exact no-rebuild multiarch OCI index
+  - Emit no success bundle on missing, failed, skipped, expired, tampered or stale-attempt evidence
+  - Retain publication_authorized false and leave current public workflows/permissions untouched
+  - Record actual main dispatch with all native builds/smokes and Actions transfer before issue 1321 close
+  owner: Eruhitsuji

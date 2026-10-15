@@ -243,3 +243,38 @@ artifact名は他producerと同じtarget別payload/proof形式、30日保持要�
 stage→bundle→upload→componentコマンドはreusable workflowに記載しています。
 Rust/WebKit/各OS runnerが必要な実installer buildとActions転送は、local Core準備の
 成功とは区別して記録します。
+
+## Mini producer（#1319）
+
+`release-preflight-mini.yml`はLinux x86_64/AArch64 native runnerと既存musl
+Rust target・Zig 0.13.0を使うread-only `workflow_call`です。同じ封印済み
+candidate_jsonを渡し、Coreの実context/source照合・host照合・共通proofを再利用します。
+旧Mini公開workflow/crate/version/conformance scriptは変更しません。
+
+既存のCore/Cargo/lock/tag整合検査、cargo test --locked、選択musl targetへの
+cargo zigbuild --locked --releaseを実行します。test/build出力先は新しい一時
+directoryとし、古いtarget出力を候補の成果物と取り違えません。実binaryは対象archの
+little-endian ELF64（x86_64=62、AArch64=183）を要求し、program-header境界・
+load segment・PT_INTERP不在・DT_NEEDED/filter/auxiliary依存不在を検査します。
+loader/外部依存を持たないstatic PIEのdynamic metadataは許容します。旧ldd文言への
+依存をなくしますが、binary自体を安全なsandboxへ認定する検査ではありません。
+
+実Miniのversion/help/check/today、既存binary-version検査とCore/Mini conformanceを
+実行してからcheckをpassedとします。固定試験日とstrict-subsetのMini Runtime Profile
+表示を維持します。conformance内のpython aliasは現在の対応interpreterと同一である
+ことを確認し、失敗・skip・欠測を成功proofへ変換しません。
+
+payload名は従来どおりlifetxt-mini-<tag>-linux-<arch>、.sha256、.build-info、
+RELEASE-NOTES.mdです。checksum/notesはLFとし、build-infoはrustc -Vvを保存します。
+reportにはCargo/cargo-zigbuild/Zig/Python・ELF証跡・各file hash/sizeも記録します。
+notesは両archで同一bytesとしstrict-subset境界を残します。公開canonicalへの集約は
+同名RELEASE-NOTES.mdを同hashの場合だけ1件へまとめ、異hashなら停止してください。
+producer固有のcanonical SHA256SUMSは生成しません。
+
+artifactは他producerと同じtarget/run/attempt別payload/proof・30日保持要求です。
+upload後のcomponentでELF/arch・厳密inventory・checksum/notes・report hashを
+再照合します。呼出元は両target proofを全件集め、信頼済みActions ID/digestを
+検査します。matrix outputを一覧とみなしてはいけません。具体的なbuild→upload→
+componentコマンドはworkflowに記載しています。Cargo/ZigがないlocalのELF/fixture
+試験は、実Mini build・native AArch64・conformance・Actions転送の成功証拠では
+ありません。公開有効化前に必要なそれらの統合証拠は#1321へ残します。

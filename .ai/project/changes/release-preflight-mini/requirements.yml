@@ -1,0 +1,13 @@
+schema_version: 1
+requirements:
+- id: req-release-preflight-mini
+  kind: ADDED
+  statement: Retain native/static/conformance Mini gates and bind exact non-public bytes to the immutable release candidate.
+  acceptance_criteria:
+  - Preserve native x86_64/AArch64 musl targets, version checks and locked Cargo test/build
+  - Use fresh build directories and validate ELF64 architecture, loader and dependency absence
+  - Execute actual Mini version/help/check/today and existing Core conformance with supported Python
+  - Retain binary/checksum/build-info/notes with candidate/run/toolchain evidence
+  - Rehash after upload and reject mismatched identity, target, static evidence or bytes
+  - No public workflow, tag, crate/version, secret or managed changes
+  owner: Eruhitsuji

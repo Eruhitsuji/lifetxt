@@ -1,0 +1,24 @@
+schema_version: 1
+change:
+  id: release-preflight-proof
+  title: Offline release preflight proof contract
+  status: in_progress
+  change_type: Operations
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1315
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1322
+  base_commit: 0a4c9ef8f91bf77ea48d98fe5ce050fe972f2e6f
+scope:
+  write_scope:
+  - scripts/release_preflight_proof.py
+  - tests/test_release_preflight_proof.py
+  - docs/en/release-preflight.md
+  - docs/ja/release-preflight.md
+  - .ai/project/changes/release-preflight-proof
+  - .ai/project/TRACEABILITY.yml
+  forbidden_scope: [.ai/managed/**, .github/workflows/**]
+human_approvals_required:
+- Independent implementation and integration reviews
+- Merge Authority

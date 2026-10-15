@@ -132,3 +132,52 @@ After tag creation that number is reserved for its SHA. Partial publication may
 retry only identical source/bytes; source defects require a new correction
 number chosen/approved by the human. Lost artifacts or conflicting bytes stop
 recovery. Existing public tags and bytes must never be replaced.
+
+## Core producer (#1316)
+
+`release-preflight-core.yml` is a read-only `workflow_call` producer. It has no
+push, release or manual publication trigger, no environment, no publish token
+and no stored checkout credentials. The future controller calls it from the
+same repository/controller revision, passing the sealed `candidate_json` string.
+There is no user-facing dispatch command yet; #1321 owns end-to-end integration.
+
+The job first checks repository/run/attempt and the controller checkout, then
+checks out only the validated source SHA into a separate directory. The Core
+helper also rejects tracked edits and checks the source's actual declared
+version. Both source and controller identity are rechecked after build/smoke.
+These are local/run identity checks: the parent still must verify trusted main
+CI, version PR and approvals against GitHub, as described above.
+
+The helper runs the existing release-policy and safety release gates, reuses
+`release_evidence.generate` for a single wheel/sdist build, verifies archive
+Name/Version, SBOM identity and provenance/source/run/file hashes, and runs twine.
+It installs **both** the exact wheel and the exact sdist into separate fresh
+virtual environments. From a temporary directory outside source, it checks that
+imports resolve inside that venv and tests module/console version, help and the
+minimal example. PYTHONPATH/PYTHONHOME are removed from smoke subprocesses.
+The sdist install builds its own installation wheel; that smoke output is never
+substituted for a preflight payload file. It does not run full source unit tests
+again. Build backend dependencies may require package-index access.
+
+The four public-payload roles are wheel/sdist/SBOM/provenance. The existing
+builder's intermediate SHA256SUMS stays out of the uploaded payload: it cannot
+compete with #1305's later canonical manifest. Complete file hashes remain in
+the build report/proof, and build/gate diagnostics are in the Actions job log.
+A report is emitted only after all gates/smokes pass. A failed job may leave
+local files, but cannot reach the upload step or emit a successful component.
+
+The immutable payload is uploaded first. Its `artifact-id`, `artifact-digest`
+and deterministic `core-payload-<run>-<attempt>` name are then bound to the build
+report after rechecking archive metadata, provenance and unchanged bytes.
+The resulting `core-component.json` is uploaded separately together with
+candidate/build report as `core-proof-<run>-<attempt>`. Reusable outputs expose
+payload ID/name/digest and component artifact ID/digest. Both artifacts request
+30-day retention (subject to repository limits). Expired evidence is a stop,
+not permission to rebuild under an old approval. No public release/tag/registry
+or Latest is changed by this producer. Actual Actions transport and complete
+13-target orchestration remain integration acceptance in #1321.
+
+For offline/local validation, standard pip settings such as `PIP_FIND_LINKS`
+and `PIP_NO_INDEX` can point smoke installs at a pre-fetched build-dependency
+wheelhouse. This changes dependency transport, not payload bytes or the clean
+venv/import checks.

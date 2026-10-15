@@ -1,0 +1,30 @@
+schema_version: 1
+change:
+  id: release-preflight-standalone
+  title: Non-public native Standalone producer
+  status: in_progress
+  change_type: Operations
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1317
+  related_pull_request: null
+  base_commit: a56177746cc2fe33da1aa51e7385139596008506
+scope:
+  write_scope:
+  - .github/workflows/release-preflight-standalone.yml
+  - scripts/release_preflight_standalone.py
+  - tests/test_release_preflight_standalone.py
+  - docs/en/release-preflight.md
+  - docs/ja/release-preflight.md
+  - .ai/project/changes/release-preflight-standalone
+  - .ai/project/TRACEABILITY.yml
+  forbidden_scope:
+  - .ai/managed/**
+  - .github/workflows/standalone-binaries.yml
+  - packaging/pyinstaller/lifetxt.spec
+  - scripts/release_preflight_core.py
+  - scripts/release_preflight_proof.py
+human_approvals_required:
+- Independent implementation and integration reviews
+- Human merge approval

@@ -1,9 +1,9 @@
 # リリースpreflight証跡の共通契約
 
-#1309で承認された設計に基づく、#1310配下の#1315のoffline基盤です。
-本helperはbuild・公開・GitHub承認確認を実行せず、公開権限も付与しません。
-既存の公開workflowは変更していません。配布物別buildと統合workflowは
-#1316〜#1321、公開canonical checksumは#1305が担当します。
+#1309で承認された設計に基づく、#1310配下のoffline基盤（#1315）・配布物別producer
+（#1316〜#1320）・read-only集約controller（#1321）の契約です。preflightは公開・
+人間承認確認・CI署名検証・公開権限付与を行いません。既存の公開workflowは変更せず、
+公開canonical checksumは#1305が担当します。
 
 ## 候補の固定
 
@@ -322,3 +322,66 @@ manifest digestのmultiarch digestへの流用は禁止です。関数自体は�
 local fixture試験はgraph/archive故障・smokeコマンド失敗・決定的組立を検証しますが、
 実containerの成功証拠ではありません。localにDocker/Skopeo/Podmanがないため、
 両arch native build・実storage転送・Actions転送は未実行として#1321に残します。
+
+## 全target controllerと統合受入
+
+`Release preflight (non-public)`（release-preflight.yml）は既存の公開workflowと別の
+**main限定・手動専用**入口です。push/PR/tag/workflow_runでは起動しません。
+今後のrelease.yml中央制御への接続/cutoverは#1311が所有し、ここでは実施しません。
+
+このworkflowのmerge後、Actions → Release preflight (non-public) → Run workflowで
+mainを選び、次を入力します。
+
+| 入力 | 必須の意味 |
+| --- | --- |
+| source_sha | mainへmerge済みの固定40桁小文字hex commit SHA |
+| version | そのsourceのpyproject.tomlと一致する明示X.Y.ZまたはX.Y.Z.N |
+| main_ci_run_id | 同source SHAのCI push/main成功run（Main compatibility gate成功必須） |
+
+source SHAとは別にcontroller workflow SHAを固定します。別repo/fork・main以外の
+ref・別workflow/event・別source CI・main gate失敗/skippedを拒否します。
+既存main gateにリンクし、互換性unit suite全体を重複実行しません。番号指定は公開承認
+ではなく、bump/tag/version変更もありません。既公開versionを非公開検証に使っても、
+そのversionの既存公開bytesは変更しません。
+
+prepare→Core→Standalone→Desktopの順序とし、Mini/OCIはCore成功後に並列起動します。
+全5familyとprepareの成功が必須です。collectは失敗後も動き部分成功を拒否しますが、
+全成功時だけverified bundleをuploadします。producerはcontents:readのみ、
+prepare/collectだけAPI参照用actions:readも付与します。設定済みGITHUB_TOKENをgh経由で
+通常使用し、PAT・environment・secret継承・write権限・承認receipt・公開能力は追加しません。
+
+matrix outputでなく全pageのActions APIを照合します。実controller run/attempt・
+全5reusable workflow SHA・13targetの成功jobと必須build/component/upload stepを確認。
+payload/proofは一意のtarget/run/attempt名・ID、同repo/run/controller SHA、producer
+job時間内の作成、期限内、archive SHA256/sizeを必須とします。APIにartifact uploaderの
+job IDはないため、信頼した固定workflowと一意job/name/時間窓を帰属境界とします。
+独立した暗号学的attestationとみなしてはいけません。
+
+ZIPをID指定downloadしhash/sizeを照合後、安全に展開します。現producerのflatでportableな
+通常fileだけを許容し、traversal・alias・symlink・暗号化・空entry・CRC故障・展開size超過を
+拒否します。各producerのoffline finish検証を再利用し、report/candidate/componentの
+厳密inventoryとDesktop stage/公開名対応を照合します。collector上でbinaryは実行せず、
+native実行は成功したproducerの責務です。信頼済みで同時改変されないrunner領域を前提とします。
+
+全13componentを共通aggregatorへ通し、検証済み両OCI tarからblobを変えず最終indexを生成。
+index digestと正確な全OCI bytes、aggregate digest、元payload/proof参照と有効期限、
+main CI証跡、report全体のhash/sizeをpreflight-bundle.jsonへ結合します。自己hashは除外。
+download/組立後にもActions/main CI状態を再取得し、attempt/job/metadata/期限が変わったら
+成功bundleを出力せず停止します。
+
+出力はpreflight-verified-<run_id>-<attempt>（30日保持要求）で、candidate.json、
+components.json、proofs/<target>/*、ociのindex/layout/全blob、preflight-bundle.jsonです。
+元13payloadは再複製せず、元artifactを参照します。後続利用前に最終artifact自体のID/
+archive digestも認証してください。必要な元artifactが1件でも失効すれば公開再利用不可です。
+publication_authorizedは常にfalseで、後続は古い成功JSONだけを信じず、実API最新状態と
+人間承認を検証する必要があります。
+
+新build attemptは「Re-run all jobs」を使います。失敗jobだけの再実行では新attemptの
+candidateと全13target証跡が揃わず停止します。古い/部分成功artifactによる穴埋めは禁止。
+既公開bytesのretryは別操作で、#1311が元の承認済みbytesだけを再利用します。
+
+localの13target fixtureはAPI故障と実offline validatorの統合を検証しますが、実native/
+GitHub転送の証拠ではありません。main手動runで全13targetのnative build/smoke、実upload/
+download digest、集約成功と最終OCI index artifactを確認するまで#1321/#1310は開いたままです。
+run URL/attempt/bundle artifact ID/digestを#1321に記録し、unit CIだけで統合成功を称したり
+公開を有効化したりしないでください。

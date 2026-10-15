@@ -1,10 +1,10 @@
 # Release preflight proof contract
 
-This is the offline evidence layer for #1315, under #1310 and the approved
-#1309 design. It does not build or publish packages, check GitHub approval,
-validate CI signatures, or authorize release operations. Existing publication
-workflows are unchanged. Component workflows and the controller will be added
-in #1316–#1321; canonical public checksums belong to #1305.
+This covers the offline evidence layer (#1315), component producers (#1316–#1320)
+and read-only collection controller (#1321), under #1310 and the approved #1309
+design. No preflight code publishes packages, checks human approval, validates
+CI signatures or authorizes releases. Existing publication workflows are
+unchanged; canonical public checksums belong to #1305.
 
 ## Candidate identity
 
@@ -371,3 +371,81 @@ Local fixture tests cover graph/archive faults, smoke-command failures and
 deterministic assembly, not real container execution. Docker/Skopeo/Podman are
 unavailable locally; both native builds, storage transfer and actual Actions
 transport remain explicitly unrun integration requirements in #1321.
+
+## All-target controller and integration acceptance
+
+`Release preflight (non-public)` (`release-preflight.yml`) is a **manual main-only**
+entry, separate from the current public release workflow. It intentionally has no
+push/PR/tag/workflow_run trigger. Connecting it to the future central `release.yml`
+is owned by #1311; this standalone entry does not implement that cutover.
+
+After this workflow is merged, open Actions → Release preflight (non-public) →
+Run workflow, choose main, and provide:
+
+| Input | Required meaning |
+| --- | --- |
+| `source_sha` | Full lowercase 40-hex immutable commit already reachable from main |
+| `version` | Explicit X.Y.Z or X.Y.Z.N matching that source's pyproject.toml |
+| `main_ci_run_id` | Successful CI push/main run for exactly source_sha, including Main compatibility gate |
+
+The controller pins its own workflow SHA independently of source SHA. It rejects
+fork/foreign repository, non-main ref, wrong workflow/event, wrong-source CI and
+failed/skipped main gate. It links the existing main gate, without repeating the
+full compatibility unit suite. Version selection does not grant release approval;
+no bump/tag/version change occurs. A read-only integration run may build an already
+published version without modifying that version's existing public bytes.
+
+Execution order is prepare → Core → Standalone → Desktop; Mini and OCI start
+after Core and run alongside Standalone/Desktop. All five family results and the
+prepare result must succeed. `collect` runs even after failure to reject partial
+results, but uploads a verified bundle only on complete success. Producers have
+contents:read only; prepare/collect additionally have actions:read for API reads
+using the configured GITHUB_TOKEN through gh. No PAT, environment, inherited
+secret, write permission, approval receipt or publication capability is added.
+
+The collector uses paginated Actions API snapshots, not matrix output inventory.
+It checks the actual controller run/attempt, all five referenced reusable workflow
+SHAs, all 13 successful target jobs and their required build/component/upload
+steps. Both payload/proof artifacts must have unique expected target/run/attempt
+names and IDs, same repository/run/controller SHA, timestamps within the producer
+job, a future expiry and an archive SHA256/size. GitHub does not expose an artifact
+uploader-job ID here: the trusted fixed workflow and unique job/name/time window
+are the attribution boundary, not an independent cryptographic attestation.
+
+Every transport ZIP is downloaded by ID, rehashed and size-checked before safe
+extraction. Only flat portable regular-file entries from the existing producers
+are accepted; path traversal, aliases, symlinks, encryption, empty entries, CRC
+faults and expanded-size overflow fail. The collector reuses each producer's
+offline finish validation against downloaded bytes, requires exact report/candidate/
+component inventories and rechecks Desktop stage/public-name metadata. It never
+executes downloaded binaries on the collector. Native execution is the successful
+producer's responsibility. This boundary assumes trusted, quiescent runner storage.
+
+After all 13 components pass the common aggregator, the two verified OCI archives
+are safely extracted and assembled without changing blobs. The final index digest
+and all exact OCI index/blob bytes are bound into `preflight-bundle.json` alongside
+the aggregate digest, original payload/proof references and expiry, main-CI receipt,
+and hashes/sizes of retained reports. The final bundle does not hash itself.
+The controller re-reads Actions/main-CI state after downloads and assembly; changed
+attempts, job state, metadata or expiry abort without a success bundle.
+
+The output artifact is `preflight-verified-<run_id>-<attempt>` (30-day retention
+request): candidate.json, components.json, proofs/<target>/*, oci/{index.json,
+oci-layout,blobs/...}, and preflight-bundle.json. It references the original 13
+payload artifacts rather than duplicating those payloads. Retain and authenticate
+the final artifact's own ID/archive digest before later consumption; expiry of
+ANY required original artifact invalidates publication reuse. All checks remain
+`publication_authorized: false`. Downstream code must validate actual latest API
+state and the human authority gate, not trust an old success JSON by itself.
+
+Use **Re-run all jobs**, not failed jobs only, for a new build attempt: the candidate
+contains the attempt and all 13 targets require new artifact names/evidence. A stale
+artifact or partial retry cannot fill a missing target. Published-byte retries are
+a different operation owned by #1311, reusing the original approved bytes only.
+
+Local 13-target fixtures validate orchestration/API faults and actual offline
+producer validators, not real native runtimes or GitHub transport. #1321 and #1310
+remain open until a main dispatch records all 13 native build/smoke results,
+actual upload/download digests, successful collection and the final OCI index
+artifact. Review the run logs and record its URL, attempt and bundle artifact ID/
+digest on #1321; do not enable publication or claim integration from unit CI alone.

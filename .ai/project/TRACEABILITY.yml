@@ -2,6 +2,26 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-release-preflight-integration
+      capability_id: cap-distribution-channels
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1310
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1321
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1328
+      changed_files_or_scope:
+        - .github/workflows/release-preflight.yml
+        - scripts/release_preflight_actions.py
+        - scripts/release_preflight_collect.py
+        - tests/test_release_preflight_actions.py
+        - tests/test_release_preflight_collect.py
+        - docs/en/release-preflight.md
+        - docs/ja/release-preflight.md
+        - .ai/project/changes/release-preflight-integration
+      tests_or_evidence:
+        - Full 13-target fixture integration using all existing offline producer validators
+        - API run/attempt/job/step/artifact/pagination/expiry/digest/ZIP/state-drift faults
+        - Actual native builds and Actions transport not_run; issue 1321 stays open
+      release_or_deployment: None; non-public manual preflight, publication_authorized false
+      status: in_progress
     - requirement_id: req-release-preflight-oci
       capability_id: cap-distribution-channels
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1310

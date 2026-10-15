@@ -1,0 +1,33 @@
+schema_version: 1
+change:
+  id: release-preflight-mini
+  title: Non-public Mini native static producer
+  status: in_progress
+  change_type: Operations
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1319
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1326
+  base_commit: 495651c05e369488ae1fa1c044de30e008573fac
+scope:
+  write_scope:
+  - .github/workflows/release-preflight-mini.yml
+  - scripts/release_preflight_mini.py
+  - tests/test_release_preflight_mini.py
+  - docs/en/release-preflight.md
+  - docs/ja/release-preflight.md
+  - .ai/project/changes/release-preflight-mini
+  - .ai/project/TRACEABILITY.yml
+  forbidden_scope:
+  - .ai/managed/**
+  - .github/workflows/lifetxt-mini-release.yml
+  - lifetxt-mini/**
+  - scripts/check_lifetxt_mini_version.py
+  - scripts/check_mini_core_conformance.py
+  - scripts/release_preflight_core.py
+  - scripts/release_preflight_standalone.py
+  - scripts/release_preflight_proof.py
+human_approvals_required:
+- Independent implementation and integration reviews
+- Human merge approval

@@ -280,6 +280,10 @@ class MiniPreflightTests(unittest.TestCase):
 
         def run(command, cwd):
             calls.append(command)
+            if command == ["cargo", "zigbuild", "--version"]:
+                raise subprocess.CalledProcessError(2, command)
+            if command == ["cargo-zigbuild", "--version"]:
+                return "cargo-zigbuild 0.23.4"
             if command[:2] == ["cargo", "zigbuild"] and "--release" in command:
                 target_dir = Path(command[command.index("--target-dir") + 1])
                 binary = (
@@ -312,6 +316,8 @@ class MiniPreflightTests(unittest.TestCase):
         ]
         self.assertEqual(len(build_calls), 2)
         self.assertTrue(all("--locked" in command for command in build_calls))
+        self.assertIn(["cargo-zigbuild", "--version"], calls)
+        self.assertEqual(row["toolchain"]["cargo-zigbuild"], "cargo-zigbuild 0.23.4")
 
     def test_cargo_failure_never_creates_success_report(self):
         output = self.root / "not-created.json"
@@ -335,6 +341,42 @@ class MiniPreflightTests(unittest.TestCase):
                 self.target,
                 {},
             )
+        self.assertFalse(output.exists())
+
+    def test_toolchain_version_failure_after_smoke_emits_no_success_report(self):
+        output = self.root / "version-failed.json"
+
+        def run(command, cwd):
+            if command == ["cargo-zigbuild", "--version"]:
+                raise subprocess.CalledProcessError(2, command)
+            if command[:2] == ["cargo", "zigbuild"] and "--release" in command:
+                binary = (
+                    Path(command[command.index("--target-dir") + 1])
+                    / mini.TARGETS[self.target][0]
+                    / "release/lifetxt-mini"
+                )
+                binary.parent.mkdir(parents=True)
+                binary.write_bytes(elf())
+            return "fixture-tool-version"
+
+        with (
+            patch.object(mini.core, "validate_context"),
+            patch.object(mini.core, "validate_source"),
+            patch.object(mini, "validate_target"),
+            patch.object(mini, "smoke") as smoke,
+            patch.object(mini.core, "run", side_effect=run),
+            self.assertRaises(subprocess.CalledProcessError),
+        ):
+            mini.build(
+                self.candidate,
+                ROOT,
+                ROOT,
+                self.root / "version-failed",
+                output,
+                self.target,
+                {},
+            )
+        smoke.assert_called_once()
         self.assertFalse(output.exists())
 
     def test_workflow_keeps_both_native_targets_read_only(self):

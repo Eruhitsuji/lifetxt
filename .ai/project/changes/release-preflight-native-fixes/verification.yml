@@ -1,0 +1,45 @@
+schema_version: 1
+verification:
+  executed:
+  - type: focused
+    command: python -m unittest tests.test_release_preflight_desktop_manifest tests.test_release_preflight_mini tests.test_release_preflight_desktop tests.test_release_preflight_collect
+    status: passed
+    result: Real-git source-blob normalization/faults, direct builder version invocation and post-smoke version failure, existing producer/report/13-target fixture checks passed
+    tested_commit: 12e4185c
+  - type: related-regression
+    command: python -m unittest tests.test_release_preflight_desktop_manifest tests.test_release_preflight_mini tests.test_release_preflight_desktop tests.test_release_preflight_collect tests.test_release_preflight_actions tests.test_release_preflight_oci tests.test_release_preflight_standalone tests.test_release_preflight_core tests.test_release_preflight_proof tests.test_release_subversions tests.test_set_tauri_desktop_version tests.test_traceability_gate tests.test_change_package_closeout
+    status: passed
+    result: 141 tests passed, including 7 new real-git manifest tests and Mini post-smoke version failure regression
+    tested_commit: 12e4185c
+  - type: lint
+    command: python -m ruff check scripts/release_preflight_mini.py scripts/release_preflight_desktop.py tests/test_release_preflight_mini.py tests/test_release_preflight_desktop_manifest.py
+    status: passed
+    tested_commit: 12e4185c
+  - type: format
+    command: python -m ruff format --check scripts/release_preflight_mini.py scripts/release_preflight_desktop.py tests/test_release_preflight_mini.py tests/test_release_preflight_desktop_manifest.py
+    status: passed
+    tested_commit: 12e4185c
+  - type: docs
+    command: python scripts/validate_release_docs.py --output /tmp/lifetxt-1329-docs.json
+    status: passed
+    result: errors=0, ok=true
+    tested_commit: 12e4185c
+  - type: initial-native-run
+    status: failed
+    command: Release preflight (non-public), run 38814960857 attempt 1
+    result: Core1/Standalone5/OCI2 succeeded; Mini2 failed unsupported nested version flag after native smoke/conformance; Desktop3 failed generated manifest gate after installer build. Collector correctly refused success. 16 component artifacts, no verified artifact. Published writes none.
+    evidence: https://github.com/Eruhitsuji/lifetxt/actions/runs/38814960857
+  - type: corrected-native-run
+    status: not_run
+    reason: Local Rust/Zig/Tauri unavailable. Requires new main dispatch after controller correction merge, tracked by issue 1321; old run rerun uses old controller.
+review_ledger:
+- reviewer: Codex implementer
+  review_type: self-review
+  result: completed
+  notes: Reviewed upstream actual versions, complete source-blob TOML boundary, no version/dependency/feature waiver, malformed/symlink/staged/lock faults, version-command failure propagation and new-run requirement. Independent reviews pending.
+- reviewer: independent implementation reviewer
+  review_type: implementation
+  result: pending
+- reviewer: independent integration reviewer / Eruhitsuji
+  review_type: integration
+  result: pending

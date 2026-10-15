@@ -2,6 +2,26 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-release-preflight-native-fixes
+      capability_id: cap-distribution-channels
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1321
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1329
+      pull_request: null
+      changed_files_or_scope:
+        - scripts/release_preflight_mini.py
+        - scripts/release_preflight_desktop.py
+        - tests/test_release_preflight_mini.py
+        - tests/test_release_preflight_desktop_manifest.py
+        - docs/en/release-preflight.md
+        - docs/ja/release-preflight.md
+        - .ai/project/changes/release-preflight-native-fixes
+      tests_or_evidence:
+        - Actual run 38814960857 failure analysis with installed upstream CLI source
+        - Real-git generated Cargo TOML semantic/immutable-blob/fault tests
+        - Mini root builder version and post-smoke version failure tests
+        - Existing producer and full 13-target fixture regression; corrected native run required by issue 1321
+      release_or_deployment: None; no public workflow/source/permission/tag changes
+      status: in_progress
     - requirement_id: req-release-preflight-integration
       capability_id: cap-distribution-channels
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1310

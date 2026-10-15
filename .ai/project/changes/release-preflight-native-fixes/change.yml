@@ -1,0 +1,32 @@
+schema_version: 1
+change:
+  id: release-preflight-native-fixes
+  title: Fix native preflight toolchain and manifest compatibility
+  status: in_progress
+  change_type: Bug
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1329
+  related_pull_request: null
+  base_commit: dacfd3c322884df37789c1942e24db765ed5381c
+scope:
+  write_scope:
+  - scripts/release_preflight_mini.py
+  - scripts/release_preflight_desktop.py
+  - tests/test_release_preflight_mini.py
+  - tests/test_release_preflight_desktop_manifest.py
+  - docs/en/release-preflight.md
+  - docs/ja/release-preflight.md
+  - .ai/project/changes/release-preflight-native-fixes
+  - .ai/project/TRACEABILITY.yml
+  forbidden_scope:
+  - .ai/managed/**
+  - .github/workflows/**
+  - desktop/src-tauri/Cargo.toml
+  - desktop/src-tauri/tauri.conf.json
+  - scripts/set_tauri_desktop_version.py
+  - Shared proof schema, version, source files, permissions, secrets, published tags and artifacts
+human_approvals_required:
+- Independent implementation and integration reviews
+- Human merge approval

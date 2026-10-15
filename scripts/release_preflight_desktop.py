@@ -34,6 +34,7 @@ STAGE_FIELDS = {
 }
 REPORT_FIELDS = STAGE_FIELDS | {"checks", "files", "installers", "not_verified"}
 CONFIG = "desktop/src-tauri/tauri.conf.json"
+CARGO = "desktop/src-tauri/Cargo.toml"
 NOT_VERIFIED = [
     "GUI install/upgrade/uninstall",
     "embedded runtime extraction from every installer format",
@@ -80,6 +81,32 @@ def runtime_path(work, target):
     return work / "desktop/src-tauri/resources/bin" / name
 
 
+def validate_manifest(candidate, work):
+    """Tauri may rewrite tauri-build = 'x' to {version='x', features=[]}.
+
+    Compare the complete TOML to the immutable source blob. Normalize ONLY that
+    dependency's string/table and absent/empty features representation; never
+    permit a version, source, nonempty feature or other semantic change.
+    """
+    original = core.tomllib.loads(
+        core.git(work, "show", candidate["source_sha"] + ":" + CARGO)
+    )
+    current = core.tomllib.loads(
+        proof.payload_path(work, CARGO).read_text(encoding="utf-8")
+    )
+    for manifest in (original, current):
+        dependencies = manifest.get("build-dependencies", {})
+        dependency = dependencies.get("tauri-build")
+        if isinstance(dependency, str):
+            dependencies["tauri-build"] = {"version": dependency, "features": []}
+        elif isinstance(dependency, dict):
+            dependency.setdefault("features", [])
+    proof.require(
+        proof.digest(current) == proof.digest(original),
+        "generated Cargo manifest semantic mismatch",
+    )
+
+
 def validate_work(candidate, work, target):
     proof.require(
         core.git(work, "rev-parse", "HEAD") == candidate["source_sha"],
@@ -87,8 +114,10 @@ def validate_work(candidate, work, target):
     )
     changed = set(core.git(work, "diff", "HEAD", "--name-only").splitlines())
     proof.require(
-        changed <= {CONFIG}, "unexpected tracked changes in generated checkout"
+        changed <= {CONFIG, CARGO}, "unexpected tracked changes in generated checkout"
     )
+    if CARGO in changed:
+        validate_manifest(candidate, work)
     config = proof.load(work / CONFIG)
     proof.require(
         config["version"] == candidate["metadata_version"],

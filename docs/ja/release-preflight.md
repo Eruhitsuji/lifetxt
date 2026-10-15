@@ -385,3 +385,29 @@ GitHub転送の証拠ではありません。main手動runで全13targetのnativ
 download digest、集約成功と最終OCI index artifactを確認するまで#1321/#1310は開いたままです。
 run URL/attempt/bundle artifact ID/digestを#1321に記録し、unit CIだけで統合成功を称したり
 公開を有効化したりしないでください。
+
+## native producer互換性とcontroller修正後の再試験
+
+Miniのbuilder version証跡は`cargo-zigbuild --version`で取得します。
+root CLIはこのflagを受理しますが、`cargo zigbuild --version`ではbuild subcommandへ
+渡され、native smoke成功後でも拒否される場合があります。version取得失敗を成功扱いに
+せず、toolchain証跡を省略して通すこともしません。
+
+Tauriは生成checkoutのCargo.tomlを変更し、tauri-build文字列依存をversionと
+features=[]を持つtableへ正規化することがあります。Desktopはimmutable source SHAの
+git blobとTOML全体を比較し、tauri-buildの文字列/table・features未指定/空配列だけを
+同値化して表現差を許可します。format/CRLFは意味比較に影響しません。
+依存version・非空features・package metadata・その他の意味変更は拒否し、Cargo.lockや
+他tracked fileの変更禁止も維持します。元source checkout/manifestは変更しません。
+既存のversion/resource/plist/runtime/installer検証もそのまま適用します。
+
+初回実統合run 38814960857ではCore・Standalone5・OCI2が成功しましたが、この2件の
+互換性不具合（#1329）で停止しました。final verified bundleも公開物も生成されておらず、
+この部分成功だけで全13targetの受入を満たしたとは扱いません。
+
+controller/helper修正merge後は、**mainから新規の手動workflow run**を開始してください。
+旧runのrerunは旧controller SHAを使うため修正検証になりません。元の固定source SHA・
+version・成功main CI runを同じ非公開配布sourceとして使うことは可能ですが、新controller
+SHAと新run/attemptを記録し、全targetを実行し直します。旧部分成功proofの流用・公開tagの
+移動・同versionへの別bytes再公開は禁止です。全native成功と最終bundle/API/index証拠が
+揃うまで#1321/#1310は開いたままにします。

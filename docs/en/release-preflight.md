@@ -449,3 +449,34 @@ remain open until a main dispatch records all 13 native build/smoke results,
 actual upload/download digests, successful collection and the final OCI index
 artifact. Review the run logs and record its URL, attempt and bundle artifact ID/
 digest on #1321; do not enable publication or claim integration from unit CI alone.
+
+## Native producer compatibility and retry after a controller fix
+
+Mini records the builder version with `cargo-zigbuild --version`. The root CLI
+supports this flag; `cargo zigbuild --version` instead sends it to the build
+subcommand and can reject it after an otherwise successful native smoke. Version
+collection failure still prevents success proof; do not omit toolchain evidence.
+
+Tauri may rewrite the generated checkout's Cargo.toml, notably changing
+`tauri-build = "..."` into a version table with `features = []`. Desktop allows
+that representation-only difference by comparing the complete parsed TOML to the
+blob at the immutable source SHA, normalizing only tauri-build string/table and
+absent/empty features. Formatting and CRLF are irrelevant to this comparison.
+Dependency versions, nonempty features, package metadata and every other semantic
+field must match; Cargo.lock and other tracked-file changes remain forbidden.
+The original source checkout and source manifest are never modified. Existing
+version/resource/plist/runtime and installer checks still apply.
+
+The initial real integration run 38814960857 succeeded for Core, all five
+Standalone targets and both OCI targets, but stopped on these two compatibility
+bugs (#1329). No final verified bundle or public output was produced. These
+partial successes do not satisfy the all-13 requirement.
+
+After merging a controller/helper correction, start a **new manual workflow run
+on main**. Re-running the old run executes its old controller SHA and cannot test
+the correction. The earlier immutable source SHA/version/successful main-CI run
+may be reused as the same non-public distribution source; the new controller SHA
+and new run/attempt must be captured, and every target must run again. Do not
+reuse partial old proofs, move a published tag or republish different bytes under
+the same version. #1321/#1310 remain open until a full successful native run and
+the final bundle/API/index evidence are recorded.

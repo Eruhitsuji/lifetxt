@@ -3,7 +3,7 @@ links:
 - requirement_id: req-release-preflight-integration
   capability_id: cap-distribution-channels
   task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1321
-  pull_request: null
+  pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1328
   tests_or_evidence:
   - tests.test_release_preflight_actions
   - tests.test_release_preflight_collect

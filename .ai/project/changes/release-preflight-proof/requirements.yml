@@ -1,0 +1,12 @@
+schema_version: 1
+requirements:
+- id: req-release-preflight-proof
+  kind: ADDED
+  statement: Bind offline payload integrity evidence to one fixed candidate and all required targets without authorizing publication.
+  acceptance_criteria:
+  - Canonical three/four-part version identity reuses existing versioning helpers
+  - Source/controller SHA, run and attempt, full target set and content digests bind reports
+  - Missing, duplicate, tampered or failed evidence is rejected and actual files are rehashed
+  - Proof output explicitly carries no publication authority
+  - Offline fault-injection and CLI tests plus bilingual contract documentation
+  owner: Eruhitsuji

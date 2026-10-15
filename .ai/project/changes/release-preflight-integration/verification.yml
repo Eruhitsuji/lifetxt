@@ -10,7 +10,7 @@ verification:
     command: python -m unittest tests.test_release_preflight_collect tests.test_release_preflight_actions tests.test_release_preflight_oci tests.test_release_preflight_mini tests.test_release_preflight_desktop tests.test_release_preflight_standalone tests.test_release_preflight_core tests.test_release_preflight_proof tests.test_release_subversions tests.test_set_tauri_desktop_version tests.test_traceability_gate tests.test_change_package_closeout
     status: passed
     result: 133 tests passed including traceability/closeout
-    tested_commit: aa11f863
+    tested_commit: 515a428b
   - type: lint
     command: python -m ruff check scripts/release_preflight_actions.py scripts/release_preflight_collect.py tests/test_release_preflight_actions.py tests/test_release_preflight_collect.py
     status: passed
@@ -26,7 +26,12 @@ verification:
     tested_commit: aa11f863
   - type: initial-test-failure
     status: resolved
-    result: Workflow security test initially matched the substring write in Python write_text. Replaced it with the permission-specific ': write' check; structured read-only permissions are also asserted. Rerun succeeded.
+    result: >-
+      Workflow security test initially matched the substring write in Python write_text.
+      Replaced it with the permission-specific ': write' check; structured read-only
+      permissions are also asserted. Rerun succeeded. Later closeout check caught
+      that colon-space in this evidence text required a YAML block scalar; corrected
+      metadata and reran all regression tests.
     environment: Python 3.12, bash; BashCompletionExecutionTests not selected; no concurrent worktree writes during test run
   - type: native-actions-integration
     status: not_run

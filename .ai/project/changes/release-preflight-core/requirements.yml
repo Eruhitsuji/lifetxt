@@ -1,0 +1,16 @@
+schema_version: 1
+requirements:
+- id: req-release-preflight-core
+  kind: ADDED
+  statement: Build the exact immutable Core candidate without publishing and retain
+    verified payload plus component evidence.
+  acceptance_criteria:
+  - Validate actual run/controller/source/version context
+  - Retain release-policy/safety/twine and archive metadata/provenance gates without
+    duplicating full source tests
+  - Smoke exact wheel and sdist in fresh venvs outside source
+  - Upload immutable four-role payload before binding artifact reference to unchanged
+    build report
+  - Reject missing/mismatched/tampered/failed evidence; no publish permissions or
+    triggers
+  owner: Eruhitsuji

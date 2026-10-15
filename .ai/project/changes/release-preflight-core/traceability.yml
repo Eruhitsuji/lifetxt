@@ -1,0 +1,15 @@
+schema_version: 1
+links:
+- requirement_id: req-release-preflight-core
+  capability_id: cap-distribution-channels
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1316
+  pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1323
+  tests_or_evidence:
+  - tests.test_release_preflight_core
+  - Exact wheel/sdist build and clean-install smoke
+  status: in_progress
+  release_or_deployment: None; private Actions artifacts only
+gaps:
+- Actual reusable-workflow transport and all-target orchestration belong to issue
+  1321
+- Independent implementation/integration review and human merge approval pending

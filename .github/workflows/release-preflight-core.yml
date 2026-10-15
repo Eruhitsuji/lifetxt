@@ -1,0 +1,110 @@
+name: Core preflight (non-public)
+
+# Read-only reusable producer. No push/release/dispatch publication path.
+# The caller must use the same trusted repository/controller revision and
+# reconcile source main-CI/approval evidence separately (#1311/#1321).
+on:
+  workflow_call:
+    inputs:
+      candidate_json:
+        description: "Sealed candidate JSON from the same trusted controller run"
+        required: true
+        type: string
+    outputs:
+      payload_artifact_id:
+        value: ${{ jobs.core.outputs.payload_artifact_id }}
+      payload_artifact_name:
+        value: ${{ jobs.core.outputs.payload_artifact_name }}
+      payload_artifact_digest:
+        value: ${{ jobs.core.outputs.payload_artifact_digest }}
+      component_artifact_id:
+        value: ${{ jobs.core.outputs.component_artifact_id }}
+      component_artifact_digest:
+        value: ${{ jobs.core.outputs.component_artifact_digest }}
+
+permissions:
+  contents: read
+
+jobs:
+  core:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      payload_artifact_id: ${{ steps.payload.outputs.artifact-id }}
+      payload_artifact_name: core-payload-${{ github.run_id }}-${{ github.run_attempt }}
+      payload_artifact_digest: ${{ steps.payload.outputs.artifact-digest }}
+      component_artifact_id: ${{ steps.component.outputs.artifact-id }}
+      component_artifact_digest: ${{ steps.component.outputs.artifact-digest }}
+    steps:
+      - name: Check out trusted controller
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: controller
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Validate candidate against actual controller/run context
+        id: candidate
+        env:
+          CANDIDATE_JSON: ${{ inputs.candidate_json }}
+        run: |
+          python -c 'import os; from pathlib import Path; Path("candidate.json").write_text(os.environ["CANDIDATE_JSON"], encoding="utf-8")'
+          python controller/scripts/release_preflight_core.py prepare \
+            --candidate candidate.json --controller controller --output checkout.env
+          cat checkout.env >> "$GITHUB_OUTPUT"
+
+      - name: Check out immutable distribution source
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ steps.candidate.outputs.source_sha }}
+          path: source
+          persist-credentials: false
+
+      - name: Install Core build and policy dependencies
+        # This environment is never used for the fresh-venv archive smoke.
+        run: python -m pip install build wheel twine "setuptools>=61" "jsonschema>=4" referencing
+
+      - name: Build and verify the exact candidate payload
+        run: |
+          python controller/scripts/release_preflight_core.py build \
+            --candidate candidate.json --controller controller --source source \
+            --payload payloads/core-any --report core-build-report.json
+
+      - name: Upload immutable non-public Core payload
+        id: payload
+        uses: actions/upload-artifact@v6
+        with:
+          name: core-payload-${{ github.run_id }}-${{ github.run_attempt }}
+          path: payloads/core-any/*
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Bind upload reference to verified bytes
+        env:
+          PAYLOAD_ARTIFACT_ID: ${{ steps.payload.outputs.artifact-id }}
+          PAYLOAD_ARTIFACT_DIGEST: ${{ steps.payload.outputs.artifact-digest }}
+          PAYLOAD_ARTIFACT_NAME: core-payload-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          python controller/scripts/release_preflight_core.py component \
+            --candidate candidate.json --controller controller --source source \
+            --payload payloads/core-any --report core-build-report.json \
+            --artifact-id "$PAYLOAD_ARTIFACT_ID" --artifact-name "$PAYLOAD_ARTIFACT_NAME" \
+            --artifact-digest "$PAYLOAD_ARTIFACT_DIGEST" --output core-component.json
+
+      - name: Upload Core component proof separately
+        id: component
+        uses: actions/upload-artifact@v6
+        with:
+          name: core-proof-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            candidate.json
+            core-build-report.json
+            core-component.json
+          if-no-files-found: error
+          retention-days: 30

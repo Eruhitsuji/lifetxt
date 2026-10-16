@@ -1,0 +1,20 @@
+schema_version: 1
+requirements:
+- id: req-procedure-guidance-v1
+  kind: ADDED
+  statement: Propose a human procedure definition/projection/run/evidence contract
+    without changing Format 1.0.
+  acceptance_criteria:
+  - Bilingual canonical example/counterexamples, alternatives and CLI/Web/text-only
+    UX
+  - Source-backed reuse audit distinguishing relation graph, VM, Daily Flow, history
+    and work-session
+  - Measured current check and text/JSON/JSONL roundtrip compatibility
+  - Explicit revisions, event authority, limits, threats and recovery proposals
+  - Child scope/dependency/assurance/test matrix; no implementation before approval
+  constraints:
+  - No arbitrary shell/HTTP/script/VM/MCP execution
+  - No normative Format/API/schema implementation in Phase 0
+  owner: Eruhitsuji
+open_questions:
+- D1-D4 approval pending; exact event field/schema mapping is a gated issue 1339 deliverable.

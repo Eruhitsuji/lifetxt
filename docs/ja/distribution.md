@@ -57,29 +57,15 @@ pip install "lifetxt[tui]"
 
 ### release が PyPI に届くまで
 
-`.github/workflows/release.yml` は `v*.*.*` の tag push ごとに実行されます：
-
-1. その tag の commit を checkout する。
-2. tag が `pyproject.toml` の `project.version` と一致することを確認する
-   （`scripts/check_release_tag_version.py`）。既存の stable release を指す
-   version で、動いている `main` の tree を publish することはできません。
-3. 既存の release policy profile（`scripts/run_ci_like.py --profile release`）
-   を実行する。
-4. checksum・SBOM・provenance metadata 付きで wheel と sdist を build する
-   （`scripts/release_evidence.py`。release evidence 記録で既に使われている
-   ものと同じ）。
-5. `twine check` で package metadata を検証する。
-6. build した wheel を clean な virtual environment に install し、
-   `lifetxt --version` / `lifetxt check` の smoke test を行う。
-7. [PyPI Trusted Publishing](https://docs.pypi.org/trusted-publishers/)
-   （OIDC。長期 upload token をこの repository に保存しない）経由で PyPI へ
-   publish する。
-8. 同じ wheel/sdist/checksum/SBOM/provenance を、対応する GitHub Release に
-   添付する。
+[承認付き公開手順](release-publication.md)を使います。
+`release-preflight.yml` がwheel/sdistを一度だけbuild・検証し、
+`main` の手動 `release.yml` がpypi environmentのrun固有の人間承認後に
+同じbytesを公開します。tag pushは公開を開始しません。
+Trusted Publisherの直接jobはrelease.yml / environment pypiのままです。
 
 ### PyPI 側の一回限りの設定（maintainer 自身の作業。ここからは自動化できません）
 
-手順 7 が成功するには、事前に PyPI 側で Trusted Publishing を紐付ける必要が
+公開が成功するには、事前に PyPI 側で Trusted Publishing を紐付ける必要が
 あります。これは `lifetxt` PyPI project の owner 自身の PyPI account が必要な
 ため、この repository の中や AI agent からは実行できません：
 
@@ -93,14 +79,13 @@ pip install "lifetxt[tui]"
    - Repository: `lifetxt`
    - Workflow: `release.yml`
    - Environment: `pypi`
-3. この repository の Settings → Environments で `pypi` という名前の
-   environment を作成する（workflow が初めて参照した時に GitHub が自動作成
-   しますが、事前に作っておけば required reviewer や deployment branch rule
-   を追加して release review の摩擦を増やすこともできます）。
+3. GitHubの `pypi` environmentにrequired reviewer `Eruhitsuji` と
+   deployment branch `main` を設定します。prepare summaryのplan/run/attempt
+   commentを承認時に入力します。実承認履歴がなければ公開前に停止します。
+   PyPI側のworkflow/environment identityは維持してください。
 
-手順 2 が完了するまでは、`release.yml` の `publish-pypi` job は実行された上で
-PyPI 側の OIDC exchange で cleanly に失敗します — 不完全・破損した release を
-publish することはありません。
+PyPI OIDCやHomebrew権限で失敗する時、他primaryは既に公開済みの場合があります。
+そのbytesを保持し、[復旧手順](release-publication.md#失敗時の復旧)に従います。
 
 ### 公開後の検証
 
@@ -242,22 +227,10 @@ directory（`LIFETXT_REVISION_METRICS_PATH`）へ ルーティングすること
 
 ### image が GHCR に届くまで
 
-`.github/workflows/docker-publish.yml` は `v*.*.*` の tag push ごとに実行
-されます（`release.yml` と同じ trigger）：
-
-1. tag が `pyproject.toml` の version と一致することを確認する。
-2. local で single-architecture の image を build し、mount した example
-   への `check` command・process が uid 1000 で動作していることの確認・
-   `/api/health` が応答するまで poll する `serve` 起動、の 3 つで
-   smoke test する。
-3. Buildx/QEMU で実際の multi-arch（`linux/amd64`、`linux/arm64`）image を
-   build し、上記の tag 方針に従って `ghcr.io/eruhitsuji/lifetxt` へ push
-   する。認証は GHCR 自身の `GITHUB_TOKEN` を使うため、別 account や
-   credential の準備は不要です。
-
-`workflow_dispatch` は push なしで build・smoke test のみ行うことにも
-対応しています（`push: false` が default）。実 tag に届く前に Dockerfile
-自体の変更を検証したい場合に使えます。
+読み取り専用のnative OCI producerが一度だけbuildし、実graphをsmokeして
+2 platformのindexをpreflightで確定します。人間承認後、release.ymlが同じ
+blobs/indexをdigest保持でversion/v-versionへ転送します。
+latest/major/minorは全受入ゲート後に更新します。旧docker-publish.ymlは廃止です。
 
 ## 3. Standalone CLI binary
 
@@ -297,7 +270,7 @@ lifetxt check life.txt
 [`packaging/pyinstaller/lifetxt.spec`](../../packaging/pyinstaller/lifetxt.spec)
 経由で使い、platform ごとに 1 つの `--onefile` executable を作ります
 （PyInstaller は各 target platform 上で native に実行する必要があるため、
-`.github/workflows/standalone-binaries.yml` は 1 つの host から
+`.github/workflows/release-preflight-standalone.yml` は 1 つの host から
 cross-compile するのではなく、対応する GitHub-hosted runner ごとに build
 します）。
 
@@ -385,9 +358,7 @@ executable）を使います。winget は manifest の `Commands` field に宣�
 **この repository は `microsoft/winget-pkgs` へ自動 submit しません。**
 `scripts/generate_winget_manifest.py` は 1 つの release に対して必要な 3 つの
 manifest file（version・installer・default-locale。manifest schema
-1.6.0）を生成し、`.github/workflows/package-manifests.yml` が GitHub
-Release が published されるたびに自動実行して、結果を download 可能な
-workflow artifact として upload します。submit 自体は release ごとに手動で
+1.6.0）を生成し、`release.yml` がcanonical primary検証後に生成し、手動提出用artifactとして保存します。submit 自体は release ごとに手動で
 行う 1 回限りの step です：
 
 ```sh
@@ -429,7 +400,7 @@ scoop install lifetxt
 ```
 
 `scripts/generate_scoop_manifest.py` が同様に `lifetxt.json` を生成し、
-こちらも `package-manifests.yml` によって自動生成されます。Scoop の
+こちらも `release.yml` の下流stage によって自動生成されます。Scoop の
 manifest は「bucket」repository（`.json` file だけの普通の Git repo）に
 置かれます。この project はまだ自前の bucket を持っておらず、これは
 issue 自体の「Scoop は副経路」という scope guidance と一致します —
@@ -464,8 +435,8 @@ winget と conda-forge は、この project が所有していない repository
 この project の maintainer 自身が所有する repository —— に対して動作しま
 す。自分自身の release workflow から自分自身の repository へ publish する
 ことは、他人の repository へ PR を開くこととは種類が異なる操作であるため、
-`.github/workflows/homebrew-tap.yml` は GitHub Release が published される
-たびに生成した Formula を自動的に push します。
+`release.yml` は全primary/canonical検証後にFormulaを更新し、remoteを読み戻します。
+Homebrew失敗時はLatestを停止します。
 
 ### Formula の設計
 
@@ -492,9 +463,8 @@ access 権を持つ token が必要です：
    `HOMEBREW_TAP_TOKEN` という名前で追加する（Settings → Secrets and
    variables → Actions）。
 
-この secret が存在しない間は、`homebrew-tap.yml` の tap checkout step が
-cleanly に失敗します（`Eruhitsuji/homebrew-tap` の checkout で
-authentication error）—— 部分的に publish されることはありません。
+Homebrew credential不足・権限エラー時はそのchannelとLatestを停止します。
+既に公開したprimaryは保持し、同じ元preflightで新しい承認runから再開します。
 
 ### install 済み Formula の検証
 
@@ -540,8 +510,7 @@ install 後に `lifetxt --version` と `lifetxt check --help` を test します
 `conda-forge/staged-recipes` は community 運営の repository です。そこへ
 recipe を submit することは、あなた自身の GitHub identity での PR に
 なり、winget（section 4）で設定した境界と一致します。
-`.github/workflows/conda-recipe.yml` は GitHub Release が published
-されるたびに `meta.yaml` を自動生成し、download 可能な workflow
+`release.yml` は全primaryとPyPI sdistの実download/hash確認後に `meta.yaml` を自動生成し、download 可能な workflow
 artifact として upload します。submit 自体は手動 step です：
 
 ```sh
@@ -630,11 +599,8 @@ cargo install tauri-cli --version "^2" --locked
 cd desktop/src-tauri && cargo tauri build
 ```
 
-`.github/workflows/desktop-installers.yml` は `v*.*.*` の tag ごとに同じ
-手順を `windows-latest`・`macos-latest`（arm64）・`ubuntu-latest` 上で native
-に実行し、それぞれ MSI/NSIS・dmg・deb/AppImage の artifact（Tauri 自身の
-platform ごとの default bundle target）を作成して、対応する GitHub Release
-に添付します。
+読み取り専用の `release-preflight-desktop.yml` がnative installerをbuild・検証します。
+承認後、release.ymlが同じbytesを公開し、全installerを単一canonical inventoryへ含めます。
 
 ### version の traceability
 

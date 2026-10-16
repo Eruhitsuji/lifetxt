@@ -7953,8 +7953,23 @@ capabilities:
       - req-distribution-desktop-standalone
       - req-release-distribution-runbook-skill
       - req-distribution-sha256sums-merge-not-clobber
+      - req-release-publication-integration
+      - req-release-authority
+      - req-release-canonical
+      - req-release-downstream
+      - req-release-acceptance
+      - req-release-recovery
     implementation_locations:
       - .ai/project/skills/release-distribution-runbook/SKILL.md
+      - scripts/release_plan.py
+      - scripts/release_canonical.py
+      - scripts/release_remote.py
+      - scripts/release_channels.py
+      - scripts/release_recovery.py
+      - scripts/release_orchestrate.py
+      - .github/workflows/release-preflight.yml
+      - docs/en/release-publication.md
+      - docs/ja/release-publication.md
       - .ai/project/CONTEXT_INDEX.yml
       - .github/workflows/release.yml
       - .github/workflows/docker-publish.yml

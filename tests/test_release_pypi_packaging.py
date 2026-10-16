@@ -23,10 +23,10 @@ class ReleasePyPIPackagingContractTests(unittest.TestCase):
         self.assertIn("packages-dir: dist-pypi", self.text)
         self.assertNotIn("packages-dir: dist-evidence", self.text)
 
-    def test_a_staging_step_copies_only_whl_and_tar_gz_into_that_directory(self):
-        self.assertIn(
-            "dist-evidence/*.whl dist-evidence/*.tar.gz dist-pypi/", self.text
-        )
+    def test_only_missing_verified_distributions_are_published(self):
+        self.assertIn("if: steps.primary.outputs.pypi_pending == 'true'", self.text)
+        self.assertIn("skip-existing: false", self.text)
+        self.assertIn("release_orchestrate.py start", self.text)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,43 @@
+schema_version: 1
+change:
+  id: release-publication
+  title: Approved immutable release publication and recovery
+  status: in_progress
+  change_type: Operations
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1308
+  related_pull_request: null
+  base_commit: 65162fb8352767e6e4b39a1cee374289f7f22829
+scope:
+  write_scope:
+  - .github/workflows/release.yml
+  - .github/workflows/{docker-publish,standalone-binaries,desktop-installers,lifetxt-mini-release,homebrew-tap,package-manifests,conda-recipe}.yml
+  - scripts/release_{canonical,plan,remote,channels,recovery,orchestrate}.py
+  - tests/test_release_publication.py
+  - tests/fixtures/release-publication
+  - tests/test_{release_pypi_packaging,standalone_binaries_checksum_newline,mini_release_workflow}.py
+  - docs/{en,ja}/{release-publication,distribution}.md
+  - .ai/project/skills/release-distribution-runbook/SKILL.md
+  - .ai/project/changes/release-publication
+  - .ai/project/changes/release-preflight-integration/{verification,traceability}.yml
+  - .ai/project/changes/release-preflight-native-fixes/verification.yml
+  - .ai/project/TRACEABILITY.yml
+  - .ai/project/CAPABILITIES.yml
+  forbidden_scope:
+  - .ai/managed/**
+  - Version/source format changes, tag moves, live publishing and account settings/secrets
+human_approvals_required:
+- Fresh independent implementation and integration reviews and human merge
+- Separate Release Authority approval for a concrete release plan
+integration:
+  issues: [1311, 1305, 1312, 1313, 1314]
+  source: origin/main
+  branch: integration/release-publication
+  final_pr_base: main
+  integrator: Eruhitsuji
+  size: M
+  split_justification: Atomic closure of all old publisher triggers and introduction of the sole approved path; user requested the related remainder together. Components stay separately testable and the batch receives High assurance.
+  complexity_score: 9
+  assurance_response: High package, complete offline faults, separate human merge/release boundaries and pending independent reviews

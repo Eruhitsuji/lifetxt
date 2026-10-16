@@ -1,0 +1,122 @@
+{
+  "source": "https://github.com/Eruhitsuji/lifetxt/releases/tag/v1.0.4.1",
+  "captured_at": "2026-10-16",
+  "note": "Read-only historical public API metadata; excludes SHA256SUMS itself. SHA256SUMS-primary-only is a retained historical diagnostic asset, not a new publication asset.",
+  "assets": [
+    {
+      "name": "lifetxt-1.0.4.1-py3-none-any.whl",
+      "size": 1362346,
+      "digest": "sha256:740f66d6c33a63e34a1e9eb7b989e8fd3401af603c6e0d2f03dea4c60246591a"
+    },
+    {
+      "name": "lifetxt-1.0.4.1.tar.gz",
+      "size": 1933208,
+      "digest": "sha256:e38cc19214e8dd2a1206ae86b0304d7b96931c0d5ce641fb2b917b8eabd6e395"
+    },
+    {
+      "name": "lifetxt-linux-arm64",
+      "size": 41730528,
+      "digest": "sha256:30a700bc0ea4a6bc2d6b27375855323ee57c7ef562bed0597af0ee00e82a2a99"
+    },
+    {
+      "name": "lifetxt-linux-x86_64",
+      "size": 42957152,
+      "digest": "sha256:189e91c5fa34068d417d7d268a7dc767f00dd779746cb5d662edb8355dfa4f4b"
+    },
+    {
+      "name": "lifetxt-macos-arm64",
+      "size": 23451968,
+      "digest": "sha256:c0a0f049f0bb5fe1742169ddc2cda216f7f0107c1ed665758c85a0ae8a6557cf"
+    },
+    {
+      "name": "lifetxt-macos-x86_64",
+      "size": 24541152,
+      "digest": "sha256:1ae4b552f909526a6a638b84da420f8cf617f2925f4130d405d3fcca3c786f97"
+    },
+    {
+      "name": "lifetxt-mini-v1.0.4.1-linux-aarch64",
+      "size": 378816,
+      "digest": "sha256:b1f6bb2e71ac8317672fa13996cad11ec9460b6e624010ae5ae84e8b10285fb3"
+    },
+    {
+      "name": "lifetxt-mini-v1.0.4.1-linux-aarch64.build-info",
+      "size": 197,
+      "digest": "sha256:60586c5678459d91006a242307c9d42841a6a719f612863d27ff30ffb3f4bf4f"
+    },
+    {
+      "name": "lifetxt-mini-v1.0.4.1-linux-aarch64.sha256",
+      "size": 102,
+      "digest": "sha256:2a2c080629c18058f1e72677afc218fa56450599792db6a0361613a21f6c4d4c"
+    },
+    {
+      "name": "lifetxt-mini-v1.0.4.1-linux-x86_64",
+      "size": 403344,
+      "digest": "sha256:0145a69066dff8f2658980df467ea2d7db88fb1b76261d294498047330e16675"
+    },
+    {
+      "name": "lifetxt-mini-v1.0.4.1-linux-x86_64.build-info",
+      "size": 196,
+      "digest": "sha256:b569b0c98ea3133c7252b4b8ea6b39b7b353813df0dd5f5c412c355691424112"
+    },
+    {
+      "name": "lifetxt-mini-v1.0.4.1-linux-x86_64.sha256",
+      "size": 101,
+      "digest": "sha256:81490b5b707e436c62b5f1ddb38bedce1354f426a39e312fcfb01671bed566d8"
+    },
+    {
+      "name": "lifetxt-windows-x86_64.exe",
+      "size": 24102972,
+      "digest": "sha256:d89344c96cc3c281a5c3fc41fbb3dedda36a963aec33aa54f05359204384f335"
+    },
+    {
+      "name": "lifetxt.Desktop-1.0.4+1-1.x86_64.rpm",
+      "size": 46596225,
+      "digest": "sha256:5b2f2b38ca52d88f80ebdd7c95ebb0862ac7496c74f4efb3a4d8eb7ce3e446db"
+    },
+    {
+      "name": "lifetxt.Desktop_1.0.4+1_aarch64.dmg",
+      "size": 26937640,
+      "digest": "sha256:db3073db2bea9fde276a3984ff7f19f9ede9cf44b00b2ffb515e2bdb926ba014"
+    },
+    {
+      "name": "lifetxt.Desktop_1.0.4+1_amd64.AppImage",
+      "size": 125184504,
+      "digest": "sha256:867bf81ed478d2b358404a66bda07c18852e635f4efda08bc005905b74420de4"
+    },
+    {
+      "name": "lifetxt.Desktop_1.0.4+1_amd64.deb",
+      "size": 46594408,
+      "digest": "sha256:c74503a45ce9dc0deef418d1ab99489d10a8fca4f1f1eeb53bb5220d740fdb54"
+    },
+    {
+      "name": "lifetxt.Desktop_1.0.4+1_x64-setup.exe",
+      "size": 26278919,
+      "digest": "sha256:803d50fed86e58f78c046a5e2d00eeaa9dafdabfce455d76d9450a417845076d"
+    },
+    {
+      "name": "lifetxt.Desktop_1.0.4+1_x64_en-US.msi",
+      "size": 27447296,
+      "digest": "sha256:f64aeaf6e2a4d1630cfea086832edd430523c9542ec3c5bf21fda49483d28335"
+    },
+    {
+      "name": "provenance.json",
+      "size": 779,
+      "digest": "sha256:ce921c8b12a70bd09210da9faa4fe34869d47b3e7729b9eba780c2fe7e3a160c"
+    },
+    {
+      "name": "RELEASE-NOTES.md",
+      "size": 144,
+      "digest": "sha256:73dc9fb371f252c40c1ec4a8b8662474c15334613b9d623806d0996a9d0c0984"
+    },
+    {
+      "name": "sbom.cdx.json",
+      "size": 775,
+      "digest": "sha256:ead28464bea2ba0f8bb32883758ef418cbb5fbd66b3bda941e183a351d284a43"
+    },
+    {
+      "name": "SHA256SUMS-primary-only",
+      "size": 830,
+      "digest": "sha256:db39fd8b444a2953d64fb9f88cebde86187e98ff0ba22fe3018e2fb0e77ccded"
+    }
+  ]
+}

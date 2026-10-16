@@ -1,38 +1,49 @@
 schema_version: 1
 change:
   id: procedure-guidance
-  title: Human procedure guidance Phase 0 contract investigation
-  status: awaiting_approval
-  change_type: Investigation
-  assurance_level: Quick
+  title: 'Human procedure guidance: approved contract and read-only stage'
+  status: in_review
+  change_type: Feature
+  assurance_level: High
   owner: Eruhitsuji
   accountable_owner: Eruhitsuji
-  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1333
-  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1345
-  base_commit: 204fc69e0796a29e8ecf98fa822e64fd866ac028
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1335
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1346
+  base_commit: e76125ed80867914e0c249c868373b21aaa129e0
   target_release: null
 scope:
   in_scope:
-  - bilingual_design_proposal
-  - compatibility_investigation
-  - downstream_contract_plan
+  - readonly definition/projection/strict validation/rendering
+  - bilingual editor-only workflow and examples
+  - minimal CLI admission and taxonomy wiring
+  - capability/traceability/verification
   out_of_scope:
-  - production_implementation
-  - normative_format_change
-  - release
-  - migration
+  - run/events/persistence
+  - Web/MCP
+  - generic parser/validator or VM/links/flow behavior changes
+  - release/migration
   write_scope:
-  - docs/en/procedure-guidance-design.md
-  - docs/ja/procedure-guidance-design.md
-  - .ai/project/changes/procedure-guidance/
-  forbidden_scope:
-  - lifetxt/
-  - tests/
-  - .ai/managed/
+  - lifetxt/procedure_*.py
+  - lifetxt/cli.py
+  - lifetxt/entrypoint.py
+  - lifetxt/cli_taxonomy.py
+  - tests/test_procedure_*.py
+  - docs/en and docs/ja procedure guides/navigation
+  - examples/procedure-*.txt
   - .ai/project/CAPABILITIES.yml
   - .ai/project/TRACEABILITY.yml
-  shared_files: []
+  - .ai/project/changes/procedure-guidance/
+  forbidden_scope:
+  - .ai/managed/
+  - generic parser/validator changes
+  - unrelated feature code
+  shared_files:
+  - lifetxt/cli.py
+  - lifetxt/entrypoint.py
+  - lifetxt/cli_taxonomy.py
+  - .ai/project/CAPABILITIES.yml
+  - .ai/project/TRACEABILITY.yml
 human_approvals_required:
-- Phase 0 decisions D1-D4 referencing reviewed commit
-- Independent latest-head review and main merge
-- Downstream High assurance schema/persistence/Web contracts before implementation
+- Independent latest-head implementation and integration review before protected main
+  merge
+- Remaining exact run schema/persistence/Web contracts before later stages

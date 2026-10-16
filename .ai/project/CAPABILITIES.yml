@@ -1,6 +1,47 @@
 schema_version: 1
 
 capabilities:
+  - id: cap-procedure-guidance
+    name: Opt-in human procedure guidance
+    summary: Read-only single-file procedure hierarchy, strict human-choice graph validation
+      and escaped text/Mermaid/DOT output; separate reusable templates and per-occurrence
+      Task examples. Run/evidence and Web remain pending.
+    status: active
+    owner: Eruhitsuji
+    source_requirements:
+    - req-procedure-guidance-v1
+    implementation_locations:
+    - lifetxt/procedure_definition.py
+    - lifetxt/procedure_validation.py
+    - lifetxt/procedure_graph.py
+    - lifetxt/procedure_cli.py
+    - lifetxt/cli.py
+    - lifetxt/entrypoint.py
+    - lifetxt/cli_taxonomy.py
+    - docs/en/procedure-guidance.md
+    - docs/ja/procedure-guidance.md
+    public_interfaces:
+    - lifetxt procedure show FILE --id ROOT
+    - lifetxt procedure graph FILE --id ROOT --format text|mermaid|dot
+    tests_or_evidence:
+    - tests/test_procedure_definition.py
+    - tests/test_procedure_validation.py
+    - tests/test_procedure_graph.py
+    - tests/test_procedure_cli.py
+    - examples/procedure-template-en.txt and ja counterpart
+    - examples/procedure-work-en.txt and ja counterpart
+    - examples/procedure-flow-en.txt and ja counterpart
+    related_issues:
+    - https://github.com/Eruhitsuji/lifetxt/issues/1332
+    - https://github.com/Eruhitsuji/lifetxt/issues/1333
+    - https://github.com/Eruhitsuji/lifetxt/issues/1334
+    - https://github.com/Eruhitsuji/lifetxt/issues/1335
+    - https://github.com/Eruhitsuji/lifetxt/issues/1336
+    - https://github.com/Eruhitsuji/lifetxt/issues/1337
+    notes: 'D1-D4 explicitly approved 2026-10-16 after PR 1345. Three-PR owner-approved
+      grouping: readonly (1334-1337), run/CLI (1338-1341), Web (1342-1343). No public
+      JSON schema or run command yet; W106 on generic check remains intentional. Existing
+      relation/VM/flow/history semantics unchanged.'
   - id: cap-web-work-session-controls
     name: Revision-bound Task drawer work sessions
     summary: Start and stop compound work sessions from a writable Task drawer with frozen item/timer revisions and safe explicit recovery.

@@ -2058,6 +2058,10 @@ def build_parser():
     )
     flow_command.set_defaults(func=command_flow)
 
+    from .procedure_cli import register_procedure
+
+    register_procedure(subparsers)
+
     vm_command = subparsers.add_parser(
         "vm",
         help="Opt-in, isolated lifetxt VM: run a Turing-complete 2-counter "

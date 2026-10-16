@@ -1,0 +1,343 @@
+{
+  "type": "object",
+  "properties": {
+    "schema": {
+      "const": "procedure-event-v1"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^pev_[0-9a-f]{32}_[1-9][0-9]{0,3}$"
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 32,
+      "pattern": "^[0-9a-f]{32}$"
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5000
+    },
+    "request_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$",
+      "maxLength": 64,
+      "not": {
+        "pattern": "[\\r\\n]"
+      }
+    },
+    "at": {
+      "type": "string",
+      "format": "date-time",
+      "minLength": 20,
+      "maxLength": 20,
+      "pattern": "^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\dZ$"
+    },
+    "actor": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$",
+      "maxLength": 64,
+      "not": {
+        "pattern": "[\\r\\n]"
+      }
+    },
+    "source_handle": {
+      "type": "string",
+      "minLength": 68,
+      "maxLength": 68,
+      "pattern": "^src_[0-9a-f]{64}$"
+    },
+    "root_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:@/-]*$",
+      "not": {
+        "pattern": "[\\r\\n]"
+      }
+    },
+    "template_revision": {
+      "type": "string",
+      "minLength": 64,
+      "maxLength": 64,
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "event": {
+      "enum": [
+        "start",
+        "next",
+        "choose",
+        "pause",
+        "resume",
+        "finish",
+        "abandon"
+      ]
+    },
+    "previous_digest": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "payload": {
+      "type": "object"
+    },
+    "digest": {
+      "type": "string",
+      "minLength": 64,
+      "maxLength": 64,
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  },
+  "required": [
+    "schema",
+    "id",
+    "run_id",
+    "sequence",
+    "request_id",
+    "at",
+    "actor",
+    "source_handle",
+    "root_id",
+    "template_revision",
+    "event",
+    "previous_digest",
+    "payload",
+    "digest"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Eruhitsuji/lifetxt/raw/main/.ai/project/changes/procedure-guidance/procedure-event-v1.schema.json",
+  "title": "Native human procedure event v1",
+  "description": "Stored as event_data on a [N] N procedure_event record. Runtime additionally verifies matching ID/sequence, canonical digest chain and control-graph semantics. This design-package schema is not added to the general published schema catalog.",
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "start"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "sequence": {
+            "const": 1
+          },
+          "previous_digest": {
+            "type": "null"
+          },
+          "payload": {
+            "type": "object",
+            "properties": {
+              "control": {
+                "type": "object",
+                "properties": {
+                  "start": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:@/-]*$",
+                    "not": {
+                      "pattern": "[\\r\\n]"
+                    }
+                  },
+                  "steps": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 500,
+                    "items": {
+                      "type": "array",
+                      "prefixItems": [
+                        {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256,
+                          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:@/-]*$",
+                          "not": {
+                            "pattern": "[\\r\\n]"
+                          }
+                        },
+                        {
+                          "enum": [
+                            "action",
+                            "decision",
+                            "end"
+                          ]
+                        }
+                      ],
+                      "items": false,
+                      "minItems": 2,
+                      "maxItems": 2
+                    }
+                  },
+                  "edges": {
+                    "type": "array",
+                    "maxItems": 2000,
+                    "items": {
+                      "type": "array",
+                      "prefixItems": [
+                        {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256,
+                          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:@/-]*$",
+                          "not": {
+                            "pattern": "[\\r\\n]"
+                          }
+                        },
+                        {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256,
+                          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:@/-]*$",
+                          "not": {
+                            "pattern": "[\\r\\n]"
+                          }
+                        },
+                        {
+                          "type": "string",
+                          "pattern": "^[a-z][a-z0-9_-]{0,31}$",
+                          "maxLength": 32,
+                          "not": {
+                            "pattern": "[\\r\\n]"
+                          }
+                        }
+                      ],
+                      "items": false,
+                      "minItems": 3,
+                      "maxItems": 3
+                    }
+                  }
+                },
+                "required": [
+                  "start",
+                  "steps",
+                  "edges"
+                ],
+                "additionalProperties": false
+              },
+              "allow_loops": {
+                "type": "boolean"
+              },
+              "max_hops": {
+                "const": 1000
+              },
+              "max_visits": {
+                "const": 20
+              }
+            },
+            "required": [
+              "control",
+              "allow_loops",
+              "max_hops",
+              "max_visits"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "sequence": {
+            "minimum": 2
+          },
+          "previous_digest": {
+            "type": "string",
+            "minLength": 64,
+            "maxLength": 64,
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "payload": {
+            "type": "object",
+            "properties": {
+              "from_step": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:@/-]*$",
+                "not": {
+                  "pattern": "[\\r\\n]"
+                }
+              },
+              "to_step": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:@/-]*$",
+                "not": {
+                  "pattern": "[\\r\\n]"
+                }
+              },
+              "choice": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_-]{0,31}$",
+                    "maxLength": 32,
+                    "not": {
+                      "pattern": "[\\r\\n]"
+                    }
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "from_step",
+              "to_step",
+              "choice"
+            ],
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "choose"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "properties": {
+              "choice": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_-]{0,31}$",
+                "maxLength": 32,
+                "not": {
+                  "pattern": "[\\r\\n]"
+                }
+              }
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "payload": {
+            "properties": {
+              "choice": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -2,6 +2,32 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-procedure-run-v1
+      capability_id: cap-procedure-guidance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1332
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1340
+      related_tasks:
+        - 1338
+        - 1339
+        - 1341
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1347
+      changed_files_or_scope:
+        - lifetxt/procedure_transition.py
+        - lifetxt/procedure_run_model.py
+        - lifetxt/procedure_run_store.py
+        - lifetxt/procedure_run_cli.py
+        - minimal procedure_cli.py/taxonomy dispatch
+        - tests/test_procedure_*
+        - bilingual procedure guide/CLI
+        - changes/procedure-guidance including exact event schema
+      tests_or_evidence:
+        - pure transition and event replay/schema/sequence/digest fixtures
+        - actual local CLI/subprocess lifecycle and request receipt
+        - two writers/runs, stale source/log/step/actor, alias/readonly/generated refusal
+        - injected write faults and real process crash + existing operator journal resume
+        - old procedure/parser/VM/flow and shared journal/mutation regressions
+      release_or_deployment: null
+      status: implemented
     - requirement_id: req-procedure-guidance-v1
       capability_id: cap-procedure-guidance
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1332

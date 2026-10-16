@@ -1,71 +1,100 @@
-# Human procedure guidance: read-only stage
+# Human procedure guidance: definition and local run stages
 
-Approved contract: [English](../../../../docs/en/procedure-guidance-design.md)
-and [日本語](../../../../docs/ja/procedure-guidance-design.md).
-User guide: [English](../../../../docs/en/procedure-guidance.md) and
+Contract: [English](../../../../docs/en/procedure-guidance-design.md) /
+[日本語](../../../../docs/ja/procedure-guidance-design.md).
+Usage: [English](../../../../docs/en/procedure-guidance.md) /
 [日本語](../../../../docs/ja/procedure-guidance.md).
 
-D1–D4 were explicitly approved by Eruhitsuji following PR #1345 merge. The owner
-requested three PRs: read-only (#1334–#1337), run/CLI (#1338–#1341), Web
-(#1342/#1343). Each starts from current main after the previous PR merges.
-Intra-stage dependencies are ordered within one PR. Stage 1 is M/complexity 6:
-its projection, strict graph validation, CLI and examples form one reviewable
-read-only capability. No intermediate sub-PRs or integration branch. Stage 1
-source: e76125ed; branch feature/1332-procedure-readonly; final base main.
+D1–D4 and the three-PR grouping were approved by Eruhitsuji. Stage 1 (#1334–#1337)
+merged as PR #1346 into 99bd4491. Stage 2 (#1338–#1341) starts from that latest
+origin/main on feature/1340-procedure-run, base=main. It is High / M / complexity 6:
+transition/model/store/CLI form one explicit operation and recovery boundary.
+Stage 3 Web starts after stage 2 merges. No intermediate sub-PRs or integration
+branch. No merge/release/deployment authority is delegated to the executor.
 
-Discovery/requirements/architecture approval completed; Implementation →
-Developer Verification → Independent Review, adaptive-default / W-model.
-Owner/independent reviewer/integrator/merge authority: Eruhitsuji; executor Codex.
-High assurance covers the adopted human-choice contract. Independent latest-head
-implementation and integration review remains pending, not replaced by self-review.
+Lifecycle: approved requirements/design → implementation → developer verification
+→ independent implementation/integration review. Adaptive-default / W-model.
+Owner, independent reviewer, integrator and merge authority: Eruhitsuji; executor
+Codex. Latest-head stage-2 independent reviews are pending, not replaced by self-review.
 
-## Boundaries and implementation
+## Reuse and module boundaries
 
-Four dedicated modules separate immutable projection, strict validation,
-data-only rendering, and bounded CLI admission. No generic KNOWN_KEYS/check,
-links, VM, flow, history or Task mutation changes. Node/details tuples snapshot
-source values; no writes or run creation are present. Other roots and ordinary
-records are excluded from the selected graph. Ambiguous file IDs and orphan
-profile hierarchy fail closed rather than selecting a guessed owner.
+Stage-1 procedure_definition/validation/graph retain their immutable, bounded,
+data-only semantics. Existing parser/ID/quote primitives are reused; strict
+profile validation stays separate from generic check. Normal W106, links/VM/flow,
+Task statuses, Native item_event, timezone and external execution are unchanged.
 
-Duplicate IDs, malformed hierarchy/fields, unresolved transitions, unreachable
-nodes and end-unreachable components refuse the entire output. Exit-capable
-cycles warn for browsing. Parent/record/step/edge/body/source/output limits are
-explicit. Indexed edges, iterative reachability, reverse end reachability and
-Kahn cycle detection avoid recursive graph walks. Input order is display order;
-only proc_* defines procedure edges. No new public JSON schema is exposed.
+- procedure_transition.py: pure explicit action/decision/end/pause/resume/finish/
+  abandon transitions; validates graph/cursor, template binding and hard guards.
+- procedure_run_model.py: closed procedure-event-v1, canonical digests, immutable
+  state, pure replay and lossless single-line Note/JSON interchange. No I/O.
+- procedure_run_store.py: explicit source/log admission, actor/source/step/sequence/
+  request/revision checks, bounded read, existing single-target CAS/journal commit.
+- procedure_run_cli.py: required explicit non-TTY commands, current instructions,
+  read-only show/list/request receipt. procedure_cli adds minimal registration;
+  taxonomy records that the top-level command now also has write operations.
 
-Graph node IDs are local ordinals, Mermaid punctuation uses decimal entities,
-DOT reuses the existing quote helper, and terminal controls are escaped. Input
-is one explicit regular file, read through a bounded descriptor (nonblocking on
-POSIX). Source hash covers exact BOM/newline bytes with mutation.hash_bytes,
-the same primitive as read_text_snapshot, without its unbounded read. CLI
-config/workspace paths never replace or pre-read the explicit file. Configured
-noncanonical id-key refuses. Parser syntax errors become stable PG diagnostics
-with line numbers, not raw potentially private lines/paths.
+## Persistence and authority
 
-A minimal entrypoint dispatch follows existing flow's pattern, bypassing
-speculative timezone pre-reads because procedures perform no date calculations.
-FIFO testing demonstrated that a generic pre-read could block before admission.
-Generic reference diagnostics are also not traversed during admission; only
-syntax is parsed before dedicated bounded ID/graph validation. Existing commands
-retain their original dispatch and timezone policies. CLI taxonomy and docs
-navigation add the new read-only command without duplicating command registries.
+The exact schema is procedure-event-v1.schema.json in this package, not a new
+entry in the generic public schema catalog. Each Note has fixed status/type/
+title and exactly record/id/event_data. event_data is closed canonical JSON;
+unknown fields/schemas and invalid calendar times fail at runtime. Start freezes
+only control IDs, step kinds and edges, plus the original full source-byte SHA
+and finite guards. No title/body/private path/secret/URL/command output is copied.
+Graph semantics are validated on replay; subsequent payloads must match exact
+sequence, previous digest, actor/source/root/revision, choice and current step.
+Request IDs are unique across the whole log. show --request-id is an inspection
+receipt, not idempotent automatic execution. Log events are the sole run authority;
+journal before/after artifacts are recovery backups, not another mutable state.
 
-## Quality and operations
+The source handle is SHA-256 of the normalized canonical path, not basename or
+content hash. Hashing is pseudonymization, not guaranteed path anonymity. Source
+and log aliases, hardlinks, symlink log targets, generated/read-only logs and
+nonregular files are rejected. Log body syntax/joins/unknown records cannot hide
+extra payloads. The initial missing-log sentinel remains distinct from an empty
+file's SHA. Existing UTF-8 BOM and CRLF survive replacement and count toward bounds.
 
-Review viewpoints: selected-scope integrity, termination/reachability,
-deterministic order, legacy compatibility, control/diagram injection, resource
-admission, no new dependency, template bytes/status preservation.
-Tests exercise actual CLI/subprocess output, negative input and boundary cases,
-plus existing parser/links/VM/flow/taxonomy regressions. Verification records
-executed commands separately from future acceptance plans.
+## CAS, failure and recovery
 
-Text-editor examples use only existing Note/Task syntax and keep two independent
-occurrences separate from the reusable template. Machine-readable proc_* examples
-remain separately opt-in; generic check intentionally retains W106.
+Only the separate log is a target of multi_target.apply_multi_target. Its shared
+lock, expected hash, staging, durable transaction journal, before/after artifacts,
+atomic replacement, postverify and operator resume/compensation policy are reused
+unchanged. Pending/corrupt journals block writes; no automatic recovery is added.
+Source binding/hash and log permissions/path are checked before target commit.
+External editors do not share a portable two-file transaction; a source change
+observed after commit returns blocked while retaining the committed event.
+Every later operation checks again. Changed/missing/invalid sources allow only
+inspection and pause/abandon against the original binding, not continuation.
+Restore exact original bytes through operator backup procedures or start a new run.
 
-No release/migration/deployment is performed. Revert stage 1 code/docs if needed;
-there is no generated run state to migrate or delete. Run models/guards/events,
-CAS persistence, executable CLI guidance and Web are stages 2/3. Their exact
-schema/authorization mappings and implementation evidence are not claimed here.
+CLI actor tokens are local attribution and not authentication. They do not grant
+server identity or Web write permission. Web remains a separately gated stage-3
+server adapter. Access to logs, actor IDs and protected recovery artifacts must
+follow existing local permissions/privacy policy. Digest chains detect accidental
+corruption, not authenticated tamper-proof audit or proof of real-world work.
+
+## Evidence and limits
+
+Tests cover explicit transition tables, choice/guard/terminal refusal, schema and
+semantic tampering, sequence/digest/binding/replay/roundtrip, independent runs,
+two writers, request receipts, stale/invalid source, aliases, permissions,
+BOM/CRLF/size caps, pre/postcommit faults, compensation and actual process crash
+followed by existing operator journal resume. Every CLI lifecycle step is also
+run in a fresh non-TTY child process. Existing parser/diagram/VM/flow and shared
+mutation/journal/work-session regressions remain required. Commands/results and
+skips are retained in verification.yml; plans are not reported as evidence.
+
+Run/log/event limits: 5,000 / 50,000 / 32 MiB / 2 MiB event JSON; persisted IDs
+256 characters, actor/request tokens 64. Hop/step-visit guards remain 1,000 / 20.
+Replay admission is bounded by encoded bytes, event count and frozen control size;
+transition traversal operates on the bounded graph. No automatic rotation,
+retention deletion, migration, rollback, release or deployment is authorized.
+Revert code without deleting existing definitions or event logs. Corruption
+requires preserving damaged data and explicit verified-backup/operator recovery.
+
+Self-review and full-suite findings: event timestamps use the common injectable
+timezone_policy.utcnow (not a new direct host clock). Postcommit blocked status
+checks canonical source identity as well as exact bytes, including identical-byte
+symlink retargets. Hash chains validate order/content but do not authenticate
+history or prove an untruncated tail without trusted backup/journal evidence.

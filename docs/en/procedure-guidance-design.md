@@ -1,8 +1,8 @@
 # Human procedure guidance: proposed v1 contract
 
 Status: **D1–D4 approved by Eruhitsuji on 2026-10-16 after PR #1345 merged**.
-Read-only browsing/validation/diagrams are implemented in stage 1 (#1334–#1337);
-run/evidence and Web below remain future work. This is not a Format 1.0 grammar
+Read-only browsing/validation/diagrams are delivered in stage 1 (#1334–#1337);
+local run/event/CAS/CLI are implemented in stage 2 (#1338–#1341). Web remains future work. This is not a Format 1.0 grammar
 amendment. Phase 0 / #1333; parent #1332. The Japanese counterpart
 is [procedure-guidance-design.md](../ja/procedure-guidance-design.md).
 
@@ -162,8 +162,8 @@ loop acknowledgement and initial step. Subsequent events are exactly
 step IDs and choice token only where applicable; no title, body, secret, URL,
 command output or arbitrary user notes. Actor IDs are personal data: operator
 access and backups must protect the log. Hash chaining detects accidental
-corruption, not authenticated tamper-proof audit. This is a schema proposal, not
-an implemented record format; exact field mapping/schema is a #1339 deliverable.
+corruption, not authenticated tamper-proof audit. The exact implemented envelope and runtime semantic checks are documented in
+the change package procedure-event-v1.schema.json (#1339).
 
 `procedure_run_model` reduces each validated ordered chain; derived status is
 active/paused/completed/abandoned. Reject duplicate/gapped/reordered sequences,
@@ -221,7 +221,7 @@ negative tests. Browser clipboard/download is explicit. No background execution,
 notifications or remote sharing. Limits and CAS reduce risk but do not certify
 instructions or real-world completion; the human remains responsible for actions.
 
-## UX and rollout (show/graph implemented; run/Web planned)
+## UX and rollout (show/graph and local run implemented; Web planned)
 
 Text editor only: read the Note template unchanged; create separate `[ ] T`
 checklist records in a work file per occurrence with unique IDs and `ref:` links.
@@ -311,3 +311,5 @@ The original Phase 0 investigation below/above cites its inspected base commit;
 actual implementation evidence is in the updated change package. The bounded
 reader uses mutation.hash_bytes, the same exact-byte primitive as read_text_snapshot,
 to enforce input limits before allocating a full snapshot.
+
+Stage 2 implements the exact local run contract in [the user guide](procedure-guidance.md#local-run-navigation-and-evidence): closed single-line event_data, ID/kind/edge-only frozen control, explicit request receipts, and existing single-log journal recovery. CLI actor is attribution, not authentication. Web is still stage 3.

@@ -3,45 +3,64 @@ schema_version: 1
 capabilities:
   - id: cap-procedure-guidance
     name: Opt-in human procedure guidance
-    summary: Read-only single-file procedure hierarchy, strict human-choice graph validation
-      and escaped text/Mermaid/DOT output; separate reusable templates and per-occurrence
-      Task examples. Run/evidence and Web remain pending.
+    summary: Opt-in human procedure hierarchy/validation/diagrams and explicit local
+      runs with pure transitions, closed native events, deterministic replay, exact
+      source/log CAS and durable operator recovery. Web remains stage 3.
     status: active
     owner: Eruhitsuji
     source_requirements:
-    - req-procedure-guidance-v1
+      - req-procedure-guidance-v1
+      - req-procedure-run-v1
     implementation_locations:
-    - lifetxt/procedure_definition.py
-    - lifetxt/procedure_validation.py
-    - lifetxt/procedure_graph.py
-    - lifetxt/procedure_cli.py
-    - lifetxt/cli.py
-    - lifetxt/entrypoint.py
-    - lifetxt/cli_taxonomy.py
-    - docs/en/procedure-guidance.md
-    - docs/ja/procedure-guidance.md
+      - lifetxt/procedure_definition.py
+      - lifetxt/procedure_validation.py
+      - lifetxt/procedure_graph.py
+      - lifetxt/procedure_cli.py
+      - lifetxt/cli.py
+      - lifetxt/entrypoint.py
+      - lifetxt/cli_taxonomy.py
+      - docs/en/procedure-guidance.md
+      - docs/ja/procedure-guidance.md
+      - lifetxt/procedure_transition.py
+      - lifetxt/procedure_run_model.py
+      - lifetxt/procedure_run_store.py
+      - lifetxt/procedure_run_cli.py
+      - .ai/project/changes/procedure-guidance/procedure-event-v1.schema.json
     public_interfaces:
-    - lifetxt procedure show FILE --id ROOT
-    - lifetxt procedure graph FILE --id ROOT --format text|mermaid|dot
+      - lifetxt procedure show FILE --id ROOT
+      - lifetxt procedure graph FILE --id ROOT --format text|mermaid|dot
+      - lifetxt procedure run start|show|next|choose|pause|resume|finish|abandon FILE
+        --id ROOT --log LOG
+      - record:procedure_event event_data procedure-event-v1 (separate local log; schema
+        retained in change package)
     tests_or_evidence:
-    - tests/test_procedure_definition.py
-    - tests/test_procedure_validation.py
-    - tests/test_procedure_graph.py
-    - tests/test_procedure_cli.py
-    - examples/procedure-template-en.txt and ja counterpart
-    - examples/procedure-work-en.txt and ja counterpart
-    - examples/procedure-flow-en.txt and ja counterpart
+      - tests/test_procedure_definition.py
+      - tests/test_procedure_validation.py
+      - tests/test_procedure_graph.py
+      - tests/test_procedure_cli.py
+      - examples/procedure-template-en.txt and ja counterpart
+      - examples/procedure-work-en.txt and ja counterpart
+      - examples/procedure-flow-en.txt and ja counterpart
+      - tests/test_procedure_transition.py
+      - tests/test_procedure_run_model.py
+      - tests/test_procedure_run_store.py
+      - tests/test_procedure_run_cli.py
     related_issues:
-    - https://github.com/Eruhitsuji/lifetxt/issues/1332
-    - https://github.com/Eruhitsuji/lifetxt/issues/1333
-    - https://github.com/Eruhitsuji/lifetxt/issues/1334
-    - https://github.com/Eruhitsuji/lifetxt/issues/1335
-    - https://github.com/Eruhitsuji/lifetxt/issues/1336
-    - https://github.com/Eruhitsuji/lifetxt/issues/1337
-    notes: 'D1-D4 explicitly approved 2026-10-16 after PR 1345. Three-PR owner-approved
-      grouping: readonly (1334-1337), run/CLI (1338-1341), Web (1342-1343). No public
-      JSON schema or run command yet; W106 on generic check remains intentional. Existing
-      relation/VM/flow/history semantics unchanged.'
+      - https://github.com/Eruhitsuji/lifetxt/issues/1332
+      - https://github.com/Eruhitsuji/lifetxt/issues/1333
+      - https://github.com/Eruhitsuji/lifetxt/issues/1334
+      - https://github.com/Eruhitsuji/lifetxt/issues/1335
+      - https://github.com/Eruhitsuji/lifetxt/issues/1336
+      - https://github.com/Eruhitsuji/lifetxt/issues/1337
+      - https://github.com/Eruhitsuji/lifetxt/issues/1338
+      - https://github.com/Eruhitsuji/lifetxt/issues/1339
+      - https://github.com/Eruhitsuji/lifetxt/issues/1340
+      - https://github.com/Eruhitsuji/lifetxt/issues/1341
+    notes: D1-D4 and the three-PR grouping were owner-approved 2026-10-16. Stage 1 merged
+      as PR 1346; stage 2 implements local run/event/CAS/CLI. Web remains stage 3. CLI
+      actor is local attribution, not authentication. No arbitrary execution, template/body
+      copies in events, generic parser/Format/item_event changes, external dependency
+      or public Web/MCP run API.
   - id: cap-web-work-session-controls
     name: Revision-bound Task drawer work sessions
     summary: Start and stop compound work sessions from a writable Task drawer with frozen item/timer revisions and safe explicit recovery.

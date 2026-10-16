@@ -43,3 +43,26 @@ timezone pre-reads because procedures perform no date calculations. FIFO input
 proved the need; invalid files must be refused before any blocking read.
 Generic reference diagnostics are not traversed during procedure admission;
 only syntax is parsed, then the dedicated bounded graph/ID checks apply.
+
+## Stage 2 implementation mapping
+
+PR #1346 was merged into 99bd4491; owner requested continuation. This implements
+#1338–#1341 under the approved D2/D3 and three-PR plan: feature/1340-procedure-run
+from that main commit, base=main, High / M / complexity 6. The typed transition,
+closed native event, single-log CAS/recovery and CLI form one acceptance boundary.
+
+The exact envelope is procedure-event-v1.schema.json in this package. Start
+freezes only control IDs/kinds/edges, not body/title/private paths, so stale source
+runs can be replayed and disposed of without silently continuing a new template.
+Single-line Note detail event_data stores canonical JSON. No Native item_event or
+mutable status authority is introduced. Request ID is unique across the log;
+explicit show --request-id returns the original committed receipt without retry.
+
+The existing multi_target writer is reused for one log target with its existing
+journal, exact revisions and fault/recovery policy. Template bodies are never
+journal targets. Source is rechecked before commit, and postcommit changes return
+blocked with the event retained. External editors are not part of a portable
+cross-file transaction. CLI actors are attribution only; Web identity remains a
+separate stage-3 server contract. Event-only schema is retained here, not added to
+the general published schema catalog. Runtime validates graph/digest/sequence and
+calendar semantics beyond structural JSON Schema.

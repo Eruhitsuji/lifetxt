@@ -1,4 +1,4 @@
-"""Explicit single-file procedure CLI. Read-only; no log or run creation."""
+"""Explicit single-file browsing and run dispatch; instructions stay data-only."""
 
 import os
 import stat
@@ -31,7 +31,7 @@ def main(argv):
         args.workspace = workspace
         args.config_data = cli.load_config(config_path)
         cli._maybe_apply_workspace(args)
-        return command_procedure(args)
+        return args.func(args)
     except ValueError as exc:
         write_console_text(sys.stderr, render_value_error_text(exc))
         return 1
@@ -39,9 +39,13 @@ def main(argv):
 
 def register_procedure(subparsers):
     command = subparsers.add_parser(
-        "procedure", help="Read-only human procedure definitions and flowcharts."
+        "procedure",
+        help="Human procedure definitions, flowcharts and explicit local runs.",
     )
     commands = command.add_subparsers(dest="procedure_command", required=True)
+    from .procedure_run_cli import register_run
+
+    register_run(commands)
     for name in ("show", "graph"):
         parser = commands.add_parser(
             name, help="Read a validated procedure; never execute its instructions."

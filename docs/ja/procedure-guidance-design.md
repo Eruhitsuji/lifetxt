@@ -1,7 +1,7 @@
 # 人間向け手順案内：v1契約草案
 
 状態：**2026-10-16、PR #1345のmerge後にEruhitsujiがD1〜D4を承認**。
-第1段階（#1334〜#1337）の閲覧・検証・図出力を実装。以下のrun/証跡・Webは後続計画であり、Format 1.0の文法変更ではない。
+第1段階（#1334〜#1337）の閲覧・検証・図出力は提供済み。第2段階（#1338〜#1341）でローカルrun/証跡/CAS/CLIを実装し、Webは後続計画。Format 1.0の文法変更ではない。
 Phase 0 / #1333、親Epic #1332。
 対応する[英語版](../en/procedure-guidance-design.md)と同じ契約を記載する。
 
@@ -139,7 +139,7 @@ version・guard・loop確認・開始stepを固定する。後続はnext / choos
 finish / abandonのみ。payloadは必要時の前後step IDと選択トークンに限定し、タイトル・body・
 秘密・URL・コマンド出力・自由メモを複製しない。actor IDは個人情報でログ/バックアップの
 保護対象。hash chainは偶発破損検出であり、認証付き改竄防止監査を保証しない。
-これはschema提案であり、正確な属性への対応とschemaは#1339で確定・実装する。
+正確な実装済みenvelopeと意味検証はpackageのprocedure-event-v1.schema.json（#1339）で定義する。
 
 純粋なreducerでactive / paused / completed / abandonedを導出する。
 重複・欠番・逆順sequence、未知schema/属性、他runやrevisionの混入、直前digest不一致、
@@ -180,7 +180,7 @@ exportも元データと同じprivacy判断が必要。DoS、symlink/path脱出�
 応答不明時を否定試験に含める。clipboard/downloadは明示操作に限る。background実行・通知・
 外部共有はしない。上限とCASは手順の正しさや現実の作業完了を保証せず、実作業は人間が担う。
 
-## UX・リリース（show/graph実装、run/Webは計画）
+## UX・リリース（show/graph・ローカルrun実装、Webは計画）
 
 テキストだけ：Noteの定義は変更せず、作業ごとに別work fileへ一意IDの`[ ] T`を作り、
 `ref:`で定義を参照する。選択・中断理由はwork fileへ手書きする。機械検証可能なrun証跡とは
@@ -256,3 +256,5 @@ Phase 0承認は後続試験の成功を意味せず、独立review・CI・freez
 Phase 0調査の根拠commitと実装検証のcommitを区別し、実測結果は更新済みpackageへ記録する。
 上限付きreaderはread_text_snapshotと同じ完全byte hashのmutation.hash_bytesを使い、
 全snapshotを割り当てる前にサイズを制限する。
+
+第2段階の正確なローカルrun契約は[guide](procedure-guidance.md#ローカルでの実行案内と証跡)を参照。閉じた一行event_data、ID/種類/辺だけの固定control、明示request receipt、既存の単一log journal復旧を実装する。CLI actorは記録用で認証ではなく、Webは第3段階である。

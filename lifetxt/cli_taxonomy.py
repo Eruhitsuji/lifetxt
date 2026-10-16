@@ -295,7 +295,6 @@ CATEGORIES = OrderedDict(
                     "lifecycle-stats",
                     "freebusy",
                     "flow",
-                    "procedure",
                     "count",
                     "status",
                     "recent",
@@ -312,6 +311,7 @@ CATEGORIES = OrderedDict(
                 "proposals, and development tickets.",
                 "commands": (
                     "project",
+                    "procedure",
                     "portfolio",
                     "area",
                     "person",
@@ -774,6 +774,7 @@ WRITE_COMMANDS = frozenset(
         "assign",
         "timer",
         "project",
+        "procedure",
         "message",
         "proposal",
         "ticket",

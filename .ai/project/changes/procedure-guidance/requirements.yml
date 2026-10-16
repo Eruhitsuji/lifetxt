@@ -1,28 +1,54 @@
 schema_version: 1
 requirements:
-- id: req-procedure-guidance-v1
-  kind: ADDED
-  statement: Support opt-in human procedure definitions through bounded read-only
-    projection, strict human-choice graph validation and text/Mermaid/DOT CLI output,
-    preserving Format 1.0 and separate per-occurrence work records.
-  acceptance_criteria:
-  - Bilingual editor-only examples separate reusable Note templates and two independent
-    Task occurrences.
-  - Explicit single-file root selection retains IDs/title/body/source line/parent
-    hierarchy in input order without mutation.
-  - Strict profile rejects duplicate/missing/ambiguous references, invalid fields/choices,
-    unreachable steps and components without an end route; exit-capable cycles warn.
-  - Deterministic text/Mermaid/DOT output shares transition meaning, escapes unsafe
-    data, bounds resources and refuses all output on error.
-  - Generic check/custom-key W106 and serialization, links/VM/flow/timezone semantics
-    remain compatible.
-  - Traceability/capability/approval/test evidence is recorded; run/persistence/Web
-    are remaining stages.
-  constraints:
-  - No arbitrary execution, network requests, run log creation or Task mutation.
-  - No generic parser/validator/Format changes or new required dependencies.
-  - No public JSON schema in this stage.
-  owner: Eruhitsuji
+  - id: req-procedure-guidance-v1
+    kind: ADDED
+    statement: Support opt-in human procedure definitions through bounded read-only
+      projection, strict human-choice graph validation and text/Mermaid/DOT CLI output,
+      preserving Format 1.0 and separate per-occurrence work records.
+    acceptance_criteria:
+      - Bilingual editor-only examples separate reusable Note templates and two independent
+        Task occurrences.
+      - Explicit single-file root selection retains IDs/title/body/source line/parent
+        hierarchy in input order without mutation.
+      - Strict profile rejects duplicate/missing/ambiguous references, invalid fields/choices,
+        unreachable steps and components without an end route; exit-capable cycles
+        warn.
+      - Deterministic text/Mermaid/DOT output shares transition meaning, escapes unsafe
+        data, bounds resources and refuses all output on error.
+      - Generic check/custom-key W106 and serialization, links/VM/flow/timezone semantics
+        remain compatible.
+      - Traceability/capability/approval/test evidence is recorded; run/persistence/Web
+        are remaining stages.
+    constraints:
+      - No arbitrary execution, network requests, run log creation or Task mutation.
+      - No generic parser/validator/Format changes or new required dependencies.
+      - No public JSON schema in this stage.
+    owner: Eruhitsuji
+  - id: req-procedure-run-v1
+    kind: ADDED
+    statement: Guide explicit human actions using independent closed native run events,
+      deterministic replay, exact CAS preconditions and operator-recoverable single-log
+      commits without executing instructions.
+    owner: Eruhitsuji
+    acceptance_criteria:
+      - Pure transition table enforces action/choice/end/pause/resume/finish/abandon
+        and hard hop/visit guards.
+      - Closed procedure-event-v1 envelope rejects missing/duplicate/out-of-order/cross-run/unknown
+        schema/digest/choice/guard/binding errors; roundtrip preserves events.
+      - Start freezes IDs/kinds/edges only; source changes block continuation but
+        retain read-only replay/pause/abandon.
+      - One operation commits one event via existing CAS/journal; two writers yield
+        one winner, duplicate request cannot reapply, interrupted commits require
+        explicit existing operator recovery.
+      - Read-only show/list/request receipts create no log and show original receipt
+        sequence; CLI writes require reviewed revision/run/step/sequence/actor/request
+        preconditions.
+      - No template/task mutation, secrets/body/title/URL/command-output copy, external
+        action/network call, new required dependency or generic schema/Format change.
+    constraints:
+      - Bounded separate regular event-only UTF-8 log and per-run/event size limits.
+      - CLI attribution is not server authentication; Web remains stage 3.
+      - No claim of portable cross-file atomicity or authenticated tamper-proof audit.
 open_questions:
-- Exact event schema and authenticated Web actor/ownership mapping are stage 2/3 deliverables
-  before those tasks are Ready.
+  - Server-authenticated actor/ownership contract is required for stage 3 Web writes;
+    no trust is inferred from a request body.

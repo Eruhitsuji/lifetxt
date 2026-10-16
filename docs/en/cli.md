@@ -237,8 +237,8 @@ including its `--json` machine-readable form for scripts and AI clients.
 | Category | Commands |
 |---|---|
 | Getting Started / Daily | `tour`, `help`, `init`, `quick` (`add`), `today`, `next`, `agenda`, `show`, `edit`, `done`, `complete`, `progress`, `clone`, `reopen`, `due`, `review`, `assist`, `state`, `start`, `stop`, `assign`, `timer`, `notify` |
-| Query / Explore | `filter`, `list`, `search`, `find`, `query`, `view`, `summary`, `inbox`, `health`, `temporal`, `timeline`, `history-check`, `thread`, `lifecycle-stats`, `freebusy`, `flow`, `procedure`, `count`, `status`, `recent`, `item-uri`, `notes` |
-| Projects / People / Collaboration | `project`, `portfolio`, `area`, `person`, `group`, `who`, `message`, `proposal`, `ticket`, `version`, `sprint` |
+| Query / Explore | `filter`, `list`, `search`, `find`, `query`, `view`, `summary`, `inbox`, `health`, `temporal`, `timeline`, `history-check`, `thread`, `lifecycle-stats`, `freebusy`, `flow`, `count`, `status`, `recent`, `item-uri`, `notes` |
+| Projects / People / Collaboration | `project`, `procedure`, `portfolio`, `area`, `person`, `group`, `who`, `message`, `proposal`, `ticket`, `version`, `sprint` |
 | Structure / Data Integrity | `check`, `integrity`, `maintenance`, `storage`, `ids`, `links`, `backlinks`, `sources`, `tag`, `lint`, `deps`, `diff`, `snapshot`, `undo`, `cleanup`, `files` |
 | Import / Export / Reports | `convert`, `import`, `export`, `import-ics`, `sync-ics`, `to-json`, `to-jsonl`, `to-csv`, `from-json`, `from-jsonl`, `from-csv`, `from-markdown`, `from-todo`, `to-ics`, `markdown`, `stats`, `plot`, `export-heatmap`, `standup`, `invoice`, `share`, `digest`, `report` |
 | Interfaces / Integration | `tui`, `fzf`, `web`, `serve`, `mcp`, `ai`, `completion`, `git-hook`, `watch`, `remote` |
@@ -4595,4 +4595,4 @@ See [Web transport security](web-transport-security.md) for deployment and upgra
 
 ### Human procedure definitions (`procedure`)
 
-Read-only `procedure show FILE --id ROOT` and `procedure graph FILE --id ROOT --format text|mermaid|dot` validate and display an opt-in procedure. See [Human procedure guidance](procedure-guidance.md) for examples, limits and diagnostics. No run/execution command is provided in this stage.
+Read-only `procedure show FILE --id ROOT` and `procedure graph FILE --id ROOT --format text|mermaid|dot` validate and display an opt-in procedure. See [Human procedure guidance](procedure-guidance.md) for examples, limits and diagnostics. Local `procedure run start|show|next|choose|pause|resume|finish|abandon` provides explicit human guidance with a separate CAS/event log; see the guide for mandatory revision/actor/request/step preconditions.

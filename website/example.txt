@@ -1,0 +1,5 @@
+[ ] T "Plan next week" due:2026-10-19
+[ ] E "Design review" on:2026-10-20
+[N] N "An idea worth keeping"
+| Start small. Keep the context.
+[x] T "Make a first record" done:2026-10-16

@@ -1,0 +1,406 @@
+{
+  "ja": {
+    "nav": [
+      "ホーム",
+      "できること",
+      "使い方の例",
+      "はじめる",
+      "ダウンロード",
+      "ドキュメント"
+    ],
+    "skip": "本文へ移動",
+    "start": "小さくはじめる",
+    "download": "ダウンロード",
+    "docs": "技術ドキュメント",
+    "guide": "初心者ガイド",
+    "releases": "公式リリース",
+    "switch": "English",
+    "eyebrow": "YOUR LIFE. IN TEXT. CONNECTED.",
+    "headline": "人生の記録を、あなたの手元に。",
+    "intro": "タスクも、予定も、日々の気づきも。lifetxtは、過去・現在・未来の記録を、長く読めるテキストでつなぐための土台です。",
+    "sample": "ひとつのlife.txt。アプリが変わっても、読める記録。",
+    "notice": "このサイトは製品紹介と導入の入口です。life.txtの編集やWeb UIの実行は、あなたが用意した環境で行います。ここに記録を入力・送信する機能はありません。",
+    "privacy": "このサイトに分析SDK・追跡Cookieはありません。リンク先はGitHubなどの外部サービスです。",
+    "cards_title": "道具を選べる。記録はつながる。",
+    "pages": {
+      "index": [
+        "あなたが所有する、テキストの記録。",
+        "読む・探す・持ち運ぶ。ひとつのアプリに閉じ込めず、自分の記録を使い続けるために。",
+        [
+          [
+            "01 / TEXT",
+            "読めることが、強さになる。",
+            "life.txtはプレーンテキスト。対応アプリがなくても、テキストエディタで内容を確かめられます。",
+            "get-started",
+            "最初の一行へ"
+          ],
+          [
+            "02 / TIME",
+            "過去・現在・未来をつなぐ。",
+            "完了したこと、今の予定、これからの意図。同じ記録の中で、文脈を残せます。",
+            "features",
+            "できることを見る"
+          ],
+          [
+            "03 / CHOICE",
+            "自分に合う入口から。",
+            "テキストエディタ、CLI、TUI、Web UI、Desktop。必要な道具を選び、同じ形式を使えます。",
+            "use-cases",
+            "利用シーンを見る"
+          ]
+        ]
+      ],
+      "features": [
+        "記録を中心に、道具を選ぶ。",
+        "life.txtを基準に、必要な機能から取り入れられます。各機能の条件・制約は技術ドキュメントで確認できます。",
+        [
+          [
+            "01 / RECORD",
+            "タスク・予定・メモ",
+            "一行を基本に、状態や日付、補足を記録。最小限から始め、必要に応じて表現を広げられます。",
+            "doc:getting-started.md",
+            "基本の書き方"
+          ],
+          [
+            "02 / INTERFACES",
+            "ひとつの形式、複数の入口",
+            "CLIやTUI、ローカルで実行するWeb UIなどから利用できます。使う機能に応じたセットアップが必要です。",
+            "doc:use-cases.md",
+            "環境別の使い方"
+          ],
+          [
+            "03 / CONTEXT",
+            "AIと使うときも、自分が主役",
+            "AI/MCP連携の仕組みを用意。開示する情報や接続範囲は、利用する環境と連携設定に合わせて選びます。",
+            "doc:ai-integration.md",
+            "AI連携を確認"
+          ],
+          [
+            "04 / PORTABILITY",
+            "読み続けられる記録",
+            "プレーンテキストを土台にし、ツールやUIより長く記録を使えることを目指しています。",
+            "doc:philosophy.md",
+            "設計理念を読む"
+          ]
+        ]
+      ],
+      "use-cases": [
+        "あなたの環境に合わせて。",
+        "まずは小さな運用から。全機能を使うことを前提にしません。",
+        [
+          [
+            "01 / EDITOR",
+            "エディタだけの環境で",
+            "利用が認められたテキストエディタで、タスクと予定を管理。インストール不要の運用例もあります。",
+            "doc:text-editor-only-workflow.md",
+            "エディタだけの運用"
+          ],
+          [
+            "02 / DAILY",
+            "日々の記録と振り返りに",
+            "タスク、予定、メモを少しずつ記録。初心者ガイドの小さな語彙から始められます。",
+            "doc:getting-started.md",
+            "初心者ガイド"
+          ],
+          [
+            "03 / TOOLS",
+            "開発や自分の道具と一緒に",
+            "CLI・Web・AI連携など、用途に合うセットアップを選べます。利用条件は各ガイドを確認してください。",
+            "doc:use-cases.md",
+            "セットアップ例"
+          ]
+        ]
+      ],
+      "get-started": [
+        "最初は、一行でいい。",
+        "まずlife.txtをテキストエディタで開くところから。専用アプリやアカウントは、形式を試すための必須条件ではありません。",
+        [
+          [
+            "01 / CREATE",
+            "life.txtを作る",
+            "テキストエディタでlife.txtというファイルを作ります。下の例は架空の記録です。",
+            "sample",
+            "サンプルを開く"
+          ],
+          [
+            "02 / WRITE",
+            "一行だけ書いてみる",
+            "[ ] T \"Plan next week\" のように、未完了のタスクを一つ。状態・種類・引用符付きのタイトルから始めましょう。",
+            "doc:getting-started.md",
+            "書き方を学ぶ"
+          ],
+          [
+            "03 / GROW",
+            "必要な道具を足す",
+            "CLIを導入したら lifetxt tour で例を体験できます。追加機能やインストール方法は公式ガイドへ。",
+            "download",
+            "インストールを選ぶ"
+          ]
+        ]
+      ],
+      "download": [
+        "使いたい入口を選ぶ。",
+        "配布物はGitHub Releasesで確認できます。OS・CPU・導入方法ごとの対応状況は、配布ガイドを正本とします。",
+        [
+          [
+            "01 / RELEASES",
+            "公式リリースから",
+            "利用する版と配布物、リリースノートを確認します。バイナリやDesktopの署名・対応環境などの制約も配布ガイドで確認してください。",
+            "releases",
+            "リリース一覧"
+          ],
+          [
+            "02 / PYTHON",
+            "Pythonから使う",
+            "Python環境での導入方法とオプション機能は配布ガイドへ。開発用のインストールと利用者向けの導入を区別しています。",
+            "doc:distribution.md",
+            "配布ガイド"
+          ],
+          [
+            "03 / NO INSTALL",
+            "まず形式だけ試す",
+            "専用ソフトをインストールする前に、テキストエディタだけでlife.txtを試せます。",
+            "get-started",
+            "最初の一行へ"
+          ]
+        ]
+      ],
+      "documentation": [
+        "詳しく知りたいときに。",
+        "仕様・操作・運用の正本はリポジトリのドキュメントです。このサイトでは導入に必要な入口を案内します。",
+        [
+          [
+            "01 / BASICS",
+            "初心者ガイド",
+            "最小限の文法と、日常的な使い方を段階的に学びます。",
+            "doc:getting-started.md",
+            "ガイドを読む"
+          ],
+          [
+            "02 / REFERENCE",
+            "仕様と操作",
+            "Format 1.0の構文やデータの読み方を確認します。",
+            "doc:life_txt_format_spec.md",
+            "形式仕様へ"
+          ],
+          [
+            "03 / PHILOSOPHY",
+            "なぜテキストなのか",
+            "情報を自分で所有し、過去・現在・未来をつなぐための考え方。",
+            "doc:philosophy.md",
+            "理念を読む"
+          ],
+          [
+            "04 / ALL DOCS",
+            "ドキュメント一覧",
+            "CLI・Web・AI連携など、必要な機能の仕様と制約を探せます。",
+            "docs",
+            "一覧を開く"
+          ]
+        ]
+      ]
+    }
+  },
+  "en": {
+    "nav": [
+      "Home",
+      "Features",
+      "Use cases",
+      "Get started",
+      "Download",
+      "Documentation"
+    ],
+    "skip": "Skip to content",
+    "start": "Start small",
+    "download": "Download",
+    "docs": "Technical docs",
+    "guide": "Beginner guide",
+    "releases": "Official releases",
+    "switch": "日本語",
+    "eyebrow": "YOUR LIFE. IN TEXT. CONNECTED.",
+    "headline": "Your life record. In your hands.",
+    "intro": "Tasks, plans, and everyday discoveries. lifetxt is a text-native, user-owned foundation for connecting records of your past, present, and future.",
+    "sample": "One life.txt. A readable record, even when your tools change.",
+    "notice": "This website introduces lifetxt and helps you get started. Editing life.txt and running the Web UI happen in an environment you set up. This site has no record entry or upload feature.",
+    "privacy": "No analytics SDKs or tracking cookies on this site. Links lead to external services such as GitHub.",
+    "cards_title": "Choose your tools. Keep your context.",
+    "pages": {
+      "index": [
+        "A text record you can own.",
+        "Read it. Search it. Take it with you. Keep using your records across tools and interfaces.",
+        [
+          [
+            "01 / TEXT",
+            "Readable by design.",
+            "life.txt is plain text. You can inspect your records with a text editor, even without a dedicated app.",
+            "get-started",
+            "Write your first line"
+          ],
+          [
+            "02 / TIME",
+            "Past, present, and future.",
+            "What you finished, what is happening, and what you intend to do can share a record and its context.",
+            "features",
+            "Explore features"
+          ],
+          [
+            "03 / CHOICE",
+            "Start your way.",
+            "Text editor, CLI, TUI, Web UI, or Desktop. Choose the tools you need around the same format.",
+            "use-cases",
+            "Find your use case"
+          ]
+        ]
+      ],
+      "features": [
+        "Your records at the center.",
+        "Start with the features you need, with life.txt as the foundation. Technical guides describe each feature’s setup and limitations.",
+        [
+          [
+            "01 / RECORD",
+            "Tasks, events, and notes",
+            "Start with a line, then add status, dates, and context. Learn more of the format when you need it.",
+            "doc:getting-started.md",
+            "Learn the basics"
+          ],
+          [
+            "02 / INTERFACES",
+            "One format, several interfaces",
+            "Use the CLI, TUI, or a Web UI you run in your own environment. Each interface has its own setup requirements.",
+            "doc:use-cases.md",
+            "Choose a setup"
+          ],
+          [
+            "03 / CONTEXT",
+            "Use AI on your terms",
+            "AI/MCP integration is available. Choose what to disclose and connect according to your environment and integration settings.",
+            "doc:ai-integration.md",
+            "Read the AI guide"
+          ],
+          [
+            "04 / PORTABILITY",
+            "Records that remain readable",
+            "Plain text is the foundation for records intended to outlast any particular tool or interface.",
+            "doc:philosophy.md",
+            "Read the philosophy"
+          ]
+        ]
+      ],
+      "use-cases": [
+        "Fit your environment.",
+        "Begin with a small workflow. You do not need to adopt every feature.",
+        [
+          [
+            "01 / EDITOR",
+            "In a text-editor-only environment",
+            "Manage tasks and plans with an approved text editor. An installation-free workflow is documented.",
+            "doc:text-editor-only-workflow.md",
+            "Editor-only workflow"
+          ],
+          [
+            "02 / DAILY",
+            "For daily records and reflection",
+            "Capture tasks, events, and notes a little at a time, starting with the beginner guide’s small vocabulary.",
+            "doc:getting-started.md",
+            "Beginner guide"
+          ],
+          [
+            "03 / TOOLS",
+            "Alongside your own tools",
+            "Choose a CLI, Web, or AI setup for your work. Check the guides for the conditions of each interface.",
+            "doc:use-cases.md",
+            "Explore setups"
+          ]
+        ]
+      ],
+      "get-started": [
+        "One line is enough to begin.",
+        "Start by opening life.txt in a text editor. A dedicated app or account is not a prerequisite for trying the format.",
+        [
+          [
+            "01 / CREATE",
+            "Create life.txt",
+            "Create a file called life.txt in a text editor. The example below is synthetic sample data.",
+            "sample",
+            "Open the sample"
+          ],
+          [
+            "02 / WRITE",
+            "Write one line",
+            "Try [ ] T \"Plan next week\" for one open task. Start with a status, type, and quoted title.",
+            "doc:getting-started.md",
+            "Learn the syntax"
+          ],
+          [
+            "03 / GROW",
+            "Add tools as you need them",
+            "After installing the CLI, try lifetxt tour for a small demonstration. Find installation and optional features in the official guide.",
+            "download",
+            "Choose an installation"
+          ]
+        ]
+      ],
+      "download": [
+        "Choose your starting point.",
+        "Find release artifacts on GitHub Releases. The distribution guide is authoritative for OS, architecture, installation paths, and their current limitations.",
+        [
+          [
+            "01 / RELEASES",
+            "Official release artifacts",
+            "Choose a version, review its artifacts and release notes. Check signing and platform limitations for binaries and Desktop in the distribution guide.",
+            "releases",
+            "Browse releases"
+          ],
+          [
+            "02 / PYTHON",
+            "Use a Python environment",
+            "See the distribution guide for installation and optional features. End-user installation is separate from an editable contributor setup.",
+            "doc:distribution.md",
+            "Distribution guide"
+          ],
+          [
+            "03 / NO INSTALL",
+            "Try the format first",
+            "Before installing dedicated software, try life.txt with a text editor.",
+            "get-started",
+            "Write your first line"
+          ]
+        ]
+      ],
+      "documentation": [
+        "Go deeper when you need to.",
+        "The repository documentation is the source of truth for specifications and operations. This site provides an introduction and useful entry points.",
+        [
+          [
+            "01 / BASICS",
+            "Beginner guide",
+            "Learn the smallest useful syntax and build up to daily use.",
+            "doc:getting-started.md",
+            "Read the guide"
+          ],
+          [
+            "02 / REFERENCE",
+            "Format reference",
+            "Check the syntax and interpretation of life.txt Format 1.0.",
+            "doc:life_txt_format_spec.md",
+            "Format specification"
+          ],
+          [
+            "03 / PHILOSOPHY",
+            "Why plain text?",
+            "The thinking behind user-owned information and connected past, present, and future records.",
+            "doc:philosophy.md",
+            "Read the philosophy"
+          ],
+          [
+            "04 / ALL DOCS",
+            "All documentation",
+            "Find CLI, Web, AI integration, and other feature guides and limitations.",
+            "docs",
+            "Browse documentation"
+          ]
+        ]
+      ]
+    }
+  }
+}

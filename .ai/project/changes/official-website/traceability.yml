@@ -1,0 +1,7 @@
+schema_version: 1
+links:
+- requirement_id: req-official-website-v1
+  capability_id: cap-official-website
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1351
+  pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1354
+  status: implemented

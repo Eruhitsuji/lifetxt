@@ -2,6 +2,20 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-official-website-v1
+      capability_id: cap-official-website
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1350
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1351
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1354
+      changed_files_or_scope:
+        - website/ and dependency-free build/check scripts
+        - tests/test_website.py and official-website change package
+      tests_or_evidence:
+        - 22 website/traceability/package tests passed
+        - Local real HTTP Chromium both languages, six pages, three viewport widths
+        - Actual parser accepts synthetic website/example.txt (4 records)
+      release_or_deployment: null
+      status: implemented
     - requirement_id: req-procedure-web-run-v1
       capability_id: cap-procedure-guidance
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1332

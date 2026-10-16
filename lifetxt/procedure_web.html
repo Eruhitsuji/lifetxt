@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Procedures · life.txt</title><style>__PROCEDURE_CSS__</style></head>
+<body>
+<header><a href="/">life.txt</a><h1 data-text="title">Procedures</h1><select id="language" aria-label="Language"><option value="en">English</option><option value="ja">日本語</option></select></header>
+<main>
+<p class="notice" data-text="notice">Definition browsing only. Reading a step does not perform or complete work.</p>
+<p id="feedback" role="status" aria-live="polite"></p>
+<button id="reload" type="button" data-text="reload">Reload definitions</button>
+<div class="layout"><nav aria-label="Procedures"><h2 data-text="list">Definitions</h2><ul id="catalog"></ul></nav>
+<article id="definition" hidden aria-labelledby="root-title">
+<h2 id="root-title" tabindex="-1"></h2><p id="meta"></p><div id="root-body" class="body"></div><ul id="warnings" class="warnings"></ul>
+<section aria-labelledby="flow-title"><h3 id="flow-title" data-text="flow">Flowchart</h3><p data-text="flowNote">Select a node to read its instruction. The numbered text below includes every transition.</p><div id="flow" class="flow"></div></section>
+<section aria-labelledby="steps-title"><h3 id="steps-title" data-text="steps">Steps and transitions</h3><ol id="steps"></ol></section>
+<details><summary data-text="exports">Text / Mermaid / DOT</summary><label for="format" data-text="format">Format</label> <select id="format"><option value="text">Text</option><option value="mermaid">Mermaid</option><option value="dot">DOT</option></select><pre id="export" tabindex="0"></pre></details>
+</article></div>
+<noscript>This view requires JavaScript. Use lifetxt procedure show / graph at a terminal, or read the life.txt definitions directly.</noscript>
+</main><script>__PROCEDURE_JS__</script></body></html>

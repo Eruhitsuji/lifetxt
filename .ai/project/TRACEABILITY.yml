@@ -2,6 +2,22 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-procedure-web-read-v1
+      capability_id: cap-procedure-guidance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1332
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1342
+      pull_request: null
+      changed_files_or_scope:
+        - lifetxt/procedure_web.py and procedure_web.html/css/js
+        - bounded read_procedure_source extraction and minimal Web route/nav/package wiring
+        - GET-only procedure revision boundary in surface_runtime.py
+        - tests/test_procedure_web.py
+        - bilingual guide and procedure-guidance change package
+      tests_or_evidence:
+        - tests.test_procedure_web HTTP projection/auth/bounds/non-mutation
+        - existing procedure CLI and Web regression tests
+      release_or_deployment: null
+      status: implemented
     - requirement_id: req-procedure-run-v1
       capability_id: cap-procedure-guidance
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1332

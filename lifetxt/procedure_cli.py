@@ -62,7 +62,7 @@ def register_procedure(subparsers):
         parser.set_defaults(func=command_procedure)
 
 
-def read_definition(path, root_id, *, id_key="id"):
+def read_procedure_source(path):
     """Bound the read before parsing, keeping the exact source-byte hash.
 
     hash_bytes is the same SHA-256 primitive as read_text_snapshot; a bounded
@@ -131,11 +131,16 @@ def read_definition(path, root_id, *, id_key="id"):
     ]
     if errors:
         raise ProcedureError(errors)
+    return items, hash_bytes(raw)
+
+
+def read_definition(path, root_id, *, id_key="id"):
+    items, revision = read_procedure_source(path)
     projection = project_definition(
         items,
         root_id,
         source=os.path.basename(path),
-        template_revision=hash_bytes(raw),
+        template_revision=revision,
         id_key=id_key,
     )
     return validate_definition(projection)

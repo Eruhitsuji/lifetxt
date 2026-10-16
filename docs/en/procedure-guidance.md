@@ -206,3 +206,51 @@ bounded by log/event/control-plan sizes; traversals use the bounded graph.
 Web run controls, server-authenticated actor ownership, Remote/MCP access and
 external action execution are not part of this stage. Web is the final planned PR;
 arbitrary automatic action execution remains outside the Epic.
+
+## Web definition browser (stage 3 read-only)
+
+Start the usual local Web server with the definition file among its inputs:
+
+```sh
+python -m lifetxt serve examples/procedure-flow-en.txt
+```
+
+Open **More → Procedures / 手順書**, or `/procedures`. Select a definition to
+read the hierarchy, plain-text instructions, incoming/outgoing transitions and
+warnings. The flowchart links to the full step list. Up to 80 steps / 160 edges
+are drawn as SVG; larger supported definitions use the complete text alternative
+(up to 500 steps). The format selector shows the same Text/Mermaid/DOT as the CLI.
+No external renderer, CDN, Markdown, URL action or instruction is executed.
+
+The URL retains `source` (an opaque configured-source token), `id` (root ID) and
+optional `lang=en|ja`. Reload obtains the current source revision. Source tokens
+select only server-configured inputs; they are identifiers, not authorization or
+anonymity guarantees. A record link uses the existing `/?id=...` route; duplicate
+workspace IDs remain subject to the existing record route's ambiguity checks.
+The source/root-specific procedure URL disambiguates definitions across files.
+
+| GET route | Result |
+| --- | --- |
+| `/procedures` | Dedicated browser with desktop/mobile and keyboard text alternatives |
+| `/api/procedures` | `procedure-catalog-v1`: roots, validity, warnings, opaque sources and unavailable sources |
+| `/api/procedures/{source}/{root_id}` | `procedure-v1`: definition-only root/steps/edges, template revision, diagnostics and CLI renderings |
+
+Existing Web Bearer authentication applies to all three routes when configured;
+this page does not introduce a separate login or persist credentials. It follows
+the same authenticated deployment arrangement as the existing Planner page.
+Read-only servers can browse definitions. Invalid definitions fail closed (422),
+unknown source tokens return 404, and unsafe methods are rejected (405, or the
+existing read-only/auth guard's 403/401). No template, Task or procedure-event log
+is written. Existing server startup metrics are independent of these GET routes.
+
+Limits: 64 configured sources, 100 roots in the catalog, 1 MiB catalog JSON,
+2 MiB detail JSON, and the existing 10 MiB source / 10,000 records / 500 steps /
+2,000 edges / depth 32 admission bounds. Reduce configured inputs or split large
+definitions on a limit error. Catalog sources with invalid syntax are shown as
+unavailable; profile-invalid roots remain listed with diagnostics. Missing API
+support displays a message and leaves the existing Items and Planner available.
+
+Web run controls remain gated on owner decision W1 in the
+[server actor/ownership proposal](../../.ai/project/changes/procedure-guidance/web-write-contract.md).
+They are not included in this draft. After approval the same final PR will add
+them; the existing explicit CLI run operations remain available now.

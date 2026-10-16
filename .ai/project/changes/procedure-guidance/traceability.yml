@@ -60,10 +60,25 @@ links:
       - old procedure/parser/VM/flow and shared journal/mutation regressions
     release_or_deployment: null
     status: implemented
+  - requirement_id: req-procedure-web-read-v1
+    capability_id: cap-procedure-guidance
+    epic: https://github.com/Eruhitsuji/lifetxt/issues/1332
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1342
+    pull_request: null
+    changed_files_or_scope:
+      - lifetxt/procedure_web.py and procedure_web.html/css/js
+      - bounded read_procedure_source extraction and minimal Web route/nav/package wiring
+      - GET-only procedure revision boundary in surface_runtime.py
+      - tests/test_procedure_web.py
+      - bilingual guide and procedure-guidance change package
+    tests_or_evidence:
+      - tests.test_procedure_web HTTP projection/auth/bounds/non-mutation
+      - tests.test_procedure_web_browser real HTTP/mobile/keyboard/XSS/large graph
+      - existing procedure CLI and Web regression tests
+    release_or_deployment: null
+    status: implemented
 gaps:
-  - description: Web read/run controls and authenticated server actor binding remain
-      stage 3.
+  - description: Web run controls await server actor/ownership decision W1; Web read is implemented.
     tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1343
-  - description: Independent latest-head implementation/integration review pending
-      for stage 2.
-    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1340
+  - description: Independent latest-head implementation/security/integration review pending for stage 3.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1342

@@ -163,3 +163,46 @@ replayの入力はログ/event/control planの上限で制限し、遷移は上�
 
 Web実行画面・server認証済みactorの本人性・Remote/MCPは本段階に含みません。
 Webは最後のPR、任意の外部自動実行は引き続きEpic外です。
+
+## Webで手順の定義を閲覧する（第3段階・読取り専用）
+
+通常のWebサーバーの入力に手順定義ファイルを指定します。
+
+```sh
+python -m lifetxt serve examples/procedure-flow-ja.txt
+```
+
+**More → Procedures / 手順書**、または `/procedures` を開き、手順を選びます。
+階層・説明・前後の遷移・警告を確認できます。フローチャートのノードを選ぶと、
+対応するステップの説明へ移動します。80ステップ・160辺までをSVGで描画し、
+それより大きい有効な定義は全ステップ・遷移のテキスト一覧で表示します（最大500ステップ）。
+形式の選択でCLIと同じテキスト・Mermaid・DOTを確認できます。
+外部レンダラー・CDN・Markdown・URL操作や指示内容の実行は行いません。
+
+URLには `source`（設定済みファイルの識別トークン）、`id`（root ID）、任意の
+`lang=en|ja` が残ります。再読み込みで最新の定義・改訂を取得します。
+sourceトークンは設定済み入力の識別子であり、認可や匿名化の保証ではありません。
+レコードを開くリンクは既存の `/?id=...` を使います。複数ファイルの同名IDは
+既存レコード画面の重複検査に従います。手順URL自体はsource/rootで区別します。
+
+| GETルート | 内容 |
+| --- | --- |
+| `/procedures` | PC・スマホ・キーボードに対応する専用閲覧画面 |
+| `/api/procedures` | `procedure-catalog-v1`：root一覧・妥当性・警告・source識別子・読めないsource |
+| `/api/procedures/{source}/{root_id}` | `procedure-v1`：定義のroot・step・辺・改訂・診断・CLIと同じ出力 |
+
+既存WebのBearer認証設定がある場合、3ルートとも同じ認証を適用します。
+別のログイン方式や認証情報の保存は追加せず、既存Plannerと同じ認証済み配置で利用します。
+読取り専用サーバーでも閲覧できます。不正定義は422、未知のsourceは404、
+書込みメソッドは405です（既存の読取り専用・認証ガードが先に403/401を返す場合があります）。
+定義・通常Task・procedure-eventログは更新しません。既存サーバー起動時のmetricsとは別です。
+
+上限：設定済みsource 64、一覧のroot 100、一覧JSON 1 MiB、詳細JSON 2 MiB。
+既存の入力10 MiB・10,000レコード・500ステップ・2,000辺・階層32の制限も適用します。
+上限エラー時は入力を減らすか定義を分割してください。構文が不正なsourceは読取不可、
+プロファイルが不正なrootは診断付きで一覧に表示します。
+API未対応のサーバーでは案内を表示し、既存Items・Plannerへの導線を維持します。
+
+Webのrun操作は、[サーバー実施者・所有権の具体案W1](../../.ai/project/changes/procedure-guidance/web-write-contract.md)
+の承認待ちで、このDraftには含みません。承認後に同じ最終PRへ追加します。
+現在利用できるCLIの明示的なrun操作は引き続き使用できます。

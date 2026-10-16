@@ -26,3 +26,12 @@
   publishing code as if it were still a supported path.
 - Actual successful preflight is recorded in the prior integration/fix packages.
   Independent review results are not invented from human merge messages.
+- Cutover also reads legacy GHCR alias indexes emitted by docker/metadata-action
+  raw v-prefixed tags and BuildKit attestations. Read/hash both runnable platform
+  manifests/configs and normalize only the leading tag v before the existing
+  numeric parser. Ignore only explicit unknown/unknown attestation descriptors
+  referencing those exact runnable manifests; reject unknown/unbound descriptors
+  and mixed platform versions. This fixture is derived from the old workflow and
+  upstream contracts, not a claim that the live legacy registry graph was read.
+  Sources: https://github.com/docker/metadata-action and
+  https://docs.docker.com/build/metadata/attestations/attestation-storage/

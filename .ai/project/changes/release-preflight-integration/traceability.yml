@@ -12,6 +12,6 @@ links:
   status: in_progress
 gaps:
 - Actual native/Actions acceptance completed in run 38822634032 attempt 1; artifact 12014680717 independently rechecked, see verification.yml
-- Parent issue 1310 and issue 1321 retain independent review closeout requirements; preflight is not publication authority
+- Parent issue 1310 and issue 1321 await record-only closeout PR merge; preflight is not publication authority
 - Central approval/publishing/cutover and final-artifact consumer verification belong to issue 1311
-- Independent implementation/integration reviews and human merge approval pending
+- Independent post-merge implementation/integration reviews completed at f70abe4937051c41021f473db000dfb150d97a1f; original human merge completed; record-only PR merge pending

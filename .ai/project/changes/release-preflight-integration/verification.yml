@@ -47,9 +47,26 @@ review_ledger:
   review_type: self-review
   result: completed
   notes: Reviewed API vs producer assertions, all-page selection, attempt/time/expiry binding, exact report validators, Desktop additive toolchain and OCI index distinction, atomic success output, no public mutation. Independent reviews pending.
-- reviewer: independent implementation reviewer
+- reviewer: Separate AI agent /root/preflight_review
   review_type: implementation
-  result: pending
-- reviewer: independent integration reviewer / Eruhitsuji
+  target_commit: f70abe4937051c41021f473db000dfb150d97a1f
+  result: completed
+  finding_count: 0
+  completed_at: "2026-10-16T06:32:00Z"
+  evidence: .ai/project/changes/release-publication/independent-review.md
+  notes: Post-merge independent review of current integrated source; not retroactive pre-merge approval and not human release authority. See report for scope, tests and limitations.
+- reviewer: Separate AI agent /root/integration_review
   review_type: integration
-  result: pending
+  target_commit: f70abe4937051c41021f473db000dfb150d97a1f
+  result: completed
+  finding_count: 0
+  completed_at: "2026-10-16T06:32:00Z"
+  evidence: .ai/project/changes/release-publication/independent-review.md
+  notes: Post-merge independent integration review; 150 targeted test executions passed. No live publication or secret identity verification.
+review_closeout:
+  timing: post_merge
+  implementation_and_integration: completed
+  original_merge: already_performed_by_human
+  record_pr_merge: pending
+  live_publication: not_run
+  release_approval: not_granted

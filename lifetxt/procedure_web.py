@@ -153,6 +153,10 @@ def register_procedure_routes(app):
                 "__PROCEDURE_%s__" % kind.upper(),
                 package.joinpath("procedure_web." + kind).read_text(encoding="utf-8"),
             )
+        text = text.replace(
+            "__PROCEDURE_RUN_JS__",
+            package.joinpath("procedure_run_web.js").read_text(encoding="utf-8"),
+        )
         return HTMLResponse(
             text,
             headers={

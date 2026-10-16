@@ -77,8 +77,22 @@ links:
       - existing procedure CLI and Web regression tests
     release_or_deployment: null
     status: implemented
+  - requirement_id: req-procedure-web-run-v1
+    capability_id: cap-procedure-guidance
+    epic: https://github.com/Eruhitsuji/lifetxt/issues/1332
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1343
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1349
+    changed_files_or_scope:
+      - lifetxt/procedure_run_web.py and procedure_run_web.js
+      - procedure_web HTML/CSS/JS and resource assembly
+      - public shell and procedure-owned source-revision/read snapshot boundaries
+      - bilingual guides and procedure-guidance change package
+    tests_or_evidence:
+      - tests.test_procedure_run_web HTTP auth/closed body/ownership/CAS/receipt fixtures
+      - tests.test_procedure_run_web_browser real HTTP/mobile/keyboard/tabs/lost response/reload
+      - existing procedure core/store/recovery and Web regressions
+    release_or_deployment: null
+    status: implemented
 gaps:
-  - description: Web run controls await server actor/ownership decision W1; Web read is implemented.
+  - description: Latest-head independent implementation/security/integration reviews and CI remain pending.
     tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1343
-  - description: Independent latest-head implementation/security/integration review pending for stage 3.
-    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1342

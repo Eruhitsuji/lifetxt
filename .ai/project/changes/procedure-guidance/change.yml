@@ -1,27 +1,27 @@
 schema_version: 1
 change:
   id: procedure-guidance
-  title: 'Human procedure guidance: Web definition browser and W1 proposal'
+  title: 'Human procedure guidance: Web browsing and authenticated explicit runs'
   status: in_review
   change_type: Feature
   assurance_level: High
   owner: Eruhitsuji
   accountable_owner: Eruhitsuji
-  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1342
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1343
   related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1349
   base_commit: 18d5c905c159d5c2646ef50f48c8b45b0e802733
   target_release: null
 scope:
   in_scope:
     - bounded GET-only Web catalog/projection and dedicated accessible UI
-    - concrete W1 server actor/ownership proposal for approval
+    - owner-approved W1 shared-operator Web run adapter and explicit UI
     - pure bounded transitions
     - closed native event schema and replay
     - single-log CAS with shared durable transaction/recovery
     - explicit local CLI and read-only request receipts
     - bilingual docs and verification/traceability
   out_of_scope:
-    - Web run writes pending W1, Remote/MCP and authentication changes
+    - Remote/MCP and general authentication redesign
     - generic Format/parser/validator/item_event changes
     - arbitrary external execution
     - data migration/deletion, release/deployment
@@ -29,6 +29,9 @@ scope:
     - lifetxt/procedure_web.py and procedure_web.html/css/js
     - minimal webapp.py/surface_runtime.py/web_assets.html/web_assets_js_01.js/pyproject.toml wiring
     - tests/test_procedure_web.py
+    - lifetxt/procedure_run_web.py and procedure_run_web.js
+    - tests/test_procedure_run_web.py and test_procedure_run_web_browser.py
+    - surface_runtime_compat.py procedure-owned read snapshot boundary
     - lifetxt/procedure_transition.py
     - lifetxt/procedure_run_model.py
     - lifetxt/procedure_run_store.py
@@ -50,4 +53,3 @@ scope:
     - .ai/project/TRACEABILITY.yml
 human_approvals_required:
   - Latest-head implementation/integration review and main merge
-  - Server-authenticated Web actor/ownership contract before stage 3 writes

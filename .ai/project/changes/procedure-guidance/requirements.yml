@@ -63,6 +63,28 @@ requirements:
     constraints:
       - No run write or authentication redesign before decision W1 approval.
       - No mandatory dependency, generic Format/Task/Remote/MCP behavior change.
-open_questions:
-  - Server-authenticated actor/ownership contract is required for stage 3 Web writes;
-    no trust is inferred from a request body.
+  - id: req-procedure-web-run-v1
+    kind: ADDED
+    statement: Provide explicit authenticated shared-operator Web runs with server-owned
+      source/log/actor, exact source/log CAS, strict ownership and read-only uncertainty receipts.
+    owner: Eruhitsuji
+    acceptance_criteria:
+      - W1 owner approval is recorded before implementation; servers without a token or with Remote enabled refuse runs.
+      - Bearer authentication, same Origin/Fetch Metadata, bounded closed JSON and source If-Match are required.
+      - Fixed web-shared actor owns only its own same-source/root runs; private paths and other actors are not disclosed.
+      - Only the configured writable source and dedicated sidecar log are admitted; templates/Tasks remain unchanged.
+      - Start/next/choose/pause/resume/finish/abandon are explicit; loops and abandonment need acknowledgement in UI.
+      - Two runs remain independent, two tabs and duplicate clicks cannot duplicate events, and receipt queries never write.
+      - Reload requires reauthentication and restores run ID; tokens never persist in browser storage/URLs/events.
+      - Source changes block continuation while retaining inspection and original pause/abandon; failed writes never auto-retry.
+      - Real HTTP/browser mobile/desktop/keyboard and inherited journal/core regressions are retained.
+    constraints:
+      - Shared credentials denote a shared operator, not separate human authentication.
+      - No Remote/MCP capability, arbitrary execution, new config/dependency, migration, deletion or deployment.
+open_questions: []
+owner_decisions:
+  - id: W1
+    state: approved
+    date: '2026-10-16'
+    evidence: https://github.com/Eruhitsuji/lifetxt/issues/1343
+    contract: web-write-contract.md

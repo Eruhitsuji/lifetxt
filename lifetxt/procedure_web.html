@@ -6,6 +6,8 @@
 <main>
 <p class="notice" data-text="notice">Definition browsing only. Reading a step does not perform or complete work.</p>
 <p id="feedback" role="status" aria-live="polite"></p>
+<form id="operator-login" autocomplete="off"><label for="operator-token" data-run-text="token">Web API token</label> <input id="operator-token" type="password" autocomplete="off" spellcheck="false"><button type="submit" data-run-text="signIn">Sign in</button> <button id="operator-signout" type="button" data-run-text="signOut">Sign out</button><p data-run-text="shared">This token represents one shared operator.</p></form>
+<section id="run-panel" hidden aria-labelledby="run-title"><h2 id="run-title" data-run-text="runTitle">Procedure run</h2><p data-run-text="runNotice">Explicit operations only.</p><p id="run-feedback" role="status" aria-live="polite"></p><p id="run-state" tabindex="-1"></p><div id="run-body" class="body"></div><label for="run-picker" data-run-text="savedRuns">Existing runs</label> <select id="run-picker"></select><div id="run-tools"><button id="run-reload" type="button" data-run-text="runReload">Reload run snapshot</button><button id="run-new" type="button" data-run-text="newRun">Prepare a new run</button><button id="run-receipt" type="button" data-run-text="receipt" hidden>Check original request</button></div><div id="run-actions" aria-label="Run operations"></div></section>
 <button id="reload" type="button" data-text="reload">Reload definitions</button>
 <div class="layout"><nav aria-label="Procedures"><h2 data-text="list">Definitions</h2><ul id="catalog"></ul></nav>
 <article id="definition" hidden aria-labelledby="root-title">

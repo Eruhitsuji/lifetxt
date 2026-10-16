@@ -331,8 +331,96 @@ verification:
       final 9 HTTP tests and real browser E2E above; the full run is evidence for
       the pre-converter 0c83e5c5 code, not a claim of executing that later test.
       Documentation/PR-binding evidence updates do not change runtime behavior.
+  - type: w1_http
+    command: python -m unittest tests.test_procedure_run_web
+    requirement_ids:
+    - req-procedure-web-run-v1
+    source_commit: eadbc035
+    status: passed
+    result: 9 tests OK in 1.616s, no skips. Full explicit lifecycle, Bearer/no-token/
+      Remote/read-only/source policy, closed duplicate-key/bounded JSON, Origin,
+      source If-Match, separate runs, concurrent tabs/duplicate request, original
+      receipt, generated/readonly source, foreign owner and changed ownership
+      during inspection, missing/invalid source disposition, restart sidecar
+      exclusion, and committed-but-uncertain mutation error fixtures.
+  - type: w1_corrupt_journal_http
+    command: python -m unittest tests.test_procedure_run_web
+    requirement_ids:
+    - req-procedure-web-run-v1
+    source_commit: eadbc035
+    working_tree_changes: Test-only extension creates an actual corrupt journal.json
+      in temporary evidence storage and calls the real store through HTTP.
+    status: passed
+    result: 9 tests OK in 1.395s, no skips. Corrupt evidence blocks the next operation,
+      preserves log bytes and journal, and exposes no private journal path.
+  - type: w1_integration
+    command: python -m unittest tests.test_procedure_run_web tests.test_procedure_web
+      tests.test_surface_runtime tests.test_web_transport tests.test_web_assets
+      tests.test_web_i18n tests.test_release_policy
+    requirement_ids:
+    - req-procedure-web-run-v1
+    source_commit: eadbc035
+    status: passed
+    result: 98 tests OK in 13.551s, no skips. Separate procedure/store/transition/model/
+      transport regression set also passed 57 tests in 2.990s. Final ownership-change
+      fixture is additionally covered by w1_http; no existing auth/translation/
+      assembled-page baseline was weakened.
+  - type: w1_real_browser
+    command: PYTHONPATH=<optional Playwright 1.51 install> LIFETXT_BROWSER_BIN=<Chromium
+      Headless Shell> LIFETXT_REQUIRE_PROCEDURE_BROWSER=1 python -m unittest
+      tests.test_procedure_run_web_browser tests.test_procedure_web_browser
+    requirement_ids:
+    - req-procedure-web-run-v1
+    - req-procedure-web-read-v1
+    source_commit: eadbc035
+    status: passed
+    result: 2 real HTTP/browser tests OK in 5.804s, no skips. Mobile 390px Japanese
+      plus desktop 1280px, token not persisted, explicit loop confirmation/start,
+      synchronous double click, keyboard Next, 2-tab CAS refusal and absent receipt,
+      pause/reload/reauthenticate/resume, server commits then response is aborted,
+      original receipt recovery without extra event, finish, independent second run,
+      changed-definition abandonment, sign out, XSS/text/500-step/unsupported API.
+      CSP remained enabled; automation waits use locator assertions rather than eval.
+  - type: w1_static_packaging
+    command: ruff check lifetxt tests scripts; ruff format --check lifetxt/procedure_*.py
+      tests/test_procedure_*.py; mypy --follow-imports=skip --ignore-missing-imports
+      lifetxt/diagnostic_contract.py; python -m lifetxt check examples/minimal_life.txt;
+      pip wheel --no-deps --no-build-isolation and compare packaged Web resources.
+    requirement_ids:
+    - req-procedure-web-run-v1
+    source_commit: eadbc035
+    status: passed
+    result: Lint passed; 22 affected Python files formatted; approved static type
+      boundary passed; minimal 10 items accepted; wheel contains all four procedure
+      HTML/CSS/JS resources byte-for-byte. No release/publish performed.
+  - type: w1_malformed_response_browser
+    command: PYTHONPATH=<optional Playwright> LIFETXT_BROWSER_BIN=<Headless Shell>
+      LIFETXT_REQUIRE_PROCEDURE_BROWSER=1 python -m unittest
+      tests.test_procedure_run_web_browser tests.test_procedure_web_browser
+    requirement_ids:
+    - req-procedure-web-run-v1
+    source_commit: eadbc035
+    working_tree_changes: Client response-shape/receipt binding validation retains
+      the original pending request until the response is proven; browser fixture
+      commits a second run then substitutes a malformed 200 JSON response.
+    status: passed
+    result: 2 tests OK in 4.741s, no skips. Malformed success retains request ID,
+      read-only receipt recovers it, and exactly two independent runs remain.
+      No CSP relaxation or automatic mutation retry.
+  - type: w1_full
+    command: MPLBACKEND=Agg python -m unittest discover
+    requirement_ids:
+    - req-procedure-web-run-v1
+    - req-procedure-web-read-v1
+    source_commit: eadbc035
+    status: passed
+    result: 5826 tests in 406.746s, OK with 76 optional/environment skips.
+      Python runtime code was unchanged during execution. Later client malformed
+      response hardening and actual corrupt-journal fixture are separately covered
+      by w1_malformed_response_browser and w1_corrupt_journal_http; documentation
+      updates only otherwise. Required CI and independent reviews remain separate.
   gaps:
-  - description: Web run controls await W1 owner approval. No Web/Remote/MCP run endpoint is exposed.
+  - description: W1 is approved and Web run controls implemented; independent latest-head implementation/security/integration review remains required.
     tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1343
 review_ledger:
 - reviewer: Eruhitsuji
@@ -355,6 +443,18 @@ review_ledger:
   completed_at: null
 - reviewer: Eruhitsuji
   review_type: stage2_integration
+  target_commit: null
+  result: pending
+  finding_count: null
+  completed_at: null
+- reviewer: Eruhitsuji
+  review_type: stage3_implementation_security
+  target_commit: null
+  result: pending
+  finding_count: null
+  completed_at: null
+- reviewer: Eruhitsuji
+  review_type: stage3_integration
   target_commit: null
   result: pending
   finding_count: null

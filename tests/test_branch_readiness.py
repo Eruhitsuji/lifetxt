@@ -115,7 +115,14 @@ class BranchReadinessTests(unittest.TestCase):
             (".ai/project/RULES.md", "`base=main`", "`base=next`"),
             (".github/workflows/ci.yml", "      - main", "      - next"),
             (".github/workflows/ci.yml", "      - main", "      - main\n      - next"),
-            (".github/workflows/release.yml", '"v*.*.*"', '"next-*"'),
+            (".github/workflows/release.yml", "  workflow_dispatch:", "  push:"),
+            (
+                ".github/workflows/release.yml",
+                "  workflow_dispatch:",
+                "  push:\n    tags: [v*]\n  workflow_dispatch:",
+            ),
+            (".github/workflows/release.yml", "refs/heads/main", "refs/heads/next"),
+            (".github/workflows/release.yml", "  prepare:", "  unguarded:"),
             ("lifetxt/server_update.py", '"--ff-only"', '"--squash"'),
             ("docs/deployment/ubuntu-server.md", '"ref": "main"', '"ref": "next"'),
         ):

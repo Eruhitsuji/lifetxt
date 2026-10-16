@@ -1,6 +1,21 @@
 schema_version: 1
 verification:
   executed:
+  - type: ci-contract-repair
+    command: python -m unittest tests.test_branch_readiness tests.test_ci_workflow_responsibilities tests.test_standalone_binaries_workflow tests.test_release_publication tests.test_release_preflight_core tests.test_git_commit_worker_cli tests.test_traceability_gate tests.test_change_package_closeout
+    status: passed
+    result: 87 tests passed after the prescribed pip install -e . setup. Updates the read-only branch diagnostic to manual-only/main-guarded release preparation; rejects extra push triggers and wrong source branches. Runner regression follows the active standalone preflight; policy/build responsibility tests follow the split producer/publisher flow. Full-project Ruff and changed-file format checks passed. Python 3.12.14/bash; no concurrent source writes during tests.
+    tested_commit: 41e694159cbdfa66daf7671a03a0cb14ec621d84
+  - type: ci-failure-diagnosis
+    command: Inspect all three failed test job logs in Actions run 38830017369
+    status: passed
+    result: Web, no-Web and coverage lanes failed the same five assertions in branch readiness and workflow responsibility/runner tests; all retained obsolete tag-trigger/build-workflow assumptions. Static typing, release documentation, browser and traceability jobs succeeded. No coverage threshold or CI selection relaxed.
+    tested_commit: 3c01a0ff3c5a4196cd4e59702a69d9d6fd0728ae
+  - type: local-full-suite-before-setup
+    command: MPLBACKEND=Agg python -m unittest discover
+    status: failed
+    result: 5730 tests, four failures, 456 skips in 375.716 seconds; all four are existing git_commit_worker_cli subprocess tests reporting No module named lifetxt because editable setup was absent in this fresh environment. Original five CI failures resolved. Prescribed pip install -e . followed by all four CLI tests passed in the 87-test run above. Full output retained in .test-output.log. Python 3.12.14/bash; BashCompletionExecutionTests ran, no concurrent worktree mutation. Tool dependencies were installed during this initial run; this run is not final full-suite acceptance evidence. Required final full suites remain GitHub CI.
+    tested_commit: working tree immediately preceding 41e694159cbdfa66daf7671a03a0cb14ec621d84 (format-only test cleanup followed)
   - type: initial-targeted
     command: python -m unittest tests.test_release_publication
     status: passed

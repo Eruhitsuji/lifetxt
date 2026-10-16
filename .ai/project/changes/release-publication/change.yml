@@ -18,6 +18,8 @@ scope:
   - tests/test_release_publication.py
   - tests/fixtures/release-publication
   - tests/test_{release_pypi_packaging,standalone_binaries_checksum_newline,mini_release_workflow}.py
+  - scripts/check_branch_readiness.py
+  - tests/test_{branch_readiness,ci_workflow_responsibilities,standalone_binaries_workflow}.py
   - docs/{en,ja}/{release-publication,distribution}.md
   - .ai/project/skills/release-distribution-runbook/SKILL.md
   - .ai/project/changes/release-publication

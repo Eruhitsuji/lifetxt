@@ -1,0 +1,6 @@
+[N] N "Maintenance" id:r proc_role:root proc_version:1 proc_start:a
+[N] N "Inspect" id:a parent:r proc_role:step proc_kind:action proc_next:q
+| Read this instruction.
+[N] N "Result" id:q parent:r proc_role:step proc_kind:decision proc_case:yes=e proc_case:no=retry
+[N] N "Retry manually" id:retry parent:r proc_role:step proc_kind:action proc_next:q
+[N] N "End" id:e parent:r proc_role:step proc_kind:end

@@ -207,6 +207,13 @@ def _legacy_main(argv):
 
         return flow_main(argv)
 
+    if cleaned and cleaned[0] == "procedure":
+        # No timezone calculations: admit only the bounded explicit file read.
+        # The generic timezone probe can block on a FIFO before admission.
+        from .procedure_cli import main as procedure_main
+
+        return procedure_main(argv)
+
     from .archive_safety_v3 import archive_safety_context
     from .runtime_safety_v2 import install_cli_timezone_context
 

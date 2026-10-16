@@ -1,0 +1,12 @@
+# Separate work records: never change the reusable template status.
+[x] T "First inspection" id:work1_check ref:check
+[x] T "First backup" id:work1_backup ref:backup
+[x] T "First update" id:work1_update ref:update
+[x] T "First verification" id:work1_verify ref:verify
+| Result yes; first occurrence finished. Backup reference: approved-backup-1.
+[x] T "Second inspection" id:work2_check ref:check
+[/] T "Second backup" id:work2_backup ref:backup
+| Paused after starting backup. Read this note before resuming.
+[ ] T "Second update" id:work2_update ref:update
+[?] T "Second verification" id:work2_verify ref:verify
+| Hold until the backup and update are verified. If result no, read restore.

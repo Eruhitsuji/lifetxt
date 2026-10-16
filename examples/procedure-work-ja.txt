@@ -1,0 +1,12 @@
+# 実施記録は定義と分離し、共通テンプレートの状態は変更しない。
+[x] T "1回目の点検" id:work1_check ref:check
+[x] T "1回目のバックアップ" id:work1_backup ref:backup
+[x] T "1回目の更新" id:work1_update ref:update
+[x] T "1回目の確認" id:work1_verify ref:verify
+| 結果yes、1回目は完了。バックアップ参照: approved-backup-1。
+[x] T "2回目の点検" id:work2_check ref:check
+[/] T "2回目のバックアップ" id:work2_backup ref:backup
+| バックアップ開始後に中断。再開前にこのメモを読み直す。
+[ ] T "2回目の更新" id:work2_update ref:update
+[?] T "2回目の確認" id:work2_verify ref:verify
+| バックアップと更新の確認まで保留。結果noならrestoreを読む。

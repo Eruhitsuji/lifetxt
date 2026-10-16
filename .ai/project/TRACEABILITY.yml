@@ -2,6 +2,29 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-procedure-guidance-v1
+      capability_id: cap-procedure-guidance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1332
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1335
+      related_tasks:
+      - 1334
+      - 1336
+      - 1337
+      pull_request: null
+      changed_files_or_scope:
+      - lifetxt/procedure_*.py
+      - minimal cli.py/entrypoint.py/cli_taxonomy.py wiring
+      - tests/test_procedure_*.py
+      - bilingual docs/examples
+      - changes/procedure-guidance
+      tests_or_evidence:
+        - tests.test_procedure_definition
+        - tests.test_procedure_validation
+        - tests.test_procedure_graph
+        - tests.test_procedure_cli
+        - parser/links/VM/flow/taxonomy regressions
+      release_or_deployment: null
+      status: implemented
     - requirement_id: req-release-publication-integration
       capability_id: cap-distribution-channels
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1308

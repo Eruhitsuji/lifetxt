@@ -1,0 +1,7 @@
+[N] N "サーバー保守" id:r proc_role:root proc_version:1 proc_start:a
+[N] N "状態を点検" id:a parent:r proc_role:step proc_kind:action proc_next:q
+| 稼働状況と空き容量を人間が確認する。
+[N] N "検証結果" id:q parent:r proc_role:step proc_kind:decision proc_case:yes=e proc_case:no=retry
+| 正常ならyes、異常ならnoを人間が選ぶ。
+[N] N "手動で復旧" id:retry parent:r proc_role:step proc_kind:action proc_next:q
+[N] N "完了" id:e parent:r proc_role:step proc_kind:end

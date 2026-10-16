@@ -1,0 +1,45 @@
+schema_version: 1
+verification:
+  executed:
+  - type: compatibility
+    command: Extract first text fence in each bilingual proposal; parse_text; python
+      -m lifetxt check on extracted file, normally and with --warnings-as-errors.
+    requirement_ids:
+    - req-procedure-guidance-v1
+    source_commit: 204fc69e0796a29e8ecf98fa822e64fd866ac028
+    result: 'Both: 7 records, no parse errors, 20 W106 warnings. Normal check exit
+      0; strict check exit 1.'
+    status: passed
+  - type: roundtrip
+    command: Compare status/kind/title/details after item_to_line + parse_text, items_to_json
+      + items_from_json_text, items_to_jsonl + items_from_jsonl_text.
+    requirement_ids:
+    - req-procedure-guidance-v1
+    source_commit: 204fc69e0796a29e8ecf98fa822e64fd866ac028
+    result: Both preserve semantic records including repeated proc_case and body.
+    status: passed
+  - type: regression
+    command: python -m unittest tests.test_roundtrip_golden tests.test_parser_format_metadata
+      tests.test_change_package_closeout
+    requirement_ids:
+    - req-procedure-guidance-v1
+    source_commit: 204fc69e0796a29e8ecf98fa822e64fd866ac028
+    result: 21 tests passed; Python 3.12.14 Linux/bash. Bash completion execution
+      ran, no skips reported. Production tree unchanged during tests.
+    status: passed
+  gaps:
+  - description: Profile semantics/bounds, schema/replay, CAS faults and browser behavior
+      unimplemented and untested.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1332
+review_ledger:
+- reviewer: Eruhitsuji
+  review_type: requirements_and_design
+  target_commit: null
+  result: pending
+  finding_count: null
+  completed_at: null
+release_evidence:
+  migration_notes: None performed; future data contracts need High approval.
+  rollback_plan: Revert docs-only PR; retain future definition/run data when reverting
+    software.
+  operations_evidence: []

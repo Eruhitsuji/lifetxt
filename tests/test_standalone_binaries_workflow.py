@@ -1,4 +1,4 @@
-"""Static contract test for standalone-binaries.yml's macOS Intel runner.
+"""Static contract test for the standalone preflight's macOS Intel runner.
 
 Regression guard for a real bug found by the v1.0.1 release: GitHub retired
 the plain `macos-13` runner label on 2025-12-04, so a build job requesting
@@ -10,7 +10,7 @@ import unittest
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-WORKFLOW = REPO_ROOT / ".github" / "workflows" / "standalone-binaries.yml"
+WORKFLOW = REPO_ROOT / ".github" / "workflows" / "release-preflight-standalone.yml"
 
 
 class StandaloneBinariesRunnerLabelTests(unittest.TestCase):

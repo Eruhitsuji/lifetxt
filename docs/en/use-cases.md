@@ -169,3 +169,7 @@ and confirmation.
 ## Maintenance
 
 Run `check`, `doctor`, and `health` regularly. Preview bulk ID assignment or transformations with `--dry-run`, do not hand-edit generated files, and keep a backup independent of the Git remote.
+
+## Reusable human procedures
+
+[Human procedure guidance](procedure-guidance.md) separates reusable Note templates from independent Task records for each occurrence, and provides optional read-only CLI flowcharts.

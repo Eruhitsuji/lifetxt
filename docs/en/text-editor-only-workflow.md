@@ -159,3 +159,7 @@ organization's rules in life.txt.
 
 Related: [Use cases](./use-cases.md) / [Philosophy](./philosophy.md) /
 [Format specification](./life_txt_format_spec.md)
+
+## Reusable human procedures
+
+[Human procedure guidance](procedure-guidance.md) separates reusable Note templates from independent Task records for each occurrence, and provides optional read-only CLI flowcharts.

@@ -1,0 +1,12 @@
+[N] N "Maintenance instructions" id:manual
+| Read in order: check, backup, update, verify. If verification fails, read restore.
+[N] N "Inspect service" id:check parent:manual
+| Check service health and free space.
+[N] N "Take backup" id:backup parent:manual
+| Record the backup reference in the separate work file. Do not store secrets.
+[N] N "Update manually" id:update parent:manual
+| Perform the authorized update yourself.
+[N] N "Verify result" id:verify parent:manual
+| Success: finish the work record. Failure: read restore, then verify again.
+[N] N "Restore backup manually" id:restore parent:manual
+| Restore the verified backup yourself. If unsure, pause and contact the operator.

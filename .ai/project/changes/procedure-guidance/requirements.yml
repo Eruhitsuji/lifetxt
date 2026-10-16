@@ -2,19 +2,27 @@ schema_version: 1
 requirements:
 - id: req-procedure-guidance-v1
   kind: ADDED
-  statement: Propose a human procedure definition/projection/run/evidence contract
-    without changing Format 1.0.
+  statement: Support opt-in human procedure definitions through bounded read-only
+    projection, strict human-choice graph validation and text/Mermaid/DOT CLI output,
+    preserving Format 1.0 and separate per-occurrence work records.
   acceptance_criteria:
-  - Bilingual canonical example/counterexamples, alternatives and CLI/Web/text-only
-    UX
-  - Source-backed reuse audit distinguishing relation graph, VM, Daily Flow, history
-    and work-session
-  - Measured current check and text/JSON/JSONL roundtrip compatibility
-  - Explicit revisions, event authority, limits, threats and recovery proposals
-  - Child scope/dependency/assurance/test matrix; no implementation before approval
+  - Bilingual editor-only examples separate reusable Note templates and two independent
+    Task occurrences.
+  - Explicit single-file root selection retains IDs/title/body/source line/parent
+    hierarchy in input order without mutation.
+  - Strict profile rejects duplicate/missing/ambiguous references, invalid fields/choices,
+    unreachable steps and components without an end route; exit-capable cycles warn.
+  - Deterministic text/Mermaid/DOT output shares transition meaning, escapes unsafe
+    data, bounds resources and refuses all output on error.
+  - Generic check/custom-key W106 and serialization, links/VM/flow/timezone semantics
+    remain compatible.
+  - Traceability/capability/approval/test evidence is recorded; run/persistence/Web
+    are remaining stages.
   constraints:
-  - No arbitrary shell/HTTP/script/VM/MCP execution
-  - No normative Format/API/schema implementation in Phase 0
+  - No arbitrary execution, network requests, run log creation or Task mutation.
+  - No generic parser/validator/Format changes or new required dependencies.
+  - No public JSON schema in this stage.
   owner: Eruhitsuji
 open_questions:
-- D1-D4 approval pending; exact event field/schema mapping is a gated issue 1339 deliverable.
+- Exact event schema and authenticated Web actor/ownership mapping are stage 2/3 deliverables
+  before those tasks are Ready.

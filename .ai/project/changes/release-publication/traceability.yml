@@ -31,5 +31,5 @@ links:
   evidence: tests.test_release_publication and issue-specific adapter/regression tests
   status: in_progress
 gaps:
-- Independent implementation/integration reviews and human merge pending
-- First live publication and external account settings require separate Release Authority decision
+- Independent post-merge implementation/integration reviews completed at f70abe4937051c41021f473db000dfb150d97a1f; record-only PR merge pending
+- External settings matched maintainer reports; secret-to-token identity and first live publication remain unverified and require a separate Release Authority decision

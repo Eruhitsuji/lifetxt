@@ -49,6 +49,20 @@ requirements:
       - Bounded separate regular event-only UTF-8 log and per-run/event size limits.
       - CLI attribution is not server authentication; Web remains stage 3.
       - No claim of portable cross-file atomicity or authenticated tamper-proof audit.
+  - id: req-procedure-web-read-v1
+    kind: ADDED
+    statement: Browse configured same-file procedure definitions through bounded
+      GET-only Web hierarchy, diagrams, text alternatives and CLI renderings.
+    owner: Eruhitsuji
+    acceptance_criteria:
+      - Configured-source tokens and root IDs select a single definition; no arbitrary path.
+      - Definition status, bodies, hierarchy, choices, previous/next and warnings are visible.
+      - Existing authentication and read-only behavior remain; unsafe methods never mutate.
+      - Output is bounded and untrusted text never becomes HTML, SVG code or executable instructions.
+      - Narrow mobile/desktop/keyboard and unsupported API paths preserve existing Items and Planner.
+    constraints:
+      - No run write or authentication redesign before decision W1 approval.
+      - No mandatory dependency, generic Format/Task/Remote/MCP behavior change.
 open_questions:
   - Server-authenticated actor/ownership contract is required for stage 3 Web writes;
     no trust is inferred from a request body.

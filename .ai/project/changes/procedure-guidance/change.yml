@@ -1,29 +1,34 @@
 schema_version: 1
 change:
   id: procedure-guidance
-  title: 'Human procedure guidance: local run/event/CAS/CLI stage'
+  title: 'Human procedure guidance: Web definition browser and W1 proposal'
   status: in_review
   change_type: Feature
   assurance_level: High
   owner: Eruhitsuji
   accountable_owner: Eruhitsuji
-  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1340
-  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1347
-  base_commit: 99bd449182ea2a99b9e582115e00804ef8f5f044
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1342
+  related_pull_request: null
+  base_commit: 18d5c905c159d5c2646ef50f48c8b45b0e802733
   target_release: null
 scope:
   in_scope:
+    - bounded GET-only Web catalog/projection and dedicated accessible UI
+    - concrete W1 server actor/ownership proposal for approval
     - pure bounded transitions
     - closed native event schema and replay
     - single-log CAS with shared durable transaction/recovery
     - explicit local CLI and read-only request receipts
     - bilingual docs and verification/traceability
   out_of_scope:
-    - Web/MCP and authentication changes
+    - Web run writes pending W1, Remote/MCP and authentication changes
     - generic Format/parser/validator/item_event changes
     - arbitrary external execution
     - data migration/deletion, release/deployment
   write_scope:
+    - lifetxt/procedure_web.py and procedure_web.html/css/js
+    - minimal webapp.py/surface_runtime.py/web_assets.html/web_assets_js_01.js/pyproject.toml wiring
+    - tests/test_procedure_web.py
     - lifetxt/procedure_transition.py
     - lifetxt/procedure_run_model.py
     - lifetxt/procedure_run_store.py

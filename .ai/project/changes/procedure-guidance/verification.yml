@@ -227,9 +227,57 @@ verification:
       unchanged during execution. Later changes only update documentation and PR/evidence
       metadata. Skips reflect optional environment-dependent integrations; these are
       not claimed as executed.'
+  - type: stage3_http_regression
+    command: python -m unittest tests.test_procedure_web tests.test_procedure_definition
+      tests.test_procedure_validation tests.test_procedure_graph tests.test_procedure_cli
+      tests.test_web_routes_analytics tests.test_web_installability tests.test_surface_runtime
+    requirement_ids:
+    - req-procedure-web-read-v1
+    source_commit: a3eb2876
+    status: passed
+    result: 74 tests OK in 6.072s, no skips. Configured-source/root projection,
+      exact CLI renderings/revisions, Bearer and read-only, unsafe methods,
+      invalid/missing/duplicate sources, bounded output and non-mutation verified.
+  - type: stage3_browser
+    command: LIFETXT_BROWSER_BIN=<installed Chromium Headless Shell executable>
+      LIFETXT_REQUIRE_PROCEDURE_BROWSER=1 python -m unittest tests.test_procedure_web_browser
+    requirement_ids:
+    - req-procedure-web-read-v1
+    source_commit: a3eb2876
+    status: passed
+    result: One real-HTTP E2E test passed in 1.777s, no skips. Chromium Headless Shell
+      134.0.6998.35; 390px Japanese and 1280px English, keyboard anchor focus,
+      XSS-as-text, CLI export switch, deep-link reload/revision change, 500-step
+      text alternative, unsupported API, GET-only traffic and no run log.
+      Initial full Chrome launch was blocked by host Unix-socket restriction;
+      Headless Shell executed successfully without privilege escalation.
+      Initial browser run exposed hash-only popstate reloading and losing focus;
+      fixed with query-change discrimination and reran successfully.
+      Screenshot layout inspected at 390px; this host lacks Japanese glyph fonts,
+      so Japanese text/codepoints were asserted by DOM, not glyph appearance.
+  - type: stage3_static
+    command: python -m ruff check lifetxt tests scripts; python -m ruff format --check
+      lifetxt/procedure_*.py tests/test_procedure_*.py; python -m mypy --follow-imports=skip
+      --ignore-missing-imports lifetxt/diagnostic_contract.py; python -m lifetxt check examples/minimal_life.txt
+    requirement_ids:
+    - req-procedure-web-read-v1
+    source_commit: a3eb2876
+    status: passed
+    result: Lint passed, procedure Python/test formatting passed, approved one-file
+      typing boundary passed, baseline 10 items accepted. No standard changes.
+  - type: stage3_translation_recheck
+    command: python -m unittest tests.test_release_policy tests.test_web_i18n
+      tests.test_web_more_nav_js tests.test_procedure_web
+    requirement_ids:
+    - req-procedure-web-read-v1
+    source_commit: a3eb2876
+    working_tree_changes: Add Procedures to the existing Japanese translation dictionary
+      and mark the new navigation label for existing i18n instead of literal bilingual chrome.
+    status: passed
+    result: 64 tests passed in 10.098s, no skips. Initial full-suite policy failure
+      identified new untranslated chrome; fixed without relaxing the translation baseline.
   gaps:
-  - description: Web read/run controls and authenticated server ownership remain stage
-      3; no Web/Remote/MCP run endpoint is exposed.
+  - description: Web run controls await W1 owner approval. No Web/Remote/MCP run endpoint is exposed.
     tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1343
 review_ledger:
 - reviewer: Eruhitsuji

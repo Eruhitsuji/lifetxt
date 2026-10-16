@@ -16,8 +16,8 @@ from lifetxt import web_assets, webapp
 
 
 REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
-# #1189 retains contextual binding and adds translated recovery to the bulk UI.
-LEGACY_PRISTINE_GIT_BLOB_SHA = "0db3caa5d19dfb14511b7a61e86bb16f9e41f634"
+# #1342 adds a translated Procedures surface link under More.
+LEGACY_PRISTINE_GIT_BLOB_SHA = "f9c4ac16af283562fcfc34206e1f788c16eccfaa"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )
@@ -47,6 +47,9 @@ class WebAssetExtractionTests(unittest.TestCase):
         more = re.search(
             r'<div class="nav-advanced"[^>]*>(.*?)</div>', nav, re.DOTALL
         ).group(1)
+        self.assertNotIn('href="/procedures"', primary)
+        self.assertIn('href="/procedures"', more)
+        self.assertIn('data-i18n="Procedures"', more)
         self.assertNotIn('href="/planner"', primary)
         self.assertNotIn('href="/capture"', primary)
         self.assertRegex(

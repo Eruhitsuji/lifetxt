@@ -98,3 +98,33 @@ timezone_policy.utcnow (not a new direct host clock). Postcommit blocked status
 checks canonical source identity as well as exact bytes, including identical-byte
 symlink retargets. Hash chains validate order/content but do not authenticate
 history or prove an untruncated tail without trusted backup/journal evidence.
+
+## Stage 3 read-only Web and write decision
+
+Stage 2 merged as #1347 into 18d5c905; the owner requested continuation.
+The final planned branch is feature/1343-procedure-web → main. #1342 is the
+bounded definition browser. #1343 still needs the explicit server actor/ownership
+contract required by change.yml. W1 is fully specified in
+[web-write-contract.md](web-write-contract.md), including identity, credential
+sharing, source/log selection, ownership, allowed operations and recovery. No
+Web run endpoint or auth change is implemented before W1 approval. Continue the
+same draft PR after approval to preserve the three-PR delivery grouping.
+
+The new procedure_web adapter uses the existing configured read sources and
+canonical ID policy. It accepts source tokens rather than paths, projects one
+file/root with the existing validator, and returns procedure-v1. Catalog parsing
+reuses the extracted bounded read_procedure_source helper; existing CLI behavior
+is unchanged. Source paths/details are excluded from HTTP output. Existing
+read-only and Bearer middleware remain authoritative. Procedure routes are
+GET-only; their revision middleware boundary rejects unsafe methods through
+normal route dispatch instead of allocating a generic template transaction.
+
+The dedicated UI is packaged with the wheel; More contains one link. All server
+text enters textContent and DOM APIs, with no Markdown/HTML/Mermaid evaluator.
+No CDN or mandatory renderer dependency. SVG nodes/edges are data-only and link
+to a complete keyboard-accessible step list containing hierarchy, instructions,
+previous/next and definition status. Large valid graphs fall back to that complete
+list. Deep links bind configured source token and root ID, language is en/ja, and
+stale asynchronous responses cannot replace a newer selected definition. No run
+or Task state is represented by a definition status. No template/log/task writes,
+new config, Remote/MCP capability or automated action.

@@ -66,3 +66,15 @@ cross-file transaction. CLI actors are attribution only; Web identity remains a
 separate stage-3 server contract. Event-only schema is retained here, not added to
 the general published schema catalog. Runtime validates graph/digest/sequence and
 calendar semantics beyond structural JSON Schema.
+
+## Stage 3 gate and Decision W1
+
+#1347 merged into 18d5c905 and the owner requested continuation. The exact
+server-authenticated actor/ownership question remains open in requirements.yml
+and change.yml. The three-PR approval does not select a credential/actor/log
+policy. Implement #1342's already-approved read projection and prepare W1 in
+web-write-contract.md; keep #1343 blocked until the owner selects that concrete
+contract. This is the final planned draft PR, continued after approval rather
+than split into another PR. No Web mutation or server-auth change is claimed.
+The explicit CLI remains available. Owner merge of stage 2 is recorded; no
+separate review findings are inferred from it.

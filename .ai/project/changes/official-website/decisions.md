@@ -9,3 +9,7 @@
 
 - #1352 operations is High assurance because GitHub Actions permissions and deployment are affected. Its implementation and integration/operations review stages are separate and pending; execution does not assert acceptance of risk.
 - No automatic deploy on merge/push, and no configure-pages enablement. First publication requires Owner setup and approval. Public read-only environment inspection needs no token. A sole maintainer may initiate and explicitly approve deployment; this is not source self-approval.
+
+- #1353 Owner request (2026-10-17) supersedes the initial Japanese root: render English directly, retain /ja/ and /en/, and use English deep-page x-default. No implicit redirects or browser detection.
+- First publication is confirmed by run 38977955823 and successful live HTTP body checks at main a64e38b3; see public-acceptance.md. Source changes in #1353 require a separate reviewed merge/deployment.
+- #1353 request authorizes scoped implementation and README promotion after HTTP verification. Live homepage metadata, deployment, merge and residual manual acceptance remain human actions; browser-local checker investigation is #1356.

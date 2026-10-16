@@ -11,3 +11,14 @@ requirements:
   - Mobile/desktop, semantic landmarks, keyboard skip/focus, readable contrast
   - No tracking, user data, scripts, hosted app or API claims
   - Canonical brand bytes reused; current docs remain authoritative
+- id: req-official-website-pages-v1
+  kind: ADDED
+  owner: Eruhitsuji
+  statement: Validate PRs read-only and publish only a checked main artifact after
+    manual dispatch and human environment approval.
+  acceptance_criteria:
+  - No push or PR deployment; non-main/fork dispatch rejected
+  - Read-only build; privileged deploy never checks out source
+  - Missing/invalid environment human reviewer or API failure refuses publication
+  - Pinned Actions, scoped upload, dedicated concurrency, no live settings mutation
+  - Bilingual local/deployment/smoke/incident/rollback runbook and tracked live gaps

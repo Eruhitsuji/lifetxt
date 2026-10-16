@@ -2,6 +2,19 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-official-website-pages-v1
+      capability_id: cap-official-website
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1350
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1352
+      pull_request: null
+      changed_files_or_scope:
+        - dedicated website-pages workflow and workflow guard tests
+        - website runbook, project commands and scoped governance records
+      tests_or_evidence:
+        - 26 site/workflow/traceability/package tests OK
+        - branch/event/permission/isolation checks and real inline guard rejection fixtures
+      release_or_deployment: null
+      status: implemented
     - requirement_id: req-official-website-v1
       capability_id: cap-official-website
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1350

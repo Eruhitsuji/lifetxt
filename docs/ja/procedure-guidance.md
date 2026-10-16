@@ -163,3 +163,99 @@ replayの入力はログ/event/control planの上限で制限し、遷移は上�
 
 Web実行画面・server認証済みactorの本人性・Remote/MCPは本段階に含みません。
 Webは最後のPR、任意の外部自動実行は引き続きEpic外です。
+
+## Webで手順の定義を閲覧する（第3段階・読取り専用）
+
+通常のWebサーバーの入力に手順定義ファイルを指定します。
+
+```sh
+python -m lifetxt serve examples/procedure-flow-ja.txt
+```
+
+**More → Procedures / 手順書**、または `/procedures` を開き、手順を選びます。
+階層・説明・前後の遷移・警告を確認できます。フローチャートのノードを選ぶと、
+対応するステップの説明へ移動します。80ステップ・160辺までをSVGで描画し、
+それより大きい有効な定義は全ステップ・遷移のテキスト一覧で表示します（最大500ステップ）。
+形式の選択でCLIと同じテキスト・Mermaid・DOTを確認できます。
+外部レンダラー・CDN・Markdown・URL操作や指示内容の実行は行いません。
+
+URLには `source`（設定済みファイルの識別トークン）、`id`（root ID）、任意の
+`lang=en|ja` が残ります。再読み込みで最新の定義・改訂を取得します。
+sourceトークンは設定済み入力の識別子であり、認可や匿名化の保証ではありません。
+レコードを開くリンクは既存の `/?id=...` を使います。複数ファイルの同名IDは
+既存レコード画面の重複検査に従います。手順URL自体はsource/rootで区別します。
+
+| GETルート | 内容 |
+| --- | --- |
+| `/procedures` | PC・スマホ・キーボードに対応する専用閲覧画面 |
+| `/api/procedures` | `procedure-catalog-v1`：root一覧・妥当性・警告・source識別子・読めないsource |
+| `/api/procedures/{source}/{root_id}` | `procedure-v1`：定義のroot・step・辺・改訂・診断・CLIと同じ出力 |
+
+既存WebのBearer認証設定がある場合、定義の2つのAPIには同じ認証を適用します。
+`/procedures` の枠は `/` と同様に公開し、W1の入力欄でトークンをメモリだけに保持して
+保護されたAPIへBearerヘッダーを送ります。詳細は次のWeb runの節を参照してください。
+読取り専用サーバーでも閲覧できます。不正定義は422、未知のsourceは404、
+書込みメソッドは405です（既存の読取り専用・認証ガードが先に403/401を返す場合があります）。
+定義・通常Task・procedure-eventログは更新しません。既存サーバー起動時のmetricsとは別です。
+
+上限：設定済みsource 64、一覧のroot 100、一覧JSON 1 MiB、詳細JSON 2 MiB。
+既存の入力10 MiB・10,000レコード・500ステップ・2,000辺・階層32の制限も適用します。
+上限エラー時は入力を減らすか定義を分割してください。構文が不正なsourceは読取不可、
+プロファイルが不正なrootは診断付きで一覧に表示します。
+API未対応のサーバーでは案内を表示し、既存Items・Plannerへの導線を維持します。
+
+Web run契約W1は承認されました。認証付き操作の使い方は次の節を参照してください。
+
+## Webで手順を実施する（W1承認済み・共有実施者）
+
+life.txtの外で環境変数にAPIトークンを設定し、定義ファイルを書込み先に選んで起動します。
+
+```sh
+python -m lifetxt serve examples/procedure-flow-ja.txt --write-file examples/procedure-flow-ja.txt --token-env LIFETXT_API_TOKEN
+```
+
+More → 手順書（`/procedures`）でトークンを入力してサインインし、手順を選びます。
+定義の閲覧とは別の「手順の実施」欄を使います。「新しいrunを準備」は状態の取得のみで、
+「runを開始」を押して初めて記録します。ループを含む定義は確認が必要です。
+説明を読み、「次へ」または分岐の選択肢を押し、必要に応じて中断・再開・終端での完了記録・
+打切りを明示します。指示・スクリプト・URL・外部作業は自動実行しません。
+
+既存runは一覧から選べます。URLのrun IDを保って再読み込みし、再度サインインすると、
+同じrunの最新状態を取得します。トークンはメモリだけに保持し、ブラウザの保存領域・URL・
+イベントログには残しません。サインアウトでトークンと操作欄を消去します。
+同じトークンの利用者は共有の `web-shared` 実施者となり、同じrunを操作できます。
+個人別の識別ではありません。別actorのCLI runをWebで引き継ぐことはできません。
+
+runの読み書きには既存Bearerトークンが必須です。トークン未設定・Remote有効・
+別の読取りファイル・生成物・読取り専用の定義やサーバーではrunを書き込めません。
+読取り専用サーバーでは、認証後に共有実施者のrunを閲覧できます。
+ページの枠は既存の `/` と同様に公開し、定義API・run APIの認証は維持します。
+ログはサーバーが選ぶ `<writable_path>.procedure-runs.txt` のみです。再起動時の入力展開に
+含まれても、通常のItems/Notesには混ぜません。CLIと共用する場合は、このログと
+`--actor web-shared` を明示します。境界はローカルのファイル権限で、署名付き監査ではありません。
+
+操作は画面に表示したsource/logの完全な改訂・root/run・step・記録番号・一意な要求IDに
+固定します。従来のobserveモードでもsourceの `If-Match` を必須とし、ログ自身のCASを適用します。
+異なるOrigin・未知のJSON項目・8 KiBを超える要求は拒否します。既存の時計検査設定も保持し、
+画面は設定済みのclient-timeヘッダーを送ります。別タブとの競合や不正操作時は操作欄を消し、
+明示的な再読み込みを求めます。書込みの自動再送はしません。
+
+応答が失われた場合は「元の要求を確認」で、その要求の確定済みイベント・記録番号を
+読取り専用で確認します。記録が見つからなくても再送の許可にはなりません。
+状態を再読み込みして判断してください。未解決・破損journalは既存の運用者向け復旧を使います。
+定義が変更・削除・不正になったrunは継続できませんが、run URLから元の状態を確認し、
+中断・打切りを記録できます。変更後の説明を元のrunの指示として表示しません。
+runの完了を通常Taskの完了に自動反映しません。
+
+| API | 契約 |
+| --- | --- |
+| `GET /api/procedure-runs?source=TOKEN&root_id=ID[&run_id=RUN][&request_id=REQUEST]` | `procedure-run-web-v1`：所有run・改訂・説明・可能な操作、または元の要求の確認 |
+| `POST /api/procedure-runs` | Bearer・同一OriginのJSON・完全な`If-Match`で、専用ログへ明示操作を1件記録 |
+
+POSTの共通項目は `source`・`root_id`・`operation`・`request_id`・`template_revision`・
+`log_revision`・`step`・`sequence` のみです。start以外は `run_id`、chooseは `choice` も必須。
+startにはbooleanの `allow_loops` を追加できます。actorやpathの指定は拒否します。
+GETの `source_revision` を引用符付きの `If-Match` に使い、本文の `template_revision` には
+run開始時の改訂を保ちます。操作はstart/next/choose/pause/resume/finish/abandonです。
+エラーはprivate pathを含めず、401/403（認証・権限）、404（所有runなし）、409（競合・不確定）、
+413（上限）、415（JSON以外）、422（項目不正）、428（source改訂なし）を返します。

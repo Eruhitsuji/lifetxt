@@ -203,6 +203,114 @@ assessing completeness, and never invent missing events. Runtime also checks gra
 valid calendar timestamps, guard counts and exact event ordering. Replay is
 bounded by log/event/control-plan sizes; traversals use the bounded graph.
 
-Web run controls, server-authenticated actor ownership, Remote/MCP access and
-external action execution are not part of this stage. Web is the final planned PR;
+Stage 2 did not include Web run controls. Stage 3 now adds the approved W1
+server actor/ownership adapter below. Remote/MCP and external execution remain outside scope;
 arbitrary automatic action execution remains outside the Epic.
+
+## Web definition browser (stage 3 read-only)
+
+Start the usual local Web server with the definition file among its inputs:
+
+```sh
+python -m lifetxt serve examples/procedure-flow-en.txt
+```
+
+Open **More → Procedures / 手順書**, or `/procedures`. Select a definition to
+read the hierarchy, plain-text instructions, incoming/outgoing transitions and
+warnings. The flowchart links to the full step list. Up to 80 steps / 160 edges
+are drawn as SVG; larger supported definitions use the complete text alternative
+(up to 500 steps). The format selector shows the same Text/Mermaid/DOT as the CLI.
+No external renderer, CDN, Markdown, URL action or instruction is executed.
+
+The URL retains `source` (an opaque configured-source token), `id` (root ID) and
+optional `lang=en|ja`. Reload obtains the current source revision. Source tokens
+select only server-configured inputs; they are identifiers, not authorization or
+anonymity guarantees. A record link uses the existing `/?id=...` route; duplicate
+workspace IDs remain subject to the existing record route's ambiguity checks.
+The source/root-specific procedure URL disambiguates definitions across files.
+
+| GET route | Result |
+| --- | --- |
+| `/procedures` | Dedicated browser with desktop/mobile and keyboard text alternatives |
+| `/api/procedures` | `procedure-catalog-v1`: roots, validity, warnings, opaque sources and unavailable sources |
+| `/api/procedures/{source}/{root_id}` | `procedure-v1`: definition-only root/steps/edges, template revision, diagnostics and CLI renderings |
+
+Existing Web Bearer authentication applies to both definition APIs when configured.
+The static `/procedures` shell is public like `/`; its W1 token form keeps credentials
+in memory only and sends Bearer headers to protected APIs (see Web runs below).
+Read-only servers can browse definitions. Invalid definitions fail closed (422),
+unknown source tokens return 404, and unsafe methods are rejected (405, or the
+existing read-only/auth guard's 403/401). No template, Task or procedure-event log
+is written. Existing server startup metrics are independent of these GET routes.
+
+Limits: 64 configured sources, 100 roots in the catalog, 1 MiB catalog JSON,
+2 MiB detail JSON, and the existing 10 MiB source / 10,000 records / 500 steps /
+2,000 edges / depth 32 admission bounds. Reduce configured inputs or split large
+definitions on a limit error. Catalog sources with invalid syntax are shown as
+unavailable; profile-invalid roots remain listed with diagnostics. Missing API
+support displays a message and leaves the existing Items and Planner available.
+
+Web run contract W1 was approved by the owner; authenticated controls are documented below.
+
+## Web runs: authenticated shared operator (W1 approved)
+
+Set a strong API token in the environment outside life.txt, then start the existing
+Web server, selecting the definition as the writable source:
+
+```sh
+python -m lifetxt serve examples/procedure-flow-en.txt --write-file examples/procedure-flow-en.txt --token-env LIFETXT_API_TOKEN
+```
+
+Open `/procedures` (More → Procedures), enter that token and sign in, then select
+a definition. The **Procedure run** section is distinct from definition browsing.
+**Prepare a new run** only obtains a preview; **Start run** commits the first event.
+A cyclic definition requires explicit confirmation. Read the current instruction,
+choose **Next** or one exact choice, and explicitly pause, resume, record completion
+at an end step, or abandon. No instruction, script, URL or external work is executed.
+
+Existing runs are selectable in the run list. Their opaque run ID remains in the
+URL; reload clears the in-memory credential, so sign in again to fetch that same
+run. Tokens never enter browser storage, URLs or event logs. Sign out clears the
+token and controls. A token denotes the single `web-shared` operator: anyone who
+shares the token shares ownership. Other CLI actors cannot be adopted through Web.
+This is not separate human identity or a cryptographically authenticated audit.
+
+Run reads and writes require the configured Bearer token. No-token servers,
+Remote-enabled servers, other read sources, generated/read-only sources and
+read-only servers cannot write runs. Read-only servers can inspect their operator's
+runs after authenticating. The static page is public like the existing `/` shell;
+its definition and run APIs keep their respective authentication requirements.
+The only log is `<writable_path>.procedure-runs.txt`, selected by the server. It is
+not a normal Items/Notes source, including when expanded inputs contain it on
+restart. CLI interoperability requires explicitly selecting that same `--log` and
+`--actor web-shared` within the trusted local filesystem boundary.
+
+Each operation freezes the displayed full source/log revisions, root/run/current
+step/sequence and a unique request ID. Source `If-Match` is required even in legacy
+observe mode; the log's own CAS remains authoritative. Cross-origin writes, unknown
+JSON fields and oversized bodies (8 KiB) are refused. Existing configured client
+clock checks are preserved; the UI sends the configured client-time header.
+A conflicting tab or invalid operation clears controls and requires explicit reload.
+No automatic write retry is performed. If a response is lost, **Check original
+request** reads the original receipt and reports its event/sequence without writing.
+An absent receipt does not authorize replay. Inspect then explicitly reload before
+a new decision. Pending/corrupt journals require the existing operator recovery.
+
+A changed/missing/invalid definition blocks continuation. A run URL still supports
+inspection and the original run's pause/abandon without showing instructions from
+a changed template. Completion does not silently complete ordinary Tasks.
+
+| API | Contract |
+| --- | --- |
+| `GET /api/procedure-runs?source=TOKEN&root_id=ID[&run_id=RUN][&request_id=REQUEST]` | `procedure-run-web-v1`, owned runs, exact revisions, current instruction/actions, or read-only original receipt |
+| `POST /api/procedure-runs` | Bearer + same-origin JSON + exact `If-Match`; one explicit operation to the server-selected log |
+
+POST fields are exactly `source`, `root_id`, `operation`, `request_id`,
+`template_revision`, `log_revision`, `step`, `sequence`; non-start operations also
+require `run_id`, choose requires `choice`, and start optionally accepts boolean
+`allow_loops`. No actor or path field is accepted. GET `source_revision` supplies
+quoted `If-Match`; `template_revision` remains the run's original bound revision.
+Operations are start/next/choose/pause/resume/finish/abandon. Error responses omit
+private paths: 401/403 authentication/authorization, 404 unavailable ownership,
+409 conflict/uncertain result, 413 size limit, 415 non-JSON, 422 invalid fields,
+428 missing source precondition. Preserve the request ID on uncertain outcomes.

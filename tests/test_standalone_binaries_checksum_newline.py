@@ -26,8 +26,18 @@ WORKFLOW = REPO_ROOT / ".github" / "workflows" / "standalone-binaries.yml"
 
 class StandaloneBinariesChecksumNewlineTests(unittest.TestCase):
     def test_workflow_disables_platform_newline_translation(self):
-        text = WORKFLOW.read_text(encoding="utf-8")
-        self.assertIn("open(name + '.sha256', 'w', newline='\\n')", text)
+        # Publication now uses the single canonical bytes writer, rather than
+        # concatenating runner text files from the retired workflow.
+        import sys
+
+        sys.path.insert(0, str(REPO_ROOT / "scripts"))
+        from release_canonical import checksum_bytes
+
+        raw = checksum_bytes(
+            [{"name": "lifetxt-windows-x86_64.exe", "sha256": "0" * 64}]
+        )
+        self.assertNotIn(b"\r", raw)
+        self.assertTrue(raw.endswith(b"lifetxt-windows-x86_64.exe\n"))
 
     def test_the_same_open_call_writes_lf_only_bytes(self):
         with TemporaryDirectory() as tmp:

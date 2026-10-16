@@ -34,8 +34,14 @@ verification:
       metadata and reran all regression tests.
     environment: Python 3.12, bash; BashCompletionExecutionTests not selected; no concurrent worktree writes during test run
   - type: native-actions-integration
-    status: not_run
-    reason: New workflow_dispatch entry must first be merged into main. Local multi-platform native runtimes and actual Actions artifact transport are unavailable. Issue 1321 remains open for mandatory real run URL, attempt and final artifact ID/digest evidence.
+    status: passed
+    command: Release preflight (non-public), run 38822634032 attempt 1
+    tested_commit: 65162fb8352767e6e4b39a1cee374289f7f22829
+    result: All 15 jobs succeeded including all 13 native targets and collector. Source dacfd3c322884df37789c1942e24db765ed5381c; version 1.0.4.1; linked source main CI 38734654770 attempt 1. Independent actual ZIP recheck covered all 65 manifest files, 13 reports, 26 original artifact references and exact two-platform OCI graph. publication_authorized false. Independent review records still pending.
+    evidence: https://github.com/Eruhitsuji/lifetxt/actions/runs/38822634032
+    artifact_id: 12014680717
+    archive_sha256: ed7bf44a1866cc9ed43de1a063ef1958c1df6b911928866fee45d16a585f2df5
+    bundle_digest: 335b53ac107b9b227c84fb45fd62d75f10554da5fbe35aa028173ec253150686
 review_ledger:
 - reviewer: Codex implementer
   review_type: self-review

@@ -105,10 +105,24 @@ def inspect(root, candidate=None):
         )
         if branches != ["main"]:
             raise ValueError("CI main push branch contract is missing or needs review")
-        if not re.search(
-            r'^    tags:\s*\n      - "v\*\.\*\.\*"\s*$', text["release"], re.M
+        release_events = re.search(
+            r"^on:\s*\n(.*?)(?=^\S|\Z)", text["release"], re.M | re.S
+        )
+        if release_events is None or re.findall(
+            r"^  ([A-Za-z_]+):", release_events[1], re.M
+        ) != ["workflow_dispatch"]:
+            raise ValueError("Manual-only release entry needs review")
+        prepare = re.search(
+            r"^  prepare:\s*\n(.*?)(?=^  [A-Za-z_-]+:|\Z)",
+            text["release"],
+            re.M | re.S,
+        )
+        if prepare is None or not re.search(
+            r"^    if: github.ref == 'refs/heads/main' && github.repository == 'Eruhitsuji/lifetxt'\s*$",
+            prepare[1],
+            re.M,
         ):
-            raise ValueError("Tagged release trigger needs review")
+            raise ValueError("Main-only release preparation guard needs review")
         if "FETCH_HEAD" not in text["server"] or '"--ff-only"' not in text["server"]:
             raise ValueError(
                 "server-update resolved-ref / fast-forward contract needs review"

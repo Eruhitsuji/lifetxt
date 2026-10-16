@@ -60,13 +60,12 @@ class CiWorkflowResponsibilityTests(unittest.TestCase):
             "--added-paths-file added-paths.txt --github-output",
             classify,
         )
-        self.assertIn(
-            "outputs['run-coverage']", self.jobs["coverage-baseline"]["if"]
-        )
+        self.assertIn("outputs['run-coverage']", self.jobs["coverage-baseline"]["if"])
 
     def test_python_312_reports_slowest_tests_without_new_suite_runs(self):
         web = next(
-            step for step in self.jobs["test"]["steps"]
+            step
+            for step in self.jobs["test"]["steps"]
             if step["name"] == "Run unit tests"
         )["run"]
         self.assertIn('if [[ "${{ matrix.python-version }}" == "3.12" ]]; then', web)
@@ -77,7 +76,8 @@ class CiWorkflowResponsibilityTests(unittest.TestCase):
         self.assertIn("| tee unit-tests-${{ matrix.python-version }}.log", web)
 
         no_web = next(
-            step for step in self.jobs["no-web-extras"]["steps"]
+            step
+            for step in self.jobs["no-web-extras"]["steps"]
             if step["name"] == "Run unit tests without extras"
         )["run"]
         self.assertIn(
@@ -87,7 +87,8 @@ class CiWorkflowResponsibilityTests(unittest.TestCase):
         self.assertIn("set -o pipefail", no_web)
 
         coverage = next(
-            step for step in self.jobs["coverage-baseline"]["steps"]
+            step
+            for step in self.jobs["coverage-baseline"]["steps"]
             if step["name"] == "Run tests and write coverage evidence"
         )["run"]
         self.assertIn(
@@ -183,11 +184,33 @@ class CiWorkflowResponsibilityTests(unittest.TestCase):
 
     def test_release_artifact_work_stays_in_release_workflow(self):
         self.assertNotIn("release-gate", self.jobs)
-        with open(RELEASE_PATH, encoding="utf-8") as handle:
-            release = handle.read()
-        self.assertIn("run_ci_like.py --profile release", release)
-        self.assertIn("python -m twine check", release)
-        self.assertIn("pip install dist-evidence/*.whl", release)
+        release = _load(RELEASE_PATH)
+        self.assertEqual({"workflow_dispatch"}, set(release["on"]))
+        self.assertEqual(
+            {"prepare", "publish-pypi", "verify", "finish"}, set(release["jobs"])
+        )
+        prepare = release["jobs"]["prepare"]
+        self.assertTrue(
+            any(
+                "scripts/check_release_policy.py" in step.get("run", "")
+                and "python -m lifetxt safety release-gate" in step["run"]
+                for step in prepare["steps"]
+            )
+        )
+        core = _load(
+            os.path.join(ROOT, ".github", "workflows", "release-preflight-core.yml")
+        )
+        self.assertEqual({"workflow_call"}, set(core["on"]))
+        self.assertTrue(
+            any(
+                "release_preflight_core.py build" in step.get("run", "")
+                for step in core["jobs"]["core"]["steps"]
+            )
+        )
+        # Publication consumes authenticated prebuilt bytes, never a second build.
+        for job in release["jobs"].values():
+            for step in job["steps"]:
+                self.assertNotIn("python -m build", step.get("run", ""))
 
 
 if __name__ == "__main__":

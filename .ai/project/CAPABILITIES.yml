@@ -8,18 +8,23 @@ capabilities:
     owner: Eruhitsuji
     source_requirements:
       - req-official-website-v1
+      - req-official-website-pages-v1
     implementation_locations:
       - website/
       - scripts/build_website.py
       - scripts/check_website.py
+      - .github/workflows/website-pages.yml
     public_interfaces:
       - Planned https://eruhitsuji.github.io/lifetxt/ (not deployed by this PR)
     tests_or_evidence:
       - tests/test_website.py
+      - tests/test_website_pages_workflow.py
       - Local Chromium HTTP checks at 320, 390, 1280 pixels for both languages
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/1350
       - https://github.com/Eruhitsuji/lifetxt/issues/1351
+      - https://github.com/Eruhitsuji/lifetxt/issues/1352
+      - https://github.com/Eruhitsuji/lifetxt/issues/1353
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/1354
 

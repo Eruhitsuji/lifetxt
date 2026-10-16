@@ -30,6 +30,22 @@ verification:
     source_commit: a3c9e23d + scoped website working tree
     status: passed
     result: Lint and type boundary passed.
+  - type: pages_guard
+    command: python -m unittest tests.test_website tests.test_website_pages_workflow
+      tests.test_traceability_gate tests.test_change_package_closeout
+    source_commit: 3a71a461 + operations scoped working tree
+    status: passed
+    result: 26 tests OK, no skips. Executes actual inline guard with fake read-only
+      HTTP for owner reviewer, missing/malformed/bot/other reviewer and API failure.
+      PR/non-main/fork denied; branch/event/permission/artifact/Action pin/checkout
+      isolation policies checked.
+  - type: operations_static
+    command: ruff check lifetxt tests scripts; mypy --follow-imports=skip --ignore-missing-imports
+      lifetxt/diagnostic_contract.py; python -m lifetxt check examples/minimal_life.txt
+    source_commit: 3a71a461 + operations scoped working tree
+    status: passed
+    result: All lint, approved type boundary and baseline 10 records passed. YAML
+      parsed; real Actions build and deployment remain CI/Owner gates.
   gaps:
   - description: Independent latest-head review and required CI remain human/PR gates;
       full runtime suite not run locally for a static-only runtime-neutral change.
@@ -37,9 +53,25 @@ verification:
   - description: Public deployment, real-device/Safari/screen-reader and live external-link
       verification require owner deployment first.
     tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1353
+  - description: Independent High implementation/security and integration/operations
+      latest-head reviews, required CI, actual protected environment and live dispatch/deploy/smoke
+      are pending; no settings changed.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1352
 review_ledger:
 - reviewer: Eruhitsuji
   review_type: independent_implementation_content_accessibility
+  target_commit: null
+  result: pending
+  finding_count: null
+  completed_at: null
+- reviewer: Eruhitsuji
+  review_type: independent_security_implementation
+  target_commit: null
+  result: pending
+  finding_count: null
+  completed_at: null
+- reviewer: Eruhitsuji
+  review_type: independent_integration_operations
   target_commit: null
   result: pending
   finding_count: null

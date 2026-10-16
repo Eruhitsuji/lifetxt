@@ -166,3 +166,7 @@ authoritative workspace が別 machine の Remote Safe Mode server にある場�
 ## Maintenance
 
 `check`、`doctor`、`health` を定期的に実行してください。bulk ID assignment や transformation は `--dry-run` で preview し、generated files は hand-edit せず、Git remote とは独立した backup を持ちます。
+
+## 繰り返し使う手順書
+
+[人間向け手順書の運用](procedure-guidance.md)では、再利用するNoteの定義と毎回のTaskによる実施記録を分け、任意でCLIの読取専用フローチャートも利用できます。

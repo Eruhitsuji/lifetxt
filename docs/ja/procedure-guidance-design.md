@@ -1,6 +1,7 @@
 # 人間向け手順案内：v1契約草案
 
-状態：**Eruhitsujiの承認待ち提案**。Format 1.0の規範変更でも実装済み機能でもない。
+状態：**2026-10-16、PR #1345のmerge後にEruhitsujiがD1〜D4を承認**。
+第1段階（#1334〜#1337）の閲覧・検証・図出力を実装。以下のrun/証跡・Webは後続計画であり、Format 1.0の文法変更ではない。
 Phase 0 / #1333、親Epic #1332。
 対応する[英語版](../en/procedure-guidance-design.md)と同じ契約を記載する。
 
@@ -13,8 +14,7 @@ D1〜D4の一括承認を推奨する。
 - D3：定義と別のNativeドメインイベントを実施状態の正本にし、定義と実施ログの完全revisionを照合。
 - D4：初期リリースは#1337までの閲覧・検証・図出力とし、run実行とWebは後続リリース。
 
-現状は未承認。一般的な実装依頼では新しい公開契約・保存モデルの選択までは確定しないため、
-この契約の改訂を指定した承認を記録する。merge・release・deployの承認は別である。
+承認結果は#1332/#1333へ記録済み。後続の正確なデータ/API対応と、merge・release・deployの承認は別である。
 判断根拠、代替案、リスクと次の作業を以下に示す。
 適用規則：CTX-HUMAN-001、CTX-ASSURE-001、TASK_DECOMPOSITIONの作業単位、
 AI_HUMAN_INTERACTIONの公開API・データモデル変更の人間承認。
@@ -67,7 +67,7 @@ source handle込みで識別する。CLIは複数入力を拒否、Webは認可�
 クライアントから任意パスを受け取らない。同じファイルに複数rootは許可するが、
 `--id`等で一つを指定し、既定入口を推測しない。
 
-## 正式記法候補の例（現在のCLIに実行機能はない）
+## 承認済み記法の例（show/graph対応、run実行は後続）
 
 ```text
 [N] N "サーバー更新" id:p_update proc_role:root proc_version:1 proc_start:s_check
@@ -180,7 +180,7 @@ exportも元データと同じprivacy判断が必要。DoS、symlink/path脱出�
 応答不明時を否定試験に含める。clipboard/downloadは明示操作に限る。background実行・通知・
 外部共有はしない。上限とCASは手順の正しさや現実の作業完了を保証せず、実作業は人間が担う。
 
-## UX・リリース（新コマンドはすべて提案）
+## UX・リリース（show/graph実装、run/Webは計画）
 
 テキストだけ：Noteの定義は変更せず、作業ごとに別work fileへ一意IDの`[ ] T`を作り、
 `ref:`で定義を参照する。選択・中断理由はwork fileへ手書きする。機械検証可能なrun証跡とは
@@ -205,8 +205,9 @@ version/tag/deploy先はここでは決めない。
 
 ## 子Issue契約・受入マトリクス
 
-各branchは着手時の最新origin/mainから作り、一Issue/branch/PR、最終baseはmain。
-逐次対応なのでintegration branchは不要。requirements/merge ownerはEruhitsuji、executorはCodex、
+追加の人間承認により、#1334〜#1337（閲覧）、#1338〜#1341（run/CLI）、#1342/#1343（Web）の3 PRに再編。
+同じ段階内の依存は一PR内で順に実装し、次段階は前段のmerge後、最新origin/mainから開始する。
+最終baseはmain。中間sub-PR・integration branchは作らない。requirements/merge ownerはEruhitsuji、executorはCodex、
 最新headの独立人間reviewは未実施。各実装のReady前にCAPABILITIES/TRACEABILITY/package更新を
 作業契約に追加する。本Phase 0はglobal registry・製品コード・規範Format・実行fixtureを変更しない。
 
@@ -250,3 +251,8 @@ Phase 0承認は後続試験の成功を意味せず、独立review・CI・freez
 関連7 Issueはいずれもfetchしてclosedを確認した。trackerの未更新checkboxだけで実装を判断せず、
 上記source/testを根拠にする。現行check/roundtripの実測はpackageのverification記録を参照。
 提案した意味診断・保存・browser動作は未実装の受入計画であり、検証済みとはしない。
+
+第1段階の実装と使い方は[人間向け手順書](procedure-guidance.md)を参照。
+Phase 0調査の根拠commitと実装検証のcommitを区別し、実測結果は更新済みpackageへ記録する。
+上限付きreaderはread_text_snapshotと同じ完全byte hashのmutation.hash_bytesを使い、
+全snapshotを割り当てる前にサイズを制限する。

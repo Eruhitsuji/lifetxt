@@ -1,0 +1,12 @@
+[N] N "保守の手順書" id:manual
+| 点検→バックアップ→更新→確認の順に読む。確認に失敗したら復旧手順を読む。
+[N] N "状態を点検" id:check parent:manual
+| 稼働状況と空き容量を確認する。
+[N] N "バックアップを取得" id:backup parent:manual
+| 別の作業記録にバックアップの参照を残す。秘密情報は書かない。
+[N] N "手動で更新" id:update parent:manual
+| 許可された更新を人間が実施する。
+[N] N "結果を確認" id:verify parent:manual
+| 成功なら作業記録を完了にする。失敗なら復旧して再確認する。
+[N] N "バックアップから手動復旧" id:restore parent:manual
+| 検証済みバックアップを人間が戻す。不明点があれば中断して運用者に確認する。

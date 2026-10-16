@@ -295,6 +295,7 @@ CATEGORIES = OrderedDict(
                     "lifecycle-stats",
                     "freebusy",
                     "flow",
+                    "procedure",
                     "count",
                     "status",
                     "recent",

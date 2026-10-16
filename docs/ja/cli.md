@@ -247,7 +247,7 @@ audience、そしてこの表と同じカテゴリ分類を表示します。
 | カテゴリ | コマンド |
 |---|---|
 | Getting Started / Daily | `tour`、`help`、`init`、`quick` (`add`)、`today`、`next`、`agenda`、`show`、`edit`、`done`、`complete`、`progress`、`clone`、`reopen`、`due`、`review`、`assist`、`state`、`start`、`stop`、`assign`、`timer`、`notify` |
-| Query / Explore | `filter`、`search`、`find`、`query`、`view`、`summary`、`inbox`、`health`、`temporal`、`timeline`、`history-check`、`thread`、`lifecycle-stats`、`freebusy`、`flow`、`count`、`status`、`recent`、`item-uri`、`notes` |
+| Query / Explore | `filter`、`search`、`find`、`query`、`view`、`summary`、`inbox`、`health`、`temporal`、`timeline`、`history-check`、`thread`、`lifecycle-stats`、`freebusy`、`flow`、`procedure`、`count`、`status`、`recent`、`item-uri`、`notes` |
 | Projects / People / Collaboration | `project`、`portfolio`、`area`、`person`、`group`、`who`、`message`、`proposal`、`ticket`、`version`、`sprint` |
 | Structure / Data Integrity | `check`、`integrity`、`maintenance`、`storage`、`ids`、`links`、`backlinks`、`sources`、`tag`、`lint`、`deps`、`diff`、`snapshot`、`undo`、`cleanup`、`files` |
 | Import / Export / Reports | `convert`、`import`、`export`、`import-ics`、`sync-ics`、`to-json`、`to-jsonl`、`to-csv`、`from-json`、`from-jsonl`、`from-csv`、`from-markdown`、`from-todo`、`to-ics`、`markdown`、`stats`、`plot`、`export-heatmap`、`standup`、`invoice`、`share`、`digest`、`report` |
@@ -3561,3 +3561,7 @@ python -m lifetxt template apply weekly_review --append life.txt --dry-run
 Bearer認証や`--insecure-public`は通信を暗号化しません。`serve`/`web`はUvicornのproxy処理を
 無効化して直接接続元を保持するため、TLS proxyには既存の`remote.trusted_proxies`を設定します。
 配置・upgrade手順は[Web通信のセキュリティ](web-transport-security.md)を参照してください。
+
+### 人間向け手順定義（`procedure`）
+
+読み取り専用の`procedure show FILE --id ROOT`と`procedure graph FILE --id ROOT --format text|mermaid|dot`でopt-in手順を検証・表示できます。例・上限・診断は[人間向け手順書](procedure-guidance.md)を参照してください。この段階にrun実行コマンドはありません。

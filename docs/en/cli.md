@@ -237,7 +237,7 @@ including its `--json` machine-readable form for scripts and AI clients.
 | Category | Commands |
 |---|---|
 | Getting Started / Daily | `tour`, `help`, `init`, `quick` (`add`), `today`, `next`, `agenda`, `show`, `edit`, `done`, `complete`, `progress`, `clone`, `reopen`, `due`, `review`, `assist`, `state`, `start`, `stop`, `assign`, `timer`, `notify` |
-| Query / Explore | `filter`, `list`, `search`, `find`, `query`, `view`, `summary`, `inbox`, `health`, `temporal`, `timeline`, `history-check`, `thread`, `lifecycle-stats`, `freebusy`, `flow`, `count`, `status`, `recent`, `item-uri`, `notes` |
+| Query / Explore | `filter`, `list`, `search`, `find`, `query`, `view`, `summary`, `inbox`, `health`, `temporal`, `timeline`, `history-check`, `thread`, `lifecycle-stats`, `freebusy`, `flow`, `procedure`, `count`, `status`, `recent`, `item-uri`, `notes` |
 | Projects / People / Collaboration | `project`, `portfolio`, `area`, `person`, `group`, `who`, `message`, `proposal`, `ticket`, `version`, `sprint` |
 | Structure / Data Integrity | `check`, `integrity`, `maintenance`, `storage`, `ids`, `links`, `backlinks`, `sources`, `tag`, `lint`, `deps`, `diff`, `snapshot`, `undo`, `cleanup`, `files` |
 | Import / Export / Reports | `convert`, `import`, `export`, `import-ics`, `sync-ics`, `to-json`, `to-jsonl`, `to-csv`, `from-json`, `from-jsonl`, `from-csv`, `from-markdown`, `from-todo`, `to-ics`, `markdown`, `stats`, `plot`, `export-heatmap`, `standup`, `invoice`, `share`, `digest`, `report` |
@@ -4592,3 +4592,7 @@ encrypted tunnel. Bearer authentication and `--insecure-public` do not encrypt
 traffic. `serve`/`web` preserve the immediate peer by disabling Uvicorn proxy
 middleware; configure existing `remote.trusted_proxies` for TLS proxies.
 See [Web transport security](web-transport-security.md) for deployment and upgrade steps.
+
+### Human procedure definitions (`procedure`)
+
+Read-only `procedure show FILE --id ROOT` and `procedure graph FILE --id ROOT --format text|mermaid|dot` validate and display an opt-in procedure. See [Human procedure guidance](procedure-guidance.md) for examples, limits and diagnostics. No run/execution command is provided in this stage.

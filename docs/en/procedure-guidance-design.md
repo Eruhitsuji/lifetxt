@@ -1,7 +1,9 @@
 # Human procedure guidance: proposed v1 contract
 
-Status: **proposal awaiting Eruhitsuji's approval**, not a Format 1.0 amendment
-or a shipped feature. Phase 0 / #1333; parent #1332. The Japanese counterpart
+Status: **D1–D4 approved by Eruhitsuji on 2026-10-16 after PR #1345 merged**.
+Read-only browsing/validation/diagrams are implemented in stage 1 (#1334–#1337);
+run/evidence and Web below remain future work. This is not a Format 1.0 grammar
+amendment. Phase 0 / #1333; parent #1332. The Japanese counterpart
 is [procedure-guidance-design.md](../ja/procedure-guidance-design.md).
 
 ## Decision request
@@ -12,7 +14,8 @@ domain-event authority with exact source/run revisions; D4 first release through
 #1337 (definition, validation, diagrams), then separately release run support.
 Alternatives and risks follow. Approval must identify this contract revision;
 requesting implementation generally does not settle these new public/data contracts.
-No approval is recorded yet. Final merge, release and deployment remain separate.
+Approval is recorded on #1332/#1333. Later-stage exact data/API mappings and
+final merge, release and deployment remain separate decisions.
 
 Rules: CTX-HUMAN-001, CTX-ASSURE-001, TASK_DECOMPOSITION unit of work,
 AI_HUMAN_INTERACTION human approval for public API/data model changes.
@@ -73,7 +76,7 @@ the source handle is part of identity. CLI refuses multiple input files; Web use
 its authorized source resolver, never a client-supplied filesystem path. Multiple
 roots in one file are legal; exactly one is selected by `--id` with no default.
 
-## Draft canonical example (not executable by current CLI)
+## Approved canonical example (show/graph only, not run execution)
 
 ```text
 [N] N "Server maintenance" id:p_update proc_role:root proc_version:1 proc_start:s_check
@@ -218,7 +221,7 @@ negative tests. Browser clipboard/download is explicit. No background execution,
 notifications or remote sharing. Limits and CAS reduce risk but do not certify
 instructions or real-world completion; the human remains responsible for actions.
 
-## UX and rollout (all new commands are proposals)
+## UX and rollout (show/graph implemented; run/Web planned)
 
 Text editor only: read the Note template unchanged; create separate `[ ] T`
 checklist records in a work file per occurrence with unique IDs and `ref:` links.
@@ -250,8 +253,10 @@ release number/tag or deployment is selected here.
 
 ## Child implementation contract and acceptance matrix
 
-All branches begin at then-current origin/main; one Issue/branch/PR each, final
-base main. No integration branch needed for this sequential plan. Maintainer
+The owner subsequently approved three PRs: #1334–#1337 (read-only),
+#1338–#1341 (run/CLI), #1342–#1343 (Web). Intra-stage dependencies are ordered
+within one PR; the next stage starts from current origin/main after the previous
+PR merges. Final base is main; no intermediate sub-PRs or integration branch. Maintainer
 Eruhitsuji owns requirements and merge; Codex executes; human independent review
 is pending. Add required CAPABILITIES/TRACEABILITY and package records in each
 implementation contract before Ready. This Phase 0 write scope excludes global
@@ -272,7 +277,7 @@ registry edits, production code, normative Format specs and runnable fixtures.
 
 Recommended numerical work order: #1333 → #1334 → #1335 → #1336 → #1337 →
 #1338 → #1339 → #1340 → #1341 → #1342 → #1343. Dependencies permit some
-parallelism but this request will be handled sequentially. Shared cli.py/Web
+parallelism but this request will be handled sequentially in the three approved groups. Shared cli.py/Web
 registration is limited to dispatch/resource hooks; no planner/top redesign.
 Before each task, refine exact existing-file paths and schema mapping in that
 Issue, confirm size/High acceptance and dependencies merged, then mark Ready.
@@ -300,3 +305,9 @@ are not implementation evidence; source/tests above ground reuse decisions.
 Current generic checks/roundtrip results are retained in the change package's
 verification record. Proposed semantic rejection, persistence and browser behavior
 remain unimplemented and are acceptance plans, not passed tests.
+
+Stage 1 implementation and usage: [Human procedure guidance](procedure-guidance.md).
+The original Phase 0 investigation below/above cites its inspected base commit;
+actual implementation evidence is in the updated change package. The bounded
+reader uses mutation.hash_bytes, the same exact-byte primitive as read_text_snapshot,
+to enforce input limits before allocating a full snapshot.

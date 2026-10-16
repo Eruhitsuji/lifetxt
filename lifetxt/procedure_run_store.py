@@ -1,6 +1,5 @@
 """Explicit local procedure run logs, committed by the shared CAS/journal writer."""
 
-import datetime
 import hashlib
 import os
 import re
@@ -9,6 +8,7 @@ import uuid
 from dataclasses import dataclass
 
 from . import mutation
+from .timezone_policy import utcnow
 from .multi_target import apply_multi_target, text_plan
 from .transaction_journal import journal_directory, list_journals
 from .procedure_definition import MAX_SOURCE_BYTES, ProcedureError
@@ -264,12 +264,7 @@ def write_run(
         refuse("PR302", "Run log event limit reached.")
     handle = source_handle(source)
     observed = _observed_revision(source)
-    now = (
-        datetime.datetime.now(datetime.timezone.utc)
-        .replace(microsecond=0)
-        .isoformat()
-        .replace("+00:00", "Z")
-    )
+    now = utcnow().replace(microsecond=0).isoformat().replace("+00:00", "Z")
     if operation == "start":
         from .procedure_cli import read_definition
 
@@ -401,6 +396,6 @@ def write_run(
         state,
         (),
         None,
-        observed != state.template_revision,
+        observed != state.template_revision or source_handle(source) != handle,
         result.transaction_id,
     )

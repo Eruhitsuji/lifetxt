@@ -8,7 +8,7 @@ change:
   owner: Eruhitsuji
   accountable_owner: Eruhitsuji
   related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1340
-  related_pull_request: null
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1347
   base_commit: 99bd449182ea2a99b9e582115e00804ef8f5f044
   target_release: null
 scope:

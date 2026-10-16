@@ -1,11 +1,15 @@
 """Publication trust-boundary regressions for #1352; never deploy anything."""
 
 import contextlib
+import importlib.util
 import io
 import json
 import os
 from pathlib import Path
 import re
+import subprocess
+import sys
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -58,7 +62,8 @@ class WebsitePagesWorkflowTests(unittest.TestCase):
             ) as request,
             contextlib.redirect_stdout(io.StringIO()),
         ):
-            exec(compile(self.guard, "workflow-human-protection", "exec"), {})
+            # Angle brackets identify virtual source to Python coverage tools.
+            exec(compile(self.guard, "<workflow-human-protection>", "exec"), {})
         return request
 
     def test_only_manual_official_main_can_upload_or_deploy(self):
@@ -130,7 +135,48 @@ class WebsitePagesWorkflowTests(unittest.TestCase):
                 patch.dict(os.environ, self.env, clear=True),
                 self.assertRaises(SystemExit),
             ):
-                exec(compile(self.guard, "guard", "exec"), {})
+                exec(compile(self.guard, "<workflow-human-protection>", "exec"), {})
+
+    def test_coverage_can_report_and_export_after_executing_inline_guards(self):
+        if importlib.util.find_spec("coverage") is None:
+            self.skipTest("Optional coverage tooling unavailable")
+        with tempfile.TemporaryDirectory() as directory:
+            data = Path(directory) / ".coverage"
+            report = Path(directory) / "coverage.json"
+            # unittest discover imports this file without the tests. prefix;
+            # subprocesses start at ROOT and must use its canonical package name.
+            case = "tests.test_website_pages_workflow.WebsitePagesWorkflowTests"
+            commands = [
+                [
+                    "run",
+                    "--branch",
+                    f"--data-file={data}",
+                    "-m",
+                    "unittest",
+                    f"{case}.test_guard_reads_only_public_environment_and_accepts_human_gate",
+                    f"{case}.test_unprotected_malformed_and_bot_reviewers_fail_closed",
+                ],
+                ["report", f"--data-file={data}"],
+                ["json", f"--data-file={data}", "-o", str(report)],
+            ]
+            for command in commands:
+                result = subprocess.run(
+                    [sys.executable, "-m", "coverage", *command],
+                    cwd=ROOT,
+                    capture_output=True,
+                    text=True,
+                )
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            files = json.loads(report.read_text(encoding="utf-8"))["files"]
+            self.assertTrue(
+                any(name.endswith("test_website_pages_workflow.py") for name in files)
+            )
+            self.assertFalse(
+                any(
+                    Path(name).name in ("guard", "workflow-human-protection")
+                    for name in files
+                )
+            )
 
     def test_pr_fork_and_non_main_never_even_query_environment(self):
         for key, value in (

@@ -11,7 +11,7 @@ traceability:
         - dedicated website-pages workflow and workflow guard tests
         - website runbook, project commands and scoped governance records
       tests_or_evidence:
-        - 26 site/workflow/traceability/package tests OK
+        - 27 site/workflow/traceability/package tests OK, including coverage report/JSON regression
         - branch/event/permission/isolation checks and real inline guard rejection fixtures
       release_or_deployment: null
       status: implemented

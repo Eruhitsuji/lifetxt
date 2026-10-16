@@ -1,0 +1,46 @@
+schema_version: 1
+verification:
+  checks:
+  - type: site_build_links
+    command: python scripts/build_website.py --output .cache/website-v1; python scripts/check_website.py
+      .cache/website-v1; python -m lifetxt check website/example.txt
+    source_commit: a3c9e23d + scoped website working tree
+    status: passed
+    result: 14 HTML pages; internal links/assets/fragments/meta valid; 4 synthetic
+      records accepted.
+  - type: unit_integration
+    command: python -m unittest tests.test_website tests.test_traceability_gate tests.test_change_package_closeout
+    source_commit: a3c9e23d + scoped website working tree
+    status: passed
+    result: 22 tests OK. Initial fixture-only artifact-count assertion failed (25
+      vs 24); replaced brittle count with public artifact exclusions, rerun green.
+  - type: browser
+    command: Optional Playwright 1.51 with installed Chromium Headless Shell over
+      real local HTTP /lifetxt/
+    source_commit: a3c9e23d + scoped website working tree
+    status: passed
+    result: '36 page/width combinations: six pages in both languages at 320/390/1280px;
+      HTTP 200, no horizontal overflow, corresponding language links, keyboard Tab/Enter
+      skip to main and root English navigation. Desktop EN and mobile screenshots
+      inspected; this host lacks Japanese glyph fonts, so JA text/codepoints/layout
+      were checked but glyph appearance remains a live/real-device gap.'
+  - type: static
+    command: ruff check lifetxt tests scripts; approved mypy diagnostic_contract.py
+      boundary
+    source_commit: a3c9e23d + scoped website working tree
+    status: passed
+    result: Lint and type boundary passed.
+  gaps:
+  - description: Independent latest-head review and required CI remain human/PR gates;
+      full runtime suite not run locally for a static-only runtime-neutral change.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1351
+  - description: Public deployment, real-device/Safari/screen-reader and live external-link
+      verification require owner deployment first.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1353
+review_ledger:
+- reviewer: Eruhitsuji
+  review_type: independent_implementation_content_accessibility
+  target_commit: null
+  result: pending
+  finding_count: null
+  completed_at: null

@@ -1,6 +1,27 @@
 schema_version: 1
 
 capabilities:
+  - id: cap-official-website
+    name: Bilingual official product introduction
+    summary: Static user-owned-text product discovery and onboarding, separate from the runnable Web UI.
+    status: implemented
+    owner: Eruhitsuji
+    source_requirements:
+      - req-official-website-v1
+    implementation_locations:
+      - website/
+      - scripts/build_website.py
+      - scripts/check_website.py
+    public_interfaces:
+      - Planned https://eruhitsuji.github.io/lifetxt/ (not deployed by this PR)
+    tests_or_evidence:
+      - tests/test_website.py
+      - Local Chromium HTTP checks at 320, 390, 1280 pixels for both languages
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/1350
+      - https://github.com/Eruhitsuji/lifetxt/issues/1351
+    related_pull_requests: []
+
   - id: cap-procedure-guidance
     name: Opt-in human procedure guidance
     summary: Opt-in human procedure hierarchy/validation/diagrams, explicit local

@@ -5,13 +5,14 @@ capabilities:
     name: Opt-in human procedure guidance
     summary: Opt-in human procedure hierarchy/validation/diagrams, explicit local
       runs with native replay/CAS/recovery, and bounded GET-only Web definition
-      browsing. Web writes await server actor/ownership decision W1.
+      browsing and owner-approved W1 shared-operator Web runs with exact revisions.
     status: active
     owner: Eruhitsuji
     source_requirements:
       - req-procedure-guidance-v1
       - req-procedure-run-v1
       - req-procedure-web-read-v1
+      - req-procedure-web-run-v1
     implementation_locations:
       - lifetxt/procedure_definition.py
       - lifetxt/procedure_validation.py
@@ -26,6 +27,8 @@ capabilities:
       - lifetxt/procedure_run_model.py
       - lifetxt/procedure_run_store.py
       - lifetxt/procedure_web.py
+      - lifetxt/procedure_run_web.py
+      - lifetxt/procedure_run_web.js
       - lifetxt/procedure_web.html/css/js
       - lifetxt/procedure_run_cli.py
       - .ai/project/changes/procedure-guidance/procedure-event-v1.schema.json
@@ -35,6 +38,7 @@ capabilities:
       - lifetxt procedure run start|show|next|choose|pause|resume|finish|abandon FILE
         --id ROOT --log LOG
       - GET /procedures and /api/procedures[/{source}/{root_id}]
+      - GET/POST /api/procedure-runs (authenticated shared operator)
       - record:procedure_event event_data procedure-event-v1 (separate local log; schema
         retained in change package)
     tests_or_evidence:
@@ -51,6 +55,8 @@ capabilities:
       - tests/test_procedure_run_cli.py
       - tests/test_procedure_web.py
       - tests/test_procedure_web_browser.py
+      - tests/test_procedure_run_web.py
+      - tests/test_procedure_run_web_browser.py
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/1332
       - https://github.com/Eruhitsuji/lifetxt/issues/1333
@@ -62,12 +68,14 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/1339
       - https://github.com/Eruhitsuji/lifetxt/issues/1340
       - https://github.com/Eruhitsuji/lifetxt/issues/1341
+      - https://github.com/Eruhitsuji/lifetxt/issues/1342
+      - https://github.com/Eruhitsuji/lifetxt/issues/1343
     notes: D1-D4 and the three-PR grouping were owner-approved 2026-10-16. Stage 1 merged
       as PR 1346; stage 2 merged as PR 1347. Stage 3 read-only Web is implemented;
-      Web writes await W1. CLI
+      W1 was owner-approved 2026-10-16 and Web explicit run controls are implemented. CLI
       actor is local attribution, not authentication. No arbitrary execution, template/body
       copies in events, generic parser/Format/item_event changes, external dependency
-      or public Web/MCP run API.
+      or public Remote/MCP run API.
   - id: cap-web-work-session-controls
     name: Revision-bound Task drawer work sessions
     summary: Start and stop compound work sessions from a writable Task drawer with frozen item/timer revisions and safe explicit recovery.

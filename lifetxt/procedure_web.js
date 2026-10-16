@@ -8,7 +8,7 @@
     ja: {title:'手順書',notice:'手順の定義を閲覧しています。読むだけでは作業の実施・完了になりません。',reload:'定義を再読み込み',list:'手順一覧',flow:'フローチャート',flowNote:'ノードを選ぶと説明に移動します。下の一覧にもすべての遷移を表示します。',steps:'ステップと遷移',exports:'テキスト / Mermaid / DOT',format:'形式',empty:'設定済みファイルに手順の定義がありません。',invalid:'定義が不正です',unavailable:'読み込めないファイルがあります。',loading:'読み込み中…',failed:'手順を読み込めませんでした。再読み込みしてください。',unsupported:'このサーバーは手順表示に未対応です。life.txtからItemsやPlannerを利用できます。',start:'開始',status:'定義の状態',previous:'前のステップ',next:'次のステップ',record:'レコードを開く',end:'定義の終端です。作業が完了したことは意味しません。',revision:'定義の改訂',large:'大きな図です。下のステップ・遷移一覧ですべてを確認できます。',choose:'手順を選択してください。'}
   };
   const t = key => strings[locale][key];
-  let current = null, catalogData = null, generation = 0;
+  let current = null, catalogData = null, generation = 0, credential = "";
   const feedback = text => { $('feedback').textContent = text; };
   function el(tag, text, parent, className) {
     const node = document.createElement(tag);
@@ -22,11 +22,11 @@
     $('language').value = locale;
     document.querySelectorAll('[data-text]').forEach(node => node.textContent = t(node.dataset.text));
   }
-  async function api(path) {
-    const response = await fetch(path, {headers:{Accept:'application/json'},cache:'no-store'});
+  async function api(path, options = {}) {
+    const response = await fetch(path, {...options,headers:{Accept:'application/json',...(credential ? {Authorization:'Bearer '+credential} : {}),...(options.headers || {})},cache:'no-store'});
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      const error = new Error(response.status === 404 ? t('unsupported') : t('failed'));
+      const error = new Error(data.message || (response.status === 404 && path === '/api/procedures' ? t('unsupported') : t('failed')));
       error.diagnostics = data.diagnostics;
       throw error;
     }
@@ -110,26 +110,29 @@
       link.href = row.href + '&lang='+locale;
       if (params.get('source') === row.source && params.get('id') === row.id) link.setAttribute('aria-current','page');
       link.onclick = event => {
-        event.preventDefault(); params.set('source',row.source); params.set('id',row.id);
+        event.preventDefault(); if(runBusy)return; params.delete('run'); params.set('source',row.source); params.set('id',row.id);
         history.pushState(null,'','/procedures?'+params.toString()); loadDefinition(row.source,row.id);
       };
     });
   }
   async function loadDefinition(source, id) {
+    invalidateRun();
     const turn = ++generation;
     current = null; $('definition').hidden = true; feedback(t('loading'));
     try {
       const data = await api('/api/procedures/'+encodeURIComponent(source)+'/'+encodeURIComponent(id));
       if (turn !== generation) return;
       if (data.schema !== 'procedure-v1' || data.mode !== 'definition') throw new Error(t('unsupported'));
-      render(data); if(catalogData) renderCatalog(catalogData); feedback(''); $('root-title').focus();
+      render(data); if(catalogData) renderCatalog(catalogData); feedback(''); $('root-title').focus(); if(credential)await refreshRun();
     } catch (error) {
       if (turn !== generation) return;
       feedback(error.message);
       if (error.diagnostics) feedback(error.message+' '+error.diagnostics.map(row => row.code+': '+row.message).join(' · '));
+      if(credential && params.get('run'))await refreshRun();
     }
   }
   async function load() {
+    invalidateRun();
     const turn = ++generation;
     current = null; $('definition').hidden = true; $('catalog').replaceChildren(); feedback(t('loading'));
     $('reload').disabled = true;
@@ -144,8 +147,9 @@
     finally { $('reload').disabled = false; }
   }
   $('format').onchange = () => { if (current) $('export').textContent = current.formats[$('format').value]; };
-  $('language').onchange = () => { locale = $('language').value; params.set('lang',locale); history.replaceState(null,'','/procedures?'+params.toString()); applyLanguage(); if(catalogData)renderCatalog(catalogData); if(current)render(current); };
+  $('language').onchange = () => { locale = $('language').value; params.set('lang',locale); history.replaceState(null,'','/procedures?'+params.toString()); applyLanguage(); if(catalogData)renderCatalog(catalogData); if(current)render(current); runLabels(); if(runSnapshot)displayRun(runSnapshot); };
   $('reload').onclick = load;
   window.addEventListener('popstate', () => { const query = new URLSearchParams(location.search); if (query.toString() === params.toString()) return; Array.from(params.keys()).forEach(key=>params.delete(key)); query.forEach((value,key)=>params.set(key,value)); load(); });
+  __PROCEDURE_RUN_JS__
   applyLanguage(); load();
 })();

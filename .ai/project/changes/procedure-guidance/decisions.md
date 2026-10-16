@@ -78,3 +78,24 @@ contract. This is the final planned draft PR, continued after approval rather
 than split into another PR. No Web mutation or server-auth change is claimed.
 The explicit CLI remains available. Owner merge of stage 2 is recorded; no
 separate review findings are inferred from it.
+
+## W1 accepted and implemented (2026-10-16)
+
+The owner explicitly approved the W1 proposal presented with Draft PR #1349.
+#1343 moved from blocked to in-progress; the same branch and PR are retained.
+The shared API credential authenticates server actor web-shared; no actor/path is
+accepted from a client. A dedicated sidecar is server-selected, kept out of normal
+Items, and committed only through the existing run store. Public static shell
+allows token entry in memory; read APIs remain protected. No Remote/MCP scope or
+authority is added. Latest-head independent security/implementation/integration
+review and human merge remain required.
+
+The dedicated endpoint enforces the existing source If-Match header itself in
+addition to exact event-log CAS. Generic template transactions and compatibility
+revision synthesis do not wrap this endpoint: that would inspect a private source
+before authentication, synthesize a missing precondition or invalidate an already
+committed sidecar event on an unrelated template transaction. Minimal exclusions
+are limited to this endpoint in surface_runtime and surface_runtime_compat; all
+other route policies are unchanged. Existing optional client clock checks remain
+in force and the UI sends the configured header. Store/model/transition/journal
+semantics are reused without changes.

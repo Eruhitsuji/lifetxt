@@ -201,7 +201,7 @@ def _patch_web_path_shape_and_reads():
             path = request.url.path
             # Daily Flow owns a bounded, read-only multi-source snapshot. Do not
             # pre-read the writable file or synthesize write revisions here.
-            if path == "/api/daily-flow":
+            if path in {"/api/daily-flow", "/api/procedure-runs"}:
                 return await call_next(request)
             unsafe = method in ("POST", "PUT", "PATCH", "DELETE")
             life_api_write = (

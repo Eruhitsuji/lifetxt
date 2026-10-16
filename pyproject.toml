@@ -65,6 +65,7 @@ lifetxt = [
   "procedure_web.html",
   "procedure_web.css",
   "procedure_web.js",
+  "procedure_run_web.js",
   "web_icon.svg",
   "web_icon_*.png",
 ]

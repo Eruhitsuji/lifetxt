@@ -76,7 +76,10 @@ class ProcedureWebTests(unittest.TestCase):
             ) as client:
                 url = self.detail_url()
                 for route in ("/procedures", "/api/procedures", url):
-                    self.assertEqual(401, client.get(route).status_code)
+                    self.assertEqual(
+                        200 if route == "/procedures" else 401,
+                        client.get(route).status_code,
+                    )
                     self.assertEqual(
                         200,
                         client.get(
@@ -84,7 +87,7 @@ class ProcedureWebTests(unittest.TestCase):
                         ).status_code,
                     )
                     self.assertEqual(
-                        401,
+                        200 if route == "/procedures" else 401,
                         client.get(
                             route, headers={"Authorization": "Bearer wrong"}
                         ).status_code,

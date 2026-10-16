@@ -1,10 +1,9 @@
-# Stage 3 Web run contract — Decision W1 (awaiting owner approval)
+# Stage 3 Web run contract — Decision W1 (owner approved 2026-10-16)
 
-This is a concrete proposal for #1343, not an implemented API or granted
-permission. #1347 merged into 18d5c905. The approved three-PR plan remains:
-complete #1342 and #1343 in feature/1343-procedure-web → main. The draft final
-PR contains the finished read-only part and this decision. After W1 approval,
-continue that same PR; do not open a fourth implementation PR.
+W1 was explicitly approved by the owner on 2026-10-16 and is implemented in
+PR #1349. #1347 merged into 18d5c905. The approved three-PR plan remains:
+complete #1342 and #1343 in feature/1343-procedure-web → main. No fourth
+implementation PR is needed. Final latest-head review/CI/merge remain separate.
 
 ## Recommended identity and authorization
 
@@ -46,7 +45,7 @@ Reject aliases/hardlinks/symlinks/generated/unwritable logs through the existing
 store. No new configuration setting, event schema, retention deletion or data
 migration. Existing journal/backup and explicit operator recovery remain intact.
 
-## API and browser behavior to implement after approval
+## Implemented API and browser behavior
 
 - A procedure-owned snapshot/receipt GET API filters to `web-shared` runs and
   rejects a foreign run ID before returning its state or receipt. Includes exact
@@ -87,7 +86,11 @@ release, deployment or merge is authorized by W1.
 
 Rule basis: change.yml `human_approvals_required` explicitly requires
 "Server-authenticated Web actor/ownership contract before stage 3 writes";
-requirements.yml retains this as an open question. D1–D4 approve the local
+requirements.yml now records W1 as approved. D1–D4 approved the local
 procedure model and three delivery stages, but do not select this server identity
 or sidecar policy. W1 approval selects the concrete proposal above; final latest
 head review, CI and merge remain separate human gates.
+
+
+W1 was explicitly approved by the owner in this session on 2026-10-16.
+Implementation is retained in PR #1349; merge/release authority is unchanged.

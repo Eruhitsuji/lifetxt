@@ -344,3 +344,34 @@ write_run(sys.argv[1],'r',sys.argv[2],'next',failure_hook=crash,**json.loads(sys
             with self.assertRaises(ProcedureError):
                 self.write("choose", run, choice="yes")
         self.assertEqual(before, self.log.read_bytes())
+
+    def test_postcommit_source_alias_change_is_blocked_even_for_identical_bytes(self):
+        clone = self.root / "identical.txt"
+        clone.write_text(SAMPLE)
+        probe = self.root / "probe-link"
+        try:
+            probe.symlink_to(clone)
+        except (NotImplementedError, OSError):
+            self.skipTest("symlink creation unavailable")
+        probe.unlink()
+        run = self.write("start").state.run_id
+        original_handle = source_handle(self.source)
+
+        def swap(phase, *_):
+            if phase == "after_commit":
+                self.source.unlink()
+                self.source.symlink_to(clone)
+
+        result = self.write("next", run, failure_hook=swap)
+        self.assertEqual(result.template_revision, result.state.template_revision)
+        self.assertNotEqual(original_handle, source_handle(self.source))
+        self.assertTrue(result.blocked)
+        self.assertEqual(2, read_log(self.log).states[run].sequence)
+
+    def test_native_events_use_the_shared_injectable_utc_clock(self):
+        import datetime
+
+        now = datetime.datetime(2026, 10, 16, 12, 34, 56, tzinfo=datetime.timezone.utc)
+        with patch("lifetxt.procedure_run_store.utcnow", return_value=now):
+            self.write("start")
+        self.assertEqual("2026-10-16T12:34:56Z", read_log(self.log).events[0]["at"])

@@ -10,7 +10,7 @@ traceability:
       - 1334
       - 1336
       - 1337
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1346
       changed_files_or_scope:
       - lifetxt/procedure_*.py
       - minimal cli.py/entrypoint.py/cli_taxonomy.py wiring

@@ -27,6 +27,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/1353
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/1354
+      - https://github.com/Eruhitsuji/lifetxt/pull/1355
 
   - id: cap-procedure-guidance
     name: Opt-in human procedure guidance

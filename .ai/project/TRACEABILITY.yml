@@ -6,7 +6,7 @@ traceability:
       capability_id: cap-official-website
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1350
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1352
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1355
       changed_files_or_scope:
         - dedicated website-pages workflow and workflow guard tests
         - website runbook, project commands and scoped governance records

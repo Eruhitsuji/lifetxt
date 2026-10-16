@@ -211,6 +211,68 @@ def no_latest_regression(api, plan):
         )
 
 
+def alias_versions(registry, data):
+    """Read runnable versions in legacy Docker indexes, excluding only known
+    BuildKit attestation descriptors referencing those exact runnable manifests.
+    docker/metadata-action's first raw tag can label the image with leading v.
+    """
+    rows = json.loads(data).get("manifests", [])
+    runnable = [
+        r
+        for r in rows
+        if r.get("platform")
+        in (
+            {"os": "linux", "architecture": "amd64"},
+            {"os": "linux", "architecture": "arm64"},
+            {"os": "linux", "architecture": "amd64", "variant": "v1"},
+            {"os": "linux", "architecture": "arm64", "variant": "v8"},
+        )
+    ]
+    proof.require(
+        len(runnable) == 2
+        and {r["platform"]["architecture"] for r in runnable} == {"amd64", "arm64"},
+        "cannot establish both alias platform versions",
+    )
+    digests = {r["digest"] for r in runnable}
+    proof.require(
+        len(rows) == len({r["digest"] for r in rows}),
+        "duplicate alias manifest descriptor",
+    )
+    for row in rows:
+        if row in runnable:
+            continue
+        annotations = row.get("annotations", {})
+        proof.require(
+            row.get("platform") == {"os": "unknown", "architecture": "unknown"}
+            and row.get("mediaType") == "application/vnd.oci.image.manifest.v1+json"
+            and annotations.get("vnd.docker.reference.type") == "attestation-manifest"
+            and annotations.get("vnd.docker.reference.digest") in digests,
+            "unknown/unbound legacy alias descriptor",
+        )
+    versions = []
+    for row in runnable:
+        raw = registry.manifest(row["digest"])
+        proof.require(
+            "sha256:" + hashlib.sha256(raw).hexdigest() == row["digest"]
+            and len(raw) == row["size"],
+            "alias manifest bytes mismatch",
+        )
+        descriptor = json.loads(raw)["config"]
+        raw = registry.blob(descriptor["digest"])
+        proof.require(
+            "sha256:" + hashlib.sha256(raw).hexdigest() == descriptor["digest"]
+            and len(raw) == descriptor["size"],
+            "alias config bytes mismatch",
+        )
+        version = json.loads(raw)["config"]["Labels"][
+            "org.opencontainers.image.version"
+        ]
+        parts = release_parts(version[1:] if version.startswith("v") else version)
+        versions.append(parts)
+    proof.require(len(set(versions)) == 1, "mixed alias platform versions")
+    return versions
+
+
 def promote(api, registry, plan, receipt):
     proof.require(
         receipt["plan_digest"] == plan["digest"]
@@ -244,19 +306,13 @@ def promote(api, registry, plan, receipt):
         data = registry.manifest(alias, missing=True)
         if data is None:
             continue
-        index = json.loads(data)
-        manifests = index.get("manifests", [])
-        proof.require(bool(manifests), "cannot establish alias version")
-        for row in manifests:
-            manifest = json.loads(registry.manifest(row["digest"]))
-            config = json.loads(registry.blob(manifest["config"]["digest"]))
-            version = config["config"]["Labels"]["org.opencontainers.image.version"]
+        for parts in alias_versions(registry, data):
             proof.require(
-                release_parts(version) <= tuple(c["version_parts"]),
+                parts <= tuple(c["version_parts"]),
                 "newer registry alias cannot be downgraded",
             )
             proof.require(
-                release_parts(version) != tuple(c["version_parts"])
+                parts != tuple(c["version_parts"])
                 or "sha256:" + hashlib.sha256(data).hexdigest()
                 == plan["oci_index_digest"],
                 "same-version alias points to conflicting bytes",

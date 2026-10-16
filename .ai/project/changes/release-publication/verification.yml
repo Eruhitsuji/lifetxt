@@ -55,6 +55,15 @@ verification:
     status: passed
     result: 59 tests passed after final controlled Homebrew credential/transport errors and sanitized failure reasons; no secret stderr stored. No concurrent worktree mutation. Python 3.12.14/bash.
     tested_commit: 008953eb55ab3b8e6fc20e817392ff7386f41cb7
+  - type: legacy-cutover-focused
+    command: python -m unittest tests.test_release_publication tests.test_release_pypi_packaging tests.test_standalone_binaries_checksum_newline tests.test_mini_release_workflow tests.test_traceability_gate tests.test_change_package_closeout
+    status: passed
+    result: 60 tests passed. Legacy alias fixture includes v-prefixed labels, two real hashed manifest/config graphs, arm64 v8 and digest-bound BuildKit unknown/unknown attestations. Wrong attestation reference/type fails closed. Existing same-digest partial repair and numeric downgrade gates still pass. No live legacy registry verification claimed.
+    tested_commit: a49a617d316eeba6650da1d730d2d6b14d273dec
+  - type: final-cutover-lint
+    command: python -m ruff check lifetxt tests scripts
+    status: passed
+    tested_commit: a49a617d316eeba6650da1d730d2d6b14d273dec
   - type: documentation
     command: python scripts/validate_release_docs.py --output /tmp/lifetxt-publication-isolated-docs.json
     status: passed
@@ -83,9 +92,9 @@ verification:
 review_ledger:
 - reviewer: Codex implementer
   review_type: self-review
-  target_commit: 008953eb55ab3b8e6fc20e817392ff7386f41cb7
+  target_commit: a49a617d316eeba6650da1d730d2d6b14d273dec
   result: completed
-  notes: Reviewed approval/API/attempt binding, exact archive/aggregate/OCI reconstruction, atomic legacy cutover, full canonical scope, remote no-clobber/retry, required Homebrew/generation states, source correction/critical stop, alias partial repair/numeric ordering and direct PyPI identity. Preserved strict source policy, isolated product execution into a fresh read-only job, used same-plan verified receipts for credentialed controller-only finish, stripped redirect authorization and made inventory directly reviewable. Controlled Homebrew credential errors remain blocked/retryable and retain sanitized reasons. Independent implementation/integration reviews still pending; no self-approval.
+  notes: Reviewed approval/API/attempt binding, exact archive/aggregate/OCI reconstruction, atomic legacy cutover, full canonical scope, remote no-clobber/retry, required Homebrew/generation states, source correction/critical stop, alias partial repair/numeric ordering and direct PyPI identity. Preserved strict source policy, isolated product execution into a fresh read-only job, used same-plan verified receipts for credentialed controller-only finish, stripped redirect authorization and made inventory directly reviewable. Controlled Homebrew credential errors remain blocked/retryable and retain sanitized reasons. Final cutover review added strict legacy raw-v labels/known attestation handling while hashing both runnable graph records; unknown descriptors and mixed/newer versions still block. Independent implementation/integration reviews still pending; no self-approval.
 - reviewer: independent implementation reviewer
   review_type: implementation
   result: pending

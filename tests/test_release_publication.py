@@ -18,6 +18,7 @@ from unittest.mock import patch
 import yaml
 
 from tests.test_release_preflight_collect import PreflightCollectTests
+from tests.test_release_preflight_oci import fixture as oci_fixture
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -652,6 +653,58 @@ class DownstreamAndRecoveryTests(unittest.TestCase):
             "critical_blocker",
             recovery.classify(published=False, external=True, critical=True)["kind"],
         )
+
+    def test_cutover_reads_legacy_v_labels_and_bound_buildkit_attestations(self):
+        candidate = proof.candidate(
+            "Eruhitsuji/lifetxt", "1.0.4.1", "a" * 40, "b" * 40, 123, 1
+        )
+        rows, blobs = [], {}
+        for arch in ("amd64", "arm64"):
+            root = self.fixture.root / ("legacy-" + arch)
+            descriptor = oci_fixture(
+                root,
+                candidate,
+                arch,
+                mutate=lambda config: config["config"]["Labels"].update(
+                    {"org.opencontainers.image.version": "v1.0.4.1"}
+                ),
+            )
+            rows.append(
+                {**descriptor, "platform": {"os": "linux", "architecture": arch}}
+            )
+            if arch == "arm64":
+                rows[-1]["platform"]["variant"] = "v8"
+            blobs.update(
+                {
+                    "sha256:" + p.name: p.read_bytes()
+                    for p in (root / "blobs/sha256").iterdir()
+                }
+            )
+        for i, manifest in enumerate(list(rows)):
+            rows.append(
+                {
+                    "mediaType": "application/vnd.oci.image.manifest.v1+json",
+                    "digest": "sha256:" + str(i) * 64,
+                    "size": 1,
+                    "platform": {"os": "unknown", "architecture": "unknown"},
+                    "annotations": {
+                        "vnd.docker.reference.type": "attestation-manifest",
+                        "vnd.docker.reference.digest": manifest["digest"],
+                    },
+                }
+            )
+        registry = unittest.mock.Mock()
+        registry.manifest.side_effect = lambda digest: blobs[digest]
+        registry.blob.side_effect = lambda digest: blobs[digest]
+        data = lambda: json.dumps({"schemaVersion": 2, "manifests": rows}).encode()
+        self.assertEqual([(1, 0, 4, 1)] * 2, channels.alias_versions(registry, data()))
+        rows[-1]["annotations"]["vnd.docker.reference.digest"] = "sha256:" + "f" * 64
+        with self.assertRaises(ValueError):
+            channels.alias_versions(registry, data())
+        rows.pop()
+        rows[-1]["annotations"]["vnd.docker.reference.type"] = "unknown"
+        with self.assertRaises(ValueError):
+            channels.alias_versions(registry, data())
 
     def test_partial_alias_failure_repairs_same_digest_without_republishing_completed_alias(
         self,

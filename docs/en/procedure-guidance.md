@@ -67,7 +67,7 @@ the same root. Display order is file order, not execution order. Choices are
 case-sensitive lowercase ASCII tokens. Missing targets, duplicate IDs/labels,
 unknown `proc_*` fields, unreachable steps, parent cycles and any reachable step
 without a route to an end are errors. A cycle with an exit is a warning for
-browsing; future runs require explicit acknowledgement and finite guards.
+browsing; starting runs requires explicit acknowledgement and finite guards.
 
 Generic `check` still treats `proc_*` as custom fields and reports W106; it does
 not validate procedure semantics. `--warnings-as-errors` therefore rejects the
@@ -197,7 +197,9 @@ is stored with the change package. It is not a new generic Format/schema-catalog
 entry. `event_data` contains a closed `procedure-event-v1` JSON envelope with a
 canonical digest chain. It copies no title/body/secret/URL/command output or free
 notes. Hash chaining detects accidental corruption, **not authenticated tamper-proof
-audit or proof that real work occurred**. Runtime also checks graph semantics,
+audit or proof that real work occurred**. A valid prefix alone cannot prove that
+trailing events were never removed; use trusted backup/journal evidence when
+assessing completeness, and never invent missing events. Runtime also checks graph semantics,
 valid calendar timestamps, guard counts and exact event ordering. Replay is
 bounded by log/event/control-plan sizes; traversals use the bounded graph.
 

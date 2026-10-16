@@ -92,3 +92,9 @@ transition traversal operates on the bounded graph. No automatic rotation,
 retention deletion, migration, rollback, release or deployment is authorized.
 Revert code without deleting existing definitions or event logs. Corruption
 requires preserving damaged data and explicit verified-backup/operator recovery.
+
+Self-review and full-suite findings: event timestamps use the common injectable
+timezone_policy.utcnow (not a new direct host clock). Postcommit blocked status
+checks canonical source identity as well as exact bytes, including identical-byte
+symlink retargets. Hash chains validate order/content but do not authenticate
+history or prove an untruncated tail without trusted backup/journal evidence.

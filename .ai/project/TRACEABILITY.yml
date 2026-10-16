@@ -2,6 +2,35 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-release-publication-integration
+      capability_id: cap-distribution-channels
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1308
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1311
+      related_tasks: [1305, 1312, 1313, 1314]
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1331
+      changed_files_or_scope:
+        - .github/workflows/release.yml and seven retired public entries
+        - scripts/release_canonical.py
+        - scripts/release_plan.py
+        - scripts/release_remote.py
+        - scripts/release_channels.py
+        - scripts/release_recovery.py
+        - scripts/release_orchestrate.py
+        - tests/test_release_publication.py and legacy publication contract adaptations
+        - docs/en/release-publication.md
+        - docs/ja/release-publication.md
+        - docs/en/distribution.md
+        - docs/ja/distribution.md
+        - .ai/project/skills/release-distribution-runbook/SKILL.md
+        - .ai/project/changes/release-publication
+        - .ai/project/CAPABILITIES.yml
+      tests_or_evidence:
+        - Complete 13-target offline trust/byte validation and approved run plan faults
+        - Canonical partial inventory, immutable uploads, PyPI partial conflict and original OCI transport
+        - Downstream CAS/state, partial alias repair, numeric Latest prevention and recovery faults
+        - Prior actual preflight run 38822634032 and artifact 12014680717 verified without publication
+      release_or_deployment: None; live publication/account settings require separate human approval
+      status: in_progress
     - requirement_id: req-release-preflight-native-fixes
       capability_id: cap-distribution-channels
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1321
@@ -39,7 +68,7 @@ traceability:
       tests_or_evidence:
         - Full 13-target fixture integration using all existing offline producer validators
         - API run/attempt/job/step/artifact/pagination/expiry/digest/ZIP/state-drift faults
-        - Actual native builds and Actions transport not_run; issue 1321 stays open
+        - Actual run 38822634032 attempt 1 all 15 jobs success; artifact 12014680717 ZIP and complete inventory independently verified; independent reviews pending
       release_or_deployment: None; non-public manual preflight, publication_authorized false
       status: in_progress
     - requirement_id: req-release-preflight-oci

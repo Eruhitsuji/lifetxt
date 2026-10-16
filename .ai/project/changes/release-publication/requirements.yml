@@ -1,0 +1,50 @@
+schema_version: 1
+requirements:
+- id: req-release-authority
+  kind: ADDED
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1311
+  statement: One run-specific human approval authorizes exact authenticated preflight bytes through the existing release.yml PyPI publisher identity.
+  acceptance_criteria:
+  - Read-only plan authenticates source/main CI, completed current preflight attempt, all 13 producer payloads and reports, final ZIP and expiry
+  - Approval API history requires Eruhitsuji User, pypi environment, exact plan/run/attempt comment; revalidate after wait
+  - Atomically retire all seven tag/manual/release-event publication bypasses
+  - Preserve source/tag/bytes and skip only actually verified matching remote objects
+  owner: Eruhitsuji
+- id: req-release-canonical
+  kind: ADDED
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1305
+  statement: Finalize one immutable full primary inventory and LF SHA256SUMS after every primary channel succeeds.
+  acceptance_criteria:
+  - Include all Desktop installers and public role-selected assets, exclude private bundled Core/OCI archive
+  - Reject missing, duplicate, case conflicts, CRLF, wrong hashes and competing different content without clobber
+  - Preserve bytes under reversed upload order and partial same-content retry
+  owner: Eruhitsuji
+- id: req-release-downstream
+  kind: ADDED
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1312
+  statement: Execute downstream adapters only after canonical and actual primary download verification.
+  acceptance_criteria:
+  - Generate winget/Scoop/conda from exact checked Windows/PyPI inputs
+  - Update Homebrew with existing credential, compare-and-swap and readback; missing permission blocks Latest
+  - Record generated/manual_required separately from external publication
+  owner: Eruhitsuji
+- id: req-release-acceptance
+  kind: ADDED
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1313
+  statement: Verify real downloads, OCI graph and representative native CLI before ordered Latest promotion.
+  acceptance_criteria:
+  - GitHub entire public inventory/download hashes, PyPI distributions/metadata/downloads, both GHCR platforms and all original blobs
+  - Run remote Linux Standalone/Mini native smoke and preserve authenticated Desktop metadata
+  - Hold all aliases/Latest until required channel verification/generation/Homebrew succeeds; reject numeric version regression
+  - Retain partial promotion failure and repair only the same verified digest; GitHub Latest last
+  owner: Eruhitsuji
+- id: req-release-recovery
+  kind: ADDED
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1314
+  statement: Distinguish unpublished retry, immutable partial retry, source correction, external manual and critical failures.
+  acceptance_criteria:
+  - No tag move, asset clobber, auto-numbering or same-number source rebuild after publication
+  - New dispatch/new run-bound approval for same original preflight; expiry stops recovery
+  - Retain channel and sanitized blocked receipts including failures inside external actions
+  - Document normal/correction flow, v1.0.4 example, approval and manual external boundaries in both languages
+  owner: Eruhitsuji

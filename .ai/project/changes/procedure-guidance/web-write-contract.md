@@ -12,8 +12,8 @@ Use the existing legacy Web `api.token` authentication, with a server-assigned
 `web-shared` actor. Never accept actor, source path or log path from a request.
 Require a configured nonempty token and an exact validated Bearer header for
 all run reads/writes. Missing token configuration disables run controls while
-keeping definition browsing available under existing read policy. Use constant
-comparison from the existing authentication boundary; do not infer identity from
+keeping definition browsing available under existing read policy. Use constant-time comparison in the procedure adapter in addition to existing
+authentication middleware; do not infer identity from
 browser storage, query strings, an actor form, Remote cookies or headers intended
 for proxy principals.
 

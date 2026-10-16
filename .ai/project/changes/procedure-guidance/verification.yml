@@ -276,6 +276,61 @@ verification:
     status: passed
     result: 64 tests passed in 10.098s, no skips. Initial full-suite policy failure
       identified new untranslated chrome; fixed without relaxing the translation baseline.
+  - type: stage3_full_initial
+    command: MPLBACKEND=Agg python -m unittest discover
+    requirement_ids:
+    - req-procedure-web-read-v1
+    source_commit: 739b62df
+    working_tree_changes: Navigation translation/fingerprint fixes were prepared
+      during the initial run; the imported assembled page still held the old asset bytes.
+    status: failed
+    result: 5814 tests in 416.450s, 4 failures, 74 skips. All failures were the new
+      untranslated nav string (translation report and release-manifest consumer)
+      or the intentional assembled-page snapshot change. No baseline was relaxed.
+  - type: stage3_full_intermediate
+    command: MPLBACKEND=Agg python -m unittest discover
+    requirement_ids:
+    - req-procedure-web-read-v1
+    source_commit: e8798686
+    status: failed
+    result: 5815 tests in 444.332s, one failure, 75 skips; remaining failure was the
+      assembled-page snapshot for the translated Procedures link. Updated expected
+      fingerprint with reason and explicit navigation assertions in 0c83e5c5.
+      The affected asset/i18n/release set then passed 57 tests in 9.124s.
+  - type: stage3_final_http_browser
+    command: python -m unittest tests.test_procedure_web tests.test_traceability_gate
+      tests.test_change_package_closeout; LIFETXT_BROWSER_BIN=<Headless Shell executable>
+      LIFETXT_REQUIRE_PROCEDURE_BROWSER=1 python -m unittest tests.test_procedure_web_browser
+    requirement_ids:
+    - req-procedure-web-read-v1
+    source_commit: 0c83e5c5
+    working_tree_changes: Final path converter accepts slash-containing canonical
+      root IDs, with a new encoded-ID regression; PR URL and W1 wording only otherwise.
+    status: passed
+    result: 26 HTTP/gate tests OK in 2.470s, no skips; includes all 9 procedure
+      HTTP tests. Real browser E2E rerun OK in 1.830s, no skips. Separate final
+      lint passed and 20 affected Python files formatted.
+  - type: stage3_wheel
+    command: python -m pip wheel --no-deps --no-build-isolation --wheel-dir <temporary-directory>
+      .; inspect all three procedure_web resources in the resulting wheel.
+    requirement_ids:
+    - req-procedure-web-read-v1
+    source_commit: 0c83e5c5
+    status: passed
+    result: Wheel built; HTML/CSS/JS resources match working-tree bytes exactly.
+      Verification-only artifact; no release or publication performed.
+  - type: stage3_full_verified
+    command: MPLBACKEND=Agg python -m unittest discover
+    requirement_ids:
+    - req-procedure-web-read-v1
+    source_commit: 0c83e5c55c8d1c9640b574aa52cfd139ad8132c8
+    status: passed
+    result: 5815 tests in 440.250s, OK with 75 optional/environment skips.
+      All four initial failures and the intermediate snapshot failure are resolved.
+      The later slash-root path-converter fix is independently covered by the
+      final 9 HTTP tests and real browser E2E above; the full run is evidence for
+      the pre-converter 0c83e5c5 code, not a claim of executing that later test.
+      Documentation/PR-binding evidence updates do not change runtime behavior.
   gaps:
   - description: Web run controls await W1 owner approval. No Web/Remote/MCP run endpoint is exposed.
     tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1343

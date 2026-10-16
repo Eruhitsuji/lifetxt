@@ -170,6 +170,23 @@ class ProcedureWebTests(unittest.TestCase):
         self.assertEqual(200, self.client.get("/planner").status_code)
         self.assertEqual(200, self.client.get("/api/items").status_code)
 
+    def test_canonical_ids_with_slashes_keep_source_bound_routing(self):
+        from urllib.parse import quote
+
+        text = SAMPLE.replace("id:r ", "id:r/group ").replace(
+            "parent:r ", "parent:r/group "
+        )
+        self.source.write_text(text, encoding="utf-8")
+        row = self.client.get("/api/procedures").json()["procedures"][0]
+        self.assertTrue(row["valid"])
+        self.assertEqual("r/group", row["id"])
+        response = self.client.get(
+            "/api/procedures/%s/%s" % (row["source"], quote(row["id"], safe=""))
+        )
+        self.assertEqual(200, response.status_code, response.text)
+        self.assertEqual("r/group", response.json()["root"]["id"])
+        self.assertEqual(text, self.source.read_text(encoding="utf-8"))
+
     def test_revision_changes_and_empty_ordinary_sources(self):
         url = self.detail_url()
         revision = self.client.get(url).json()["template_revision"]

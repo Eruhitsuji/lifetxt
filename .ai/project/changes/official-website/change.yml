@@ -1,18 +1,19 @@
 schema_version: 1
 change:
   id: official-website
-  title: Bilingual static product introduction and owner-approved Pages operations
+  title: Bilingual product website, owner-approved Pages operations and public acceptance
   status: in_review
   change_type: Operations
   assurance_level: High
   owner: Eruhitsuji
   accountable_owner: Eruhitsuji
-  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1352
-  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1355
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1353
+  related_pull_request: null
   base_commit: 3a71a46160d8001de508dead9a64df2771dcf0dd
   target_release: null
 scope:
   write_scope:
+  - readme.md
   - website/**
   - scripts/build_website.py
   - scripts/check_website.py
@@ -35,3 +36,10 @@ human_approvals_required:
 - Independent integration/operations review
 - Human merge, Pages/environment settings, manual dispatch and environment deployment
   approval
+
+current_task:
+  issue: https://github.com/Eruhitsuji/lifetxt/issues/1353
+  change_type: Operations
+  assurance_level: Standard
+  note: Earlier High Pages permission changes retain their assurance and review
+    obligations; this task changes only static language/links and records evidence.

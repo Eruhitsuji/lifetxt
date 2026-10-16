@@ -1,5 +1,7 @@
 # life.txt
 
+[Official website](https://eruhitsuji.github.io/lifetxt/) · [日本語サイト](https://eruhitsuji.github.io/lifetxt/ja/) · [English site](https://eruhitsuji.github.io/lifetxt/en/)
+
 `life.txt` is a plain-text format for managing tasks, events, deadlines, reminders, habits, status / presence records, messages, notes, and journal / diary entries in a single human-readable file.
 Please refer to [docs/en/life_txt_format_spec.md](./docs/en/life_txt_format_spec.md)
 or [docs/ja/life_txt_format_spec.md](./docs/ja/life_txt_format_spec.md) for the

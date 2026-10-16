@@ -98,12 +98,15 @@ def check(output: Path, base: str = DEFAULT_URL) -> list[str]:
         ):
             errors.append(f"{relative}: missing language, heading, main, or viewport")
         if relative != "404.html":
+            expected_lang = "ja" if relative.startswith("ja/") else "en"
+            if doc.lang != expected_lang:
+                errors.append(f"{relative}: wrong page language")
             canonical = base + relative.removesuffix("index.html")
             if doc.canonical != [canonical] or not doc.description:
                 errors.append(f"{relative}: wrong canonical or missing description")
             filename = "" if file.name == "index.html" else file.name
             alternatives = {lang: base + lang + "/" + filename for lang in ("ja", "en")}
-            alternatives["x-default"] = base if not filename else alternatives["ja"]
+            alternatives["x-default"] = base if not filename else alternatives["en"]
             if doc.alternates != alternatives:
                 errors.append(f"{relative}: wrong language alternates")
         for link in doc.links:

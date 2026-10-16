@@ -1,0 +1,32 @@
+schema_version: 1
+change:
+  id: official-website
+  title: Bilingual static product introduction and owner-approved Pages operations
+  status: in_review
+  change_type: Feature
+  assurance_level: Standard
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1350
+  related_pull_request: null
+  base_commit: a3c9e23d
+  target_release: null
+scope:
+  write_scope:
+  - website/**
+  - scripts/build_website.py
+  - scripts/check_website.py
+  - tests/test_website.py
+  - CAPABILITIES.yml and TRACEABILITY.yml feature records
+  - this package
+  forbidden_scope:
+  - .ai/managed/**
+  - runtime and release changes
+  - live Pages/Settings changes
+  shared_files:
+  - CAPABILITIES.yml
+  - TRACEABILITY.yml
+  integration_owner: Codex execution; Eruhitsuji merge authority
+human_approvals_required:
+- Independent latest-head review and merge
+- Pages configuration and deployment remain separate approval boundaries

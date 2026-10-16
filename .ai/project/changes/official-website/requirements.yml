@@ -1,0 +1,13 @@
+schema_version: 1
+requirements:
+- id: req-official-website-v1
+  kind: ADDED
+  owner: Eruhitsuji
+  statement: Introduce the real product and provide bilingual paths to authoritative
+    guides and releases without hosting the app.
+  acceptance_criteria:
+  - Six equivalent Japanese/English pages plus root and 404
+  - Valid project-relative links/assets, canonical/hreflang/sitemap
+  - Mobile/desktop, semantic landmarks, keyboard skip/focus, readable contrast
+  - No tracking, user data, scripts, hosted app or API claims
+  - Canonical brand bytes reused; current docs remain authoritative

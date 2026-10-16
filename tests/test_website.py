@@ -7,7 +7,7 @@ import tempfile
 import unittest
 
 from scripts.build_website import BRAND, ROOT, build
-from scripts.check_website import check
+from scripts.check_website import Document, check
 
 
 class WebsiteTests(unittest.TestCase):
@@ -43,6 +43,45 @@ class WebsiteTests(unittest.TestCase):
         )
         self.assertFalse((self.output / "README.md").exists())
         self.assertFalse((self.output / "content.json").exists())
+
+    def test_english_default_preserves_language_routes_and_deep_switches(self):
+        base = "https://eruhitsuji.github.io/lifetxt/"
+        root = (self.output / "index.html").read_text(encoding="utf-8")
+        self.assertEqual(Document(root).lang, "en")
+        self.assertIn('<h1 id="page-title">Your life record. In your hands.</h1>', root)
+        self.assertIn(f'<meta property="og:url" content="{base}">', root)
+        self.assertIn('href="./ja/" lang="ja" hreflang="ja"', root)
+        self.assertIn('href="en/get-started.html"', root)
+        self.assertIn('href="en/" aria-current="page"', root)
+        self.assertEqual(Document(root).canonical, [base])
+        for lang, other in (("ja", "en"), ("en", "ja")):
+            home = Document((self.output / lang / "index.html").read_text())
+            self.assertEqual(home.lang, lang)
+            self.assertEqual(home.canonical, [base + lang + "/"])
+            self.assertEqual(home.alternates["x-default"], base)
+            deep = (self.output / lang / "features.html").read_text()
+            self.assertIn(f'href="../{other}/features.html" lang="{other}"', deep)
+            self.assertEqual(
+                Document(deep).alternates["x-default"], base + "en/features.html"
+            )
+        self.assertEqual(check(self.output), [])
+
+    def test_wrong_default_or_localized_language_is_reported(self):
+        for relative, before, after in (
+            ("index.html", "en", "ja"),
+            ("en/features.html", "en", "ja"),
+            ("ja/features.html", "ja", "en"),
+        ):
+            with self.subTest(relative=relative):
+                file = self.output / relative
+                original = file.read_text()
+                file.write_text(
+                    original.replace(
+                        f'<html lang="{before}">', f'<html lang="{after}">'
+                    )
+                )
+                self.assertIn(f"{relative}: wrong page language", check(self.output))
+                file.write_text(original)
 
     def test_broken_link_fragment_and_unsafe_content_are_reported(self):
         file = self.output / "ja/index.html"

@@ -61,16 +61,35 @@ verification:
       Combined site/workflow/traceability/package suite is 27 tests OK; lint and
       approved mypy boundary pass. CI run 38922993874 failure is retained as the
       original evidence; latest-head CI must be checked separately.
+  - type: public_http_acceptance
+    command: Concurrent urllib GET of all 23 recorded URLs plus 18 external links;
+      deployed-commit build and byte SHA-256 comparison
+    source_commit: a64e38b373bc95f616babc3b3149a4b038807b8e
+    status: passed
+    result: 22 HTTP 200 artifacts exactly match deployed build; unknown nested path
+      returns matching 404 body. Metadata and local links validated by deployed
+      checker. Public evidence in live-http-20261017.json and public-acceptance.md.
+  - type: english_root_regression
+    command: python -m unittest tests.test_supported_runtime tests.test_website
+      tests.test_website_pages_workflow tests.test_traceability_gate tests.test_change_package_closeout;
+      Ruff lint and focused format; approved mypy boundary; build/check; sample checks
+    source_commit: 85cc45ebe8a5cb59bc2d26cd95fe61c4e4b228c4 (same code/tests; traceability finalized afterward)
+    status: passed
+    result: 31 tests OK; lint, format, mypy, build/check and synthetic/baseline samples
+      pass. Live browser skip/focus and language switch pass; no screenshot/zoom or
+      real-device/screen-reader success claimed. Required CI and independent review
+      are pending. Full runtime suite not run for this static-only change.
   gaps:
   - description: Independent latest-head review and required CI remain human/PR gates;
       full runtime suite not run locally for a static-only runtime-neutral change.
-    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1351
-  - description: Public deployment, real-device/Safari/screen-reader and live external-link
-      verification require owner deployment first.
     tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1353
-  - description: Independent High implementation/security and integration/operations
-      latest-head reviews, required CI, actual protected environment and live dispatch/deploy/smoke
-      are pending; no settings changed.
+  - description: Initial deployment and live HTTP links verified; new English-root
+      deployment, real-device visual acceptance, Safari, screen-reader and 200% zoom
+      remain unverified. See public-acceptance.md.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1353
+  - description: High latest-head review history remains human evidence; first
+      deployment success does not substitute for independent implementation and
+      integration review. No Settings or deployment action performed by Codex.
     tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1352
 review_ledger:
 - reviewer: Eruhitsuji

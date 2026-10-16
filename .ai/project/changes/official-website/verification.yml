@@ -73,7 +73,7 @@ verification:
     command: python -m unittest tests.test_supported_runtime tests.test_website
       tests.test_website_pages_workflow tests.test_traceability_gate tests.test_change_package_closeout;
       Ruff lint and focused format; approved mypy boundary; build/check; sample checks
-    source_commit: a64e38b3 plus scoped 1353 working tree
+    source_commit: 85cc45ebe8a5cb59bc2d26cd95fe61c4e4b228c4 (same code/tests; traceability finalized afterward)
     status: passed
     result: 31 tests OK; lint, format, mypy, build/check and synthetic/baseline samples
       pass. Live browser skip/focus and language switch pass; no screenshot/zoom or

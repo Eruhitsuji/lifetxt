@@ -157,3 +157,17 @@ commands:
     values:
       - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover'
       - python -m lifetxt check examples/minimal_life.txt
+
+  website_build:
+    status: configured
+    description: Build only public bilingual product pages into a new output directory.
+    values:
+      - python scripts/build_website.py --output .cache/website
+    note: Existing output is refused; choose a new directory on subsequent builds.
+
+  website_check:
+    status: configured
+    values:
+      - python scripts/check_website.py .cache/website
+      - python -m lifetxt check website/example.txt
+      - python -m unittest tests.test_website tests.test_website_pages_workflow

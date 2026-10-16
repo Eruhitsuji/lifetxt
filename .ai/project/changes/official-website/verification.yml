@@ -30,6 +30,37 @@ verification:
     source_commit: a3c9e23d + scoped website working tree
     status: passed
     result: Lint and type boundary passed.
+  - type: pages_guard
+    command: python -m unittest tests.test_website tests.test_website_pages_workflow
+      tests.test_traceability_gate tests.test_change_package_closeout
+    source_commit: 3a71a461 + operations scoped working tree
+    status: passed
+    result: 26 tests OK, no skips. Executes actual inline guard with fake read-only
+      HTTP for owner reviewer, missing/malformed/bot/other reviewer and API failure.
+      PR/non-main/fork denied; branch/event/permission/artifact/Action pin/checkout
+      isolation policies checked.
+  - type: operations_static
+    command: ruff check lifetxt tests scripts; mypy --follow-imports=skip --ignore-missing-imports
+      lifetxt/diagnostic_contract.py; python -m lifetxt check examples/minimal_life.txt
+    source_commit: 3a71a461 + operations scoped working tree
+    status: passed
+    result: All lint, approved type boundary and baseline 10 records passed. YAML
+      parsed; real Actions build and deployment remain CI/Owner gates.
+  - type: pages_coverage_ci_repair
+    command: COVERAGE_FILE=<temporary-data> python -m coverage run --branch -m unittest
+      tests.test_website_pages_workflow; python -m coverage report; python -m coverage
+      json; python -m unittest discover -s tests -p test_website_pages_workflow.py
+    source_commit: a66c62e5 plus scoped CI-repair working tree; main 770c0bc6 integration checked
+    status: passed
+    result: Reproduced the CI missing-source error with coverage 7.16.2 after all
+      four original tests passed. Both dynamic compile sites now use a virtual
+      angle-bracket source name, without weakening coverage or publication gates.
+      Five workflow tests now pass under coverage, report and JSON export succeed,
+      and discovery-mode invocation passes. A subprocess regression independently
+      exercises positive/refusal guards then requires successful report and JSON.
+      Combined site/workflow/traceability/package suite is 27 tests OK; lint and
+      approved mypy boundary pass. CI run 38922993874 failure is retained as the
+      original evidence; latest-head CI must be checked separately.
   gaps:
   - description: Independent latest-head review and required CI remain human/PR gates;
       full runtime suite not run locally for a static-only runtime-neutral change.
@@ -37,9 +68,25 @@ verification:
   - description: Public deployment, real-device/Safari/screen-reader and live external-link
       verification require owner deployment first.
     tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1353
+  - description: Independent High implementation/security and integration/operations
+      latest-head reviews, required CI, actual protected environment and live dispatch/deploy/smoke
+      are pending; no settings changed.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1352
 review_ledger:
 - reviewer: Eruhitsuji
   review_type: independent_implementation_content_accessibility
+  target_commit: null
+  result: pending
+  finding_count: null
+  completed_at: null
+- reviewer: Eruhitsuji
+  review_type: independent_security_implementation
+  target_commit: null
+  result: pending
+  finding_count: null
+  completed_at: null
+- reviewer: Eruhitsuji
+  review_type: independent_integration_operations
   target_commit: null
   result: pending
   finding_count: null

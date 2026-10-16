@@ -46,6 +46,21 @@ verification:
     status: passed
     result: All lint, approved type boundary and baseline 10 records passed. YAML
       parsed; real Actions build and deployment remain CI/Owner gates.
+  - type: pages_coverage_ci_repair
+    command: COVERAGE_FILE=<temporary-data> python -m coverage run --branch -m unittest
+      tests.test_website_pages_workflow; python -m coverage report; python -m coverage
+      json; python -m unittest discover -s tests -p test_website_pages_workflow.py
+    source_commit: a66c62e5 plus scoped CI-repair working tree; main 770c0bc6 integration checked
+    status: passed
+    result: Reproduced the CI missing-source error with coverage 7.16.2 after all
+      four original tests passed. Both dynamic compile sites now use a virtual
+      angle-bracket source name, without weakening coverage or publication gates.
+      Five workflow tests now pass under coverage, report and JSON export succeed,
+      and discovery-mode invocation passes. A subprocess regression independently
+      exercises positive/refusal guards then requires successful report and JSON.
+      Combined site/workflow/traceability/package suite is 27 tests OK; lint and
+      approved mypy boundary pass. CI run 38922993874 failure is retained as the
+      original evidence; latest-head CI must be checked separately.
   gaps:
   - description: Independent latest-head review and required CI remain human/PR gates;
       full runtime suite not run locally for a static-only runtime-neutral change.

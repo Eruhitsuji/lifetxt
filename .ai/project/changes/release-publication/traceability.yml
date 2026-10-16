@@ -1,0 +1,35 @@
+schema_version: 1
+links:
+- requirement_id: req-release-authority
+  capability_id: cap-distribution-channels
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1311
+  pull_request: null
+  evidence: tests.test_release_publication and issue-specific adapter/regression tests
+  status: in_progress
+- requirement_id: req-release-canonical
+  capability_id: cap-distribution-channels
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1305
+  pull_request: null
+  evidence: tests.test_release_publication and issue-specific adapter/regression tests
+  status: in_progress
+- requirement_id: req-release-downstream
+  capability_id: cap-distribution-channels
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1312
+  pull_request: null
+  evidence: tests.test_release_publication and issue-specific adapter/regression tests
+  status: in_progress
+- requirement_id: req-release-acceptance
+  capability_id: cap-distribution-channels
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1313
+  pull_request: null
+  evidence: tests.test_release_publication and issue-specific adapter/regression tests
+  status: in_progress
+- requirement_id: req-release-recovery
+  capability_id: cap-distribution-channels
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1314
+  pull_request: null
+  evidence: tests.test_release_publication and issue-specific adapter/regression tests
+  status: in_progress
+gaps:
+- Independent implementation/integration reviews and human merge pending
+- First live publication and external account settings require separate Release Authority decision

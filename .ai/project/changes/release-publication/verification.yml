@@ -1,0 +1,94 @@
+schema_version: 1
+verification:
+  executed:
+  - type: initial-targeted
+    command: python -m unittest tests.test_release_publication
+    status: passed
+    result: 31 tests passed before subsequent receipt/alias hardening; includes reused collector fixture tests. Not live publication evidence.
+    tested_commit: working tree based on 65162fb8
+  - type: targeted
+    command: python -m unittest tests.test_release_publication tests.test_release_pypi_packaging tests.test_standalone_binaries_checksum_newline tests.test_mini_release_workflow
+    status: passed
+    result: 37 tests passed before additional partial-alias/failure-receipt tests; final combined regression still required.
+    tested_commit: working tree based on 65162fb8
+  - type: final-regression
+    command: python -m unittest tests.test_release_publication tests.test_release_preflight_desktop_manifest tests.test_release_preflight_mini tests.test_release_preflight_desktop tests.test_release_preflight_collect tests.test_release_preflight_actions tests.test_release_preflight_oci tests.test_release_preflight_standalone tests.test_release_preflight_core tests.test_release_preflight_proof tests.test_release_subversions tests.test_set_tauri_desktop_version tests.test_release_pypi_packaging tests.test_standalone_binaries_checksum_newline tests.test_mini_release_workflow tests.test_generate_homebrew_formula tests.test_generate_winget_manifest tests.test_generate_scoop_manifest tests.test_generate_conda_recipe tests.test_merge_sha256sums tests.test_check_release_tag_version tests.test_release_evidence tests.test_traceability_gate tests.test_change_package_closeout
+    status: passed
+    result: 214 tests passed, 2 skipped (Ruby syntax check lacks Ruby; conda render lacks Jinja2). Python 3.12.14/bash; BashCompletionExecutionTests not selected; no concurrent worktree mutation during run. Captured output .test-output.log, no failures.
+    tested_commit: 23c378dc7fa94113f6bc117071aab63faedb32bf
+  - type: final-source-focused
+    command: python -m unittest tests.test_release_publication tests.test_traceability_gate tests.test_change_package_closeout
+    status: passed
+    result: 52 tests passed after exposing the inventory/checksum files in the reviewable approval artifact. No live publication.
+    tested_commit: c06ccc33
+  - type: project-lint
+    command: python -m ruff check lifetxt tests scripts
+    status: passed
+    tested_commit: 008953eb55ab3b8e6fc20e817392ff7386f41cb7
+  - type: changed-format
+    command: python -m ruff format --check scripts/release_{canonical,plan,remote,channels,recovery,orchestrate}.py tests/test_release_publication.py tests/test_release_pypi_packaging.py tests/test_standalone_binaries_checksum_newline.py tests/test_mini_release_workflow.py
+    status: passed
+    result: 10 changed Python files formatted, including final permission-isolation and sanitized failure adapters.
+    tested_commit: 008953eb55ab3b8e6fc20e817392ff7386f41cb7
+  - type: strict-policy-regression
+    command: Related 214-test set plus tests.test_release_policy and tests.test_check_release_policy_cli
+    status: passed
+    result: 232 tests passed with jsonschema/Jinja2 installed; only Ruby syntax test skipped. Existing cached pre-bootstrap schema-validator test emitted a deprecation warning and made this combined run 220 seconds, but completed successfully. No source changes during run and no test failure.
+    tested_commit: 203486d0
+  - type: strict-source-policy
+    command: python scripts/check_release_policy.py --root . --pretty --output /tmp/lifetxt-publication-policy.json examples/minimal_life.txt examples/status_presence.txt examples/messages_life.txt
+    status: passed
+    result: ok=true, all 13 checks passed with required jsonschema, including local schema registry validation.
+    tested_commit: 203486d0
+  - type: strict-cli-safety-gate
+    command: python -m lifetxt safety release-gate --root . examples/minimal_life.txt examples/status_presence.txt examples/messages_life.txt
+    status: passed
+    result: ok=true; existing release policy gate preserved before approval, no artifact rebuild.
+    tested_commit: 203486d0
+  - type: isolated-job-regression
+    command: Same final-regression module list recorded above
+    status: passed
+    result: 215 tests passed, one Ruby syntax skip, after separation into prepare/publish-pypi/read-only verify/controller-only finish. Verifies the native verification path never invokes public mutation adapters and the same-plan receipt gates finish.
+    tested_commit: c065bd35
+  - type: latest-source-focused
+    command: python -m unittest tests.test_release_publication tests.test_release_pypi_packaging tests.test_standalone_binaries_checksum_newline tests.test_mini_release_workflow tests.test_traceability_gate tests.test_change_package_closeout
+    status: passed
+    result: 59 tests passed after final controlled Homebrew credential/transport errors and sanitized failure reasons; no secret stderr stored. No concurrent worktree mutation. Python 3.12.14/bash.
+    tested_commit: 008953eb55ab3b8e6fc20e817392ff7386f41cb7
+  - type: documentation
+    command: python scripts/validate_release_docs.py --output /tmp/lifetxt-publication-isolated-docs.json
+    status: passed
+    result: errors=0, ok=true
+    tested_commit: c065bd35
+  - type: real-retained-bundle-read
+    command: release_plan.extract_bundle and bundle_contents against retained real preflight ZIP
+    status: passed
+    result: New consumer safely extracted actual run 38822634032 artifact 12014680717 ZIP and verified all 65 manifest file hashes and bundle digest 335b53ac107b9b227c84fb45fd62d75f10554da5fbe35aa028173ec253150686; no public write.
+    tested_commit: 23c378dc7fa94113f6bc117071aab63faedb32bf
+  - type: runbook-validation
+    command: YAML frontmatter exact name/description, package-directory name and less-than-500-line checks
+    status: passed
+    result: Existing repository skill updated in place; generic cloud quick_validate.py is not a local executable here, so equivalent frontmatter/name/size checks and separate-thread forward test used. Git-backed persistence is the integration PR.
+    tested_commit: 23c378dc7fa94113f6bc117071aab63faedb32bf
+  - type: live-publication
+    status: not_run
+    reason: Separate human Release Authority approval required; no release/tag/PyPI/GHCR/Homebrew/account-setting writes authorized by implementation.
+  - type: account-settings
+    status: not_run
+    reason: Required reviewer, deployment branch policy, PyPI Trusted Publisher and Homebrew token are external settings; no claim of configuration/inspection.
+  - type: skill-forward-test
+    status: passed
+    result: Separate read-only thread used raw runbook and linked Japanese guide to resolve explicit N selection, partial Homebrew failure, source correction and external pending state; no live actions. Added distribution sections 4/6 link for submission detail.
+    tested_commit: working tree based on 65162fb8
+review_ledger:
+- reviewer: Codex implementer
+  review_type: self-review
+  target_commit: 008953eb55ab3b8e6fc20e817392ff7386f41cb7
+  result: completed
+  notes: Reviewed approval/API/attempt binding, exact archive/aggregate/OCI reconstruction, atomic legacy cutover, full canonical scope, remote no-clobber/retry, required Homebrew/generation states, source correction/critical stop, alias partial repair/numeric ordering and direct PyPI identity. Preserved strict source policy, isolated product execution into a fresh read-only job, used same-plan verified receipts for credentialed controller-only finish, stripped redirect authorization and made inventory directly reviewable. Controlled Homebrew credential errors remain blocked/retryable and retain sanitized reasons. Independent implementation/integration reviews still pending; no self-approval.
+- reviewer: independent implementation reviewer
+  review_type: implementation
+  result: pending
+- reviewer: independent integration reviewer / Eruhitsuji
+  review_type: integration
+  result: pending

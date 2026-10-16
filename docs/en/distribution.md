@@ -57,27 +57,16 @@ pip install "lifetxt[tui]"
 
 ### How releases reach PyPI
 
-`.github/workflows/release.yml` runs on every `v*.*.*` tag push:
-
-1. Check out the repository at the exact tag.
-2. Confirm the tag matches `pyproject.toml`'s `project.version`
-   (`scripts/check_release_tag_version.py`) — a moving `main` tree can never
-   be published under a version that already identifies an earlier release.
-3. Run the existing release-policy profile (`scripts/run_ci_like.py --profile release`).
-4. Build wheel and sdist with checksums, an SBOM, and provenance metadata
-   (`scripts/release_evidence.py`, already used for release evidence records).
-5. Validate package metadata with `twine check`.
-6. Install the built wheel into a clean virtual environment and smoke test
-   `lifetxt --version` / `lifetxt check`.
-7. Publish to PyPI via [PyPI Trusted Publishing](https://docs.pypi.org/trusted-publishers/)
-   (OIDC — no long-lived upload token stored in this repository).
-8. Attach the same wheel/sdist/checksums/SBOM/provenance to the matching
-   GitHub Release.
+Use the [approved publication procedure](release-publication.md).
+`release-preflight.yml` builds and verifies wheel/sdist once; the sole manual
+main entry `release.yml` publishes those exact bytes only after the pypi
+environment's run-specific human approval. Tag pushes do not publish.
+The direct Trusted Publisher job remains in release.yml with environment pypi.
 
 ### One-time PyPI-side setup (maintainer action, not automatable from here)
 
 PyPI Trusted Publishing must be linked from the PyPI project itself before
-step 7 can succeed — this cannot be done from inside this repository or by
+publication can succeed — this cannot be done from inside this repository or by
 an AI agent, since it requires the `lifetxt` PyPI project owner's own PyPI
 account:
 
@@ -91,15 +80,13 @@ account:
    - Repository: `lifetxt`
    - Workflow: `release.yml`
    - Environment: `pypi`
-3. In this repository's Settings → Environments, create an environment named
-   `pypi` (GitHub creates it automatically on first workflow run that
-   references it, but creating it ahead of time lets you add required
-   reviewers or a deployment branch rule if you want extra release-review
-   friction).
+3. Configure the GitHub `pypi` environment with required reviewer
+   `Eruhitsuji` and deployment branch `main`. The exact plan/run/attempt comment
+   from the prepare summary is required. Missing actual approval history stops
+   before public writes. Preserve the existing PyPI workflow/environment identity.
 
-Until step 2 is done, `release.yml`'s `publish-pypi` job runs and fails
-cleanly at the PyPI OIDC exchange — it does not publish a partial or
-malformed release.
+PyPI OIDC and Homebrew permission errors can occur after other primary channels
+were published. Preserve those bytes and follow the [recovery guide](release-publication.md#failure-and-recovery).
 
 ### Verifying a release once published
 
@@ -236,21 +223,11 @@ regression test reproducing the exact `-v ...:/data:ro` failure.
 
 ### How images reach GHCR
 
-`.github/workflows/docker-publish.yml` runs on every `v*.*.*` tag push (the
-same trigger as `release.yml`):
-
-1. Confirm the tag matches `pyproject.toml`'s version.
-2. Build a local single-architecture image and smoke test it: a `check`
-   command against a mounted example, confirmation the process runs as
-   uid 1000, and a `serve` invocation polled until `/api/health` responds.
-3. Build the real multi-arch (`linux/amd64`, `linux/arm64`) image with
-   Buildx/QEMU and push it to `ghcr.io/eruhitsuji/lifetxt` with the tag
-   policy above, using GHCR's own `GITHUB_TOKEN` authentication — no
-   separate account or credential setup is required.
-
-`workflow_dispatch` supports building and smoke-testing without pushing
-(`push: false`, the default), for verifying a change to the Dockerfile
-itself before it reaches a real tag.
+Read-only native OCI producers build once, smoke test the exact graphs and
+assemble a deterministic two-platform index during preflight. After human
+approval, release.yml copies the same blobs/index with digest preservation to
+version/v-version tags. latest/major/minor aliases wait for the full acceptance
+gate. The old docker-publish.yml entry is retired.
 
 ## 3. Standalone CLI binaries
 
@@ -288,7 +265,7 @@ Each release also publishes a `SHA256SUMS` file covering every artifact.
 [PyInstaller](https://pyinstaller.org/) via
 [`packaging/pyinstaller/lifetxt.spec`](../../packaging/pyinstaller/lifetxt.spec),
 producing one `--onefile` executable per platform (PyInstaller must run
-natively on each target platform, so `.github/workflows/standalone-binaries.yml`
+natively on each target platform, so `.github/workflows/release-preflight-standalone.yml`
 builds each artifact on a matching GitHub-hosted runner rather than
 cross-compiling from one host).
 
@@ -376,9 +353,8 @@ name declared in the manifest's `Commands` field.
 automatically.** `scripts/generate_winget_manifest.py` produces the three
 required manifest files (version, installer, default-locale — manifest
 schema 1.6.0) for one release, and
-`.github/workflows/package-manifests.yml` runs it automatically whenever a
-GitHub Release is published, uploading the result as a downloadable
-workflow artifact. Submitting is a manual, one-time-per-release step:
+`release.yml` generates them after canonical primary verification and retains
+manual-submission artifacts. Submitting is a manual, one-time-per-release step:
 
 ```sh
 # Locally, from a release's published SHA256SUMS:
@@ -418,7 +394,7 @@ scoop install lifetxt
 ```
 
 `scripts/generate_scoop_manifest.py` produces `lifetxt.json` the same way,
-also generated automatically by `package-manifests.yml`. Scoop manifests
+also generated automatically by `release.yml`'s ordered downstream stage. Scoop manifests
 live in a "bucket" repository (a plain Git repo of `.json` files); this
 project does not yet maintain its own bucket, matching the issue's own
 "Scoop is secondary" scope guidance — the generated manifest is ready to
@@ -452,8 +428,8 @@ Eruhitsuji/tap/lifetxt` works against
 repository this project's own maintainer owns. Publishing to your own
 repository from your own release workflow is not the same kind of action as
 opening a PR against someone else's, so
-`.github/workflows/homebrew-tap.yml` pushes the generated Formula
-automatically whenever a GitHub Release is published.
+`release.yml` updates and reads back the generated Formula only after every
+primary and the canonical checksum have been verified.
 
 ### Formula design
 
@@ -477,9 +453,9 @@ repository it runs in, so pushing to a *different* repository
 2. Add it as a repository secret named `HOMEBREW_TAP_TOKEN` on
    `Eruhitsuji/lifetxt` (Settings → Secrets and variables → Actions).
 
-Until this secret exists, `homebrew-tap.yml`'s tap-checkout step fails
-cleanly (an authentication error checking out
-`Eruhitsuji/homebrew-tap`) — it never partially publishes.
+A missing or invalid Homebrew credential blocks that channel and Latest. Primary
+publication may already be complete; retry the original bytes through a new
+approved central run. See [operator procedure](release-publication.md).
 
 ### Verifying an installed Formula
 
@@ -524,8 +500,7 @@ check --help` after install.
 
 `conda-forge/staged-recipes` is a community-owned repository; submitting a
 recipe there is a PR under your own GitHub identity, matching the boundary
-already set for winget (section 4). `.github/workflows/conda-recipe.yml`
-generates `meta.yaml` automatically whenever a GitHub Release is published
+already set for winget (section 4). `release.yml` generates `meta.yaml` after canonical primary and public PyPI sdist verification
 and uploads it as a downloadable workflow artifact; submitting it is a
 manual step:
 
@@ -613,11 +588,9 @@ cargo install tauri-cli --version "^2" --locked
 cd desktop/src-tauri && cargo tauri build
 ```
 
-`.github/workflows/desktop-installers.yml` runs this same sequence
-natively on `windows-latest`, `macos-latest` (arm64), and `ubuntu-latest`
-for every `v*.*.*` tag, producing MSI/NSIS, dmg, and deb/AppImage
-artifacts respectively (Tauri's own per-platform default bundle targets),
-and attaches them to the matching GitHub Release.
+Read-only `release-preflight-desktop.yml` builds and verifies native installers.
+After approval, release.yml attaches those exact mapped installer bytes and
+includes them in the single canonical inventory.
 
 ### Version traceability
 

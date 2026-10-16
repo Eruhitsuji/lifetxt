@@ -30,8 +30,11 @@ verification:
     result: Core1/Standalone5/OCI2 succeeded; Mini2 failed unsupported nested version flag after native smoke/conformance; Desktop3 failed generated manifest gate after installer build. Collector correctly refused success. 16 component artifacts, no verified artifact. Published writes none.
     evidence: https://github.com/Eruhitsuji/lifetxt/actions/runs/38814960857
   - type: corrected-native-run
-    status: not_run
-    reason: Local Rust/Zig/Tauri unavailable. Requires new main dispatch after controller correction merge, tracked by issue 1321; old run rerun uses old controller.
+    status: passed
+    command: Release preflight (non-public), run 38822634032 attempt 1
+    tested_commit: 65162fb8352767e6e4b39a1cee374289f7f22829
+    result: Mini2 and Desktop3 succeeded, all 13 targets and final collector successful. Actual final artifact 12014680717 rechecked; bundle digest 335b53ac107b9b227c84fb45fd62d75f10554da5fbe35aa028173ec253150686. No public write. Independent reviews remain pending.
+    evidence: https://github.com/Eruhitsuji/lifetxt/actions/runs/38822634032
 review_ledger:
 - reviewer: Codex implementer
   review_type: self-review

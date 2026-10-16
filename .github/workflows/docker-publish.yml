@@ -1,150 +1,16 @@
-name: Docker image
-
-# Builds and publishes the official lifetxt OCI image to GHCR from one
-# immutable release tag/commit, mirroring release.yml's PyPI flow. GHCR
-# authenticates with this workflow's own GITHUB_TOKEN (packages: write),
-# so no separate account/credential setup is required beyond this repo.
-#
-# See docs/en/distribution.md for the tag policy, usage contract, and
-# Compose examples.
-
+name: Retired entry (docker-publish)
+# Atomic cutover: no tag, release event or manual publication path remains.
+# All producers are release-preflight-*.yml; publication and downstream
+# generation run as explicitly ordered stages of release.yml after approval.
 on:
-  push:
-    tags:
-      - "v*.*.*"
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: "Existing tag to (re-)build and publish, e.g. v1.0.0"
-        required: true
-      push:
-        description: "Push the built image to GHCR (unchecked builds and smoke-tests only)"
-        type: boolean
-        default: false
-
-env:
-  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/lifetxt
-
+  workflow_call:
 permissions:
   contents: read
-
 jobs:
-  build-and-verify:
-    name: Build, smoke-test, and (on release) publish
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
+  retired:
+    runs-on: ubuntu-24.04
     steps:
-      - name: Resolve release tag
-        id: resolve-tag
-        shell: bash
+      - name: Reject the retired entry
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Check out repository at the release tag
-        uses: actions/checkout@v5
-        with:
-          ref: ${{ steps.resolve-tag.outputs.tag }}
-
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-
-      - name: Confirm tag matches the declared package version
-        run: python scripts/check_release_tag_version.py "${{ steps.resolve-tag.outputs.tag }}"
-
-      - name: Set up QEMU (multi-arch emulation)
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Resolve numeric release aliases
-        id: release-version
-        shell: bash
-        env:
-          TAG: ${{ steps.resolve-tag.outputs.tag }}
-        run: python scripts/release_version_metadata.py "$TAG" >> "$GITHUB_OUTPUT"
-
-      - name: Derive image tags and labels
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.IMAGE_NAME }}
-          tags: |
-            type=raw,value=${{ steps.resolve-tag.outputs.tag }}
-            type=raw,value=${{ steps.release-version.outputs.version }}
-            type=raw,value=${{ steps.release-version.outputs.minor }}
-            type=raw,value=${{ steps.release-version.outputs.major }}
-            type=raw,value=latest,enable=${{ !contains(steps.resolve-tag.outputs.tag, '-') }}
-
-      - name: Build a local single-arch image for smoke testing
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: false
-          load: true
-          tags: lifetxt:smoke-test
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Smoke test — CLI mode against a mounted example
-        run: |
-          docker run --rm -v "$PWD/examples:/data" lifetxt:smoke-test check /data/minimal_life.txt
-
-      - name: Smoke test — non-root user
-        run: |
-          # -u must follow the image name: docker run [OPTIONS] IMAGE
-          # [COMMAND] [ARG...], so `-u` before the image name is parsed as a
-          # docker option expecting a value (consuming the image name),
-          # leaving no IMAGE argument at all -- reproduced live in the very
-          # first real tag-triggered run of this workflow.
-          uid="$(docker run --rm --entrypoint id lifetxt:smoke-test -u)"
-          test "$uid" = "1000"
-
-      - name: Smoke test — Web serve mode
-        run: |
-          set -e
-          docker run -d --name lifetxt-web-smoke -p 18321:8000 \
-            -v "$PWD/examples:/data" lifetxt:smoke-test \
-            serve /data/minimal_life.txt --host 0.0.0.0 --port 8000 --read-only
-          for _ in $(seq 1 40); do
-            if curl -fsS http://127.0.0.1:18321/api/health >/dev/null; then
-              echo "Web mode healthy"
-              break
-            fi
-            sleep 1
-          done
-          curl -fsS http://127.0.0.1:18321/api/health
-          docker logs lifetxt-web-smoke
-          docker rm -f lifetxt-web-smoke
-
-      - name: Log in to GHCR
-        if: >-
-          (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
-          (github.event_name == 'workflow_dispatch' && inputs.push == true)
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and publish the multi-arch image to GHCR
-        if: >-
-          (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
-          (github.event_name == 'workflow_dispatch' && inputs.push == true)
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          platforms: linux/amd64,linux/arm64
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          echo 'Use release-preflight.yml, then the single approved release.yml entry.'
+          exit 1

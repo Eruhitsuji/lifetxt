@@ -177,7 +177,7 @@ def register_procedure_routes(app):
                 },
             )
 
-    @app.get("/api/procedures/{source}/{root_id}")
+    @app.get("/api/procedures/{source}/{root_id:path}")
     def get_definition(source: str, root_id: str, response: Response):
         headers(response)
         try:

@@ -227,9 +227,200 @@ verification:
       unchanged during execution. Later changes only update documentation and PR/evidence
       metadata. Skips reflect optional environment-dependent integrations; these are
       not claimed as executed.'
+  - type: stage3_http_regression
+    command: python -m unittest tests.test_procedure_web tests.test_procedure_definition
+      tests.test_procedure_validation tests.test_procedure_graph tests.test_procedure_cli
+      tests.test_web_routes_analytics tests.test_web_installability tests.test_surface_runtime
+    requirement_ids:
+    - req-procedure-web-read-v1
+    source_commit: a3eb2876
+    status: passed
+    result: 74 tests OK in 6.072s, no skips. Configured-source/root projection,
+      exact CLI renderings/revisions, Bearer and read-only, unsafe methods,
+      invalid/missing/duplicate sources, bounded output and non-mutation verified.
+  - type: stage3_browser
+    command: LIFETXT_BROWSER_BIN=<installed Chromium Headless Shell executable>
+      LIFETXT_REQUIRE_PROCEDURE_BROWSER=1 python -m unittest tests.test_procedure_web_browser
+    requirement_ids:
+    - req-procedure-web-read-v1
+    source_commit: a3eb2876
+    status: passed
+    result: One real-HTTP E2E test passed in 1.777s, no skips. Chromium Headless Shell
+      134.0.6998.35; 390px Japanese and 1280px English, keyboard anchor focus,
+      XSS-as-text, CLI export switch, deep-link reload/revision change, 500-step
+      text alternative, unsupported API, GET-only traffic and no run log.
+      Initial full Chrome launch was blocked by host Unix-socket restriction;
+      Headless Shell executed successfully without privilege escalation.
+      Initial browser run exposed hash-only popstate reloading and losing focus;
+      fixed with query-change discrimination and reran successfully.
+      Screenshot layout inspected at 390px; this host lacks Japanese glyph fonts,
+      so Japanese text/codepoints were asserted by DOM, not glyph appearance.
+  - type: stage3_static
+    command: python -m ruff check lifetxt tests scripts; python -m ruff format --check
+      lifetxt/procedure_*.py tests/test_procedure_*.py; python -m mypy --follow-imports=skip
+      --ignore-missing-imports lifetxt/diagnostic_contract.py; python -m lifetxt check examples/minimal_life.txt
+    requirement_ids:
+    - req-procedure-web-read-v1
+    source_commit: a3eb2876
+    status: passed
+    result: Lint passed, procedure Python/test formatting passed, approved one-file
+      typing boundary passed, baseline 10 items accepted. No standard changes.
+  - type: stage3_translation_recheck
+    command: python -m unittest tests.test_release_policy tests.test_web_i18n
+      tests.test_web_more_nav_js tests.test_procedure_web
+    requirement_ids:
+    - req-procedure-web-read-v1
+    source_commit: a3eb2876
+    working_tree_changes: Add Procedures to the existing Japanese translation dictionary
+      and mark the new navigation label for existing i18n instead of literal bilingual chrome.
+    status: passed
+    result: 64 tests passed in 10.098s, no skips. Initial full-suite policy failure
+      identified new untranslated chrome; fixed without relaxing the translation baseline.
+  - type: stage3_full_initial
+    command: MPLBACKEND=Agg python -m unittest discover
+    requirement_ids:
+    - req-procedure-web-read-v1
+    source_commit: 739b62df
+    working_tree_changes: Navigation translation/fingerprint fixes were prepared
+      during the initial run; the imported assembled page still held the old asset bytes.
+    status: failed
+    result: 5814 tests in 416.450s, 4 failures, 74 skips. All failures were the new
+      untranslated nav string (translation report and release-manifest consumer)
+      or the intentional assembled-page snapshot change. No baseline was relaxed.
+  - type: stage3_full_intermediate
+    command: MPLBACKEND=Agg python -m unittest discover
+    requirement_ids:
+    - req-procedure-web-read-v1
+    source_commit: e8798686
+    status: failed
+    result: 5815 tests in 444.332s, one failure, 75 skips; remaining failure was the
+      assembled-page snapshot for the translated Procedures link. Updated expected
+      fingerprint with reason and explicit navigation assertions in 0c83e5c5.
+      The affected asset/i18n/release set then passed 57 tests in 9.124s.
+  - type: stage3_final_http_browser
+    command: python -m unittest tests.test_procedure_web tests.test_traceability_gate
+      tests.test_change_package_closeout; LIFETXT_BROWSER_BIN=<Headless Shell executable>
+      LIFETXT_REQUIRE_PROCEDURE_BROWSER=1 python -m unittest tests.test_procedure_web_browser
+    requirement_ids:
+    - req-procedure-web-read-v1
+    source_commit: 0c83e5c5
+    working_tree_changes: Final path converter accepts slash-containing canonical
+      root IDs, with a new encoded-ID regression; PR URL and W1 wording only otherwise.
+    status: passed
+    result: 26 HTTP/gate tests OK in 2.470s, no skips; includes all 9 procedure
+      HTTP tests. Real browser E2E rerun OK in 1.830s, no skips. Separate final
+      lint passed and 20 affected Python files formatted.
+  - type: stage3_wheel
+    command: python -m pip wheel --no-deps --no-build-isolation --wheel-dir <temporary-directory>
+      .; inspect all three procedure_web resources in the resulting wheel.
+    requirement_ids:
+    - req-procedure-web-read-v1
+    source_commit: 0c83e5c5
+    status: passed
+    result: Wheel built; HTML/CSS/JS resources match working-tree bytes exactly.
+      Verification-only artifact; no release or publication performed.
+  - type: stage3_full_verified
+    command: MPLBACKEND=Agg python -m unittest discover
+    requirement_ids:
+    - req-procedure-web-read-v1
+    source_commit: 0c83e5c55c8d1c9640b574aa52cfd139ad8132c8
+    status: passed
+    result: 5815 tests in 440.250s, OK with 75 optional/environment skips.
+      All four initial failures and the intermediate snapshot failure are resolved.
+      The later slash-root path-converter fix is independently covered by the
+      final 9 HTTP tests and real browser E2E above; the full run is evidence for
+      the pre-converter 0c83e5c5 code, not a claim of executing that later test.
+      Documentation/PR-binding evidence updates do not change runtime behavior.
+  - type: w1_http
+    command: python -m unittest tests.test_procedure_run_web
+    requirement_ids:
+    - req-procedure-web-run-v1
+    source_commit: eadbc035
+    status: passed
+    result: 9 tests OK in 1.616s, no skips. Full explicit lifecycle, Bearer/no-token/
+      Remote/read-only/source policy, closed duplicate-key/bounded JSON, Origin,
+      source If-Match, separate runs, concurrent tabs/duplicate request, original
+      receipt, generated/readonly source, foreign owner and changed ownership
+      during inspection, missing/invalid source disposition, restart sidecar
+      exclusion, and committed-but-uncertain mutation error fixtures.
+  - type: w1_corrupt_journal_http
+    command: python -m unittest tests.test_procedure_run_web
+    requirement_ids:
+    - req-procedure-web-run-v1
+    source_commit: eadbc035
+    working_tree_changes: Test-only extension creates an actual corrupt journal.json
+      in temporary evidence storage and calls the real store through HTTP.
+    status: passed
+    result: 9 tests OK in 1.395s, no skips. Corrupt evidence blocks the next operation,
+      preserves log bytes and journal, and exposes no private journal path.
+  - type: w1_integration
+    command: python -m unittest tests.test_procedure_run_web tests.test_procedure_web
+      tests.test_surface_runtime tests.test_web_transport tests.test_web_assets
+      tests.test_web_i18n tests.test_release_policy
+    requirement_ids:
+    - req-procedure-web-run-v1
+    source_commit: eadbc035
+    status: passed
+    result: 98 tests OK in 13.551s, no skips. Separate procedure/store/transition/model/
+      transport regression set also passed 57 tests in 2.990s. Final ownership-change
+      fixture is additionally covered by w1_http; no existing auth/translation/
+      assembled-page baseline was weakened.
+  - type: w1_real_browser
+    command: PYTHONPATH=<optional Playwright 1.51 install> LIFETXT_BROWSER_BIN=<Chromium
+      Headless Shell> LIFETXT_REQUIRE_PROCEDURE_BROWSER=1 python -m unittest
+      tests.test_procedure_run_web_browser tests.test_procedure_web_browser
+    requirement_ids:
+    - req-procedure-web-run-v1
+    - req-procedure-web-read-v1
+    source_commit: eadbc035
+    status: passed
+    result: 2 real HTTP/browser tests OK in 5.804s, no skips. Mobile 390px Japanese
+      plus desktop 1280px, token not persisted, explicit loop confirmation/start,
+      synchronous double click, keyboard Next, 2-tab CAS refusal and absent receipt,
+      pause/reload/reauthenticate/resume, server commits then response is aborted,
+      original receipt recovery without extra event, finish, independent second run,
+      changed-definition abandonment, sign out, XSS/text/500-step/unsupported API.
+      CSP remained enabled; automation waits use locator assertions rather than eval.
+  - type: w1_static_packaging
+    command: ruff check lifetxt tests scripts; ruff format --check lifetxt/procedure_*.py
+      tests/test_procedure_*.py; mypy --follow-imports=skip --ignore-missing-imports
+      lifetxt/diagnostic_contract.py; python -m lifetxt check examples/minimal_life.txt;
+      pip wheel --no-deps --no-build-isolation and compare packaged Web resources.
+    requirement_ids:
+    - req-procedure-web-run-v1
+    source_commit: eadbc035
+    status: passed
+    result: Lint passed; 22 affected Python files formatted; approved static type
+      boundary passed; minimal 10 items accepted; wheel contains all four procedure
+      HTML/CSS/JS resources byte-for-byte. No release/publish performed.
+  - type: w1_malformed_response_browser
+    command: PYTHONPATH=<optional Playwright> LIFETXT_BROWSER_BIN=<Headless Shell>
+      LIFETXT_REQUIRE_PROCEDURE_BROWSER=1 python -m unittest
+      tests.test_procedure_run_web_browser tests.test_procedure_web_browser
+    requirement_ids:
+    - req-procedure-web-run-v1
+    source_commit: eadbc035
+    working_tree_changes: Client response-shape/receipt binding validation retains
+      the original pending request until the response is proven; browser fixture
+      commits a second run then substitutes a malformed 200 JSON response.
+    status: passed
+    result: 2 tests OK in 4.741s, no skips. Malformed success retains request ID,
+      read-only receipt recovers it, and exactly two independent runs remain.
+      No CSP relaxation or automatic mutation retry.
+  - type: w1_full
+    command: MPLBACKEND=Agg python -m unittest discover
+    requirement_ids:
+    - req-procedure-web-run-v1
+    - req-procedure-web-read-v1
+    source_commit: eadbc035
+    status: passed
+    result: 5826 tests in 406.746s, OK with 76 optional/environment skips.
+      Python runtime code was unchanged during execution. Later client malformed
+      response hardening and actual corrupt-journal fixture are separately covered
+      by w1_malformed_response_browser and w1_corrupt_journal_http; documentation
+      updates only otherwise. Required CI and independent reviews remain separate.
   gaps:
-  - description: Web read/run controls and authenticated server ownership remain stage
-      3; no Web/Remote/MCP run endpoint is exposed.
+  - description: W1 is approved and Web run controls implemented; independent latest-head implementation/security/integration review remains required.
     tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1343
 review_ledger:
 - reviewer: Eruhitsuji
@@ -252,6 +443,18 @@ review_ledger:
   completed_at: null
 - reviewer: Eruhitsuji
   review_type: stage2_integration
+  target_commit: null
+  result: pending
+  finding_count: null
+  completed_at: null
+- reviewer: Eruhitsuji
+  review_type: stage3_implementation_security
+  target_commit: null
+  result: pending
+  finding_count: null
+  completed_at: null
+- reviewer: Eruhitsuji
+  review_type: stage3_integration
   target_commit: null
   result: pending
   finding_count: null

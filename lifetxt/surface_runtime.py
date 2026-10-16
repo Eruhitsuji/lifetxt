@@ -86,6 +86,8 @@ _WEB_NO_REVISION_PATHS = frozenset(
         "/api/timer",
         # The upload performs its own guarded multi-target attachment transaction.
         "/api/attachments/upload",
+        # Procedure runs enforce source If-Match and log CAS in their own adapter.
+        "/api/procedure-runs",
     )
 )
 
@@ -434,7 +436,12 @@ def _patch_webapp():
             path = request.url.path
             # This GET-only projection owns its multi-source read snapshot and
             # has no mutation/revision contract, including rejected methods.
-            if path == "/api/daily-flow":
+            if (
+                path == "/api/daily-flow"
+                or path == "/api/procedure-runs"
+                or path == "/api/procedures"
+                or path.startswith("/api/procedures/")
+            ):
                 return await call_next(request)
             unsafe = method in ("POST", "PUT", "PATCH", "DELETE")
             guarded = (

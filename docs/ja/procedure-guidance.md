@@ -54,7 +54,7 @@ stdin・glob・directory・workspaceの展開はせず、代替id-key設定も�
 各レコードは安全な`id:`を一つ持ち、同じroot内でparent階層を作れます。表示順はファイル順で、
 実施順とは区別します。選択ラベルは小文字ASCIIトークンで大文字小文字を区別します。
 欠損遷移先・ID/ラベル重複・未知proc_*・到達不能step・parent循環・endに到達する経路のないstepは
-エラーです。脱出口のあるloopは閲覧時に警告し、将来のrunでは明示確認と有限guardを要求します。
+エラーです。脱出口のあるloopは閲覧時に警告し、runの開始では明示確認と有限guardを要求します。
 
 一般の`check`ではproc_*は従来通り独自属性のW106警告となり、手順の意味は検証しません。
 そのため`--warnings-as-errors`ではopt-in例は失敗します。一般の変換は属性を保持します。
@@ -157,6 +157,7 @@ journalが20,000件を超えたら、追加書込前に運用者によるarchive
 保存し、一般Format/schema catalogへは追加しません。event_dataは閉じたprocedure-event-v1 JSON envelopeと
 canonical digest chainを持ち、title/body/秘密/URL/コマンド出力/自由メモを複製しません。
 hash chainは偶発破損を検出しますが、**認証付き改竄防止監査や現実の作業完了の証明ではありません**。
+有効なprefixだけでは末尾eventの削除がなかったことも証明できないため、完全性の判断には信頼できるbackup/journal証拠を使い、欠けたeventを推測して追加しません。
 runtimeはgraph意味論、実在するUTC日時、guard、イベント順も検証します。
 replayの入力はログ/event/control planの上限で制限し、遷移は上限付きgraphで判定します。
 

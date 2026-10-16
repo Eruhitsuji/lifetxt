@@ -129,31 +129,141 @@ verification:
       execution ran. Production code/tests unchanged during run; verification documentation
       was updated separately. Initial failures resolved by editable setup and evidence
       indentation correction. Required CI/optional-extra suites remain separate evidence.'
+  - type: stage2_focused
+    command: python -m unittest tests.test_procedure_transition tests.test_procedure_run_model
+      tests.test_procedure_run_store tests.test_procedure_run_cli
+    requirement_ids:
+    - req-procedure-run-v1
+    source_commit: 01534b18f04db8278efd0f88231749f411be4dab
+    status: passed
+    result: 31 tests OK, no skips; every lifecycle command also runs in a fresh subprocess,
+      with crash/operator recovery, two writers, stale source/log, receipt and privacy
+      fixtures.
+  - type: stage2_regression
+    command: python -m unittest tests.test_procedure_transition tests.test_procedure_run_model
+      tests.test_procedure_run_store tests.test_procedure_run_cli tests.test_procedure_definition
+      tests.test_procedure_validation tests.test_procedure_graph tests.test_procedure_cli
+      tests.test_multi_target_v2 tests.test_transaction_journal_v3 tests.test_transaction_policy_v4
+      tests.test_transaction_admin_v5 tests.test_native_history tests.test_native_history_mutation
+      tests.test_work_session_v4 tests.test_timer_public_revisions_v3 tests.test_cli_taxonomy
+      tests.test_roundtrip_golden tests.test_links tests.test_vm tests.test_vm_cli
+      tests.test_daily_flow tests.test_daily_flow_cli
+    requirement_ids:
+    - req-procedure-run-v1
+    source_commit: 99bd449182ea2a99b9e582115e00804ef8f5f044
+    status: passed
+    result: 434 tests OK, 4 optional/environment skips on the implementation worktree
+      based on 99bd4491. Final focused set adds one whole-lifecycle fresh-process
+      test; final full-suite evidence follows separately.
+  - type: stage2_lint
+    command: python -m ruff check lifetxt tests scripts
+    requirement_ids:
+    - req-procedure-run-v1
+    source_commit: 01534b18f04db8278efd0f88231749f411be4dab
+    status: passed
+    result: All checks passed.
+  - type: stage2_format
+    command: python -m ruff format --check lifetxt/procedure_*.py tests/test_procedure_*.py
+    requirement_ids:
+    - req-procedure-run-v1
+    source_commit: 01534b18f04db8278efd0f88231749f411be4dab
+    status: passed
+    result: 16 files already formatted.
+  - type: stage2_type
+    command: python -m mypy --follow-imports=skip --ignore-missing-imports lifetxt/diagnostic_contract.py
+    requirement_ids:
+    - req-procedure-run-v1
+    source_commit: 01534b18f04db8278efd0f88231749f411be4dab
+    status: passed
+    result: Approved one-file typing boundary passed.
+  - type: stage2_integration
+    command: python -m lifetxt check examples/minimal_life.txt
+    requirement_ids:
+    - req-procedure-run-v1
+    source_commit: 01534b18f04db8278efd0f88231749f411be4dab
+    status: passed
+    result: 10 items accepted. Native run writes do not modify existing parser or
+      template semantics.
+  - type: stage2_schema
+    command: Draft202012Validator.check_schema and structural validation of actual
+      start/next/choose/finish events against procedure-event-v1.schema.json
+    requirement_ids:
+    - req-procedure-run-v1
+    source_commit: 01534b18f04db8278efd0f88231749f411be4dab
+    status: passed
+    result: Schema valid; 4 real events accepted, 6 structural invalid variants rejected.
+      Calendar/digest/graph semantics are separately exercised by runtime tests. jsonschema
+      was installed only for this verification probe, not added as a product requirement.
+  - type: stage2_full_initial
+    command: MPLBACKEND=Agg python -m unittest discover
+    requirement_ids:
+    - req-procedure-run-v1
+    source_commit: 01534b18f04db8278efd0f88231749f411be4dab
+    status: failed
+    result: '5796 tests in 430.849 seconds, 2 failures, 437 skips. Both failures came
+      from the same new direct datetime.now call: clock boundary audit and its release-manifest
+      consumer. No clock baseline or test was weakened; the store was changed to shared
+      timezone_policy.utcnow.'
+  - type: stage2_clock_binding_recheck
+    command: python -m unittest tests.test_procedure_transition tests.test_procedure_run_model
+      tests.test_procedure_run_store tests.test_procedure_run_cli tests.test_clock_contract_v4
+      tests.test_release_policy
+    requirement_ids:
+    - req-procedure-run-v1
+    source_commit: 01534b18f04db8278efd0f88231749f411be4dab
+    working_tree_changes: Shared-clock and postcommit source-handle fix plus two regression
+      cases, subsequently committed as 3b53a6ed6f649eb6812157cfaba215af7186aaa0.
+    status: passed
+    result: '50 tests in 84.046 seconds: OK, no skips. Includes both failed policy
+      checks and new identical-byte/different-source-handle postcommit and injected
+      UTC clock regressions.'
+  - type: stage2_full_final
+    command: MPLBACKEND=Agg python -m unittest discover
+    requirement_ids:
+    - req-procedure-run-v1
+    source_commit: 3b53a6ed6f649eb6812157cfaba215af7186aaa0
+    status: passed
+    result: '5798 tests in 413.473 seconds: OK, 437 skips. Production code and tests
+      unchanged during execution. Later changes only update documentation and PR/evidence
+      metadata. Skips reflect optional environment-dependent integrations; these are
+      not claimed as executed.'
   gaps:
-  - description: Run schema/replay, CAS persistence and Web remain unimplemented and
-      untested in stage 1.
-    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1332
+  - description: Web read/run controls and authenticated server ownership remain stage
+      3; no Web/Remote/MCP run endpoint is exposed.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1343
 review_ledger:
 - reviewer: Eruhitsuji
   review_type: requirements_and_design
   target_commit: e76125ed80867914e0c249c868373b21aaa129e0
   result: approved
+  completed_at: '2026-10-16'
   finding_count: 0
+- reviewer: Eruhitsuji
+  review_type: stage1_merge
+  target_commit: 69fd4dad66160ba32731d1159c5781ed8fed8bcd
+  result: owner_merge_recorded
+  evidence: https://github.com/Eruhitsuji/lifetxt/pull/1346
   completed_at: '2026-10-16'
 - reviewer: Eruhitsuji
-  review_type: implementation
+  review_type: stage2_implementation
   target_commit: null
   result: pending
   finding_count: null
   completed_at: null
 - reviewer: Eruhitsuji
-  review_type: integration
+  review_type: stage2_integration
   target_commit: null
   result: pending
   finding_count: null
   completed_at: null
 release_evidence:
-  migration_notes: None performed; future data contracts need High approval.
-  rollback_plan: Revert docs-only PR; retain future definition/run data when reverting
-    software.
-  operations_evidence: []
+  migration_notes: No migration performed. New procedure-event-v1 is an opt-in local
+    event-only log. Unknown schema refuses writes/replay rather than guessing. Generic
+    Format 1.0/interchange preserves custom fields. No public schema-catalog change.
+  rollback_plan: Revert software while retaining definitions/logs and recovery artifacts.
+    Old clients may read Notes but must not update runs. Corrupt or pending journals
+    need existing explicit operator inspection and verified-backup recovery; no deletion
+    or automatic rollback is authorized.
+  operations_evidence:
+  - Synthetic failure and actual child-process crash were recovered through existing
+    transaction journal resume without duplicate events; production data was not touched.

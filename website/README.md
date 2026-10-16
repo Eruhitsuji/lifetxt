@@ -1,8 +1,9 @@
 # Official product website
 
 Source for #1350 / #1351. This is a static introduction to lifetxt, separate
-from the runnable Web UI. The planned URL is
-`https://eruhitsuji.github.io/lifetxt/`; this file does not claim it is live.
+from the runnable Web UI. The public URL is
+`https://eruhitsuji.github.io/lifetxt/`. First publication and its acceptance
+evidence are recorded in `.ai/project/changes/official-website/public-acceptance.md`.
 
 `content.json` owns bilingual product copy, not technical specifications.
 Keep command/format details in `docs/{ja,en}/` and link to those authoritative
@@ -21,12 +22,15 @@ Open `http://localhost:8080/`. To reproduce the project prefix, build into
 Output must be outside source directories and must not already exist: choose
 a new directory for each build. The builder never deletes an output directory.
 
-Root is a Japanese introduction with an English link, without browser-language
-redirects or persistence. Stable language URLs use `/ja/` and `/en/`; language
+Root is an English introduction with an explicit Japanese link, without
+browser-language redirects or persistence. Stable language URLs use `/ja/` and `/en/`; language
 links keep the same page. All ordinary local links are relative. The self-contained
 404 recovery page uses the configured base path because unknown URL depth cannot
 be resolved with relative links. `--site-url` changes canonical URLs, sitemap,
-robots and that 404 base for a future host/domain (default: the planned URL).
+robots and that 404 base for a future host/domain (default: the public URL).
+Deep-page `x-default` points to the English equivalent;
+home-page `x-default` points to the English root. `/en/` remains a stable English
+home URL with its own canonical. No automatic redirect is introduced.
 
 Build copies only the three named canonical brand SVGs from `assets/brand/`.
 No JavaScript, telemetry, cookies, external fonts, network build calls, runtime
@@ -35,8 +39,9 @@ external documentation/release links use their destination services' policies.
 Native binaries/Desktop installation and current support limitations stay in
 the distribution guide, rather than being inferred from a package-manager recipe.
 
-Publication, live checks and README/homepage promotion require separate human
-approval and are tracked by #1352 and #1353.
+Publication and homepage metadata changes require human approval and are tracked
+by #1352 and #1353. The README links follow successful live HTTP verification;
+new source changes still need merge and a separate owner-approved deployment.
 
 ## Pages publication runbook (#1352)
 

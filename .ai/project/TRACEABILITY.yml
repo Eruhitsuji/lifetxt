@@ -2,6 +2,20 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-official-website-live-quality-v1
+      capability_id: cap-official-website
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1350
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1353
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1357
+      changed_files_or_scope:
+        - English root generator/checker, regression tests, README and public acceptance evidence
+      tests_or_evidence:
+        - 31 focused runtime-baseline/site/workflow/traceability/package tests OK
+        - 23 live HTTP requests, 18 external links, 22 exact deployed artifact matches
+        - Published Chromium DOM, keyboard skip/focus and actual English switch
+      release_or_deployment: https://github.com/Eruhitsuji/lifetxt/actions/runs/38977955823
+      status: implemented
+      note: Initial publication evidence only; English-root update not deployed and manual acceptance remains open
     - requirement_id: req-official-website-pages-v1
       capability_id: cap-official-website
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1350

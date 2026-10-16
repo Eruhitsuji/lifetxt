@@ -22,3 +22,14 @@ requirements:
   - Missing/invalid environment human reviewer or API failure refuses publication
   - Pinned Actions, scoped upload, dedicated concurrency, no live settings mutation
   - Bilingual local/deployment/smoke/incident/rollback runbook and tracked live gaps
+- id: req-official-website-live-quality-v1
+  kind: ADDED
+  owner: Eruhitsuji
+  statement: Verify the published artifact and promote official links, then render
+    English at root while preserving stable bilingual routes.
+  acceptance_criteria:
+  - Live HTTP pages/assets/404/SEO/docs/releases and initial deployment approval evidence
+  - English root, stable /ja/ and /en/, same-page switches, English deep x-default
+  - README promotion only after verified publication
+  - Record real-device, screen-reader, zoom, independent review and metadata gaps honestly
+  - No live Settings, runtime, managed standards or publication change in this PR

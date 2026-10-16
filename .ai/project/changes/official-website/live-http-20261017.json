@@ -1,0 +1,266 @@
+{
+  "source_commit": "a64e38b373bc95f616babc3b3149a4b038807b8e",
+  "checked_utc": "2026-10-16T23:27:43.814315+00:00",
+  "responses": [
+    {
+      "path": "",
+      "status": 200,
+      "url": "https://eruhitsuji.github.io/lifetxt/",
+      "bytes": 4882,
+      "sha256": "f14c79341da09ee811cc203cdaf6ecf2d51fc1a6f7fa0cfebc20254d6623bd56"
+    },
+    {
+      "path": "404.html",
+      "status": 200,
+      "url": "https://eruhitsuji.github.io/lifetxt/404.html",
+      "bytes": 408,
+      "sha256": "df04b09aaf0f1f3a7862bb68a4b29ccf4bcf64bc19e26f11ced9316040577a6c"
+    },
+    {
+      "path": "robots.txt",
+      "status": 200,
+      "url": "https://eruhitsuji.github.io/lifetxt/robots.txt",
+      "bytes": 81,
+      "sha256": "2b06eafde81d31349c3f1ea2a28177ee43e8eb8fb70d37508d9addaf0eb5ac1d"
+    },
+    {
+      "path": "sitemap.xml",
+      "status": 200,
+      "url": "https://eruhitsuji.github.io/lifetxt/sitemap.xml",
+      "bytes": 1060,
+      "sha256": "9a89a7bc57c1c3a0ab834eef5226f3fd89ce9834fb94d764c4a163d31d7e4b0f"
+    },
+    {
+      "path": ".nojekyll",
+      "status": 200,
+      "url": "https://eruhitsuji.github.io/lifetxt/.nojekyll",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "style.css",
+      "status": 200,
+      "url": "https://eruhitsuji.github.io/lifetxt/style.css",
+      "bytes": 3846,
+      "sha256": "526942b15f0d4e4a54af7f15610e0397d1f6fe482d1eb31514f6c9b0f294d63d"
+    },
+    {
+      "path": "example.txt",
+      "status": 200,
+      "url": "https://eruhitsuji.github.io/lifetxt/example.txt",
+      "bytes": 181,
+      "sha256": "f1e430e0c1972e7bd43fd34e4b2128a43f130601a056a268ad87299f141d433f"
+    },
+    {
+      "path": "ja/",
+      "status": 200,
+      "url": "https://eruhitsuji.github.io/lifetxt/ja/",
+      "bytes": 4880,
+      "sha256": "59167879a1b9b7a5dbb60ccfac626e195b689dcfa8d8b01cb90d8d5da2c29e2f"
+    },
+    {
+      "path": "ja/features.html",
+      "status": 200,
+      "url": "https://eruhitsuji.github.io/lifetxt/ja/features.html",
+      "bytes": 5101,
+      "sha256": "211ae03ff5bc1f0dd447cf7840546f1c13315b3eb3934645e9473833610b5a38"
+    },
+    {
+      "path": "ja/use-cases.html",
+      "status": 200,
+      "url": "https://eruhitsuji.github.io/lifetxt/ja/use-cases.html",
+      "bytes": 4549,
+      "sha256": "12ad90b7f800656429f5bc5dd75d74fad5b18a0c2d29e71e7001e1d37d7825b6"
+    },
+    {
+      "path": "ja/get-started.html",
+      "status": 200,
+      "url": "https://eruhitsuji.github.io/lifetxt/ja/get-started.html",
+      "bytes": 5057,
+      "sha256": "33e84593464940e265788b442ffad4ea30baaf800d0c6f395fe14f7be2cf22b9"
+    },
+    {
+      "path": "ja/download.html",
+      "status": 200,
+      "url": "https://eruhitsuji.github.io/lifetxt/ja/download.html",
+      "bytes": 4651,
+      "sha256": "e21995927c63344dca2a0385d2ffceea3d2054e098bdd149930b51f7d5dd7ec5"
+    },
+    {
+      "path": "ja/documentation.html",
+      "status": 200,
+      "url": "https://eruhitsuji.github.io/lifetxt/ja/documentation.html",
+      "bytes": 4817,
+      "sha256": "9c82d517bf3211f41c8dfdd293de73f61cae2363f2e41eecd08f3168ae6132e5"
+    },
+    {
+      "path": "en/",
+      "status": 200,
+      "url": "https://eruhitsuji.github.io/lifetxt/en/",
+      "bytes": 4477,
+      "sha256": "64fa74fae47549abd65ee25733c61e5a53b5475b4908d800892222ce18b4be37"
+    },
+    {
+      "path": "en/features.html",
+      "status": 200,
+      "url": "https://eruhitsuji.github.io/lifetxt/en/features.html",
+      "bytes": 4745,
+      "sha256": "cf2b6adb9c9eeb1bf1d08ef5cde6d242726cd3fe5af117f95cfa628952098216"
+    },
+    {
+      "path": "en/use-cases.html",
+      "status": 200,
+      "url": "https://eruhitsuji.github.io/lifetxt/en/use-cases.html",
+      "bytes": 4207,
+      "sha256": "ff2378a8413e365a24382807003d37fda745ca6b4c50794fecdfb4cceae4557a"
+    },
+    {
+      "path": "en/get-started.html",
+      "status": 200,
+      "url": "https://eruhitsuji.github.io/lifetxt/en/get-started.html",
+      "bytes": 4665,
+      "sha256": "00c33e4374afb8b5c4aa59ceccb1c3922ce611117aa858679a2ad7f1e9a9355d"
+    },
+    {
+      "path": "en/download.html",
+      "status": 200,
+      "url": "https://eruhitsuji.github.io/lifetxt/en/download.html",
+      "bytes": 4480,
+      "sha256": "14a59d590512026fcd92893e9d8000a1afef79516aa3386f5a20317b456897fc"
+    },
+    {
+      "path": "en/documentation.html",
+      "status": 200,
+      "url": "https://eruhitsuji.github.io/lifetxt/en/documentation.html",
+      "bytes": 4632,
+      "sha256": "fa8293755f39ed83d72b21b3fd355af2a6e289e07448fc28a1f926ea190a1a04"
+    },
+    {
+      "path": "assets/lifetxt-symbol.svg",
+      "status": 200,
+      "url": "https://eruhitsuji.github.io/lifetxt/assets/lifetxt-symbol.svg",
+      "bytes": 2353,
+      "sha256": "711a854fc29fbae2398c995449e03fb4a7803e3631044bc8f740f037cf58dd64"
+    },
+    {
+      "path": "assets/lifetxt-favicon.svg",
+      "status": 200,
+      "url": "https://eruhitsuji.github.io/lifetxt/assets/lifetxt-favicon.svg",
+      "bytes": 2258,
+      "sha256": "bc14f81738bea7929dabbc3e19ad198ccd6711bf2e97aade2573ea4c07aa88ba"
+    },
+    {
+      "path": "assets/lifetxt-logo-horizontal.svg",
+      "status": 200,
+      "url": "https://eruhitsuji.github.io/lifetxt/assets/lifetxt-logo-horizontal.svg",
+      "bytes": 2838,
+      "sha256": "11f2b73c626d4bb0c4ac9bca1624b566034b0fc5c5e56d92c43fbc64d1b444f1"
+    },
+    {
+      "path": "not-found/nested/1353",
+      "status": 404,
+      "url": "https://eruhitsuji.github.io/lifetxt/not-found/nested/1353",
+      "bytes": 408,
+      "sha256": "df04b09aaf0f1f3a7862bb68a4b29ccf4bcf64bc19e26f11ced9316040577a6c"
+    }
+  ],
+  "offline_metadata_links_check": [],
+  "unknown_depth_404_matches": true,
+  "external_links": [
+    {
+      "url": "https://github.com/Eruhitsuji/lifetxt",
+      "status": 200,
+      "final_url": "https://github.com/Eruhitsuji/lifetxt"
+    },
+    {
+      "url": "https://github.com/Eruhitsuji/lifetxt/blob/main/docs/en/ai-integration.md",
+      "status": 200,
+      "final_url": "https://github.com/Eruhitsuji/lifetxt/blob/main/docs/en/ai-integration.md"
+    },
+    {
+      "url": "https://github.com/Eruhitsuji/lifetxt/blob/main/docs/en/distribution.md",
+      "status": 200,
+      "final_url": "https://github.com/Eruhitsuji/lifetxt/blob/main/docs/en/distribution.md"
+    },
+    {
+      "url": "https://github.com/Eruhitsuji/lifetxt/blob/main/docs/en/getting-started.md",
+      "status": 200,
+      "final_url": "https://github.com/Eruhitsuji/lifetxt/blob/main/docs/en/getting-started.md"
+    },
+    {
+      "url": "https://github.com/Eruhitsuji/lifetxt/blob/main/docs/en/life_txt_format_spec.md",
+      "status": 200,
+      "final_url": "https://github.com/Eruhitsuji/lifetxt/blob/main/docs/en/life_txt_format_spec.md"
+    },
+    {
+      "url": "https://github.com/Eruhitsuji/lifetxt/blob/main/docs/en/philosophy.md",
+      "status": 200,
+      "final_url": "https://github.com/Eruhitsuji/lifetxt/blob/main/docs/en/philosophy.md"
+    },
+    {
+      "url": "https://github.com/Eruhitsuji/lifetxt/blob/main/docs/en/text-editor-only-workflow.md",
+      "status": 200,
+      "final_url": "https://github.com/Eruhitsuji/lifetxt/blob/main/docs/en/text-editor-only-workflow.md"
+    },
+    {
+      "url": "https://github.com/Eruhitsuji/lifetxt/blob/main/docs/en/use-cases.md",
+      "status": 200,
+      "final_url": "https://github.com/Eruhitsuji/lifetxt/blob/main/docs/en/use-cases.md"
+    },
+    {
+      "url": "https://github.com/Eruhitsuji/lifetxt/blob/main/docs/ja/ai-integration.md",
+      "status": 200,
+      "final_url": "https://github.com/Eruhitsuji/lifetxt/blob/main/docs/ja/ai-integration.md"
+    },
+    {
+      "url": "https://github.com/Eruhitsuji/lifetxt/blob/main/docs/ja/distribution.md",
+      "status": 200,
+      "final_url": "https://github.com/Eruhitsuji/lifetxt/blob/main/docs/ja/distribution.md"
+    },
+    {
+      "url": "https://github.com/Eruhitsuji/lifetxt/blob/main/docs/ja/getting-started.md",
+      "status": 200,
+      "final_url": "https://github.com/Eruhitsuji/lifetxt/blob/main/docs/ja/getting-started.md"
+    },
+    {
+      "url": "https://github.com/Eruhitsuji/lifetxt/blob/main/docs/ja/life_txt_format_spec.md",
+      "status": 200,
+      "final_url": "https://github.com/Eruhitsuji/lifetxt/blob/main/docs/ja/life_txt_format_spec.md"
+    },
+    {
+      "url": "https://github.com/Eruhitsuji/lifetxt/blob/main/docs/ja/philosophy.md",
+      "status": 200,
+      "final_url": "https://github.com/Eruhitsuji/lifetxt/blob/main/docs/ja/philosophy.md"
+    },
+    {
+      "url": "https://github.com/Eruhitsuji/lifetxt/blob/main/docs/ja/text-editor-only-workflow.md",
+      "status": 200,
+      "final_url": "https://github.com/Eruhitsuji/lifetxt/blob/main/docs/ja/text-editor-only-workflow.md"
+    },
+    {
+      "url": "https://github.com/Eruhitsuji/lifetxt/blob/main/docs/ja/use-cases.md",
+      "status": 200,
+      "final_url": "https://github.com/Eruhitsuji/lifetxt/blob/main/docs/ja/use-cases.md"
+    },
+    {
+      "url": "https://github.com/Eruhitsuji/lifetxt/releases",
+      "status": 200,
+      "final_url": "https://github.com/Eruhitsuji/lifetxt/releases"
+    },
+    {
+      "url": "https://github.com/Eruhitsuji/lifetxt/tree/main/docs/en",
+      "status": 200,
+      "final_url": "https://github.com/Eruhitsuji/lifetxt/tree/main/docs/en"
+    },
+    {
+      "url": "https://github.com/Eruhitsuji/lifetxt/tree/main/docs/ja",
+      "status": 200,
+      "final_url": "https://github.com/Eruhitsuji/lifetxt/tree/main/docs/ja"
+    }
+  ],
+  "root_language": "ja",
+  "artifact_comparison": {
+    "mismatches": [],
+    "count": 22
+  }
+}

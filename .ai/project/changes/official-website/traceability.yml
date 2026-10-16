@@ -10,3 +10,8 @@ links:
   task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1352
   pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1355
   status: implemented
+- requirement_id: req-official-website-live-quality-v1
+  capability_id: cap-official-website
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1353
+  pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1357
+  status: implemented

@@ -72,7 +72,7 @@ def render(
             f'<link rel="alternate" hreflang="{code}" href="{escape(base + code + "/" + filename)}">'
             for code in ("ja", "en")
         )
-        + f'<link rel="alternate" hreflang="x-default" href="{escape(base if page == "index" else base + "ja/" + filename)}">'
+        + f'<link rel="alternate" hreflang="x-default" href="{escape(base if page == "index" else base + "en/" + filename)}">'
     )
     title, intro, cards = copy["pages"][page]
     nav = "".join(
@@ -169,7 +169,7 @@ def build(output: Path, base: str = DEFAULT_URL) -> None:
             )
             urls.append(base + lang + "/" + ("" if page == "index" else name))
     (output / "index.html").write_text(
-        render(content, "ja", "index", base, root=True), encoding="utf-8"
+        render(content, "en", "index", base, root=True), encoding="utf-8"
     )
     # The failed URL may have arbitrary depth. This one recovery page intentionally
     # uses the configured absolute base path and has no relative assets.

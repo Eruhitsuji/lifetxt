@@ -3,13 +3,13 @@ change:
   id: official-website
   title: Bilingual static product introduction and owner-approved Pages operations
   status: in_review
-  change_type: Feature
-  assurance_level: Standard
+  change_type: Operations
+  assurance_level: High
   owner: Eruhitsuji
   accountable_owner: Eruhitsuji
-  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1350
-  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1354
-  base_commit: a3c9e23d
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1352
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1355
+  base_commit: 3a71a46160d8001de508dead9a64df2771dcf0dd
   target_release: null
 scope:
   write_scope:
@@ -19,6 +19,9 @@ scope:
   - tests/test_website.py
   - CAPABILITIES.yml and TRACEABILITY.yml feature records
   - this package
+  - .github/workflows/website-pages.yml
+  - tests/test_website_pages_workflow.py
+  - .ai/project/COMMANDS.yml website entries
   forbidden_scope:
   - .ai/managed/**
   - runtime and release changes
@@ -28,5 +31,7 @@ scope:
   - TRACEABILITY.yml
   integration_owner: Codex execution; Eruhitsuji merge authority
 human_approvals_required:
-- Independent latest-head review and merge
-- Pages configuration and deployment remain separate approval boundaries
+- Independent latest-head implementation/security review
+- Independent integration/operations review
+- Human merge, Pages/environment settings, manual dispatch and environment deployment
+  approval

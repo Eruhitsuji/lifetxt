@@ -69,6 +69,7 @@ class Server:
         self.send = send
         self.id_key = id_key
         self.documents = {}
+        self.suspended = {}
         self.initialized = False
         self.shutdown = False
         self.exited = False
@@ -95,9 +96,15 @@ class Server:
             },
         )
 
+    def active_documents(self):
+        return {
+            uri: doc for uri, doc in self.documents.items() if uri not in self.suspended
+        }
+
     def publish_all(self):
-        extra = workspace_diagnostics(self.documents, self.id_key)
-        for document in self.documents.values():
+        documents = self.active_documents()
+        extra = workspace_diagnostics(documents, self.id_key)
+        for document in documents.values():
             self.publish(document, extra.get(document.uri, ()))
 
     def handle(self, message):
@@ -167,26 +174,48 @@ class Server:
                 version = data["version"]
                 if type(version) is not int:
                     raise ValueError("Integer version required")
-                if version <= doc.version:
+                if version <= max(
+                    doc.version, self.suspended.get(doc.uri, doc.version)
+                ):
                     return
-                changes = params["contentChanges"]
-                if not isinstance(changes, list) or not changes:
-                    raise ValueError("Full text changes required")
-                if any("range" in change for change in changes):
-                    raise ValueError("Only full document synchronization supported")
-                updated = Document(
-                    doc.uri,
-                    version,
-                    changes[-1]["text"],
-                    self.id_key,
-                    check_links=False,
-                )
+                try:
+                    changes = params["contentChanges"]
+                    if not isinstance(changes, list) or not changes:
+                        raise ValueError("Full text changes required")
+                    if any("range" in change for change in changes):
+                        raise ValueError("Only full document synchronization supported")
+                    updated = Document(
+                        doc.uri,
+                        version,
+                        changes[-1]["text"],
+                        self.id_key,
+                        check_links=False,
+                    )
+                except (
+                    KeyError,
+                    TypeError,
+                    ValueError,
+                    IndexError,
+                    OverflowError,
+                    RecursionError,
+                ):
+                    # Keep the last valid snapshot, but never answer language
+                    # queries or resolve IDs against text the client has replaced.
+                    self.suspended[doc.uri] = version
+                    self.publish_all()
+                    self.notify(
+                        "textDocument/publishDiagnostics",
+                        {"uri": doc.uri, "version": version, "diagnostics": []},
+                    )
+                    raise
+                self.suspended.pop(doc.uri, None)
                 self.documents[doc.uri] = updated
                 self.publish_all()
                 return
             elif method == "textDocument/didClose":
                 uri = params["textDocument"]["uri"]
                 self.documents.pop(uri, None)
+                self.suspended.pop(uri, None)
                 self.publish_all()
                 self.notify(
                     "textDocument/publishDiagnostics", {"uri": uri, "diagnostics": []}
@@ -194,9 +223,17 @@ class Server:
                 return
             elif method in ("textDocument/completion", "textDocument/hover"):
                 doc = self.documents[params["textDocument"]["uri"]]
+                if doc.uri in self.suspended:
+                    if request:
+                        self.response(
+                            id_, [] if method.endswith("completion") else None
+                        )
+                    return
                 result = (
                     completion(
-                        doc, params["position"], items=workspace_items(self.documents)
+                        doc,
+                        params["position"],
+                        items=workspace_items(self.active_documents()),
                     )
                     if method.endswith("completion")
                     else hover(doc, params["position"])

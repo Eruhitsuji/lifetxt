@@ -225,7 +225,8 @@ downgradeする前にLSPを無効化してください。解除は設定を無�
 最大32文書、文書あたりUTF-8で256KiB、補完・診断200件、frame 2MiB、header 8KiBです。
 古いversionの変更通知と差分syncを受理しません（全文syncを宣言します）。
 文書が拒否された場合はclient logを確認し、close/openで再同期してください。
-最後の有効snapshotを保持します。要求は同期実行し、client側debounceで通知頻度を抑えます。
+最後の有効snapshotを保持しますが、その文書の診断・補完・Hover・他bufferへの候補/参照解決への参加を一時停止します。
+拒否されたversionより新しい有効な全文通知でも復帰します。同じか古いversionでは復帰しません。要求は同期実行し、client側debounceで通知頻度を抑えます。
 cancelは既に開始したCore解析を中断しません。背景走査、telemetry、自動編集はありません。
 
 ## 開いているbufferのworkspace・展開状況

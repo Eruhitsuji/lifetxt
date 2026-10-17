@@ -1,0 +1,276 @@
+{
+  "schema_version": 1,
+  "issue": 1362,
+  "complete_distribution_audit": false,
+  "upstream_pyodide": {
+    "tag": "314.0.7",
+    "commit": "b1e4fcc2488962f6360a97f19b9982d6fdb5d16f",
+    "recipe_urls": [
+      "https://github.com/pyodide/pyodide/blob/b1e4fcc2488962f6360a97f19b9982d6fdb5d16f/Makefile.envs",
+      "https://github.com/pyodide/pyodide/blob/b1e4fcc2488962f6360a97f19b9982d6fdb5d16f/cpython/Makefile",
+      "https://github.com/emscripten-core/emscripten/blob/5.0.3/tools/ports/zlib.py",
+      "https://github.com/emscripten-core/emscripten/blob/5.0.3/tools/ports/bzip2.py"
+    ]
+  },
+  "runtime_observations": {
+    "kind": "Node execution of actual PoC WASM; not browser acceptance or complete SBOM",
+    "complete_distribution_audit": false,
+    "node": "v24.19.0",
+    "pyodide": "314.0.7",
+    "runtime_files": {
+      "runtime/pyodide-lock.json": {
+        "bytes": 119077,
+        "sha256": "5dc2fc119108bc148c7457dc86e7675b5c87e1cafd420b9c34c1eaef7b36c010"
+      },
+      "runtime/pyodide.asm.mjs": {
+        "bytes": 1250344,
+        "sha256": "f7cdc8ece80678ceb712f8e65ebe6d3a83203a180c399865f49612a051693635"
+      },
+      "runtime/pyodide.asm.wasm": {
+        "bytes": 9598218,
+        "sha256": "cc36e3cab04fdfc9a63ff13eb52eae2b911bf46c025cc7b281f394bd3de1d5e6"
+      },
+      "runtime/pyodide.mjs": {
+        "bytes": 17931,
+        "sha256": "6f1d60f7bf529beb300f0f47983c921d3982363640ba20af0e38efdddbc66109"
+      },
+      "runtime/python_stdlib.zip": {
+        "bytes": 2545637,
+        "sha256": "fa1957e5777068fc4f7437f96d860ae2fbe9c19732ba06c84e004ec16dd7dd7a"
+      }
+    },
+    "observed": {
+      "python": "3.14.2 (main, Sep 14 2026, 03:03:51) [Clang 23.0.0git (https:/github.com/llvm/llvm-project e5927fecf8a6ce89e1a4eac5b8",
+      "builtins": [
+        "_abc",
+        "_ast",
+        "_asyncio",
+        "_bisect",
+        "_blake2",
+        "_bz2",
+        "_codecs",
+        "_codecs_cn",
+        "_codecs_hk",
+        "_codecs_iso2022",
+        "_codecs_jp",
+        "_codecs_kr",
+        "_codecs_tw",
+        "_collections",
+        "_contextvars",
+        "_csv",
+        "_ctypes",
+        "_datetime",
+        "_decimal",
+        "_elementtree",
+        "_functools",
+        "_heapq",
+        "_hmac",
+        "_imp",
+        "_io",
+        "_json",
+        "_locale",
+        "_lsprof",
+        "_lzma",
+        "_md5",
+        "_multibytecodec",
+        "_opcode",
+        "_operator",
+        "_pickle",
+        "_posixsubprocess",
+        "_pyodide_core",
+        "_queue",
+        "_random",
+        "_remote_debugging",
+        "_sha1",
+        "_sha2",
+        "_sha3",
+        "_signal",
+        "_socket",
+        "_sqlite3",
+        "_sre",
+        "_stat",
+        "_statistics",
+        "_string",
+        "_struct",
+        "_suggestions",
+        "_symtable",
+        "_sysconfig",
+        "_testbuffer",
+        "_testcapi",
+        "_testclinic",
+        "_testclinic_limited",
+        "_testinternalcapi",
+        "_testlimitedcapi",
+        "_thread",
+        "_tokenize",
+        "_tracemalloc",
+        "_types",
+        "_typing",
+        "_warnings",
+        "_weakref",
+        "_xxtestfuzz",
+        "_zoneinfo",
+        "_zstd",
+        "array",
+        "atexit",
+        "binascii",
+        "builtins",
+        "cmath",
+        "errno",
+        "faulthandler",
+        "fcntl",
+        "gc",
+        "itertools",
+        "marshal",
+        "math",
+        "mmap",
+        "posix",
+        "pyexpat",
+        "select",
+        "sys",
+        "termios",
+        "time",
+        "unicodedata",
+        "xxsubtype",
+        "zlib"
+      ],
+      "zlib_runtime": "1.3.1",
+      "sqlite_runtime": "3.39.0",
+      "expat_runtime": "expat_2.7.3",
+      "imported_extensions": [
+        "_bz2",
+        "_lzma",
+        "_ctypes",
+        "_zstd"
+      ]
+    }
+  },
+  "components": [
+    {
+      "name": "Pyodide",
+      "version": "314.0.7",
+      "basis": "npm pin plus runtime.version",
+      "licence": "MPL-2.0",
+      "notice": "pyodide-314.0.7.txt"
+    },
+    {
+      "name": "CPython",
+      "version": "3.14.2",
+      "basis": "sys.version plus tagged build",
+      "licence": "PSF and combined notices",
+      "notice": "cpython-3.14.2.txt"
+    },
+    {
+      "name": "Emscripten",
+      "version": "5.0.3",
+      "basis": "tagged Makefile.envs only; compiler version is not binary attestation",
+      "licence": "MIT/NCSA and components",
+      "notice": "emscripten-5.0.3.txt"
+    },
+    {
+      "name": "libffi",
+      "version": "f08493d249d2067c8b3207ba46693dd858f95db3",
+      "basis": "tagged cpython/Makefile; _ctypes import observed, no runtime version",
+      "licence": "MIT",
+      "notice": "libffi-f08493d.txt"
+    },
+    {
+      "name": "hiwire",
+      "version": "6a1e67280a15d929ebeceee54a6358c9c8d5f697",
+      "basis": "tagged cpython/Makefile; no independent runtime version",
+      "licence": "MPL-2.0",
+      "notice": "hiwire-6a1e672.txt"
+    },
+    {
+      "name": "liblzma (XZ)",
+      "version": "5.2.2",
+      "basis": "tagged cpython/Makefile; _lzma import observed, no runtime version",
+      "licence": "COPYING identifies liblzma public domain; file-level review remains",
+      "notice": "xz-5.2.2-COPYING.txt"
+    },
+    {
+      "name": "zstd",
+      "version": "1.5.7",
+      "basis": "tagged cpython/Makefile archive; _zstd import observed, no runtime version",
+      "licence": "BSD-3-Clause notice retained; file-level review remains",
+      "notice": "zstd-1.5.7.txt"
+    },
+    {
+      "name": "SQLite",
+      "version": "3.39.0",
+      "basis": "sqlite3.sqlite_version and tagged cpython/Makefile",
+      "licence": "public-domain disclaimer",
+      "notice": "sqlite-3.39.0.txt"
+    },
+    {
+      "name": "zlib",
+      "version": "1.3.1",
+      "basis": "zlib.ZLIB_RUNTIME_VERSION and Emscripten port",
+      "licence": "Zlib",
+      "notice": "zlib-1.3.1-README.txt"
+    },
+    {
+      "name": "bzip2",
+      "version": "1.0.6",
+      "basis": "Emscripten port only; _bz2 import observed, no runtime version",
+      "licence": "bzip2 licence",
+      "notice": "bzip2-1.0.6.txt"
+    },
+    {
+      "name": "Expat",
+      "version": "2.7.3",
+      "basis": "pyexpat.EXPAT_VERSION; notice from CPython tag",
+      "licence": "MIT",
+      "notice": "expat-cpython-3.14.2.txt"
+    },
+    {
+      "name": "stackframe/error-stack-parser",
+      "version": "vendored Pyodide b1e4fcc",
+      "basis": "src/js/compat.ts imports vendor; upstream vendor commit not separately pinned",
+      "licence": "MIT",
+      "notice": "stackframe-pyodide-314.0.7.txt"
+    },
+    {
+      "name": "MiniLZ4",
+      "version": "vendored Emscripten 5.0.3",
+      "basis": "LZ4=1 build flag; leading third_party/mini-lz4.js notice",
+      "licence": "MIT",
+      "notice": "mini-lz4-emscripten-5.0.3.txt"
+    },
+    {
+      "name": "musl",
+      "version": "vendored Emscripten 5.0.3",
+      "basis": "Emscripten LICENSE points to musl COPYRIGHT; per-object inclusion not attested",
+      "licence": "MIT plus file-specific notices in COPYRIGHT",
+      "notice": "musl-emscripten-5.0.3.txt"
+    },
+    {
+      "name": "LLVM libc++",
+      "version": "vendored Emscripten 5.0.3",
+      "basis": "-lstdc++ tagged build; libc++ subtree notice; other LLVM runtime portions pending",
+      "licence": "Apache-2.0 WITH LLVM-exception plus legacy notices",
+      "notice": "libcxx-emscripten-5.0.3.txt"
+    },
+    {
+      "name": "HACL*",
+      "version": "vendored CPython 3.14.2",
+      "basis": "Setup.local names HACL files; _hmac/_sha2 builtins; representative complete leading licence comment only",
+      "licence": "MIT; all file/header notices not audited",
+      "notice": "hacl-cpython-3.14.2-header.txt"
+    },
+    {
+      "name": "other CPython/Emscripten portions",
+      "version": null,
+      "basis": "_decimal, generated Unicode tables, compiler-rt/libunwind and other linked/vendored portions not exhaustively mapped",
+      "licence": null,
+      "notice": null
+    }
+  ],
+  "public_distribution_approved": false,
+  "remaining_gates": [
+    "Complete object/file-level attribution including CPython data/code and LLVM runtime pieces",
+    "Exact npm binary build, patches and source mapping; source-based versions are candidates unless runtime observed",
+    "Corresponding source delivery for Pyodide and hiwire MPL portions including modifications; source URLs alone are not a distribution compliance determination",
+    "Independent distribution/legal review and Owner publication approval under #1358"
+  ]
+}

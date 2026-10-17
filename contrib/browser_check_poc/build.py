@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SOURCE = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 from contrib.browser_check_poc.adapter import check_text
+from contrib.browser_check_poc.notice_inventory import validate_notices
 
 VERSION = "314.0.7"
 RUNTIME_FILES = (
@@ -39,6 +40,7 @@ def build(output):
     package = json.loads((runtime / "package.json").read_text())
     if package["version"] != VERSION:
         raise ValueError("Install the exact pinned Pyodide using npm ci")
+    notice_files = validate_notices(SOURCE, runtime)
     fixtures = json.loads((SOURCE / "fixtures.json").read_text())
     expected = [{**f, "expected": check_text(f["text"])} for f in fixtures]
     # Explicit corpus-observed import closure. Never harvest ambient test-process
@@ -90,13 +92,7 @@ def build(output):
     ):
         shutil.copyfile(SOURCE / name, output / name)
     (output / "notices").mkdir()
-    for name in (
-        "pyodide-314.0.7.txt",
-        "cpython-3.14.2.txt",
-        "emscripten-5.0.3.txt",
-        "provenance.json",
-        "README.md",
-    ):
+    for name in notice_files:
         shutil.copyfile(SOURCE / "notices" / name, output / "notices" / name)
     (output / "core.zip").write_bytes(archive.getvalue())
     (output / "fixtures.json").write_text(

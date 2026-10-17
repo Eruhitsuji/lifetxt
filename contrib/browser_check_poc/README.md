@@ -100,13 +100,18 @@ risk. SharedArrayBuffer/COOP/COEP interruption was not required by this PoC.
 
 ## Dependencies, licences and updates
 
+Current mapping and unresolved gates: [RUNTIME_INVENTORY.md](RUNTIME_INVENTORY.md).
+Before creating output, the builder refuses missing/modified notices or any of
+the five runtime files differing from the retained inventory. An intentional
+upgrade needs renewed inventory/notice review; changing a hash alone is not review.
+
 - `package.json` pins Pyodide **314.0.7**; `package-lock.json` fixes npm integrity
   and transitive dependencies. The installed Pyodide package declares MPL-2.0;
   `ws` and `@types/emscripten` declare MIT. They are tooling/runtime-package
   dependencies; only the five named runtime files are copied for the browser.
 - Generated Core ZIP contains the project's MIT LICENSE and unchanged sources.
-- `notices/` retains versioned upstream Pyodide, CPython and Emscripten licence
-  texts with provenance/hashes; the builder copies them into the local artifact.
+- `notices/` retains sixteen upstream notice texts with provenance/hashes and a
+  partial component inventory; the builder copies them into the local artifact.
 - Pyodide's binary/std-library distribution also incorporates CPython and other
   upstream code. npm's top-level licence is **not** a complete binary notice/SBOM
   audit. Full upstream licences, required notices/source obligations and their

@@ -20,6 +20,47 @@ SOURCE = ROOT / "contrib/browser_check_poc"
 
 
 class BrowserCheckPocTests(unittest.TestCase):
+    def test_partial_inventory_rejects_missing_tampered_and_overclaimed_notices(self):
+        from contrib.browser_check_poc.notice_inventory import validate_notices
+
+        validate_notices(SOURCE)
+        for failure in (
+            "tamper",
+            "missing",
+            "complete",
+            "reference",
+            "runtime",
+            "runtime_bytes",
+        ):
+            with (
+                self.subTest(failure=failure),
+                tempfile.TemporaryDirectory() as directory,
+            ):
+                source = Path(directory)
+                shutil.copytree(SOURCE / "notices", source / "notices")
+                first = source / "notices/pyodide-314.0.7.txt"
+                if failure == "tamper":
+                    first.write_text("wrong notice")
+                elif failure == "missing":
+                    first.unlink()
+                else:
+                    path = source / "notices/components.json"
+                    data = json.loads(path.read_text())
+                    if failure == "complete":
+                        data["complete_distribution_audit"] = True
+                    elif failure == "reference":
+                        data["components"][0]["notice"] = "absent.txt"
+                    elif failure == "runtime":
+                        data["runtime_observations"]["runtime_files"] = {}
+                    else:
+                        for runtime_file in builder.RUNTIME_FILES:
+                            (source / runtime_file).write_bytes(b"unexpected binary")
+                    path.write_text(json.dumps(data))
+                with self.assertRaises((ValueError, FileNotFoundError)):
+                    validate_notices(
+                        source, source if failure.startswith("runtime") else None
+                    )
+
     def test_corpus_preserves_authoritative_parser_diagnostics(self):
         from lifetxt.parser import parse_text
         from lifetxt.diagnostic_contract import diagnostics_to_output
@@ -63,6 +104,13 @@ class BrowserCheckPocTests(unittest.TestCase):
             )
             for name in builder.RUNTIME_FILES:
                 (runtime / name).write_text("runtime fixture")
+            # This test builds synthetic runtime files, not the real pinned binary.
+            inventory_path = source / "notices/components.json"
+            inventory = json.loads(inventory_path.read_text())
+            for entry in inventory["runtime_observations"]["runtime_files"].values():
+                entry["bytes"] = len(b"runtime fixture")
+                entry["sha256"] = hashlib.sha256(b"runtime fixture").hexdigest()
+            inventory_path.write_text(json.dumps(inventory))
             a, b = Path(directory) / "a", Path(directory) / "b"
             with patch.object(builder, "SOURCE", source):
                 builder.build(a)
@@ -94,7 +142,9 @@ class BrowserCheckPocTests(unittest.TestCase):
             self.assertEqual(manifest["pyodide"], builder.VERSION)
             for notice in (SOURCE / "notices").iterdir():
                 copied = a / "notices" / notice.name
-                self.assertEqual(copied.read_bytes(), notice.read_bytes())
+                self.assertEqual(
+                    copied.read_bytes(), (source / "notices" / notice.name).read_bytes()
+                )
                 self.assertEqual(
                     manifest["files"]["notices/" + notice.name]["sha256"],
                     hashlib.sha256(copied.read_bytes()).hexdigest(),

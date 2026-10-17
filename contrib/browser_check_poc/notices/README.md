@@ -1,5 +1,11 @@
 # Runtime notice snapshot — incomplete inventory
 
+Follow-up #1362 expands this directory to sixteen notice texts. `components.json`
+distinguishes source-pinned candidates from actual runtime observations;
+`../RUNTIME_INVENTORY.md` records remaining publication gates. The builder validates
+and copies all provenance-listed texts and metadata. The original three-snapshot
+explanation below is historical, not the current count.
+
 These are fixed-version upstream licence texts, not a complete distribution
 approval. `provenance.json` records original/stored hashes and normalization.
 The PoC Core ZIP already contains lifetxt's MIT LICENSE and unmodified sources.

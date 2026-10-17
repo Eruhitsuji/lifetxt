@@ -1,0 +1,40 @@
+schema_version: 1
+verification:
+  checks:
+  - type: focused_regression
+    command: LIFETXT_BROWSER_ENGINES=chromium LIFETXT_REQUIRE_BROWSER_ENGINES=1
+      python -m unittest tests.test_browser_check_poc_engines tests.test_browser_check_poc
+      tests.test_core_import_boundary tests.test_supported_runtime tests.test_diagnostic_contract
+      tests.test_website tests.test_traceability_gate tests.test_change_package_closeout
+    status: passed
+    result: 45 tests, 2 existing optional Web skips. Chromium portable matrix was
+      required and executed; Firefox/WebKit remained blocked, not passed. Ruff
+      lint and focused format, approved mypy and diff checks pass. Full suite not rerun locally.
+  - type: extra_engines
+    command: python contrib/browser_check_poc/engine_matrix.py --site local-artifact --output local-evidence
+    status: blocked
+    result: Firefox 157.0 reports version but page creation crashes; sandbox uid_map
+      EPERM and child signal 11 observed. WebKit build 2370 lacks 21 OS libraries.
+      CLI exits nonzero and neither engine reaches corpus acceptance.
+  - type: portable_runner_chromium
+    command: engine_matrix.py --engines chromium; required opt-in Chromium unittest and focused existing regressions
+    status: passed
+    result: Chromium 153 corpus 16 of 16, Worker, CSP/MIME, bounded network/storage,
+      lazy/warm/offline, keyboard/viewports and cancel/clear/restart pass.
+  gaps:
+  - description: Firefox/WebKit need a supported host; Safari/physical mobile,
+      screen readers, desktop zoom, CJK visual quality and low-memory/network remain open.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1358
+review_ledger:
+- reviewer: Codex implementer
+  review_type: status_failure_and_boundary_self_review
+  target_commit: b012d37123e14e44f02a96243f9909b2181684d1 (code unchanged by final PR trace metadata)
+  result: informational_only
+  finding_count: 0
+  completed_at: '2026-10-17'
+- reviewer: Eruhitsuji
+  review_type: independent_implementation_and_evidence
+  target_commit: null
+  result: pending
+  finding_count: null
+  completed_at: null

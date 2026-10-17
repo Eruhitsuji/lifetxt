@@ -1,0 +1,13 @@
+schema_version: 1
+requirements:
+- id: req-browser-engine-matrix-v1
+  kind: ADDED
+  owner: Eruhitsuji
+  statement: Investigate extra engines without treating blocked prerequisites or
+    missing observations as successful browser acceptance.
+  acceptance_criteria:
+  - Attempt default Firefox and WebKit launch/page creation without security bypass
+  - Record sanitized concrete blockers or real corpus and bounded boundary observations
+  - Reject empty, partial, blocked or failed result matrices
+  - Provide opt-in optional and required regression execution modes
+  - Keep Safari, physical device and other unexecuted gates explicit

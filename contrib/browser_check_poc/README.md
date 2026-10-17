@@ -131,3 +131,11 @@ were read on 2026-10-17 (documentation version 314.0.7). The official guidance
 supports module Workers and static hosting with correct WASM MIME headers;
 these are upstream design references, not evidence that this PoC passed Safari.
 Related: #1350, #1353, #1356, #1358, #1360, #827 and #1055.
+
+## Additional browser engines (#1364)
+
+[ENGINE_MATRIX.md](ENGINE_MATRIX.md) documents the portable real-engine runner,
+explicit optional/required unittest modes and sanitized evidence. Firefox page
+creation is blocked by this host's sandbox permissions; WebKit lacks OS libraries.
+Neither is accepted. The runner's success path passes on the existing Chromium;
+that smoke is not evidence of Firefox, WebKit, Safari or physical mobile support.

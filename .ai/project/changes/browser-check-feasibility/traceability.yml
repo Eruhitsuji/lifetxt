@@ -3,7 +3,7 @@ links:
 - requirement_id: req-browser-runtime-inventory-v1
   capability_id: cap-official-website
   task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1362
-  pull_request: null
+  pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1363
   status: implemented
 - requirement_id: req-browser-local-check-acceptance-v1
   capability_id: cap-official-website

@@ -10,6 +10,7 @@ capabilities:
       - req-official-website-v1
       - req-official-website-pages-v1
       - req-official-website-live-quality-v1
+      - req-browser-local-check-feasibility-v1
     implementation_locations:
       - website/
       - scripts/build_website.py
@@ -18,16 +19,20 @@ capabilities:
     public_interfaces:
       - https://eruhitsuji.github.io/lifetxt/ (initial deployment verified; English-root update pending)
     tests_or_evidence:
+      - contrib/browser_check_poc/RESULTS.md (experimental; not published or browser accepted)
       - .ai/project/changes/official-website/public-acceptance.md
       - tests/test_website.py
       - tests/test_website_pages_workflow.py
       - Local Chromium HTTP checks at 320, 390, 1280 pixels for both languages
     related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/1356
+      - https://github.com/Eruhitsuji/lifetxt/issues/1358
       - https://github.com/Eruhitsuji/lifetxt/issues/1350
       - https://github.com/Eruhitsuji/lifetxt/issues/1351
       - https://github.com/Eruhitsuji/lifetxt/issues/1352
       - https://github.com/Eruhitsuji/lifetxt/issues/1353
     related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/1359
       - https://github.com/Eruhitsuji/lifetxt/pull/1357
       - https://github.com/Eruhitsuji/lifetxt/pull/1354
       - https://github.com/Eruhitsuji/lifetxt/pull/1355

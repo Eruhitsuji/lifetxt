@@ -2,6 +2,21 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-browser-local-check-feasibility-v1
+      capability_id: cap-official-website
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1350
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1356
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1359
+      changed_files_or_scope:
+        - isolated contrib/browser_check_poc and tests/test_browser_check_poc.py
+        - investigation report and browser-check-feasibility package
+      tests_or_evidence:
+        - Native and actual Node WASM 16-case parity; actual CLI 14-case diagnostic parity with two scope gaps
+        - Worker shim termination, bounded Unicode input and fake DOM lifecycle
+        - 41 focused tests, 2 optional Web skips; lint, format and approved mypy
+      release_or_deployment: null
+      status: implemented
+      note: Experimental conditional GO only; real-browser and mobile acceptance unverified in 1356 and adoption proposal 1358
     - requirement_id: req-official-website-live-quality-v1
       capability_id: cap-official-website
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1350

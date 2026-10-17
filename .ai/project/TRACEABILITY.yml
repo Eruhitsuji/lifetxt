@@ -2,6 +2,17 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-editor-support-integration
+      capability_id: cap-editor-language-support
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1348
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1348
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1376
+      changed_files_or_scope:
+        - Integrate static, LSP and bounded workspace task ancestry into main
+      tests_or_evidence:
+        - editor-language-support/evidence.json and verification.yml
+        - Preserve individual PR links 1371, 1374 and 1375; final latest-head CI and human review required
+      status: implemented
     - requirement_id: req-editor-open-buffer-workspace
       capability_id: cap-editor-language-support
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1348

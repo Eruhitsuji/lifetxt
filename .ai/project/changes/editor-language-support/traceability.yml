@@ -12,3 +12,7 @@ traceability:
     task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1372
     pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1375
     status: implemented
+  - requirement_id: req-editor-support-integration
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1348
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1376
+    status: implemented

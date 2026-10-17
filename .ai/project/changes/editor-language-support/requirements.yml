@@ -25,3 +25,10 @@ requirements:
       - Core ID/reference validation and candidates reflect unsaved changes and close
       - Explicit ID key, result/document limits and no arbitrary I/O
       - Measured baseline and honest unsupported editor/OS matrix
+  - id: req-editor-support-integration
+    kind: ADDED
+    owner: Eruhitsuji
+    statement: Consolidate independently scoped editor task ancestry into a final main PR.
+    acceptance_criteria:
+      - Preserve subtask PR attribution and add a separate integration trace step
+      - Retain executed evidence, limits and independent latest-head approval boundary

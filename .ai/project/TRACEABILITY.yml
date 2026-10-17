@@ -6,6 +6,7 @@ traceability:
       capability_id: cap-editor-language-support
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1348
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1369
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1371
       changed_files_or_scope:
         - editors/vscode/lifetxt and static fixture tests; bilingual editor docs
       tests_or_evidence:

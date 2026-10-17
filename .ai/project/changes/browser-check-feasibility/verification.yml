@@ -33,7 +33,7 @@ verification:
 review_ledger:
 - reviewer: Codex implementer
   review_type: code_security_evidence_self_review
-  target_commit: scoped PoC working tree
+  target_commit: 092d3617490b7c5af51de05a3826e251a035cfa3 (same PoC code; PR references finalized afterward)
   result: informational_only
   finding_count: 3
   completed_at: '2026-10-17'

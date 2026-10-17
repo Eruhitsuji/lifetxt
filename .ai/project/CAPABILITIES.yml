@@ -11,6 +11,7 @@ capabilities:
       - req-official-website-pages-v1
       - req-official-website-live-quality-v1
       - req-browser-local-check-feasibility-v1
+      - req-browser-engine-matrix-v1
       - req-browser-local-check-acceptance-v1
     implementation_locations:
       - website/
@@ -26,11 +27,13 @@ capabilities:
       - .ai/project/changes/official-website/public-acceptance.md
       - tests/test_website.py
       - tests/test_website_pages_workflow.py
+      - contrib/browser_check_poc/ENGINE_MATRIX.md (Firefox/WebKit blocked; portable runner Chromium smoke only)
       - Local Chromium HTTP checks at 320, 390, 1280 pixels for both languages
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/1360
       - https://github.com/Eruhitsuji/lifetxt/issues/1356
       - https://github.com/Eruhitsuji/lifetxt/issues/1358
+      - https://github.com/Eruhitsuji/lifetxt/issues/1364
       - https://github.com/Eruhitsuji/lifetxt/issues/1350
       - https://github.com/Eruhitsuji/lifetxt/issues/1351
       - https://github.com/Eruhitsuji/lifetxt/issues/1352

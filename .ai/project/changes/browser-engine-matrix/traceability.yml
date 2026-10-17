@@ -1,0 +1,7 @@
+schema_version: 1
+links:
+- requirement_id: req-browser-engine-matrix-v1
+  capability_id: cap-official-website
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1364
+  pull_request: null
+  status: implemented

@@ -1,0 +1,547 @@
+{
+  "recorded_at": "2026-10-17",
+  "issue": 1364,
+  "blocked_capture": {
+    "issue": 1364,
+    "playwright": "1.64.0",
+    "kind": "actual headless desktop engines over loopback HTTP",
+    "manifest_sha256": "b4e80f88f9066bd7929a95dee38e5a5a7bdb9df92e36c0c7c50e79562d3cec4a",
+    "manifest": {
+      "pyodide": "314.0.7",
+      "engine_base_revision": "6ea5ed56345027eb2b5a5788b04788940c396beb",
+      "core_modules": [
+        "lifetxt/__init__.py",
+        "lifetxt/atomic.py",
+        "lifetxt/config.py",
+        "lifetxt/diagnostic_contract.py",
+        "lifetxt/ids.py",
+        "lifetxt/links.py",
+        "lifetxt/model.py",
+        "lifetxt/mutation.py",
+        "lifetxt/parser.py",
+        "lifetxt/progress.py",
+        "lifetxt/recurrence.py",
+        "lifetxt/safety_foundation.py",
+        "lifetxt/serializer.py",
+        "lifetxt/temporal_context.py",
+        "lifetxt/temporal_thread.py",
+        "lifetxt/ticket_project_values.py",
+        "lifetxt/tickets.py",
+        "lifetxt/timeutil.py",
+        "lifetxt/timezone_policy.py",
+        "lifetxt/validator.py"
+      ],
+      "files": {
+        "adapter.py": {
+          "bytes": 1216,
+          "sha256": "35402ce2fdde361edd9fef29d59c643a0c290e4a7f43ea394d088b01ebf6d69e"
+        },
+        "core.zip": {
+          "bytes": 76645,
+          "sha256": "675ede79d71b0da7fa81436b426937c72c7127512dc116a24311df6b9aa8bcc1"
+        },
+        "engine.mjs": {
+          "bytes": 823,
+          "sha256": "ee4006ce007b2995dd979d4ed084ffcf1073b59de485a678da1aa74c3e697c9d"
+        },
+        "fixtures.json": {
+          "bytes": 10269,
+          "sha256": "2459f0a78bef0ebcc9972c7be78fdb7914885dd6d8b055580828dc60643c8ea4"
+        },
+        "index.html": {
+          "bytes": 1139,
+          "sha256": "d5eb2c3b1e9989706c9f61de9643e3afed0a91750425142ecdb28bb30490764f"
+        },
+        "notices/README.md": {
+          "bytes": 2162,
+          "sha256": "46a8f3013363a018d7026258ac0ec1e95c3e745a4901a9c097fb7430c8f9d40f"
+        },
+        "notices/cpython-3.14.2.txt": {
+          "bytes": 13804,
+          "sha256": "b0e25a78cffb43f4d92de8b61ccfa1f1f98ecbc22330b54b5251e7b6ba010231"
+        },
+        "notices/emscripten-5.0.3.txt": {
+          "bytes": 5092,
+          "sha256": "06f2e6c024612605fc3c803b192983a26f19404eb54d78e399190d90ed32ac78"
+        },
+        "notices/provenance.json": {
+          "bytes": 1830,
+          "sha256": "719b78f0ed37259bf42fb63ce9fd67f33d06e89c2a7e3b58020f6fee582dc75d"
+        },
+        "notices/pyodide-314.0.7.txt": {
+          "bytes": 16725,
+          "sha256": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5"
+        },
+        "runtime/pyodide-lock.json": {
+          "bytes": 119077,
+          "sha256": "5dc2fc119108bc148c7457dc86e7675b5c87e1cafd420b9c34c1eaef7b36c010"
+        },
+        "runtime/pyodide.asm.mjs": {
+          "bytes": 1250344,
+          "sha256": "f7cdc8ece80678ceb712f8e65ebe6d3a83203a180c399865f49612a051693635"
+        },
+        "runtime/pyodide.asm.wasm": {
+          "bytes": 9598218,
+          "sha256": "cc36e3cab04fdfc9a63ff13eb52eae2b911bf46c025cc7b281f394bd3de1d5e6"
+        },
+        "runtime/pyodide.mjs": {
+          "bytes": 17931,
+          "sha256": "6f1d60f7bf529beb300f0f47983c921d3982363640ba20af0e38efdddbc66109"
+        },
+        "runtime/python_stdlib.zip": {
+          "bytes": 2545637,
+          "sha256": "fa1957e5777068fc4f7437f96d860ae2fbe9c19732ba06c84e004ec16dd7dd7a"
+        },
+        "style.css": {
+          "bytes": 364,
+          "sha256": "ce9aa1256f558f18ccd18781b651c226e0180fde0bb52eea44792048f300ce9a"
+        },
+        "ui.mjs": {
+          "bytes": 1846,
+          "sha256": "3505ca7f2f52072aabee74f3b59309e672c49e527ef9494c10a88623d11b84ac"
+        },
+        "worker.mjs": {
+          "bytes": 1136,
+          "sha256": "239a341e0444091da514aa1907c3fa5bee2b17d2ee9c55faae5b7f0fcb0086d6"
+        }
+      }
+    },
+    "probe_sha256": "d9e17aaf1359ca3285b9ab60a6bacc386113e2a310f6199a7cba940365b71e50",
+    "safari_iphone_android_screen_reader_desktop_zoom": "not tested",
+    "engines": [
+      {
+        "engine": "firefox",
+        "status": "blocked",
+        "physical_device": false,
+        "version": "157.0",
+        "error_type": "Error",
+        "reason": "Engine launched but page creation failed before acceptance"
+      },
+      {
+        "engine": "webkit",
+        "status": "blocked",
+        "physical_device": false,
+        "reason": "Engine launch failed before page creation",
+        "missing_libraries": [
+          "libGLESv2.so.2",
+          "libavif.so.16",
+          "libevent-2.1.so.7",
+          "libgraphene-1.0.so.0",
+          "libgstallocators-1.0.so.0",
+          "libgstapp-1.0.so.0",
+          "libgstaudio-1.0.so.0",
+          "libgstbase-1.0.so.0",
+          "libgstcodecparsers-1.0.so.0",
+          "libgstfft-1.0.so.0",
+          "libgstgl-1.0.so.0",
+          "libgstpbutils-1.0.so.0",
+          "libgstreamer-1.0.so.0",
+          "libgsttag-1.0.so.0",
+          "libgstvideo-1.0.so.0",
+          "libgtk-4.so.1",
+          "libharfbuzz-icu.so.0",
+          "libhyphen.so.0",
+          "libmanette-0.2.so.0",
+          "libsecret-1.so.0",
+          "libwayland-server.so.0"
+        ],
+        "error_type": "Error"
+      }
+    ]
+  },
+  "portable_runner_smoke": {
+    "issue": 1364,
+    "playwright": "1.64.0",
+    "kind": "actual headless desktop engines over loopback HTTP",
+    "manifest_sha256": "b4e80f88f9066bd7929a95dee38e5a5a7bdb9df92e36c0c7c50e79562d3cec4a",
+    "manifest": {
+      "pyodide": "314.0.7",
+      "engine_base_revision": "6ea5ed56345027eb2b5a5788b04788940c396beb",
+      "core_modules": [
+        "lifetxt/__init__.py",
+        "lifetxt/atomic.py",
+        "lifetxt/config.py",
+        "lifetxt/diagnostic_contract.py",
+        "lifetxt/ids.py",
+        "lifetxt/links.py",
+        "lifetxt/model.py",
+        "lifetxt/mutation.py",
+        "lifetxt/parser.py",
+        "lifetxt/progress.py",
+        "lifetxt/recurrence.py",
+        "lifetxt/safety_foundation.py",
+        "lifetxt/serializer.py",
+        "lifetxt/temporal_context.py",
+        "lifetxt/temporal_thread.py",
+        "lifetxt/ticket_project_values.py",
+        "lifetxt/tickets.py",
+        "lifetxt/timeutil.py",
+        "lifetxt/timezone_policy.py",
+        "lifetxt/validator.py"
+      ],
+      "files": {
+        "adapter.py": {
+          "bytes": 1216,
+          "sha256": "35402ce2fdde361edd9fef29d59c643a0c290e4a7f43ea394d088b01ebf6d69e"
+        },
+        "core.zip": {
+          "bytes": 76645,
+          "sha256": "675ede79d71b0da7fa81436b426937c72c7127512dc116a24311df6b9aa8bcc1"
+        },
+        "engine.mjs": {
+          "bytes": 823,
+          "sha256": "ee4006ce007b2995dd979d4ed084ffcf1073b59de485a678da1aa74c3e697c9d"
+        },
+        "fixtures.json": {
+          "bytes": 10269,
+          "sha256": "2459f0a78bef0ebcc9972c7be78fdb7914885dd6d8b055580828dc60643c8ea4"
+        },
+        "index.html": {
+          "bytes": 1139,
+          "sha256": "d5eb2c3b1e9989706c9f61de9643e3afed0a91750425142ecdb28bb30490764f"
+        },
+        "notices/README.md": {
+          "bytes": 2162,
+          "sha256": "46a8f3013363a018d7026258ac0ec1e95c3e745a4901a9c097fb7430c8f9d40f"
+        },
+        "notices/cpython-3.14.2.txt": {
+          "bytes": 13804,
+          "sha256": "b0e25a78cffb43f4d92de8b61ccfa1f1f98ecbc22330b54b5251e7b6ba010231"
+        },
+        "notices/emscripten-5.0.3.txt": {
+          "bytes": 5092,
+          "sha256": "06f2e6c024612605fc3c803b192983a26f19404eb54d78e399190d90ed32ac78"
+        },
+        "notices/provenance.json": {
+          "bytes": 1830,
+          "sha256": "719b78f0ed37259bf42fb63ce9fd67f33d06e89c2a7e3b58020f6fee582dc75d"
+        },
+        "notices/pyodide-314.0.7.txt": {
+          "bytes": 16725,
+          "sha256": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5"
+        },
+        "runtime/pyodide-lock.json": {
+          "bytes": 119077,
+          "sha256": "5dc2fc119108bc148c7457dc86e7675b5c87e1cafd420b9c34c1eaef7b36c010"
+        },
+        "runtime/pyodide.asm.mjs": {
+          "bytes": 1250344,
+          "sha256": "f7cdc8ece80678ceb712f8e65ebe6d3a83203a180c399865f49612a051693635"
+        },
+        "runtime/pyodide.asm.wasm": {
+          "bytes": 9598218,
+          "sha256": "cc36e3cab04fdfc9a63ff13eb52eae2b911bf46c025cc7b281f394bd3de1d5e6"
+        },
+        "runtime/pyodide.mjs": {
+          "bytes": 17931,
+          "sha256": "6f1d60f7bf529beb300f0f47983c921d3982363640ba20af0e38efdddbc66109"
+        },
+        "runtime/python_stdlib.zip": {
+          "bytes": 2545637,
+          "sha256": "fa1957e5777068fc4f7437f96d860ae2fbe9c19732ba06c84e004ec16dd7dd7a"
+        },
+        "style.css": {
+          "bytes": 364,
+          "sha256": "ce9aa1256f558f18ccd18781b651c226e0180fde0bb52eea44792048f300ce9a"
+        },
+        "ui.mjs": {
+          "bytes": 1846,
+          "sha256": "3505ca7f2f52072aabee74f3b59309e672c49e527ef9494c10a88623d11b84ac"
+        },
+        "worker.mjs": {
+          "bytes": 1136,
+          "sha256": "239a341e0444091da514aa1907c3fa5bee2b17d2ee9c55faae5b7f0fcb0086d6"
+        }
+      }
+    },
+    "probe_sha256": "c79adf6a633a977996212ec2a1b2bda407ba48d10d7e7c48df04081690899dc6",
+    "safari_iphone_android_screen_reader_desktop_zoom": "not tested",
+    "engines": [
+      {
+        "engine": "chromium",
+        "status": "passed",
+        "physical_device": false,
+        "version": "153.0.8010.0",
+        "lazy_load": true,
+        "cold_interaction_ms": 2324.825322999459,
+        "cases": [
+          {
+            "name": "empty",
+            "match": true,
+            "check_ms": 0.30000000074505806,
+            "wall_ms": 62.02982099966903
+          },
+          {
+            "name": "valid",
+            "match": true,
+            "check_ms": 0.5,
+            "wall_ms": 59.319814999980736
+          },
+          {
+            "name": "japanese",
+            "match": true,
+            "check_ms": 1,
+            "wall_ms": 72.77556699955312
+          },
+          {
+            "name": "syntax",
+            "match": true,
+            "check_ms": 0.599999999627471,
+            "wall_ms": 42.45576799985429
+          },
+          {
+            "name": "custom-key",
+            "match": true,
+            "check_ms": 0.5,
+            "wall_ms": 59.16979299945524
+          },
+          {
+            "name": "warning",
+            "match": true,
+            "check_ms": 0.5,
+            "wall_ms": 59.79106899940234
+          },
+          {
+            "name": "position",
+            "match": true,
+            "check_ms": 0.40000000037252903,
+            "wall_ms": 65.2866520013049
+          },
+          {
+            "name": "format-current",
+            "match": true,
+            "check_ms": 0.40000000037252903,
+            "wall_ms": 65.54044299991801
+          },
+          {
+            "name": "format-future",
+            "match": true,
+            "check_ms": 0.5,
+            "wall_ms": 58.78790400129219
+          },
+          {
+            "name": "duplicate-id",
+            "match": true,
+            "check_ms": 0.5,
+            "wall_ms": 56.06257299950812
+          },
+          {
+            "name": "missing-reference",
+            "match": true,
+            "check_ms": 0.6999999992549419,
+            "wall_ms": 61.60793099843431
+          },
+          {
+            "name": "timezone",
+            "match": true,
+            "check_ms": 1.400000000372529,
+            "wall_ms": 62.485083000865416
+          },
+          {
+            "name": "multiline",
+            "match": true,
+            "check_ms": 0.5,
+            "wall_ms": 57.367114000953734
+          },
+          {
+            "name": "html-injection",
+            "match": true,
+            "check_ms": 0.599999999627471,
+            "wall_ms": 62.612924999484676
+          },
+          {
+            "name": "completed-parent-gap",
+            "match": true,
+            "check_ms": 0.599999999627471,
+            "wall_ms": 61.46329399962269
+          },
+          {
+            "name": "native-history-gap",
+            "match": true,
+            "check_ms": 0.6999999992549419,
+            "wall_ms": 61.755173999699764
+          }
+        ],
+        "warm_no_http": true,
+        "offline_warm": true,
+        "text_only": true,
+        "oversize_no_http": true,
+        "no_overflow_widths": [
+          1280,
+          640,
+          390,
+          320
+        ],
+        "keyboard_focus": "rgb(18, 104, 94) solid 3px",
+        "storage": {
+          "local": [],
+          "session": [],
+          "indexedDB": [],
+          "caches": [],
+          "serviceWorkers": 0,
+          "cookies": ""
+        },
+        "cancel_clear_restart": true,
+        "requests": [
+          {
+            "path": "/",
+            "origin_ok": true,
+            "method": "GET",
+            "query": "",
+            "has_body": false
+          },
+          {
+            "path": "/style.css",
+            "origin_ok": true,
+            "method": "GET",
+            "query": "",
+            "has_body": false
+          },
+          {
+            "path": "/ui.mjs",
+            "origin_ok": true,
+            "method": "GET",
+            "query": "",
+            "has_body": false
+          },
+          {
+            "path": "/worker.mjs",
+            "origin_ok": true,
+            "method": "GET",
+            "query": "",
+            "has_body": false
+          },
+          {
+            "path": "/engine.mjs",
+            "origin_ok": true,
+            "method": "GET",
+            "query": "",
+            "has_body": false
+          },
+          {
+            "path": "/runtime/pyodide.mjs",
+            "origin_ok": true,
+            "method": "GET",
+            "query": "",
+            "has_body": false
+          },
+          {
+            "path": "/core.zip",
+            "origin_ok": true,
+            "method": "GET",
+            "query": "",
+            "has_body": false
+          },
+          {
+            "path": "/adapter.py",
+            "origin_ok": true,
+            "method": "GET",
+            "query": "",
+            "has_body": false
+          },
+          {
+            "path": "/runtime/pyodide-lock.json",
+            "origin_ok": true,
+            "method": "GET",
+            "query": "",
+            "has_body": false
+          },
+          {
+            "path": "/runtime/python_stdlib.zip",
+            "origin_ok": true,
+            "method": "GET",
+            "query": "",
+            "has_body": false
+          },
+          {
+            "path": "/runtime/pyodide.asm.wasm",
+            "origin_ok": true,
+            "method": "GET",
+            "query": "",
+            "has_body": false
+          },
+          {
+            "path": "/runtime/pyodide.asm.mjs",
+            "origin_ok": true,
+            "method": "GET",
+            "query": "",
+            "has_body": false
+          },
+          {
+            "path": "/worker.mjs",
+            "origin_ok": true,
+            "method": "GET",
+            "query": "",
+            "has_body": false
+          },
+          {
+            "path": "/engine.mjs",
+            "origin_ok": true,
+            "method": "GET",
+            "query": "",
+            "has_body": false
+          },
+          {
+            "path": "/runtime/pyodide.mjs",
+            "origin_ok": true,
+            "method": "GET",
+            "query": "",
+            "has_body": false
+          },
+          {
+            "path": "/core.zip",
+            "origin_ok": true,
+            "method": "GET",
+            "query": "",
+            "has_body": false
+          },
+          {
+            "path": "/adapter.py",
+            "origin_ok": true,
+            "method": "GET",
+            "query": "",
+            "has_body": false
+          },
+          {
+            "path": "/runtime/pyodide-lock.json",
+            "origin_ok": true,
+            "method": "GET",
+            "query": "",
+            "has_body": false
+          },
+          {
+            "path": "/runtime/python_stdlib.zip",
+            "origin_ok": true,
+            "method": "GET",
+            "query": "",
+            "has_body": false
+          },
+          {
+            "path": "/runtime/pyodide.asm.wasm",
+            "origin_ok": true,
+            "method": "GET",
+            "query": "",
+            "has_body": false
+          },
+          {
+            "path": "/runtime/pyodide.asm.mjs",
+            "origin_ok": true,
+            "method": "GET",
+            "query": "",
+            "has_body": false
+          }
+        ],
+        "success_context_errors": [],
+        "mime": true,
+        "csp_inline_blocked": true
+      }
+    ]
+  },
+  "manual_diagnostics": {
+    "firefox": "Version 157.0 reported; page creation crashed. DEBUG=pw:browser showed Sandbox: writing /proc/self/uid_map: EPERM and child processes exiting signal 11. No sandbox disabling attempted.",
+    "webkit": "Playwright WebKit 27.2 build 2370 downloaded; OS shared libraries absent, no page created.",
+    "post_blocked_capture_changes": "Runner then gained an explicit Chromium smoke option and an origin trailing-slash correction. Captured hash is preserved; final runner hash is the Chromium capture's probe_sha256. Firefox/WebKit acceptance never began; after retaining blocked statuses, later execution used Chromium only.",
+    "physical_devices": "Not tested; Playwright WebKit is not Safari/iPhone.",
+    "os_security_changes": "None"
+  }
+}

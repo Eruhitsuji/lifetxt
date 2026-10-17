@@ -2,6 +2,20 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-browser-runtime-inventory-v1
+      capability_id: cap-official-website
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1358
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1362
+      pull_request: null
+      changed_files_or_scope:
+        - isolated PoC notice inventory, builder gate, Node probe and focused tests
+        - browser-check-feasibility package and scoped registries
+      tests_or_evidence:
+        - contrib/browser_check_poc/RUNTIME_INVENTORY.md and notices/components.json
+        - sixteen upstream notices; fail-closed missing, tamper, reference and runtime inventory checks
+        - focused regression and static checks; partial audit and publication blockers retained
+      release_or_deployment: null
+      status: implemented
     - requirement_id: req-browser-local-check-acceptance-v1
       capability_id: cap-official-website
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1350

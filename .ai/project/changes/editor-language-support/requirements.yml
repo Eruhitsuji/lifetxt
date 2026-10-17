@@ -1,0 +1,27 @@
+schema_version: 1
+requirements:
+  - id: req-editor-static-format1
+    kind: CHANGED
+    owner: Eruhitsuji
+    statement: Static assistance covers Format 1.0 without requiring Python.
+    acceptance_criteria:
+      - Nine Type snippets, seven statuses, metadata, quotes, custom keys and continuations
+      - Explicit date entry, no generic txt takeover, actual TextMate fixtures
+  - id: req-editor-readonly-lsp
+    kind: ADDED
+    owner: Eruhitsuji
+    statement: Optional stdio adapters reuse Core semantics on unsaved buffers.
+    acceptance_criteria:
+      - Full sync, monotonic versions, close clearing and bounded framing
+      - UTF-16 physical ranges including BOM, CRLF, emoji and logical continuation
+      - Contextual completion and shared plaintext help without automatic edits
+      - Static fallback, trust gating, explicit interpreter and bilingual settings documentation
+      - Same fixture exercised by VS Code and independent Neovim client
+  - id: req-editor-open-buffer-workspace
+    kind: ADDED
+    owner: Eruhitsuji
+    statement: Explicit open buffers are the bounded workspace, without disk discovery.
+    acceptance_criteria:
+      - Core ID/reference validation and candidates reflect unsaved changes and close
+      - Explicit ID key, result/document limits and no arbitrary I/O
+      - Measured baseline and honest unsupported editor/OS matrix

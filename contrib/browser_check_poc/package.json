@@ -1,0 +1,6 @@
+{
+  "name": "lifetxt-browser-check-poc",
+  "private": true,
+  "version": "0.0.0",
+  "dependencies": {"pyodide": "314.0.7"}
+}

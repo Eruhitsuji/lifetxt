@@ -1,0 +1,1234 @@
+{
+  "engine_base_revision": "e59ef2b6ef2fb8f34edc86fccf7fcbb4d274d9fc",
+  "poc_sources_sha256": {
+    "adapter.py": "35402ce2fdde361edd9fef29d59c643a0c290e4a7f43ea394d088b01ebf6d69e",
+    "build.py": "3ba703c66d5b88bd3ef1890a537ec869d745c736cd79987689187ee4191736ec",
+    "compare_cli.py": "5bf5d8fd5b98288e99d3398983f5fe834ef2fcec9b0d4f147370e3d9c67eaeb6",
+    "engine.mjs": "ee4006ce007b2995dd979d4ed084ffcf1073b59de485a678da1aa74c3e697c9d",
+    "fixtures.json": "1d3baadd533446f5e49326c9fe20e3225a3e76bd9f11e0763b1f72d998c54239",
+    "index.html": "d5eb2c3b1e9989706c9f61de9643e3afed0a91750425142ecdb28bb30490764f",
+    "node_worker.mjs": "914182359e0d7bebe92f9e44ba5b34b0d2c12f6e3be489fc18521e2a9a668515",
+    "package-lock.json": "03131c28d96b17f3d89d91e55b81ce29b4f57642d792f78b5f5195b44944d680",
+    "package.json": "c3aa7d6b070db7db69021cb3877be974c160033b520964e5da9f9c361292285f",
+    "probe.mjs": "71e5a48a6fd1ab02734679ebe1e8ea747459a787cf3ac265173dd6e3e72bbe8c",
+    "style.css": "ce9aa1256f558f18ccd18781b651c226e0180fde0bb52eea44792048f300ce9a",
+    "test_ui.mjs": "3711c5e3bddd31978b54ce1fc1c42c0c967792d17dfa47d867140097338532b2",
+    "ui.mjs": "3505ca7f2f52072aabee74f3b59309e672c49e527ef9494c10a88623d11b84ac",
+    "worker.mjs": "239a341e0444091da514aa1907c3fa5bee2b17d2ee9c55faae5b7f0fcb0086d6",
+    "worker_probe.mjs": "f5ab083fb4b7e4b21804f333924c5ea84ddbfaaeb5f463235b7f980d3c532a76"
+  },
+  "node_wasm": {
+    "environment": "Node.js WASM, not a browser or mobile measurement",
+    "node": "v24.19.0",
+    "runtime": {
+      "pyodide": "314.0.7",
+      "python": "3.14.2 (main, Sep 14 2026, 03:03:51) [Clang 23.0.0git (https:/github.com/llvm/llvm-project e5927fecf8a6ce89e1a4eac5b8",
+      "wasm_heap_bytes": 31457280
+    },
+    "startup_ms": 1903.0357629999999,
+    "cases": [
+      {
+        "name": "empty",
+        "match": true,
+        "check_ms": 137.85300300000017,
+        "result": {
+          "scope": "parser-and-item-validator-only",
+          "engine_version": "1.0.4.1",
+          "format_version_state": "unversioned",
+          "items": 0,
+          "supported_format": true,
+          "valid": true,
+          "diagnostic_count": 0,
+          "truncated": false,
+          "diagnostics": []
+        }
+      },
+      {
+        "name": "valid",
+        "match": true,
+        "check_ms": 27.266449000000193,
+        "result": {
+          "scope": "parser-and-item-validator-only",
+          "engine_version": "1.0.4.1",
+          "format_version_state": "unversioned",
+          "items": 1,
+          "supported_format": true,
+          "valid": true,
+          "diagnostic_count": 0,
+          "truncated": false,
+          "diagnostics": []
+        }
+      },
+      {
+        "name": "japanese",
+        "match": true,
+        "check_ms": 1.1092600000001767,
+        "result": {
+          "scope": "parser-and-item-validator-only",
+          "engine_version": "1.0.4.1",
+          "format_version_state": "unversioned",
+          "items": 1,
+          "supported_format": true,
+          "valid": true,
+          "diagnostic_count": 0,
+          "truncated": false,
+          "diagnostics": []
+        }
+      },
+      {
+        "name": "syntax",
+        "match": true,
+        "check_ms": 0.28819400000020323,
+        "result": {
+          "scope": "parser-and-item-validator-only",
+          "engine_version": "1.0.4.1",
+          "format_version_state": "unversioned",
+          "items": 1,
+          "supported_format": true,
+          "valid": false,
+          "diagnostic_count": 1,
+          "truncated": false,
+          "diagnostics": [
+            {
+              "severity": "error",
+              "code": "E018",
+              "category": "syntax",
+              "message": "Unclosed quoted title.",
+              "line": 1,
+              "column": 7,
+              "span": {
+                "start": {
+                  "line": 1,
+                  "column": 7
+                },
+                "end": {
+                  "line": 1,
+                  "column": 16
+                }
+              },
+              "hint": "Add the closing double quote for this value."
+            }
+          ]
+        }
+      },
+      {
+        "name": "custom-key",
+        "match": true,
+        "check_ms": 0.21824800000013056,
+        "result": {
+          "scope": "parser-and-item-validator-only",
+          "engine_version": "1.0.4.1",
+          "format_version_state": "unversioned",
+          "items": 1,
+          "supported_format": true,
+          "valid": true,
+          "diagnostic_count": 1,
+          "truncated": false,
+          "diagnostics": [
+            {
+              "severity": "warning",
+              "code": "W106",
+              "category": "style",
+              "message": "Detail key 'custom_key' is custom for type T; it will be preserved.",
+              "line": 1,
+              "hint": "Keep the custom key if intentional, or rename it to a documented key for this item type."
+            }
+          ]
+        }
+      },
+      {
+        "name": "warning",
+        "match": true,
+        "check_ms": 0.19223999999985608,
+        "result": {
+          "scope": "parser-and-item-validator-only",
+          "engine_version": "1.0.4.1",
+          "format_version_state": "unversioned",
+          "items": 1,
+          "supported_format": true,
+          "valid": true,
+          "diagnostic_count": 1,
+          "truncated": false,
+          "diagnostics": [
+            {
+              "severity": "warning",
+              "code": "W203",
+              "category": "time",
+              "message": "due: should use YYYY-MM-DD or YYYY-MM-DDTHH:MM, optionally with :SS, fractional seconds, and timezone.",
+              "line": 1,
+              "hint": "Rewrite the value as YYYY-MM-DD or YYYY-MM-DDTHH:MM."
+            }
+          ]
+        }
+      },
+      {
+        "name": "position",
+        "match": true,
+        "check_ms": 0.18388699999968594,
+        "result": {
+          "scope": "parser-and-item-validator-only",
+          "engine_version": "1.0.4.1",
+          "format_version_state": "unversioned",
+          "items": 1,
+          "supported_format": true,
+          "valid": false,
+          "diagnostic_count": 1,
+          "truncated": false,
+          "diagnostics": [
+            {
+              "severity": "error",
+              "code": "E018",
+              "category": "syntax",
+              "message": "Unclosed quoted title.",
+              "line": 2,
+              "column": 7,
+              "span": {
+                "start": {
+                  "line": 2,
+                  "column": 7
+                },
+                "end": {
+                  "line": 2,
+                  "column": 16
+                }
+              },
+              "hint": "Add the closing double quote for this value."
+            }
+          ]
+        }
+      },
+      {
+        "name": "format-current",
+        "match": true,
+        "check_ms": 0.29564499999969485,
+        "result": {
+          "scope": "parser-and-item-validator-only",
+          "engine_version": "1.0.4.1",
+          "format_version_state": "current",
+          "items": 1,
+          "supported_format": true,
+          "valid": true,
+          "diagnostic_count": 0,
+          "truncated": false,
+          "diagnostics": []
+        }
+      },
+      {
+        "name": "format-future",
+        "match": true,
+        "check_ms": 0.1872720000001209,
+        "result": {
+          "scope": "parser-and-item-validator-only",
+          "engine_version": "1.0.4.1",
+          "format_version_state": "unsupported",
+          "items": 1,
+          "supported_format": false,
+          "valid": false,
+          "diagnostic_count": 0,
+          "truncated": false,
+          "diagnostics": []
+        }
+      },
+      {
+        "name": "duplicate-id",
+        "match": true,
+        "check_ms": 0.26394799999980023,
+        "result": {
+          "scope": "parser-and-item-validator-only",
+          "engine_version": "1.0.4.1",
+          "format_version_state": "unversioned",
+          "items": 2,
+          "supported_format": true,
+          "valid": true,
+          "diagnostic_count": 1,
+          "truncated": false,
+          "diagnostics": [
+            {
+              "severity": "warning",
+              "code": "W213",
+              "category": "id",
+              "message": "Duplicate id:same; first seen at line 1.",
+              "line": 2,
+              "hint": ""
+            }
+          ]
+        }
+      },
+      {
+        "name": "missing-reference",
+        "match": true,
+        "check_ms": 0.1906370000001516,
+        "result": {
+          "scope": "parser-and-item-validator-only",
+          "engine_version": "1.0.4.1",
+          "format_version_state": "unversioned",
+          "items": 1,
+          "supported_format": true,
+          "valid": true,
+          "diagnostic_count": 1,
+          "truncated": false,
+          "diagnostics": [
+            {
+              "severity": "warning",
+              "code": "W215",
+              "category": "reference",
+              "message": "Reference parent:missing does not match any id: value.",
+              "line": 1,
+              "hint": ""
+            }
+          ]
+        }
+      },
+      {
+        "name": "timezone",
+        "match": true,
+        "check_ms": 0.8320129999997334,
+        "result": {
+          "scope": "parser-and-item-validator-only",
+          "engine_version": "1.0.4.1",
+          "format_version_state": "unversioned",
+          "items": 1,
+          "supported_format": true,
+          "valid": true,
+          "diagnostic_count": 0,
+          "truncated": false,
+          "diagnostics": []
+        }
+      },
+      {
+        "name": "multiline",
+        "match": true,
+        "check_ms": 0.18739300000015646,
+        "result": {
+          "scope": "parser-and-item-validator-only",
+          "engine_version": "1.0.4.1",
+          "format_version_state": "unversioned",
+          "items": 1,
+          "supported_format": true,
+          "valid": true,
+          "diagnostic_count": 0,
+          "truncated": false,
+          "diagnostics": []
+        }
+      },
+      {
+        "name": "html-injection",
+        "match": true,
+        "check_ms": 0.23602600000003804,
+        "result": {
+          "scope": "parser-and-item-validator-only",
+          "engine_version": "1.0.4.1",
+          "format_version_state": "unversioned",
+          "items": 1,
+          "supported_format": true,
+          "valid": false,
+          "diagnostic_count": 2,
+          "truncated": false,
+          "diagnostics": [
+            {
+              "severity": "error",
+              "code": "E010",
+              "category": "syntax",
+              "message": "Expected detail in key:value form.",
+              "line": 1,
+              "column": 38,
+              "hint": "Write details as key:value with no space around the colon."
+            },
+            {
+              "severity": "error",
+              "code": "E010",
+              "category": "syntax",
+              "message": "Expected detail in key:value form.",
+              "line": 1,
+              "column": 40,
+              "hint": "Write details as key:value with no space around the colon."
+            }
+          ]
+        }
+      },
+      {
+        "name": "completed-parent-gap",
+        "match": true,
+        "check_ms": 0.4070329999999558,
+        "result": {
+          "scope": "parser-and-item-validator-only",
+          "engine_version": "1.0.4.1",
+          "format_version_state": "unversioned",
+          "items": 2,
+          "supported_format": true,
+          "valid": true,
+          "diagnostic_count": 1,
+          "truncated": false,
+          "diagnostics": [
+            {
+              "severity": "warning",
+              "code": "W103",
+              "category": "workflow",
+              "message": "Completed items should usually include done:DATE.",
+              "line": 1,
+              "hint": "Add done:YYYY-MM-DD when the completion date is known."
+            }
+          ]
+        }
+      },
+      {
+        "name": "native-history-gap",
+        "match": true,
+        "check_ms": 0.32547999999997046,
+        "result": {
+          "scope": "parser-and-item-validator-only",
+          "engine_version": "1.0.4.1",
+          "format_version_state": "unversioned",
+          "items": 1,
+          "supported_format": true,
+          "valid": true,
+          "diagnostic_count": 3,
+          "truncated": false,
+          "diagnostics": [
+            {
+              "severity": "warning",
+              "code": "W106",
+              "category": "style",
+              "message": "Detail key 'record' is custom for type N; it will be preserved.",
+              "line": 1,
+              "hint": "Keep the custom key if intentional, or rename it to a documented key for this item type."
+            },
+            {
+              "severity": "warning",
+              "code": "W106",
+              "category": "style",
+              "message": "Detail key 'item' is custom for type N; it will be preserved.",
+              "line": 1,
+              "hint": "Keep the custom key if intentional, or rename it to a documented key for this item type."
+            },
+            {
+              "severity": "warning",
+              "code": "W106",
+              "category": "style",
+              "message": "Detail key 'event' is custom for type N; it will be preserved.",
+              "line": 1,
+              "hint": "Keep the custom key if intentional, or rename it to a documented key for this item type."
+            }
+          ]
+        }
+      }
+    ],
+    "loads": [
+      {
+        "lines": 1,
+        "utf8_bytes": 19,
+        "check_ms": 0.17083800000000338,
+        "items": 1,
+        "runtime": {
+          "pyodide": "314.0.7",
+          "python": "3.14.2 (main, Sep 14 2026, 03:03:51) [Clang 23.0.0git (https:/github.com/llvm/llvm-project e5927fecf8a6ce89e1a4eac5b8",
+          "wasm_heap_bytes": 31457280
+        }
+      },
+      {
+        "lines": 100,
+        "utf8_bytes": 1900,
+        "check_ms": 2.755079999999907,
+        "items": 100,
+        "runtime": {
+          "pyodide": "314.0.7",
+          "python": "3.14.2 (main, Sep 14 2026, 03:03:51) [Clang 23.0.0git (https:/github.com/llvm/llvm-project e5927fecf8a6ce89e1a4eac5b8",
+          "wasm_heap_bytes": 31457280
+        }
+      },
+      {
+        "lines": 1000,
+        "utf8_bytes": 19000,
+        "check_ms": 21.75821199999973,
+        "items": 1000,
+        "runtime": {
+          "pyodide": "314.0.7",
+          "python": "3.14.2 (main, Sep 14 2026, 03:03:51) [Clang 23.0.0git (https:/github.com/llvm/llvm-project e5927fecf8a6ce89e1a4eac5b8",
+          "wasm_heap_bytes": 31457280
+        }
+      },
+      {
+        "lines": 2000,
+        "utf8_bytes": 38000,
+        "check_ms": 40.89397600000029,
+        "items": 2000,
+        "runtime": {
+          "pyodide": "314.0.7",
+          "python": "3.14.2 (main, Sep 14 2026, 03:03:51) [Clang 23.0.0git (https:/github.com/llvm/llvm-project e5927fecf8a6ce89e1a4eac5b8",
+          "wasm_heap_bytes": 31457280
+        }
+      }
+    ],
+    "oversizedRejected": true
+  },
+  "node_worker_shim": {
+    "environment": "Node worker_threads with browser-worker shim; not a browser",
+    "cold": {
+      "id": 1,
+      "stage": "result",
+      "result": {
+        "scope": "parser-and-item-validator-only",
+        "engine_version": "1.0.4.1",
+        "format_version_state": "unversioned",
+        "items": 1,
+        "supported_format": true,
+        "valid": true,
+        "diagnostic_count": 0,
+        "truncated": false,
+        "diagnostics": []
+      },
+      "check_ms": 103.77256299999999
+    },
+    "warm": {
+      "id": 2,
+      "stage": "result",
+      "result": {
+        "scope": "parser-and-item-validator-only",
+        "engine_version": "1.0.4.1",
+        "format_version_state": "unversioned",
+        "items": 2000,
+        "supported_format": true,
+        "valid": true,
+        "diagnostic_count": 0,
+        "truncated": false,
+        "diagnostics": []
+      },
+      "check_ms": 28.188348000000133
+    },
+    "startup": {
+      "id": 1,
+      "stage": "ready",
+      "startup_ms": 2031.3587870000001,
+      "runtime": {
+        "pyodide": "314.0.7",
+        "python": "3.14.2 (main, Sep 14 2026, 03:03:51) [Clang 23.0.0git (https:/github.com/llvm/llvm-project e5927fecf8a6ce89e1a4eac5b8",
+        "wasm_heap_bytes": 31457280
+      }
+    },
+    "heartbeat_ticks_during_startup": 216,
+    "over_limit_refused": true,
+    "matches": [
+      {
+        "name": "empty",
+        "match": true
+      },
+      {
+        "name": "valid",
+        "match": true
+      },
+      {
+        "name": "japanese",
+        "match": true
+      },
+      {
+        "name": "syntax",
+        "match": true
+      },
+      {
+        "name": "custom-key",
+        "match": true
+      },
+      {
+        "name": "warning",
+        "match": true
+      },
+      {
+        "name": "position",
+        "match": true
+      },
+      {
+        "name": "format-current",
+        "match": true
+      },
+      {
+        "name": "format-future",
+        "match": true
+      },
+      {
+        "name": "duplicate-id",
+        "match": true
+      },
+      {
+        "name": "missing-reference",
+        "match": true
+      },
+      {
+        "name": "timezone",
+        "match": true
+      },
+      {
+        "name": "multiline",
+        "match": true
+      },
+      {
+        "name": "html-injection",
+        "match": true
+      },
+      {
+        "name": "completed-parent-gap",
+        "match": true
+      },
+      {
+        "name": "native-history-gap",
+        "match": true
+      }
+    ],
+    "source_asset_reads": [
+      "./core.zip",
+      "./adapter.py"
+    ],
+    "termination_completed": true
+  },
+  "cli_comparison": [
+    {
+      "name": "empty",
+      "diagnostics_match": true,
+      "cli_exit_code": 0,
+      "cli_diagnostics": [],
+      "parser_result": {
+        "scope": "parser-and-item-validator-only",
+        "engine_version": "1.0.4.1",
+        "format_version_state": "unversioned",
+        "items": 0,
+        "supported_format": true,
+        "valid": true,
+        "diagnostic_count": 0,
+        "truncated": false,
+        "diagnostics": []
+      }
+    },
+    {
+      "name": "valid",
+      "diagnostics_match": true,
+      "cli_exit_code": 0,
+      "cli_diagnostics": [],
+      "parser_result": {
+        "scope": "parser-and-item-validator-only",
+        "engine_version": "1.0.4.1",
+        "format_version_state": "unversioned",
+        "items": 1,
+        "supported_format": true,
+        "valid": true,
+        "diagnostic_count": 0,
+        "truncated": false,
+        "diagnostics": []
+      }
+    },
+    {
+      "name": "japanese",
+      "diagnostics_match": true,
+      "cli_exit_code": 0,
+      "cli_diagnostics": [],
+      "parser_result": {
+        "scope": "parser-and-item-validator-only",
+        "engine_version": "1.0.4.1",
+        "format_version_state": "unversioned",
+        "items": 1,
+        "supported_format": true,
+        "valid": true,
+        "diagnostic_count": 0,
+        "truncated": false,
+        "diagnostics": []
+      }
+    },
+    {
+      "name": "syntax",
+      "diagnostics_match": true,
+      "cli_exit_code": 1,
+      "cli_diagnostics": [
+        {
+          "severity": "error",
+          "code": "E018",
+          "category": "syntax",
+          "message": "Unclosed quoted title.",
+          "line": 1,
+          "column": 7,
+          "span": {
+            "start": {
+              "line": 1,
+              "column": 7
+            },
+            "end": {
+              "line": 1,
+              "column": 16
+            }
+          },
+          "hint": "Add the closing double quote for this value."
+        }
+      ],
+      "parser_result": {
+        "scope": "parser-and-item-validator-only",
+        "engine_version": "1.0.4.1",
+        "format_version_state": "unversioned",
+        "items": 1,
+        "supported_format": true,
+        "valid": false,
+        "diagnostic_count": 1,
+        "truncated": false,
+        "diagnostics": [
+          {
+            "severity": "error",
+            "code": "E018",
+            "category": "syntax",
+            "message": "Unclosed quoted title.",
+            "line": 1,
+            "column": 7,
+            "span": {
+              "start": {
+                "line": 1,
+                "column": 7
+              },
+              "end": {
+                "line": 1,
+                "column": 16
+              }
+            },
+            "hint": "Add the closing double quote for this value."
+          }
+        ]
+      }
+    },
+    {
+      "name": "custom-key",
+      "diagnostics_match": true,
+      "cli_exit_code": 0,
+      "cli_diagnostics": [
+        {
+          "severity": "warning",
+          "code": "W106",
+          "category": "style",
+          "message": "Detail key 'custom_key' is custom for type T; it will be preserved.",
+          "line": 1,
+          "hint": "Keep the custom key if intentional, or rename it to a documented key for this item type."
+        }
+      ],
+      "parser_result": {
+        "scope": "parser-and-item-validator-only",
+        "engine_version": "1.0.4.1",
+        "format_version_state": "unversioned",
+        "items": 1,
+        "supported_format": true,
+        "valid": true,
+        "diagnostic_count": 1,
+        "truncated": false,
+        "diagnostics": [
+          {
+            "severity": "warning",
+            "code": "W106",
+            "category": "style",
+            "message": "Detail key 'custom_key' is custom for type T; it will be preserved.",
+            "line": 1,
+            "hint": "Keep the custom key if intentional, or rename it to a documented key for this item type."
+          }
+        ]
+      }
+    },
+    {
+      "name": "warning",
+      "diagnostics_match": true,
+      "cli_exit_code": 0,
+      "cli_diagnostics": [
+        {
+          "severity": "warning",
+          "code": "W203",
+          "category": "time",
+          "message": "due: should use YYYY-MM-DD or YYYY-MM-DDTHH:MM, optionally with :SS, fractional seconds, and timezone.",
+          "line": 1,
+          "hint": "Rewrite the value as YYYY-MM-DD or YYYY-MM-DDTHH:MM."
+        }
+      ],
+      "parser_result": {
+        "scope": "parser-and-item-validator-only",
+        "engine_version": "1.0.4.1",
+        "format_version_state": "unversioned",
+        "items": 1,
+        "supported_format": true,
+        "valid": true,
+        "diagnostic_count": 1,
+        "truncated": false,
+        "diagnostics": [
+          {
+            "severity": "warning",
+            "code": "W203",
+            "category": "time",
+            "message": "due: should use YYYY-MM-DD or YYYY-MM-DDTHH:MM, optionally with :SS, fractional seconds, and timezone.",
+            "line": 1,
+            "hint": "Rewrite the value as YYYY-MM-DD or YYYY-MM-DDTHH:MM."
+          }
+        ]
+      }
+    },
+    {
+      "name": "position",
+      "diagnostics_match": true,
+      "cli_exit_code": 1,
+      "cli_diagnostics": [
+        {
+          "severity": "error",
+          "code": "E018",
+          "category": "syntax",
+          "message": "Unclosed quoted title.",
+          "line": 2,
+          "column": 7,
+          "span": {
+            "start": {
+              "line": 2,
+              "column": 7
+            },
+            "end": {
+              "line": 2,
+              "column": 16
+            }
+          },
+          "hint": "Add the closing double quote for this value."
+        }
+      ],
+      "parser_result": {
+        "scope": "parser-and-item-validator-only",
+        "engine_version": "1.0.4.1",
+        "format_version_state": "unversioned",
+        "items": 1,
+        "supported_format": true,
+        "valid": false,
+        "diagnostic_count": 1,
+        "truncated": false,
+        "diagnostics": [
+          {
+            "severity": "error",
+            "code": "E018",
+            "category": "syntax",
+            "message": "Unclosed quoted title.",
+            "line": 2,
+            "column": 7,
+            "span": {
+              "start": {
+                "line": 2,
+                "column": 7
+              },
+              "end": {
+                "line": 2,
+                "column": 16
+              }
+            },
+            "hint": "Add the closing double quote for this value."
+          }
+        ]
+      }
+    },
+    {
+      "name": "format-current",
+      "diagnostics_match": true,
+      "cli_exit_code": 0,
+      "cli_diagnostics": [],
+      "parser_result": {
+        "scope": "parser-and-item-validator-only",
+        "engine_version": "1.0.4.1",
+        "format_version_state": "current",
+        "items": 1,
+        "supported_format": true,
+        "valid": true,
+        "diagnostic_count": 0,
+        "truncated": false,
+        "diagnostics": []
+      }
+    },
+    {
+      "name": "format-future",
+      "diagnostics_match": true,
+      "cli_exit_code": 0,
+      "cli_diagnostics": [],
+      "parser_result": {
+        "scope": "parser-and-item-validator-only",
+        "engine_version": "1.0.4.1",
+        "format_version_state": "unsupported",
+        "items": 1,
+        "supported_format": false,
+        "valid": false,
+        "diagnostic_count": 0,
+        "truncated": false,
+        "diagnostics": []
+      }
+    },
+    {
+      "name": "duplicate-id",
+      "diagnostics_match": true,
+      "cli_exit_code": 0,
+      "cli_diagnostics": [
+        {
+          "severity": "warning",
+          "code": "W213",
+          "category": "id",
+          "message": "Duplicate id:same; first seen at line 1.",
+          "line": 2,
+          "hint": ""
+        }
+      ],
+      "parser_result": {
+        "scope": "parser-and-item-validator-only",
+        "engine_version": "1.0.4.1",
+        "format_version_state": "unversioned",
+        "items": 2,
+        "supported_format": true,
+        "valid": true,
+        "diagnostic_count": 1,
+        "truncated": false,
+        "diagnostics": [
+          {
+            "severity": "warning",
+            "code": "W213",
+            "category": "id",
+            "message": "Duplicate id:same; first seen at line 1.",
+            "line": 2,
+            "hint": ""
+          }
+        ]
+      }
+    },
+    {
+      "name": "missing-reference",
+      "diagnostics_match": true,
+      "cli_exit_code": 0,
+      "cli_diagnostics": [
+        {
+          "severity": "warning",
+          "code": "W215",
+          "category": "reference",
+          "message": "Reference parent:missing does not match any id: value.",
+          "line": 1,
+          "hint": ""
+        }
+      ],
+      "parser_result": {
+        "scope": "parser-and-item-validator-only",
+        "engine_version": "1.0.4.1",
+        "format_version_state": "unversioned",
+        "items": 1,
+        "supported_format": true,
+        "valid": true,
+        "diagnostic_count": 1,
+        "truncated": false,
+        "diagnostics": [
+          {
+            "severity": "warning",
+            "code": "W215",
+            "category": "reference",
+            "message": "Reference parent:missing does not match any id: value.",
+            "line": 1,
+            "hint": ""
+          }
+        ]
+      }
+    },
+    {
+      "name": "timezone",
+      "diagnostics_match": true,
+      "cli_exit_code": 0,
+      "cli_diagnostics": [],
+      "parser_result": {
+        "scope": "parser-and-item-validator-only",
+        "engine_version": "1.0.4.1",
+        "format_version_state": "unversioned",
+        "items": 1,
+        "supported_format": true,
+        "valid": true,
+        "diagnostic_count": 0,
+        "truncated": false,
+        "diagnostics": []
+      }
+    },
+    {
+      "name": "multiline",
+      "diagnostics_match": true,
+      "cli_exit_code": 0,
+      "cli_diagnostics": [],
+      "parser_result": {
+        "scope": "parser-and-item-validator-only",
+        "engine_version": "1.0.4.1",
+        "format_version_state": "unversioned",
+        "items": 1,
+        "supported_format": true,
+        "valid": true,
+        "diagnostic_count": 0,
+        "truncated": false,
+        "diagnostics": []
+      }
+    },
+    {
+      "name": "html-injection",
+      "diagnostics_match": true,
+      "cli_exit_code": 1,
+      "cli_diagnostics": [
+        {
+          "severity": "error",
+          "code": "E010",
+          "category": "syntax",
+          "message": "Expected detail in key:value form.",
+          "line": 1,
+          "column": 38,
+          "hint": "Write details as key:value with no space around the colon."
+        },
+        {
+          "severity": "error",
+          "code": "E010",
+          "category": "syntax",
+          "message": "Expected detail in key:value form.",
+          "line": 1,
+          "column": 40,
+          "hint": "Write details as key:value with no space around the colon."
+        }
+      ],
+      "parser_result": {
+        "scope": "parser-and-item-validator-only",
+        "engine_version": "1.0.4.1",
+        "format_version_state": "unversioned",
+        "items": 1,
+        "supported_format": true,
+        "valid": false,
+        "diagnostic_count": 2,
+        "truncated": false,
+        "diagnostics": [
+          {
+            "severity": "error",
+            "code": "E010",
+            "category": "syntax",
+            "message": "Expected detail in key:value form.",
+            "line": 1,
+            "column": 38,
+            "hint": "Write details as key:value with no space around the colon."
+          },
+          {
+            "severity": "error",
+            "code": "E010",
+            "category": "syntax",
+            "message": "Expected detail in key:value form.",
+            "line": 1,
+            "column": 40,
+            "hint": "Write details as key:value with no space around the colon."
+          }
+        ]
+      }
+    },
+    {
+      "name": "completed-parent-gap",
+      "diagnostics_match": false,
+      "cli_exit_code": 0,
+      "cli_diagnostics": [
+        {
+          "severity": "warning",
+          "code": "W103",
+          "category": "workflow",
+          "message": "Completed items should usually include done:DATE.",
+          "line": 1,
+          "hint": "Add done:YYYY-MM-DD when the completion date is known."
+        },
+        {
+          "severity": "warning",
+          "code": "W225",
+          "category": "semantic",
+          "message": "Completed/canceled parent id:p has 1 open child(ren): c.",
+          "line": 1,
+          "hint": ""
+        }
+      ],
+      "parser_result": {
+        "scope": "parser-and-item-validator-only",
+        "engine_version": "1.0.4.1",
+        "format_version_state": "unversioned",
+        "items": 2,
+        "supported_format": true,
+        "valid": true,
+        "diagnostic_count": 1,
+        "truncated": false,
+        "diagnostics": [
+          {
+            "severity": "warning",
+            "code": "W103",
+            "category": "workflow",
+            "message": "Completed items should usually include done:DATE.",
+            "line": 1,
+            "hint": "Add done:YYYY-MM-DD when the completion date is known."
+          }
+        ]
+      }
+    },
+    {
+      "name": "native-history-gap",
+      "diagnostics_match": false,
+      "cli_exit_code": 0,
+      "cli_diagnostics": [
+        {
+          "severity": "warning",
+          "code": "W106",
+          "category": "style",
+          "message": "Detail key 'item' is custom for type N; it will be preserved.",
+          "line": 1,
+          "hint": "Keep the custom key if intentional, or rename it to a documented key for this item type."
+        },
+        {
+          "severity": "warning",
+          "code": "W261",
+          "category": "semantic",
+          "message": "Item event is missing required field(s): id, parent, sequence, transaction, source_revision.",
+          "line": 1,
+          "hint": "Use a supported typed mutation; do not edit item events in place."
+        },
+        {
+          "severity": "warning",
+          "code": "W261",
+          "category": "semantic",
+          "message": "Item event field(s) must occur exactly once: id, parent, sequence, transaction, source_revision.",
+          "line": 1,
+          "hint": "Use a supported typed mutation; do not edit item events in place."
+        },
+        {
+          "severity": "warning",
+          "code": "W263",
+          "category": "semantic",
+          "message": "Item event payload field(s) must occur exactly once: before_status, after_status.",
+          "line": 1,
+          "hint": "Use a supported typed mutation; do not edit item events in place."
+        },
+        {
+          "severity": "warning",
+          "code": "W264",
+          "category": "semantic",
+          "message": "Item event contains unsupported field(s): item.",
+          "line": 1,
+          "hint": "Use a supported typed mutation; do not edit item events in place."
+        },
+        {
+          "severity": "warning",
+          "code": "W265",
+          "category": "semantic",
+          "message": "Item event timestamp must include a UTC offset.",
+          "line": 1,
+          "hint": "Use a supported typed mutation; do not edit item events in place."
+        },
+        {
+          "severity": "warning",
+          "code": "W266",
+          "category": "semantic",
+          "message": "Item event sequence must be a positive integer.",
+          "line": 1,
+          "hint": "Use a supported typed mutation; do not edit item events in place."
+        }
+      ],
+      "parser_result": {
+        "scope": "parser-and-item-validator-only",
+        "engine_version": "1.0.4.1",
+        "format_version_state": "unversioned",
+        "items": 1,
+        "supported_format": true,
+        "valid": true,
+        "diagnostic_count": 3,
+        "truncated": false,
+        "diagnostics": [
+          {
+            "severity": "warning",
+            "code": "W106",
+            "category": "style",
+            "message": "Detail key 'record' is custom for type N; it will be preserved.",
+            "line": 1,
+            "hint": "Keep the custom key if intentional, or rename it to a documented key for this item type."
+          },
+          {
+            "severity": "warning",
+            "code": "W106",
+            "category": "style",
+            "message": "Detail key 'item' is custom for type N; it will be preserved.",
+            "line": 1,
+            "hint": "Keep the custom key if intentional, or rename it to a documented key for this item type."
+          },
+          {
+            "severity": "warning",
+            "code": "W106",
+            "category": "style",
+            "message": "Detail key 'event' is custom for type N; it will be preserved.",
+            "line": 1,
+            "hint": "Keep the custom key if intentional, or rename it to a documented key for this item type."
+          }
+        ]
+      }
+    }
+  ],
+  "artifact_manifest": {
+    "pyodide": "314.0.7",
+    "engine_base_revision": "e59ef2b6ef2fb8f34edc86fccf7fcbb4d274d9fc",
+    "core_modules": [
+      "lifetxt/__init__.py",
+      "lifetxt/atomic.py",
+      "lifetxt/config.py",
+      "lifetxt/diagnostic_contract.py",
+      "lifetxt/ids.py",
+      "lifetxt/links.py",
+      "lifetxt/model.py",
+      "lifetxt/mutation.py",
+      "lifetxt/parser.py",
+      "lifetxt/progress.py",
+      "lifetxt/recurrence.py",
+      "lifetxt/safety_foundation.py",
+      "lifetxt/serializer.py",
+      "lifetxt/temporal_context.py",
+      "lifetxt/temporal_thread.py",
+      "lifetxt/ticket_project_values.py",
+      "lifetxt/tickets.py",
+      "lifetxt/timeutil.py",
+      "lifetxt/timezone_policy.py",
+      "lifetxt/validator.py"
+    ],
+    "files": {
+      "adapter.py": {
+        "bytes": 1216,
+        "sha256": "35402ce2fdde361edd9fef29d59c643a0c290e4a7f43ea394d088b01ebf6d69e"
+      },
+      "core.zip": {
+        "bytes": 76645,
+        "sha256": "675ede79d71b0da7fa81436b426937c72c7127512dc116a24311df6b9aa8bcc1"
+      },
+      "engine.mjs": {
+        "bytes": 823,
+        "sha256": "ee4006ce007b2995dd979d4ed084ffcf1073b59de485a678da1aa74c3e697c9d"
+      },
+      "fixtures.json": {
+        "bytes": 10269,
+        "sha256": "2459f0a78bef0ebcc9972c7be78fdb7914885dd6d8b055580828dc60643c8ea4"
+      },
+      "index.html": {
+        "bytes": 1139,
+        "sha256": "d5eb2c3b1e9989706c9f61de9643e3afed0a91750425142ecdb28bb30490764f"
+      },
+      "runtime/pyodide-lock.json": {
+        "bytes": 119077,
+        "sha256": "5dc2fc119108bc148c7457dc86e7675b5c87e1cafd420b9c34c1eaef7b36c010"
+      },
+      "runtime/pyodide.asm.mjs": {
+        "bytes": 1250344,
+        "sha256": "f7cdc8ece80678ceb712f8e65ebe6d3a83203a180c399865f49612a051693635"
+      },
+      "runtime/pyodide.asm.wasm": {
+        "bytes": 9598218,
+        "sha256": "cc36e3cab04fdfc9a63ff13eb52eae2b911bf46c025cc7b281f394bd3de1d5e6"
+      },
+      "runtime/pyodide.mjs": {
+        "bytes": 17931,
+        "sha256": "6f1d60f7bf529beb300f0f47983c921d3982363640ba20af0e38efdddbc66109"
+      },
+      "runtime/python_stdlib.zip": {
+        "bytes": 2545637,
+        "sha256": "fa1957e5777068fc4f7437f96d860ae2fbe9c19732ba06c84e004ec16dd7dd7a"
+      },
+      "style.css": {
+        "bytes": 364,
+        "sha256": "ce9aa1256f558f18ccd18781b651c226e0180fde0bb52eea44792048f300ce9a"
+      },
+      "ui.mjs": {
+        "bytes": 1846,
+        "sha256": "3505ca7f2f52072aabee74f3b59309e672c49e527ef9494c10a88623d11b84ac"
+      },
+      "worker.mjs": {
+        "bytes": 1136,
+        "sha256": "239a341e0444091da514aa1907c3fa5bee2b17d2ee9c55faae5b7f0fcb0086d6"
+      }
+    }
+  }
+}

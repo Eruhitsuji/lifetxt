@@ -1,0 +1,63 @@
+schema_version: 1
+verification:
+  checks:
+  - type: actual_desktop_measurements
+    command: readiness_probe.py --site local-artifact --chromium local-chromium --output readiness-evidence.json
+    status: passed
+    result: Two contexts pass exact 64KiB, 30 repeats of 2000 records, 500 warnings
+      capped at 100, native comparisons, warm no-HTTP, refusal, AX semantics,
+      storage snapshot and clear/restart. Pacing is per response, not cellular.
+      Source/artifact hashes retained. Resource acceptance is NOT passed.
+  - type: public_example_conformance
+    command: example_corpus.py --site new-local-artifact --output example-evidence.json
+    status: passed
+    result: All 115 public text examples match native parser-only results in Node
+      WASM, 0 excluded; same Core ZIP as browser artifact. Invalid examples stay
+      included. Not complete Format, browser or CLI parity.
+  - type: focused_project_checks
+    command: Required actual Chromium browser/engine tests plus readiness, PoC,
+      Core import, supported runtime, diagnostic, website, traceability and package tests
+    status: passed
+    result: 51 tests, 3 skips (readiness opt-in test already exercised through
+      standalone actual CLI; 2 optional Web diagnostic tests). Real Chromium
+      browser and portable matrix were required and executed, 16/16 corpus.
+      Ruff lint/focused format, approved mypy, Node UI lifecycle, integration
+      check and whitespace pass. CP932-default build regression passes after
+      explicit UTF-8 correction; rebuilt executable asset/fixture hashes exactly
+      match the measured browser artifact. Full suite is delegated to required CI.
+  - type: evidence_source_binding
+    command: SHA-256 comparisons for probes, actual artifact source files and all 115 public inputs
+    status: passed
+    result: Retained evidence matches measured sources; Node/browser Core ZIP hashes agree.
+  - type: interrupted_invocation
+    command: First post-UTF8 focused test invocation
+    status: incomplete
+    result: Executor session disappeared with partial output and no exit status or
+      summary; no pass inferred. Full available output in verification-partial.txt.
+      Python 3.12.14, Bash/Linux; BashCompletionExecutionTests not selected;
+      documentation changed while it was running. No cause established.
+      Clean retry completed all 51 tests in 27.694s with 3 documented skips;
+      complete available output in verification-test-run.txt.
+  gaps:
+  - description: Long-input automated fill about 3.4s and large CDP embedder
+      snapshots require supported-host/device resource-budget investigation.
+      Forced GC drop is not a normal-GC or leak conclusion.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1367
+  - description: Physical devices, extra engines/Safari, assistive technology,
+      desktop zoom, CJK visual quality, peak/low-memory behavior and complete
+      binary attribution/source-delivery remain unaccepted. No publication.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1358
+review_ledger:
+- reviewer: Codex implementer
+  review_type: code_security_measurement_and_integration_self_review
+  target_commit: 231b52ced1f58f762ef76c1be774509919f3c37a (implementation unchanged by final evidence closeout)
+  result: informational_only
+  finding_count: 2
+  finding_resolution: Resource finding recorded in 1367; implicit locale I/O corrected with CP932-default regression. No UI/limit change or adoption waiver
+  completed_at: '2026-10-17'
+- reviewer: Eruhitsuji
+  review_type: independent_implementation_and_evidence
+  target_commit: null
+  result: pending
+  finding_count: null
+  completed_at: null

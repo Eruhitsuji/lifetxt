@@ -11,6 +11,7 @@ capabilities:
       - req-official-website-pages-v1
       - req-official-website-live-quality-v1
       - req-browser-local-check-feasibility-v1
+      - req-browser-readiness-measurements-v1
       - req-browser-engine-matrix-v1
       - req-browser-local-check-acceptance-v1
       - req-browser-runtime-inventory-v1
@@ -22,6 +23,8 @@ capabilities:
     public_interfaces:
       - https://eruhitsuji.github.io/lifetxt/ (initial deployment verified; English-root update pending)
     tests_or_evidence:
+      - contrib/browser_check_poc/READINESS.md (bounded desktop measurements; no adoption approval)
+      - contrib/browser_check_poc/MANUAL_ACCEPTANCE.md (unexecuted manual gates)
       - contrib/browser_check_poc/RUNTIME_INVENTORY.md (partial source-based inventory; no publication approval)
       - contrib/browser_check_poc/RESULTS.md (historical Node baseline)
       - contrib/browser_check_poc/BROWSER_ACCEPTANCE.md (actual Chromium; not public or all-device accepted)
@@ -32,6 +35,7 @@ capabilities:
       - contrib/browser_check_poc/ENGINE_MATRIX.md (Firefox/WebKit blocked; portable runner Chromium smoke only)
       - Local Chromium HTTP checks at 320, 390, 1280 pixels for both languages
     related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/1366
       - https://github.com/Eruhitsuji/lifetxt/issues/1362
       - https://github.com/Eruhitsuji/lifetxt/issues/1360
       - https://github.com/Eruhitsuji/lifetxt/issues/1356
@@ -42,6 +46,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/1352
       - https://github.com/Eruhitsuji/lifetxt/issues/1353
     related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/1368
       - https://github.com/Eruhitsuji/lifetxt/pull/1363
       - https://github.com/Eruhitsuji/lifetxt/pull/1361
       - https://github.com/Eruhitsuji/lifetxt/pull/1359

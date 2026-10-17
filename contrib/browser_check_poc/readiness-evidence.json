@@ -1,0 +1,889 @@
+{
+  "issue": 1366,
+  "status": "passed",
+  "created_utc": "2026-10-17T02:33:10.772577+00:00",
+  "physical_device": false,
+  "playwright": "1.64.0",
+  "probe_sha256": "d56df27d79354509cf6881f4ffc204ee07bee98ad35c9d38e44b62a7b122c751",
+  "manifest_sha256": "5f7996b95643cb890417d8d50109657d4bca502c775006d7eeaf621ee202f4d7",
+  "manifest": {
+    "pyodide": "314.0.7",
+    "engine_base_revision": "5767b770222d1485a548ca7559e514fe63a8fcbd",
+    "core_modules": [
+      "lifetxt/__init__.py",
+      "lifetxt/atomic.py",
+      "lifetxt/config.py",
+      "lifetxt/diagnostic_contract.py",
+      "lifetxt/ids.py",
+      "lifetxt/links.py",
+      "lifetxt/model.py",
+      "lifetxt/mutation.py",
+      "lifetxt/parser.py",
+      "lifetxt/progress.py",
+      "lifetxt/recurrence.py",
+      "lifetxt/safety_foundation.py",
+      "lifetxt/serializer.py",
+      "lifetxt/temporal_context.py",
+      "lifetxt/temporal_thread.py",
+      "lifetxt/ticket_project_values.py",
+      "lifetxt/tickets.py",
+      "lifetxt/timeutil.py",
+      "lifetxt/timezone_policy.py",
+      "lifetxt/validator.py"
+    ],
+    "files": {
+      "adapter.py": {
+        "bytes": 1216,
+        "sha256": "35402ce2fdde361edd9fef29d59c643a0c290e4a7f43ea394d088b01ebf6d69e"
+      },
+      "core.zip": {
+        "bytes": 76645,
+        "sha256": "675ede79d71b0da7fa81436b426937c72c7127512dc116a24311df6b9aa8bcc1"
+      },
+      "engine.mjs": {
+        "bytes": 823,
+        "sha256": "ee4006ce007b2995dd979d4ed084ffcf1073b59de485a678da1aa74c3e697c9d"
+      },
+      "fixtures.json": {
+        "bytes": 10269,
+        "sha256": "2459f0a78bef0ebcc9972c7be78fdb7914885dd6d8b055580828dc60643c8ea4"
+      },
+      "index.html": {
+        "bytes": 1139,
+        "sha256": "d5eb2c3b1e9989706c9f61de9643e3afed0a91750425142ecdb28bb30490764f"
+      },
+      "notices/README.md": {
+        "bytes": 2540,
+        "sha256": "df75159a982ca8558485befb34f427169ba46df88e27d06515798656ba28989d"
+      },
+      "notices/bzip2-1.0.6.txt": {
+        "bytes": 1896,
+        "sha256": "01c5ea784da676b8138406f99436abbb8d366a096d4f2403070188a40bda578b"
+      },
+      "notices/components.json": {
+        "bytes": 8520,
+        "sha256": "3f86dd2f13dce5cf9984be283fbf5b2a3944e514ba9499954736a43016492653"
+      },
+      "notices/cpython-3.14.2.txt": {
+        "bytes": 13804,
+        "sha256": "b0e25a78cffb43f4d92de8b61ccfa1f1f98ecbc22330b54b5251e7b6ba010231"
+      },
+      "notices/emscripten-5.0.3.txt": {
+        "bytes": 5092,
+        "sha256": "06f2e6c024612605fc3c803b192983a26f19404eb54d78e399190d90ed32ac78"
+      },
+      "notices/expat-cpython-3.14.2.txt": {
+        "bytes": 1144,
+        "sha256": "122f2c27000472a201d337b9b31f7eb2b52d091b02857061a8880371612d9534"
+      },
+      "notices/hacl-cpython-3.14.2-header.txt": {
+        "bytes": 1207,
+        "sha256": "998ce04fb8ad9dedb0bc1b44938f8c3dcf1089780fa105ce1c8c30fb5554d78c"
+      },
+      "notices/hiwire-6a1e672.txt": {
+        "bytes": 16725,
+        "sha256": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5"
+      },
+      "notices/libcxx-emscripten-5.0.3.txt": {
+        "bytes": 16703,
+        "sha256": "539dd7aed86e8a4f12cbdd0e6c50c189c7d74847e4fecc64ce2c6ee3a01da38b"
+      },
+      "notices/libffi-f08493d.txt": {
+        "bytes": 1132,
+        "sha256": "2c9c2acb9743e6b007b91350475308aee44691d96aa20eacef8e199988c8c388"
+      },
+      "notices/mini-lz4-emscripten-5.0.3.txt": {
+        "bytes": 1214,
+        "sha256": "d27097e98c94f60e7f96e31e90296f32789738c1f8f271df785fe1dda9d52baa"
+      },
+      "notices/musl-emscripten-5.0.3.txt": {
+        "bytes": 6204,
+        "sha256": "f9bc4423732350eb0b3f7ed7e91d530298476f8fec0c6c427a1c04ade22655af"
+      },
+      "notices/provenance.json": {
+        "bytes": 7078,
+        "sha256": "cc2f34c8793afffde5de661380f9dfd28adc48828d46516050edc3f5d97b1257"
+      },
+      "notices/pyodide-314.0.7.txt": {
+        "bytes": 16725,
+        "sha256": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5"
+      },
+      "notices/sqlite-3.39.0.txt": {
+        "bytes": 263,
+        "sha256": "9c6479123f32a1ed50d9a0af203dfe8972e65035b0cdeef436b5f8d0924517fe"
+      },
+      "notices/stackframe-pyodide-314.0.7.txt": {
+        "bytes": 1080,
+        "sha256": "899da9d991cb211a3642b84e82a9ae0b4b4e44546fd207e34d7d4ec2eb40f420"
+      },
+      "notices/xz-5.2.2-COPYING.txt": {
+        "bytes": 2773,
+        "sha256": "48398016e20f91676c11e50d5066d2668afda3c161a75dcfd47311f52f220f14"
+      },
+      "notices/zlib-1.3.1-README.txt": {
+        "bytes": 5317,
+        "sha256": "d106dcdb2a0b3087cb3a2380b9f00a0bbadc7eb835cd80408f94a2d78d69727d"
+      },
+      "notices/zstd-1.5.7.txt": {
+        "bytes": 1549,
+        "sha256": "7055266497633c9025b777c78eb7235af13922117480ed5c674677adc381c9d8"
+      },
+      "runtime/pyodide-lock.json": {
+        "bytes": 119077,
+        "sha256": "5dc2fc119108bc148c7457dc86e7675b5c87e1cafd420b9c34c1eaef7b36c010"
+      },
+      "runtime/pyodide.asm.mjs": {
+        "bytes": 1250344,
+        "sha256": "f7cdc8ece80678ceb712f8e65ebe6d3a83203a180c399865f49612a051693635"
+      },
+      "runtime/pyodide.asm.wasm": {
+        "bytes": 9598218,
+        "sha256": "cc36e3cab04fdfc9a63ff13eb52eae2b911bf46c025cc7b281f394bd3de1d5e6"
+      },
+      "runtime/pyodide.mjs": {
+        "bytes": 17931,
+        "sha256": "6f1d60f7bf529beb300f0f47983c921d3982363640ba20af0e38efdddbc66109"
+      },
+      "runtime/python_stdlib.zip": {
+        "bytes": 2545637,
+        "sha256": "fa1957e5777068fc4f7437f96d860ae2fbe9c19732ba06c84e004ec16dd7dd7a"
+      },
+      "style.css": {
+        "bytes": 364,
+        "sha256": "ce9aa1256f558f18ccd18781b651c226e0180fde0bb52eea44792048f300ce9a"
+      },
+      "ui.mjs": {
+        "bytes": 1846,
+        "sha256": "3505ca7f2f52072aabee74f3b59309e672c49e527ef9494c10a88623d11b84ac"
+      },
+      "worker.mjs": {
+        "bytes": 1136,
+        "sha256": "239a341e0444091da514aa1907c3fa5bee2b17d2ee9c55faae5b7f0fcb0086d6"
+      }
+    }
+  },
+  "unverified": [
+    "physical devices",
+    "Safari/Firefox/WebKit acceptance",
+    "screen reader",
+    "desktop 200% zoom",
+    "CJK visual quality",
+    "peak total memory and low-memory behavior",
+    "complete binary attribution and source delivery",
+    "adoption/publication"
+  ],
+  "memory_scope": "Page CDP JS heap snapshots exclude Worker WASM and process peak; startup WASM capacity is not usage",
+  "profiles": [
+    {
+      "name": "loopback",
+      "status": "passed",
+      "response_latency_seconds": 0,
+      "bytes_per_second_per_response": 0,
+      "cold": {
+        "wall_ms": 2365.6897240002763,
+        "check_ms": 100,
+        "startup_ms": 1989,
+        "startup_wasm_heap_capacity_bytes": 31457280
+      },
+      "page_js_heap_before": {
+        "usedSize": 2494388,
+        "totalSize": 5312512,
+        "embedderHeapUsedSize": 1860120,
+        "backingStorageSize": 3964
+      },
+      "boundary_bytes": 65536,
+      "boundary": {
+        "check_ms": 10.100000000093132,
+        "wall_ms": 75.32176099994103,
+        "automation_fill_ms": 16.473217999646295
+      },
+      "repeats": [
+        {
+          "check_ms": 32.60000000009313,
+          "wall_ms": 140.804825000032,
+          "automation_fill_ms": 3241.947378000077
+        },
+        {
+          "check_ms": 28.59999999962747,
+          "wall_ms": 135.85149700020338,
+          "automation_fill_ms": 3311.0801610000635
+        },
+        {
+          "check_ms": 31.199999999720603,
+          "wall_ms": 133.21525799983647,
+          "automation_fill_ms": 3667.262746000233
+        },
+        {
+          "check_ms": 32,
+          "wall_ms": 135.48596999999063,
+          "automation_fill_ms": 3164.4504989999405
+        },
+        {
+          "check_ms": 30.100000000093132,
+          "wall_ms": 114.11228399992979,
+          "automation_fill_ms": 3390.1111899999705
+        },
+        {
+          "check_ms": 36.39999999990687,
+          "wall_ms": 135.1662869997199,
+          "automation_fill_ms": 3559.894297000028
+        },
+        {
+          "check_ms": 26.699999999720603,
+          "wall_ms": 140.91370899996036,
+          "automation_fill_ms": 3274.5974660001593
+        },
+        {
+          "check_ms": 30.100000000093132,
+          "wall_ms": 138.9663620002466,
+          "automation_fill_ms": 3360.100680999949
+        },
+        {
+          "check_ms": 30.800000000279397,
+          "wall_ms": 137.2031750001952,
+          "automation_fill_ms": 3397.320076000142
+        },
+        {
+          "check_ms": 28.100000000093132,
+          "wall_ms": 125.7564369998363,
+          "automation_fill_ms": 3305.9890919998907
+        },
+        {
+          "check_ms": 35.39999999990687,
+          "wall_ms": 149.34764199961137,
+          "automation_fill_ms": 3540.0560719999703
+        },
+        {
+          "check_ms": 27,
+          "wall_ms": 132.6917249998587,
+          "automation_fill_ms": 3378.936882999824
+        },
+        {
+          "check_ms": 56.5,
+          "wall_ms": 142.93059999999969,
+          "automation_fill_ms": 3864.43198500001
+        },
+        {
+          "check_ms": 29.700000000186265,
+          "wall_ms": 132.90081600007397,
+          "automation_fill_ms": 3292.27876799996
+        },
+        {
+          "check_ms": 30.399999999906868,
+          "wall_ms": 137.27726200022516,
+          "automation_fill_ms": 3494.5759950001047
+        },
+        {
+          "check_ms": 28.899999999906868,
+          "wall_ms": 137.33731499996793,
+          "automation_fill_ms": 3394.9589009998817
+        },
+        {
+          "check_ms": 33.10000000009313,
+          "wall_ms": 143.74646599981133,
+          "automation_fill_ms": 3436.336626999946
+        },
+        {
+          "check_ms": 29.600000000093132,
+          "wall_ms": 130.39803299989217,
+          "automation_fill_ms": 3325.3526459998284
+        },
+        {
+          "check_ms": 30,
+          "wall_ms": 137.89180000003398,
+          "automation_fill_ms": 3596.8583389999367
+        },
+        {
+          "check_ms": 31.899999999906868,
+          "wall_ms": 133.2967710000048,
+          "automation_fill_ms": 3500.123340999835
+        },
+        {
+          "check_ms": 36.5,
+          "wall_ms": 136.27760100007436,
+          "automation_fill_ms": 3358.130134000021
+        },
+        {
+          "check_ms": 28.600000000093132,
+          "wall_ms": 125.23313700012295,
+          "automation_fill_ms": 3241.8720969999413
+        },
+        {
+          "check_ms": 27,
+          "wall_ms": 102.76696900018578,
+          "automation_fill_ms": 3813.1003469998177
+        },
+        {
+          "check_ms": 31.5,
+          "wall_ms": 124.66963899987604,
+          "automation_fill_ms": 3209.414621999713
+        },
+        {
+          "check_ms": 29.399999999906868,
+          "wall_ms": 139.86798199994155,
+          "automation_fill_ms": 3412.5201430001653
+        },
+        {
+          "check_ms": 27.5,
+          "wall_ms": 131.83910999987347,
+          "automation_fill_ms": 3364.4819020000796
+        },
+        {
+          "check_ms": 28.100000000093132,
+          "wall_ms": 143.99388099991484,
+          "automation_fill_ms": 3694.6131100003186
+        },
+        {
+          "check_ms": 31.100000000093132,
+          "wall_ms": 130.19510499998432,
+          "automation_fill_ms": 3250.19984499977
+        },
+        {
+          "check_ms": 29.5,
+          "wall_ms": 128.32410900000468,
+          "automation_fill_ms": 3272.001430999808
+        },
+        {
+          "check_ms": 27.5,
+          "wall_ms": 138.80567199976213,
+          "automation_fill_ms": 3443.897666000339
+        }
+      ],
+      "repeat_matches": 30,
+      "diagnostic_limit": 100,
+      "diagnostic_count": 500,
+      "diagnostics_truncated": true,
+      "page_js_heap_after": {
+        "usedSize": 2749820,
+        "totalSize": 4526080,
+        "embedderHeapUsedSize": 479544896,
+        "backingStorageSize": 342377
+      },
+      "warm_no_http": true,
+      "oversize_refused": true,
+      "ax_semantics": true,
+      "font_family": "monospace",
+      "focus_outline": "rgb(18, 104, 94) solid 3px",
+      "storage_empty": true,
+      "page_js_heap_after_clear": {
+        "usedSize": 3400428,
+        "totalSize": 5906432,
+        "embedderHeapUsedSize": 482291064,
+        "backingStorageSize": 473640
+      },
+      "page_js_heap_after_forced_gc": {
+        "usedSize": 2392228,
+        "totalSize": 3547136,
+        "embedderHeapUsedSize": 44617824,
+        "backingStorageSize": 2839
+      },
+      "cancel_restart": true,
+      "requests": [
+        {
+          "path": "/",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/style.css",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/ui.mjs",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/worker.mjs",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/engine.mjs",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/runtime/pyodide.mjs",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/core.zip",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/adapter.py",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/runtime/pyodide-lock.json",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/runtime/python_stdlib.zip",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/runtime/pyodide.asm.wasm",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/runtime/pyodide.asm.mjs",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/worker.mjs",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/engine.mjs",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/runtime/pyodide.mjs",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/core.zip",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/adapter.py",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/runtime/pyodide-lock.json",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/runtime/python_stdlib.zip",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/runtime/pyodide.asm.wasm",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/runtime/pyodide.asm.mjs",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        }
+      ],
+      "network_bounded": true
+    },
+    {
+      "name": "simulated_slow",
+      "status": "passed",
+      "response_latency_seconds": 0.15,
+      "bytes_per_second_per_response": 524288,
+      "cold": {
+        "wall_ms": 21913.183446999938,
+        "check_ms": 102.10000000009313,
+        "startup_ms": 21043.5,
+        "startup_wasm_heap_capacity_bytes": 31457280
+      },
+      "page_js_heap_before": {
+        "usedSize": 3652592,
+        "totalSize": 6098944,
+        "embedderHeapUsedSize": 2005008,
+        "backingStorageSize": 3985
+      },
+      "boundary_bytes": 65536,
+      "boundary": {
+        "check_ms": 10.299999999813735,
+        "wall_ms": 71.61180599996442,
+        "automation_fill_ms": 14.548358000411099
+      },
+      "repeats": [
+        {
+          "check_ms": 35,
+          "wall_ms": 131.1615439999514,
+          "automation_fill_ms": 3460.4385129996444
+        },
+        {
+          "check_ms": 31.799999999813735,
+          "wall_ms": 139.99776299988298,
+          "automation_fill_ms": 3895.2959119997104
+        },
+        {
+          "check_ms": 31.699999999720603,
+          "wall_ms": 134.23743100020147,
+          "automation_fill_ms": 3377.739138999914
+        },
+        {
+          "check_ms": 28.299999999813735,
+          "wall_ms": 131.7628369997692,
+          "automation_fill_ms": 3554.8835269996744
+        },
+        {
+          "check_ms": 28.300000000279397,
+          "wall_ms": 131.84971999999107,
+          "automation_fill_ms": 3283.359684000061
+        },
+        {
+          "check_ms": 29.699999999720603,
+          "wall_ms": 141.70349300002272,
+          "automation_fill_ms": 3543.7967200000458
+        },
+        {
+          "check_ms": 30.100000000093132,
+          "wall_ms": 143.0715980000059,
+          "automation_fill_ms": 3323.423971000011
+        },
+        {
+          "check_ms": 32.10000000009313,
+          "wall_ms": 133.2247919999645,
+          "automation_fill_ms": 3583.7299119998534
+        },
+        {
+          "check_ms": 29.09999999962747,
+          "wall_ms": 138.94611500018073,
+          "automation_fill_ms": 3224.608157000148
+        },
+        {
+          "check_ms": 30.700000000186265,
+          "wall_ms": 142.0337730000938,
+          "automation_fill_ms": 3603.129214999626
+        },
+        {
+          "check_ms": 28.399999999906868,
+          "wall_ms": 128.66170099960073,
+          "automation_fill_ms": 3491.1859850003566
+        },
+        {
+          "check_ms": 32.90000000037253,
+          "wall_ms": 130.70554800015088,
+          "automation_fill_ms": 3402.3280940000404
+        },
+        {
+          "check_ms": 30.299999999813735,
+          "wall_ms": 135.5117500002052,
+          "automation_fill_ms": 3641.0737549999794
+        },
+        {
+          "check_ms": 28,
+          "wall_ms": 126.63932700024816,
+          "automation_fill_ms": 3430.2134129998194
+        },
+        {
+          "check_ms": 30.399999999906868,
+          "wall_ms": 131.16307000018423,
+          "automation_fill_ms": 3403.551177999816
+        },
+        {
+          "check_ms": 29.199999999720603,
+          "wall_ms": 157.67109999978857,
+          "automation_fill_ms": 3934.062926000024
+        },
+        {
+          "check_ms": 41.09999999962747,
+          "wall_ms": 134.66367500041088,
+          "automation_fill_ms": 3257.124544999897
+        },
+        {
+          "check_ms": 27.600000000093132,
+          "wall_ms": 139.31120300003386,
+          "automation_fill_ms": 3326.4076499999646
+        },
+        {
+          "check_ms": 32.39999999990687,
+          "wall_ms": 126.46790799999508,
+          "automation_fill_ms": 3471.8058139997083
+        },
+        {
+          "check_ms": 28.899999999906868,
+          "wall_ms": 136.35494599975573,
+          "automation_fill_ms": 3079.6440499998425
+        },
+        {
+          "check_ms": 33.10000000009313,
+          "wall_ms": 123.29426800033616,
+          "automation_fill_ms": 3259.159429999727
+        },
+        {
+          "check_ms": 29.699999999720603,
+          "wall_ms": 114.01947299964377,
+          "automation_fill_ms": 3802.499246000025
+        },
+        {
+          "check_ms": 27.899999999906868,
+          "wall_ms": 130.60934899976928,
+          "automation_fill_ms": 3235.560838999845
+        },
+        {
+          "check_ms": 28.399999999906868,
+          "wall_ms": 129.70062800013693,
+          "automation_fill_ms": 3305.781226000363
+        },
+        {
+          "check_ms": 36,
+          "wall_ms": 128.853173999687,
+          "automation_fill_ms": 3453.543866000018
+        },
+        {
+          "check_ms": 27.300000000279397,
+          "wall_ms": 140.0429880000047,
+          "automation_fill_ms": 3395.9632430000966
+        },
+        {
+          "check_ms": 31.600000000093132,
+          "wall_ms": 145.71268300005613,
+          "automation_fill_ms": 3356.5212149997024
+        },
+        {
+          "check_ms": 29.700000000186265,
+          "wall_ms": 144.19910600008734,
+          "automation_fill_ms": 3838.74219099971
+        },
+        {
+          "check_ms": 29.09999999962747,
+          "wall_ms": 145.88747900006638,
+          "automation_fill_ms": 3338.5279799999807
+        },
+        {
+          "check_ms": 28,
+          "wall_ms": 132.2465819998797,
+          "automation_fill_ms": 3467.1858219999194
+        }
+      ],
+      "repeat_matches": 30,
+      "diagnostic_limit": 100,
+      "diagnostic_count": 500,
+      "diagnostics_truncated": true,
+      "page_js_heap_after": {
+        "usedSize": 3025056,
+        "totalSize": 4788224,
+        "embedderHeapUsedSize": 183937664,
+        "backingStorageSize": 233684
+      },
+      "warm_no_http": true,
+      "oversize_refused": true,
+      "ax_semantics": true,
+      "font_family": "monospace",
+      "focus_outline": "rgb(18, 104, 94) solid 3px",
+      "storage_empty": true,
+      "page_js_heap_after_clear": {
+        "usedSize": 3517772,
+        "totalSize": 5120000,
+        "embedderHeapUsedSize": 186645896,
+        "backingStorageSize": 364947
+      },
+      "page_js_heap_after_forced_gc": {
+        "usedSize": 2396480,
+        "totalSize": 3547136,
+        "embedderHeapUsedSize": 44638728,
+        "backingStorageSize": 2839
+      },
+      "cancel_restart": true,
+      "requests": [
+        {
+          "path": "/",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/style.css",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/ui.mjs",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/worker.mjs",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/engine.mjs",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/runtime/pyodide.mjs",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/core.zip",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/adapter.py",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/runtime/pyodide-lock.json",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/runtime/python_stdlib.zip",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/runtime/pyodide.asm.wasm",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/runtime/pyodide.asm.mjs",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/worker.mjs",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/engine.mjs",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/runtime/pyodide.mjs",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/core.zip",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/adapter.py",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/runtime/pyodide-lock.json",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/runtime/python_stdlib.zip",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/runtime/pyodide.asm.wasm",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        },
+        {
+          "path": "/runtime/pyodide.asm.mjs",
+          "origin_ok": true,
+          "method": "GET",
+          "query": "",
+          "has_body": false
+        }
+      ],
+      "network_bounded": true
+    }
+  ],
+  "chromium": "153.0.8010.0"
+}

@@ -1,0 +1,24 @@
+schema_version: 1
+change:
+  id: browser-readiness-measurements
+  title: Bounded browser readiness measurements
+  status: in_review
+  change_type: Investigation
+  assurance_level: Standard
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1366
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1368
+  base_commit: 5767b770222d1485a548ca7559e514fe63a8fcbd
+scope:
+  write_scope:
+  - isolated readiness probe, report, evidence and README
+  - tests/test_browser_check_poc_readiness.py
+  - this package and scoped capability and traceability records
+  forbidden_scope:
+  - Core, UI/Worker semantics, CSP changes
+  - website, workflow, Settings and deployment
+  - OS security configuration and .ai/managed/**
+human_approvals_required:
+- Independent latest-head review and merge
+- Separate adoption, distribution and deployment approval

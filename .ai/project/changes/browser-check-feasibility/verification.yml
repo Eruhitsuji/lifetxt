@@ -64,7 +64,7 @@ verification:
 review_ledger:
 - reviewer: Codex implementer
   review_type: inventory_and_source_provenance_self_review
-  target_commit: null
+  target_commit: b6fec1b92c0ac7130d60c96b9e049cd8bba9b618 (code unchanged by final PR trace metadata)
   result: informational_only
   finding_count: 0
   completed_at: '2026-10-17'

@@ -1,5 +1,10 @@
 # Design
 
+#1362 adds source-based candidates and actual-runtime version observations in
+notices/components.json. The builder validates all shipped runtime hashes and
+notice hashes/references before creating output; it does not infer legal
+completeness. Inventory probing is Node-only, separate from browser acceptance.
+
 #1360 adds a Python Playwright probe with ephemeral real Chromium contexts and
 a loopback HTTP server. Actual rendering/Worker/CSP tests remain separate from
 Node/fake-DOM evidence. Notice snapshots are copied and manifest-hashed; their

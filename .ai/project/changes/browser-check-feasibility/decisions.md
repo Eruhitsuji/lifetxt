@@ -1,5 +1,13 @@
 # Decisions
 
+## Dependency follow-up #1362
+
+- Investigate distribution provenance without authorizing public distribution.
+- Retain 16 upstream texts, source pins and measured runtime versions separately;
+  remaining file/object attribution and MPL source delivery require independent review.
+- Reject artifact/notice drift before output; do not update hashes to conceal a mismatch.
+- Additional engine execution is a separate task, not a silent expansion of this PR.
+
 ## Follow-up #1360
 
 - The user's follow-up authorizes local actual-browser and licence investigation,

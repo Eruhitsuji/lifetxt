@@ -6,7 +6,7 @@
   "publisher": "lifetxt",
   "license": "MIT",
   "engines": {
-    "vscode": "^1.82.0"
+    "vscode": "^1.80.0"
   },
   "categories": [
     "Programming Languages",
@@ -61,6 +61,13 @@
           "default": "python",
           "scope": "machine",
           "description": "Executable path (one program, no shell arguments) in the extension host environment containing lifetxt. Reload window after changes. Added in 0.2.0; non-secret. Not read from life.txt/Core configuration."
+        },
+        "lifetxt.languageServer.idKey": {
+          "type": "string",
+          "default": "id",
+          "scope": "window",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_-]*$",
+          "description": "Explicit Core ID key for buffer references and ID completion. Match your ids.key; Core config is not loaded. Reload window. Added 0.2.0; non-secret; default id preserves prior behavior."
         }
       }
     }

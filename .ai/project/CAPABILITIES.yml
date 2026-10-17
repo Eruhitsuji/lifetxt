@@ -9,23 +9,30 @@ capabilities:
     source_requirements:
       - req-editor-static-format1
       - req-editor-readonly-lsp
+      - req-editor-open-buffer-workspace
     implementation_locations:
       - editors/vscode/lifetxt
       - editors/neovim
       - lifetxt/lsp.py
       - lifetxt/lsp_document.py
       - lifetxt/lsp_features.py
+      - lifetxt/lsp_workspace.py
     public_interfaces:
       - VS Code lifetxt language and static snippets
       - python -m lifetxt.lsp --stdio
     tests_or_evidence:
       - tests/test_editor_static.py
       - tests/test_lsp.py
+      - tests/test_lsp_workspace.py
       - editors/vscode/lifetxt/test/grammar.cjs
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/1348
       - https://github.com/Eruhitsuji/lifetxt/issues/1369
-    notes: Static highlighting is display assistance, not a duplicate semantic parser.
+    notes: >-
+      Static highlighting is display assistance. LSP scope is explicitly opened
+      buffers only (32 documents, 256 KiB each, 200 results), without disk scan,
+      network or writes. Actual Neovim and Microsoft protocol parity verified;
+      VS Code GUI, other OS and distribution decisions remain in issue 1373.
   - id: cap-official-website
     name: Bilingual official product introduction
     summary: Static user-owned-text product discovery and onboarding, separate from the runnable Web UI.

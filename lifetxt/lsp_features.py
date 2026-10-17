@@ -3,6 +3,7 @@
 import re
 
 from .completion import candidates, VALUE_KINDS
+from .ids import collect_item_ids
 from .interactive import TYPE_DESCRIPTIONS, STATUS_DESCRIPTIONS, DETAIL_DESCRIPTIONS
 from .model import (
     VALID_STATUSES,
@@ -103,6 +104,7 @@ def completion(document, position, items=None):
         pool = (
             *recommended,
             *KNOWN_KEYS,
+            document.id_key,
             *REFERENCE_KEYS,
             *(k for _, keys in RECOMMENDED_KEY_GROUPS for k in keys),
             *(k for item in (items or document.result[0]) for k in item.details),
@@ -114,11 +116,22 @@ def completion(document, position, items=None):
         )
         if value_kind not in VALUE_KINDS or value_kind in ("type", "status", "key"):
             return []
-        values = candidates(
-            value_kind,
-            items=items if items is not None else document.result[0],
-            limit=MAX_RESULTS,
-        )
+        if value_kind == "id":
+            values = sorted(
+                v
+                for v in collect_item_ids(
+                    items if items is not None else document.result[0],
+                    key=document.id_key,
+                )
+                if v.startswith(prefix)
+            )[:MAX_RESULTS]
+        else:
+            values = candidates(
+                value_kind,
+                prefix=prefix,
+                items=items if items is not None else document.result[0],
+                limit=MAX_RESULTS,
+            )
     row, offset = document.offset(position)
     line = document.lines[row]
     # Replace the complete current token when invoked in its middle.
@@ -176,6 +189,16 @@ def hover(document, position):
     ]
     # Only complete detail tokens after the title, never words inside values.
     rest = match[4]
+    quoted = escaped = False
+    for char in rest:
+        if escaped:
+            escaped = False
+        elif char == "\\" and quoted:
+            escaped = True
+        elif char == '"':
+            quoted = not quoted
+    if quoted:
+        return None
     tokens = list(_TOKEN.finditer(rest))
     for token in tokens[1:]:
         key = token[0].split(":", 1)[0]

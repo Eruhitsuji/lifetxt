@@ -2,6 +2,16 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-editor-open-buffer-workspace
+      capability_id: cap-editor-language-support
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1348
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1372
+      changed_files_or_scope:
+        - lsp workspace adapter, bounds and custom ID support, client metadata, tests and bilingual docs
+      tests_or_evidence:
+        - tests/test_lsp_workspace.py; retained common-client fixture and measured baseline
+        - GUI and other-OS acceptance tracked separately by issue 1373
+      status: implemented
     - requirement_id: req-editor-readonly-lsp
       capability_id: cap-editor-language-support
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1348

@@ -1,6 +1,7 @@
 """In-memory documents and explicit Core/code-point to LSP/UTF-16 mapping."""
 
 from dataclasses import dataclass, field
+from bisect import bisect_right
 import re
 
 from .parser import parse_text
@@ -36,9 +37,11 @@ class Document:
     version: int
     text: str
     id_key: str = "id"
+    check_links: bool = True
     lines: list = field(init=False)
     result: object = field(init=False)
     logical_positions: dict = field(init=False)
+    core_origins: list = field(init=False)
 
     def __post_init__(self):
         if (
@@ -51,25 +54,44 @@ class Document:
         self.lines = re.split(r"\r\n|\r|\n", self.text)
         # Core strips a file BOM at the file-reading boundary. Mirror that
         # boundary in memory, while retaining it in the position map.
-        self.result = parse_text(self.text.removeprefix("\ufeff"), id_key=self.id_key)
+        self.result = parse_text(
+            self.text.removeprefix("\ufeff"),
+            id_key=self.id_key,
+            check_ids=self.check_links,
+            check_references=self.check_links,
+        )
         self.logical_positions = {}
-        rows = self.text.removeprefix("\ufeff").splitlines()
+        plain = self.text.removeprefix("\ufeff")
+        chunks = plain.splitlines(keepends=True)
+        rows = plain.splitlines()
+        lsp_starts = [0] + [m.end() for m in re.finditer(r"\r\n|\r|\n", plain)]
+        self.core_origins = []
+        source_offset = 0
+        for chunk in chunks:
+            actual_row = bisect_right(lsp_starts, source_offset) - 1
+            self.core_origins.append(
+                (actual_row, source_offset - lsp_starts[actual_row])
+            )
+            source_offset += len(chunk)
+        if not self.core_origins:
+            self.core_origins = [(0, 0)]
         row = 0
         while row < len(rows):
             first = row
             locations = []
+            logical_offset = 0
             while True:
                 text = rows[row]
                 indent = len(text) - len(text.lstrip(" ")) if row != first else 0
                 tail = text.rstrip(" ")
                 continued = tail.endswith("\\")
                 end = len(tail) - 1 if continued else len(text)
-                locations.extend((row, col) for col in range(indent, end))
-                final = (row, end)
+                length = max(0, end - indent)
+                locations.append((logical_offset, logical_offset + length, row, indent))
+                logical_offset += length
                 row += 1
                 if not continued or row >= len(rows):
                     break
-            locations.append(final)
             self.logical_positions[first] = locations
 
     def offset(self, position):
@@ -79,19 +101,24 @@ class Document:
         return line, codepoint_offset(self.lines[line], position["character"])
 
     def position(self, line, column, logical=True):
-        row = max(0, min((line or 1) - 1, len(self.lines) - 1))
+        row = max(0, min((line or 1) - 1, len(self.core_origins) - 1))
         offset = max(0, (column or 1) - 1)
         if logical and row in self.logical_positions:
-            row, offset = self.logical_positions[row][
-                min(offset, len(self.logical_positions[row]) - 1)
-            ]
+            segments = self.logical_positions[row]
+            segment = next(
+                (part for part in segments if part[0] <= offset < part[1]), segments[-1]
+            )
+            begin, end, row, indent = segment
+            offset = indent + max(0, min(offset, end) - begin)
+        row, base = self.core_origins[row]
+        offset += base
         if row == 0 and self.text.startswith("\ufeff"):
             offset += 1
         return {"line": row, "character": utf16_length(self.lines[row][:offset])}
 
-    def diagnostics(self):
+    def diagnostics(self, extra=()):
         output = []
-        for d in self.result[1][:MAX_RESULTS]:
+        for d in [*self.result[1], *extra][:MAX_RESULTS]:
             physical = d.code in {"E019", "E020", "E021", "E022"}
             start = self.position(d.line, d.column, logical=not physical)
             # Preserve only supplied spans; convert joined logical columns
@@ -104,7 +131,9 @@ class Document:
             output.append(
                 {
                     "range": {"start": start, "end": end},
-                    "severity": 1 if d.severity == "error" else 2,
+                    "severity": {"error": 1, "warning": 2, "info": 3, "hint": 4}.get(
+                        d.severity, 3
+                    ),
                     "code": d.code,
                     "source": "lifetxt",
                     "message": d.message + ("\n" + d.hint if d.hint else ""),

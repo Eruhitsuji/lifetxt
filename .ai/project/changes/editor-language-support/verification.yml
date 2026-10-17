@@ -1,0 +1,17 @@
+schema_version: 1
+verification:
+  checks:
+    - type: static
+      command: python -m unittest tests.test_editor_static; npm run test:grammar --prefix editors/vscode/lifetxt
+      source_commit: 85d9f4a947aac5f324b28c760c8b4fca6f5b468f
+      status: passed
+      result: 3 unittest checks and 21 actual TextMate/Oniguruma fixtures
+    - type: runtime
+      command: python -m unittest tests.test_lsp tests.test_editor_static
+      source_commit: working implementation on static ancestry
+      status: passed
+      result: 21 focused tests; initial harness fixture selection corrected
+    - type: independent_review
+      command: Owner review of final head
+      status: pending
+      result: Self-review does not substitute for separate implementation/integration approval

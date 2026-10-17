@@ -1,0 +1,12 @@
+{
+  "text": "[ ] T \"日本語😀é\" due:invalid\n[ ] T other project:demo",
+  "completionText": "[ ] T \"日本語😀é\" du",
+  "hover": {
+    "line": 0,
+    "character": 16
+  },
+  "expectedCompletion": [
+    "due:",
+    "duplicate_of:"
+  ]
+}

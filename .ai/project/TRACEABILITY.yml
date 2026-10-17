@@ -2,6 +2,15 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-editor-readonly-lsp
+      capability_id: cap-editor-language-support
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1348
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1370
+      changed_files_or_scope:
+        - lifetxt/lsp*.py, optional VS Code client, Neovim adapter, bilingual guides and package
+      tests_or_evidence:
+        - tests/test_lsp.py; actual client interop fixture probes
+      status: implemented
     - requirement_id: req-editor-static-format1
       capability_id: cap-editor-language-support
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1348

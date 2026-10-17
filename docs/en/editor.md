@@ -10,7 +10,7 @@ extension at all.
 
 ## Current Scope
 
-The current editor support is intentionally lightweight:
+Static editor support includes:
 
 - TextMate syntax highlighting for comments, item starts, statuses, types,
   titles, detail keys, quoted strings, dates/times, body continuation lines,
@@ -44,27 +44,6 @@ Reload VS Code after copying. The workspace also contains `.vscode/settings.json
 so files named `*_life.txt` are associated with the `lifetxt` language inside
 this project. You can also open `editors/vscode/lifetxt` in VS Code and press
 `F5` to start an Extension Development Host.
-
-## Completion Strategy
-
-Static snippets cover the common cases:
-
-- `task`, `event`, `status`, `message`, `journal`, `habit`
-- `subtask`, `body`, `ibody`
-- `id`, `parent`, `depends_on`, `blocks`
-- `due`, `fromto`, `dtz`, `project`, `tag`
-
-These snippets intentionally mirror the current format profile:
-
-- `status` inserts type `S` with `from:`, `state:`, and `person:`.
-- `message` inserts type `M` with `sender:`, `recipient:`, `notify_at:`, and
-  `body:`.
-- `journal` inserts type `J` with a `|` body continuation line.
-- `repeat-limited` inserts `repeat:`, `interval:`, `until:`, and `count:`.
-- `dtz` inserts a datetime with seconds, fractional seconds, and timezone.
-
-For richer completion, the recommended next step is an optional language server
-that reuses the Python parser and validator.
 
 ## Static Format 1.0 coverage
 
@@ -190,18 +169,80 @@ If you rely on a specific editor, set `EDITOR`/`VISUAL` (or the config
 since the fallback differs from what `fzf`/TUI editing does and is not
 configurable per invocation except via `--editor`.
 
-## Planned Language Server Features
 
-A future LSP implementation should provide:
+## Optional language server (local, read-only)
 
-- Diagnostics equivalent to `python -m lifetxt check`.
-- Type/status-aware detail-key completion.
-- ID completion for `parent:`, `ref:`, `depends_on:`, `blocks:`, and
-  `related:`.
-- Hover help from the format specification.
-- Document symbols grouped by type, project, tag, and hierarchy.
-- Commands or code actions for `links`, `agenda`, `status`, and ID assignment.
+Python **3.10+** with lifetxt installed can run `python -m lifetxt.lsp --stdio`.
+No LSP Python extra is needed. Install explicitly in your chosen environment
+(`python -m pip install -e .` from this checkout, or install a release containing
+this module). Once installed, the server works offline. It never installs tools,
+loads Core configuration, scans disk, follows symlinks, sends network requests,
+executes commands, or writes life.txt. Editor saves still write directly;
+`safe_edit` protects only the CLI/TUI temporary-copy workflow described above.
 
-Keep the static extension dependency-free. Put dynamic behavior behind an
-optional language-server package so CLI users and plain text users are not
-forced to install editor dependencies.
+Implemented: lifecycle, full document synchronization, versioned diagnostics,
+UTF-16 completion edits and plaintext Hover. Core parser/validator codes and
+severity are retained, with `F110` additionally reporting unsupported Format
+metadata from the existing Core policy helper. Unknown end spans stay zero-width;
+logical continuation columns map back to physical lines. No formatting,
+format-on-save, automatic fixes, code actions, symbols or definition provider.
+Completion avoids unfinished quotes, titles, comments, body and joined-line
+contexts. Free/custom keys are preserved. Help currently reuses English Core
+metadata; both installation guides are maintained.
+
+### VS Code (1.82+)
+
+The extension remains usable by copying its directory for static support.
+Dynamic support additionally needs its **optional** Node client dependency:
+run `npm ci --omit=dev --ignore-scripts` in `editors/vscode/lifetxt` before copying
+that directory (including installed production `node_modules`). This install is
+explicit and is not performed by the extension. An already prepared copy can be
+used offline. No Marketplace publication is implied.
+
+In VS Code user settings:
+
+```json
+{
+  "lifetxt.languageServer.enabled": true,
+  "lifetxt.languageServer.python": "/absolute/path/to/python"
+}
+```
+
+On Windows use a Python executable path, for example
+`"C:\\Python312\\python.exe"`; do not put shell arguments in it. In Remote
+Development the Python path refers to the **extension host**, not your desktop.
+Virtual URI providers are static-only; `file` and `untitled` buffers are selected.
+Reload the window after changing either setting. Startup failure shows a warning;
+inspect the life.txt output channel, install lifetxt in that interpreter and
+reload. Missing Python/client dependency does not disable static features.
+Untrusted workspaces always stay static-only, even when enabled in settings.
+
+| Extension setting | Type/default | Scope/provenance | Restart/secrets/compatibility |
+| --- | --- | --- | --- |
+| `lifetxt.languageServer.enabled` | boolean / `false` | VS Code window setting; trusted workspace required | Reload window; non-secret; added 0.2.0; disable for static fallback |
+| `lifetxt.languageServer.python` | string / `python` | VS Code machine/user setting, executable only | Reload window; non-secret; added 0.2.0; set the interpreter containing the matching lifetxt version |
+
+These settings belong to the extension manifest, not the lifetxt config schema;
+`lifetxt config explain` does not report them. There is no Core config migration.
+Older extension copies ignore them; disable the LSP before downgrading to a
+lifetxt version without this module. To uninstall, disable the setting and remove
+the copied extension directory, then reload.
+
+### Neovim (0.11+)
+
+Explicitly load [`editors/neovim/lifetxt.lua`](../../editors/neovim/lifetxt.lua)
+from your trusted `init.lua`, replacing `python` with the installed interpreter.
+It uses built-in `vim.lsp.config` / `vim.lsp.enable`, with no lspconfig plugin.
+Weekly files use `:setfiletype lifetxt`. Disable with
+`vim.lsp.enable('lifetxt', false)` and remove the config to uninstall. Python is
+optional for plain-text use, required only while this LSP configuration is on.
+
+### Resource and compatibility limits
+
+The server accepts at most 32 open buffers, 256 KiB UTF-8 per buffer, 200
+completion/diagnostic entries, 2 MiB frames and 8 KiB headers. It rejects out-of-
+order document versions and incremental edits (full sync is advertised).
+For rejected documents, inspect the client log and close/reopen to resynchronize;
+old valid snapshots remain intact. Requests run synchronously; client debounce
+reduces traffic, cancellation does not interrupt Core parsing already running.
+No background workspace scan, telemetry or automatic source mutation occurs.

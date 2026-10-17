@@ -8,12 +8,19 @@ capabilities:
     owner: Eruhitsuji
     source_requirements:
       - req-editor-static-format1
+      - req-editor-readonly-lsp
     implementation_locations:
       - editors/vscode/lifetxt
+      - editors/neovim
+      - lifetxt/lsp.py
+      - lifetxt/lsp_document.py
+      - lifetxt/lsp_features.py
     public_interfaces:
       - VS Code lifetxt language and static snippets
+      - python -m lifetxt.lsp --stdio
     tests_or_evidence:
       - tests/test_editor_static.py
+      - tests/test_lsp.py
       - editors/vscode/lifetxt/test/grammar.cjs
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/1348

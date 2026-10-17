@@ -40,7 +40,17 @@ verification:
       command: Independent implementation/integration review of final PR head
       status: pending
       result: High risk acceptance and final merge remain with Owner
+    - type: rejected_change_recovery
+      command: Focused editor/workspace/boundary suite, Ruff lint/format and actual common-client probes
+      source_commit: 12b69dd1ae1f8f07636000c94f9cb1d2ee24bbaa
+      status: passed
+      result: 67 tests, 2 optional Web skips; 38 editor tests included. Stale candidates/queries stop after rejection and resume only from newer valid full sync or close/open. Prior invalid-position assertion retained on a synchronized document.
   reviews:
+    - reviewer: Codex (implementer)
+      review_type: self_review
+      target_commit: 12b69dd1ae1f8f07636000c94f9cb1d2ee24bbaa
+      result: self_reviewed
+      findings: Rejected updates no longer leak old candidates or edits; monotonic recovery and lifecycle regression checks pass
     - reviewer: Codex (implementer)
       review_type: self_review
       target_commit: 1d85b756aaba8233a1170d55f674dccd97846b4a

@@ -1,17 +1,51 @@
 schema_version: 1
 verification:
   checks:
-    - type: static
-      command: python -m unittest tests.test_editor_static; npm run test:grammar --prefix editors/vscode/lifetxt
-      source_commit: 85d9f4a947aac5f324b28c760c8b4fca6f5b468f
+    - type: runtime_full_suite
+      command: MPLBACKEND=Agg python -m unittest discover
+      source_commit: b071eaca098c5176bd87c00ed1855c87d310dd0a
       status: passed
-      result: 3 unittest checks and 21 actual TextMate/Oniguruma fixtures
-    - type: runtime
-      command: python -m unittest tests.test_lsp tests.test_editor_static
-      source_commit: working implementation on static ancestry
+      result: 5870 ran, 477 skipped, no failures in 371.063 seconds; runtime Python sources unchanged during execution, before workspace additions
+    - type: final_focused
+      command: python -m unittest tests.test_lsp tests.test_lsp_workspace tests.test_editor_static tests.test_change_package_closeout tests.test_diagnostic_contract tests.test_core_import_boundary tests.test_supported_runtime tests.test_traceability_gate
+      source_commit: 1d85b756aaba8233a1170d55f674dccd97846b4a
       status: passed
-      result: 21 focused tests; initial harness fixture selection corrected
+      result: 64 ran, 2 optional Web skips, no failures; 35 editor/LSP/workspace tests included
+    - type: actual_client_interop
+      command: Node test/protocol.cjs and actual Neovim headless editors/neovim/probe.lua
+      source_commit: 1d85b756aaba8233a1170d55f674dccd97846b4a
+      status: passed
+      result: Common fixture codes, severity, UTF-16 ranges, completion and Hover match; see evidence.json
+    - type: static_and_activation
+      command: npm run test:grammar; node test/activation.cjs; actual BashCompletionExecutionTests
+      source_commit: 1d85b756aaba8233a1170d55f674dccd97846b4a
+      status: passed
+      result: 21 real TextMate fixtures, trust/disabled/old-host/failure fallback checks, 4 real bash tests
+    - type: static_checks
+      command: Ruff lint; changed-file Ruff format; approved mypy; minimal CLI check
+      source_commit: 1d85b756aaba8233a1170d55f674dccd97846b4a
+      status: passed
+      result: Whole-tree formatting separately reports 76 pre-existing files; no unrelated formatting changes
+    - type: performance
+      command: python -m editors.benchmark_lsp
+      source_commit: 1d85b756aaba8233a1170d55f674dccd97846b4a
+      status: passed
+      result: Seven repeats, 1000 items and two buffers, compact mapping and Core diagnostics/candidates; local baseline retained in evidence.json
+    - type: external_acceptance
+      command: actual VS Code Extension Host and representative Windows/macOS acceptance
+      status: blocked
+      tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1373
+      result: GUI socket boundary and unavailable physical platforms; protocol and host doubles are not GUI proof
     - type: independent_review
-      command: Owner review of final head
+      command: Independent implementation/integration review of final PR head
       status: pending
-      result: Self-review does not substitute for separate implementation/integration approval
+      result: High risk acceptance and final merge remain with Owner
+  reviews:
+    - reviewer: Codex (implementer)
+      review_type: self_review
+      target_commit: 1d85b756aaba8233a1170d55f674dccd97846b4a
+      result: self_reviewed
+      findings: Prefix-before-cap, unfinished quote Hover, graph recursion, compact position map, UTF-16/Core line mapping and static 1.80 compatibility corrected and regression-tested
+    - reviewer: Owner or separate reviewer
+      review_type: implementation_and_integration
+      result: pending

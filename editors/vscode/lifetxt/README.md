@@ -1,50 +1,52 @@
 # life.txt VS Code support
 
-This directory contains a lightweight VS Code extension for life.txt files.
+Format 1.0 static highlighting and all nine record snippets work without Python
+or Node dependencies. Dates use explicit `YYYY-MM-DD` tabstops; enter the intended
+date before saving. Weekly `.txt` files require selecting the life.txt language;
+generic `.txt` files are not claimed.
 
-## Features
+## Optional language server
 
-- Syntax highlighting for comments, status, type, title, detail keys, quoted strings, dates, times, body continuations, and ID references.
-- Snippets for common item types: task, event, status, message, journal, habit, nested task, and recurrence.
-- Snippet completions for common detail keys such as `id:`, `parent:`, `depends_on:`, `blocks:`, `due:`, `from:/to:`, `project:`, and `tag:`.
-- File association for `life.txt`, `*.life.txt`, `*_life.txt`, `.life.txt`, and `.lifetxt`.
+VS Code 1.82+, trusted workspace, Python 3.10+ with this lifetxt module installed.
+The read-only server is opt-in. It provides unsaved-buffer diagnostics, contextual
+completion and plaintext Hover from Core metadata. It never writes your source,
+executes commands, installs dependencies or sends network requests.
 
-## Local installation
+1. Explicitly install lifetxt in the interpreter you will use.
+2. In this directory, run `npm ci --omit=dev --ignore-scripts` if dynamic support
+   is wanted. Copy this directory including production `node_modules` into your
+   VS Code extensions folder; reload. For static-only use copying without Node
+   dependencies is sufficient.
+3. Set `lifetxt.languageServer.enabled` to `true` and
+   `lifetxt.languageServer.python` to the interpreter executable path in VS Code
+   user settings, then reload. No shell arguments. Remote Development uses the
+   extension host's interpreter.
 
-For development, copy or symlink this directory into your VS Code extensions
-directory, then reload VS Code.
+All three settings are non-secret, added in 0.2.0, and require a window reload.
+`enabled` is boolean/default false/window scope; `python` is string/default
+`python`/machine scope. `lifetxt.languageServer.idKey` is string/default `id`/window
+scope: explicitly match Core `ids.key` for custom-ID workspaces. The manifest is their registry; Core `config explain`
+does not apply. Untrusted workspaces stay static-only. Missing Python or client
+package produces an actionable warning while static features remain available.
+Disable the setting and reload to restore static-only behavior. Disable before
+using a lifetxt version without `lifetxt.lsp`; remove the copied directory and
+reload to uninstall. Once dependencies are prepared, operation is offline.
 
-Windows example:
+See the full [English](../../../docs/en/editor.md) and
+[Japanese](../../../docs/ja/editor.md) guides for scope, limits and Neovim.
+This is local installation support; no Marketplace publication is implied.
 
-```powershell
-$target = "$env:USERPROFILE\.vscode\extensions\lifetxt"
-New-Item -ItemType Directory -Force $target
-Copy-Item -Recurse -Force .\editors\vscode\lifetxt\* $target
+## Verification
+
+With dev dependencies installed (`npm ci --ignore-scripts`):
+
+```sh
+npm run test:grammar
+node test/activation.cjs
+# Run from repository root, with Python containing lifetxt:
+node editors/vscode/lifetxt/test/protocol.cjs
 ```
 
-The workspace also includes `.vscode/settings.json` with `files.associations`
-for `life.txt`, `*.life.txt`, `*_life.txt`, `.life.txt`, and `.lifetxt`.
-This makes `*_life.txt` files use the `lifetxt` language inside this project
-even if filename pattern matching from the extension manifest is not applied by
-the editor.
-
-Alternatively, open this directory in VS Code and press `F5` to start an
-Extension Development Host.
-
-## Design notes
-
-This extension intentionally starts with static TextMate grammar and snippets.
-That keeps editor support dependency-free and easy to copy into local setups.
-
-Future dynamic features should be implemented as a language server that reuses
-the Python parser and validator:
-
-- diagnostics from `python -m lifetxt check`
-- context-aware detail-key completion by type/status
-- ID completion for `parent:`, `ref:`, `depends_on:`, `blocks:`, and `related:`
-- hover help from the detail-key descriptions
-- commands for `agenda`, `status`, `links`, and `assist`
-
-The static extension and a future language server can coexist: keep TextMate
-highlighting in this package and add dynamic behavior through an optional VS
-Code client/server layer.
+`test/extension-host.cjs` is an actual VS Code test-host entry point. It is kept
+separate from host doubles and the Microsoft protocol test; these do not prove
+GUI acceptance. Neovim's actual-client probe is `editors/neovim/probe.lua`.

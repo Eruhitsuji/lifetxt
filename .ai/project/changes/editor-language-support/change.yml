@@ -1,0 +1,29 @@
+schema_version: 1
+change:
+  id: editor-language-support
+  title: Optional Core-backed editor language support
+  status: in_review
+  change_type: Feature
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1348
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1376
+  base_commit: 18e9d392b3286ae725e5f36efa73f4a2cd211704
+scope:
+  write_scope:
+    - lifetxt/lsp*.py
+    - editors/**
+    - tests/test_lsp*.py and tests/test_editor_static.py
+    - tests/fixtures/editor/**
+    - docs/en/editor.md and docs/ja/editor.md
+    - scoped capability/traceability entries and this package
+  forbidden_scope:
+    - .ai/managed/**
+    - Core Format or mutation changes
+    - mandatory Python dependencies
+    - publish, release, deploy, merge
+human_approvals_required:
+  - Independent implementation and integration review of final head
+  - High assurance risk acceptance by Owner before merge
+  - Final merge; publication and release are separate decisions

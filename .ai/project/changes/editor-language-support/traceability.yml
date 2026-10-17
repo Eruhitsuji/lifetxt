@@ -1,0 +1,18 @@
+schema_version: 1
+traceability:
+  - requirement_id: req-editor-static-format1
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1369
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1371
+    status: implemented
+  - requirement_id: req-editor-readonly-lsp
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1370
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1374
+    status: implemented
+  - requirement_id: req-editor-open-buffer-workspace
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1372
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1375
+    status: implemented
+  - requirement_id: req-editor-support-integration
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1348
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1376
+    status: implemented

@@ -22,7 +22,7 @@ code-level な仕組みもあります。この文書の後半、「CLI から�
 
 ## 現在の範囲
 
-現時点では軽量な static extension として実装しています。
+静的支援は次の機能を提供します。
 
 - コメント、item 開始、status、type、title、detail key、quoted string、日時、
   body 継続行、ID 参照の TextMate syntax highlight
@@ -46,25 +46,11 @@ Copy-Item -Recurse -Force .\editors\vscode\lifetxt\* $target
 `editors/vscode/lifetxt` を VS Code で開き、`F5` で Extension Development Host
 を起動して試すこともできます。
 
-## 補完方針
+## 静的なFormat 1.0対応
 
-static snippet では以下を提供します。
+9種類すべてに `task`、`event`、`deadline`、`reminder`、`habit`、`note`、`status`、`message`、`journal` のsnippetがあります。`do` は実施予定、`due` は締切です。日付のtabstopは `YYYY-MM-DD` と表示されるため、保存前に明示入力してください。過去の固定日付は挿入しません。titleと本文detailは引用符付き、`|` の本文は通常の文字列です。metadata、全参照key、末尾 `\` の継続記号もhighlightします。highlightは表示支援であり、検証ではありません。
 
-- `task`、`event`、`status`、`message`、`journal`、`habit`
-- `subtask`、`body`、`ibody`
-- `id`、`parent`、`depends_on`、`blocks`
-- `due`、`fromto`、`dtz`、`project`、`tag`
-
-snippet は現在の format profile に合わせています。
-
-- `status` は type `S` と `from:`、`state:`、`person:` を挿入します。
-- `message` は type `M` と `sender:`、`recipient:`、`notify_at:`、`body:` を挿入します。
-- `journal` は type `J` と `|` body continuation line を挿入します。
-- `repeat-limited` は `repeat:`、`interval:`、`until:`、`count:` を挿入します。
-- `dtz` は秒、小数秒、timezone 付き datetime を挿入します。
-
-より高度な補完は、Python parser / validator を再利用する optional language
-server として実装する方針が適しています。
+`2026-W42.txt` のような週次ファイルは言語選択で **life.txt** を選ぶか、`files.associations` に `"2026-W*.txt": "lifetxt"` を明示してください。汎用 `*.txt` は関連付けません。静的支援にはPythonもLSPも不要です。
 
 ## CLI からの編集: `lifetxt edit`
 
@@ -176,16 +162,104 @@ key を順に探します（正確な解決順序、`PATH` 経由の実行ファ
 この fallback は `fzf`/TUI の編集とは異なり、`--editor` 以外では実行ごとに
 変更できません。
 
-## 今後の language server 候補
+## 任意の言語サーバー（ローカル・読み取り専用）
 
-将来的な LSP では以下を提供できます。
+lifetxtを導入した **Python 3.10以上** で `python -m lifetxt.lsp --stdio` を実行できます。
+PythonのLSP追加依存は不要です。選択した環境へ明示的に導入してください（checkoutからは
+`python -m pip install -e .`、またはこのmoduleを含むリリースを使用）。導入後はofflineで使えます。
+serverは自動install、Core設定の読み込み、disk走査、symlink追跡、network送信、command実行、
+life.txt書き込みを行いません。IDEの通常保存は直接保存です。上記 `safe_edit` はCLI/TUIの
+一時コピー経由の編集を保護する契約です。
 
-- `python -m lifetxt check` 相当の diagnostics
-- type / status に応じた detail-key completion
-- `parent:`、`ref:`、`depends_on:`、`blocks:`、`related:` の ID completion
-- 仕様書由来の hover help
-- type、project、tag、hierarchy ごとの document symbols
-- `links`、`agenda`、`status`、ID 付与の command / code action
+lifecycle、全文sync、version付き診断、UTF-16位置の補完、plaintext Hoverを提供します。
+Core parser/validatorのcodeとseverityを再利用し、未対応Formatの宣言は既存Core policyの
+`F110` で追加表示します。end span不明時は長さ0、論理行の位置は物理行へ変換します。
+format-on-save、自動修正、code action、symbol、definitionは未提供です。
+入力途中の引用符、title、comment、body、論理行継続の位置では補完を控えます。
+custom keyは保持します。Hoverの説明は現時点で既存Coreの英語metadataを再利用します。
 
-static extension は dependency-free に保ち、動的機能は optional language-server
-package に分離すると、CLI ユーザや単なる plain text ユーザに editor 依存を強制せずに済みます。
+### VS Code（1.82以上）
+
+静的支援は拡張directoryのコピーで使用できます。動的支援は任意のNode client依存が必要です。
+`editors/vscode/lifetxt` で `npm ci --omit=dev --ignore-scripts` を明示実行してから、
+production `node_modules` ごとコピーしてください。拡張自体はinstallを実行しません。
+準備済みdirectoryはofflineで使用できます。Marketplace公開は含みません。
+
+VS Codeのユーザー設定例:
+
+```json
+{
+  "lifetxt.languageServer.enabled": true,
+  "lifetxt.languageServer.python": "/absolute/path/to/python"
+}
+```
+
+Windowsでは `"C:\\Python312\\python.exe"` のように実行ファイルだけを指定し、引数を含めません。
+Remote Developmentではdesktop側でなく **extension host側** のPythonです。
+対象は `file` と `untitled` bufferで、virtual URI providerは静的支援のみです。
+設定変更後はwindowをreloadしてください。起動失敗時は警告とlife.txt outputを確認し、
+指定環境へlifetxtを導入してreloadします。Python/client依存がなくても静的機能は使えます。
+信頼されていないworkspaceでは有効設定にかかわらず静的支援のみです。
+
+| 拡張設定 | 型・既定値 | scope・正本 | 反映・秘密・互換性 |
+| --- | --- | --- | --- |
+| `lifetxt.languageServer.enabled` | boolean / `false` | VS Code window設定、trusted workspaceのみ | reloadが必要、秘密情報ではない、0.2.0追加、無効化で静的支援へ戻る |
+| `lifetxt.languageServer.python` | string / `python` | VS Code machine/user設定、実行ファイルのみ | reloadが必要、秘密情報ではない、0.2.0追加、対応するlifetxtを導入した環境を指定 |
+| `lifetxt.languageServer.idKey` | string / `id` | VS Code window設定、Coreの `ids.key` と明示的に合わせる | reloadが必要、秘密情報ではない、0.2.0追加、旧拡張は無視、既定動作へ戻す場合は `id` |
+
+正本は拡張manifestです。Core設定schemaの項目ではないため `lifetxt config explain` の対象外で、
+Core設定migrationもありません。旧拡張は設定を無視します。このmoduleを含まないlifetxtへ
+downgradeする前にLSPを無効化してください。解除は設定を無効にし、コピーした拡張directoryを
+削除してreloadします。
+
+### Neovim（0.11以上）
+
+信頼する `init.lua` から [`editors/neovim/lifetxt.lua`](../../editors/neovim/lifetxt.lua) を
+明示的に読み込み、`python` を導入先interpreterへ変更します。組込の
+`vim.lsp.config` / `vim.lsp.enable` を使い、lspconfig pluginは不要です。
+週次ファイルは `:setfiletype lifetxt`。停止は `vim.lsp.enable('lifetxt', false)`、
+解除は設定の削除です。通常のテキスト運用にPythonは不要で、LSPを使う場合のみ必要です。
+
+### 上限・互換性
+
+最大32文書、文書あたりUTF-8で256KiB、補完・診断200件、frame 2MiB、header 8KiBです。
+古いversionの変更通知と差分syncを受理しません（全文syncを宣言します）。
+文書が拒否された場合はclient logを確認し、close/openで再同期してください。
+最後の有効snapshotを保持しますが、その文書の診断・補完・Hover・他bufferへの候補/参照解決への参加を一時停止します。
+拒否されたversionより新しい有効な全文通知でも復帰します。同じか古いversionでは復帰しません。要求は同期実行し、client側debounceで通知頻度を抑えます。
+cancelは既に開始したCore解析を中断しません。背景走査、telemetry、自動編集はありません。
+
+## 開いているbufferのworkspace・展開状況
+
+同じserver sessionで明示的に開いたlife.txt bufferは、未保存のID、project、tag、personなどを
+Core補完候補として共有します。closeで候補を除外し、残る文書の参照診断を更新します。
+rootやfile URIは識別子として扱うため、folderを開くだけではdisk走査しません。
+同じclient sessionの複数rootも共有範囲に入ります。候補を共有したくない文書は別window/
+server sessionに分けてください。開いていないファイルのIDは参照解決に使えません。
+
+Coreの `ids.key` を変更している場合は、VS Codeで `lifetxt.languageServer.idKey` を明示し、
+Neovimでは `cmd` に `--id-key uid` などを追加します。Core設定を暗黙に読み込みません。
+未対応Formatの文書は現行文書のID候補へ混ぜません。非常に深い参照graphはadapter診断
+`LSP001` を表示します。この場合も構文診断は使えますがgraph検証は未完了です。
+参照chainを簡単にするか、無関係なbufferを閉じてください。元の文書は変更しません。
+
+| 対象 | 提供内容 | 検証・残る境界 |
+| --- | --- | --- |
+| 通常のテキストエディタ | 従来のtemplate・最小文法・手動運用 | Python/LSP/network不要 |
+| VS Code静的（1.80以上） | 全Type・snippet・関連付け・TextMate grammar | Core生成確認と実際のTextMate/Oniguruma corpus |
+| VS Code動的（1.82以上） | 任意client、診断・補完・Hover | Microsoft protocol・host doubles確認済み、GUI/Windows/macOS受入は#1373 |
+| Neovim（0.11以上の設定API） | 組込LSP設定 | Linuxの実際の0.12.6で共通fixtureを確認、0.11/他OS未実施 |
+| Zed | 未対応 | metadata・Tree-sitter grammar/queries・拡張adapterを要調査 |
+| Sublime Text | 未対応 | syntaxとcommunity LSP clientの設定・受入が必要 |
+| JetBrains | 未対応 | 対象IDE/API対応版・plugin設計を決めてから検証 |
+
+VSIX/Marketplace/registry公開は含みません。外部受入と配布判断は
+[#1373](https://github.com/Eruhitsuji/lifetxt/issues/1373)で追跡します。
+symbol/definition/actionやdisk workspace探索は今後の検討であり、提供済みとは扱いません。
+
+性能の回帰確認は同じPython/OS/machineで
+`python -m editors.benchmark_lsp > baseline.json`、続いて
+`python -m editors.benchmark_lsp --baseline baseline.json --max-ratio 2` を実行します。
+1,000件・2bufferのCore解析、圧縮位置map、参照診断、補完をtracemalloc付きで測定します。
+Linux/Python 3.12で初期中央値約137ms、Python割当peak約4.3MBでした。
+この環境の観測値であり、他環境で同じ速度を保証するものではありません。

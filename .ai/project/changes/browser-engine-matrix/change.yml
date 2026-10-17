@@ -1,0 +1,26 @@
+schema_version: 1
+change:
+  id: browser-engine-matrix
+  title: Investigate extra browser engine acceptance
+  status: in_review
+  change_type: Investigation
+  assurance_level: Standard
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1364
+  related_pull_request: null
+  base_commit: 6ea5ed56345027eb2b5a5788b04788940c396beb
+scope:
+  write_scope:
+  - isolated engine matrix, report and evidence
+  - tests/test_browser_check_poc_engines.py
+  - this package and scoped registry entries
+  forbidden_scope:
+  - Core and UI/Worker behavior
+  - CSP weakening, website, workflows and Settings
+  - OS security changes and deployment
+  - .ai/managed/**
+human_approvals_required:
+- Latest-head independent review and human merge
+- Supported test environment before extra-engine acceptance
+- Separate adoption and publication approval

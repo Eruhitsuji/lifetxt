@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import patch
 
 from lifetxt.lsp import Server
-from lifetxt.lsp_document import Document, utf16_length
+from lifetxt.lsp_document import Document, utf16_length, MAX_DOCUMENT_BYTES
 from lifetxt.lsp_features import completion, hover
 
 
@@ -124,6 +124,62 @@ class WorkspaceTests(unittest.TestCase):
         self.open("current", "[ ] T current ref:")
         self.assertEqual([], self.labels("current"))
         self.assertIn("F110", self.codes("future"))
+
+    def test_rejected_change_suspends_old_candidates_and_language_queries(self):
+        self.open("source", "[ ] T source id:before")
+        self.open("query", "[ ] T query ref:")
+        self.open("reference", "[ ] T ref ref:before")
+        self.assertEqual(["before"], self.labels("query"))
+        saved = self.server.documents["source"]
+        self.change("source", "x" * (MAX_DOCUMENT_BYTES + 1), 4)
+        self.assertIs(saved, self.server.documents["source"])
+        self.assertEqual([], self.labels("query"))
+        self.assertIn("W215", self.codes("reference"))
+        self.send(
+            "textDocument/completion",
+            {
+                "textDocument": {"uri": "source"},
+                "position": {"line": 0, "character": 4},
+            },
+            True,
+        )
+        self.assertEqual([], self.messages[-1]["result"])
+        self.send(
+            "textDocument/hover",
+            {
+                "textDocument": {"uri": "source"},
+                "position": {"line": 0, "character": 4},
+            },
+            True,
+        )
+        self.assertIsNone(self.messages[-1]["result"])
+        self.assertEqual([], self.codes("source"))
+
+    def test_only_newer_valid_full_change_resumes_suspended_document(self):
+        self.open("source", "[ ] T source id:before")
+        self.open("query", "[ ] T query ref:")
+        self.change("source", "x" * (MAX_DOCUMENT_BYTES + 1), 4)
+        for version in (2, 3, 4):
+            self.change("source", "[ ] T late id:late", version)
+            self.assertEqual([], self.labels("query"))
+        self.change("source", "[ ] T recovered id:after", 5)
+        self.assertEqual(["after"], self.labels("query"))
+        self.assertNotIn("source", self.server.suspended)
+
+    def test_rejected_incremental_change_then_close_open_resets_suspension(self):
+        self.open("source", "[ ] T source id:before")
+        self.open("query", "[ ] T query ref:")
+        self.send(
+            "textDocument/didChange",
+            {
+                "textDocument": {"uri": "source", "version": 2},
+                "contentChanges": [{"range": {}, "text": "replacement"}],
+            },
+        )
+        self.assertEqual([], self.labels("query"))
+        self.send("textDocument/didClose", {"textDocument": {"uri": "source"}})
+        self.open("source", "[ ] T reopened id:reopened")
+        self.assertEqual(["reopened"], self.labels("query"))
 
 
 class PositionAndCompletionRegressions(unittest.TestCase):

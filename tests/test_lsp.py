@@ -208,6 +208,12 @@ class ProtocolTests(unittest.TestCase):
         self.send("initialize", {}, True)
         self.open()
         self.send(
+            "textDocument/completion",
+            {"textDocument": {"uri": URI}, "position": {"line": -1, "character": 0}},
+            True,
+        )
+        self.assertEqual(-32602, self.messages[-1]["error"]["code"])
+        self.send(
             "textDocument/didChange",
             {
                 "textDocument": {"uri": URI, "version": 2},
@@ -224,12 +230,6 @@ class ProtocolTests(unittest.TestCase):
             },
         )
         self.assertEqual(1, self.server.documents[URI].version)
-        self.send(
-            "textDocument/completion",
-            {"textDocument": {"uri": URI}, "position": {"line": -1, "character": 0}},
-            True,
-        )
-        self.assertEqual(-32602, self.messages[-1]["error"]["code"])
 
     def test_framing_unicode_content_length_and_invalid_input(self):
         stream = io.BytesIO()

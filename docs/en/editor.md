@@ -244,7 +244,9 @@ The server accepts at most 32 open buffers, 256 KiB UTF-8 per buffer, 200
 completion/diagnostic entries, 2 MiB frames and 8 KiB headers. It rejects out-of-
 order document versions and incremental edits (full sync is advertised).
 For rejected documents, inspect the client log and close/reopen to resynchronize;
-old valid snapshots remain intact. Requests run synchronously; client debounce
+old valid snapshots remain intact but are suspended from diagnostics, completion,
+Hover and cross-buffer candidate/reference resolution. A full update newer than
+the rejected version also resumes assistance; equal/older versions cannot resume it. Requests run synchronously; client debounce
 reduces traffic, cancellation does not interrupt Core parsing already running.
 No background workspace scan, telemetry or automatic source mutation occurs.
 

@@ -1,0 +1,10 @@
+.s...................ss............................
+----------------------------------------------------------------------
+Ran 51 tests in 27.694s
+
+OK (skipped=3)
+{"core_modules": 20, "core_zip_bytes": 76645, "runtime_bytes": 75}
+{"core_modules": 20, "core_zip_bytes": 76645, "runtime_bytes": 75}
+{"core_modules": 20, "core_zip_bytes": 76645, "runtime_bytes": 13531207}
+{"chromium": "153.0.8010.0", "cases": 16, "matches": 16, "requests": 30, "cold_ms": 2822.6966530000936, "browser_errors": []}
+{"core_modules": 20, "core_zip_bytes": 76645, "runtime_bytes": 13531207}

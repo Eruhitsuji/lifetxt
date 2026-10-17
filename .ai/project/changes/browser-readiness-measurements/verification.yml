@@ -22,11 +22,22 @@ verification:
       standalone actual CLI; 2 optional Web diagnostic tests). Real Chromium
       browser and portable matrix were required and executed, 16/16 corpus.
       Ruff lint/focused format, approved mypy, Node UI lifecycle, integration
-      check and whitespace pass. Full suite is delegated to required CI.
+      check and whitespace pass. CP932-default build regression passes after
+      explicit UTF-8 correction; rebuilt executable asset/fixture hashes exactly
+      match the measured browser artifact. Full suite is delegated to required CI.
   - type: evidence_source_binding
     command: SHA-256 comparisons for probes, actual artifact source files and all 115 public inputs
     status: passed
     result: Retained evidence matches measured sources; Node/browser Core ZIP hashes agree.
+  - type: interrupted_invocation
+    command: First post-UTF8 focused test invocation
+    status: incomplete
+    result: Executor session disappeared with partial output and no exit status or
+      summary; no pass inferred. Full available output in verification-partial.txt.
+      Python 3.12.14, Bash/Linux; BashCompletionExecutionTests not selected;
+      documentation changed while it was running. No cause established.
+      Clean retry completed all 51 tests in 27.694s with 3 documented skips;
+      complete available output in verification-test-run.txt.
   gaps:
   - description: Long-input automated fill about 3.4s and large CDP embedder
       snapshots require supported-host/device resource-budget investigation.
@@ -39,7 +50,7 @@ verification:
 review_ledger:
 - reviewer: Codex implementer
   review_type: code_security_measurement_and_integration_self_review
-  target_commit: pending_source_review
+  target_commit: 231b52ced1f58f762ef76c1be774509919f3c37a (implementation unchanged by final evidence closeout)
   result: informational_only
   finding_count: 2
   finding_resolution: Resource finding recorded in 1367; implicit locale I/O corrected with CP932-default regression. No UI/limit change or adoption waiver

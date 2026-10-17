@@ -66,6 +66,12 @@ These snippets intentionally mirror the current format profile:
 For richer completion, the recommended next step is an optional language server
 that reuses the Python parser and validator.
 
+## Static Format 1.0 coverage
+
+All nine record types have snippets: `task`, `event`, `deadline`, `reminder`, `habit`, `note`, `status`, `message`, `journal`. `do` inserts planned execution; `due` inserts a deadline. Date tabstops say `YYYY-MM-DD`: replace these before saving; no old sample date is silently accepted. Titles and text detail placeholders are quoted. `|` body text stays plain. Highlighting includes metadata, all reference keys and the trailing `\` continuation marker; it is display assistance, not validation.
+
+Weekly names such as `2026-W42.txt` require choosing **life.txt** in the language selector, or an explicit `files.associations` setting such as `"2026-W*.txt": "lifetxt"`. Generic `*.txt` is never captured. Static support needs neither Python nor an LSP.
+
 ## Editing From The CLI: `lifetxt edit`
 
 Besides the TUI's `/edit` command and `fzf --action edit` (see

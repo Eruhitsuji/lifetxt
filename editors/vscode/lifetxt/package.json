@@ -2,7 +2,7 @@
   "name": "lifetxt",
   "displayName": "life.txt",
   "description": "Syntax highlighting and snippets for the life.txt plain-text planning format.",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "publisher": "lifetxt",
   "license": "MIT",
   "engines": {
@@ -47,5 +47,12 @@
         "path": "./snippets/lifetxt.code-snippets"
       }
     ]
+  },
+  "scripts": {
+    "test:grammar": "node test/grammar.cjs"
+  },
+  "devDependencies": {
+    "vscode-textmate": "9.3.2",
+    "vscode-oniguruma": "2.0.1"
   }
 }

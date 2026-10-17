@@ -1,0 +1,315 @@
+[
+  {
+    "text": "[ ] T \"日本語 title\" custom:\"quoted value\"",
+    "expect": [
+      [
+        "T",
+        "entity.name.type.lifetxt"
+      ],
+      [
+        "\"日本語 title\"",
+        "entity.name.section.lifetxt"
+      ],
+      [
+        "custom",
+        "variable.parameter.detail-key.lifetxt"
+      ],
+      [
+        "quoted value",
+        "string.quoted.double.lifetxt"
+      ]
+    ]
+  },
+  {
+    "text": "[ ] E \"日本語 title\" custom:\"quoted value\"",
+    "expect": [
+      [
+        "E",
+        "entity.name.type.lifetxt"
+      ],
+      [
+        "\"日本語 title\"",
+        "entity.name.section.lifetxt"
+      ],
+      [
+        "custom",
+        "variable.parameter.detail-key.lifetxt"
+      ],
+      [
+        "quoted value",
+        "string.quoted.double.lifetxt"
+      ]
+    ]
+  },
+  {
+    "text": "[ ] D \"日本語 title\" custom:\"quoted value\"",
+    "expect": [
+      [
+        "D",
+        "entity.name.type.lifetxt"
+      ],
+      [
+        "\"日本語 title\"",
+        "entity.name.section.lifetxt"
+      ],
+      [
+        "custom",
+        "variable.parameter.detail-key.lifetxt"
+      ],
+      [
+        "quoted value",
+        "string.quoted.double.lifetxt"
+      ]
+    ]
+  },
+  {
+    "text": "[ ] R \"日本語 title\" custom:\"quoted value\"",
+    "expect": [
+      [
+        "R",
+        "entity.name.type.lifetxt"
+      ],
+      [
+        "\"日本語 title\"",
+        "entity.name.section.lifetxt"
+      ],
+      [
+        "custom",
+        "variable.parameter.detail-key.lifetxt"
+      ],
+      [
+        "quoted value",
+        "string.quoted.double.lifetxt"
+      ]
+    ]
+  },
+  {
+    "text": "[ ] H \"日本語 title\" custom:\"quoted value\"",
+    "expect": [
+      [
+        "H",
+        "entity.name.type.lifetxt"
+      ],
+      [
+        "\"日本語 title\"",
+        "entity.name.section.lifetxt"
+      ],
+      [
+        "custom",
+        "variable.parameter.detail-key.lifetxt"
+      ],
+      [
+        "quoted value",
+        "string.quoted.double.lifetxt"
+      ]
+    ]
+  },
+  {
+    "text": "[ ] N \"日本語 title\" custom:\"quoted value\"",
+    "expect": [
+      [
+        "N",
+        "entity.name.type.lifetxt"
+      ],
+      [
+        "\"日本語 title\"",
+        "entity.name.section.lifetxt"
+      ],
+      [
+        "custom",
+        "variable.parameter.detail-key.lifetxt"
+      ],
+      [
+        "quoted value",
+        "string.quoted.double.lifetxt"
+      ]
+    ]
+  },
+  {
+    "text": "[ ] S \"日本語 title\" custom:\"quoted value\"",
+    "expect": [
+      [
+        "S",
+        "entity.name.type.lifetxt"
+      ],
+      [
+        "\"日本語 title\"",
+        "entity.name.section.lifetxt"
+      ],
+      [
+        "custom",
+        "variable.parameter.detail-key.lifetxt"
+      ],
+      [
+        "quoted value",
+        "string.quoted.double.lifetxt"
+      ]
+    ]
+  },
+  {
+    "text": "[ ] M \"日本語 title\" custom:\"quoted value\"",
+    "expect": [
+      [
+        "M",
+        "entity.name.type.lifetxt"
+      ],
+      [
+        "\"日本語 title\"",
+        "entity.name.section.lifetxt"
+      ],
+      [
+        "custom",
+        "variable.parameter.detail-key.lifetxt"
+      ],
+      [
+        "quoted value",
+        "string.quoted.double.lifetxt"
+      ]
+    ]
+  },
+  {
+    "text": "[ ] J \"日本語 title\" custom:\"quoted value\"",
+    "expect": [
+      [
+        "J",
+        "entity.name.type.lifetxt"
+      ],
+      [
+        "\"日本語 title\"",
+        "entity.name.section.lifetxt"
+      ],
+      [
+        "custom",
+        "variable.parameter.detail-key.lifetxt"
+      ],
+      [
+        "quoted value",
+        "string.quoted.double.lifetxt"
+      ]
+    ]
+  },
+  {
+    "text": "[ ] T title",
+    "expect": [
+      [
+        "[ ]",
+        "keyword.operator.status.lifetxt"
+      ]
+    ]
+  },
+  {
+    "text": "[/] T title",
+    "expect": [
+      [
+        "[/]",
+        "keyword.operator.status.lifetxt"
+      ]
+    ]
+  },
+  {
+    "text": "[x] T title",
+    "expect": [
+      [
+        "[x]",
+        "keyword.operator.status.lifetxt"
+      ]
+    ]
+  },
+  {
+    "text": "[-] T title",
+    "expect": [
+      [
+        "[-]",
+        "keyword.operator.status.lifetxt"
+      ]
+    ]
+  },
+  {
+    "text": "[>] T title",
+    "expect": [
+      [
+        "[>]",
+        "keyword.operator.status.lifetxt"
+      ]
+    ]
+  },
+  {
+    "text": "[?] T title",
+    "expect": [
+      [
+        "[?]",
+        "keyword.operator.status.lifetxt"
+      ]
+    ]
+  },
+  {
+    "text": "[N] T title",
+    "expect": [
+      [
+        "[N]",
+        "keyword.operator.status.lifetxt"
+      ]
+    ]
+  },
+  {
+    "text": "#! format_version: 1",
+    "expect": [
+      [
+        "format_version",
+        "variable.language.directive.lifetxt"
+      ]
+    ]
+  },
+  {
+    "text": "| body ref:plain",
+    "expect": [
+      [
+        "ref:plain",
+        "string.unquoted.body.lifetxt"
+      ]
+    ]
+  },
+  {
+    "text": "# ref:plain",
+    "expect": [
+      [
+        "ref:plain",
+        "comment.line.number-sign.lifetxt"
+      ]
+    ]
+  },
+  {
+    "text": "  [ ] T title duplicate_of:t1 follows:t2 realizes:t3 \\",
+    "expect": [
+      [
+        "t1",
+        "constant.other.id-reference.lifetxt"
+      ],
+      [
+        "t2",
+        "constant.other.id-reference.lifetxt"
+      ],
+      [
+        "t3",
+        "constant.other.id-reference.lifetxt"
+      ],
+      [
+        "\\",
+        "punctuation.separator.continuation.lifetxt"
+      ]
+    ]
+  },
+  {
+    "text": "[ ] T \"a \\\"quoted\\\" title\" due:2026-10-17T10:00:00.5+09:00",
+    "expect": [
+      [
+        "\"a \\\"quoted\\\" title\"",
+        "entity.name.section.lifetxt"
+      ],
+      [
+        "2026-10-17T10:00:00.5+09:00",
+        "constant.numeric.datetime.lifetxt"
+      ]
+    ]
+  }
+]

@@ -3,14 +3,36 @@
   "name": "life.txt",
   "scopeName": "source.lifetxt",
   "patterns": [
-    {"include": "#comment"},
-    {"include": "#body"},
-    {"include": "#itemWithTitle"},
-    {"include": "#itemStart"},
-    {"include": "#detail"},
-    {"include": "#quotedString"},
-    {"include": "#dateTime"},
-    {"include": "#idReference"}
+    {
+      "include": "#metadata"
+    },
+    {
+      "include": "#comment"
+    },
+    {
+      "include": "#body"
+    },
+    {
+      "include": "#itemWithTitle"
+    },
+    {
+      "include": "#itemStart"
+    },
+    {
+      "include": "#quotedString"
+    },
+    {
+      "include": "#idReference"
+    },
+    {
+      "include": "#detail"
+    },
+    {
+      "include": "#dateTime"
+    },
+    {
+      "include": "#continuation"
+    }
   ],
   "repository": {
     "comment": {
@@ -25,27 +47,45 @@
       "name": "meta.item.lifetxt",
       "match": "^(\\s*)(\\[(?: |/|x|-|>|\\?|N)\\])\\s+([TEDRHNSMJ])\\s+(\"(?:\\\\[\"\\\\]|[^\"\\\\])*\"|\\S+)",
       "captures": {
-        "1": {"name": "punctuation.whitespace.indent.lifetxt"},
-        "2": {"name": "keyword.operator.status.lifetxt"},
-        "3": {"name": "entity.name.type.lifetxt"},
-        "4": {"name": "entity.name.section.lifetxt"}
+        "1": {
+          "name": "punctuation.whitespace.indent.lifetxt"
+        },
+        "2": {
+          "name": "keyword.operator.status.lifetxt"
+        },
+        "3": {
+          "name": "entity.name.type.lifetxt"
+        },
+        "4": {
+          "name": "entity.name.section.lifetxt"
+        }
       }
     },
     "itemStart": {
       "name": "meta.item.lifetxt",
       "match": "^(\\s*)(\\[(?: |/|x|-|>|\\?|N)\\])\\s+([TEDRHNSMJ])\\b",
       "captures": {
-        "1": {"name": "punctuation.whitespace.indent.lifetxt"},
-        "2": {"name": "keyword.operator.status.lifetxt"},
-        "3": {"name": "entity.name.type.lifetxt"}
+        "1": {
+          "name": "punctuation.whitespace.indent.lifetxt"
+        },
+        "2": {
+          "name": "keyword.operator.status.lifetxt"
+        },
+        "3": {
+          "name": "entity.name.type.lifetxt"
+        }
       }
     },
     "detail": {
       "name": "meta.detail.lifetxt",
       "match": "\\b([a-z][a-z0-9_]*)(:)",
       "captures": {
-        "1": {"name": "variable.parameter.detail-key.lifetxt"},
-        "2": {"name": "punctuation.separator.key-value.lifetxt"}
+        "1": {
+          "name": "variable.parameter.detail-key.lifetxt"
+        },
+        "2": {
+          "name": "punctuation.separator.key-value.lifetxt"
+        }
       }
     },
     "quotedString": {
@@ -77,12 +117,37 @@
     },
     "idReference": {
       "name": "meta.id-reference.lifetxt",
-      "match": "\\b(id|parent|ref|depends_on|blocks|related)(:)([A-Za-z0-9][A-Za-z0-9_.:@/-]*)",
+      "match": "\\b(id|parent|ref|depends_on|blocks|related|duplicate_of|replaced_by|follows|realizes)(:)([A-Za-z0-9][A-Za-z0-9_.:@/-]*)",
       "captures": {
-        "1": {"name": "variable.parameter.detail-key.lifetxt"},
-        "2": {"name": "punctuation.separator.key-value.lifetxt"},
-        "3": {"name": "constant.other.id-reference.lifetxt"}
+        "1": {
+          "name": "variable.parameter.detail-key.lifetxt"
+        },
+        "2": {
+          "name": "punctuation.separator.key-value.lifetxt"
+        },
+        "3": {
+          "name": "constant.other.id-reference.lifetxt"
+        }
       }
+    },
+    "metadata": {
+      "name": "meta.directive.lifetxt",
+      "match": "^(#!)\\s+([A-Za-z_][A-Za-z0-9_]*)(:)(.*)$",
+      "captures": {
+        "1": {
+          "name": "punctuation.definition.comment.lifetxt"
+        },
+        "2": {
+          "name": "variable.language.directive.lifetxt"
+        },
+        "4": {
+          "name": "string.unquoted.directive.lifetxt"
+        }
+      }
+    },
+    "continuation": {
+      "name": "punctuation.separator.continuation.lifetxt",
+      "match": "\\\\$"
     }
   }
 }

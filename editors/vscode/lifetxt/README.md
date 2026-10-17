@@ -22,9 +22,10 @@ executes commands, installs dependencies or sends network requests.
    user settings, then reload. No shell arguments. Remote Development uses the
    extension host's interpreter.
 
-Both settings are non-secret, added in 0.2.0, and require a window reload.
+All three settings are non-secret, added in 0.2.0, and require a window reload.
 `enabled` is boolean/default false/window scope; `python` is string/default
-`python`/machine scope. The manifest is their registry; Core `config explain`
+`python`/machine scope. `lifetxt.languageServer.idKey` is string/default `id`/window
+scope: explicitly match Core `ids.key` for custom-ID workspaces. The manifest is their registry; Core `config explain`
 does not apply. Untrusted workspaces stay static-only. Missing Python or client
 package produces an actionable warning while static features remain available.
 Disable the setting and reload to restore static-only behavior. Disable before

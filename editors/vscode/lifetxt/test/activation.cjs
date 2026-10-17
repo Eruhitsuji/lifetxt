@@ -3,7 +3,7 @@ const Module = require('node:module');
 const assert = require('node:assert/strict');
 const original = Module._load;
 let imports = 0, starts = 0, warnings = 0, options;
-const vscode = {workspace:{isTrusted:false, getConfiguration:()=>({get:(key, fallback)=>key==='languageServer.enabled'?true:fallback})},window:{showWarningMessage:async()=>warnings++}};
+const vscode = {version:'1.82.3', workspace:{isTrusted:false, getConfiguration:()=>({get:(key, fallback)=>key==='languageServer.enabled'?true:fallback})},window:{showWarningMessage:async()=>warnings++}};
 class LanguageClient {
   constructor(id, name, server, client) { options={server,client}; }
   async start() { starts++; throw new Error('missing interpreter'); }
@@ -23,9 +23,12 @@ Module._load = function(name, ...args) {
     vscode.workspace.getConfiguration=()=>({get:(key,fallback)=>key==='languageServer.enabled'?false:fallback});
     await ext.activate(context); assert.equal(imports,0);
     vscode.workspace.getConfiguration=()=>({get:(key,fallback)=>key==='languageServer.enabled'?true:fallback});
+    vscode.version='1.80.0';
+    await ext.activate(context); assert.equal(imports,0); assert.equal(warnings,1);
+    vscode.version='1.82.3';
     await ext.activate(context);
-    assert.equal(starts,1); assert.equal(warnings,1); assert.equal(options.server.options.shell,false);
-    assert.deepEqual(options.server.args,['-m','lifetxt.lsp','--stdio']);
+    assert.equal(starts,1); assert.equal(warnings,2); assert.equal(options.server.options.shell,false);
+    assert.deepEqual(options.server.args,['-m','lifetxt.lsp','--stdio','--id-key','id']);
     assert(!options.client.documentSelector.some(x=>x.language==='plaintext'));
     await ext.deactivate();
     console.log('Trust, opt-in, executable argv and failure fallback passed');

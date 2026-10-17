@@ -212,7 +212,7 @@ On Windows use a Python executable path, for example
 `"C:\\Python312\\python.exe"`; do not put shell arguments in it. In Remote
 Development the Python path refers to the **extension host**, not your desktop.
 Virtual URI providers are static-only; `file` and `untitled` buffers are selected.
-Reload the window after changing either setting. Startup failure shows a warning;
+Reload the window after changing any server setting. Startup failure shows a warning;
 inspect the life.txt output channel, install lifetxt in that interpreter and
 reload. Missing Python/client dependency does not disable static features.
 Untrusted workspaces always stay static-only, even when enabled in settings.
@@ -221,6 +221,7 @@ Untrusted workspaces always stay static-only, even when enabled in settings.
 | --- | --- | --- | --- |
 | `lifetxt.languageServer.enabled` | boolean / `false` | VS Code window setting; trusted workspace required | Reload window; non-secret; added 0.2.0; disable for static fallback |
 | `lifetxt.languageServer.python` | string / `python` | VS Code machine/user setting, executable only | Reload window; non-secret; added 0.2.0; set the interpreter containing the matching lifetxt version |
+| `lifetxt.languageServer.idKey` | string / `id` | VS Code window setting; explicit equivalent of Core `ids.key` | Reload window; non-secret; added 0.2.0; older clients ignore it; return to `id` for default behavior |
 
 These settings belong to the extension manifest, not the lifetxt config schema;
 `lifetxt config explain` does not report them. There is no Core config migration.
@@ -246,3 +247,43 @@ For rejected documents, inspect the client log and close/reopen to resynchronize
 old valid snapshots remain intact. Requests run synchronously; client debounce
 reduces traffic, cancellation does not interrupt Core parsing already running.
 No background workspace scan, telemetry or automatic source mutation occurs.
+
+## Open-buffer workspace and rollout status
+
+All life.txt buffers explicitly opened in the same server session share ID,
+project, tag, person and other Core completion values, including unsaved changes.
+Closing a buffer removes its candidates and republishes remaining reference
+warnings. Root paths and filesystem URIs are opaque: opening a workspace folder
+alone never authorizes scanning its files. This scope includes multiple roots in
+one client session; use separate windows/server sessions when those buffers must
+not share candidates. Unopened files cannot satisfy references.
+
+For a custom Core `ids.key`, explicitly set `lifetxt.languageServer.idKey` in
+VS Code or append `--id-key uid` to Neovim's `cmd`. The server never silently loads
+Core configuration. Incompatible Format declarations do not contribute IDs to
+current documents. Very deep Core reference graphs produce adapter diagnostic
+`LSP001`; local syntax diagnostics remain available, but graph validation is
+incomplete. Simplify the chain or close unrelated buffers. No source is changed.
+
+| Surface | Delivered support | Verification / remaining boundary |
+| --- | --- | --- |
+| Plain text editor | Existing templates, minimum grammar and manual workflow | No Python, LSP or network required |
+| VS Code static (1.80+) | All types, snippets, associations and TextMate grammar | Core snippet checks and actual TextMate/Oniguruma corpus |
+| VS Code dynamic (1.82+) | Optional pinned client, diagnostics/completion/Hover | Microsoft protocol and host doubles verified; GUI host/Windows/macOS acceptance tracked in #1373 |
+| Neovim (0.11+ config API) | Built-in LSP configuration | Actual Neovim 0.12.6 Linux common fixture verified; 0.11/other OS not exercised |
+| Zed | Not integrated | Needs language metadata, Tree-sitter grammar/queries and extension adapter investigation |
+| Sublime Text | Not integrated | Needs syntax plus community LSP client configuration and acceptance |
+| JetBrains | Not integrated | Select concrete IDE/API-supported version and plugin design before claiming support |
+
+No VSIX/Marketplace/registry publication is included. See
+[#1373](https://github.com/Eruhitsuji/lifetxt/issues/1373) for external acceptance
+and distribution decisions. Symbol/definition/action providers and disk-backed
+workspace discovery remain future work, not advertised capabilities.
+
+For local performance regression monitoring run
+`python -m editors.benchmark_lsp > baseline.json`, then
+`python -m editors.benchmark_lsp --baseline baseline.json --max-ratio 2` on the
+same Python/OS/machine. The 1,000-item/two-buffer fixture measures parsing,
+compact position mapping, reference diagnostics and completion with tracemalloc.
+The initial Linux/Python 3.12 observation was about 137 ms median and 4.3 MB peak
+Python allocations; it is a local observation, not a universal latency guarantee.

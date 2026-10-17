@@ -205,6 +205,7 @@ Remote Developmentではdesktop側でなく **extension host側** のPythonで�
 | --- | --- | --- | --- |
 | `lifetxt.languageServer.enabled` | boolean / `false` | VS Code window設定、trusted workspaceのみ | reloadが必要、秘密情報ではない、0.2.0追加、無効化で静的支援へ戻る |
 | `lifetxt.languageServer.python` | string / `python` | VS Code machine/user設定、実行ファイルのみ | reloadが必要、秘密情報ではない、0.2.0追加、対応するlifetxtを導入した環境を指定 |
+| `lifetxt.languageServer.idKey` | string / `id` | VS Code window設定、Coreの `ids.key` と明示的に合わせる | reloadが必要、秘密情報ではない、0.2.0追加、旧拡張は無視、既定動作へ戻す場合は `id` |
 
 正本は拡張manifestです。Core設定schemaの項目ではないため `lifetxt config explain` の対象外で、
 Core設定migrationもありません。旧拡張は設定を無視します。このmoduleを含まないlifetxtへ
@@ -226,3 +227,38 @@ downgradeする前にLSPを無効化してください。解除は設定を無�
 文書が拒否された場合はclient logを確認し、close/openで再同期してください。
 最後の有効snapshotを保持します。要求は同期実行し、client側debounceで通知頻度を抑えます。
 cancelは既に開始したCore解析を中断しません。背景走査、telemetry、自動編集はありません。
+
+## 開いているbufferのworkspace・展開状況
+
+同じserver sessionで明示的に開いたlife.txt bufferは、未保存のID、project、tag、personなどを
+Core補完候補として共有します。closeで候補を除外し、残る文書の参照診断を更新します。
+rootやfile URIは識別子として扱うため、folderを開くだけではdisk走査しません。
+同じclient sessionの複数rootも共有範囲に入ります。候補を共有したくない文書は別window/
+server sessionに分けてください。開いていないファイルのIDは参照解決に使えません。
+
+Coreの `ids.key` を変更している場合は、VS Codeで `lifetxt.languageServer.idKey` を明示し、
+Neovimでは `cmd` に `--id-key uid` などを追加します。Core設定を暗黙に読み込みません。
+未対応Formatの文書は現行文書のID候補へ混ぜません。非常に深い参照graphはadapter診断
+`LSP001` を表示します。この場合も構文診断は使えますがgraph検証は未完了です。
+参照chainを簡単にするか、無関係なbufferを閉じてください。元の文書は変更しません。
+
+| 対象 | 提供内容 | 検証・残る境界 |
+| --- | --- | --- |
+| 通常のテキストエディタ | 従来のtemplate・最小文法・手動運用 | Python/LSP/network不要 |
+| VS Code静的（1.80以上） | 全Type・snippet・関連付け・TextMate grammar | Core生成確認と実際のTextMate/Oniguruma corpus |
+| VS Code動的（1.82以上） | 任意client、診断・補完・Hover | Microsoft protocol・host doubles確認済み、GUI/Windows/macOS受入は#1373 |
+| Neovim（0.11以上の設定API） | 組込LSP設定 | Linuxの実際の0.12.6で共通fixtureを確認、0.11/他OS未実施 |
+| Zed | 未対応 | metadata・Tree-sitter grammar/queries・拡張adapterを要調査 |
+| Sublime Text | 未対応 | syntaxとcommunity LSP clientの設定・受入が必要 |
+| JetBrains | 未対応 | 対象IDE/API対応版・plugin設計を決めてから検証 |
+
+VSIX/Marketplace/registry公開は含みません。外部受入と配布判断は
+[#1373](https://github.com/Eruhitsuji/lifetxt/issues/1373)で追跡します。
+symbol/definition/actionやdisk workspace探索は今後の検討であり、提供済みとは扱いません。
+
+性能の回帰確認は同じPython/OS/machineで
+`python -m editors.benchmark_lsp > baseline.json`、続いて
+`python -m editors.benchmark_lsp --baseline baseline.json --max-ratio 2` を実行します。
+1,000件・2bufferのCore解析、圧縮位置map、参照診断、補完をtracemalloc付きで測定します。
+Linux/Python 3.12で初期中央値約137ms、Python割当peak約4.3MBでした。
+この環境の観測値であり、他環境で同じ速度を保証するものではありません。

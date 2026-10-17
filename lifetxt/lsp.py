@@ -6,10 +6,12 @@ network, Core configuration loading or writes happen in this server.
 
 import argparse
 import json
+import re
 import sys
 
 from .lsp_document import Document, MAX_DOCUMENT_BYTES, MAX_DOCUMENTS
 from .lsp_features import completion, hover
+from .lsp_workspace import workspace_items, workspace_diagnostics
 
 MAX_MESSAGE_BYTES = 2 * 1024 * 1024
 
@@ -35,7 +37,11 @@ def read_message(stream):
         except (UnicodeError, ValueError) as exc:
             raise ProtocolError("Malformed header") from exc
         if key.lower() == "content-length":
-            if length is not None or not value.strip().isdigit():
+            if (
+                length is not None
+                or len(value.strip()) > 7
+                or not value.strip().isdigit()
+            ):
                 raise ProtocolError("Invalid Content-Length")
             length = int(value)
     if length is None or not 0 < length <= MAX_MESSAGE_BYTES:
@@ -79,15 +85,20 @@ class Server:
     def notify(self, method, params):
         self.send({"jsonrpc": "2.0", "method": method, "params": params})
 
-    def publish(self, document):
+    def publish(self, document, extra=()):
         self.notify(
             "textDocument/publishDiagnostics",
             {
                 "uri": document.uri,
                 "version": document.version,
-                "diagnostics": document.diagnostics(),
+                "diagnostics": document.diagnostics(extra),
             },
         )
+
+    def publish_all(self):
+        extra = workspace_diagnostics(self.documents, self.id_key)
+        for document in self.documents.values():
+            self.publish(document, extra.get(document.uri, ()))
 
     def handle(self, message):
         request = "id" in message
@@ -144,9 +155,11 @@ class Server:
                     raise ValueError("Document already open")
                 if len(self.documents) >= MAX_DOCUMENTS:
                     raise ValueError("Maximum 32 open documents")
-                doc = Document(uri, data["version"], data["text"], self.id_key)
+                doc = Document(
+                    uri, data["version"], data["text"], self.id_key, check_links=False
+                )
                 self.documents[uri] = doc
-                self.publish(doc)
+                self.publish_all()
                 return
             elif method == "textDocument/didChange":
                 data = params["textDocument"]
@@ -161,13 +174,20 @@ class Server:
                     raise ValueError("Full text changes required")
                 if any("range" in change for change in changes):
                     raise ValueError("Only full document synchronization supported")
-                updated = Document(doc.uri, version, changes[-1]["text"], self.id_key)
+                updated = Document(
+                    doc.uri,
+                    version,
+                    changes[-1]["text"],
+                    self.id_key,
+                    check_links=False,
+                )
                 self.documents[doc.uri] = updated
-                self.publish(updated)
+                self.publish_all()
                 return
             elif method == "textDocument/didClose":
                 uri = params["textDocument"]["uri"]
                 self.documents.pop(uri, None)
+                self.publish_all()
                 self.notify(
                     "textDocument/publishDiagnostics", {"uri": uri, "diagnostics": []}
                 )
@@ -175,7 +195,9 @@ class Server:
             elif method in ("textDocument/completion", "textDocument/hover"):
                 doc = self.documents[params["textDocument"]["uri"]]
                 result = (
-                    completion(doc, params["position"])
+                    completion(
+                        doc, params["position"], items=workspace_items(self.documents)
+                    )
                     if method.endswith("completion")
                     else hover(doc, params["position"])
                 )
@@ -187,7 +209,14 @@ class Server:
                 return
             if request:
                 self.response(id_, result)
-        except (KeyError, TypeError, ValueError, IndexError, OverflowError):
+        except (
+            KeyError,
+            TypeError,
+            ValueError,
+            IndexError,
+            OverflowError,
+            RecursionError,
+        ):
             # Do not echo document text, URI, raw payload or filesystem paths.
             if request:
                 self.response(
@@ -248,7 +277,7 @@ def main(argv=None):
         help="Explicit ID detail key (Core configuration is not loaded)",
     )
     args = parser.parse_args(argv)
-    if not args.id_key or not args.id_key.replace("_", "").isalnum():
+    if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_-]*", args.id_key):
         parser.error("--id-key must be a nonempty detail key")
     return serve(sys.stdin.buffer, sys.stdout.buffer, args.id_key)
 

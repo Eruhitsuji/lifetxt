@@ -35,23 +35,25 @@ def run(site, output):
     fixtures, excluded = collect_examples(ROOT / "examples")
     build(site)
     fixture_file = site / "fixtures.json"
-    fixture_file.write_text(json.dumps(fixtures, ensure_ascii=False, indent=2) + "\n")
+    fixture_file.write_text(
+        json.dumps(fixtures, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
     # Same pinned runtime and Core; only the experiment's fixture set changes.
     manifest_file = site / "manifest.json"
-    manifest = json.loads(manifest_file.read_text())
+    manifest = json.loads(manifest_file.read_text(encoding="utf-8"))
     data = fixture_file.read_bytes()
     manifest["files"]["fixtures.json"] = {
         "bytes": len(data),
         "sha256": hashlib.sha256(data).hexdigest(),
     }
-    manifest_file.write_text(json.dumps(manifest, indent=2) + "\n")
+    manifest_file.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     raw_output = site / "node-example-result.json"
     subprocess.run(
         ["node", str(SOURCE / "probe.mjs"), str(site), str(raw_output)],
         check=True,
         stdout=subprocess.DEVNULL,
     )
-    observed = json.loads(raw_output.read_text())
+    observed = json.loads(raw_output.read_text(encoding="utf-8"))
     if [c["name"] for c in observed["cases"]] != [f["name"] for f in fixtures]:
         raise ValueError("Incomplete or mismatched example result set")
     if not all(c["match"] for c in observed["cases"]):
@@ -78,7 +80,9 @@ def run(site, output):
         }
     )
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(json.dumps(observed, ensure_ascii=False, indent=2) + "\n")
+    output.write_text(
+        json.dumps(observed, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
     print(
         json.dumps(
             {

@@ -35,6 +35,15 @@ Before adopting the experimental 64KiB/100-diagnostic/120s-startup/5s-check budg
 
 The existing Node probe and the same 20-module Core ZIP are reused. Only the experimental fixture set and its manifest entry change. The result supports the current import closure on these examples; it does not establish future dynamic-import closure, all Format 1.0 combinations, browser compatibility, native-history validation or full CLI equivalence. The earlier CLI 14/16 diagnostic comparison and its two scope differences remain unchanged.
 
+## UTF-8 portability correction
+
+Self-review identified locale-dependent text I/O in the isolated builder and new
+corpus tool. JSON fixtures/results now use explicit UTF-8, and the large Unicode
+test fixture also uses UTF-8. The existing reproducible-build regression now
+simulates a CP932 default for the second build, proving that the Japanese/emoji
+fixture still builds. Linux executable asset and Core bytes are unchanged. This
+is not a full Windows browser acceptance.
+
 ## Reproduce
 
 ```sh

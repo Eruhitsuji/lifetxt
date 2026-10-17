@@ -114,14 +114,28 @@ class BrowserCheckPocTests(unittest.TestCase):
             a, b = Path(directory) / "a", Path(directory) / "b"
             with patch.object(builder, "SOURCE", source):
                 builder.build(a)
+                original_read, original_write = Path.read_text, Path.write_text
+
+                def legacy_read(path, encoding=None, **kwargs):
+                    return original_read(path, encoding=encoding or "cp932", **kwargs)
+
+                def legacy_write(path, data, encoding=None, **kwargs):
+                    return original_write(
+                        path, data, encoding=encoding or "cp932", **kwargs
+                    )
+
                 # An unrelated module already loaded by a larger suite must not leak.
-                with patch.dict(
-                    sys.modules,
-                    {
-                        "lifetxt.unrelated_probe": SimpleNamespace(
-                            __file__=str(ROOT / "lifetxt/remote_client.py")
-                        )
-                    },
+                with (
+                    patch.dict(
+                        sys.modules,
+                        {
+                            "lifetxt.unrelated_probe": SimpleNamespace(
+                                __file__=str(ROOT / "lifetxt/remote_client.py")
+                            )
+                        },
+                    ),
+                    patch.object(Path, "read_text", legacy_read),
+                    patch.object(Path, "write_text", legacy_write),
                 ):
                     builder.build(b)
                 with self.assertRaises(FileExistsError):

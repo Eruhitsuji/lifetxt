@@ -2,6 +2,20 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-browser-readiness-measurements-v1
+      capability_id: cap-official-website
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1358
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1366
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1368
+      changed_files_or_scope:
+        - isolated readiness probe, bounded desktop evidence and manual acceptance checklist
+        - focused regressions, change package and scoped registries
+      tests_or_evidence:
+        - contrib/browser_check_poc/READINESS.md, readiness-evidence.json and example-evidence.json
+        - boundary, repetition, diagnostic cap, controlled response pacing, AX semantics and privacy/recovery
+      release_or_deployment: null
+      status: implemented
+      note: Physical-device, resource, distribution and Owner adoption gates remain open
     - requirement_id: req-browser-runtime-inventory-v1
       capability_id: cap-official-website
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1358

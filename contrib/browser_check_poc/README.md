@@ -139,3 +139,47 @@ explicit optional/required unittest modes and sanitized evidence. Firefox page
 creation is blocked by this host's sandbox permissions; WebKit lacks OS libraries.
 Neither is accepted. The runner's success path passes on the existing Chromium;
 that smoke is not evidence of Firefox, WebKit, Safari or physical mobile support.
+
+## Remaining readiness measurements (#1366)
+
+`readiness_probe.py` measures two fresh Chromium contexts: loopback baseline
+and server-paced GET responses (150ms delay, 524288 bytes/s **per response**).
+This is not aggregate cellular throttling, a physical device or Safari evidence.
+It compares exact 65536-byte input, 30 runs of 2000 records and a 500-diagnostic
+case with native results, then checks rejection, AX semantics, network/storage,
+clearing and restart. Page CDP heap snapshots and startup WASM capacity have
+different scopes; neither measures total peak memory. Forced-GC observations
+are diagnostic and separate from normal interaction. Input-fill automation time
+is recorded separately from Check-to-result time and Worker parse time.
+
+```sh
+python contrib/browser_check_poc/readiness_probe.py \
+  --site .cache/browser-check-site \
+  --chromium /path/to/chromium \
+  --output .cache/current-readiness.json
+python -m unittest tests.test_browser_check_poc_readiness
+```
+
+Use the build instructions above to create the local artifact first. The CLI
+exits nonzero for blocked/failed/partial measurements. Missing optional test
+tooling skips only when not required. To require a fresh run through unittest:
+set `LIFETXT_BROWSER_BIN`, `LIFETXT_RUN_READINESS=1` and
+`LIFETXT_REQUIRE_READINESS=1`. These tests deliberately include paced downloads
+and long-input editing and can take several minutes. Preserve a failed run's
+output; do not substitute retained evidence for the current command result.
+
+See [READINESS.md](READINESS.md) for measured results and open resource questions,
+and [MANUAL_ACCEPTANCE.md](MANUAL_ACCEPTANCE.md) for the remaining actual-device,
+assistive-technology, desktop zoom, Japanese rendering and distribution gates.
+No public checker, production script permission or deployment is added here.
+
+For the read-only public-example corpus comparison with the same Core ZIP:
+
+```sh
+python contrib/browser_check_poc/example_corpus.py \
+  --site .cache/example-corpus-site \
+  --output .cache/current-examples.json
+```
+
+Use a new output directory. The retained 115-case Node result is separate from
+browser observations and does not establish complete Format/CLI compatibility.

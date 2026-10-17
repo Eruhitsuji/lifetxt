@@ -1,5 +1,12 @@
 # Design
 
+#1360 adds a Python Playwright probe with ephemeral real Chromium contexts and
+a loopback HTTP server. Actual rendering/Worker/CSP tests remain separate from
+Node/fake-DOM evidence. Notice snapshots are copied and manifest-hashed; their
+inventory is explicitly incomplete. See BROWSER_ACCEPTANCE.md for current
+coverage, mobile-emulation limits and outstanding product gates. The original
+design below describes the #1356 baseline.
+
 Reuse cap-official-website and the #1055 Core boundary. An isolated contrib
 builder packages an explicit corpus-observed closure of unmodified Python
 modules, not the CLI bootstrap. The adapter calls parse_text and the existing

@@ -7,13 +7,15 @@ change:
   assurance_level: Standard
   owner: Eruhitsuji
   accountable_owner: Eruhitsuji
-  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1356
-  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1359
-  base_commit: e59ef2b6ef2fb8f34edc86fccf7fcbb4d274d9fc
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1360
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1361
+  base_commit: 17583a3ec1946f38a3ae4122ff3cbce36d11378d
+  previous_delivery: https://github.com/Eruhitsuji/lifetxt/pull/1359
 scope:
   write_scope:
   - contrib/browser_check_poc/**
   - tests/test_browser_check_poc.py
+  - tests/test_browser_check_poc_browser.py
   - this package
   - scoped CAPABILITIES and TRACEABILITY entries
   forbidden_scope:

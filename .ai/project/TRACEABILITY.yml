@@ -2,6 +2,21 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-browser-local-check-acceptance-v1
+      capability_id: cap-official-website
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1350
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1360
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1361
+      changed_files_or_scope:
+        - isolated browser probe, optional regression and versioned notices
+        - browser acceptance evidence and browser-check-feasibility package
+      tests_or_evidence:
+        - contrib/browser_check_poc/BROWSER_ACCEPTANCE.md and browser-evidence.json
+        - actual Chromium 16-case parity, CSP/MIME, network/storage and failure lifecycle
+        - notice provenance hashes and incomplete distribution inventory gate
+      release_or_deployment: null
+      status: implemented
+      note: Local investigation only; physical devices, other engines, accessibility and full binary licences remain adoption gates
     - requirement_id: req-browser-local-check-feasibility-v1
       capability_id: cap-official-website
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1350
@@ -16,7 +31,7 @@ traceability:
         - 41 focused tests, 2 optional Web skips; lint, format and approved mypy
       release_or_deployment: null
       status: implemented
-      note: Experimental conditional GO only; real-browser and mobile acceptance unverified in 1356 and adoption proposal 1358
+      note: Original Node baseline; actual Chromium follow-up in 1360, physical mobile and adoption gates remain in 1356 and 1358
     - requirement_id: req-official-website-live-quality-v1
       capability_id: cap-official-website
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1350

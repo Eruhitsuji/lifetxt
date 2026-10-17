@@ -1,0 +1,45 @@
+schema_version: 1
+verification:
+  checks:
+  - type: native_and_wasm
+    command: build.py, probe.mjs, worker_probe.mjs and compare_cli.py
+    source_commit: e59ef2b6 plus isolated 1356 PoC; exact input/source hashes in evidence.json
+    status: passed
+    result: Node WASM and worker-shim corpus match native 16 of 16. CLI diagnostic
+      match is 14 of 16; two semantic scope differences retained. Byte limit and
+      termination pass. Results do not claim browser or complete CLI equivalence.
+  - type: offline_regression
+    command: python -m unittest tests.test_browser_check_poc tests.test_core_import_boundary
+      tests.test_supported_runtime tests.test_diagnostic_contract tests.test_website
+      tests.test_traceability_gate tests.test_change_package_closeout
+    source_commit: e59ef2b6 plus isolated 1356 PoC
+    status: passed
+    result: 41 tests run, 2 optional Web diagnostic tests skipped; executed tests pass.
+      No core, website, workflow or standard behavior changed.
+  - type: static
+    command: Ruff lint including contrib PoC, focused format, approved mypy boundary,
+      node --check for all PoC mjs and test_ui.mjs execution
+    source_commit: e59ef2b6 plus isolated 1356 PoC
+    status: passed
+    result: All executed checks pass. Fake DOM lifecycle is not browser evidence.
+  gaps:
+  - description: Actual browser/mobile/CSP/MIME, network/storage trace, accessibility,
+      200 percent zoom, download and peak-memory verification unavailable because
+      cloud browser cannot reach local loopback; minimal browser execution unverified.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1356
+  - description: Runtime notices/SBOM and distribution obligations, broader Core
+      conformance and final adoption/scope/production limits require separate review.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1358
+review_ledger:
+- reviewer: Codex implementer
+  review_type: code_security_evidence_self_review
+  target_commit: 092d3617490b7c5af51de05a3826e251a035cfa3 (same PoC code; PR references finalized afterward)
+  result: informational_only
+  finding_count: 3
+  completed_at: '2026-10-17'
+- reviewer: Eruhitsuji
+  review_type: independent_implementation_and_evidence
+  target_commit: null
+  result: pending
+  finding_count: null
+  completed_at: null

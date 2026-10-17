@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<link rel="stylesheet" href="./style.css"><title>lifetxt parser feasibility PoC</title></head><body>
+<h1>Local parser check — experimental PoC</h1>
+<p>Parser and item validator only, not all CLI checks. Synthetic test input only.
+No text uploads or persistent storage. Runtime loads locally after Check. Limit: 65536 UTF-8 bytes.</p>
+<label for="input">life.txt sample</label><br>
+<textarea id="input" rows="10" cols="45" autocomplete="off" spellcheck="false">[ ] T "Read paper" due:2026-10-20</textarea><br>
+<button id="check">Check</button> <button id="cancel" disabled>Cancel / clear runtime</button>
+<p id="status" role="status" aria-live="polite">Not loaded</p>
+<h2>Diagnostics and measurements</h2><pre id="output" tabindex="0"></pre>
+<script type="module" src="./ui.mjs"></script>
+</body></html>

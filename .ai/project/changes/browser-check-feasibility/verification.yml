@@ -1,6 +1,29 @@
 schema_version: 1
 verification:
   checks:
+  - type: followup_regression
+    command: python -m unittest tests.test_browser_check_poc tests.test_browser_check_poc_browser
+      tests.test_core_import_boundary tests.test_supported_runtime tests.test_diagnostic_contract
+      tests.test_website tests.test_traceability_gate tests.test_change_package_closeout
+    source_commit: 17583a3e plus isolated 1360 additions
+    status: passed
+    result: 43 tests, 2 existing optional Web diagnostic skips; actual Chromium
+      dependency gate required and executed. Ruff lint and focused format, approved
+      mypy boundary and diff whitespace pass. Full runtime suite not rerun locally.
+  - type: actual_browser_acceptance
+    command: LIFETXT_REQUIRE_BROWSER_CHECK=1 LIFETXT_BROWSER_BIN=local-chromium
+      python -m unittest tests.test_browser_check_poc_browser
+    source_commit: 17583a3e plus isolated 1360 additions; browser-evidence.json has exact artifact and probe hashes
+    status: passed
+    result: Real HTTP Chromium 153 corpus 16 of 16; unchanged CSP/MIME, bounded
+      network/storage, lazy/warm/offline, cancel/restart, failure/retry and virtual-clock
+      startup timeout pass. Mobile emulation is not a physical device.
+  - type: notice_provenance
+    command: python -m unittest tests.test_browser_check_poc
+    source_commit: 17583a3e plus isolated 1360 additions
+    status: passed
+    result: Three upstream notice texts have stored hashes and are copied into
+      the manifest-bound local artifact. Full binary inventory is not complete.
   - type: native_and_wasm
     command: build.py, probe.mjs, worker_probe.mjs and compare_cli.py
     source_commit: e59ef2b6 plus isolated 1356 PoC; exact input/source hashes in evidence.json
@@ -23,14 +46,20 @@ verification:
     status: passed
     result: All executed checks pass. Fake DOM lifecycle is not browser evidence.
   gaps:
-  - description: Actual browser/mobile/CSP/MIME, network/storage trace, accessibility,
-      200 percent zoom, download and peak-memory verification unavailable because
-      cloud browser cannot reach local loopback; minimal browser execution unverified.
+  - description: Chromium execution, CSP/MIME and bounded network/storage are now
+      covered in 1360. Physical mobile, Firefox/Safari, screen reader, desktop
+      200 percent zoom, realistic download and peak-memory remain unverified.
     tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1356
   - description: Runtime notices/SBOM and distribution obligations, broader Core
       conformance and final adoption/scope/production limits require separate review.
     tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1358
 review_ledger:
+- reviewer: Codex implementer
+  review_type: browser_and_notice_evidence_self_review
+  target_commit: null
+  result: informational_only
+  finding_count: 0
+  completed_at: '2026-10-17'
 - reviewer: Codex implementer
   review_type: code_security_evidence_self_review
   target_commit: 092d3617490b7c5af51de05a3826e251a035cfa3 (same PoC code; PR references finalized afterward)

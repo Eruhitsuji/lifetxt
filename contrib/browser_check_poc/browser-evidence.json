@@ -1,0 +1,519 @@
+{
+  "recorded_at": "2026-10-17",
+  "issue": 1360,
+  "manifest": {
+    "pyodide": "314.0.7",
+    "engine_base_revision": "17583a3ec1946f38a3ae4122ff3cbce36d11378d",
+    "core_modules": [
+      "lifetxt/__init__.py",
+      "lifetxt/atomic.py",
+      "lifetxt/config.py",
+      "lifetxt/diagnostic_contract.py",
+      "lifetxt/ids.py",
+      "lifetxt/links.py",
+      "lifetxt/model.py",
+      "lifetxt/mutation.py",
+      "lifetxt/parser.py",
+      "lifetxt/progress.py",
+      "lifetxt/recurrence.py",
+      "lifetxt/safety_foundation.py",
+      "lifetxt/serializer.py",
+      "lifetxt/temporal_context.py",
+      "lifetxt/temporal_thread.py",
+      "lifetxt/ticket_project_values.py",
+      "lifetxt/tickets.py",
+      "lifetxt/timeutil.py",
+      "lifetxt/timezone_policy.py",
+      "lifetxt/validator.py"
+    ],
+    "files": {
+      "adapter.py": {
+        "bytes": 1216,
+        "sha256": "35402ce2fdde361edd9fef29d59c643a0c290e4a7f43ea394d088b01ebf6d69e"
+      },
+      "core.zip": {
+        "bytes": 76645,
+        "sha256": "675ede79d71b0da7fa81436b426937c72c7127512dc116a24311df6b9aa8bcc1"
+      },
+      "engine.mjs": {
+        "bytes": 823,
+        "sha256": "ee4006ce007b2995dd979d4ed084ffcf1073b59de485a678da1aa74c3e697c9d"
+      },
+      "fixtures.json": {
+        "bytes": 10269,
+        "sha256": "2459f0a78bef0ebcc9972c7be78fdb7914885dd6d8b055580828dc60643c8ea4"
+      },
+      "index.html": {
+        "bytes": 1139,
+        "sha256": "d5eb2c3b1e9989706c9f61de9643e3afed0a91750425142ecdb28bb30490764f"
+      },
+      "notices/README.md": {
+        "bytes": 2162,
+        "sha256": "46a8f3013363a018d7026258ac0ec1e95c3e745a4901a9c097fb7430c8f9d40f"
+      },
+      "notices/cpython-3.14.2.txt": {
+        "bytes": 13804,
+        "sha256": "b0e25a78cffb43f4d92de8b61ccfa1f1f98ecbc22330b54b5251e7b6ba010231"
+      },
+      "notices/emscripten-5.0.3.txt": {
+        "bytes": 5092,
+        "sha256": "06f2e6c024612605fc3c803b192983a26f19404eb54d78e399190d90ed32ac78"
+      },
+      "notices/provenance.json": {
+        "bytes": 1830,
+        "sha256": "719b78f0ed37259bf42fb63ce9fd67f33d06e89c2a7e3b58020f6fee582dc75d"
+      },
+      "notices/pyodide-314.0.7.txt": {
+        "bytes": 16725,
+        "sha256": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5"
+      },
+      "runtime/pyodide-lock.json": {
+        "bytes": 119077,
+        "sha256": "5dc2fc119108bc148c7457dc86e7675b5c87e1cafd420b9c34c1eaef7b36c010"
+      },
+      "runtime/pyodide.asm.mjs": {
+        "bytes": 1250344,
+        "sha256": "f7cdc8ece80678ceb712f8e65ebe6d3a83203a180c399865f49612a051693635"
+      },
+      "runtime/pyodide.asm.wasm": {
+        "bytes": 9598218,
+        "sha256": "cc36e3cab04fdfc9a63ff13eb52eae2b911bf46c025cc7b281f394bd3de1d5e6"
+      },
+      "runtime/pyodide.mjs": {
+        "bytes": 17931,
+        "sha256": "6f1d60f7bf529beb300f0f47983c921d3982363640ba20af0e38efdddbc66109"
+      },
+      "runtime/python_stdlib.zip": {
+        "bytes": 2545637,
+        "sha256": "fa1957e5777068fc4f7437f96d860ae2fbe9c19732ba06c84e004ec16dd7dd7a"
+      },
+      "style.css": {
+        "bytes": 364,
+        "sha256": "ce9aa1256f558f18ccd18781b651c226e0180fde0bb52eea44792048f300ce9a"
+      },
+      "ui.mjs": {
+        "bytes": 1846,
+        "sha256": "3505ca7f2f52072aabee74f3b59309e672c49e527ef9494c10a88623d11b84ac"
+      },
+      "worker.mjs": {
+        "bytes": 1136,
+        "sha256": "239a341e0444091da514aa1907c3fa5bee2b17d2ee9c55faae5b7f0fcb0086d6"
+      }
+    }
+  },
+  "probe_sha256": "e48469cf04950b6b9075acb15bac1f9ce6956e6714c0d9d90c6c1caa2f4cb869",
+  "browser": {
+    "kind": "actual headless Chromium over loopback HTTP",
+    "physical_device": false,
+    "screenshots_inspected": false,
+    "safari_firefox_screen_reader_desktop_zoom": "not tested",
+    "cases": [
+      {
+        "name": "empty",
+        "match": true,
+        "check_ms": 0.2999999988824129,
+        "wall_ms": 67.2525059999316
+      },
+      {
+        "name": "valid",
+        "match": true,
+        "check_ms": 0.599999999627471,
+        "wall_ms": 52.61759200038796
+      },
+      {
+        "name": "japanese",
+        "match": true,
+        "check_ms": 1,
+        "wall_ms": 56.97923100160551
+      },
+      {
+        "name": "syntax",
+        "match": true,
+        "check_ms": 0.900000000372529,
+        "wall_ms": 62.03539200032537
+      },
+      {
+        "name": "custom-key",
+        "match": true,
+        "check_ms": 0.5,
+        "wall_ms": 63.26886399983778
+      },
+      {
+        "name": "warning",
+        "match": true,
+        "check_ms": 0.6000000014901161,
+        "wall_ms": 59.809841000969755
+      },
+      {
+        "name": "position",
+        "match": true,
+        "check_ms": 0.5,
+        "wall_ms": 64.60109100044065
+      },
+      {
+        "name": "format-current",
+        "match": true,
+        "check_ms": 0.5,
+        "wall_ms": 61.48643400047149
+      },
+      {
+        "name": "format-future",
+        "match": true,
+        "check_ms": 0.40000000037252903,
+        "wall_ms": 62.256776000140235
+      },
+      {
+        "name": "duplicate-id",
+        "match": true,
+        "check_ms": 1,
+        "wall_ms": 63.65004100007354
+      },
+      {
+        "name": "missing-reference",
+        "match": true,
+        "check_ms": 0.599999999627471,
+        "wall_ms": 62.64052600090508
+      },
+      {
+        "name": "timezone",
+        "match": true,
+        "check_ms": 1.199999999254942,
+        "wall_ms": 58.05511700054922
+      },
+      {
+        "name": "multiline",
+        "match": true,
+        "check_ms": 0.3999999985098839,
+        "wall_ms": 61.894210000900785
+      },
+      {
+        "name": "html-injection",
+        "match": true,
+        "check_ms": 0.5,
+        "wall_ms": 62.83703100052662
+      },
+      {
+        "name": "completed-parent-gap",
+        "match": true,
+        "check_ms": 0.900000000372529,
+        "wall_ms": 59.934143000646145
+      },
+      {
+        "name": "native-history-gap",
+        "match": true,
+        "check_ms": 0.8000000007450581,
+        "wall_ms": 61.38430499959213
+      }
+    ],
+    "requests": [
+      {
+        "path": "/",
+        "origin_ok": true,
+        "method": "GET",
+        "query": "",
+        "has_post_data": false
+      },
+      {
+        "path": "/style.css",
+        "origin_ok": true,
+        "method": "GET",
+        "query": "",
+        "has_post_data": false
+      },
+      {
+        "path": "/ui.mjs",
+        "origin_ok": true,
+        "method": "GET",
+        "query": "",
+        "has_post_data": false
+      },
+      {
+        "path": "/worker.mjs",
+        "origin_ok": true,
+        "method": "GET",
+        "query": "",
+        "has_post_data": false
+      },
+      {
+        "path": "/engine.mjs",
+        "origin_ok": true,
+        "method": "GET",
+        "query": "",
+        "has_post_data": false
+      },
+      {
+        "path": "/runtime/pyodide.mjs",
+        "origin_ok": true,
+        "method": "GET",
+        "query": "",
+        "has_post_data": false
+      },
+      {
+        "path": "/core.zip",
+        "origin_ok": true,
+        "method": "GET",
+        "query": "",
+        "has_post_data": false
+      },
+      {
+        "path": "/adapter.py",
+        "origin_ok": true,
+        "method": "GET",
+        "query": "",
+        "has_post_data": false
+      },
+      {
+        "path": "/runtime/pyodide-lock.json",
+        "origin_ok": true,
+        "method": "GET",
+        "query": "",
+        "has_post_data": false
+      },
+      {
+        "path": "/runtime/python_stdlib.zip",
+        "origin_ok": true,
+        "method": "GET",
+        "query": "",
+        "has_post_data": false
+      },
+      {
+        "path": "/runtime/pyodide.asm.wasm",
+        "origin_ok": true,
+        "method": "GET",
+        "query": "",
+        "has_post_data": false
+      },
+      {
+        "path": "/runtime/pyodide.asm.mjs",
+        "origin_ok": true,
+        "method": "GET",
+        "query": "",
+        "has_post_data": false
+      },
+      {
+        "path": "/worker.mjs",
+        "origin_ok": true,
+        "method": "GET",
+        "query": "",
+        "has_post_data": false
+      },
+      {
+        "path": "/engine.mjs",
+        "origin_ok": true,
+        "method": "GET",
+        "query": "",
+        "has_post_data": false
+      },
+      {
+        "path": "/runtime/pyodide.mjs",
+        "origin_ok": true,
+        "method": "GET",
+        "query": "",
+        "has_post_data": false
+      },
+      {
+        "path": "/core.zip",
+        "origin_ok": true,
+        "method": "GET",
+        "query": "",
+        "has_post_data": false
+      },
+      {
+        "path": "/adapter.py",
+        "origin_ok": true,
+        "method": "GET",
+        "query": "",
+        "has_post_data": false
+      },
+      {
+        "path": "/runtime/pyodide-lock.json",
+        "origin_ok": true,
+        "method": "GET",
+        "query": "",
+        "has_post_data": false
+      },
+      {
+        "path": "/runtime/python_stdlib.zip",
+        "origin_ok": true,
+        "method": "GET",
+        "query": "",
+        "has_post_data": false
+      },
+      {
+        "path": "/runtime/pyodide.asm.wasm",
+        "origin_ok": true,
+        "method": "GET",
+        "query": "",
+        "has_post_data": false
+      },
+      {
+        "path": "/runtime/pyodide.asm.mjs",
+        "origin_ok": true,
+        "method": "GET",
+        "query": "",
+        "has_post_data": false
+      },
+      {
+        "path": "/worker.mjs",
+        "origin_ok": true,
+        "method": "GET",
+        "query": "",
+        "has_post_data": false
+      },
+      {
+        "path": "/engine.mjs",
+        "origin_ok": true,
+        "method": "GET",
+        "query": "",
+        "has_post_data": false
+      },
+      {
+        "path": "/runtime/pyodide.mjs",
+        "origin_ok": true,
+        "method": "GET",
+        "query": "",
+        "has_post_data": false
+      },
+      {
+        "path": "/core.zip",
+        "origin_ok": true,
+        "method": "GET",
+        "query": "",
+        "has_post_data": false
+      },
+      {
+        "path": "/adapter.py",
+        "origin_ok": true,
+        "method": "GET",
+        "query": "",
+        "has_post_data": false
+      },
+      {
+        "path": "/runtime/pyodide-lock.json",
+        "origin_ok": true,
+        "method": "GET",
+        "query": "",
+        "has_post_data": false
+      },
+      {
+        "path": "/runtime/python_stdlib.zip",
+        "origin_ok": true,
+        "method": "GET",
+        "query": "",
+        "has_post_data": false
+      },
+      {
+        "path": "/runtime/pyodide.asm.wasm",
+        "origin_ok": true,
+        "method": "GET",
+        "query": "",
+        "has_post_data": false
+      },
+      {
+        "path": "/runtime/pyodide.asm.mjs",
+        "origin_ok": true,
+        "method": "GET",
+        "query": "",
+        "has_post_data": false
+      }
+    ],
+    "console_errors": [],
+    "page_errors": [],
+    "chromium": "153.0.8010.0",
+    "lazy_load": true,
+    "cold": {
+      "wall_ms": 2324.5564900007594,
+      "startup": {
+        "id": 1,
+        "stage": "ready",
+        "startup_ms": 2155.5,
+        "runtime": {
+          "pyodide": "314.0.7",
+          "python": "3.14.2 (main, Sep 14 2026, 03:03:51) [Clang 23.0.0git (https:/github.com/llvm/llvm-project e5927fecf8a6ce89e1a4eac5b8",
+          "wasm_heap_bytes": 31457280
+        }
+      },
+      "first_check_ms": 130.40000000037253
+    },
+    "warm_no_http": true,
+    "offline_warm_check": true,
+    "text_only_output": true,
+    "sizes": [
+      {
+        "lines": 1,
+        "bytes": 19,
+        "check_ms": 0.5,
+        "wall_ms": 57.96054499842285
+      },
+      {
+        "lines": 100,
+        "bytes": 1900,
+        "check_ms": 2.099999999627471,
+        "wall_ms": 57.33285299902491
+      },
+      {
+        "lines": 1000,
+        "bytes": 19000,
+        "check_ms": 16.300000000745058,
+        "wall_ms": 68.99866700041457
+      },
+      {
+        "lines": 2000,
+        "bytes": 38000,
+        "check_ms": 32.19999999925494,
+        "wall_ms": 118.40060699978494
+      }
+    ],
+    "oversize_refused_without_http": true,
+    "cancel_and_restart": true,
+    "viewports": [
+      {
+        "width": 1280,
+        "horizontal_overflow": false
+      },
+      {
+        "width": 640,
+        "horizontal_overflow": false
+      },
+      {
+        "width": 390,
+        "horizontal_overflow": false
+      },
+      {
+        "width": 320,
+        "horizontal_overflow": false
+      }
+    ],
+    "emulated_visual_scale": 2,
+    "keyboard_focus": "rgb(18, 104, 94) solid 3px",
+    "aria": {
+      "label": 1,
+      "status": 1
+    },
+    "storage": {
+      "local": [],
+      "session": [],
+      "indexedDB": [],
+      "caches": [],
+      "serviceWorkers": 0,
+      "cookies": ""
+    },
+    "mime": "WASM application/wasm; module JavaScript",
+    "mobile_emulation": {
+      "width": 390,
+      "touch": true,
+      "device_scale_factor": 3,
+      "warning": "W203",
+      "physical_device": false
+    },
+    "download_failure_and_retry": true,
+    "startup_timeout": "real DOM/Worker with held asset; page timer fast-forwarded 120001ms",
+    "csp_inline_script_blocked": true,
+    "cancelled_static_transfers": 1
+  },
+  "manual_review": {
+    "mobile_screenshot_inspected": true,
+    "japanese_glyphs": "missing CJK font renders boxes; not a Japanese visual acceptance",
+    "desktop_zoom": "not tested; visual scale is not browser zoom"
+  }
+}

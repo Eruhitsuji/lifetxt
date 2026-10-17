@@ -1,0 +1,42 @@
+{
+  "complete_distribution_audit": false,
+  "files": [
+    {
+      "file": "pyodide-314.0.7.txt",
+      "source_url": "https://raw.githubusercontent.com/pyodide/pyodide/314.0.7/LICENSE",
+      "source_sha256": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5",
+      "stored_sha256": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5",
+      "normalization": "UTF-8/LF; trailing whitespace stripped; notice words unchanged"
+    },
+    {
+      "file": "cpython-3.14.2.txt",
+      "source_url": "https://raw.githubusercontent.com/python/cpython/v3.14.2/LICENSE",
+      "source_sha256": "b0e25a78cffb43f4d92de8b61ccfa1f1f98ecbc22330b54b5251e7b6ba010231",
+      "stored_sha256": "b0e25a78cffb43f4d92de8b61ccfa1f1f98ecbc22330b54b5251e7b6ba010231",
+      "normalization": "UTF-8/LF; trailing whitespace stripped; notice words unchanged"
+    },
+    {
+      "file": "emscripten-5.0.3.txt",
+      "source_url": "https://raw.githubusercontent.com/emscripten-core/emscripten/5.0.3/LICENSE",
+      "source_sha256": "620a78084fc7ca97c0b5dea9abf891f3ffcadfdbf305276f099c9c4e12fc1d86",
+      "stored_sha256": "06f2e6c024612605fc3c803b192983a26f19404eb54d78e399190d90ed32ac78",
+      "normalization": "UTF-8/LF; trailing whitespace stripped; notice words unchanged"
+    }
+  ],
+  "upstream_build_source": "https://github.com/pyodide/pyodide/blob/314.0.7/Makefile.envs",
+  "observed_runtime_components": [
+    "CPython 3.14.2",
+    "Emscripten 5.0.3",
+    "Pyodide 314.0.7",
+    "LZ4",
+    "zlib",
+    "bzip2",
+    "libffi",
+    "libhiwire",
+    "liblzma",
+    "sqlite3",
+    "zstd",
+    "C++ runtime"
+  ],
+  "unresolved": "Exact binary-to-component/version mapping and complete third-party notices/source availability must be reviewed before public redistribution. Build flags are not a complete or exact SBOM."
+}

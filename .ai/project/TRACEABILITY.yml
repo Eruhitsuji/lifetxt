@@ -2,6 +2,15 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-editor-static-format1
+      capability_id: cap-editor-language-support
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1348
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1369
+      changed_files_or_scope:
+        - editors/vscode/lifetxt and static fixture tests; bilingual editor docs
+      tests_or_evidence:
+        - Three static/Core tests and 21 actual TextMate/Oniguruma fixtures
+      status: implemented
     - requirement_id: req-browser-readiness-measurements-v1
       capability_id: cap-official-website
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1358

@@ -66,6 +66,12 @@ snippet は現在の format profile に合わせています。
 より高度な補完は、Python parser / validator を再利用する optional language
 server として実装する方針が適しています。
 
+## 静的なFormat 1.0対応
+
+9種類すべてに `task`、`event`、`deadline`、`reminder`、`habit`、`note`、`status`、`message`、`journal` のsnippetがあります。`do` は実施予定、`due` は締切です。日付のtabstopは `YYYY-MM-DD` と表示されるため、保存前に明示入力してください。過去の固定日付は挿入しません。titleと本文detailは引用符付き、`|` の本文は通常の文字列です。metadata、全参照key、末尾 `\` の継続記号もhighlightします。highlightは表示支援であり、検証ではありません。
+
+`2026-W42.txt` のような週次ファイルは言語選択で **life.txt** を選ぶか、`files.associations` に `"2026-W*.txt": "lifetxt"` を明示してください。汎用 `*.txt` は関連付けません。静的支援にはPythonもLSPも不要です。
+
 ## CLI からの編集: `lifetxt edit`
 
 TUI の `/edit` コマンドや `fzf --action edit`

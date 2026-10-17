@@ -1,5 +1,15 @@
 schema_version: 1
 requirements:
+- id: req-browser-runtime-inventory-v1
+  kind: ADDED
+  owner: Eruhitsuji
+  statement: Retain source-based component candidates, actual runtime observations
+    and additional notices without claiming complete distribution clearance.
+  acceptance_criteria:
+  - Distinguish recipe pins, observed versions and unresolved binary attribution
+  - Sixteen provenance-bound notice texts and component map enter isolated artifact
+  - Reject missing or tampered notices, references and runtime hash drift before build
+  - Preserve incomplete audit and publication gates and reproduction instructions
 - id: req-browser-local-check-acceptance-v1
   kind: ADDED
   owner: Eruhitsuji

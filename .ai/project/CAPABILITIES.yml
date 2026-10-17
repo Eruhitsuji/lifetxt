@@ -12,6 +12,7 @@ capabilities:
       - req-official-website-live-quality-v1
       - req-browser-local-check-feasibility-v1
       - req-browser-local-check-acceptance-v1
+      - req-browser-runtime-inventory-v1
     implementation_locations:
       - website/
       - scripts/build_website.py
@@ -20,6 +21,7 @@ capabilities:
     public_interfaces:
       - https://eruhitsuji.github.io/lifetxt/ (initial deployment verified; English-root update pending)
     tests_or_evidence:
+      - contrib/browser_check_poc/RUNTIME_INVENTORY.md (partial source-based inventory; no publication approval)
       - contrib/browser_check_poc/RESULTS.md (historical Node baseline)
       - contrib/browser_check_poc/BROWSER_ACCEPTANCE.md (actual Chromium; not public or all-device accepted)
       - tests/test_browser_check_poc_browser.py
@@ -28,6 +30,7 @@ capabilities:
       - tests/test_website_pages_workflow.py
       - Local Chromium HTTP checks at 320, 390, 1280 pixels for both languages
     related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/1362
       - https://github.com/Eruhitsuji/lifetxt/issues/1360
       - https://github.com/Eruhitsuji/lifetxt/issues/1356
       - https://github.com/Eruhitsuji/lifetxt/issues/1358
@@ -36,6 +39,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/1352
       - https://github.com/Eruhitsuji/lifetxt/issues/1353
     related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/1363
       - https://github.com/Eruhitsuji/lifetxt/pull/1361
       - https://github.com/Eruhitsuji/lifetxt/pull/1359
       - https://github.com/Eruhitsuji/lifetxt/pull/1357

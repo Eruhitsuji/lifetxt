@@ -1,0 +1,27 @@
+schema_version: 1
+change:
+  id: browser-check-feasibility
+  title: Investigate browser-local Python parser checking
+  status: in_review
+  change_type: Investigation
+  assurance_level: Standard
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1356
+  related_pull_request: null
+  base_commit: e59ef2b6ef2fb8f34edc86fccf7fcbb4d274d9fc
+scope:
+  write_scope:
+  - contrib/browser_check_poc/**
+  - tests/test_browser_check_poc.py
+  - this package
+  - scoped CAPABILITIES and TRACEABILITY entries
+  forbidden_scope:
+  - lifetxt runtime Core
+  - website script rules and Pages workflows
+  - .ai/managed/**
+  - deployment and Settings changes
+human_approvals_required:
+- Independent latest-head implementation and evidence review
+- Human merge
+- Architecture adoption and publication in a separate follow-up

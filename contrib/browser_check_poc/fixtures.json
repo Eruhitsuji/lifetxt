@@ -1,0 +1,18 @@
+[
+  {"name":"empty","text":""},
+  {"name":"valid","text":"[ ] T \"Read paper\" due:2026-10-20"},
+  {"name":"japanese","text":"[ ] T \"日本語😀\" due:2026-10-20"},
+  {"name":"syntax","text":"[ ] T \"Unclosed"},
+  {"name":"custom-key","text":"[ ] T \"Read\" custom_key:kept"},
+  {"name":"warning","text":"[ ] T \"Read\" due:wrong"},
+  {"name":"position","text":"# comment\n[ ] T \"Unclosed"},
+  {"name":"format-current","text":"#! format_version: 1\n[ ] T \"Read\""},
+  {"name":"format-future","text":"#! format_version: 999\n[ ] T \"Read\""},
+  {"name":"duplicate-id","text":"[ ] T \"A\" id:same\n[ ] T \"B\" id:same"},
+  {"name":"missing-reference","text":"[ ] T \"A\" parent:missing"},
+  {"name":"timezone","text":"#! timezone: Asia/Tokyo\n[ ] E \"Meet\" at:2026-10-20T10:00"},
+  {"name":"multiline","text":"[N] N \"Note\"\n| line one\n| line two"},
+  {"name":"html-injection","text":"[N] N \"<img src=x onerror=alert(1)>\" | ${__import__('os').system('bad')}"},
+  {"name":"completed-parent-gap","text":"[x] T \"Parent\" id:p\n[ ] T \"Child\" id:c parent:p"},
+  {"name":"native-history-gap","text":"[N] N \"Event\" record:item_event item:missing event:completed at:2026-10-20T10:00"}
+]

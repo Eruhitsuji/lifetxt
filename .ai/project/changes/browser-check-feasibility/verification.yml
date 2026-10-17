@@ -56,7 +56,7 @@ verification:
 review_ledger:
 - reviewer: Codex implementer
   review_type: browser_and_notice_evidence_self_review
-  target_commit: null
+  target_commit: ba6f78d99a16ae214506eac0b05d4dfed7203d5e (code and artifact unchanged by final trace metadata)
   result: informational_only
   finding_count: 0
   completed_at: '2026-10-17'

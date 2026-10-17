@@ -46,6 +46,21 @@ traceability:
       release_or_deployment: null
       status: implemented
       note: Original Node baseline; actual Chromium follow-up in 1360, physical mobile and adoption gates remain in 1356 and 1358
+    - requirement_id: req-browser-engine-matrix-v1
+      capability_id: cap-official-website
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1358
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1364
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1365
+      changed_files_or_scope:
+        - isolated portable engine matrix, status tests and engine evidence
+        - browser-engine-matrix package and scoped registries
+      tests_or_evidence:
+        - contrib/browser_check_poc/ENGINE_MATRIX.md and engine-evidence.json
+        - actual Firefox page-creation and WebKit library blockers retained, neither passed
+        - portable runner Chromium 16-case smoke plus offline false-pass/failure regressions
+      release_or_deployment: null
+      status: implemented
+      note: Tooling and blocked evidence only; extra-engine and physical-device acceptance remain open
     - requirement_id: req-official-website-live-quality-v1
       capability_id: cap-official-website
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1350

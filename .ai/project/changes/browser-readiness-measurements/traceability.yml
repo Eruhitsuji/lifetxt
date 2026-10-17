@@ -3,5 +3,5 @@ links:
 - requirement_id: req-browser-readiness-measurements-v1
   capability_id: cap-official-website
   task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1366
-  pull_request: null
+  pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1368
   status: implemented

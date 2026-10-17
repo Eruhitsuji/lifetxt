@@ -37,11 +37,11 @@ def build(output):
     ):
         raise ValueError("output must be separate from repository sources")
     runtime = SOURCE / "node_modules/pyodide"
-    package = json.loads((runtime / "package.json").read_text())
+    package = json.loads((runtime / "package.json").read_text(encoding="utf-8"))
     if package["version"] != VERSION:
         raise ValueError("Install the exact pinned Pyodide using npm ci")
     notice_files = validate_notices(SOURCE, runtime)
-    fixtures = json.loads((SOURCE / "fixtures.json").read_text())
+    fixtures = json.loads((SOURCE / "fixtures.json").read_text(encoding="utf-8"))
     expected = [{**f, "expected": check_text(f["text"])} for f in fixtures]
     # Explicit corpus-observed import closure. Never harvest ambient test-process
     # imports, which could accidentally bundle the CLI/Remote or unrelated modules.
@@ -96,7 +96,7 @@ def build(output):
         shutil.copyfile(SOURCE / "notices" / name, output / "notices" / name)
     (output / "core.zip").write_bytes(archive.getvalue())
     (output / "fixtures.json").write_text(
-        json.dumps(expected, ensure_ascii=False, indent=2)
+        json.dumps(expected, ensure_ascii=False, indent=2), encoding="utf-8"
     )
     revision = subprocess.check_output(
         ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
@@ -114,7 +114,9 @@ def build(output):
             if f.is_file()
         },
     }
-    (output / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+    (output / "manifest.json").write_text(
+        json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+    )
     print(
         json.dumps(
             {

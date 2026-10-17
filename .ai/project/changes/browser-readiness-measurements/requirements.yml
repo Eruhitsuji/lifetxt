@@ -12,3 +12,4 @@ requirements:
   - Bound memory observations and retain physical-device, CJK, zoom and distribution gaps
   - Failed or unavailable measurements cannot be treated as current acceptance
   - Compare all bounded public text examples with native results using the unchanged Core ZIP in Node WASM
+  - Preserve Unicode fixtures under non-UTF-8 locale defaults

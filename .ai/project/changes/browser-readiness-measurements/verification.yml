@@ -39,10 +39,10 @@ verification:
 review_ledger:
 - reviewer: Codex implementer
   review_type: code_security_measurement_and_integration_self_review
-  target_commit: pending_local_commit
+  target_commit: pending_source_review
   result: informational_only
-  finding_count: 1
-  finding_resolution: Resource finding recorded in 1367; no UI/limit change and no adoption waiver
+  finding_count: 2
+  finding_resolution: Resource finding recorded in 1367; implicit locale I/O corrected with CP932-default regression. No UI/limit change or adoption waiver
   completed_at: '2026-10-17'
 - reviewer: Eruhitsuji
   review_type: independent_implementation_and_evidence

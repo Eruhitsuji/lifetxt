@@ -24,7 +24,7 @@ class BrowserReadinessTests(unittest.TestCase):
             root = Path(directory)
             (root / "valid.txt").write_text('[ ] T "Synthetic"')
             (root / "invalid.txt").write_text("invalid synthetic record")
-            (root / "large.txt").write_text("あ" * 22000)
+            (root / "large.txt").write_text("あ" * 22000, encoding="utf-8")
             fixtures, excluded = collect_examples(root)
             self.assertEqual(len(fixtures), 2)
             self.assertEqual({f["expected"]["valid"] for f in fixtures}, {True, False})

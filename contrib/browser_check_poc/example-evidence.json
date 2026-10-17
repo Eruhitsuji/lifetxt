@@ -6,589 +6,589 @@
     "python": "3.14.2 (main, Sep 14 2026, 03:03:51) [Clang 23.0.0git (https:/github.com/llvm/llvm-project e5927fecf8a6ce89e1a4eac5b8",
     "wasm_heap_bytes": 31457280
   },
-  "startup_ms": 1820.525543,
+  "startup_ms": 1922.902998,
   "cases": [
     {
       "name": "agenda_life.txt",
       "match": true,
-      "check_ms": 129.63856699999997
+      "check_ms": 156.61269599999991
     },
     {
       "name": "ai-patterns/PAT-COM-001/recommended.life.txt",
       "match": true,
-      "check_ms": 3.6880149999999503
+      "check_ms": 2.969771999999921
     },
     {
       "name": "ai-patterns/PAT-COM-002/recommended.life.txt",
       "match": true,
-      "check_ms": 2.7571100000000115
+      "check_ms": 2.147371000000021
     },
     {
       "name": "ai-patterns/PAT-COM-003/recommended.life.txt",
       "match": true,
-      "check_ms": 0.6550979999999527
+      "check_ms": 0.4988029999999526
     },
     {
       "name": "ai-patterns/PAT-COM-004/recommended.life.txt",
       "match": true,
-      "check_ms": 0.33789900000010675
+      "check_ms": 0.3145750000003318
     },
     {
       "name": "ai-patterns/PAT-COM-005/recommended.life.txt",
       "match": true,
-      "check_ms": 0.6642820000001848
+      "check_ms": 0.664082000000235
     },
     {
       "name": "ai-patterns/PAT-COM-006/recommended.life.txt",
       "match": true,
-      "check_ms": 0.4866950000000543
+      "check_ms": 0.43562699999984034
     },
     {
       "name": "ai-patterns/PAT-COM-007/recommended.life.txt",
       "match": true,
-      "check_ms": 0.65357599999993
+      "check_ms": 0.65176399999973
     },
     {
       "name": "ai-patterns/PAT-COM-008/recommended.life.txt",
       "match": true,
-      "check_ms": 0.36675399999990077
+      "check_ms": 0.3886670000001686
     },
     {
       "name": "ai-patterns/PAT-GRAM-001/counterexample.life.txt",
       "match": true,
-      "check_ms": 0.1545530000000781
+      "check_ms": 0.21900000000005093
     },
     {
       "name": "ai-patterns/PAT-GRAM-001/recommended.life.txt",
       "match": true,
-      "check_ms": 0.14612099999999373
+      "check_ms": 0.17241000000012718
     },
     {
       "name": "ai-patterns/PAT-GRAM-002/recommended.life.txt",
       "match": true,
-      "check_ms": 0.12090299999999843
+      "check_ms": 0.12625100000013845
     },
     {
       "name": "ai-patterns/PAT-GRAM-003/recommended.life.txt",
       "match": true,
-      "check_ms": 0.23475500000017746
+      "check_ms": 0.2363270000000739
     },
     {
       "name": "ai-patterns/PAT-GRAM-004/recommended.life.txt",
       "match": true,
-      "check_ms": 0.13773799999989933
+      "check_ms": 0.13758700000016688
     },
     {
       "name": "ai-patterns/PAT-GRAM-005/counterexample.life.txt",
       "match": true,
-      "check_ms": 0.20584000000008018
+      "check_ms": 0.17739700000038283
     },
     {
       "name": "ai-patterns/PAT-GRAM-005/joined-body.life.txt",
       "match": true,
-      "check_ms": 0.19763799999986986
+      "check_ms": 0.2124599999997372
     },
     {
       "name": "ai-patterns/PAT-GRAM-005/recommended.life.txt",
       "match": true,
-      "check_ms": 0.1464410000000953
+      "check_ms": 0.14178400000037072
     },
     {
       "name": "ai-patterns/PAT-GRAM-006/counterexample.life.txt",
       "match": true,
-      "check_ms": 0.10707200000001649
+      "check_ms": 0.10538900000028661
     },
     {
       "name": "ai-patterns/PAT-GRAM-006/recommended.life.txt",
       "match": true,
-      "check_ms": 0.16029200000002675
+      "check_ms": 0.11438300000008894
     },
     {
       "name": "ai-patterns/PAT-GRAM-007/recommended.life.txt",
       "match": true,
-      "check_ms": 0.2337119999999686
+      "check_ms": 0.12094200000001365
     },
     {
       "name": "ai-patterns/PAT-GRAM-008/recommended.life.txt",
       "match": true,
-      "check_ms": 0.3422059999998055
+      "check_ms": 0.28630199999997785
     },
     {
       "name": "ai-patterns/PAT-PIT-001/counterexample.life.txt",
       "match": true,
-      "check_ms": 0.4637800000000425
+      "check_ms": 0.49614900000005946
     },
     {
       "name": "ai-patterns/PAT-PIT-001/recommended.life.txt",
       "match": true,
-      "check_ms": 0.13835900000003676
+      "check_ms": 0.1693359999999302
     },
     {
       "name": "ai-patterns/PAT-PIT-002/counterexample.life.txt",
       "match": true,
-      "check_ms": 0.45849199999997836
+      "check_ms": 0.2820050000000265
     },
     {
       "name": "ai-patterns/PAT-PIT-002/recommended.life.txt",
       "match": true,
-      "check_ms": 0.23668700000007448
+      "check_ms": 0.24948700000004465
     },
     {
       "name": "ai-patterns/PAT-PIT-003/counterexample.life.txt",
       "match": true,
-      "check_ms": 0.15412300000002688
+      "check_ms": 0.15401199999996606
     },
     {
       "name": "ai-patterns/PAT-PIT-003/recommended.life.txt",
       "match": true,
-      "check_ms": 0.15018699999995988
+      "check_ms": 0.15233000000034735
     },
     {
       "name": "ai-patterns/PAT-PIT-004/counterexample.life.txt",
       "match": true,
-      "check_ms": 0.12381700000014462
+      "check_ms": 0.1220539999999346
     },
     {
       "name": "ai-patterns/PAT-PIT-004/recommended.life.txt",
       "match": true,
-      "check_ms": 0.42018400000006295
+      "check_ms": 0.18091300000014598
     },
     {
       "name": "ai-patterns/PAT-PIT-005/counterexample.life.txt",
       "match": true,
-      "check_ms": 0.31274199999984376
+      "check_ms": 0.32154499999978725
     },
     {
       "name": "ai-patterns/PAT-PIT-005/recommended.life.txt",
       "match": true,
-      "check_ms": 0.14266499999985172
+      "check_ms": 0.14852399999972477
     },
     {
       "name": "ai-patterns/PAT-PIT-006/counterexample.life.txt",
       "match": true,
-      "check_ms": 0.1441869999998744
+      "check_ms": 0.1413830000001326
     },
     {
       "name": "ai-patterns/PAT-PIT-006/recommended.life.txt",
       "match": true,
-      "check_ms": 0.15404199999989032
+      "check_ms": 0.08590900000035617
     },
     {
       "name": "ai-patterns/PAT-PIT-007/counterexample.life.txt",
       "match": true,
-      "check_ms": 0.13957000000004882
+      "check_ms": 0.12729199999967022
     },
     {
       "name": "ai-patterns/PAT-PIT-007/recommended.life.txt",
       "match": true,
-      "check_ms": 0.10977500000012697
+      "check_ms": 0.10599000000001979
     },
     {
       "name": "ai-patterns/PAT-PIT-008/counterexample.life.txt",
       "match": true,
-      "check_ms": 0.24982700000009572
+      "check_ms": 0.20479900000009366
     },
     {
       "name": "ai-patterns/PAT-PIT-008/recommended.life.txt",
       "match": true,
-      "check_ms": 0.23153900000011163
+      "check_ms": 0.2573579999998401
     },
     {
       "name": "ai-patterns/PAT-PIT-009/counterexample.life.txt",
       "match": true,
-      "check_ms": 0.16318599999999606
+      "check_ms": 0.16622099999995044
     },
     {
       "name": "ai-patterns/PAT-PIT-009/recommended.life.txt",
       "match": true,
-      "check_ms": 0.1411529999998038
+      "check_ms": 0.18856400000004214
     },
     {
       "name": "ai-patterns/PAT-PIT-010/counterexample.life.txt",
       "match": true,
-      "check_ms": 0.12381699999991724
+      "check_ms": 0.13380199999983233
     },
     {
       "name": "ai-patterns/PAT-PIT-010/recommended.life.txt",
       "match": true,
-      "check_ms": 0.22543999999993503
+      "check_ms": 0.12496800000008079
     },
     {
       "name": "ai-patterns/PAT-REC-001/recommended.life.txt",
       "match": true,
-      "check_ms": 0.1977990000000318
+      "check_ms": 0.1905669999996462
     },
     {
       "name": "ai-patterns/PAT-REC-002/recommended.life.txt",
       "match": true,
-      "check_ms": 0.49200199999995675
+      "check_ms": 0.47778100000004997
     },
     {
       "name": "ai-patterns/PAT-REC-003/recommended.life.txt",
       "match": true,
-      "check_ms": 0.3107390000000123
+      "check_ms": 0.23293199999989156
     },
     {
       "name": "ai-patterns/PAT-REC-003/yearly.life.txt",
       "match": true,
-      "check_ms": 0.18974600000001374
+      "check_ms": 0.18756400000029316
     },
     {
       "name": "ai-patterns/PAT-REC-004/recommended.life.txt",
       "match": true,
-      "check_ms": 0.17834900000002563
+      "check_ms": 0.23989199999959965
     },
     {
       "name": "ai-patterns/PAT-REC-005/recommended.life.txt",
       "match": true,
-      "check_ms": 0.22358699999995224
+      "check_ms": 0.18041200000016033
     },
     {
       "name": "ai-patterns/PAT-REC-006/recommended.life.txt",
       "match": true,
-      "check_ms": 0.4731939999999213
+      "check_ms": 0.36644299999989016
     },
     {
       "name": "ai-patterns/PAT-REC-007/recommended.life.txt",
       "match": true,
-      "check_ms": 0.2296559999999772
+      "check_ms": 0.21738800000002811
     },
     {
       "name": "ai-patterns/PAT-REC-008/recommended.life.txt",
       "match": true,
-      "check_ms": 0.34067400000003545
+      "check_ms": 0.3261919999999918
     },
     {
       "name": "ai-patterns/PAT-REL-001/counterexample.life.txt",
       "match": true,
-      "check_ms": 0.1850499999998192
+      "check_ms": 0.18268599999964863
     },
     {
       "name": "ai-patterns/PAT-REL-001/recommended.life.txt",
       "match": true,
-      "check_ms": 0.1248289999998633
+      "check_ms": 0.12236399999983405
     },
     {
       "name": "ai-patterns/PAT-REL-002/recommended.life.txt",
       "match": true,
-      "check_ms": 0.24531000000001768
+      "check_ms": 0.19157999999970343
     },
     {
       "name": "ai-patterns/PAT-REL-003/recommended.life.txt",
       "match": true,
-      "check_ms": 0.24188500000013846
+      "check_ms": 0.23797899999999572
     },
     {
       "name": "ai-patterns/PAT-REL-004/recommended.life.txt",
       "match": true,
-      "check_ms": 0.222686000000067
+      "check_ms": 0.24274599999989732
     },
     {
       "name": "ai-patterns/PAT-REL-005/recommended.life.txt",
       "match": true,
-      "check_ms": 0.39784000000008746
+      "check_ms": 0.27578600000015285
     },
     {
       "name": "ai-patterns/PAT-REL-006/recommended.life.txt",
       "match": true,
-      "check_ms": 0.4910210000000461
+      "check_ms": 0.4206440000002658
     },
     {
       "name": "ai-patterns/PAT-REL-007/ambiguous.life.txt",
       "match": true,
-      "check_ms": 0.3100680000000011
+      "check_ms": 0.26531000000022686
     },
     {
       "name": "ai-patterns/PAT-REL-007/counterexample.life.txt",
       "match": true,
-      "check_ms": 0.4536239999999907
+      "check_ms": 0.2465119999997114
     },
     {
       "name": "ai-patterns/PAT-REL-007/missing.life.txt",
       "match": true,
-      "check_ms": 0.27657799999997223
+      "check_ms": 0.14908500000001368
     },
     {
       "name": "ai-patterns/PAT-REL-007/recommended.life.txt",
       "match": true,
-      "check_ms": 0.22783400000002985
+      "check_ms": 0.24535000000014406
     },
     {
       "name": "ai-patterns/PAT-REL-007/self.life.txt",
       "match": true,
-      "check_ms": 0.2992619999999988
+      "check_ms": 0.17381300000033661
     },
     {
       "name": "ai-patterns/PAT-REL-008/counterexample.life.txt",
       "match": true,
-      "check_ms": 0.1711080000000038
+      "check_ms": 0.22945600000002742
     },
     {
       "name": "ai-patterns/PAT-REL-008/recommended.life.txt",
       "match": true,
-      "check_ms": 0.25783899999987625
+      "check_ms": 0.23862000000008265
     },
     {
       "name": "ai-patterns/PAT-STATUS-001/recommended.life.txt",
       "match": true,
-      "check_ms": 0.11097700000004806
+      "check_ms": 0.11067700000012337
     },
     {
       "name": "ai-patterns/PAT-STATUS-002/recommended.life.txt",
       "match": true,
-      "check_ms": 0.5775719999999183
+      "check_ms": 0.32795400000031805
     },
     {
       "name": "ai-patterns/PAT-STATUS-003/recommended.life.txt",
       "match": true,
-      "check_ms": 0.15164899999990666
+      "check_ms": 0.17712699999992765
     },
     {
       "name": "ai-patterns/PAT-STATUS-004/recommended.life.txt",
       "match": true,
-      "check_ms": 0.16799399999990783
+      "check_ms": 0.10889399999996385
     },
     {
       "name": "ai-patterns/PAT-STATUS-005/counterexample.life.txt",
       "match": true,
-      "check_ms": 0.16696200000001227
+      "check_ms": 0.16058200000043144
     },
     {
       "name": "ai-patterns/PAT-STATUS-005/recommended.life.txt",
       "match": true,
-      "check_ms": 0.14501900000004753
+      "check_ms": 0.1408329999999296
     },
     {
       "name": "ai-patterns/PAT-STATUS-006/recommended.life.txt",
       "match": true,
-      "check_ms": 0.09876900000017486
+      "check_ms": 0.09574400000019523
     },
     {
       "name": "ai-patterns/PAT-STATUS-007/counterexample.life.txt",
       "match": true,
-      "check_ms": 0.10220400000002883
+      "check_ms": 0.10064199999987977
     },
     {
       "name": "ai-patterns/PAT-STATUS-007/recommended.life.txt",
       "match": true,
-      "check_ms": 0.07952999999997701
+      "check_ms": 0.07960999999977503
     },
     {
       "name": "ai-patterns/PAT-TIME-001/counterexample.life.txt",
       "match": true,
-      "check_ms": 0.21459399999980633
+      "check_ms": 0.11395200000015393
     },
     {
       "name": "ai-patterns/PAT-TIME-001/recommended.life.txt",
       "match": true,
-      "check_ms": 0.18385799999987285
+      "check_ms": 0.4036689999998089
     },
     {
       "name": "ai-patterns/PAT-TIME-002/recommended.life.txt",
       "match": true,
-      "check_ms": 0.34640200000012555
+      "check_ms": 0.3572990000002392
     },
     {
       "name": "ai-patterns/PAT-TIME-003/recommended.life.txt",
       "match": true,
-      "check_ms": 0.14613999999983207
+      "check_ms": 0.15373200000021825
     },
     {
       "name": "ai-patterns/PAT-TIME-004/recommended.life.txt",
       "match": true,
-      "check_ms": 0.2799119999999675
+      "check_ms": 0.3264630000003308
     },
     {
       "name": "ai-patterns/PAT-TIME-005/recommended.life.txt",
       "match": true,
-      "check_ms": 0.5367899999998826
+      "check_ms": 0.8861070000002655
     },
     {
       "name": "ai-patterns/PAT-TIME-006/recommended.life.txt",
       "match": true,
-      "check_ms": 0.18298600000002807
+      "check_ms": 0.2041689999996379
     },
     {
       "name": "ai-patterns/PAT-TIME-007/recommended.life.txt",
       "match": true,
-      "check_ms": 0.3957279999999628
+      "check_ms": 0.37451499999997395
     },
     {
       "name": "ai-patterns/PAT-TIME-008/recommended.life.txt",
       "match": true,
-      "check_ms": 1.2050580000000082
+      "check_ms": 1.7749079999998685
     },
     {
       "name": "ai-patterns/PAT-TIME-009/recommended.life.txt",
       "match": true,
-      "check_ms": 0.16149399999994785
+      "check_ms": 0.2571579999998903
     },
     {
       "name": "ai-patterns/PAT-TIME-010/recommended.life.txt",
       "match": true,
-      "check_ms": 0.49109100000009676
+      "check_ms": 0.6973020000000361
     },
     {
       "name": "ai-patterns/PAT-TYPE-001/recommended.life.txt",
       "match": true,
-      "check_ms": 0.12694099999998798
+      "check_ms": 0.11617599999999584
     },
     {
       "name": "ai-patterns/PAT-TYPE-002/recommended.life.txt",
       "match": true,
-      "check_ms": 0.1817839999998796
+      "check_ms": 0.22117400000024645
     },
     {
       "name": "ai-patterns/PAT-TYPE-003/recommended.life.txt",
       "match": true,
-      "check_ms": 0.16687200000001212
+      "check_ms": 0.1740420000000995
     },
     {
       "name": "ai-patterns/PAT-TYPE-004/recommended.life.txt",
       "match": true,
-      "check_ms": 0.16203500000005988
+      "check_ms": 0.2009539999999106
     },
     {
       "name": "ai-patterns/PAT-TYPE-005/recommended.life.txt",
       "match": true,
-      "check_ms": 0.14608100000009472
+      "check_ms": 0.15837899999996807
     },
     {
       "name": "ai-patterns/PAT-TYPE-006/recommended.life.txt",
       "match": true,
-      "check_ms": 0.087402000000111
+      "check_ms": 0.08921399999962887
     },
     {
       "name": "ai-patterns/PAT-TYPE-007/recommended.life.txt",
       "match": true,
-      "check_ms": 0.2110890000001291
+      "check_ms": 0.21794900000031703
     },
     {
       "name": "ai-patterns/PAT-TYPE-008/recommended.life.txt",
       "match": true,
-      "check_ms": 0.25635700000020734
+      "check_ms": 0.21853999999984808
     },
     {
       "name": "ai-patterns/PAT-TYPE-009/recommended.life.txt",
       "match": true,
-      "check_ms": 0.15205900000000838
+      "check_ms": 0.2578889999999774
     },
     {
       "name": "annotated_life.txt",
       "match": true,
-      "check_ms": 0.5317520000000968
+      "check_ms": 0.5695299999997587
     },
     {
       "name": "attachments_life.txt",
       "match": true,
-      "check_ms": 0.4399629999998069
+      "check_ms": 0.42552200000000084
     },
     {
       "name": "diary_life.txt",
       "match": true,
-      "check_ms": 0.4886079999998856
+      "check_ms": 0.588387999999668
     },
     {
       "name": "events_life.txt",
       "match": true,
-      "check_ms": 0.7343980000000556
+      "check_ms": 0.7274069999998574
     },
     {
       "name": "getting_started_life.txt",
       "match": true,
-      "check_ms": 0.3327320000000782
+      "check_ms": 0.4387019999999211
     },
     {
       "name": "habits_reminders_life.txt",
       "match": true,
-      "check_ms": 0.603601000000026
+      "check_ms": 0.5407959999997729
     },
     {
       "name": "hierarchy_life.txt",
       "match": true,
-      "check_ms": 0.5636909999998352
+      "check_ms": 0.7155299999999443
     },
     {
       "name": "json_roundtrip_life.txt",
       "match": true,
-      "check_ms": 0.38796499999989464
+      "check_ms": 0.40097500000001673
     },
     {
       "name": "linked_life.txt",
       "match": true,
-      "check_ms": 0.575268000000051
+      "check_ms": 0.3874040000000605
     },
     {
       "name": "markdown_life.txt",
       "match": true,
-      "check_ms": 0.4384709999999359
+      "check_ms": 0.37015900000005786
     },
     {
       "name": "messages_life.txt",
       "match": true,
-      "check_ms": 0.5962700000000041
+      "check_ms": 0.4636599999998907
     },
     {
       "name": "minimal_life.txt",
       "match": true,
-      "check_ms": 0.9921669999998812
+      "check_ms": 0.8015490000002501
     },
     {
       "name": "procedure-flow-en.txt",
       "match": true,
-      "check_ms": 0.6286680000000615
+      "check_ms": 0.5817379999998593
     },
     {
       "name": "procedure-flow-ja.txt",
       "match": true,
-      "check_ms": 0.6884580000000824
+      "check_ms": 0.5090079999999944
     },
     {
       "name": "procedure-template-en.txt",
       "match": true,
-      "check_ms": 0.3486559999998917
+      "check_ms": 0.40245799999956944
     },
     {
       "name": "procedure-template-ja.txt",
       "match": true,
-      "check_ms": 0.3932629999999335
+      "check_ms": 0.433132999999998
     },
     {
       "name": "procedure-work-en.txt",
       "match": true,
-      "check_ms": 0.5771710000001349
+      "check_ms": 0.6405359999998836
     },
     {
       "name": "procedure-work-ja.txt",
       "match": true,
-      "check_ms": 0.756842000000006
+      "check_ms": 0.6731150000000525
     },
     {
       "name": "recurrence_time_life.txt",
       "match": true,
-      "check_ms": 3.838081000000102
+      "check_ms": 3.419970000000376
     },
     {
       "name": "status_presence.txt",
       "match": true,
-      "check_ms": 0.475767999999789
+      "check_ms": 0.5659940000000461
     },
     {
       "name": "tasks_life.txt",
       "match": true,
-      "check_ms": 0.7011079999997492
+      "check_ms": 0.6657439999999042
     },
     {
       "name": "team_status_life.txt",
       "match": true,
-      "check_ms": 0.9852270000001226
+      "check_ms": 1.153269999999793
     }
   ],
   "loads": [
     {
       "lines": 1,
       "utf8_bytes": 19,
-      "check_ms": 0.12819300000001022,
+      "check_ms": 0.1347529999998187,
       "items": 1,
       "runtime": {
         "pyodide": "314.0.7",
@@ -599,7 +599,7 @@
     {
       "lines": 100,
       "utf8_bytes": 1900,
-      "check_ms": 1.7719629999996869,
+      "check_ms": 1.4646699999998418,
       "items": 100,
       "runtime": {
         "pyodide": "314.0.7",
@@ -610,7 +610,7 @@
     {
       "lines": 1000,
       "utf8_bytes": 19000,
-      "check_ms": 15.706619000000046,
+      "check_ms": 13.611227999999755,
       "items": 1000,
       "runtime": {
         "pyodide": "314.0.7",
@@ -621,7 +621,7 @@
     {
       "lines": 2000,
       "utf8_bytes": 38000,
-      "check_ms": 28.361233000000084,
+      "check_ms": 26.264791999999943,
       "items": 2000,
       "runtime": {
         "pyodide": "314.0.7",
@@ -1214,7 +1214,7 @@
   "excluded": [],
   "manifest": {
     "pyodide": "314.0.7",
-    "engine_base_revision": "5767b770222d1485a548ca7559e514fe63a8fcbd",
+    "engine_base_revision": "b372a27de048774366012b4963cd829c4dee1d72",
     "core_modules": [
       "lifetxt/__init__.py",
       "lifetxt/atomic.py",
@@ -1368,7 +1368,7 @@
       }
     }
   },
-  "manifest_sha256": "47cb9a35b61aba5c7fdb129a48349db691938a926446c7a3a2b9cb7d46c05d24",
-  "generator_sha256": "4a3dc36f5a9d397332ea8de538427438f04092917512006dee8bdc71c6da7363",
+  "manifest_sha256": "fcb8c9b58f10e9756ced1e2efa5455c0a42eef233869f48f0bd3591a53842f56",
+  "generator_sha256": "2d03271196a5d564bcadf2551460d21411ec640506ed3f0424209f8ee1f460c4",
   "node_probe_sha256": "71e5a48a6fd1ab02734679ebe1e8ea747459a787cf3ac265173dd6e3e72bbe8c"
 }

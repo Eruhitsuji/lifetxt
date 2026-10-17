@@ -1,0 +1,14 @@
+schema_version: 1
+requirements:
+- id: req-browser-readiness-measurements-v1
+  kind: ADDED
+  owner: Eruhitsuji
+  statement: Measure bounded desktop behavior and preserve unresolved adoption gates.
+  acceptance_criteria:
+  - Distinguish loopback baseline and per-response latency and rate simulation
+  - Compare boundary-sized input, thirty repeated runs and diagnostic cap with native results
+  - Verify rejection, clearing and recovery without input network or storage use
+  - Inspect actual accessibility semantics without claiming assistive-technology acceptance
+  - Bound memory observations and retain physical-device, CJK, zoom and distribution gaps
+  - Failed or unavailable measurements cannot be treated as current acceptance
+  - Compare all bounded public text examples with native results using the unchanged Core ZIP in Node WASM

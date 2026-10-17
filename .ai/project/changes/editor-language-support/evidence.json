@@ -1,0 +1,159 @@
+{
+  "source_commit": "12b69dd1ae1f8f07636000c94f9cb1d2ee24bbaa",
+  "source_tree": "working tree verified identical to uploaded source tree",
+  "environment": {
+    "python": "3.12.14",
+    "os": "Linux x86_64",
+    "shell": "bash",
+    "neovim": "0.12.6",
+    "microsoft_protocol": "3.17.5"
+  },
+  "common_fixture": {
+    "microsoft": {
+      "client": "Microsoft vscode-languageserver-protocol 3.17.5 (GUI not exercised)",
+      "diagnostics": [
+        {
+          "code": "W203",
+          "severity": 2,
+          "range": {
+            "start": {
+              "line": 0,
+              "character": 0
+            },
+            "end": {
+              "line": 0,
+              "character": 0
+            }
+          }
+        }
+      ],
+      "completion": [
+        "due:",
+        "duplicate_of:"
+      ],
+      "hover": {
+        "contents": {
+          "kind": "plaintext",
+          "value": "due: Deadline date or datetime."
+        },
+        "range": {
+          "start": {
+            "line": 0,
+            "character": 16
+          },
+          "end": {
+            "line": 0,
+            "character": 19
+          }
+        }
+      }
+    },
+    "neovim": {
+      "completion": [
+        "due:",
+        "duplicate_of:"
+      ],
+      "hover": {
+        "range": {
+          "end": {
+            "line": 0,
+            "character": 19
+          },
+          "start": {
+            "line": 0,
+            "character": 16
+          }
+        },
+        "contents": {
+          "kind": "plaintext",
+          "value": "due: Deadline date or datetime."
+        }
+      },
+      "client": "Neovim 0.12.6+v0.12.6",
+      "diagnostics": [
+        {
+          "severity": 2,
+          "code": "W203",
+          "range": {
+            "end": {
+              "line": 0,
+              "character": 0
+            },
+            "start": {
+              "line": 0,
+              "character": 0
+            }
+          }
+        }
+      ]
+    },
+    "comparison": "diagnostic code/severity/UTF-16 range, completion and Hover are equal"
+  },
+  "benchmark": {
+    "fixture": "1000-items-two-buffers-v1",
+    "python": "3.12.14",
+    "os": "Linux",
+    "machine": "x86_64",
+    "repeats": 7,
+    "text_utf8_bytes": 46779,
+    "median_ms": 140.219,
+    "max_ms": 151.448,
+    "tracemalloc_peak_bytes": 4227963,
+    "includes": "Core parse, compact position map, workspace reference checks, diagnostic conversion and ID completion; tracemalloc enabled",
+    "source_commit": "1d85b756aaba8233a1170d55f674dccd97846b4a"
+  },
+  "verification": {
+    "final_focused": {
+      "ran": 67,
+      "skipped": 2,
+      "failures": 0,
+      "skip_reason": "optional Web extras unavailable"
+    },
+    "editor_lsp_workspace": {
+      "ran": 38,
+      "skipped": 0,
+      "failures": 0
+    },
+    "textmate_fixtures": 21,
+    "bash_completion_tests": 4,
+    "runtime_full_suite": {
+      "ran": 5870,
+      "skipped": 477,
+      "failures": 0,
+      "seconds": 371.063,
+      "source": "b071eaca098c5176bd87c00ed1855c87d310dd0a runtime Python code; before workspace additions",
+      "tree_changes_during_run": "Python sources remained unchanged; documentation/manifest edits and commit creation occurred during run. Workspace source changes used a separate worktree."
+    },
+    "lint": "passed repository Python boundary plus benchmark",
+    "format": "changed Python files passed; 76 pre-existing repository files fail current Ruff whole-tree format check, unchanged",
+    "mypy": "approved diagnostic_contract.py boundary passed",
+    "minimal_cli": "10 items accepted"
+  },
+  "unverified": [
+    {
+      "check": "actual VS Code Extension Host GUI",
+      "reason": "execution environment cannot establish GUI listening sockets",
+      "tracked_by": "https://github.com/Eruhitsuji/lifetxt/issues/1373"
+    },
+    {
+      "check": "Windows/macOS and Neovim 0.11",
+      "reason": "not executed; actual Neovim probe used Linux 0.12.6",
+      "tracked_by": "https://github.com/Eruhitsuji/lifetxt/issues/1373"
+    },
+    {
+      "check": "publication and extra-editor rollout",
+      "reason": "not authorized or claimed; conditional investigation remains"
+    }
+  ],
+  "rejected_change_followup": {
+    "source_commit": "12b69dd1ae1f8f07636000c94f9cb1d2ee24bbaa",
+    "reproduction": "Rejected oversized didChange left previous ID candidates active",
+    "behavior": "Preserve last valid snapshot but suspend it from diagnostics, completion, Hover and reference/candidate resolution; only a newer full update or close/open resumes it",
+    "regressions": [
+      "oversize suspension and cross-buffer invalidation",
+      "no reactivation from equal/older versions",
+      "incremental rejection and close/open recovery"
+    ],
+    "validation": "67 focused tests, 2 optional Web skips; Ruff lint/changed-file format; actual Neovim/Microsoft protocol parity"
+  }
+}

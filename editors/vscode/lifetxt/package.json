@@ -2,7 +2,7 @@
   "name": "lifetxt",
   "displayName": "life.txt",
   "description": "Syntax highlighting and snippets for the life.txt plain-text planning format.",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "publisher": "lifetxt",
   "license": "MIT",
   "engines": {
@@ -46,6 +46,60 @@
         "language": "lifetxt",
         "path": "./snippets/lifetxt.code-snippets"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "life.txt",
+      "properties": {
+        "lifetxt.languageServer.enabled": {
+          "type": "boolean",
+          "default": false,
+          "scope": "window",
+          "description": "Opt in to the read-only Python language server. Trusted workspaces only. Reload window after changes; no automatic installation. Added in 0.2.0; non-secret; disabling restores static-only behavior."
+        },
+        "lifetxt.languageServer.python": {
+          "type": "string",
+          "default": "python",
+          "scope": "machine",
+          "description": "Executable path (one program, no shell arguments) in the extension host environment containing lifetxt. Reload window after changes. Added in 0.2.0; non-secret. Not read from life.txt/Core configuration."
+        },
+        "lifetxt.languageServer.idKey": {
+          "type": "string",
+          "default": "id",
+          "scope": "window",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_-]*$",
+          "description": "Explicit Core ID key for buffer references and ID completion. Match your ids.key; Core config is not loaded. Reload window. Added 0.2.0; non-secret; default id preserves prior behavior."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "test:grammar": "node test/grammar.cjs",
+    "test:activation": "node test/activation.cjs",
+    "test:protocol": "node test/protocol.cjs"
+  },
+  "devDependencies": {
+    "vscode-textmate": "9.3.2",
+    "vscode-oniguruma": "2.0.1"
+  },
+  "main": "./extension.js",
+  "activationEvents": [
+    "onLanguage:lifetxt"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "Static features only; language server disabled in untrusted workspaces.",
+      "restrictedConfigurations": [
+        "lifetxt.languageServer.enabled",
+        "lifetxt.languageServer.python"
+      ]
+    },
+    "virtualWorkspaces": {
+      "supported": false,
+      "description": "Use static features for remote/virtual document providers."
+    }
+  },
+  "optionalDependencies": {
+    "vscode-languageclient": "9.0.1"
   }
 }

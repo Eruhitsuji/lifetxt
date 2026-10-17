@@ -11,6 +11,7 @@ traceability:
         - Integrate static, LSP and bounded workspace task ancestry into main
       tests_or_evidence:
         - editor-language-support/evidence.json and verification.yml
+        - Rejected-change suspension, monotonic recovery and cross-buffer invalidation regressions (67 focused tests, 2 Web skips)
         - Preserve individual PR links 1371, 1374 and 1375; final latest-head CI and human review required
       status: implemented
     - requirement_id: req-editor-open-buffer-workspace

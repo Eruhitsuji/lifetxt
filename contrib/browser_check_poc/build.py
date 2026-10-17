@@ -89,6 +89,15 @@ def build(output):
         "style.css",
     ):
         shutil.copyfile(SOURCE / name, output / name)
+    (output / "notices").mkdir()
+    for name in (
+        "pyodide-314.0.7.txt",
+        "cpython-3.14.2.txt",
+        "emscripten-5.0.3.txt",
+        "provenance.json",
+        "README.md",
+    ):
+        shutil.copyfile(SOURCE / "notices" / name, output / "notices" / name)
     (output / "core.zip").write_bytes(archive.getvalue())
     (output / "fixtures.json").write_text(
         json.dumps(expected, ensure_ascii=False, indent=2)

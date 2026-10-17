@@ -1,5 +1,18 @@
 # Decisions
 
+## Follow-up #1360
+
+- The user's follow-up authorizes local actual-browser and licence investigation,
+  not production integration, real input, deployment or workflow changes.
+- Actual Chromium is now evidenced without CSP/web-security bypass. Use a local
+  test binary rather than treating the original cloud-loopback blocker as final.
+- Preserve original Node evidence, add separately hash-bound browser evidence;
+  never equate mobile emulation, visual scale or labels with device/zoom/AT acceptance.
+- Include three versioned upstream notices, but retain incomplete binary inventory,
+  source-availability and independent review gates before public redistribution.
+
+## Original #1356 baseline
+
 - The 2026-10-17 user request authorizes the #1356 local investigation, not public
   JavaScript, Core contract changes, deployment or final adoption.
 - Use self-hosted Pyodide314.0.7 in a module Worker; retain upstream runtime

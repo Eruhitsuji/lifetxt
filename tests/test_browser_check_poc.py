@@ -1,6 +1,7 @@
 """Offline acceptance of the isolated #1356 probe, not the public website."""
 
 import json
+import hashlib
 from pathlib import Path
 import shutil
 import subprocess
@@ -91,8 +92,27 @@ class BrowserCheckPocTests(unittest.TestCase):
                 )
             manifest = json.loads((a / "manifest.json").read_text())
             self.assertEqual(manifest["pyodide"], builder.VERSION)
+            for notice in (SOURCE / "notices").iterdir():
+                copied = a / "notices" / notice.name
+                self.assertEqual(copied.read_bytes(), notice.read_bytes())
+                self.assertEqual(
+                    manifest["files"]["notices/" + notice.name]["sha256"],
+                    hashlib.sha256(copied.read_bytes()).hexdigest(),
+                )
             self.assertEqual(
                 manifest["files"]["core.zip"]["bytes"], (a / "core.zip").stat().st_size
+            )
+
+    def test_notice_provenance_and_distribution_gap_are_preserved(self):
+        provenance = json.loads((SOURCE / "notices/provenance.json").read_text())
+        self.assertFalse(provenance["complete_distribution_audit"])
+        for notice in provenance["files"]:
+            stored = (SOURCE / "notices" / notice["file"]).read_bytes()
+            self.assertEqual(
+                hashlib.sha256(stored).hexdigest(), notice["stored_sha256"]
+            )
+            self.assertTrue(
+                notice["source_url"].startswith("https://raw.githubusercontent.com/")
             )
 
     @unittest.skipUnless(shutil.which("node"), "Node.js not available")

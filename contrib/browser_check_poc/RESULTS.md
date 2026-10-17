@@ -1,5 +1,9 @@
 # Feasibility result — 2026-10-17 (#1356)
 
+Historical baseline from #1359. **Follow-up #1360 now executes actual Chromium**:
+see [BROWSER_ACCEPTANCE.md](BROWSER_ACCEPTANCE.md) and `browser-evidence.json`.
+The environment blocker below describes the original run, not the current state.
+
 **Conditional GO for further browser validation using a self-hosted module
 Worker and existing Python Core. Not approved for public deployment.** A local
 PoC and real Node WASM execution are available; actual browser/mobile acceptance

@@ -115,7 +115,9 @@ try {
   assert.equal(await evaluate(`document.querySelector('#activity-input').value`),'Keep my draft');
   assert.equal(await evaluate(`document.querySelector('#current-state').textContent`),'Busy');
   assert.equal(await evaluate('window.__posts.length'),1);
-  assert.ok(await evaluate(`document.querySelector('[data-state=focus]').disabled`));
+  // Validation rejection is definite: allow an explicit corrected submission.
+  // Auth/conflict/uncertain results require a refresh, with no automatic retry.
+  assert.equal(await evaluate(`document.querySelector('[data-state=focus]').disabled`),code!==400,'write guard for '+code);
   assert.ok(await evaluate(`(()=>{const n=document.querySelector('#feedback');n.scrollIntoView({block:'center'});const r=n.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight;})()`));
  }
  await command('Emulation.setSafeAreaInsetsOverride',{insets:{}});

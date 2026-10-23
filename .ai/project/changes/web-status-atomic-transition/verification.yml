@@ -1,6 +1,14 @@
 schema_version: 1
 verification:
   executed:
+    - command: MPLBACKEND=Agg python -m unittest discover
+      result: passed
+      commit: b75366e006bd936a6523032da3a33956eab88b45
+      source_tree: 5587341d62332e4a8e9016154f6098549e47899a
+      notes: 5915 tests, OK (skipped=81), 431.323 seconds. Python 3.12.14 / Bash; BashCompletionExecutionTests ran (also separately passed 4 tests). Worktree unchanged during full run. Published implementation tree exactly matches the tested local tree. Complete output retained locally. Optional browser/device scenarios remain unverified where skipped.
+    - command: python -m unittest tests.test_web_status_atomic tests.test_presence_mutation tests.test_mutation
+      result: passed
+      notes: Core-only interpreter without FastAPI; 53 tests, OK (24 Web tests skipped, 29 Core tests passed).
     - command: python -m unittest tests.test_web_status_atomic tests.test_presence_mutation tests.test_mutation tests.test_shorthand tests.test_surface_runtime tests.test_revision_telemetry_v2 tests.test_shared_surface_mutation_routing
       result: passed
       notes: Initial 174 tests passed; expanded focused suite with package closeout and supported runtime passed 183 tests. Status-specific suite passed all 24 tests. Python 3.12.14 / Bash.
@@ -18,7 +26,7 @@ verification:
 review_ledger:
   - reviewer: Codex implementer
     review_type: self_review
-    target_commit: working tree before implementation commit
+    target_commit: b75366e006bd936a6523032da3a33956eab88b45
     result: completed
     finding_count: 0
     completed_at: '2026-10-23'

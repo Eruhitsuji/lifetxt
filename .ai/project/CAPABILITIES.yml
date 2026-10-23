@@ -11844,6 +11844,8 @@ capabilities:
       Quick Status while retaining POST /api/status as the only presence
       mutation path; the separate title field preserves the earlier compact
       `focus Deep work` capability without parsing state and title together.
+      #1378 / PR1381 performs that transition inside the authoritative shared
+      lock with existing Web CAS, retaining saved revisions and exact newlines.
     replacement:
       replaces: []
       replaced_by: null

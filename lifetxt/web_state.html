@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>State · life.txt</title>
+  <style>__STATE_CSS__</style>
+</head>
+<body>
+  <a class="skip" href="#main" data-i18n="skip">Skip to your status</a>
+  <header class="topbar">
+    <a class="brand" href="/">✓ life.txt <span> / State</span></a>
+    <div class="preferences">
+      <label><span class="sr-only" data-i18n="language">Language</span><select id="language"><option value="en">English</option><option value="ja">日本語</option></select></label>
+      <label><span class="sr-only" data-i18n="theme">Theme</span><select id="theme"><option value="auto" data-i18n="system">System</option><option value="light" data-i18n="light">Light</option><option value="dark" data-i18n="dark">Dark</option></select></label>
+    </div>
+  </header>
+  <main id="main" tabindex="-1">
+    <div class="page-heading"><div><p class="eyebrow" data-i18n="eyebrow">A little signal to the world</p><h1 data-i18n="heading">Your status</h1></div><span class="self-tag" data-i18n="self">Just you</span></div>
+    <section id="current-card" class="current-card p-unknown" aria-labelledby="current-caption">
+      <p id="current-caption" class="eyebrow" data-i18n="current">Current status</p>
+      <div class="current-heading"><span id="current-icon" class="state-icon" aria-hidden="true">◇</span><h2 id="current-state" data-i18n="loading">Loading…</h2></div>
+      <p id="activity" class="activity" hidden></p>
+      <dl id="timing" hidden><div><dt data-i18n="since">Since</dt><dd><time id="since"></time></dd></div><div><dt data-i18n="elapsed">Elapsed</dt><dd id="elapsed">—</dd></div></dl>
+      <p id="current-note" class="note" hidden></p>
+      <p id="previous" class="previous" hidden></p>
+    </section>
+    <div class="sync-row"><p id="sync" role="status" aria-live="polite" data-i18n="syncing">Syncing…</p><button id="refresh" type="button" data-i18n="refresh">Refresh</button></div>
+    <p id="write-access" class="notice" hidden></p>
+    <p id="feedback" class="feedback" role="status" aria-live="polite" aria-atomic="true"></p>
+    <section class="choices" aria-labelledby="choose-heading">
+      <div class="section-heading"><h2 id="choose-heading" data-i18n="choose">Change your status</h2><span data-i18n="oneTap">One tap to save</span></div>
+      <div id="primary-states" class="tiles"></div>
+      <details id="more-states"><summary data-i18n="more">More statuses</summary><div id="extra-states" class="tiles"></div><button id="custom-open" class="custom-open" type="button" data-i18n="custom">Custom…</button></details>
+    </section>
+    <details id="details" class="details-panel">
+      <summary data-i18n="details">Add an activity or note</summary>
+      <form id="status-form">
+        <fieldset id="detail-fields" disabled>
+          <label for="form-state" data-i18n="state">Status</label><select id="form-state"></select>
+          <div id="custom-row" hidden><label for="custom-state" data-i18n="customState">Custom status</label><input id="custom-state" autocomplete="off" aria-describedby="custom-help"><p id="custom-help" class="help" data-i18n="customHelp">Your value is saved exactly as entered, without translation.</p></div>
+          <label for="activity-input" data-i18n="activity">Activity / title (optional)</label><input id="activity-input" autocomplete="off">
+          <label for="note-input" data-i18n="note">Note (optional)</label><textarea id="note-input" rows="3"></textarea>
+          <label class="check"><input id="force" type="checkbox"><span data-i18n="force">Restart even if this status is already current</span></label>
+          <p class="help" data-i18n="noopHelp">Repeating the current status keeps its start, title and note. Choose restart to record changes to that same status.</p>
+          <button id="save" type="submit" class="save" data-i18n="save">Save status</button>
+        </fieldset>
+      </form>
+    </details>
+    <section class="end-section" aria-labelledby="end-heading"><h2 id="end-heading" data-i18n="endHeading">Finished for now?</h2><p data-i18n="endHelp">Ending closes your current status. Choosing Offline starts an offline status instead.</p><button id="end" type="button" disabled data-i18n="end">End current status</button></section>
+    <footer><a href="/" data-i18n="web">Open full Web UI</a><span>life.txt / State</span></footer>
+  </main>
+  <script>__STATE_JS__</script>
+</body>
+</html>

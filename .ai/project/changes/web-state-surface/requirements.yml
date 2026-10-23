@@ -1,0 +1,16 @@
+schema_version: 1
+requirements:
+  - id: req-web-state-surface-v1
+    kind: ADDED
+    owner: Eruhitsuji
+    statement: Provide a mobile-first self Status page using existing canonical APIs and storage.
+    acceptance_criteria:
+      - Direct authenticated no-store page; preserve root, capture and planner pages.
+      - Distinguish self open status, ended previous status, never recorded and unavailable reads.
+      - Nine canonical states, safe custom fallback and existing configured color overrides.
+      - One-tap writes, optional title/note/restart form and separate end action; only update display after confirmed persistence and readback.
+      - Suppress duplicate writes; preserve input and confirmed display on failures without retries.
+      - Keep revisions bound to displayed status and edited forms; preserve auth/read-only/write-target rules.
+      - EN/JA, light/dark, phone/short viewports, safe area, native keyboard/focus and accessible labels.
+      - Package the assets and retain verification evidence, including unavailable device/browser checks.
+open_questions: []

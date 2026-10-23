@@ -2574,13 +2574,21 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             raise HTTPException(status_code=400, detail=error_detail(exc))
 
     @app.post("/api/status", status_code=201)
-    def set_status(payload=Body(...)):
+    def set_status(response: Response, payload=Body(...)):
         """Record a presence status, closing the previously open one.
 
         One request performs the whole transition so a client cannot leave two
         records looking current.
         """
         from .presence import status_transition
+        from .surface_runtime import active_transaction, conflict_payload
+
+        response.headers["Cache-Control"] = "no-store"
+        if app.state.read_only or not app.state.writable_path:
+            raise HTTPException(
+                status_code=403,
+                detail={"error": "READ_ONLY", "message": "Web mode is read-only."},
+            )
 
         if not isinstance(payload, dict):
             raise HTTPException(status_code=400, detail="Body must be a JSON object.")
@@ -2599,13 +2607,13 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
                 details[key] = [str(value)]
 
         path = app.state.writable_path
-        try:
-            with open(path, "r", encoding="utf-8-sig") as handle:
-                text = handle.read()
-        except OSError:
-            text = ""
+        transaction = active_transaction()
+        if transaction is not None and not transaction.matches(path):
+            transaction = None
+        result = None
 
-        try:
+        def transform(text):
+            nonlocal result
             result = status_transition(
                 text,
                 state=state_value,
@@ -2616,8 +2624,53 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
                 close_only=close_only,
                 force=bool(payload.get("force")),
             )
+            return result.text
+
+        try:
+            saved = mutation.write_text(
+                path,
+                transform=transform,
+                expected_hash=transaction.expected_hash if transaction else None,
+                operation="web status transition",
+                create=True,
+            )
+        except mutation.MutationConflict as exc:
+            return JSONResponse(
+                status_code=409,
+                content=conflict_payload(exc),
+                headers={"Cache-Control": "no-store"},
+            )
+        except mutation.LockTimeout:
+            return JSONResponse(
+                status_code=503,
+                content={
+                    "error": "LOCK_TIMEOUT",
+                    "message": "Status file is busy. Reload before retrying.",
+                },
+                headers={"Cache-Control": "no-store"},
+            )
         except ValueError as exc:
-            raise HTTPException(status_code=400, detail=error_detail(exc))
+            raise HTTPException(
+                status_code=400,
+                detail=error_detail(exc),
+            ) from exc
+        except OSError:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "error": "IO_ERROR",
+                    "message": "Could not persist status. Reload before retrying.",
+                },
+                headers={"Cache-Control": "no-store"},
+            )
+
+        if transaction is not None:
+            # This handler commits under the shared lock instead of staging a
+            # replacement. Let the revision middleware report that exact saved
+            # snapshot without writing the pre-request snapshot a second time.
+            transaction.before = saved.snapshot
+            transaction.text = saved.snapshot.text
+            transaction.result = saved
 
         if result.unchanged:
             return {
@@ -2627,7 +2680,6 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
                 "path": path,
             }
 
-        write_text(path, result.text)
         return {
             "closed": result.closed,
             "opened": result.opened,

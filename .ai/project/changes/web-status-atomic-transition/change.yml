@@ -1,0 +1,41 @@
+schema_version: 1
+change:
+  id: web-status-atomic-transition
+  title: Atomically transform and persist Web Status
+  status: implemented
+  change_type: Bug
+  assurance_level: High
+  size: S
+  complexity: 6
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1378
+  related_pull_request: null
+  base_commit: bbcb6f051709063dea18918cb6c0da3633ef0396
+scope:
+  in_scope:
+    - Existing POST /api/status atomicity, persistence and revision compatibility
+  out_of_scope:
+    - State UI, Format, authorization changes, shared runtime refactoring
+  write_scope:
+    - lifetxt/webapp.py
+    - tests/test_web_status_atomic.py
+    - docs/en/web.md
+    - docs/ja/web.md
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+    - .ai/project/changes/web-status-atomic-transition/**
+  forbidden_scope:
+    - .ai/managed/**
+    - Unrelated Core and Web assets
+  shared_files:
+    - webapp.py and capability/traceability metadata; integrator Eruhitsuji
+design_approval:
+  owner: Eruhitsuji
+  date: '2026-10-23'
+  record: https://github.com/Eruhitsuji/lifetxt/issues/1378#issuecomment-6355862829
+  scope: High assurance, Ready and proposed atomic Status design approved before implementation
+human_approvals_required:
+  - Independent implementation review of final head
+  - Independent integration review of final head and required CI
+  - Maintainer merge; no release or deployment included

@@ -11761,6 +11761,7 @@ capabilities:
       - req-web-actionable-retryable-errors
       - req-web-status-standard-custom-authoring
       - req-web-quick-status-standard-custom-authoring
+      - req-web-status-atomic-transition
       - req-web-more-active-view-collapsed-nav
       - req-web-main-accessible-controls-navigation
       - req-web-diagnostics-location-navigation-summary
@@ -11784,6 +11785,7 @@ capabilities:
       - tests/test_web_diagnostics_js.py
       - lifetxt/webapp.py
       - tests/test_web_quick_status_js.py
+      - tests/test_web_status_atomic.py
       - docs/en/web.md
       - docs/ja/web.md
     public_interfaces:
@@ -11804,6 +11806,7 @@ capabilities:
       - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
       - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
       - tests/test_web_quick_status_js.py covers config-backed standard options, Custom precedence and retention, optional title, empty validation, same-state no-op, End, failure retention, accessible labels, and Enter submission
+      - tests/test_web_status_atomic.py covers locked status transforms, exact saved revisions, concurrent requests and external edits, no-op/force/end, persistence failures and existing API guards (#1378)
       - MPLBACKEND=Agg python -m unittest discover -> Ran 4523 tests, OK (skipped=210), after merging origin/main at 1eb56eb
       - tests/test_web_diagnostics_js.py (15 tests) covers diagnostic location labels, filter-hidden marking, source+line record matching, escaping, summary counts/open state, and Open record fallback/toasts (#1073)
     related_issues:
@@ -11815,6 +11818,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/798
       - https://github.com/Eruhitsuji/lifetxt/issues/821
       - https://github.com/Eruhitsuji/lifetxt/issues/829
+      - https://github.com/Eruhitsuji/lifetxt/issues/1378
       - https://github.com/Eruhitsuji/lifetxt/issues/1068
       - https://github.com/Eruhitsuji/lifetxt/issues/1072
       - https://github.com/Eruhitsuji/lifetxt/issues/1073

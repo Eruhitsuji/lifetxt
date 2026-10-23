@@ -1,0 +1,48 @@
+schema_version: 1
+verification:
+  executed:
+    - command: python -m unittest tests.test_web_status_atomic tests.test_presence_mutation tests.test_mutation tests.test_shorthand tests.test_surface_runtime tests.test_revision_telemetry_v2 tests.test_shared_surface_mutation_routing
+      result: passed
+      notes: Initial 174 tests passed; expanded focused suite with package closeout and supported runtime passed 183 tests. Status-specific suite passed all 24 tests. Python 3.12.14 / Bash.
+    - command: python -m unittest tests.test_web_quick_status_js tests.test_web_commands tests.test_web_planner_revisions tests.test_revision_telemetry_relocation_v3
+      result: passed
+      notes: 44 tests; real browser engines unavailable, browser-dependent cases report their own availability.
+    - command: ruff check lifetxt tests scripts; ruff format --check tests/test_web_status_atomic.py; mypy --follow-imports=skip --ignore-missing-imports lifetxt/diagnostic_contract.py; python -m lifetxt check examples/minimal_life.txt; git diff --check
+      result: passed
+    - command: python scripts/validate_release_docs.py --output .cache/status-release-doc-validation.json
+      result: passed
+      notes: Zero errors; initial invocation without required --output returned usage error and was corrected.
+    - command: Two targeted regression tests against unchanged origin/main
+      result: expected_failure
+      notes: Both locked-transform and BOM/CRLF preservation regressions fail on bbcb6f0 and pass with this fix. Complete baseline output retained locally.
+review_ledger:
+  - reviewer: Codex implementer
+    review_type: self_review
+    target_commit: working tree before implementation commit
+    result: completed
+    finding_count: 0
+    completed_at: '2026-10-23'
+    notes: Inspected handler, middleware CAS/response interaction, one-write behavior, persistence/errors, tests, auth boundaries, scope, bilingual documentation and traceability. Not an independent review or final approval.
+  - reviewer: Eruhitsuji
+    review_type: implementation
+    target_commit: null
+    result: pending
+    finding_count: 0
+    completed_at: null
+  - reviewer: Eruhitsuji
+    review_type: integration
+    target_commit: null
+    result: pending
+    finding_count: 0
+    completed_at: null
+earlier_attempts:
+  - command: Focused suite with change package closeout
+    result: failed_then_resolved
+    notes: 182 tests, one package schema error; changed new verification record from a list to the template's executed mapping. Runtime tests passed. Python 3.12.14, Bash; no worktree edits during run, BashCompletionExecutionTests not selected. Full output retained locally.
+  - command: python -m unittest tests.test_web_status_atomic
+    result: failed_then_resolved
+    notes: First run had an unquoted multiword title in a new fixture; second run exposed missing no-store headers on caught conflicts because the global HTTPException handler discards headers. Fixture fixed and new storage errors use JSONResponse. Logs retained locally. Python 3.12.14, Bash; BashCompletionExecutionTests not selected; no worktree edits during the runs.
+release_evidence:
+  migration_notes: No migration, payload or Format change.
+  rollback_plan: Maintainer-approved revert; existing S records stay valid.
+  operations_evidence: []

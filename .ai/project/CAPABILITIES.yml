@@ -1,6 +1,36 @@
 schema_version: 1
 
 capabilities:
+  - id: cap-web-state-surface
+    name: Dedicated mobile State surface
+    summary: Self-only current presence, one-tap state transitions and optional title/note editing through existing Status APIs.
+    status: implemented
+    owner: Eruhitsuji
+    source_requirements:
+      - req-web-state-surface-v1
+    implementation_locations:
+      - lifetxt/web_state.html
+      - lifetxt/web_state.css
+      - lifetxt/web_state.js
+      - lifetxt/web_assets.py
+      - lifetxt/webapp.py
+      - pyproject.toml
+    public_interfaces:
+      - GET /state
+      - Existing self Status/config/health read APIs and POST /api/status
+    tests_or_evidence:
+      - tests/test_web_state.py
+      - tests/test_web_state_ui.py
+      - tests/state_ui_probe.mjs
+      - tests/browser_state_probe.mjs
+      - tests/browser_state_live_probe.mjs
+      - .ai/project/changes/web-state-surface/verification.yml
+    related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/1377
+      - https://github.com/Eruhitsuji/lifetxt/issues/1379
+    related_pull_requests: []
+    reuse_policy: Reuse Status Core and API, Web revision/CAS and Planner standalone-page assembly; no new parser, mutation model, authentication or dependency.
+    notes: Separate page; six primary and three secondary standard tiles plus custom form. Navigation and dedicated installability follow in issue 1380. Independent final-head review remains required.
   - id: cap-editor-language-support
     name: Optional editor language support
     summary: Format-aligned static editor assistance and a Core-backed read-only language server.

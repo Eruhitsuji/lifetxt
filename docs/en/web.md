@@ -48,6 +48,45 @@ iOS Safari/Android browser chrome, safe-area insets, software-keyboard resizing,
 and installed home-screen icon presentation remain platform-level residual
 risks to check on target devices.
 
+### Mobile State
+
+Open `/state` (for example `http://127.0.0.1:8000/state`) to see and change your
+own `person:self` presence. The large current-state card shows the activity,
+start time and elapsed time. Ended records are identified as previous records;
+no current status and failed loading are different states.
+
+Tap Available, Busy, Focus, Meeting, Away or Offline to save immediately.
+**More statuses** contains Commuting, Working, Sleeping and **Custom…**.
+**Add an activity or note** opens an optional title/note form. Repeating the
+current status keeps its original start, title and note; select **Restart even
+if this status is already current** to record a new interval with revised
+details. **End current status** only closes the current interval, whereas
+Offline starts a new offline interval. Canonical values remain untranslated.
+`web.presence.states` color-class overrides also apply here.
+
+The page supports English/Japanese (`?lang=ja` or the language selector) and
+system/light/dark themes. It uses the existing Web authentication connection,
+read-only/write-target rules and Status API; it does not add a credential form.
+With Bearer-protected deployments, access it through the same authenticated
+browser/proxy connection as `/planner`.
+
+State is online-only, with no queued writes or automatic retry. Device network
+offline is distinct from an Offline presence record. Writes use the displayed
+snapshot's `If-Match`; edited details keep their own original revision even if
+a background read finds a newer record. On conflict or an uncertain result,
+**Refresh** explicitly reviews the latest status while keeping your inputs,
+then you can choose whether to submit again. Successful writes are reloaded
+before the displayed state changes. A failed reload after a successful save
+is reported separately and blocks another write until refreshed.
+
+The visible page refreshes every minute and on return to the tab. Elapsed time
+uses the workspace clock/timezone; invalid or ambiguous naive DST timestamps
+show Unavailable rather than guessing. The phone viewport/keyboard/AX probe
+is available in `tests.test_web_state_ui` when Chromium is available; physical
+Safari/Android, real safe-area/keyboard resizing and screen-reader acceptance
+remain device checks. Dedicated home-screen integration/navigation follows in
+the next task; this page does not add a manifest or service worker.
+
 ### Mobile Day Planner
 
 Open `/planner` for a separate Day Planner. Day remains the default and shows

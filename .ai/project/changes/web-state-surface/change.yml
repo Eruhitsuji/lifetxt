@@ -1,0 +1,35 @@
+schema_version: 1
+change:
+  id: web-state-surface
+  title: Dedicated mobile State page
+  status: implemented
+  change_type: Feature
+  assurance_level: Standard
+  size: S
+  complexity: 6
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1379
+  related_pull_request: null
+  base_commit: fca6573f32188c9ba4074d2cd7fd2476fea78ea9
+scope:
+  write_scope:
+    - lifetxt/web_state.html
+    - lifetxt/web_state.css
+    - lifetxt/web_state.js
+    - lifetxt/web_assets.py
+    - lifetxt/webapp.py GET /state route only
+    - pyproject.toml package-data registration only
+    - tests/test_web_state*.py
+    - tests/*state*probe.mjs
+    - docs/en/web.md
+    - docs/ja/web.md
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+    - .ai/project/changes/web-state-surface/**
+  out_of_scope:
+    - Manifest, main navigation, offline queue, Format, Status API or authentication changes
+  forbidden_scope:
+    - .ai/managed/**
+human_approvals_required:
+  - Independent review on final head and maintainer merge

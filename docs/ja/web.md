@@ -374,6 +374,24 @@ curl "http://127.0.0.1:8000/api/review?month=2026-07&project=research"
 curl "http://127.0.0.1:8000/api/review?from=2026-06-29&to=2026-07-05"
 ```
 
+`POST /api/status` は、既存のWeb revision/CAS判定を維持し、共有ファイルロックの
+内側で状態変換から保存まで実行します。成功時（同一状態のno-opを含む`201`）は
+`closed`、`opened`、`unchanged`、`path`と、保存したrevisionを
+`ETag` / `X-Lifetxt-Revision`に返します。同一状態の再指定では元の開始時刻を保ち、
+`force:true`では再開始、`end:true`では対象personのopenレコードを終了するだけです。
+他のレコード・ID・UTF-8 BOM・改行形式を保持します。`observe`の既存legacy fallbackと
+`required`モードは変更しません。revision取得済みのクライアントは、読み取ったrevisionを
+`If-Match`に指定してください。
+
+更新競合は`409 CONFLICT`、ロック待ちタイムアウトは`503 LOCK_TIMEOUT`、
+Status mutation内の読み書き失敗は`500 IO_ERROR`、life.txtのパース失敗は`400`です。
+自動再試行は行いません。再読込して現在の状態を確認し、明示的に再操作してください。
+特にI/Oエラーでは保存結果が確定できない場合があります。Status成功とmutationの
+競合・ロック・I/O応答には`Cache-Control: no-store`を付けます。
+共有ロックに従う書き込みは直列化し、ロックを無視する外部編集については置換前と
+保存後の内容ハッシュを検査します。共有mutation契約と同様、任意の外部エディターに
+対してOSレベルの排他ロックを提供するものではありません。
+
 `GET /api/review` は CLI `review` コマンド・MCP `get_review` tool と同じ
 report を返します: `completed_tasks` / `open_tasks` の件数、`completed`
 一覧(title、done 日付、project、id)、habit ごとの達成率、抜粋付き journal

@@ -97,6 +97,18 @@ def _assemble_planner_html() -> str:
 PLANNER_HTML_PAGE = _assemble_planner_html()
 
 
+def _assemble_state_html() -> str:
+    template = _read_resource("web_state.html")
+    if template.count("__STATE_CSS__") != 1 or template.count("__STATE_JS__") != 1:
+        raise RuntimeError("web_state.html must contain one CSS and JS marker")
+    return template.replace("__STATE_CSS__", _read_resource("web_state.css")).replace(
+        "__STATE_JS__", _read_resource("web_state.js")
+    )
+
+
+STATE_HTML_PAGE = _assemble_state_html()
+
+
 def _svg_data_uri(svg: str) -> str:
     payload = base64.b64encode(svg.encode("utf-8")).decode("ascii")
     return f"data:image/svg+xml;base64,{payload}"

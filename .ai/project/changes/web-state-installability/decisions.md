@@ -5,7 +5,9 @@
 - Register the manifest in `pyproject.toml`: source-only success would not prove
   that installed wheels expose the new route.
 - Reuse the existing `Quick Status` translation in the new State link, avoiding
-  a JS dictionary change or renaming Status/Team.
+  a JS dictionary change or renaming Status/Team. The invariant app name State
+  has its own `lang="en"` span, separate from the translatable description and
+  separator; the existing full-page translation audit remains enforced.
 - Keep State's existing full-Web footer link; no additional competing controls.
 - Extend existing Chromium probes and evidence filenames, without changing CI
   jobs, permissions, dependency installation or triggers.

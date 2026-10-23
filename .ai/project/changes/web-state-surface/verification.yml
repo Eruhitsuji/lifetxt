@@ -1,6 +1,14 @@
 schema_version: 1
 verification:
   executed:
+    - command: MPLBACKEND=Agg python -m unittest discover
+      result: passed
+      commit: 34e2a3666dd75932b1ebd1549f55b5010ae834d0
+      source_tree: 2cd3d53f63f28429bbc7a392561ab0d7f215e5cb
+      notes: 5923 tests, OK (skipped=83), 469.482 seconds. Python 3.12.14 / Bash. Worktree unchanged during full run. Published implementation tree matches tested local tree. Full output retained locally. Later changes only record evidence/PR links and connect optional native tests/evidence to existing Chromium CI; shipped UI runtime remains unchanged.
+    - command: python scripts/validate_release_docs.py --output .cache/state-doc-validation.json; python -m unittest tests.test_traceability_gate
+      result: passed
+      notes: Documentation zero errors; 14 traceability tests passed before final PR linkage.
     - command: python -m unittest tests.test_web_state tests.test_web_state_ui tests.test_web_assets tests.test_web_status_atomic tests.test_web_planner_revisions
       result: passed
       notes: Final focused run includes package closeout; 50 tests passed, 2 Chromium skips. Python 3.12.14 / Bash. Source unchanged during run.
@@ -21,7 +29,7 @@ verification:
 review_ledger:
   - reviewer: Codex implementer
     review_type: self_review
-    target_commit: implementation working tree
+    target_commit: 34e2a3666dd75932b1ebd1549f55b5010ae834d0
     result: completed
     finding_count: 0
     completed_at: '2026-10-23'

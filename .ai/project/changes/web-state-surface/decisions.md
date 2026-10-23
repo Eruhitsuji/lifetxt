@@ -14,3 +14,6 @@
   for browser-equipped CI/hosts and report physical-device limitations.
 - Independent final-head review and merge belong to the human maintainer.
   Implementer self-review cannot supply independent approval.
+- Connect the new State native probes to the existing provisioned real-Chromium
+  CI lane and retain synthetic evidence. This verification-only scope refinement
+  is recorded on #1379; no new jobs, permissions, triggers or dependencies.

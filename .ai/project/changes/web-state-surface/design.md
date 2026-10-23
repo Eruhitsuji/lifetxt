@@ -57,3 +57,9 @@ safe-area hardware and screen-reader acceptance remain device checks.
 
 Rollback: maintainer-approved revert of the PR. No migration; written S records
 remain valid. Shared-file integration and final merge belong to Eruhitsuji.
+
+The existing real-Chromium revision CI job also runs StateBrowserTests; it
+already provisions Node/Chrome/Web dependencies. Retain synthetic viewport JSON,
+a synthetic screenshot and live-API summaries in its existing artifact. Do not
+add jobs, triggers, permissions or dependencies, and do not claim local browser
+execution when installation is unavailable.

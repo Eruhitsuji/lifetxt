@@ -28,7 +28,8 @@ capabilities:
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/1377
       - https://github.com/Eruhitsuji/lifetxt/issues/1379
-    related_pull_requests: []
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/1382
     reuse_policy: Reuse Status Core and API, Web revision/CAS and Planner standalone-page assembly; no new parser, mutation model, authentication or dependency.
     notes: Separate page; six primary and three secondary standard tiles plus custom form. Navigation and dedicated installability follow in issue 1380. Independent final-head review remains required.
   - id: cap-editor-language-support

@@ -18,10 +18,11 @@ verification:
 review_ledger:
   - reviewer: Codex implementer
     review_type: self_review
-    target_commit: null
-    result: pending
+    target_commit: d1c389099716833bd0308e5809db3131c7c16af2
+    result: completed
     finding_count: 0
-    completed_at: null
+    completed_at: '2026-10-23'
+    notes: Reviewed full diff against main; only the intended anchor/metadata/manifest/allowlist/route/package runtime changes. Existing public root exemption retained, assets byte-matched, native link and auth/non-goals preserved. Later commit only links PR and records review. Independent review is not claimed.
   - reviewer: Eruhitsuji
     review_type: independent_implementation_and_integration
     target_commit: null

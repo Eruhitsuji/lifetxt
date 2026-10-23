@@ -37,6 +37,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/1383
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/1382
+      - https://github.com/Eruhitsuji/lifetxt/pull/1384
     reuse_policy: Reuse Status Core and API, Web revision/CAS and Planner standalone-page assembly; no new parser, mutation model, authentication or dependency.
     notes: Separate self-only page; six primary and three secondary tiles plus custom form. More uses a native State link without replacing Status/Team tabs. Dedicated manifest reuses existing icons/auth/no-store; online only, no worker or queue. Native Chromium viewport/AX/safe-area emulation and API probes do not certify physical Safari/Android/home-screen/assistive-technology acceptance; those gaps are tracked in issue 1383. Independent final-head review remains required.
   - id: cap-editor-language-support

@@ -86,7 +86,7 @@ from .web_read_service import limit_items as _service_limit_items
 from .web_read_service import read_life_inputs as _service_read_life_inputs
 from .web_read_service import sort_items as _service_sort_items
 from .web_read_service import sort_key_for_item as _service_sort_key_for_item
-from .web_assets import HTML_PAGE, PLANNER_HTML_PAGE
+from .web_assets import HTML_PAGE, PLANNER_HTML_PAGE, STATE_HTML_PAGE
 from .web_routes_analytics import register_analytics_routes
 from .web_routes_git import register_git_routes
 from . import __version__
@@ -338,6 +338,12 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
     @app.get("/planner", response_class=HTMLResponse)
     def planner():
         return HTMLResponse(content=PLANNER_HTML_PAGE, headers={"Cache-Control": "no-store"})
+
+    @app.get("/state", response_class=HTMLResponse)
+    def state_page():
+        return HTMLResponse(
+            content=STATE_HTML_PAGE, headers={"Cache-Control": "no-store"}
+        )
 
     @app.get("/manifest.webmanifest")
     def web_app_manifest():

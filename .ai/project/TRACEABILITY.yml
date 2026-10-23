@@ -2,6 +2,18 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-state-surface-v1
+      capability_id: cap-web-state-surface
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1377
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1379
+      pull_request: null
+      changed_files_or_scope:
+        - State assets, GET /state route, assembly and package data
+        - route/API/DOM/optional-browser tests, bilingual docs and change package
+      tests_or_evidence:
+        - tests.test_web_state and tests.test_web_state_ui
+        - .ai/project/changes/web-state-surface/verification.yml
+      status: implemented
     - requirement_id: req-web-status-atomic-transition
       capability_id: cap-web-beginner-first-ux
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1377

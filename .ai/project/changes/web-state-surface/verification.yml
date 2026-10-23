@@ -1,0 +1,41 @@
+schema_version: 1
+verification:
+  executed:
+    - command: python -m unittest tests.test_web_state tests.test_web_state_ui tests.test_web_assets tests.test_web_status_atomic tests.test_web_planner_revisions
+      result: passed
+      notes: Final focused run includes package closeout; 50 tests passed, 2 Chromium skips. Python 3.12.14 / Bash. Source unchanged during run.
+    - command: node tests/state_ui_probe.mjs lifetxt/web_state.html lifetxt/web_state.js
+      result: passed
+      notes: 363 assertions across 22 scenarios, including nine canonical states in both languages, missing target and empty custom input. DOM and HTTP contracts only, not browser layout.
+    - command: python -m pip wheel --no-deps . -w .cache/state-wheel
+      result: passed
+      notes: Final build in .cache/state-wheel-final contains all three assets byte-for-byte identical to current source (checked with zipfile).
+    - command: python -m unittest tests.test_web_state tests.test_web_state_ui (Core-only interpreter)
+      result: passed
+      notes: 8 tests; 6 optional Web/browser skips and 2 Core/Node tests passed. No mandatory Web dependency introduced.
+    - command: ruff check lifetxt tests scripts; ruff format --check lifetxt/web_assets.py tests/test_web_state.py tests/test_web_state_ui.py; mypy --follow-imports=skip --ignore-missing-imports lifetxt/diagnostic_contract.py; python -m lifetxt check examples/minimal_life.txt; git diff --check
+      result: passed
+    - command: Local Chromium/headless-shell browser installation
+      result: blocked
+      notes: Both Playwright downloads returned invalid/truncated zero-size ZIP archives. Browser/viewport/AX/live API probes unrun locally; retain conditional tests. No runtime dependency added.
+review_ledger:
+  - reviewer: Codex implementer
+    review_type: self_review
+    target_commit: implementation working tree
+    result: completed
+    finding_count: 0
+    completed_at: '2026-10-23'
+    notes: Reviewed scope, auth/read-only, pinned form and displayed revisions, current vs ended/error, stale async responses, safe DOM, canonical values and package resources. During review, retained edited-form revision across tile saves, added request cleanup, keyboard focus restoration and explicit missing-target feedback. No blocking self-review findings remain; this is not independent approval.
+  - reviewer: Eruhitsuji
+    review_type: independent_implementation_and_integration
+    target_commit: null
+    result: pending
+    finding_count: 0
+    completed_at: null
+earlier_attempts:
+  - command: Initial route/API and expanded DOM probes
+    result: failed_then_resolved
+    notes: Route fixture needed resetting between observe/required cases after End; expanded DOM fixture lacked element.id for focus assertion. Fixed test fixtures, not product behavior. Full local outputs retained. Python 3.12.14 / Bash; BashCompletionExecutionTests not selected; no edits while runs were in flight.
+release_evidence:
+  migration_notes: No Format, stored data or API migration.
+  rollback_plan: Maintainer-approved PR revert; existing S records remain valid.

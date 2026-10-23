@@ -2,6 +2,7 @@
 
 import json
 import importlib.util
+import os
 import shutil
 import socket
 import subprocess
@@ -42,6 +43,10 @@ class StateInteractionTests(unittest.TestCase):
 @unittest.skipUnless(browser_path(), "Chrome/Chromium unavailable")
 class StateBrowserTests(unittest.TestCase):
     def test_native_viewport_theme_language_focus_keyboard_and_accessibility(self):
+        evidence = os.environ.get("LIFETXT_REVISION_EVIDENCE_DIR")
+        evidence_path = Path(evidence) if evidence else None
+        if evidence_path:
+            evidence_path.mkdir(parents=True, exist_ok=True)
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "state.html"
             path.write_text(STATE_HTML_PAGE, encoding="utf-8")
@@ -51,7 +56,8 @@ class StateBrowserTests(unittest.TestCase):
                     str(ROOT / "tests/browser_state_probe.mjs"),
                     browser_path(),
                     str(path),
-                ],
+                ]
+                + ([str(evidence_path / "state-browser.png")] if evidence_path else []),
                 capture_output=True,
                 text=True,
                 timeout=120,
@@ -60,6 +66,10 @@ class StateBrowserTests(unittest.TestCase):
         report = json.loads(result.stdout)
         self.assertEqual(20, len(report["matrix"]))
         self.assertIn("passed", report["interaction"])
+        if evidence_path:
+            (evidence_path / "state-browser.json").write_text(
+                json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
 
     @unittest.skipUnless(importlib.util.find_spec("uvicorn"), "Web extras unavailable")
     def test_real_browser_status_mutations_observe_and_required(self):
@@ -109,7 +119,15 @@ class StateBrowserTests(unittest.TestCase):
                         self.assertEqual(
                             0, result.returncode, result.stderr or result.stdout
                         )
-                        self.assertEqual(0, json.loads(result.stdout)["legacyFallback"])
+                        report = json.loads(result.stdout)
+                        self.assertEqual(0, report["legacyFallback"])
+                        evidence = os.environ.get("LIFETXT_REVISION_EVIDENCE_DIR")
+                        if evidence:
+                            output = Path(evidence)
+                            output.mkdir(parents=True, exist_ok=True)
+                            (output / f"state-live-{mode}.json").write_text(
+                                json.dumps(report, indent=2), encoding="utf-8"
+                            )
                     finally:
                         server.should_exit = True
                         thread.join(timeout=10)

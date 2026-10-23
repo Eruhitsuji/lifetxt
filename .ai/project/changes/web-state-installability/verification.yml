@@ -30,6 +30,13 @@ review_ledger:
     finding_count: 0
     completed_at: null
 earlier_attempts:
+  - command: Expanded StateBrowserTests in CI run 39898881508
+    result: failed_initial_attempt
+    commit: f07882923106afc90c77f2a79d9a15e1d4c66037
+    notes: Native matrix/safe-area/AX/tab/touch passed and actual Web navigation/API observe+required passed. New failure-loop probe incorrectly required writes disabled after definite HTTP 400 validation rejection; existing UI intentionally allows explicit corrected submission. Correct expected guard per status (400 enabled, auth/conflict/uncertain disabled), retaining input/current/no-auto-retry assertions. Runtime unchanged. CI Python 3.12.15 / Bash; immutable checkout; BashCompletionExecutionTests not selected in native job. Full failed log retained in Actions.
+  - command: First local full-suite run on f07882923106afc90c77f2a79d9a15e1d4c66037
+    result: interrupted
+    notes: Intentionally stopped via test-session Ctrl-C (exit 130) after native CI found the incorrect added assertion, before any file edits. Not counted as a passing full suite. Partial output retained in .state-install-full-test-output.log. Python 3.12.14 / Bash; no edits while running. Final full suite must be rerun on corrected head.
   - command: Initial route tests and initial expanded 60-test focused run
     result: failed_then_resolved
     notes: Route test incorrectly expected auth on public root; retained existing root exemption and corrected test only. Focused assembly hash failed after intended State anchor; inspected one-line shell diff and updated expected hash, without changing runtime fragments. Initial route output retained in tool result; focused failure full output in .state-installability-focused.log. Python 3.12.14 / Bash; BashCompletionExecutionTests not selected; worktree unchanged during each run.

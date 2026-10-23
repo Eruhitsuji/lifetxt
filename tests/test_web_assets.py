@@ -16,8 +16,8 @@ from lifetxt import web_assets, webapp
 
 
 REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
-# #1342 adds a translated Procedures surface link under More.
-LEGACY_PRISTINE_GIT_BLOB_SHA = "f9c4ac16af283562fcfc34206e1f788c16eccfaa"
+# #1380 adds the State surface link under More; no JS/CSS fragments change.
+LEGACY_PRISTINE_GIT_BLOB_SHA = "9f212b917576c235d07c603db69e85f506d1f74f"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )
@@ -52,6 +52,9 @@ class WebAssetExtractionTests(unittest.TestCase):
         self.assertIn('data-i18n="Procedures"', more)
         self.assertNotIn('href="/planner"', primary)
         self.assertNotIn('href="/capture"', primary)
+        self.assertNotIn('href="/state"', primary)
+        self.assertIn('href="/state"', more)
+        self.assertIn('data-i18n="Quick Status"', more)
         self.assertRegex(
             more,
             r'<a class="workspace-tab surface-link" href="/planner">'

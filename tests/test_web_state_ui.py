@@ -65,6 +65,9 @@ class StateBrowserTests(unittest.TestCase):
         self.assertEqual(0, result.returncode, result.stderr or result.stdout)
         report = json.loads(result.stdout)
         self.assertEqual(20, len(report["matrix"]))
+        self.assertTrue(all(item["reachable"] for item in report["matrix"]))
+        self.assertEqual([400, 401, 403, 409, 500, "network"], report["failures"])
+        self.assertIn("not physical iOS", report["safeArea"])
         self.assertIn("passed", report["interaction"])
         if evidence_path:
             (evidence_path / "state-browser.json").write_text(
@@ -121,6 +124,8 @@ class StateBrowserTests(unittest.TestCase):
                         )
                         report = json.loads(result.stdout)
                         self.assertEqual(0, report["legacyFallback"])
+                        self.assertEqual("/state", report["manifest"])
+                        self.assertIn("browser back", report["navigation"])
                         evidence = os.environ.get("LIFETXT_REVISION_EVIDENCE_DIR")
                         if evidence:
                             output = Path(evidence)

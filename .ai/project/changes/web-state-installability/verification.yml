@@ -1,0 +1,37 @@
+schema_version: 1
+verification:
+  executed:
+    - command: python -m unittest tests.test_web_installability tests.test_web_state tests.test_web_state_ui tests.test_web_more_nav_js tests.test_web_planner tests.test_web_assets tests.test_web_mobile_capture tests.test_web_mobile_capture_browser tests.test_web_quick_status_js
+      result: passed
+      notes: 91 tests OK, 11 optional Chromium skips. Python 3.12.14 / Bash; no changes while running. Full output retained locally.
+    - command: node --check tests/browser_state_probe.mjs; node --check tests/browser_state_live_probe.mjs; ruff check lifetxt tests scripts
+      result: passed
+    - command: ruff format --check changed Python tests; mypy approved diagnostic boundary; python -m lifetxt check examples/minimal_life.txt; python scripts/validate_release_docs.py; python -m unittest tests.test_change_package_closeout tests.test_traceability_gate
+      result: passed
+      notes: 4 formatted files, typing clean, minimal 10 items, documentation zero errors, 17 gates passed (before PR linkage).
+    - command: python -m pip wheel --no-deps .; unzip resource bytes compared to source; install wheel into isolated target and run outside repository source directory
+      result: passed
+      notes: Manifest, State assets, changed shell/Python files and 3 brand PNGs match source byte-for-byte. Installed wheel serves State manifest/page/nav/icon with no-store. Asserted import path is installed target, not editable checkout.
+    - command: Native Chromium and physical-device acceptance locally
+      result: blocked
+      notes: No local Chromium binary; previous browser download returned invalid/truncated ZIP. Existing CI lane runs both expanded StateBrowserTests when Chrome is provisioned; no CI or install dependencies added. Physical checks remain in issue 1383.
+review_ledger:
+  - reviewer: Codex implementer
+    review_type: self_review
+    target_commit: null
+    result: pending
+    finding_count: 0
+    completed_at: null
+  - reviewer: Eruhitsuji
+    review_type: independent_implementation_and_integration
+    target_commit: null
+    result: pending
+    finding_count: 0
+    completed_at: null
+earlier_attempts:
+  - command: Initial route tests and initial expanded 60-test focused run
+    result: failed_then_resolved
+    notes: Route test incorrectly expected auth on public root; retained existing root exemption and corrected test only. Focused assembly hash failed after intended State anchor; inspected one-line shell diff and updated expected hash, without changing runtime fragments. Initial route output retained in tool result; focused failure full output in .state-installability-focused.log. Python 3.12.14 / Bash; BashCompletionExecutionTests not selected; worktree unchanged during each run.
+release_evidence:
+  migration_notes: No data, API or Format migration.
+  rollback_plan: Maintainer-approved PR revert; persisted Status records remain valid.

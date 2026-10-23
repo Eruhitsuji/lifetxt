@@ -1,8 +1,9 @@
-"""Installability metadata coverage for the online-only Quick Capture app."""
+"""Installability and navigation contracts for online-only Web surfaces."""
 
 import json
 import struct
 import unittest
+from html.parser import HTMLParser
 from importlib import resources
 from pathlib import Path
 
@@ -10,6 +11,106 @@ from lifetxt import web_assets, webapp
 
 
 BRAND = Path(__file__).resolve().parents[1] / "assets" / "brand"
+
+
+class _Elements(HTMLParser):
+    def __init__(self, html):
+        super().__init__()
+        self.elements = []
+        self.feed(html)
+
+    def handle_starttag(self, tag, attributes):
+        self.elements.append((tag, dict(attributes)))
+
+
+class StateInstallabilityResourceTests(unittest.TestCase):
+    def test_separate_manifest_has_stable_identity_and_no_new_permissions(self):
+        raw = web_assets.web_resource_bytes("state_app_manifest.json")
+        manifest = json.loads(raw)
+        self.assertEqual("/state", manifest["id"])
+        self.assertEqual("/state", manifest["start_url"])
+        self.assertEqual("/", manifest["scope"])
+        self.assertEqual("standalone", manifest["display"])
+        self.assertEqual("State", manifest["short_name"])
+        self.assertEqual("life.txt State", manifest["name"])
+        self.assertEqual("#f5f6f2", manifest["background_color"])
+        planner = json.loads(web_assets.web_resource_bytes("planner_app_manifest.json"))
+        self.assertEqual(planner["icons"], manifest["icons"])
+        self.assertEqual(planner["theme_color"], manifest["theme_color"])
+        self.assertEqual(
+            {
+                "id",
+                "name",
+                "short_name",
+                "description",
+                "start_url",
+                "scope",
+                "display",
+                "background_color",
+                "theme_color",
+                "icons",
+            },
+            set(manifest),
+        )
+        self.assertIn(
+            '"state_app_manifest.json"',
+            (BRAND.parents[1] / "pyproject.toml").read_text(encoding="utf-8"),
+        )
+
+    def test_state_links_own_manifest_touch_icon_and_full_web_return(self):
+        elements = _Elements(web_assets.STATE_HTML_PAGE).elements
+        manifests = [
+            a["href"]
+            for tag, a in elements
+            if tag == "link" and a.get("rel") == "manifest"
+        ]
+        self.assertEqual(["/state.webmanifest"], manifests)
+        self.assertTrue(
+            any(
+                tag == "link"
+                and a.get("rel") == "apple-touch-icon"
+                and a.get("href") == "/assets/lifetxt-icon-180.png"
+                for tag, a in elements
+            )
+        )
+        self.assertTrue(
+            any(
+                tag == "meta"
+                and a.get("name") == "apple-mobile-web-app-title"
+                and a.get("content") == "State"
+                for tag, a in elements
+            )
+        )
+        self.assertTrue(
+            any(
+                tag == "a" and a.get("href") == "/" and a.get("data-i18n") == "web"
+                for tag, a in elements
+            )
+        )
+        self.assertNotIn("navigator.serviceWorker", web_assets.STATE_HTML_PAGE)
+        self.assertNotIn("caches.open", web_assets.STATE_HTML_PAGE)
+
+    def test_more_navigation_uses_links_without_replacing_status_team_tabs(self):
+        html = web_assets.HTML_PAGE
+        more = html.split('id="nav-advanced"', 1)[1].split("</details>", 1)[0]
+        elements = _Elements(more).elements
+        for route in ("/state", "/capture", "/planner"):
+            links = [a for tag, a in elements if tag == "a" and a.get("href") == route]
+            self.assertEqual(1, len(links), route)
+            self.assertEqual("workspace-tab surface-link", links[0]["class"])
+            self.assertNotIn("onclick", links[0])
+            self.assertNotIn("role", links[0])
+            self.assertNotIn("tabindex", links[0])
+        for view in ("status", "team"):
+            self.assertTrue(
+                any(
+                    tag == "button"
+                    and a.get("data-view") == view
+                    and a.get("onclick") == f"switchWorkspace('{view}')"
+                    for tag, a in elements
+                )
+            )
+        self.assertIn('data-i18n="Quick Status"', more)
 
 
 class WebInstallabilityResourceTests(unittest.TestCase):
@@ -81,6 +182,67 @@ class WebInstallabilityRouteTests(unittest.TestCase):
             self.assertEqual(200, icon_response.status_code, icon["src"])
             self.assertEqual("image/png", icon_response.headers["content-type"])
             self.assertEqual("no-store", icon_response.headers["cache-control"])
+
+    def test_state_manifest_and_icons_keep_auth_no_store_and_other_app_identities(self):
+        from fastapi.testclient import TestClient
+
+        with TestClient(
+            webapp.create_app(paths=[], config={"api": {"token": "install-test"}})
+        ) as client:
+            auth = {"Authorization": "Bearer install-test"}
+            # The existing public root shell is intentionally exempt, not /state.
+            self.assertEqual(200, client.get("/").status_code)
+            for route in (
+                "/capture",
+                "/planner",
+                "/state",
+                "/state.webmanifest",
+                "/assets/lifetxt-icon-180.png",
+                "/assets/lifetxt-icon-192.png",
+                "/assets/lifetxt-icon-512.png",
+            ):
+                self.assertEqual(401, client.get(route).status_code, route)
+                self.assertEqual(
+                    401,
+                    client.get(
+                        route, headers={"Authorization": "Bearer wrong"}
+                    ).status_code,
+                    route,
+                )
+                response = client.get(route, headers=auth)
+                self.assertEqual(200, response.status_code, route)
+                self.assertEqual("no-store", response.headers["cache-control"], route)
+            response = client.get("/state.webmanifest", headers=auth)
+            self.assertEqual(
+                "application/manifest+json", response.headers["content-type"]
+            )
+            self.assertEqual(
+                web_assets.web_resource_bytes("state_app_manifest.json"),
+                response.content,
+            )
+            for route, expected in (
+                ("/manifest.webmanifest", "/capture"),
+                ("/planner.webmanifest", "/planner"),
+                ("/state.webmanifest", "/state"),
+            ):
+                manifest = client.get(route, headers=auth).json()
+                self.assertEqual(expected, manifest["id"])
+                self.assertEqual(expected, manifest["start_url"])
+                for icon in manifest["icons"]:
+                    icon_response = client.get(icon["src"], headers=auth)
+                    self.assertEqual(200, icon_response.status_code)
+                    self.assertEqual("image/png", icon_response.headers["content-type"])
+                    self.assertEqual("no-store", icon_response.headers["cache-control"])
+
+    def test_readonly_state_still_has_install_metadata_and_menu_link(self):
+        from fastapi.testclient import TestClient
+
+        with TestClient(webapp.create_app(paths=[], read_only=True)) as client:
+            self.assertEqual(200, client.get("/state.webmanifest").status_code)
+            self.assertIn('href="/state.webmanifest"', client.get("/state").text)
+            for route in ("/", "/capture"):
+                self.assertIn('href="/state"', client.get(route).text)
+            self.assertTrue(client.get("/api/health").json()["read_only"])
 
     def test_capture_shell_links_manifest_and_ios_metadata(self):
         response = self.client.get("/capture")

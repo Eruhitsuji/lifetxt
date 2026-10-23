@@ -41,6 +41,10 @@ review_ledger:
     finding_count: 0
     completed_at: null
 earlier_attempts:
+  - command: StateBrowserTests in CI run 39895605380
+    result: failed_initial_attempt
+    commit: 83fbcdfd798746063c1d32f588e33c3fe6bb090f
+    notes: Real Chromium completed the 20 viewport/language/theme/AX matrix and real API persistence in observe/required mode, but the keyboard probe timed out. It sent keyDown/keyUp without a text/char event. Match existing native CDP key sequence, wait for enabled target and assert focus before typing; retain diagnostics. UI runtime unchanged. Final CI must recheck full native probe. Python 3.12.15 / Bash; immutable CI checkout; BashCompletionExecutionTests not selected in this job. Full job log retained in Actions.
   - command: Initial route/API and expanded DOM probes
     result: failed_then_resolved
     notes: Route fixture needed resetting between observe/required cases after End; expanded DOM fixture lacked element.id for focus assertion. Fixed test fixtures, not product behavior. Full local outputs retained. Python 3.12.14 / Bash; BashCompletionExecutionTests not selected; no edits while runs were in flight.

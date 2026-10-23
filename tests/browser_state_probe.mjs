@@ -29,7 +29,7 @@ const {command,evaluate,wait}=driver;
 const base=`http://127.0.0.1:${server.address().port}/state`;
 async function open(query='') {
   await command('Page.navigate',{url:base+query});
-  await wait(`location.href===${JSON.stringify(base+query)}&&document.querySelector('#sync')?.textContent.match(/Up to date|最新の状態/)`, 'State boot');
+  await wait(`location.href===${JSON.stringify(base+query)}&&document.querySelector('#sync')?.textContent.match(/Up to date|最新の状態/)&&!document.querySelector('#refresh').disabled`, 'State boot');
 }
 const matrix=[];
 try {
@@ -48,10 +48,15 @@ try {
  }
  await command('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
  await open('?lang=en&theme=light');
+ await command('Page.bringToFront');
+ await wait(`!document.querySelector('[data-state=focus]').disabled&&document.visibilityState==='visible'`, 'keyboard target ready');
  await evaluate(`window.__delay=true;document.querySelector('[data-state=focus]').focus()`);
- await command('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
+ assert.equal(await evaluate(`document.activeElement.dataset.state`),'focus','keyboard target must receive native focus');
+ await command('Input.dispatchKeyEvent',{type:'rawKeyDown',key:'Enter',code:'Enter',windowsVirtualKeyCode:13,nativeVirtualKeyCode:13});
+ await command('Input.dispatchKeyEvent',{type:'char',key:'Enter',code:'Enter',text:'\r',unmodifiedText:'\r',windowsVirtualKeyCode:13,nativeVirtualKeyCode:13});
  await command('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
- await wait('window.__posts.length===1','keyboard submission');
+ try { await wait('window.__posts.length===1','keyboard submission'); }
+ catch(error) { throw Error(error.message+' '+JSON.stringify(await evaluate(`({focused:document.activeElement?.outerHTML,visible:document.visibilityState,sync:document.querySelector('#sync').textContent,disabled:document.querySelector('[data-state=focus]').disabled,posts:window.__posts})`))); }
  assert.equal(await evaluate(`document.querySelector('#current-state').textContent`),'Busy');
  assert.ok(await evaluate(`[...document.querySelectorAll('.tile')].every(n=>n.disabled)`));
  await evaluate(`document.querySelector('[data-state=away]').click();window.__release()`);

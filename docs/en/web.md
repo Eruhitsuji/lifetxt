@@ -420,6 +420,25 @@ curl "http://127.0.0.1:8000/api/review?month=2026-07&project=research"
 curl "http://127.0.0.1:8000/api/review?from=2026-06-29&to=2026-07-05"
 ```
 
+`POST /api/status` transforms and persists the status under the shared file lock,
+with the existing Web revision/CAS check. Success (`201`, including a same-state
+no-op) returns `closed`, `opened`, `unchanged`, `path` and the saved revision in
+`ETag` / `X-Lifetxt-Revision`. Repeating a state preserves its original start;
+`force:true` restarts it; `end:true` only closes open records for that person.
+Other records, IDs, UTF-8 BOM and line endings are preserved. The existing
+`observe` legacy revision fallback and `required` mode are unchanged: clients
+that discover revisions send `If-Match` with the revision they read.
+
+An overlapping edit returns `409 CONFLICT`, lock timeout returns `503 LOCK_TIMEOUT`,
+and a read/write failure inside the status mutation returns `500 IO_ERROR`.
+Malformed life.txt content returns `400`. No automatic retry is performed;
+reload and check the current status before explicitly retrying, especially after
+an I/O error whose persistence outcome may be uncertain. Status successes and
+mutation conflict/lock/I/O responses use `Cache-Control: no-store`.
+Writers using the shared lock are serialized; editors that ignore it are checked
+by content hash before replacement and after saving. As with the shared mutation
+contract, this is not an operating-system lock on arbitrary external editors.
+
 `GET /api/review` returns the same report as the CLI `review` command and the
 MCP `get_review` tool: `completed_tasks` / `open_tasks` counts, a `completed`
 list (title, done date, project, id), per-habit completion rates, journal

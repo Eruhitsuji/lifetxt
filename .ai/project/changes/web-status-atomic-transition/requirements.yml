@@ -1,0 +1,17 @@
+schema_version: 1
+requirements:
+  - id: req-web-status-atomic-transition
+    kind: CHANGED
+    statement: Perform each Web Status transition under the authoritative shared lock and CAS contract.
+    owner: Eruhitsuji
+    acceptance_criteria:
+      - Read, parse, close/open and persist under one shared mutation lock; retain unrelated bytes, IDs, BOM and newlines.
+      - Preserve payload and response fields, same-state no-op, force, end and person separation, including multiple open records.
+      - Retain existing observe/required revision, auth, read-only and write-target contracts.
+      - Concurrent requests and detectable external edits fail safely without automatic retries.
+      - Return success only after persistence verification; response revision matches the saved bytes.
+      - Invalid input, parse failure, lock timeout and I/O failure never report success.
+    constraints:
+      - No new mandatory header, payload change, Format or state addition.
+      - Reuse existing mutation.write_text(transform=...) and presence.status_transition.
+open_questions: []

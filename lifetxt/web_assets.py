@@ -78,6 +78,7 @@ def web_resource_bytes(name: str) -> bytes:
     allowed = {
         "web_app_manifest.json",
         "planner_app_manifest.json",
+        "state_app_manifest.json",
         "web_icon_180.png",
         "web_icon_192.png",
         "web_icon_512.png",

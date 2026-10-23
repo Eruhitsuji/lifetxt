@@ -64,6 +64,24 @@ details. **End current status** only closes the current interval, whereas
 Offline starts a new offline interval. Canonical values remain untranslated.
 `web.presence.states` color-class overrides also apply here.
 
+From the full Web UI, open **More → State · Quick Status**. State changes only
+your own presence; **Status · latest** shows the latest/active status records by
+person and **Team · presence** combines presence with workload and messages.
+The small **Open full Web UI** footer link returns to those views.
+
+For a home-screen shortcut, open `/state` in a supported mobile browser and
+choose **Add to Home Screen** or **Install** (on iOS, use the browser's share
+menu when available). Its separate `/state.webmanifest` identifies and starts
+the app at `/state`, titled **State**, using the existing life.txt icons.
+Capture and Planner keep their own launch URLs. Availability, installation
+wording and standalone display depend on the browser; no install prompt is
+forced. After installation, open the shortcut online and verify that it opens
+State and that your confirmed status still reloads. An icon/manifest alone is
+not proof of installation on your device. Existing authentication still applies
+to the page, manifest, icons and API, so authenticated proxy/browser setup must
+also work in the standalone context; a home-screen shortcut does not carry or
+bypass Bearer credentials.
+
 The page supports English/Japanese (`?lang=ja` or the language selector) and
 system/light/dark themes. It uses the existing Web authentication connection,
 read-only/write-target rules and Status API; it does not add a credential form.
@@ -84,8 +102,11 @@ uses the workspace clock/timezone; invalid or ambiguous naive DST timestamps
 show Unavailable rather than guessing. The phone viewport/keyboard/AX probe
 is available in `tests.test_web_state_ui` when Chromium is available; physical
 Safari/Android, real safe-area/keyboard resizing and screen-reader acceptance
-remain device checks. Dedicated home-screen integration/navigation follows in
-the next task; this page does not add a manifest or service worker.
+remain device checks. Automated Chromium checks include emulated safe-area
+insets, scroll reachability of fields/End, native tab order and focus, returning
+from the full UI, browser back/reload, and error input retention. These do not
+certify VoiceOver/TalkBack, real iOS safe areas or home-screen installation.
+No service worker, offline cache or write queue is added.
 
 ### Mobile Day Planner
 

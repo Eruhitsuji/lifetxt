@@ -111,6 +111,7 @@ class StateInstallabilityResourceTests(unittest.TestCase):
                 )
             )
         self.assertIn('data-i18n="Quick Status"', more)
+        self.assertIn('<span lang="en">State</span>', more)
 
 
 class WebInstallabilityResourceTests(unittest.TestCase):

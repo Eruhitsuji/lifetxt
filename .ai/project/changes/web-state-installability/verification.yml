@@ -1,6 +1,9 @@
 schema_version: 1
 verification:
   executed:
+    - command: python -m unittest tests.test_web_i18n tests.test_release_policy; expanded Web regression including those modules and package closeout
+      result: passed
+      notes: Translation/release-policy 44 tests OK; expanded regression 138 tests OK (11 optional local Chromium skips), 13.366 seconds. Corrected app-name span without dictionary/audit exceptions. Ruff lint and changed-test format passed. Rebuilt wheel after anchor correction; all 10 State/shell/route/icon resources byte-match source, installed-target translation audit and manifest/icon routes pass.
     - command: python -m unittest tests.test_web_installability tests.test_web_state tests.test_web_state_ui tests.test_web_more_nav_js tests.test_web_planner tests.test_web_assets tests.test_web_mobile_capture tests.test_web_mobile_capture_browser tests.test_web_quick_status_js
       result: passed
       notes: 91 tests OK, 11 optional Chromium skips. Python 3.12.14 / Bash; no changes while running. Full output retained locally.
@@ -22,7 +25,7 @@ review_ledger:
     result: completed
     finding_count: 0
     completed_at: '2026-10-23'
-    notes: Reviewed full diff against main; only the intended anchor/metadata/manifest/allowlist/route/package runtime changes. Existing public root exemption retained, assets byte-matched, native link and auth/non-goals preserved. Later commit only links PR and records review. Independent review is not claimed.
+    notes: Reviewed full diff against main; only the intended anchor/metadata/manifest/allowlist/route/package runtime changes. Existing public root exemption retained, assets byte-matched, native link and auth/non-goals preserved. Later corrections address the test-only HTTP 400 expectation and separate the invariant app name from translated description in the anchor; see earlier attempts. Independent review is not claimed.
   - reviewer: Eruhitsuji
     review_type: independent_implementation_and_integration
     target_commit: null
@@ -30,6 +33,10 @@ review_ledger:
     finding_count: 0
     completed_at: null
 earlier_attempts:
+  - command: MPLBACKEND=Agg python -m unittest discover
+    result: failed_initial_attempt
+    commit: 305536a93ffb0942f865fa42fe953be5684164e4
+    notes: 5928 tests, 3 failures, 83 skips, 441.905 seconds. All three failures identify the same new static chrome string State with separator as untranslated (i18n coverage and 2 release-policy gates). Separate the invariant English app name into its own lang=en span while retaining the existing translated Quick Status suffix; do not weaken translation audit or add an exemption. Retain full local output in .state-install-full-final.log. Python 3.12.14 / Bash; BashCompletionExecutionTests ran; worktree unchanged throughout. Final full suite and final-head native CI must recheck the changed anchor.
   - command: Expanded StateBrowserTests in CI run 39898881508
     result: failed_initial_attempt
     commit: f07882923106afc90c77f2a79d9a15e1d4c66037

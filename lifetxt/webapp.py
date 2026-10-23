@@ -365,6 +365,16 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             headers={"Cache-Control": "no-store"},
         )
 
+    @app.get("/state.webmanifest")
+    def state_web_app_manifest():
+        from .web_assets import web_resource_bytes
+
+        return Response(
+            content=web_resource_bytes("state_app_manifest.json"),
+            media_type="application/manifest+json",
+            headers={"Cache-Control": "no-store"},
+        )
+
     @app.get("/assets/lifetxt-icon-{size}.png")
     def web_app_icon(size: int):
         from .web_assets import web_resource_bytes

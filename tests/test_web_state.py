@@ -25,7 +25,7 @@ class StateAssetTests(unittest.TestCase):
                 (Path(__file__).parents[1] / "pyproject.toml").read_text(),
             )
         self.assertNotIn("<script src=", STATE_HTML_PAGE)
-        self.assertNotIn('rel="manifest"', STATE_HTML_PAGE)
+        self.assertIn('rel="manifest" href="/state.webmanifest"', STATE_HTML_PAGE)
 
 
 @unittest.skipIf(TestClient is None, "Web extras unavailable")
@@ -58,7 +58,7 @@ class StateRouteTests(unittest.TestCase):
             response = client.get(route)
             self.assertEqual(200, response.status_code, route)
             self.assertEqual("no-store", response.headers["Cache-Control"])
-        self.assertNotIn('href="/state"', client.get("/").text)
+        self.assertIn('href="/state"', client.get("/").text)
 
     def test_route_keeps_existing_authentication(self):
         client = self.client(config={"api": {"token": "state-test-token"}})

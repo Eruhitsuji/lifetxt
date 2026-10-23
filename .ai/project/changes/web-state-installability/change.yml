@@ -1,0 +1,35 @@
+schema_version: 1
+change:
+  id: web-state-installability
+  title: State navigation, home-screen launch metadata and mobile acceptance
+  status: implemented
+  change_type: Feature
+  assurance_level: Standard
+  size: S
+  complexity: 5
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1380
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1384
+  base_commit: 1c268ac40d59482b2fbf31030836dde86332ec4d
+scope:
+  write_scope:
+    - lifetxt/web_assets.html State link only
+    - lifetxt/web_state.html manifest and mobile metadata only
+    - lifetxt/state_app_manifest.json
+    - lifetxt/web_assets.py resource allowlist only
+    - lifetxt/webapp.py State manifest route only
+    - pyproject.toml package-data registration only
+    - tests/test_web_installability.py
+    - tests/test_web_assets.py
+    - tests/test_web_state*.py
+    - tests/browser_state*probe.mjs
+    - docs/en/web.md
+    - docs/ja/web.md
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+    - .ai/project/changes/web-state-installability/**
+  forbidden_scope:
+    - .ai/managed/**, Format/Core/API mutation semantics, auth relaxation
+human_approvals_required:
+  - Independent final-head review and maintainer merge

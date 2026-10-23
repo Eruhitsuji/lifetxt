@@ -1,0 +1,15 @@
+schema_version: 1
+requirements:
+  - id: req-web-state-surface-v1
+    kind: MODIFIED
+    owner: Eruhitsuji
+    statement: Make the existing self-only State surface discoverable and home-screen launchable without changing Status semantics or security.
+    acceptance_criteria:
+      - More uses a native State link with existing surface styling; preserve Planner/Capture links and Status/Team buttons.
+      - Stable State manifest identity/start URL, root scope, existing brand icons and iOS title metadata.
+      - Auth and no-store apply to State manifest and icons; root shell keeps its existing public exemption.
+      - Package assets match source; no service worker, queue, forced install prompt or new dependency.
+      - Native phone/language/theme matrix includes emulated safe-area padding, scroll reachability, keyboard/touch/focus/AX, error retention and return/back/reload.
+      - JA/EN guides explain usage, installation, role split and online/auth constraints.
+      - Physical installability, actual safe areas/keyboards/font rendering and screen-reader acceptance remain explicitly unverified when no device is available.
+open_questions: []

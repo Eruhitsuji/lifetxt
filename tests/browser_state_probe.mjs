@@ -13,6 +13,7 @@ window.fetch=async (path,options={})=>{
  const response=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json','ETag':window.__revision,'X-Lifetxt-Timezone':'UTC'}});
  if(options.method==='POST'){
   const payload=JSON.parse(options.body);window.__posts.push({payload,headers:options.headers});
+  if(window.__error==='network')throw new TypeError('Synthetic connection failure');
   const save=()=>{if(window.__error)return response({},window.__error);const same=!payload.force&&!payload.end&&window.__record?.state===payload.state;
    if(payload.end)window.__record=null;else if(!same)window.__record={person:'self',active:true,state:payload.state,title:payload.title||payload.state,from:'2031-02-03T10:00',to:'',details:{note:payload.note?[payload.note]:[]}};
    if(!same)window.__revision='"r'+window.__posts.length+'"';return response({unchanged:same?payload.state:'',closed:[],opened:payload.end?'':'new'});};
@@ -34,6 +35,8 @@ async function open(query='') {
 const matrix=[];
 try {
  await command('Page.addScriptToEvaluateOnNewDocument',{source:setup});
+ // Chromium env() emulation, not evidence from a physical iOS safe area.
+ await command('Emulation.setSafeAreaInsetsOverride',{insets:{top:44,right:24,bottom:34,left:24}});
  for(const width of [320,360,390,430,740])for(const language of ['en','ja'])for(const theme of ['light','dark']){
   const height=width===740?360:844;
   await command('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:true});
@@ -41,15 +44,32 @@ try {
   await evaluate(`document.querySelector('#more-states').open=true;document.querySelector('#details').open=true`);
   const report=await evaluate(`({width:innerWidth,scroll:document.documentElement.scrollWidth,language:document.documentElement.lang,theme:document.documentElement.dataset.theme,primary:document.querySelectorAll('#primary-states .tile').length,all:document.querySelectorAll('.tile').length,minHeight:Math.min(...[...document.querySelectorAll('.tile')].map(n=>n.getBoundingClientRect().height)),pressed:document.querySelector('[data-state=busy]').getAttribute('aria-pressed'),safe:!document.querySelector('#activity img'),override:document.querySelector('[data-state=commuting]').classList.contains('p-focus'),labels:[...document.querySelectorAll('.tile')].every(n=>n.textContent.trim()),fields:[...document.querySelectorAll('input,textarea,select')].every(n=>n.labels.length>0)})`);
   assert.equal(report.width,width);assert.ok(report.scroll<=width);assert.equal(report.language,language);assert.equal(report.theme,theme);assert.equal(report.primary,6);assert.equal(report.all,9);assert.ok(report.minHeight>=44);assert.equal(report.pressed,'true');assert.ok(report.safe&&report.override&&report.labels&&report.fields);
+  const insets=await evaluate(`({top:parseFloat(getComputedStyle(document.querySelector('.topbar')).paddingTop),left:parseFloat(getComputedStyle(document.querySelector('main')).paddingLeft),right:parseFloat(getComputedStyle(document.querySelector('main')).paddingRight),bottom:parseFloat(getComputedStyle(document.querySelector('main')).paddingBottom)})`);
+  assert.ok(insets.top>=44&&insets.left>=24&&insets.right>=24&&insets.bottom>=34,'safe-area env padding');
+  for(const selector of ['#current-card','[data-state=available]','[data-state=sleeping]','#activity-input','#note-input','#save','#end','footer a']){
+   const reachable=await evaluate(`(()=>{const n=document.querySelector(${JSON.stringify(selector)});n.scrollIntoView({block:'center'});const r=n.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,height:r.height};})()`);
+   assert.ok(reachable.left>=0&&reachable.right<=width,selector+' horizontal reachability');
+   // Tall cards/textareas may exceed short viewports, but their edges remain scrollable.
+   if(reachable.height<=height)assert.ok(reachable.top>=0&&reachable.bottom<=height,selector+' vertical reachability');
+  }
   await command('Accessibility.enable');
   const ax=await command('Accessibility.getFullAXTree');
   assert.ok(ax.nodes.some(node=>node.role?.value==='button'&&node.name?.value.includes(language==='ja'?'集中':'Focus')));
-  matrix.push(report);
+  assert.ok(ax.nodes.some(node=>node.role?.value==='button'&&node.name?.value===(language==='ja'?'現在の状態を終了':'End current status')));
+  assert.ok(ax.nodes.some(node=>node.role?.value==='textbox'&&node.name?.value.includes(language==='ja'?'メモ':'Note')));
+  matrix.push({...report,insets,reachable:true});
  }
  await command('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
  await open('?lang=en&theme=light');
  await command('Page.bringToFront');
  await wait(`!document.querySelector('[data-state=focus]').disabled&&document.visibilityState==='visible'`, 'keyboard target ready');
+ await evaluate(`document.querySelector('#language').focus()`);
+ for(const expected of ['theme','refresh','available','busy','focus','meeting','away','offline']){
+  await command('Input.dispatchKeyEvent',{type:'rawKeyDown',key:'Tab',code:'Tab',windowsVirtualKeyCode:9});
+  await command('Input.dispatchKeyEvent',{type:'keyUp',key:'Tab',code:'Tab',windowsVirtualKeyCode:9});
+  assert.equal(await evaluate(`document.activeElement.dataset.state||document.activeElement.id`),expected,'native tab order');
+  assert.ok(await evaluate(`parseFloat(getComputedStyle(document.activeElement).outlineWidth)>=3`),'visible keyboard focus');
+ }
  await evaluate(`window.__delay=true;document.querySelector('[data-state=focus]').focus()`);
  assert.equal(await evaluate(`document.activeElement.dataset.state`),'focus','keyboard target must receive native focus');
  await command('Input.dispatchKeyEvent',{type:'rawKeyDown',key:'Enter',code:'Enter',windowsVirtualKeyCode:13,nativeVirtualKeyCode:13});
@@ -88,6 +108,19 @@ try {
  await command('Emulation.setEmulatedMedia',{features:[{name:'forced-colors',value:'active'}]});
  assert.ok(await evaluate(`parseFloat(getComputedStyle(document.querySelector('[data-state=busy]')).outlineWidth)>=3`));
  await command('Emulation.setEmulatedMedia',{features:[]});
- if(screenshot){await command('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});await open('?lang=ja&theme=light');const shot=await command('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});await writeFile(screenshot,Buffer.from(shot.data,'base64'));}
- console.log(JSON.stringify({matrix,interaction:'keyboard, native touch, pending guard, canonical payload/revision, custom focus, XSS, short viewport, read-only, AX, forced colors passed'}));
+ for(const code of [400,401,403,409,500,'network']){
+  await open('?lang=en&theme=light');
+  await evaluate(`document.querySelector('#details').open=true;document.querySelector('#form-state').value='focus';document.querySelector('#form-state').dispatchEvent(new Event('change'));document.querySelector('#activity-input').value='Keep my draft';document.querySelector('#activity-input').dispatchEvent(new Event('input',{bubbles:true}));window.__error=${JSON.stringify(code)};document.querySelector('#save').click()`);
+  await wait(`document.querySelector('#feedback').dataset.error==='true'&&!document.querySelector('#refresh').disabled`,'native failed save '+code);
+  assert.equal(await evaluate(`document.querySelector('#activity-input').value`),'Keep my draft');
+  assert.equal(await evaluate(`document.querySelector('#current-state').textContent`),'Busy');
+  assert.equal(await evaluate('window.__posts.length'),1);
+  // Validation rejection is definite: allow an explicit corrected submission.
+  // Auth/conflict/uncertain results require a refresh, with no automatic retry.
+  assert.equal(await evaluate(`document.querySelector('[data-state=focus]').disabled`),code!==400,'write guard for '+code);
+  assert.ok(await evaluate(`(()=>{const n=document.querySelector('#feedback');n.scrollIntoView({block:'center'});const r=n.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight;})()`));
+ }
+ await command('Emulation.setSafeAreaInsetsOverride',{insets:{}});
+ if(screenshot){await command('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});await open('?lang=en&theme=light');const shot=await command('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});await writeFile(screenshot,Buffer.from(shot.data,'base64'));}
+ console.log(JSON.stringify({matrix,safeArea:'Chromium env() override 44/24/34/24; not physical iOS',failures:[400,401,403,409,500,'network'],interaction:'keyboard/tab order/focus-visible, native touch, pending guard, canonical payload/revision, custom focus, XSS, short viewport/reachable End and fields, failure input retention, read-only, AX, forced colors passed'}));
 } finally {await driver.close();await new Promise(resolve=>server.close(resolve));}

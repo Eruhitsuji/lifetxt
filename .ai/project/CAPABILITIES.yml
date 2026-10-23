@@ -3,7 +3,7 @@ schema_version: 1
 capabilities:
   - id: cap-web-state-surface
     name: Dedicated mobile State surface
-    summary: Self-only current presence, one-tap state transitions and optional title/note editing through existing Status APIs.
+    summary: Self-only current presence, one-tap state transitions and optional title/note editing, discoverable from More and independently launchable from the home screen.
     status: implemented
     owner: Eruhitsuji
     source_requirements:
@@ -12,11 +12,14 @@ capabilities:
       - lifetxt/web_state.html
       - lifetxt/web_state.css
       - lifetxt/web_state.js
+      - lifetxt/web_assets.html
+      - lifetxt/state_app_manifest.json
       - lifetxt/web_assets.py
       - lifetxt/webapp.py
       - pyproject.toml
     public_interfaces:
       - GET /state
+      - GET /state.webmanifest
       - Existing self Status/config/health read APIs and POST /api/status
     tests_or_evidence:
       - tests/test_web_state.py
@@ -24,14 +27,19 @@ capabilities:
       - tests/state_ui_probe.mjs
       - tests/browser_state_probe.mjs
       - tests/browser_state_live_probe.mjs
+      - tests/test_web_installability.py
       - .ai/project/changes/web-state-surface/verification.yml
+      - .ai/project/changes/web-state-installability/verification.yml
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/1377
       - https://github.com/Eruhitsuji/lifetxt/issues/1379
+      - https://github.com/Eruhitsuji/lifetxt/issues/1380
+      - https://github.com/Eruhitsuji/lifetxt/issues/1383
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/1382
+      - https://github.com/Eruhitsuji/lifetxt/pull/1384
     reuse_policy: Reuse Status Core and API, Web revision/CAS and Planner standalone-page assembly; no new parser, mutation model, authentication or dependency.
-    notes: Separate page; six primary and three secondary standard tiles plus custom form. Navigation and dedicated installability follow in issue 1380. Independent final-head review remains required.
+    notes: Separate self-only page; six primary and three secondary tiles plus custom form. More uses a native State link without replacing Status/Team tabs. Dedicated manifest reuses existing icons/auth/no-store; online only, no worker or queue. Native Chromium viewport/AX/safe-area emulation and API probes do not certify physical Safari/Android/home-screen/assistive-technology acceptance; those gaps are tracked in issue 1383. Independent final-head review remains required.
   - id: cap-editor-language-support
     name: Optional editor language support
     summary: Format-aligned static editor assistance and a Core-backed read-only language server.

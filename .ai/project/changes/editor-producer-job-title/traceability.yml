@@ -1,0 +1,11 @@
+schema_version: 1
+traceability:
+- requirement_id: req-editor-producer-job-identity
+  capability_id: cap-editor-language-support
+  epic: https://github.com/Eruhitsuji/lifetxt/issues/1389
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1401
+  pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1402
+  tests_or_evidence:
+  - tests/test_release_preflight_actions.py
+  - https://github.com/Eruhitsuji/lifetxt/actions/runs/40084409123
+  status: in_review

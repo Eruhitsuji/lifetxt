@@ -75,7 +75,9 @@ class FakeActions:
                 {
                     "id": 1000 + index,
                     "run_id": candidate["run_id"],
-                    "name": actions.TITLES[family]
+                    "name": yaml.safe_load(
+                        (ROOT / actions.WORKFLOW).read_text(encoding="utf-8")
+                    )["jobs"][family]["name"]
                     + " / "
                     + ("core" if family == "core" else "Preflight (%s)" % target),
                     "head_sha": candidate["controller_sha"],
@@ -163,6 +165,22 @@ class PreflightActionsTests(unittest.TestCase):
             len(actions.select_artifacts(self.api, self.candidate, jobs)),
             2 * len(proof.TARGETS),
         )
+
+    def test_editor_actual_job_identity_rejects_missing_duplicate_and_failed(self):
+        editor_job = next(j for j in self.api.jobs if j["name"] ==
+                          "Editor Windows / Preflight (editor-windows)")
+        self.assertIn("editor-windows", actions.producer_jobs(self.api, self.candidate))
+        for fault in ("name", "duplicate", "failed"):
+            api = copy.deepcopy(self.api)
+            job = next(j for j in api.jobs if j["id"] == editor_job["id"])
+            if fault == "name":
+                job["name"] = "Editor / Preflight (editor-windows)"
+            elif fault == "duplicate":
+                api.jobs.append(copy.deepcopy(job))
+            else:
+                job["conclusion"] = "failure"
+            with self.subTest(fault=fault), self.assertRaises(ValueError):
+                actions.producer_jobs(api, self.candidate)
 
     def test_main_ci_fork_source_ref_event_conclusion_and_gate_faults(self):
         for field, value in (

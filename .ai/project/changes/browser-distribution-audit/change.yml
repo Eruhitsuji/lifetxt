@@ -1,0 +1,14 @@
+schema_version: 1
+change:
+  id: browser-distribution-audit
+  title: Fail-closed browser runtime distribution audit
+  status: in_review
+  change_type: Operations
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1398
+scope:
+  write_scope: [contrib/browser_check_poc, tests/test_browser_distribution_audit.py, scoped change package and traceability]
+  forbidden_scope: [Core behavior, website publication, workflows, .ai/managed]
+human_approvals_required: [independent distribution and integration review, merge, source correspondence acceptance, publication]

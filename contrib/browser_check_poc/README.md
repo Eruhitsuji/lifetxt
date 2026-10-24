@@ -183,3 +183,12 @@ python contrib/browser_check_poc/example_corpus.py \
 
 Use a new output directory. The retained 115-case Node result is separate from
 browser observations and does not establish complete Format/CLI compatibility.
+
+### Distribution integrity gate (#1398)
+
+The builder now checks its complete fixed artifact allowlist after generating
+`manifest.json`. `python -m contrib.browser_check_poc.distribution_audit ARTIFACT`
+emits component/source-delivery status and hash evidence. Use
+`--require-publication` for a nonzero exit while any publication gate remains
+open. Current source correspondence and independent distribution review remain
+blocked; see the explicit artifact/source disposition in RUNTIME_INVENTORY.md.

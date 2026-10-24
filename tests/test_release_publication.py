@@ -257,6 +257,40 @@ class CanonicalPublicationTests(unittest.TestCase):
         self.public = self.fixture.root / "prepared/public"
         self.expected = canonical.staged_rows(self.public)
 
+    def test_desktop_spaces_are_canonicalized_before_public_inventory(self):
+        original = proof.load
+        def with_spaces(path):
+            report = original(path)
+            if str(path).endswith("desktop-bundle-report.json"):
+                report = copy.deepcopy(report)
+                for row in report["installers"]:
+                    row["public_name"] = "lifetxt Desktop " + row["public_name"]
+            return report
+        with patch.object(proof, "load", side_effect=with_spaces):
+            canonical.public_inventory(
+                self.fixture.candidate,
+                original(self.fixture.bundle / "components.json"),
+                self.fixture.bundle, self.fixture.root / "prepared/payloads",
+                self.fixture.root / "normalized/public",
+            )
+        rows = canonical.staged_rows(self.fixture.root / "normalized/public")
+        installers = [r for r in rows if "Desktop" in r["name"]]
+        self.assertTrue(installers)
+        self.assertTrue(all(" " not in r["name"] for r in installers))
+        canonical.remote_inventory(rows, [
+            {"name": r["name"], "size": r["bytes"], "digest": "sha256:" + r["sha256"]}
+            for r in rows
+        ], True)
+
+    def test_public_name_normalization_is_strict_and_collision_visible(self):
+        self.assertEqual(canonical.github_asset_name("lifetxt Desktop_1.0.4+3.deb"),
+                         "lifetxt.Desktop_1.0.4+3.deb")
+        self.assertEqual(canonical.github_asset_name("lifetxt.Desktop.deb"),
+                         canonical.github_asset_name("lifetxt Desktop.deb"))
+        for name in ("-bad", ".hidden", "../bad", "bad?name", "日本語.deb"):
+            with self.subTest(name=name), self.assertRaises(ValueError):
+                canonical.github_asset_name(name)
+
     def test_historical_nine_only_and_missing_desktop_never_finalize(self):
         fixture = proof.load(
             ROOT / "tests/fixtures/release-publication/v1.0.4.1-assets.json"

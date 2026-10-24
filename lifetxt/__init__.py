@@ -1,6 +1,6 @@
 """Small, side-effect-free public Core import surface."""
 
-__version__ = "1.0.4.2"
+__version__ = "1.0.4.3"
 
 from .model import Diagnostic, Item
 from .parser import parse_line, parse_text

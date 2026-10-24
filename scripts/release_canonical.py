@@ -9,6 +9,17 @@ import release_preflight_desktop as desktop
 import release_preflight_proof as proof
 
 
+def github_asset_name(name):
+    """Choose a stable ASCII name before GitHub can rewrite upload names."""
+    desktop.public_name(name)
+    name = name.replace(" ", ".")
+    proof.require(
+        re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9._+-]*", name) is not None,
+        "unsupported public asset name",
+    )
+    return name
+
+
 def checksum_bytes(rows):
     names = [row["name"] for row in rows]
     proof.require(
@@ -61,7 +72,7 @@ def public_inventory(candidate, aggregate, bundle, payloads, output):
                 or (family == "standalone" and row["role"] == "checksum")
             ):
                 continue
-            name = mapping.get(row["path"], row["path"])
+            name = github_asset_name(mapping.get(row["path"], row["path"]))
             desktop.public_name(name)
             proof.require(
                 "/" not in name

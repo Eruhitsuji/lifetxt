@@ -1,0 +1,18 @@
+schema_version: 1
+requirements:
+- id: req-release-v1-0-4-3
+  kind: MODIFIED
+  statement: Prepare reviewed source for correction release 1.0.4.3, retaining original
+    v1.0.4 tag.
+  acceptance_criteria:
+  - Core CLI, MCP, pyproject and package artifacts report 1.0.4.3
+  - Mini Cargo and lock use mapped 1.0.4+3
+  - v1.0.4.3 matches canonical Core release identity
+  - Release notes describe correction changes, strict-subset Mini and limits
+  - No tag or publication performed by this version PR
+  constraints:
+  - 'Use merged #1301 and #1303'
+  - No life.txt format/data migration
+  owner: Eruhitsuji
+open_questions:
+- Desktop native installation/upgrade remains release acceptance work.

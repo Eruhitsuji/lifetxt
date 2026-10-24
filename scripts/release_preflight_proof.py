@@ -25,6 +25,7 @@ TARGETS = (
     "mini-linux-aarch64",
     "oci-linux-amd64",
     "oci-linux-arm64",
+    "editor-windows",
 )
 CONTRACTS = {
     "core": (
@@ -41,6 +42,10 @@ CONTRACTS = {
         {"version", "native", "static", "conformance", "cli"},
     ),
     "oci": ({"oci-layout"}, {"version", "native", "cli", "web", "non-root"}),
+    "editor": (
+        {"vsix", "neovim-config"},
+        {"vsix-package", "neovim-config", "provenance", "offline"},
+    ),
 }
 HEX = re.compile(r"[0-9a-f]{64}")
 SHA = re.compile(r"[0-9a-f]{40}")

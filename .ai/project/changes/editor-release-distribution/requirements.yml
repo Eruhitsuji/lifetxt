@@ -1,0 +1,18 @@
+schema_version: 1
+requirements:
+  - id: req-editor-windows-approved-release
+    kind: ADDED
+    statement: Distribute Windows VS Code VSIX and Neovim configuration ZIP through the existing human-approved immutable Release, with offline preflight and downloaded-byte verification.
+    acceptance_criteria:
+      - Existing 13 preflight targets remain mandatory; editor-windows is the 14th, with both roles required.
+      - VSIX and Neovim ZIP include source SHA, release version, extension SemVer, candidate digest.
+      - Preflight must fail on missing, altered or out-of-contract bytes before approval.
+      - Existing human approval and no-clobber release/Latest gates remain unchanged.
+      - Public readback verifies real zip contents and checksum; docs offer Windows installation and removal.
+    constraints:
+      - Windows VS Code/Neovim editor support only; other OS/Vim excluded.
+      - No new publish permission, dependencies for Core, telemetry, mutation, marketplace.
+    owner: Eruhitsuji
+open_questions:
+  - Node packaging and optional client inclusion require an actual preflight build/VSIX inspect before release acceptance.
+  - Windows GUI matrix scope outside #1373 remains not universally verified.

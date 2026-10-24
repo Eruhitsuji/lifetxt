@@ -12,6 +12,7 @@ from pathlib import Path
 import release_preflight_actions as actions
 import release_preflight_core as core
 import release_preflight_desktop as desktop
+import release_preflight_editor as editor
 import release_preflight_mini as mini
 import release_preflight_oci as oci
 import release_preflight_oci_layout as layout
@@ -24,6 +25,7 @@ PRODUCERS = {
     "desktop": desktop,
     "mini": mini,
     "oci": oci,
+    "editor": editor,
 }
 
 

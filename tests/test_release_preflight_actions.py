@@ -157,8 +157,11 @@ class PreflightActionsTests(unittest.TestCase):
         self.assertEqual(ci["gate_job_id"], 901)
         actions.current_run(self.api, self.candidate)
         jobs = actions.producer_jobs(self.api, self.candidate)
+        # Every required target emits both a payload and a separate proof
+        # artifact. Keep this bound to the strict target inventory.
         self.assertEqual(
-            len(actions.select_artifacts(self.api, self.candidate, jobs)), 26
+            len(actions.select_artifacts(self.api, self.candidate, jobs)),
+            2 * len(proof.TARGETS),
         )
 
     def test_main_ci_fork_source_ref_event_conclusion_and_gate_faults(self):

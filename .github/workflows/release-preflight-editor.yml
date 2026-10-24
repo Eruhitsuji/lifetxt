@@ -1,0 +1,80 @@
+name: Editor Windows preflight (non-public)
+on:
+  workflow_call:
+    inputs:
+      candidate_json:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  editor:
+    name: Preflight (editor-windows)
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Check out trusted controller
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: controller
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate candidate against actual controller/run context
+        id: candidate
+        env:
+          CANDIDATE_JSON: ${{ inputs.candidate_json }}
+        run: |
+          python -c 'import os; from pathlib import Path; Path("candidate.json").write_text(os.environ["CANDIDATE_JSON"], encoding="utf-8")'
+          python controller/scripts/release_preflight_core.py prepare \
+            --candidate candidate.json --controller controller --output checkout.env
+          cat checkout.env >> "$GITHUB_OUTPUT"
+      - name: Check out immutable distribution source
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ steps.candidate.outputs.source_sha }}
+          path: source
+          persist-credentials: false
+      - name: Build and smoke Windows VSIX and Neovim archives
+        run: |
+          python controller/scripts/release_preflight_editor.py build \
+            --candidate candidate.json --controller controller --source source \
+            --payload payloads/editor-windows --report editor-build-report.json
+      - name: Upload immutable non-public Editor payload
+        id: payload
+        uses: actions/upload-artifact@v6
+        with:
+          name: editor-windows-payload-${{ github.run_id }}-${{ github.run_attempt }}
+          path: payloads/editor-windows/*
+          if-no-files-found: error
+          retention-days: 30
+      - name: Bind upload reference to verified Editor bytes
+        env:
+          PAYLOAD_ARTIFACT_ID: ${{ steps.payload.outputs.artifact-id }}
+          PAYLOAD_ARTIFACT_NAME: editor-windows-payload-${{ github.run_id }}-${{ github.run_attempt }}
+          PAYLOAD_ARTIFACT_DIGEST: ${{ steps.payload.outputs.artifact-digest }}
+        run: |
+          python controller/scripts/release_preflight_editor.py component \
+            --candidate candidate.json --controller controller --source source \
+            --payload payloads/editor-windows --report editor-build-report.json \
+            --artifact-id "$PAYLOAD_ARTIFACT_ID" \
+            --artifact-name "$PAYLOAD_ARTIFACT_NAME" \
+            --artifact-digest "$PAYLOAD_ARTIFACT_DIGEST" --output editor-component.json
+      - name: Upload Editor component proof separately
+        uses: actions/upload-artifact@v6
+        with:
+          name: editor-windows-proof-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            candidate.json
+            editor-build-report.json
+            editor-component.json
+          if-no-files-found: error
+          retention-days: 30

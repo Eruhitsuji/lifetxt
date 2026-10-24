@@ -47,7 +47,7 @@ class CompletePreflight:
                 "id": 3000,
                 "run_id": 123,
                 "head_sha": "b" * 40,
-                "name": "Verify all 13 targets",
+                "name": "Verify all 14 targets",
                 "status": "completed",
                 "conclusion": "success",
                 "started_at": "2020-01-01T00:20:00Z",
@@ -103,6 +103,9 @@ class ReleasePlanTests(unittest.TestCase):
         self.assertEqual(plan["bundle_digest"], self.fixture.manifest["digest"])
         self.assertEqual("1.0.4.2", plan["candidate"]["version"])
         self.assertTrue(any("desktop-windows" in r["name"] for r in rows))
+        editor_assets = [r for r in rows if r["name"].endswith((".vsix", "-windows-1.0.4.2.zip"))]
+        self.assertEqual(len(editor_assets), 2)
+        self.assertTrue(all(r["bytes"] > 0 for r in editor_assets))
         self.assertFalse(
             any(
                 "bundled-core" in r["name"] or r["name"].endswith(".oci.tar")

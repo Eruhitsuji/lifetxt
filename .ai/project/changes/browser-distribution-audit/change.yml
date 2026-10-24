@@ -7,6 +7,7 @@ change:
   assurance_level: High
   owner: Eruhitsuji
   accountable_owner: Eruhitsuji
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1407
   related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1398
 scope:
   write_scope: [contrib/browser_check_poc, tests/test_browser_distribution_audit.py, scoped change package and traceability]

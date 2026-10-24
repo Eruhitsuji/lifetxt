@@ -1,0 +1,36 @@
+schema_version: 1
+change:
+  id: editor-vsix-readme-case
+  title: Validate normalized VSIX README path
+  status: in_review
+  change_type: Bug
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1396
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1397
+  base_commit: 381e77a9770ccd89830f50b4d9f2c807f6e7fca6
+scope:
+  in_scope:
+  - Correct packaged README path and model actual vsce inventory
+  - Regression checks for missing, tampered and duplicate-case README
+  out_of_scope:
+  - Publishing a Release, updating tag, changing version or authorization
+  - Modifying tracked VS Code README or original 13 preflight targets
+  write_scope:
+  - scripts/release_preflight_editor.py
+  - tests/test_release_preflight_editor.py
+  - .ai/project/changes/editor-vsix-readme-case/**
+  - .ai/project/TRACEABILITY.yml
+  forbidden_scope:
+  - .ai/managed/**
+  - .github/workflows/release.yml
+  - scripts/release_canonical.py
+  - scripts/release_channels.py
+  - tags, assets, publication, secrets, merge
+  shared_files:
+  - scripts/release_preflight_editor.py
+human_approvals_required:
+- Independent High assurance implementation and integration review of final head
+- Owner merge approval
+- Separate human Release Authority approval for future publishing

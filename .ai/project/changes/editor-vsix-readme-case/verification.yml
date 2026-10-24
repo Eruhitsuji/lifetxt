@@ -1,0 +1,25 @@
+schema_version: 1
+verification:
+  checks:
+  - type: regression_suite
+    command: python -m unittest tests.test_change_package_closeout tests.test_release_preflight_editor
+      tests.test_release_preflight_actions tests.test_release_preflight_collect tests.test_release_publication
+    status: passed
+    result: 77 tests passed; normalized fixture reproduced two errors before validator
+      correction.
+  - type: actual_build
+    status: passed
+    result: Local npm ci --omit=dev --ignore-scripts and pinned vsce 3.7.1 generated
+      a real 324-file VSIX; smoke_vsix returned editor version 0.2.0. Full workflow
+      provenance/context and all 14 targets still require fresh main preflight after
+      merge.
+  reviews:
+  - reviewer: ChatGPT (implementer)
+    review_type: self_review
+    result: passed
+    findings: Exact path fix only; case collision detection and provenance unchanged.
+  - reviewer: Independent reviewer / Owner
+    review_type: implementation_and_integration
+    result: pending
+release_evidence:
+  rollback_plan: Revert repair PR; withhold publication. No assets or tags modified.

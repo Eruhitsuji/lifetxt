@@ -126,10 +126,11 @@ def checked_archive(path, *, max_size=80 * 1024 * 1024):
 
 def smoke_vsix(candidate, path):
     rows = checked_archive(path)
+    # Pinned vsce normalizes the packaged README basename to lowercase.
     required = {
         "[Content_Types].xml", "extension.vsixmanifest",
         "extension/package.json", "extension/release.json",
-        "extension/README.md",
+        "extension/readme.md",
         "extension/extension.js", "extension/language-configuration.json",
         "extension/syntaxes/lifetxt.tmLanguage.json",
         "extension/snippets/lifetxt.code-snippets",
@@ -138,7 +139,7 @@ def smoke_vsix(candidate, path):
         "extension/node_modules/vscode-languageclient/lib/node/main.js",
     }
     proof.require(required <= set(rows), "VSIX missing language/client content")
-    readme = rows["extension/README.md"].decode("utf-8")
+    readme = rows["extension/readme.md"].decode("utf-8")
     doc_root = (
         "https://github.com/Eruhitsuji/lifetxt/blob/"
         + candidate["source_sha"] + "/docs/"

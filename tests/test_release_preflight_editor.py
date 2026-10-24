@@ -91,7 +91,7 @@ class EditorArtifactTests(unittest.TestCase):
             editor.validate_payload(self.candidate, self.payload)
 
     def test_bundle_extras_paths_and_wrong_version_rejected(self):
-        cases = ("../escape", "lifetxt.lua", r"bad\windows", "/absolute")
+        cases = ("../escape", "LIFETXT.LUA", r"bad\windows", "/absolute")
         for bad in cases:
             files = dict(self.nvim_files)
             files[bad] = b"evil"

@@ -1,0 +1,12 @@
+schema_version: 1
+verification:
+  checks:
+    - type: focused
+      result: Version tag and Mini checks passed; 23 focused tests passed. New version preflight and publication remain pending.
+      status: passed
+  reviews:
+    - reviewer: Independent reviewer
+      result: pending
+release_evidence:
+  publication: not_run
+  preflight: Fresh v1.0.4.2 preflight required after merge

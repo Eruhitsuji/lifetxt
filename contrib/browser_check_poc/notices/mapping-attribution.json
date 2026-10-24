@@ -1,0 +1,166 @@
+{
+  "schema_version": 1,
+  "source_archive_sha256": "c609e078adab90e2c6bacb6afafacd5eaf60cd94cf670f1e159565725fcd448d",
+  "complete_distribution_audit": false,
+  "public_distribution_approved": false,
+  "inputs": [
+    {
+      "id": "ucd-16-and-3.2",
+      "origin": "Unicode UCD 16.0.0 and legacy UCD 3.2.0",
+      "generators": [
+        "Tools/unicode/makeunicodedata.py"
+      ],
+      "inputs": [
+        "https://www.unicode.org/Public/16.0.0/ucd/",
+        "https://www.unicode.org/Public/3.2-Update/"
+      ],
+      "terms_assessment": "Official current Unicode terms identify V3 for data unless specifically indicated otherwise. UCD16 and UCD3.2 release ReadMes retained; historical table-by-table exceptions not independently cleared.",
+      "review_status": "independent-acceptance-pending",
+      "evidence_members": [
+        {
+          "archive": "cpython",
+          "member": "Tools/unicode/makeunicodedata.py",
+          "sha256": "b48c83468d646a398278e1ea732a5c1290144daba55a846cd9fe84737ab15d4c"
+        }
+      ]
+    },
+    {
+      "id": "unicode-mappings",
+      "origin": "Unicode MAPPINGS, including vendor/obsolete tables",
+      "generators": [
+        "Tools/unicode/genmap_japanese.py",
+        "Tools/unicode/genmap_korean.py",
+        "Tools/unicode/genmap_schinese.py",
+        "Tools/unicode/genmap_tchinese.py"
+      ],
+      "inputs": [
+        "CP932",
+        "CP936",
+        "CP949",
+        "CP950",
+        "JIS0208",
+        "JIS0212",
+        "BIG5",
+        "Lib/encodings eight-bit mappings"
+      ],
+      "terms_assessment": "Unicode V3 retained; per-input historic/vendor notices must remain in source archives. Do not assign V3 to all CJK input sources.",
+      "review_status": "independent-acceptance-pending",
+      "evidence_members": [
+        {
+          "archive": "cpython",
+          "member": "Tools/unicode/genmap_japanese.py",
+          "sha256": "c21ee6d96c0bf60b7965eedd54826487ee9a5be77ef2131d7fbed2293de4f28b"
+        },
+        {
+          "archive": "cpython",
+          "member": "Tools/unicode/genmap_korean.py",
+          "sha256": "56a38de6c73818ea893f7cf8ee9443e54862c494d13964c3314a7748fddd5e8a"
+        },
+        {
+          "archive": "cpython",
+          "member": "Tools/unicode/genmap_schinese.py",
+          "sha256": "15f13f4091b15f2758116f5045b7c6ceecf93b393768efed66ae7ed197863d04"
+        },
+        {
+          "archive": "cpython",
+          "member": "Tools/unicode/genmap_tchinese.py",
+          "sha256": "96706701969bafb414bf00ea74a59e7256d51c39f632a07e7ff61e98148e5ce4"
+        }
+      ]
+    },
+    {
+      "id": "hkscs-2004",
+      "origin": "HKSARG CCLI HKSCS-2004",
+      "generators": [
+        "Tools/unicode/genmap_tchinese.py"
+      ],
+      "inputs": [
+        "https://www.ccli.gov.hk/en/archive/terms_hkscs-2004-big5-iso.html"
+      ],
+      "terms_assessment": "Generator explicitly calls the input licence restrictive. Official terms clauses 5 and 15 restrict modification and redistribution and offer a limited complete/unmodified distribution permission. Applicability to CPython generated tables is unresolved. No inference that PSF or Unicode V3 overrides it. No raw HKSCS mapping was downloaded or added by this change.",
+      "review_status": "unresolved-permission-scope-publication-blocker",
+      "evidence_members": [
+        {
+          "archive": "cpython",
+          "member": "Tools/unicode/genmap_tchinese.py",
+          "sha256": "96706701969bafb414bf00ea74a59e7256d51c39f632a07e7ff61e98148e5ce4"
+        }
+      ]
+    },
+    {
+      "id": "icu-gb18030",
+      "origin": "Historical ICU GB18030-2000 XML",
+      "generators": [
+        "Tools/unicode/genmap_schinese.py"
+      ],
+      "inputs": [
+        "http://oss.software.ibm.com/cvs/icu/~checkout~/charset/data/xml/gb-18030-2000.xml"
+      ],
+      "retained_member": "Tools/unicode/python-mappings/gb-18030-2000.xml",
+      "terms_assessment": "CPython archive contains the exact XML but no copyright/licence declaration was found within it. Historical ICU terms corresponding to this input have not been established. Current ICU licence is not substituted as proof.",
+      "review_status": "unresolved-historical-terms-publication-blocker",
+      "evidence_members": [
+        {
+          "archive": "cpython",
+          "member": "Tools/unicode/genmap_schinese.py",
+          "sha256": "15f13f4091b15f2758116f5045b7c6ceecf93b393768efed66ae7ed197863d04"
+        },
+        {
+          "archive": "cpython",
+          "member": "Tools/unicode/python-mappings/gb-18030-2000.xml",
+          "sha256": "47350d44c6db23e0f0c9e9f4a1bf2e966369f52357fd01425bc06b9aaf83f943"
+        }
+      ]
+    },
+    {
+      "id": "jis-x-0213",
+      "origin": "JIS X 0213:2004 mapping (historical wakaba-web source)",
+      "generators": [
+        "Tools/unicode/genmap_japanese.py"
+      ],
+      "inputs": [
+        "http://wakaba-web.hp.infoseek.co.jp/table/jisx0213-2004-std.txt"
+      ],
+      "retained_member": "Tools/unicode/python-mappings/jisx0213-2004-std.txt",
+      "terms_assessment": "Original retained header grants free use, modification and distribution; copyright statements of earthian and I'O retained in a separate notice. No claim that this is Unicode V3.",
+      "review_status": "notice-retained-independent-acceptance-pending",
+      "evidence_members": [
+        {
+          "archive": "cpython",
+          "member": "Tools/unicode/genmap_japanese.py",
+          "sha256": "c21ee6d96c0bf60b7965eedd54826487ee9a5be77ef2131d7fbed2293de4f28b"
+        },
+        {
+          "archive": "cpython",
+          "member": "Tools/unicode/python-mappings/jisx0213-2004-std.txt",
+          "sha256": "41c9b4c9221162a94cfa5a87016256c42321a8a4f81c852034564e67eab46446"
+        }
+      ]
+    },
+    {
+      "id": "gb2312",
+      "origin": "GB2312 table from historical FreeBSD perky endpoint",
+      "generators": [
+        "Tools/unicode/genmap_schinese.py"
+      ],
+      "inputs": [
+        "http://people.freebsd.org/~perky/i18n/GB2312.TXT"
+      ],
+      "retained_member": "Tools/unicode/python-mappings/GB2312.TXT",
+      "terms_assessment": "Although retrieval endpoint is FreeBSD, the retained input identifies Unicode copyright 1991-1999 and grants use for Unicode-supporting products with notice preservation for copies. The complete leading header is retained, rather than claiming the endpoint itself grants a FreeBSD licence.",
+      "review_status": "notice-retained-independent-acceptance-pending",
+      "evidence_members": [
+        {
+          "archive": "cpython",
+          "member": "Tools/unicode/genmap_schinese.py",
+          "sha256": "15f13f4091b15f2758116f5045b7c6ceecf93b393768efed66ae7ed197863d04"
+        },
+        {
+          "archive": "cpython",
+          "member": "Tools/unicode/python-mappings/GB2312.TXT",
+          "sha256": "52335c54396c41d3e04856cb6018bd600469f210556233aa9895b1f396b257ed"
+        }
+      ]
+    }
+  ]
+}

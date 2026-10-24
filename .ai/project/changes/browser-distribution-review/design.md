@@ -61,3 +61,13 @@ checks encoding behavior, not a claim of full Windows certification.
 
 Rollback: human-reviewed revert; no deployed checker or data migration. Preserve
 the final reviewed source/manifest/bundle before any future distribution action.
+
+
+Second-review refinements: explicit LF writes plus scoped checkout attributes;
+canonical stored Core ZIP and full-byte comparison; all notice metadata including
+README linked; exact-build-commit documentation rendering. Gate records now use
+schema2 with normalized tool/login identities and repository discussion URLs,
+and always label authority as unverified. Human URL verification is required by
+PUBLICATION_REVIEW.md, not silently inferred by the offline validator. CJK input
+classification and source-specific terms results are bound to selected archive
+members; HKSCS/ICU questions remain explicit pending publication blockers.

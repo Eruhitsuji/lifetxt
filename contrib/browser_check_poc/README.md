@@ -221,7 +221,7 @@ licences, limits and open independent-review gates. This is not public clearance
 
 ### Review remediation and final checker audit (#1411)
 
-All 25 notice documents are linked from the generated notice index. The source
+All 28 notice documents are linked from the generated notice index. The source
 index includes the full correspondence report. Public candidates require the
 complete ten-source same-origin bundle; upstream link mode is development-only.
 
@@ -237,3 +237,11 @@ verified record to the final commit and artifact manifest, without modifying
 reviewed bytes. See [SOURCE_DELIVERY.md](SOURCE_DELIVERY.md) and the pending
 [record template](publication-review.example.json). Actual status flags remain
 false; synthetic gate success is not approval or deployment.
+
+
+The second review adds explicit LF writes/checkout preservation, canonical stored
+Core ZIP byte checking, schema2 record identities/references with an always-false
+authority_verified field, and [mandatory human reference checks](PUBLICATION_REVIEW.md).
+See [mapping attribution](notices/mapping-attribution.json) for legacy UCD3.2 and
+source-specific CJK terms. HKSCS permission scope and historical ICU terms remain
+unresolved publication blockers; generic Unicode/CPython notices do not clear them.

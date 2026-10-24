@@ -66,3 +66,25 @@ review_ledger:
   review_type: integration
   target_commit: null
   result: pending
+
+second_round:
+  review_input: https://github.com/Eruhitsuji/lifetxt/pull/1412#issuecomment-6390737165
+  reviewed_base_head: 499c164a10c7b06c0a401fa1de7cd369652be6b0
+  checks:
+  - type: actual_source_and_regressions
+    command: LIFETXT_RUN_SOURCE_AUDIT=1 LIFETXT_SOURCE_CACHE=CACHE LIFETXT_SOURCE_RUNTIME=RUNTIME python -W error::ResourceWarning -m unittest tests.test_browser_review_remediation tests.test_browser_source_delivery tests.test_browser_distribution_audit tests.test_browser_check_poc tests.test_website_checker tests.test_website tests.test_website_pages_workflow tests.test_traceability_gate tests.test_change_package_closeout
+    status: passed
+    result: Full sources reacquired with exact locked hashes; actual probe reproduces retained report, including UCD3.2 and selected JIS/GB headers. Combined cp932+CRLF candidate equality, spoofed identity/reference negatives and rehashed trailing-byte/ZIP-comment rejection verified. Final count recorded on PR.
+  - type: actual_browser_navigation
+    command: Chromium loopback JA/EN notice/source navigation and explicit hiwire download
+    status: passed
+    result: Chromium 153.0.8010.0, 28 notice documents and all 32 notice/metadata destinations including README reachable with HTTP200, static indexes, no automatic runtime/source download, hiwire hash matched, no page errors. second-review-navigation.json.
+  - type: source_specific_terms_investigation
+    status: partial
+    result: Exact CPython generators/input headers inspected; legacy UCD3.2 recorded; JIS/GB original notices retained. HKSARG official terms reviewed, but derived-table permission is unresolved; historical ICU XML licence also unresolved. No legal clearance claimed.
+  - type: native_windows
+    status: not_run
+    result: Native Windows unavailable. Encoding/newline/path/platform regression simulations executed; independent native rerun still recommended.
+  owner_decisions: pending
+  independent_final_head_review: pending
+  actual_public_distribution_approved: false

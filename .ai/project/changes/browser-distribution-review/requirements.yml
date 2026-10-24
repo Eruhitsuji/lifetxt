@@ -26,3 +26,14 @@ requirements:
   - P3-11 generated sysconfig hash/constants checked and full source provenance shipped
   - Actual flags remain false; parent issues remain blocked; self-review and PR, no
     merge/deploy
+  - N-1 generated UTF-8/LF and Git checkout invariance; cp932+CRLF defaults cannot
+    alter candidate bytes/manifest; canonical ZIP stores bytes and platform metadata
+  - N-2 record authority explicitly unverified; schema2 strict repository references,
+    normalized login/tool identities and complete pinned implementing tools; mandatory
+    human reference verification runbook
+  - N-3 distinguish UCD3.2 and non-Unicode CJK sources; retain original GB2312/JISX0213
+    terms; HKSCS/ICU permission uncertainties explicit pending Owner/independent resolution
+  - N-4 rehashed Core ZIP trailing bytes rejected by complete canonical comparison
+  - N-5 README and every notice metadata file linked and checked
+  - N-6 current-only inventory; generated repository references bind actual build
+    commit

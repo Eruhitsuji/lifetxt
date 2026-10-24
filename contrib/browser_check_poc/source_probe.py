@@ -88,6 +88,7 @@ def observe_runtime(runtime, source, entries):
         "sqlite": entries["sqlite"]["version"],
         "zstd": entries["zstd"]["version"],
         "ucd": "16.0.0",
+        "legacy_ucd": "3.2.0",
         "with_mimalloc": 1,
     }:
         raise ValueError("Actual WASM versions differ from retained source inventory")
@@ -239,6 +240,8 @@ def probe(cache, runtime, output, source=SOURCE):
                 if hashlib.sha256(raw).hexdigest() != member["sha256"]:
                     raise ValueError("Notice source member mismatch")
                 text = raw.decode("utf-8")
+                if notice["selection"] == "leading-line-comments":
+                    text = re.match(r"(?:#[^\n]*\n|\n)*", text).group()
                 if notice["selection"] == "headers":
                     text = re.match(r"\s*(/\*.*?\*/)", text, re.S).group(1) + "\n"
                 fragments.setdefault(text, []).append(member["member"])
@@ -290,6 +293,9 @@ def probe(cache, runtime, output, source=SOURCE):
         "stdlib_counts": counts,
         "stdlib_mapping": mapping,
         "additional_notices": notice_checks,
+        "mapping_attribution_sha256": hashlib.sha256(
+            (source / "notices/mapping-attribution.json").read_bytes()
+        ).hexdigest(),
         "complete_distribution_audit": False,
         "public_distribution_approved": False,
         "remaining_review": [
@@ -298,7 +304,9 @@ def probe(cache, runtime, output, source=SOURCE):
             "Independent distribution/implementation/integration acceptance and Owner publication approval",
         ],
     }
-    output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    output.write_text(
+        json.dumps(report, indent=2) + "\n", encoding="utf-8", newline="\n"
+    )
     return report
 
 

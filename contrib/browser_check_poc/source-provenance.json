@@ -15,6 +15,7 @@
     }
   ],
   "runtime_observations": {
+    "legacy_ucd": "3.2.0",
     "sqlite": "3.39.0",
     "ucd": "16.0.0",
     "with_mimalloc": 1,
@@ -117,7 +118,7 @@
       "sha256": "fa1957e5777068fc4f7437f96d860ae2fbe9c19732ba06c84e004ec16dd7dd7a"
     }
   },
-  "source_lock_sha256": "2c54581c1260fe82f7dd83f9f8ba277af349533ce4f1547e76150ec4fce5e760",
+  "source_lock_sha256": "fd1ee5452e188aa49fcdfe01de568530fdd18c73d1438689866736b45d6e3cca",
   "pyodide_source_commit": "b1e4fcc2488962f6360a97f19b9982d6fdb5d16f",
   "cpython_patch_checks": [
     {
@@ -3611,8 +3612,19 @@
       "notice": "llvm-libc-emscripten-5.0.3.txt",
       "members": 1,
       "result": "source-bytes-verified"
+    },
+    {
+      "notice": "gb2312-cpython-3.14.2-header.txt",
+      "members": 1,
+      "result": "source-bytes-verified"
+    },
+    {
+      "notice": "jisx0213-cpython-3.14.2-header.txt",
+      "members": 1,
+      "result": "source-bytes-verified"
     }
   ],
+  "mapping_attribution_sha256": "fe5335b7fe62762e72e9523e778bfd230fa8f556596af12776bab932d4f958b1",
   "complete_distribution_audit": false,
   "public_distribution_approved": false,
   "remaining_review": [

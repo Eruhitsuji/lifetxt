@@ -41,3 +41,46 @@ No broad security support claim is made for legacy runtime library versions.
 Result: implementation ready for independent review, with the Owner decisions
 above explicitly pending. Actual complete_distribution_audit and
 public_distribution_approved remain false; #1398/#1400 remain blocked.
+
+
+## Second-round self-review (N-1–N-6)
+
+The independent review of 499c164a was correct: encoding simulation did not
+exercise Windows newline translation; record claims could look authoritative;
+CJK source classification was overbroad; ZIP trailing bytes and README discovery
+needed stronger checks. The following fixes were re-reviewed:
+
+- N-1: generated writes explicitly use UTF-8/LF; scoped checkout attributes keep
+  source assets LF and original snapshots byte-exact. Full candidate builds under
+  cp932+CRLF defaults compare every file/manifest against normal output. ZIP
+  entries use fixed platform/mode/time and STORE to avoid zlib-version variation.
+  Native Windows itself is not available; use a new worktree after attributes
+  change. This is a simulation result, not native-Windows certification.
+- N-2: schema2 compares case-insensitive logins/tools and complete implementing
+  tool inventory pinned outside the review record; every evidence/reference
+  must be a same-repository GitHub comment/review URL. Case aliases, substituted
+  implementer lists and x/external-URL references are rejected. A successful
+  structural record still has authority_verified=false and requires human
+  verification; PUBLICATION_REVIEW.md mandates opening/authenticating every URL.
+  This code never claims to verify signatures, authors or human authority.
+- N-3: UCD3.2 is observed and listed; Unicode MAPPINGS, HKSCS, historical ICU,
+  JISX0213 and GB2312 are separated. Source-member hashes bind classifications.
+  Original JIS/GB headers are retained; GB2312's FreeBSD endpoint actually serves
+  a Unicode-copyrighted table. HKSCS derived-table permission and historical ICU
+  terms remain unresolved, explicitly recorded and publication-blocking. These
+  are not falsely marked cleared by this self-review or generic licence text.
+- N-4: complete regenerated ZIP bytes reject trailing bytes and comment metadata
+  changes even with a matching rewritten manifest. Member checks also remain.
+- N-5: README and all 32 notice/metadata destinations are linked, checked and
+  served successfully in real JA/EN Chromium navigation.
+- N-6: current-only runtime inventory replaces obsolete interleaved sections;
+  generated Markdown repository links bind the actual build commit. Original
+  source documentation remains navigable without embedding its own commit hash.
+
+No Core behavior, pinned runtime binary, workflow, deployment or approval flag
+was changed. Core source bytes remain unchanged; only its ZIP container is now
+canonical (288106 bytes instead of the earlier compressed 76646). The roughly
+211KB increase is explicit and Node/WASM fixture behavior still passes. Owner
+P2-6/P2-7 decisions, source retention and source-specific permission acceptance
+remain pending. All new tests are regression tests for reported defects;
+synthetic positive records are not real approvals.

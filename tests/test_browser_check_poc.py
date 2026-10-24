@@ -13,6 +13,7 @@ from unittest.mock import patch
 import zipfile
 
 from contrib.browser_check_poc.adapter import MAX_BYTES, check_text
+from contrib.browser_check_poc.artifact_documents import document_bytes
 from contrib.browser_check_poc import build as builder
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -157,7 +158,10 @@ class BrowserCheckPocTests(unittest.TestCase):
             for notice in (SOURCE / "notices").iterdir():
                 copied = a / "notices" / notice.name
                 self.assertEqual(
-                    copied.read_bytes(), (source / "notices" / notice.name).read_bytes()
+                    copied.read_bytes(),
+                    document_bytes(source / "notices" / notice.name)
+                    if notice.name == "README.md"
+                    else (source / "notices" / notice.name).read_bytes(),
                 )
                 self.assertEqual(
                     manifest["files"]["notices/" + notice.name]["sha256"],

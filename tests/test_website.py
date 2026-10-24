@@ -55,11 +55,13 @@ class WebsiteTests(unittest.TestCase):
         self.assertIn('href="en/" aria-current="page"', root)
         self.assertEqual(Document(root).canonical, [base])
         for lang, other in (("ja", "en"), ("en", "ja")):
-            home = Document((self.output / lang / "index.html").read_text())
+            home = Document(
+                (self.output / lang / "index.html").read_text(encoding="utf-8")
+            )
             self.assertEqual(home.lang, lang)
             self.assertEqual(home.canonical, [base + lang + "/"])
             self.assertEqual(home.alternates["x-default"], base)
-            deep = (self.output / lang / "features.html").read_text()
+            deep = (self.output / lang / "features.html").read_text(encoding="utf-8")
             self.assertIn(f'href="../{other}/features.html" lang="{other}"', deep)
             self.assertEqual(
                 Document(deep).alternates["x-default"], base + "en/features.html"
@@ -74,14 +76,15 @@ class WebsiteTests(unittest.TestCase):
         ):
             with self.subTest(relative=relative):
                 file = self.output / relative
-                original = file.read_text()
+                original = file.read_text(encoding="utf-8")
                 file.write_text(
                     original.replace(
                         f'<html lang="{before}">', f'<html lang="{after}">'
-                    )
+                    ),
+                    encoding="utf-8",
                 )
                 self.assertIn(f"{relative}: wrong page language", check(self.output))
-                file.write_text(original)
+                file.write_text(original, encoding="utf-8")
 
     def test_broken_link_fragment_and_unsafe_content_are_reported(self):
         file = self.output / "ja/index.html"

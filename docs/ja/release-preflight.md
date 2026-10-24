@@ -1,5 +1,7 @@
 # リリースpreflight証跡の共通契約
 
+現在の必須対象は既存13ターゲット＋Editor（Windows）1ターゲットの合計14です。
+
 #1309で承認された設計に基づく、#1310配下のoffline基盤（#1315）・配布物別producer
 （#1316〜#1320）・read-only集約controller（#1321）の契約です。preflightは公開・
 人間承認確認・CI署名検証・公開権限付与を行いません。既存の公開workflowは変更せず、
@@ -411,3 +413,18 @@ version・成功main CI runを同じ非公開配布sourceとして使うこと�
 SHAと新run/attemptを記録し、全targetを実行し直します。旧部分成功proofの流用・公開tagの
 移動・同versionへの別bytes再公開は禁止です。全native成功と最終bundle/API/index証拠が
 揃うまで#1321/#1310は開いたままにします。
+
+## Windows Editor producerの追加（#1389）
+
+既存13ターゲットを残し、`editor-windows`（VSIXとNeovim設定ZIPの両方必須）を
+第14のターゲットとして追加します。read-onlyな`release-preflight-editor.yml`は
+同一封印済みcandidateについてpayload/proofを別々にアップロードし、collectorが
+現物ZIP/VSIXの内容、必須機能、内部release.json、source SHA、版数、digest、
+SHA256とbytesを再検証します。欠損・失敗・skip・古いattemptでは全体停止します。
+専用公開経路や追加の公開権限は設けません。
+
+公開ファイル名のlifetxt本体版`X.Y.Z[.N]`と拡張内の3要素版（現状`0.2.0`）は
+異なるものとしてsource SHA/candidate証跡で結び付けます。
+旧13-target preflight証跡を新14-targetの配布許可として流用せず、
+新controllerによるpreflightから全対象を再検証します。
+CIのみでWindows GUIの全条件PASSとしません。実機記録は#1373を参照。

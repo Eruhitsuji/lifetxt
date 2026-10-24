@@ -277,10 +277,77 @@ incomplete. Simplify the chain or close unrelated buffers. No source is changed.
 | Sublime Text | Not integrated | Needs syntax plus community LSP client configuration and acceptance |
 | JetBrains | Not integrated | Select concrete IDE/API-supported version and plugin design before claiming support |
 
-No VSIX/Marketplace/registry publication is included. See
-[#1373](https://github.com/Eruhitsuji/lifetxt/issues/1373) for external acceptance
-and distribution decisions. Symbol/definition/action providers and disk-backed
-workspace discovery remain future work, not advertised capabilities.
+## Official Windows editor support and release artifacts (#1389)
+
+**Supported editor clients:** VS Code (1.82+ for optional LSP; static features
+also work on 1.80+) and Neovim (0.11+) **on Windows only**. This support
+statement is limited to editor assistance and does not redefine Core/CLI/server
+operating system support. Regular Vim/Vim9, Marketplace/Open VSX publishing and
+Linux/macOS editor guarantees are outside this release scope.
+
+The existing human-approved GitHub Release pipeline includes two Windows
+editor archives, both bound to the same lifetxt release tag/source SHA and
+SHA256SUMS:
+
+- `lifetxt-vscode-<lifetxt-version>.vsix`
+- `lifetxt-neovim-windows-<lifetxt-version>.zip`
+
+These become downloadable **only after an authorized Release**; a preflight
+build or merged PR is not proof that a specific public version exists.
+The VS Code extension has its own three-component extension version (currently
+`0.2.0`), distinct from the lifetxt application release `X.Y.Z[.N]`.
+Both archives contain a release provenance record linking the extension version,
+application version, candidate digest, and source SHA. Verify the published
+SHA256SUMS before installing; a file in a non-public CI artifact is not an
+approved public release.
+
+### Install VSIX on Windows
+
+1. Download the `.vsix` and `SHA256SUMS` from the *same* GitHub Release.
+   Verify the listed SHA256 using `Get-FileHash .\lifetxt-vscode-*.vsix -Algorithm SHA256`.
+2. In VS Code choose Extensions → `...` → **Install from VSIX...**,
+   or run `code --install-extension .\lifetxt-vscode-<version>.vsix`.
+3. Reload VS Code, open `life.txt`, and confirm language `life.txt`.
+   Static syntax/snippets work without Python; no LSP is started by default.
+4. For optional diagnostics/completion/Hover, separately install the matching
+   lifetxt Python package into Python 3.10+, then in VS Code user settings set
+   `lifetxt.languageServer.enabled` to `true` and
+   `lifetxt.languageServer.python` to the full Windows path to that interpreter
+   (for example `C:\\Python312\\python.exe`; JSON requires escaped backslashes).
+   Reload. The path must contain **only** the executable, no CLI arguments.
+   If IDs use a non-default key, explicitly set `lifetxt.languageServer.idKey`.
+5. To return to static-only support set `enabled=false` and reload.
+   To uninstall, use Extensions → life.txt → Uninstall (or
+   `code --uninstall-extension lifetxt.lifetxt`) and reload.
+   Disable LSP before downgrading lifetxt to a version without
+   `lifetxt.lsp`. A missing Python or LSP client never requires modifying
+   `life.txt`; static editing remains possible.
+
+### Install Neovim configuration on Windows
+
+1. Download the same-release Neovim ZIP, verify SHA256, then safely extract
+   `lifetxt.lua`, `release.json` and `INSTALL-WINDOWS.md` into a
+   trusted local directory; read the included instructions.
+2. Separately install lifetxt in Python 3.10+ only if LSP is desired.
+   Review the Lua file, edit its `cmd` Python executable, and explicitly add
+   `dofile([[C:\path\to\lifetxt.lua]])` to your own `init.lua`.
+   This turns on Neovim built-in LSP for the `lifetxt` filetype; no
+   `nvim-lspconfig` plugin is required. Ordinary manual editing needs none of it.
+3. Reload Neovim; open `life.txt`. Weekly `.txt` files require
+   `:setfiletype lifetxt`. To stop LSP:
+   `:lua vim.lsp.enable('lifetxt', false)`.
+   To uninstall/remove opt-in, delete the added `dofile` line and the
+   extracted directory, then restart. Do not overwrite the rest of `init.lua`.
+
+Windows GUI and Neovim actual-client core scenarios were recorded in
+[#1373](https://github.com/Eruhitsuji/lifetxt/issues/1373);
+the Owner explicitly left additional edge cases unexecuted. Neither CI archive
+inspection nor that focused acceptance proves every Unicode/path/offline/reconnect
+combination, nor certifies other operating systems. A failing LSP is read-only
+and optional: disable it and continue static/manual editing.
+
+Marketplace/registry publication is not included. Symbol/definition/action providers
+and disk-backed workspace discovery remain future work, not advertised capabilities.
 
 For local performance regression monitoring run
 `python -m editors.benchmark_lsp > baseline.json`, then

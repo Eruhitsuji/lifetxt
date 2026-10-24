@@ -28,7 +28,7 @@ canonical identity; `1.0.4.2` keeps its explicit correction number and maps to
 `1.0.4+2` only for Cargo/Tauri metadata. Number selection does not grant approval.
 No version is inferred or incremented on failure.
 
-Schema 1 fixes all 13 targets in `TARGETS` in the helper: Core, five Standalone,
+Schema 1 fixes 14 targets (the original 13 plus the Windows editor target) in `TARGETS` in the helper: Core, five Standalone,
 three Desktop, two Mini and two OCI targets. A candidate cannot remove a target
 to hide a failure. Every component binds to the candidate digest, source and
 controller SHA, run ID and attempt. A rebuilt candidate at a new attempt needs
@@ -480,3 +480,24 @@ and new run/attempt must be captured, and every target must run again. Do not
 reuse partial old proofs, move a published tag or republish different bytes under
 the same version. #1321/#1310 remain open until a full successful native run and
 the final bundle/API/index evidence are recorded.
+
+## Windows editor producer extension (#1389)
+
+The original 13 targets are preserved. New strict target `editor-windows`
+adds two required public roles: `vsix` and `neovim-config`. The trusted
+non-public reusable workflow `release-preflight-editor.yml` emits separately
+uploaded payload/proof artifacts for the identical sealed candidate. Producer
+and collector re-open the **actual** VSIX/Neovim ZIP bytes, validate ZIP paths,
+mandatory grammar/snippets/optional client and Lua configuration, verify both
+internal release.json records, source SHA, versions, candidate digest and hashes.
+A missing, failed, skipped or stale editor producer blocks the entire
+14-target preflight before release approval; no editor-specific publisher exists.
+
+The lifetxt release version `X.Y.Z[.N]` appears in public asset names and
+provenance; VS Code extension version is separately versioned with 3-part
+SemVer, currently `0.2.0`. Historic preflight archives created before this
+contract are **not authorizations for new editor artifacts**. Re-run preflight
+from the approved new controller and require the whole 14-target bundle. The
+previous 13-target run evidence documents its historical acceptance only.
+No actual Windows GUI acceptance is implied by cross-platform CI packaging;
+see [#1373](https://github.com/Eruhitsuji/lifetxt/issues/1373).

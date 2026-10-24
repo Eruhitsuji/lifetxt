@@ -16,6 +16,7 @@ import generate_scoop_manifest as scoop
 import generate_winget_manifest as winget
 import release_canonical as canonical
 import release_preflight_core as core
+import release_preflight_editor as editor
 import release_preflight_mini as mini
 import release_preflight_proof as proof
 import release_preflight_standalone as standalone
@@ -52,6 +53,23 @@ def verify_github(api, plan, public, output):
         (output / name).write_bytes(raw)
     canonical.staged_rows(output)
     inventory = proof.load(output / "release-inventory.json")
+    # Re-open exact downloaded editor bytes, not merely the local preflight copy.
+    # Missing/extra/renamed archives, wrong VSIX version, or forged provenance
+    # must block verify and therefore Latest promotion.
+    editor_assets = {r["name"]: r for r in inventory["assets"]
+                     if r["role"] in editor.ROLES}
+    expected_editor = editor.names(plan["candidate"])
+    proof.require(
+        set(editor_assets) == set(expected_editor)
+        and all(editor_assets[name]["role"] == role
+                and editor_assets[name]["targets"] == [editor.TARGET]
+                for name, role in expected_editor.items()),
+        "published editor inventory mismatch",
+    )
+    vsix_name = next(n for n, role in expected_editor.items() if role == "vsix")
+    neovim_name = next(n for n, role in expected_editor.items() if role == "neovim-config")
+    editor_version = editor.smoke_vsix(plan["candidate"], output / vsix_name)
+    editor.smoke_neovim(plan["candidate"], output / neovim_name, editor_version)
     for row in inventory["assets"]:
         if row["role"] in ("wheel", "sdist"):
             metadata = core.package_metadata(output / row["name"])

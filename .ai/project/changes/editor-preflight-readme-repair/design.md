@@ -1,0 +1,8 @@
+# README permalink correction
+
+Real non-public preflight run 40076258957 failed in editor-windows:
+`@vscode/vsce@3.7.1` rejected relative links to `../../../docs/en/editor.md` in the VS Code extension README because it could not detect a repository. Japanese link shares the same parent-directory pattern. Existing 13 targets passed; final 14-target collect correctly refused incomplete evidence.
+
+The extension source tree is copied to an isolated staging directory. A new `stage_readme` helper reads the original README without writing to its source checkout, rewrites exactly one English and one Japanese parent-directory guide link to `https://github.com/Eruhitsuji/lifetxt/blob/<candidate.source_sha>/docs/{en,ja}/editor.md`, rejects any remaining parent-relative Markdown links, and writes only the staged copy. Build runs this immediately after copytree and before the pinned `vsce package` invocation. The offline VSIX smoke requires actual packaged `extension/README.md` and the exact source-SHA-pinned documentation URLs. Tests check both localization links, source immutability and fail-closed unknown/missing/tampered paths.
+
+This change does not alter the `npm ci`/vsce version, Neovim bundle, VSIX LSP client, source/git clean checks, 14-target aggregate, Release Authority approval or canonical inventory. The old run's controller SHA is immutable: re-run of failed jobs on that old run is not suitable evidence for a corrected controller. After Owner merge and successful main CI, initiate a **new main preflight run** with current controller/source SHA and record its real artifact result. Public Release remains a distinct human approval.

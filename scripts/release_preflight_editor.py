@@ -66,6 +66,38 @@ def metadata(candidate, editor_version):
     }
 
 
+def stage_readme(candidate, source_readme, staged_readme):
+    """Keep source Markdown unchanged; make VSIX documentation links immutable.
+
+    vsce cannot resolve ../../../docs/... from a packaged extension without
+    repository metadata. Pin the two documentation links to the exact source
+    commit instead of guessing a repository root or pointing to mutable main.
+    """
+    proof.validate_candidate(candidate)
+    proof.require(
+        candidate["repository"] == "Eruhitsuji/lifetxt",
+        "unexpected editor documentation repository",
+    )
+    content = Path(source_readme).read_text(encoding="utf-8")
+    root = (
+        "https://github.com/Eruhitsuji/lifetxt/blob/"
+        + candidate["source_sha"] + "/docs/"
+    )
+    for language in ("en", "ja"):
+        original = "](../../../docs/" + language + "/editor.md)"
+        proof.require(
+            content.count(original) == 1,
+            "editor README documentation link missing or duplicated: " + language,
+        )
+        content = content.replace(original, "](" + root + language + "/editor.md)")
+    proof.require(
+        re.search(r"\]\((?:\.\./)+", content) is None,
+        "unresolved parent-relative editor README link",
+    )
+    Path(staged_readme).write_text(content, encoding="utf-8")
+    return content
+
+
 def checked_archive(path, *, max_size=80 * 1024 * 1024):
     proof.require(path.is_file() and not path.is_symlink(), "missing editor archive")
     proof.require(path.stat().st_size <= max_size, "oversized editor archive")
@@ -97,6 +129,7 @@ def smoke_vsix(candidate, path):
     required = {
         "[Content_Types].xml", "extension.vsixmanifest",
         "extension/package.json", "extension/release.json",
+        "extension/README.md",
         "extension/extension.js", "extension/language-configuration.json",
         "extension/syntaxes/lifetxt.tmLanguage.json",
         "extension/snippets/lifetxt.code-snippets",
@@ -105,6 +138,17 @@ def smoke_vsix(candidate, path):
         "extension/node_modules/vscode-languageclient/lib/node/main.js",
     }
     proof.require(required <= set(rows), "VSIX missing language/client content")
+    readme = rows["extension/README.md"].decode("utf-8")
+    doc_root = (
+        "https://github.com/Eruhitsuji/lifetxt/blob/"
+        + candidate["source_sha"] + "/docs/"
+    )
+    proof.require(
+        all("](" + doc_root + lang + "/editor.md)" in readme
+            for lang in ("en", "ja"))
+        and re.search(r"\]\((?:\.\./)+", readme) is None,
+        "VSIX README documentation provenance mismatch",
+    )
     manifest = json.loads(rows["extension/package.json"])
     version = manifest["version"]
     proof.require(
@@ -202,6 +246,7 @@ def build(candidate, controller, source, payload, report, context):
     with tempfile.TemporaryDirectory(prefix="lifetxt-editor-build-") as tmp:
         staged = Path(tmp) / "extension"
         shutil.copytree(extension, staged, ignore=shutil.ignore_patterns("node_modules", ".git"))
+        stage_readme(candidate, extension / "README.md", staged / "README.md")
         (staged / "release.json").write_text(
             json.dumps(metadata(candidate, package["version"]), sort_keys=True) + "\n",
             encoding="utf-8",

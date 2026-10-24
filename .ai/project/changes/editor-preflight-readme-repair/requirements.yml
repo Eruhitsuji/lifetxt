@@ -1,0 +1,16 @@
+schema_version: 1
+requirements:
+  - id: req-editor-vsix-source-pinned-readme
+    kind: FIXED
+    statement: VSIX packaging resolves README references outside the extension using source-SHA-pinned links, without changing the tracked source or publication authority.
+    acceptance_criteria:
+      - Both documentation links become absolute commit-pinned URLs in the staged README.
+      - Tracked README is unchanged and usable through relative links in GitHub.
+      - Unexpected escaping relative links or missing expected links fail closed.
+      - Packaged VSIX actual README source binding is independently validated.
+      - Existing 14-target safety, version, role and publication authorization gates remain unchanged.
+    constraints:
+      - No new dependency, no secret, no publishing operation.
+    owner: Eruhitsuji
+open_questions:
+  - Actual npx vsce build and 14-target manual preflight must be rerun on a newly merged main controller.

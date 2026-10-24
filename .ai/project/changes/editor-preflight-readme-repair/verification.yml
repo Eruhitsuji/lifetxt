@@ -1,0 +1,32 @@
+schema_version: 1
+verification:
+  checks:
+    - type: targeted_unit
+      command: python -m unittest tests.test_release_preflight_editor
+      status: passed
+      result: 7 Editor tests passed locally on d7af6d78 with the decision-record repair; actual VSIX build remains outstanding.
+    - type: regression_suite
+      command: python -m unittest tests.test_change_package_closeout tests.test_release_preflight_editor tests.test_release_preflight_actions tests.test_release_preflight_collect tests.test_release_publication
+      status: passed
+      result: 75 tests passed locally on d7af6d78 plus the decisions.md repair. Package closeout reproduced the missing-file failure before the repair; full updated PR CI remains pending.
+    - type: actual_build
+      command: New non-public manual 14-target release-preflight workflow on main after merge
+      status: not_run
+      result: The prior immutable controller failed VSIX on npx vsce; only a new controller/run can verify the fix.
+    - type: independent_review
+      command: Independent High assurance review of final PR head
+      status: pending
+      result: Owner merge and publication approvals remain separate.
+  reviews:
+    - reviewer: ChatGPT (implementer)
+      review_type: self_review
+      result: in_progress
+      findings: Use SHA-pinned absolute docs URLs in disposable build stage rather than weakening vsce validation.
+    - reviewer: Owner or separate reviewer
+      review_type: independent_implementation_and_integration
+      result: pending
+release_evidence:
+  migration_notes: No user-data/API/version change.
+  rollback_plan: Do not release if new preflight fails; fix with a separate PR and fresh preflight at new main controller. Published assets remain immutable.
+  operations_evidence:
+    - https://github.com/Eruhitsuji/lifetxt/actions/runs/40076258957

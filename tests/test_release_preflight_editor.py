@@ -25,6 +25,9 @@ class EditorArtifactTests(unittest.TestCase):
         self.payload = self.root / "payload"
         self.payload.mkdir()
         self.version = "0.2.0"
+        self.source_readme = ROOT / "editors/vscode/lifetxt/README.md"
+        self.staged_readme = self.root / "README.md"
+        editor.stage_readme(self.candidate, self.source_readme, self.staged_readme)
         names = editor.names(self.candidate)
         self.vsix = self.payload / next(n for n, r in names.items() if r == "vsix")
         self.nvim = self.payload / next(n for n, r in names.items() if r == "neovim-config")
@@ -43,6 +46,7 @@ class EditorArtifactTests(unittest.TestCase):
                 },
             }).encode(),
             "extension/release.json": json.dumps(editor.metadata(self.candidate, self.version)).encode(),
+            "extension/README.md": self.staged_readme.read_bytes(),
             "extension/extension.js": b"exports.activate = function () {};",
             "extension/language-configuration.json": b"{}",
             "extension/syntaxes/lifetxt.tmLanguage.json": b"{}",
@@ -69,6 +73,42 @@ class EditorArtifactTests(unittest.TestCase):
             for key, value in files.items():
                 archive.writestr(key, value)
 
+    def test_staged_readme_uses_immutable_links_without_changing_source(self):
+        source_before = self.source_readme.read_bytes()
+        staged = self.staged_readme.read_text(encoding="utf-8")
+        for language in ("en", "ja"):
+            self.assertIn(
+                "https://github.com/Eruhitsuji/lifetxt/blob/"
+                + self.candidate["source_sha"] + "/docs/" + language
+                + "/editor.md",
+                staged,
+            )
+        self.assertNotIn("](../../../docs/", staged)
+        self.assertEqual(self.source_readme.read_bytes(), source_before)
+
+    def test_staging_rejects_missing_docs_and_unexpected_parent_links(self):
+        text = self.source_readme.read_text(encoding="utf-8")
+        damaged = self.root / "damaged-README.md"
+        for replacement in (
+            text.replace("../../../docs/en/editor.md", "docs/en/editor.md"),
+            text.replace("../../../docs/ja/editor.md", "../../../docs/en/editor.md"),
+            text + "\n[other](../../unexpected.md)\n",
+        ):
+            damaged.write_text(replacement, encoding="utf-8")
+            with self.subTest(replacement=replacement[-45:]):
+                with self.assertRaises(ValueError):
+                    editor.stage_readme(self.candidate, damaged, self.staged_readme)
+
+    def test_vsix_rejects_mismatched_readme_source_permalinks(self):
+        files = dict(self.vsix_files)
+        files["extension/README.md"] = files["extension/README.md"].replace(
+            self.candidate["source_sha"].encode(), ("f" * 40).encode()
+        )
+        self.pack(self.vsix, files)
+        with self.assertRaises(ValueError):
+            editor.validate_payload(self.candidate, self.payload)
+
+
     def test_valid_bytes_have_independent_editor_version(self):
         self.assertEqual(editor.validate_payload(self.candidate, self.payload), "0.2.0")
         self.assertTrue(self.vsix.name.endswith("1.0.4.2.vsix"))
@@ -80,6 +120,7 @@ class EditorArtifactTests(unittest.TestCase):
             "extension/node_modules/vscode-languageclient/node.js",
             "extension/node_modules/vscode-languageclient/lib/node/main.js",
             "extension/release.json",
+            "extension/README.md",
         ):
             entries = dict(self.vsix_files)
             del entries[victim]

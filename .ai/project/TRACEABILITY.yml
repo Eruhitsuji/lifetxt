@@ -18559,6 +18559,20 @@ traceability:
       release_or_deployment: null
       status: in_review
 
+    - requirement_id: req-editor-vsix-source-pinned-readme
+      capability_id: cap-editor-language-support
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1348
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1394
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1395
+      changed_files_or_scope:
+        - Read-only source SHA-pinned VSIX stage README docs links; packaged archive smoke; docs path regression tests
+      tests_or_evidence:
+        - tests/test_release_preflight_editor.py
+        - .ai/project/changes/editor-preflight-readme-repair/verification.yml
+        - Failed preflight run 40076258957; successful new controller preflight required before release
+      release_or_deployment: null
+      status: in_review
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

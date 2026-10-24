@@ -1,0 +1,31 @@
+schema_version: 1
+verification:
+  checks:
+  - type: focused_regression
+    command: python -m unittest tests.test_website_checker tests.test_website tests.test_website_pages_workflow tests.test_browser_check_poc tests.test_core_import_boundary tests.test_diagnostic_contract
+    status: passed
+    result: 34 tests, 3 existing optional Web skips. Real Node Worker/WASM 25 native-parity/boundary cases and 30 repeats; JA/EN fake DOM lifecycle separately passed.
+  - type: chromium_product_preview
+    command: python scripts/probe_website_checker.py --site LOCAL_PREVIEW --chromium CHROMIUM --output LOCAL_EVIDENCE --screenshots LOCAL_SCREENSHOTS
+    status: passed
+    result: Chromium 153.0.8010.0 on Ubuntu 24.04 x86_64 headless loopback; 22 native-parity cases per language, exact/over UTF8 boundary, 30 repeats per language, keyboard, cancel/restart, forced load failure/offline recovery, accelerated startup timeout and cancellation during initialization. No observed input GET/query/body or app persistence; no CSP/page errors. JA/EN screenshots inspected with CJK font present.
+  - type: static
+    command: python -m ruff check scripts/build_website_checker.py scripts/probe_website_checker.py tests/test_website_checker.py tests/test_website_checker_browser.py website/checker/adapter.py
+    status: passed
+    result: Focused lint/format and git diff checks passed
+  gaps:
+  - description: Distribution attribution/source delivery and final independent High review are open. No Pages integration/deployment. Actual desktop Chrome variants, physical devices, assistive technology and OS peak memory unverified.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1400
+review_ledger:
+- reviewer: Codex implementer
+  review_type: self_review_only
+  target_commit: null
+  result: informational_only
+- reviewer: Eruhitsuji
+  review_type: independent_implementation_security
+  target_commit: null
+  result: pending
+- reviewer: Eruhitsuji
+  review_type: integration
+  target_commit: null
+  result: pending

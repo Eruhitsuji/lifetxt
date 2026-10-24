@@ -1,0 +1,15 @@
+schema_version: 1
+change:
+  id: website-local-checker
+  title: Isolated bilingual local grammar and item checker
+  status: in_review
+  change_type: Feature
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1408
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1399
+scope:
+  write_scope: [website/checker, scripts/build_website_checker.py, scripts/probe_website_checker.py, dedicated checker tests, scoped change package and traceability]
+  forbidden_scope: [Core/Format/CLI, Remote/API, Pages workflow and deployment, .ai/managed]
+human_approvals_required: [latest-head implementation/security review, integration review, merge, final publication under issue 1400]

@@ -1,0 +1,3542 @@
+{
+  "issue": 1409,
+  "runtime_release_identity": "5/5 byte-identical; no local runtime byte modifications",
+  "release_archive_sha256": "2abdcc2e35208af406e07724cffa85bc582ced97e9028383ecf5462541393f95",
+  "port_archive_checks": [
+    {
+      "component": "zlib",
+      "recipe_sha512": "8c9642495bafd6fad4ab9fb67f09b268c69ff9af0f4f20cf15dfc18852ff1f312bd8ca41de761b3f8d8e90e77d79f2ccacd3d4c5b19e475ecf09d021fdfe9088",
+      "result": "matched"
+    },
+    {
+      "component": "bzip2",
+      "recipe_sha512": "512cbfde5144067f677496452f3335e9368fd5d7564899cb49e77847b9ae7dca598218276637cbf5ec524523be1e8ace4ad36a148ef7f4badf3f6d5a002a4bb2",
+      "result": "matched"
+    }
+  ],
+  "runtime_files": {
+    "runtime/pyodide-lock.json": {
+      "bytes": 119077,
+      "sha256": "5dc2fc119108bc148c7457dc86e7675b5c87e1cafd420b9c34c1eaef7b36c010"
+    },
+    "runtime/pyodide.asm.mjs": {
+      "bytes": 1250344,
+      "sha256": "f7cdc8ece80678ceb712f8e65ebe6d3a83203a180c399865f49612a051693635"
+    },
+    "runtime/pyodide.asm.wasm": {
+      "bytes": 9598218,
+      "sha256": "cc36e3cab04fdfc9a63ff13eb52eae2b911bf46c025cc7b281f394bd3de1d5e6"
+    },
+    "runtime/pyodide.mjs": {
+      "bytes": 17931,
+      "sha256": "6f1d60f7bf529beb300f0f47983c921d3982363640ba20af0e38efdddbc66109"
+    },
+    "runtime/python_stdlib.zip": {
+      "bytes": 2545637,
+      "sha256": "fa1957e5777068fc4f7437f96d860ae2fbe9c19732ba06c84e004ec16dd7dd7a"
+    }
+  },
+  "source_lock_sha256": "0b3f819111218d8aefdff3d71323c911a7a66e24ecf8e6ffdce8d4a5be0c1a2d",
+  "pyodide_source_commit": "b1e4fcc2488962f6360a97f19b9982d6fdb5d16f",
+  "cpython_patch_checks": [
+    {
+      "member": "cpython/patches/0001-Public-pymain_run_python.patch",
+      "sha256": "ad29aa6d748176b873846bf14d601b65a694d002743792ae226d737c8bf67d5d",
+      "application": "passed-no-fuzz"
+    },
+    {
+      "member": "cpython/patches/0002-Fix-LONG_BIT-constant-to-be-always-32bit.patch",
+      "sha256": "e840dcb6c2f70ce7e2029ff51028fc980f0f98f6807c755a63ba1336c791ce08",
+      "application": "passed-no-fuzz"
+    },
+    {
+      "member": "cpython/patches/0003-Add-call-to-JsProxy_GetMethod-to-help-remove-tempora.patch",
+      "sha256": "a359c12516cc2f08720096d51f8cfb31d62ce57d096255beae0ca6848ede8cbe",
+      "application": "passed-no-fuzz"
+    },
+    {
+      "member": "cpython/patches/0004-Make-from-x-import-aware-of-jsproxy-modules.patch",
+      "sha256": "4297a7694d0f58e5c620f322b94bfdeef6ef5926bdf62d7dd9038c80d4f51720",
+      "application": "passed-no-fuzz"
+    },
+    {
+      "member": "cpython/patches/0005-Remove-JSPI-related-parts-in-emscripten_syscalls.c.patch",
+      "sha256": "5f7a57b74af22f3d2afd89d0cb99b8a44eed37d2b7a7cbbc28fe8f796c99d5cb",
+      "application": "passed-no-fuzz"
+    },
+    {
+      "member": "cpython/patches/0006-Teach-json-encoder.py-to-encode-jsnull.patch",
+      "sha256": "ba13244a5c1003f55c4ddfb4087c977c38b5fdeccf68f819deb0617bf04adc6a",
+      "application": "passed-no-fuzz"
+    },
+    {
+      "member": "cpython/patches/0007-Warn-if-ZoneInfo-is-imported-without-tzdata.patch",
+      "sha256": "bcf92273acce4b4b0ea8bed3fab3f375e944a2874a27b0f8e7b79ecb40f5a685",
+      "application": "passed-no-fuzz"
+    },
+    {
+      "member": "cpython/patches/0008-Export-_Py_emscripten_signal_clock-and-_Py_emscripte.patch",
+      "sha256": "7cf220d962a8a1f24d7c96a588d9c1f3d32849c3bc89329cbf76dff517ca737b",
+      "application": "passed-no-fuzz"
+    },
+    {
+      "member": "cpython/patches/0009-Fix-Emscripten-trampoline-with-emcc-4.0.19.patch",
+      "sha256": "e4de0006020fa3118da139e566a6eea3d747ef11d39785d1d7cc5e74c8638371",
+      "application": "passed-no-fuzz"
+    }
+  ],
+  "stdlib_counts": {
+    "cpython-source-identical": 535,
+    "pyodide-source-identical": 29,
+    "generated-build-configuration-source-shipped-in-stdlib": 1,
+    "cpython-source-plus-upstream-patches": 2
+  },
+  "stdlib_mapping": [
+    {
+      "file": "__future__.py",
+      "sha256": "981d4c398849f9ebcab72300d9c1fe288fd6d7f28957b3b3fa3a493a5836d95c",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/__future__.py"
+    },
+    {
+      "file": "__hello__.py",
+      "sha256": "a8ce70b199497950f0f06def93115a6814daf1f961934457f59046909901487f",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/__hello__.py"
+    },
+    {
+      "file": "__phello__/__init__.py",
+      "sha256": "56f7ed595e767c558ded05def14b682893105daf504500c3443b458ca2431bc6",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/__phello__/__init__.py"
+    },
+    {
+      "file": "__phello__/spam.py",
+      "sha256": "56f7ed595e767c558ded05def14b682893105daf504500c3443b458ca2431bc6",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/__phello__/spam.py"
+    },
+    {
+      "file": "_ast_unparse.py",
+      "sha256": "2c477f40fe644f8e8454e8af97aaf3de90579bdce5ddfe597f29d3012d10443f",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_ast_unparse.py"
+    },
+    {
+      "file": "_collections_abc.py",
+      "sha256": "50beebb1f309d83fd3af45f0e4c98c9dbfe0edd2f40edc8dc79e5cf0072cfbea",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_collections_abc.py"
+    },
+    {
+      "file": "_colorize.py",
+      "sha256": "15db41bec8e25fd1ba81cf234df2cc7446d0fbc10285fda73186176365efd730",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_colorize.py"
+    },
+    {
+      "file": "_compat_pickle.py",
+      "sha256": "028d2d9845d7acac2e1ceb565aacaee64e3f8019fba96174d65eff1609b50cd0",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_compat_pickle.py"
+    },
+    {
+      "file": "_markupbase.py",
+      "sha256": "01046da4883344a898fb1261a0805a7ab1bae371e95ade31311ac03b43b33c98",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_markupbase.py"
+    },
+    {
+      "file": "_opcode_metadata.py",
+      "sha256": "d9badc5ab19a66415e230bf8f4299491b2207d584981a92b6e7c447cfa1aeac3",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_opcode_metadata.py"
+    },
+    {
+      "file": "_py_abc.py",
+      "sha256": "f9c6fe3dd9b51bd7d93f867356e9d362600c924febfd903ee1c6e298860dca92",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_py_abc.py"
+    },
+    {
+      "file": "_py_warnings.py",
+      "sha256": "16604a696fcf69c0d85cd9a93dbd0c2a7fcd1de168a37ecf2da3b812b22ace77",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_py_warnings.py"
+    },
+    {
+      "file": "_pydatetime.py",
+      "sha256": "2110f90af43143761566480888666874549b2a8996af947fa55fec12fc359cca",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_pydatetime.py"
+    },
+    {
+      "file": "_pyio.py",
+      "sha256": "7e1f01a4e7c2d3b5964540be3095e86366b6e8dcfb08d5daa43d0c4ccdc9f4c9",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_pyio.py"
+    },
+    {
+      "file": "_pylong.py",
+      "sha256": "3c82c3d1f8ed6058fc9b2c1362634d6fdfb8db9db207a980f702fedde5cb93ff",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_pylong.py"
+    },
+    {
+      "file": "_pyodide/__init__.py",
+      "sha256": "de655c1598120f699d84a90a4d88ff1cc372e8d9fc14d5b66d505b80414857ca",
+      "basis": "pyodide-source-identical",
+      "source_member": "src/py/_pyodide/__init__.py"
+    },
+    {
+      "file": "_pyodide/_base.py",
+      "sha256": "15e663381565c1df6cb56d7535856e9082c08094942bd81bb7c15ef61f189399",
+      "basis": "pyodide-source-identical",
+      "source_member": "src/py/_pyodide/_base.py"
+    },
+    {
+      "file": "_pyodide/_core_docs.py",
+      "sha256": "c1e3fc8d65051df42637dcee8b909985805cced48edb4d07a770f7cc2d5917d1",
+      "basis": "pyodide-source-identical",
+      "source_member": "src/py/_pyodide/_core_docs.py"
+    },
+    {
+      "file": "_pyodide/_future_helper.py",
+      "sha256": "e8b4263fad8e857e8a244f6556e34b47486cf654396228137229f03b3e1824ac",
+      "basis": "pyodide-source-identical",
+      "source_member": "src/py/_pyodide/_future_helper.py"
+    },
+    {
+      "file": "_pyodide/_importhook.py",
+      "sha256": "a7e84a42d411c76a3606a141f765a10a42d682b81389a7a65fbc7de3063b702b",
+      "basis": "pyodide-source-identical",
+      "source_member": "src/py/_pyodide/_importhook.py"
+    },
+    {
+      "file": "_pyodide/docs_argspec.py",
+      "sha256": "978b0855958c89c7e1209f18da280a46985e1bbe5e351cf193bcc751eb75fb5b",
+      "basis": "pyodide-source-identical",
+      "source_member": "src/py/_pyodide/docs_argspec.py"
+    },
+    {
+      "file": "_pyodide/docstring.py",
+      "sha256": "c50fd26c0dac8690009018db9f6832e77880aa7155f03e366235519cb64c852c",
+      "basis": "pyodide-source-identical",
+      "source_member": "src/py/_pyodide/docstring.py"
+    },
+    {
+      "file": "_pyodide/jsbind.py",
+      "sha256": "1f6cdda94963d1496db13711a8aba16f81fb20e7e528d720e21b4e55bddcb489",
+      "basis": "pyodide-source-identical",
+      "source_member": "src/py/_pyodide/jsbind.py"
+    },
+    {
+      "file": "_pyodide/py.typed",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "basis": "pyodide-source-identical",
+      "source_member": "src/py/_pyodide/py.typed"
+    },
+    {
+      "file": "_pyrepl/__init__.py",
+      "sha256": "f2de534027869b0b5cf0f9a62d3d0b53e62688b483ef0d8b351257e07f255165",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_pyrepl/__init__.py"
+    },
+    {
+      "file": "_pyrepl/__main__.py",
+      "sha256": "3b207710ddae4728028d57c550d4315f88a626f06265cb719dd29f7b04977685",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_pyrepl/__main__.py"
+    },
+    {
+      "file": "_pyrepl/_module_completer.py",
+      "sha256": "c2c383fe8f0ca0ae139ae77cfd53e55972837b3fe2661f9086d7d21445af7a33",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_pyrepl/_module_completer.py"
+    },
+    {
+      "file": "_pyrepl/_threading_handler.py",
+      "sha256": "fa38840e7d147f5969bc76e2269ccfeb6ab4e64350845a6b34f9df576a04d7fe",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_pyrepl/_threading_handler.py"
+    },
+    {
+      "file": "_pyrepl/base_eventqueue.py",
+      "sha256": "4ec1110f52ccba2e4e751e8c0fc0f6842ea2b67c2458b8639cc62c068f6e11f1",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_pyrepl/base_eventqueue.py"
+    },
+    {
+      "file": "_pyrepl/commands.py",
+      "sha256": "178119b89d3676f6e2071476b00216b400c358c5602ab14726267ccfd0f6db7f",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_pyrepl/commands.py"
+    },
+    {
+      "file": "_pyrepl/completing_reader.py",
+      "sha256": "76d6331e15088d54bd6b8db78c9e36d6ff2a3d47dde249727c253e267260b495",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_pyrepl/completing_reader.py"
+    },
+    {
+      "file": "_pyrepl/console.py",
+      "sha256": "f006cf1ad1de56c5b41f2d37b6a28403c9f7ac387395621efaaf041a6c645db7",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_pyrepl/console.py"
+    },
+    {
+      "file": "_pyrepl/fancy_termios.py",
+      "sha256": "a9228c28fb0bbbcd55957945e91aab7e7e97a0e4cb6ea79dd1cb71e03ce8b8b3",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_pyrepl/fancy_termios.py"
+    },
+    {
+      "file": "_pyrepl/historical_reader.py",
+      "sha256": "cab5c4ab74ffcd5ad413b3e8e3b557064db24545bdd16abe0cdd242a75e1b799",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_pyrepl/historical_reader.py"
+    },
+    {
+      "file": "_pyrepl/input.py",
+      "sha256": "182bf1a99c86e95798e443de79f0f02a0b7d6e5bd2b8d51015dcfe64b5267ab3",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_pyrepl/input.py"
+    },
+    {
+      "file": "_pyrepl/keymap.py",
+      "sha256": "b8c2fa9bf99adcbfc56b2f45784a9006dec50f02dd8d518f741a62c47f4fa46c",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_pyrepl/keymap.py"
+    },
+    {
+      "file": "_pyrepl/main.py",
+      "sha256": "6bf86e18aea5d678a1c7c32fc3fae3c2c421bebf81b519130dbc2886ecc8900f",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_pyrepl/main.py"
+    },
+    {
+      "file": "_pyrepl/mypy.ini",
+      "sha256": "e645bb87dcaf295c22350795e24e4508914aa825e63daa294b5e218e0683da2a",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_pyrepl/mypy.ini"
+    },
+    {
+      "file": "_pyrepl/pager.py",
+      "sha256": "00226d6adb0239a8d7e708259d864345c068ca1e67c60d6b4371679d065db5fb",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_pyrepl/pager.py"
+    },
+    {
+      "file": "_pyrepl/reader.py",
+      "sha256": "efab4578d607e99884b330382be7f0ab3222e042e852c0bf995661fa2ccce984",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_pyrepl/reader.py"
+    },
+    {
+      "file": "_pyrepl/readline.py",
+      "sha256": "0aa869de4165f45d34d75a4da13de3586168ebfc4e4336a4a1fe26cd56d06d9e",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_pyrepl/readline.py"
+    },
+    {
+      "file": "_pyrepl/simple_interact.py",
+      "sha256": "39a54fec01853e8b0fd06c2ae050407b2f11b1eb7193aaec5cd0ce17639dbb0d",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_pyrepl/simple_interact.py"
+    },
+    {
+      "file": "_pyrepl/terminfo.py",
+      "sha256": "af39087c07b02c10c845e646d98facf243df12359dbdf0446c9ad61df99ea612",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_pyrepl/terminfo.py"
+    },
+    {
+      "file": "_pyrepl/trace.py",
+      "sha256": "41bbca51aff4922b3f5d5146648e23411c866d61b3b92025f60d98fcafb6bde3",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_pyrepl/trace.py"
+    },
+    {
+      "file": "_pyrepl/types.py",
+      "sha256": "f7aa0bd36205ea53a7c4237df213767a177d683887f467e06b6e4b31c48f9aa7",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_pyrepl/types.py"
+    },
+    {
+      "file": "_pyrepl/unix_console.py",
+      "sha256": "07db3112d2d5546317caaa66f8d8a1a1302c6f59a5a28ac71f430b4981c20756",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_pyrepl/unix_console.py"
+    },
+    {
+      "file": "_pyrepl/unix_eventqueue.py",
+      "sha256": "85fcc878c81b99f10f2735ce83aabd5acb8f923758aaa1395d8e50d6edd8c0e8",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_pyrepl/unix_eventqueue.py"
+    },
+    {
+      "file": "_pyrepl/utils.py",
+      "sha256": "563b512e49c8084bf588e3b3f18ae76e9058813fe6597715656da21894e8958c",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_pyrepl/utils.py"
+    },
+    {
+      "file": "_pyrepl/windows_console.py",
+      "sha256": "2353468d74292d2675d15f1edc0ce0b50cbab1c649001ba3c3a23cec8350f5f1",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_pyrepl/windows_console.py"
+    },
+    {
+      "file": "_pyrepl/windows_eventqueue.py",
+      "sha256": "ca39efc778d55c97357fc8b95f25f1c9301f79f487ee7486f24bf872a87c3aa7",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_pyrepl/windows_eventqueue.py"
+    },
+    {
+      "file": "_sitebuiltins.py",
+      "sha256": "b9388bc1d6d12ed6be12da420ab1feca40f99c0e33ec315d92b1e01cb69b25bc",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_sitebuiltins.py"
+    },
+    {
+      "file": "_ssl.py",
+      "sha256": "fc983d9c8fe8cb1120cf9510eb64bdf684e6108f1439bfc1572bbe2d1a22f61a",
+      "basis": "pyodide-source-identical",
+      "source_member": "src/py/_ssl.py"
+    },
+    {
+      "file": "_strptime.py",
+      "sha256": "3283216b39dc619ad1b0c0ccbed0c6a13c69884177e8032211087736fedacf4d",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_strptime.py"
+    },
+    {
+      "file": "_sysconfigdata__emscripten_wasm32-emscripten.py",
+      "sha256": "bc3c87c5dd4e997d905bfe833402380515fbc5bfbbc4855570d8cac2a9c80267",
+      "basis": "generated-build-configuration-source-shipped-in-stdlib",
+      "source_member": "cpython/Makefile sysconfigdata target"
+    },
+    {
+      "file": "_threading_local.py",
+      "sha256": "c28a8fee862741e9173f5a76f0c680761b5f61e1dd9f2ca479b02c69c9ada4e7",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_threading_local.py"
+    },
+    {
+      "file": "_weakrefset.py",
+      "sha256": "2dd7cb459d654fe78b00c5c47ee8e786c037ee77763304603f5e976dd62cbf81",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/_weakrefset.py"
+    },
+    {
+      "file": "abc.py",
+      "sha256": "e558702a95cdce3febd289da021715d2b92bc43995b8a1bc58dfa1c3d8010287",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/abc.py"
+    },
+    {
+      "file": "annotationlib.py",
+      "sha256": "94547bf18a845960d719b2ba2408b2aedbd7edee33522bd3a6ac68c2b34487d6",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/annotationlib.py"
+    },
+    {
+      "file": "antigravity.py",
+      "sha256": "8a5ee63e1b79ba2733e7ff4290b6eefea60e7f3a1ccb6bb519535aaf92b44967",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/antigravity.py"
+    },
+    {
+      "file": "argparse.py",
+      "sha256": "7b73a121353cca465b96265ba256b7c5b92f18e3b2fb2d9a5a950e227b7fccf5",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/argparse.py"
+    },
+    {
+      "file": "ast.py",
+      "sha256": "5ea9a796353544bea0d706153516f04ef3d92be305d15a73238403837d77e34c",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/ast.py"
+    },
+    {
+      "file": "asyncio/__init__.py",
+      "sha256": "8148552daea881e3b33639d6e9bdab0da2021367ab694ee0604431c33c16983f",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/asyncio/__init__.py"
+    },
+    {
+      "file": "asyncio/__main__.py",
+      "sha256": "cfb95909d2c15914ccdd7cecfb5eeeac2e807ba31baf2a9d48db3bf32a3b4b2a",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/asyncio/__main__.py"
+    },
+    {
+      "file": "asyncio/base_events.py",
+      "sha256": "a82285b1ccb379d4bc18f3c1b05a2876040daed1523e7fb6bc05c0a86977894d",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/asyncio/base_events.py"
+    },
+    {
+      "file": "asyncio/base_futures.py",
+      "sha256": "2f3798c4b82f5ac77647908b157c924f734f36871d98970e72849ea9a9a07856",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/asyncio/base_futures.py"
+    },
+    {
+      "file": "asyncio/base_subprocess.py",
+      "sha256": "9ef40d250546b3e0eea0f11464f4e8f758d010834f74ded28c8b3204e4399a49",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/asyncio/base_subprocess.py"
+    },
+    {
+      "file": "asyncio/base_tasks.py",
+      "sha256": "56efac65b63db927af336fa55eb5bda93c97a2defa4734ea8d695ed20fd6712a",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/asyncio/base_tasks.py"
+    },
+    {
+      "file": "asyncio/constants.py",
+      "sha256": "873fc2f9e66313c3c19c337269e704f204b59f9e91d6ecbec59f68335484d338",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/asyncio/constants.py"
+    },
+    {
+      "file": "asyncio/coroutines.py",
+      "sha256": "57b52edd0fc4cf50be2956aed9530110556f8a098e2908d0492b88c36ea75933",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/asyncio/coroutines.py"
+    },
+    {
+      "file": "asyncio/events.py",
+      "sha256": "b1a138015c6e1878d7f8c6be51896da451d7f25c24f6ef18d76ceff249050d94",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/asyncio/events.py"
+    },
+    {
+      "file": "asyncio/exceptions.py",
+      "sha256": "a5971f88be14cd1417d59adf539ae48c5d818f95362a4e0eb00017e3690ab37b",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/asyncio/exceptions.py"
+    },
+    {
+      "file": "asyncio/format_helpers.py",
+      "sha256": "c02f2f8c1e2508ddb2f8d8c1bef452be1f6b9a1d2a998b89a56d153e42a5f1ef",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/asyncio/format_helpers.py"
+    },
+    {
+      "file": "asyncio/futures.py",
+      "sha256": "f23f290c9e3ab1b1839a0929ace615ce9195131d52d0a3819721fc2c9e1eb7b4",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/asyncio/futures.py"
+    },
+    {
+      "file": "asyncio/graph.py",
+      "sha256": "f6bb1079a4759c4b34a6b8a852e273895df3a2d3b082d435dab2a33ed2fbd80b",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/asyncio/graph.py"
+    },
+    {
+      "file": "asyncio/locks.py",
+      "sha256": "e8503dc3ab56aaa57ab14f74f2a4f9ce81db1740be68667ca0da0b48b34ee75f",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/asyncio/locks.py"
+    },
+    {
+      "file": "asyncio/log.py",
+      "sha256": "80e4cc3ded4b138baba486519e7444801a23d6ac35f229d336a407a96af7e8d2",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/asyncio/log.py"
+    },
+    {
+      "file": "asyncio/mixins.py",
+      "sha256": "8f4a3e16eca845ebfba422550cbcee7340ec8166d2bff6b750a8ed0de6b9ae3c",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/asyncio/mixins.py"
+    },
+    {
+      "file": "asyncio/proactor_events.py",
+      "sha256": "aeb149ee0ac2f27fddbfe79d8085a7cde881bd5f5d048e5c9c2f5b8f3b64a971",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/asyncio/proactor_events.py"
+    },
+    {
+      "file": "asyncio/protocols.py",
+      "sha256": "1d1b49988c338b4ef06e30f9e92d9db2e00080c341f0a3f573bb8312deb8aff6",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/asyncio/protocols.py"
+    },
+    {
+      "file": "asyncio/queues.py",
+      "sha256": "559dd0b597af27d60f0ea75a0ee4eff19d9337d685d13e0685d13045ee7b7cdf",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/asyncio/queues.py"
+    },
+    {
+      "file": "asyncio/runners.py",
+      "sha256": "749f15c02d29ea7f79e779b92e066422f8267d3fa0afc7e08b497a56c703897c",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/asyncio/runners.py"
+    },
+    {
+      "file": "asyncio/selector_events.py",
+      "sha256": "a72e4da5151d56d7eee6ec1df2582acea4f092e1910e6170e7a49b717e90f2eb",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/asyncio/selector_events.py"
+    },
+    {
+      "file": "asyncio/sslproto.py",
+      "sha256": "b33d2f13fc373b7220402c4358dc96c770cea14489f5570b49774b37f9ac052f",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/asyncio/sslproto.py"
+    },
+    {
+      "file": "asyncio/staggered.py",
+      "sha256": "8be17b2fa59a3a207b2e004f278257fc220c592afc8b6aa1cbe47030e1b9b4a9",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/asyncio/staggered.py"
+    },
+    {
+      "file": "asyncio/streams.py",
+      "sha256": "d1753bc21667afe914390623be181ebb31776845d7c7f2f50805cae972f0189b",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/asyncio/streams.py"
+    },
+    {
+      "file": "asyncio/subprocess.py",
+      "sha256": "7b70605716334f63cc482123b2aaa3b7c5bb7138eeab63a037bd8068d43307c1",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/asyncio/subprocess.py"
+    },
+    {
+      "file": "asyncio/taskgroups.py",
+      "sha256": "df0ea4f0911ea9c1006b4dec45557e0862a09d7a411c63259943731df8c41dda",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/asyncio/taskgroups.py"
+    },
+    {
+      "file": "asyncio/tasks.py",
+      "sha256": "8554946e93b93d70288a2ab0ad7f255cf3119c4861f89e3c9194956d0f3f591a",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/asyncio/tasks.py"
+    },
+    {
+      "file": "asyncio/threads.py",
+      "sha256": "39d37295383641565f0c08bd992e2f661dc8051eb17e890b834fce96bde0910e",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/asyncio/threads.py"
+    },
+    {
+      "file": "asyncio/timeouts.py",
+      "sha256": "3154c617c94bf0124b0b5eaf1a6aef89cc0776e95d00b5e4e5302e32b29cb06b",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/asyncio/timeouts.py"
+    },
+    {
+      "file": "asyncio/tools.py",
+      "sha256": "6e74b35d25157f99335d70e2352a11d9be4aeee80f3300294dc80f75862dd00b",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/asyncio/tools.py"
+    },
+    {
+      "file": "asyncio/transports.py",
+      "sha256": "bfd414b25979e07b74081140bf91332957a9bf8b5aa5a0c7ff0d779d93eada21",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/asyncio/transports.py"
+    },
+    {
+      "file": "asyncio/trsock.py",
+      "sha256": "c0eac37debcc51b702b808f6b7ed3e417343f5ff5f57125dad600a27eb082328",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/asyncio/trsock.py"
+    },
+    {
+      "file": "asyncio/unix_events.py",
+      "sha256": "7466b4efe773e4e05f4ea94b37ba4bc8d75dddd137357067a9ac02f45e4e906a",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/asyncio/unix_events.py"
+    },
+    {
+      "file": "asyncio/windows_events.py",
+      "sha256": "886afa6f0f2e2ee02560c3b5dac8d0beb1239f9f34bd1a38a8b4c796ee4da43e",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/asyncio/windows_events.py"
+    },
+    {
+      "file": "asyncio/windows_utils.py",
+      "sha256": "e6fcffefa2521666bc2aed0f5caf8e862c1c1014ad12d2ab5fbce09c2df9c6f0",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/asyncio/windows_utils.py"
+    },
+    {
+      "file": "base64.py",
+      "sha256": "202d288f0b6d25ed1b206640f86e934381e6766fa0496f6f8d87d9c1bf92cdef",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/base64.py"
+    },
+    {
+      "file": "bdb.py",
+      "sha256": "ed54964aed0bb23931265607c3ef1e38ec09ccb681d298fd1b56e5ac1cd4223c",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/bdb.py"
+    },
+    {
+      "file": "bisect.py",
+      "sha256": "f1cf7b85fc36b5da249813fc5ab97d9464f8cc1bc817f7146206fa2713e35999",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/bisect.py"
+    },
+    {
+      "file": "bz2.py",
+      "sha256": "368b9ee55f0b6dbfc81b15e1a17c51cccddb009389eae8e9a7acf2402ca4109a",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/bz2.py"
+    },
+    {
+      "file": "cProfile.py",
+      "sha256": "4349fe3dba56e2636cee1ce4038baac7988104986c96be808b62bb46939ad7bf",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/cProfile.py"
+    },
+    {
+      "file": "calendar.py",
+      "sha256": "071c962f9000d42c565b92bae4063e1b7f615ae2db4f574e7c682c41f99c5146",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/calendar.py"
+    },
+    {
+      "file": "cmd.py",
+      "sha256": "2412ce55bbaa0be0bb33e11e3a13735160194e674a7d88a262da708ee00e4d7f",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/cmd.py"
+    },
+    {
+      "file": "code.py",
+      "sha256": "fcb15fcef14ca2a66ec8e02d52d2ab88b50e86f232317f8b35811dd9c2aa0de9",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/code.py"
+    },
+    {
+      "file": "codecs.py",
+      "sha256": "718f39b3ea68fe934214d789c5bce3005fa828040b03a72d2f715fc5e2647b7e",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/codecs.py"
+    },
+    {
+      "file": "codeop.py",
+      "sha256": "6777d19fa0f88c415d615c78e214ede057dd7507db8494744ca2c53fe9911a3a",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/codeop.py"
+    },
+    {
+      "file": "collections/__init__.py",
+      "sha256": "dbd563752a57c6633b7566b1e9c95bc8ea81df1a1d213b23f61c5335424e5af5",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/collections/__init__.py"
+    },
+    {
+      "file": "colorsys.py",
+      "sha256": "65e3dfbf7bad61d4d7d7731a69dd7e75a347fd350d91327a51010a94e6fd2f1d",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/colorsys.py"
+    },
+    {
+      "file": "compileall.py",
+      "sha256": "503f5a5e778b03903ddfd81490d987a3a2c13434df8b950efcda55b252be73bd",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/compileall.py"
+    },
+    {
+      "file": "compression/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/compression/__init__.py"
+    },
+    {
+      "file": "compression/_common/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/compression/_common/__init__.py"
+    },
+    {
+      "file": "compression/_common/_streams.py",
+      "sha256": "8b8e943815c748d030e540a023400cb87fb13f75c2f0615a63ec42ef9f156c92",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/compression/_common/_streams.py"
+    },
+    {
+      "file": "compression/bz2.py",
+      "sha256": "0179b1d941eb89941776a5a4a92108c2680cc3b9da614998ca5e621617ce8bf8",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/compression/bz2.py"
+    },
+    {
+      "file": "compression/gzip.py",
+      "sha256": "20c9914eeadab67976d460979f111c0679f6c515ad2430df605a592bac71f7e8",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/compression/gzip.py"
+    },
+    {
+      "file": "compression/lzma.py",
+      "sha256": "b9c1d0a5a84f0af8c022db06732a2a9331186cb1fc589123ab39d53525491352",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/compression/lzma.py"
+    },
+    {
+      "file": "compression/zlib.py",
+      "sha256": "421ce16560784b698eeda5052235308e80807889847393845eeec9ffc4f4f7d7",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/compression/zlib.py"
+    },
+    {
+      "file": "compression/zstd/__init__.py",
+      "sha256": "a4a2da5a3f729baf74dc9873afe02da7919a5e394e665dc7beb24438d105cc76",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/compression/zstd/__init__.py"
+    },
+    {
+      "file": "compression/zstd/_zstdfile.py",
+      "sha256": "662c2fc97fae490e6dc0e1ceb6a4363bea76ffa05b0acd788aec1274157c4216",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/compression/zstd/_zstdfile.py"
+    },
+    {
+      "file": "concurrent/__init__.py",
+      "sha256": "87ad5c8954dd56fbbca04517bf87477ff4dce575170c7dd1281d7ef1f4214ac8",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/concurrent/__init__.py"
+    },
+    {
+      "file": "concurrent/futures/__init__.py",
+      "sha256": "b70493d1f40759fdb270d09bfdde1e33c4a796cc8af24416fb33012ae2c966c3",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/concurrent/futures/__init__.py"
+    },
+    {
+      "file": "concurrent/futures/_base.py",
+      "sha256": "3665aa676031ee09ed6db32db6227e66f56c96230cfd26a2db7c2d83da49b69d",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/concurrent/futures/_base.py"
+    },
+    {
+      "file": "concurrent/futures/interpreter.py",
+      "sha256": "6ed137e0a028af8b1f4218e96d150f676f5d33b751cc7e697d615c52ae32c905",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/concurrent/futures/interpreter.py"
+    },
+    {
+      "file": "concurrent/futures/process.py",
+      "sha256": "baf3439c2f89e7e796c5e3d8892418d3bbf0becdea26fd0a0894b39ede5e13fc",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/concurrent/futures/process.py"
+    },
+    {
+      "file": "concurrent/futures/thread.py",
+      "sha256": "7f95079dda8064cd372c9c0ea60c7e172b34c8f2aa0c3d9213e85b8584aa033c",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/concurrent/futures/thread.py"
+    },
+    {
+      "file": "concurrent/interpreters/__init__.py",
+      "sha256": "040e47f07bdfb28c67798fa7764fac1d79e13fd0fc0db9c85ee5dae8e1edf249",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/concurrent/interpreters/__init__.py"
+    },
+    {
+      "file": "concurrent/interpreters/_crossinterp.py",
+      "sha256": "029fa98334c0dd71aead1cb3662a661f292aee5c9960fd71a15c1ac7a941cc72",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/concurrent/interpreters/_crossinterp.py"
+    },
+    {
+      "file": "concurrent/interpreters/_queues.py",
+      "sha256": "de83f0ecab62d3bcf0e06b6bc29c2186c237558ea91eafd8ac374a0a6b722869",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/concurrent/interpreters/_queues.py"
+    },
+    {
+      "file": "configparser.py",
+      "sha256": "2e28d93f26d11feb56973b220892a04ab8ed604d6199ddbb9a8e9e1e3bd460e6",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/configparser.py"
+    },
+    {
+      "file": "contextlib.py",
+      "sha256": "c1e0d67b2007de11ae93cd36cf6faf38d9ab32656a832d592a49325eec579f96",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/contextlib.py"
+    },
+    {
+      "file": "contextvars.py",
+      "sha256": "cf0d77b49a9cde369bb6fc3e5c3e51658e8878cb9dab64a883b70caa86119007",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/contextvars.py"
+    },
+    {
+      "file": "copy.py",
+      "sha256": "15154fde290d6e65b5007905689a47a9a5a724822c5e06eec35d9ffbb2a3aa69",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/copy.py"
+    },
+    {
+      "file": "copyreg.py",
+      "sha256": "6376eb5722806396f5842997ac18add369ea9ac3ff4fcfe1460c41a088cac425",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/copyreg.py"
+    },
+    {
+      "file": "csv.py",
+      "sha256": "7604e007804bef2693cb9705257a4ab18ab9b7a188fa3c1eb21a8a55f6ae1ddf",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/csv.py"
+    },
+    {
+      "file": "ctypes/__init__.py",
+      "sha256": "77dd2b5905652d1e1960034bce46320a900891116d8c1278c3b27bcfad2e809c",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/ctypes/__init__.py"
+    },
+    {
+      "file": "ctypes/_aix.py",
+      "sha256": "540e2821fa36981bde5c6ffb8f972474b06db4a37c1854c0e0e379b75d2b0fa3",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/ctypes/_aix.py"
+    },
+    {
+      "file": "ctypes/_endian.py",
+      "sha256": "499773a028a41ee18153fedfe0a00a26efb2a650f568b9bc17e2f3a914a23468",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/ctypes/_endian.py"
+    },
+    {
+      "file": "ctypes/_layout.py",
+      "sha256": "02c1f1c159b23daa8af9ed3ece20f047b25127da70c8cdb75daf43896838db0d",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/ctypes/_layout.py"
+    },
+    {
+      "file": "ctypes/macholib/README.ctypes",
+      "sha256": "dc29d1da83b6a0a09a41647e4111eee878ed079c2d6b54a98fd6d8b88dd581f2",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/ctypes/macholib/README.ctypes"
+    },
+    {
+      "file": "ctypes/macholib/__init__.py",
+      "sha256": "1e77c01eec8f167ed10b754f153c0c743c8e5196ae9c81dffc08f129ab56dbfd",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/ctypes/macholib/__init__.py"
+    },
+    {
+      "file": "ctypes/macholib/dyld.py",
+      "sha256": "eb8e7b17f1533bc3e86e23e8695f7a5e4b7a99ef1b1575d10af54f389161b655",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/ctypes/macholib/dyld.py"
+    },
+    {
+      "file": "ctypes/macholib/dylib.py",
+      "sha256": "f19ee056b18165cc6735efab0b4ca3508be9405b9646c38113316c15e8278a6f",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/ctypes/macholib/dylib.py"
+    },
+    {
+      "file": "ctypes/macholib/fetch_macholib",
+      "sha256": "a9f6faacdb1aa00ac2f68043cd445171de9639a732b861bd5e64090a2865ab23",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/ctypes/macholib/fetch_macholib"
+    },
+    {
+      "file": "ctypes/macholib/fetch_macholib.bat",
+      "sha256": "7497fbdbb98afca4ac455e3a057c59bcdebaf1280e25c94741dc301f05cb53e5",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/ctypes/macholib/fetch_macholib.bat"
+    },
+    {
+      "file": "ctypes/macholib/framework.py",
+      "sha256": "302439e40d9cbdd61b8b7cffd0b7e1278a6811b635044ee366a36e0d991f62da",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/ctypes/macholib/framework.py"
+    },
+    {
+      "file": "ctypes/util.py",
+      "sha256": "4619533abb487b60dfc273cf200401ba08d9acb306c3f1c2d012db86179530f1",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/ctypes/util.py"
+    },
+    {
+      "file": "ctypes/wintypes.py",
+      "sha256": "d48a951550b66cfc96fa66497d573c401927afcdaa70172e92d52c5ba166cb79",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/ctypes/wintypes.py"
+    },
+    {
+      "file": "dataclasses.py",
+      "sha256": "cd1435e8cd7b7fd8b0128e05c2583445ea3f76fb437b065d22cb7587206afca8",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/dataclasses.py"
+    },
+    {
+      "file": "datetime.py",
+      "sha256": "742884b0c8e7dc69911858245db4f34d42e8ec0f769d580c570bd56032b0866c",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/datetime.py"
+    },
+    {
+      "file": "decimal.py",
+      "sha256": "af29fa99aa720a68cab5a6384c7beba4c8e9480a6c1d53a512efeeb5a7e5c781",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/decimal.py"
+    },
+    {
+      "file": "difflib.py",
+      "sha256": "000f99f04cf8fd967753ed9929be6d5025e006437e0ef19b65e3303072538b74",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/difflib.py"
+    },
+    {
+      "file": "dis.py",
+      "sha256": "17d4d9a9195c9ee5aa27a96f3e0871f9363fd501e3a64ef20cb1cc876d7ad553",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/dis.py"
+    },
+    {
+      "file": "doctest.py",
+      "sha256": "3e1c718783b5d9b9b9e95ffa13c2ecc221b58f8a1651732ff4b3484a6bceca60",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/doctest.py"
+    },
+    {
+      "file": "email/__init__.py",
+      "sha256": "dafca994154b9a6eb2b69d0e6e69e7596f397c2aec9bc62702259f4b39bd111a",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/email/__init__.py"
+    },
+    {
+      "file": "email/_encoded_words.py",
+      "sha256": "4178321600c0a19ca04cfe8542ce44487f339d15d89a473b58cea63c0b230217",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/email/_encoded_words.py"
+    },
+    {
+      "file": "email/_header_value_parser.py",
+      "sha256": "cb79aaf3b57072daa004339a824db51e7029539afb1b07d1d807bdbd30495ca1",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/email/_header_value_parser.py"
+    },
+    {
+      "file": "email/_parseaddr.py",
+      "sha256": "59924815da3537e55342625a254288931e0585733cb65892bd500adb4b837e69",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/email/_parseaddr.py"
+    },
+    {
+      "file": "email/_policybase.py",
+      "sha256": "b39778a6dd7803ca768e99c0f3c2f814af8b6fc9ec6a7c8265fcb15e53f2a3f3",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/email/_policybase.py"
+    },
+    {
+      "file": "email/base64mime.py",
+      "sha256": "f9afd67a21d496a2cb571595ecbf79db1f1d4140e6b8b453a569a7eb8a688822",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/email/base64mime.py"
+    },
+    {
+      "file": "email/charset.py",
+      "sha256": "37f291f2390447e43314229202ed7aee2251420ad47e2fb1aa51b3b5b90c1054",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/email/charset.py"
+    },
+    {
+      "file": "email/contentmanager.py",
+      "sha256": "b76b572c0adfd3b3c6e08978e82895fcf9a6da5782d488f26d192759fa3cc94d",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/email/contentmanager.py"
+    },
+    {
+      "file": "email/encoders.py",
+      "sha256": "cc09bd113246fd8084162298948bdf64c3684ed2c8780f03814c7897ce32dca3",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/email/encoders.py"
+    },
+    {
+      "file": "email/errors.py",
+      "sha256": "16e9ae1143667e7224e2ab4048339d0175ed02f3e4946f30daf94d98a25968be",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/email/errors.py"
+    },
+    {
+      "file": "email/feedparser.py",
+      "sha256": "6c0d04d902ce6000e7aaf303dae35e506829f2573f5f72b8bb4f219dc967d690",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/email/feedparser.py"
+    },
+    {
+      "file": "email/generator.py",
+      "sha256": "58768389e3a034789b0b588527dca4598986e94542327899c3072027334708f5",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/email/generator.py"
+    },
+    {
+      "file": "email/header.py",
+      "sha256": "0af6a163dca4e3405c0b1be9093d0e9f6bb9d3f661a453dfbcf11c286af1e27e",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/email/header.py"
+    },
+    {
+      "file": "email/headerregistry.py",
+      "sha256": "fada56c25b6a457c6a62af43f9f929bbc29424103ce65f40f114adb4fdf3d39f",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/email/headerregistry.py"
+    },
+    {
+      "file": "email/iterators.py",
+      "sha256": "3fa231c15961a6cf3f61ef8362d9558417b23ab93ce43ab5fc66cb5847e5fcf2",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/email/iterators.py"
+    },
+    {
+      "file": "email/message.py",
+      "sha256": "65620d24398c60137ea750c3830365916193978af32bd0b412131ee3fa6c7ee7",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/email/message.py"
+    },
+    {
+      "file": "email/mime/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/email/mime/__init__.py"
+    },
+    {
+      "file": "email/mime/application.py",
+      "sha256": "84cd51ceac08e42b7fd0af9dbaad59afee9a62fb7ba3adeb54c28728a32fcb87",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/email/mime/application.py"
+    },
+    {
+      "file": "email/mime/audio.py",
+      "sha256": "5dcd137f6fa1548648c0a4120eebee5a5d0aee5329d3e33f5d7ae917574e1e7b",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/email/mime/audio.py"
+    },
+    {
+      "file": "email/mime/base.py",
+      "sha256": "883ea9430679ff2738bf72619b7ebfefcfe1eed561eef354e6b41e9300bcc981",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/email/mime/base.py"
+    },
+    {
+      "file": "email/mime/image.py",
+      "sha256": "846833f2fda471df0a391aa68643867d624a223ddd7a0d78b0b6ee0368921acc",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/email/mime/image.py"
+    },
+    {
+      "file": "email/mime/message.py",
+      "sha256": "ee9786db4e3434dc8883ea9df2ee8a9d0471aabf189b5ce08201ed430f5dc5e5",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/email/mime/message.py"
+    },
+    {
+      "file": "email/mime/multipart.py",
+      "sha256": "5be186cfbf465c7d6d523ccb8628057b7f774e247c4cf526dc40659bb5bd9742",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/email/mime/multipart.py"
+    },
+    {
+      "file": "email/mime/nonmultipart.py",
+      "sha256": "e93a956cf8cc781fc8c36e1fd2d2c3105f2e258df5465292c2980abef2f3d3ed",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/email/mime/nonmultipart.py"
+    },
+    {
+      "file": "email/mime/text.py",
+      "sha256": "214c42aa6c1d74320177d8bdc75de5a8490362b1fdd869e0327eb5ce17b3dc8c",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/email/mime/text.py"
+    },
+    {
+      "file": "email/parser.py",
+      "sha256": "5af6ef2ef9eb5aed6cae264ec2418ac466fe4316b41fd3f7ece4b149d521a1ee",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/email/parser.py"
+    },
+    {
+      "file": "email/policy.py",
+      "sha256": "9dcd0d4849a92b8e3250b04ac02ebccead57b7172057984fc8abb85f818ba01d",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/email/policy.py"
+    },
+    {
+      "file": "email/quoprimime.py",
+      "sha256": "d7e20e65fd1947daec86f0ef4d07e12b11b5be62368f584654cd7113f9e0effd",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/email/quoprimime.py"
+    },
+    {
+      "file": "email/utils.py",
+      "sha256": "628766d0bb6a4dfab2aa6f1da4aeb3088b31e5c23b6a37e3a9155a118ba37a19",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/email/utils.py"
+    },
+    {
+      "file": "encodings/__init__.py",
+      "sha256": "dadc37a3e430ce905b113d2e2a73ee2762dda8a4ad30567b83eb4b44eda147eb",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/__init__.py"
+    },
+    {
+      "file": "encodings/_win_cp_codecs.py",
+      "sha256": "a10ef385d2096ff10a4ed00e7adfb7750fefcd10aa8eea1b573846145c9abad7",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/_win_cp_codecs.py"
+    },
+    {
+      "file": "encodings/aliases.py",
+      "sha256": "e38fc524cc8b2355807921411c918c0d971419c4d6ba6147409785db42d257a3",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/aliases.py"
+    },
+    {
+      "file": "encodings/ascii.py",
+      "sha256": "578aa1173f7cc60dad2895071287fe6182bd14787b3fbf47a6c7983dfe3675e3",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/ascii.py"
+    },
+    {
+      "file": "encodings/base64_codec.py",
+      "sha256": "cf9ac7a464f541492486241d1b4bf33e37b45c6499275cc4d69c5a8e564e5976",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/base64_codec.py"
+    },
+    {
+      "file": "encodings/big5.py",
+      "sha256": "98fac6f86a20dd05da197e2058176ebfd47edee7074c3248f5f48fe0fb672d7c",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/big5.py"
+    },
+    {
+      "file": "encodings/big5hkscs.py",
+      "sha256": "21d051a00fb5c6a86ba187e0c50e811d659ce00991fd5f5b408f71ebb2ef0f16",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/big5hkscs.py"
+    },
+    {
+      "file": "encodings/bz2_codec.py",
+      "sha256": "1181a2a89102a2b1d2b2f1f4473236d5d1ececdd0be8fdaa498a3dbe21a185ab",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/bz2_codec.py"
+    },
+    {
+      "file": "encodings/charmap.py",
+      "sha256": "1b8b5fdb36ce3becc62a6115ed904a17083949ec8aaef5a80f7078cec232f43b",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/charmap.py"
+    },
+    {
+      "file": "encodings/cp037.py",
+      "sha256": "fda6ca994d710e4e0c760e0204c29a4273fc0f14ebe3169306d2eb54c9953f58",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp037.py"
+    },
+    {
+      "file": "encodings/cp1006.py",
+      "sha256": "eaded38b427841bdf280e878f1e26da506e743eaa9429075332af60cce429473",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp1006.py"
+    },
+    {
+      "file": "encodings/cp1026.py",
+      "sha256": "f5227237dd7ce5005b16a8e4d8342f0d193193c878e3cf35b9305d22b3b1aaf9",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp1026.py"
+    },
+    {
+      "file": "encodings/cp1125.py",
+      "sha256": "f84c7d30ce222e6a50cff1a4c9737173411da108cbd2c9bb57c854480103c470",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp1125.py"
+    },
+    {
+      "file": "encodings/cp1140.py",
+      "sha256": "3379d78b244aa905ffe1171a968caaf41b9a0154d1ddc76c05a2abaca2b289fd",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp1140.py"
+    },
+    {
+      "file": "encodings/cp1250.py",
+      "sha256": "ebcec1adf9167863fb0bab29708c546300c80a77ef07838c9e0437a59e265970",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp1250.py"
+    },
+    {
+      "file": "encodings/cp1251.py",
+      "sha256": "d57f8cfa34494c5acb6692ddb31f616ae2dd89a075d2af6d36b0b7ec2ffe7af1",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp1251.py"
+    },
+    {
+      "file": "encodings/cp1252.py",
+      "sha256": "19aa5bee667f5fb387924a813aec9fa1dda47769d09e8483a748bdb202be6a84",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp1252.py"
+    },
+    {
+      "file": "encodings/cp1253.py",
+      "sha256": "8c27696dcfb6894b378869bc89f113703fbd1e9b13a83934463d5999b055d1e8",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp1253.py"
+    },
+    {
+      "file": "encodings/cp1254.py",
+      "sha256": "06517ec2f74f1c6562d0a1a500c48ba43f2e6e9d0c3d28356d747f274f1a4c8d",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp1254.py"
+    },
+    {
+      "file": "encodings/cp1255.py",
+      "sha256": "54a1b5087578fa78e5bdd0afa6a9e80e8c5467c1e4226cf6e586cfe7a674a653",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp1255.py"
+    },
+    {
+      "file": "encodings/cp1256.py",
+      "sha256": "ad3768ac2fef2a646b3301c20af705f4d4a1544f22fa8a84241bada27ab84133",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp1256.py"
+    },
+    {
+      "file": "encodings/cp1257.py",
+      "sha256": "d9149d2925b3f719809ef2297e541461079f15c658af207a3e498be314ab2c6b",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp1257.py"
+    },
+    {
+      "file": "encodings/cp1258.py",
+      "sha256": "672e05b51952a82c8dbd5603769195fcedf565e457bb86c0d5bae04955d04630",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp1258.py"
+    },
+    {
+      "file": "encodings/cp273.py",
+      "sha256": "6c6aec3b213ea3aebc2c526dd4d121c95d4a25a2fc928a87cd80f8448988185f",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp273.py"
+    },
+    {
+      "file": "encodings/cp424.py",
+      "sha256": "30414c2186ea0802bbf3db034122ddec1f8a10061b97c50871e14b74ee36d0ca",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp424.py"
+    },
+    {
+      "file": "encodings/cp437.py",
+      "sha256": "5c2a5015cd36cf7f561269f33dec4c323093d3d88b0673969accdabdcb9ce2cb",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp437.py"
+    },
+    {
+      "file": "encodings/cp500.py",
+      "sha256": "630f503f9110d98ea3e1529f2f965ebc275a2f78d3de47f8e9b69d35589d764b",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp500.py"
+    },
+    {
+      "file": "encodings/cp720.py",
+      "sha256": "395496001271b92efe5df07fc0ae7c3410d1dd2bdfebbd3e4d8e806c8166beb0",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp720.py"
+    },
+    {
+      "file": "encodings/cp737.py",
+      "sha256": "be3ca1785a3970ec62310710eaf7de82932181b04d06fe4528f8adaba9fb8c4b",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp737.py"
+    },
+    {
+      "file": "encodings/cp775.py",
+      "sha256": "e0dba85b99329d7f16907e620adada06be5216abcb964406c827b569b2cf1aeb",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp775.py"
+    },
+    {
+      "file": "encodings/cp850.py",
+      "sha256": "257e29f235e2a8790dd68cee45668776648bab809ce8584f893cdd8fd007993c",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp850.py"
+    },
+    {
+      "file": "encodings/cp852.py",
+      "sha256": "cc6faaa9dc4a933127da0aaacd1dc7a44c09266051af56bfe3215ff228636b6b",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp852.py"
+    },
+    {
+      "file": "encodings/cp855.py",
+      "sha256": "7b25c61c9e8c47b218d3fbb801541a2861926ac712843d2113fff90e2074f5ba",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp855.py"
+    },
+    {
+      "file": "encodings/cp856.py",
+      "sha256": "2e52ec5cb1eafa6739b5569b0b98ee89df5f7358b84ccdc8da64e86f017d359f",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp856.py"
+    },
+    {
+      "file": "encodings/cp857.py",
+      "sha256": "8d1b769058bfccdb3c6c70c49a104f5081a2fcc9fad68f7b5eb3e4f67f0b33da",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp857.py"
+    },
+    {
+      "file": "encodings/cp858.py",
+      "sha256": "a24930c4a6ad0ff66dde9a69f2027e4b92c2c9c61dcda2992e940654c606577b",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp858.py"
+    },
+    {
+      "file": "encodings/cp860.py",
+      "sha256": "2dfae7e31d3d9aa3013cff44a4d7ad842f257ac63765a9998436701b629cd86a",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp860.py"
+    },
+    {
+      "file": "encodings/cp861.py",
+      "sha256": "701930d77a2177497586e99bc3fe60f2d4beffb645608f167c76874a72ff405e",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp861.py"
+    },
+    {
+      "file": "encodings/cp862.py",
+      "sha256": "15a2844b6ed9544c6400cf7299b42d0c2bef93c9bee70a9e89f66b8610ad6d6d",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp862.py"
+    },
+    {
+      "file": "encodings/cp863.py",
+      "sha256": "a3d57f61fce1b98fc81ea8e4ebebaf402fae40bbcdd35d4b8297b9bb49a79aa2",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp863.py"
+    },
+    {
+      "file": "encodings/cp864.py",
+      "sha256": "15ad8f1fdfdd842c7522241372e7eddda7df687e815692a89157c5f256f21a08",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp864.py"
+    },
+    {
+      "file": "encodings/cp865.py",
+      "sha256": "bdbaded987242ed2a8de7133ec2f61ddcc1c2e9de27816ab7cd0a4c678a3a907",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp865.py"
+    },
+    {
+      "file": "encodings/cp866.py",
+      "sha256": "9efcc8e85bbd1687272a0991f6d0429a4c06679db2d114b2ac95db27a70f9d13",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp866.py"
+    },
+    {
+      "file": "encodings/cp869.py",
+      "sha256": "52582d9fb769b24eac7154f18d7dae856588297d6da98f37fb5efd8da883826d",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp869.py"
+    },
+    {
+      "file": "encodings/cp874.py",
+      "sha256": "fe4752fa2e65741e08a563a31ff914fe71068942ce9c6f4070b1dfd7b25e5e7f",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp874.py"
+    },
+    {
+      "file": "encodings/cp875.py",
+      "sha256": "2fe72632015db2cba2bb4367055551da6fe22051b96d170c7b96fa271c46b257",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp875.py"
+    },
+    {
+      "file": "encodings/cp932.py",
+      "sha256": "99748e28113d2d49f5d666b49b78accd2c6e10a7852f7dd6dece9b5b71aa83c4",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp932.py"
+    },
+    {
+      "file": "encodings/cp949.py",
+      "sha256": "950a7d29467ce0590b4a1137830d43d88d8f20e4035dcaaa8b2a5c3c3f1de962",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp949.py"
+    },
+    {
+      "file": "encodings/cp950.py",
+      "sha256": "27811178b450731fc955b1247656a605d04e5ee98e0d585e4596b94b703a27f6",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/cp950.py"
+    },
+    {
+      "file": "encodings/euc_jis_2004.py",
+      "sha256": "9fa426cd9f17629f6320700ed18baa94839304cf1bcabbee7edb501747dc055d",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/euc_jis_2004.py"
+    },
+    {
+      "file": "encodings/euc_jisx0213.py",
+      "sha256": "e28315910da20218dae8b7d5becd81de1e283dfd8b0415a4980d67065de73a0b",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/euc_jisx0213.py"
+    },
+    {
+      "file": "encodings/euc_jp.py",
+      "sha256": "b453a439787b0efa031e43416a7d852a6be705c985e1200693eb96d87ea79cdc",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/euc_jp.py"
+    },
+    {
+      "file": "encodings/euc_kr.py",
+      "sha256": "633a1a5504bfad04b1ec9c96d44d4ebb3bb99066a218318e7d67d866e20887a6",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/euc_kr.py"
+    },
+    {
+      "file": "encodings/gb18030.py",
+      "sha256": "6c10b4dc49bc63724e539137ede6936304fcca1c97c28d16d89f381e10849521",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/gb18030.py"
+    },
+    {
+      "file": "encodings/gb2312.py",
+      "sha256": "3d2d567d8d079b78f3f3b566ed52ad2f38af61bf832b7dc28858b0039a032d6b",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/gb2312.py"
+    },
+    {
+      "file": "encodings/gbk.py",
+      "sha256": "eff9b8cbc9ad2ef2e10e96afa83d3db1f775ea044aed275b7a35574ae0d8645b",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/gbk.py"
+    },
+    {
+      "file": "encodings/hex_codec.py",
+      "sha256": "fc5f0a31b59efe990b86efb98936769f33dd91d912ce55b49a5a4cfc516cd047",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/hex_codec.py"
+    },
+    {
+      "file": "encodings/hp_roman8.py",
+      "sha256": "c43cce763d12e8f71a63dbc16641bd87147eaf5f9d9054ea856864b216b2735b",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/hp_roman8.py"
+    },
+    {
+      "file": "encodings/hz.py",
+      "sha256": "025a9531e3046e52d3e039c0be04f9a5a74651d7683a13c7c7ebd4c7dfb5996a",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/hz.py"
+    },
+    {
+      "file": "encodings/idna.py",
+      "sha256": "ea8d7f01422af0ad138e4bf58d4ae63112f3ceb68833c486d6c4d18252610fd8",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/idna.py"
+    },
+    {
+      "file": "encodings/iso2022_jp.py",
+      "sha256": "461a0e7f72eccb8b29f351c4e7926cfbda58e0edd6d0770bd82e0b36c5febe77",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/iso2022_jp.py"
+    },
+    {
+      "file": "encodings/iso2022_jp_1.py",
+      "sha256": "63bacad13a979a5519fcaa4f1e1e07b2c7415005167fac3a689408c7d886fabd",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/iso2022_jp_1.py"
+    },
+    {
+      "file": "encodings/iso2022_jp_2.py",
+      "sha256": "5d4248181548b0fc89a9f5ee9cf52ebecb235708ba87d47896ad14130884ef9f",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/iso2022_jp_2.py"
+    },
+    {
+      "file": "encodings/iso2022_jp_2004.py",
+      "sha256": "b4d1468bcd608b46f38cb0c6ef115510dcf9aa0f71e590792f407efc6e165164",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/iso2022_jp_2004.py"
+    },
+    {
+      "file": "encodings/iso2022_jp_3.py",
+      "sha256": "3aceaa5661909de14e2861d864443b8472460ce39b99cce5c6965346d47aa5ac",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/iso2022_jp_3.py"
+    },
+    {
+      "file": "encodings/iso2022_jp_ext.py",
+      "sha256": "f4c9ed8f3031995faa224bcb10153d2b6144944477d1f27d1a6cc4a879fac34c",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/iso2022_jp_ext.py"
+    },
+    {
+      "file": "encodings/iso2022_kr.py",
+      "sha256": "1c86362e17944f0bcf68db02f4995bdeea605867795fff7ab4079073f96705e4",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/iso2022_kr.py"
+    },
+    {
+      "file": "encodings/iso8859_1.py",
+      "sha256": "b5cebd515e057d670bf54e10b8a6f162ef3daa7f21b146aee3249160caf3c32d",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/iso8859_1.py"
+    },
+    {
+      "file": "encodings/iso8859_10.py",
+      "sha256": "54c886b41819ebb7f4fb34b8dbae1c45f4fc0864f019ecd772676ccfac5fae7b",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/iso8859_10.py"
+    },
+    {
+      "file": "encodings/iso8859_11.py",
+      "sha256": "ed5a964470a241b4da7a6cfb718e4149d09644933af38f0497602baab6e563ef",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/iso8859_11.py"
+    },
+    {
+      "file": "encodings/iso8859_13.py",
+      "sha256": "7312237e8e5d201d920b4130f057cfdf1b0be9baafaa246826e6d93204fcc206",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/iso8859_13.py"
+    },
+    {
+      "file": "encodings/iso8859_14.py",
+      "sha256": "82778b995a0ee87c5f1180fcc52900359eee15bd9a6e3a0e25f0d963e0b2a343",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/iso8859_14.py"
+    },
+    {
+      "file": "encodings/iso8859_15.py",
+      "sha256": "01976a81811873dc9a0c79db9fc00d1c30103487f3c6bc3a6d81b4043cd48e02",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/iso8859_15.py"
+    },
+    {
+      "file": "encodings/iso8859_16.py",
+      "sha256": "b5ac8f5a5d8f84c0f903b2b7c342184758d590d8bcf810d561f942fe5b372d66",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/iso8859_16.py"
+    },
+    {
+      "file": "encodings/iso8859_2.py",
+      "sha256": "2b57cab6111cae9021505e3ae1b2adbbfc344ec48165fda322f6b069fbb18adc",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/iso8859_2.py"
+    },
+    {
+      "file": "encodings/iso8859_3.py",
+      "sha256": "4ffdf89004bf0c5230caa7079f7ca3142fc112f8b923ddb2c7358369d2d3c242",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/iso8859_3.py"
+    },
+    {
+      "file": "encodings/iso8859_4.py",
+      "sha256": "87bd130daa0eaef3e4cb465e10cffb2bcd194ff74097e0c186b4b8eb7be41ac5",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/iso8859_4.py"
+    },
+    {
+      "file": "encodings/iso8859_5.py",
+      "sha256": "9961d96cc7b9fdf011ebcaaeaeca7b50b8670fadbd7b75fde66192f8c1f68f30",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/iso8859_5.py"
+    },
+    {
+      "file": "encodings/iso8859_6.py",
+      "sha256": "4840e68014346517680f593ca22f67133c39ba7e46f34b9be62c980a728448c6",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/iso8859_6.py"
+    },
+    {
+      "file": "encodings/iso8859_7.py",
+      "sha256": "b352eca3b819488f64fb3338fd93f39c1e30f32bb13f2f9c577925e58f2960e4",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/iso8859_7.py"
+    },
+    {
+      "file": "encodings/iso8859_8.py",
+      "sha256": "4cf9e8a8bbe04accb1c1a80853efb19ae0772d18f81e270adefc1b2386cb368e",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/iso8859_8.py"
+    },
+    {
+      "file": "encodings/iso8859_9.py",
+      "sha256": "84d9b15263e81685f7513c5ab45caf80b2f73c301c68e659f7162c1b1882d359",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/iso8859_9.py"
+    },
+    {
+      "file": "encodings/johab.py",
+      "sha256": "9586615917afd3d848c1c4328656603b2834af6115f2aec932fccc935e1a60fb",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/johab.py"
+    },
+    {
+      "file": "encodings/koi8_r.py",
+      "sha256": "4d4e353aee8039bb71e2145a6e68fe1e6833a1b4250b70ee0ac5ec70bbb8c51d",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/koi8_r.py"
+    },
+    {
+      "file": "encodings/koi8_t.py",
+      "sha256": "9c9043814abdbe7dc39ff98f3857d5d110a84c978ad2304158d810a4e9eacef1",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/koi8_t.py"
+    },
+    {
+      "file": "encodings/koi8_u.py",
+      "sha256": "d449f9858e357fa8c2edbd4b9fe739337e9f201cac3ded20f99bfcecd4970ff7",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/koi8_u.py"
+    },
+    {
+      "file": "encodings/kz1048.py",
+      "sha256": "76beb30e98a911f72f97609a2373782573c17c88a5fb3537db338aa382979ffc",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/kz1048.py"
+    },
+    {
+      "file": "encodings/latin_1.py",
+      "sha256": "b75503e532a27c636477396c855209ff5f3036536d2a4bede0a576c89382b60c",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/latin_1.py"
+    },
+    {
+      "file": "encodings/mac_arabic.py",
+      "sha256": "5eafd9a3136abfbd8ed52df9c90203c7a283e7429ed60502a87a02511e0fb777",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/mac_arabic.py"
+    },
+    {
+      "file": "encodings/mac_croatian.py",
+      "sha256": "a880cd05c82a8d11a29c65ee86a396def3344465dd71441b0bb4a73826024953",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/mac_croatian.py"
+    },
+    {
+      "file": "encodings/mac_cyrillic.py",
+      "sha256": "83616786a1c6308b03a0dc82536908d24d0974b2248d67393d613fe558cea4bd",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/mac_cyrillic.py"
+    },
+    {
+      "file": "encodings/mac_farsi.py",
+      "sha256": "f5763c38fb4ab0423fafe2fdca34d6f9932ac7f1a74c0cd8109d60234c7dc624",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/mac_farsi.py"
+    },
+    {
+      "file": "encodings/mac_greek.py",
+      "sha256": "63016a323ddf98cb3aa9cfa78f3bab4768bedbfe9a5262a36a5aecb13d291f6e",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/mac_greek.py"
+    },
+    {
+      "file": "encodings/mac_iceland.py",
+      "sha256": "753cc1ac635caa7e1b4630fbcebef8db8db332c098154a5b11f652912bf64f37",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/mac_iceland.py"
+    },
+    {
+      "file": "encodings/mac_latin2.py",
+      "sha256": "31670da18ce8b5394cd53fe6bf216268e7e8eae4c0247532e420e2e103727d50",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/mac_latin2.py"
+    },
+    {
+      "file": "encodings/mac_roman.py",
+      "sha256": "230367d96aef8e8d7f185b4acfb84923714f39ddbcbf9cf38a06bf6f5d621c22",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/mac_roman.py"
+    },
+    {
+      "file": "encodings/mac_romanian.py",
+      "sha256": "49630cf035c19e896a123ed6e5fee18b5e485123daf2f15da38bf727ff387bee",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/mac_romanian.py"
+    },
+    {
+      "file": "encodings/mac_turkish.py",
+      "sha256": "99758a5cad2825cb3be3fa5d031e0821e4eba910a46f417fd890207b9b6be77b",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/mac_turkish.py"
+    },
+    {
+      "file": "encodings/mbcs.py",
+      "sha256": "f6ed445ed537c9f856d8defe8b56505727737d0dc9348d0a877abedab4bdd864",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/mbcs.py"
+    },
+    {
+      "file": "encodings/oem.py",
+      "sha256": "481656d3a35f792d0e5109e3f821e6dbfcf097163a19b0cdfcbff3b3db99292f",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/oem.py"
+    },
+    {
+      "file": "encodings/palmos.py",
+      "sha256": "79b4edcfaede8f7deb25b278d60e472217c0ff55e830ef1ccd2c408413742fa0",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/palmos.py"
+    },
+    {
+      "file": "encodings/ptcp154.py",
+      "sha256": "0eabcb2c287d335e86b71b0abe5718bd6ddc9aaee234f0f0f2363845d2926d8d",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/ptcp154.py"
+    },
+    {
+      "file": "encodings/punycode.py",
+      "sha256": "1e8d57e06e9b527009c35f2a1486ab56b51540e817f5bd8f239dc71e3fc0b014",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/punycode.py"
+    },
+    {
+      "file": "encodings/quopri_codec.py",
+      "sha256": "502a213c34c05a94ed063ee03f47680bd6efbb35036e06fb4dc809bf398cfa64",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/quopri_codec.py"
+    },
+    {
+      "file": "encodings/raw_unicode_escape.py",
+      "sha256": "fa6328486b8f5a5cbd10e377e80adb8cf94acbbe19c38b4e1bf708d831a80a3a",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/raw_unicode_escape.py"
+    },
+    {
+      "file": "encodings/rot_13.py",
+      "sha256": "14767f475acdc0bf48e6272280dd15b80efaecafb93c06be21136f83dd1ee7e4",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/rot_13.py"
+    },
+    {
+      "file": "encodings/shift_jis.py",
+      "sha256": "ad4ac50ebf58294304e412cc0f1b12980988dd6edc414e4110029c0a1abbe966",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/shift_jis.py"
+    },
+    {
+      "file": "encodings/shift_jis_2004.py",
+      "sha256": "d21c5930f21063ea78fea3b0f76dfb8fd92858d2a4a200064a52126a43dd1a99",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/shift_jis_2004.py"
+    },
+    {
+      "file": "encodings/shift_jisx0213.py",
+      "sha256": "2c8d0b93bb36edf31c1236b1b4d1c0008553868bd2fc9137570115b96b834f2e",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/shift_jisx0213.py"
+    },
+    {
+      "file": "encodings/tis_620.py",
+      "sha256": "647c4719e2c1a7375105e15a89b377c66f6b699977dcabbb71d923a4607b7902",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/tis_620.py"
+    },
+    {
+      "file": "encodings/undefined.py",
+      "sha256": "0e1e3e7c1dbc4690b71494099541e73de23c9010a54b6822f3867aec35a74a62",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/undefined.py"
+    },
+    {
+      "file": "encodings/unicode_escape.py",
+      "sha256": "507e7ca8f18df639fd823d7cc23ce4028a3550ceefdfa40b3c76f81d1a94531d",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/unicode_escape.py"
+    },
+    {
+      "file": "encodings/utf_16.py",
+      "sha256": "08437559c8d255a5ba1449c1c75beaa62b0834fe4259d161ecf8699381e4c8e1",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/utf_16.py"
+    },
+    {
+      "file": "encodings/utf_16_be.py",
+      "sha256": "3357196f3fa52433326a6626880e34964e00c5570aee50e9a0a0a7c6d86f6e4f",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/utf_16_be.py"
+    },
+    {
+      "file": "encodings/utf_16_le.py",
+      "sha256": "3aedaf3eb49769282daef1eaedfd4fa1c31fe5eebeff67fe2307c89dc2e2fd80",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/utf_16_le.py"
+    },
+    {
+      "file": "encodings/utf_32.py",
+      "sha256": "6c235e377e1e277cde5f684cee6f6f8da4c73d153a21891df0cb834f17cd2b6f",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/utf_32.py"
+    },
+    {
+      "file": "encodings/utf_32_be.py",
+      "sha256": "cbba20e1f6d0879c7c4293446c371a9f79e7c90bf3c78a77a9b8fc72b18915dd",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/utf_32_be.py"
+    },
+    {
+      "file": "encodings/utf_32_le.py",
+      "sha256": "9134b91047d85b442898d59effe23e7e0cf4167ca341ae31119a731dbf880a7b",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/utf_32_le.py"
+    },
+    {
+      "file": "encodings/utf_7.py",
+      "sha256": "9ff32314f4f1fa074f206bbf7fdb851504e5313128636d73b4bf75b886e4a87d",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/utf_7.py"
+    },
+    {
+      "file": "encodings/utf_8.py",
+      "sha256": "ba0cac060269583523ca9506473a755203037c57d466a11aa89a30a5f6756f3d",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/utf_8.py"
+    },
+    {
+      "file": "encodings/utf_8_sig.py",
+      "sha256": "1ef3da8d8aa08149e7f274dc64dbfce2155da812e5258ca8e8f832428d3b5c2d",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/utf_8_sig.py"
+    },
+    {
+      "file": "encodings/uu_codec.py",
+      "sha256": "45ba92000718abf85f158563c755205e100356ce1b4ab9444b4d0a3d21f061a3",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/uu_codec.py"
+    },
+    {
+      "file": "encodings/zlib_codec.py",
+      "sha256": "6ef01e8d3a5fe1cc52f7b5ae008df12f1dbce7304111bf8d4758f1bfc0115759",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/encodings/zlib_codec.py"
+    },
+    {
+      "file": "enum.py",
+      "sha256": "f58ac9cdf3ad80dcc4d445471192397e63374d7100f5ed790d6593a076097e82",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/enum.py"
+    },
+    {
+      "file": "filecmp.py",
+      "sha256": "f895d4defb64409dd31f860e8af58f3d2877bfc17aed4f93217d1417c791c28a",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/filecmp.py"
+    },
+    {
+      "file": "fileinput.py",
+      "sha256": "c28f39e002286c3e822e7a0767d2db0a04613d5ec4f65599bccf29654a4dff3b",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/fileinput.py"
+    },
+    {
+      "file": "fnmatch.py",
+      "sha256": "ce582bc266922e4c682e2a85d72095124430a6bf58716c6f2537103480eae742",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/fnmatch.py"
+    },
+    {
+      "file": "fractions.py",
+      "sha256": "7a95f1c506c9ac4b2277df5f2bdd9d61cc67b520c45021a5a961939770221ef6",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/fractions.py"
+    },
+    {
+      "file": "ftplib.py",
+      "sha256": "e613121d194faef6aa6c8bd5a0e0c844165cf595405ddb59c162e797d0a2612a",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/ftplib.py"
+    },
+    {
+      "file": "functools.py",
+      "sha256": "046ec9660146db48862c7b22c78e2ef3818eaed6920e5cbf35f551ef09fec6cd",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/functools.py"
+    },
+    {
+      "file": "genericpath.py",
+      "sha256": "cdac5a68dd738051e0d66fc81d5947d6a1776248fc6fe862253477608d870ec4",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/genericpath.py"
+    },
+    {
+      "file": "getopt.py",
+      "sha256": "f42eecb0e854a89b0c08d4c8c10930b49fbde0baea2bfcce9b23e797b7d10a38",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/getopt.py"
+    },
+    {
+      "file": "getpass.py",
+      "sha256": "f1e8b3ea2cc5f2ca15e5568b3e53d355c313da3b2891447a36edad2537b6b077",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/getpass.py"
+    },
+    {
+      "file": "gettext.py",
+      "sha256": "54c00df11915aafb017ed23860dcb5197ed063f7ee07e5612625ec86afadcaf5",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/gettext.py"
+    },
+    {
+      "file": "glob.py",
+      "sha256": "403f046e49ce9967cef50d2f72e7986f7f08c6ba942376fcfe78520e005502f9",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/glob.py"
+    },
+    {
+      "file": "graphlib.py",
+      "sha256": "1cfcffd2270ce6b96f300671a88932a3873438d7eb74004431852439fcdd976a",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/graphlib.py"
+    },
+    {
+      "file": "gzip.py",
+      "sha256": "079b8bc62bd15313cb9588d29831e0aa2aa5518844d7ce325beb0b3f50dc2fa7",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/gzip.py"
+    },
+    {
+      "file": "hashlib.py",
+      "sha256": "88fa624821fbdee7eb2ef87c2437b207afe328cf117c7463367e2db5eb1af492",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/hashlib.py"
+    },
+    {
+      "file": "heapq.py",
+      "sha256": "f2d644de141a488db66fc13608a794ef5f2d33162299f6751ea92c3cb0b4c9ea",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/heapq.py"
+    },
+    {
+      "file": "hmac.py",
+      "sha256": "97e45ff94358a40a34f95adb434bd0316d20248bcff1d92f6059c39cb3facccc",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/hmac.py"
+    },
+    {
+      "file": "html/__init__.py",
+      "sha256": "923d82d821e75e8d235392c10c145ab8587927b3faf9c952bbd48081eebd8522",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/html/__init__.py"
+    },
+    {
+      "file": "html/entities.py",
+      "sha256": "d9c65fb2828dbc1f3e399058a341d51e9375ec5bca95a8e92599c41bd5b78bde",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/html/entities.py"
+    },
+    {
+      "file": "html/parser.py",
+      "sha256": "b8393a95226ab2d01024e5c9f78e3a83cf0b97b22d5be48f90ef6c0fc1bbb80b",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/html/parser.py"
+    },
+    {
+      "file": "http/__init__.py",
+      "sha256": "ff5f3d443b9174909975e1c9c67573cf2ffd5fbff9fc2e28529c0601cd17ed9b",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/http/__init__.py"
+    },
+    {
+      "file": "http/client.py",
+      "sha256": "a5cd9edd48e0bc67c2ea0b13ea45749d28cd8d6313bb103b17c13509f60a3e33",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/http/client.py"
+    },
+    {
+      "file": "http/cookiejar.py",
+      "sha256": "33cdcee4ec52171e50cd079da77923d1d0f6e523cefa39f296a8e1ec1b1acb64",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/http/cookiejar.py"
+    },
+    {
+      "file": "http/cookies.py",
+      "sha256": "80257adde5c47ea1f35c0ddd1a537837ea6c3ba6a4506951e5b060375438f77c",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/http/cookies.py"
+    },
+    {
+      "file": "http/server.py",
+      "sha256": "b917e19d333ae8aa1995063c9bddf5a15391f8f7caf32e41a22067824d643429",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/http/server.py"
+    },
+    {
+      "file": "imaplib.py",
+      "sha256": "2bedbdbba602c1151484b6e25f0f5617175e03273dc751514b4fcc58d32cb293",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/imaplib.py"
+    },
+    {
+      "file": "importlib/__init__.py",
+      "sha256": "72b07de4133a7e39b2f6a7920465669aa04626f217e800779587bc0713fe002e",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/importlib/__init__.py"
+    },
+    {
+      "file": "importlib/_abc.py",
+      "sha256": "80aab7931dc999dee581c8b8b56fcd973fe156335a96ceeaf6acfc03cebf10e8",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/importlib/_abc.py"
+    },
+    {
+      "file": "importlib/_bootstrap.py",
+      "sha256": "9cb541ddc6807aaba91e4243de57d869baa7f423565b1ac27024b9e826b50e1c",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/importlib/_bootstrap.py"
+    },
+    {
+      "file": "importlib/_bootstrap_external.py",
+      "sha256": "9750820035459ff08336cc59409d92c2f32f6f633c1831ba14c1ad9c3a56d9f2",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/importlib/_bootstrap_external.py"
+    },
+    {
+      "file": "importlib/abc.py",
+      "sha256": "66da663909ac110b77d89d4402589574308aac2a5b524bba014fabd65f34cc99",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/importlib/abc.py"
+    },
+    {
+      "file": "importlib/machinery.py",
+      "sha256": "34b7583fd83ebb2629b7645c0dd293839ce16b19cf8742801e21a21fe08f5811",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/importlib/machinery.py"
+    },
+    {
+      "file": "importlib/metadata/__init__.py",
+      "sha256": "5476c7c22a65f9e8b5a07b799336d87fa70e792758fd95b161b53b530e3b2654",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/importlib/metadata/__init__.py"
+    },
+    {
+      "file": "importlib/metadata/_adapters.py",
+      "sha256": "c46791664cc0720374649414d0afdf24ca709580ce9feea0a25a4f76441677c1",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/importlib/metadata/_adapters.py"
+    },
+    {
+      "file": "importlib/metadata/_collections.py",
+      "sha256": "089d0e4c21c88d6034648552e2fa0e440b27d91e11d9c40112d3ec6442690126",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/importlib/metadata/_collections.py"
+    },
+    {
+      "file": "importlib/metadata/_functools.py",
+      "sha256": "3ec636fb8aeb297e1155e442d681a9d65075a660bd78a37cf3f7fe6c3f6e3a80",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/importlib/metadata/_functools.py"
+    },
+    {
+      "file": "importlib/metadata/_itertools.py",
+      "sha256": "72faffdaff0145bc5c225e71e6575fa9d1e3848f188bcb3cca4e741bf9e6ea34",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/importlib/metadata/_itertools.py"
+    },
+    {
+      "file": "importlib/metadata/_meta.py",
+      "sha256": "9f167b0bc19595c04500a5b254e9ff767ee8b7fb7005c6e6d4d9af8c87ad0472",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/importlib/metadata/_meta.py"
+    },
+    {
+      "file": "importlib/metadata/_text.py",
+      "sha256": "1c2b0592c66924b7933f734493f9e0ac079755146d4ebb7287d78e001a113f80",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/importlib/metadata/_text.py"
+    },
+    {
+      "file": "importlib/metadata/diagnose.py",
+      "sha256": "9e4491322a309669212d884a86f0a0f60966b7fd750a8c7e1262f311ba984daf",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/importlib/metadata/diagnose.py"
+    },
+    {
+      "file": "importlib/readers.py",
+      "sha256": "d0d57d118d64916f7e6edb04f8bd1a760a1abb879125899ef50a36d09ef54df4",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/importlib/readers.py"
+    },
+    {
+      "file": "importlib/resources/__init__.py",
+      "sha256": "dc9fb6eb542ace0fb59017a7315b0eb2f268d7d11b52662a8c792b6568851ce3",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/importlib/resources/__init__.py"
+    },
+    {
+      "file": "importlib/resources/_adapters.py",
+      "sha256": "be9ac919b51e1db6a35fa5c2b8c3fa27794caea0a2f8ffcc4e5ce225447b8df9",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/importlib/resources/_adapters.py"
+    },
+    {
+      "file": "importlib/resources/_common.py",
+      "sha256": "fcfb97ce807c692b36ac1b224379b455d64937a210c48c5ae60369bcaabe6456",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/importlib/resources/_common.py"
+    },
+    {
+      "file": "importlib/resources/_functional.py",
+      "sha256": "98b5380f04a587cff62175aac0a39f3d5c7246a004a41dc1e174df471af75f73",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/importlib/resources/_functional.py"
+    },
+    {
+      "file": "importlib/resources/_itertools.py",
+      "sha256": "7838ac57a46a88d64ea202d25dfe8b3861ce61cefd14680faca34bcc52e60ab5",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/importlib/resources/_itertools.py"
+    },
+    {
+      "file": "importlib/resources/abc.py",
+      "sha256": "a726c48590b21ba5532f0c654735991571bc0ecafe88145cb8891d82cd364e5e",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/importlib/resources/abc.py"
+    },
+    {
+      "file": "importlib/resources/readers.py",
+      "sha256": "f64855ffaa44f6c21ffc49e77b8cbfeeca37183bf7f7d3aecb30cb079ab45939",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/importlib/resources/readers.py"
+    },
+    {
+      "file": "importlib/resources/simple.py",
+      "sha256": "c099b6a8667d10c3c58512e22416bd126e6d54a6c3ed0f226d6b6de193605815",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/importlib/resources/simple.py"
+    },
+    {
+      "file": "importlib/simple.py",
+      "sha256": "8e687aeeb1db537d2717cb0352c5f126ff7d4095c6de6dc7f00d5103f3009c40",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/importlib/simple.py"
+    },
+    {
+      "file": "importlib/util.py",
+      "sha256": "7bdfadad42664ba169ffac8160765673cd79937f74324f4664de8d820c35b863",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/importlib/util.py"
+    },
+    {
+      "file": "inspect.py",
+      "sha256": "dfa331ea130e46fcac095c4b60a9591e62647aa4f9c9caf94bb96c1fb9aeea2a",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/inspect.py"
+    },
+    {
+      "file": "io.py",
+      "sha256": "1b75584d4efcc612dc0db2ae98619408276585a106f0544879edb5e25b55430a",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/io.py"
+    },
+    {
+      "file": "ipaddress.py",
+      "sha256": "4cba28ab40dc34c685950535cf9adf6251bee5b63c82eed1f315d93853d4eaca",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/ipaddress.py"
+    },
+    {
+      "file": "json/__init__.py",
+      "sha256": "95022d150a27a2bfd54ac21bfce35812c96b53c420bb7b018dcb573f13e52da0",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/json/__init__.py"
+    },
+    {
+      "file": "json/__main__.py",
+      "sha256": "2135d18ded78bcb96b7b96e144b822039c90c37609fe6311ee239af2424a003a",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/json/__main__.py"
+    },
+    {
+      "file": "json/decoder.py",
+      "sha256": "302ce57cb6f411122d7ef2ad2997c1fc0f184849fab3f1f585752f18f2195c73",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/json/decoder.py"
+    },
+    {
+      "file": "json/encoder.py",
+      "sha256": "82f8b6912da367214cbcfca3b00dfd769b4a2522ec4c2dd59d67e6ab78036d97",
+      "basis": "cpython-source-plus-upstream-patches",
+      "source_member": "Lib/json/encoder.py"
+    },
+    {
+      "file": "json/scanner.py",
+      "sha256": "572958017eae8842eeddd0e3d18d3c56cc0a197348224915e1d87ce937841764",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/json/scanner.py"
+    },
+    {
+      "file": "json/tool.py",
+      "sha256": "a9b45e8452bd19fba0db863da86c6c5b74bfbd9fcd18f581cff1139b33d5af75",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/json/tool.py"
+    },
+    {
+      "file": "keyword.py",
+      "sha256": "18c2be738c04ad20ad375f6a71db34b3823c7f40b0340f5294d0e89f3c9b093b",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/keyword.py"
+    },
+    {
+      "file": "linecache.py",
+      "sha256": "e1b815521669b40b0795b0963e9115cae67e684b8f06ce0e50d1d87a112c7db0",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/linecache.py"
+    },
+    {
+      "file": "locale.py",
+      "sha256": "0e90907424b4bef150b00feb1bef4687bacb416e6e3f2b463e0758ee34979fe4",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/locale.py"
+    },
+    {
+      "file": "logging/__init__.py",
+      "sha256": "60682a2e00512c56fe9de436034fbe7a882891964145a8e0b438bb2e6b55cd98",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/logging/__init__.py"
+    },
+    {
+      "file": "logging/config.py",
+      "sha256": "b94e76d8c0ea76a89a60776493964a2703b926a09abb54438b2a942d60c8c066",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/logging/config.py"
+    },
+    {
+      "file": "logging/handlers.py",
+      "sha256": "c6d3abbb1ceba5ccbd8b1bc9cfe9474bf64976003dcb614391a87c408a94dc31",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/logging/handlers.py"
+    },
+    {
+      "file": "lzma.py",
+      "sha256": "b01a78a04c6a9ba6c645758cace78ed53a53871ea3ff88744e23f6263613d507",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/lzma.py"
+    },
+    {
+      "file": "mailbox.py",
+      "sha256": "c302512932be1e7c045eb1b97708b7fa0b8ea3b9a5ce1c7c147fd61d31b0f753",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/mailbox.py"
+    },
+    {
+      "file": "mimetypes.py",
+      "sha256": "4a4e30ce7d070b3887b8bdd95cc01f418d7fd26e19b6430fd6a1dda9850ec743",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/mimetypes.py"
+    },
+    {
+      "file": "modulefinder.py",
+      "sha256": "5447268e1fe922d334f59e2f370dae0130ab2b9eff48ca7bd71c4ec544443c8b",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/modulefinder.py"
+    },
+    {
+      "file": "multiprocessing/__init__.py",
+      "sha256": "a5a42976033c7d63ee2740acceef949a3582dcb0e0442845f9717e1be771c68b",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/multiprocessing/__init__.py"
+    },
+    {
+      "file": "multiprocessing/connection.py",
+      "sha256": "a9fa7963ca8fa1d7a17392035b6720f463064d0f27aeaaa69a161595a699651f",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/multiprocessing/connection.py"
+    },
+    {
+      "file": "multiprocessing/context.py",
+      "sha256": "c90436e3f6af45d094875dc1a73bb772a3d3374eb4c8079869367ea6cc07dc24",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/multiprocessing/context.py"
+    },
+    {
+      "file": "multiprocessing/dummy/__init__.py",
+      "sha256": "bd08f18fce4393e38be9a94a67b6595c05959d59140135d65dc6b3fecfe70e54",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/multiprocessing/dummy/__init__.py"
+    },
+    {
+      "file": "multiprocessing/dummy/connection.py",
+      "sha256": "d63dd1979fde9c133efe430ee870e6ba6de43c0a0513866ce3ce475791fe57ab",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/multiprocessing/dummy/connection.py"
+    },
+    {
+      "file": "multiprocessing/forkserver.py",
+      "sha256": "9366575bd9b7ac0fe2eb43a2de2eb143cb5a4aaf0ed8cb28a3e9708077a3b135",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/multiprocessing/forkserver.py"
+    },
+    {
+      "file": "multiprocessing/heap.py",
+      "sha256": "f6bb79bb99b9ae484935f0d68822e9603a1622dd0b6c4966c79db232a93ba614",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/multiprocessing/heap.py"
+    },
+    {
+      "file": "multiprocessing/managers.py",
+      "sha256": "507dd86b02a50e105736153f923341f13e622622e05a498ef4bfab31436bf83c",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/multiprocessing/managers.py"
+    },
+    {
+      "file": "multiprocessing/pool.py",
+      "sha256": "2b1e92bfc230007ac463aa0a3bd18c948a3c62f97e7e73858ae8b3f61dd13a6e",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/multiprocessing/pool.py"
+    },
+    {
+      "file": "multiprocessing/popen_fork.py",
+      "sha256": "b9a01db0127e3934d933b9b0e027ae5111527cd7c68f1cd3d7429a2d481bd7cf",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/multiprocessing/popen_fork.py"
+    },
+    {
+      "file": "multiprocessing/popen_forkserver.py",
+      "sha256": "0588ad0e5a36718b4377dc2a2a97864a10986c25a33dc3bfed12595711b0cdab",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/multiprocessing/popen_forkserver.py"
+    },
+    {
+      "file": "multiprocessing/popen_spawn_posix.py",
+      "sha256": "3738d2da3f5f57c83149232120a389a3b03cb4ed6f275957b884b18eb227628a",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/multiprocessing/popen_spawn_posix.py"
+    },
+    {
+      "file": "multiprocessing/popen_spawn_win32.py",
+      "sha256": "c3be536c83f59c5c6b83bb78af06366307000be2a63b093767bd2cc732f82d24",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/multiprocessing/popen_spawn_win32.py"
+    },
+    {
+      "file": "multiprocessing/process.py",
+      "sha256": "9cad9791c8ff9aba8f688c4e7ad9f620384231f8d0dfcc88dbc1e4c947ec28bc",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/multiprocessing/process.py"
+    },
+    {
+      "file": "multiprocessing/queues.py",
+      "sha256": "2749328cec74ac7abfb2f1b06df3eb70955d3951ea9c90aea21f25a729369cc7",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/multiprocessing/queues.py"
+    },
+    {
+      "file": "multiprocessing/reduction.py",
+      "sha256": "7cd1652f08e4685f380f2484ad3441d363fe58fe5b328f50050fb0f281a535f9",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/multiprocessing/reduction.py"
+    },
+    {
+      "file": "multiprocessing/resource_sharer.py",
+      "sha256": "bba3c7f2b76a9cf4e8ceb642801c405411da95adf91947d81b0043586038290e",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/multiprocessing/resource_sharer.py"
+    },
+    {
+      "file": "multiprocessing/resource_tracker.py",
+      "sha256": "b2d87c96b4b7f4f5b9cc873105a8168d9a305545362ad56825a02023b4270a5e",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/multiprocessing/resource_tracker.py"
+    },
+    {
+      "file": "multiprocessing/shared_memory.py",
+      "sha256": "f6c69c219fc7ab36abbcd386573a41880ae869a2861e546b72afbd3387cc163e",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/multiprocessing/shared_memory.py"
+    },
+    {
+      "file": "multiprocessing/sharedctypes.py",
+      "sha256": "77ef522912474652490b7df523112858e51721e63dcf109b8567a35ce9b31b0d",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/multiprocessing/sharedctypes.py"
+    },
+    {
+      "file": "multiprocessing/spawn.py",
+      "sha256": "ebf9fa40eb622384c37690d8c78e7208744df031155ab4ceedab0fc791a1669b",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/multiprocessing/spawn.py"
+    },
+    {
+      "file": "multiprocessing/synchronize.py",
+      "sha256": "d77f983907f050516dceae8e25af70628c644b720d51ae13d10f8b46442645c2",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/multiprocessing/synchronize.py"
+    },
+    {
+      "file": "multiprocessing/util.py",
+      "sha256": "a03138826235c4806bd0baea705b33a42edd9727eb55ff50fc6d2e4cacb0bfea",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/multiprocessing/util.py"
+    },
+    {
+      "file": "netrc.py",
+      "sha256": "3ddc67d7599759d745525af7e00ef1bf2d6bb958129698169b7548f17b81cbe8",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/netrc.py"
+    },
+    {
+      "file": "ntpath.py",
+      "sha256": "7c5c992b1b52f97d7dc73ad09ea8b97917475e7e4474563379e71b03015f04ca",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/ntpath.py"
+    },
+    {
+      "file": "nturl2path.py",
+      "sha256": "876806ae202de9a3dbef166ac49d0b5f854f17511e6dc443314215a66d51dd69",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/nturl2path.py"
+    },
+    {
+      "file": "numbers.py",
+      "sha256": "e5e73beba4a7674bd5e9a881a202d403a0c3e2b59af4181699155ea4827a7561",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/numbers.py"
+    },
+    {
+      "file": "opcode.py",
+      "sha256": "1036d90c917bb27c540ac3205d22896ee747214df1f2682458ab915758e4fdf2",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/opcode.py"
+    },
+    {
+      "file": "operator.py",
+      "sha256": "a9f9910965c31f841caad0447ee47299ac539a371422aefe200c86c60f3b4697",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/operator.py"
+    },
+    {
+      "file": "optparse.py",
+      "sha256": "4b1ef880a6d0a017ee2844794865fb1bfa86f1bf71ba00609ec3f955c300eb6f",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/optparse.py"
+    },
+    {
+      "file": "os.py",
+      "sha256": "1494f3b93c6714d7a511963586f2b392dc92f3181c0d1ead82c621a4b0aad969",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/os.py"
+    },
+    {
+      "file": "pathlib/__init__.py",
+      "sha256": "042a4d0a5e1ef66778daa86dc269af205bd42d06e793e53d8b99dff4c45928ca",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/pathlib/__init__.py"
+    },
+    {
+      "file": "pathlib/_local.py",
+      "sha256": "dd1067a4fc49212d10583e0a340cd87eb638a7d70725203d40834b70272fa675",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/pathlib/_local.py"
+    },
+    {
+      "file": "pathlib/_os.py",
+      "sha256": "61e844988e54bdf47c0b11ad2b3fd961f058bb370793428f4c6868bd40cab6f2",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/pathlib/_os.py"
+    },
+    {
+      "file": "pathlib/types.py",
+      "sha256": "723afad22b9629a513c815240644e6312056144efd3f61f66d4f9ec320fdd124",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/pathlib/types.py"
+    },
+    {
+      "file": "pdb.py",
+      "sha256": "5e053e214c86615325ffe0f3a46d727368a78b3d5d99396170b4c2f2d0349b62",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/pdb.py"
+    },
+    {
+      "file": "pickle.py",
+      "sha256": "b24a348ff4c37e7db4f7e25edec94a83583ee9bd9a2f55c5df9f11b0c3237a51",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/pickle.py"
+    },
+    {
+      "file": "pickletools.py",
+      "sha256": "ea05191d23b25e32a4070f56ce146d207342f79dc0b509110d3ba519b191a02e",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/pickletools.py"
+    },
+    {
+      "file": "pkgutil.py",
+      "sha256": "c0ae4cc6a6d36be016d77764cf846c0da4b1b85229d94f090ac994495fc2f203",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/pkgutil.py"
+    },
+    {
+      "file": "platform.py",
+      "sha256": "240eba74565cd0dc4f99f182f7afc32bbea0593016ddb34165b529b5bcb6be0a",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/platform.py"
+    },
+    {
+      "file": "plistlib.py",
+      "sha256": "ac723b45bb33e7cfa345b22d898bc14e8d1e51b473f7f9cc36ed67ed82b90795",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/plistlib.py"
+    },
+    {
+      "file": "poplib.py",
+      "sha256": "527e714523264093910a0a0b1a55c6583f952835c89061537fc40ad98c347056",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/poplib.py"
+    },
+    {
+      "file": "posixpath.py",
+      "sha256": "8a5bc2b6674e76efe0f507b873a41d746beba466a191153ed18a7580ef6e08e1",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/posixpath.py"
+    },
+    {
+      "file": "pprint.py",
+      "sha256": "0b807d4a62c4292ead5b64e1b455f98b0ba225667ff3ee74bd7e0b873620402d",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/pprint.py"
+    },
+    {
+      "file": "profile.py",
+      "sha256": "13a71363e2318222971f155f8511d7965c8d7efdee56a48f28a01bfae54ca30c",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/profile.py"
+    },
+    {
+      "file": "pstats.py",
+      "sha256": "ae89fface3b47690d37170ab0ab55a5d2cffb025aa6e4839085f7456084eb11e",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/pstats.py"
+    },
+    {
+      "file": "pty.py",
+      "sha256": "655814df6302412a3991305d05a301e0a2514d1363b7465a30898513a53bddfc",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/pty.py"
+    },
+    {
+      "file": "py_compile.py",
+      "sha256": "f027de16c180c20912f14d43e07a50fa4397e315059f5b1206d6ffd4c1326e44",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/py_compile.py"
+    },
+    {
+      "file": "pyclbr.py",
+      "sha256": "e8ca09333701ba41244e20b8c2c37b7ed0499b88c4b2ca82cac51ef89ca9e647",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/pyclbr.py"
+    },
+    {
+      "file": "pydoc.py",
+      "sha256": "762fb7848795adc4886bf16f32f4c62cb6a68203a523623638b91273deaf1c12",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/pydoc.py"
+    },
+    {
+      "file": "pyodide/__init__.py",
+      "sha256": "a02eabaa00ee98a4108082fc751808ff71e7d990fe889852f63d13621934e0ac",
+      "basis": "pyodide-source-identical",
+      "source_member": "src/py/pyodide/__init__.py"
+    },
+    {
+      "file": "pyodide/_core.py",
+      "sha256": "52d212cd61b846bac239b37fcec0fa919006b2b810e5c69cd87ba34545af497b",
+      "basis": "pyodide-source-identical",
+      "source_member": "src/py/pyodide/_core.py"
+    },
+    {
+      "file": "pyodide/_nodesock_transport.py",
+      "sha256": "b438b744d96f267d6d85c09daf48fab09f5b99fb2482cc6a7d1d2876947da527",
+      "basis": "pyodide-source-identical",
+      "source_member": "src/py/pyodide/_nodesock_transport.py"
+    },
+    {
+      "file": "pyodide/_package_loader.py",
+      "sha256": "66bc0d856252e3c3690a9c9cc2f73a4e88d7a9cc5beafa712194cadda4eb2b70",
+      "basis": "pyodide-source-identical",
+      "source_member": "src/py/pyodide/_package_loader.py"
+    },
+    {
+      "file": "pyodide/_run_js.py",
+      "sha256": "66dbf5911d7f9845611df9d788c02aa395ed1290e168e368af361923d814d1f4",
+      "basis": "pyodide-source-identical",
+      "source_member": "src/py/pyodide/_run_js.py"
+    },
+    {
+      "file": "pyodide/_state.py",
+      "sha256": "f7891a2b4ed7e6e8606779d813be3829ae171445c41eebb2d9d37a910e80879e",
+      "basis": "pyodide-source-identical",
+      "source_member": "src/py/pyodide/_state.py"
+    },
+    {
+      "file": "pyodide/code.py",
+      "sha256": "58cb66cc8f7049b73f790a69f16378b039d0a55bf2f0bd07f467af811756d556",
+      "basis": "pyodide-source-identical",
+      "source_member": "src/py/pyodide/code.py"
+    },
+    {
+      "file": "pyodide/common.py",
+      "sha256": "fb1f3d764f43efb1a451363557df712abbd4f409ad5bc3650fe6a1d50a8e9ec7",
+      "basis": "pyodide-source-identical",
+      "source_member": "src/py/pyodide/common.py"
+    },
+    {
+      "file": "pyodide/console.py",
+      "sha256": "bcf2346f19c5b968afda3a14222cd5ff5d67806f492aebb09dca24172e91736b",
+      "basis": "pyodide-source-identical",
+      "source_member": "src/py/pyodide/console.py"
+    },
+    {
+      "file": "pyodide/ffi/__init__.py",
+      "sha256": "9564c32e290be1730d9e5dcec0a55320715f8865186f43c8201d32a643735ed1",
+      "basis": "pyodide-source-identical",
+      "source_member": "src/py/pyodide/ffi/__init__.py"
+    },
+    {
+      "file": "pyodide/ffi/wrappers.py",
+      "sha256": "55744176706464efc7480c728154fcdc46c789d7de0b827ab2115fa7dad7197d",
+      "basis": "pyodide-source-identical",
+      "source_member": "src/py/pyodide/ffi/wrappers.py"
+    },
+    {
+      "file": "pyodide/http/__init__.py",
+      "sha256": "b6c1cf4493aaa143c70ae23dd935eddb6f25150d1bbf9e99c92f2bf5d9a7a075",
+      "basis": "pyodide-source-identical",
+      "source_member": "src/py/pyodide/http/__init__.py"
+    },
+    {
+      "file": "pyodide/http/_exceptions.py",
+      "sha256": "49cdec97800dd844b987ce7e775118fb34f8cbaade8ed8652a150e9c7fb005b9",
+      "basis": "pyodide-source-identical",
+      "source_member": "src/py/pyodide/http/_exceptions.py"
+    },
+    {
+      "file": "pyodide/http/_pyfetch.py",
+      "sha256": "bed6d98c09e1e2c2f7a10b77d06e86b033ea21fafb1ea810fd32e8b3d4d0c969",
+      "basis": "pyodide-source-identical",
+      "source_member": "src/py/pyodide/http/_pyfetch.py"
+    },
+    {
+      "file": "pyodide/http/pyxhr.py",
+      "sha256": "39a7a2c74eb0d28e94fec89007c96cfc3a63ccb41ddc819cb56944e7a39c1621",
+      "basis": "pyodide-source-identical",
+      "source_member": "src/py/pyodide/http/pyxhr.py"
+    },
+    {
+      "file": "pyodide/py.typed",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "basis": "pyodide-source-identical",
+      "source_member": "src/py/pyodide/py.typed"
+    },
+    {
+      "file": "pyodide/webloop.py",
+      "sha256": "7a031beee926b61b644f92917ddc16e9e3034075fa86b66333d11294f5e955c3",
+      "basis": "pyodide-source-identical",
+      "source_member": "src/py/pyodide/webloop.py"
+    },
+    {
+      "file": "queue.py",
+      "sha256": "5c2a0057e95a12f5de3e5c7d3f8de747eaea7139a5eb64626f185d93f48f8b79",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/queue.py"
+    },
+    {
+      "file": "quopri.py",
+      "sha256": "744ae69027b180e7155b8be70ea2bb264c2358f7ea4e3af986a215d4c743390f",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/quopri.py"
+    },
+    {
+      "file": "random.py",
+      "sha256": "62dca8cdae7482513b99bb093ff038afd5131954e7eb78166d673a772cee871c",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/random.py"
+    },
+    {
+      "file": "re/__init__.py",
+      "sha256": "741a9de729ed8207bfa19db990f8826f1bf3661f33d0970a80c08cd1338ebc35",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/re/__init__.py"
+    },
+    {
+      "file": "re/_casefix.py",
+      "sha256": "1b12d9136f23db6c3f6f26053fefc15ca964b886838c7b9c1fabf8d2efc1e5c8",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/re/_casefix.py"
+    },
+    {
+      "file": "re/_compiler.py",
+      "sha256": "d49f30cf9a1dbae33b200ed8befd9d0ce3ac612783a10ac35196536f98923e91",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/re/_compiler.py"
+    },
+    {
+      "file": "re/_constants.py",
+      "sha256": "42253b3181b81aad6c46392f44a0ab26dcfa31feea411296f43ba16616a1ab0b",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/re/_constants.py"
+    },
+    {
+      "file": "re/_parser.py",
+      "sha256": "e57bd194a2d42398355ae7c1ccc2ddfb78421dd431eb81e3809dbe8ca9057dc4",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/re/_parser.py"
+    },
+    {
+      "file": "reprlib.py",
+      "sha256": "b04872e10d76252e44eae50cc785eb0fe478491afc4d7f0825a93f82b2eaba5f",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/reprlib.py"
+    },
+    {
+      "file": "rlcompleter.py",
+      "sha256": "67521ee368b694816ec0556c3a05315a15ff66f7f6557749f2606a95a11effe9",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/rlcompleter.py"
+    },
+    {
+      "file": "runpy.py",
+      "sha256": "81e07da29bb2235111079bb64efea7d291639c5d2cf163e7af187d6a38cef389",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/runpy.py"
+    },
+    {
+      "file": "sched.py",
+      "sha256": "56588f00a68ef953014f41baf36e0dbb7ed7793f8aa883ebcb1a8bd3787c06a6",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/sched.py"
+    },
+    {
+      "file": "secrets.py",
+      "sha256": "277000574358a6ecda4bb40e73332ae81a3bc1c8e1fa36f50e5c6a7d4d3f0f17",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/secrets.py"
+    },
+    {
+      "file": "selectors.py",
+      "sha256": "4b8a60cfbb619d080f87dffe1578372e56e8c0ac826f043224a154cf7b77606d",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/selectors.py"
+    },
+    {
+      "file": "shelve.py",
+      "sha256": "6a10724762dea768c4348bcf8f829cea8cf683c8bef2cb5874cd0583c59cc80e",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/shelve.py"
+    },
+    {
+      "file": "shlex.py",
+      "sha256": "aeda1c54188363d907654a19d338e5961416ebec2e2f506afab19be61ada8120",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/shlex.py"
+    },
+    {
+      "file": "shutil.py",
+      "sha256": "ab36f39f04e349020cdd13cf41b50905fc399150fb5e6a7cf73d69b22dd949cd",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/shutil.py"
+    },
+    {
+      "file": "signal.py",
+      "sha256": "0363c964c90ac0b3e515de5749205e6e6454051a1211058375d84d91eab6071a",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/signal.py"
+    },
+    {
+      "file": "site-packages/README.txt",
+      "sha256": "cba8fece8f62c36306ba27a128f124a257710e41fc619301ee97be93586917cb",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/site-packages/README.txt"
+    },
+    {
+      "file": "site.py",
+      "sha256": "bf3567b10092d10189a9f7eb12eb1f0c72d023c0d4e72cfa93a5f2e7d3122fd0",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/site.py"
+    },
+    {
+      "file": "smtplib.py",
+      "sha256": "4ce63a8abb37b20847e0cf32417c391a21c241229334d32680b65aaca6ee76b3",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/smtplib.py"
+    },
+    {
+      "file": "socket.py",
+      "sha256": "6d223ec9cbaff437546a1bfadd8bfc5c8044a8e61962bf32f81d6eb9967787e4",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/socket.py"
+    },
+    {
+      "file": "socketserver.py",
+      "sha256": "ecbbe1a633801460399a8f10b39007aa0e13cdbdad507e39414000f097b769b5",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/socketserver.py"
+    },
+    {
+      "file": "sqlite3/__init__.py",
+      "sha256": "24b0d5e0b2c2ddee085bc316a71164a8f40b84d3f173cfecbdcc7787fb0e1d83",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/sqlite3/__init__.py"
+    },
+    {
+      "file": "sqlite3/__main__.py",
+      "sha256": "c6fe6460fbfa6aa2c97668db782000f32796d780d9f7a4765de4daef1b460989",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/sqlite3/__main__.py"
+    },
+    {
+      "file": "sqlite3/dbapi2.py",
+      "sha256": "a79d47b93dba1aa26c3908d0d960b513e498e125bb54812cb52fbc75ec0e9f3a",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/sqlite3/dbapi2.py"
+    },
+    {
+      "file": "sqlite3/dump.py",
+      "sha256": "9ece8ae1b063152df37235379177f7693adea77048f238038677edeab5d51c6f",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/sqlite3/dump.py"
+    },
+    {
+      "file": "sre_compile.py",
+      "sha256": "f7fd87f8ac9dad7d1387e2401761ec05806c5108201a6d1ede6ab2f481f6df54",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/sre_compile.py"
+    },
+    {
+      "file": "sre_constants.py",
+      "sha256": "87013dc0b349c2c044100f70a8daa9d713e60a527e26f6ab8ee1fc978a6d3234",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/sre_constants.py"
+    },
+    {
+      "file": "sre_parse.py",
+      "sha256": "c4929134532306081918f185c99305c6f55213bc16b32f8c259bc60f7f81e810",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/sre_parse.py"
+    },
+    {
+      "file": "ssl.py",
+      "sha256": "0fc98ae56cec05cf5d9b59b68ba4d6a01b890eb4ca690009dd73111c20287837",
+      "basis": "pyodide-source-identical",
+      "source_member": "src/py/ssl.py"
+    },
+    {
+      "file": "stat.py",
+      "sha256": "f76eaa7f02d6ef4a8c3c3e82cae34ed72870b643b8c94937a34c697d1e9d6ca2",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/stat.py"
+    },
+    {
+      "file": "statistics.py",
+      "sha256": "b7558385a2005432c0ae74a222866316bf4f9c3ed448555659e7014b1077173a",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/statistics.py"
+    },
+    {
+      "file": "string/__init__.py",
+      "sha256": "10c1c744ce2518dd739c3debec3831682d453814ce9e228376fadcc83f0f1a4f",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/string/__init__.py"
+    },
+    {
+      "file": "string/templatelib.py",
+      "sha256": "cafa8b20e15ffc8839a93aacd64f9e28b6596055a04e0ece4d789575ab36b057",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/string/templatelib.py"
+    },
+    {
+      "file": "stringprep.py",
+      "sha256": "60b6c83581093029312efb6670b11c540090b3f78bcf72264467b494f02f21a5",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/stringprep.py"
+    },
+    {
+      "file": "struct.py",
+      "sha256": "50c14e55f94957804c1e45e975fedbe8e86f7e1dbb745b150370ff681155370a",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/struct.py"
+    },
+    {
+      "file": "subprocess.py",
+      "sha256": "44f1dd075f61930212ad38dfe555492e0fd89f114cf9eaab2e3960945112383d",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/subprocess.py"
+    },
+    {
+      "file": "symtable.py",
+      "sha256": "7069b0eae8fc568986887d27c1d1eb2c0d17eacd4215e0600a7692c7c197aef5",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/symtable.py"
+    },
+    {
+      "file": "sysconfig/__init__.py",
+      "sha256": "a080b0d644b97a1bfbdc18496be6bfa81338796db0d0ff31cdee917e41a720b9",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/sysconfig/__init__.py"
+    },
+    {
+      "file": "sysconfig/__main__.py",
+      "sha256": "e0f9e52f5263e0f351940534dd20d6c7036a99f351fa97553493ca428c3d570b",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/sysconfig/__main__.py"
+    },
+    {
+      "file": "tabnanny.py",
+      "sha256": "d2136597703bf516ef46ce0469fb114d22950e8db5555ebba07c34f2e1db277a",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/tabnanny.py"
+    },
+    {
+      "file": "tarfile.py",
+      "sha256": "e6571e25f39e56f48107f552d585326c6ef011cc8c9328debaef9a73dcd9d448",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/tarfile.py"
+    },
+    {
+      "file": "tempfile.py",
+      "sha256": "e3e951ac276abd01709060e4d65a483b9e33beda8b5bba79c756a16ac1fdedb7",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/tempfile.py"
+    },
+    {
+      "file": "textwrap.py",
+      "sha256": "7f05d89c983f5aa8cefcff707a9cc561ed60c51fc8a68e2e3ab61cc6dfa84544",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/textwrap.py"
+    },
+    {
+      "file": "this.py",
+      "sha256": "481d0cb3de511eae0b5713dad18542b07eafd9c013bb7690f7497bad49923a71",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/this.py"
+    },
+    {
+      "file": "threading.py",
+      "sha256": "5323909624ec2165e70b6d31333e4191b63d383d2dc5a7d7d516a3475ea2b7e3",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/threading.py"
+    },
+    {
+      "file": "timeit.py",
+      "sha256": "d738e7d47a9eaaaac095d79ed6129788efa1b262c8f3facb1bce827cd603d544",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/timeit.py"
+    },
+    {
+      "file": "token.py",
+      "sha256": "61d4270311099c8a0c0b2e45fb363fd1c4e347a720bcc25f682b63dc28c34234",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/token.py"
+    },
+    {
+      "file": "tokenize.py",
+      "sha256": "65ba1bacdc42e768382208ff27f3001ee77d9d61aafba686c67652d22b84b330",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/tokenize.py"
+    },
+    {
+      "file": "tomllib/__init__.py",
+      "sha256": "71f67036895f4c5acab942618af0cbd3d814451ba61e967f358d0f341a5b8f51",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/tomllib/__init__.py"
+    },
+    {
+      "file": "tomllib/_parser.py",
+      "sha256": "5eff5fceb6fa7bb8eb11d551213891291cdb8cee35659a95416b5e84789997b9",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/tomllib/_parser.py"
+    },
+    {
+      "file": "tomllib/_re.py",
+      "sha256": "e0d6f33e345e0a43a55f3965d6c3eef89b69ec4767478e30dbba80458d80854d",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/tomllib/_re.py"
+    },
+    {
+      "file": "tomllib/_types.py",
+      "sha256": "f864c6d9552a929c7032ace654ee05ef26ca75d21b027b801d77e65907138b74",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/tomllib/_types.py"
+    },
+    {
+      "file": "tomllib/mypy.ini",
+      "sha256": "01d8afe88929a47bb6425f11573cccddc244af126057165722cd40f0eca3f35c",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/tomllib/mypy.ini"
+    },
+    {
+      "file": "trace.py",
+      "sha256": "57b34562e91e0c6bf299f4c444216611e4aa1c38fc0c39ee46d064529304f93d",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/trace.py"
+    },
+    {
+      "file": "traceback.py",
+      "sha256": "c7057fe0778bdbe4c277755f91336bd1a652e350e531a4319e6466792a854b0f",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/traceback.py"
+    },
+    {
+      "file": "tracemalloc.py",
+      "sha256": "c2cc84a05b824df79840c98729a0e94ef8909b11c528a1b2c5a00aa436b97b25",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/tracemalloc.py"
+    },
+    {
+      "file": "tty.py",
+      "sha256": "1ab5e5e047130b310355e907a3306178299b9f2044fb526ac63bd116e9a16d2b",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/tty.py"
+    },
+    {
+      "file": "types.py",
+      "sha256": "8e3836b81d5764ef5449bd155c49bf745d5e79f6056978d35b7cd4b4d752e9ef",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/types.py"
+    },
+    {
+      "file": "typing.py",
+      "sha256": "4a4a8fd99db2939c5950ccdaa8d4fef11a8c999d52073e25de28e143479d2b01",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/typing.py"
+    },
+    {
+      "file": "unittest/__init__.py",
+      "sha256": "2698f2daf7a02609a6825b89cd459ebaa283dec2403c7b846315a0701bc74a0d",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/unittest/__init__.py"
+    },
+    {
+      "file": "unittest/__main__.py",
+      "sha256": "ff6b9a100d32001715b40d61bc4d613623b139edb1fdc3566427b83c331caae3",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/unittest/__main__.py"
+    },
+    {
+      "file": "unittest/_log.py",
+      "sha256": "905672317ab26c656c600defce25d477728068f597f00a7f94e22e8128c323b9",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/unittest/_log.py"
+    },
+    {
+      "file": "unittest/async_case.py",
+      "sha256": "5e8265cb20ead3877aef870cda91f2462acf107513933f84b4f3419028e8746f",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/unittest/async_case.py"
+    },
+    {
+      "file": "unittest/case.py",
+      "sha256": "a79b422eec43c90352e25a54bce8cee106811974c8dea9405199e4caa689ffe9",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/unittest/case.py"
+    },
+    {
+      "file": "unittest/loader.py",
+      "sha256": "b715a61e71ad8d23537fde5471067e5c1ca44b266052fdf417c4e1fe3a8d102c",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/unittest/loader.py"
+    },
+    {
+      "file": "unittest/main.py",
+      "sha256": "12de7da0fea92dbff8713ebe9904ada6dbd1e0a334d58861c6287ccfc0a261d2",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/unittest/main.py"
+    },
+    {
+      "file": "unittest/mock.py",
+      "sha256": "667d9ed88fd330a3d45419436b13ac41488fca77f39959dca6e93642cf80a678",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/unittest/mock.py"
+    },
+    {
+      "file": "unittest/result.py",
+      "sha256": "813415b331a53acc1bd88ffebadfcb46886dba1ff2bbda2908533e24548db50c",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/unittest/result.py"
+    },
+    {
+      "file": "unittest/runner.py",
+      "sha256": "51780085229bd3547a2751e8d75ab1d8f391dd2c9c3ca1d011b54529348faeb4",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/unittest/runner.py"
+    },
+    {
+      "file": "unittest/signals.py",
+      "sha256": "f8286e818ca56e10e03745bc056cdfd31147678f9a1dc8cb6b0fe96ef9a4362a",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/unittest/signals.py"
+    },
+    {
+      "file": "unittest/suite.py",
+      "sha256": "ed2da92bc9f97c53403ee2d3d12cc53b16a96e85d596ebc887b5a93458f3f6bc",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/unittest/suite.py"
+    },
+    {
+      "file": "unittest/util.py",
+      "sha256": "fdcc640c3505d16deab9c32eae7c3f5f67c3b5e81c563dc6698fa7fcf403854d",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/unittest/util.py"
+    },
+    {
+      "file": "urllib/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/urllib/__init__.py"
+    },
+    {
+      "file": "urllib/error.py",
+      "sha256": "d12b3cc66af3f42a8ebe63e1c91d24f92c6237b6a93a3702938dffabd812d77b",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/urllib/error.py"
+    },
+    {
+      "file": "urllib/parse.py",
+      "sha256": "a220071456b8487b51d09c9daa8f79bb382e345836ec7050efadfc27bbf3b72b",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/urllib/parse.py"
+    },
+    {
+      "file": "urllib/request.py",
+      "sha256": "6e2822d5fe355bd50960e9c75fdded7cbbd9a45d26dd93bf37852546825badbb",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/urllib/request.py"
+    },
+    {
+      "file": "urllib/response.py",
+      "sha256": "7e6c3b6d7a95f0d74f5968f51a87adae8a51bf42390cdfec98c7a99203e7bb76",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/urllib/response.py"
+    },
+    {
+      "file": "urllib/robotparser.py",
+      "sha256": "bc7b484a9ed71de7e54992dd01ff97c541514b99637f2591255c0964b64bf7e4",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/urllib/robotparser.py"
+    },
+    {
+      "file": "uuid.py",
+      "sha256": "18cf6964825ae92a6c92758c5daab09b92e962dfb50622ea3d0a069a7fbc6857",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/uuid.py"
+    },
+    {
+      "file": "warnings.py",
+      "sha256": "142225786de63c593f1c9abdacf5b4fc0b05dd847f6bed0ebb4b4aa2d4d93b02",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/warnings.py"
+    },
+    {
+      "file": "wave.py",
+      "sha256": "9b2249d6e3d0d1b2cbc183f59ca301cdfeb34f1b022f8712bf0318c2618a4edd",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/wave.py"
+    },
+    {
+      "file": "weakref.py",
+      "sha256": "5e5f727a19a858cb4c56dbaf3e0a138ded02fb954a9a58a840a0764216ae9522",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/weakref.py"
+    },
+    {
+      "file": "webbrowser.py",
+      "sha256": "90ccd56425f5c2a19931a9bd7ee95aff604b98c32a0311d9f3ea7a6f5a8ae2b2",
+      "basis": "pyodide-source-identical",
+      "source_member": "src/py/webbrowser.py"
+    },
+    {
+      "file": "wsgiref/__init__.py",
+      "sha256": "c30e144025a63d267778d92f2f066fa592b476e789d888f79b96c059bf0bef60",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/wsgiref/__init__.py"
+    },
+    {
+      "file": "wsgiref/handlers.py",
+      "sha256": "b4ed08869ab79d7c17065993875cdc6eb1b2a0b3645b74325bc0aab44e97cfc5",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/wsgiref/handlers.py"
+    },
+    {
+      "file": "wsgiref/headers.py",
+      "sha256": "81d3af6734f52c8415903ad48be093579beb8378163bcfec949f9f0382397fae",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/wsgiref/headers.py"
+    },
+    {
+      "file": "wsgiref/simple_server.py",
+      "sha256": "d6b820a6addc837717989064565d5be0c18af67337700ad48b317825eb4a13d8",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/wsgiref/simple_server.py"
+    },
+    {
+      "file": "wsgiref/types.py",
+      "sha256": "ba66d30ce511a88eba9b809616c51e12bf89c67972102e7d976b18557f7a6387",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/wsgiref/types.py"
+    },
+    {
+      "file": "wsgiref/util.py",
+      "sha256": "c38778f289f859523d703f8fcf9dd56647448c235dda439c17b32c33b0222f28",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/wsgiref/util.py"
+    },
+    {
+      "file": "wsgiref/validate.py",
+      "sha256": "4132f87dcf11a332f6ec5b051e68e59ff493dd6fdcc4f716ea72373734977a0a",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/wsgiref/validate.py"
+    },
+    {
+      "file": "xml/__init__.py",
+      "sha256": "34296f728e7fe68cccb97a9f6edbf3bf3a686f44044c744fe85f207a92ed4811",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/xml/__init__.py"
+    },
+    {
+      "file": "xml/dom/NodeFilter.py",
+      "sha256": "9bfacbbb64e239a75591a7260b3ed86748eeb4366e6c40f3542753e79bace9a7",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/xml/dom/NodeFilter.py"
+    },
+    {
+      "file": "xml/dom/__init__.py",
+      "sha256": "e7139ed583a7f60fbbc750044df4f1e3655371d8b8c4f80a43bff4aa3ba97857",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/xml/dom/__init__.py"
+    },
+    {
+      "file": "xml/dom/domreg.py",
+      "sha256": "826b02a803930834b96b1086cbee7db1d21c684f65dd3073706dc7bb5ba1a3e8",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/xml/dom/domreg.py"
+    },
+    {
+      "file": "xml/dom/expatbuilder.py",
+      "sha256": "80598dbc5970feaa36ea2b7549e3e76dd018fb80cf79e4a5e27e9e71af60c82c",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/xml/dom/expatbuilder.py"
+    },
+    {
+      "file": "xml/dom/minicompat.py",
+      "sha256": "42974c4c67803dfe80b016ff8aeea0d1e5c751703ab3aec5be765f4e534367be",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/xml/dom/minicompat.py"
+    },
+    {
+      "file": "xml/dom/minidom.py",
+      "sha256": "6c18480e96c314597a80b88d38bbda39ff202bf6892add11e78cbb6b408a105b",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/xml/dom/minidom.py"
+    },
+    {
+      "file": "xml/dom/pulldom.py",
+      "sha256": "614b88673d496a360e6b10efe8d733c7c0826fb214470ff12f24a1e597699870",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/xml/dom/pulldom.py"
+    },
+    {
+      "file": "xml/dom/xmlbuilder.py",
+      "sha256": "26883dc30a461cb6a3583bd79d363858059569c04e94e3787d4d028f5fab7354",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/xml/dom/xmlbuilder.py"
+    },
+    {
+      "file": "xml/etree/ElementInclude.py",
+      "sha256": "8e10c99668216701224831c82f13b36d29cd408554c19e34d290c351595df4ce",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/xml/etree/ElementInclude.py"
+    },
+    {
+      "file": "xml/etree/ElementPath.py",
+      "sha256": "ae8a80a8b51567b4f0965481682705e70c73dd6bfa145283f630d6833f1b4975",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/xml/etree/ElementPath.py"
+    },
+    {
+      "file": "xml/etree/ElementTree.py",
+      "sha256": "c0219b8554532be939142b7ac4247158433b936e880a420f48be34145b43e5b0",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/xml/etree/ElementTree.py"
+    },
+    {
+      "file": "xml/etree/__init__.py",
+      "sha256": "91950edfb196c105d93886f8af7ea3c0a79e06a6b63be3e5a4ea09804e8672a6",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/xml/etree/__init__.py"
+    },
+    {
+      "file": "xml/etree/cElementTree.py",
+      "sha256": "d0f57acab07fe4f9c116c3392d85946bac8e78608f409cea70005f16ea019b57",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/xml/etree/cElementTree.py"
+    },
+    {
+      "file": "xml/parsers/__init__.py",
+      "sha256": "b88497adc30d5d5eda7789c25a2206ee9270c932d584d7ac42680325651da45c",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/xml/parsers/__init__.py"
+    },
+    {
+      "file": "xml/parsers/expat.py",
+      "sha256": "64e1947747c2874117a7458bba1f07c86620cc0ed9a4a4116d262878e4a2aa09",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/xml/parsers/expat.py"
+    },
+    {
+      "file": "xml/sax/__init__.py",
+      "sha256": "b097eb749917fd49dd6cc710a44492cbfd12dd994637afb34b8445a60c222884",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/xml/sax/__init__.py"
+    },
+    {
+      "file": "xml/sax/_exceptions.py",
+      "sha256": "26564d5742496196d17a4a0ee135d28f652ec81742cf2fa4bff83e64323578ac",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/xml/sax/_exceptions.py"
+    },
+    {
+      "file": "xml/sax/expatreader.py",
+      "sha256": "5b6750ae591cffa303b20f092b13409a92df5ee1c403adac08dd5320eafee0be",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/xml/sax/expatreader.py"
+    },
+    {
+      "file": "xml/sax/handler.py",
+      "sha256": "00b4fb71867c2ff316e765ca52f42bfe78af04d3c4807b5f72f8d85a32470327",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/xml/sax/handler.py"
+    },
+    {
+      "file": "xml/sax/saxutils.py",
+      "sha256": "3fe2cdb6386e0c4d42d37c657bbecb78b69c57aedb1610dbd8bf4043944130ab",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/xml/sax/saxutils.py"
+    },
+    {
+      "file": "xml/sax/xmlreader.py",
+      "sha256": "0962c8d64ac8b03148d4ae62a531f544c4fd1be2116c6f4a53b480cff463dbba",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/xml/sax/xmlreader.py"
+    },
+    {
+      "file": "xmlrpc/__init__.py",
+      "sha256": "87ad5c8954dd56fbbca04517bf87477ff4dce575170c7dd1281d7ef1f4214ac8",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/xmlrpc/__init__.py"
+    },
+    {
+      "file": "xmlrpc/client.py",
+      "sha256": "5e1fb646dc5841bc490e9c036197d0cc7e4a05b6a83a4b65725972d08928efbd",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/xmlrpc/client.py"
+    },
+    {
+      "file": "xmlrpc/server.py",
+      "sha256": "56a5fd432aaab78c2b369d60daf6dc1934ccd9a93182c68e70252911c0604d58",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/xmlrpc/server.py"
+    },
+    {
+      "file": "zipapp.py",
+      "sha256": "fe845e2ea2c20d3114d2dea458cc53f3bebffb9bf85f0ed43d9e8405bbf8823e",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/zipapp.py"
+    },
+    {
+      "file": "zipfile/__init__.py",
+      "sha256": "7f86ad3712225caf8ada9c4e2036323023c5def089b40a9486c23d06b8a2582c",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/zipfile/__init__.py"
+    },
+    {
+      "file": "zipfile/__main__.py",
+      "sha256": "e418cdbb27adf0063e3cec28179ac6b7bdb6ac743bb49d157f450551fcf38be2",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/zipfile/__main__.py"
+    },
+    {
+      "file": "zipfile/_path/__init__.py",
+      "sha256": "319c002564b7deca9ca9dc913f5d06bc32a2f376d291094afa635558af6e17ff",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/zipfile/_path/__init__.py"
+    },
+    {
+      "file": "zipfile/_path/glob.py",
+      "sha256": "d84da9b313d40544a87657a0ea2f9cf719416fd3c3450724c5d2dde5b475d2b5",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/zipfile/_path/glob.py"
+    },
+    {
+      "file": "zipimport.py",
+      "sha256": "4de64633a484e16c39fdb46a3f939ce7c577b14a6e9ee49b79871ec1880b4597",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/zipimport.py"
+    },
+    {
+      "file": "zoneinfo/__init__.py",
+      "sha256": "9091c902b8d0385f835e9d393017f03b68f92fae7cbe1e31833b2911d65947e6",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/zoneinfo/__init__.py"
+    },
+    {
+      "file": "zoneinfo/_common.py",
+      "sha256": "a60e6962d5d62b3ac46e5349b0339c456fc3904135a8773f433f752229fbe8d7",
+      "basis": "cpython-source-plus-upstream-patches",
+      "source_member": "Lib/zoneinfo/_common.py"
+    },
+    {
+      "file": "zoneinfo/_tzpath.py",
+      "sha256": "e5026fcd64e30a41c2d6c7609e6d77757c4da9f431f5a1e14b1bccaf914489c3",
+      "basis": "cpython-source-identical",
+      "source_member": "Lib/zoneinfo/_tzpath.py"
+    }
+  ],
+  "additional_notices": [
+    {
+      "notice": "cpython-incorporated-3.14.2.rst",
+      "members": 1,
+      "result": "source-bytes-verified"
+    },
+    {
+      "notice": "hacl-all-headers-cpython-3.14.2.txt",
+      "members": 40,
+      "result": "source-bytes-verified"
+    },
+    {
+      "notice": "libmpdec-headers-cpython-3.14.2.txt",
+      "members": 41,
+      "result": "source-bytes-verified"
+    },
+    {
+      "notice": "compiler-rt-emscripten-5.0.3.txt",
+      "members": 1,
+      "result": "source-bytes-verified"
+    },
+    {
+      "notice": "libcxxabi-emscripten-5.0.3.txt",
+      "members": 1,
+      "result": "source-bytes-verified"
+    },
+    {
+      "notice": "libunwind-emscripten-5.0.3.txt",
+      "members": 1,
+      "result": "source-bytes-verified"
+    },
+    {
+      "notice": "llvm-libc-emscripten-5.0.3.txt",
+      "members": 1,
+      "result": "source-bytes-verified"
+    }
+  ],
+  "complete_distribution_audit": false,
+  "public_distribution_approved": false,
+  "remaining_review": [
+    "WASM file/object attribution, remaining per-file and Unicode-data licensing evaluation",
+    "Upstream recipes/release are not signed build or bit-reproducibility attestation",
+    "Independent distribution/implementation/integration acceptance and Owner publication approval"
+  ]
+}

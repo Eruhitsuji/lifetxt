@@ -18636,6 +18636,15 @@ traceability:
         - .ai/project/changes/browser-distribution-audit/verification.yml
       status: implemented
 
+    - requirement_id: req-browser-local-check-source-delivery-v1
+      capability_id: cap-official-website
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1409
+      tests_or_evidence:
+        - tests/test_browser_source_delivery.py
+        - contrib/browser_check_poc/source-provenance.json
+        - .ai/project/changes/browser-source-delivery/verification.yml
+      status: implemented
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

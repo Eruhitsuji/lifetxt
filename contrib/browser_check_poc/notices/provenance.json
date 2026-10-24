@@ -106,6 +106,499 @@
       "source_url": "https://raw.githubusercontent.com/python/cpython/v3.14.2/Modules/_hacl/Hacl_Hash_SHA2.c",
       "stored_sha256": "998ce04fb8ad9dedb0bc1b44938f8c3dcf1089780fa105ce1c8c30fb5554d78c",
       "normalization": "Complete leading licence comment only; UTF-8/LF; trailing whitespace stripped; notice words unchanged"
+    },
+    {
+      "file": "cpython-incorporated-3.14.2.rst",
+      "source_url": "https://raw.githubusercontent.com/python/cpython/v3.14.2/Doc/license.rst",
+      "stored_sha256": "c695d550b135e53e38807e76496d1db17d22c40e461d1f3f354c86188d3305dd",
+      "normalization": "Unmodified complete source document",
+      "source_members": [
+        {
+          "archive": "cpython",
+          "member": "Doc/license.rst",
+          "sha256": "c695d550b135e53e38807e76496d1db17d22c40e461d1f3f354c86188d3305dd"
+        }
+      ],
+      "selection": "whole"
+    },
+    {
+      "file": "hacl-all-headers-cpython-3.14.2.txt",
+      "source_url": "https://raw.githubusercontent.com/python/cpython/v3.14.2/Modules/_hacl/Hacl_HMAC.c",
+      "stored_sha256": "d5091e96e4ce79c7680a98bb5209118cc7d48d6ec363a7db60803ec206241fdc",
+      "normalization": "All distinct complete leading licence comments, with source member lists; no notice words changed",
+      "source_members": [
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/Hacl_HMAC.c",
+          "sha256": "142adb769ff02b8a5327f0eb837e1f9a797bdf9a1684d21acd749dbb5b2e5be2"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/Hacl_HMAC.h",
+          "sha256": "d68209032703137326f9aadd9abac8fe4a5c92d391e2f43b0414fa63087adc6b"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/Hacl_Hash_Blake2b.c",
+          "sha256": "6a492aa586f2d10b1b300ce8ce4c72c976ff7548fee667aded2253f99969ac87"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/Hacl_Hash_Blake2b.h",
+          "sha256": "fac493e96af252abcf5705f0ab4eec59c1f3bc8244e105d75a57c43552dd1569"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/Hacl_Hash_Blake2b_Simd256.c",
+          "sha256": "9eb22953ce60dde9dc970fec9dfce9d94235f4b7ccd8f0151cad4707dc835d1d"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/Hacl_Hash_Blake2b_Simd256.h",
+          "sha256": "817dcd05d06d804587fce7d8f2f3f42a6fcf6818d2419a3551ef0df70cb7125a"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/Hacl_Hash_Blake2s.c",
+          "sha256": "f3204f3e60734d811b6630f879b69ce54eaf367f3fca5889c1026e7a1f3ee1e4"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/Hacl_Hash_Blake2s.h",
+          "sha256": "5cc96313f8c066f055c2819e473c79aeff086ba91a1449d54aa569127cd8601e"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/Hacl_Hash_Blake2s_Simd128.c",
+          "sha256": "c93746df2f219cbb1634ee6fb0ab1c4cbd381d1f36c637114c68346c9935326d"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/Hacl_Hash_Blake2s_Simd128.h",
+          "sha256": "fe3f17bf237166f872ba88c8204333c4f64bdc4bb29c265448581c7bfea4b151"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/Hacl_Hash_MD5.c",
+          "sha256": "5b91ed0339074e2e546119833398e2cdb7190c33a59c405bf43b2417c789547d"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/Hacl_Hash_MD5.h",
+          "sha256": "a34534ef36bc8428ac1169ca5f4f1c17a0817507ebae388e3dd825d1a331f28d"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/Hacl_Hash_SHA1.c",
+          "sha256": "ce08721d491f3b8a9bd4cde6c27bfcc8fc01471512ccca4bd3c0b764cb551d29"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/Hacl_Hash_SHA1.h",
+          "sha256": "2d5cae94382f5473cf6d2654760375ff1ee9cebdb8d4506b63ba33f488de1559"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/Hacl_Hash_SHA2.c",
+          "sha256": "f8af382de7e29a73c726f9c70770498ddd99e2c4702489ed6e634f0b68597c95"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/Hacl_Hash_SHA2.h",
+          "sha256": "442d8997d2bcda20ddf628665e2e69945400e1ab3019bc14fc7c8e20db20c320"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/Hacl_Hash_SHA3.c",
+          "sha256": "8744f5b6e054c3e5c44f413a60f9154b76dd7230135dcee26fd063755ec64be1"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/Hacl_Hash_SHA3.h",
+          "sha256": "961a686186b76a1cd6a64bcfd06afdc8657b1f901bac991166f498ed16f9349a"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/Hacl_Streaming_HMAC.c",
+          "sha256": "29fcf948a3715e09cbbd434cebb6105f276236a6e4947d237b7bf06634bf2432"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/Hacl_Streaming_HMAC.h",
+          "sha256": "6450aef92f507fb0a8a3086b1d2792e7fca07121580c24fdaedd1b32e9ad0a76"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/Hacl_Streaming_Types.h",
+          "sha256": "efc7bd11460744768425aedf4e004d3ad3397a5489752b80044ae785f30b78d4"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/internal/Hacl_HMAC.h",
+          "sha256": "96c2a973bc01b1295f7af67c7de3839facfeee36c8848d7d88c62695de98ab21"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/internal/Hacl_Hash_Blake2b.h",
+          "sha256": "f262738390f56e8e9692acadecd1434c688075047d788283e1fb45d920ea6956"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/internal/Hacl_Hash_Blake2b_Simd256.h",
+          "sha256": "f22e088ad9c2eb739aefc3685ef3ab1ccaab3c5ef2e5d06cc846ad9f8e3d2669"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/internal/Hacl_Hash_Blake2s.h",
+          "sha256": "a4728e43deb0a9d8213b8ddcbda68a63bc73a12fb99aad54b7d28b314776a0d4"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/internal/Hacl_Hash_Blake2s_Simd128.h",
+          "sha256": "dad568d256a2ccbbbcdd419fe0543ea7137d8065a713a5f009aa52521c0f7f6a"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/internal/Hacl_Hash_MD5.h",
+          "sha256": "305af1422213ed97e8e5d3d8a9dfee4f21cb2fcd2acf65ee7303ce00b2b4bd2a"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/internal/Hacl_Hash_SHA1.h",
+          "sha256": "63c58363ff95e8146d5628dab2da25bc2fd0e8b590fd4823b512c33f843355bb"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/internal/Hacl_Hash_SHA2.h",
+          "sha256": "709c6272f77e2368f6cc0bf36527e3b16dd5d5f3dc26a2afdef8238200af8770"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/internal/Hacl_Hash_SHA3.h",
+          "sha256": "cf49d536a5663379fb4517018b4b3f8a232f8d4c7ddc7edfd60163d13f98a530"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/internal/Hacl_Impl_Blake2_Constants.h",
+          "sha256": "916d54d7217517f0360edea920dc21585fbe6d1c2458eac86826182e12c82ec2"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/internal/Hacl_Streaming_HMAC.h",
+          "sha256": "059cf0d31427abf84c626797a97c140630a1a6ead578005162f46fad46663389"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/internal/Hacl_Streaming_Types.h",
+          "sha256": "76997c7069a347ac78b65d26354a0324d54add4ca7a02e7be36d6d5e1c9702e0"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/include/krml/FStar_UInt128_Verified.h",
+          "sha256": "69dc2e78411e9b271100eb0d2a2d8dc39dd2348afc26f8b4cfba14c025102c7f"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/include/krml/FStar_UInt_8_16_32_64.h",
+          "sha256": "f01e3f0892935f3f659019875f580445b9ea23482afbe11ffbe7cdbd22dbd4d2"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/include/krml/fstar_uint128_struct_endianness.h",
+          "sha256": "1c9bee7ac4b987c73cc3aba6b7ceed8ec7e75c9a741810e4411f35602490e0d8"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/include/krml/internal/compat.h",
+          "sha256": "c5a04a1f99807cea29ac1832ba17d8a3d3805862d3a713642583be2106e04edb"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/include/krml/internal/target.h",
+          "sha256": "08bb43ef5626a8450f985da0af345b6658ac8bcc4585f77271decd0e41fc02e0"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/include/krml/internal/types.h",
+          "sha256": "404691cf9b2269ecc754ceca27bb8f8f029f1c8deaa4d967990dcf5ce08cd016"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_hacl/include/krml/lowstar_endianness.h",
+          "sha256": "6d1a350ec272c83761f1789611d8f60947a4d69fed3d23d8eee38709a0ad2c0a"
+        }
+      ],
+      "selection": "headers"
+    },
+    {
+      "file": "libmpdec-headers-cpython-3.14.2.txt",
+      "source_url": "https://raw.githubusercontent.com/python/cpython/v3.14.2/Modules/_decimal/libmpdec/basearith.c",
+      "stored_sha256": "9ed728973cc5027ec7fec3caf7ac9e886e119b9f88806943bfa3478eb44ade1e",
+      "normalization": "All distinct complete leading licence comments, with source member lists; no notice words changed",
+      "source_members": [
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/basearith.c",
+          "sha256": "ad498362c31a5b99ab19fce320ac540cf14c5c4ec09478f0ad3858da1428113d"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/basearith.h",
+          "sha256": "2eaac88a71b9bcf3144396c12dcfeced573e0e550a0050d75b9ed3903248596d"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/bench.c",
+          "sha256": "007e38542ec8d9d8805fe243b5390d79211b9360e2797a20079e833e68ad9e45"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/bench_full.c",
+          "sha256": "1b9e892d4b268deea835ec8906f20a1e5d25e037b2e698edcd34315613f3608c"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/bits.h",
+          "sha256": "ce7741e58ea761a24250c0bfa10058cec8c4fd220dca70a41de3927a2e4f5376"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/constants.c",
+          "sha256": "cd430b8657cf8a616916e02f9bd5ca044d5fc19e69333f5d427e1fdb90b0864b"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/constants.h",
+          "sha256": "19dc46df04abb7ee08e9a403f87c8aac8d4a077efcce314c597f8b73e22884f2"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/context.c",
+          "sha256": "9a265d366f31894aad78bca7fcdc1457bc4a3aa3887ca231b7d78e41f79541c0"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/convolute.c",
+          "sha256": "66fe27b9bb37039cad5be32b105ed509e5aefa15c1957a9058af8ee23cddc97a"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/convolute.h",
+          "sha256": "c00d17450c2b8e1d7f1eb8a084f7e6a68f257a453f8701600e860bf357c531d7"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/crt.c",
+          "sha256": "1f4e65c44864c3e911a6e91f33adec76765293e90553459e3ebce35a58898dba"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/crt.h",
+          "sha256": "7d31f1d0dd73b62964dab0f7a1724473bf87f1f95d8febf0b40c15430ae9a47c"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/difradix2.c",
+          "sha256": "0a9fef8a374f55277e9f6000b7277bb037b9763c32b156c29950422b057498bd"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/difradix2.h",
+          "sha256": "5c6766496224de657400995b58b64db3e7084004bf00daebdd7e08d0c5995243"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/examples/compare.c",
+          "sha256": "452666ee4eb10a8cf0a926cb3bcf5e95b5c361fa129dbdfe27b654e6d640417e"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/examples/div.c",
+          "sha256": "6d369f5a24d0bb1e7cb6a4f8b0e97a273260e7668c8a540a8fcc92e039f7af2e"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/examples/divmod.c",
+          "sha256": "5db54bae75ac3d7fa12f1bb0f7ce1bf797df86a81030e8c3ce44d3b1f9b958b7"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/examples/multiply.c",
+          "sha256": "22ed39b18fa740a27aacfd29a7bb40066be24500ba49b9b1f24e2af1e039fcd9"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/examples/pow.c",
+          "sha256": "cd8c037649b3d4d6897c9acd2f92f3f9d5390433061d5e48623a5d526a3f4f9c"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/examples/powmod.c",
+          "sha256": "e29614b43abf1856b656a84d6b67c22cc5dc7af8cbae8ddc7acf17022220ee12"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/examples/shift.c",
+          "sha256": "203f2dbf11d115580cb3c7c524ac6ccca2a7b31d89545db1b6263381b5de2b6a"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/examples/sqrt.c",
+          "sha256": "f3dc2ce321833bbd4b3d1d9ea6fa2e0bcc1bfe1e39abb8d55be53e46c33949db"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/fnt.c",
+          "sha256": "a9f923524d53a9445769f27405375ec3d95fa804bb11db5ee249ae047f11cfce"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/fnt.h",
+          "sha256": "3b03e69adf78fde68c8f87d33595d557237581d33fc067e1039eed9e9f2cc44c"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/fourstep.c",
+          "sha256": "cf2e69b946ec14b087e523c0ff606553070d13c23e851fb0ba1df51a728017e6"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/fourstep.h",
+          "sha256": "dbaced03b52d0f880c377b86c943bcb36f24d557c99a5e9732df3ad5debb5917"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/io.c",
+          "sha256": "d74f365463166891f62e1326d22b2d39d865776b7ea5e0df2aea5eede4d85b0f"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/io.h",
+          "sha256": "259eab89fe27914e0e39e61199094a357ac60d86b2aab613c909040ff64a4a0c"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/mpalloc.c",
+          "sha256": "5ba2f4c80302e71fb216aa247c858e0bf6c8cfabffe7980ac17d4d023c0fef2b"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/mpalloc.h",
+          "sha256": "f7412521de38afb837fcabc2b1d48b971b86bfaa55f3f40d58ff9e46e92debd3"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/mpdecimal.c",
+          "sha256": "4f89b8095e408a18deff79cfb605299e615bae747898eb105d8936064f7fb626"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/mpdecimal.h",
+          "sha256": "ea0b9c6b296c13aed6ecaa50b463e39a9c1bdc059b84f50507fd8247b2e660f9"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/mpsignal.c",
+          "sha256": "653171cf2549719478417db7e9800fa0f9d99c02dec6da6876329ccf2c07b93f"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/numbertheory.c",
+          "sha256": "bdbf2e246f341a3ba3f6f9d8759e7cb222eb9b15f9ed1e7c9f6a59cbb9f8bc91"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/numbertheory.h",
+          "sha256": "2f7d5b40af508fa6ac86f5d62101fa3bf683c63b24aa87c9548e3fdd13abc57b"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/sixstep.c",
+          "sha256": "7602aaf98ec9525bc4b3cab9631615e1be2efd9af894002ef4e3f5ec63924fcf"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/sixstep.h",
+          "sha256": "a191366348b3d3dd49b9090ec5c77dbd77bb3a523c01ff32adafa137e5097ce7"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/transpose.c",
+          "sha256": "2d12fcae512143a9376c8a0d4c1ba3008e420e024497a7e7ec64c6bec23fcddc"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/transpose.h",
+          "sha256": "fafeb2b901b2b41bf0df00be7d99b84df1a78e3cc1e582e09cbfc3b6d44d4abe"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/typearith.h",
+          "sha256": "25e0a0703b51744277834e6b2398d7b7d2c17f92bf30f8b6f949e0486ae2b346"
+        },
+        {
+          "archive": "cpython",
+          "member": "Modules/_decimal/libmpdec/umodarith.h",
+          "sha256": "bfe1ddb2ca92906456b80745adcbe02c83cadac3ef69caa21bc09b7292cc152b"
+        }
+      ],
+      "selection": "headers"
+    },
+    {
+      "file": "compiler-rt-emscripten-5.0.3.txt",
+      "source_url": "https://raw.githubusercontent.com/emscripten-core/emscripten/5.0.3/system/lib/compiler-rt/LICENSE.TXT",
+      "stored_sha256": "1a8f1058753f1ba890de984e48f0242a3a5c29a6a8f2ed9fd813f36985387e8d",
+      "normalization": "Unmodified complete source document",
+      "source_members": [
+        {
+          "archive": "emscripten",
+          "member": "system/lib/compiler-rt/LICENSE.TXT",
+          "sha256": "1a8f1058753f1ba890de984e48f0242a3a5c29a6a8f2ed9fd813f36985387e8d"
+        }
+      ],
+      "selection": "whole"
+    },
+    {
+      "file": "libcxxabi-emscripten-5.0.3.txt",
+      "source_url": "https://raw.githubusercontent.com/emscripten-core/emscripten/5.0.3/system/lib/libcxxabi/LICENSE.TXT",
+      "stored_sha256": "e2b35be49f7284a45b7baca8fc7b3ab7440e7902392b2528a457816b5bb2a15c",
+      "normalization": "Unmodified complete source document",
+      "source_members": [
+        {
+          "archive": "emscripten",
+          "member": "system/lib/libcxxabi/LICENSE.TXT",
+          "sha256": "e2b35be49f7284a45b7baca8fc7b3ab7440e7902392b2528a457816b5bb2a15c"
+        }
+      ],
+      "selection": "whole"
+    },
+    {
+      "file": "libunwind-emscripten-5.0.3.txt",
+      "source_url": "https://raw.githubusercontent.com/emscripten-core/emscripten/5.0.3/system/lib/libunwind/LICENSE.TXT",
+      "stored_sha256": "b5efebcaca80879234098e52d1725e6d9eb8fb96a19fce625d39184b705f7b6d",
+      "normalization": "Unmodified complete source document",
+      "source_members": [
+        {
+          "archive": "emscripten",
+          "member": "system/lib/libunwind/LICENSE.TXT",
+          "sha256": "b5efebcaca80879234098e52d1725e6d9eb8fb96a19fce625d39184b705f7b6d"
+        }
+      ],
+      "selection": "whole"
+    },
+    {
+      "file": "llvm-libc-emscripten-5.0.3.txt",
+      "source_url": "https://raw.githubusercontent.com/emscripten-core/emscripten/5.0.3/system/lib/llvm-libc/LICENSE.TXT",
+      "stored_sha256": "ebcd9bbf783a73d05c53ba4d586b8d5813dcdf3bbec50265860ccc885e606f47",
+      "normalization": "Unmodified complete source document",
+      "source_members": [
+        {
+          "archive": "emscripten",
+          "member": "system/lib/llvm-libc/LICENSE.TXT",
+          "sha256": "ebcd9bbf783a73d05c53ba4d586b8d5813dcdf3bbec50265860ccc885e606f47"
+        }
+      ],
+      "selection": "whole"
     }
   ],
   "upstream_build_source": "https://github.com/pyodide/pyodide/blob/b1e4fcc2488962f6360a97f19b9982d6fdb5d16f/Makefile.envs",

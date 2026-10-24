@@ -271,8 +271,8 @@ incomplete. Simplify the chain or close unrelated buffers. No source is changed.
 | --- | --- | --- |
 | Plain text editor | Existing templates, minimum grammar and manual workflow | No Python, LSP or network required |
 | VS Code static (1.80+) | All types, snippets, associations and TextMate grammar | Core snippet checks and actual TextMate/Oniguruma corpus |
-| VS Code dynamic (1.82+) | Optional pinned client, diagnostics/completion/Hover | Microsoft protocol and host doubles verified; GUI host/Windows/macOS acceptance tracked in #1373 |
-| Neovim (0.11+ config API) | Built-in LSP configuration | Actual Neovim 0.12.6 Linux common fixture verified; 0.11/other OS not exercised |
+| VS Code dynamic (1.82+) | Optional pinned client, diagnostics/completion/Hover | Microsoft protocol and host doubles verified; Windows representative GUI acceptance in #1373; other OS unsupported |
+| Neovim (0.11+ config API) | Built-in LSP configuration | Windows Neovim 0.12.6 acceptance in #1373; 0.11 and other OS not fully exercised |
 | Zed | Not integrated | Needs language metadata, Tree-sitter grammar/queries and extension adapter investigation |
 | Sublime Text | Not integrated | Needs syntax plus community LSP client configuration and acceptance |
 | JetBrains | Not integrated | Select concrete IDE/API-supported version and plugin design before claiming support |

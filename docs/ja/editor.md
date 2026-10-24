@@ -247,8 +247,8 @@ Neovimでは `cmd` に `--id-key uid` などを追加します。Core設定を�
 | --- | --- | --- |
 | 通常のテキストエディタ | 従来のtemplate・最小文法・手動運用 | Python/LSP/network不要 |
 | VS Code静的（1.80以上） | 全Type・snippet・関連付け・TextMate grammar | Core生成確認と実際のTextMate/Oniguruma corpus |
-| VS Code動的（1.82以上） | 任意client、診断・補完・Hover | Microsoft protocol・host doubles確認済み、GUI/Windows/macOS受入は#1373 |
-| Neovim（0.11以上の設定API） | 組込LSP設定 | Linuxの実際の0.12.6で共通fixtureを確認、0.11/他OS未実施 |
+| VS Code動的（1.82以上） | 任意client、診断・補完・Hover | Microsoft protocol・host doubles確認済み、Windows主要実機受入は#1373、他OS未保証 |
+| Neovim（0.11以上の設定API） | 組込LSP設定 | Windows Neovim 0.12.6主要受入は#1373、0.11/他OS未保証 |
 | Zed | 未対応 | metadata・Tree-sitter grammar/queries・拡張adapterを要調査 |
 | Sublime Text | 未対応 | syntaxとcommunity LSP clientの設定・受入が必要 |
 | JetBrains | 未対応 | 対象IDE/API対応版・plugin設計を決めてから検証 |

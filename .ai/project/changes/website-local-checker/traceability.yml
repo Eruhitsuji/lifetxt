@@ -1,0 +1,7 @@
+schema_version: 1
+traceability:
+- requirement_id: req-browser-local-check-v1
+  capability_id: cap-official-website
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1399
+  tests_or_evidence: [tests/test_website_checker.py, tests/test_website_checker_browser.py, .ai/project/changes/website-local-checker/browser-evidence.json]
+  status: implemented

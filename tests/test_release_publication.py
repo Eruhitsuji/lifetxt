@@ -47,7 +47,7 @@ class CompletePreflight:
                 "id": 3000,
                 "run_id": 123,
                 "head_sha": "b" * 40,
-                "name": "Verify all 13 targets",
+                "name": "Verify all 14 targets",
                 "status": "completed",
                 "conclusion": "success",
                 "started_at": "2020-01-01T00:20:00Z",

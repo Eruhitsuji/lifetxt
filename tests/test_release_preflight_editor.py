@@ -123,12 +123,13 @@ class EditorArtifactTests(unittest.TestCase):
             ],
         })
         artifact = {"id": 1234, "name": "editor-payload-123-1", "sha256": "f" * 64}
-        # Isolated producer must not be mistaken for the full preflight verification.
-        with self.assertRaises(ValueError):
+        component = editor.finish(self.candidate, report, self.payload, artifact)
+        self.assertEqual(component["target"], "editor-windows")
+        self.assertEqual(len(component["files"]), 2)
+        self.assertIn("editor-windows", proof.TARGETS)
+        self.vsix.write_bytes(self.vsix.read_bytes() + b"tamper")
+        with self.assertRaises((ValueError, zipfile.BadZipFile)):
             editor.finish(self.candidate, report, self.payload, artifact)
-        self.assertEqual(editor.validate_payload(self.candidate, self.payload), self.version)
-        # Future full-proof tests use the strict TARGETS contract with all 14 rows.
-        self.assertNotIn("editor-windows", proof.TARGETS)
 
 
 if __name__ == "__main__":

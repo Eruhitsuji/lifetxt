@@ -22,7 +22,7 @@ def audit(output, source=builder.SOURCE):
     """Return evidence, not legal clearance. Reject unlisted and changed bytes."""
     output = Path(output).resolve()
     source = Path(source)
-    notices = validate_notices(source)
+    notices = validate_notices(source, output / "runtime")
     inventory = json.loads((source / "notices/components.json").read_text("utf-8"))
     manifest = json.loads((output / "manifest.json").read_text("utf-8"))
     if manifest["pyodide"] != builder.VERSION:

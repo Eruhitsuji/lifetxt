@@ -52,6 +52,7 @@ capabilities:
       - req-editor-static-format1
       - req-editor-readonly-lsp
       - req-editor-open-buffer-workspace
+      - req-editor-windows-approved-release
     implementation_locations:
       - editors/vscode/lifetxt
       - editors/neovim
@@ -59,6 +60,10 @@ capabilities:
       - lifetxt/lsp_document.py
       - lifetxt/lsp_features.py
       - lifetxt/lsp_workspace.py
+      - scripts/release_preflight_editor.py
+      - scripts/release_preflight_collect.py
+      - scripts/release_channels.py
+      - .github/workflows/release-preflight-editor.yml
     public_interfaces:
       - VS Code lifetxt language and static snippets
       - python -m lifetxt.lsp --stdio
@@ -67,14 +72,28 @@ capabilities:
       - tests/test_lsp.py
       - tests/test_lsp_workspace.py
       - editors/vscode/lifetxt/test/grammar.cjs
+      - tests/test_release_preflight_editor.py
+      - tests/test_release_preflight_collect.py
+      - tests/test_release_publication.py
+      - .ai/project/changes/editor-release-distribution/verification.yml
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/1348
       - https://github.com/Eruhitsuji/lifetxt/issues/1369
+      - https://github.com/Eruhitsuji/lifetxt/issues/1389
+      - https://github.com/Eruhitsuji/lifetxt/issues/1390
+      - https://github.com/Eruhitsuji/lifetxt/issues/1391
+      - https://github.com/Eruhitsuji/lifetxt/issues/1392
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/1393
     notes: >-
       Static highlighting is display assistance. LSP scope is explicitly opened
       buffers only (32 documents, 256 KiB each, 200 results), without disk scan,
       network or writes. Actual Neovim and Microsoft protocol parity verified;
-      VS Code GUI, other OS and distribution decisions remain in issue 1373.
+      Windows VS Code/Neovim representative actual-client acceptance recorded
+      in issue 1373 (additional cases unexecuted); other operating systems and
+      ordinary Vim are not in the editor support guarantee. Editor Release
+      assets are immutable, preflight-gated and separately human-authorized;
+      no public distribution is claimed before a successful approved Release.
   - id: cap-official-website
     name: Bilingual official product introduction
     summary: Static user-owned-text product discovery and onboarding, separate from the runnable Web UI.

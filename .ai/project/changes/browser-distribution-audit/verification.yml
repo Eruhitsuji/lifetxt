@@ -1,0 +1,27 @@
+schema_version: 1
+verification:
+  checks:
+  - type: focused_regression
+    command: python -m unittest tests.test_browser_distribution_audit tests.test_browser_check_poc
+    status: passed
+    result: 8 tests; artifact extra/missing/tampered/rehash/symlink/Core/notice/lock failures rejected
+  - type: real_artifact
+    command: npm ci --prefix contrib/browser_check_poc --ignore-scripts; python contrib/browser_check_poc/build.py --output NEW_DIRECTORY
+    status: passed
+    result: Pinned runtime 13531207 bytes, 20 Core modules, Core ZIP 76646 bytes
+  - type: publication
+    command: python -m contrib.browser_check_poc.distribution_audit ARTIFACT --require-publication
+    status: blocked
+    result: Expected exit 1; attribution, corresponding source delivery and independent review incomplete
+  gaps:
+  - description: Full distribution/source correspondence and human evaluation remain publication blockers
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1398
+review_ledger:
+- reviewer: Eruhitsuji
+  review_type: independent_implementation_distribution
+  target_commit: null
+  result: pending
+- reviewer: Eruhitsuji
+  review_type: integration
+  target_commit: null
+  result: pending

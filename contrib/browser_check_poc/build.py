@@ -26,6 +26,30 @@ RUNTIME_FILES = (
 )
 
 
+CORE_MODULES = (
+    "__init__",
+    "atomic",
+    "config",
+    "diagnostic_contract",
+    "ids",
+    "links",
+    "model",
+    "mutation",
+    "parser",
+    "progress",
+    "recurrence",
+    "safety_foundation",
+    "serializer",
+    "temporal_context",
+    "temporal_thread",
+    "ticket_project_values",
+    "tickets",
+    "timeutil",
+    "timezone_policy",
+    "validator",
+)
+
+
 def build(output):
     output = output.resolve()
     if (
@@ -45,29 +69,7 @@ def build(output):
     expected = [{**f, "expected": check_text(f["text"])} for f in fixtures]
     # Explicit corpus-observed import closure. Never harvest ambient test-process
     # imports, which could accidentally bundle the CLI/Remote or unrelated modules.
-    names = (
-        "__init__",
-        "atomic",
-        "config",
-        "diagnostic_contract",
-        "ids",
-        "links",
-        "model",
-        "mutation",
-        "parser",
-        "progress",
-        "recurrence",
-        "safety_foundation",
-        "serializer",
-        "temporal_context",
-        "temporal_thread",
-        "ticket_project_values",
-        "tickets",
-        "timeutil",
-        "timezone_policy",
-        "validator",
-    )
-    modules = [ROOT / "lifetxt" / (name + ".py") for name in sorted(names)]
+    modules = [ROOT / "lifetxt" / (name + ".py") for name in sorted(CORE_MODULES)]
     archive = io.BytesIO()
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         for file in modules:
@@ -117,6 +119,9 @@ def build(output):
     (output / "manifest.json").write_text(
         json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
     )
+    from contrib.browser_check_poc.distribution_audit import audit
+
+    audit(output, SOURCE)
     print(
         json.dumps(
             {

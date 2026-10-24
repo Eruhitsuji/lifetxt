@@ -247,15 +247,73 @@ Neovimでは `cmd` に `--id-key uid` などを追加します。Core設定を�
 | --- | --- | --- |
 | 通常のテキストエディタ | 従来のtemplate・最小文法・手動運用 | Python/LSP/network不要 |
 | VS Code静的（1.80以上） | 全Type・snippet・関連付け・TextMate grammar | Core生成確認と実際のTextMate/Oniguruma corpus |
-| VS Code動的（1.82以上） | 任意client、診断・補完・Hover | Microsoft protocol・host doubles確認済み、GUI/Windows/macOS受入は#1373 |
-| Neovim（0.11以上の設定API） | 組込LSP設定 | Linuxの実際の0.12.6で共通fixtureを確認、0.11/他OS未実施 |
+| VS Code動的（1.82以上） | 任意client、診断・補完・Hover | Microsoft protocol・host doubles確認済み、Windows主要実機受入は#1373、他OS未保証 |
+| Neovim（0.11以上の設定API） | 組込LSP設定 | Windows Neovim 0.12.6主要受入は#1373、0.11/他OS未保証 |
 | Zed | 未対応 | metadata・Tree-sitter grammar/queries・拡張adapterを要調査 |
 | Sublime Text | 未対応 | syntaxとcommunity LSP clientの設定・受入が必要 |
 | JetBrains | 未対応 | 対象IDE/API対応版・plugin設計を決めてから検証 |
 
-VSIX/Marketplace/registry公開は含みません。外部受入と配布判断は
-[#1373](https://github.com/Eruhitsuji/lifetxt/issues/1373)で追跡します。
-symbol/definition/actionやdisk workspace探索は今後の検討であり、提供済みとは扱いません。
+## Windows向け正式Editorサポート・リリース配布物（#1389）
+
+**公式のEditor入力補助対象はWindows版VS Code / Neovim（nvim）のみ**です。
+VS Codeは静的機能が1.80以上、任意のLSPは1.82以上、Neovimは0.11以上を対象とします。
+この範囲はEditorの支援機能のみに適用し、Core/CLI/ServerのOSサポート方針は変更しません。
+通常Vim/Vim9、Linux/macOSのEditor実機保証、Marketplace/Open VSXは対象外です。
+
+既存の人間承認付きRelease CIは、同一のlifetxt Release版/source SHA/チェックサムに
+対応する次の2ファイルをGitHub Releasesに添付する設計です。
+
+- `lifetxt-vscode-<lifetxt-version>.vsix`
+- `lifetxt-neovim-windows-<lifetxt-version>.zip`
+
+**実際に正式Release Authority承認と公開が済むまではダウンロード可能と断定できません。**
+preflight生成・PRのmergeは正式公開ではありません。
+拡張内の3要素版（現状`0.2.0`）とlifetxt本体の`X.Y.Z[.N]`は独立し、
+両ZIP内の`release.json`でsource SHA・候補digest・両版を結び付けています。
+導入前に同じReleaseの`SHA256SUMS`とファイルのハッシュを確認してください。
+
+### VS Code VSIX導入（Windows）
+
+1. 対象ReleaseからVSIXと`SHA256SUMS`を取得します。PowerShellの
+   `Get-FileHash .\lifetxt-vscode-*.vsix -Algorithm SHA256`で照合します。
+2. VS Code → 拡張機能 → `...` →「VSIXからのインストール」、
+   または`code --install-extension .\lifetxt-vscode-<version>.vsix`を実行します。
+3. 再起動後に`life.txt`を開いて言語モードを確認します。
+   静的highlight/snippetはPython無しで使え、LSPは既定で無効です。
+4. 診断・補完・Hoverを使う場合のみPython 3.10以上の環境へlifetxtを
+   **明示的に導入**し、VS Code設定で
+   `lifetxt.languageServer.enabled=true`、
+   `lifetxt.languageServer.python`に導入先Python実行ファイルの絶対パス
+   （JSON中のバックスラッシュはエスケープ）を設定してウィンドウを再読み込みします。
+   Python実行設定に引数を含めません。IDキーを変更している場合は
+   `lifetxt.languageServer.idKey`を明示します。
+5. 静的機能へ戻す場合は`enabled=false`にして再読み込みします。
+   削除する場合は拡張機能から「アンインストール」、または
+   `code --uninstall-extension lifetxt.lifetxt`を実行します。
+   `lifetxt.lsp`を持たない旧本体へ戻す前にLSPをOFFにしてください。
+   Python/LSP不具合時にも静的編集は可能です。
+
+### Neovim設定導入（Windows）
+
+1. 対象Releaseから同版のZIPとSHA256SUMSを取得・照合し、
+   `lifetxt.lua`、`release.json`、`INSTALL-WINDOWS.md`を安全に展開します。
+2. Luaを確認して`cmd`のPython実行ファイルを変更し、自分の`init.lua`へ
+   `dofile([[C:\path\to\lifetxt.lua]])`を**手動で追加**します。
+   Neovim built-in LSPを利用するため、追加LSP pluginは不要です。
+   LSPを使う場合のみPython環境へlifetxtを別途導入してください。
+3. Neovimを再起動して`life.txt`を開きます。週次の`.txt`は
+   `:setfiletype lifetxt`を指定します。LSP停止は
+   `:lua vim.lsp.enable('lifetxt', false)`です。
+   元に戻すときは`init.lua`の追加した`dofile`行だけを削除し、
+   展開先を削除して再起動します。他の設定を上書きしません。
+
+[#1373](https://github.com/Eruhitsuji/lifetxt/issues/1373)にはWindows実機の
+VS Code/Neovim主要動作の受入結果が記録されていますが、一部のpath・Unicode・
+offline・再接続の組合せや追加試験は**未実施**です。CIによるパッケージ検査は
+全実機条件のPASSを意味しません。LSPが失敗しても無効化して静的/手動編集を継続できます。
+
+Marketplace/外部registryへの公開は対象外です。symbol/definition/actionや
+disk workspace探索は未提供です。
 
 性能の回帰確認は同じPython/OS/machineで
 `python -m editors.benchmark_lsp > baseline.json`、続いて

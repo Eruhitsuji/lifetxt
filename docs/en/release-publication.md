@@ -141,10 +141,27 @@ this new pipeline: existing Releases lack its immutable inventory binding.
 
 ## Validation boundary
 
-Offline tests exercise all 13 real producer validators with synthetic payloads,
+Offline tests exercise the 14 mandatory producer validators (original 13 plus editor-windows) with synthetic payloads,
 partial remote services, approval/expiry/identity faults, immutable uploads,
 checksum failures and downstream ordering. They do not certify a live public
 release. A separately approved first real release must still validate the
 PyPI OIDC exchange, GHCR transport, protected environment and Homebrew token.
 The successfully retained preflight run 38822634032 certifies build/preflight
 transport only and has no publication authority.
+
+## Windows editor assets in approved publication (#1389)
+
+An approved candidate additionally publishes both the VS Code VSIX and the
+Neovim Windows configuration ZIP through the **existing** GitHub Release
+asset upload, with one canonical release-inventory.json and SHA256SUMS. No
+Marketplace/Open VSX or new trusted publisher is introduced. The read-only
+remote verifier downloads both files and checks actual archive contents,
+VS Code three-part version and matching extension.vsixmanifest, and embedded
+candidate/source/version metadata before permitting Latest promotion.
+
+For partial publication or read-back failure, use the original #1308 immutable
+retry/source-defect classification. Never replace already published bytes or
+reuse a mismatched preflight candidate; a source correction needs a new
+human-selected correction version and approval. Preflight success is not a
+published release. Windows GUI acceptance remains independently tracked in
+[#1373](https://github.com/Eruhitsuji/lifetxt/issues/1373).

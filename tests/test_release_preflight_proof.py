@@ -59,7 +59,7 @@ class PreflightProofTests(unittest.TestCase):
 
     def test_all_targets_bind_bytes_without_publication_authority(self):
         result = self.aggregate()
-        self.assertEqual(len(result["components"]), 13)
+        self.assertEqual(len(result["components"]), 14)
         self.assertEqual(result["status"], "preflight_verified")
         self.assertIs(result["publication_authorized"], False)
         self.assertEqual(result, self.aggregate(list(reversed(self.components))))

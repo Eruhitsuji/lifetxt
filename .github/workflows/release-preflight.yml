@@ -97,6 +97,15 @@ jobs:
     with:
       candidate_json: ${{ needs.prepare.outputs.candidate_json }}
 
+  editor:
+    name: Editor Windows
+    needs: [prepare, core]
+    permissions:
+      contents: read
+    uses: ./.github/workflows/release-preflight-editor.yml
+    with:
+      candidate_json: ${{ needs.prepare.outputs.candidate_json }}
+
   oci:
     name: OCI
     needs: [prepare, core]
@@ -107,8 +116,8 @@ jobs:
       candidate_json: ${{ needs.prepare.outputs.candidate_json }}
 
   collect:
-    name: Verify all 13 targets
-    needs: [prepare, core, standalone, desktop, mini, oci]
+    name: Verify all 14 targets
+    needs: [prepare, core, standalone, desktop, mini, oci, editor]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     permissions:

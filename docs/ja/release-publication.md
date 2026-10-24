@@ -17,7 +17,7 @@ workflowは呼び出しを拒否します。buildは読み取り専用の
    ZIP自体のSHA256と、このbundle digestは別物です。
 3. Actionsの **Release**（`release.yml`、branch `main`）を
    `preflight_artifact_id` と `bundle_digest` で起動します。
-   prepare jobが実ZIPと全13 targetの元payloadをdownloadし、API由来情報、
+   prepare jobが実ZIPと全14 target（既存13＋Windows Editor）の元payloadをdownloadし、API由来情報、
    source CI、reports、hash、期限、OCI graphを照合してplanを表示します。
    固定sourceに対するstrict release policy/schema/golden/翻訳/書込経路と
    CLI safety release-gateもjsonschema必須で維持し、旧profileのbuild/twine/
@@ -121,8 +121,22 @@ Desktop checksum不足は今回のinventory finalizerで止めます。
 
 ## 検証の境界
 
-offline試験は全13 producerの実validatorをsynthetic payloadで通し、承認/API/期限/改変/
+offline試験は全14 producer（既存13＋Editor）の実validatorをsynthetic payloadで通し、承認/API/期限/改変/
 部分公開/retry/下流順序を検証します。公開済み成功を証明するものではありません。
 初回の実公開には別途承認が必要で、PyPI OIDC、GHCR転送、environment、Homebrew権限の
 実確認が残ります。実preflight run 38822634032はbuildと非公開artifact転送の証拠であり、
 公開承認を持ちません。
+
+## Windows Editor配布物の承認付き公開（#1389）
+
+既存の承認付きGitHub Release経路へVSIXとNeovim Windows用設定ZIPを追加し、
+従来と**単一の**release-inventory.json／SHA256SUMSでbytes/版数を管理します。
+新しいMarketplace／Open VSX公開経路はありません。read-onlyの公開後照合は
+両ファイルを再ダウンロードし、VSIX manifest・syntax/snippets/client、Neovim
+Lua/案内、source SHA/candidate digest、本体版と拡張版を再確認します。
+欠損や別bytesの状態でLatestを更新しません。
+
+一部公開失敗は#1308のimmutable retry/補正版契約を再利用します。同一tagの既存bytesを
+上書きせず、source修正が必要ならOwnerが別補正版を決めたうえで新PR/main CI/
+preflight/人間承認から実施します。CI preflight成功は正式公開ではありません。
+Windows実機の限定的な検証は#1373で記録されており、未実施条件をPASS扱いしません。

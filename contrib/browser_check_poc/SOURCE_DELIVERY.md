@@ -16,10 +16,9 @@ required source/patch members are in `sources/source-lock.json`; the complete
 `sources/source-provenance.json`. The exact shipped stdlib ZIP also contains
 its Python source, including generated configuration.
 
-In this repository, see [Pyodide MPL terms](notices/pyodide-314.0.7.txt),
-[component inventory](notices/components.json), [notice provenance](notices/provenance.json),
-and [source correspondence](source-provenance.json). These links are repository
-links; the generated indexes above provide local artifact navigation.
+In this repository, see [Pyodide MPL terms](https://github.com/Eruhitsuji/lifetxt/blob/main/contrib/browser_check_poc/notices/pyodide-314.0.7.txt),
+[component inventory](https://github.com/Eruhitsuji/lifetxt/blob/main/contrib/browser_check_poc/notices/components.json), [notice provenance](https://github.com/Eruhitsuji/lifetxt/blob/main/contrib/browser_check_poc/notices/provenance.json),
+and [source correspondence](source-provenance.json). These notice/template links open repository documentation; the generated indexes above provide local artifact navigation.
 
 Pyodide and hiwire sources retain MPL-2.0 rights and terms. Other source archives
 retain their own original per-file notices. No local runtime bytes or runtime
@@ -101,7 +100,7 @@ so `complete_distribution_audit=false` and `public_distribution_approved=false`.
 Use an **external** JSON review record supplied by `--review-record FILE` after
 review of the final commit and artifact. Keeping it outside the artifact avoids
 a circular “commit a review → new unreviewed head” dependency. See
-[the pending record template](publication-review.example.json). Do not change
+[the pending record template](https://github.com/Eruhitsuji/lifetxt/blob/main/contrib/browser_check_poc/publication-review.example.json). Do not change
 repository/artifact bytes to fill that record: any source change requires a new
 commit, build and review. Historical source inventories keep
 their false snapshot fields; only the evaluated current audit report represents

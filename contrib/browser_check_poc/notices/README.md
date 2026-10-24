@@ -10,8 +10,8 @@ The CPython incorporated-software list is explicitly incomplete upstream.
 The generated **Third-party notices** page, `notices/index.html`, links every
 retained document, component metadata and source downloads. Both checker pages
 and the generated source index link that page. In this repository, see
-[delivery and evidence limits](../SOURCE_DELIVERY.md) and
-[the runtime inventory](../RUNTIME_INVENTORY.md); there is no generated index
+[delivery and evidence limits](https://github.com/Eruhitsuji/lifetxt/blob/main/contrib/browser_check_poc/SOURCE_DELIVERY.md) and
+[the runtime inventory](https://github.com/Eruhitsuji/lifetxt/blob/main/contrib/browser_check_poc/RUNTIME_INVENTORY.md); there is no generated index
 in the source tree.
 
 Unicode License V3 was retrieved unchanged from the official Unicode site on

@@ -25,7 +25,7 @@ exact generated index bytes as well as parsed links; rejected unsafe notice
 basenames/origins; checked manifest hash shape and malformed review objects;
 required Owner source retention record; kept review records external to avoid
 self-referential commits; added dirty-input blocking. Corrected a notice-section
-label against the original CPython document. Synthetic fixture failures were
+label against the original CPython document. Used explicit repository documentation URLs for context-dependent README/delivery links so the copied Markdown also avoids broken artifact-relative paths. Synthetic fixture failures were
 fixed before reporting the final passing tests; no failed run is counted as a
 pass. Final changed-file review confirms no Core/Format/CLI runtime behavior,
 production builder, Pages workflow, managed standard, settings or runtime binary

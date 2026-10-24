@@ -1,6 +1,7 @@
 """Reproduce retained source/release relationships without building executable code."""
 
 import argparse
+import ast
 import hashlib
 import json
 from pathlib import Path
@@ -46,11 +47,59 @@ def patch_member_paths(data):
     return result
 
 
+def validate_generated_sysconfig(name, raw, lock):
+    """Hash and inspect the generated source without executing its Python code."""
+    expected = lock["generated_sysconfig"]
+    if (
+        name != expected["file"]
+        or hashlib.sha256(raw).hexdigest() != expected["sha256"]
+    ):
+        raise ValueError("Unknown generated sysconfig source")
+    tree = ast.parse(raw)
+    assignments = [
+        n
+        for n in tree.body
+        if isinstance(n, ast.Assign)
+        and len(n.targets) == 1
+        and isinstance(n.targets[0], ast.Name)
+        and n.targets[0].id == "build_time_vars"
+    ]
+    if len(assignments) != 1 or not isinstance(assignments[0].value, ast.Dict):
+        raise ValueError("Unexpected sysconfig source shape")
+    dictionary = assignments[0].value
+    values = {
+        ast.literal_eval(k): v for k, v in zip(dictionary.keys, dictionary.values)
+    }
+    for key, value in expected["required_values"].items():
+        if key not in values or ast.literal_eval(values[key]) != value:
+            raise ValueError("Sysconfig source contradicts runtime build policy")
+
+
+def observe_runtime(runtime, source, entries):
+    result = subprocess.run(
+        ["node", str(source / "runtime_probe.mjs"), str(runtime)],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=90,
+    )
+    observed = json.loads(result.stdout)
+    if observed != {
+        "sqlite": entries["sqlite"]["version"],
+        "zstd": entries["zstd"]["version"],
+        "ucd": "16.0.0",
+        "with_mimalloc": 1,
+    }:
+        raise ValueError("Actual WASM versions differ from retained source inventory")
+    return observed
+
+
 def probe(cache, runtime, output, source=SOURCE):
     lock = load_lock(source)
     validate_cache(cache, lock, include_core=True)
     validate_notices(source, runtime)
     entries = {e["id"]: e for e in lock["archives"]}
+    observed = observe_runtime(runtime, source, entries)
     core = entries["upstream-core"]
     data = read_members(cache / core["file"], core["root"], core["required_members"])
     if any(data[n] != (runtime / n).read_bytes() for n in data):
@@ -153,7 +202,8 @@ def probe(cache, runtime, output, source=SOURCE):
                 working / "Lib" / name
             ).read_bytes() == raw:
                 category, member = "cpython-source-plus-upstream-patches", "Lib/" + name
-            elif name == "_sysconfigdata__emscripten_wasm32-emscripten.py":
+            elif name == lock["generated_sysconfig"]["file"]:
+                validate_generated_sysconfig(name, raw, lock)
                 category, member = (
                     "generated-build-configuration-source-shipped-in-stdlib",
                     "cpython/Makefile sysconfigdata target",
@@ -214,6 +264,21 @@ def probe(cache, runtime, output, source=SOURCE):
         "runtime_release_identity": "5/5 byte-identical; no local runtime byte modifications",
         "release_archive_sha256": core["sha256"],
         "port_archive_checks": port_checks,
+        "runtime_observations": observed,
+        "archive_correspondence": [
+            {
+                "component": e["id"],
+                "basis": e["correspondence_basis"],
+                "archive_sha256": e["sha256"],
+                "limit": "Local archive hash alone is not an upstream binary build attestation",
+                **(
+                    {"official_equivalence": e["official_equivalence"]}
+                    if "official_equivalence" in e
+                    else {}
+                ),
+            }
+            for e in lock["archives"]
+        ],
         "runtime_files": json.loads(
             (source / "notices/components.json").read_text("utf-8")
         )["runtime_observations"]["runtime_files"],
@@ -228,7 +293,7 @@ def probe(cache, runtime, output, source=SOURCE):
         "complete_distribution_audit": False,
         "public_distribution_approved": False,
         "remaining_review": [
-            "WASM file/object attribution, remaining per-file and Unicode-data licensing evaluation",
+            "Independent evaluation of complete WASM/file attribution and Unicode mapping scope; known Unicode notices now retained",
             "Upstream recipes/release are not signed build or bit-reproducibility attestation",
             "Independent distribution/implementation/integration acceptance and Owner publication approval",
         ],

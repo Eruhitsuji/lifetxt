@@ -1,53 +1,33 @@
-# Runtime notice snapshot — incomplete inventory
+# Runtime notice snapshots — independent acceptance pending
 
-Follow-up #1362 expands this directory to sixteen notice texts. `components.json`
-distinguishes source-pinned candidates from actual runtime observations;
-`../RUNTIME_INVENTORY.md` records remaining publication gates. The builder validates
-and copies all provenance-listed texts and metadata. The original three-snapshot
-explanation below is historical, not the current count.
+The current inventory contains **25 notice documents** (23 preceding #1411,
+plus the full official Unicode License V3 and UCD 16.0.0 ReadMe). Original source
+URLs, retrieval details, hashes and selection/normalization are recorded in
+[provenance.json](provenance.json). [components.json](components.json) maps known
+components/versions to the applicable documents and, where relevant, sections.
+The CPython incorporated-software list is explicitly incomplete upstream.
 
-These are fixed-version upstream licence texts, not a complete distribution
-approval. `provenance.json` records original/stored hashes and normalization.
-The PoC Core ZIP already contains lifetxt's MIT LICENSE and unmodified sources.
+The generated **Third-party notices** page, `notices/index.html`, links every
+retained document, component metadata and source downloads. Both checker pages
+and the generated source index link that page. In this repository, see
+[delivery and evidence limits](../SOURCE_DELIVERY.md) and
+[the runtime inventory](../RUNTIME_INVENTORY.md); there is no generated index
+in the source tree.
 
-- Pyodide314.0.7: MPL2.0 text and source at
-  https://github.com/pyodide/pyodide/tree/314.0.7 .
-- CPython3.14.2: its combined history/licence text at
-  https://github.com/python/cpython/tree/v3.14.2 .
-- Emscripten5.0.3: its MIT/NCSA text at
-  https://github.com/emscripten-core/emscripten/tree/5.0.3 .
+Unicode License V3 was retrieved unchanged from the official Unicode site on
+2026-10-25 (its current copyright range is 1991–2026). The original UCD16 ReadMe
+retains its 2024 copyright and terms reference. The scope includes UCD16-derived
+CPython character/name/type tables, unicode.org mapping-derived encodings and
+CJK generated tables. This is not a new provenance claim for every individual
+mapping input; independent scope/attribution assessment remains required.
 
-The pinned Pyodide Makefile.envs identifies Python3.14.2, Emscripten5.0.3 and
-link flags for additional libraries (listed in provenance.json). This proves
-that top-level npm metadata alone is an insufficient inventory, not that every
-flag describes a known exact component version inside the supplied binary.
-The installed npm package and python_stdlib.zip contained no standalone licence
-or complete third-party notice bundle. The package lock's many available wheels
-must not be misrepresented as wheels actually downloaded or shipped by this PoC.
+The complete CPython software notice document covers mimalloc, SipHash24,
+strtod/dtoa and Mersenne Twister. HACL/decimal aggregates retain all distinct
+leading licence comments found in the checked 40/41 source/header files. Full
+archives preserve other inline/per-file terms. LLVM runtime subtree licences
+are retained whole; their presence does not map every linked object.
 
-Before any public redistribution, establish the binary's full component/version
-inventory, gather the remaining required notices, preserve relevant copyright
-statements and decide how recipients obtain corresponding source. Keep an
-accurate source-availability notice with the actual subset being distributed.
-The Mozilla FAQ's Q7/Q16 distinguish executable/minified forms and source notice
-considerations; it does not make these three snapshots a complete approval.
-CPython's licence documentation also lists included software notices beyond its
-main terms. The Owner must accept a completed, reviewed distribution package.
-
-References checked 2026-10-17:
-https://www.mozilla.org/en-US/MPL/2.0/FAQ/
-https://docs.python.org/3.14/license.html
-https://github.com/pyodide/pyodide/blob/314.0.7/Makefile.envs
-
-No runtime binary is committed or published by this investigation. Keep public
-integration blocked on #1358's distribution gate. This is technical inventory
-and provenance evidence, not a legal-compliance guarantee.
-
-## Source acquisition and expanded notices (#1409)
-
-See [source acquisition](../sources/index.html) in the generated artifact.
-Seven additional documents retain CPython incorporated-software notices, all
-distinct leading HACL/decimal licence headers, and LLVM runtime subtree licences.
-These are bounded source-based additions, not a complete linked-object audit.
-Original source archives retain per-file notices. Complete audit/publication
-approval remains false. In the repository, see ../SOURCE_DELIVERY.md.
+The Core ZIP contains unchanged lifetxt sources and its MIT LICENSE. Optional
+wheels listed in pyodide-lock.json are not downloaded or shipped by this build.
+These notices and source archives are technical evidence, not legal clearance
+or publication approval. Both status snapshot flags remain false.

@@ -1,0 +1,23 @@
+{
+  "kind": "actual Chromium over loopback HTTP",
+  "physical_device": false,
+  "cases": [
+    {
+      "language": "ja",
+      "all_notice_HTTP_200": 25,
+      "static_indexes": true,
+      "automatic_runtime_or_archive_requests": false,
+      "explicit_hiwire_download_sha256": "0d64144f149c0de3bd157551421833c6c16fdc0492c312a6325ffc25d185c93c",
+      "page_errors": []
+    },
+    {
+      "language": "en",
+      "all_notice_HTTP_200": 25,
+      "static_indexes": true,
+      "automatic_runtime_or_archive_requests": false,
+      "explicit_hiwire_download_sha256": "0d64144f149c0de3bd157551421833c6c16fdc0492c312a6325ffc25d185c93c",
+      "page_errors": []
+    }
+  ],
+  "browser": "153.0.8010.0"
+}

@@ -1,0 +1,42 @@
+schema_version: 1
+change:
+  id: editor-release-distribution
+  title: Windows Editor archives in approved immutable release
+  status: in_review
+  change_type: Operations
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1389
+  related_pull_request: null
+  base_commit: bf86f4f6e250e5dfb22e39635f7423e21b8f9026
+scope:
+  in_scope:
+    - Build Windows VSIX and Neovim ZIP as immutable artifacts
+    - Extend non-public preflight with strict 14th target
+    - Revalidate public bytes and provide bilingual Windows instructions
+  out_of_scope:
+    - Marketplace or other registries, standard Vim, Core/Format changes
+    - Automatic Release Authority approval or release dispatch
+  write_scope:
+    - scripts/release_preflight_editor.py and focused tests
+    - .github/workflows/release-preflight-editor.yml and existing preflight collector
+    - scripts/release_preflight_proof.py; scripts/release_preflight_actions.py
+    - scripts/release_preflight_collect.py; scripts/release_plan.py; scripts/release_channels.py
+    - docs/en/editor.md; docs/ja/editor.md; release preflight/publication guides
+    - .ai/project/changes/editor-release-distribution/**
+    - scoped .ai/project/CAPABILITIES.yml and .ai/project/TRACEABILITY.yml
+  forbidden_scope:
+    - .ai/managed/**
+    - .github/workflows/release.yml approval/security controls
+    - Core/Format/LSP functionality, new secrets/permissions
+    - Tag/release/publish/deploy/merge operations
+  shared_files:
+    - .github/workflows/release-preflight.yml
+    - scripts/release_preflight_proof.py
+    - scripts/release_plan.py
+    - scripts/release_channels.py
+human_approvals_required:
+  - Independent implementation and integration review of latest PR head
+  - Owner/Integrator High risk acceptance and merge approval
+  - Separate human Release Authority approval before actual publication

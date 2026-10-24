@@ -1,0 +1,35 @@
+schema_version: 1
+verification:
+  checks:
+    - type: offline_archive_contract
+      command: python -m unittest tests.test_release_preflight_editor
+      status: not_run
+      result: Awaiting integration PR CI; no local repository runtime available in this execution environment.
+    - type: preflight_14_target
+      command: python -m unittest tests.test_release_preflight_proof tests.test_release_preflight_actions tests.test_release_preflight_collect
+      status: not_run
+      result: Awaiting integration PR CI.
+    - type: publication_contract
+      command: python -m unittest tests.test_release_publication
+      status: not_run
+      result: Awaiting integration PR CI.
+    - type: actual_artifact
+      command: Execute approved read-only manual main preflight after merge
+      status: not_run
+      result: Requires main merge and valid source/version/main CI input; not authorized or executed in implementation.
+    - type: independent_review
+      command: Human independent implementation and integration review of final PR head
+      status: pending
+      result: Human-only final approval and merge; AI self-review is not independent.
+  reviews:
+    - reviewer: ChatGPT (implementer)
+      review_type: self_review
+      result: in_progress
+      findings: Do not use vsce --no-dependencies with an unbundled client; corrected before PR.
+    - reviewer: Owner or separate reviewer
+      review_type: implementation_and_integration
+      result: pending
+release_evidence:
+  migration_notes: No Core migration or mandatory dependency changes.
+  rollback_plan: Revert this integration PR before public release; after public release preserve immutable tag/assets and issue separately approved corrective version.
+  operations_evidence: []

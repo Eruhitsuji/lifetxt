@@ -18608,6 +18608,15 @@ traceability:
         - .ai/project/changes/release-v1-0-4-2/verification.yml
       status: in_review
 
+    - requirement_id: req-release-v1-0-4-3
+      capability_id: cap-stable-release-governance
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1405
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1406
+      tests_or_evidence:
+        - tests/test_release_publication.py
+        - .ai/project/changes/release-v1-0-4-3/verification.yml
+      status: in_review
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

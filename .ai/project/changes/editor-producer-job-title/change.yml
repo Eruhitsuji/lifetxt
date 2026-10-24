@@ -14,6 +14,7 @@ scope:
   - scripts/release_preflight_actions.py
   - tests/test_release_preflight_actions.py
   - .ai/project/changes/editor-producer-job-title/**
+  - .ai/project/TRACEABILITY.yml
   out_of_scope:
   - Workflow, dependency, version, authority and publication changes
 human_approvals_required:

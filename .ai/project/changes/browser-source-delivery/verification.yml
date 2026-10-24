@@ -1,0 +1,47 @@
+schema_version: 1
+verification:
+  checks:
+  - type: real_upstream_sources
+    command: LIFETXT_RUN_SOURCE_AUDIT=1 LIFETXT_SOURCE_CACHE=CACHE LIFETXT_SOURCE_RUNTIME=RUNTIME python -W error::ResourceWarning -m unittest tests.test_browser_source_delivery tests.test_browser_distribution_audit tests.test_browser_check_poc
+    status: passed
+    result: 14 tests, no skips. Official core archive and 5 runtime bytes match; 10 source archives and required licence/patch member hashes verified; 9 patches apply with zero fuzz; all 567 stdlib files classified; retained proof reproduced exactly; synthetic negative source/cache/delivery cases pass.
+  - type: integrated_regression
+    command: python -W error::ResourceWarning -m unittest tests.test_browser_source_delivery tests.test_browser_distribution_audit tests.test_browser_check_poc tests.test_website_checker tests.test_website tests.test_website_pages_workflow
+    status: passed
+    result: 31 tests, 2 skips (opt-in full cache audit already run separately; existing optional Web test). Node WASM checker regression executed with real pinned runtime. Default introduction/Pages remain unchanged.
+  - type: real_bundle
+    command: python contrib/browser_check_poc/build.py --output NEW_DIRECTORY --source-cache CACHE; python -m contrib.browser_check_poc.distribution_audit ARTIFACT
+    status: passed
+    result: Complete ten-source offline bundle; integrity passed; publication blocked; no runtime byte changes.
+  - type: explicit_fetch
+    command: python -m contrib.browser_check_poc.source_delivery fetch --cache CACHE
+    status: passed
+    result: Real hiwire re-download through fixed-origin fetch path; all other retained source/archive hashes verified; full synthetic fetch failure/no-overwrite/resource checks passed.
+  - type: publication_gate
+    command: python -m contrib.browser_check_poc.distribution_audit ARTIFACT --require-publication
+    status: blocked
+    result: Expected exit 1 after successful artifact integrity audit; independent distribution evaluation and full attribution not approved.
+  - type: source_navigation
+    command: headless Chromium loopback smoke against fresh local checker source bundle
+    status: passed
+    result: Chromium 153.0.8010.0 JA/EN links reach script-free source index; no automatic source/runtime download; explicit hiwire download hash matches; no page errors.
+  - type: static
+    command: python -m ruff check lifetxt tests scripts and changed contrib source modules
+    status: passed
+    result: Focused formatting and lint pass; no Core, Worker logic, production website build or workflow change.
+  gaps:
+  - description: Complete WASM object attribution, remaining Unicode/data licensing evaluation and independent distribution acceptance still block publication.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1398
+review_ledger:
+- reviewer: Codex implementer
+  review_type: informational_self_review
+  target_commit: null
+  result: informational_only
+- reviewer: Eruhitsuji
+  review_type: independent_implementation_distribution
+  target_commit: null
+  result: pending
+- reviewer: Eruhitsuji
+  review_type: integration
+  target_commit: null
+  result: pending

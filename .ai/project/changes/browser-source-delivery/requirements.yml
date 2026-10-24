@@ -1,0 +1,14 @@
+schema_version: 1
+requirements:
+- id: req-browser-local-check-source-delivery-v1
+  kind: ADDED
+  owner: Eruhitsuji
+  statement: Provide verifiable pinned runtime-source acquisition and optional offline source delivery without claiming distribution clearance.
+  acceptance_criteria:
+  - Verify official upstream core bytes match all five retained runtime files
+  - Record source revisions, recipe pins, all CPython patch application and complete stdlib file correspondence
+  - Retain additional original notices with source-member hashes
+  - Provide static source acquisition index and explicit hash-locked maintainer fetch
+  - Offline builds support either upstream acquisition links or all ten local source archives
+  - Reject corrupt/missing/unlisted/partial source delivery and preserve false publication flags
+  - Leave full WASM attribution, remaining licence evaluation and independent acceptance explicit

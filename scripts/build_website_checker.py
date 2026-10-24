@@ -71,11 +71,11 @@ def render(lang, base=DEFAULT_URL):
 <button class="button" type="button" id="cancel" disabled>{c["cancel"]}</button></div>
 <p id="status" role="status" aria-live="polite"></p><pre id="output" tabindex="0" aria-label="{c["title"]}"></pre>
 <noscript><p>{c["noscript"]}</p></noscript>
-<p><a href="../../checker/notices/README.md">{c["notices"]}</a></p>
+<p><a href="../../checker/sources/index.html">{c["notices"]}</a></p>
 </main></body></html>'''
 
 
-def build(output):
+def build(output, source_cache=None):
     output = Path(output).resolve()
     protected = ("website", "assets", "lifetxt", "scripts", "tests", "contrib", ".ai")
     if output == ROOT or any(output.is_relative_to(ROOT / name) for name in protected):
@@ -87,11 +87,11 @@ def build(output):
     # The standard website build remains introduction-only, including Pages.
     with tempfile.TemporaryDirectory() as directory:
         poc = Path(directory) / "poc"
-        build_poc(poc)
+        build_poc(poc, source_cache)
         build_intro(output)
         destination = output / "checker"
         destination.mkdir()
-        for name in ("runtime", "notices"):
+        for name in ("runtime", "notices", "sources"):
             shutil.copytree(poc / name, destination / name)
         for name in ("core.zip", "engine.mjs"):
             shutil.copyfile(poc / name, destination / name)
@@ -106,4 +106,8 @@ def build(output):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
-    build(parser.parse_args().output)
+    parser.add_argument(
+        "--source-cache", type=Path, help="Offline source archives for local preview"
+    )
+    args = parser.parse_args()
+    build(args.output, args.source_cache)

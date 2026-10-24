@@ -42,6 +42,9 @@ def audit(output, source=builder.SOURCE):
             or not entry.get("resolved", "").startswith("https://registry.npmjs.org/")
         ):
             raise ValueError("Unpinned package source")
+    from contrib.browser_check_poc.source_delivery import audit_delivery
+
+    source_status, source_files = audit_delivery(output, source)
     expected = (
         {
             "core.zip",
@@ -55,6 +58,7 @@ def audit(output, source=builder.SOURCE):
         }
         | {"runtime/" + n for n in builder.RUNTIME_FILES}
         | {"notices/" + n for n in notices}
+        | source_files
     )
     files = list(output.rglob("*"))
     if any(f.is_symlink() for f in files):
@@ -111,10 +115,10 @@ def audit(output, source=builder.SOURCE):
         "runtime_files": inventory["runtime_observations"]["runtime_files"],
         "components": inventory["components"],
         "source_delivery": {
-            "Pyodide": "not_provided; pinned upstream reference is not a delivery attestation",
-            "hiwire": "not_provided; exact binary/patch correspondence unverified",
+            "Pyodide": source_status,
+            "hiwire": source_status,
             "Core": "unmodified MIT sources and LICENSE inside core.zip; byte-verified",
-            "stdlib": "binary ZIP hash verified; full attribution/source mapping incomplete",
+            "stdlib": "567 source files mapped in source-provenance.json; full licence/attribution acceptance pending",
         },
         "blockers": inventory["remaining_gates"],
     }

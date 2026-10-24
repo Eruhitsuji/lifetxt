@@ -192,3 +192,28 @@ emits component/source-delivery status and hash evidence. Use
 `--require-publication` for a nonzero exit while any publication gate remains
 open. Current source correspondence and independent distribution review remain
 blocked; see the explicit artifact/source disposition in RUNTIME_INVENTORY.md.
+
+
+### Fixed source acquisition and offline delivery (#1409)
+
+The generated PoC and local checker now link to `sources/index.html`. The default
+artifact contains pinned upstream download links; the offline bundle option
+copies all ten verified source archives (about 76.5 MB, fetched only by explicit
+maintainer action). No source archive is fetched when a visitor checks text.
+
+```sh
+python -m contrib.browser_check_poc.source_delivery fetch --cache .cache/runtime-source-cache
+python -m contrib.browser_check_poc.source_delivery verify --cache .cache/runtime-source-cache
+python contrib/browser_check_poc/build.py --output .cache/poc-with-sources --source-cache .cache/runtime-source-cache
+python scripts/build_website_checker.py --output .cache/checker-with-sources --source-cache .cache/runtime-source-cache
+python -m contrib.browser_check_poc.source_probe --cache .cache/runtime-source-cache --runtime contrib/browser_check_poc/node_modules/pyodide --output .cache/source-provenance.json
+```
+
+Every build needs a new output directory. `source_probe` additionally needs the
+`patch` utility; it applies upstream patches to temporary data files, never
+executes the downloaded source or changes installed Python. The full-source
+optional regression is enabled with `LIFETXT_RUN_SOURCE_AUDIT=1`,
+`LIFETXT_SOURCE_CACHE` and `LIFETXT_SOURCE_RUNTIME`. Default tests use explicitly
+synthetic archives and do not infer upstream acceptance from an optional skip.
+See SOURCE_DELIVERY.md and source-provenance.json for measured relationships,
+licences, limits and open independent-review gates. This is not public clearance.

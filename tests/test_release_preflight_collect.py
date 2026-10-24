@@ -418,6 +418,15 @@ class PreflightCollectTests(unittest.TestCase):
         jobs = workflow["jobs"]
         self.assertEqual(set(jobs["collect"]["needs"]), {"prepare", *actions.FAMILIES})
         self.assertIn("always()", jobs["collect"]["if"])
+        editor_workflow = yaml.load(
+            (ROOT / ".github/workflows/release-preflight-editor.yml").read_text(),
+            Loader=yaml.BaseLoader,
+        )
+        self.assertEqual(set(editor_workflow["on"]), {"workflow_call"})
+        self.assertEqual(editor_workflow["permissions"], {"contents": "read"})
+        editor_steps = [row.get("name") for row in editor_workflow["jobs"]["editor"]["steps"]]
+        for name in actions.STEPS["editor"]:
+            self.assertIn(name, editor_steps)
         for family in actions.FAMILIES:
             self.assertIn("prepare", jobs[family]["needs"])
             self.assertEqual(jobs[family]["permissions"], {"contents": "read"})

@@ -87,7 +87,10 @@ approval alone. Independent reviewers must assess the chosen evidence scope.
 manifest covers the entire site, including introduction assets, both checker
 pages, runtime, Core ZIP, active assets, all notices, sources and provenance.
 Allowlists and source-byte comparisons reject changes even after manifest
-rehashing. The normal introduction-only build and Pages workflow remain separate.
+rehashing. Core ZIP is regenerated as a canonical uncompressed ZIP with fixed
+metadata and compared in full, including its end-of-file bytes. Generated text
+uses explicit UTF-8/LF, checkout attributes preserve source/snapshot bytes, and
+manifest keys use POSIX-path order. The normal introduction-only build and Pages workflow remain separate.
 
 `--require-publication` evaluates the data contract in `publication_gate.py`
 instead of unconditionally failing. It requires the final checker profile,
@@ -111,3 +114,27 @@ shape/binding, not signatures or GitHub permissions, and cannot grant authority.
 A successful gate is evidence for a human decision, not a deployment command.
 Merge, #1400 product acceptance, publication and deployment retain their separate
 Owner boundaries. This PR does not close #1398/#1400 or enable either flag.
+
+
+## Second-review corrections and human boundary
+
+The gate now accepts schema2 records only. All implementing AI tools are listed
+and compared to this task's pinned tool inventory; reviewer tool names and GitHub
+logins are case-insensitive, and evidence/reference fields must point to this
+repository's GitHub issue/PR comments or reviews. This is **syntax checking**, not
+proof of truthful authorship. The report always includes authority_verified=false
+and human_reference_verification_required=true. A record's approval fields can
+never replace the human checks in the
+[publication review runbook](https://github.com/Eruhitsuji/lifetxt/blob/main/contrib/browser_check_poc/PUBLICATION_REVIEW.md).
+
+Generated copies of this document and the notice README replace repository
+`blob/main` links with the exact build commit; links in the source document are
+ordinary repository navigation. No file embeds its own not-yet-created commit.
+
+UCD3.2 legacy tables and non-Unicode CJK inputs are itemized separately in the
+[mapping assessment](https://github.com/Eruhitsuji/lifetxt/blob/main/contrib/browser_check_poc/notices/mapping-attribution.json).
+Original GB2312 and JIS X 0213 header terms are now retained. HKSCS permission
+scope and the licence for the historical ICU XML remain unresolved, explicit
+publication blockers. Neither current Unicode V3 nor CPython's top-level terms
+are claimed to clear those inputs. N-3 must have a source-specific documented
+resolution or Owner judgment, verified independently before #1400 proceeds.

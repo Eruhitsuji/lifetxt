@@ -1,8 +1,7 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "target_commit": null,
   "manifest_sha256": null,
-  "implementer": "Codex",
   "findings": {
     "P1-1": {
       "status": "pending",
@@ -47,6 +46,27 @@
       "owner": null,
       "verified_scope": null,
       "remaining_risk": null
+    },
+    "N-1": {
+      "status": "pending",
+      "evidence": null,
+      "owner": null,
+      "verified_scope": null,
+      "remaining_risk": null
+    },
+    "N-2": {
+      "status": "pending",
+      "evidence": null,
+      "owner": null,
+      "verified_scope": null,
+      "remaining_risk": null
+    },
+    "N-3": {
+      "status": "pending",
+      "evidence": null,
+      "owner": null,
+      "verified_scope": null,
+      "remaining_risk": null
     }
   },
   "source_retention": {
@@ -57,17 +77,21 @@
   "reviews": [
     {
       "type": "implementation-distribution",
-      "reviewer": null,
       "result": "pending",
       "target_commit": null,
-      "reference": null
+      "reference": null,
+      "reviewer_login": null,
+      "reviewer_kind": null,
+      "reviewer_tool": null
     },
     {
       "type": "integration",
-      "reviewer": null,
       "result": "pending",
       "target_commit": null,
-      "reference": null
+      "reference": null,
+      "reviewer_login": null,
+      "reviewer_kind": null,
+      "reviewer_tool": null
     }
   ],
   "publication_approval": {
@@ -76,5 +100,8 @@
     "target_commit": null,
     "manifest_sha256": null,
     "reference": null
-  }
+  },
+  "implementer_tools": [
+    "codex"
+  ]
 }

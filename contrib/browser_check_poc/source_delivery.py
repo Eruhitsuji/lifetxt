@@ -14,6 +14,8 @@ import urllib.request
 from urllib.parse import urlsplit
 import zipfile
 
+from contrib.browser_check_poc.artifact_documents import document_bytes
+
 SOURCE = Path(__file__).resolve().parent
 PYODIDE_COMMIT = "b1e4fcc2488962f6360a97f19b9982d6fdb5d16f"
 SOURCE_IDS = {
@@ -203,10 +205,13 @@ def write_delivery(destination, source=SOURCE, cache=None):
         validate_cache(Path(cache), lock)
     destination.mkdir()
     (destination / "index.html").write_text(
-        render_index(lock, cache is not None), encoding="utf-8"
+        render_index(lock, cache is not None), encoding="utf-8", newline="\n"
     )
     for name in ("source-lock.json", "SOURCE_DELIVERY.md", "source-provenance.json"):
-        shutil.copyfile(source / name, destination / name)
+        if name == "SOURCE_DELIVERY.md":
+            (destination / name).write_bytes(document_bytes(source / name))
+        else:
+            shutil.copyfile(source / name, destination / name)
     if cache is not None:
         for e in lock["archives"]:
             if e["ship_source"]:
@@ -228,7 +233,12 @@ def audit_delivery(output, source=SOURCE):
     ):
         raise ValueError("Source acquisition index mismatch")
     for name in ("source-lock.json", "SOURCE_DELIVERY.md", "source-provenance.json"):
-        if (destination / name).read_bytes() != (source / name).read_bytes():
+        expected = (
+            document_bytes(source / name)
+            if name == "SOURCE_DELIVERY.md"
+            else (source / name).read_bytes()
+        )
+        if (destination / name).read_bytes() != expected:
             raise ValueError("Source metadata mismatch")
     if bundled:
         validate_cache(destination, lock)

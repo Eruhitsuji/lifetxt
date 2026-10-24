@@ -15,7 +15,7 @@ from urllib.parse import urlsplit
 from contrib.browser_check_poc import build as builder
 from contrib.browser_check_poc.distribution_audit import audit, digest
 from contrib.browser_check_poc.notice_inventory import validate_notices
-from contrib.browser_check_poc.publication_gate import evaluate, P1, P2
+from contrib.browser_check_poc.publication_gate import evaluate, P1, P2, NEW_P2
 from contrib.browser_check_poc.source_probe import validate_generated_sysconfig
 from scripts.build_website_checker import build
 from scripts.check_website import Document
@@ -31,26 +31,31 @@ class PublicationGateTests(unittest.TestCase):
             "manifest_sha256": "b" * 64,
         }
         record = {
-            "schema_version": 1,
+            "schema_version": 2,
             "target_commit": facts["commit"],
             "manifest_sha256": facts["manifest_sha256"],
-            "implementer": "Codex",
+            "implementer_tools": ["codex"],
             "findings": {
-                key: {"status": "fixed", "evidence": "synthetic-test-only"}
-                for key in P1 | P2
+                key: {
+                    "status": "fixed",
+                    "evidence": "https://github.com/Eruhitsuji/lifetxt/issues/1398#issuecomment-123",
+                }
+                for key in P1 | P2 | NEW_P2
             },
             "source_retention": {
                 "owner": "Eruhitsuji",
                 "minimum_period": "entire-binary-distribution-period",
-                "reference": "synthetic-test-only",
+                "reference": "https://github.com/Eruhitsuji/lifetxt/pull/1412#issuecomment-123",
             },
             "reviews": [
                 {
                     "type": t,
-                    "reviewer": "Independent synthetic reviewer",
+                    "reviewer_login": "Eruhitsuji",
+                    "reviewer_kind": "ai-assisted",
+                    "reviewer_tool": "claude-code",
                     "target_commit": facts["commit"],
                     "result": "accepted",
-                    "reference": "synthetic-test-only",
+                    "reference": "https://github.com/Eruhitsuji/lifetxt/pull/1412#issuecomment-123",
                 }
                 for t in ("implementation-distribution", "integration")
             ],
@@ -59,10 +64,10 @@ class PublicationGateTests(unittest.TestCase):
                 "decision": "approved",
                 "target_commit": facts["commit"],
                 "manifest_sha256": facts["manifest_sha256"],
-                "reference": "synthetic-test-only",
+                "reference": "https://github.com/Eruhitsuji/lifetxt/pull/1412#issuecomment-123",
             },
         }
-        for key in ("P2-6", "P2-7"):
+        for key in ("P2-6", "P2-7", "N-3"):
             record["findings"][key].update(
                 status="owner-risk-accepted",
                 owner="Eruhitsuji",
@@ -77,6 +82,9 @@ class PublicationGateTests(unittest.TestCase):
         self.assertTrue(report["complete_distribution_audit"])
         self.assertTrue(report["public_distribution_approved"])
         self.assertEqual(report["blockers"], [])
+        self.assertFalse(report["authority_verified"])
+        self.assertTrue(report["human_reference_verification_required"])
+        self.assertEqual(report["record_shape_and_binding"], "passed")
         # Distribution review is distinct from publication permission.
         record.pop("publication_approval")
         report = evaluate(facts, record)
@@ -114,7 +122,7 @@ class PublicationGateTests(unittest.TestCase):
                 elif mode == "dirty":
                     facts["source_clean"] = False
                 elif mode == "identity":
-                    record["implementer"] = None
+                    record["implementer_tools"] = []
                 elif mode == "p1":
                     record["findings"]["P1-1"]["status"] = "owner-risk-accepted"
                 elif mode == "p2":
@@ -126,7 +134,7 @@ class PublicationGateTests(unittest.TestCase):
                 elif mode == "owner":
                     record["findings"]["P2-7"]["owner"] = "Implementer"
                 elif mode == "self":
-                    record["reviews"][0]["reviewer"] = "Codex"
+                    record["reviews"][0]["reviewer_tool"] = "Codex"
                 elif mode == "review":
                     record["reviews"][1]["target_commit"] = "c" * 40
                 elif mode == "retention":
@@ -141,6 +149,47 @@ class PublicationGateTests(unittest.TestCase):
             (builder.SOURCE / "publication-review.example.json").read_text("utf-8")
         )
         self.assertFalse(evaluate(facts, pending)["complete_distribution_audit"])
+
+    def test_reported_case_alias_identity_and_reference_bypasses_fail(self):
+        for mode in (
+            "case-tool",
+            "case-login",
+            "alias-implementer",
+            "evidence-x",
+            "reference-x",
+            "external-url",
+            "bad-owner",
+        ):
+            with self.subTest(mode=mode):
+                facts, record = self.fixture()
+                if mode == "case-tool":
+                    record["reviews"][0]["reviewer_tool"] = "CoDeX"
+                elif mode == "case-login":
+                    record["reviews"][0].update(
+                        reviewer_login="codex",
+                        reviewer_kind="human",
+                        reviewer_tool=None,
+                    )
+                elif mode == "alias-implementer":
+                    record["implementer_tools"] = ["another-tool"]
+                elif mode == "evidence-x":
+                    for e in record["findings"].values():
+                        e["evidence"] = "x"
+                elif mode == "reference-x":
+                    record["reviews"][0]["reference"] = "x"
+                elif mode == "external-url":
+                    record["reviews"][0]["reference"] = (
+                        "https://github.com/other/repo/pull/1#issuecomment-123"
+                    )
+                else:
+                    record["publication_approval"]["owner"] = "other-person"
+                self.assertFalse(
+                    evaluate(facts, record)["public_distribution_approved"]
+                )
+        facts, record = self.fixture()
+        record["reviews"][0]["reviewer_login"] = "ERUHITSUJI"
+        record["source_retention"]["owner"] = "eruhitsuji"
+        self.assertTrue(evaluate(facts, record)["public_distribution_approved"])
 
 
 class FinalArtifactTests(unittest.TestCase):
@@ -189,7 +238,7 @@ class FinalArtifactTests(unittest.TestCase):
             notices = json.loads(
                 (source / "notices/provenance.json").read_text("utf-8")
             )
-            self.assertEqual(len(notices["files"]), 25)
+            self.assertEqual(len(notices["files"]), 28)
             for entry in notices["files"]:
                 self.assertIn(entry["file"], page.links)
             for directory in ("notices", "sources"):
@@ -232,6 +281,117 @@ class FinalArtifactTests(unittest.TestCase):
                     ):
                         audit(target, source)
                     shutil.rmtree(target)
+
+    def test_host_encoding_and_crlf_defaults_do_not_change_final_artifact(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            source = self.source_fixture(root)
+            a, b = root / "unix", root / "windows"
+            with patch.object(builder, "SOURCE", source):
+                build(a)
+                original_read, original_write = Path.read_text, Path.write_text
+
+                def windows_read(path, encoding=None, **kwargs):
+                    return original_read(path, encoding=encoding or "cp932", **kwargs)
+
+                def windows_write(path, text, encoding=None, newline=None, **kwargs):
+                    return original_write(
+                        path,
+                        text,
+                        encoding=encoding or "cp932",
+                        newline="\r\n" if newline is None else newline,
+                        **kwargs,
+                    )
+
+                with (
+                    patch.object(Path, "read_text", windows_read),
+                    patch.object(Path, "write_text", windows_write),
+                ):
+                    build(b)
+                    self.assertEqual(audit(b, source)["integrity"], "passed")
+            files = [p.relative_to(a) for p in a.rglob("*") if p.is_file()]
+            self.assertTrue(files)
+            for name in files:
+                self.assertEqual(
+                    (a / name).read_bytes(), (b / name).read_bytes(), str(name)
+                )
+            with zipfile.ZipFile(a / "checker/core.zip") as archive:
+                self.assertTrue(
+                    all(
+                        i.create_system == 3 and i.compress_type == zipfile.ZIP_STORED
+                        for i in archive.infolist()
+                    )
+                )
+            # Original notices may intentionally have CRLF; generated indexes do not.
+            for name in (
+                "checker/notices/index.html",
+                "checker/sources/index.html",
+                "ja/check/index.html",
+                "manifest.json",
+            ):
+                self.assertNotIn(b"\r\n", (b / name).read_bytes())
+            source_document = (b / "checker/sources/SOURCE_DELIVERY.md").read_bytes()
+            self.assertNotIn(b"/blob/main/", source_document)
+            import subprocess
+
+            sha = subprocess.check_output(
+                ["git", "rev-parse", "HEAD"], cwd=builder.ROOT, text=True
+            ).strip()
+            self.assertIn(("/blob/" + sha + "/").encode(), source_document)
+
+    def test_rehashed_core_zip_trailing_bytes_and_zip_metadata_are_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            source = self.source_fixture(root)
+            site = root / "site"
+            with patch.object(builder, "SOURCE", source):
+                build(site)
+            core = site / "checker/core.zip"
+            original = core.read_bytes()
+            for mode in ("trailing", "zip-comment"):
+                with self.subTest(mode=mode):
+                    core.write_bytes(original)
+                    if mode == "trailing":
+                        core.write_bytes(original + b"appended garbage")
+                    else:
+                        with zipfile.ZipFile(core, "a") as archive:
+                            archive.comment = b"unreviewed ZIP metadata"
+                    manifest_path = site / "manifest.json"
+                    manifest = json.loads(manifest_path.read_text("utf-8"))
+                    manifest["files"]["checker/core.zip"] = digest(core)
+                    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+                    with self.assertRaisesRegex(ValueError, "Core ZIP bytes"):
+                        audit(site, source)
+
+    def test_mapping_sources_and_terms_evidence_remain_separate_and_hash_bound(self):
+        source = builder.SOURCE
+        lock = json.loads((source / "source-lock.json").read_text("utf-8"))
+        cpython = next(e for e in lock["archives"] if e["id"] == "cpython")
+        data = json.loads(
+            (source / "notices/mapping-attribution.json").read_text("utf-8")
+        )
+        self.assertEqual(data["source_archive_sha256"], cpython["sha256"])
+        rows = {e["id"]: e for e in data["inputs"]}
+        self.assertEqual(
+            set(rows),
+            {
+                "ucd-16-and-3.2",
+                "unicode-mappings",
+                "hkscs-2004",
+                "icu-gb18030",
+                "jis-x-0213",
+                "gb2312",
+            },
+        )
+        self.assertIn("3.2.0", rows["ucd-16-and-3.2"]["origin"])
+        for key in ("hkscs-2004", "icu-gb18030"):
+            self.assertTrue(rows[key]["review_status"].startswith("unresolved-"))
+        for row in rows.values():
+            for member in row["evidence_members"]:
+                self.assertEqual(
+                    cpython["required_members"][member["member"]], member["sha256"]
+                )
+        self.assertFalse(data["public_distribution_approved"])
 
     def test_repository_document_links_and_notice_sections_resolve(self):
         for relative in ("SOURCE_DELIVERY.md", "notices/README.md"):

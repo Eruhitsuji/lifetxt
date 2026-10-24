@@ -309,16 +309,16 @@
     },
     {
       "name": "Unicode Character Database derived tables",
-      "version": "16.0.0",
+      "version": "16.0.0 and legacy 3.2.0",
       "notice": "unicode-license-v3-2026.txt",
-      "basis": "CPython Tools/unicode/makeunicodedata.py and generated UCD tables; unicodedata runtime version independently probed",
+      "basis": "makeunicodedata.py includes old_versions=[3.2.0]; actual unicodedata version and ucd_3_2_0.unidata_version probed; generated character/name/type tables",
       "licence": "Unicode-3.0"
     },
     {
-      "name": "unicode.org mapping-derived codecs",
+      "name": "Unicode MAPPINGS-derived codecs (bounded subset)",
       "version": "CPython 3.14.2",
       "notice": "unicode-license-v3-2026.txt",
-      "basis": "Lib/encodings and Tools/unicode/genmap_* unicode.org mapping inputs; includes CJK tables in WASM; not a per-table provenance attestation",
+      "basis": "genmap generators identify Unicode CP932/936/949/950, JIS0208/0212 and BIG5 inputs; eight-bit encodings include Unicode mappings and other contributions. Separate HKSCS/ICU/JISX0213/GB2312 sources are itemized in mapping-attribution.json.",
       "licence": "Unicode-3.0"
     },
     {
@@ -359,6 +359,41 @@
       "basis": "Modules/_randommodule.c; _random builtin observed",
       "licence": "See original notice",
       "notice_section": "Mersenne Twister"
+    },
+    {
+      "name": "Unicode legacy UCD release identification",
+      "version": "3.2.0",
+      "notice": "unicode-ucd-3.2.0-ReadMe.txt",
+      "licence": "Unicode data terms; ReadMe identifies release, not legal clearance",
+      "basis": "makeunicodedata.py and actual unicodedata.ucd_3_2_0"
+    },
+    {
+      "name": "HKSCS mapping-derived CJK tables",
+      "version": "2004",
+      "notice": null,
+      "licence": "Unresolved HKSARG permission scope; not Unicode V3 or blanket PSF clearance",
+      "basis": "genmap_tchinese.py identifies restrictive HKSARG input; mapping-attribution.json records terms assessment and publication blocker"
+    },
+    {
+      "name": "ICU GB18030 mapping-derived CJK tables",
+      "version": "GB18030-2000 XML version 3",
+      "notice": null,
+      "licence": "Historical ICU input licence not established; publication blocker",
+      "basis": "genmap_schinese.py and retained python-mappings/gb-18030-2000.xml; missing per-input licence is explicit"
+    },
+    {
+      "name": "JIS X 0213 mapping-derived CJK tables",
+      "version": "2004, retained mapping dated 2004-07-07",
+      "notice": "jisx0213-cpython-3.14.2-header.txt",
+      "licence": "Original header grants use/modification/distribution; copyright retained",
+      "basis": "genmap_japanese.py historical wakaba-web input and exact source header"
+    },
+    {
+      "name": "GB2312 mapping-derived CJK tables",
+      "version": "GB2312-80; retained table 1999-10-08",
+      "notice": "gb2312-cpython-3.14.2-header.txt",
+      "licence": "Original Unicode 1991-1999 data notice; not a licence inferred from FreeBSD hosting",
+      "basis": "genmap_schinese.py historical FreeBSD endpoint; exact retained table/header independently inspected"
     }
   ],
   "public_distribution_approved": false,
@@ -366,7 +401,8 @@
     "Independent final-head distribution and integration re-review of #1411 repairs",
     "Owner judgment on P2-6 archive correspondence limits and P2-7 official-release/recipe evidence vs rebuilding; unverified remains unverified",
     "Owner acceptance of same-origin source retention throughout binary availability",
-    "Separate explicit publication and deployment approval; device/browser acceptance remains #1400"
+    "Separate explicit publication and deployment approval; device/browser acceptance remains #1400",
+    "N-3 source-specific HKSCS derived-table permission and historical ICU XML terms need documented independent/Owner resolution; generic CPython/Unicode notices do not clear them"
   ],
   "source_delivery_issue": 1409
 }

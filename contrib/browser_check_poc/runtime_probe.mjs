@@ -7,6 +7,6 @@ const runtime = await loadPyodide({indexURL: directory + '/'});
 console.log(runtime.runPython(`
 import json, sqlite3, _zstd, unicodedata, sysconfig
 json.dumps({"sqlite": sqlite3.sqlite_version, "zstd": _zstd.zstd_version,
-            "ucd": unicodedata.unidata_version,
+            "ucd": unicodedata.unidata_version, "legacy_ucd": unicodedata.ucd_3_2_0.unidata_version,
             "with_mimalloc": sysconfig.get_config_var("WITH_MIMALLOC")}, sort_keys=True)
 `));

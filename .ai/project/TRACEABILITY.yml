@@ -18657,6 +18657,8 @@ traceability:
         - tests/test_browser_distribution_audit.py
         - contrib/browser_check_poc/source-provenance.json
         - .ai/project/changes/browser-distribution-review/verification.yml
+        - contrib/browser_check_poc/PUBLICATION_REVIEW.md
+        - contrib/browser_check_poc/notices/mapping-attribution.json
       status: implemented
 
   gap_policy:

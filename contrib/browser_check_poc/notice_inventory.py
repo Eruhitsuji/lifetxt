@@ -25,7 +25,14 @@ def validate_notices(source, runtime=None):
             or "\\" in name
             or ":" in name
             or name in names
-            or name in ("README.md", "provenance.json", "components.json", "index.html")
+            or name
+            in (
+                "README.md",
+                "provenance.json",
+                "components.json",
+                "index.html",
+                "mapping-attribution.json",
+            )
         ):
             raise ValueError("Notice name must be a unique basename")
         url = urlsplit(entry["source_url"])
@@ -73,7 +80,15 @@ def validate_notices(source, runtime=None):
                 hashlib.sha256(data).hexdigest() != expected["sha256"]
             ):
                 raise ValueError("Runtime differs from retained inventory: " + name)
-    return sorted(names + ["README.md", "provenance.json", "components.json"])
+    return sorted(
+        names
+        + [
+            "README.md",
+            "provenance.json",
+            "components.json",
+            "mapping-attribution.json",
+        ]
+    )
 
 
 def render_notice_index(source):
@@ -108,7 +123,7 @@ def render_notice_index(source):
 <meta name="viewport" content="width=device-width, initial-scale=1"><title>Third-party notices | lifetxt</title></head><body>
 <h1>Third-party notices / 第三者ライセンス一覧</h1>
 <p>These source notices preserve their original terms. Inclusion is not exhaustive binary attribution or publication clearance.</p>
-<p><a href="components.json">Components, versions and evidence / 構成と確認範囲</a> · <a href="provenance.json">Notice provenance and hashes</a> · <a href="../sources/index.html">Source downloads / ソース取得</a></p><ul>"""
+<p><a href="README.md">Inventory guide / 説明</a> · <a href="components.json">Components, versions and evidence / 構成と確認範囲</a> · <a href="mapping-attribution.json">Mapping source and terms assessment</a> · <a href="provenance.json">Notice provenance and hashes</a> · <a href="../sources/index.html">Source downloads / ソース取得</a></p><ul>"""
         + "".join(rows)
         + "</ul></body></html>\n"
     )
@@ -116,7 +131,7 @@ def render_notice_index(source):
 
 def write_notice_index(destination, source):
     (destination / "index.html").write_text(
-        render_notice_index(source), encoding="utf-8"
+        render_notice_index(source), encoding="utf-8", newline="\n"
     )
 
 
@@ -130,7 +145,7 @@ def audit_notice_index(destination, source):
 
     links = Document((destination / "index.html").read_text("utf-8")).links
     names = validate_notices(source)
-    if not set(names).issubset(set(links) | {"README.md"}):
+    if not set(names).issubset(set(links)):
         raise ValueError("Notice index does not link every notice and metadata file")
     for name in names:
         if not (destination / name).is_file():

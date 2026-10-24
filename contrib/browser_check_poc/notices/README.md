@@ -1,7 +1,6 @@
 # Runtime notice snapshots — independent acceptance pending
 
-The current inventory contains **25 notice documents** (23 preceding #1411,
-plus the full official Unicode License V3 and UCD 16.0.0 ReadMe). Original source
+The current inventory contains **28 notice documents** (25 before the second review, plus original GB2312/JIS X 0213 headers and the UCD3.2 release ReadMe). Original source
 URLs, retrieval details, hashes and selection/normalization are recorded in
 [provenance.json](provenance.json). [components.json](components.json) maps known
 components/versions to the applicable documents and, where relevant, sections.
@@ -16,9 +15,7 @@ in the source tree.
 
 Unicode License V3 was retrieved unchanged from the official Unicode site on
 2026-10-25 (its current copyright range is 1991–2026). The original UCD16 ReadMe
-retains its 2024 copyright and terms reference. The scope includes UCD16-derived
-CPython character/name/type tables, unicode.org mapping-derived encodings and
-CJK generated tables. This is not a new provenance claim for every individual
+retains its 2024 copyright and terms reference. The Unicode scope includes UCD16 and legacy UCD3.2 tables and identified Unicode MAPPINGS inputs. CJK tables also use HKSCS, historical ICU, JIS X 0213 and GB2312 sources; [mapping attribution](mapping-attribution.json) distinguishes their terms and open permission questions. This is not a new provenance claim for every individual
 mapping input; independent scope/attribution assessment remains required.
 
 The complete CPython software notice document covers mimalloc, SipHash24,

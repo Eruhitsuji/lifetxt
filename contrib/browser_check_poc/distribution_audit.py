@@ -14,6 +14,7 @@ from contrib.browser_check_poc.notice_inventory import (
     audit_notice_index,
 )
 from contrib.browser_check_poc.publication_gate import evaluate
+from contrib.browser_check_poc.artifact_documents import document_bytes
 from scripts.check_website import Document
 
 
@@ -138,7 +139,12 @@ def audit(output, source=builder.SOURCE, review_record=None):
         if digest(assets / name) != bound:
             raise ValueError("Runtime differs from audited binary: " + name)
     for name in notices:
-        if digest(assets / "notices" / name) != digest(source / "notices" / name):
+        expected_notice = (
+            document_bytes(source / "notices" / name)
+            if name == "README.md"
+            else (source / "notices" / name).read_bytes()
+        )
+        if (assets / "notices" / name).read_bytes() != expected_notice:
             raise ValueError("Notice differs from reviewed source: " + name)
     poc_assets = (
         ("index.html", "ui.mjs", "worker.mjs", "engine.mjs", "adapter.py", "style.css")
@@ -158,6 +164,8 @@ def audit(output, source=builder.SOURCE, review_record=None):
         f"lifetxt/{n}.py" for n in sorted(builder.CORE_MODULES)
     ]:
         raise ValueError("Core module allowlist mismatch")
+    if (assets / "core.zip").read_bytes() != builder.core_archive_bytes():
+        raise ValueError("Core ZIP bytes differ from deterministic source archive")
     with zipfile.ZipFile(assets / "core.zip") as archive:
         expected_members = set(manifest["core_modules"]) | {"LICENSE"}
         if (
@@ -226,7 +234,11 @@ def audit(output, source=builder.SOURCE, review_record=None):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("artifact", type=Path)
-    parser.add_argument("--require-publication", action="store_true")
+    parser.add_argument(
+        "--require-publication",
+        action="store_true",
+        help="Require a complete approval claim in the record; human reference authentication in PUBLICATION_REVIEW.md is still mandatory",
+    )
     parser.add_argument(
         "--review-record",
         type=Path,

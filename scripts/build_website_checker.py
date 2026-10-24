@@ -107,7 +107,9 @@ def build(output, source_cache=None, *, publication_candidate=False):
         for lang in COPY:
             page = output / lang / "check"
             page.mkdir()
-            (page / "index.html").write_text(render(lang), encoding="utf-8")
+            (page / "index.html").write_text(
+                render(lang), encoding="utf-8", newline="\n"
+            )
         from contrib.browser_check_poc.build import SOURCE as poc_source, write_manifest
         from contrib.browser_check_poc.distribution_audit import audit
 

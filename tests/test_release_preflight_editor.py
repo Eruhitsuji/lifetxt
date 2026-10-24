@@ -46,7 +46,7 @@ class EditorArtifactTests(unittest.TestCase):
                 },
             }).encode(),
             "extension/release.json": json.dumps(editor.metadata(self.candidate, self.version)).encode(),
-            "extension/README.md": self.staged_readme.read_bytes(),
+            "extension/readme.md": self.staged_readme.read_bytes(),
             "extension/extension.js": b"exports.activate = function () {};",
             "extension/language-configuration.json": b"{}",
             "extension/syntaxes/lifetxt.tmLanguage.json": b"{}",
@@ -101,13 +101,20 @@ class EditorArtifactTests(unittest.TestCase):
 
     def test_vsix_rejects_mismatched_readme_source_permalinks(self):
         files = dict(self.vsix_files)
-        files["extension/README.md"] = files["extension/README.md"].replace(
+        files["extension/readme.md"] = files["extension/readme.md"].replace(
             self.candidate["source_sha"].encode(), ("f" * 40).encode()
         )
         self.pack(self.vsix, files)
         with self.assertRaises(ValueError):
             editor.validate_payload(self.candidate, self.payload)
 
+
+    def test_readme_case_collision_is_rejected(self):
+        files = dict(self.vsix_files)
+        files["extension/README.md"] = files["extension/readme.md"]
+        self.pack(self.vsix, files)
+        with self.assertRaisesRegex(ValueError, "duplicate editor archive entry"):
+            editor.validate_payload(self.candidate, self.payload)
 
     def test_valid_bytes_have_independent_editor_version(self):
         self.assertEqual(editor.validate_payload(self.candidate, self.payload), "0.2.0")
@@ -120,7 +127,7 @@ class EditorArtifactTests(unittest.TestCase):
             "extension/node_modules/vscode-languageclient/node.js",
             "extension/node_modules/vscode-languageclient/lib/node/main.js",
             "extension/release.json",
-            "extension/README.md",
+            "extension/readme.md",
         ):
             entries = dict(self.vsix_files)
             del entries[victim]

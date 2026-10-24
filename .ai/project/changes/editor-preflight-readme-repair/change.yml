@@ -1,0 +1,36 @@
+schema_version: 1
+change:
+  id: editor-preflight-readme-repair
+  title: Fix source-pinned README links in Windows VSIX preflight
+  status: in_review
+  change_type: Bug
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1394
+  related_pull_request: null
+  base_commit: a9fd7b4e8ba62c2e0e5d5e844dd8f39bfd5c7f5a
+scope:
+  in_scope:
+    - Transform only staged VSIX README links to immutable source SHA permalinks
+    - Validate packaged README links and add fault-injection tests
+  out_of_scope:
+    - Publishing a Release, updating tag, changing version or authorization
+    - Modifying tracked VS Code README or original 13 preflight targets
+  write_scope:
+    - scripts/release_preflight_editor.py
+    - tests/test_release_preflight_editor.py
+    - .ai/project/changes/editor-preflight-readme-repair/**
+    - .ai/project/TRACEABILITY.yml
+  forbidden_scope:
+    - .ai/managed/**
+    - .github/workflows/release.yml
+    - scripts/release_canonical.py
+    - scripts/release_channels.py
+    - tags, assets, publication, secrets, merge
+  shared_files:
+    - scripts/release_preflight_editor.py
+human_approvals_required:
+  - Independent High assurance implementation and integration review of final head
+  - Owner merge approval
+  - Separate human Release Authority approval for future publishing

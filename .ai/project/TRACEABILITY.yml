@@ -18650,13 +18650,13 @@ traceability:
       capability_id: cap-official-website
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1398
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1411
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1412
       tests_or_evidence:
-      - tests/test_browser_review_remediation.py
-      - tests/test_browser_source_delivery.py
-      - tests/test_browser_distribution_audit.py
-      - contrib/browser_check_poc/source-provenance.json
-      - .ai/project/changes/browser-distribution-review/verification.yml
+        - tests/test_browser_review_remediation.py
+        - tests/test_browser_source_delivery.py
+        - tests/test_browser_distribution_audit.py
+        - contrib/browser_check_poc/source-provenance.json
+        - .ai/project/changes/browser-distribution-review/verification.yml
       status: implemented
 
   gap_policy:

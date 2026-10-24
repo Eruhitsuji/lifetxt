@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "target_commit": null,
+  "manifest_sha256": null,
+  "implementer": "Codex",
+  "findings": {
+    "P1-1": {
+      "status": "pending",
+      "evidence": null
+    },
+    "P1-2": {
+      "status": "pending",
+      "evidence": null
+    },
+    "P1-3": {
+      "status": "pending",
+      "evidence": null
+    },
+    "P1-4": {
+      "status": "pending",
+      "evidence": null
+    },
+    "P2-5": {
+      "status": "pending",
+      "evidence": null,
+      "owner": null,
+      "verified_scope": null,
+      "remaining_risk": null
+    },
+    "P2-6": {
+      "status": "pending",
+      "evidence": null,
+      "owner": null,
+      "verified_scope": null,
+      "remaining_risk": null
+    },
+    "P2-7": {
+      "status": "pending",
+      "evidence": null,
+      "owner": null,
+      "verified_scope": null,
+      "remaining_risk": null
+    },
+    "P2-8": {
+      "status": "pending",
+      "evidence": null,
+      "owner": null,
+      "verified_scope": null,
+      "remaining_risk": null
+    }
+  },
+  "source_retention": {
+    "owner": null,
+    "minimum_period": "entire-binary-distribution-period",
+    "reference": null
+  },
+  "reviews": [
+    {
+      "type": "implementation-distribution",
+      "reviewer": null,
+      "result": "pending",
+      "target_commit": null,
+      "reference": null
+    },
+    {
+      "type": "integration",
+      "reviewer": null,
+      "result": "pending",
+      "target_commit": null,
+      "reference": null
+    }
+  ],
+  "publication_approval": {
+    "owner": null,
+    "decision": "pending",
+    "target_commit": null,
+    "manifest_sha256": null,
+    "reference": null
+  }
+}

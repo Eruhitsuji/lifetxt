@@ -18646,6 +18646,19 @@ traceability:
         - .ai/project/changes/browser-source-delivery/verification.yml
       status: implemented
 
+    - requirement_id: req-browser-distribution-review-remediation-v1
+      capability_id: cap-official-website
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1398
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1411
+      pull_request: null
+      tests_or_evidence:
+      - tests/test_browser_review_remediation.py
+      - tests/test_browser_source_delivery.py
+      - tests/test_browser_distribution_audit.py
+      - contrib/browser_check_poc/source-provenance.json
+      - .ai/project/changes/browser-distribution-review/verification.yml
+      status: implemented
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

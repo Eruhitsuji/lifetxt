@@ -45,7 +45,7 @@ class BrowserCheckPocTests(unittest.TestCase):
                     first.unlink()
                 else:
                     path = source / "notices/components.json"
-                    data = json.loads(path.read_text())
+                    data = json.loads(path.read_text("utf-8"))
                     if failure == "complete":
                         data["complete_distribution_audit"] = True
                     elif failure == "reference":
@@ -65,7 +65,7 @@ class BrowserCheckPocTests(unittest.TestCase):
         from lifetxt.parser import parse_text
         from lifetxt.diagnostic_contract import diagnostics_to_output
 
-        for fixture in json.loads((SOURCE / "fixtures.json").read_text()):
+        for fixture in json.loads((SOURCE / "fixtures.json").read_text("utf-8")):
             with self.subTest(name=fixture["name"]):
                 result = check_text(fixture["text"])
                 parsed = parse_text(fixture["text"])
@@ -106,7 +106,7 @@ class BrowserCheckPocTests(unittest.TestCase):
                 (runtime / name).write_text("runtime fixture")
             # This test builds synthetic runtime files, not the real pinned binary.
             inventory_path = source / "notices/components.json"
-            inventory = json.loads(inventory_path.read_text())
+            inventory = json.loads(inventory_path.read_text("utf-8"))
             for entry in inventory["runtime_observations"]["runtime_files"].values():
                 entry["bytes"] = len(b"runtime fixture")
                 entry["sha256"] = hashlib.sha256(b"runtime fixture").hexdigest()
@@ -152,7 +152,7 @@ class BrowserCheckPocTests(unittest.TestCase):
                 self.assertEqual(
                     {entry.date_time for entry in z.infolist()}, {(2026, 1, 1, 0, 0, 0)}
                 )
-            manifest = json.loads((a / "manifest.json").read_text())
+            manifest = json.loads((a / "manifest.json").read_text("utf-8"))
             self.assertEqual(manifest["pyodide"], builder.VERSION)
             for notice in (SOURCE / "notices").iterdir():
                 copied = a / "notices" / notice.name
@@ -168,7 +168,7 @@ class BrowserCheckPocTests(unittest.TestCase):
             )
 
     def test_notice_provenance_and_distribution_gap_are_preserved(self):
-        provenance = json.loads((SOURCE / "notices/provenance.json").read_text())
+        provenance = json.loads((SOURCE / "notices/provenance.json").read_text("utf-8"))
         self.assertFalse(provenance["complete_distribution_audit"])
         for notice in provenance["files"]:
             stored = (SOURCE / "notices" / notice["file"]).read_bytes()
@@ -176,7 +176,9 @@ class BrowserCheckPocTests(unittest.TestCase):
                 hashlib.sha256(stored).hexdigest(), notice["stored_sha256"]
             )
             self.assertTrue(
-                notice["source_url"].startswith("https://raw.githubusercontent.com/")
+                notice["source_url"].startswith(
+                    ("https://raw.githubusercontent.com/", "https://www.unicode.org/")
+                )
             )
 
     @unittest.skipUnless(shutil.which("node"), "Node.js not available")

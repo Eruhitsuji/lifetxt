@@ -38,6 +38,10 @@ class SourceDeliveryTests(unittest.TestCase):
         shutil.copyfile(
             delivery.SOURCE / "SOURCE_DELIVERY.md", source / "SOURCE_DELIVERY.md"
         )
+        shutil.copyfile(
+            delivery.SOURCE / "source-provenance.json",
+            source / "source-provenance.json",
+        )
         return source, cache, lock
 
     def test_offline_links_and_complete_bundle_have_different_explicit_modes(self):
@@ -56,7 +60,7 @@ class SourceDeliveryTests(unittest.TestCase):
                     )
                     report, paths = delivery.audit_delivery(output, source)
                     self.assertEqual(report["archive_count"], 10)
-                    self.assertEqual(len(paths), 13 if mode == "bundle" else 3)
+                    self.assertEqual(len(paths), 14 if mode == "bundle" else 4)
                     self.assertEqual(
                         report["mode"],
                         "hash-verified-self-hosted-archives"
@@ -65,11 +69,35 @@ class SourceDeliveryTests(unittest.TestCase):
                     )
                     self.assertFalse((output / "sources/pyodide-core.tar.bz2").exists())
                     self.assertIn(
-                        "MPL-2.0", (output / "sources/index.html").read_text()
+                        "MPL-2.0", (output / "sources/index.html").read_text("utf-8")
                     )
                     self.assertNotIn(
-                        "<script", (output / "sources/index.html").read_text()
+                        "<script", (output / "sources/index.html").read_text("utf-8")
                     )
+
+    def test_delivery_is_utf8_with_legacy_windows_default_encoding(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            source, cache, lock = self.fixture(root)
+            output = root / "site"
+            output.mkdir()
+            original_read, original_write = Path.read_text, Path.write_text
+
+            def legacy_read(path, encoding=None, **kwargs):
+                return original_read(path, encoding=encoding or "cp932", **kwargs)
+
+            def legacy_write(path, data, encoding=None, **kwargs):
+                return original_write(
+                    path, data, encoding=encoding or "cp932", **kwargs
+                )
+
+            with (
+                patch.object(Path, "read_text", legacy_read),
+                patch.object(Path, "write_text", legacy_write),
+            ):
+                delivery.write_delivery(output / "sources", source, cache)
+                status, _ = delivery.audit_delivery(output, source)
+            self.assertEqual(status["mode"], "hash-verified-self-hosted-archives")
 
     def test_missing_changed_partial_extra_and_rehashed_source_fail(self):
         for mode in (
@@ -157,7 +185,9 @@ class SourceDeliveryTests(unittest.TestCase):
                     lock["complete_distribution_audit"] = True
                 else:
                     lock["public_distribution_approved"] = True
-                (source / "source-lock.json").write_text(json.dumps(lock))
+                (source / "source-lock.json").write_text(
+                    json.dumps(lock), encoding="utf-8"
+                )
                 with self.assertRaises(ValueError):
                     delivery.load_lock(source)
         for url in (

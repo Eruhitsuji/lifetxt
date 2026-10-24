@@ -2,6 +2,7 @@
 
 import argparse
 import html
+import json
 from pathlib import Path
 import shutil
 import sys
@@ -28,7 +29,8 @@ COPY = {
         "cancel": "キャンセル・すべて消去",
         "recovery": "失敗・時間切れでは入力・結果・ランタイムを消去します。接続を確認し、再入力してチェックしてください。別ページへの移動・閉じる操作では入力を保持しません。",
         "noscript": "このチェック機能にはJavaScriptが必要です。CLIを利用することもできます。",
-        "notices": "ライセンス・ソース提供の未解決事項",
+        "notices": "第三者ライセンス一覧",
+        "sources": "ソース取得・確認範囲",
     },
     "en": {
         "title": "Grammar and item check",
@@ -43,7 +45,8 @@ COPY = {
         "cancel": "Cancel / clear everything",
         "recovery": "Failure or timeout clears input, results and runtime. Check your connection, paste again and retry. Navigating away or closing the page does not retain input.",
         "noscript": "JavaScript is required for this checker. You can also use the CLI.",
-        "notices": "Licences and unresolved source-delivery requirements",
+        "notices": "Third-party notices",
+        "sources": "Source downloads and evidence limits",
     },
 }
 
@@ -71,11 +74,15 @@ def render(lang, base=DEFAULT_URL):
 <button class="button" type="button" id="cancel" disabled>{c["cancel"]}</button></div>
 <p id="status" role="status" aria-live="polite"></p><pre id="output" tabindex="0" aria-label="{c["title"]}"></pre>
 <noscript><p>{c["noscript"]}</p></noscript>
-<p><a href="../../checker/sources/index.html">{c["notices"]}</a></p>
+<p><a href="../../checker/notices/index.html">{c["notices"]}</a> · <a href="../../checker/sources/index.html">{c["sources"]}</a></p>
 </main></body></html>'''
 
 
-def build(output, source_cache=None):
+def build(output, source_cache=None, *, publication_candidate=False):
+    if publication_candidate and source_cache is None:
+        raise ValueError(
+            "Publication candidates require all verified same-origin source archives"
+        )
     output = Path(output).resolve()
     protected = ("website", "assets", "lifetxt", "scripts", "tests", "contrib", ".ai")
     if output == ROOT or any(output.is_relative_to(ROOT / name) for name in protected):
@@ -101,6 +108,12 @@ def build(output, source_cache=None):
             page = output / lang / "check"
             page.mkdir()
             (page / "index.html").write_text(render(lang), encoding="utf-8")
+        from contrib.browser_check_poc.build import SOURCE as poc_source, write_manifest
+        from contrib.browser_check_poc.distribution_audit import audit
+
+        manifest = json.loads((poc / "manifest.json").read_text("utf-8"))
+        write_manifest(output, manifest["core_modules"], "website-checker")
+        audit(output, poc_source)
 
 
 if __name__ == "__main__":
@@ -109,5 +122,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "--source-cache", type=Path, help="Offline source archives for local preview"
     )
+    parser.add_argument(
+        "--publication-candidate",
+        action="store_true",
+        help="Require same-origin source bundle; does not approve publication",
+    )
     args = parser.parse_args()
-    build(args.output, args.source_cache)
+    build(
+        args.output, args.source_cache, publication_candidate=args.publication_candidate
+    )

@@ -599,6 +599,26 @@
         }
       ],
       "selection": "whole"
+    },
+    {
+      "file": "unicode-license-v3-2026.txt",
+      "source_url": "https://www.unicode.org/license.txt",
+      "retrieved_on": "2026-10-25",
+      "selection": "whole",
+      "original_sha256": "e7a93b009565cfce55919a381437ac4db883e9da2126fa28b91d12732bc53d96",
+      "stored_sha256": "e7a93b009565cfce55919a381437ac4db883e9da2126fa28b91d12732bc53d96",
+      "normalization": "none",
+      "scope": "Unicode UCD 16.0.0 derived tables and unicode.org mapping-derived codecs in CPython 3.14.2; current official Unicode License V3 retained with original UCD copyright notice"
+    },
+    {
+      "file": "unicode-ucd-16.0.0-ReadMe.txt",
+      "source_url": "https://www.unicode.org/Public/16.0.0/ucd/ReadMe.txt",
+      "retrieved_on": "2026-10-25",
+      "selection": "whole",
+      "original_sha256": "14cafa23788d3a20dd21d6b0cdcb8d6dab520781fcd9ad9392f3b88ea607e633",
+      "stored_sha256": "14cafa23788d3a20dd21d6b0cdcb8d6dab520781fcd9ad9392f3b88ea607e633",
+      "normalization": "none",
+      "scope": "Unicode UCD 16.0.0 derived tables and unicode.org mapping-derived codecs in CPython 3.14.2; current official Unicode License V3 retained with original UCD copyright notice"
     }
   ],
   "upstream_build_source": "https://github.com/pyodide/pyodide/blob/b1e4fcc2488962f6360a97f19b9982d6fdb5d16f/Makefile.envs",

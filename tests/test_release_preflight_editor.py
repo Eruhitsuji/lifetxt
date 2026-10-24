@@ -34,6 +34,7 @@ class EditorArtifactTests(unittest.TestCase):
             "extension/package.json": json.dumps({
                 "name": "lifetxt", "version": self.version,
                 "main": "./extension.js",
+                "optionalDependencies": {"vscode-languageclient": "9.0.1"},
                 "contributes": {
                     "languages": [{"id": "lifetxt"}],
                     "configuration": {"properties": {
@@ -46,7 +47,9 @@ class EditorArtifactTests(unittest.TestCase):
             "extension/language-configuration.json": b"{}",
             "extension/syntaxes/lifetxt.tmLanguage.json": b"{}",
             "extension/snippets/lifetxt.code-snippets": b"{}",
-            "extension/node_modules/vscode-languageclient/package.json": b"{}",
+            "extension/node_modules/vscode-languageclient/package.json": b'{"name":"vscode-languageclient","version":"9.0.1"}',
+            "extension/node_modules/vscode-languageclient/node.js": b"module.exports = {};",
+            "extension/node_modules/vscode-languageclient/lib/node/main.js": b"module.exports = {};",
         }
         self.nvim_files = {
             "lifetxt.lua": (
@@ -74,6 +77,8 @@ class EditorArtifactTests(unittest.TestCase):
     def test_missing_language_client_and_provenance_are_rejected(self):
         for victim in (
             "extension/node_modules/vscode-languageclient/package.json",
+            "extension/node_modules/vscode-languageclient/node.js",
+            "extension/node_modules/vscode-languageclient/lib/node/main.js",
             "extension/release.json",
         ):
             entries = dict(self.vsix_files)

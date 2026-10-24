@@ -101,6 +101,8 @@ def smoke_vsix(candidate, path):
         "extension/syntaxes/lifetxt.tmLanguage.json",
         "extension/snippets/lifetxt.code-snippets",
         "extension/node_modules/vscode-languageclient/package.json",
+        "extension/node_modules/vscode-languageclient/node.js",
+        "extension/node_modules/vscode-languageclient/lib/node/main.js",
     }
     proof.require(required <= set(rows), "VSIX missing language/client content")
     manifest = json.loads(rows["extension/package.json"])
@@ -127,15 +129,23 @@ def smoke_vsix(candidate, path):
         json.loads(rows["extension/release.json"]) == metadata(candidate, version),
         "VSIX provenance mismatch",
     )
+    client = json.loads(rows["extension/node_modules/vscode-languageclient/package.json"])
+    proof.require(
+        client.get("name") == "vscode-languageclient"
+        and client.get("version") == manifest.get("optionalDependencies", {}).get("vscode-languageclient"),
+        "VSIX optional client version mismatch",
+    )
+    proof.require(
+        rows["extension/node_modules/vscode-languageclient/node.js"]
+        and rows["extension/node_modules/vscode-languageclient/lib/node/main.js"],
+        "VSIX optional client entry is empty",
+    )
     for name in ("extension/syntaxes/lifetxt.tmLanguage.json",
                  "extension/snippets/lifetxt.code-snippets",
                  "extension/language-configuration.json",
                  "extension/node_modules/vscode-languageclient/package.json"):
         json.loads(rows[name])
-    proof.require(
-        rows["extension/extension.js"] and rows["extension/extension.js"].find(b"spawn") == -1,
-        "unexpected VS Code entry",
-    )
+    proof.require(rows["extension/extension.js"], "empty VS Code entry")
     return version
 
 

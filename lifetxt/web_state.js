@@ -13,7 +13,7 @@
       customHelp: "The canonical value is saved without translation (leading/trailing spaces are trimmed).", activity: "Activity / title (optional)", note: "Note (optional)", force: "Restart even if this status is already current",
       noopHelp: "Repeating the current status keeps its start, title and note. Choose restart to record changes to that same status.", save: "Save status", endHeading: "Finished for now?", endHelp: "Ending closes your current status. Choosing Offline starts an offline status instead.", end: "End current status", web: "Open full Web UI",
       currentMarker: "✓ Current", unset: "No current status", never: "No status has been recorded yet.", ended: "Previous status ended", unknown: "Unavailable", readonly: "This workspace is read-only. Status changes are disabled.",
-      noTarget: "No writable target is configured. Status changes are disabled.", unavailable: "Changes are disabled until the latest status is confirmed.", auth: "Authentication required. Open this page through your existing authenticated Web connection.", forbidden: "Changes are not permitted. Check read-only mode and your access.", conflict: "Data changed. Refresh to review the latest status; your inputs will be kept. Nothing is retried automatically.",
+      noTarget: "No writable target is configured. Status changes are disabled.", unavailable: "Changes are disabled until the latest status is confirmed.", reviewRequired: "Use Refresh to review the latest status before making another change.", auth: "Authentication required. Open this page through your existing authenticated Web connection.", forbidden: "Changes are not permitted. Check read-only mode and your access.", conflict: "Data changed. Refresh to review the latest status; your inputs will be kept. Nothing is retried automatically.",
       invalid: "The status could not be accepted. Check your input and the life.txt diagnostics.", network: "Connection failed. The result may be unknown; refresh before trying again.", server: "The server could not confirm the update. Refresh before trying again.", loadFailed: "Could not refresh. The previous confirmed display and your inputs are kept.",
       saving: "Saving…", saved: "Status saved.", noChange: "This status is already current. Its start, title and note were kept.", endedSaved: "Current status ended.", savedUnconfirmed: "Save acknowledged, but the current display could not be refreshed. Refresh before making another change.", reviewed: "Latest status confirmed. Your inputs are kept; review before saving.", required: "Enter a custom status.", missingRevision: "No write revision is available. Refresh before changing status.",
       names: ["Available", "Busy", "Focus", "Meeting", "Away", "Offline", "Commuting", "Working", "Sleeping"], hours: "h", minutes: "min", lessMinute: "Less than a minute",
@@ -26,7 +26,7 @@
       customHelp: "入力値は翻訳せず保存します（前後の空白は除きます）。", activity: "活動名・タイトル（任意）", note: "メモ（任意）", force: "同じ状態でも再開始する",
       noopHelp: "同じ状態を選ぶと、開始時刻・タイトル・メモを維持します。同じ状態の内容を変えるには再開始を選んでください。", save: "状態を保存", endHeading: "いったん終了しますか？", endHelp: "終了は現在の状態を閉じます。「オフライン」を選ぶと、オフラインの状態を新しく開始します。", end: "現在の状態を終了", web: "Web UI全体を開く",
       currentMarker: "✓ 現在", unset: "現在設定なし", never: "まだ状態が記録されていません。", ended: "前の状態は終了済み", unknown: "取得できません", readonly: "このworkspaceは読み取り専用です。状態は変更できません。",
-      noTarget: "書き込み先が未設定のため、状態を変更できません。", unavailable: "最新の状態を確認するまで変更できません。", auth: "認証が必要です。既存の認証済みWeb接続から開いてください。", forbidden: "変更が許可されていません。読み取り専用設定とアクセス権を確認してください。", conflict: "データが更新されています。再読込で最新状態を確認してください。入力は保持し、自動再試行はしません。",
+      noTarget: "書き込み先が未設定のため、状態を変更できません。", unavailable: "最新の状態を確認するまで変更できません。", reviewRequired: "次の変更の前に「再読込」で最新の状態を確認してください。", auth: "認証が必要です。既存の認証済みWeb接続から開いてください。", forbidden: "変更が許可されていません。読み取り専用設定とアクセス権を確認してください。", conflict: "データが更新されています。再読込で最新状態を確認してください。入力は保持し、自動再試行はしません。",
       invalid: "状態を保存できませんでした。入力とlife.txtの診断を確認してください。", network: "接続できませんでした。保存結果が未確定の場合があります。再操作の前に再読込してください。", server: "サーバーが更新を確認できませんでした。再操作の前に再読込してください。", loadFailed: "再取得できませんでした。前回確認した表示と入力を保持しています。",
       saving: "保存中…", saved: "状態を保存しました。", noChange: "すでに同じ状態です。開始時刻・タイトル・メモは維持しました。", endedSaved: "現在の状態を終了しました。", savedUnconfirmed: "保存応答は受け取りましたが、表示を再取得できませんでした。次の変更の前に再読込してください。", reviewed: "最新の状態を確認しました。入力は保持しています。内容を確認してから保存してください。", required: "カスタム状態を入力してください。", missingRevision: "更新用revisionを取得できません。再読込してから操作してください。",
       names: ["対応可能", "取り込み中", "集中", "会議中", "離席中", "オフライン", "移動中", "作業中", "睡眠中"], hours: "時間", minutes: "分", lessMinute: "1分未満",
@@ -37,6 +37,7 @@
   let lang = ["en", "ja"].includes(params.get("lang")) ? params.get("lang") : ((navigator.language || "en").startsWith("ja") ? "ja" : "en");
   let languageChosen = params.has("lang"), config = {}, current = null, previous = null;
   let loaded = false, writable = false, writeReason = "readonly", stale = true, pending = false, reading = false;
+  let reviewRequired = false;
   let revision = null, formRevision = null, formTouched = false, generation = 0, readController = null;
   let zone = "", serverClock = null, syncKey = "syncing", feedbackKey = "", feedbackError = false;
   const t = key => copy[lang][key];
@@ -64,7 +65,7 @@
     $("feedback").dataset.error = String(error);
   }
   function updateControls() {
-    const disabled = !loaded || !writable || stale || pending || reading || navigator.onLine === false || !revision;
+    const disabled = !loaded || !writable || stale || reviewRequired || pending || reading || navigator.onLine === false || !revision;
     document.querySelectorAll(".tile").forEach(button => { button.disabled = disabled; });
     $("detail-fields").disabled = disabled;
     $("end").disabled = disabled || !current;
@@ -204,7 +205,8 @@
       revision = active.revision; loaded = true; stale = false;
       writable = health.data.read_only === false && Boolean(health.data.writable_path);
       writeReason = health.data.read_only ? "readonly" : "noTarget";
-      syncKey = "synced"; initializeForm();
+      if (manual) reviewRequired = false;
+      syncKey = reviewRequired ? "reviewRequired" : "synced"; initializeForm();
       if (manual) { formRevision = revision; feedback("reviewed"); }
       translate(); return true;
     } catch (error) {
@@ -218,7 +220,7 @@
     }
   }
   async function send(payload, expected = revision) {
-    if (pending || reading || stale || !loaded || !writable || navigator.onLine === false) return;
+    if (pending || reading || stale || reviewRequired || !loaded || !writable || navigator.onLine === false) return;
     if (!expected) { feedback("missingRevision", true); return; }
     const focused = document.activeElement;
     pending = true; feedback("saving"); updateControls();
@@ -226,12 +228,13 @@
     try {
       const result = await api("/api/status", {method: "POST", signal: controller.signal, headers: {"Content-Type": "application/json", "If-Match": expected}, body: JSON.stringify(payload)});
       const confirmed = await refresh({afterWrite: true});
+      if (!confirmed) reviewRequired = true;
       feedback(confirmed ? (result.data.unchanged ? "noChange" : payload.end ? "endedSaved" : "saved") : "savedUnconfirmed", !confirmed);
       if (confirmed && formTouched && "title" in payload) formRevision = revision;
     } catch (error) {
       const key = errorKey(error);
       feedback(key, true);
-      if (key !== "invalid") { stale = true; syncKey = key; renderCurrent(); }
+      if (key !== "invalid") { reviewRequired = true; stale = true; syncKey = key; renderCurrent(); }
     } finally {
       clearTimeout(timer); controller.abort(); pending = false; updateControls();
       if (focused && focused !== document.body && document.activeElement === document.body && document.visibilityState !== "hidden") {

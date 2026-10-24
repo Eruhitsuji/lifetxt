@@ -1,0 +1,10 @@
+schema_version: 1
+requirements:
+- id: req-editor-producer-job-identity
+  kind: FIXED
+  statement: Match exact actual Editor Windows job title without weakening provenance
+    checks.
+  acceptance_criteria:
+  - All 14 workflow-derived producer names match.
+  - Missing, duplicate and failed Editor jobs reject.
+  - SHA/run/step checks remain unchanged.

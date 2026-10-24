@@ -1,0 +1,5 @@
+# Producer identity repair
+
+All 14 producers passed in run 40084409123; collect failed before artifact validation because TITLES derived Editor while the parent workflow names the job Editor Windows. Set the editor title explicitly. Derive synthetic API job names from actual parent workflow YAML instead of importing the production mapping; existing all-target test now detects any family drift. Add Editor-specific missing/duplicate/failure regressions. Exact equality, uniqueness, SHA/run, completion and step validation remain intact.
+
+Task #1401, Bug / High / S, complexity 4/10. Reuse cap-editor-language-support. Executor ChatGPT; Owner Eruhitsuji. Maintenance -> verification -> independent review -> integration. Source origin/main 752b5dea; branch fix/editor-producer-job-title; final base main. Review correctness, fail-closed provenance, compatibility and scope; no data or public API change. No parallel writes. Rollback: revert PR and withhold release. A fresh main preflight is required after merge; old successful component builds do not authorize publication.

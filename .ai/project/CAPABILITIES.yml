@@ -38,6 +38,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/1385
       - https://github.com/Eruhitsuji/lifetxt/issues/1387
     related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/1388
       - https://github.com/Eruhitsuji/lifetxt/pull/1382
       - https://github.com/Eruhitsuji/lifetxt/pull/1384
     reuse_policy: Reuse Status Core and API, Web revision/CAS and Planner standalone-page assembly; no new parser, mutation model, authentication or dependency.

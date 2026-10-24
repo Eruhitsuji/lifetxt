@@ -52,13 +52,15 @@ async function create({lang='en', query='', readonly=false, target='life.txt', i
       const payload=JSON.parse(options.body);model.posts.push({payload,expected:options.headers['If-Match']});
       const save=()=>{
         if(model.postError==='network')throw Error('Network failed');
-        if(model.postError)return response({},model.postError);
+        if(model.postError==='invalid-json')return new Response('invalid JSON',{status:200});
+        if(model.postError&&model.postError!=='lost-response')return response({},model.postError);
         if(options.headers['If-Match']!==model.revision)return response({},409);
         const unchanged=!payload.end&&!payload.force&&model.current?.state===payload.state;
         if(payload.end){model.latest=model.current?{...model.current,active:false,to:'2031-02-03T10:00'}:model.latest;model.current=null;}
         else if(!unchanged)model.current={...record(payload.state),title:payload.title||payload.state,details:{note:payload.note?[payload.note]:[]},from:'2031-02-03T10:00'};
         if(!unchanged)model.revision='"r'+model.posts.length+'"';
         if(model.failAfterSave)model.readFailure=503;
+        if(model.postError==='lost-response')throw Error('Response lost after commit');
         return response({closed:[],opened:payload.end?'':'record',unchanged:unchanged?payload.state:''});
       };
       if(model.postDelay)return new Promise(resolve=>{model.releasePost=()=>resolve(save());});
@@ -195,4 +197,55 @@ for(const lang of ['en','ja']){
   expect(ui.tile('focus').disabled,true,'missing write target disables mutations');
   expect(ui.ids.get('write-access').textContent.includes('No writable target'),true,'missing target explanation');
 }
-console.log(JSON.stringify({checks,scenarios:22,kind:'DOM interaction and HTTP contract; not layout'}));
+// #1387: a background read must not acknowledge an uncertain write for the user.
+for(const failure of [401,403,409,500,'network','invalid-json','lost-response','readback']){
+  const ui=await create();ui.choose('focus');ui.input('activity-input','Keep draft');ui.input('note-input','Keep note');
+  if(failure==='readback')ui.model.failAfterSave=true;else ui.model.postError=failure;
+  ui.submit();await ui.settle();
+  expect(ui.tile('away').disabled,true,'failed write blocks next action '+failure);
+  expect(ui.ids.get('feedback').dataset.error,'true','no false success '+failure);
+  ui.model.postError=0;ui.model.failAfterSave=false;ui.model.readFailure=0;
+  const resumes=[
+    ()=>ui.handlers.get('window:online')(),
+    ()=>ui.handlers.get('window:focus')(),
+    ()=>ui.handlers.get('window:pageshow')(),
+    ()=>ui.handlers.get('document:visibilitychange')(),
+    ()=>ui.intervals[0](),
+  ];
+  for(const resume of resumes){
+    resume();await ui.settle();
+    expect(ui.tile('away').disabled,true,'background refresh cannot acknowledge '+failure);
+    expect(ui.ids.get('end').disabled,true,'end remains blocked '+failure);
+    expect(ui.ids.get('detail-fields').disabled,true,'form remains blocked '+failure);
+    ui.tile('away').click();ui.ids.get('end').click();ui.submit();await ui.settle();
+    expect(ui.model.posts.length,1,'no background retry or next write '+failure);
+  }
+  expect(ui.ids.get('sync').textContent.includes('Use Refresh'),true,'background read explains manual confirmation '+failure);
+  expect(ui.ids.get('current-state').textContent,['lost-response','readback'].includes(failure)?'Focus':'Busy','background read still displays authoritative state '+failure);
+  expect(ui.ids.get('activity-input').value,'Keep draft','background recovery keeps draft '+failure);
+  expect(ui.ids.get('note-input').value,'Keep note','background recovery keeps note '+failure);
+  ui.model.readFailure=503;ui.ids.get('refresh').click();await ui.settle();
+  expect(ui.tile('away').disabled,true,'failed manual refresh keeps block '+failure);
+  ui.model.readFailure=0;ui.handlers.get('window:focus')();await ui.settle();
+  expect(ui.tile('away').disabled,true,'background recovery after failed manual read stays blocked '+failure);
+  ui.ids.get('refresh').click();await ui.settle();
+  expect(ui.tile('away').disabled,false,'successful manual refresh permits explicit retry '+failure);
+  expect(ui.model.posts.length,1,'manual refresh does not resend '+failure);
+  const reviewedRevision=ui.model.revision;
+  ui.submit();await ui.settle();
+  expect(ui.model.posts.length,2,'user explicitly retries once '+failure);
+  expect(ui.model.posts.at(-1).expected,reviewedRevision,'retry carries revision');
+  expect(ui.ids.get('activity').textContent,'Keep draft','retry preserves draft '+failure);
+}
+{
+  const ui=await create();ui.model.postError='network';ui.tile('focus').click();await ui.settle();
+  ui.model.postError=0;ui.model.readDelay=true;ui.ids.get('refresh').click();
+  const obsolete=ui.model.held.splice(0);ui.model.readDelay=false;
+  ui.handlers.get('window:focus')();await ui.settle();
+  obsolete.forEach(resolve=>resolve());await new Promise(resolve=>setTimeout(resolve,10));
+  expect(ui.tile('away').disabled,true,'obsolete manual response cannot acknowledge newer background read');
+  expect(ui.model.posts.length,1,'race never resends');
+  ui.ids.get('refresh').click();await ui.settle();
+  expect(ui.tile('away').disabled,false,'fresh manual response acknowledges recovery');
+}
+console.log(JSON.stringify({checks,scenarios:31,kind:'DOM interaction and HTTP contract; not layout'}));

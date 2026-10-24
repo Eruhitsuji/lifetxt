@@ -95,7 +95,10 @@ a background read finds a newer record. On conflict or an uncertain result,
 **Refresh** explicitly reviews the latest status while keeping your inputs,
 then you can choose whether to submit again. Successful writes are reloaded
 before the displayed state changes. A failed reload after a successful save
-is reported separately and blocks another write until refreshed.
+is reported separately and blocks another write until **Refresh** succeeds.
+Automatic reads on reconnect, tab return, or the one-minute timer may update
+the display, but cannot clear this write block. A failed manual refresh keeps
+the block and your inputs; only a successful manual refresh permits an explicit retry.
 
 The visible page refreshes every minute and on return to the tab. Elapsed time
 uses the workspace clock/timezone; invalid or ambiguous naive DST timestamps

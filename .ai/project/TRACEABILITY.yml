@@ -5,6 +5,18 @@ traceability:
     - requirement_id: req-web-state-surface-v1
       capability_id: cap-web-state-surface
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1377
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1387
+      changed_files_or_scope:
+        - State manual-confirmation latch after uncertain POST or failed save readback
+        - Recovery DOM regressions, bilingual Web guide and mock acceptance evidence for issue 1385
+      tests_or_evidence:
+        - tests/state_ui_probe.mjs (31 mock scenarios including lost committed response and obsolete manual read)
+        - tests.test_web_status_atomic, tests.test_web_state, tests.test_web_state_ui, tests.test_web_installability
+        - https://github.com/Eruhitsuji/lifetxt/issues/1385
+      status: implemented
+    - requirement_id: req-web-state-surface-v1
+      capability_id: cap-web-state-surface
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1377
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1380
       pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1384
       changed_files_or_scope:

@@ -18573,6 +18573,19 @@ traceability:
       release_or_deployment: null
       status: in_review
 
+    - requirement_id: req-editor-vsix-normalized-readme
+      capability_id: cap-editor-language-support
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1389
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1396
+      pull_request: null
+      changed_files_or_scope:
+        - Exact vsce-normalized README path validation and archive regressions
+      tests_or_evidence:
+        - tests/test_release_preflight_editor.py
+        - .ai/project/changes/editor-vsix-readme-case/verification.yml
+      release_or_deployment: null
+      status: in_review
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

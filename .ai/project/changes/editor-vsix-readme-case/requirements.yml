@@ -1,0 +1,16 @@
+schema_version: 1
+requirements:
+- id: req-editor-vsix-normalized-readme
+  kind: FIXED
+  statement: Validate the actual vsce-normalized README while preserving archive safety
+    and source provenance.
+  acceptance_criteria:
+  - Actual extension/readme.md is accepted with source-pinned documentation links.
+  - Missing README, case collisions and incorrect source permalinks fail closed.
+  - All other payload, provenance and publication gates remain unchanged.
+  constraints:
+  - No new dependency, no secret, no publishing operation.
+  owner: Eruhitsuji
+open_questions:
+- Actual npx vsce build and 14-target manual preflight must be rerun on a newly merged
+  main controller.

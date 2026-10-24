@@ -1,0 +1,7 @@
+schema_version: 1
+traceability:
+- requirement_id: req-browser-local-check-distribution-v1
+  capability_id: cap-official-website
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1398
+  tests_or_evidence: [tests/test_browser_distribution_audit.py, contrib/browser_check_poc/RUNTIME_INVENTORY.md]
+  status: implemented

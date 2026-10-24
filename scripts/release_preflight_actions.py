@@ -16,6 +16,7 @@ WORKFLOW = ".github/workflows/release-preflight.yml"
 FAMILIES = ("core", "standalone", "desktop", "mini", "oci", "editor")
 TITLES = {family: family.capitalize() for family in FAMILIES}
 TITLES["oci"] = "OCI"
+TITLES["editor"] = "Editor Windows"
 STEPS = {
     "editor": (
         "Build and smoke Windows VSIX and Neovim archives",

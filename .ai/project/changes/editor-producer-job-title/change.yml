@@ -1,0 +1,22 @@
+schema_version: 1
+change:
+  id: editor-producer-job-title
+  title: Match actual Editor Windows producer identity
+  status: in_review
+  change_type: Bug
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1401
+  base_commit: 752b5dea40f2c592d5ced601625bd7a890c97cfc
+scope:
+  write_scope:
+  - scripts/release_preflight_actions.py
+  - tests/test_release_preflight_actions.py
+  - .ai/project/changes/editor-producer-job-title/**
+  out_of_scope:
+  - Workflow, dependency, version, authority and publication changes
+human_approvals_required:
+- Independent final-head implementation/integration review
+- Owner merge
+- Separate Release Authority for publication

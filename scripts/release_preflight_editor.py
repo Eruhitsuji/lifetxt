@@ -197,6 +197,8 @@ def build(candidate, controller, source, payload, report, context):
             encoding="utf-8",
         )
         # Network access is confined to explicit build dependencies; no script execution.
+        # vsce must walk npm production dependencies; --no-dependencies would
+        # omit the unbundled optional vscode-languageclient from the VSIX.
         subprocess.run(
             ["npm", "ci", "--omit=dev", "--ignore-scripts", "--no-audit", "--no-fund"],
             cwd=staged, check=True, timeout=300,
@@ -205,7 +207,7 @@ def build(candidate, controller, source, payload, report, context):
         vsix = payload / next(n for n, role in names(candidate).items() if role == "vsix")
         subprocess.run(
             ["npx", "--yes", "--package=@vscode/vsce@" + VSCE_VERSION, "vsce",
-             "package", "--no-dependencies", "--out", str(vsix)],
+             "package", "--allow-missing-repository", "--out", str(vsix)],
             cwd=staged, check=True, timeout=300,
         )
         nvim = payload / next(n for n, role in names(candidate).items() if role == "neovim-config")

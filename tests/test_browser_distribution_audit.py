@@ -53,6 +53,7 @@ class DistributionAuditTests(unittest.TestCase):
                 "notice",
                 "asset",
                 "lock",
+                "runtime-coverage",
             ):
                 with self.subTest(mutation=mutation):
                     artifact = Path(directory) / mutation
@@ -69,6 +70,16 @@ class DistributionAuditTests(unittest.TestCase):
                         (artifact / "alias").symlink_to(artifact / "core.zip")
                     elif mutation == "core":
                         manifest["core_modules"] = []
+                    elif mutation == "runtime-coverage":
+                        original_inventory = inventory_path.read_bytes()
+                        broken = json.loads(original_inventory)
+                        broken["runtime_observations"]["runtime_files"] = {}
+                        inventory_path.write_text(json.dumps(broken))
+                        target = artifact / "notices/components.json"
+                        target.write_bytes(inventory_path.read_bytes())
+                        from contrib.browser_check_poc.distribution_audit import digest
+
+                        manifest["files"]["notices/components.json"] = digest(target)
                     elif mutation == "lock":
                         lock_path = source / "package-lock.json"
                         original_lock = lock_path.read_bytes()
@@ -92,3 +103,5 @@ class DistributionAuditTests(unittest.TestCase):
                     finally:
                         if mutation == "lock":
                             lock_path.write_bytes(original_lock)
+                        elif mutation == "runtime-coverage":
+                            inventory_path.write_bytes(original_inventory)

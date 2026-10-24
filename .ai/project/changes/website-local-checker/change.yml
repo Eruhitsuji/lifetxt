@@ -7,6 +7,7 @@ change:
   assurance_level: High
   owner: Eruhitsuji
   accountable_owner: Eruhitsuji
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1408
   related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1399
 scope:
   write_scope: [website/checker, scripts/build_website_checker.py, scripts/probe_website_checker.py, dedicated checker tests, scoped change package and traceability]

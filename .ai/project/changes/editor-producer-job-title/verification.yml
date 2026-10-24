@@ -1,0 +1,27 @@
+schema_version: 1
+verification:
+  checks:
+  - type: reproduction
+    status: passed
+    result: 'Workflow-derived fixture reproduces missing/ambiguous producer job: editor-windows
+      before fix.'
+  - type: regression
+    status: passed
+    command: python -m unittest tests.test_release_preflight_actions tests.test_release_preflight_collect
+      tests.test_release_preflight_editor tests.test_release_publication tests.test_change_package_closeout
+    result: 78 related tests passed, including workflow-derived all-family fixture
+      and Editor missing/duplicate/failure rejection.
+  - type: fresh_main_preflight
+    status: not_run
+    result: Requires merge and exact-SHA successful main CI.
+  reviews:
+  - reviewer: ChatGPT (implementer)
+    review_type: self_review
+    result: passed
+    findings: Exact title override only; trust-boundary checks unchanged; all-family
+      fixtures independent of production mapping.
+  - reviewer: Independent reviewer / Owner
+    review_type: implementation_and_integration
+    result: pending
+release_evidence:
+  rollback_plan: Revert repair PR and withhold publication; no tags/assets modified.

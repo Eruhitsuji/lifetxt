@@ -35,8 +35,8 @@ class StateInteractionTests(unittest.TestCase):
         )
         self.assertEqual(0, result.returncode, result.stderr or result.stdout)
         report = json.loads(result.stdout)
-        self.assertGreaterEqual(report["checks"], 190)
-        self.assertEqual(22, report["scenarios"])
+        self.assertGreaterEqual(report["checks"], 900)
+        self.assertEqual(31, report["scenarios"])
 
 
 @unittest.skipUnless(shutil.which("node"), "Node.js unavailable")

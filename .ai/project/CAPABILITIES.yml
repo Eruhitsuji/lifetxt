@@ -108,6 +108,7 @@ capabilities:
       - req-browser-engine-matrix-v1
       - req-browser-local-check-acceptance-v1
       - req-browser-runtime-inventory-v1
+      - req-browser-local-check-source-delivery-v1
     implementation_locations:
       - website/
       - scripts/build_website.py
@@ -119,6 +120,8 @@ capabilities:
       - contrib/browser_check_poc/READINESS.md (bounded desktop measurements; no adoption approval)
       - contrib/browser_check_poc/MANUAL_ACCEPTANCE.md (unexecuted manual gates)
       - contrib/browser_check_poc/RUNTIME_INVENTORY.md (partial source-based inventory; no publication approval)
+      - contrib/browser_check_poc/source-provenance.json (upstream release/source relationships; no publication approval)
+      - tests/test_browser_source_delivery.py
       - contrib/browser_check_poc/RESULTS.md (historical Node baseline)
       - contrib/browser_check_poc/BROWSER_ACCEPTANCE.md (actual Chromium; not public or all-device accepted)
       - tests/test_browser_check_poc_browser.py

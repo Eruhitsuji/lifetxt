@@ -114,8 +114,9 @@ corresponding source, applicable modifications/build patches and licence texts,
 provide a durable acquisition mechanism to recipients, and have an independent
 distribution evaluator accept the binary/source relationship and delivery notice.
 The references in `components.json` identify candidates; this change does not
-claim that a URL or recipe alone fulfils those obligations. No corresponding
-source archive or accepted no-modifications attestation currently exists here.
+claim that a URL or recipe alone fulfils those obligations. Fixed source archives and an offline self-hosting mode are now implemented by
+#1409; their recipe/release relationship is recorded in source-provenance.json.
+Independent acceptance of that evidence and full object-level attribution remain open.
 This is a **publication blocker**, not a legal adequacy determination.
 
 ### Upgrade / stop / rollback
@@ -129,3 +130,41 @@ changed byte, failed check or stale independent review. Keep the prior reviewed
 revision, manifest and immutable artifact; deployment/rollback remains a separate
 Owner operation. Until distribution review and source gates are complete, keep
 `complete_distribution_audit=false` and `public_distribution_approved=false`.
+
+
+## #1409 source acquisition and evidence (2026-10-24)
+
+`source-lock.json` fixes ten complete source archives (76,504,570 bytes) plus
+an official core release archive used only for verification. The release
+SHA256 matches GitHub's published digest and its five named runtime files are
+byte-identical to the shipped npm files. No local runtime bytes were modified.
+The release points to the retained Pyodide commit; this establishes a concrete
+upstream release/recipe relationship, not a signed build or reproducible-build proof.
+
+`source-provenance.json` records clean application of all nine CPython patches,
+the recipe SHA256 for CPython, matching Emscripten SHA512 pins for zlib/bzip2,
+and mappings for all 567 regular files in python_stdlib.zip: 535 unchanged
+CPython sources, 29 exact Pyodide sources, 2 CPython files matching upstream
+patches, and 1 generated sysconfig module already shipped as Python source.
+
+The notice inventory now contains 23 texts: the original sixteen plus the whole
+CPython incorporated-software licence document, all distinct leading copyright/
+licence comments found in 40 HACL and 41 decimal source/header files, and four
+LLVM runtime subtree licence documents. This does not establish that every
+source file in those archives is linked into the binary. Original per-file
+notices remain inside the full source archives. Unicode data licensing and the
+complete WASM linked-object attribution still need independent evaluation.
+
+Generated `sources/index.html` provides fixed upstream acquisition links by
+default. `--source-cache CACHE` instead verifies all ten source archives offline
+and copies them into that directory. Partial source bundles, missing licence/
+patch members, corrupted payloads, changed metadata, extra source files and
+symlinks fail. CLI `source_delivery fetch` is an explicit maintainer download;
+build and Worker never download these archives automatically. The local-only
+checker builder forwards this option and copies the source directory. Production
+introduction build and Pages workflow still do not distribute the checker.
+
+Full procedure and boundaries: [SOURCE_DELIVERY.md](SOURCE_DELIVERY.md).
+`complete_distribution_audit` and `public_distribution_approved` remain false.
+Independent distribution and integration review, source-hosting continuity and
+Owner publication approval are separate gates under #1398/#1400.

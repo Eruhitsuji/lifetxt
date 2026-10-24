@@ -1,0 +1,12 @@
+{
+  "browser": "153.0.8010.0",
+  "kind": "loopback headless source-navigation smoke",
+  "languages": [
+    "ja",
+    "en"
+  ],
+  "source_index": "passed; no script",
+  "automatic_runtime_or_source_download": false,
+  "hiwire_explicit_download_sha256": "matched",
+  "page_errors": []
+}

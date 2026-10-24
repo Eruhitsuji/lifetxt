@@ -1,0 +1,7 @@
+schema_version: 1
+traceability:
+- requirement_id: req-browser-local-check-source-delivery-v1
+  capability_id: cap-official-website
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1409
+  tests_or_evidence: [tests/test_browser_source_delivery.py, contrib/browser_check_poc/source-provenance.json, contrib/browser_check_poc/source-lock.json]
+  status: implemented

@@ -107,6 +107,11 @@ class WebsiteCheckerTests(unittest.TestCase):
             build(output)
             self.assertTrue((output / "ja/check/index.html").is_file())
             self.assertTrue((output / "en/check/index.html").is_file())
+            self.assertTrue((output / "checker/sources/index.html").is_file())
+            self.assertIn(
+                "../../checker/sources/index.html",
+                (output / "ja/check/index.html").read_text("utf-8"),
+            )
             self.assertEqual(
                 (output / "checker/adapter.py").read_bytes(),
                 (ROOT / "website/checker/adapter.py").read_bytes(),

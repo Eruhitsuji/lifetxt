@@ -1,0 +1,23 @@
+schema_version: 1
+change:
+  id: browser-source-delivery
+  title: Pinned runtime source delivery and expanded source-based notices
+  status: in_review
+  change_type: Operations
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1410
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1409
+  base_commit: 368af83ef1e219149018abb06b76f6d6d573d8c6
+scope:
+  write_scope:
+  - contrib/browser_check_poc source acquisition, probe, metadata, notices and isolated builder/audit
+  - scripts/build_website_checker.py local source forwarding and source link
+  - dedicated source/website checker regression tests
+  - scoped change package, capability and traceability records
+  forbidden_scope: [Core/Format/CLI, Worker behavior, production website build and Pages workflow, .ai/managed, deployment]
+human_approvals_required:
+- Latest-head independent implementation/distribution and integration review
+- Human merge
+- Separate full distribution evaluation and Owner publication under issues 1398 and 1400

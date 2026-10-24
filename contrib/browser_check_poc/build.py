@@ -50,7 +50,7 @@ CORE_MODULES = (
 )
 
 
-def build(output):
+def build(output, source_cache=None):
     output = output.resolve()
     if (
         output == ROOT
@@ -80,6 +80,14 @@ def build(output):
         license_info = zipfile.ZipInfo("LICENSE", (2026, 1, 1, 0, 0, 0))
         license_info.compress_type = zipfile.ZIP_DEFLATED
         z.writestr(license_info, (ROOT / "LICENSE").read_bytes())
+    from contrib.browser_check_poc.source_delivery import (
+        load_lock,
+        validate_cache,
+        write_delivery,
+    )
+
+    if source_cache is not None:
+        validate_cache(Path(source_cache), load_lock(SOURCE))
     output.mkdir(parents=True, exist_ok=False)
     (output / "runtime").mkdir()
     for name in RUNTIME_FILES:
@@ -100,6 +108,7 @@ def build(output):
     (output / "fixtures.json").write_text(
         json.dumps(expected, ensure_ascii=False, indent=2), encoding="utf-8"
     )
+    write_delivery(output / "sources", SOURCE, source_cache)
     revision = subprocess.check_output(
         ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
     ).strip()
@@ -138,4 +147,10 @@ def build(output):
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--output", required=True, type=Path)
-    build(p.parse_args().output)
+    p.add_argument(
+        "--source-cache",
+        type=Path,
+        help="Offline verified source archives to self-host",
+    )
+    args = p.parse_args()
+    build(args.output, args.source_cache)

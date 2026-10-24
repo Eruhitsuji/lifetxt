@@ -42,3 +42,12 @@ https://github.com/pyodide/pyodide/blob/314.0.7/Makefile.envs
 No runtime binary is committed or published by this investigation. Keep public
 integration blocked on #1358's distribution gate. This is technical inventory
 and provenance evidence, not a legal-compliance guarantee.
+
+## Source acquisition and expanded notices (#1409)
+
+See [source acquisition](../sources/index.html) in the generated artifact.
+Seven additional documents retain CPython incorporated-software notices, all
+distinct leading HACL/decimal licence headers, and LLVM runtime subtree licences.
+These are bounded source-based additions, not a complete linked-object audit.
+Original source archives retain per-file notices. Complete audit/publication
+approval remains false. In the repository, see ../SOURCE_DELIVERY.md.

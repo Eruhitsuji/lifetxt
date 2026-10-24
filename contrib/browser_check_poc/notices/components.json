@@ -254,9 +254,9 @@
     {
       "name": "HACL*",
       "version": "vendored CPython 3.14.2",
-      "basis": "Setup.local names HACL files; _hmac/_sha2 builtins; representative complete leading licence comment only",
-      "licence": "MIT; all file/header notices not audited",
-      "notice": "hacl-cpython-3.14.2-header.txt"
+      "basis": "CPython 3.14.2 full archive retained; all distinct leading copyright/licence comments in 40 HACL source/header files checked; actual linked subset remains unverified",
+      "licence": "MIT and per-file notices in the complete source archive; linked-object audit pending",
+      "notice": "hacl-all-headers-cpython-3.14.2.txt"
     },
     {
       "name": "other CPython/Emscripten portions",
@@ -264,13 +264,56 @@
       "basis": "_decimal, generated Unicode tables, compiler-rt/libunwind and other linked/vendored portions not exhaustively mapped",
       "licence": null,
       "notice": null
+    },
+    {
+      "name": "mpdecimal",
+      "version": "vendored CPython 3.14.2",
+      "basis": "_decimal builtin observed; full vendored source archive plus 41 leading file licence headers retained",
+      "licence": "BSD-style per-file terms",
+      "notice": "libmpdec-headers-cpython-3.14.2.txt"
+    },
+    {
+      "name": "CPython incorporated software",
+      "version": "3.14.2",
+      "basis": "Original Doc/license.rst retained whole; upstream explicitly calls this list incomplete",
+      "licence": "Multiple incorporated-software notices; not exhaustive binary attribution",
+      "notice": "cpython-incorporated-3.14.2.rst"
+    },
+    {
+      "name": "LLVM compiler-rt",
+      "version": "vendored Emscripten 5.0.3",
+      "basis": "Complete subtree licence and source archive retained; precise linked inclusion unverified",
+      "licence": "See original licence, LLVM exceptions and inherited notices",
+      "notice": "compiler-rt-emscripten-5.0.3.txt"
+    },
+    {
+      "name": "LLVM libcxxabi",
+      "version": "vendored Emscripten 5.0.3",
+      "basis": "Complete subtree licence and source archive retained; precise linked inclusion unverified",
+      "licence": "See original licence, LLVM exceptions and inherited notices",
+      "notice": "libcxxabi-emscripten-5.0.3.txt"
+    },
+    {
+      "name": "LLVM libunwind",
+      "version": "vendored Emscripten 5.0.3",
+      "basis": "Complete subtree licence and source archive retained; precise linked inclusion unverified",
+      "licence": "See original licence, LLVM exceptions and inherited notices",
+      "notice": "libunwind-emscripten-5.0.3.txt"
+    },
+    {
+      "name": "LLVM llvm-libc",
+      "version": "vendored Emscripten 5.0.3",
+      "basis": "Complete subtree licence and source archive retained; precise linked inclusion unverified",
+      "licence": "See original licence, LLVM exceptions and inherited notices",
+      "notice": "llvm-libc-emscripten-5.0.3.txt"
     }
   ],
   "public_distribution_approved": false,
   "remaining_gates": [
-    "Complete object/file-level attribution including CPython data/code and LLVM runtime pieces",
-    "Exact npm binary build, patches and source mapping; source-based versions are candidates unless runtime observed",
-    "Corresponding source delivery for Pyodide and hiwire MPL portions including modifications; source URLs alone are not a distribution compliance determination",
-    "Independent distribution/legal review and Owner publication approval under #1358"
-  ]
+    "Complete WASM linked-object/per-file attribution and remaining Unicode data licensing evaluation; retained full source/extra notices are evidence, not completeness",
+    "Independent acceptance of the exact official release -> source recipe/patch relationship; byte-identical upstream core is verified, not signed/reproducible-build attestation",
+    "Independent review of Source Code Form acquisition/hosting continuity and full distribution obligations",
+    "Owner publication approval under #1398/#1400; full audit/publication flags remain false"
+  ],
+  "source_delivery_issue": 1409
 }

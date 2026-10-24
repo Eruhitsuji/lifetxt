@@ -3,7 +3,7 @@ links:
 - requirement_id: req-release-v1-0-4-3
   capability_id: cap-stable-release-governance
   task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1405
-  pull_request: pending
+  pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1406
   tests_or_evidence:
   - Version/tag/Mini consistency
   - Focused tests, release-policy check and wheel/sdist verification

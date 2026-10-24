@@ -160,7 +160,7 @@ def preflight_snapshot(api, candidate, manifest, artifact_id):
         % (candidate["run_id"], candidate["run_attempt"]),
         "jobs",
     )
-    collectors = [j for j in all_jobs if j["name"] == "Verify all 13 targets"]
+    collectors = [j for j in all_jobs if j["name"] == "Verify all 14 targets"]
     proof.require(
         len(collectors) == 1
         and collectors[0]["run_id"] == candidate["run_id"]

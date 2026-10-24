@@ -1,0 +1,12 @@
+schema_version: 1
+verification:
+  checks:
+    - type: regression
+      result: 52 publication/version/import/package tests and v1.0.4.3 tag/Mini checks passed; diff check passed. Independent review and fresh preflight pending.
+      status: passed
+  reviews:
+    - reviewer: Independent reviewer
+      result: pending
+release_evidence:
+  publication: not_run
+  recovery: Preserve v1.0.4.2 bytes and require new v1.0.4.3 preflight

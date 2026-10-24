@@ -1,4 +1,4 @@
-"""Full 13-target fixture integration; not native-build/Actions runtime evidence."""
+"""Full 14-target fixture integration; not native-build/Actions runtime evidence."""
 
 import copy
 import io
@@ -15,6 +15,7 @@ import yaml
 
 from tests.test_release_preflight_actions import FakeActions
 from tests.test_release_preflight_mini import elf
+from tests.test_release_preflight_editor import EditorArtifactTests
 from tests.test_release_preflight_oci import fixture as oci_fixture
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -86,6 +87,17 @@ def payload_fixture(candidate, target, payload, image):
         (payload / (binary.name + ".build-info")).write_text("fixture rustc\n")
         (payload / "RELEASE-NOTES.md").write_text(collect.mini.notes(candidate))
         details["static_elf"] = collect.mini.static_elf(binary, target)
+    elif family == "editor":
+        # Fake archive bytes, but the real producer's offline validators run.
+        fixture = EditorArtifactTests()
+        fixture.setUp()
+        try:
+            for path in fixture.payload.iterdir():
+                (payload / path.name).write_bytes(path.read_bytes())
+        finally:
+            fixture.doCleanups()
+        roles = collect.editor.names(candidate)
+        details["editor_version"] = "0.2.0"
     elif family == "desktop":
         suffix, data = (
             (".msi", b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1")
@@ -254,12 +266,12 @@ class PreflightCollectTests(unittest.TestCase):
             row, self.root / ("payloads" if kind == "payload" else "proofs") / target
         )
 
-    def test_all_13_real_validators_and_final_index_are_bound(self):
+    def test_all_14_real_validators_and_final_index_are_bound(self):
         result = self.collect()
         bundle = self.root / "verified"
         self.assertIs(result["publication_authorized"], False)
         self.assertEqual(result["status"], "preflight_verified")
-        self.assertEqual(len(result["artifacts"]), 13)
+        self.assertEqual(len(result["artifacts"]), 14)
         self.assertEqual(result["main_ci"], self.ci)
         self.assertEqual(
             result["oci_index_digest"],

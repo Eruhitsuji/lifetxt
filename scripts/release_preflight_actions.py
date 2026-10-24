@@ -13,10 +13,16 @@ import release_preflight_proof as proof
 
 REPOSITORY = "Eruhitsuji/lifetxt"
 WORKFLOW = ".github/workflows/release-preflight.yml"
-FAMILIES = ("core", "standalone", "desktop", "mini", "oci")
+FAMILIES = ("core", "standalone", "desktop", "mini", "oci", "editor")
 TITLES = {family: family.capitalize() for family in FAMILIES}
 TITLES["oci"] = "OCI"
 STEPS = {
+    "editor": (
+        "Build and smoke Windows VSIX and Neovim archives",
+        "Upload immutable non-public Editor payload",
+        "Bind upload reference to verified Editor bytes",
+        "Upload Editor component proof separately",
+    ),
     "core": (
         "Build and verify the exact candidate payload",
         "Bind upload reference to verified bytes",

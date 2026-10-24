@@ -1,0 +1,15 @@
+schema_version: 1
+links:
+- requirement_id: req-release-v1-0-4-3
+  capability_id: cap-stable-release-governance
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1405
+  pull_request: pending
+  tests_or_evidence:
+  - Version/tag/Mini consistency
+  - Focused tests, release-policy check and wheel/sdist verification
+  release_or_deployment: Preparation only; tag/publication requires Release Authority
+    approval
+  status: implemented
+gaps:
+- Main merge-commit CI and post-publication channel validation belong to the next
+  operation.

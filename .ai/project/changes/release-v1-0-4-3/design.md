@@ -1,0 +1,5 @@
+# Public name correction
+
+GitHub changed Desktop asset spaces to dots during v1.0.4.2 upload; run 40093901356 failed with unexpected remote public asset. Preserve that release. User selected 1.0.4.3. Normalize spaces to dots before canonical inventory, checksum and staging creation. Reject unsupported names with an explicit ASCII allowlist; preserve + metadata and exact byte hashes. Existing case-fold collision detection rejects normalized aliases. Remote validation stays exact; no fuzzy matching or overwrite. Tests exercise real canonical staging with space-containing mappings and exact remote inventory.
+
+Bug/High, M justified by one corrected release identity; Owner Eruhitsuji, executor ChatGPT. Reuse cap-stable-release-governance. Branch fix/release-v1.0.4.3, base origin/main, final PR main. Review name safety, collisions, metadata compatibility and immutable public bytes. Tests: canonical/publication/version/traceability. No workflow or authority changes. After human merge: exact main CI, new 14-target preflight and separate run-specific release approval. Rollback only unpublished preparation by revert.

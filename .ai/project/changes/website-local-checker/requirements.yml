@@ -1,0 +1,13 @@
+schema_version: 1
+requirements:
+- id: req-browser-local-check-v1
+  kind: ADDED
+  owner: Eruhitsuji
+  statement: Provide isolated Japanese and English parser-only checking without input transmission or persistence.
+  acceptance_criteria:
+  - Explicit local preview creates ja/check and en/check without modifying the default Pages build
+  - Lazy pinned same-origin Worker reuses the native Core and FFI diagnostic contract
+  - UTF8 0/16384/16385 boundaries and 100/500 diagnostic counts verified
+  - Cancel, failure, timeout, recovery and stale results have bounded clear/restart behavior
+  - Focused Chromium network/storage, input responsiveness, repeat, keyboard and layout observations
+  - Publication remains blocked on issues 1398 and 1400 and independent human reviews

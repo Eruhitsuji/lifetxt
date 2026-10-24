@@ -18602,7 +18602,7 @@ traceability:
     - requirement_id: req-release-v1-0-4-2
       capability_id: cap-stable-release-governance
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1403
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1404
       tests_or_evidence:
         - tests/test_release_subversions.py
         - .ai/project/changes/release-v1-0-4-2/verification.yml

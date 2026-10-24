@@ -14,7 +14,10 @@ ROOT = Path(__file__).resolve().parents[2]
 SOURCE = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 from contrib.browser_check_poc.adapter import check_text
-from contrib.browser_check_poc.notice_inventory import validate_notices
+from contrib.browser_check_poc.notice_inventory import (
+    validate_notices,
+    write_notice_index,
+)
 
 VERSION = "314.0.7"
 RUNTIME_FILES = (
@@ -104,30 +107,13 @@ def build(output, source_cache=None):
     (output / "notices").mkdir()
     for name in notice_files:
         shutil.copyfile(SOURCE / "notices" / name, output / "notices" / name)
+    write_notice_index(output / "notices", SOURCE)
     (output / "core.zip").write_bytes(archive.getvalue())
     (output / "fixtures.json").write_text(
         json.dumps(expected, ensure_ascii=False, indent=2), encoding="utf-8"
     )
     write_delivery(output / "sources", SOURCE, source_cache)
-    revision = subprocess.check_output(
-        ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
-    ).strip()
-    manifest = {
-        "pyodide": VERSION,
-        "engine_base_revision": revision,
-        "core_modules": [f.relative_to(ROOT).as_posix() for f in modules],
-        "files": {
-            f.relative_to(output).as_posix(): {
-                "bytes": f.stat().st_size,
-                "sha256": hashlib.sha256(f.read_bytes()).hexdigest(),
-            }
-            for f in sorted(output.rglob("*"))
-            if f.is_file()
-        },
-    }
-    (output / "manifest.json").write_text(
-        json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
-    )
+    write_manifest(output, [f.relative_to(ROOT).as_posix() for f in modules])
     from contrib.browser_check_poc.distribution_audit import audit
 
     audit(output, SOURCE)
@@ -141,6 +127,29 @@ def build(output, source_cache=None):
                 ),
             }
         )
+    )
+
+
+def write_manifest(output, core_modules, profile="poc"):
+    revision = subprocess.check_output(
+        ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
+    ).strip()
+    manifest = {
+        "pyodide": VERSION,
+        "engine_base_revision": revision,
+        "core_modules": core_modules,
+        "profile": profile,
+        "files": {
+            f.relative_to(output).as_posix(): {
+                "bytes": f.stat().st_size,
+                "sha256": hashlib.sha256(f.read_bytes()).hexdigest(),
+            }
+            for f in sorted(output.rglob("*"))
+            if f.is_file()
+        },
+    }
+    (output / "manifest.json").write_text(
+        json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
     )
 
 

@@ -1,5 +1,7 @@
 # Runtime distribution inventory — #1362, 2026-10-17
 
+The current #1411 disposition is at the end of this document; earlier dated sections are historical evidence.
+
 This is an incremental source-based candidate inventory, **not a complete SBOM,
 legal clearance, publication approval or reproducible-build attestation**.
 The five-file runtime is hash-bound in `notices/components.json`.
@@ -168,3 +170,44 @@ Full procedure and boundaries: [SOURCE_DELIVERY.md](SOURCE_DELIVERY.md).
 `complete_distribution_audit` and `public_distribution_approved` remain false.
 Independent distribution and integration review, source-hosting continuity and
 Owner publication approval are separate gates under #1398/#1400.
+
+
+## #1411 review remediation (2026-10-25, current disposition)
+
+The notice inventory now has 25 documents, all reachable from generated
+`notices/index.html`, both checker pages and the source index. Unicode License
+V3 and original UCD16 ReadMe retain official bytes/hash/date; components include
+UCD-derived tables and unicode.org mapping-derived codecs. Retained source
+archives preserve other per-file terms. Historical statements above about
+missing sources, one representative HACL notice or unmeasured zstd are superseded
+by the bounded results below; they are not current missing-work claims.
+
+| Additional component/evidence | Retained terms / limit |
+| --- | --- |
+| Unicode Character Database 16.0.0 derived tables | Unicode License V3 + original UCD16 ReadMe; runtime UCD16 observed |
+| unicode.org mapping-derived encodings/CJK tables | Unicode License V3; per-input attribution scope awaits independent acceptance |
+| mimalloc | CPython incorporated-software notice, mimalloc section; actual WITH_MIMALLOC=1 |
+| SipHash24 | Same notice, SipHash24 section; source-level component, no per-object attribution |
+| strtod/dtoa | Same notice, strtod/dtoa section; source-level component |
+| Mersenne Twister | Same notice, Mersenne Twister section; _random builtin observed |
+| zstd 1.5.7 / SQLite 3.39.0 | Runtime versions match recipe versions; recipe has no archive hash |
+| xz 5.2.2 archive | Mirror bytes equal official tukaani.org bytes; actual linked version not measured |
+
+`source-provenance.json` now distinguishes the correspondence basis of all 11
+archives. Actual runtime observations are reproducible via runtime_probe.mjs.
+All nine patches and all 567 stdlib files remain checked; generated sysconfig
+classification additionally requires its exact SHA256 and inspected constants.
+Full object mapping, bitwise reproducibility and the actual emsdk Emscripten
+commit are **unverified**, not facts established by an Owner acceptance.
+
+The final website checker now has a whole-site manifest and fixed-source audit.
+Publication candidates require all ten sources on the same origin. Owner source
+retention responsibility covers the entire binary-distribution period; acceptance
+is pending. Link mode remains a blocked development aid.
+
+The data-driven publication gate checks final-head independent review and
+artifact identity with P1/P2 dispositions and separate Owner approval. Synthetic
+positive tests demonstrate evaluation only, never actual approval. Both actual
+flags stay false. See [SOURCE_DELIVERY.md](SOURCE_DELIVERY.md) for current
+commands, evidence limits and pending P2-6/P2-7 decisions. #1398 and #1400 remain
+blocked until final-head independent re-review and the required Owner decisions.

@@ -80,7 +80,7 @@ def check(output: Path, base: str = DEFAULT_URL) -> list[str]:
     expected = {"index.html", "404.html"} | {
         f"{lang}/{page}.html" for lang in ("ja", "en") for page in PAGES
     }
-    actual = {str(file.relative_to(output)) for file in docs}
+    actual = {file.relative_to(output).as_posix() for file in docs}
     if actual != expected:
         errors.append(f"unexpected/missing HTML pages: {sorted(actual ^ expected)}")
     origin = urlsplit(base)

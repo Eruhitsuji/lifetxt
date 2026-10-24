@@ -3,12 +3,12 @@ verification:
   checks:
     - type: targeted_unit
       command: python -m unittest tests.test_release_preflight_editor
-      status: not_run
-      result: Requires target repository checkout and CI; original run 40076258957 provides failing real VSIX proof.
+      status: passed
+      result: 7 Editor tests passed locally on d7af6d78 with the decision-record repair; actual VSIX build remains outstanding.
     - type: regression_suite
-      command: python -m unittest tests.test_release_preflight_actions tests.test_release_preflight_collect tests.test_release_publication
-      status: not_run
-      result: Verify after PR CI, not yet executed.
+      command: python -m unittest tests.test_change_package_closeout tests.test_release_preflight_editor tests.test_release_preflight_actions tests.test_release_preflight_collect tests.test_release_publication
+      status: passed
+      result: 75 tests passed locally on d7af6d78 plus the decisions.md repair. Package closeout reproduced the missing-file failure before the repair; full updated PR CI remains pending.
     - type: actual_build
       command: New non-public manual 14-target release-preflight workflow on main after merge
       status: not_run

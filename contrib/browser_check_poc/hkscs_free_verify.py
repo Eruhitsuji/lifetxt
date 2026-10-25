@@ -9,10 +9,55 @@ import tarfile
 import tempfile
 import zipfile
 
-from contrib.browser_check_poc.hkscs_free import HERE, REMOVED, ROOT, digest
+from contrib.browser_check_poc.hkscs_free import (
+    HERE,
+    REMOVED,
+    ROOT,
+    digest,
+    prepare_build,
+)
+
+
+STAGED_INPUTS = (
+    "cpython/Setup.local",
+    "cpython/Makefile",
+    "Makefile",
+    "tools/hkscs_free_build.py",
+)
+
+
+def verify_staging(build, curated, source_cache):
+    """Reconstruct trusted inputs; workspace receipts cannot vouch for themselves."""
+    with tempfile.TemporaryDirectory() as temporary:
+        stage = Path(temporary) / "stage"
+        expected_build = prepare_build(source_cache, stage)
+        for actual, expected in (
+            (curated.parent / "build-profile.json", stage / "build-profile.json"),
+            (curated / "source-removal.json", stage / "curated/source-removal.json"),
+        ):
+            if json.loads(actual.read_text("utf-8")) != json.loads(
+                expected.read_text("utf-8")
+            ):
+                raise ValueError(
+                    "staging receipt differs from locked source reconstruction"
+                )
+        if digest((curated / "cpython-hkscs-free.tar.gz").read_bytes()) != digest(
+            (stage / "curated/cpython-hkscs-free.tar.gz").read_bytes()
+        ):
+            raise ValueError(
+                "curated archive differs from locked source reconstruction"
+            )
+        for relative in STAGED_INPUTS:
+            if (build / relative).read_bytes() != (
+                expected_build / relative
+            ).read_bytes():
+                raise ValueError(
+                    f"staged compiler input differs from locked source: {relative}"
+                )
 
 
 def verify(build, curated, runtime, llvm_ar, source_cache):
+    verify_staging(build, curated, source_cache)
     profile = json.loads((curated.parent / "build-profile.json").read_text())
     for relative, field in (
         ("cpython/Setup.local", "setup_local_sha256"),

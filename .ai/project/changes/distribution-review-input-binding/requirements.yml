@@ -1,0 +1,14 @@
+schema_version: 1
+requirements:
+  - id: req-hkscs-verification-input-binding-v1
+    kind: ADDED
+    statement: Source/object evidence must reconstruct locked staging rather than trust mutable workspace receipts.
+    acceptance_criteria:
+      - Recreate the curated archive, receipts and four modified inputs from fixed upstream archives.
+      - Reject simultaneous work-file and receipt/hash mutations before reading a runtime or invoking llvm-ar.
+      - Record per-Issue technical findings, execution limits and close conditions for 1409, 1411, 1413, 1415 and 1417.
+      - Preserve source-specific review and publication gates and both false flags.
+    constraints:
+      - Offline verification only; no new runtime bytes or lock updates.
+    owner: Eruhitsuji
+open_questions: []

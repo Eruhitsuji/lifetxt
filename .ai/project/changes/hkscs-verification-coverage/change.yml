@@ -1,0 +1,22 @@
+schema_version: 1
+change:
+  id: hkscs-verification-coverage
+  title: Extend bounded HKSCS build-input verification and mismatch diagnostics
+  status: in_review
+  change_type: Operations
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1423
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1424
+  base_commit: 78442528
+scope:
+  write_scope:
+    - HKSCS source verifier, focused tests, HKSCS_FREE.md
+    - dedicated change package and limited capability/traceability
+  forbidden_scope:
+    - runtime/source pins, Core, CLI, Format, managed standards, Pages workflow and deploy
+human_approvals_required:
+  - independent latest-head implementation and integration review
+  - merge
+  - separate distribution acceptance and publication authorization

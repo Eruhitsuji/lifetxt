@@ -1,0 +1,198 @@
+{
+  "environment": "Node worker_threads/WASM; not browser acceptance",
+  "node": "v24.22.1",
+  "cases": [
+    {
+      "name": "empty",
+      "stage": "result",
+      "worker_ms": 91.68665199999987,
+      "elapsed_ms": 2410.856582
+    },
+    {
+      "name": "valid",
+      "stage": "result",
+      "worker_ms": 20.824493000000075,
+      "elapsed_ms": 21.959440000000086
+    },
+    {
+      "name": "japanese",
+      "stage": "result",
+      "worker_ms": 0.9047690000002149,
+      "elapsed_ms": 3.3957680000003165
+    },
+    {
+      "name": "syntax",
+      "stage": "result",
+      "worker_ms": 0.2517880000000332,
+      "elapsed_ms": 0.5981379999998353
+    },
+    {
+      "name": "custom-key",
+      "stage": "result",
+      "worker_ms": 0.32617000000027474,
+      "elapsed_ms": 0.5409119999999348
+    },
+    {
+      "name": "warning",
+      "stage": "result",
+      "worker_ms": 0.2410620000000563,
+      "elapsed_ms": 0.4104059999999663
+    },
+    {
+      "name": "position",
+      "stage": "result",
+      "worker_ms": 0.23905899999999747,
+      "elapsed_ms": 0.43877900000006775
+    },
+    {
+      "name": "format-current",
+      "stage": "result",
+      "worker_ms": 0.26890400000002046,
+      "elapsed_ms": 0.41346100000009756
+    },
+    {
+      "name": "format-future",
+      "stage": "result",
+      "worker_ms": 0.17062600000008388,
+      "elapsed_ms": 0.37072600000010425
+    },
+    {
+      "name": "duplicate-id",
+      "stage": "result",
+      "worker_ms": 0.32546800000000076,
+      "elapsed_ms": 0.6145830000000387
+    },
+    {
+      "name": "missing-reference",
+      "stage": "result",
+      "worker_ms": 0.21848799999997937,
+      "elapsed_ms": 0.5377920000000813
+    },
+    {
+      "name": "timezone",
+      "stage": "result",
+      "worker_ms": 0.7169460000000072,
+      "elapsed_ms": 0.8572369999997136
+    },
+    {
+      "name": "multiline",
+      "stage": "result",
+      "worker_ms": 0.19738700000016252,
+      "elapsed_ms": 0.3228750000002947
+    },
+    {
+      "name": "html-injection",
+      "stage": "result",
+      "worker_ms": 0.20873299999993833,
+      "elapsed_ms": 0.34561900000016976
+    },
+    {
+      "name": "completed-parent-gap",
+      "stage": "result",
+      "worker_ms": 0.36899300000004587,
+      "elapsed_ms": 0.4904260000002978
+    },
+    {
+      "name": "native-history-gap",
+      "stage": "result",
+      "worker_ms": 0.3590790000002926,
+      "elapsed_ms": 0.4722590000001219
+    },
+    {
+      "name": "empty",
+      "stage": "result",
+      "worker_ms": 0.12512799999967683,
+      "elapsed_ms": 0.243094999999812
+    },
+    {
+      "name": "utf8-exact",
+      "stage": "result",
+      "worker_ms": 1.0713190000001305,
+      "elapsed_ms": 1.277983000000404
+    },
+    {
+      "name": "ascii-exact",
+      "stage": "result",
+      "worker_ms": 0.3037760000001981,
+      "elapsed_ms": 0.492870000000039
+    },
+    {
+      "name": "emoji",
+      "stage": "result",
+      "worker_ms": 0.13258900000028007,
+      "elapsed_ms": 0.26141199999983655
+    },
+    {
+      "name": "supplementary-cjk",
+      "stage": "result",
+      "worker_ms": 0.1882220000002235,
+      "elapsed_ms": 0.3419840000001386
+    },
+    {
+      "name": "html-injection",
+      "stage": "result",
+      "worker_ms": 0.17401200000040262,
+      "elapsed_ms": 0.3385089999997035
+    },
+    {
+      "name": "100-diagnostics",
+      "stage": "result",
+      "worker_ms": 2.000062000000071,
+      "elapsed_ms": 2.4320459999999002
+    },
+    {
+      "name": "500-diagnostics",
+      "stage": "result",
+      "worker_ms": 4.2288690000000315,
+      "elapsed_ms": 4.676379999999881
+    },
+    {
+      "name": "ascii-over",
+      "stage": "error",
+      "elapsed_ms": 0.33468200000015713
+    },
+    {
+      "name": "utf8-over",
+      "stage": "error",
+      "elapsed_ms": 0.188122999999905
+    }
+  ],
+  "repeated_ms": [
+    21.08877799999982,
+    13.626026000000365,
+    11.934927000000243,
+    12.587290999999823,
+    12.705353000000287,
+    13.30484400000023,
+    12.300496000000294,
+    12.0632999999998,
+    12.009279000000333,
+    11.983388999999988,
+    11.380685000000085,
+    11.597860999999739,
+    11.72402000000011,
+    12.328558000000157,
+    12.049089000000095,
+    11.845612999999958,
+    13.131393000000116,
+    12.550001000000066,
+    12.48672600000009,
+    11.389016999999967,
+    12.31720099999984,
+    13.91384700000026,
+    14.275791000000027,
+    12.31401599999981,
+    12.130450999999994,
+    16.831007999999656,
+    11.79197299999987,
+    11.824269999999615,
+    11.609969000000092,
+    11.881306000000222
+  ],
+  "heartbeat_ticks": 280,
+  "startup": {
+    "id": 1,
+    "stage": "ready",
+    "startup_ms": 2195.8942509999997
+  }
+}

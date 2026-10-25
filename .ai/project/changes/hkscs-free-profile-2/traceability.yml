@@ -1,0 +1,12 @@
+schema_version: 1
+links:
+  - requirement_id: req-hkscs-free-profile-2-v1
+    capability_id: cap-official-website
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1427
+    pull_request: null
+    tests_or_evidence:
+      - tests/test_hkscs_profile2.py
+      - contrib/browser_check_poc/profiles/hkscs-free-2/profile.json
+      - browser-summary.json
+      - node-proof.json
+    status: implemented

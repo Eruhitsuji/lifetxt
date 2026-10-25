@@ -1,0 +1,47 @@
+schema_version: 1
+verification:
+  checks:
+    - type: focused_regression
+      command: LIFETXT_PROFILE2_ARTIFACT=ARTIFACT python -m unittest tests.test_hkscs_profile2 tests.test_custom_distribution tests.test_website_checker tests.test_website tests.test_website_pages_workflow
+      status: passed
+      result: 28 tests, 25 successful and 3 explicit legacy artifact/npm-runtime skips. Actual new artifact mutation suite executed.
+    - type: actual_worker
+      command: node tests/website_checker_node_probe.mjs ARTIFACT/checker FIXTURES OUTPUT
+      status: passed
+      result: 26 cases and 30 repeated checks; native contract parity, exact UTF8/ascii16KiB boundaries, oversize rejection, Japanese/supplementary CJK, HTML injection and diagnostic limits.
+      evidence: node-proof.json
+    - type: actual_chromium
+      command: python scripts/probe_website_checker.py --site ARTIFACT --chromium CHROME153 --output OUTPUT
+      status: passed
+      result: JA/EN bounded Chromium153 final checker acceptance; lazy load, network/storage, cancellation, accelerated startup timeout and recovery. Not public Pages or other devices.
+      evidence: browser-summary.json
+    - type: source_specific_icu
+      command: python -m contrib.browser_check_poc.permission_probe verify --cache ICU --source-cache DERIVED --custom-source-profile
+      status: passed
+      result: Exact curated source and retained grant comparison rerun; independent applicability remains pending.
+    - type: intro
+      command: python scripts/build_website.py --output NEW; python scripts/check_website.py NEW
+      status: passed
+      result: 14 bilingual introduction pages, local links/assets/fragments and metadata pass; no checker in ordinary build.
+    - type: full_focused_source_and_governance
+      command: LIFETXT_RUN_SOURCE_AUDIT=1 with pinned source/runtime/ICU caches and profile2 artifact; python -W error::ResourceWarning -m unittest focused source/runtime/site/governance modules
+      status: passed
+      result: 90 collected, 87 successful, 3 legacy artifact/npm-runtime skips; actual new artifact negative tests and source/ICU checks executed.
+    - type: static_and_legacy_compatibility
+      command: ruff check contrib/browser_check_poc lifetxt tests scripts; ruff format --check CHANGED; compare origin/main custom_distribution.static_files with current default; git diff --check
+      status: passed
+      result: Lint and format pass; all 78 default legacy static/notice/source files identical; old pins/proofs unchanged.
+  gaps:
+    - description: Separate independent latest-head review and source-specific/final distribution acceptance remain pending.
+      tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1398
+    - description: Publication/deployment and actual public delivery remain separate.
+      tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1400
+review_ledger:
+  - reviewer: Codex implementer
+    review_type: informational_self_review
+    result: informational_only
+    completed_at: '2026-10-25'
+    finding_count: 0
+  - reviewer: separate reviewer
+    review_type: implementation-and-integration
+    result: pending

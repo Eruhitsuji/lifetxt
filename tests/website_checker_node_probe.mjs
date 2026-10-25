@@ -10,13 +10,19 @@ const messages = [];
 function request(text) {
   return new Promise((resolve, reject) => {
     const id = ++sequence;
-    const timeout = setTimeout(()=>reject(new Error('Worker timeout')), 30000);
+    function cleanup() {
+      clearTimeout(timeout);
+      worker.off('message', listener);
+      worker.off('error', onError);
+    }
+    const timeout = setTimeout(()=>{cleanup();reject(new Error('Worker timeout'));}, 30000);
+    const onError = error => {cleanup();reject(error);};
     const listener = data => {
       messages.push(data);
       if (data.id !== id || !['result','error'].includes(data.stage)) return;
-      clearTimeout(timeout); worker.off('message',listener); resolve(data);
+      cleanup(); resolve(data);
     };
-    worker.once('error', reject); worker.on('message',listener); worker.postMessage({id,text});
+    worker.once('error', onError); worker.on('message',listener); worker.postMessage({id,text});
   });
 }
 try {
@@ -34,5 +40,5 @@ try {
   }
   assert.ok(ticks>0);
   await writeFile(output,JSON.stringify({environment:'Node worker_threads/WASM; not browser acceptance',node:process.version,cases,repeated_ms:repeated,heartbeat_ticks:ticks,startup:messages.find(m=>m.stage==='ready')},null,2));
-  console.log(`Node WASM: ${cases.length} cases, 30 repeats; browser acceptance remains unexecuted.`);
+  console.log(`Node WASM: ${cases.length} cases, 30 repeats; browser acceptance is separate.`);
 } finally {clearInterval(timer); await worker.terminate();}

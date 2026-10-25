@@ -111,6 +111,7 @@ capabilities:
       - req-browser-local-check-source-delivery-v1
       - req-browser-distribution-review-remediation-v1
       - req-hkscs-free-runtime-candidate-v1
+      - req-hkscs-free-distribution-v1
       - req-cjk-source-permissions-v1
     implementation_locations:
       - website/

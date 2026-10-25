@@ -1,0 +1,65 @@
+schema_version: 1
+verification:
+  checks:
+  - type: fixed_custom_source_generation
+    command: python -m contrib.browser_check_poc.custom_sources --upstream-cache CACHE --output NEW_DERIVED_CACHE
+    status: passed
+    result: Ten archives verified; curated CPython bound to removal proof; modified Pyodide contains original MPL and helper MIT notice, changed-file instructions and build helper. No original CPython/HKSCS archive or official core archive is delivered as custom source.
+  - type: actual_custom_runtime_versions
+    command: node contrib/browser_check_poc/runtime_probe.mjs VERIFIED_RUNTIME
+    status: passed
+    result: Actual UCD16.0.0 and legacy3.2.0, SQLite3.39.0, zstd1.5.7, mimalloc enabled. Exact five files agree with source-build/codec/runtime observations.
+    evidence: contrib/browser_check_poc/hkscs-runtime-observations.json
+  - type: custom_whole_site_integrity
+    command: python scripts/build_website_checker.py --output NEW --hkscs-runtime VERIFIED_RUNTIME --source-cache DERIVED_CACHE
+    status: passed
+    result: Complete local JA/EN checker and introduction, runtime, Core, source and notice allowlist bound to reviewed inputs. Source review remains pending; no publication claim.
+  - type: negative_mutations_and_gate
+    command: python -m unittest tests.test_custom_distribution
+    status: passed
+    result: Synthetic unit fixtures reject rehashed script/runtime/Core/notice/source/HTML changes, extra/missing files, missing sources, old runtime and proof drift. Actual mapping statuses block an otherwise-valid synthetic Owner/review record.
+  - type: focused_real_browser
+    command: python scripts/probe_website_checker.py --site CUSTOM_SITE --chromium EXECUTABLE --output EVIDENCE
+    status: passed
+    result: Actual Chromium153 on Linux; JA23/23 and EN23/23 including 16KiB boundaries, Unicode, diagnostics, 30 repeated 800-item checks per language, main thread responsiveness, network/storage, cancellation/retry/offline recovery and accelerated timeout. Only focused local acceptance, no physical/live claims.
+    evidence: browser-proof.json
+  - type: introduction_regression
+    command: python scripts/build_website.py --output INTRO_ONLY; python scripts/check_website.py INTRO_ONLY
+    status: passed
+    result: 14 introduction HTML pages, links/assets/fragments and metadata pass. The introduction-only checker deliberately rejects active checker pages; it was not weakened to accept them.
+  - type: all_actual_focused_regressions
+    command: LIFETXT_CUSTOM_ARTIFACT=ARTIFACT LIFETXT_RUN_SOURCE_AUDIT=1 LIFETXT_SOURCE_CACHE=UPSTREAM_CACHE LIFETXT_SOURCE_RUNTIME=OFFICIAL_RUNTIME LIFETXT_PERMISSION_CACHE=ICU_CACHE python -W error::ResourceWarning -m unittest -v tests.test_custom_distribution tests.test_browser_permission_evidence tests.test_hkscs_free tests.test_browser_review_remediation tests.test_browser_source_delivery tests.test_browser_distribution_audit tests.test_browser_check_poc tests.test_website_checker tests.test_website tests.test_website_pages_workflow tests.test_traceability_gate tests.test_change_package_closeout
+    status: passed
+    result: 82 tests, zero skips. Includes actual old/new runtime, pinned source/permission inputs, ten actual rehashed mutations on an isolated copy and restored-original integrity. Complete stdout/stderr captured in memory and retained.
+    evidence: verification-logs.json.gz
+  - type: actual_node_worker
+    command: node tests/website_checker_node_probe.mjs CHECKER FIXTURES OUTPUT
+    status: passed
+    result: 27 actual custom Worker cases and 30 repeated checks; supplemental CJK, UTF-8 boundaries, diagnostics and error cases match native expectations.
+    evidence: node-proof.json
+  - type: final_head_binding
+    command: Rebuild and audit at final PR head, then product/browser and source/notice HTTP verification
+    status: external_record_required
+    result: The final PR Conversation records exact head/manifest and final evidence; this developer snapshot does not claim a future commit hash.
+  gaps:
+  - description: Final-head independent implementation/distribution/integration assessment, ICU applicability and HKSCS-removal acceptance; existing Owner retention decisions must be checked against the exact custom bundle.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1398
+  - description: Human public-release decision, Pages integration and live-delivery smoke; unsupported physical/browser/OS-peak scenarios remain unverified.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1400
+review_ledger:
+- reviewer: Codex implementer
+  review_type: informational_self_review
+  result: informational_only
+  finding_count: 6
+  unresolved_finding_count: 0
+  completed_at: 2026-10-25
+  evidence: self-review.md; final PR comment binds the actual head
+- reviewer: Owner-designated independent evaluator
+  review_type: implementation-distribution
+  result: pending
+- reviewer: Owner-designated independent evaluator
+  review_type: integration
+  result: pending
+
+  # Final full-output regressions and exact final-head manifest/browser binding
+  # are recorded in verification-logs.json.gz and the PR Conversation.

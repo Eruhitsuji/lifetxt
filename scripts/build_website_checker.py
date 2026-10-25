@@ -78,7 +78,13 @@ def render(lang, base=DEFAULT_URL):
 </main></body></html>'''
 
 
-def build(output, source_cache=None, *, publication_candidate=False):
+def build(
+    output, source_cache=None, *, publication_candidate=False, hkscs_runtime=None
+):
+    if hkscs_runtime is not None:
+        from contrib.browser_check_poc.custom_distribution import build as custom_build
+
+        return custom_build(output, hkscs_runtime, source_cache)
     if publication_candidate and source_cache is None:
         raise ValueError(
             "Publication candidates require all verified same-origin source archives"
@@ -129,7 +135,15 @@ if __name__ == "__main__":
         action="store_true",
         help="Require same-origin source bundle; does not approve publication",
     )
+    parser.add_argument(
+        "--hkscs-runtime",
+        type=Path,
+        help="Explicit verified HKSCS-free runtime; requires derived source cache",
+    )
     args = parser.parse_args()
     build(
-        args.output, args.source_cache, publication_candidate=args.publication_candidate
+        args.output,
+        args.source_cache,
+        publication_candidate=args.publication_candidate,
+        hkscs_runtime=args.hkscs_runtime,
     )

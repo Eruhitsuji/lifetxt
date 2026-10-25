@@ -1,0 +1,21 @@
+schema_version: 1
+change:
+  id: hkscs-distribution-integration
+  title: Bind the HKSCS-free runtime to final checker and corresponding source
+  status: in_review
+  change_type: Operations
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1417
+  related_pull_request: null
+scope:
+  write_scope:
+  - explicit custom checker builder, source package, audit and focused tests
+  - dedicated change package and narrow capability/traceability records
+  forbidden_scope:
+  - managed standards, Core, CLI, Format, Pages workflow and deploy
+human_approvals_required:
+- independent final-head implementation/integration review
+- merge
+- publication and deployment separately

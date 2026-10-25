@@ -16,6 +16,78 @@ from contrib.browser_check_poc.source_delivery import load_lock
 
 
 class PermissionEvidenceTests(unittest.TestCase):
+    def test_custom_source_verification_reads_curated_archive_and_keeps_acceptance_pending(
+        self,
+    ):
+        from contrib.browser_check_poc import custom_sources
+        import tarfile
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            cache, sources, notice = root / "cache", root / "sources", root / "notices"
+            for path in (cache, sources, notice):
+                path.mkdir()
+            raw = b"<mapping/>\n"
+            bodies = {
+                "icu-xml": raw,
+                "icu-license": b"Synthetic grant",
+                "icu-repository-readme": b"released under [LICENSE]",
+                "icu-charset-readme": b"Synthetic charset scope",
+            }
+            rows = []
+            for key, data in bodies.items():
+                (cache / key).write_bytes(data)
+                rows.append(
+                    {
+                        "id": key,
+                        "file": key,
+                        "bytes": len(data),
+                        "sha256": hashlib.sha256(data).hexdigest(),
+                    }
+                )
+            (notice / "grant.txt").write_bytes(bodies["icu-license"])
+            archive = sources / "curated.tar.gz"
+            with tarfile.open(archive, "w:gz") as tar:
+                item = tarfile.TarInfo("curated/mapping.xml")
+                item.size = len(raw) + 1
+                tar.addfile(item, io.BytesIO(raw + b"\n"))
+            entry = {
+                "id": "cpython",
+                "file": archive.name,
+                "root": "curated",
+                "bytes": archive.stat().st_size,
+                "sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+                "required_members": {
+                    "mapping.xml": hashlib.sha256(raw + b"\n").hexdigest()
+                },
+                "base_upstream_sha256": "a" * 64,
+            }
+            metadata = {
+                "inputs": rows,
+                "cpython_member": "mapping.xml",
+                "license_notice": "grant.txt",
+                "icu_data_commit": "b" * 40,
+            }
+            with (
+                patch.object(probe, "evidence", return_value=metadata),
+                patch.object(
+                    custom_sources, "load_lock", return_value={"archives": [entry]}
+                ),
+                patch.object(
+                    probe,
+                    "load_lock",
+                    side_effect=AssertionError("old source lock used"),
+                ),
+            ):
+                result = probe.verify(cache, sources, root, custom_source_profile=True)
+                self.assertEqual(result["cpython_archive_sha256"], entry["sha256"])
+                self.assertEqual(result["base_upstream_cpython_sha256"], "a" * 64)
+                self.assertEqual(result["independent_permission_acceptance"], "pending")
+                self.assertFalse(result["public_distribution_approved"])
+                archive.write_bytes(archive.read_bytes() + b"changed")
+                with self.assertRaises(ValueError):
+                    probe.verify(cache, sources, root, custom_source_profile=True)
+
     def test_exact_xml_correspondence_allows_only_the_recorded_single_lf(self):
         self.assertIn(
             "all other bytes identical",

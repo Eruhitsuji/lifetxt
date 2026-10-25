@@ -1,0 +1,20 @@
+{
+  "kind": "actual Chromium loopback notice navigation",
+  "cases": [
+    {
+      "language": "ja",
+      "ICU_notice_reachable": true,
+      "status": 200,
+      "sha256": "f72db45707e93c90c4bf400edfa5d38ce44fe692789e385548e627459c1bf6c9",
+      "page_errors": []
+    },
+    {
+      "language": "en",
+      "ICU_notice_reachable": true,
+      "status": 200,
+      "sha256": "f72db45707e93c90c4bf400edfa5d38ce44fe692789e385548e627459c1bf6c9",
+      "page_errors": []
+    }
+  ],
+  "browser": "153.0.8010.0"
+}

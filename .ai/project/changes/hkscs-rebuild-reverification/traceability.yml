@@ -3,7 +3,7 @@ links:
   - requirement_id: req-hkscs-rebuild-evidence-v1
     capability_id: cap-official-website
     task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1425
-    pull_request: null
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1426
     tests_or_evidence:
       - source-build-proof.json
       - wasm-proof.json

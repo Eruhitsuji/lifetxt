@@ -33,6 +33,34 @@ class RebuildProfileTests(unittest.TestCase):
             "pending",
         )
 
+    def test_packaged_source_guide_identity_and_template_drift(self):
+        metadata = profile.source_metadata(profile.REBUILD_RUNTIME_PROFILE)
+        self.assertIn(
+            b"(runtime profile lifetxt-hkscs-free-2; source recipe lifetxt-hkscs-free-1)",
+            metadata["CUSTOM_SOURCE.md"],
+        )
+        self.assertIn(b"PROFILE.md", metadata["index.html"])
+        self.assertIn(b"lifetxt-hkscs-free-2", metadata["PROFILE.md"])
+        source_path = profile.SOURCE / "CUSTOM_SOURCE.md"
+        read_bytes = Path.read_bytes
+        original = read_bytes(source_path)
+        for changed in (
+            original.replace(b"(profile lifetxt-hkscs-free-1)", b"(reworded profile)"),
+            original + b"\n(profile lifetxt-hkscs-free-1)\n",
+        ):
+            with self.subTest(changed=changed != original):
+
+                def changed_guide(path):
+                    return changed if path == source_path else read_bytes(path)
+
+                with patch.object(Path, "read_bytes", changed_guide):
+                    with self.assertRaisesRegex(ValueError, "exactly once"):
+                        profile.source_metadata(profile.REBUILD_RUNTIME_PROFILE)
+                    # Legacy output does not depend on the profile2 template guard.
+                    self.assertEqual(
+                        profile.source_metadata()["CUSTOM_SOURCE.md"], changed
+                    )
+
     def test_unknown_profile_and_missing_runtime_fail_before_output(self):
         with tempfile.TemporaryDirectory() as temp:
             output = Path(temp) / "site"

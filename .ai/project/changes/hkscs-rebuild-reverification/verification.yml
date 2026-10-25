@@ -1,0 +1,47 @@
+schema_version: 1
+verification:
+  checks:
+    - type: fixed_compiler_and_real_build
+      command: pinned emsdk install/activate; five SDK patches and struct_info comparison; PYODIDE_JOBS=4 make all-but-packages COMPILEALL_OPTS=-j1
+      status: passed
+      result: Compiler hash/revision match original. Attempt3 exit0 with complete output; earlier failures/incomplete runs retained. No fixed runtime pin updated.
+      evidence: procurement.json; build-logs.json.gz
+    - type: actual_source_object_and_runtime
+      command: hkscs_free_verify.verify(BUILD, CURATED, CANDIDATE, FIXED_LLVM_AR, CACHE)
+      status: passed
+      result: 68 staging inputs, 351 objects, CPython3204 C/header/Python, Pyodide202 src and five dependencies798 C/header files verified. Source manifests agree with original; actual five runtime files match actual WASM probe hashes.
+      evidence: source-build-proof.json
+    - type: actual_wasm_removal_and_core
+      command: node contrib/browser_check_poc/hkscs_free_probe.mjs CANDIDATE OUTPUT; hkscs_free --probe CANDIDATE LAYOUT; node contrib/browser_check_poc/probe.mjs LAYOUT OUTPUT
+      status: passed
+      result: HKSCS builtin/module/codec lookups rejected, Unicode/Japanese codecs pass, Core17/17 match and 1/100/1000/2000-line checks/oversize rejection pass.
+      evidence: wasm-proof.json; core-wasm-proof.json
+    - type: actual_chromium_poc
+      command: python contrib/browser_check_poc/browser_probe.py --site LAYOUT --chromium CHROME153 --output OUTPUT
+      status: passed
+      result: Chromium153.0.8010.0, 17/17 match, 30 requests, no page errors; existing lazy-load/offline/cancel/restart/retry/timeout/storage/CSP PoC checks passed. Not final website checker acceptance or physical-device testing.
+      evidence: browser-summary.json
+    - type: original_profile_identity_and_rejection
+      command: compare five runtime size/hash records; custom_distribution.check_runtime(CANDIDATE)
+      status: passed
+      result: asm.mjs and lock.json match; wasm/stdlib/loader differ. Existing fixed profile rejects the candidate. This is not bit-identical restoration.
+      evidence: runtime-comparison.json
+    - type: private_recovery_roundtrip
+      command: create regular-file checkpoint excluding SDK/node_modules/Git/caches; data-only extract; verify complete manifest; reverify.py with fixed llvm-ar
+      status: passed
+      result: 10924 payload hashes verify; restored complete source/object report equals the original new report. Archive identity recorded and privately retained; no private URL published.
+      evidence: retention.json
+  gaps:
+    - description: New candidate is not adopted; old runtime bytes unavailable. Separate profile adoption or restoration and completed checker/final manifest/16KiB acceptance are required.
+      tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1417
+    - description: Independent latest-head/source-specific/distribution acceptance, source retention and Owner publication/deployment decisions remain pending.
+      tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1398
+review_ledger:
+  - reviewer: Codex implementer
+    review_type: informational_self_review
+    result: informational_only
+    finding_count: 0
+    completed_at: '2026-10-25'
+  - reviewer: separate reviewer
+    review_type: implementation-and-integration
+    result: pending

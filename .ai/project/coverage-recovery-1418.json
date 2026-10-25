@@ -1,0 +1,87 @@
+{
+  "issue": 1418,
+  "base": "0b7fd88f5ca6430ad5451851b593e7fcea83839f",
+  "cause": "Temporary Python selector source deleted before coverage report",
+  "fix": "Mock selector import in ZIP test; retain real archive bytes, CRC and metadata assertions",
+  "before": [
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python",
+        "-m",
+        "coverage",
+        "run",
+        "--branch",
+        "--data-file=.cache-before-coverage",
+        "-m",
+        "unittest",
+        "tests.test_hkscs_free"
+      ],
+      "exit_code": 0,
+      "output": ".....\n----------------------------------------------------------------------\nRan 5 tests in 0.026s\n\nOK\n"
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python",
+        "-m",
+        "coverage",
+        "report",
+        "--data-file=.cache-before-coverage",
+        "-m"
+      ],
+      "exit_code": 1,
+      "output": "No source for code: '/tmp/tmpgmo03boo/tools/create_zipfile.py'; see https://coverage.readthedocs.io/en/7.17.0/messages.html#error-no-source\n"
+    }
+  ],
+  "after": [
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python",
+        "-m",
+        "coverage",
+        "run",
+        "--branch",
+        "--data-file=.cache-after-coverage",
+        "-m",
+        "unittest",
+        "tests.test_hkscs_free"
+      ],
+      "exit_code": 0,
+      "output": ".....\n----------------------------------------------------------------------\nRan 5 tests in 0.026s\n\nOK\n"
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python",
+        "-m",
+        "coverage",
+        "report",
+        "--data-file=.cache-after-coverage",
+        "-m"
+      ],
+      "exit_code": 0,
+      "output": "Name                                            Stmts   Miss Branch BrPart  Cover   Missing\n-------------------------------------------------------------------------------------------\ncontrib/browser_check_poc/hkscs_free.py           153     99     62      7    34%   58, 65, 67, 69, 72, 79, 115-209, 214-244, 260-280\ncontrib/browser_check_poc/hkscs_free_build.py      56     15     18      3    70%   40->39, 60, 65-78, 88\ntests/__init__.py                                   0      0      0      0   100%\ntests/test_hkscs_free.py                          101      1     10      1    98%   152\n-------------------------------------------------------------------------------------------\nTOTAL                                             310    115     90     11    58%\n"
+    },
+    {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python",
+        "-m",
+        "coverage",
+        "json",
+        "--data-file=.cache-after-coverage",
+        "-o",
+        ".cache-after-coverage.json"
+      ],
+      "exit_code": 0,
+      "output": "Wrote JSON report to .cache-after-coverage.json\n"
+    }
+  ],
+  "self_review": {
+    "scope": "test fixture and narrow traceability only",
+    "coverage_configuration_changed": false,
+    "production_code_changed": false,
+    "result": "No unresolved implementation findings; independent review and full main compatibility gate remain required"
+  },
+  "limitations": [
+    "Focused coverage percentages are not the full project coverage baseline.",
+    "Incident must remain open until full main compatibility gate succeeds after merge."
+  ]
+}

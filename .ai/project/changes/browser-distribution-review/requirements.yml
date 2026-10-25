@@ -37,3 +37,7 @@ requirements:
   - N-5 README and every notice metadata file linked and checked
   - N-6 current-only inventory; generated repository references bind actual build
     commit
+  - N-7 gate binds packaged mapping-attribution data to the fixed CPython
+    source archive. HKSCS/ICU publication blockers cannot be cleared by an
+    Owner-risk record or changed status without source-specific evidence and
+    independent review; positive and negative synthetic tests fail closed

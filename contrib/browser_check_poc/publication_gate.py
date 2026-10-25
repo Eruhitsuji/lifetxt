@@ -5,7 +5,7 @@ from urllib.parse import urlsplit
 
 P1 = {f"P1-{n}" for n in range(1, 5)}
 P2 = {f"P2-{n}" for n in range(5, 9)}
-NEW_P2 = {"N-1", "N-2", "N-3"}
+NEW_P2 = {"N-1", "N-2", "N-3", "N-7"}
 # Current task's implementing AI tools, anchored outside the reviewer's record.
 IMPLEMENTER_TOOLS = frozenset({"codex"})
 OWNER = "eruhitsuji"
@@ -49,6 +49,83 @@ def reference(value):
     )
 
 
+# Known permission blockers cannot be turned into non-blocking "pending" rows.
+MAPPING_REQUIRED_IDS = frozenset({
+    "ucd-16-and-3.2", "unicode-mappings", "hkscs-2004",
+    "icu-gb18030", "jis-x-0213", "gb2312",
+})
+MAPPING_PERMISSION_BLOCKERS = frozenset({"hkscs-2004", "icu-gb18030"})
+MAPPING_PENDING = frozenset({
+    "independent-acceptance-pending",
+    "notice-retained-independent-acceptance-pending",
+})
+MAPPING_RESOLVED = frozenset({
+    "resolved-removed", "resolved-terms-confirmed", "resolved-owner-judgment",
+})
+
+
+def mapping_blockers(mapping, pinned_source_sha):
+    """Reject unresolved mapping licences regardless of Owner-risk claims.
+
+    This validates the shape and source binding of evidence, not legal validity.
+    PUBLICATION_REVIEW.md still requires human verification of every reference.
+    """
+    if not isinstance(mapping, dict) or mapping.get("schema_version") != 1:
+        return ["Missing or invalid mapping-attribution data"]
+    if (
+        not isinstance(pinned_source_sha, str)
+        or not re.fullmatch(r"[0-9a-f]{64}", pinned_source_sha)
+        or mapping.get("source_archive_sha256") != pinned_source_sha
+    ):
+        return ["Mapping attribution is not bound to pinned CPython source"]
+    entries = mapping.get("inputs")
+    if not isinstance(entries, list) or not all(isinstance(e, dict) for e in entries):
+        return ["Missing or invalid mapping input inventory"]
+    ids = [e.get("id") for e in entries]
+    if (
+        any(not isinstance(k, str) or not k for k in ids)
+        or len(ids) != len(set(ids))
+        or not MAPPING_REQUIRED_IDS.issubset(ids)
+    ):
+        return ["Mapping source IDs missing, duplicated or invalid"]
+    blockers = []
+    for entry in entries:
+        source_id, status = entry["id"], entry.get("review_status")
+        if status not in MAPPING_PENDING | MAPPING_RESOLVED:
+            # A publication-blocker, unresolved status or unknown status fails.
+            blockers.append(f"Mapping {source_id}: unresolved/unknown status {status}")
+            continue
+        if source_id not in MAPPING_PERMISSION_BLOCKERS and status in MAPPING_PENDING:
+            continue
+        if status not in MAPPING_RESOLVED:
+            blockers.append(f"Mapping {source_id}: independent source resolution required")
+            continue
+        result = entry.get("resolution")
+        if not isinstance(result, dict):
+            blockers.append(f"Mapping {source_id}: missing source-specific resolution")
+            continue
+        basis, scope, risk = (
+            result.get("basis"), result.get("verified_scope"),
+            result.get("remaining_risk"),
+        )
+        if (
+            result.get("status") != status
+            or result.get("source_id") != source_id
+            or result.get("source_archive_sha256") != pinned_source_sha
+            or login(result.get("owner")) != OWNER
+            or not reference(result.get("evidence_reference"))
+            or not reference(result.get("independent_review_reference"))
+            or not isinstance(basis, str) or len(basis.strip()) < 24
+            or not isinstance(scope, str) or len(scope.strip()) < 12
+            or not isinstance(risk, str) or len(risk.strip()) < 12
+        ):
+            blockers.append(
+                f"Mapping {source_id}: incomplete source-bound licence/removal "
+                "evidence and independent review"
+            )
+    return blockers
+
+
 def evaluate(facts, record=None):
     """Treat approval fields as record claims; authority_verified is always false.
 
@@ -64,6 +141,9 @@ def evaluate(facts, record=None):
             raise ValueError("Invalid publication evidence object: " + key)
     if "reviews" in record and not isinstance(record["reviews"], list):
         raise ValueError("Reviews must be a list")
+    blockers.extend(mapping_blockers(
+        facts.get("mapping_attribution"), facts.get("mapping_source_sha256")
+    ))
     if facts.get("source_clean") is not True:
         blockers.append("Reviewed build inputs are modified or untracked")
     tools = record.get("implementer_tools", [])
@@ -96,7 +176,7 @@ def evaluate(facts, record=None):
     findings = record.get("findings", {})
     required = P1 | P2 | NEW_P2
     if set(findings) != required:
-        blockers.append("All P1/P2 and N-1/N-2/N-3 require explicit dispositions")
+        blockers.append("All P1/P2 and N-1/N-2/N-3/N-7 require explicit dispositions")
     for finding in sorted(required):
         entry = findings.get(finding, {})
         if not isinstance(entry, dict):

@@ -16,7 +16,7 @@ absence, Japanese and existing Core cases. Coding/security: fixed hashes,
 validated tar paths/types, no archive traversal, explicit local SDK, fresh output
 only, no automatic runtime package installation or publication approval.
 
-Remove five upstream files and the two codec aliases, preserve licensing and
+Remove seven upstream files and the two codec aliases, preserve licensing and
 historical documentation. The generator's reference to HKSCS is not table data;
 it is retained for upstream attribution, but must not regenerate removed data.
 Disable _codecs_hk in Pyodide Setup.local before compiling. Fail if curated

@@ -1,0 +1,67 @@
+{
+  "approval_field_semantics": "Unverified claims in the supplied record; not authenticated authorization",
+  "authority_verified": false,
+  "blockers": [
+    "Mapping hkscs-2004: independent source resolution required",
+    "Mapping icu-gb18030: unresolved/unknown status unresolved-independent-permission-review-publication-blocker",
+    "Reviewed build inputs are modified or untracked",
+    "Implementer tool list must match the task's complete implementing-tool inventory",
+    "Missing current versioned review record",
+    "Review is absent or stale for the final source commit",
+    "Review does not bind this final artifact manifest",
+    "All P1/P2 and N-1/N-2/N-3/N-7 require explicit dispositions",
+    "N-1 lacks a disposition with a repository comment/review reference",
+    "N-2 lacks a disposition with a repository comment/review reference",
+    "N-3 lacks a disposition with a repository comment/review reference",
+    "N-3 requires Owner judgment with verified scope and remaining risk",
+    "N-7 lacks a disposition with a repository comment/review reference",
+    "P1-1 lacks a disposition with a repository comment/review reference",
+    "P1-2 lacks a disposition with a repository comment/review reference",
+    "P1-3 lacks a disposition with a repository comment/review reference",
+    "P1-4 lacks a disposition with a repository comment/review reference",
+    "P2-5 lacks a disposition with a repository comment/review reference",
+    "P2-6 lacks a disposition with a repository comment/review reference",
+    "P2-6 requires Owner judgment with verified scope and remaining risk",
+    "P2-7 lacks a disposition with a repository comment/review reference",
+    "P2-7 requires Owner judgment with verified scope and remaining risk",
+    "P2-8 lacks a disposition with a repository comment/review reference",
+    "Owner source retention commitment with a repository reference is missing",
+    "Missing independent final-head implementation-distribution review record",
+    "Missing independent final-head integration review record",
+    "Separate explicit Owner publication approval record is absent or stale"
+  ],
+  "complete_distribution_audit": false,
+  "evidence_scope": "Developer snapshot before PR commit; final clean-head manifest and browser binding are retained in PR Conversation",
+  "human_reference_verification_required": true,
+  "integrity": "passed",
+  "issue": 1398,
+  "manifest_sha256": "828c33fa6db7426b3ef4cd281dfd3b608b1274065d6f12b9b2327768bc0b9bff",
+  "profile": "website-checker-hkscs-free",
+  "public_distribution_approved": false,
+  "publication": "blocked",
+  "record_shape_and_binding": "blocked",
+  "runtime_files": {
+    "pyodide-lock.json": {
+      "bytes": 119077,
+      "sha256": "5dc2fc119108bc148c7457dc86e7675b5c87e1cafd420b9c34c1eaef7b36c010"
+    },
+    "pyodide.asm.mjs": {
+      "bytes": 1250244,
+      "sha256": "8e52b1871dd7be68eddcc95b9dfc584304c6bd13d2562056be4a979d57fefa5a"
+    },
+    "pyodide.asm.wasm": {
+      "bytes": 9467681,
+      "sha256": "95f3f51ed10978b5bc81d535406f528fbb2239a6c46b9dbb348be3a6f03fbf16"
+    },
+    "pyodide.mjs": {
+      "bytes": 17931,
+      "sha256": "a8fddce78bf8534000f6d408b0b625e78c72798f1cad79a9aa8b28a0f0cb7e84"
+    },
+    "python_stdlib.zip": {
+      "bytes": 2540752,
+      "sha256": "d4c5705cdbf1f63ff6d588efad7f8bd09a3a030221e5552dad87627fbe022ed5"
+    }
+  },
+  "source_archives": 10,
+  "source_delivery": "modified Pyodide + curated CPython + eight retained component sources; exact stdlib and Core sources included"
+}

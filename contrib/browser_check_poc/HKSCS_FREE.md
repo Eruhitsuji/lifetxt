@@ -104,3 +104,19 @@ custom artifact, curated CPython source, upstream patches, compiler receipt and
 retained sources before website adoption. ICU permission evidence in #1414 is
 independent of HKSCS removal and must still be reviewed. #1398/#1400 remain
 blocked pending those steps; a source-removal receipt never grants publication.
+
+## Final local checker profile (#1417)
+
+The explicit `--hkscs-runtime` option in `scripts/build_website_checker.py` binds
+this candidate to the complete checker and its ten same-origin source archives.
+Prepare those archives with
+`python -m contrib.browser_check_poc.custom_sources --upstream-cache CACHE --output NEW_DERIVED_CACHE`.
+The derived hashes must match the reviewed `hkscs-distribution-lock.json`;
+`--write-lock` is a maintenance operation requiring a new reviewed PR.
+The custom builder requires the derived cache and has no old-runtime fallback.
+Use `python -m contrib.browser_check_poc.distribution_audit ARTIFACT` for the
+whole custom profile. `--require-publication` remains blocked pending acceptance.
+See CUSTOM_SOURCE.md and DISTRIBUTION_REMAINING.md for source/acceptance scope.
+
+The active fixed runtime/source/build records are retained in
+`profiles/hkscs-free-1/`; historical change packages are not runtime configuration.

@@ -1,0 +1,12 @@
+schema_version: 1
+chains:
+- requirement_id: req-hkscs-free-distribution-v1
+  capability_id: cap-official-website
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1417
+  pull_request: null
+  tests_or_evidence:
+  - tests/test_custom_distribution.py
+  - contrib/browser_check_poc/custom_distribution.py
+  - contrib/browser_check_poc/custom_sources.py
+  - contrib/browser_check_poc/hkscs-distribution-lock.json
+  status: implemented

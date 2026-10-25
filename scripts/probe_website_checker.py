@@ -43,6 +43,7 @@ def run(site, executable, output, screenshots=None):
         {"name": "utf8-boundary", "text": "#" + "あ" * 5461},
         {"name": "ascii-boundary", "text": "#" + "x" * 16383},
         {"name": "emoji", "text": '[ ] T "日本語😀"'},
+        {"name": "supplementary-cjk", "text": '[ ] T "日本語𠮷香港"'},
         {"name": "100-diagnostics", "text": "bad\n" * 100},
         {"name": "500-diagnostics", "text": "bad\n" * 500},
     ]

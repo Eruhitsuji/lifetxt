@@ -1,0 +1,32 @@
+{
+  "profile": "lifetxt-hkscs-free-1",
+  "emsdk_commit": "a620cf1d71c62dfdfbb0c01fe0a371e2af2dda6c",
+  "sdk_release": "065bfade0ee2c02138b83cb10049d8be95e146b6",
+  "emscripten_revision": "285c424dfa9e83b03cf8490c65ceadb7c45f28eb",
+  "host_python": "3.14.2 python-build-standalone via uv",
+  "host_node": "24.22.1",
+  "host_os": "Ubuntu 24.04 x86_64",
+  "files": {
+    "upstream/bin/clang": {
+      "bytes": 143875832,
+      "sha256": "141b521b24f86d0533968431cb2a3a08a202507e022ac8d0a02ec43b9585169e"
+    },
+    "upstream/emscripten/emscripten-revision.txt": {
+      "bytes": 41,
+      "sha256": "35986dbc85ceae60f043a4fe337d566d5df05a16c016b06b09aad3ff8dc27d78"
+    }
+  },
+  "adaptations": [
+    "TAR_OPTIONS=--no-same-owner for SDK extraction",
+    "SDK bundled Node 22.16.0 SIGSEGV; NODE_JS uses host 24.22.1; SDK bin/node forwards to the same host executable",
+    "Initial source manually extracted from verified archive and curated before compilation; generated staging profile tested separately",
+    "Parallel libinstall compileall failed creating AF_UNIX socket (PermissionError); rerun libinstall with COMPILEALL_OPTS=-j1; shipped stdlib excludes __pycache__",
+    "Initial stdlib ZIP lacked central directory despite successful make status; source utility regeneration and final in-memory CRC-checked ZIP succeeded",
+    "Incremental shell append embedded generated JS twice; single-write helper fixed embed; final make exited 0",
+    "HK-only tests removed from final developer source after initial source verifier detected them; these tests were excluded from runtime stdlib throughout"
+  ],
+  "complete_distribution_audit": false,
+  "public_distribution_approved": false,
+  "final_build_command": "PYODIDE_JOBS=4 make all-but-packages COMPILEALL_OPTS=-j1",
+  "final_build_exit_code": 0
+}

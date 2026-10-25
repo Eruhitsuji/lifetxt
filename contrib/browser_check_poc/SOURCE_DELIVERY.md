@@ -1,5 +1,8 @@
 # Source Code Form acquisition and delivery (#1409, #1411)
 
+Scope: this document describes the original upstream-source baseline. For the modified HKSCS-free profile, use CUSTOM_SOURCE.md and the derived source lock; do not substitute the original CPython archive or claim custom binary identity with the official release.
+
+
 The five-file Pyodide 314.0.7 runtime is unchanged. Its bytes match the official
 core release archive identified in source-lock.json. That release identifies
 Pyodide commit b1e4fcc2488962f6360a97f19b9982d6fdb5d16f. This is an upstream

@@ -1,5 +1,8 @@
 # Current runtime distribution inventory — #1398 / #1411
 
+Scope: this inventory records the original official-runtime baseline. The explicit HKSCS-free custom profile has separate fixed hashes, observations and corresponding source in hkscs-distribution-lock.json, hkscs-runtime-observations.json and CUSTOM_SOURCE.md. Neither profile is approved for publication by this inventory.
+
+
 This document describes the current PR candidate. It is bounded technical
 provenance, not a complete SBOM, legal clearance or reproducible-build proof.
 The five runtime files remain byte-identical to the pinned Pyodide 314.0.7

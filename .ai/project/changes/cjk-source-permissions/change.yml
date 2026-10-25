@@ -2,7 +2,7 @@ schema_version: 1
 change:
   id: cjk-source-permissions
   title: Source-specific ICU grant evidence and actionable HKSCS permission enquiry
-  status: in_review
+  status: merged
   change_type: Operations
   assurance_level: High
   owner: Eruhitsuji
@@ -10,6 +10,8 @@ change:
   related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1413
   related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1414
   base_commit: 946d8c0402804856c8d71b61b918c1c9af9ccdef
+  implementation_merge_commit: b544514c
+  pending_acceptance: independent distribution/integration review and parent publication gates
 scope:
   write_scope:
   - contrib/browser_check_poc permission probe/notices/metadata/docs and dedicated

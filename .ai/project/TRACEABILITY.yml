@@ -18696,6 +18696,19 @@ traceability:
         - .ai/project/changes/cjk-source-permissions/verification.yml
       status: implemented
 
+    - requirement_id: req-hkscs-free-distribution-v1
+      capability_id: cap-official-website
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1398
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1417
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1419
+      tests_or_evidence:
+        - tests/test_custom_distribution.py
+        - contrib/browser_check_poc/custom_distribution.py
+        - contrib/browser_check_poc/custom_sources.py
+        - contrib/browser_check_poc/hkscs-distribution-lock.json
+        - .ai/project/changes/hkscs-distribution-integration/verification.yml
+      status: implemented
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

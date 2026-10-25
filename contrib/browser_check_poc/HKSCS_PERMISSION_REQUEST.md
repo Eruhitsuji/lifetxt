@@ -1,5 +1,8 @@
 # HKSCS-2004 permission enquiry — prepared, NOT SENT
 
+Historical unsent draft: Owner chose verified HKSCS removal (#1416/#1417). This enquiry is superseded and must not be sent as a next step. Retained solely for audit history.
+
+
 Recipient: Common Chinese Language Interface Support Team, Digital Policy Office
 Email: clis@digitalpolicy.gov.hk
 Verified source: https://www.digitalpolicy.gov.hk/en/our_work/data_governance/policies_standards/ccli/contact/

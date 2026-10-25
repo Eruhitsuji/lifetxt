@@ -261,3 +261,9 @@ no written permission has been received. See
 HKSCS-free runtime candidate: [HKSCS_FREE.md](HKSCS_FREE.md). This isolated
 build/verification profile does not replace the currently audited official runtime
 or grant publication approval.
+
+Complete HKSCS-free local checker profile (#1417): use
+`python scripts/build_website_checker.py --output NEW_DIRECTORY --hkscs-runtime CANDIDATE_RUNTIME --source-cache DERIVED_SOURCE_CACHE`.
+See [CUSTOM_SOURCE.md](CUSTOM_SOURCE.md) for corresponding source and licence
+scope; [DISTRIBUTION_REMAINING.md](DISTRIBUTION_REMAINING.md) tracks acceptance
+and deployment conditions. No public approval is implied by a passing byte audit.

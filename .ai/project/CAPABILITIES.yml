@@ -112,6 +112,7 @@ capabilities:
       - req-browser-distribution-review-remediation-v1
       - req-hkscs-free-runtime-candidate-v1
       - req-cjk-source-permissions-v1
+      - req-hkscs-fixture-coverage-reporting-v1
     implementation_locations:
       - website/
       - scripts/build_website.py

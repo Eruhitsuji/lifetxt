@@ -1,0 +1,10 @@
+{
+  "candidate_id": "hkscs-free-rebuild-20261025-161559",
+  "complete_distribution_audit": false,
+  "final_build_exit_code": 0,
+  "note": "Actual rebuild environment and failed attempts are recorded in procurement.json; legacy environment adaptations are not inherited.",
+  "procurement": "procurement.json",
+  "public_distribution_approved": false,
+  "runtime_profile": "lifetxt-hkscs-free-2",
+  "source_recipe_profile": "lifetxt-hkscs-free-1"
+}

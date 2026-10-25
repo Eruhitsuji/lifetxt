@@ -1,0 +1,35 @@
+{
+  "candidate_id": "hkscs-free-rebuild-20261025-161559",
+  "complete_distribution_audit": false,
+  "distribution_profile_adopted": false,
+  "files": {
+    "pyodide-lock.json": {
+      "bytes": 119077,
+      "sha256": "5dc2fc119108bc148c7457dc86e7675b5c87e1cafd420b9c34c1eaef7b36c010"
+    },
+    "pyodide.asm.mjs": {
+      "bytes": 1250244,
+      "sha256": "8e52b1871dd7be68eddcc95b9dfc584304c6bd13d2562056be4a979d57fefa5a"
+    },
+    "pyodide.asm.wasm": {
+      "bytes": 9467707,
+      "sha256": "4258196ea42852ab4cdc25ccbc22d21e2cfe26e346c767ca3d85ea1b76566905"
+    },
+    "pyodide.mjs": {
+      "bytes": 17931,
+      "sha256": "25677327b2eabfca5acd88cb8747a31f6d0f0a52dfa1554b863d0a84363bb4f8"
+    },
+    "python_stdlib.zip": {
+      "bytes": 2540722,
+      "sha256": "4b0dfd9273e380a2c67dda69b0d4bd85cece80d2324efb4e10abb1774b7ed725"
+    }
+  },
+  "llvm_ar": {
+    "bytes": 10635880,
+    "sha256": "2a08dfcecdfaa200f48be07ea30873e751ef9bc4cf871814eafc21c983e8c27b"
+  },
+  "original_runtime_all_bytes_identical": false,
+  "public_distribution_approved": false,
+  "source_commit": "32dc60b941b1bd037ff5f71c296d7c4f5e10b831",
+  "source_recipe": "lifetxt-hkscs-free-1"
+}

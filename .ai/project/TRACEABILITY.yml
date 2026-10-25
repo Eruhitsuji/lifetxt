@@ -18740,6 +18740,16 @@ traceability:
         - .ai/project/changes/hkscs-rebuild-reverification/retention.json
       status: implemented
 
+    - requirement_id: req-hkscs-free-profile-2-v1
+      capability_id: cap-official-website
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1427
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1428
+      tests_or_evidence:
+        - tests/test_hkscs_profile2.py
+        - contrib/browser_check_poc/profiles/hkscs-free-2/profile.json
+        - .ai/project/changes/hkscs-free-profile-2/verification.yml
+      status: implemented
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

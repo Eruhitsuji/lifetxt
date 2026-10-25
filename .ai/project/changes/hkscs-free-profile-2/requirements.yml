@@ -1,0 +1,16 @@
+schema_version: 1
+requirements:
+  - id: req-hkscs-free-profile-2-v1
+    kind: ADDED
+    statement: Explicitly select the rebuilt runtime under a distinct identity while preserving the legacy source recipe and runtime pins.
+    acceptance_criteria:
+      - Bind candidate, five runtime files, source/object/WASM reports, staging inputs and measured observations.
+      - Reject unknown profiles, crossed runtime bytes, metadata drift and rehashed artifact changes without fallback.
+      - Preserve ten source archives, original notices, pending mapping acceptance and false publication flags.
+      - Verify actual final JA/EN checker on Node and Chromium plus introduction-only regression.
+      - Retain the complete final artifact and require separate review and human merge/publication.
+    constraints:
+      - Runtime profile2 is distinct from raw source recipe1; legacy profile and historical proof bytes remain unchanged.
+    owner: Eruhitsuji
+open_questions:
+  - Separate final-head implementation, integration, source-specific distribution acceptance and publication remain pending.

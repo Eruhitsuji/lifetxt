@@ -1,0 +1,160 @@
+{
+  "schema_version": 1,
+  "status": "build-completed-verification-passed-unadopted",
+  "source_commit": "32dc60b941b1bd037ff5f71c296d7c4f5e10b831",
+  "sdk_commit": "a620cf1d71c62dfdfbb0c01fe0a371e2af2dda6c",
+  "sdk_release": "065bfade0ee2c02138b83cb10049d8be95e146b6",
+  "compiler_checks": {
+    "upstream/bin/clang": {
+      "expected": {
+        "bytes": 143875832,
+        "sha256": "141b521b24f86d0533968431cb2a3a08a202507e022ac8d0a02ec43b9585169e"
+      },
+      "actual": {
+        "bytes": 143875832,
+        "sha256": "141b521b24f86d0533968431cb2a3a08a202507e022ac8d0a02ec43b9585169e"
+      },
+      "match": true
+    },
+    "upstream/emscripten/emscripten-revision.txt": {
+      "expected": {
+        "bytes": 41,
+        "sha256": "35986dbc85ceae60f043a4fe337d566d5df05a16c016b06b09aad3ff8dc27d78"
+      },
+      "actual": {
+        "bytes": 41,
+        "sha256": "35986dbc85ceae60f043a4fe337d566d5df05a16c016b06b09aad3ff8dc27d78"
+      },
+      "match": true
+    }
+  },
+  "host_build_python": "python3.14",
+  "node": "v24.22.1",
+  "host_tool_packages": [
+    {
+      "package": "autoconf",
+      "version": "2.71-3",
+      "url": "https://archive.ubuntu.com/ubuntu/pool/main/a/autoconf/autoconf_2.71-3_all.deb",
+      "sha256": "cc3f9f7a1e576173fb59c36652c0a67c6426feae752b352404ba92dfcb1b26c9"
+    },
+    {
+      "package": "automake",
+      "version": "1:1.16.5-1.3ubuntu1",
+      "url": "https://archive.ubuntu.com/ubuntu/pool/main/a/automake-1.16/automake_1.16.5-1.3ubuntu1_all.deb",
+      "sha256": "5ae9a98e73545002cd891f028859941af2a3c760cb6190e635c7ef36953912de"
+    },
+    {
+      "package": "autotools-dev",
+      "version": "20220109.1",
+      "url": "https://archive.ubuntu.com/ubuntu/pool/main/a/autotools-dev/autotools-dev_20220109.1_all.deb",
+      "sha256": "d909f0327b09d9a9136239caca975df89782fa28efd721c4eb4caea422d3fc5a"
+    },
+    {
+      "package": "libtool",
+      "version": "2.4.7-7build1",
+      "url": "https://archive.ubuntu.com/ubuntu/pool/main/libt/libtool/libtool_2.4.7-7build1_all.deb",
+      "sha256": "9d1d707179675d38e024bb13613b1d99e0d33fa6c45e5f3bcba19340781781d3"
+    },
+    {
+      "package": "m4",
+      "version": "1.4.19-4build1",
+      "url": "https://archive.ubuntu.com/ubuntu/pool/main/m/m4/m4_1.4.19-4build1_amd64.deb",
+      "sha256": "30ea715845a1863abd55d11e47ab91513130bf347852d4cdeae69e9d98fa795c"
+    },
+    {
+      "package": "pkgconf",
+      "version": "1.8.1-2build1",
+      "url": "https://archive.ubuntu.com/ubuntu/pool/main/p/pkgconf/pkgconf_1.8.1-2build1_amd64.deb",
+      "sha256": "834a58031069d97d7cfb8b2f5bfd5effc69cecf7f30cc362071875f1f8dc1828"
+    },
+    {
+      "package": "pkgconf-bin",
+      "version": "1.8.1-2build1",
+      "url": "https://archive.ubuntu.com/ubuntu/pool/main/p/pkgconf/pkgconf-bin_1.8.1-2build1_amd64.deb",
+      "sha256": "7a812f05ee1610154b433e2ad54f6e4163fcbb306b9fb31afe959afb2e5e1545"
+    },
+    {
+      "package": "libpkgconf3",
+      "version": "1.8.1-2build1",
+      "url": "https://archive.ubuntu.com/ubuntu/pool/main/p/pkgconf/libpkgconf3_1.8.1-2build1_amd64.deb",
+      "sha256": "fc3a57e8f931ec06cb7c51acc56878f1fec247ff02a7adcab26905c2faeb2792"
+    },
+    {
+      "package": "libltdl7",
+      "version": "2.4.7-7build1",
+      "url": "https://archive.ubuntu.com/ubuntu/pool/main/libt/libtool/libltdl7_2.4.7-7build1_amd64.deb",
+      "sha256": "02d0d2d7e1bf73f838a92f8df7a9b07b698c837e82bd89aee6a581cf793cd966"
+    },
+    {
+      "package": "libltdl-dev",
+      "version": "2.4.7-7build1",
+      "url": "https://archive.ubuntu.com/ubuntu/pool/main/libt/libtool/libltdl-dev_2.4.7-7build1_amd64.deb",
+      "sha256": "3a706efe1d9d8b493bd2335fabaa9ec28549c9134750fad6c0a5aa9868c6ee9c"
+    }
+  ],
+  "host_tool_relocations": [
+    {
+      "path": "usr/bin/autoupdate",
+      "before": "ba9fe21e52f5d192312245fb72a3e9bd216bdf3db49c902b7a3bd5b58a179ecb",
+      "after": "ed8fe359dc9e587c4503e96f50a6c53ec996d3c346b4e419a6b4942797108e96"
+    },
+    {
+      "path": "usr/bin/libtoolize",
+      "before": "bebbad0908353b59ecc29386e0fed1e0c5cb42df41687cc6f522fa9a01a13dc5",
+      "after": "1be14729bfecc53bff16a44d1d708872c9fd56908c7968a96b323b4d40551890"
+    },
+    {
+      "path": "usr/bin/automake-1.16",
+      "before": "d408da48b279eff2996bb9a4c298b76645fdc61770af8da0e8fff3b5c60c804b",
+      "after": "af87216d723b7ca435c45bb1579967521d5fb0ee0e269b94e56798758c5ee8ab"
+    },
+    {
+      "path": "usr/bin/autoreconf",
+      "before": "d3e5d4d0a3a3e1e12c1a38dc0aeed5f3ec3e8b2b94729202ce0706daa67d6639",
+      "after": "695a9ac0e6b4a2f979c20b28607a7d08037dd53ae76746b4c85a03c904234fe9"
+    },
+    {
+      "path": "usr/bin/autoscan",
+      "before": "eb6d743960a5e88dd9084bdb9c7f0f6ee0d0ae7f2d397defc313e3e21767fe80",
+      "after": "5f78e788ea86ca7d166ceb5ffcf711aabe5eed4a44be5db9b36dfbf600afe2e2"
+    },
+    {
+      "path": "usr/bin/autoheader",
+      "before": "81e0a70d884b3a2de197a8436bf683cd932d6b2af1adf1f407a3ac86f846bce8",
+      "after": "8eab29a3e72afb1b9e9e2e9e8ca6fad9db8e9d473ce944e6db5f03385429f366"
+    },
+    {
+      "path": "usr/bin/ifnames",
+      "before": "12bdd28d34b5cef20bec9923a06c0559cb021d7e28e0e218d29e2d77f8a0e64a",
+      "after": "565f70030e5df010fbefdfd9e5c5c99af2ff8618c6dfb99e3c016f21f085d1e3"
+    },
+    {
+      "path": "usr/bin/autoconf",
+      "before": "6e1333c24e8f3bd9bd5e38c513cc47f9c8cc7dbb3dd30b0354b628ba0f4580dd",
+      "after": "3fa13909eb6cb9b02d22f61265ea446d3ba637d66db452e71266604a852ec4a5"
+    },
+    {
+      "path": "usr/bin/autom4te",
+      "before": "c59d277a63b425828bdf005eaf3c4cfcf61f5e99ecf719a43f8b846cad245331",
+      "after": "7f7b53a18e89cf7bbe0bbc40899a560a92112f9293de52c5739a5c9a45ca55ab"
+    },
+    {
+      "path": "usr/bin/aclocal-1.16",
+      "before": "670008c585e9467c95f0fecad139f1dea483f2d32837389b699b7802ade38997",
+      "after": "8d07d7921a9c690091800b2ce79366eb1bd892ef47fcd093f9546770c5fe2d5a"
+    },
+    {
+      "path": "usr/share/autoconf/autom4te.cfg",
+      "before": "c0a208b11a12d3e39828d9ff44837a2a9d0044cad8c1337166048af10aa08476",
+      "after": "a5d4c509018348c6130d84ec7dd72e32c903c1dd7c67edf21eddd978fbf60ff5"
+    },
+    {
+      "path": "usr/share/automake-1.16/Automake/Config.pm",
+      "before": "6d98b5070e9d836ec8bc9d62bee7832e5e2dc972f8d03c862142802131e61af5",
+      "after": "c231232f37bd07981dfd8fccfae93349919569cbb06173bb47d35b6430f803e0"
+    }
+  ],
+  "cmake_version": "3.31.6",
+  "complete_distribution_audit": false,
+  "public_distribution_approved": false
+}

@@ -1,0 +1,41 @@
+{
+  "candidate_id": "hkscs-free-rebuild-20261025-161559",
+  "complete_distribution_audit": false,
+  "evidence_sha256": {
+    "build-environment.json": "792f51b871beff2f95400ce07c3625e438dd9f8c09bbd7134274e220f9f62032",
+    "build-profile.json": "1ce58bdab5c1b83991078e9155cabad62b1bf9836f67518a380a11a5a18525fd",
+    "candidate.json": "4530136fa68af8b707f53459da9330392cf72726b296d0ec46e98d4b65708190",
+    "icu-proof.json": "df8dfee34911172c0ce5f18a5c13696647f3e65937c4c5ea4ddccff0e9c48614",
+    "mapping-attribution.json": "fb29f9a3620c806960c395af375c4d0da3a96d38a45bee53ff7f81db9d7118f9",
+    "procurement.json": "db4302eb3712e499a46b5866434d0b7d85cb612c81f7a1c8a4a16cf59499f3af",
+    "runtime-observations.json": "cd8d3d39f046633cede2829207b157cc029096cc8059af8e9b386703fe853a25",
+    "source-build-proof.json": "b555f779338b43245dbd5fd1ae24d95d250d66de7f8fbfc93941fd034ac7229a",
+    "source-removal.json": "026d588955e10221646f960c97f7c564f025a5de114294c36817f8129d66c919",
+    "wasm-proof.json": "ed018ed0b33ad54bd1bb735f25aaad48aab4a9d31f53b8f62433ebeb8bf83cb4"
+  },
+  "public_distribution_approved": false,
+  "runtime_files": {
+    "pyodide-lock.json": {
+      "bytes": 119077,
+      "sha256": "5dc2fc119108bc148c7457dc86e7675b5c87e1cafd420b9c34c1eaef7b36c010"
+    },
+    "pyodide.asm.mjs": {
+      "bytes": 1250244,
+      "sha256": "8e52b1871dd7be68eddcc95b9dfc584304c6bd13d2562056be4a979d57fefa5a"
+    },
+    "pyodide.asm.wasm": {
+      "bytes": 9467707,
+      "sha256": "4258196ea42852ab4cdc25ccbc22d21e2cfe26e346c767ca3d85ea1b76566905"
+    },
+    "pyodide.mjs": {
+      "bytes": 17931,
+      "sha256": "25677327b2eabfca5acd88cb8747a31f6d0f0a52dfa1554b863d0a84363bb4f8"
+    },
+    "python_stdlib.zip": {
+      "bytes": 2540722,
+      "sha256": "4b0dfd9273e380a2c67dda69b0d4bd85cece80d2324efb4e10abb1774b7ed725"
+    }
+  },
+  "runtime_profile": "lifetxt-hkscs-free-2",
+  "source_recipe_profile": "lifetxt-hkscs-free-1"
+}

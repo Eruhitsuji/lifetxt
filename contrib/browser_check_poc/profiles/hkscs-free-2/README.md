@@ -20,3 +20,20 @@ python scripts/build_website_checker.py --output .cache/checker-profile2 --hkscs
 
 Omitting --hkscs-profile preserves legacy profile 1. Crossed runtimes fail.
 Nothing changes the introduction-only Pages build.
+
+## Audit selection contract
+
+The generic distribution auditor discovers one of the finite known identities
+from the artifact manifest, then checks that profile's complete fixed lock.
+When a caller expects one particular runtime identity, pass it explicitly:
+
+```python
+from contrib.browser_check_poc.custom_distribution import audit
+
+audit(artifact, runtime_profile="lifetxt-hkscs-free-2")
+```
+
+Passing runtime_profile="lifetxt-hkscs-free-1" rejects a profile2 artifact.
+Discovery is not a guarantee that a caller's unstated profile expectation holds.
+Source-guide generation rejects a missing or repeated recipe label; template
+wording changes require an explicit generator update and test review.

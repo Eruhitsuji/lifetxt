@@ -1,0 +1,13 @@
+schema_version: 1
+requirements:
+  - id: req-hkscs-profile2-review-v1
+    kind: ADDED
+    statement: Reject source guide template drift and document explicit audit expectations without changing profile selection compatibility.
+    acceptance_criteria:
+      - Normal profile2 guide identifies runtime2 and source recipe1, with PROFILE.md linked.
+      - Missing or repeated source profile labels fail closed; old profile guide is unaffected.
+      - Explain generic audit discovery and explicitly selected runtime expectations.
+      - Record bounded independent static review and restoration rather than cross-host byte reproducibility.
+    owner: Eruhitsuji
+open_questions:
+  - Final independent source-specific and distribution acceptance remains in issue 1398; publication in issue 1400.

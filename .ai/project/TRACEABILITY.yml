@@ -18729,6 +18729,17 @@ traceability:
         - .ai/project/changes/hkscs-verification-coverage/verification.yml
       status: implemented
 
+    - requirement_id: req-hkscs-rebuild-evidence-v1
+      capability_id: cap-official-website
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1425
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1426
+      tests_or_evidence:
+        - .ai/project/changes/hkscs-rebuild-reverification/source-build-proof.json
+        - .ai/project/changes/hkscs-rebuild-reverification/wasm-proof.json
+        - .ai/project/changes/hkscs-rebuild-reverification/browser-summary.json
+        - .ai/project/changes/hkscs-rebuild-reverification/retention.json
+      status: implemented
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

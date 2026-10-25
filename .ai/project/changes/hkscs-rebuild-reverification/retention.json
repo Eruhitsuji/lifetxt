@@ -1,0 +1,11 @@
+{
+  "filename": "hkscs-rebuild-checkpoint-20261025.tar.gz",
+  "bytes": 159341433,
+  "sha256": "abf3a3fe76abfc662f4a022f6ed898475fc258abe4883cff3b16c1ac77bba8f1",
+  "regular_files": 10924,
+  "manifest_sha256": "0fa31f577f3cda2c09242f9473ff0e9e08e23185b49b823a2d95c75fafcb2446",
+  "sdk_and_node_modules_included": false,
+  "distribution_approved": false,
+  "roundtrip_all_payload_hashes_verified": true,
+  "restored_source_object_report_identical": true
+}

@@ -18675,6 +18675,15 @@ traceability:
         - .ai/project/changes/hkscs-free-runtime/verification.yml
       status: implemented
 
+    - requirement_id: req-hkscs-fixture-coverage-reporting-v1
+      capability_id: cap-official-website
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1418
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1420
+      tests_or_evidence:
+        - tests/test_hkscs_free.py
+        - .ai/project/coverage-recovery-1418.json
+      status: implemented
+
     - requirement_id: req-cjk-source-permissions-v1
       capability_id: cap-official-website
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1398

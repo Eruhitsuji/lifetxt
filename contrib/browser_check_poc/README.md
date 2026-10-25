@@ -257,3 +257,7 @@ acceptance is still pending, so N-7 remains fail-closed. HKSCS needs an actual
 source-specific clarification/grant or a separately verified removal/replacement;
 no written permission has been received. See
 [permission evidence and next action](https://github.com/Eruhitsuji/lifetxt/blob/main/contrib/browser_check_poc/PERMISSION_RESOLUTION.md).
+
+HKSCS-free runtime candidate: [HKSCS_FREE.md](HKSCS_FREE.md). This isolated
+build/verification profile does not replace the currently audited official runtime
+or grant publication approval.

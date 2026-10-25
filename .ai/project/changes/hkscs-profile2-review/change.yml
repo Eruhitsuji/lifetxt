@@ -1,0 +1,16 @@
+schema_version: 1
+change:
+  id: hkscs-profile2-review
+  title: Address nonblocking independent profile2 review
+  status: in_review
+  change_type: Operations
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1429
+  related_pull_request: null
+  base_commit: 617540fab2cdbc455a0ee9738ed1db178c855685
+scope:
+  write_scope: [source guide guard, profile2 audit instructions, focused tests, review dispositions, limited traceability]
+  forbidden_scope: [old pins and measured proofs, Core, CLI, Format, managed standards, Pages, publication]
+human_approvals_required: [independent latest-head review, merge, separate source-specific and distribution acceptance, publication]

@@ -116,6 +116,7 @@ capabilities:
       - req-hkscs-build-input-coverage-v1
       - req-hkscs-rebuild-evidence-v1
       - req-hkscs-free-profile-2-v1
+      - req-hkscs-profile2-review-v1
       - req-cjk-source-permissions-v1
       - req-hkscs-fixture-coverage-reporting-v1
     implementation_locations:

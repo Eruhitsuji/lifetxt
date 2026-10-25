@@ -1,0 +1,15 @@
+schema_version: 1
+requirements:
+  - id: req-hkscs-build-input-coverage-v1
+    kind: ADDED
+    statement: Compare explicitly bounded build support inputs with locked reconstruction and explain archive mismatch without relaxing byte checks.
+    acceptance_criteria:
+      - Compare tools, CPython/SDK patch trees and named build/environment configurations, rejecting changed, missing, additional and symlinked inputs.
+      - Ignore only documented generated tools Python caches; record count/digest of checked files without a whole-tree attestation claim.
+      - Reject build-profile-only mutation before reading runtime or invoking object tools.
+      - Include Python/zlib versions and pinned-environment guidance on receipt/archive mismatch, retaining exact byte/hash equality.
+      - Verify real fixed-source staging and focused regressions; leave old proof/runtime/source hashes and publication flags unchanged.
+    constraints:
+      - Offline verification only; no runtime rebuild, publication or automatic issue close from CI.
+    owner: Eruhitsuji
+open_questions: []

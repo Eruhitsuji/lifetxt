@@ -4,10 +4,12 @@ import argparse
 import io
 import json
 from pathlib import Path
+import platform
 import subprocess
 import tarfile
 import tempfile
 import zipfile
+import zlib
 
 from contrib.browser_check_poc.hkscs_free import (
     HERE,
@@ -24,6 +26,60 @@ STAGED_INPUTS = (
     "Makefile",
     "tools/hkscs_free_build.py",
 )
+BUILD_INPUT_TREES = ("tools", "cpython/patches", "emsdk/patches")
+BUILD_INPUT_CONFIGS = (
+    "Makefile.envs",
+    "pyproject.toml",
+    "package.json",
+    "package-lock.json",
+    "emsdk/Makefile",
+    "environment.yml",
+    "requirements.txt",
+    "pyodide_env.sh",
+    ".gitmodules",
+)
+
+
+def build_input_manifest(root):
+    """Bounded build support files, excluding only tools' generated Python caches."""
+    if root.is_symlink():
+        raise ValueError("symlink staged build root")
+    result = {}
+    paths = [root / name for name in STAGED_INPUTS + BUILD_INPUT_CONFIGS]
+    for name in BUILD_INPUT_TREES:
+        directory = root / name
+        if directory.is_symlink():
+            raise ValueError(f"symlink in staged build inputs: {name}")
+        if not directory.is_dir():
+            raise ValueError(f"missing staged build input directory: {name}")
+        paths.extend(directory.rglob("*"))
+    for path in paths:
+        relative = path.relative_to(root).as_posix()
+        if any(p.is_symlink() for p in (path, *path.parents) if p.is_relative_to(root)):
+            raise ValueError(f"symlink in staged build inputs: {relative}")
+        if path.is_dir():
+            continue
+        if relative.startswith("tools/") and (
+            "__pycache__" in path.relative_to(root).parts
+            or path.suffix in {".pyc", ".pyo"}
+        ):
+            continue
+        if not path.exists() and relative in BUILD_INPUT_CONFIGS:
+            continue  # Configs present in the fixed upstream tree are compared below.
+        if not path.is_file():
+            raise ValueError(f"missing/non-regular staged build input: {relative}")
+        result[relative] = digest(path.read_bytes())
+    return result
+
+
+def reconstruction_error(subject):
+    return ValueError(
+        f"{subject} differs from locked source reconstruction; bytes rejected. "
+        f"Host Python {platform.python_version()}, zlib build {zlib.ZLIB_VERSION}, "
+        f"zlib runtime {zlib.ZLIB_RUNTIME_VERSION}. "
+        "Python/gzip/zlib differences can affect archive bytes; reproduce the "
+        "pinned generation environment in HKSCS_FREE.md. Do not replace locked hashes."
+    )
 
 
 def verify_staging(build, curated, source_cache):
@@ -38,26 +94,30 @@ def verify_staging(build, curated, source_cache):
             if json.loads(actual.read_text("utf-8")) != json.loads(
                 expected.read_text("utf-8")
             ):
-                raise ValueError(
-                    "staging receipt differs from locked source reconstruction"
-                )
+                raise reconstruction_error("staging receipt")
         if digest((curated / "cpython-hkscs-free.tar.gz").read_bytes()) != digest(
             (stage / "curated/cpython-hkscs-free.tar.gz").read_bytes()
         ):
-            raise ValueError(
-                "curated archive differs from locked source reconstruction"
+            raise reconstruction_error("curated archive")
+        expected = build_input_manifest(expected_build)
+        actual = build_input_manifest(build)
+        if actual != expected:
+            changed = sorted(
+                k
+                for k in set(actual) | set(expected)
+                if actual.get(k) != expected.get(k)
             )
-        for relative in STAGED_INPUTS:
-            if (build / relative).read_bytes() != (
-                expected_build / relative
-            ).read_bytes():
-                raise ValueError(
-                    f"staged compiler input differs from locked source: {relative}"
-                )
+            raise ValueError(
+                "staged build inputs differ from locked source: " + ", ".join(changed)
+            )
+        return {
+            "files": len(expected),
+            "manifest_sha256": digest(json.dumps(expected, sort_keys=True).encode()),
+        }
 
 
 def verify(build, curated, runtime, llvm_ar, source_cache):
-    verify_staging(build, curated, source_cache)
+    staging_check = verify_staging(build, curated, source_cache)
     profile = json.loads((curated.parent / "build-profile.json").read_text())
     for relative, field in (
         ("cpython/Setup.local", "setup_local_sha256"),
@@ -223,6 +283,7 @@ def verify(build, curated, runtime, llvm_ar, source_cache):
         "schema_version": 1,
         "profile": receipt["profile"],
         "runtime_files": runtime_files,
+        "staging_input_check": staging_check,
         "curated_sha256": receipt["curated_sha256"],
         "removed_source_files": sorted(REMOVED),
         "archive_object_count": len(listing),

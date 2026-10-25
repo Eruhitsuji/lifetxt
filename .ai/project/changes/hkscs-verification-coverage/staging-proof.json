@@ -1,0 +1,11 @@
+{
+  "files": 68,
+  "manifest_sha256": "17e4546ef996a98098d9316fc48c8613aa09a37efe9843f771a0f6af1b36d927",
+  "python": "3.12.14",
+  "zlib_build": "1.3.2",
+  "zlib_runtime": "1.3.2",
+  "original_fixed_receipts_match": true,
+  "custom_wasm_executed": false,
+  "complete_distribution_audit": false,
+  "public_distribution_approved": false
+}

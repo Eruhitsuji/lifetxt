@@ -377,9 +377,9 @@
     {
       "name": "ICU GB18030 mapping-derived CJK tables",
       "version": "GB18030-2000 XML version 3",
-      "notice": null,
-      "licence": "Historical ICU input licence not established; publication blocker",
-      "basis": "genmap_schinese.py and retained python-mappings/gb-18030-2000.xml; missing per-input licence is explicit"
+      "notice": "icu-data-bae5ca6-LICENSE.txt",
+      "licence": "Official ICU data grant (Unicode V3 and retained original ICU terms); independent applicability acceptance pending",
+      "basis": "Pinned official ICU XML equals the CPython archive member plus exactly one trailing LF; official repository declaration and licence are retained/hash-bound in permission_evidence. Not merely a current unrelated ICU licence."
     },
     {
       "name": "JIS X 0213 mapping-derived CJK tables",

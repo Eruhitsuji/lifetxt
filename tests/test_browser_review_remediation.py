@@ -210,7 +210,6 @@ class PublicationGateTests(unittest.TestCase):
         record["source_retention"]["owner"] = "eruhitsuji"
         self.assertTrue(evaluate(facts, record)["public_distribution_approved"])
 
-
     def test_n7_current_blockers_override_valid_owner_acceptance_record(self):
         facts, record = self.fixture()
         original = json.loads(
@@ -224,8 +223,16 @@ class PublicationGateTests(unittest.TestCase):
             self.assertTrue(any(source_id in b for b in report["blockers"]))
         for source_id in ("hkscs-2004", "icu-gb18030"):
             partial = copy.deepcopy(facts)
-            original_entry = next(e for e in partial["mapping_attribution"]["inputs"] if e["id"] == source_id)
-            resolved_entry = next(e for e in self.fixture()[0]["mapping_attribution"]["inputs"] if e["id"] == source_id)
+            original_entry = next(
+                e
+                for e in partial["mapping_attribution"]["inputs"]
+                if e["id"] == source_id
+            )
+            resolved_entry = next(
+                e
+                for e in self.fixture()[0]["mapping_attribution"]["inputs"]
+                if e["id"] == source_id
+            )
             original_entry.update(
                 review_status=resolved_entry["review_status"],
                 resolution=resolved_entry["resolution"],
@@ -234,10 +241,22 @@ class PublicationGateTests(unittest.TestCase):
 
     def test_n7_invalid_source_resolution_and_stale_pin_fail_closed(self):
         for mode in (
-            "missing", "sha", "duplicate", "removed", "benign-pending",
-            "unresolved-override", "no-resolution", "source-id",
-            "resolution-sha", "owner", "scope", "risk", "basis",
-            "evidence", "independent", "unknown-status",
+            "missing",
+            "sha",
+            "duplicate",
+            "removed",
+            "benign-pending",
+            "unresolved-override",
+            "no-resolution",
+            "source-id",
+            "resolution-sha",
+            "owner",
+            "scope",
+            "risk",
+            "basis",
+            "evidence",
+            "independent",
+            "unknown-status",
         ):
             with self.subTest(mode=mode):
                 facts, record = self.fixture()
@@ -255,7 +274,9 @@ class PublicationGateTests(unittest.TestCase):
                 elif mode == "benign-pending":
                     row["review_status"] = "independent-acceptance-pending"
                 elif mode == "unresolved-override":
-                    row["review_status"] = "unresolved-permission-scope-publication-blocker"
+                    row["review_status"] = (
+                        "unresolved-permission-scope-publication-blocker"
+                    )
                 elif mode == "no-resolution":
                     row.pop("resolution")
                 elif mode == "source-id":
@@ -291,7 +312,11 @@ class PublicationGateTests(unittest.TestCase):
         self.assertFalse(current["complete_distribution_audit"])
         self.assertFalse(current["public_distribution_approved"])
         self.assertEqual(
-            {e["id"] for e in current["inputs"] if e["review_status"].endswith("publication-blocker")},
+            {
+                e["id"]
+                for e in current["inputs"]
+                if e["review_status"].endswith("publication-blocker")
+            },
             {"hkscs-2004", "icu-gb18030"},
         )
 
@@ -342,7 +367,7 @@ class FinalArtifactTests(unittest.TestCase):
             notices = json.loads(
                 (source / "notices/provenance.json").read_text("utf-8")
             )
-            self.assertEqual(len(notices["files"]), 28)
+            self.assertEqual(len(notices["files"]), 29)
             for entry in notices["files"]:
                 self.assertIn(entry["file"], page.links)
             for directory in ("notices", "sources"):

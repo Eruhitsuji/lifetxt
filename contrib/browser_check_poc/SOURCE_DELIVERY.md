@@ -134,7 +134,19 @@ ordinary repository navigation. No file embeds its own not-yet-created commit.
 UCD3.2 legacy tables and non-Unicode CJK inputs are itemized separately in the
 [mapping assessment](https://github.com/Eruhitsuji/lifetxt/blob/main/contrib/browser_check_poc/notices/mapping-attribution.json).
 Original GB2312 and JIS X 0213 header terms are now retained. HKSCS permission
-scope and the licence for the historical ICU XML remain unresolved, explicit
+scope and the licence for the ICU grant applicability remain pending independent acceptance, explicit
 publication blockers. Neither current Unicode V3 nor CPython's top-level terms
 are claimed to clear those inputs. N-3 must have a source-specific documented
 resolution or Owner judgment, verified independently before #1400 proceeds.
+
+
+## #1413 source-specific permission follow-up
+
+The official ICU data XML has now been located and byte-compared: it equals the
+CPython XML except for one additional trailing LF in CPython. The repository's
+licence scope declaration and complete grant (including original ICU terms)
+are pinned, verified and retained as a notice. Independent applicability
+acceptance is still pending, so N-7 remains fail-closed. HKSCS needs an actual
+source-specific clarification/grant or a separately verified removal/replacement;
+no written permission has been received. See
+[permission evidence and next action](https://github.com/Eruhitsuji/lifetxt/blob/main/contrib/browser_check_poc/PERMISSION_RESOLUTION.md).

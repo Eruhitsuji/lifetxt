@@ -85,7 +85,8 @@
           "member": "Tools/unicode/genmap_tchinese.py",
           "sha256": "96706701969bafb414bf00ea74a59e7256d51c39f632a07e7ff61e98148e5ce4"
         }
-      ]
+      ],
+      "next_action": "Obtain written source-specific clarification/permission from official CCLI support, or rebuild/verify an appropriately licensed replacement/removal. Draft and removal plan are in HKSCS_PERMISSION_REQUEST.md."
     },
     {
       "id": "icu-gb18030",
@@ -97,8 +98,8 @@
         "http://oss.software.ibm.com/cvs/icu/~checkout~/charset/data/xml/gb-18030-2000.xml"
       ],
       "retained_member": "Tools/unicode/python-mappings/gb-18030-2000.xml",
-      "terms_assessment": "CPython archive contains the exact XML but no copyright/licence declaration was found within it. Historical ICU terms corresponding to this input have not been established. Current ICU licence is not substituted as proof.",
-      "review_status": "unresolved-historical-terms-publication-blocker",
+      "terms_assessment": "Official ICU data XML at pinned commit matches the retained CPython XML with exactly one additional trailing LF in CPython. The same repository README releases its contents under LICENSE; the complete original grant includes Unicode V3 and original ICU1.8.1–57.1 terms. Grant and byte correspondence located; independent applicability acceptance remains pending. Do not claim a new written permission or an HKSARG grant.",
+      "review_status": "unresolved-independent-permission-review-publication-blocker",
       "evidence_members": [
         {
           "archive": "cpython",
@@ -162,5 +163,60 @@
         }
       ]
     }
-  ]
+  ],
+  "permission_evidence": {
+    "schema_version": 1,
+    "checked_on": "2026-10-25",
+    "icu_data_commit": "bae5ca647fa41703393dbf00240ec1b807a9c353",
+    "inputs": [
+      {
+        "id": "icu-xml",
+        "file": "icu-gb18030.xml",
+        "url": "https://raw.githubusercontent.com/unicode-org/icu-data/bae5ca647fa41703393dbf00240ec1b807a9c353/charset/data/xml/gb-18030-2000.xml",
+        "bytes": 845974,
+        "sha256": "a0eccd5460cff9d5ea32194369971286c11af80fb1b09c4d9d77ff046e22b5cc"
+      },
+      {
+        "id": "icu-license",
+        "file": "icu-data-LICENSE",
+        "url": "https://raw.githubusercontent.com/unicode-org/icu-data/bae5ca647fa41703393dbf00240ec1b807a9c353/LICENSE",
+        "bytes": 5131,
+        "sha256": "f72db45707e93c90c4bf400edfa5d38ce44fe692789e385548e627459c1bf6c9"
+      },
+      {
+        "id": "icu-repository-readme",
+        "file": "icu-data-README.md",
+        "url": "https://raw.githubusercontent.com/unicode-org/icu-data/bae5ca647fa41703393dbf00240ec1b807a9c353/README.md",
+        "bytes": 1274,
+        "sha256": "ec67319a4c85e3b38534b84ec5732c48421adfa239e3f9edc76e72a35ef563a8"
+      },
+      {
+        "id": "icu-charset-readme",
+        "file": "icu-charset-readme.txt",
+        "url": "https://raw.githubusercontent.com/unicode-org/icu-data/bae5ca647fa41703393dbf00240ec1b807a9c353/charset/readme.txt",
+        "bytes": 991,
+        "sha256": "e87d028fcc8c29c073ce9f0747d473e3697783670d4aeae964897decd8830615"
+      }
+    ],
+    "cpython_member": "Tools/unicode/python-mappings/gb-18030-2000.xml",
+    "comparison_rule": "cpython-bytes-equal-icu-xml-plus-one-LF",
+    "license_notice": "icu-data-bae5ca6-LICENSE.txt",
+    "candidate_status": "source-specific-grant-located-independent-acceptance-pending",
+    "hkscs": {
+      "status": "written-clarification-not-requested-yet",
+      "terms_url": "https://www.ccli.gov.hk/en/archive/terms_hkscs-2004-big5-iso.html",
+      "contact_url": "https://www.digitalpolicy.gov.hk/en/our_work/data_governance/policies_standards/ccli/contact/",
+      "recipient": "clis@digitalpolicy.gov.hk",
+      "terms_assessment": "Clause5 restricts adaptation/distribution; clause15 is limited to complete/unmodified distribution with conditions. No source-specific written clarification or extra grant for the derived CPython tables has been received.",
+      "not_a_permission_grant": [
+        "Similar IBM/ICU HKSCS tables under other terms",
+        "Other products shipping a codec",
+        "Owner risk acceptance",
+        "No standalone licence on a generated C header"
+      ],
+      "transport_note": "Primary official pages were read through web retrieval. Direct HTTPS requests returned interstitial HTML and are not stored as authoritative terms/contact snapshots."
+    },
+    "complete_distribution_audit": false,
+    "public_distribution_approved": false
+  }
 }

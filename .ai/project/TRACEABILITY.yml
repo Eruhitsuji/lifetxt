@@ -18675,6 +18675,18 @@ traceability:
         - .ai/project/changes/hkscs-free-runtime/verification.yml
       status: implemented
 
+    - requirement_id: req-cjk-source-permissions-v1
+      capability_id: cap-official-website
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1398
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1413
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1414
+      tests_or_evidence:
+        - tests/test_browser_permission_evidence.py
+        - contrib/browser_check_poc/PERMISSION_RESOLUTION.md
+        - contrib/browser_check_poc/HKSCS_PERMISSION_REQUEST.md
+        - .ai/project/changes/cjk-source-permissions/verification.yml
+      status: implemented
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

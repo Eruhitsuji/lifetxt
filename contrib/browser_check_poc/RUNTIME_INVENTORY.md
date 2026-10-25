@@ -25,7 +25,7 @@ publication flags remain false, and #1398/#1400 remain blocked.
 | Checker/UI/site | Whole-site manifest, fixed allowlist, actual source-byte comparisons and parsed notice/source navigation | Local candidate only; production workflow does not publish it |
 
 Optional wheels in pyodide-lock.json are an available-package index, not shipped
-wheels. No optional packages are automatically fetched. All 28 notice documents,
+wheels. No optional packages are automatically fetched. All 29 notice documents,
 README and three metadata files are linked from the static notice index. All
 ten source archives are required on the same origin for a publication candidate;
 upstream-link mode remains a development aid and cannot pass the record gate.
@@ -40,7 +40,7 @@ CPython generator/input-member hashes and a source-specific terms assessment.
 | Unicode UCD16 and legacy UCD3.2 | makeunicodedata.py old_versions; actual unicodedata/ucd_3_2_0 runtime versions; official current V3 and both release ReadMes | Historical per-input exceptions need independent acceptance |
 | Unicode MAPPINGS subset | CP932/936/949/950, JIS0208/0212, BIG5 and identified eight-bit inputs; Unicode terms | Do not label every CJK or eight-bit contribution Unicode-only |
 | HKSARG HKSCS-2004 | genmap_tchinese.py explicitly calls licence restrictive; official clauses5/15 reviewed | Derived-table permission scope unresolved; publication blocker |
-| Historical ICU GB18030 XML | genmap_schinese.py plus retained XML version3 | No licence declaration found in the retained XML; matching historical ICU terms unresolved; publication blocker |
+| Historical ICU GB18030 XML | genmap_schinese.py plus retained XML version3 | Official same-dataset XML, repository scope declaration and full ICU grant located; source-specific independent acceptance pending; publication blocker |
 | JIS X 0213:2004 mapping | Original retained wakaba-web input header expressly allows use/modification/distribution; original earthian/I'O copyright retained | Independent acceptance of scope required |
 | GB2312 historical FreeBSD endpoint | Actual retained table identifies Unicode1991–1999 rights and product-use/notice-preservation terms; leading header retained | Hosting domain is not a licence; independent acceptance required |
 
@@ -75,3 +75,15 @@ separate human decisions. No library upgrade or security clearance is implied.
 
 Historical reports remain in Git history and their dated change packages; this
 current inventory intentionally does not interleave obsolete blocker lists.
+
+
+## #1413 source-specific permission follow-up
+
+The official ICU data XML has now been located and byte-compared: it equals the
+CPython XML except for one additional trailing LF in CPython. The repository's
+licence scope declaration and complete grant (including original ICU terms)
+are pinned, verified and retained as a notice. Independent applicability
+acceptance is still pending, so N-7 remains fail-closed. HKSCS needs an actual
+source-specific clarification/grant or a separately verified removal/replacement;
+no written permission has been received. See
+[permission evidence and next action](https://github.com/Eruhitsuji/lifetxt/blob/main/contrib/browser_check_poc/PERMISSION_RESOLUTION.md).

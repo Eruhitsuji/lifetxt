@@ -1,0 +1,62 @@
+schema_version: 1
+verification:
+  checks:
+  - type: actual_permission_inputs
+    command: python -m contrib.browser_check_poc.permission_probe fetch --cache NEW_CACHE;
+      python -m contrib.browser_check_poc.permission_probe verify --cache NEW_CACHE
+      --source-cache LOCKED_SOURCE_CACHE
+    status: passed
+    result: Four actual pinned ICU files downloaded/verified; CPython XML equals official
+      ICU XML plus exactly one LF. Full shipped licence bytes match. Independent acceptance
+      pending; HKSCS new permission false.
+  - type: focused_actual_source_regressions
+    command: LIFETXT_PERMISSION_CACHE=CACHE LIFETXT_RUN_SOURCE_AUDIT=1 LIFETXT_SOURCE_CACHE=SOURCE_CACHE
+      LIFETXT_SOURCE_RUNTIME=RUNTIME python -W error::ResourceWarning -m unittest
+      tests.test_browser_permission_evidence tests.test_browser_review_remediation
+      tests.test_browser_source_delivery tests.test_browser_distribution_audit tests.test_browser_check_poc
+      tests.test_website_checker tests.test_website tests.test_website_pages_workflow
+      tests.test_change_package_closeout
+    status: passed
+    result: 55 tests, no skips. Includes actual permission XML/licence/README, 11
+      locked archives, 9 upstream patches, 567 stdlib mappings and regenerated source
+      proof; notice/gate/Windows simulation/WASM/website regressions.
+  - type: static
+    command: python -m ruff check lifetxt tests scripts contrib/browser_check_poc;
+      focused ruff format --check; git diff --check
+    status: passed
+    result: Scoped implementation/static review succeeded. Runtime and gate not weakened.
+  - type: traceability_closeout
+    command: python -m unittest tests.test_traceability_gate tests.test_change_package_closeout
+    status: passed
+    result: 17 tests pass; final PR link rechecked after commit.
+  - type: actual_notice_navigation
+    command: Chromium loopback JA/EN ICU notice navigation and content hash
+    status: passed
+    result: Chromium153.0.8010.0, both language pages reach the new licence, HTTP200,
+      exact upstream SHA256, no page errors; notice-navigation.json.
+  - type: real_source_bundle
+    command: python scripts/build_website_checker.py --output NEW_OUTPUT --source-cache
+      SOURCE_CACHE --publication-candidate
+    status: passed
+    result: Actual ten-source bundle integrity passed; both public flags remain false
+      and N-7 remains blocked.
+  gaps:
+  - description: ICU independent applicability acceptance and HKSCS written clarification/grant
+      or verified removal are pending; N-7 remains blocked.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1398
+review_ledger:
+- reviewer: Codex implementer
+  review_type: informational_self_review
+  target_commit: null
+  result: informational_only
+  finding_count: 0
+  completed_at: '2026-10-25'
+  evidence: self-review.md
+- reviewer: Owner-designated independent evaluator
+  review_type: implementation_distribution
+  target_commit: null
+  result: pending
+- reviewer: Eruhitsuji
+  review_type: integration
+  target_commit: null
+  result: pending

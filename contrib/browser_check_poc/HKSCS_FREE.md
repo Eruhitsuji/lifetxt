@@ -90,7 +90,22 @@ python contrib/browser_check_poc/browser_probe.py --site LOCAL_TEST_LAYOUT --chr
 
 The Python probe first reconstructs curation and staging from the hash-locked
 upstream cache in a temporary directory. It compares both receipts, the curated
-archive and all four modified build inputs before checking objects or runtime.
+archive and the modified build inputs before checking objects or runtime.
+It also compares the regular files under `tools/`, `cpython/patches/` and
+`emsdk/patches/`, plus `Makefile.envs`, `pyproject.toml`, `emsdk/Makefile`,
+`environment.yml`, `requirements.txt`, `pyodide_env.sh`, `.gitmodules` and any
+root package JSON/lock present in the pinned source. Missing, changed, extra or
+symlinked files in that bounded scope fail. Only generated tools Python caches
+(`__pycache__`, `.pyc`, `.pyo`) are excluded; clear them before a rebuild. The
+new `staging_input_check` in a newly generated report records its file count and
+manifest digest; retained historical proofs are not silently regenerated.
+
+This is not a whole build-tree or compiler attestation. Installed SDK/host tools,
+generated output, build directories and downloaded dependencies outside the named
+scope are not covered by this staging check. The existing verifier separately
+checks Pyodide `src/`, patched CPython C/header/Python inputs, dependency C/header
+inputs, object/library and runtime bytes. Those checks and the separate WASM and
+final-artifact probes remain necessary.
 Changing a work file and its self-reported hash together cannot establish source
 identity. This adds temporary disk/CPU use, but never fetches or builds a runtime.
 
@@ -126,3 +141,28 @@ See CUSTOM_SOURCE.md and DISTRIBUTION_REMAINING.md for source/acceptance scope.
 
 The active fixed runtime/source/build records are retained in
 `profiles/hkscs-free-1/`; historical change packages are not runtime configuration.
+
+
+## Archive-byte mismatch diagnostics (#1423)
+
+Curation pins exact archive bytes, including gzip output. Python, gzip and zlib
+versions may affect those bytes across hosts even when extracted content agrees.
+Receipt/archive mismatch errors now report the current Python and zlib
+build/runtime versions. They indicate a rejected mismatch, not its cause: check
+source tampering and incomplete input first, then compare generation environments.
+The recorded compiler host is Ubuntu 24.04 x86_64 with host Python 3.14.2,
+Node 24.22.1 and the SDK pins above. That compiler receipt does not establish the
+Python/zlib version of every source-curation operation. Record the curation
+interpreter and both zlib versions when reproducing it:
+
+```bash
+python -c "import platform,zlib; print(platform.python_version(), zlib.ZLIB_VERSION, zlib.ZLIB_RUNTIME_VERSION)"
+```
+
+Use the verified input cache and a fresh staging directory; compare the generated
+profile/removal receipts against `profiles/hkscs-free-1/` as well as checking
+archive bytes. The #1423 change package records a bounded current-host source
+reconstruction. It does not establish cross-host binary reproducibility. If bytes
+still differ, keep the verification failed and retain the diagnostic for review.
+Do not replace locked hashes or downgrade to extracted-content-only equality.
+A new profile needs separately reviewed evidence; this diagnostic grants none.

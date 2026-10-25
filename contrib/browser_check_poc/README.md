@@ -221,7 +221,7 @@ licences, limits and open independent-review gates. This is not public clearance
 
 ### Review remediation and final checker audit (#1411)
 
-All 28 notice documents are linked from the generated notice index. The source
+All 29 notice documents are linked from the generated notice index. The source
 index includes the full correspondence report. Public candidates require the
 complete ten-source same-origin bundle; upstream link mode is development-only.
 
@@ -243,5 +243,17 @@ The second review adds explicit LF writes/checkout preservation, canonical store
 Core ZIP byte checking, schema2 record identities/references with an always-false
 authority_verified field, and [mandatory human reference checks](PUBLICATION_REVIEW.md).
 See [mapping attribution](notices/mapping-attribution.json) for legacy UCD3.2 and
-source-specific CJK terms. HKSCS permission scope and historical ICU terms remain
-unresolved publication blockers; generic Unicode/CPython notices do not clear them.
+source-specific CJK terms. HKSCS permission scope and independent acceptance of the located ICU grant remain
+publication blockers; generic Unicode/CPython notices do not clear them.
+
+
+## #1413 source-specific permission follow-up
+
+The official ICU data XML has now been located and byte-compared: it equals the
+CPython XML except for one additional trailing LF in CPython. The repository's
+licence scope declaration and complete grant (including original ICU terms)
+are pinned, verified and retained as a notice. Independent applicability
+acceptance is still pending, so N-7 remains fail-closed. HKSCS needs an actual
+source-specific clarification/grant or a separately verified removal/replacement;
+no written permission has been received. See
+[permission evidence and next action](https://github.com/Eruhitsuji/lifetxt/blob/main/contrib/browser_check_poc/PERMISSION_RESOLUTION.md).

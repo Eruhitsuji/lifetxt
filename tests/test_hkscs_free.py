@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import tarfile
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -38,10 +39,20 @@ class HkscsFreeTests(unittest.TestCase):
     def test_stdlib_zip_is_complete_and_independent_of_source_mtime(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            (root / "tools").mkdir()
-            (root / "tools/create_zipfile.py").write_text(
-                "def default_filterfunc(*args):\n"
-                "    return lambda directory, names: set()\n"
+            # This test exercises ZIP bytes/metadata, not the upstream selector.
+            # Do not execute temporary Python source: coverage reports after the
+            # TemporaryDirectory is gone and cannot read that deleted module.
+            selector = SimpleNamespace(
+                default_filterfunc=lambda *_: lambda directory, names: set()
+            )
+            spec = SimpleNamespace(
+                loader=SimpleNamespace(exec_module=lambda module: None)
+            )
+            importer = SimpleNamespace(
+                util=SimpleNamespace(
+                    spec_from_file_location=lambda *_: spec,
+                    module_from_spec=lambda _: selector,
+                )
             )
             library = root / "lib"
             (library / "encodings").mkdir(parents=True)
@@ -50,9 +61,10 @@ class HkscsFreeTests(unittest.TestCase):
             before = Path.cwd()
             try:
                 os.chdir(root)
-                builder.stdlib([library], [], [], root / "one.zip", 6)
-                os.utime(first, (1_500_000_000, 1_500_000_000))
-                builder.stdlib([library], [], [], root / "two.zip", 6)
+                with patch.object(builder, "importlib", importer):
+                    builder.stdlib([library], [], [], root / "one.zip", 6)
+                    os.utime(first, (1_500_000_000, 1_500_000_000))
+                    builder.stdlib([library], [], [], root / "two.zip", 6)
             finally:
                 os.chdir(before)
             self.assertEqual(

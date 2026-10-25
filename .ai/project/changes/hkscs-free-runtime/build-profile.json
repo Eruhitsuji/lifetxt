@@ -1,0 +1,24 @@
+{
+  "aliases_sha256": "a11e59dde687e964d5397c4fc661ca59014f875010edc302102bdac94cd896bc",
+  "build_helper_sha256": "61c34ca5725049de2d765cc124f72610d841518b453bc2f56075ab5db44dc96f",
+  "complete_distribution_audit": false,
+  "cpython_makefile_sha256": "da53ea3fdc446c69796475e83ba64229d259c746196470cd04a7f8cbe155c2aa",
+  "curated_sha256": "f862710e3d61091aae013d486d8bedbf1074188fd98086572d6340ec60b5392c",
+  "profile": "lifetxt-hkscs-free-1",
+  "public_distribution_approved": false,
+  "removed_sha256": {
+    "Lib/encodings/big5hkscs.py": "21d051a00fb5c6a86ba187e0c50e811d659ce00991fd5f5b408f71ebb2ef0f16",
+    "Lib/test/cjkencodings/big5hkscs-utf8.txt": "d00f4861f1eb15bace0e9f19d9975f52b2b2153e6dc7111717965332f3371872",
+    "Lib/test/cjkencodings/big5hkscs.txt": "20f803a24c94538a7f05049a0e848cc3d6c5617253f7e9b3d5381cba4c898bbd",
+    "Lib/test/test_codecencodings_hk.py": "66bf4b4208edcfdae2d17512adff3a37ae43b033ba903a2fd4acc2affd05d9a0",
+    "Lib/test/test_codecmaps_hk.py": "b0215a89b79d182aa100d82cae3b4e54ca7651878db766367fa92450ead9f6fd",
+    "Modules/cjkcodecs/_codecs_hk.c": "2b1c4a0516cc930c58bf885baae06e7b7b676b5dc1713c0653bba1fc39c4e12d",
+    "Modules/cjkcodecs/mappings_hk.h": "80259d8dababbbacbc214158aebb1f17a53bbbfa2cac30da3ce0fe43435f344e"
+  },
+  "required_disabled_builtin": "_codecs_hk",
+  "root_makefile_sha256": "73022f5fb4c7dd7e80ae26c627f66c3c05270a9a606035ff619a50f0fc5beebf",
+  "runtime_verified": false,
+  "schema_version": 1,
+  "setup_local_sha256": "e21c46d7b9703dc85142c3f8a11db97cc8be4cd247fe87a397c26533bf6ed88d",
+  "upstream_sha256": "c609e078adab90e2c6bacb6afafacd5eaf60cd94cf670f1e159565725fcd448d"
+}

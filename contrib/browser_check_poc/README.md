@@ -245,3 +245,7 @@ authority_verified field, and [mandatory human reference checks](PUBLICATION_REV
 See [mapping attribution](notices/mapping-attribution.json) for legacy UCD3.2 and
 source-specific CJK terms. HKSCS permission scope and historical ICU terms remain
 unresolved publication blockers; generic Unicode/CPython notices do not clear them.
+
+HKSCS-free runtime candidate: [HKSCS_FREE.md](HKSCS_FREE.md). This isolated
+build/verification profile does not replace the currently audited official runtime
+or grant publication approval.

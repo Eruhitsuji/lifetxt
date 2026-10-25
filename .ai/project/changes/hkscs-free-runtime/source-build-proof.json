@@ -1,0 +1,86 @@
+{
+  "archive_object_count": 351,
+  "complete_distribution_audit": false,
+  "cpython_source_check": {
+    "c_h_and_py_files": 3204,
+    "manifest_sha256": "e47ef5bded735b5356a78c010b78bfcf2a94a13738fc2e768d5dad68d6288b43",
+    "patches": 9
+  },
+  "curated_sha256": "f862710e3d61091aae013d486d8bedbf1074188fd98086572d6340ec60b5392c",
+  "dependency_source_checks": {
+    "hiwire": {
+      "archive_sha256": "0d64144f149c0de3bd157551421833c6c16fdc0492c312a6325ffc25d185c93c",
+      "c_and_h_files": 22,
+      "manifest_sha256": "107a0a4727ed5deb4a43ec2313e1ba210e9252f29148675ccd09e47747901ed9"
+    },
+    "libffi": {
+      "archive_sha256": "0c4e5647b79e21b900eb872dd98a3e0a66be12b36ad89677f61fd901a2615778",
+      "c_and_h_files": 296,
+      "manifest_sha256": "f6ac69f1dc7e516e26112ca58722fc4f8bd61c96884ca8ab6b87dc00d0bccd41"
+    },
+    "sqlite": {
+      "archive_sha256": "e90bcaef6dd5813fcdee4e867f6b65f3c9bfd0aec0f1017f9f3bbce1e4ed09e2",
+      "c_and_h_files": 7,
+      "manifest_sha256": "4953f7890f914307766d591108a076e5b2bcedb17ce72e27aecedec8dc5b9e61"
+    },
+    "xz": {
+      "archive_sha256": "73df4d5d34f0468bd57d09f2d8af363e95ed6cc3a4a86129d2f2c366259902a2",
+      "c_and_h_files": 211,
+      "manifest_sha256": "408fcb50571e5cb29a61a2aeff32897c40a20af275e1af1da90e89f2fd0c9f49"
+    },
+    "zstd": {
+      "archive_sha256": "f24b52470d12f466e9fa4fcc94e6c530625ada51d7b36de7fdc6ed7e6f499c8e",
+      "c_and_h_files": 262,
+      "manifest_sha256": "43bc8538296538ab73dd405a54e95fabf8cb158d9dba2dd643bedf8a2798b658"
+    }
+  },
+  "inputs_sha256": {
+    "Pyodide.Makefile": "73022f5fb4c7dd7e80ae26c627f66c3c05270a9a606035ff619a50f0fc5beebf",
+    "Pyodide.Setup.local": "e21c46d7b9703dc85142c3f8a11db97cc8be4cd247fe87a397c26533bf6ed88d",
+    "Setup.local": "e21c46d7b9703dc85142c3f8a11db97cc8be4cd247fe87a397c26533bf6ed88d",
+    "build_helper": "61c34ca5725049de2d765cc124f72610d841518b453bc2f56075ab5db44dc96f",
+    "config.c": "7cb60ba5876dbc150eb3962f0bd6dd3ebd892101f67d25775b5b59879a76868d",
+    "cpython/Makefile": "da53ea3fdc446c69796475e83ba64229d259c746196470cd04a7f8cbe155c2aa",
+    "installed/libpython3.14.a": "c4395afac145e0648f4fca6a1c07259a94f89c02c8933e6158a464941050c51e",
+    "libpython3.14.a": "c4395afac145e0648f4fca6a1c07259a94f89c02c8933e6158a464941050c51e"
+  },
+  "limits": "Source and object inclusion checks; pair with actual WASM probe. Not independent review, compiler attestation or publication approval.",
+  "profile": "lifetxt-hkscs-free-1",
+  "public_distribution_approved": false,
+  "pyodide_source_check": {
+    "manifest_sha256": "3721c1c7f32ff352aa2e54f90899c9a4848f6df05d6bef6207c8c36e0bf77cfc",
+    "src_files": 202
+  },
+  "removed_source_files": [
+    "Lib/encodings/big5hkscs.py",
+    "Lib/test/cjkencodings/big5hkscs-utf8.txt",
+    "Lib/test/cjkencodings/big5hkscs.txt",
+    "Lib/test/test_codecencodings_hk.py",
+    "Lib/test/test_codecmaps_hk.py",
+    "Modules/cjkcodecs/_codecs_hk.c",
+    "Modules/cjkcodecs/mappings_hk.h"
+  ],
+  "runtime_files": {
+    "pyodide-lock.json": {
+      "bytes": 119077,
+      "sha256": "5dc2fc119108bc148c7457dc86e7675b5c87e1cafd420b9c34c1eaef7b36c010"
+    },
+    "pyodide.asm.mjs": {
+      "bytes": 1250244,
+      "sha256": "8e52b1871dd7be68eddcc95b9dfc584304c6bd13d2562056be4a979d57fefa5a"
+    },
+    "pyodide.asm.wasm": {
+      "bytes": 9467681,
+      "sha256": "95f3f51ed10978b5bc81d535406f528fbb2239a6c46b9dbb348be3a6f03fbf16"
+    },
+    "pyodide.mjs": {
+      "bytes": 17931,
+      "sha256": "a8fddce78bf8534000f6d408b0b625e78c72798f1cad79a9aa8b28a0f0cb7e84"
+    },
+    "python_stdlib.zip": {
+      "bytes": 2540752,
+      "sha256": "d4c5705cdbf1f63ff6d588efad7f8bd09a3a030221e5552dad87627fbe022ed5"
+    }
+  },
+  "schema_version": 1
+}

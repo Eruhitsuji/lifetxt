@@ -1,0 +1,13 @@
+schema_version: 1
+requirements:
+- id: req-hkscs-free-runtime-candidate-v1
+  kind: ADDED
+  owner: Eruhitsuji
+  statement: Build and verify a pinned runtime candidate without HKSCS code or mapping data.
+  acceptance_criteria:
+  - Verify upstream archives and remove HKSCS implementation, mapping, wrapper, samples and codec aliases.
+  - Disable _codecs_hk at compilation; verify built-in registration, linked library and stdlib.
+  - Run actual WASM module/codec rejection and Japanese/Unicode/Core regression probes.
+  - Keep runtime candidate distinct from official upstream bytes and publication approval.
+  - Record exact build blockers rather than report removal without an actual artifact.
+  - Self-review and PR; final-head independent review remains pending.

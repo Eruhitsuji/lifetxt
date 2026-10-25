@@ -1,0 +1,55 @@
+schema_version: 1
+verification:
+  checks:
+  - type: source_curation_and_staging
+    command: python contrib/browser_check_poc/hkscs_free.py --build SOURCE_CACHE NEW_BUILD_DIRECTORY
+    status: passed
+    result: Real locked Pyodide/CPython/xz/zstd/SQLite inputs; seven excluded files, codec aliases removed; separate upstream/curated hashes. Missing curated input fails with exit 2, no fallback.
+    evidence: build-profile.json; source-removal.json
+  - type: actual_custom_runtime_build
+    command: PYODIDE_JOBS=4 make all-but-packages COMPILEALL_OPTS=-j1
+    status: passed
+    result: Final build exit 0 after resolving host Node, parallel compileall and generated output failures. Single-write embed contains one initializer; in-memory ZIP passes complete CRC check. Initial failures retained rather than called successful.
+    evidence: build-environment.json; verification-logs.json.gz
+  - type: source_and_object_correspondence
+    command: python -m contrib.browser_check_poc.hkscs_free_verify BUILD CURATED CANDIDATE LLVM_AR OUTPUT --source-cache CACHE
+    status: passed
+    result: Seven source paths absent; aliases and curated source agree. Nine pinned patches reconstructed; 3204 CPython C/header/Python files, 202 Pyodide src files and 798 dependency C/header files match. Built and installed libpython hashes agree; 351 objects contain Japanese codec and no HK object/registration; stdlib CRC/aliases checked. Five candidate files equal build outputs.
+    evidence: source-build-proof.json
+  - type: actual_wasm_absence_and_unicode
+    command: node contrib/browser_check_poc/hkscs_free_probe.mjs CANDIDATE OUTPUT
+    status: passed
+    result: Six builtin/module/codec availability checks reject HKSCS; UTF-8, Shift JIS, EUC JP, ISO2022 JP, Big5 and CP950 round trips pass. Old official runtime fails this probe (expected exit 1).
+    evidence: wasm-proof.json; verification-logs.json.gz
+  - type: native_wasm_core_fixtures
+    command: python -m contrib.browser_check_poc.hkscs_free --probe CANDIDATE LAYOUT; node contrib/browser_check_poc/probe.mjs LAYOUT OUTPUT
+    status: passed
+    result: 17 of 17 fixtures match native adapter expectations, including Japanese and supplementary Unicode. 1/100/1000/2000-line checks and oversized UTF-8 rejection pass. Reproduced layout has 13 byte-identical files.
+    evidence: core-wasm-proof.json
+  - type: actual_chromium
+    command: python contrib/browser_check_poc/browser_probe.py --site LAYOUT --chromium EXECUTABLE --output OUTPUT
+    status: passed
+    result: Chromium 153.0.8010.0 over loopback; 17 of 17 cases match; 30 requests, no browser errors. Lazy load, offline warm check, worker cancellation/restart, keyboard, ARIA, viewport/mobile emulation, retry/timeout and CSP checks pass.
+    evidence: browser-proof.json
+  - type: focused_actual_source_regression
+    command: LIFETXT_RUN_SOURCE_AUDIT=1 LIFETXT_SOURCE_CACHE=CACHE LIFETXT_SOURCE_RUNTIME=OFFICIAL_RUNTIME python -W error::ResourceWarning -m unittest tests.test_hkscs_free tests.test_browser_review_remediation tests.test_browser_source_delivery tests.test_browser_distribution_audit tests.test_browser_check_poc tests.test_website_checker tests.test_website tests.test_website_pages_workflow tests.test_traceability_gate tests.test_change_package_closeout
+    status: passed
+    result: 69 tests, one pre-existing optional Web feature skip; existing official-runtime source/distribution contract unchanged. New profile tests pass.
+    evidence: verification-logs.json.gz
+  - type: static_and_native
+    command: ruff check lifetxt tests scripts contrib/browser_check_poc; focused ruff format --check; node --check hkscs_free_probe.mjs; git diff --check; python -m lifetxt check examples/minimal_life.txt
+    status: passed
+    result: No lint/format/syntax/diff errors; native example OK (10 items).
+  gaps:
+  - description: Candidate adoption needs a distinct full source/provenance/notice/artifact binding and independent final-head distribution review, including ICU evidence in PR1414. Existing public builder still uses the official runtime and stays blocked; this profile is a separately verified removal candidate.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1398
+  - description: Cross-host binary reproducibility, physical mobile/Safari/Firefox/accessibility acceptance, retention of a future published custom bundle and publication/deploy approval remain outside these bounded measurements.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1400
+review_ledger:
+- reviewer: Codex implementer
+  review_type: informational_self_review
+  result: informational_only
+  finding_count: 3
+  unresolved_finding_count: 0
+  completed_at: '2026-10-25'
+  evidence: self-review.md; final PR comment binds the exact review head

@@ -14,6 +14,8 @@ import urllib.request
 from urllib.parse import urlsplit
 import zipfile
 
+from contrib.browser_check_poc.artifact_documents import document_bytes
+
 SOURCE = Path(__file__).resolve().parent
 PYODIDE_COMMIT = "b1e4fcc2488962f6360a97f19b9982d6fdb5d16f"
 SOURCE_IDS = {
@@ -37,7 +39,12 @@ HOSTS = {
     "release-assets.githubusercontent.com",
     "objects.githubusercontent.com",
 }
-METADATA = {"index.html", "source-lock.json", "SOURCE_DELIVERY.md"}
+METADATA = {
+    "index.html",
+    "source-lock.json",
+    "SOURCE_DELIVERY.md",
+    "source-provenance.json",
+}
 
 
 def safe_path(name):
@@ -186,7 +193,7 @@ def render_index(lock, bundled=False):
 <p>固定版のソースとライセンスを以下から取得できます。ソースは各ライセンスに従います。製品の公開審査は未完です。</p>
 <p>These are upstream release/recipe sources, not a reproducible-build or full binary attribution attestation. No local modifications to runtime bytes are made; upstream build patches are retained in the Pyodide/hiwire archives. This preview is not approved for publication.</p>
 <p>The source form of stdlib Python files, including generated configuration, is also present in <a href="../runtime/python_stdlib.zip">the exact shipped stdlib ZIP</a>.</p>
-<p><a href="source-lock.json">Versions, hashes and required source/patch members</a> · <a href="SOURCE_DELIVERY.md">Delivery status / 検証範囲</a> · <a href="../notices/pyodide-314.0.7.txt">MPL-2.0</a></p><ul>"""
+<p><a href="source-lock.json">Versions, hashes and required source/patch members</a> · <a href="SOURCE_DELIVERY.md">Delivery status / 検証範囲</a> · <a href="source-provenance.json">Source correspondence evidence / 対応根拠</a> · <a href="../notices/index.html">All third-party notices / 全ライセンス</a></p><ul>"""
         + "".join(rows)
         + "</ul></body></html>\n"
     )
@@ -198,10 +205,13 @@ def write_delivery(destination, source=SOURCE, cache=None):
         validate_cache(Path(cache), lock)
     destination.mkdir()
     (destination / "index.html").write_text(
-        render_index(lock, cache is not None), encoding="utf-8"
+        render_index(lock, cache is not None), encoding="utf-8", newline="\n"
     )
-    for name in ("source-lock.json", "SOURCE_DELIVERY.md"):
-        shutil.copyfile(source / name, destination / name)
+    for name in ("source-lock.json", "SOURCE_DELIVERY.md", "source-provenance.json"):
+        if name == "SOURCE_DELIVERY.md":
+            (destination / name).write_bytes(document_bytes(source / name))
+        else:
+            shutil.copyfile(source / name, destination / name)
     if cache is not None:
         for e in lock["archives"]:
             if e["ship_source"]:
@@ -218,10 +228,17 @@ def audit_delivery(output, source=SOURCE):
         raise ValueError("Source delivery must contain all archives or metadata only")
     if any(p.is_symlink() or not p.is_file() for p in destination.iterdir()):
         raise ValueError("Source delivery must contain flat regular files")
-    if (destination / "index.html").read_text("utf-8") != render_index(lock, bundled):
+    if (destination / "index.html").read_bytes() != render_index(lock, bundled).encode(
+        "utf-8"
+    ):
         raise ValueError("Source acquisition index mismatch")
-    for name in ("source-lock.json", "SOURCE_DELIVERY.md"):
-        if (destination / name).read_bytes() != (source / name).read_bytes():
+    for name in ("source-lock.json", "SOURCE_DELIVERY.md", "source-provenance.json"):
+        expected = (
+            document_bytes(source / name)
+            if name == "SOURCE_DELIVERY.md"
+            else (source / name).read_bytes()
+        )
+        if (destination / name).read_bytes() != expected:
             raise ValueError("Source metadata mismatch")
     if bundled:
         validate_cache(destination, lock)

@@ -29,7 +29,7 @@ class DistributionAuditTests(unittest.TestCase):
 
             bound = {"bytes": 7, "sha256": hashlib.sha256(b"fixture").hexdigest()}
             inventory_path = source / "notices/components.json"
-            inventory = json.loads(inventory_path.read_text())
+            inventory = json.loads(inventory_path.read_text("utf-8"))
             for name in builder.RUNTIME_FILES:
                 (runtime / name).write_bytes(b"fixture")
                 inventory["runtime_observations"]["runtime_files"][
@@ -59,7 +59,7 @@ class DistributionAuditTests(unittest.TestCase):
                     artifact = Path(directory) / mutation
                     shutil.copytree(clean, artifact)
                     manifest_path = artifact / "manifest.json"
-                    manifest = json.loads(manifest_path.read_text())
+                    manifest = json.loads(manifest_path.read_text("utf-8"))
                     if mutation == "extra":
                         (artifact / "unapproved.mjs").write_text("alert(1)")
                     elif mutation == "missing":
@@ -85,7 +85,7 @@ class DistributionAuditTests(unittest.TestCase):
                         original_lock = lock_path.read_bytes()
                         lock = json.loads(original_lock)
                         lock["packages"]["node_modules/pyodide"]["version"] = "latest"
-                        lock_path.write_text(json.dumps(lock))
+                        lock_path.write_text(json.dumps(lock), encoding="utf-8")
                     else:
                         name = {
                             "runtime": "runtime/pyodide.mjs",

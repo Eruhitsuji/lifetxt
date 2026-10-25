@@ -599,6 +599,66 @@
         }
       ],
       "selection": "whole"
+    },
+    {
+      "file": "unicode-license-v3-2026.txt",
+      "source_url": "https://www.unicode.org/license.txt",
+      "retrieved_on": "2026-10-25",
+      "selection": "whole",
+      "original_sha256": "e7a93b009565cfce55919a381437ac4db883e9da2126fa28b91d12732bc53d96",
+      "stored_sha256": "e7a93b009565cfce55919a381437ac4db883e9da2126fa28b91d12732bc53d96",
+      "normalization": "none",
+      "scope": "Unicode UCD and identified Unicode MAPPINGS inputs only; excludes blanket coverage of HKSCS/ICU/JISX0213/other sources; see mapping-attribution.json"
+    },
+    {
+      "file": "unicode-ucd-16.0.0-ReadMe.txt",
+      "source_url": "https://www.unicode.org/Public/16.0.0/ucd/ReadMe.txt",
+      "retrieved_on": "2026-10-25",
+      "selection": "whole",
+      "original_sha256": "14cafa23788d3a20dd21d6b0cdcb8d6dab520781fcd9ad9392f3b88ea607e633",
+      "stored_sha256": "14cafa23788d3a20dd21d6b0cdcb8d6dab520781fcd9ad9392f3b88ea607e633",
+      "normalization": "none",
+      "scope": "Unicode UCD and identified Unicode MAPPINGS inputs only; excludes blanket coverage of HKSCS/ICU/JISX0213/other sources; see mapping-attribution.json"
+    },
+    {
+      "file": "gb2312-cpython-3.14.2-header.txt",
+      "source_url": "https://raw.githubusercontent.com/python/cpython/v3.14.2/Tools/unicode/python-mappings/GB2312.TXT",
+      "selection": "leading-line-comments",
+      "source_members": [
+        {
+          "archive": "cpython",
+          "member": "Tools/unicode/python-mappings/GB2312.TXT",
+          "sha256": "52335c54396c41d3e04856cb6018bd600469f210556233aa9895b1f396b257ed"
+        }
+      ],
+      "original_sha256": "52335c54396c41d3e04856cb6018bd600469f210556233aa9895b1f396b257ed",
+      "stored_sha256": "50361b2000e153df785c6318d047d41f6a9df493b93495f6e079299b35461dec",
+      "normalization": "Original complete leading # comments, preceded by source-member identification"
+    },
+    {
+      "file": "jisx0213-cpython-3.14.2-header.txt",
+      "source_url": "https://raw.githubusercontent.com/python/cpython/v3.14.2/Tools/unicode/python-mappings/jisx0213-2004-std.txt",
+      "selection": "leading-line-comments",
+      "source_members": [
+        {
+          "archive": "cpython",
+          "member": "Tools/unicode/python-mappings/jisx0213-2004-std.txt",
+          "sha256": "41c9b4c9221162a94cfa5a87016256c42321a8a4f81c852034564e67eab46446"
+        }
+      ],
+      "original_sha256": "41c9b4c9221162a94cfa5a87016256c42321a8a4f81c852034564e67eab46446",
+      "stored_sha256": "a788ce940436163f6b12c8ee746c3d47e99317254eb82a6b46532656dc76c1c9",
+      "normalization": "Original complete leading # comments, preceded by source-member identification"
+    },
+    {
+      "file": "unicode-ucd-3.2.0-ReadMe.txt",
+      "source_url": "https://www.unicode.org/Public/3.2-Update/ReadMe-3.2.0.txt",
+      "retrieved_on": "2026-10-25",
+      "selection": "whole",
+      "original_sha256": "f1d949a8f5b5acd5a415f28c7f5bd61a429d3c5377022e5dfc73b6c9f682c8be",
+      "stored_sha256": "f7394d92f66a62d5365a16b1e8826ef26058fbeabf4106af073b7d94ea20bf4e",
+      "normalization": "LF; trim per-line trailing whitespace and final blank lines. Original downloaded hash retained separately; content unchanged.",
+      "scope": "Unicode UCD and identified Unicode MAPPINGS inputs only; excludes blanket coverage of HKSCS/ICU/JISX0213/other sources; see mapping-attribution.json"
     }
   ],
   "upstream_build_source": "https://github.com/pyodide/pyodide/blob/b1e4fcc2488962f6360a97f19b9982d6fdb5d16f/Makefile.envs",

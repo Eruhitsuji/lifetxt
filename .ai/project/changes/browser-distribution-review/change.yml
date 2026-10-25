@@ -1,0 +1,35 @@
+schema_version: 1
+change:
+  id: browser-distribution-review
+  title: Independent browser distribution review remediation
+  status: in_review
+  change_type: Bug
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1411
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1412
+  base_commit: 372ddca1dcd010037e0e29c574b80402b2db77bb
+scope:
+  write_scope:
+  - contrib/browser_check_poc notices/source/probe/audit/gate and docs
+  - scripts/build_website_checker.py final preview artifact
+  - scripts/check_website.py portable HTML paths
+  - focused browser source/distribution/checker/website tests
+  - dedicated change package and narrow capability/traceability additions
+  - scripts/build_website.py generated LF only; tests/test_website.py UTF-8
+  - root .gitattributes scoped checker input newline preservation
+  - contrib/browser_check_poc mapping attribution and human review runbook
+  forbidden_scope:
+  - .ai/managed
+  - Core/Format/CLI behavior
+  - production introduction behavior and Pages workflow
+  - merge/publication/deploy/settings/Issue Close
+  shared_files:
+  - .ai/project/CAPABILITIES.yml (Integrator Eruhitsuji; narrow website addition)
+  - .ai/project/TRACEABILITY.yml (Integrator Eruhitsuji; one new chain)
+human_approvals_required:
+- independent final-head implementation/distribution and integration review
+- P2-6/P2-7 residual-risk judgment and source retention commitment
+- merge
+- publication and deployment separately

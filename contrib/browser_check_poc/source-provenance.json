@@ -14,6 +14,88 @@
       "result": "matched"
     }
   ],
+  "runtime_observations": {
+    "legacy_ucd": "3.2.0",
+    "sqlite": "3.39.0",
+    "ucd": "16.0.0",
+    "with_mimalloc": 1,
+    "zstd": "1.5.7"
+  },
+  "archive_correspondence": [
+    {
+      "component": "pyodide",
+      "basis": "official-release-source-commit",
+      "archive_sha256": "a9c7ac66311ed7e0805b9970054ee5be4f69d02204d28bffe4b017310a24bad9",
+      "limit": "Local archive hash alone is not an upstream binary build attestation"
+    },
+    {
+      "component": "hiwire",
+      "basis": "recipe-commit",
+      "archive_sha256": "0d64144f149c0de3bd157551421833c6c16fdc0492c312a6325ffc25d185c93c",
+      "limit": "Local archive hash alone is not an upstream binary build attestation"
+    },
+    {
+      "component": "cpython",
+      "basis": "recipe-sha256",
+      "archive_sha256": "c609e078adab90e2c6bacb6afafacd5eaf60cd94cf670f1e159565725fcd448d",
+      "limit": "Local archive hash alone is not an upstream binary build attestation"
+    },
+    {
+      "component": "emscripten",
+      "basis": "recipe-version-tag-not-emsdk-commit-attestation",
+      "archive_sha256": "b32ce4192bae12f15b06b1eec67b7ea6ac8ae809fc81230a43354c3c24251360",
+      "limit": "Local archive hash alone is not an upstream binary build attestation"
+    },
+    {
+      "component": "libffi",
+      "basis": "recipe-commit",
+      "archive_sha256": "0c4e5647b79e21b900eb872dd98a3e0a66be12b36ad89677f61fd901a2615778",
+      "limit": "Local archive hash alone is not an upstream binary build attestation"
+    },
+    {
+      "component": "xz",
+      "basis": "recipe-url-and-version-no-upstream-hash",
+      "archive_sha256": "73df4d5d34f0468bd57d09f2d8af363e95ed6cc3a4a86129d2f2c366259902a2",
+      "limit": "Local archive hash alone is not an upstream binary build attestation",
+      "official_equivalence": {
+        "url": "https://tukaani.org/xz/xz-5.2.2.tar.gz",
+        "bytes": 1464228,
+        "sha256": "73df4d5d34f0468bd57d09f2d8af363e95ed6cc3a4a86129d2f2c366259902a2",
+        "checked_on": "2026-10-25",
+        "scope": "Independently retrieved official bytes equal retained mirror archive; does not attest upstream build input bytes"
+      }
+    },
+    {
+      "component": "zstd",
+      "basis": "recipe-url-and-version-no-upstream-hash",
+      "archive_sha256": "f24b52470d12f466e9fa4fcc94e6c530625ada51d7b36de7fdc6ed7e6f499c8e",
+      "limit": "Local archive hash alone is not an upstream binary build attestation"
+    },
+    {
+      "component": "sqlite",
+      "basis": "recipe-url-and-version-no-upstream-hash",
+      "archive_sha256": "e90bcaef6dd5813fcdee4e867f6b65f3c9bfd0aec0f1017f9f3bbce1e4ed09e2",
+      "limit": "Local archive hash alone is not an upstream binary build attestation"
+    },
+    {
+      "component": "zlib",
+      "basis": "port-recipe-sha512",
+      "archive_sha256": "17e88863f3600672ab49182f217281b6fc4d3c762bde361935e436a95214d05c",
+      "limit": "Local archive hash alone is not an upstream binary build attestation"
+    },
+    {
+      "component": "bzip2",
+      "basis": "port-recipe-sha512",
+      "archive_sha256": "9628e7bc598719335ce1d1219c1a4fc241652c0a7b4d993fa82a9b98a6c5dec6",
+      "limit": "Local archive hash alone is not an upstream binary build attestation"
+    },
+    {
+      "component": "upstream-core",
+      "basis": "official-release-published-sha256",
+      "archive_sha256": "2abdcc2e35208af406e07724cffa85bc582ced97e9028383ecf5462541393f95",
+      "limit": "Local archive hash alone is not an upstream binary build attestation"
+    }
+  ],
   "runtime_files": {
     "runtime/pyodide-lock.json": {
       "bytes": 119077,
@@ -36,7 +118,7 @@
       "sha256": "fa1957e5777068fc4f7437f96d860ae2fbe9c19732ba06c84e004ec16dd7dd7a"
     }
   },
-  "source_lock_sha256": "0b3f819111218d8aefdff3d71323c911a7a66e24ecf8e6ffdce8d4a5be0c1a2d",
+  "source_lock_sha256": "fd1ee5452e188aa49fcdfe01de568530fdd18c73d1438689866736b45d6e3cca",
   "pyodide_source_commit": "b1e4fcc2488962f6360a97f19b9982d6fdb5d16f",
   "cpython_patch_checks": [
     {
@@ -3530,12 +3612,23 @@
       "notice": "llvm-libc-emscripten-5.0.3.txt",
       "members": 1,
       "result": "source-bytes-verified"
+    },
+    {
+      "notice": "gb2312-cpython-3.14.2-header.txt",
+      "members": 1,
+      "result": "source-bytes-verified"
+    },
+    {
+      "notice": "jisx0213-cpython-3.14.2-header.txt",
+      "members": 1,
+      "result": "source-bytes-verified"
     }
   ],
+  "mapping_attribution_sha256": "fe5335b7fe62762e72e9523e778bfd230fa8f556596af12776bab932d4f958b1",
   "complete_distribution_audit": false,
   "public_distribution_approved": false,
   "remaining_review": [
-    "WASM file/object attribution, remaining per-file and Unicode-data licensing evaluation",
+    "Independent evaluation of complete WASM/file attribution and Unicode mapping scope; known Unicode notices now retained",
     "Upstream recipes/release are not signed build or bit-reproducibility attestation",
     "Independent distribution/implementation/integration acceptance and Owner publication approval"
   ]

@@ -184,14 +184,14 @@
     {
       "name": "liblzma (XZ)",
       "version": "5.2.2",
-      "basis": "tagged cpython/Makefile; _lzma import observed, no runtime version",
+      "basis": "Recipe URL+version without recipe hash; _lzma import observed but linked version unavailable; retained mirror archive matches official tukaani.org bytes",
       "licence": "COPYING identifies liblzma public domain; file-level review remains",
       "notice": "xz-5.2.2-COPYING.txt"
     },
     {
       "name": "zstd",
       "version": "1.5.7",
-      "basis": "tagged cpython/Makefile archive; _zstd import observed, no runtime version",
+      "basis": "Recipe URL+version without recipe hash; actual _zstd.zstd_version observed by runtime_probe.mjs; not a source-byte attestation",
       "licence": "BSD-3-Clause notice retained; file-level review remains",
       "notice": "zstd-1.5.7.txt"
     },
@@ -261,7 +261,7 @@
     {
       "name": "other CPython/Emscripten portions",
       "version": null,
-      "basis": "_decimal, generated Unicode tables, compiler-rt/libunwind and other linked/vendored portions not exhaustively mapped",
+      "basis": "Remaining linked/vendored files are not exhaustively mapped; listed known Unicode, decimal and LLVM notices do not establish completeness",
       "licence": null,
       "notice": null
     },
@@ -306,14 +306,103 @@
       "basis": "Complete subtree licence and source archive retained; precise linked inclusion unverified",
       "licence": "See original licence, LLVM exceptions and inherited notices",
       "notice": "llvm-libc-emscripten-5.0.3.txt"
+    },
+    {
+      "name": "Unicode Character Database derived tables",
+      "version": "16.0.0 and legacy 3.2.0",
+      "notice": "unicode-license-v3-2026.txt",
+      "basis": "makeunicodedata.py includes old_versions=[3.2.0]; actual unicodedata version and ucd_3_2_0.unidata_version probed; generated character/name/type tables",
+      "licence": "Unicode-3.0"
+    },
+    {
+      "name": "Unicode MAPPINGS-derived codecs (bounded subset)",
+      "version": "CPython 3.14.2",
+      "notice": "unicode-license-v3-2026.txt",
+      "basis": "genmap generators identify Unicode CP932/936/949/950, JIS0208/0212 and BIG5 inputs; eight-bit encodings include Unicode mappings and other contributions. Separate HKSCS/ICU/JISX0213/GB2312 sources are itemized in mapping-attribution.json.",
+      "licence": "Unicode-3.0"
+    },
+    {
+      "name": "Unicode UCD copyright and source",
+      "version": "16.0.0",
+      "notice": "unicode-ucd-16.0.0-ReadMe.txt",
+      "basis": "Original official UCD16 ReadMe copyright (2024) and terms reference retained whole",
+      "licence": "See Unicode License V3"
+    },
+    {
+      "name": "mimalloc",
+      "version": "vendored CPython 3.14.2",
+      "notice": "cpython-incorporated-3.14.2.rst",
+      "basis": "WITH_MIMALLOC=1 in actual runtime; exact linked files not mapped",
+      "licence": "MIT",
+      "notice_section": "mimalloc"
+    },
+    {
+      "name": "SipHash24",
+      "version": "vendored CPython 3.14.2",
+      "notice": "cpython-incorporated-3.14.2.rst",
+      "basis": "CPython hash implementation and incorporated-software terms; exact linked subset unverified",
+      "licence": "See original notice",
+      "notice_section": "SipHash24"
+    },
+    {
+      "name": "dtoa",
+      "version": "vendored CPython 3.14.2",
+      "notice": "cpython-incorporated-3.14.2.rst",
+      "basis": "Python/dtoa.c source; corresponding incorporated notice retained",
+      "licence": "See original notice",
+      "notice_section": "strtod and dtoa"
+    },
+    {
+      "name": "Mersenne Twister",
+      "version": "vendored CPython 3.14.2",
+      "notice": "cpython-incorporated-3.14.2.rst",
+      "basis": "Modules/_randommodule.c; _random builtin observed",
+      "licence": "See original notice",
+      "notice_section": "Mersenne Twister"
+    },
+    {
+      "name": "Unicode legacy UCD release identification",
+      "version": "3.2.0",
+      "notice": "unicode-ucd-3.2.0-ReadMe.txt",
+      "licence": "Unicode data terms; ReadMe identifies release, not legal clearance",
+      "basis": "makeunicodedata.py and actual unicodedata.ucd_3_2_0"
+    },
+    {
+      "name": "HKSCS mapping-derived CJK tables",
+      "version": "2004",
+      "notice": null,
+      "licence": "Unresolved HKSARG permission scope; not Unicode V3 or blanket PSF clearance",
+      "basis": "genmap_tchinese.py identifies restrictive HKSARG input; mapping-attribution.json records terms assessment and publication blocker"
+    },
+    {
+      "name": "ICU GB18030 mapping-derived CJK tables",
+      "version": "GB18030-2000 XML version 3",
+      "notice": null,
+      "licence": "Historical ICU input licence not established; publication blocker",
+      "basis": "genmap_schinese.py and retained python-mappings/gb-18030-2000.xml; missing per-input licence is explicit"
+    },
+    {
+      "name": "JIS X 0213 mapping-derived CJK tables",
+      "version": "2004, retained mapping dated 2004-07-07",
+      "notice": "jisx0213-cpython-3.14.2-header.txt",
+      "licence": "Original header grants use/modification/distribution; copyright retained",
+      "basis": "genmap_japanese.py historical wakaba-web input and exact source header"
+    },
+    {
+      "name": "GB2312 mapping-derived CJK tables",
+      "version": "GB2312-80; retained table 1999-10-08",
+      "notice": "gb2312-cpython-3.14.2-header.txt",
+      "licence": "Original Unicode 1991-1999 data notice; not a licence inferred from FreeBSD hosting",
+      "basis": "genmap_schinese.py historical FreeBSD endpoint; exact retained table/header independently inspected"
     }
   ],
   "public_distribution_approved": false,
   "remaining_gates": [
-    "Complete WASM linked-object/per-file attribution and remaining Unicode data licensing evaluation; retained full source/extra notices are evidence, not completeness",
-    "Independent acceptance of the exact official release -> source recipe/patch relationship; byte-identical upstream core is verified, not signed/reproducible-build attestation",
-    "Independent review of Source Code Form acquisition/hosting continuity and full distribution obligations",
-    "Owner publication approval under #1398/#1400; full audit/publication flags remain false"
+    "Independent final-head distribution and integration re-review of #1411 repairs",
+    "Owner judgment on P2-6 archive correspondence limits and P2-7 official-release/recipe evidence vs rebuilding; unverified remains unverified",
+    "Owner acceptance of same-origin source retention throughout binary availability",
+    "Separate explicit publication and deployment approval; device/browser acceptance remains #1400",
+    "N-3 source-specific HKSCS derived-table permission and historical ICU XML terms need documented independent/Owner resolution; generic CPython/Unicode notices do not clear them"
   ],
   "source_delivery_issue": 1409
 }

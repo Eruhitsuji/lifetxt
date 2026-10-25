@@ -1,0 +1,90 @@
+schema_version: 1
+verification:
+  checks:
+  - type: focused_actual_source_and_regression
+    command: LIFETXT_RUN_SOURCE_AUDIT=1 LIFETXT_SOURCE_CACHE=CACHE LIFETXT_SOURCE_RUNTIME=RUNTIME
+      python -W error::ResourceWarning -m unittest tests.test_browser_review_remediation
+      tests.test_browser_source_delivery tests.test_browser_distribution_audit tests.test_browser_check_poc
+      tests.test_website_checker tests.test_website tests.test_website_pages_workflow
+      tests.test_traceability_gate tests.test_change_package_closeout
+    status: passed
+    result: 57 tests, 1 existing optional Web skip. Actual 11 archive/cache checks,
+      9 patches, all 567 stdlib mappings and actual Node version probes reproduce
+      source-provenance exactly. Includes synthetic positive/negative gate and final-artifact
+      rehashed mutations. Includes final parsed-link hardening and simulated Windows path separators.
+  - type: real_publication_candidate
+    command: python scripts/build_website_checker.py --output NEW_DIRECTORY --source-cache
+      CACHE --publication-candidate
+    status: passed
+    result: Whole-site candidate with all ten sources; final artifact integrity passed.
+      Source/notice metadata changes require a fresh build; stale intermediate output
+      is not final evidence.
+  - type: publication_rejection
+    command: python -m contrib.browser_check_poc.distribution_audit ARTIFACT --require-publication
+    status: blocked
+    result: Expected exit 1 after integrity passed; no independent review or Owner
+      decision record supplied, both actual flags false.
+  - type: browser_navigation
+    command: Actual Chromium loopback JA/EN notice/source navigation and explicit
+      source download
+    status: passed
+    result: Chromium 153.0.8010.0; all 25 notices HTTP200 per language, static indexes,
+      full provenance link, no automatic runtime/archive downloads, explicit hiwire
+      SHA256 matched, no page errors. source-navigation.json retains sanitized evidence.
+  - type: official_xz_equivalence
+    command: Explicit HTTPS retrieval of https://tukaani.org/xz/xz-5.2.2.tar.gz and
+      SHA256 comparison
+    status: passed
+    result: 1464228 bytes, SHA256 73df4d5d34f0468bd57d09f2d8af363e95ed6cc3a4a86129d2f2c366259902a2
+      equals retained mirror source; not proof of upstream build input.
+  - type: static
+    command: python -m ruff check lifetxt tests scripts contrib/browser_check_poc;
+      focused ruff format --check; git diff --check
+    status: passed
+    result: No lint/format/diff errors after self-review corrections.
+  - type: native_integration
+    command: python -m lifetxt check examples/minimal_life.txt
+    status: passed
+    result: 'OK: 10 items.'
+  gaps:
+  - description: Final-head independent review, Owner evidence-scope decisions, source
+      retention commitment, product acceptance and publication/deploy remain pending.
+    tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1398
+review_ledger:
+- reviewer: Codex implementer
+  review_type: informational_self_review
+  target_commit: null
+  result: informational_only
+  finding_count: 0
+  completed_at: '2026-10-25'
+  evidence: self-review.md; final PR commit binding supplied on PR
+- reviewer: independent evaluator designated by Eruhitsuji
+  review_type: implementation_distribution
+  target_commit: null
+  result: pending
+- reviewer: Eruhitsuji
+  review_type: integration
+  target_commit: null
+  result: pending
+
+second_round:
+  review_input: https://github.com/Eruhitsuji/lifetxt/pull/1412#issuecomment-6390737165
+  reviewed_base_head: 499c164a10c7b06c0a401fa1de7cd369652be6b0
+  checks:
+  - type: actual_source_and_regressions
+    command: LIFETXT_RUN_SOURCE_AUDIT=1 LIFETXT_SOURCE_CACHE=CACHE LIFETXT_SOURCE_RUNTIME=RUNTIME python -W error::ResourceWarning -m unittest tests.test_browser_review_remediation tests.test_browser_source_delivery tests.test_browser_distribution_audit tests.test_browser_check_poc tests.test_website_checker tests.test_website tests.test_website_pages_workflow tests.test_traceability_gate tests.test_change_package_closeout
+    status: passed
+    result: Full sources reacquired with exact locked hashes; actual probe reproduces retained report, including UCD3.2 and selected JIS/GB headers. Combined cp932+CRLF candidate equality, spoofed identity/reference negatives and rehashed trailing-byte/ZIP-comment rejection verified. Final count recorded on PR.
+  - type: actual_browser_navigation
+    command: Chromium loopback JA/EN notice/source navigation and explicit hiwire download
+    status: passed
+    result: Chromium 153.0.8010.0, 28 notice documents and all 32 notice/metadata destinations including README reachable with HTTP200, static indexes, no automatic runtime/source download, hiwire hash matched, no page errors. second-review-navigation.json.
+  - type: source_specific_terms_investigation
+    status: partial
+    result: Exact CPython generators/input headers inspected; legacy UCD3.2 recorded; JIS/GB original notices retained. HKSARG official terms reviewed, but derived-table permission is unresolved; historical ICU XML licence also unresolved. No legal clearance claimed.
+  - type: native_windows
+    status: not_run
+    result: Native Windows unavailable. Encoding/newline/path/platform regression simulations executed; independent native rerun still recommended.
+  owner_decisions: pending
+  independent_final_head_review: pending
+  actual_public_distribution_approved: false

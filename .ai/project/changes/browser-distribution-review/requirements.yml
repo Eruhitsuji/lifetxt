@@ -1,0 +1,43 @@
+schema_version: 1
+requirements:
+- id: req-browser-distribution-review-remediation-v1
+  kind: ADDED
+  owner: Eruhitsuji
+  statement: Resolve review findings in the same-origin source/notice/final-checker
+    audit contract without asserting approval.
+  acceptance_criteria:
+  - P1-1 official Unicode License V3 and UCD16 source/copyright retained with hashes;
+    mapping scope recorded
+  - P1-2 all notice/component documents discoverable from JA/EN checker and source
+    index; integrity rejects broken/rehashed indexes
+  - P1-3 entire final checker artifact has fixed-source allowlist and manifest integrity
+    audit
+  - P1-4 publication candidates require all ten verified local source archives; retention
+    duty and pending Owner commitment recorded
+  - P2-5 mimalloc/SipHash24/dtoa/Mersenne Twister listed with notice sections
+  - P2-6 archive correspondence basis and source-hash limits recorded; actual zstd/SQLite/UCD/mimalloc
+    probes; official xz byte equivalence
+  - P2-7 proposal and alternative for source correspondence acceptance with unverified
+    scope explicit, Owner decision pending
+  - P2-8 positive/negative evidence gate; stale review, dirty inputs, missing findings,
+    incomplete sources and absent Owner approval block
+  - P3-9 UTF-8 test/notice I/O and POSIX website paths
+  - P3-10 repository documentation links resolve independently of generated layout
+  - P3-11 generated sysconfig hash/constants checked and full source provenance shipped
+  - Actual flags remain false; parent issues remain blocked; self-review and PR, no
+    merge/deploy
+  - N-1 generated UTF-8/LF and Git checkout invariance; cp932+CRLF defaults cannot
+    alter candidate bytes/manifest; canonical ZIP stores bytes and platform metadata
+  - N-2 record authority explicitly unverified; schema2 strict repository references,
+    normalized login/tool identities and complete pinned implementing tools; mandatory
+    human reference verification runbook
+  - N-3 distinguish UCD3.2 and non-Unicode CJK sources; retain original GB2312/JISX0213
+    terms; HKSCS/ICU permission uncertainties explicit pending Owner/independent resolution
+  - N-4 rehashed Core ZIP trailing bytes rejected by complete canonical comparison
+  - N-5 README and every notice metadata file linked and checked
+  - N-6 current-only inventory; generated repository references bind actual build
+    commit
+  - N-7 gate binds packaged mapping-attribution data to the fixed CPython
+    source archive. HKSCS/ICU publication blockers cannot be cleared by an
+    Owner-risk record or changed status without source-specific evidence and
+    independent review; positive and negative synthetic tests fail closed

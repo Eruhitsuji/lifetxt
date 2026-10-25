@@ -1,0 +1,1743 @@
+{
+  "kind": "headless Chromium loopback HTTP; synthetic inputs",
+  "os": "Linux-6.18.55-x86_64-with-glibc2.39",
+  "acceptance": "passed_focused_only",
+  "languages": {
+    "ja": {
+      "checks": [
+        {
+          "name": "empty",
+          "fill_ms": 46.683831000336795,
+          "wall_ms": 2831.0610099997575,
+          "worker_ms": 113.5
+        },
+        {
+          "name": "valid",
+          "fill_ms": 8.382129000892746,
+          "wall_ms": 65.10803300079715,
+          "worker_ms": 25.699999999254942
+        },
+        {
+          "name": "japanese",
+          "fill_ms": 12.696910000158823,
+          "wall_ms": 43.398703001003014,
+          "worker_ms": 1.400000000372529
+        },
+        {
+          "name": "syntax",
+          "fill_ms": 5.878637999558123,
+          "wall_ms": 44.12468200098374,
+          "worker_ms": 0.599999999627471
+        },
+        {
+          "name": "custom-key",
+          "fill_ms": 6.807054000091739,
+          "wall_ms": 38.393079999877955,
+          "worker_ms": 0.599999999627471
+        },
+        {
+          "name": "warning",
+          "fill_ms": 4.98857999991742,
+          "wall_ms": 41.77762899962545,
+          "worker_ms": 0.5
+        },
+        {
+          "name": "position",
+          "fill_ms": 6.978433999393019,
+          "wall_ms": 42.44508099873201,
+          "worker_ms": 1.099999999627471
+        },
+        {
+          "name": "format-current",
+          "fill_ms": 6.644160999712767,
+          "wall_ms": 37.774209999042796,
+          "worker_ms": 0.6000000014901161
+        },
+        {
+          "name": "format-future",
+          "fill_ms": 7.266951000929112,
+          "wall_ms": 40.58490100032941,
+          "worker_ms": 0.40000000037252903
+        },
+        {
+          "name": "duplicate-id",
+          "fill_ms": 6.923353999809478,
+          "wall_ms": 36.1211050003476,
+          "worker_ms": 0.6000000014901161
+        },
+        {
+          "name": "missing-reference",
+          "fill_ms": 5.281813000692637,
+          "wall_ms": 47.44052300156909,
+          "worker_ms": 0.599999999627471
+        },
+        {
+          "name": "timezone",
+          "fill_ms": 7.444401999237016,
+          "wall_ms": 35.02850299992133,
+          "worker_ms": 1.300000000745058
+        },
+        {
+          "name": "multiline",
+          "fill_ms": 7.243285999720683,
+          "wall_ms": 36.07270599968615,
+          "worker_ms": 0.599999999627471
+        },
+        {
+          "name": "html-injection",
+          "fill_ms": 4.3295889990986325,
+          "wall_ms": 42.96198299925891,
+          "worker_ms": 0.3999999985098839
+        },
+        {
+          "name": "completed-parent-gap",
+          "fill_ms": 5.900997999560786,
+          "wall_ms": 37.693694001063704,
+          "worker_ms": 1
+        },
+        {
+          "name": "native-history-gap",
+          "fill_ms": 4.838098999243812,
+          "wall_ms": 42.08518099949288,
+          "worker_ms": 1
+        },
+        {
+          "name": "empty",
+          "fill_ms": 6.609530999412527,
+          "wall_ms": 38.43853000034869,
+          "worker_ms": 0.30000000074505806
+        },
+        {
+          "name": "utf8-boundary",
+          "fill_ms": 10.326354000426363,
+          "wall_ms": 37.378812001406914,
+          "worker_ms": 1.799999998882413
+        },
+        {
+          "name": "ascii-boundary",
+          "fill_ms": 11.764412000047741,
+          "wall_ms": 19.434582000030787,
+          "worker_ms": 1
+        },
+        {
+          "name": "emoji",
+          "fill_ms": 7.016131999989739,
+          "wall_ms": 12.371998998787603,
+          "worker_ms": 0.5
+        },
+        {
+          "name": "supplementary-cjk",
+          "fill_ms": 10.244389999570558,
+          "wall_ms": 37.38322699973651,
+          "worker_ms": 0.40000000037252903
+        },
+        {
+          "name": "100-diagnostics",
+          "fill_ms": 54.00293699858594,
+          "wall_ms": 39.68124700077169,
+          "worker_ms": 2.400000000372529
+        },
+        {
+          "name": "500-diagnostics",
+          "fill_ms": 525.0454189990705,
+          "wall_ms": 59.77764100134664,
+          "worker_ms": 5
+        }
+      ],
+      "startup": {
+        "id": 1,
+        "stage": "ready",
+        "startup_ms": 2650.5
+      },
+      "main_thread_ticks": 1392,
+      "page_heap_before_repeats": {
+        "metrics": [
+          {
+            "name": "Timestamp",
+            "value": 12475.139309
+          },
+          {
+            "name": "AudioHandlers",
+            "value": 0
+          },
+          {
+            "name": "AudioWorkletProcessors",
+            "value": 0
+          },
+          {
+            "name": "Documents",
+            "value": 4
+          },
+          {
+            "name": "Frames",
+            "value": 4
+          },
+          {
+            "name": "JSEventListeners",
+            "value": 78
+          },
+          {
+            "name": "LayoutObjects",
+            "value": 3845
+          },
+          {
+            "name": "MediaKeySessions",
+            "value": 0
+          },
+          {
+            "name": "MediaKeys",
+            "value": 0
+          },
+          {
+            "name": "Nodes",
+            "value": 4497
+          },
+          {
+            "name": "Resources",
+            "value": 13
+          },
+          {
+            "name": "ContextLifecycleStateObservers",
+            "value": 7
+          },
+          {
+            "name": "V8PerContextDatas",
+            "value": 4
+          },
+          {
+            "name": "WorkerGlobalScopes",
+            "value": 1
+          },
+          {
+            "name": "UACSSResources",
+            "value": 0
+          },
+          {
+            "name": "RTCPeerConnections",
+            "value": 0
+          },
+          {
+            "name": "ResourceFetchers",
+            "value": 6
+          },
+          {
+            "name": "AdSubframes",
+            "value": 0
+          },
+          {
+            "name": "DetachedScriptStates",
+            "value": 2
+          },
+          {
+            "name": "ArrayBufferContents",
+            "value": 1360
+          },
+          {
+            "name": "LayoutCount",
+            "value": 0
+          },
+          {
+            "name": "RecalcStyleCount",
+            "value": 0
+          },
+          {
+            "name": "LayoutDuration",
+            "value": 0
+          },
+          {
+            "name": "RecalcStyleDuration",
+            "value": 0
+          },
+          {
+            "name": "DevToolsCommandDuration",
+            "value": 1.3e-05
+          },
+          {
+            "name": "ScriptDuration",
+            "value": 0
+          },
+          {
+            "name": "V8CompileDuration",
+            "value": 0
+          },
+          {
+            "name": "TaskDuration",
+            "value": 1.9e-05
+          },
+          {
+            "name": "TaskOtherDuration",
+            "value": 6e-06
+          },
+          {
+            "name": "ThreadTime",
+            "value": 7.9e-05
+          },
+          {
+            "name": "ProcessTime",
+            "value": 0
+          },
+          {
+            "name": "JSHeapUsedSize",
+            "value": 4429104
+          },
+          {
+            "name": "JSHeapTotalSize",
+            "value": 6692864
+          },
+          {
+            "name": "FirstMeaningfulPaint",
+            "value": 12469.937209
+          },
+          {
+            "name": "DomContentLoaded",
+            "value": 12469.865861
+          },
+          {
+            "name": "NavigationStart",
+            "value": 12469.826241
+          }
+        ]
+      },
+      "page_heap_after_repeats": {
+        "metrics": [
+          {
+            "name": "Timestamp",
+            "value": 12516.518561
+          },
+          {
+            "name": "AudioHandlers",
+            "value": 0
+          },
+          {
+            "name": "AudioWorkletProcessors",
+            "value": 0
+          },
+          {
+            "name": "Documents",
+            "value": 1
+          },
+          {
+            "name": "Frames",
+            "value": 1
+          },
+          {
+            "name": "JSEventListeners",
+            "value": 36
+          },
+          {
+            "name": "LayoutObjects",
+            "value": 2645
+          },
+          {
+            "name": "MediaKeySessions",
+            "value": 0
+          },
+          {
+            "name": "MediaKeys",
+            "value": 0
+          },
+          {
+            "name": "Nodes",
+            "value": 77142
+          },
+          {
+            "name": "Resources",
+            "value": 4
+          },
+          {
+            "name": "ContextLifecycleStateObservers",
+            "value": 4
+          },
+          {
+            "name": "V8PerContextDatas",
+            "value": 2
+          },
+          {
+            "name": "WorkerGlobalScopes",
+            "value": 1
+          },
+          {
+            "name": "UACSSResources",
+            "value": 0
+          },
+          {
+            "name": "RTCPeerConnections",
+            "value": 0
+          },
+          {
+            "name": "ResourceFetchers",
+            "value": 2
+          },
+          {
+            "name": "AdSubframes",
+            "value": 0
+          },
+          {
+            "name": "DetachedScriptStates",
+            "value": 0
+          },
+          {
+            "name": "ArrayBufferContents",
+            "value": 1628
+          },
+          {
+            "name": "LayoutCount",
+            "value": 48121
+          },
+          {
+            "name": "RecalcStyleCount",
+            "value": 72238
+          },
+          {
+            "name": "LayoutDuration",
+            "value": 9.215403
+          },
+          {
+            "name": "RecalcStyleDuration",
+            "value": 1.935522
+          },
+          {
+            "name": "DevToolsCommandDuration",
+            "value": 0.499254
+          },
+          {
+            "name": "ScriptDuration",
+            "value": 2.35658
+          },
+          {
+            "name": "V8CompileDuration",
+            "value": 0
+          },
+          {
+            "name": "TaskDuration",
+            "value": 40.034991
+          },
+          {
+            "name": "TaskOtherDuration",
+            "value": 26.028232
+          },
+          {
+            "name": "ThreadTime",
+            "value": 39.909252
+          },
+          {
+            "name": "ProcessTime",
+            "value": 0
+          },
+          {
+            "name": "JSHeapUsedSize",
+            "value": 3118920
+          },
+          {
+            "name": "JSHeapTotalSize",
+            "value": 5382144
+          },
+          {
+            "name": "FirstMeaningfulPaint",
+            "value": 12469.937209
+          },
+          {
+            "name": "DomContentLoaded",
+            "value": 12469.865861
+          },
+          {
+            "name": "NavigationStart",
+            "value": 12469.826241
+          }
+        ]
+      },
+      "heap_scope": "CDP page metrics only; excludes Worker and OS peak, not leak evidence",
+      "repeated": [
+        {
+          "fill_ms": 1097.529034001127,
+          "wall_ms": 109.24702000011166,
+          "worker_ms": 34.40000000037253
+        },
+        {
+          "fill_ms": 1050.2987959989696,
+          "wall_ms": 61.57091800014314,
+          "worker_ms": 18.5
+        },
+        {
+          "fill_ms": 1135.757009998997,
+          "wall_ms": 94.1873250012577,
+          "worker_ms": 24.200000001117587
+        },
+        {
+          "fill_ms": 1138.1253409999772,
+          "wall_ms": 74.1692139999941,
+          "worker_ms": 21
+        },
+        {
+          "fill_ms": 1072.4034210015816,
+          "wall_ms": 57.322335998833296,
+          "worker_ms": 17.300000000745058
+        },
+        {
+          "fill_ms": 1223.9993949988275,
+          "wall_ms": 52.76813199998287,
+          "worker_ms": 14.5
+        },
+        {
+          "fill_ms": 1174.1055279999273,
+          "wall_ms": 50.84360699947865,
+          "worker_ms": 14.799999998882413
+        },
+        {
+          "fill_ms": 1083.546636000392,
+          "wall_ms": 99.11934900082997,
+          "worker_ms": 25.699999999254942
+        },
+        {
+          "fill_ms": 1058.0170829998679,
+          "wall_ms": 73.96835700092197,
+          "worker_ms": 14.399999998509884
+        },
+        {
+          "fill_ms": 1069.9817309996433,
+          "wall_ms": 73.75399500051572,
+          "worker_ms": 16.40000000037253
+        },
+        {
+          "fill_ms": 1092.653463998431,
+          "wall_ms": 84.16681599919684,
+          "worker_ms": 27.5
+        },
+        {
+          "fill_ms": 1076.9423570000072,
+          "wall_ms": 46.72727500110341,
+          "worker_ms": 15.599999999627471
+        },
+        {
+          "fill_ms": 1255.9752590004791,
+          "wall_ms": 70.21197200083407,
+          "worker_ms": 18.199999999254942
+        },
+        {
+          "fill_ms": 1442.3576529989077,
+          "wall_ms": 57.82828500014148,
+          "worker_ms": 17.299999998882413
+        },
+        {
+          "fill_ms": 1545.7025879986759,
+          "wall_ms": 88.18631100075436,
+          "worker_ms": 16.90000000037253
+        },
+        {
+          "fill_ms": 1376.0053939986392,
+          "wall_ms": 124.3248129994754,
+          "worker_ms": 60.80000000074506
+        },
+        {
+          "fill_ms": 1173.7049559997104,
+          "wall_ms": 75.33102900015365,
+          "worker_ms": 18.700000001117587
+        },
+        {
+          "fill_ms": 1122.0042619988817,
+          "wall_ms": 65.58566700005031,
+          "worker_ms": 18.59999999962747
+        },
+        {
+          "fill_ms": 1069.2040449994238,
+          "wall_ms": 93.18642399921373,
+          "worker_ms": 49.600000001490116
+        },
+        {
+          "fill_ms": 1081.635106000249,
+          "wall_ms": 72.29113500034146,
+          "worker_ms": 27.40000000037253
+        },
+        {
+          "fill_ms": 1100.870948001102,
+          "wall_ms": 57.57733999962511,
+          "worker_ms": 15.5
+        },
+        {
+          "fill_ms": 1317.715020999458,
+          "wall_ms": 54.97729099988646,
+          "worker_ms": 14.799999998882413
+        },
+        {
+          "fill_ms": 1645.3161730005377,
+          "wall_ms": 78.76687600037258,
+          "worker_ms": 16.5
+        },
+        {
+          "fill_ms": 1627.1068559999549,
+          "wall_ms": 74.95799400021497,
+          "worker_ms": 11.700000001117587
+        },
+        {
+          "fill_ms": 1608.0410269987624,
+          "wall_ms": 70.06632100092247,
+          "worker_ms": 14.099999999627471
+        },
+        {
+          "fill_ms": 1726.6309019996697,
+          "wall_ms": 79.8036719988886,
+          "worker_ms": 19.59999999962747
+        },
+        {
+          "fill_ms": 1436.527345000286,
+          "wall_ms": 57.18604600042454,
+          "worker_ms": 13
+        },
+        {
+          "fill_ms": 1443.2402450001973,
+          "wall_ms": 89.93367400034913,
+          "worker_ms": 15.099999999627471
+        },
+        {
+          "fill_ms": 1482.4024200006534,
+          "wall_ms": 86.51835700038646,
+          "worker_ms": 12.400000000372529
+        },
+        {
+          "fill_ms": 1556.3465269988228,
+          "wall_ms": 84.9951410000358,
+          "worker_ms": 24.800000000745058
+        }
+      ],
+      "requests": [
+        {
+          "path": "/ja/check/",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/style.css",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/checker.css",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/ui.mjs",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/limits.mjs",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/worker.mjs",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/engine.mjs",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/limits.mjs",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/runtime/pyodide.mjs",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/core.zip",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/adapter.py",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/runtime/pyodide-lock.json",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/runtime/python_stdlib.zip",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/runtime/pyodide.asm.wasm",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/runtime/pyodide.asm.mjs",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/worker.mjs",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/engine.mjs",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/limits.mjs",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/runtime/pyodide.mjs",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/core.zip",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/adapter.py",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/runtime/pyodide-lock.json",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/runtime/python_stdlib.zip",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/runtime/pyodide.asm.wasm",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/runtime/pyodide.asm.mjs",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/worker.mjs",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/worker.mjs",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/engine.mjs",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/limits.mjs",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/runtime/pyodide.mjs",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/core.zip",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/adapter.py",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/runtime/pyodide-lock.json",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/runtime/python_stdlib.zip",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/runtime/pyodide.asm.wasm",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/runtime/pyodide.asm.mjs",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        }
+      ],
+      "storage": {
+        "local": 0,
+        "session": 0,
+        "databases": [],
+        "caches": [],
+        "registrations": 0,
+        "writes": [],
+        "csp": []
+      },
+      "keyboard": "Enter check passed",
+      "layout": "no horizontal overflow at 1280x900",
+      "cancel_restart_offline_recovery": "passed"
+    },
+    "en": {
+      "checks": [
+        {
+          "name": "empty",
+          "fill_ms": 34.52101299990318,
+          "wall_ms": 2755.9790760005853,
+          "worker_ms": 112.19999999925494
+        },
+        {
+          "name": "valid",
+          "fill_ms": 6.774961000701296,
+          "wall_ms": 56.9374130009237,
+          "worker_ms": 26.799999998882413
+        },
+        {
+          "name": "japanese",
+          "fill_ms": 12.438513000233797,
+          "wall_ms": 36.07383600137837,
+          "worker_ms": 1.200000001117587
+        },
+        {
+          "name": "syntax",
+          "fill_ms": 8.129984000333934,
+          "wall_ms": 37.871180998990894,
+          "worker_ms": 0.5
+        },
+        {
+          "name": "custom-key",
+          "fill_ms": 7.892699000876746,
+          "wall_ms": 38.99783799897705,
+          "worker_ms": 0.6000000014901161
+        },
+        {
+          "name": "warning",
+          "fill_ms": 7.994102001248393,
+          "wall_ms": 38.23414199905528,
+          "worker_ms": 0.5
+        },
+        {
+          "name": "position",
+          "fill_ms": 5.2572660006262595,
+          "wall_ms": 43.33752000093227,
+          "worker_ms": 0.8000000007450581
+        },
+        {
+          "name": "format-current",
+          "fill_ms": 5.528540999875986,
+          "wall_ms": 39.503035999587155,
+          "worker_ms": 0.5
+        },
+        {
+          "name": "format-future",
+          "fill_ms": 6.693121998978313,
+          "wall_ms": 40.92940599912254,
+          "worker_ms": 0.5
+        },
+        {
+          "name": "duplicate-id",
+          "fill_ms": 7.002865000686143,
+          "wall_ms": 39.589902000443544,
+          "worker_ms": 0.599999999627471
+        },
+        {
+          "name": "missing-reference",
+          "fill_ms": 4.97714799894311,
+          "wall_ms": 41.459492000285536,
+          "worker_ms": 0.8000000007450581
+        },
+        {
+          "name": "timezone",
+          "fill_ms": 5.408057000749977,
+          "wall_ms": 41.37005700067675,
+          "worker_ms": 1.199999999254942
+        },
+        {
+          "name": "multiline",
+          "fill_ms": 5.7592079992900835,
+          "wall_ms": 40.557697000622284,
+          "worker_ms": 0.7000000011175871
+        },
+        {
+          "name": "html-injection",
+          "fill_ms": 6.214623999767355,
+          "wall_ms": 39.9877550007659,
+          "worker_ms": 0.5
+        },
+        {
+          "name": "completed-parent-gap",
+          "fill_ms": 5.874286000107531,
+          "wall_ms": 41.3889970004675,
+          "worker_ms": 0.6999999992549419
+        },
+        {
+          "name": "native-history-gap",
+          "fill_ms": 6.394668998837005,
+          "wall_ms": 39.40744999999879,
+          "worker_ms": 0.8000000007450581
+        },
+        {
+          "name": "empty",
+          "fill_ms": 8.099264001430129,
+          "wall_ms": 35.7739049995871,
+          "worker_ms": 0.40000000037252903
+        },
+        {
+          "name": "utf8-boundary",
+          "fill_ms": 9.295243000451592,
+          "wall_ms": 36.01372199955222,
+          "worker_ms": 2.299999998882413
+        },
+        {
+          "name": "ascii-boundary",
+          "fill_ms": 9.418600000572042,
+          "wall_ms": 35.824366999804624,
+          "worker_ms": 0.8000000007450581
+        },
+        {
+          "name": "emoji",
+          "fill_ms": 7.812006999301957,
+          "wall_ms": 37.8546030005964,
+          "worker_ms": 0.6999999992549419
+        },
+        {
+          "name": "supplementary-cjk",
+          "fill_ms": 6.125353000243194,
+          "wall_ms": 38.23256199939351,
+          "worker_ms": 0.5
+        },
+        {
+          "name": "100-diagnostics",
+          "fill_ms": 37.41482799887308,
+          "wall_ms": 57.362351999472594,
+          "worker_ms": 2
+        },
+        {
+          "name": "500-diagnostics",
+          "fill_ms": 502.05265400109056,
+          "wall_ms": 55.83880500125815,
+          "worker_ms": 3.899999998509884
+        }
+      ],
+      "startup": {
+        "id": 1,
+        "stage": "ready",
+        "startup_ms": 2599.300000000745
+      },
+      "main_thread_ticks": 1434,
+      "page_heap_before_repeats": {
+        "metrics": [
+          {
+            "name": "Timestamp",
+            "value": 12527.868361
+          },
+          {
+            "name": "AudioHandlers",
+            "value": 0
+          },
+          {
+            "name": "AudioWorkletProcessors",
+            "value": 0
+          },
+          {
+            "name": "Documents",
+            "value": 4
+          },
+          {
+            "name": "Frames",
+            "value": 4
+          },
+          {
+            "name": "JSEventListeners",
+            "value": 78
+          },
+          {
+            "name": "LayoutObjects",
+            "value": 3845
+          },
+          {
+            "name": "MediaKeySessions",
+            "value": 0
+          },
+          {
+            "name": "MediaKeys",
+            "value": 0
+          },
+          {
+            "name": "Nodes",
+            "value": 4497
+          },
+          {
+            "name": "Resources",
+            "value": 13
+          },
+          {
+            "name": "ContextLifecycleStateObservers",
+            "value": 7
+          },
+          {
+            "name": "V8PerContextDatas",
+            "value": 4
+          },
+          {
+            "name": "WorkerGlobalScopes",
+            "value": 1
+          },
+          {
+            "name": "UACSSResources",
+            "value": 0
+          },
+          {
+            "name": "RTCPeerConnections",
+            "value": 0
+          },
+          {
+            "name": "ResourceFetchers",
+            "value": 6
+          },
+          {
+            "name": "AdSubframes",
+            "value": 0
+          },
+          {
+            "name": "DetachedScriptStates",
+            "value": 2
+          },
+          {
+            "name": "ArrayBufferContents",
+            "value": 1314
+          },
+          {
+            "name": "LayoutCount",
+            "value": 0
+          },
+          {
+            "name": "RecalcStyleCount",
+            "value": 0
+          },
+          {
+            "name": "LayoutDuration",
+            "value": 0
+          },
+          {
+            "name": "RecalcStyleDuration",
+            "value": 0
+          },
+          {
+            "name": "DevToolsCommandDuration",
+            "value": 0.000139
+          },
+          {
+            "name": "ScriptDuration",
+            "value": 4e-06
+          },
+          {
+            "name": "V8CompileDuration",
+            "value": 0
+          },
+          {
+            "name": "TaskDuration",
+            "value": 0.000174
+          },
+          {
+            "name": "TaskOtherDuration",
+            "value": 3.1e-05
+          },
+          {
+            "name": "ThreadTime",
+            "value": 0.000341
+          },
+          {
+            "name": "ProcessTime",
+            "value": 0
+          },
+          {
+            "name": "JSHeapUsedSize",
+            "value": 4324956
+          },
+          {
+            "name": "JSHeapTotalSize",
+            "value": 6692864
+          },
+          {
+            "name": "FirstMeaningfulPaint",
+            "value": 12522.73864
+          },
+          {
+            "name": "DomContentLoaded",
+            "value": 12522.707427
+          },
+          {
+            "name": "NavigationStart",
+            "value": 12522.680841
+          }
+        ]
+      },
+      "page_heap_after_repeats": {
+        "metrics": [
+          {
+            "name": "Timestamp",
+            "value": 12576.545131
+          },
+          {
+            "name": "AudioHandlers",
+            "value": 0
+          },
+          {
+            "name": "AudioWorkletProcessors",
+            "value": 0
+          },
+          {
+            "name": "Documents",
+            "value": 1
+          },
+          {
+            "name": "Frames",
+            "value": 1
+          },
+          {
+            "name": "JSEventListeners",
+            "value": 36
+          },
+          {
+            "name": "LayoutObjects",
+            "value": 6228
+          },
+          {
+            "name": "MediaKeySessions",
+            "value": 0
+          },
+          {
+            "name": "MediaKeys",
+            "value": 0
+          },
+          {
+            "name": "Nodes",
+            "value": 85140
+          },
+          {
+            "name": "Resources",
+            "value": 4
+          },
+          {
+            "name": "ContextLifecycleStateObservers",
+            "value": 4
+          },
+          {
+            "name": "V8PerContextDatas",
+            "value": 2
+          },
+          {
+            "name": "WorkerGlobalScopes",
+            "value": 1
+          },
+          {
+            "name": "UACSSResources",
+            "value": 0
+          },
+          {
+            "name": "RTCPeerConnections",
+            "value": 0
+          },
+          {
+            "name": "ResourceFetchers",
+            "value": 2
+          },
+          {
+            "name": "AdSubframes",
+            "value": 0
+          },
+          {
+            "name": "DetachedScriptStates",
+            "value": 0
+          },
+          {
+            "name": "ArrayBufferContents",
+            "value": 3354
+          },
+          {
+            "name": "LayoutCount",
+            "value": 48121
+          },
+          {
+            "name": "RecalcStyleCount",
+            "value": 72238
+          },
+          {
+            "name": "LayoutDuration",
+            "value": 11.376951
+          },
+          {
+            "name": "RecalcStyleDuration",
+            "value": 2.653871
+          },
+          {
+            "name": "DevToolsCommandDuration",
+            "value": 0.540659
+          },
+          {
+            "name": "ScriptDuration",
+            "value": 2.589846
+          },
+          {
+            "name": "V8CompileDuration",
+            "value": 0
+          },
+          {
+            "name": "TaskDuration",
+            "value": 46.788719
+          },
+          {
+            "name": "TaskOtherDuration",
+            "value": 29.627392
+          },
+          {
+            "name": "ThreadTime",
+            "value": 46.639691
+          },
+          {
+            "name": "ProcessTime",
+            "value": 0
+          },
+          {
+            "name": "JSHeapUsedSize",
+            "value": 2740440
+          },
+          {
+            "name": "JSHeapTotalSize",
+            "value": 8265728
+          },
+          {
+            "name": "FirstMeaningfulPaint",
+            "value": 12522.73864
+          },
+          {
+            "name": "DomContentLoaded",
+            "value": 12522.707427
+          },
+          {
+            "name": "NavigationStart",
+            "value": 12522.680841
+          }
+        ]
+      },
+      "heap_scope": "CDP page metrics only; excludes Worker and OS peak, not leak evidence",
+      "repeated": [
+        {
+          "fill_ms": 1224.7014989989111,
+          "wall_ms": 88.2790899995598,
+          "worker_ms": 23.59999999962747
+        },
+        {
+          "fill_ms": 1297.186834999593,
+          "wall_ms": 55.53536400111625,
+          "worker_ms": 14
+        },
+        {
+          "fill_ms": 1299.1629499992996,
+          "wall_ms": 80.82138600002509,
+          "worker_ms": 36.09999999962747
+        },
+        {
+          "fill_ms": 1302.698475001307,
+          "wall_ms": 80.36272900062613,
+          "worker_ms": 33.40000000037253
+        },
+        {
+          "fill_ms": 1346.7648080004437,
+          "wall_ms": 72.88920400060306,
+          "worker_ms": 17.59999999962747
+        },
+        {
+          "fill_ms": 1231.414699999732,
+          "wall_ms": 47.32021400013764,
+          "worker_ms": 15
+        },
+        {
+          "fill_ms": 3199.5371299999533,
+          "wall_ms": 176.85364200042386,
+          "worker_ms": 71.79999999888241
+        },
+        {
+          "fill_ms": 3888.7015689997497,
+          "wall_ms": 495.341797999572,
+          "worker_ms": 22.699999999254942
+        },
+        {
+          "fill_ms": 3154.4408700010536,
+          "wall_ms": 46.60520400102541,
+          "worker_ms": 14.899999998509884
+        },
+        {
+          "fill_ms": 1179.6900850004022,
+          "wall_ms": 91.79112200035888,
+          "worker_ms": 15.799999998882413
+        },
+        {
+          "fill_ms": 1333.7821419991087,
+          "wall_ms": 131.69893200029037,
+          "worker_ms": 78.79999999888241
+        },
+        {
+          "fill_ms": 1505.9608240007947,
+          "wall_ms": 67.89754199962772,
+          "worker_ms": 16.299999998882413
+        },
+        {
+          "fill_ms": 1251.3463350005622,
+          "wall_ms": 103.9921690007759,
+          "worker_ms": 26.40000000037253
+        },
+        {
+          "fill_ms": 1226.2482559999626,
+          "wall_ms": 62.31065999963903,
+          "worker_ms": 20.300000000745058
+        },
+        {
+          "fill_ms": 1474.2236429992772,
+          "wall_ms": 68.52067100044223,
+          "worker_ms": 16.5
+        },
+        {
+          "fill_ms": 1351.9561299999623,
+          "wall_ms": 73.01052399998298,
+          "worker_ms": 22.800000000745058
+        },
+        {
+          "fill_ms": 1333.5898969999107,
+          "wall_ms": 70.83327799955441,
+          "worker_ms": 13
+        },
+        {
+          "fill_ms": 1366.441770000165,
+          "wall_ms": 66.8495959998836,
+          "worker_ms": 15.099999999627471
+        },
+        {
+          "fill_ms": 1416.84913500103,
+          "wall_ms": 61.923758999910206,
+          "worker_ms": 12.300000000745058
+        },
+        {
+          "fill_ms": 1365.989787000217,
+          "wall_ms": 90.29730600013863,
+          "worker_ms": 21.799999998882413
+        },
+        {
+          "fill_ms": 1275.3884070007189,
+          "wall_ms": 49.43826500129944,
+          "worker_ms": 17
+        },
+        {
+          "fill_ms": 1374.5209620010428,
+          "wall_ms": 136.890368999957,
+          "worker_ms": 14
+        },
+        {
+          "fill_ms": 1291.2673859991628,
+          "wall_ms": 85.56231999864394,
+          "worker_ms": 15
+        },
+        {
+          "fill_ms": 1220.4309169992484,
+          "wall_ms": 58.57958900014637,
+          "worker_ms": 18.200000001117587
+        },
+        {
+          "fill_ms": 1282.6384650015825,
+          "wall_ms": 76.12897599938151,
+          "worker_ms": 17
+        },
+        {
+          "fill_ms": 1156.4517139995587,
+          "wall_ms": 51.9784999996773,
+          "worker_ms": 13.100000001490116
+        },
+        {
+          "fill_ms": 1363.836631000595,
+          "wall_ms": 77.72814499912784,
+          "worker_ms": 28.700000001117587
+        },
+        {
+          "fill_ms": 1109.825183000794,
+          "wall_ms": 46.16489899854059,
+          "worker_ms": 14.300000000745058
+        },
+        {
+          "fill_ms": 1103.2525289992918,
+          "wall_ms": 53.89652000121714,
+          "worker_ms": 11.800000000745058
+        },
+        {
+          "fill_ms": 1047.6977489997807,
+          "wall_ms": 116.29274299957615,
+          "worker_ms": 19.59999999962747
+        }
+      ],
+      "requests": [
+        {
+          "path": "/en/check/",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/style.css",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/checker.css",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/ui.mjs",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/limits.mjs",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/worker.mjs",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/engine.mjs",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/limits.mjs",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/runtime/pyodide.mjs",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/core.zip",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/adapter.py",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/runtime/pyodide-lock.json",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/runtime/python_stdlib.zip",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/runtime/pyodide.asm.wasm",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/runtime/pyodide.asm.mjs",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/worker.mjs",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/engine.mjs",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/limits.mjs",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/runtime/pyodide.mjs",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/core.zip",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/adapter.py",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/runtime/pyodide-lock.json",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/runtime/python_stdlib.zip",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/runtime/pyodide.asm.wasm",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/runtime/pyodide.asm.mjs",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/worker.mjs",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/worker.mjs",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/engine.mjs",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/limits.mjs",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/runtime/pyodide.mjs",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/core.zip",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/adapter.py",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/runtime/pyodide-lock.json",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/runtime/python_stdlib.zip",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/runtime/pyodide.asm.wasm",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        },
+        {
+          "path": "/checker/runtime/pyodide.asm.mjs",
+          "same_origin": true,
+          "method": "GET",
+          "query": false,
+          "body": false
+        }
+      ],
+      "storage": {
+        "local": 0,
+        "session": 0,
+        "databases": [],
+        "caches": [],
+        "registrations": 0,
+        "writes": [],
+        "csp": []
+      },
+      "keyboard": "Enter check passed",
+      "layout": "no horizontal overflow at 1280x900",
+      "cancel_restart_offline_recovery": "passed"
+    }
+  },
+  "unverified": [
+    "physical devices",
+    "screen readers",
+    "Firefox/Safari",
+    "OS peak memory",
+    "public Pages delivery"
+  ],
+  "chromium": "153.0.8010.0",
+  "accelerated_startup_timeout_clears": true,
+  "cancel_during_initialization": true
+}

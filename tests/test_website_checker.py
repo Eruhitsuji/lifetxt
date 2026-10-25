@@ -28,6 +28,7 @@ def fixtures():
         {"name": "utf8-exact", "text": "#" + "あ" * 5461},
         {"name": "ascii-exact", "text": "#" + "x" * 16383},
         {"name": "emoji", "text": '[ ] T "日本語😀"'},
+        {"name": "supplementary-cjk", "text": '[ ] T "日本語𠮷香港"'},
         {"name": "html-injection", "text": '<script>alert("synthetic")</script>'},
         {"name": "100-diagnostics", "text": "bad\n" * 100},
         {"name": "500-diagnostics", "text": "bad\n" * 500},

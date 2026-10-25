@@ -39,6 +39,10 @@ def audit(output, source=builder.SOURCE, review_record=None):
     inventory = json.loads((source / "notices/components.json").read_text("utf-8"))
     manifest = json.loads((output / "manifest.json").read_text("utf-8"))
     profile = manifest.get("profile", "poc")
+    if profile == "website-checker-hkscs-free":
+        from contrib.browser_check_poc.custom_distribution import audit as custom_audit
+
+        return custom_audit(output, review_record)
     if profile not in {"poc", "website-checker"}:
         raise ValueError("Unknown artifact profile")
     assets = output / "checker" if profile == "website-checker" else output

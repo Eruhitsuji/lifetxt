@@ -79,14 +79,19 @@ def compare_xml(cpython, upstream):
     return "exactly one additional trailing LF in CPython; all other bytes identical"
 
 
-def verify(cache, source_cache, source=SOURCE):
+def verify(cache, source_cache, source=SOURCE, *, custom_source_profile=False):
     value = evidence(source)
     data = {}
     for row in value["inputs"]:
         path = cache / row["file"]
         verify_bytes(path, row)
         data[row["id"]] = path.read_bytes()
-    lock = load_lock(source)
+    if custom_source_profile:
+        from contrib.browser_check_poc.custom_sources import load_lock as custom_lock
+
+        lock = custom_lock()
+    else:
+        lock = load_lock(source)
     cpython = next(e for e in lock["archives"] if e["id"] == "cpython")
     path = source_cache / cpython["file"]
     verify_bytes(path, cpython)
@@ -101,7 +106,7 @@ def verify(cache, source_cache, source=SOURCE):
         raise ValueError("Shipped ICU licence differs from pinned upstream grant")
     if b"released under [LICENSE]" not in data["icu-repository-readme"]:
         raise ValueError("Missing official repository licence scope declaration")
-    return {
+    result = {
         "icu_data_commit": value["icu_data_commit"],
         "cpython_archive_sha256": cpython["sha256"],
         "cpython_xml_sha256": hashlib.sha256(raw).hexdigest(),
@@ -113,6 +118,13 @@ def verify(cache, source_cache, source=SOURCE):
         "complete_distribution_audit": False,
         "public_distribution_approved": False,
     }
+    if custom_source_profile:
+        result.update(
+            runtime_profile="lifetxt-hkscs-free-1",
+            base_upstream_cpython_sha256=cpython["base_upstream_sha256"],
+            source_member=member,
+        )
+    return result
 
 
 if __name__ == "__main__":
@@ -120,10 +132,24 @@ if __name__ == "__main__":
     parser.add_argument("command", choices=("fetch", "verify"))
     parser.add_argument("--cache", type=Path, required=True)
     parser.add_argument("--source-cache", type=Path)
+    parser.add_argument(
+        "--custom-source-profile",
+        action="store_true",
+        help="verify the fixed curated CPython archive instead of the official upstream input",
+    )
     args = parser.parse_args()
     if args.command == "fetch":
         fetch(args.cache)
     else:
         if args.source_cache is None:
             parser.error("verify requires --source-cache")
-        print(json.dumps(verify(args.cache, args.source_cache), indent=2))
+        print(
+            json.dumps(
+                verify(
+                    args.cache,
+                    args.source_cache,
+                    custom_source_profile=args.custom_source_profile,
+                ),
+                indent=2,
+            )
+        )

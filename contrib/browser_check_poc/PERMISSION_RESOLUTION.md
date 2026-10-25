@@ -1,5 +1,8 @@
 # Source-specific permission investigation — #1413
 
+Current direction (#1417): HKSCS removal is implemented in the fixed custom candidate and complete local checker profile. The enquiry draft is historical and unsent. ICU byte/grant evidence is rechecked against curated CPython; independent applicability/distribution acceptance is still pending. See DISTRIBUTION_REMAINING.md.
+
+
 Baseline: main 946d8c0402804856c8d71b61b918c1c9af9ccdef, Pyodide314.0.7,
 CPython3.14.2 source archive SHA256
 c609e078adab90e2c6bacb6afafacd5eaf60cd94cf670f1e159565725fcd448d.

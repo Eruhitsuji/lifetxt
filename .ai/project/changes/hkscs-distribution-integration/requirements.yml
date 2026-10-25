@@ -1,0 +1,14 @@
+schema_version: 1
+requirements:
+- id: req-hkscs-free-distribution-v1
+  kind: ADDED
+  owner: Eruhitsuji
+  statement: Bind the measured HKSCS-free runtime, modified corresponding sources and complete local checker to one fixed audit contract.
+  acceptance_criteria:
+  - Explicit custom builder accepts only the five measured runtime hashes and ten derived/pinned source archives, without upstream fallback.
+  - Deliver curated CPython and modified Pyodide with original third-party notices, changed-source instructions, helper MIT notice and exact Core/stdlib source.
+  - Whole-artifact audit rejects rehashed runtime/source/script/notice changes, extras, omissions and stale metadata; normal introduction remains no-script.
+  - Actual runtime facts, source proofs and custom lock agree; original release identity is not claimed for custom bytes.
+  - Actual JA/EN Chromium tests cover 16KiB, Unicode, repeats, private text, recovery and source/notice access; unsupported environments remain unverified.
+  - Existing independent review and source-specific ICU/HKSCS acceptance gates stay closed; publication/deploy remain separate human decisions.
+  - Record residuals and merged implementation milestones, self-review, and create a main-targeted PR.

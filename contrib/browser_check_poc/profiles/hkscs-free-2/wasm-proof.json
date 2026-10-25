@@ -1,0 +1,40 @@
+{
+  "blocked": [
+    "_codecs_hk",
+    "encodings.big5hkscs",
+    "big5hkscs",
+    "big5_hkscs",
+    "hkscs",
+    "big5-hkscs"
+  ],
+  "unicode": "日本語𠮷あ",
+  "python": "3.14.2 (main, Oct 25 2026, 16:15:59) [Clang 23.0.0git (https:/github.com/llvm/llvm-project e5927fecf8a6ce89e1a4eac5b8",
+  "builtin_count": 90,
+  "profile": "lifetxt-hkscs-free-1",
+  "node": "v24.22.1",
+  "environment": "Node WASM; browser operation and independent review remain separate",
+  "files": {
+    "pyodide.mjs": {
+      "bytes": 17931,
+      "sha256": "25677327b2eabfca5acd88cb8747a31f6d0f0a52dfa1554b863d0a84363bb4f8"
+    },
+    "pyodide.asm.mjs": {
+      "bytes": 1250244,
+      "sha256": "8e52b1871dd7be68eddcc95b9dfc584304c6bd13d2562056be4a979d57fefa5a"
+    },
+    "pyodide.asm.wasm": {
+      "bytes": 9467707,
+      "sha256": "4258196ea42852ab4cdc25ccbc22d21e2cfe26e346c767ca3d85ea1b76566905"
+    },
+    "python_stdlib.zip": {
+      "bytes": 2540722,
+      "sha256": "4b0dfd9273e380a2c67dda69b0d4bd85cece80d2324efb4e10abb1774b7ed725"
+    },
+    "pyodide-lock.json": {
+      "bytes": 119077,
+      "sha256": "5dc2fc119108bc148c7457dc86e7675b5c87e1cafd420b9c34c1eaef7b36c010"
+    }
+  },
+  "complete_distribution_audit": false,
+  "public_distribution_approved": false
+}

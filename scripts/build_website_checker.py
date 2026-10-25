@@ -79,12 +79,21 @@ def render(lang, base=DEFAULT_URL):
 
 
 def build(
-    output, source_cache=None, *, publication_candidate=False, hkscs_runtime=None
+    output,
+    source_cache=None,
+    *,
+    publication_candidate=False,
+    hkscs_runtime=None,
+    hkscs_profile=None,
 ):
+    if hkscs_profile is not None and hkscs_runtime is None:
+        raise ValueError("explicit HKSCS profile requires runtime directory")
     if hkscs_runtime is not None:
         from contrib.browser_check_poc.custom_distribution import build as custom_build
 
-        return custom_build(output, hkscs_runtime, source_cache)
+        return custom_build(
+            output, hkscs_runtime, source_cache, runtime_profile=hkscs_profile
+        )
     if publication_candidate and source_cache is None:
         raise ValueError(
             "Publication candidates require all verified same-origin source archives"
@@ -140,10 +149,16 @@ if __name__ == "__main__":
         type=Path,
         help="Explicit verified HKSCS-free runtime; requires derived source cache",
     )
+    parser.add_argument(
+        "--hkscs-profile",
+        choices=("lifetxt-hkscs-free-1", "lifetxt-hkscs-free-2"),
+        help="Explicit runtime identity; default preserves legacy profile 1",
+    )
     args = parser.parse_args()
     build(
         args.output,
         args.source_cache,
         publication_candidate=args.publication_candidate,
         hkscs_runtime=args.hkscs_runtime,
+        hkscs_profile=args.hkscs_profile,
     )

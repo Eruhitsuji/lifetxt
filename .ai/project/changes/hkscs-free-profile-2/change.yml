@@ -1,0 +1,23 @@
+schema_version: 1
+change:
+  id: hkscs-free-profile-2
+  title: Explicit rebuilt HKSCS-free runtime profile 2
+  status: in_review
+  change_type: Operations
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1427
+  related_pull_request: null
+  base_commit: 8fec2568cd9a7e83f3fb8329761165b8599bed0c
+scope:
+  write_scope:
+    - explicit runtime selection, living profile2 evidence, final artifact audit and focused tests
+    - limited capability and traceability
+  forbidden_scope:
+    - old runtime/source pins and historical proofs, Core, CLI, Format, managed standards, Pages workflow and deployment
+human_approvals_required:
+  - independent latest-head implementation and integration review
+  - merge
+  - independent source-specific and distribution acceptance
+  - separate publication and deployment

@@ -1,0 +1,35 @@
+{
+  "complete_distribution_audit": false,
+  "environment": "Actual Node v24.22.1 WASM; not independent acceptance or browser compatibility",
+  "observations": {
+    "legacy_ucd": "3.2.0",
+    "sqlite": "3.39.0",
+    "ucd": "16.0.0",
+    "with_mimalloc": 1,
+    "zstd": "1.5.7"
+  },
+  "public_distribution_approved": false,
+  "runtime_files": {
+    "pyodide-lock.json": {
+      "bytes": 119077,
+      "sha256": "5dc2fc119108bc148c7457dc86e7675b5c87e1cafd420b9c34c1eaef7b36c010"
+    },
+    "pyodide.asm.mjs": {
+      "bytes": 1250244,
+      "sha256": "8e52b1871dd7be68eddcc95b9dfc584304c6bd13d2562056be4a979d57fefa5a"
+    },
+    "pyodide.asm.wasm": {
+      "bytes": 9467707,
+      "sha256": "4258196ea42852ab4cdc25ccbc22d21e2cfe26e346c767ca3d85ea1b76566905"
+    },
+    "pyodide.mjs": {
+      "bytes": 17931,
+      "sha256": "25677327b2eabfca5acd88cb8747a31f6d0f0a52dfa1554b863d0a84363bb4f8"
+    },
+    "python_stdlib.zip": {
+      "bytes": 2540722,
+      "sha256": "4b0dfd9273e380a2c67dda69b0d4bd85cece80d2324efb4e10abb1774b7ed725"
+    }
+  },
+  "runtime_profile": "lifetxt-hkscs-free-2"
+}

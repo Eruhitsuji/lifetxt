@@ -39,7 +39,7 @@ def audit(output, source=builder.SOURCE, review_record=None):
     inventory = json.loads((source / "notices/components.json").read_text("utf-8"))
     manifest = json.loads((output / "manifest.json").read_text("utf-8"))
     profile = manifest.get("profile", "poc")
-    if profile == "website-checker-hkscs-free":
+    if profile in {"website-checker-hkscs-free", "website-checker-hkscs-free-2"}:
         from contrib.browser_check_poc.custom_distribution import audit as custom_audit
 
         return custom_audit(output, review_record)

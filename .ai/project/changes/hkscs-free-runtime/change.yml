@@ -1,0 +1,25 @@
+schema_version: 1
+change:
+  id: hkscs-free-runtime
+  title: Build a separately verified HKSCS-free runtime candidate
+  status: in_review
+  change_type: Operations
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1415
+  related_pull_request: null
+  base_commit: 946d8c0402804856c8d71b61b918c1c9af9ccdef
+scope:
+  write_scope:
+  - contrib/browser_check_poc source curation, build profile, absence verification and evidence
+  - tests/test_hkscs_free.py
+  - dedicated change package and narrow capability/traceability records
+  forbidden_scope:
+  - .ai/managed, Core, Format, CLI
+  - unverified runtime replacement or weaker publication gate
+  - merge, deploy, public flag changes or external permission email
+human_approvals_required:
+- independent final-head implementation and integration review
+- publication candidate adoption and complete distribution review
+- merge and publication/deployment separately

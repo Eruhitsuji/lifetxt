@@ -1,0 +1,19 @@
+schema_version: 1
+requirements:
+- id: req-cjk-source-permissions-v1
+  kind: ADDED
+  owner: Eruhitsuji
+  statement: Establish reproducible source-specific permission evidence and actionable
+    resolution steps without inventing grants or reviews.
+  acceptance_criteria:
+  - Pin official ICU data XML/scope declaration/licence and compare against exact
+    retained CPython source
+  - Retain complete official ICU grant, including original ICU terms, and make notice
+    reachable
+  - Reject changed sources/evidence/URLs and correspondence beyond one recorded trailing
+    LF
+  - Document HKSCS conditions, verified official contact, complete unsent enquiry
+    and removal/rebuild fallback
+  - Keep N-7 block while independent grant acceptance/HKSCS actual permission remain
+    missing; actual flags false
+  - Run meaningful regressions and self-review; PR into main, no external send/merge/deploy

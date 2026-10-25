@@ -659,6 +659,16 @@
       "stored_sha256": "f7394d92f66a62d5365a16b1e8826ef26058fbeabf4106af073b7d94ea20bf4e",
       "normalization": "LF; trim per-line trailing whitespace and final blank lines. Original downloaded hash retained separately; content unchanged.",
       "scope": "Unicode UCD and identified Unicode MAPPINGS inputs only; excludes blanket coverage of HKSCS/ICU/JISX0213/other sources; see mapping-attribution.json"
+    },
+    {
+      "file": "icu-data-bae5ca6-LICENSE.txt",
+      "source_url": "https://raw.githubusercontent.com/unicode-org/icu-data/bae5ca647fa41703393dbf00240ec1b807a9c353/LICENSE",
+      "retrieved_on": "2026-10-25",
+      "selection": "whole",
+      "original_sha256": "f72db45707e93c90c4bf400edfa5d38ce44fe692789e385548e627459c1bf6c9",
+      "stored_sha256": "f72db45707e93c90c4bf400edfa5d38ce44fe692789e385548e627459c1bf6c9",
+      "normalization": "none",
+      "scope": "Official ICU data repository grant, including original ICU1.8.1–57.1 licence; exact GB18030 XML correspondence verified separately; not an HKSARG grant"
     }
   ],
   "upstream_build_source": "https://github.com/pyodide/pyodide/blob/b1e4fcc2488962f6360a97f19b9982d6fdb5d16f/Makefile.envs",

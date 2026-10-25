@@ -1,6 +1,6 @@
 # Runtime notice snapshots — independent acceptance pending
 
-The current inventory contains **28 notice documents** (25 before the second review, plus original GB2312/JIS X 0213 headers and the UCD3.2 release ReadMe). Original source
+The current inventory contains **29 notice documents** (including the original GB2312/JIS X 0213 headers, UCD3.2 release ReadMe and complete official ICU data licence). Original source
 URLs, retrieval details, hashes and selection/normalization are recorded in
 [provenance.json](provenance.json). [components.json](components.json) maps known
 components/versions to the applicable documents and, where relevant, sections.
@@ -28,3 +28,10 @@ The Core ZIP contains unchanged lifetxt sources and its MIT LICENSE. Optional
 wheels listed in pyodide-lock.json are not downloaded or shipped by this build.
 These notices and source archives are technical evidence, not legal clearance
 or publication approval. Both status snapshot flags remain false.
+
+
+The official ICU data repository's complete licence is now retained, including
+original ICU1.8.1–57.1 terms. Exact XML/source correspondence and its limited
+single-LF transformation are recorded in mapping-attribution.json. This is a
+source-specific grant candidate pending independent acceptance, not a grant
+for HKSARG material. HKSCS remains unresolved and no enquiry has been sent.

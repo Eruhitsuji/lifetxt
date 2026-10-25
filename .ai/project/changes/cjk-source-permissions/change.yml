@@ -1,0 +1,28 @@
+schema_version: 1
+change:
+  id: cjk-source-permissions
+  title: Source-specific ICU grant evidence and actionable HKSCS permission enquiry
+  status: in_review
+  change_type: Operations
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1413
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1414
+  base_commit: 946d8c0402804856c8d71b61b918c1c9af9ccdef
+scope:
+  write_scope:
+  - contrib/browser_check_poc permission probe/notices/metadata/docs and dedicated
+    tests
+  - focused High change package/capability/traceability
+  forbidden_scope:
+  - .ai/managed
+  - Core/Format/CLI
+  - runtime bytes/ABI
+  - gate weakening or false independent approval
+  - merge/publication/deployment
+  - external correspondence without explicit sending instruction
+human_approvals_required:
+- source-specific independent acceptance
+- explicit authorization before sending prepared external enquiry
+- merge/publication/deployment separately

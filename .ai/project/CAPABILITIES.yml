@@ -111,6 +111,7 @@ capabilities:
       - req-browser-local-check-source-delivery-v1
       - req-browser-distribution-review-remediation-v1
       - req-hkscs-free-runtime-candidate-v1
+      - req-cjk-source-permissions-v1
     implementation_locations:
       - website/
       - scripts/build_website.py
@@ -125,6 +126,7 @@ capabilities:
       - contrib/browser_check_poc/source-provenance.json (upstream release/source relationships; no publication approval)
       - tests/test_browser_source_delivery.py
       - tests/test_browser_review_remediation.py
+      - tests/test_browser_permission_evidence.py
       - contrib/browser_check_poc/RESULTS.md (historical Node baseline)
       - contrib/browser_check_poc/BROWSER_ACCEPTANCE.md (actual Chromium; not public or all-device accepted)
       - tests/test_browser_check_poc_browser.py
@@ -134,6 +136,7 @@ capabilities:
       - contrib/browser_check_poc/ENGINE_MATRIX.md (Firefox/WebKit blocked; portable runner Chromium smoke only)
       - Local Chromium HTTP checks at 320, 390, 1280 pixels for both languages
     related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/1413
       - https://github.com/Eruhitsuji/lifetxt/issues/1411
       - https://github.com/Eruhitsuji/lifetxt/issues/1366
       - https://github.com/Eruhitsuji/lifetxt/issues/1362
@@ -146,6 +149,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/1352
       - https://github.com/Eruhitsuji/lifetxt/issues/1353
     related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/1414
       - https://github.com/Eruhitsuji/lifetxt/pull/1412
       - https://github.com/Eruhitsuji/lifetxt/pull/1368
       - https://github.com/Eruhitsuji/lifetxt/pull/1363

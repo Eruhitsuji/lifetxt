@@ -1,0 +1,7 @@
+# Keep the checker artifact independent of checkout newline settings.
+/lifetxt/*.py text eol=lf
+/LICENSE text eol=lf
+/website/** text eol=lf
+/assets/brand/*.svg text eol=lf
+# Snapshots include original upstream CRLF bytes: never normalize them.
+/contrib/browser_check_poc/** -text

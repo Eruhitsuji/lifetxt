@@ -209,7 +209,7 @@ python scripts/build_website_checker.py --output .cache/checker-with-sources --s
 python -m contrib.browser_check_poc.source_probe --cache .cache/runtime-source-cache --runtime contrib/browser_check_poc/node_modules/pyodide --output .cache/source-provenance.json
 ```
 
-Every build needs a new output directory. `source_probe` additionally needs the
+Every build needs a new output directory. `source_probe` additionally needs Node and the
 `patch` utility; it applies upstream patches to temporary data files, never
 executes the downloaded source or changes installed Python. The full-source
 optional regression is enabled with `LIFETXT_RUN_SOURCE_AUDIT=1`,
@@ -217,3 +217,31 @@ optional regression is enabled with `LIFETXT_RUN_SOURCE_AUDIT=1`,
 synthetic archives and do not infer upstream acceptance from an optional skip.
 See SOURCE_DELIVERY.md and source-provenance.json for measured relationships,
 licences, limits and open independent-review gates. This is not public clearance.
+
+
+### Review remediation and final checker audit (#1411)
+
+All 28 notice documents are linked from the generated notice index. The source
+index includes the full correspondence report. Public candidates require the
+complete ten-source same-origin bundle; upstream link mode is development-only.
+
+```sh
+python scripts/build_website_checker.py --output .cache/checker-candidate --source-cache .cache/runtime-source-cache --publication-candidate
+python -m contrib.browser_check_poc.distribution_audit .cache/checker-candidate
+python -m contrib.browser_check_poc.distribution_audit .cache/checker-candidate --require-publication
+```
+
+The last command currently fails as intended: final-head independent review and
+Owner decisions are pending. A future `--review-record FILE` binds a separate
+verified record to the final commit and artifact manifest, without modifying
+reviewed bytes. See [SOURCE_DELIVERY.md](SOURCE_DELIVERY.md) and the pending
+[record template](publication-review.example.json). Actual status flags remain
+false; synthetic gate success is not approval or deployment.
+
+
+The second review adds explicit LF writes/checkout preservation, canonical stored
+Core ZIP byte checking, schema2 record identities/references with an always-false
+authority_verified field, and [mandatory human reference checks](PUBLICATION_REVIEW.md).
+See [mapping attribution](notices/mapping-attribution.json) for legacy UCD3.2 and
+source-specific CJK terms. HKSCS permission scope and historical ICU terms remain
+unresolved publication blockers; generic Unicode/CPython notices do not clear them.

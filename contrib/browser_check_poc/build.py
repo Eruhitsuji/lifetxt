@@ -14,7 +14,11 @@ ROOT = Path(__file__).resolve().parents[2]
 SOURCE = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 from contrib.browser_check_poc.adapter import check_text
-from contrib.browser_check_poc.notice_inventory import validate_notices
+from contrib.browser_check_poc.artifact_documents import document_bytes
+from contrib.browser_check_poc.notice_inventory import (
+    validate_notices,
+    write_notice_index,
+)
 
 VERSION = "314.0.7"
 RUNTIME_FILES = (
@@ -50,6 +54,19 @@ CORE_MODULES = (
 )
 
 
+def core_archive_bytes():
+    """Canonical ZIP bytes, independent of host platform and zlib version."""
+    archive = io.BytesIO()
+    with zipfile.ZipFile(archive, "w", zipfile.ZIP_STORED) as z:
+        for name in [f"lifetxt/{n}.py" for n in sorted(CORE_MODULES)] + ["LICENSE"]:
+            info = zipfile.ZipInfo(name, (2026, 1, 1, 0, 0, 0))
+            info.create_system = 3
+            info.external_attr = 0o100644 << 16
+            info.compress_type = zipfile.ZIP_STORED
+            z.writestr(info, (ROOT / name).read_bytes())
+    return archive.getvalue()
+
+
 def build(output, source_cache=None):
     output = output.resolve()
     if (
@@ -70,16 +87,7 @@ def build(output, source_cache=None):
     # Explicit corpus-observed import closure. Never harvest ambient test-process
     # imports, which could accidentally bundle the CLI/Remote or unrelated modules.
     modules = [ROOT / "lifetxt" / (name + ".py") for name in sorted(CORE_MODULES)]
-    archive = io.BytesIO()
-    with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
-        for file in modules:
-            name = file.relative_to(ROOT).as_posix()
-            info = zipfile.ZipInfo(name, (2026, 1, 1, 0, 0, 0))
-            info.compress_type = zipfile.ZIP_DEFLATED
-            z.writestr(info, file.read_bytes())
-        license_info = zipfile.ZipInfo("LICENSE", (2026, 1, 1, 0, 0, 0))
-        license_info.compress_type = zipfile.ZIP_DEFLATED
-        z.writestr(license_info, (ROOT / "LICENSE").read_bytes())
+    archive = core_archive_bytes()
     from contrib.browser_check_poc.source_delivery import (
         load_lock,
         validate_cache,
@@ -103,31 +111,21 @@ def build(output, source_cache=None):
         shutil.copyfile(SOURCE / name, output / name)
     (output / "notices").mkdir()
     for name in notice_files:
-        shutil.copyfile(SOURCE / "notices" / name, output / "notices" / name)
-    (output / "core.zip").write_bytes(archive.getvalue())
+        if name == "README.md":
+            (output / "notices" / name).write_bytes(
+                document_bytes(SOURCE / "notices" / name)
+            )
+        else:
+            shutil.copyfile(SOURCE / "notices" / name, output / "notices" / name)
+    write_notice_index(output / "notices", SOURCE)
+    (output / "core.zip").write_bytes(archive)
     (output / "fixtures.json").write_text(
-        json.dumps(expected, ensure_ascii=False, indent=2), encoding="utf-8"
+        json.dumps(expected, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+        newline="\n",
     )
     write_delivery(output / "sources", SOURCE, source_cache)
-    revision = subprocess.check_output(
-        ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
-    ).strip()
-    manifest = {
-        "pyodide": VERSION,
-        "engine_base_revision": revision,
-        "core_modules": [f.relative_to(ROOT).as_posix() for f in modules],
-        "files": {
-            f.relative_to(output).as_posix(): {
-                "bytes": f.stat().st_size,
-                "sha256": hashlib.sha256(f.read_bytes()).hexdigest(),
-            }
-            for f in sorted(output.rglob("*"))
-            if f.is_file()
-        },
-    }
-    (output / "manifest.json").write_text(
-        json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
-    )
+    write_manifest(output, [f.relative_to(ROOT).as_posix() for f in modules])
     from contrib.browser_check_poc.distribution_audit import audit
 
     audit(output, SOURCE)
@@ -135,12 +133,37 @@ def build(output, source_cache=None):
         json.dumps(
             {
                 "core_modules": len(modules),
-                "core_zip_bytes": len(archive.getvalue()),
+                "core_zip_bytes": len(archive),
                 "runtime_bytes": sum(
                     (runtime / n).stat().st_size for n in RUNTIME_FILES
                 ),
             }
         )
+    )
+
+
+def write_manifest(output, core_modules, profile="poc"):
+    revision = subprocess.check_output(
+        ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
+    ).strip()
+    manifest = {
+        "pyodide": VERSION,
+        "engine_base_revision": revision,
+        "core_modules": core_modules,
+        "profile": profile,
+        "files": {
+            f.relative_to(output).as_posix(): {
+                "bytes": f.stat().st_size,
+                "sha256": hashlib.sha256(f.read_bytes()).hexdigest(),
+            }
+            for f in sorted(
+                output.rglob("*"), key=lambda p: p.relative_to(output).as_posix()
+            )
+            if f.is_file()
+        },
+    }
+    (output / "manifest.json").write_text(
+        json.dumps(manifest, indent=2) + "\n", encoding="utf-8", newline="\n"
     )
 
 

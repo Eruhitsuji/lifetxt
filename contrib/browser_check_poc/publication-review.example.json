@@ -1,0 +1,114 @@
+{
+  "schema_version": 2,
+  "target_commit": null,
+  "manifest_sha256": null,
+  "findings": {
+    "P1-1": {
+      "status": "pending",
+      "evidence": null
+    },
+    "P1-2": {
+      "status": "pending",
+      "evidence": null
+    },
+    "P1-3": {
+      "status": "pending",
+      "evidence": null
+    },
+    "P1-4": {
+      "status": "pending",
+      "evidence": null
+    },
+    "P2-5": {
+      "status": "pending",
+      "evidence": null,
+      "owner": null,
+      "verified_scope": null,
+      "remaining_risk": null
+    },
+    "P2-6": {
+      "status": "pending",
+      "evidence": null,
+      "owner": null,
+      "verified_scope": null,
+      "remaining_risk": null
+    },
+    "P2-7": {
+      "status": "pending",
+      "evidence": null,
+      "owner": null,
+      "verified_scope": null,
+      "remaining_risk": null
+    },
+    "P2-8": {
+      "status": "pending",
+      "evidence": null,
+      "owner": null,
+      "verified_scope": null,
+      "remaining_risk": null
+    },
+    "N-1": {
+      "status": "pending",
+      "evidence": null,
+      "owner": null,
+      "verified_scope": null,
+      "remaining_risk": null
+    },
+    "N-2": {
+      "status": "pending",
+      "evidence": null,
+      "owner": null,
+      "verified_scope": null,
+      "remaining_risk": null
+    },
+    "N-3": {
+      "status": "pending",
+      "evidence": null,
+      "owner": null,
+      "verified_scope": null,
+      "remaining_risk": null
+    },
+    "N-7": {
+      "status": "pending",
+      "evidence": null,
+      "owner": null,
+      "verified_scope": null,
+      "remaining_risk": null
+    }
+  },
+  "source_retention": {
+    "owner": null,
+    "minimum_period": "entire-binary-distribution-period",
+    "reference": null
+  },
+  "reviews": [
+    {
+      "type": "implementation-distribution",
+      "result": "pending",
+      "target_commit": null,
+      "reference": null,
+      "reviewer_login": null,
+      "reviewer_kind": null,
+      "reviewer_tool": null
+    },
+    {
+      "type": "integration",
+      "result": "pending",
+      "target_commit": null,
+      "reference": null,
+      "reviewer_login": null,
+      "reviewer_kind": null,
+      "reviewer_tool": null
+    }
+  ],
+  "publication_approval": {
+    "owner": null,
+    "decision": "pending",
+    "target_commit": null,
+    "manifest_sha256": null,
+    "reference": null
+  },
+  "implementer_tools": [
+    "codex"
+  ]
+}

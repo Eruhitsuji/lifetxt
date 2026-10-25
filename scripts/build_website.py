@@ -165,11 +165,11 @@ def build(output: Path, base: str = DEFAULT_URL) -> None:
         for page in PAGES:
             name = "index.html" if page == "index" else page + ".html"
             (output / lang / name).write_text(
-                render(content, lang, page, base), encoding="utf-8"
+                render(content, lang, page, base), encoding="utf-8", newline="\n"
             )
             urls.append(base + lang + "/" + ("" if page == "index" else name))
     (output / "index.html").write_text(
-        render(content, "en", "index", base, root=True), encoding="utf-8"
+        render(content, "en", "index", base, root=True), encoding="utf-8", newline="\n"
     )
     # The failed URL may have arbitrary depth. This one recovery page intentionally
     # uses the configured absolute base path and has no relative assets.
@@ -182,14 +182,17 @@ def build(output: Path, base: str = DEFAULT_URL) -> None:
         f'<p><a href="{recovery}ja/">日本語ホーム</a></p>'
         f'<p><a href="{recovery}en/" lang="en">English home</a></p></main></body></html>',
         encoding="utf-8",
+        newline="\n",
     )
     sitemap = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
     sitemap += (
         "".join(f"<url><loc>{escape(url)}</loc></url>" for url in urls) + "</urlset>\n"
     )
-    (output / "sitemap.xml").write_text(sitemap, encoding="utf-8")
+    (output / "sitemap.xml").write_text(sitemap, encoding="utf-8", newline="\n")
     (output / "robots.txt").write_text(
-        f"User-agent: *\nAllow: /\nSitemap: {base}sitemap.xml\n", encoding="utf-8"
+        f"User-agent: *\nAllow: /\nSitemap: {base}sitemap.xml\n",
+        encoding="utf-8",
+        newline="\n",
     )
     (output / ".nojekyll").touch()
 

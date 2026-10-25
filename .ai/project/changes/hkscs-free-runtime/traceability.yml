@@ -1,0 +1,13 @@
+schema_version: 1
+chains:
+- requirement_id: req-hkscs-free-runtime-candidate-v1
+  capability_id: cap-official-website
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1415
+  pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1416
+  tests_or_evidence:
+  - tests/test_hkscs_free.py
+  - contrib/browser_check_poc/hkscs_free.py
+  - contrib/browser_check_poc/hkscs_free_build.py
+  - contrib/browser_check_poc/hkscs_free_probe.mjs
+  - contrib/browser_check_poc/hkscs_free_verify.py
+  status: implemented

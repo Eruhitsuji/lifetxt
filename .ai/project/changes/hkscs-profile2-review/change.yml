@@ -8,7 +8,7 @@ change:
   owner: Eruhitsuji
   accountable_owner: Eruhitsuji
   related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1429
-  related_pull_request: null
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1430
   base_commit: 617540fab2cdbc455a0ee9738ed1db178c855685
 scope:
   write_scope: [source guide guard, profile2 audit instructions, focused tests, review dispositions, limited traceability]

@@ -282,8 +282,13 @@ def source_metadata(runtime_profile=None):
     files["icu-proof.json"] = icu_path.read_bytes()
     if runtime_profile == REBUILD_RUNTIME_PROFILE:
         files["PROFILE.md"] = (proof / "README.md").read_bytes()
+        source_profile_label = b"(profile lifetxt-hkscs-free-1)"
+        if files["CUSTOM_SOURCE.md"].count(source_profile_label) != 1:
+            raise ValueError(
+                "custom source guide must identify source recipe exactly once"
+            )
         files["CUSTOM_SOURCE.md"] = files["CUSTOM_SOURCE.md"].replace(
-            b"(profile lifetxt-hkscs-free-1)",
+            source_profile_label,
             b"(runtime profile lifetxt-hkscs-free-2; source recipe lifetxt-hkscs-free-1)",
         )
         for name in ("HKSCS_FREE.md", "DISTRIBUTION_REMAINING.md"):

@@ -88,6 +88,12 @@ node contrib/browser_check_poc/probe.mjs LOCAL_TEST_LAYOUT core-wasm-proof.json
 python contrib/browser_check_poc/browser_probe.py --site LOCAL_TEST_LAYOUT --chromium CHROMIUM_EXECUTABLE --output browser-proof.json
 ```
 
+The Python probe first reconstructs curation and staging from the hash-locked
+upstream cache in a temporary directory. It compares both receipts, the curated
+archive and all four modified build inputs before checking objects or runtime.
+Changing a work file and its self-reported hash together cannot establish source
+identity. This adds temporary disk/CPU use, but never fetches or builds a runtime.
+
 The Python probe checks removed source paths, curated aliases, the disabled
 builtin declaration, generated builtin module table, static library members,
 stale HK object files and shipped stdlib. It reconstructs the curated CPython

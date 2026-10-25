@@ -1,0 +1,15 @@
+{
+  "icu_data_commit": "bae5ca647fa41703393dbf00240ec1b807a9c353",
+  "cpython_archive_sha256": "f862710e3d61091aae013d486d8bedbf1074188fd98086572d6340ec60b5392c",
+  "cpython_xml_sha256": "47350d44c6db23e0f0c9e9f4a1bf2e966369f52357fd01425bc06b9aaf83f943",
+  "icu_xml_sha256": "a0eccd5460cff9d5ea32194369971286c11af80fb1b09c4d9d77ff046e22b5cc",
+  "comparison": "exactly one additional trailing LF in CPython; all other bytes identical",
+  "licence_bytes_match": true,
+  "independent_permission_acceptance": "pending",
+  "hkscs_new_permission_received": false,
+  "complete_distribution_audit": false,
+  "public_distribution_approved": false,
+  "runtime_profile": "lifetxt-hkscs-free-1",
+  "base_upstream_cpython_sha256": "c609e078adab90e2c6bacb6afafacd5eaf60cd94cf670f1e159565725fcd448d",
+  "source_member": "Tools/unicode/python-mappings/gb-18030-2000.xml"
+}

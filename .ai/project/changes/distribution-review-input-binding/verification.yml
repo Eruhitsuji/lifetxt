@@ -1,0 +1,39 @@
+schema_version: 1
+verification:
+  checks:
+    - type: reconstructed_input_negative_regression
+      command: python -W error::ResourceWarning -m unittest tests.test_hkscs_verification_inputs
+      status: passed
+      result: Real staging implementation with synthetic locked archives; original accepted; receipt, curated archive plus both receipts, build input plus profile hash, and missing cache rejected before runtime/tool access.
+    - type: focused_regression_with_real_upstream_sources
+      command: LIFETXT_RUN_SOURCE_AUDIT=1 LIFETXT_SOURCE_CACHE=CACHE LIFETXT_SOURCE_RUNTIME=OFFICIAL_RUNTIME LIFETXT_PERMISSION_CACHE=ICU_CACHE python -W error::ResourceWarning -m unittest -v tests.test_hkscs_verification_inputs tests.test_custom_distribution tests.test_browser_permission_evidence tests.test_hkscs_free tests.test_browser_review_remediation tests.test_browser_source_delivery tests.test_browser_distribution_audit tests.test_browser_check_poc tests.test_website_checker tests.test_website tests.test_website_pages_workflow tests.test_traceability_gate tests.test_change_package_closeout
+      status: passed
+      result: 83 collected, 80 passed, 3 skipped; real eleven-archive official-source/patch/stdlib and ICU checks pass. Custom candidate and configured npm runtime tests skipped.
+      evidence: test-output.txt
+    - type: real_fixed_source_reconstruction
+      command: prepare_build(CACHE, NEW_STAGE); verify_staging(BUILD, CURATED, CACHE); compare both reconstructed receipts with profiles/hkscs-free-1
+      status: passed
+      result: Fixed original inputs recreate both retained build-profile.json and source-removal.json exactly; current verify_staging accepts the real reconstructed inputs.
+    - type: derived_custom_sources_and_icu
+      command: python -m contrib.browser_check_poc.custom_sources --upstream-cache CACHE --output NEW; python -m contrib.browser_check_poc.permission_probe verify --cache ICU --source-cache NEW --custom-source-profile
+      status: passed
+      result: All ten derived archives match the fixed custom lock; ICU XML and licence comparison repeated against curated CPython and agrees with retained custom proof. Acceptance remains pending, flags false.
+      evidence: icu-recheck.json
+    - type: static_and_introduction
+      command: ruff check contrib/browser_check_poc lifetxt tests scripts; ruff format --check CHANGED_PYTHON; python -m lifetxt check examples/minimal_life.txt; python scripts/build_website.py --output NEW; python scripts/check_website.py NEW; git diff --check
+      status: passed
+      result: Lint/format/diff clean, native example 10 items, 14 introduction pages with links/assets/fragments/metadata valid.
+  gaps:
+    - description: Fresh execution of custom WASM, built object tree and final browser artifact requires retained candidate/build data; historical evidence is reviewed separately.
+      tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1398
+    - description: Separate reviewer and human final approval for this correction and publication remain pending.
+      tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1421
+review_ledger:
+  - reviewer: Codex correction implementer
+    review_type: informational_self_review
+    result: informational_only
+    finding_count: 0
+    completed_at: '2026-10-25'
+  - reviewer: separate reviewer
+    review_type: implementation-and-integration
+    result: pending

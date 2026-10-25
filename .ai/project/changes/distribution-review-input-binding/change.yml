@@ -1,0 +1,21 @@
+schema_version: 1
+change:
+  id: distribution-review-input-binding
+  title: Independently inspect distribution tasks and anchor verification inputs
+  status: in_review
+  change_type: Bug
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1421
+  related_pull_request: null
+scope:
+  write_scope:
+    - HKSCS source/object verifier, focused tests and review documentation
+    - dedicated change package and limited capability/traceability
+  forbidden_scope:
+    - managed standards, Core, CLI, Format, runtime locks, Pages workflow and deploy
+human_approvals_required:
+  - independent latest-head review of the correction
+  - merge
+  - publication and deployment separately

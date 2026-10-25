@@ -202,8 +202,18 @@ def audit(output, source=builder.SOURCE, review_record=None):
         cwd=builder.ROOT,
         text=True,
     ).strip()
+    mapping_bytes = (assets / "notices/mapping-attribution.json").read_bytes()
+    if mapping_bytes != (source / "notices/mapping-attribution.json").read_bytes():
+        raise ValueError("Packaged mapping assessment differs from audited source")
+    mapping_attribution = json.loads(mapping_bytes)
+    source_lock = json.loads((source / "source-lock.json").read_text("utf-8"))
+    cpython_entries = [e for e in source_lock["archives"] if e.get("id") == "cpython"]
+    if len(cpython_entries) != 1:
+        raise ValueError("Exactly one pinned CPython source archive is required")
     gate = evaluate(
         {
+            "mapping_attribution": mapping_attribution,
+            "mapping_source_sha256": cpython_entries[0]["sha256"],
             "profile": profile,
             "source_clean": clean,
             "source_mode": source_status["mode"],

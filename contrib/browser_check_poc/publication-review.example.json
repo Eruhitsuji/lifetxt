@@ -67,6 +67,13 @@
       "owner": null,
       "verified_scope": null,
       "remaining_risk": null
+    },
+    "N-7": {
+      "status": "pending",
+      "evidence": null,
+      "owner": null,
+      "verified_scope": null,
+      "remaining_risk": null
     }
   },
   "source_retention": {

@@ -25,11 +25,24 @@ Before using `--require-publication`, the human Owner must:
    an AI review; this does not turn the review into a human technical review.
    A human review must really have been performed by a human. The offline tool
    cannot distinguish truthful declarations from fabricated ones.
-4. Verify P1-1–P1-4, P2-5–P2-8 and N-1–N-3 dispositions against the actual fixes
+4. Verify P1-1–P1-4, P2-5–P2-8 and N-1–N-3/N-7 dispositions against the actual fixes
    and evidence. For P2-6/P2-7 and N-3, require verified scope, remaining risks,
    and the Owner's explicit decision. For HKSCS/ICU in particular, require a
-   source-specific permission/terms resolution, supported alternative or scoped
-   decision; generic PSF/Unicode text and a boolean do not resolve the question.
+   source-specific permission/terms resolution or verifiable removal; a generic
+   PSF/Unicode claim or Owner risk acceptance is **not** a resolution. For N-7,
+   the gate reads the packaged `notices/mapping-attribution.json` and rejects
+   every unresolved publication-blocker. HKSCS-2004 and ICU GB18030 may change
+   to `resolved-terms-confirmed`, `resolved-removed` or
+   `resolved-owner-judgment` **only when independently supported by source-
+   specific facts**. Each input needs a `resolution` object: matching
+   `status`, `source_id`, `source_archive_sha256`, `owner`, substantive
+   `basis`, `verified_scope`, `remaining_risk`, and same-repository
+   `evidence_reference` and `independent_review_reference`. A missing
+   resolution, a renamed/pending blocker, or an approval claim alone fails.
+   Open these links and verify the actual source terms/byte removal and
+   applicability to the distributed binary. Offline validation **does not**
+   prove legal permission or authenticate the evidence. There is currently
+   **no accepted HKSCS/ICU resolution**; keep publication blocked.
 5. Confirm the Owner's actual source-retention commitment covers the entire
    period corresponding binaries remain available, including retained older
    versions. Confirm delivery/backup/restore of the exact ten-source bundle.

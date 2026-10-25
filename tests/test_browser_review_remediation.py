@@ -30,6 +30,25 @@ class PublicationGateTests(unittest.TestCase):
             "commit": "a" * 40,
             "manifest_sha256": "b" * 64,
         }
+        mapping = json.loads(
+            (builder.SOURCE / "notices/mapping-attribution.json").read_text("utf-8")
+        )
+        for entry in mapping["inputs"]:
+            if entry["id"] in {"hkscs-2004", "icu-gb18030"}:
+                entry["review_status"] = "resolved-terms-confirmed"
+                entry["resolution"] = {
+                    "status": "resolved-terms-confirmed",
+                    "source_id": entry["id"],
+                    "source_archive_sha256": mapping["source_archive_sha256"],
+                    "owner": "Eruhitsuji",
+                    "basis": "Synthetic terms permission evidence for regression only",
+                    "verified_scope": "Synthetic fixed CPython mapping source",
+                    "remaining_risk": "Synthetic owner claims are not authenticated or legal clearance",
+                    "evidence_reference": "https://github.com/Eruhitsuji/lifetxt/issues/1398#issuecomment-123",
+                    "independent_review_reference": "https://github.com/Eruhitsuji/lifetxt/pull/1412#issuecomment-123",
+                }
+        facts["mapping_attribution"] = mapping
+        facts["mapping_source_sha256"] = mapping["source_archive_sha256"]
         record = {
             "schema_version": 2,
             "target_commit": facts["commit"],
@@ -190,6 +209,91 @@ class PublicationGateTests(unittest.TestCase):
         record["reviews"][0]["reviewer_login"] = "ERUHITSUJI"
         record["source_retention"]["owner"] = "eruhitsuji"
         self.assertTrue(evaluate(facts, record)["public_distribution_approved"])
+
+
+    def test_n7_current_blockers_override_valid_owner_acceptance_record(self):
+        facts, record = self.fixture()
+        original = json.loads(
+            (builder.SOURCE / "notices/mapping-attribution.json").read_text("utf-8")
+        )
+        facts["mapping_attribution"] = original
+        report = evaluate(facts, record)
+        self.assertFalse(report["complete_distribution_audit"])
+        self.assertFalse(report["public_distribution_approved"])
+        for source_id in ("hkscs-2004", "icu-gb18030"):
+            self.assertTrue(any(source_id in b for b in report["blockers"]))
+        for source_id in ("hkscs-2004", "icu-gb18030"):
+            partial = copy.deepcopy(facts)
+            original_entry = next(e for e in partial["mapping_attribution"]["inputs"] if e["id"] == source_id)
+            resolved_entry = next(e for e in self.fixture()[0]["mapping_attribution"]["inputs"] if e["id"] == source_id)
+            original_entry.update(
+                review_status=resolved_entry["review_status"],
+                resolution=resolved_entry["resolution"],
+            )
+            self.assertFalse(evaluate(partial, record)["public_distribution_approved"])
+
+    def test_n7_invalid_source_resolution_and_stale_pin_fail_closed(self):
+        for mode in (
+            "missing", "sha", "duplicate", "removed", "benign-pending",
+            "unresolved-override", "no-resolution", "source-id",
+            "resolution-sha", "owner", "scope", "risk", "basis",
+            "evidence", "independent", "unknown-status",
+        ):
+            with self.subTest(mode=mode):
+                facts, record = self.fixture()
+                mapping = facts["mapping_attribution"]
+                row = next(e for e in mapping["inputs"] if e["id"] == "hkscs-2004")
+                evidence = row["resolution"]
+                if mode == "missing":
+                    facts.pop("mapping_attribution")
+                elif mode == "sha":
+                    facts["mapping_source_sha256"] = "c" * 64
+                elif mode == "duplicate":
+                    mapping["inputs"].append(copy.deepcopy(row))
+                elif mode == "removed":
+                    mapping["inputs"].remove(row)
+                elif mode == "benign-pending":
+                    row["review_status"] = "independent-acceptance-pending"
+                elif mode == "unresolved-override":
+                    row["review_status"] = "unresolved-permission-scope-publication-blocker"
+                elif mode == "no-resolution":
+                    row.pop("resolution")
+                elif mode == "source-id":
+                    evidence["source_id"] = "icu-gb18030"
+                elif mode == "resolution-sha":
+                    evidence["source_archive_sha256"] = "c" * 64
+                elif mode == "owner":
+                    evidence["owner"] = "Codex"
+                elif mode == "scope":
+                    evidence["verified_scope"] = ""
+                elif mode == "risk":
+                    evidence["remaining_risk"] = ""
+                elif mode == "basis":
+                    evidence["basis"] = "Owner accepts risk"
+                elif mode == "evidence":
+                    evidence["evidence_reference"] = "placeholder"
+                elif mode == "independent":
+                    evidence["independent_review_reference"] = None
+                else:
+                    row["review_status"] = "approved"
+                report = evaluate(facts, record)
+                self.assertFalse(report["complete_distribution_audit"])
+                self.assertFalse(report["public_distribution_approved"])
+                self.assertTrue(report["blockers"])
+
+    def test_n7_synthetic_positive_does_not_change_actual_licence_assessment(self):
+        facts, record = self.fixture()
+        self.assertTrue(evaluate(facts, record)["public_distribution_approved"])
+        self.assertFalse(evaluate(facts, record)["authority_verified"])
+        current = json.loads(
+            (builder.SOURCE / "notices/mapping-attribution.json").read_text("utf-8")
+        )
+        self.assertFalse(current["complete_distribution_audit"])
+        self.assertFalse(current["public_distribution_approved"])
+        self.assertEqual(
+            {e["id"] for e in current["inputs"] if e["review_status"].endswith("publication-blocker")},
+            {"hkscs-2004", "icu-gb18030"},
+        )
 
 
 class FinalArtifactTests(unittest.TestCase):

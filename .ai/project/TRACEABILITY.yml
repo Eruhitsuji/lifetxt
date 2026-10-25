@@ -18709,6 +18709,16 @@ traceability:
         - .ai/project/changes/hkscs-distribution-integration/verification.yml
       status: implemented
 
+    - requirement_id: req-hkscs-verification-input-binding-v1
+      capability_id: cap-official-website
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1421
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1422
+      tests_or_evidence:
+        - contrib/browser_check_poc/hkscs_free_verify.py
+        - tests/test_hkscs_verification_inputs.py
+        - .ai/project/changes/distribution-review-input-binding/review.md
+      status: implemented
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

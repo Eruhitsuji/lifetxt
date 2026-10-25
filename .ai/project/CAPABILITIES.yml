@@ -114,6 +114,7 @@ capabilities:
       - req-hkscs-free-distribution-v1
       - req-hkscs-verification-input-binding-v1
       - req-hkscs-build-input-coverage-v1
+      - req-hkscs-rebuild-evidence-v1
       - req-cjk-source-permissions-v1
       - req-hkscs-fixture-coverage-reporting-v1
     implementation_locations:

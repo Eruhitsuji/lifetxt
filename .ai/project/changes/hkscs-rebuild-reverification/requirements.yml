@@ -1,0 +1,16 @@
+schema_version: 1
+requirements:
+  - id: req-hkscs-rebuild-evidence-v1
+    kind: ADDED
+    statement: Rebuild and retain verifiable source/object/runtime evidence without relabelling differing bytes as the old fixed candidate.
+    acceptance_criteria:
+      - Verify pinned SDK/compiler identity, patches, actual make result and failed attempts.
+      - Execute the latest source/object verifier, actual WASM removal/Unicode and Core fixtures, and bounded Chromium PoC checks.
+      - Compare all five runtime hashes with the old profile and retain its rejection of differing bytes.
+      - Preserve a data-only recovery checkpoint and verify all restored payload hashes plus the complete restored source/object report.
+      - Preserve existing runtime/source pins, historical proof bytes, false flags and distinct independent/distribution/publication boundaries.
+    constraints:
+      - This is unadopted candidate evidence, not old binary restoration, a new distribution profile or final website acceptance.
+    owner: Eruhitsuji
+open_questions:
+  - Restore the original exact binary bytes elsewhere or independently review adoption of these differing bytes under a new profile.

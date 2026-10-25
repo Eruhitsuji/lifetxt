@@ -1,0 +1,23 @@
+schema_version: 1
+change:
+  id: hkscs-rebuild-reverification
+  title: Retain and verify an unadopted HKSCS-free rebuild candidate
+  status: in_review
+  change_type: Operations
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1425
+  related_pull_request: null
+  base_commit: 32dc60b941b1bd037ff5f71c296d7c4f5e10b831
+scope:
+  write_scope:
+    - dedicated source/object/runtime/browser evidence and recovery instructions
+    - limited capability and traceability
+  forbidden_scope:
+    - live runtime/source pins, historical proofs, Core, CLI, Format, managed standards, Pages workflow and deployment
+human_approvals_required:
+  - independent latest-head implementation and integration review
+  - merge
+  - separate new distribution profile adoption and final artifact acceptance
+  - separate publication and deployment

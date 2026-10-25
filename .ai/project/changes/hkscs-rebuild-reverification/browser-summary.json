@@ -1,0 +1,32 @@
+{
+  "scope": "isolated PoC layout with unadopted rebuilt candidate; not final website checker 16KiB acceptance",
+  "chromium": "153.0.8010.0",
+  "cases": 17,
+  "matches": 17,
+  "page_errors": [],
+  "console_errors": [],
+  "physical_device": false,
+  "raw_evidence_sha256": "2f0bf55657442e97c11442c3244da5514858ff4b58c5060699d5cfa2987d161f",
+  "lazy_load": true,
+  "warm_no_http": true,
+  "offline_warm_check": true,
+  "text_only_output": true,
+  "oversize_refused_without_http": true,
+  "cancel_and_restart": true,
+  "keyboard_focus": "rgb(18, 104, 94) solid 3px",
+  "aria": {
+    "label": 1,
+    "status": 1
+  },
+  "storage": {
+    "local": [],
+    "session": [],
+    "indexedDB": [],
+    "caches": [],
+    "serviceWorkers": 0,
+    "cookies": ""
+  },
+  "download_failure_and_retry": true,
+  "startup_timeout": "real DOM/Worker with held asset; page timer fast-forwarded 120001ms",
+  "csp_inline_script_blocked": true
+}

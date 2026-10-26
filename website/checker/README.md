@@ -21,8 +21,13 @@ parser/item diagnostic contract with a 16,384 UTF-8-byte candidate bound.
 The display shows at most 100 diagnostics, with total and displayed counts.
 This does not include all `lifetxt check` CLI diagnostics.
 
-Cancel clears input/results and terminates the runtime. Error/timeout does the
-same; paste again and retry after restoring the connection. A new worker starts
+Diagnostics show a readable location, severity, code, message and hint instead
+of raw JSON. Core messages and hints remain English, as noted on both pages.
+
+Cancel clears input/results and terminates the runtime. Error/timeout clears
+results and terminates the runtime but keeps input in this page; restore the
+connection and choose Check to retry without pasting again. Leaving the page
+clears input. No input is persisted. A new worker starts
 on the next Check. Normal browser HTTP caching of **static runtime assets** may
 allow another cold worker to start offline; this is distinct from persisting
 input. The app uses no browser storage APIs. The Python function receives text

@@ -1,6 +1,7 @@
 """Isolated source-only Unicode-minimal PoC tests (not binary acceptance)."""
 
 import ast
+import hashlib
 import io
 from pathlib import Path
 import tarfile
@@ -35,13 +36,18 @@ def fixture(missing=None, symlink=False):
             arc.addfile(item)
     return buf.getvalue()
 
+def checked_curate(source, target):
+    """Use fixture bytes as the synthetic expected hash only in unit tests."""
+    expected = hashlib.sha256(source.read_bytes()).hexdigest()
+    return mod.curate(source, target, expected_source_sha256=expected)
+
 
 class SourceOnlyTests(unittest.TestCase):
     def test_cjk_and_icu_removed_and_aliases_pruned(self):
         with tempfile.TemporaryDirectory() as td:
             source, target = Path(td) / "in.gz", Path(td) / "out.gz"
             source.write_bytes(fixture())
-            report = mod.curate(source, target)
+            report = checked_curate(source, target)
             self.assertFalse(report["runtime_verified"])
             self.assertFalse(report["licence_resolved"])
             with tarfile.open(target, "r:gz") as archive:
@@ -65,7 +71,7 @@ class SourceOnlyTests(unittest.TestCase):
                     {"latin": "latin_1", "u8": "utf_8"},
                 )
             with self.assertRaises(FileExistsError):
-                mod.curate(source, target)
+                checked_curate(source, target)
 
     def test_missing_rejects_without_creating_output(self):
         with tempfile.TemporaryDirectory() as td:
@@ -74,7 +80,7 @@ class SourceOnlyTests(unittest.TestCase):
                 fixture(missing="Tools/unicode/python-mappings/gb-18030-2000.xml")
             )
             with self.assertRaisesRegex(ValueError, "missing expected"):
-                mod.curate(source, target)
+                checked_curate(source, target)
             self.assertFalse(target.exists())
 
     def test_symlink_rejected(self):
@@ -82,6 +88,14 @@ class SourceOnlyTests(unittest.TestCase):
             source, target = Path(td) / "in.gz", Path(td) / "out.gz"
             source.write_bytes(fixture(symlink=True))
             with self.assertRaisesRegex(ValueError, "non-regular"):
+                checked_curate(source, target)
+            self.assertFalse(target.exists())
+
+    def test_unknown_source_hash_rejected(self):
+        with tempfile.TemporaryDirectory() as td:
+            source, target = Path(td) / "in.gz", Path(td) / "out.gz"
+            source.write_bytes(fixture())
+            with self.assertRaisesRegex(ValueError, "differs from pinned"):
                 mod.curate(source, target)
             self.assertFalse(target.exists())
 
@@ -91,8 +105,8 @@ class SourceOnlyTests(unittest.TestCase):
             source.write_bytes(fixture())
             a, b = Path(td) / "a.gz", Path(td) / "b.gz"
             self.assertEqual(
-                mod.curate(source, a)["output_sha256"],
-                mod.curate(source, b)["output_sha256"],
+                checked_curate(source, a)["output_sha256"],
+                checked_curate(source, b)["output_sha256"],
             )
             self.assertEqual(a.read_bytes(), b.read_bytes())
 

@@ -21,7 +21,7 @@ task:
 
 verification:
   focused_test_command: python -m unittest tests.test_unicode_minimal
-  focused_test_result: 4-passed-in-isolated-local-copy
+  focused_test_result: 5-passed-in-isolated-local-copy
   actual_source_sha256: f862710e3d61091aae013d486d8bedbf1074188fd98086572d6340ec60b5392c
   source_only_candidate_sha256: eb80e7df3c4a4190ec5b83c72e231fbba33dc299a442ce6743ea03a54dea5619
   source_only_files_removed: 130

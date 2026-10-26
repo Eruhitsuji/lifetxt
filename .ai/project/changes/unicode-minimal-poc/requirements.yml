@@ -1,0 +1,22 @@
+schema_version: 1
+
+requirements:
+  - id: req-browser-local-check-distribution-v1
+    kind: MODIFIED
+    owner: Eruhitsuji
+    statement: Investigate an isolated UTF-8-first CPython source candidate without changing the accepted browser checker or its current runtime.
+    acceptance_criteria:
+      - Verify the HKSCS-free CPython 3.14.2 source SHA-256 before curating.
+      - Remove CJK codec C sources, their generated mapping headers and source mapping inputs including ICU GB18030 from a new deterministic archive.
+      - Limit candidate Lib/encodings wrappers and aliases to an explicitly documented internal/Unicode allowlist.
+      - Reject malformed or unpinned archives, duplicate members, links, missing required files, or existing output without overwriting.
+      - Document retained and excluded sources, exact hashes and actual focused test results separately from unperformed WASM/browser compatibility validation.
+      - Preserve existing profile1/profile2 locks, actual checker behavior, licence status and publication approval flags.
+    constraints:
+      - Source-only findings are not evidence of compiled object/stdlib/WASM absence.
+      - No profile3 adoption or release from this PR.
+      - Independent review and Owner merge approval are separate gates.
+
+open_questions:
+  - Which internal codecs are required for an actual minimal Pyodide runtime?
+  - Can the future profile3 run the parser and full browser-worker matrix without legacy codecs?

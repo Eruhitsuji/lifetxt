@@ -27,7 +27,8 @@ COPY = {
         "label": "life.txtのテキスト",
         "check": "チェック",
         "cancel": "キャンセル・すべて消去",
-        "recovery": "失敗・時間切れでは入力・結果・ランタイムを消去します。接続を確認し、再入力してチェックしてください。別ページへの移動・閉じる操作では入力を保持しません。",
+        "recovery": "失敗・時間切れでは結果・ランタイムを消去し、入力はこのページ内に保持します。接続を確認し、チェックを押して再試行してください。キャンセルでは入力も消去します。別ページへの移動・閉じる操作では入力を保持しません。",
+        "diagnostics": "診断のメッセージ・ヒントは現在英語です。行・列・重大度・コードと併せて表示します。",
         "noscript": "このチェック機能にはJavaScriptが必要です。CLIを利用することもできます。",
         "notices": "第三者ライセンス一覧",
         "sources": "ソース取得・確認範囲",
@@ -43,7 +44,8 @@ COPY = {
         "label": "life.txt text",
         "check": "Check",
         "cancel": "Cancel / clear everything",
-        "recovery": "Failure or timeout clears input, results and runtime. Check your connection, paste again and retry. Navigating away or closing the page does not retain input.",
+        "recovery": "Failure or timeout clears results and runtime but keeps input in this page. Check your connection and choose Check to retry. Cancel also clears input. Navigating away or closing the page does not retain input.",
+        "diagnostics": "Diagnostics show line, column, severity, code, message and hint. Messages and hints are currently in English.",
         "noscript": "JavaScript is required for this checker. You can also use the CLI.",
         "notices": "Third-party notices",
         "sources": "Source downloads and evidence limits",
@@ -72,6 +74,7 @@ def render(lang, base=DEFAULT_URL):
 <textarea id="input" aria-describedby="help bytes" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea>
 <p id="bytes"></p><div class="actions"><button class="button primary" type="button" id="check">{c["check"]}</button>
 <button class="button" type="button" id="cancel" disabled>{c["cancel"]}</button></div>
+<p>{c["diagnostics"]}</p>
 <p id="status" role="status" aria-live="polite"></p><pre id="output" tabindex="0" aria-label="{c["title"]}"></pre>
 <noscript><p>{c["noscript"]}</p></noscript>
 <p><a href="../../checker/notices/index.html">{c["notices"]}</a> · <a href="../../checker/sources/index.html">{c["sources"]}</a></p>

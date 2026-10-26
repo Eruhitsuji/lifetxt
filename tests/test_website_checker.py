@@ -74,6 +74,8 @@ class WebsiteCheckerTests(unittest.TestCase):
             self.assertIn('src="../../checker/ui.mjs"', page)
             self.assertIn('for="input"', page)
             self.assertIn('autocomplete="off"', page)
+            self.assertIn(COPY[lang]["diagnostics"], page)
+            self.assertIn(COPY[lang]["recovery"], page)
             doc = Document(page)
             self.assertEqual(doc.lang, lang)
             self.assertEqual(doc.h1, 1)

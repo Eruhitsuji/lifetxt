@@ -123,6 +123,13 @@ window.__csp=[]; document.addEventListener('securitypolicyviolation',event=>wind
                         before,
                     )
                     assert result["result"] == adapter.check_text(text)
+                    displayed = page.locator("#output").inner_text()
+                    for diagnostic in result["result"]["diagnostics"]:
+                        assert diagnostic["message"] in displayed
+                        assert diagnostic["code"] in displayed
+                        if diagnostic.get("hint"):
+                            assert diagnostic["hint"] in displayed
+                    assert page.locator("#output img").count() == 0
                     return {
                         "fill_ms": fill_ms,
                         "wall_ms": (time.perf_counter() - started) * 1000,
@@ -158,10 +165,16 @@ window.__csp=[]; document.addEventListener('securitypolicyviolation',event=>wind
                 context.set_offline(True)
                 page.locator("#input").fill('[ ] T "Offline failure"')
                 page.locator("#check").click()
-                expect(page.locator("#cancel")).to_be_disabled(timeout=30000)
-                assert page.locator("#input").input_value() == ""
+                expect(page.locator("#check")).to_be_enabled(timeout=30000)
+                assert page.locator("#input").input_value() == '[ ] T "Offline failure"'
                 context.set_offline(False)
                 context.unroute("**/checker/core.zip")
+                # Retry the retained input without another paste/fill.
+                page.locator("#check").click()
+                expect(page.locator("#status")).to_contain_text(
+                    "完了" if lang == "ja" else "finished", timeout=30000
+                )
+                assert page.locator("#input").input_value() == '[ ] T "Offline failure"'
                 perform('[ ] T "Online recovery"')
                 storage = page.evaluate(
                     """async()=>({local:localStorage.length,session:sessionStorage.length,databases:await indexedDB.databases(),caches:await caches.keys(),registrations:(await navigator.serviceWorker.getRegistrations()).length,writes:window.__storageWrites,csp:window.__csp})"""
@@ -222,10 +235,10 @@ window.__csp=[]; document.addEventListener('securitypolicyviolation',event=>wind
             page.goto(origin + "/en/check/")
             page.locator("#input").fill("# synthetic timeout")
             page.locator("#check").click()
-            expect(page.locator("#cancel")).to_be_disabled(timeout=30000)
-            assert page.locator("#input").input_value() == ""
+            expect(page.locator("#check")).to_be_enabled(timeout=30000)
+            assert page.locator("#input").input_value() == "# synthetic timeout"
             assert "Timed out" in page.locator("#status").inner_text()
-            report["accelerated_startup_timeout_clears"] = True
+            report["accelerated_startup_timeout_preserves_input"] = True
             # The same stalled module is cancelled before it can finish startup.
             page.locator("#input").fill("# synthetic cancellation")
             page.locator("#check").click()

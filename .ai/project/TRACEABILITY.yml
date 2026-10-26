@@ -5,6 +5,19 @@ traceability:
     - requirement_id: req-browser-local-check-v1
       capability_id: cap-official-website
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1399
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1431
+      changed_files_or_scope:
+        - Checker product review P-1 through P-5 remediation
+      tests_or_evidence:
+        - tests/website_checker_ui.mjs
+        - tests/test_website_checker.py
+        - scripts/probe_website_checker.py (updated, real browser execution blocked)
+        - .ai/project/changes/website-local-checker/review-fixes.md
+      status: implemented
+
+    - requirement_id: req-browser-local-check-v1
+      capability_id: cap-official-website
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1399
       pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1408
       tests_or_evidence:
         - tests/test_website_checker.py

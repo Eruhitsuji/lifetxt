@@ -29,3 +29,14 @@ review_ledger:
   review_type: integration
   target_commit: null
   result: pending
+
+# 2026-10-26 remediation evidence is separate from historical browser acceptance.
+product_review_remediation:
+  issue: https://github.com/Eruhitsuji/lifetxt/issues/1399
+  evidence: .ai/project/changes/website-local-checker/review-fixes.md
+  local_verification: passed
+  browser_verification: blocked_missing_chromium_invalid_download
+  profile2_final_artifact: not_verified_by_this_remediation
+  independent_implementation_security_review: pending
+  independent_integration_review: pending
+  owner_product_limit_acceptance: pending

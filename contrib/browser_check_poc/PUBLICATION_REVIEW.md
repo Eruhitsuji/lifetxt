@@ -62,3 +62,8 @@ Do not fill the pending example with invented names, placeholder URLs, accepted
 statuses or evidence from a different revision. The template remains pending.
 The current record contains no accepted Owner/independent decisions; actual
 flags remain false. This runbook prepares review; it is not a completed review.
+
+For private checkpoint transfer, receiver hash/safety checks, profile-specific
+execution and historical-versus-current artifact scope, follow
+[REVIEWER_HANDOFF.md](REVIEWER_HANDOFF.md). That procedure is not an acceptance
+record and does not change the pending publication decisions above.

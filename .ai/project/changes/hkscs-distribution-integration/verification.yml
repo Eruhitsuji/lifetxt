@@ -63,3 +63,15 @@ review_ledger:
 
   # Final full-output regressions and exact final-head manifest/browser binding
   # are recorded in verification-logs.json.gz and the PR Conversation.
+
+review_remediation_1417:
+  issue: https://github.com/Eruhitsuji/lifetxt/issues/1417
+  evidence: .ai/project/changes/hkscs-distribution-integration/review-remediation.md
+  cp932_default_simulation_before: 3_decode_errors_2_actual_artifact_skips
+  cp932_default_simulation_after: 5_passed_2_actual_artifact_skips
+  focused_regression: 33_passed_3_actual_artifact_skips
+  independent_historical_artifact_report: https://github.com/Eruhitsuji/lifetxt/issues/1417#issuecomment-6413507506
+  new_actual_artifact_execution: not_run
+  independent_final_head_implementation_review: pending
+  independent_final_head_integration_review: pending
+  publication_flags_changed: false

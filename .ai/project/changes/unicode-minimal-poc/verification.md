@@ -16,7 +16,7 @@
 
 \`\`\`text
 python -m unittest tests.test_unicode_minimal
-4 tests: PASS
+5 tests: PASS (including wrong input hash rejection)
 \`\`\`
 
 Historical profile2 artifact SHA \`a013d3773da97727542528f507c1f9ff8d9cbbc814a7e2ff92078781fe9eb039\` was available from local conversation files. Source payload SHA \`f862710e3d61091aae013d486d8bedbf1074188fd98086572d6340ec60b5392c\` matched the pinned profile2 curated CPython source. The isolated curated experiment returned output SHA \`eb80e7df3c4a4190ec5b83c72e231fbba33dc299a442ce6743ea03a54dea5619\`, retaining 4927 and removing 130 files, with a 18-entry candidate encoding allowlist. Output tar and original 82MB artifact were not committed.

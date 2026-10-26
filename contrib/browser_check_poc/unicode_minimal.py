@@ -15,6 +15,7 @@ from pathlib import Path, PurePosixPath
 import tarfile
 
 ROOT = "Python-3.14.2"
+EXPECTED_SOURCE_SHA256 = "f862710e3d61091aae013d486d8bedbf1074188fd98086572d6340ec60b5392c"
 KEEP_ENCODINGS = frozenset({
     "__init__", "aliases", "ascii", "latin_1", "utf_8", "utf_8_sig",
     "utf_16", "utf_16_be", "utf_16_le", "utf_32", "utf_32_be", "utf_32_le",
@@ -50,7 +51,7 @@ def _aliases(source):
             + "aliases = " + repr(dict(sorted(kept.items()))) + "\n").encode("utf-8")
 
 
-def curate(source: Path, target: Path):
+def curate(source: Path, target: Path, *, expected_source_sha256=EXPECTED_SOURCE_SHA256):
     """Curate an HKSCS-free CPython source tar without modifying the input.
 
     The caller must verify the source archive's original hash/identity separately.
@@ -58,6 +59,9 @@ def curate(source: Path, target: Path):
     """
     if target.exists():
         raise FileExistsError(target)
+    source_hash = hashlib.sha256(source.read_bytes()).hexdigest()
+    if source_hash != expected_source_sha256:
+        raise ValueError("CPython source SHA-256 differs from pinned input")
     files = {}
     removed = []
     seen = set()
@@ -107,7 +111,7 @@ def curate(source: Path, target: Path):
         "kind": "source-only-utf8-minimal-candidate",
         "runtime_verified": False,
         "licence_resolved": False,
-        "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+        "source_sha256": source_hash,
         "output_sha256": hashlib.sha256(payload).hexdigest(),
         "retained_files": len(files),
         "removed_files": len(removed),

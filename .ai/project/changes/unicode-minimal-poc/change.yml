@@ -1,0 +1,42 @@
+schema_version: 1
+
+change:
+  id: unicode-minimal-poc
+  title: Isolated Unicode-minimal CPython source-only PoC
+  status: in_review
+  change_type: Investigation
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1434
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1435
+  base_commit: 67e5806a5ae22d69e9e93fbffb6634726affa8fb
+  target_release: null
+
+scope:
+  in_scope:
+    - Isolated curated CPython source-only archive experiment
+    - Fail-closed input SHA-256 and tar member validation
+    - Minimal codec candidate list, source exclusion tests and evidence
+  out_of_scope:
+    - Pyodide runtime build or WASM/profile3 acceptance
+    - Third-party licence applicability or source-specific removal acceptance
+    - Production checker changes, public distribution and deployment
+  write_scope:
+    - contrib/browser_check_poc/unicode_minimal.py
+    - contrib/browser_check_poc/UNICODE_MINIMAL_POC.md
+    - tests/test_unicode_minimal.py
+    - .ai/project/changes/unicode-minimal-poc/
+    - .ai/project/TRACEABILITY.yml
+  forbidden_scope:
+    - .ai/managed/
+    - Existing HKSCS-free profile1/profile2 binaries and locks
+    - Core/CLI/Format/website/Pages/deployment
+    - Publication flags and unverified permission/mapping statuses
+  shared_files:
+    - .ai/project/TRACEABILITY.yml
+
+human_approvals_required:
+  - Independent latest-head High implementation and security/integration review
+  - Owner merge authorization
+  - Separate future profile3 adoption and publication approval

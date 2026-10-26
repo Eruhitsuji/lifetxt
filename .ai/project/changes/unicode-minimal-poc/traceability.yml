@@ -1,0 +1,19 @@
+schema_version: 1
+
+links:
+  - requirement_id: req-browser-local-check-distribution-v1
+    capability_id: cap-official-website
+    epic: https://github.com/Eruhitsuji/lifetxt/issues/1398
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1434
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1435
+    tests_or_evidence:
+      - tests/test_unicode_minimal.py
+      - contrib/browser_check_poc/UNICODE_MINIMAL_POC.md
+      - .ai/project/changes/unicode-minimal-poc/verification.yml
+    release_or_deployment: null
+    status: in_review
+
+gaps:
+  - Actual profile3 runtime build and independent compiled evidence tracked by issue 1436
+  - Final checker and distribution proof tracked by issue 1437
+  - Source-specific licensing/publication held by issues 1398 and 1400

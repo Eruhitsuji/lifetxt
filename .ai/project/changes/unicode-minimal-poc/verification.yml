@@ -1,0 +1,46 @@
+schema_version: 1
+
+task:
+  issue: https://github.com/Eruhitsuji/lifetxt/issues/1434
+  parent_distribution_issue: https://github.com/Eruhitsuji/lifetxt/issues/1398
+  pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1435
+  source_base_commit: 67e5806a5ae22d69e9e93fbffb6634726affa8fb
+  requirement: req-browser-local-check-distribution-v1
+  capability: cap-official-website
+  type: Investigation
+  assurance: High
+  method: adaptive-default
+  phase: developer-verification-and-independent-review
+  status: in-review
+  reviewers:
+    implementation: pending-independent
+    security: pending-independent
+    integration: pending-independent
+  owner_merge_required: true
+  rollout: not-authorized
+
+verification:
+  focused_test_command: python -m unittest tests.test_unicode_minimal
+  focused_test_result: 5-passed-in-isolated-local-copy
+  actual_source_sha256: f862710e3d61091aae013d486d8bedbf1074188fd98086572d6340ec60b5392c
+  source_only_candidate_sha256: eb80e7df3c4a4190ec5b83c72e231fbba33dc299a442ce6743ea03a54dea5619
+  source_only_files_removed: 130
+  source_only_files_retained: 4927
+  runtime_build: not-run
+  linked_object_inspection: not-run
+  wasm_codec_validation: not-run
+  browser_integration: not-run
+  licence_applicability: not-reviewed
+  publication_approved: false
+
+dependencies:
+  runtime_poc: https://github.com/Eruhitsuji/lifetxt/issues/1436
+  final_distribution_integration: https://github.com/Eruhitsuji/lifetxt/issues/1437
+
+boundaries:
+  - Keep existing profile1/profile2 identities and locks unchanged
+  - No Core parser or website behavior changed
+  - No released binary or corresponding source publication
+  - Never infer mapping source licensing from deleted files alone
+  - No status or publication flag true before source-specific review
+  - CI plus independent head review and Owner merge approval required

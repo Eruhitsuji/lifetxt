@@ -2,6 +2,18 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-browser-local-check-distribution-v1
+      capability_id: cap-official-website
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1434
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1435
+      changed_files_or_scope:
+        - Isolated UTF-8-first CPython source-only curator, focused tests and PoC documentation
+      tests_or_evidence:
+        - tests/test_unicode_minimal.py (4 isolated tests)
+        - contrib/browser_check_poc/UNICODE_MINIMAL_POC.md (actual source-only hash and NOT RUN)
+        - .ai/project/changes/unicode-minimal-poc/verification.yml
+      status: implemented
+
     - requirement_id: req-hkscs-free-distribution-v1
       capability_id: cap-official-website
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1417

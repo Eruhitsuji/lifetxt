@@ -40,7 +40,7 @@ PoC生成source SHA-256：
 **削除130ファイル／保持4927ファイル、候補codec18ファイル**。除去名一覧のSHA-256：
 \`2d992f949d6af6350deb923e9a97a95687f6af902da6e3326796ff91b2ea97f8\`
 
-Synthetic focused tests: **4 PASS**（CJK/ICU source・alias削除、必須入力欠損拒否、symlink拒否、既存出力拒否、deterministic hash）。
+Synthetic focused tests: **5 PASS** (including rejection of unpinned source SHA-256)（CJK/ICU source・alias削除、必須入力欠損拒否、symlink拒否、既存出力拒否、deterministic hash）。
 
 これは **source-only PASS**。次はすべて**NOT RUN**：Pyodide SDKでのconfigure/compile、\`Setup.local\`でのCJK builtin/\`_multibytecodec\`の無効化、build/objectの除去確認、stdlib/WASMの負試験、Python/JSON/encodingの実動作、life.txt parser parity、Node/Chromium/browser、実メモリ、独立レビュー、全ライセンス。
 

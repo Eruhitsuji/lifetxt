@@ -54,7 +54,7 @@ def _aliases(source):
 def curate(source: Path, target: Path, *, expected_source_sha256=EXPECTED_SOURCE_SHA256):
     """Curate an HKSCS-free CPython source tar without modifying the input.
 
-    The caller must verify the source archive's original hash/identity separately.
+    The fixed profile2 source SHA-256 is required; changed source is rejected.
     This function refuses an existing output; never call it on a build tree.
     """
     if target.exists():

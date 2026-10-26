@@ -21,7 +21,7 @@ class CustomDistributionTests(unittest.TestCase):
             root = Path(temp)
             for name in ("wasm-proof.json", "source-build-proof.json"):
                 (root / name).write_bytes((profile.PROOF / name).read_bytes())
-            data = json.loads((root / "wasm-proof.json").read_text())
+            data = json.loads((root / "wasm-proof.json").read_text(encoding="utf-8"))
             data["files"]["pyodide.asm.wasm"]["sha256"] = "0" * 64
             (root / "wasm-proof.json").write_bytes(sources.json_bytes(data))
             with (
@@ -68,7 +68,9 @@ class CustomDistributionTests(unittest.TestCase):
             for path in profile.PROOF.iterdir():
                 if path.is_file():
                     (proof / path.name).write_bytes(path.read_bytes())
-            mapping = json.loads((proof / "mapping-attribution.json").read_text())
+            mapping = json.loads(
+                (proof / "mapping-attribution.json").read_text(encoding="utf-8")
+            )
             mapping["source_archive_sha256"] = next(
                 e["sha256"] for e in lock["archives"] if e["id"] == "cpython"
             )
@@ -146,7 +148,9 @@ class CustomDistributionTests(unittest.TestCase):
 
     def test_acceptance_status_is_reviewed_profile_data_not_code_override(self):
         facts, record = gate_tests.PublicationGateTests().fixture()
-        actual = json.loads((profile.PROOF / "mapping-attribution.json").read_text())
+        actual = json.loads(
+            (profile.PROOF / "mapping-attribution.json").read_text(encoding="utf-8")
+        )
         synthetic = facts["mapping_attribution"]
         synthetic["source_archive_sha256"] = actual["source_archive_sha256"]
         synthetic["runtime_profile"] = "lifetxt-hkscs-free-1"
@@ -175,7 +179,10 @@ class CustomDistributionTests(unittest.TestCase):
         self.assertTrue(evaluate(facts, record)["public_distribution_approved"])
         self.assertFalse(evaluate(facts, record)["authority_verified"])
         self.assertEqual(
-            json.loads((profile.PROOF / "mapping-attribution.json").read_text()), actual
+            json.loads(
+                (profile.PROOF / "mapping-attribution.json").read_text(encoding="utf-8")
+            ),
+            actual,
         )
 
     def test_missing_source_and_old_runtime_have_no_fallback(self):

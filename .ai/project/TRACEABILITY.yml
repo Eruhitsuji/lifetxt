@@ -2,6 +2,18 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-hkscs-free-distribution-v1
+      capability_id: cap-official-website
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1417
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1433
+      changed_files_or_scope:
+        - Explicit UTF-8 JSON reads in custom distribution tests and private reviewer handoff procedure
+      tests_or_evidence:
+        - tests/test_custom_distribution.py (cp932-default simulation before and after)
+        - contrib/browser_check_poc/REVIEWER_HANDOFF.md
+        - .ai/project/changes/hkscs-distribution-integration/review-remediation.md
+      status: implemented
+
     - requirement_id: req-browser-local-check-v1
       capability_id: cap-official-website
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1399

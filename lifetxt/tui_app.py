@@ -424,6 +424,10 @@ class WorkspaceState(object):
         self.marked = set()
         self.show_help = False
         self.show_detail = True
+        # Explicit todo.txt capture is modal: parsing creates this review
+        # state, while only Enter may cross the mutation boundary.
+        self.todo_preview = None
+        self.todo_preview_scroll = 0
         self.toast = None
         self.undo_stack = []
         self.rows = []
@@ -1477,6 +1481,116 @@ def _cmd_add(state, argument):
     return ("success", "Added to %s: %s" % (os.path.basename(path), line))
 
 
+def _cmd_todo(state, argument):
+    """Resolve one explicit todo.txt task into a non-writing review."""
+    text = str(argument or "")
+    if not text.strip():
+        raise ValueError("Usage: /todo TASK")
+    # Never leave an older, valid review confirmable after a failed attempt.
+    state.todo_preview = None
+    from .quick_input import resolve_quick_input
+
+    resolved = resolve_quick_input(
+        text,
+        syntax="todo",
+        id_key=state.options["id_key"],
+    )
+    if state.backend.is_remote:
+        expected_revision = state.backend.current_revision()
+        if not expected_revision:
+            raise ValueError(
+                "The remote workspace revision is unknown. Reload before previewing."
+            )
+        path = None
+    else:
+        from . import mutation
+
+        path = _write_target(state)
+        expected_revision = mutation.read_text_snapshot(
+            path, allow_missing=True
+        ).content_hash
+    state.todo_preview = {
+        "text": text,
+        "item": resolved.item,
+        "diagnostics": list(resolved.diagnostics),
+        "expected_revision": expected_revision,
+        "path": path,
+    }
+    state.todo_preview_scroll = 0
+    return ("info", "Review todo.txt mapping; Enter confirms, Esc cancels.")
+
+
+def _cancel_todo_preview(state):
+    state.todo_preview = None
+    state.todo_preview_scroll = 0
+    state.notify("todo.txt capture cancelled.", "info")
+
+
+def _confirm_todo_preview(state):
+    """Re-resolve and commit the exact reviewed todo.txt source once."""
+    preview = state.todo_preview
+    if preview is None:
+        return
+    from .quick_input import resolve_quick_input
+
+    resolved = resolve_quick_input(
+        preview["text"],
+        syntax="todo",
+        id_key=state.options["id_key"],
+    )
+    if resolved.item.to_dict() != preview["item"].to_dict():
+        raise ValueError("todo.txt mapping changed; preview again before confirming.")
+
+    if state.backend.is_remote:
+        payload = {
+            "status": resolved.item.status,
+            "type": resolved.item.kind,
+            "title": resolved.item.title,
+            "details": resolved.item.details,
+        }
+        state.backend.create_item(
+            payload, expected_revision=preview["expected_revision"]
+        )
+        state.todo_preview = None
+        state.todo_preview_scroll = 0
+        state.reload()
+        state.notify("Captured reviewed todo.txt task.", "success")
+        return
+
+    path = _write_target(state)
+    if path != preview["path"]:
+        raise ValueError("Write target changed; preview again before confirming.")
+    from .ids import collect_item_ids
+
+    existing = collect_item_ids(state._items, key=state.options["id_key"])
+    line = _quick_add_line(
+        preview["text"],
+        state.options["id_key"],
+        existing_ids=existing,
+        config=getattr(state.args, "config_data", None),
+        syntax="todo",
+    )
+    from . import mutation
+    from .write_operations import append_life_records
+
+    before = mutation.read_text_snapshot(path, allow_missing=True)
+    if before.content_hash != preview["expected_revision"]:
+        raise ValueError("Workspace changed; preview again before confirming.")
+    result = append_life_records(
+        path,
+        line + "\n",
+        expected_revision=preview["expected_revision"],
+        operation="tui.todo",
+    )
+    _remember_undo(
+        state, {path: before}, {path: result.after_hash}, "todo %s" % resolved.item.title
+    )
+    state.todo_preview = None
+    state.todo_preview_scroll = 0
+    state.reload()
+    state.notify("Captured reviewed todo.txt task.", "success")
+
+
 GUIDED_COMMON_KEYS = frozenset(
     ("due", "do", "on", "from", "to", "at", "project", "priority", "tag", "progress")
 )
@@ -1981,6 +2095,12 @@ COMMANDS = (
         "add", "TITLE", "Append a new open task to the write file", _cmd_add, alias="a"
     ),
     Command(
+        "todo",
+        "TASK",
+        "Preview one explicit todo.txt task; Enter confirms and Esc cancels",
+        _cmd_todo,
+    ),
+    Command(
         "guided",
         "TITLE [key=value ...]",
         "Create a task with guided common fields (due/project/priority/tag/progress)",
@@ -2317,7 +2437,13 @@ def _write_target(state):
 
 
 def _quick_add_line(
-    title, id_key, existing_ids=None, shorthand=True, extra_details=None, config=None
+    title,
+    id_key,
+    existing_ids=None,
+    shorthand=True,
+    extra_details=None,
+    config=None,
+    syntax="quick",
 ):
     """Resolve Quick text, fill absent context fields and assign a unique ID."""
     from .ids import ensure_item_id, id_prefix_for_item
@@ -2329,6 +2455,7 @@ def _quick_add_line(
         id_key=id_key,
         shorthand=shorthand,
         extra_details=extra_details,
+        syntax=syntax,
     ).item
     if existing_ids and set(item.details.get(id_key, [])) & existing_ids:
         raise ValueError("Duplicate %s: value; use a unique ID." % id_key)
@@ -2355,7 +2482,9 @@ def build_frame(state, width, height):
     footer = _build_footer(state, width)
     body_height = max(1, height - len(header) - len(footer))
 
-    if state.show_help:
+    if getattr(state, "todo_preview", None) is not None:
+        body = _build_todo_preview(state, width, body_height)
+    elif state.show_help:
         body = _build_help(state, width, body_height)
     elif state.error:
         body = _build_error(state, width, body_height)
@@ -2369,6 +2498,69 @@ def build_frame(state, width, height):
         frame.insert(len(header) + len(body[:body_height]), [("", "default")])
     frame = frame[:height]
     return [fit_spans(line, width) for line in frame]
+
+
+def _build_todo_preview(state, width, height):
+    """Render every field produced by the shared todo.txt adapter."""
+    preview = state.todo_preview
+    item = preview["item"]
+    lines = [
+        [("  todo.txt preview", "section")],
+        [("  Review the mapped life.txt task before writing.", "hint")],
+        [("", "default")],
+        [("  Title       ", "detail_key"), (item.title, "detail_value")],
+        [("  Status      ", "detail_key"), (item.status, "detail_value")],
+        [("  Type        ", "detail_key"), (item.kind, "detail_value")],
+    ]
+    for key, values in item.details.items():
+        for index, value in enumerate(values):
+            label = key if index == 0 else ""
+            lines.append(
+                [
+                    (("  %-12s" % label), "detail_key"),
+                    (str(value), "detail_value"),
+                ]
+            )
+    diagnostics = preview["diagnostics"]
+    if diagnostics:
+        lines.append([("  Diagnostics", "detail_key")])
+        for diagnostic in diagnostics:
+            lines.append(
+                [
+                    (
+                        "  %s %s: %s"
+                        % (
+                            diagnostic.severity.upper(),
+                            diagnostic.code,
+                            diagnostic.message,
+                        ),
+                        "counter_warn"
+                        if diagnostic.severity != "error"
+                        else "toast_error",
+                    )
+                ]
+            )
+    else:
+        lines.append(
+            [("  Diagnostics ", "detail_key"), ("none", "detail_value")]
+        )
+    body_height = max(0, height - 1)
+    maximum = max(0, len(lines) - body_height)
+    state.todo_preview_scroll = max(
+        0, min(getattr(state, "todo_preview_scroll", 0), maximum)
+    )
+    visible = lines[
+        state.todo_preview_scroll : state.todo_preview_scroll + body_height
+    ]
+    controls = [
+        ("  Enter", "key"),
+        (" confirm    ", "hint"),
+        ("Esc", "key"),
+        (" cancel    ", "hint"),
+        ("up/down", "key"),
+        (" review", "hint"),
+    ]
+    return (visible + [controls])[:height]
 
 
 def _build_header(state, width):
@@ -3584,6 +3776,28 @@ def handle_key(state, key, page=5):
         return True
     if key == "ctrl-c":
         state.running = False
+        return True
+
+    if getattr(state, "todo_preview", None) is not None:
+        if key == "escape":
+            _cancel_todo_preview(state)
+        elif key == "enter":
+            try:
+                _confirm_todo_preview(state)
+            except Exception as exc:
+                state.notify(str(exc), "error")
+        elif key in ("up", "k"):
+            state.todo_preview_scroll = max(0, state.todo_preview_scroll - 1)
+        elif key in ("down", "j"):
+            state.todo_preview_scroll += 1
+        elif key in ("pgup", "ctrl-u"):
+            state.todo_preview_scroll = max(0, state.todo_preview_scroll - page)
+        elif key in ("pgdn", "ctrl-d"):
+            state.todo_preview_scroll += page
+        elif key in ("home", "g"):
+            state.todo_preview_scroll = 0
+        # The review is modal. Resize was handled above; other keys cannot
+        # mutate the input or navigate behind the confirmation boundary.
         return True
 
     if state.show_help:

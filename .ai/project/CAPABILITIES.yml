@@ -711,8 +711,8 @@ capabilities:
     owner: Eruhitsuji
     source_requirements: [req-shared-quick-input-resolution]
     implementation_locations: [lifetxt/quick_input.py, lifetxt/cli.py, lifetxt/webapp.py, lifetxt/tui_app.py, lifetxt/tui_backend.py, lifetxt/mcp.py, lifetxt/web_assets_js_08.js, lifetxt/web_assets_js_12.js, lifetxt/web_planner.js]
-    public_interfaces: [CLI quick/q/add, POST /api/items/capture, POST /api/quick/resolve, TUI /add, TUI /related, MCP capture_item]
-    tests_or_evidence: [tests.test_quick_input, tests.test_web_mobile_capture, tests.test_shorthand]
+    public_interfaces: [CLI quick/q/add, POST /api/items/capture, POST /api/quick/resolve, TUI /add, TUI /related, TUI /todo, MCP capture_item]
+    tests_or_evidence: [tests.test_quick_input, tests.test_web_mobile_capture, tests.test_shorthand, tests.test_tui_todo_preview]
     related_issues: [https://github.com/Eruhitsuji/lifetxt/issues/1021]
     related_pull_requests: [https://github.com/Eruhitsuji/lifetxt/pull/1023]
     reuse_policy: shared resolver only; reuse authoritative Format parser and existing shorthand, serializer, IDs and mutation contracts
@@ -10993,8 +10993,9 @@ capabilities:
       never authoritative stores; plain life.txt remains authoritative. The
       shared text converter also supports strict life.txt Task ↔ todo.txt
       interchange (#1432/#1438), and explicit single-task todo.txt capture
-      through the established CLI creation boundary (#1441) and a Web
-      Quick Capture semantic preview/confirmation boundary (#1442).
+      through the established CLI creation boundary (#1441), a Web Quick
+      Capture semantic preview/confirmation boundary (#1442), and an explicit
+      local/Remote TUI semantic preview/confirmation boundary (#1443).
     status: active
     owner: Eruhitsuji
     source_requirements:
@@ -11009,6 +11010,7 @@ capabilities:
       - req-todo-interoperability-core
       - req-cli-todo-capture
       - req-web-todo-capture-preview
+      - req-tui-todo-capture-preview
     implementation_locations:
       - lifetxt/batch_save.py
       - tests/test_batch_save.py
@@ -11021,6 +11023,8 @@ capabilities:
       - lifetxt/webapp.py
       - lifetxt/web_assets.html
       - lifetxt/web_assets_js_08.js
+      - lifetxt/tui_app.py
+      - lifetxt/tui_backend.py
       - lifetxt/_extra_convert_impl.py
       - lifetxt/cli_taxonomy.py
       - lifetxt/completion.py
@@ -11052,6 +11056,7 @@ capabilities:
       - lifetxt add --syntax todo TASK
       - POST /api/quick/resolve with syntax=todo
       - POST /api/items/capture with preview-bound syntax=todo
+      - TUI /todo TASK
       - lifetxt export --format json|jsonl|csv|markdown|life|sqlite|lifetxtz
       - lifetxt import --preset life|sqlite|lifetxtz
       - lifetxt.cli.EXPORT_FORMAT_HANDLERS
@@ -11099,6 +11104,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/1438
       - https://github.com/Eruhitsuji/lifetxt/issues/1441
       - https://github.com/Eruhitsuji/lifetxt/issues/1442
+      - https://github.com/Eruhitsuji/lifetxt/issues/1443
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/828
     reuse_policy: prefer_reuse_or_extension_before_new_implementation

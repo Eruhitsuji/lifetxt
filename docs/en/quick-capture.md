@@ -149,13 +149,31 @@ Explicit IDs are preserved and duplicate workspace IDs are rejected. CLI follows
 `ids.auto`; TUI/Web/MCP continue guaranteeing addressable IDs, using configured
 ID keys/prefixes. MCP may add configured source metadata and supports dry-run proposals.
 
+## Explicit todo.txt capture in the TUI
+
+Use `/todo TASK` when the input is intentionally todo.txt rather than Quick
+shorthand. The TUI resolves the line through the shared todo.txt adapter and
+opens a non-writing review showing title, status, type, priority, dates,
+projects, contexts, every retained metadata field, and diagnostics. Press
+`Enter` to confirm or `Esc` to cancel. Up/down and page keys scroll a compact
+review after resize; no navigation key can accidentally submit it.
+
+Confirmation re-resolves the exact source and uses the previewed writable-file
+or Remote workspace revision. A changed destination, duplicate mapped ID,
+invalid or multiline input, or stale revision fails without appending. The
+confirmed local write still uses the established ID validation, file lock, and
+atomic compare-and-swap path; Remote TUI uses the existing structured Web API
+create path with the reviewed `If-Match` revision. `/add` and `/a` remain the
+unchanged default Quick creation commands. Use explicit conversion/import for
+multiple todo.txt tasks.
+
 ## Availability
 
 | Surface | Common Quick entry | Adapter behavior |
 | --- | --- | --- |
 | CLI | `add`, `quick`, `q`, stdin | existing shorthand flags/presets/defaults |
-| Local TUI | `/add`, `/a`, `/related` | shared resolver; related context fills absent fields |
-| Remote TUI | `/add`, `/a`, `/related` | sends text to authoritative server with revision |
+| Local TUI | `/add`, `/a`, `/related`; `/todo` is explicit todo.txt | shared resolver; `/todo` requires preview and confirmation |
+| Remote TUI | `/add`, `/a`, `/related`; `/todo` is explicit todo.txt | reviewed todo mapping uses structured create with the previewed revision |
 | Web UI | Quick Add, `/capture`, Planner, command `/add`, Focus Quick Add | common capture API; `/capture` additionally provides explicit previewed todo.txt input |
 | Web API | `POST /api/items/capture` | shorthand or full record; explicit todo syntax requires its preview token/revision |
 | MCP | `capture_item` | shorthand or full record; existing proposals and source metadata |

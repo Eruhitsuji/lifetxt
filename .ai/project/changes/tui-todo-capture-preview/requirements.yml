@@ -1,0 +1,24 @@
+schema_version: 1
+
+requirements:
+  - id: req-tui-todo-capture-preview
+    kind: ADDED
+    statement: >-
+      Allow one explicitly selected todo.txt task to be semantically previewed
+      and confirmed through the local or Remote TUI without a duplicate parser
+      or weakening the established revision-safe mutation path.
+    acceptance_criteria:
+      - Quick remains the default and todo.txt mode is explicit.
+      - The shared todo adapter supplies every previewed field and diagnostic.
+      - Enter confirms and Escape cancels a keyboard-only modal review.
+      - Invalid, multiline, cancelled, changed, or stale input cannot mutate data.
+      - Local and Remote confirmation retain their existing authoritative write safeguards.
+      - Unicode, priority/date order, project/context, metadata, completed tasks, and resize are covered.
+    constraints:
+      - Plain life.txt remains authoritative.
+      - No Format 1.0 or storage change.
+      - No TUI-specific todo.txt grammar or automatic syntax detection.
+      - One physical todo.txt line per capture.
+    owner: Eruhitsuji
+
+open_questions: []

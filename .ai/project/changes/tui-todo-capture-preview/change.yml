@@ -1,0 +1,55 @@
+schema_version: 1
+
+change:
+  id: tui-todo-capture-preview
+  title: Previewed todo.txt TUI capture
+  status: in_review
+  change_type: Feature
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1443
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1447
+  base_commit: 7e71915c0a04885354d3c753424b622de0402f81
+  target_release: next normal maintenance release
+
+scope:
+  in_scope:
+    - Add explicit todo.txt mode to local and Remote TUI creation.
+    - Preview every mapped field and diagnostic before confirmation.
+    - Bind confirmation to exact semantic input and the writable revision.
+    - Preserve existing validation, ID, locking, and atomic-write behavior.
+    - Add keyboard, resize, Unicode, EN/JA, and focused regression coverage.
+  out_of_scope:
+    - Automatic syntax detection, multiline import, and compatibility profiles.
+    - CLI, Web UI, general TUI redesign, storage schema, or synchronization.
+  write_scope:
+    - lifetxt/tui_app.py
+    - lifetxt/tui_backend.py
+    - tests/test_tui_todo_preview.py
+    - tests/test_tui_remote_backend.py
+    - docs/en/cli.md
+    - docs/ja/cli.md
+    - docs/en/quick-capture.md
+    - docs/ja/quick-capture.md
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+    - .ai/project/changes/tui-todo-capture-preview/**
+  forbidden_scope:
+    - .ai/managed/**
+    - TUI-specific todo grammar
+    - CLI or Web redesign
+    - lossy conversion and external synchronization
+  shared_files:
+    - lifetxt/tui_app.py
+    - lifetxt/tui_backend.py
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+
+task_size:
+  size: S
+  split_justification: Preview and confirmed submission are one safety boundary; bulk import remains separate.
+
+human_approvals_required:
+  - Independent TUI implementation, safety, accessibility, and integration review.
+  - Human Merge Authority approval; the implementer must not merge.

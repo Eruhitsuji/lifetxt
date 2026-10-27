@@ -143,13 +143,28 @@ workspace内の重複IDは拒否します。CLIは `ids.auto` に従い、TUI/We
 操作用IDを保証します。設定されたID key/prefixを利用します。
 MCPの設定に応じた出所metadataとdry-run proposalも維持します。
 
+## TUIでの明示的なtodo.txt capture
+
+Quick省略記法ではなくtodo.txtとして入力する場合は`/todo TASK`を使います。TUIは
+共有todo.txt adapterで1行を解決し、書き込み前のPreviewにtitle、status、type、
+priority、日付、project、context、保持するすべてのmetadata field、diagnosticを表示します。
+`Enter`で確定し、`Esc`で取り消します。resize後の小さい画面では上下／page keyでReviewを
+scrollでき、navigation keyで誤って確定されることはありません。
+
+確定時には同じsourceを再解決し、Preview時のwrite fileまたはRemote workspace revisionを
+使います。書込先の変更、mapped IDの重複、不正／複数行入力、古いrevisionは追記前に失敗します。
+ローカル確定は既存のID検証、file lock、atomic compare-and-swap経路を維持し、Remote TUIは
+Preview時の`If-Match` revisionを付けた既存のstructured Web API create経路を使います。
+`/add`と`/a`は従来どおり既定のQuick作成commandです。複数のtodo.txt taskには明示的な
+変換／importを使用してください。
+
 ## 利用可能なsurface
 
 | Surface | 共通Quick入口 | 固有の動作 |
 | --- | --- | --- |
 | CLI | `add`, `quick`, `q`, stdin | 既存の省略記法flag/preset/default |
-| ローカルTUI | `/add`, `/a`, `/related` | 共通resolver。関連contextは未指定fieldを補完 |
-| Remote TUI | `/add`, `/a`, `/related` | revision付きでtextをサーバーへ送り、サーバー側で解決 |
+| ローカルTUI | `/add`, `/a`, `/related`。`/todo`は明示todo.txt | 共通resolver。`/todo`はPreviewと確定が必須 |
+| Remote TUI | `/add`, `/a`, `/related`。`/todo`は明示todo.txt | Preview時revisionを使うstructured createでreview済みmappingを保存 |
 | Web UI | Quick Add、`/capture`、Planner、command `/add`、Focus Quick Add | 共通capture API。`/capture`は明示todo.txt Preview入力にも対応 |
 | Web API | `POST /api/items/capture` | 省略記法または完全record。明示todo syntaxにはPreview token／revisionが必須 |
 | MCP | `capture_item` | 省略記法または完全record。proposalと出所metadataを維持 |

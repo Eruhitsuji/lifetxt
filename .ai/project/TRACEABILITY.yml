@@ -8494,9 +8494,2285 @@ traceability:
       release_or_deployment: null
       notes: >-
         Standard assurance test hygiene fix with no runtime behavior change.
-      statu
-... 157170 bytes omitted ...
-ew tests: ticket-shaped proposal acceptance writes a creation event, non-ticket proposal unaffected, id-less ticket-shaped proposal treated as non-ticket since staging does not auto-generate an id the way `ticket new` does)
+      status: implemented
+
+    - requirement_id: req-stable-resource-warning-gate
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/363
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/386
+      changed_files_or_scope:
+        - .github/workflows/ci.yml
+        - .ai/project/COMMANDS.yml
+      tests_or_evidence:
+        - focused CI job promotes ResourceWarning to an error
+        - YAML parse and 98-test local focused run pass
+      release_or_deployment: null
+      notes: >-
+        Non-blocking regression gate that prevents recurrence in the selected
+        configuration, archive, and safety-foundation test scope.
+      status: implemented
+
+    - requirement_id: req-stable-ast-modernization
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/364
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/386
+      changed_files_or_scope:
+        - lifetxt/safety_foundation.py
+        - tests/test_safety_foundation.py
+      tests_or_evidence:
+        - AST string handling accepts only ast.Constant string values
+        - tests.test_safety_foundation passes
+      release_or_deployment: null
+      notes: >-
+        Standard assurance Python modernization with a focused compatibility
+        test and no supported input contract change.
+      status: implemented
+
+    - requirement_id: req-stable-actions-runtime-refresh
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/365
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/386
+      changed_files_or_scope:
+        - .github/workflows/ci.yml
+      tests_or_evidence:
+        - checkout/setup-python/upload-artifact/github-script action majors refreshed
+        - workflow YAML parses successfully
+      release_or_deployment: null
+      notes: >-
+        CI maintenance only; runtime package and support surface are unchanged.
+      status: implemented
+
+    - requirement_id: req-stable-oversized-file-audit
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/366
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/386
+      changed_files_or_scope:
+        - config/maintainability/oversized-file-classification-v1.json
+        - docs/en/oversized-file-decomposition-audit.md
+      tests_or_evidence:
+        - current byte/line classification covers source and test hotspots
+        - decomposition owners and follow-up issues are recorded
+        - JSON parses and git diff --check passes
+      release_or_deployment: null
+      notes: >-
+        Informational maintainability inventory; no source movement or runtime
+        behavior change is included.
+      status: implemented
+
+    - requirement_id: req-stable-web-mcp-boundary-audit
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/368
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/386
+      changed_files_or_scope:
+        - docs/en/web-mcp-service-boundary-audit.md
+      tests_or_evidence:
+        - every mcp.py webapp import is classified
+        - protocol-neutral ownership and compatibility rules are recorded
+        - follow-up #385 defines the first extraction seam
+      release_or_deployment: null
+      notes: >-
+        Standard assurance architecture inventory; no Web/MCP route, schema, or
+        write behavior is changed by this task.
+      status: implemented
+
+    - requirement_id: req-stable-oversized-file-report
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/375
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/386
+      changed_files_or_scope:
+        - scripts/report_oversized_files.py
+        - .ai/project/COMMANDS.yml
+        - docs/en/oversized-file-report.md
+        - docs/en/oversized-file-report.json
+      tests_or_evidence:
+        - report recomputes current bytes/lines and emits deltas
+        - report is informational and never fails solely on size
+        - Ruff and JSON/YAML checks pass
+      release_or_deployment: null
+      notes: >-
+        Standard assurance maintenance report; thresholds remain review inputs,
+        not a CI size gate.
+      status: implemented
+
+    - requirement_id: req-stable-release-security-review
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/361
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/386
+      changed_files_or_scope:
+        - docs/en/release-security-review.md
+      tests_or_evidence:
+        - bounded review covers release policy, dependencies, artifacts, remote/MCP, and write safety
+        - residual risks and follow-up issues are explicitly recorded
+        - limitations state that this is not a penetration test
+      release_or_deployment: null
+      notes: >-
+        High assurance review record. It identifies no new release-blocking
+        finding in the bounded repository review while retaining the need for
+        dependency refresh and real-environment evidence before release.
+      status: implemented
+
+    - requirement_id: req-stable-mcp-decomposition-audit
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/369
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/391
+      changed_files_or_scope:
+        - docs/en/mcp-decomposition-audit.md
+      tests_or_evidence:
+        - MCP responsibility clusters and compatibility risks are inventoried
+        - #387 selects the first read-resource extraction seam
+      release_or_deployment: null
+      notes: >-
+        Investigation only; protocol behavior and MCP write scope are unchanged.
+      status: implemented
+
+    - requirement_id: req-stable-tui-decomposition-audit
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/370
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/391
+      changed_files_or_scope:
+        - docs/en/tui-decomposition-audit.md
+      tests_or_evidence:
+        - pure layout, state, rendering, and event-loop responsibilities are classified
+        - #390 selects the first pure helper extraction seam
+      release_or_deployment: null
+      notes: >-
+        Investigation only; Unicode/ASCII and terminal behavior are unchanged.
+      status: implemented
+
+    - requirement_id: req-stable-test-suite-decomposition-audit
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/372
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/391
+      changed_files_or_scope:
+        - docs/en/test-suite-decomposition-audit.md
+      tests_or_evidence:
+        - test responsibilities and existing focused module overlap are inventoried
+        - #388 selects the archive/config first extraction cluster
+      release_or_deployment: null
+      notes: >-
+        Investigation only; discovery and test semantics remain unchanged.
+      status: implemented
+
+    - requirement_id: req-stable-server-update-decomposition-audit
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/374
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/391
+      changed_files_or_scope:
+        - docs/en/server-update-decomposition-audit.md
+      tests_or_evidence:
+        - update phases, safety coupling, and test ownership are inventoried
+        - #389 selects pure diff/risk-review parsing as the first seam
+      release_or_deployment: null
+      notes: >-
+        Investigation only; update safety, diagnostics, and approval behavior are unchanged.
+      status: implemented
+
+    - requirement_id: req-stable-cli-completion-boundary
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/384
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/391
+      changed_files_or_scope:
+        - lifetxt/cli.py
+        - lifetxt/completion.py
+      tests_or_evidence:
+        - completion parser registration is delegated to completion.py
+        - completion surfaces and parser-focused tests pass
+        - Ruff checks pass for changed Python files
+      release_or_deployment: null
+      notes: >-
+        Standard assurance XS/S extraction preserving command names, flags,
+        output, and completion behavior.
+      status: implemented
+
+    - requirement_id: req-stable-web-asset-resource-contract
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/367
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/400
+      changed_files_or_scope:
+        - docs/en/web-asset-resource-migration.md
+        - lifetxt/web_assets.py
+        - lifetxt/web_assets.html
+        - pyproject.toml
+        - tests/test_web_assets.py
+      tests_or_evidence:
+        - packaged resource bytes match the pristine imported HTML value
+        - webapp compatibility export and surface runtime rebinding remain covered
+        - built wheel contains lifetxt/web_assets.html with matching bytes
+      release_or_deployment: null
+      notes: >-
+        The large literal is extracted into a packaged resource while
+        webapp.HTML_PAGE remains the compatibility/rebinding surface.
+      status: implemented
+
+    - requirement_id: req-stable-mcp-resource-boundary
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/387
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/392
+      changed_files_or_scope:
+        - lifetxt/mcp.py
+        - lifetxt/mcp_resources.py
+      tests_or_evidence:
+        - resource list/read validation moved behind a compatibility wrapper
+        - focused MCP read contract remains covered
+      release_or_deployment: null
+      notes: >-
+        Standard assurance XS/S extraction; protocol negotiation, schemas, and
+        write behavior are unchanged.
+      status: implemented
+
+    - requirement_id: req-stable-tui-layout-boundary
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/390
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/392
+      changed_files_or_scope:
+        - lifetxt/tui_app.py
+        - lifetxt/tui_layout.py
+      tests_or_evidence:
+        - pure display-width, fitting, padding, span, and frame helpers extracted
+        - focused TUI/completion compatibility tests pass
+      release_or_deployment: null
+      notes: >-
+        Standard assurance XS/S extraction; Unicode/ASCII and terminal behavior
+        remain unchanged.
+      status: implemented
+
+    - requirement_id: req-stable-test-extraction-preparation
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/388
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/392
+      changed_files_or_scope:
+        - docs/en/test-archive-config-extraction.md
+      tests_or_evidence:
+        - first archive/config cluster and discovery/count preservation rules recorded
+      release_or_deployment: null
+      notes: >-
+        Preparation record; no tests are deleted or moved by this batch.
+      status: implemented
+
+    - requirement_id: req-stable-server-review-extraction-preparation
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/389
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/392
+      changed_files_or_scope:
+        - docs/en/server-update-review-extraction.md
+      tests_or_evidence:
+        - pure diff/risk review seam and safety compatibility requirements recorded
+      release_or_deployment: null
+      notes: >-
+        Preparation record; update orchestration and service safety remain in
+        server_update.py.
+      status: implemented
+
+    - requirement_id: req-stable-web-read-service-extraction
+      capability_id: cap-stable-maintainability-followthrough
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/385
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/394
+      changed_files_or_scope:
+        - lifetxt/webapp.py
+        - lifetxt/web_read_service.py
+      tests_or_evidence:
+        - tests.test_surface_runtime
+        - tests.test_completion_surfaces
+        - tests.test_lifetxt.LifeTxtParserTests
+      release_or_deployment: null
+      notes: >-
+        Compatibility wrappers retain the existing Web helper surface while
+        pure read logic is independently importable.
+      status: implemented
+
+    - requirement_id: req-stable-web-route-decomposition-audit
+      capability_id: cap-stable-maintainability-followthrough
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/371
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/394
+      changed_files_or_scope:
+        - docs/en/web-route-decomposition-audit.md
+      tests_or_evidence:
+        - route inventory and first extraction issue #393
+      release_or_deployment: null
+      notes: >-
+        Audit-only slice; no route behavior changes.
+      status: implemented
+
+    - requirement_id: req-stable-server-review-helper-extraction
+      capability_id: cap-stable-maintainability-followthrough
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/389
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/394
+      changed_files_or_scope:
+        - lifetxt/server_update.py
+        - lifetxt/server_update_review.py
+      tests_or_evidence:
+        - tests.test_server_update.DiffSummaryParsingTests
+        - tests.test_server_update.ClassifyRiskTests
+        - tests.test_server_update.ReviewBlockFormatTests
+      release_or_deployment: null
+      notes: >-
+        Pure review helpers extracted without changing update orchestration.
+      status: implemented
+
+    - requirement_id: req-stable-cui-test-decomposition-audit
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/373
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/396
+      changed_files_or_scope:
+        - docs/en/cui-test-decomposition-audit.md
+      tests_or_evidence:
+        - CUI test responsibility inventory
+        - follow-up issue #395
+      release_or_deployment: null
+      notes: >-
+        Investigation record; no tests moved in this batch.
+      status: implemented
+
+    - requirement_id: req-stable-web-revision-observe-verification
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/288
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/396
+      changed_files_or_scope:
+        - docs/en/stable-verification-288-web-revision-observe.md
+      tests_or_evidence:
+        - redacted external observe-mode procedure and evidence format
+      release_or_deployment: null
+      notes: Real deployment evidence remains outstanding.
+      status: implemented
+
+    - requirement_id: req-stable-web-client-revision-verification
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/289
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/396
+      changed_files_or_scope:
+        - docs/en/stable-verification-289-web-client-revisions.md
+      tests_or_evidence:
+        - client inventory and redacted precondition evidence format
+      release_or_deployment: null
+      notes: Supported client execution remains outstanding.
+      status: implemented
+
+    - requirement_id: req-stable-zero-legacy-write-window
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/290
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/396
+      changed_files_or_scope:
+        - docs/en/stable-verification-290-zero-legacy-window.md
+      tests_or_evidence:
+        - observation-window pass/reset/blocked gate definition
+      release_or_deployment: null
+      notes: No qualifying external window is claimed.
+      status: implemented
+
+    - requirement_id: req-stable-required-revision-cutover
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/291
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/396
+      changed_files_or_scope:
+        - docs/en/stable-verification-291-required-revision-cutover.md
+      tests_or_evidence:
+        - strict-mode pre-cutover and rollback checklist
+      release_or_deployment: null
+      notes: No production cutover is claimed.
+      status: implemented
+
+    - requirement_id: req-stable-web-revision-lifecycle
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/292
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/396
+      changed_files_or_scope:
+        - docs/en/stable-verification-292-revision-lifecycle.md
+      tests_or_evidence:
+        - upgrade/rollback scenario matrix
+      release_or_deployment: null
+      notes: External lifecycle results remain outstanding.
+      status: implemented
+
+    - requirement_id: req-stable-attachment-restart-recovery
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/297
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/396
+      changed_files_or_scope:
+        - docs/en/stable-verification-297-attachment-restart.md
+      tests_or_evidence:
+        - interruption/chunk/retry observation matrix
+      release_or_deployment: null
+      notes: Real remote-client execution remains outstanding.
+      status: implemented
+
+    - requirement_id: req-stable-attachment-replay-recovery
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/298
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/396
+      changed_files_or_scope:
+        - docs/en/stable-verification-298-attachment-replay.md
+      tests_or_evidence:
+        - crash/replay/compensation observation matrix
+      release_or_deployment: null
+      notes: Real remote-client execution remains outstanding.
+      status: implemented
+
+    - requirement_id: req-stable-attachment-bounds
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/299
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/396
+      changed_files_or_scope:
+        - docs/en/stable-verification-299-attachment-bounds.md
+      tests_or_evidence:
+        - authorization/retention/size-bound evidence format
+      release_or_deployment: null
+      notes: Large-file and real-client coverage remains outstanding.
+      status: implemented
+
+    - requirement_id: req-stable-filesystem-recovery-support
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/304
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/396
+      changed_files_or_scope:
+        - docs/en/stable-verification-304-filesystem-support.md
+      tests_or_evidence:
+        - filesystem environment and interruption matrix
+      release_or_deployment: null
+      notes: No filesystem support claim is made before real testing.
+      status: implemented
+
+    - requirement_id: req-stable-windows-terminal-tui-verification
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/312
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/396
+      changed_files_or_scope:
+        - docs/en/stable-verification-312-windows-terminals.md
+      tests_or_evidence:
+        - WSL/Windows Terminal scenario and redaction rules
+      release_or_deployment: null
+      notes: No WSL or native Terminal result is claimed.
+      status: implemented
+
+    - requirement_id: req-stable-web-analytics-route-extraction
+      capability_id: cap-stable-maintainability-followthrough
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/393
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/397
+      changed_files_or_scope:
+        - lifetxt/web_routes_analytics.py
+        - lifetxt/webapp.py
+        - tests/test_web_routes_analytics.py
+      tests_or_evidence:
+        - tests.test_web_routes_analytics
+        - tests.test_lifetxt.LifeTxtWebApiTests
+        - tests.test_surface_runtime
+        - tests.test_web_assets
+      release_or_deployment: null
+      notes: >-
+        Six read-only analytics routes moved behind a registration boundary;
+        create_app, route contracts, middleware, and dependency-free imports
+        remain stable.
+      status: implemented
+
+    - requirement_id: req-stable-cui-completion-test-extraction
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/395
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/398
+      changed_files_or_scope:
+        - tests/test_completion_surfaces.py
+        - tests/test_cui_extensions.py
+      tests_or_evidence:
+        - tests.test_completion_surfaces -> 41 tests passed
+        - tests.test_cui_extensions -> 141 tests passed
+        - combined discovery -> 182 tests passed
+      release_or_deployment: null
+      notes: >-
+        CompletionTests and CliParserConsistencyTests moved without assertion
+        or production-code changes; shared helper ownership moved with them.
+      status: implemented
+
+    - requirement_id: req-stable-archive-test-extraction
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/388
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/399
+      changed_files_or_scope:
+        - tests/test_archive_cli.py
+        - tests/test_lifetxt.py
+      tests_or_evidence:
+        - tests.test_archive_cli -> 7 tests passed
+        - tests.test_lifetxt.LifeTxtDirectiveTests -> 9 tests passed
+        - source suite discovery count reduced from 634 to 627; destination owns 7 archive tests
+      release_or_deployment: null
+      notes: >-
+        Archive CLI cluster moved with shared run_cli helper retained in the
+        aggregate test module; config cluster remains for a follow-up slice.
+      status: implemented
+
+    - requirement_id: req-stable-parser-format-metadata
+      capability_id: cap-stable-diagnostics
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/319
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/401
+      changed_files_or_scope:
+        - lifetxt/parser.py
+        - lifetxt/safety_foundation.py
+        - tests/test_parser_format_metadata.py
+      tests_or_evidence:
+        - current, unversioned, and unsupported format states are exposed by ParseResult
+        - existing tuple-unpacking parser callers remain compatible
+        - focused parser, safety foundation, runtime, and diagnostic tests pass
+      release_or_deployment: null
+      notes: >-
+        Bounded XS/S slice of #319. Parser metadata is authoritative for the
+        declared format state; mutation refusal and surface error behavior remain
+        on the existing safety/runtime contract.
+      status: implemented
+
+    - requirement_id: req-stable-config-test-extraction
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/339
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/388
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/400
+      changed_files_or_scope:
+        - tests/test_config_cli.py
+        - tests/test_lifetxt.py
+      tests_or_evidence:
+        - tests.test_config_cli -> 9 tests passed
+        - tests.test_lifetxt -> 618 tests remain discovered after the move
+        - aggregate plus destination discovery preserves all 627 tests
+      release_or_deployment: null
+      notes: >-
+        Configuration CLI cluster moved with shared run_cli helper retained in
+        the aggregate test module; assertion bodies and test names are unchanged.
+      status: implemented
+
+    - requirement_id: req-stable-format-migration-contract
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/320
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/402
+      changed_files_or_scope:
+        - lifetxt/extra_cli.py
+        - lifetxt/extra_safety.py
+        - lifetxt/entrypoint.py
+        - tests/test_safety_cli.py
+        - docs/en/format-migration.md
+      tests_or_evidence:
+        - unversioned to Format 1.0 preview/write and idempotent no-op are covered
+        - unsupported source versions are rejected without mutation
+        - downgrade inspection is explicitly non-writing until a loss matrix exists
+      release_or_deployment: null
+      notes: >-
+        Bounded migration slice. Automatic downgrade and legacy-version
+        transformations remain intentionally unsupported until separately specified.
+      status: implemented
+
+    - requirement_id: req-stable-format-compatibility-matrix
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/403
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/410
+      changed_files_or_scope:
+        - docs/en/format-compatibility-matrix.md
+        - docs/en/format-migration.md
+      tests_or_evidence:
+        - matrix explicitly classifies unversioned, current, legacy, future, and downgrade paths
+        - stable loss category names and examples are defined
+        - refusal-before-write and maintainer approval gates are stated
+      release_or_deployment: null
+      notes: >-
+        Decision/documentation slice. No legacy transformation or writable
+        downgrade is introduced.
+      status: implemented
+
+    - requirement_id: req-stable-release-notes-boundary
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/325
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/412
+      changed_files_or_scope:
+        - docs/en/stable-release-notes-draft.md
+        - docs/ja/stable-release-notes-draft.md
+      tests_or_evidence:
+        - stable boundary and known limitations are documented without selecting a release version
+        - installation smoke uses clean release artifacts rather than editable checkouts
+        - English and Japanese release-note boundaries are aligned
+      release_or_deployment: null
+      notes: >-
+        Version/tag selection and final publication remain release-authority
+        decisions; this is a pre-release documentation slice.
+      status: partial
+
+    - requirement_id: req-stable-canonical-corpus-freeze
+      capability_id: cap-stable-maintainability
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/321
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/402
+      changed_files_or_scope:
+        - tests/golden/policy-v1.json
+        - lifetxt/release_policy.py
+        - tests/test_roundtrip_golden.py
+        - docs/en/release-safety-foundations.md
+      tests_or_evidence:
+        - golden policy pins LIFETXT_CANON_V1
+        - canonical corpus outputs are checked for idempotency
+        - roundtrip, release policy, and safety foundation tests pass
+      release_or_deployment: null
+      notes: >-
+        Canonical output changes require both a corpus-version bump and an
+        explicit migration note.
+      status: implemented
+
+    - requirement_id: req-stable-stable-contract-matrix
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/323
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/402
+      changed_files_or_scope:
+        - docs/en/stable-contract-matrix.md
+      tests_or_evidence:
+        - stable machine-readable contract families, schema evidence, and explicit exceptions are inventoried
+        - release schema bundle and policy validation pass
+      release_or_deployment: null
+      notes: >-
+        Matrix establishes the support boundary; route-by-route Web and MCP
+        envelope validation remains a follow-up where marked partial.
+      status: implemented
+
+    - requirement_id: req-stable-diagnostic-matrix
+      capability_id: cap-stable-diagnostics
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/324
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/402
+      changed_files_or_scope:
+        - docs/en/stable-diagnostics-matrix.md
+      tests_or_evidence:
+        - parser, canonical policy, mutation, configuration, and remote diagnostic boundaries are classified
+        - remaining message-only and real-environment gaps are explicitly recorded
+      release_or_deployment: null
+      notes: >-
+        Documentation slice only; no unsupported remote or release evidence is
+        claimed by the matrix.
+      status: implemented
+
+    - requirement_id: req-stable-parser-end-span
+      capability_id: cap-stable-diagnostics
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/405
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/406
+      changed_files_or_scope:
+        - lifetxt/model.py
+        - lifetxt/parser.py
+        - lifetxt/safety_foundation.py
+        - tests/test_diagnostic_contract.py
+        - tests/test_safety_cli.py
+      tests_or_evidence:
+        - E018 unclosed quoted string reports deterministic start/end span
+        - format check JSON preserves the parser end span
+        - shared diagnostic output preserves optional span fields
+      release_or_deployment: null
+      notes: >-
+        Bounded XS/S implementation for one quoted-string syntax family;
+        unrelated diagnostic families retain their existing span behavior.
+      status: implemented
+
+    - requirement_id: req-stable-parser-structural-spans
+      capability_id: cap-stable-diagnostics
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/405
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/411
+      changed_files_or_scope:
+        - lifetxt/parser.py
+        - tests/test_diagnostic_contract.py
+      tests_or_evidence:
+        - E019, E020, E021, and E022 report deterministic end spans
+        - shared diagnostic output preserves structural parser spans
+        - focused diagnostic and safety CLI tests pass
+      release_or_deployment: null
+      notes: >-
+        Bounded parser-only extension. Validator, remote, and unrelated
+        message-only diagnostic families remain outside this slice.
+      status: partial
+
+    - requirement_id: req-multi-file-link-metadata-missing-source-integrity
+      capability_id: cap-graph-link-foundation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/322
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/421
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/423
+      changed_files_or_scope:
+        - tests/test_links.py
+        - tests/test_paths.py
+        - docs/en/cli.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests/test_links.py CrossFileLinkIntegrityTests (4 tests) and TicketEventCrossFileResolutionTests (1 test)
+        - tests/test_paths.py MultiFileSourceIntegrityTests (4 tests)
+        - python -m unittest tests.test_links tests.test_paths -> Ran 53 tests, OK
+        - 'live: icacls /deny on a real Windows file reproduces the permission-denied refusal the automated test encodes'
+        - 'live: lifetxt links against two real files with a cross-file record:ticket_event parent: reference resolves with status ok, matching the direct (non-archive) test'
+      release_or_deployment: null
+      notes: >-
+        #421 is the follow-up filed when #322 was decomposed (#415 input
+        order, #416 workspace ID uniqueness, and #417 explicit write target
+        shipped separately; see #322's closing comment). Every one of #421's
+        five acceptance criteria was found, by live verification against
+        real multi-file fixtures before any code was written, to already be
+        correct existing behavior (cross-file parent:/depends_on: resolution
+        and cycle detection via the merged item list lifetxt/cli.py already
+        builds before lifetxt/links.py runs; item.source preservation
+        through link_records; missing/permission-denied/symlinked-input
+        handling via lifetxt/entrypoint.py's top-level OSError catch). No
+        production code changed in lifetxt/links.py, lifetxt/paths.py,
+        lifetxt/cli.py, or lifetxt/entrypoint.py -- this closes a test-
+        coverage and documentation gap, not a behavior gap. The
+        missing/permission-denied policy, previously correct but unstated,
+        is now documented in docs/en/cli.md. A pre-existing, unrelated
+        docs/ja/cli.md drift (missing the #415/#418 paragraphs entirely)
+        was found while documenting this and filed separately as #422
+        rather than folded in here.
+      status: implemented
+
+    - requirement_id: req-cli-docs-ja-input-paths-parity
+      capability_id: cap-graph-link-foundation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/322
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/422
+      pull_request: null
+      changed_files_or_scope:
+        - docs/ja/cli.md
+      tests_or_evidence:
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - git diff --check docs/ja/cli.md -> no whitespace errors
+        - code-fence count in docs/ja/cli.md remains even (balanced) after the edit
+        - python -m unittest tests.test_release_policy tests.test_surface_runtime.TuiDocumentationDriftTests -> pass
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2414 tests, OK (skipped=5)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+      release_or_deployment: null
+      notes: >-
+        Documentation-only translation fix. Translates the three paragraphs
+        docs/en/cli.md's "2.1 Input Paths" section carried that
+        docs/ja/cli.md's "2.1 入力 path" lacked entirely (deterministic
+        multi-file expansion order from #415/#418; the one-logical-input-set
+        cross-file reference and cycle-detection rule; the missing/
+        permission-denied/symlinked-input policy from #421). No English
+        content changed. Terminology matches this document's existing
+        mixed English/Japanese technical-term style (e.g. "明示的に失敗",
+        "非ゼロで終了", "黙って" for "silently", keeping cycle/symlink/OS
+        error as English/loanwords where the surrounding document already
+        does). Per #422's own scope, a broader audit of the rest of
+        docs/ja/cli.md against docs/en/cli.md for unrelated drift was not
+        attempted here.
+      status: implemented
+
+    - requirement_id: req-stable-external-verification-automation
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/425
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/426
+      changed_files_or_scope:
+        - scripts/run_external_verification.py
+        - tests/test_external_verification.py
+        - docs/en/external-environment-verification.md
+        - .ai/project/COMMANDS.yml
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+        - .ai/project/changes/issue-425-external-verification-automation/
+        - todo.md
+      tests_or_evidence:
+        - tests.test_external_verification covers platform classification, redaction, command capture, aggregation, and source package-version identity
+        - disposable local git fixture writes one sanitized JSON bundle while preserving manual_required/blocked external scenarios
+        - GitHub Actions CI on PR #426
+      release_or_deployment: null
+      notes: >-
+        High-assurance release-evidence tooling only. The collector reuses
+        scripts/run_ci_like.py and does not satisfy interactive, browser,
+        Remote, SMTP, filesystem, deployment, release, or rollback gates by
+        inference.
+      status: implemented
+
+    - requirement_id: req-release-gate-console-encoding-safety
+      capability_id: cap-supported-platform-install
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/429
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/431
+      changed_files_or_scope:
+        - lifetxt/atomic.py
+        - lifetxt/cli.py
+        - lifetxt/extra_common.py
+        - tests/test_mutation.py
+        - tests/test_safety_cli.py
+      tests_or_evidence:
+        - tests/test_mutation.py WriteConsoleTextTests (4 tests)
+        - tests/test_safety_cli.py ConsoleEncodingSafetyTests (2 tests)
+        - 'git stash confirmed both ConsoleEncodingSafetyTests cases reproduce the original UnicodeEncodeError crash against the pre-fix code'
+        - python -m unittest tests.test_mutation tests.test_safety_cli -> pass
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2426 tests, OK (skipped=5)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check -> clean
+      release_or_deployment: null
+      notes: >-
+        Real Windows external verification (#429's own report, commit
+        ae9d8ee) hit this exact crash after the full unit suite and release
+        manifest already succeeded: `lifetxt safety release-gate`'s
+        machine-readable output embeds ensure_ascii=False translation-
+        coverage strings, and a bare sys.stdout.write crashed on a cp932
+        console encountering U+21B5. Fixed at the shared write boundary
+        (lifetxt.atomic.write_console_text, reused by both
+        extra_common.py::_write_output and cli.py::write_text) rather than
+        only the one reported command, since cli.py::write_text (used by
+        check/links/etc.) had the byte-identical unguarded call. Does not
+        modify scripts/check_release_policy.py, which already had its own
+        working fix from #95. Regenerating a fresh Windows external-
+        verification bundle after this fix (#429's last acceptance
+        criterion) is external-environment work outside this sandbox and
+        remains open.
+      status: implemented
+
+    - requirement_id: req-external-verification-redaction-hardening
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/430
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/434
+      changed_files_or_scope:
+        - scripts/run_external_verification.py
+        - tests/test_external_verification.py
+      tests_or_evidence:
+        - tests/test_external_verification.py RedactionHardeningTests (3 tests)
+        - tests/test_external_verification.py WriteBundleSafetyNetTests (4 tests)
+        - 'git stash confirmed all 5 new tests reproduce the original defects against the pre-fix code'
+        - python -m unittest tests.test_external_verification -> Ran 13 tests, OK
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2427 tests, 2426 OK plus 1 pre-existing unrelated failure (separately tracked/fixed as #432, not present on this branch)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+      release_or_deployment: null
+      notes: >-
+        Real Windows/WSL external-verification bundles collected under
+        #425/#426 exposed two sanitizer defects before this fix: a Windows
+        account-name path segment survived redaction (case-sensitive
+        str.replace() missed a differently-cased path emitted by a child
+        tool such as pip), and temp paths were repeatedly normalized as
+        `<temp><temp>...` (56 occurrences in the supplied bundle), showing
+        redaction was not idempotent/canonical. Root-caused by empirical
+        reproduction rather than by guessing: (1) case-sensitive exact-match
+        replacement, and (2) a fixed repo/home/temp processing order that let
+        the shorter `home` path consume `temp`'s shared prefix when `%TEMP%`
+        is nested inside `%USERPROFILE%` (the normal Windows layout), so
+        `temp`'s own marker never had a chance to apply. Rewritten as one
+        case-insensitive, longest-candidate-first, single-pass regex
+        substitution, plus a persistence-time rescan-and-refuse safety net in
+        `write_bundle()` as explicit defense in depth. The literal reported
+        `<temp><temp>` byte sequence could not be reproduced without the
+        original bundle (never pasted, per #430's own security note); the
+        fix addresses the underlying ordering/case defect class it points at
+        and adds the persistence-time safety net regardless. Regenerating
+        fresh Windows/WSL bundles after this fix (#430's own last acceptance
+        criterion) is external-environment work outside this sandbox and
+        remains open.
+      status: implemented
+
+    - requirement_id: req-verification-python-bootstrap
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/435
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/436
+      changed_files_or_scope:
+        - scripts/verification_python_bootstrap.py
+        - tests/test_verification_python_bootstrap.py
+        - scripts/run_external_verification.py
+        - tests/test_external_verification.py
+        - scripts/verify-external.ps1
+        - scripts/verify-external.sh
+        - docs/en/external-environment-verification.md
+      tests_or_evidence:
+        - tests/test_verification_python_bootstrap.py (18 tests: host_key normalization, existing-interpreter discovery priority and unsupported-only rejection, Windows py-launcher probing, managed-Python provision including verified download+extract/reuse/checksum-mismatch-rejection-before-extraction/unsupported-host/download-failure, venv creation/reuse, bootstrap-path redaction under the existing <repo> marker)
+        - tests/test_external_verification.py: two new tests asserting a venv-creation failure degrades to a blocked release-profile check rather than crashing the collector, and that a bootstrap failure blocks the release profile without a fabricated pass
+        - python -m unittest tests.test_verification_python_bootstrap tests.test_external_verification -> Ran 31 tests, OK
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2453 tests, OK (skipped=5)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff check / ruff format --check on every new and changed file -> clean (pre-existing unrelated drift confirmed present on main already, not introduced by this change)
+        - scripts/validate_release_docs.py passes against the updated docs/en/external-environment-verification.md
+        - 'live end-to-end on this Windows host: gh api resolved astral-sh/python-build-standalone''s real latest release tag (20260807); provision_managed_python() itself (not raw curl/tar) downloaded the real Windows 3.12.13 install_only asset, confirmed its SHA256 matched the manifest, extracted it, and ran the resulting python.exe --version -> Python 3.12.13; a second call reused the install (reused: true) instead of re-downloading'
+        - 'live on WSL: find_existing_interpreter() discovered a real python3.10 on PATH; create_verification_venv() surfaced a real CalledProcessError from this host''s missing python3-venv ensurepip support; the wrapped try/except in build_bundle() correctly degraded to a blocked release-profile check with the real redacted error message instead of crashing, and the collector still wrote valid evidence JSON (exit=0)'
+      release_or_deployment: null
+      notes: >-
+        Generalizes #429's finding: the collector's release-profile invocation
+        always used sys.executable, so a host whose only available Python was
+        not one of the stable-release matrix's three supported versions
+        (3.10/3.11/3.12) could not run the flow at all, and a venv does not fix
+        this since it inherits its creator's version. scripts/verification_python_bootstrap.py
+        is pure stdlib (no new runtime dependency) since it must run under any
+        host Python, including unsupported ones, to find or provision a
+        supported one. It prefers an already-installed supported interpreter
+        (search order 3.12 -> 3.11 -> 3.10, checking the *reported* version
+        rather than trusting the executable name) and otherwise provisions a
+        verification-only interpreter from a pinned, SHA256-verified
+        python-build-standalone release into .cache/lifetxt-verify-python/ --
+        checksum verification happens strictly before any archive extraction,
+        and a mismatch is rejected without extracting anything. No new
+        redaction category was needed: .cache/ lives inside repo_root, which
+        the existing <repo> marker from #430 already covers, verified by a
+        dedicated regression test rather than assumed. Two new one-command
+        entry scripts (scripts/verify-external.ps1, scripts/verify-external.sh)
+        find any Python 3 already on the host to hand off to the collector,
+        which then bootstraps a supported interpreter itself; a host with
+        literally no Python 3 remains an explicit blocked/manual case.
+        Escalated from the issue's preferred S size to M, per the issue's own
+        explicit allowance, given the genuine cross-platform download/verify/
+        extract scope; justification recorded here and in the PR rather than
+        forced smaller. Three real defects were found and fixed during live
+        (non-mocked) testing rather than by inspection alone:
+        _managed_python_executable() assumed a flat archive layout instead of
+        python-build-standalone's python/ wrapper directory (which had also
+        broken the reuse check, causing a re-download on every call); two test
+        assertions checked Path.exists() after their own
+        tempfile.TemporaryDirectory() context had already deleted the
+        directory (always-false tautologies); and an uncaught
+        subprocess.CalledProcessError from venv creation on a real
+        ensurepip-less host would have crashed the entire collector before any
+        evidence was written, fixed by wrapping that call site in build_bundle()
+        with a try/except that degrades to a blocked check, matching this
+        capability's established graceful-degradation design. Real
+        re-verification on native Linux and macOS after merge remains
+        external-environment work outside this sandbox and is recorded as
+        open, matching the pattern already established for #429/#430/#432.
+      status: implemented
+
+    - requirement_id: req-external-verification-timeout-resilience
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/437
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/440
+      changed_files_or_scope:
+        - scripts/run_external_verification.py
+        - tests/test_external_verification.py
+        - docs/en/external-environment-verification.md
+      tests_or_evidence:
+        - "tests/test_external_verification.py: run_command() records a real subprocess timeout as status \"timeout\" (never \"failed\"/\"passed\"), with timeout_seconds and retained partial stdout; bundle_exit_code() fails the run on a release-profile or git-identity timeout exactly like a failure; the default release_timeout has real headroom (>= 2x) over the highest confirmed real-host duration; --release-timeout/--probe-timeout parse and override independently; a bash-gated end-to-end test invokes scripts/verify-external.sh for real and asserts the printed summary and evidence bundle reflect the overridden --release-timeout"
+        - python -m unittest tests.test_external_verification -> Ran 24 tests, OK
+        - "confirmed via git stash (production code only, tests kept) that 5 of the new/changed tests fail against the pre-#437 code, then pass once the fix is restored"
+        - "live end-to-end on this Windows host: run_command() against a real slow subprocess with a 2s timeout recorded status=timeout, exit_code=null, timeout_seconds=2, and retained the real partial stdout the process had already printed"
+        - "live: real .\\scripts\\verify-external.ps1 --release-timeout 8765 --skip-release run printed release_timeout=8765 and wrote a real evidence bundle; real ./scripts/verify-external.sh with --release-timeout 4321 --skip-release did the same over a real bash subprocess, proving wrapper argv forwarding without needing to invoke the internal Python script directly"
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2462 tests, OK (skipped=5)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on scripts/run_external_verification.py and tests/test_external_verification.py -> clean (pre-existing unrelated drift confirmed present on main already, not introduced by this change)
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true} against the updated docs/en/external-environment-verification.md'
+      release_or_deployment: null
+      notes: >-
+        Real supported-host runs at commit b57aa84 (#435's own merge) showed
+        the fixed 7200-second release-profile timeout was too tight: Windows
+        completed in ~5316s, WSL in ~4959s, and native Linux/macOS both
+        reached the full test run but were cut off by the collector itself at
+        the boundary with no compatibility failure observed before the
+        cutoff -- the timeout was stopping the run, not the run failing.
+        Fixed by raising the default to 14400s (roughly 2.7x headroom over the
+        highest confirmed real duration) and by making a timeout a distinct,
+        unambiguous result: run_command() records status "timeout" (never
+        "failed"/"passed") with an explicit timeout_seconds field and
+        retained partial stdout/stderr; bundle_exit_code() fails the
+        collector's exit code on a release-profile or git-identity timeout
+        exactly like it already did for "failed". The independent, much
+        shorter --probe-timeout (default 30s) is unchanged.
+        verify-external.ps1/verify-external.sh already forwarded all
+        arguments unconditionally, so no wrapper-script code change was
+        needed for --release-timeout to reach them -- verified live on both
+        Windows (PowerShell) and via a real bash-gated automated test rather
+        than assumed from reading the forwarding code alone. Real Linux/macOS
+        reruns beyond the previous 7200s boundary, per the issue's own
+        acceptance criterion, remain external-environment work outside this
+        sandbox and are recorded as open.
+      status: implemented
+
+    - requirement_id: req-external-verification-temp-redaction-canonicalization
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/438
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/441
+      changed_files_or_scope:
+        - scripts/run_external_verification.py
+        - tests/test_external_verification.py
+      tests_or_evidence:
+        - "reproduced the exact <temp><temp>... symptom with a synthetic path against the pre-#438 code: a temp root recurring as a substring immediately next to itself (e.g. /tmp/tmp/subdir, matching Python tempfile.mkdtemp()'s own default \"tmp\" prefix convention) made re.sub's left-to-right non-overlapping match scan replace two adjacent occurrences independently with no separator between the two markers"
+        - "reproduced the macOS /private<temp> malformation with a synthetic path: tempfile.gettempdir()'s unresolved /var/folders/... value never textually matched a tool-reported /private/var/folders/... resolved form"
+        - "reproduced the Windows/WSL <redacted-user>-only-match residue with a synthetic path: a WSL HOME (POSIX) never matches a captured /mnt/c/Users/... or C:\\Users\\... path, so only the generic username pattern fires, leaving Users/<redacted-user>/AppData/Local/Temp structure instead of one <temp> marker"
+        - "tests/test_external_verification.py TempPathCanonicalizationTests (10 tests, synthetic paths only, no real account names): adjacent-raw-temp collapse (double and triple), re-sanitizing already-canonical/nested marker text stays one root, macOS /private/var and /private/tmp alias canonicalization, Windows backslash and WSL /mnt/c username-only-match structural collapse, repeated recursive redact() passes stay stable, overlap with genuinely distinct repo/home paths is preserved while a genuinely repeated repo occurrence still collapses, and the persistence-time leak-scan safety net (#430) now also covers the macOS alias variant"
+        - python -m unittest tests.test_external_verification.TempPathCanonicalizationTests -> Ran 10 tests, OK
+        - "confirmed via git stash (production code only, tests kept) that all 10 new tests fail against the pre-#438 code with the exact malformed output described in the issue, then pass once the fix is restored"
+        - python -m unittest tests.test_external_verification -> Ran 34 tests, OK
+        - "live: a real ./scripts/verify-external.sh --skip-release --probe-timeout 1 run wrote a real evidence bundle whose serialized JSON contains zero <temp><temp>/<repo><repo>/<home><home> doubled-marker sequences and zero private<temp> remnants"
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2472 tests, OK (skipped=5)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on scripts/run_external_verification.py and tests/test_external_verification.py -> clean (pre-existing unrelated drift confirmed present on main already, not introduced by this change)
+      release_or_deployment: null
+      notes: >-
+        Fresh real-host bundles collected after #430/#434 kept showing
+        "<temp><temp>..." (WSL/Linux), "/private<temp>" (macOS), and residual
+        "C:\Users\<redacted-user>\...\Temp" structure (Windows) -- #430's
+        exact-value path matching was still not idempotent end to end.
+        Root-caused, not merely patched around, with three independent
+        synthetic reproductions of the pre-fix code before writing any fix:
+        (1) a raw temp-root value recurring as a substring immediately next
+        to itself (e.g. "/tmp/tmp/subdir" -- matching Python's own
+        tempfile.mkdtemp() default "tmp" prefix convention) makes re.sub's
+        left-to-right non-overlapping match scan replace two adjacent
+        occurrences independently with nothing between the two markers; (2)
+        macOS resolves several default temp/home roots through a "/private"
+        symlink, so a tool reporting the resolved form never textually
+        matches this process's own unresolved tempfile.gettempdir() value;
+        (3) a WSL collector's own POSIX HOME never matches a captured
+        "/mnt/c/Users/..." or "C:\Users\..." path, so only the generic
+        username pattern fires, leaving structure around <redacted-user>
+        instead of one <temp> marker. Fixed with a new
+        _canonicalize_markers() pass applied as the final step of every
+        redact() call: an adjacent-same-marker collapse regex (handles case
+        1, and makes re-sanitizing already-canonical or nested subprocess
+        output converge to one root regardless of how many times it recurs),
+        a deterministic (not live-filesystem-realpath-dependent, so testable
+        on any host) "/private" alias registered as an additional variant of
+        each candidate (handles case 2), and a structural regex recognizing
+        <redacted-user> immediately followed by the well-known Windows/WSL
+        temp-directory suffix (handles case 3). All three fixes are
+        exercised with synthetic paths only, per the issue's own scope, and
+        confirmed via git stash to fail against the pre-fix code with the
+        issue's exact described malformed forms before passing with the fix
+        restored. A real (non-mocked) --skip-release run's serialized
+        evidence bundle was also checked and contains zero doubled-marker
+        sequences. Real re-verification with a lightweight --skip-release
+        sanitizer smoke on native Linux and macOS, per the issue's own last
+        acceptance criterion, remains external-environment work outside this
+        sandbox and is recorded as open.
+      status: implemented
+
+    - requirement_id: req-external-verification-macos-filesystem-type
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/439
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/442
+      changed_files_or_scope:
+        - scripts/run_external_verification.py
+        - tests/test_external_verification.py
+      tests_or_evidence:
+        - "tests/test_external_verification.py MacosFilesystemTypeTests (11 tests): mount-output parsing returns a filesystem type (not the mount path), picks the longest matching mountpoint over a shorter parent, resolves a non-apfs external volume, tolerates a multi-word device name (\"map auto_home on ...\"), returns None on no matching line/missing mount binary/non-zero exit/OSError/TimeoutExpired (never a path value), a real subprocess-mocked success path, and dispatch routing confirming Linux/WSL/Windows detectors are unchanged"
+        - python -m unittest tests.test_external_verification.MacosFilesystemTypeTests -> Ran 11 tests, OK
+        - "confirmed via git stash (production code only, tests kept) that 10 of the 11 new tests error/fail against the pre-#439 code (AttributeError: no _parse_macos_mount_type/_macos_filesystem_type), then pass once the fix is restored"
+        - python -m unittest tests.test_external_verification -> Ran 45 tests, OK
+        - "live: a real (non-mocked) --skip-release run on this Windows host confirms metadata.filesystem_type is still NTFS (a type, not a path), proving the Windows dispatch branch is unaffected"
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2483 tests, OK (skipped=5)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on scripts/run_external_verification.py and tests/test_external_verification.py -> clean (pre-existing unrelated drift confirmed present on main already, not introduced by this change)
+      release_or_deployment: null
+      notes: >-
+        A real macOS bundle recorded metadata.filesystem_type as "/" -- the
+        mount path, not a filesystem type/class. The previous implementation
+        called `stat -f "%T" root`, which does not reliably yield the
+        filesystem type on BSD/macOS stat, whose "-f FORMAT" conversions
+        describe *file* attributes (e.g. "Regular File", "Directory"), not
+        filesystem attributes -- unlike GNU coreutils' stat, where "-f" has a
+        different, filesystem-status meaning. Fixed by replacing it with
+        `mount` output parsing (well-documented and portable across
+        BSD/macOS mount implementations), mirroring
+        _linux_filesystem_type()'s existing longest-matching-mountpoint
+        algorithm over /proc/mounts so a nested mount (e.g. an external
+        volume) correctly wins over its shorter parent. Failure at any stage
+        (missing mount binary, non-zero exit, OSError, timeout, or no
+        matching line) returns None explicitly, never a path value. Linux,
+        WSL, and Windows filesystem-type detection are untouched; a live,
+        non-mocked --skip-release run on this Windows host confirmed
+        metadata.filesystem_type is still correctly "NTFS". Real macOS
+        re-verification with the normal one-command entry path, per the
+        issue's own last acceptance criterion, remains external-environment
+        work outside this sandbox and is recorded as open.
+      status: implemented
+
+    - requirement_id: req-external-verification-windows-redaction-refusal-progress-evidence
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/443
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/444
+      changed_files_or_scope:
+        - scripts/run_external_verification.py
+        - tests/test_external_verification.py
+        - docs/en/external-environment-verification.md
+      tests_or_evidence:
+        - "reproduced the exact real-host false positive with a synthetic short username ('an') and 5000-repetition large text: make_redactor() correctly left the text untouched (no real username occurrence), yet the old unconditional persistence-time substring scan still reported it present -> confirmed false positive, not a true redaction miss"
+        - "tests/test_external_verification.py UsernameLeakPatternTests (3 tests): the persistence-time username match now agrees exactly with make_redactor()'s own bounded username_patterns"
+        - "tests/test_external_verification.py PersistenceCategoryLeakScanTests (7 tests): the reproduced false positive is fixed; a sanitized full-profile-shaped bundle with 20000 lines of stdout writes successfully; a genuine boundary-matched username leak and a genuine repo leak are both still refused unchanged; the refusal message names the candidate category, never the raw value; JSON-escaped/backslash Windows paths remain covered; bare flat-string candidates keep the original strict unconditional substring check"
+        - "tests/test_external_verification.py ProgressRecorderTests (7 tests): sanitized JSONL + human-readable log line shape; every field (including nested dicts/lists) sanitized before writing, never after; a comprehensive scan against real repo/home/temp/username/secret-token fixtures finds zero raw values; durability across calls with no special close; null-recorder no-op; _progress_artifact_paths derives .log/.progress.jsonl from the .json path"
+        - "tests/test_external_verification.py MainProgressAndRefusalIntegrationTests (2 tests): a real module.main() --skip-release run writes all three artifacts with the full expected lifecycle event sequence; a forced final-evidence refusal leaves both progress artifacts intact with a final_evidence_persistence/refused and a collector_complete/failed event, exits 1, never crashes with a traceback"
+        - python -m unittest tests.test_external_verification -> Ran 63 tests, OK
+        - "confirmed via git stash (production code only, tests kept) that 17 of the 18 new tests fail/error against the pre-#443 code, then pass once the fix is restored; the one test that passed unmodified locks in pre-existing, unchanged flat-string behavior"
+        - "live end-to-end on this Windows host: a real --skip-release run wrote all three artifacts; the .log is human-readable, the .progress.jsonl parses as one JSON object per line; neither file (nor the .json) contains the real raw USERPROFILE value or the real username in path form"
+        - "live: a forced real refusal (module.main() with _categorized_redaction_candidates monkeypatched) confirmed exit code 1, no .json written, both progress artifacts preserved, a final_evidence_persistence/refused event carrying only the category, a collector_complete/failed event, and a clean printed error message naming the category -- never a raw value or an uncaught traceback"
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2501 tests, OK (skipped=5)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on scripts/run_external_verification.py and tests/test_external_verification.py -> clean (pre-existing unrelated drift confirmed present on main already, not introduced by this change)
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: null
+      notes: >-
+        A real Windows full-profile run refused to persist its evidence at
+        write_bundle() with "1 raw redaction candidate value(s) are still
+        present," discarding a multi-hour run's entire result; a
+        --skip-release smoke on the same host succeeded, narrowing the
+        problem to data unique to the full-profile path. Root-caused before
+        any fix: _redaction_candidates() includes usernames as short as two
+        characters, and the persistence-time scan did an unconditional
+        substring check for every candidate, while make_redactor()'s own
+        username_patterns only ever redact a username in a bounded context.
+        Across a full release profile's stdout/stderr, a short username
+        coincidentally appears as a substring of ordinary words, which
+        redact() correctly leaves untouched but the old scan still flagged:
+        a false positive, not a true redaction miss. Fixed by making the
+        persistence-time scan's username matching agree with
+        make_redactor()'s own bounded patterns via a new
+        _categorized_redaction_candidates()/_username_leak_pattern() pair;
+        repo/home/temp categories keep the original strict substring check
+        unchanged. The flat-string _redaction_candidates() is preserved and
+        reimplemented on top of the categorized function, so every existing
+        caller/test keeps working without modification. Also added
+        ProgressRecorder: incrementally-flushed, sanitized human-readable
+        (.log) and machine-readable (.progress.jsonl) lifecycle events
+        sharing the final JSON's name stem, each field sanitized before
+        writing and each write flushed/fsynced immediately, so an
+        interruption or persistence refusal leaves the latest completed
+        event durable. main() now catches a persistence RuntimeError,
+        records collector_complete/failed, prints the progress-artifact
+        paths and the category-only error message, and exits 1 instead of
+        crashing with a traceback. Verified live end to end on this Windows
+        host, including a forced real persistence refusal confirming
+        progress artifacts survive with a privacy-safe refused event. One
+        real Windows full-profile verification run, per the issue's own
+        explicit allowance to validate with synthetic fixtures first,
+        remains external-environment work outside this sandbox and is
+        recorded as open.
+      status: implemented
+
+    - requirement_id: req-external-verification-bash-native-windows-path-probe
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/445
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/446
+      changed_files_or_scope:
+        - tests/test_external_verification.py
+      tests_or_evidence:
+        - "a real Windows full-verification run on merge commit 284a0cf found tests.test_external_verification.VerifyExternalShWrapperTests.test_release_timeout_flag_propagates_through_the_wrapper failing with exit 127: the discovered bash resolved to WSL's bash.exe, which passes _bash_skip_reason()'s trivial inline-command probe but cannot address a native Windows-style path passed as a positional argument -- a test-portability failure, not a lifetxt runtime or #443 regression"
+        - "tests/test_external_verification.py BashNativeWindowsPathCompatibilityTests (7 tests, synthetic subprocess results only, no real checkout path): the new _bash_handles_native_windows_paths() probe returns True immediately on POSIX without spawning a subprocess; returns False with no executable on Windows; returns True when the shell translates the native path (mimics Git Bash/MSYS/Cygwin); returns False when the shell cannot resolve it (mimics the real observed WSL bash.exe failure); returns False (not a raised exception) on a subprocess error; _bash_skip_reason() names the native-Windows-path-model problem (not bash absence) when the trivial probe passes but the native-path probe fails, and returns None when both probes succeed"
+        - python -m unittest tests.test_external_verification.BashNativeWindowsPathCompatibilityTests -> Ran 7 tests, OK
+        - "confirmed the new probe function and its tests do not exist in the pre-#445 test file, so they cannot pass by coincidence against the old code"
+        - "live on this Windows sandbox: the discovered bash is Cygwin bash (not WSL bash.exe), confirmed to correctly translate a native Windows path via a direct cat probe, so the wrapper test still runs (not skipped) and passes unchanged after the fix, proving #437's POSIX-wrapper coverage is preserved on an actual POSIX-capable Windows shell"
+        - python -m unittest tests.test_external_verification -> Ran 70 tests, OK
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2508 tests, OK (skipped=5)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on tests/test_external_verification.py -> clean (pre-existing unrelated drift confirmed present on main already, not introduced by this change)
+      release_or_deployment: null
+      notes: >-
+        A subsequent real Windows full-verification run (#443's own merge
+        commit) still failed, but only on the POSIX-wrapper timeout-
+        propagation test with exit 127 -- final evidence persistence itself
+        succeeded, so this was not a recurrence of #443. Root cause: the
+        discovered bash resolved to WSL's bash.exe, which passes the
+        trivial inline-command probe (WSL bash runs inline commands fine)
+        but cannot address a native Windows-style path passed as a
+        positional argument -- WSL's own filesystem view treats the whole
+        string as a single, nonexistent literal filename rather than
+        translating it. A test-portability failure, not a lifetxt runtime
+        incompatibility. Fixed entirely in the test file, no production
+        code change: a new _bash_handles_native_windows_paths() probe
+        writes a small temp file and confirms the discovered bash can `cat`
+        it by its native Windows path before the bash is treated as usable
+        for the POSIX-wrapper integration test; on POSIX hosts this returns
+        True immediately without spawning a subprocess, so Linux/macOS
+        coverage is unaffected. When the native-path probe fails, the skip
+        reason explicitly names the path-model problem rather than implying
+        bash is absent. Verified live on this Windows sandbox that the
+        discovered bash here is Cygwin bash (not WSL bash.exe) and
+        correctly translates native paths, so the wrapper test still runs
+        and passes unchanged -- confirming #437's POSIX-wrapper coverage is
+        preserved on an actual POSIX-capable Windows shell, not merely
+        skipped away. A subsequent real Windows external-verification run
+        with WSL bash discoverable on PATH, per the issue's own last
+        acceptance criterion, remains external-environment work outside
+        this sandbox and is recorded as open.
+      status: implemented
+
+    - requirement_id: req-external-verification-windows-temp-escaped-backslash-collapse
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/438
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/448
+      changed_files_or_scope:
+        - scripts/run_external_verification.py
+        - tests/test_external_verification.py
+      tests_or_evidence:
+        - "#438 reopened from new real Windows full-profile evidence collected on merge commit 284a0cf: ResourceWarning path representations remained structurally expanded around <redacted-user> instead of collapsing to one <temp> root; root-caused to Python's repr() escaping each backslash as two literal backslash characters, which the original _WINDOWS_USER_TEMP_PATTERN (exactly-one-separator) did not recognize, while the username lookaround (which only checks the single adjacent character) still matched and redacted the account name -- reproduced exactly with a synthetic repr-style double-backslash fixture before writing any fix"
+        - "tests/test_external_verification.py TempPathCanonicalizationTests.test_windows_repr_escaped_backslash_username_only_match_collapses (1 new test, synthetic repr-style fixture, no real account name/path): confirms the doubled-backslash structural collapse now works, no username/AppData fragment survives"
+        - "confirmed via git stash (production code only, test kept) that the new test fails against the pre-fix code with the exact unredacted structural form the reopen comment describes, then passes once the fix is restored"
+        - "found and filed as a separate, out-of-scope, non-privacy-impacting follow-up (#447): a short/generic temp candidate's backslash-variant path_pattern registration can coincidentally match inside an unrelated tempfile.mkdtemp()-style 'tmpXXXXXX' directory name, truncating (but not un-redacting) the result; the primary fix's own test fixture was adjusted to avoid this unrelated coincidental collision rather than conflating the two root causes"
+        - python -m unittest tests.test_external_verification -> Ran 71 tests, OK
+        - "live: a real (non-mocked) --skip-release run on this Windows host wrote a real evidence bundle whose serialized JSON contains zero doubled-marker sequences"
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2509 tests, OK (skipped=5)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on scripts/run_external_verification.py and tests/test_external_verification.py -> clean (pre-existing unrelated drift confirmed present on main already, not introduced by this change)
+      release_or_deployment: null
+      notes: >-
+        Reopened from new real Windows full-profile evidence collected on
+        merge commit 284a0cf: ResourceWarning path representations remained
+        structurally expanded around <redacted-user> instead of collapsing
+        to one <temp> root, even though the account name itself was
+        correctly redacted. Root-caused before any fix: a ResourceWarning
+        message's text is a Python repr() of a file object, and repr()
+        escapes each backslash as two literal backslash characters, so the
+        real separator there is two characters, not one. The username
+        lookaround only checks the single character immediately adjacent,
+        so it still matched and redacted the account name either way -- but
+        the original _WINDOWS_USER_TEMP_PATTERN required exactly one
+        separator character between each path segment and missed the
+        doubled form, leaving the surrounding Users/AppData/Local/Temp
+        structure unredacted around the already-redacted username. Fixed by
+        broadening each single-character separator class in that pattern to
+        one-or-more, which handles both the normal single-backslash case and
+        the repr()-escaped doubled case uniformly, with no change to the
+        username redaction itself. While constructing this fixture, a
+        separate, low-severity, non-privacy-impacting quirk was found and
+        filed as its own follow-up (#447) rather than folded into this fix:
+        a short/generic temp candidate's backslash-variant path_pattern
+        registration can coincidentally match inside an unrelated
+        tempfile.mkdtemp()-style directory name, truncating (but never
+        un-redacting) the result -- the primary fix's own test fixture was
+        adjusted to avoid this unrelated coincidental collision so the two
+        root causes are not conflated. A lightweight real-host sanitizer
+        smoke on Windows/WSL/Linux/macOS confirming canonical output, per
+        the issue's own last acceptance criterion, remains
+        external-environment work outside this sandbox for the platforms
+        not exercised live here and is recorded as open.
+      status: implemented
+
+    - requirement_id: req-external-verification-release-timeout-default-reopened
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/437
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/449
+      changed_files_or_scope:
+        - scripts/run_external_verification.py
+        - tests/test_external_verification.py
+        - docs/en/external-environment-verification.md
+      tests_or_evidence:
+        - "#437 reopened a second time from real-host verification on merge commit 2d99fc2: WSL completed in ~7427s (up from ~4959s on an earlier run of the same host class -- real host performance varies run to run), macOS completed in ~14225s (barely inside the prior 14400s boundary), and native Linux again hit the collector's timeout at 14400s while still inside the test run, confirming #440's timeout-recording semantics work correctly but that the 14400s default still lacked headroom"
+        - "raised DEFAULT_RELEASE_TIMEOUT_SECONDS from 14400 to 28800 (8h, roughly 2x headroom over the highest confirmed near-miss of ~14225s), with the module-level comment and docs/en/external-environment-verification.md's rationale updated to cite this reopened run's real evidence"
+        - "tests/test_external_verification.py ReleaseTimeoutConfigurationTests.test_default_release_timeout_has_headroom_over_observed_real_host_durations updated to assert headroom over the new ~14225s near-miss and to strictly exceed the prior insufficient 14400s default -- confirmed via git stash (production code only, test kept) that the updated assertion fails against the pre-fix 14400s default with the exact observed shortfall (14400 not >= 28450), then passes once the fix is restored"
+        - python -m unittest tests.test_external_verification.ReleaseTimeoutConfigurationTests -> Ran 5 tests, OK
+        - python -m unittest tests.test_external_verification -> Ran 71 tests, OK
+        - "live: a real --skip-release run on this Windows host reports release_timeout=28800 in its summary output"
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2509 tests, OK (skipped=5)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on scripts/run_external_verification.py and tests/test_external_verification.py -> clean (pre-existing unrelated drift confirmed present on main already, not introduced by this change)
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: null
+      notes: >-
+        Reopened a second time from real-host verification on merge commit
+        2d99fc2: WSL completed in ~7427s (up from ~4959s on an earlier run
+        of the same host class -- real host performance genuinely varies
+        run to run), macOS completed in ~14225s (barely inside the prior
+        14400s boundary), and native Linux again hit the collector's
+        timeout at 14400s while still inside the test run itself, with its
+        true completion time unknown. This confirmed #440's timeout-
+        recording semantics (distinct "timeout" status, retained partial
+        output, never a fabricated pass) work correctly, but that the
+        14400s default itself -- already raised once from 7200s -- still
+        lacked sufficient headroom. Fixed by raising
+        DEFAULT_RELEASE_TIMEOUT_SECONDS to 28800s (8h, roughly 2x headroom
+        over the highest confirmed near-miss of ~14225s), with the module-
+        level comment, the runbook, and the existing headroom-locking test
+        all updated to cite this reopened run's real evidence in place of
+        the superseded b57aa84-era figures. No change to the timeout-
+        recording mechanism itself, which the reopening comment explicitly
+        confirmed already works correctly. A subsequent real Linux rerun
+        able to complete beyond the previous 14400s boundary, per the
+        reopening comment's own explicit request, remains external-
+        environment work outside this sandbox and is recorded as open.
+      status: implemented
+
+    - requirement_id: req-traceability-gate-test-git-utf8-decoding
+      capability_id: cap-supported-platform-install
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/432
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/433
+      changed_files_or_scope:
+        - tests/test_traceability_gate.py
+      tests_or_evidence:
+        - 'reproduced directly: subprocess.run(["git", "show", "origin/main:.ai/project/TRACEABILITY.yml"], text=True) with no explicit encoding raised UnicodeDecodeError in the background reader thread on this cp932-locale host, leaving stdout None despite returncode 0'
+        - 'confirmed the same call with encoding="utf-8" returns the full file content'
+        - tests/test_traceability_gate.py RepositoryTraceabilityGateTests.test_current_change_set_satisfies_traceability_gate_when_base_is_known -> passes (previously AttributeError on this host from a feature branch)
+        - python -m unittest tests.test_traceability_gate -> Ran 14 tests, OK
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2420 tests, OK (skipped=5)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff check tests/test_traceability_gate.py -> All checks passed (pre-existing unrelated formatting drift in this file confirmed present on main already, not introduced by this one-line change)
+      release_or_deployment: null
+      notes: >-
+        Found while locally verifying #429's traceability update on this
+        project's own Windows/cp932-locale development host. One-line fix:
+        _git()'s subprocess.run() call gained an explicit encoding="utf-8".
+        No epic: this is a test-infrastructure fix discovered during that
+        session's own verification pass, not decomposed from #283/#339.
+      status: implemented
+    - requirement_id: req-external-verification-short-temp-candidate-boundary
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/447
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/450
+      changed_files_or_scope:
+        - scripts/run_external_verification.py
+        - tests/test_external_verification.py
+      tests_or_evidence:
+        - short /tmp and \\tmp candidates no longer match inside tmpXXXX components
+        - genuine POSIX and Windows temp roots remain redacted to <temp>
+        - persistence-time repo/home/temp scanning uses the same path boundary and still catches genuine leaks
+        - tests.test_external_verification -> 74 tests, OK (skipped=1)
+        - scripts/run_external_verification.py --skip-release --probe-timeout 1 -> exit=0 with canonical evidence artifacts
+        - ruff check and git diff --check pass
+      release_or_deployment: null
+      notes: >-
+        Standard-assurance text-fidelity fix. Username, secret, and persistence
+        safety semantics are not relaxed; only path-component false matches are
+        excluded.
+      status: implemented
+
+    - requirement_id: req-external-verification-subprocess-decoding
+      capability_id: cap-stable-external-verification-preparation
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/283
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/451
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/452
+      changed_files_or_scope:
+        - scripts/run_external_verification.py
+        - tests/test_external_verification.py
+      tests_or_evidence:
+        - external-verification runner and macOS mount capture use explicit UTF-8 replacement decoding
+        - bash usability, native-path, and wrapper subprocess captures use explicit UTF-8 replacement decoding
+        - synthetic child output containing an undecodable byte is captured as replacement text without UnicodeDecodeError
+        - tests.test_external_verification -> 75 tests, OK (skipped=1)
+        - scripts/run_external_verification.py --skip-release --probe-timeout 1 -> exit=0 with JSON/log/JSONL artifacts
+        - tests.test_traceability_gate -> 14 tests, OK
+        - ruff check and git diff --check pass
+      release_or_deployment: null
+      notes: >-
+        Windows non-UTF-8 locale hardening. Exit status, timeout status,
+        shell-model skips, and redaction behavior remain unchanged.
+      status: implemented
+
+    - requirement_id: req-stable-minimal-rescope-policy
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/454
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/454
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/455
+      changed_files_or_scope:
+        - Record the #454 re-scope of the remaining Stable 1.0 gate as repository-authoritative policy
+        - .ai/project/STABLE_RELEASE.yml
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - YAML parse of .ai/project/STABLE_RELEASE.yml after the minimal_stabilization_rescope section addition
+        - the reduced blocker definition, deferred-item list, and required-now checklist match #454's issue body field for field
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      release_or_deployment: null
+      notes: >-
+        Adds a minimal_stabilization_rescope section to STABLE_RELEASE.yml
+        recording that #454 supersedes #283/#339's remaining gate criteria
+        only for what is required before the first Stable 1.0 release, while
+        leaving every existing section of that file (feature freeze,
+        compatibility policy, support matrix, release gates, roadmap
+        classification, delegated mutation inventory) unchanged and intact
+        as historical stabilization policy. No code changed.
+      status: implemented
+
+    - requirement_id: req-stable-format-1-0-finalization-review
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/454
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/454
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/455
+      changed_files_or_scope:
+        - Perform the bounded Format 1.0 release-contract review required by #454
+        - docs/en/format-1.0-finalization-review.md
+      tests_or_evidence:
+        - "lifetxt/parser.py FORMAT_VERSION/format_version_state classification confirmed to match docs/en/format-compatibility-matrix.md's version matrix (unversioned/current/unsupported)"
+        - "lifetxt/extra_safety.py format migrate confirmed to check version['state'] == 'unsupported' and return changed=False/written=False before any write_text call; format downgrade confirmed to report writable: False unconditionally"
+        - "docs/en/format-migration.md and docs/en/format-compatibility-matrix.md reviewed against the implemented behavior above; no drift found"
+        - python -m unittest tests.test_roundtrip_golden tests.test_randomized_roundtrip tests.test_parser_format_metadata -> Ran 19 tests, OK
+      release_or_deployment: null
+      notes: >-
+        This review is investigation only; it confirms four of #454's five
+        Format 1.0 finalization checklist items. The fifth item (recording
+        the human release decision that Format 1.0 is the accepted
+        compatibility baseline) is explicitly left as a pending
+        release-authority sign-off in the review document itself, not
+        asserted by this entry. No concrete defect was found; per #454 and
+        this project's Horizontal Review Scope Discipline, a defect found by
+        this review would be filed as its own dedicated Issue rather than
+        expanding this review's scope.
+      status: implemented
+
+    - requirement_id: req-stable-release-notes-reduced-gate
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/454
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/325
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/455
+      changed_files_or_scope:
+        - Update stable release notes and known limitations to describe #454's reduced Stable 1.0 gate instead of exhaustive real-host verification as a prerequisite
+        - docs/en/stable-release-notes-draft.md
+        - docs/ja/stable-release-notes-draft.md
+      tests_or_evidence:
+        - both documents reference #454 and list the same deferred-from-gate item set as .ai/project/STABLE_RELEASE.yml's minimal_stabilization_rescope.deferred_from_gate
+        - the version/tag remains intentionally unset, per #454's own "release authority must select it" requirement
+        - manual review confirming the English and Japanese documents carry the same claims (parity), matching the existing #354 doc-parity practice for this document pair
+      release_or_deployment: null
+      notes: >-
+        #325 reused under #454's reduced policy, per #454's own "Required
+        now" section 1. Only the verification-status and known-limitations
+        framing changed; the stable-boundary and installation-smoke sections
+        are extended with cross-references (the Format 1.0 finalization
+        review, the artifact verification evidence doc) rather than rewritten.
+        The release version/tag selection, which #325's own acceptance
+        criteria assign to release authority, remains explicitly out of
+        scope for this entry.
+      status: implemented
+
+    - requirement_id: req-stable-minimal-clean-artifact-verification
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/454
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/326
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/455
+      changed_files_or_scope:
+        - Record the #454 release-critical minimum clean-artifact verification (reduced from #326's original full real-host OS/Python matrix)
+        - docs/en/stable-release-artifact-verification.md
+      tests_or_evidence:
+        - "python -m build --wheel --sdist from a clean checkout at commit 9a7c4cf8cb1b8c96abac4111ad0bb4f9b56548c9 -> both artifacts built; twine check -> PASSED for both"
+        - "wheel file listing scanned: only lifetxt/*.py, lifetxt/web_assets.html, and lifetxt-0.1.0.dist-info/* present, no __pycache__/.git/.venv/.cache/.env or other dev-cache/local-state entries"
+        - "sdist's 294-entry listing scanned for the same categories plus secret/credential-shaped names -> none found"
+        - "python scripts/run_ci_like.py --profile release (CPython 3.12.3, Windows 10 Pro NT 10.0.19045.0): a separate wheel-only venv (no dev/web extras) installed the built wheel, ran python -m lifetxt --help and the installed lifetxt --help entry point outside the source checkout, and python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s), all against the installed wheel"
+        - "the release profile's primary venv (dev+web extras, editable install, not the wheel) separately ran: python -m unittest discover -> Ran 2513 tests in 454.538s, OK (skipped=5); release-policy/release-gate smoke -> OK: 10 item(s), OK: 5 item(s), OK: 6 item(s). The recovery-safe-path smoke against the literal installed wheel itself is not yet exercised; recorded as an open gap, not claimed closed"
+        - "separate core-only install (no web/tui/dev extras) in its own fresh venv on the same commit/host: pip list --format=freeze reports exactly lifetxt, pip, and the declared Windows-only tzdata; python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s); installed lifetxt --help entry point ran successfully"
+      release_or_deployment: null
+      notes: >-
+        #326 reused for the release-critical minimum only, per #454's
+        "Required now" section 2. This is one supported Python version on
+        one supported OS (Windows); it satisfies #454's explicit statement
+        that a full real-host OS/Python matrix is no longer a Stable 1.0
+        prerequisite and that normal CI (Linux 3.10/3.11/3.12, no-Web job,
+        native Windows/macOS core smoke) covers the broader regression
+        matrix. Additional real-host rows remain useful, non-blocking,
+        post-Stable-1.0 evidence and are recorded as an explicit known gap
+        in docs/en/stable-release-artifact-verification.md rather than
+        omitted or claimed complete.
+      status: implemented
+
+    - requirement_id: req-stable-format-1-0-baseline-decision
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/454
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/457
+      pull_request: null
+      changed_files_or_scope:
+        - Record the human release-authority decision approving Format 1.0 as the Stable 1.0 compatibility baseline
+        - docs/en/format-1.0-finalization-review.md
+        - .ai/project/STABLE_RELEASE.yml
+      tests_or_evidence:
+        - repository owner (Eruhitsuji) explicitly approved Format 1.0 as the Stable 1.0 compatibility baseline, referencing the PR #455 finalization evidence, recorded 2026-08-21
+        - decision recorded in both docs/en/format-1.0-finalization-review.md (section 5, checkbox checked) and .ai/project/STABLE_RELEASE.yml's new format_1_0_baseline_decision record, and linked from #454
+        - YAML parse of .ai/project/STABLE_RELEASE.yml after the format_1_0_baseline_decision addition
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      release_or_deployment: null
+      notes: >-
+        #457 is intentionally scoped to the remaining human-authority decision
+        only; the technical review itself was completed by PR #455
+        (req-stable-format-1-0-finalization-review). No new implementation,
+        grammar redesign, or additional environment verification is in
+        scope, matching #457's own explicit out-of-scope list. This closes
+        the "Record the human release decision..." item and the "Format 1.0
+        final release-contract review is complete..." completion criterion
+        on #454; every other #454 completion criterion (release
+        version/notes finalization, RC cut, promotion) remains open and
+        requires its own separate human-authority decision.
+      status: implemented
+
+    - requirement_id: req-stable-installation-examples-release-artifact-boundary
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/454
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/325
+      pull_request: null
+      changed_files_or_scope:
+        - Make the primary installation examples describe a plain release-style install (pip install .) instead of leading with the editable development install (pip install -e .)
+        - readme.md
+        - docs/en/readme.md
+        - docs/ja/readme.md
+        - docs/en/use-cases.md
+        - docs/ja/use-cases.md
+        - docs/en/cli.md
+        - docs/ja/cli.md
+        - docs/ja/optional-dependency-compatibility.md
+        - .gitignore
+      tests_or_evidence:
+        - "grep across docs/en, docs/ja, and readme.md confirmed every remaining bare `pip install -e .` (no extras) instance is inside a legitimate editable-install context: readme.md's own Development environment section, or lifetxt update/server-update's git-checkout requirement (both explicitly need the editable install to have a git tree to fast-forward)"
+        - "live: a fresh venv installed the package via `pip install <path>` (equivalent to `pip install .` from that directory, non-editable) and `lifetxt check examples/minimal_life.txt` -> OK: 10 item(s), confirming the newly-documented primary install command actually works"
+        - "found and fixed a real gap this doc change would otherwise have exposed to a new reader following it: `pip install .` from this checkout leaves an untracked `build/lib/...` directory behind (a setuptools intermediate), which `.gitignore` did not previously cover; added a root-anchored `/build/` rule (not a blanket `dist/`, since `dist/schemas/` is tracked real content) and confirmed via `git check-ignore` that it now excludes the directory without matching any tracked path"
+        - python -m unittest tests.test_release_policy -> pass (no translation-coverage or doc-validation regression)
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)
+        - git diff --check
+      release_or_deployment: null
+      notes: >-
+        #325 reused under #454's reduced policy, closing the "Ensure the
+        primary installation and basic usage examples describe the release
+        artifacts rather than editable-development assumptions" acceptance
+        criterion. lifetxt has no PyPI package, so "release artifact"
+        install means a plain, non-editable `pip install .` from a source
+        checkout or a built wheel/sdist (see
+        docs/en/stable-release-artifact-verification.md), not `pip install
+        -e .`. docs/en/cli.md's `update` command documentation (and its
+        docs/ja counterpart) was also corrected: it previously called `-e
+        .` "the documented install method," which was accurate when that
+        was the only documented path but is now stale; it is rewritten to
+        explain that `update`/`server-update` specifically require the
+        editable install because they fast-forward the git checkout behind
+        it, distinct from the ordinary end-user install this change
+        introduces. Development-section and production-deployment (Ubuntu
+        Server runbook) `-e` usage is intentionally unchanged, since both
+        have their own legitimate reason to require an editable, git-backed
+        install.
+      status: implemented
+
+    - requirement_id: req-stable-1-0-0-version-and-release-notes-finalized
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/454
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/325
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/467
+      changed_files_or_scope:
+        - Set the Stable 1.0 release version (1.0.0rc1, pending RC) consistently across every authoritative version source, and finalize release notes and upgrade guidance
+        - pyproject.toml
+        - lifetxt/__init__.py
+        - lifetxt/mcp.py
+        - lifetxt/webapp.py
+        - tests/test_lifetxt.py
+        - docs/en/stable-release-notes-draft.md
+        - docs/ja/stable-release-notes-draft.md
+        - docs/en/release-doc-parity-audit.md
+      tests_or_evidence:
+        - "found and fixed a real version-consistency gap before bumping anything: lifetxt/mcp.py's SERVER_VERSION and lifetxt/webapp.py's FastAPI app version= were independently hardcoded '0.1.0' literals, not reading lifetxt.__version__ (the source pyproject.toml/CLI --version/update-check/release-gate manifest already used); both now import and reference __version__ so a future version bump cannot silently miss them"
+        - "confirmed lifetxt/config_registry.py's since=\"0.1.0\" config-registry metadata is a historical introduction-version marker (when each key was added), not a live version reference, and left it unchanged -- bumping it would misrepresent history"
+        - 'live: `python -m lifetxt --version` -> "lifetxt 1.0.0rc1"; `python -c "import lifetxt.mcp as m; print(m.SERVER_VERSION)"` -> "1.0.0rc1"; `python -m lifetxt update-check --format json` -> current_version "1.0.0rc1", status no_release_found (no tag/release exists yet)'
+        - python -m unittest tests.test_lifetxt.LifeTxtUpdateCheckCliTests -> Ran 13 tests, OK (version-comparison logic unaffected by the bump)
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2513 tests, OK (skipped=5)'
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - ruff check lifetxt tests scripts -> All checks passed
+        - ruff format --check lifetxt/mcp.py lifetxt/webapp.py tests/test_lifetxt.py -> 3 files already formatted
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - git diff --check
+      release_or_deployment: null
+      notes: >-
+        #325 reused under #454's reduced policy, closing its remaining
+        acceptance criteria: version set consistently; release notes
+        finalized with a capability Highlights summary; upgrade guidance
+        expanded to reference Format, configuration, policy/journal, and
+        Web revision migration (all "not applicable to this first release,
+        but here is the mechanism a future release will use" per the
+        repository owner's decision that 1.0.0 is the version, recorded via
+        AskUserQuestion). docs/en/release-doc-parity-audit.md gained an
+        addendum recording that readme.md, docs/en+ja/readme.md,
+        docs/en+ja/use-cases.md, docs/ja/optional-dependency-compatibility.md
+        (outside the original #354 audited-pairs list) and
+        docs/en+ja/stable-release-notes-draft.md were kept in English/
+        Japanese parity through this and the prior #454 installation-
+        examples change, without expanding the formal audited-pairs table
+        itself. The version is `1.0.0rc1` pending the RC cut described in
+        #454's release-candidate-and-promotion section; it will be bumped
+        to `1.0.0` in a separate change only after the repository owner
+        approves promotion from a validated candidate.
+      status: implemented
+
+    - requirement_id: req-stable-v1-0-0rc1-cut
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/454
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/461
+      pull_request: null
+      changed_files_or_scope:
+        - Cut the v1.0.0rc1 release candidate per #454's reduced release-candidate procedure (also satisfies #458's installed-wheel core smoke and #462's bounded RC validation)
+        - docs/en/stable-release-notes-draft.md
+        - docs/ja/stable-release-notes-draft.md
+        - docs/en/stable-release-artifact-verification.md
+        - .ai/project/STABLE_RELEASE.yml
+      tests_or_evidence:
+        - "python -m build --wheel --sdist at commit ca1894b6f5571b3862138d84bfe9dc542ebc2551 -> lifetxt-1.0.0rc1-py3-none-any.whl (sha256 fba241ab14bea43eb74281ec106a76f7a9c89aab5318e5dc7f837e1955b12c88), lifetxt-1.0.0rc1.tar.gz (sha256 73ffca299840d4268578d782a3caa2dac416b8e9b115fe03901d694e6eba3cf0); python -m twine check -> PASSED for both; contents scanned, no dev caches/secrets/local state"
+        - "git tag -a v1.0.0rc1 at ca1894b6f5571b3862138d84bfe9dc542ebc2551, pushed; gh release create --prerelease with both artifacts attached -> https://github.com/Eruhitsuji/lifetxt/releases/tag/v1.0.0rc1, confirmed isPrerelease=true, targetCommitish correct, both assets present"
+        - "live: python -m lifetxt update-check --format json against the real GitHub API -> latest_version v1.0.0rc1 (kind tag, since GitHub's latest-release endpoint excludes prereleases as expected), status up_to_date -- confirms the tagged release is externally discoverable and version-comparison-correct"
+        - "live, fresh disposable venv, wheel-only install (no dev/web extras, no editable source), scratch working directory, only the installed lifetxt console script used: lifetxt init --yes (create) -> check OK: 1 item(s); echo | lifetxt quick - --append (create) -> check OK: 2 item(s); lifetxt complete --text (mutate) -> re-read confirmed [x] T \"Buy milk\" done:2026-08-21; lifetxt format canon --write (serialize/write, revision-checked) -> changed:false/written:false, confirming round-trip stability; lifetxt format migrate --write (a second, distinct revision-checked write: the recovery-safe path) -> changed:true/written:true, added #! format_version: 1, re-read and check confirmed OK: 2 item(s) -- closes the recovery-safe-path gap docs/en/stable-release-artifact-verification.md had explicitly recorded as open"
+        - required CI was already confirmed green on the target commit by PR #467's post-merge main-branch CI run (this RC cuts from that exact commit, no new code change)
+        - YAML parse of .ai/project/STABLE_RELEASE.yml after the release_candidate_status section addition
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: >-
+        v1.0.0rc1 published as a GitHub prerelease with wheel and sdist
+        assets attached, per repository-owner approval given in response to
+        the direct question of whether to proceed with the RC cut. This is
+        the release-candidate step only; v1.0.0 promotion is a separate,
+        not-yet-requested human approval.
+      notes: >-
+        Satisfies #461 (prepare RC version metadata and build the
+        candidate), #458 (installed-wheel core mutation and re-read smoke,
+        which also closes #454's previously-recorded recovery-safe-path
+        gap), and #462 (bounded RC validation: required CI plus the
+        minimal installed-artifact smoke against the exact candidate
+        commit) in one pass, since all three were satisfied by the same
+        RC-cutting work using the same installed-wheel venv. #327 ("Cut a
+        release candidate and run a bugfix-only stabilization cycle") is
+        the broader original issue #461/#462 decompose and reuse here
+        under #454's reduced RC procedure rather than #327's original
+        exhaustive real-environment RC-entry criteria (still recorded in
+        STABLE_RELEASE.yml's release_gates.rc_entry section, which #454's
+        minimal_stabilization_rescope explicitly supersedes for the first
+        Stable 1.0 release). The bugfix-only stabilization cycle #327
+        describes has not started; no defect has been found against this
+        candidate yet.
+      status: implemented
+
+    - requirement_id: req-stable-v1-0-0-promotion-version-bump
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/454
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/464
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/469
+      changed_files_or_scope:
+        - Apply the release-metadata-only version bump (1.0.0rc1 -> 1.0.0) approved for promotion of the validated v1.0.0rc1 candidate
+        - pyproject.toml
+        - lifetxt/__init__.py
+        - docs/en/stable-release-notes-draft.md
+        - docs/ja/stable-release-notes-draft.md
+        - .ai/project/STABLE_RELEASE.yml
+      tests_or_evidence:
+        - "repository owner explicitly approved promotion in response to a direct question, after #463's open-issue review (no release-blocking defect found during the RC period)"
+        - "live: python -c \"import lifetxt; print(lifetxt.__version__)\" -> 1.0.0; python -c \"import lifetxt.mcp as m; print(m.SERVER_VERSION)\" -> 1.0.0 (both track __version__ automatically, per the earlier PR #467 consistency fix -- no separate edit needed in mcp.py/webapp.py); python -m lifetxt --version -> lifetxt 1.0.0; python -m lifetxt check examples/minimal_life.txt -> OK: 10 item(s)"
+        - python -m unittest tests.test_lifetxt.LifeTxtUpdateCheckCliTests tests.test_mcp_expansion tests.test_lifetxt.LifeTxtWebAppTests -> Ran 115 tests, OK
+        - ruff check lifetxt tests scripts -> All checks passed
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> full suite, no failures (see PR for exact count)'
+        - git diff --check
+      release_or_deployment: >-
+        Version-only change on top of the already-validated v1.0.0rc1
+        candidate's code, per #464's own constraint that the final commit
+        must be identical in product behavior to the validated RC except
+        for release-metadata-only changes. The actual v1.0.0 tag, final
+        artifacts, and their evidence are recorded in a follow-up change
+        once this merges, mirroring how v1.0.0rc1's tag/artifacts were
+        recorded in a follow-up after the version-bump PR (#467) merged.
+      notes: >-
+        Closes #464's "change authoritative version metadata... using only
+        release-metadata changes" step. No other file changed: the
+        product-behavior-identical requirement is satisfied by construction,
+        since only version strings changed and everything else is the exact
+        code already validated as v1.0.0rc1 (commit
+        ca1894b6f5571b3862138d84bfe9dc542ebc2551).
+      status: implemented
+
+    - requirement_id: req-stable-v1-0-0-promoted
+      capability_id: cap-stable-release-governance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/454
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/464
+      pull_request: null
+      changed_files_or_scope:
+        - Record the final v1.0.0 tag, GitHub Release, and post-promotion smoke evidence
+        - docs/en/stable-release-notes-draft.md
+        - docs/ja/stable-release-notes-draft.md
+        - docs/en/stable-release-artifact-verification.md
+        - .ai/project/STABLE_RELEASE.yml
+      tests_or_evidence:
+        - "python -m build --wheel --sdist at commit 4f6eead6587c383eac7ee8e92873bb1596cc1c69 -> lifetxt-1.0.0-py3-none-any.whl (sha256 1da07155a8edfe6dc9ab535d2007d0e65b1ed4688a2ef8c647c7af596dc54e8f), lifetxt-1.0.0.tar.gz (sha256 3be2157c7462193223afce782037ac1cc8260290d9e2ad7d4da65e4fbf74f803); python -m twine check -> PASSED for both; contents scanned, no dev caches/secrets/local state"
+        - "git tag -a v1.0.0 at 4f6eead6587c383eac7ee8e92873bb1596cc1c69, pushed; gh release create (no --prerelease) with both artifacts attached -> https://github.com/Eruhitsuji/lifetxt/releases/tag/v1.0.0, confirmed isPrerelease=false, isDraft=false, targetCommitish correct, both assets present"
+        - "live, fresh disposable venv, wheel-only install: python -m lifetxt --version and the installed lifetxt --version entry point both reported lifetxt 1.0.0"
+        - "live, same installed-wheel venv, scratch working directory: the full init -> quick --append -> complete --text -> format canon --write -> format migrate --write -> re-read sequence (parse/read, create, mutate, serialize/write via the revision-checked atomic-write contract, re-read, recovery-safe write) passed identically to the v1.0.0rc1 smoke"
+        - "live: python -m lifetxt update-check --format json against the real GitHub API -> kind: \"release\" (a genuine non-prerelease Release, unlike the RC's kind: \"tag\"), status: \"up_to_date\" -- confirms external discoverability post-promotion"
+        - required CI was already confirmed green on the promoted commit by PR #469's post-merge main-branch CI run
+        - YAML parse of .ai/project/STABLE_RELEASE.yml after the promotion record update
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: >-
+        lifetxt 1.0.0, the project's first Stable release, published as a
+        GitHub Release (not a prerelease) with wheel and sdist assets
+        attached, at commit 4f6eead6587c383eac7ee8e92873bb1596cc1c69. This
+        completes #454's full release-candidate-and-promotion procedure.
+      notes: >-
+        Closes #464 and the top-level #454 completion criterion "Stable
+        1.0.0 is promoted from a validated candidate." No release-blocking
+        defect was found at any point in the RC period (#463). This is the
+        terminal record for #454's Required Now / release-candidate work;
+        remaining #454 scope, if any, is post-Stable-1.0 follow-up per its
+        own deferred-item disposition.
+      status: implemented
+
+    - requirement_id: req-post-stable-roadmap-rebaseline
+      capability_id: cap-stable-release-governance
+      epic: null
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/471
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/474
+      changed_files_or_scope:
+        - Rebaseline the roadmap after v1.0.0 into a post-Stable priority model, reclassify the remaining stabilization-era issues, and select the next product-development themes
+        - todo.md
+        - .ai/project/STABLE_RELEASE.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - YAML parse of .ai/project/STABLE_RELEASE.yml and .ai/project/TRACEABILITY.yml after the post_stable_roadmap section addition
+        - 'all 18 still-open stabilization-era issues named in #454''s deferred_from_gate list (#288-#292, #297-#299, #304, #312-#314, #315-#316, #317-#318, #437, #453) carry an explicit post_stable_quality or maintenance_or_correctness classification in .ai/project/STABLE_RELEASE.yml''s post_stable_roadmap.reclassified_issues; none were closed or reclassified obsolete_or_superseded, since #454''s deferred_item_disposition confirms none are obsolete'
+        - '#283 and #339 are recorded under post_stable_roadmap.trackers_preserved_as_historical rather than closed, satisfying the acceptance criterion that they remain historical trackers'
+        - 'todo.md no longer has a "P0: Release Safety and Correctness" heading; the equivalent content is retitled "P2: Reliability and Real-Environment Verification (Post-Stable, Non-Blocking)" and moved after the P1/P2 product sections, immediately before Deferred Ideas'
+        - python -c "import re; text=open('todo.md',encoding='utf-8').read(); assert not re.search(r'\n{3,}', text)" -> no multi-blank-line drift introduced
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+      release_or_deployment: null
+      notes: >-
+        Process/Standard assurance planning task. Reuses cap-stable-release-governance
+        rather than creating a new capability, since this is the same
+        STABLE_RELEASE.yml-as-authoritative-policy pattern #284-#287/#454
+        already established, extended to the post-Stable phase. Selected and
+        confirmed with the repository owner via AskUserQuestion (theme
+        selection and execution mode are both flagged in #471's own task
+        contract as needing human sign-off): theme 1, Unified Inbox + Daily
+        Command Center + Saved Views/life-area navigation, tracked by #472
+        (epic) with #473 as the first bounded design-investigation issue;
+        themes 2 (Project & Portfolio Hub exposure) and 3 (ticket workflow
+        usability) are recorded in priority order in both todo.md and
+        STABLE_RELEASE.yml but have no tracker issue yet, per #471's own
+        instruction not to implement product features in this task. No
+        `.ai/project/CAPABILITIES.yml` change was needed: this task adds no
+        new implementation, only planning/governance records.
+      status: implemented
+
+    - requirement_id: req-command-center-next-actions-and-inbox
+      capability_id: cap-daily-command-center
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/472
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/475
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/478
+      changed_files_or_scope:
+        - Extend command_center() with a next_actions bucket reusing lifetxt.nextaction.next_action_items and a bounded inbox summary reusing lifetxt.inbox.inbox_summary
+        - Extend command-center-v1's schema generator and sample, and regenerate the published schema
+        - lifetxt/command_center.py
+        - lifetxt/schema_extensions_v7.py
+        - dist/schemas/command-center-v1.schema.json
+        - tests/test_life_hub.py
+        - docs/en/life-hub.md
+        - docs/ja/life-hub.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests/test_life_hub.py CommandCenterTests.test_next_actions_reuses_the_shared_actionable_definition, test_next_actions_limit_bounds_the_list_without_changing_order, test_inbox_is_empty_when_no_proposals_are_staged, test_inbox_reports_pending_and_deferred_counts_and_bounded_summary, test_inbox_pending_never_exposes_the_full_operational_record
+        - python -m unittest tests.test_life_hub -> Ran 21 tests, OK
+        - python -m unittest tests.test_schema_extensions_v2 -> Ran 5 tests, OK (bundle equality against the regenerated dist/schemas/command-center-v1.schema.json, plus draft 2020-12 validation of the extended sample)
+        - python -m unittest tests.test_nextaction tests.test_inbox tests.test_mcp_expansion -> Ran 158 tests, OK (no regression in the two reused engines or the unmodified MCP get_command_center tool)
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: null
+      notes: >-
+        First implementation task of the #472 post-Stable Daily Command
+        Center theme, following #473's investigation. No parallel
+        aggregation engine, storage model, or authoritative record kind was
+        introduced: next_actions and inbox both delegate to their existing
+        engines and only adapt/bound the result. lifetxt/cli.py's
+        command_today text renderer was left unmodified, per #475's own
+        write scope; its --json output and the MCP get_command_center tool
+        already surface the new fields with no code change on their side.
+      status: implemented
+
+    - requirement_id: req-tui-today-view
+      capability_id: cap-daily-command-center
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/472
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/476
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/478
+      changed_files_or_scope:
+        - Add a Today view/`/today` command to the interactive TUI, rendering the shared command_center() result grouped as NOW/ATTENTION/INBOX/UPCOMING
+        - Compute WorkspaceState._today in load() via a direct command_center() call, alongside the existing dashboard_model() parse
+        - Add `today` to WORKSPACE_VIEWS and the `/view` command's usage/values
+        - lifetxt/tui_app.py
+        - tests/test_cui_extensions.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests/test_cui_extensions.py WorkspaceTodayViewTests (6 tests)
+        - python -m unittest tests.test_cui_extensions -> Ran 147 tests, OK (skipped=1)
+        - python -m unittest tests.test_surface_runtime -> Ran 20 tests, OK (TuiDocumentationDriftTests confirms docs/en/cli.md's TUI command table matches tui_app.COMMANDS after adding /today and widening /view's usage string)
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: null
+      notes: >-
+        Second implementation task of the #472 post-Stable Daily Command
+        Center theme, depending on #475. No due/blocked/waiting/next-action/
+        inbox rule is duplicated in lifetxt/tui_app.py: every row and count
+        in the Today view comes directly from the same command_center()
+        object CLI today and MCP get_command_center already build. The
+        pre-existing tasks/agenda/status dashboard model
+        (lifetxt.tui.dashboard_model) is unchanged and remains the data
+        source for every other TUI view. Read-only by design, matching
+        #476's own scope; editing/accepting Inbox proposals from the Today
+        view is an explicit, unimplemented follow-up.
+      status: implemented
+
+    - requirement_id: req-web-command-center-endpoint
+      capability_id: cap-daily-command-center
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/472
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/477
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/478
+      changed_files_or_scope:
+        - Add GET /api/command-center, delegating entirely to command_center() with horizon/person/mode query parameters and the standard 400 error shape for an invalid horizon
+        - Add a WEB_COMMAND_NOTES entry for /today, matching the existing pattern that explains every TUI-only command instead of silently omitting it from the browser command palette
+        - lifetxt/webapp.py
+        - tests/test_lifetxt.py
+        - docs/en/web.md
+        - docs/ja/web.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests/test_lifetxt.py LifeTxtWebApiTests.test_command_center_api_returns_the_canonical_shape, test_command_center_api_matches_the_direct_engine_call, test_command_center_api_respects_horizon_and_person_parameters, test_command_center_api_invalid_horizon_returns_400, test_command_center_api_available_on_a_read_only_client
+        - python -m unittest tests.test_lifetxt.LifeTxtWebApiTests -> Ran 27 tests, OK
+        - python -m unittest tests.test_surface_runtime tests.test_web_i18n tests.test_web_commands -> Ran 61 tests, OK (no capability/command-catalog drift; WEB_COMMANDS/WEB_COMMAND_NOTES completeness gates confirm /today is covered; no i18n regression)
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: null
+      notes: >-
+        Third implementation task of the #472 post-Stable Daily Command
+        Center theme, depending on #475. The route contains no
+        due/blocked/waiting/next-action/inbox calculation of its own; it
+        reads input, resolves the same horizon/person/mode parameters CLI
+        today and MCP get_command_center already accept, and returns
+        command_center()'s result unchanged. No Web UI bundle change was
+        made, per #477's own scope; rendering this endpoint in the browser
+        Dashboard remains an explicit, unimplemented follow-up. Found while
+        reviewing the diff that /today (added by #476) was the only TUI
+        command with neither Web support nor a WEB_COMMAND_NOTES entry,
+        which the browser command palette's own design explicitly guards
+        against (see webapp.py's get_commands() docstring); added the
+        matching note within this task's own write scope (lifetxt/webapp.py)
+        rather than leaving the palette silently omit an explanation.
+      status: implemented
+
+    - requirement_id: req-temporal-context-v1-cli
+      capability_id: cap-temporal-context
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/472
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/485
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/486
+      changed_files_or_scope:
+        - Add lifetxt/temporal_context.py (node_facts/temporal_context), a new temporal-context-v1 schema, and a lifetxt temporal CLI command
+        - Reuse lifetxt.ticket_project_values.last_activity/reference_time/DEFAULT_STALE_DAYS verbatim for the staleness formula rather than reimplementing it
+        - lifetxt/temporal_context.py
+        - lifetxt/schema_extensions_v24.py
+        - lifetxt/__init__.py
+        - lifetxt/cli.py
+        - dist/schemas/temporal-context-v1.schema.json
+        - tests/test_temporal_context.py
+        - tests/test_temporal_cli.py
+        - tests/test_schema_extensions_v2.py
+        - tests/test_safety_foundation.py
+        - tests/test_safety_cli.py
+        - tests/test_ticket_custom_field_public_contract.py
+        - tests/test_ticket_workflow_surfaces.py
+        - docs/en/life-hub.md
+        - docs/ja/life-hub.md
+        - docs/en/cli.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests/test_temporal_context.py NodeFactsTests, TemporalContextTests (15 tests)
+        - tests/test_temporal_cli.py TemporalCliTests (4 tests)
+        - python -m unittest tests.test_temporal_context tests.test_temporal_cli -> Ran 19 tests, OK
+        - python -m unittest tests.test_schema_extensions_v2 tests.test_safety_foundation tests.test_safety_cli tests.test_ticket_custom_field_public_contract tests.test_ticket_workflow_surfaces -> Ran 59 tests, OK (every hardcoded schema-bundle count updated 77 -> 78)
+        - 'live: real lifetxt temporal t1 life.txt (text and --json) against a real 3-item due:-dated fixture showed the correct overdue_by fact and same-window before/after edges, nearest-first; lifetxt temporal nope life.txt failed loudly with exit 1'
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - "MPLBACKEND=Agg python -W ignore::ResourceWarning -m unittest discover -> Ran 2549 tests, OK (skipped=5)"
+      release_or_deployment: null
+      notes: >-
+        Implements #481's investigation and repository-owner-approved
+        recommendation: a new, separate, bounded temporal-context-v1
+        contract (not merged into GET /api/graph or command-center-v1),
+        with a narrow v1 vocabulary and CLI as the first consumer. No
+        structural relation computation is duplicated (links.py is
+        untouched) and no staleness formula is reinvented
+        (ticket_project_values.py's existing helpers are reused verbatim,
+        generalized beyond tickets since they already read details from any
+        item shape). temporal_context() is bounded by construction to one
+        target item's neighborhood, never an all-pairs scan. TUI/Web/MCP
+        exposure and the deferred overlap/near-window relations remain
+        explicit, unimplemented follow-ups per #485's own scope.
+      status: implemented
+
+    - requirement_id: req-web-today-dashboard
+      capability_id: cap-daily-command-center
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/472
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/479
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/482
+      changed_files_or_scope:
+        - Add a Today tab/page to the Web UI rendering GET /api/command-center as four cards (Now/Attention/Inbox/Upcoming), distinct from the existing Dashboard tab
+        - Add today to PAGE_VIEWS/VIEW_PAGE/VIEW_META/VIEW_ACTIONS and the refreshAll() dispatch table
+        - Add UI_STRINGS/translation coverage for every new static and dynamically-rendered chrome string, reusing existing entries (Overdue, Due today, Blocked, Habits, Projects, Messages, deferred, +N more) where already present
+        - lifetxt/web_assets.html
+        - tests/test_lifetxt.py
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests/test_lifetxt.py LifeTxtWebConfigAndCheckLineTests.test_today_view_is_served_and_backed_by_the_command_center_endpoint
+        - python -m unittest tests.test_lifetxt.LifeTxtWebConfigAndCheckLineTests tests.test_lifetxt.LifeTxtWebApiTests tests.test_web_i18n tests.test_release_policy tests.test_surface_runtime tests.test_web_commands -> Ran 126 tests, OK
+        - python -m unittest tests.test_web_assets -> Ran 7 tests, OK (packaged web_assets.html resource still matches the imported HTML_PAGE value byte-for-byte)
+        - "manual: a real Node.js run of the extracted _todayRefRow/_todaySubsection/loadToday source against populated, empty, bounded-limit (12 rows against an 8-row cap), and forced-error fixtures -- correct markup and bounded '+4 more' output in every case, graceful error message instead of a thrown exception"
+        - node --check on the full extracted <script> body -> exit 0 (no syntax error introduced)
+        - "live: real lifetxt serve process against a real 3-item fixture; GET /api/command-center returned the real aggregation; GET / contained the Today tab/section markup; GET /?view=today served successfully"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: null
+      notes: >-
+        Fourth implementation task of the #472 post-Stable Daily Command
+        Center theme, depending on #477/PR #478. Deliberately added as a new
+        `today` tab distinct from the pre-existing `dashboard` tab rather
+        than replacing it: the existing Dashboard view already has its own
+        established KPI-tile/chart/project aggregation independently built
+        from `/api/items`/`/api/agenda`/`/api/chart/tasks`/`/api/stats/summary`,
+        and #479's acceptance criteria explicitly forbid reimplementing
+        Command Center business rules or disturbing existing Web
+        conventions -- rewriting that view was out of scope and would have
+        been a materially larger, riskier change than this S-sized task.
+        loadToday() calls only GET /api/command-center and performs no
+        aggregation of its own; verified both by a real Node.js run of the
+        extracted rendering functions and by a served-page test asserting
+        the function body never references /api/items, /api/agenda, or
+        /api/stats. Existing auth/read-only middleware is inherited
+        automatically (no route change in this task; #477 already wired
+        the endpoint into it). Proposal accept/edit/reject actions and
+        Saved Views/life-area navigation remain explicit, unimplemented
+        follow-ups per #479's own scope.
+      status: implemented
+
+    - requirement_id: req-tui-saved-views-and-area-switching
+      capability_id: cap-query-saved-views-and-areas
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/472
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/483
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/487
+      changed_files_or_scope:
+        - Add /saved [NAME] (list configured saved views, or apply one as the active row filter via lifetxt.saved_views.run_saved_view)
+        - Add /area [NAME] (list areas with progress via lifetxt.areas.area_list, or filter rows to one area via lifetxt.areas.collect_areas)
+        - Reset both filters from the existing /clear command; persist both across sessions via the existing SESSION_FIELDS mechanism; keep both fresh across /reload by recomputing the active filter's (source, line) membership in load()
+        - lifetxt/tui_app.py
+        - tests/test_cui_extensions.py
+        - docs/en/cli.md
+        - docs/ja/cli.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests/test_cui_extensions.py WorkspaceSavedViewAndAreaTests (11 tests)
+        - python -m unittest tests.test_cui_extensions -> Ran 147 tests, OK (skipped=1)
+        - python -m unittest tests.test_surface_runtime -> Ran 20 tests, OK (TuiDocumentationDriftTests confirms docs/en/cli.md's TUI command table matches tui_app.COMMANDS after adding /saved and /area)
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: null
+      notes: >-
+        Implements #480's investigation and recommendation: TUI first
+        (matching an already-established `/project`/`/context`/`/tag`
+        filter-command pattern, and avoiding the naming collision `/view`
+        already carries on both TUI and Web). No query grammar or
+        area-membership logic is duplicated in `lifetxt/tui_app.py`; both
+        commands adapt the (source, line) identity every row already
+        carries to `run_saved_view`/`collect_areas`'s own results, and both
+        reuse the exact ValueError message
+        `lifetxt.saved_views`/`lifetxt.areas` already raise for an unknown
+        name. `/saved` and `/area` are mutually exclusive (applying one
+        clears the other, matching the "one active filter of this kind"
+        model). The Web counterpart (#484) remains an explicit,
+        unimplemented follow-up.
+      status: implemented
+
+    - requirement_id: req-web-saved-views-and-area-switching
+      capability_id: cap-web-saved-views-and-areas
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/472
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/484
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/488
+      changed_files_or_scope:
+        - Add GET /api/saved-views, GET /api/saved-views/{name}, GET /api/areas, GET /api/areas/{name}, delegating entirely to lifetxt.saved_views/lifetxt.areas
+        - Add a Saved view / Area select to the Items view filter bar, replacing the visible row set with the selected view's or area's items
+        - lifetxt/webapp.py
+        - lifetxt/web_assets.html
+        - tests/test_lifetxt.py
+        - docs/en/web.md
+        - docs/ja/web.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests/test_lifetxt.py LifeTxtWebApiTests saved-view/area tests (8 tests) and test_saved_view_and_area_selects_are_served_and_backed_by_the_new_apis
+        - "live: TestClient smoke against a real fixture life.txt with a saved_views config and an area:home item confirmed all four routes, including 404 for an unknown saved view (\"Unknown saved view 'nope'. Known: urgent\") and area (\"Unknown area 'nope'. Known: (unassigned), home\")"
+        - python -m unittest tests.test_lifetxt.LifeTxtWebApiTests tests.test_web_commands tests.test_surface_runtime tests.test_web_i18n tests.test_release_policy -> Ran 135 tests, OK
+        - '$env:MPLBACKEND="Agg"; python -W ignore::ResourceWarning -m unittest discover -> Ran 2558 tests, OK (skipped=5)'
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check lifetxt tests scripts -> clean (pre-existing drift in 9 unrelated files confirmed present on main already, not introduced by this change)
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: null
+      notes: >-
+        Ninth #472-epic implementation task, alongside #475/#476/#477/#479
+        (Daily Command Center) and #481/#485 (temporal-context-v1). An
+        earlier draft added WEB_COMMAND_NOTES entries for "saved"/"area",
+        mirroring #479's own "today" note; both were reverted after the
+        full suite caught that #483 (the TUI /saved and /area commands)
+        was not yet merged into main at the time this branch was created,
+        so those TUI command names do not exist in COMMANDS_BY_NAME on
+        this branch and the WEB_COMMAND_NOTES/TUI-registry drift gate
+        (tests.test_web_commands.test_every_note_refers_to_a_real_command,
+        tests.test_surface_runtime.WebSurfaceRuntimeTests.test_live_web_command_catalog_matches_tui_registry_gate)
+        correctly failed. The stale "today" note text left over from #479
+        ("Not yet available in the browser") was also corrected in the
+        same edit, found while reading WEB_COMMAND_NOTES for this task.
+        `GET /api/areas/{name}` returns `area_show()`'s `open_items` as
+        lightweight refs, not full serialized items, so the client-side
+        `applyArea()` fetches `/api/items` and filters to the returned
+        `(source, line)` membership rather than rendering the refs
+        directly -- see `cap-web-saved-views-and-areas`'s own notes for why
+        this capability is a separate entry from #483's TUI-side one rather
+        than an extension of it.
+      status: implemented
+
+    - requirement_id: req-mcp-temporal-context
+      capability_id: cap-temporal-context
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/472
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/489
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/491
+      changed_files_or_scope:
+        - Add a read-only MCP tool get_temporal_context delegating entirely to lifetxt.temporal_context.temporal_context()
+        - Register it in READ_ONLY_TOOLS, the tool schema list, and TOOL_HANDLERS
+        - lifetxt/mcp.py
+        - tests/test_mcp_expansion.py
+        - docs/en/life-hub.md
+        - docs/ja/life-hub.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests/test_mcp_expansion.py GetTemporalContextToolTests (8 tests: direct-engine equivalence, window/limit bounding, stale_after reaching the engine, unknown/missing/ambiguous id errors, invalid-bound type errors, read-only usability)
+        - python -m unittest tests.test_mcp_expansion tests.test_surface_runtime -> Ran 107 tests, OK
+        - 'live: lifetxt.mcp.call_tool("get_temporal_context", {"id": "t1"}, context) against a real 3-item fixture with due: dates returned the exact object a direct temporal_context() call produces; unknown/missing id and a non-integer window each raised a deterministic ValueError'
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check lifetxt tests scripts -> clean
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: null
+      notes: >-
+        Extends cap-temporal-context (#481/#485, PR #486) rather than
+        creating a parallel capability, per the issue's own technical
+        constraint. No temporal derivation logic is duplicated in
+        lifetxt/mcp.py: the new tool resolves the target item via the same
+        find_item_by_id helper _tool_get_item/_tool_get_backlinks already
+        use, raises the same bare ValueError convention on an empty,
+        unknown, or ambiguous id (letting call_tool's existing
+        ValueError-to-JSON-RPC-error translation handle the response
+        shape), and passes window/limit/stale_after straight through to
+        temporal_context() with only type validation -- matching the CLI's
+        own defaults and leniency rather than inventing new range checks.
+        A read-only McpContext does not reject duplicate workspace ids at
+        startup (only a writable context's assert_unique_workspace_ids
+        does), so the ambiguous-id test uses a read-only context to
+        actually reach find_item_by_id's own multiple-match branch.
+      status: implemented
+
+    - requirement_id: req-mcp-explain-item-prompt
+      capability_id: cap-mcp-prompts
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/472
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/492
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/493
+      changed_files_or_scope:
+        - Add the explain_item MCP prompt, composing get_temporal_context/get_backlinks/get_command_center/get_next_actions/get_ticket/get_project for one target item
+        - Extend prompt_get() with generic required-argument validation, raising a deterministic ValueError when a declared-required argument is missing
+        - lifetxt/mcp.py
+        - tests/test_mcp_expansion.py
+        - docs/en/ai-integration.md
+        - docs/ja/ai-integration.md
+        - .ai/project/CAPABILITIES.yml
+        - .ai/project/TRACEABILITY.yml
+      tests_or_evidence:
+        - tests/test_mcp_expansion.py PromptTests (12 tests) and JsonRpcTests.test_prompt_missing_required_argument_becomes_a_jsonrpc_error
+        - python -m unittest tests.test_mcp_expansion -> Ran 95 tests, OK
+        - python -m unittest tests.test_surface_runtime tests.test_release_policy tests.test_web_i18n -> Ran 53 tests, OK
+        - "live: prompt_get(\"explain_item\", {\"id\": \"t1\"}) returned the expected template with \"Context: id = t1\" appended; prompt_get(\"explain_item\", {}) and prompt_get(\"explain_item\") both raised a deterministic ValueError naming the missing id argument; every pre-existing prompt continued to work unchanged with no arguments"
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check lifetxt tests scripts -> clean
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+      release_or_deployment: null
+      notes: >-
+        Implements #490's own recommendation directly: no new schema, tool,
+        or shared aggregate contract is introduced. explain_item delegates
+        entirely to existing tools; see cap-mcp-prompts's own notes for the
+        full account, including the found-and-fixed required-argument
+        validation gap in prompt_get() (a generic mechanism fix, not
+        explain_item-specific logic, since prompts are template data with
+        no per-prompt handler function to hold one-off validation).
+      status: implemented
+
+    - requirement_id: req-command-center-messages-ack-snooze
+      capability_id: cap-daily-command-center
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/472
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/498
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/501
+      changed_files_or_scope:
+        - Fix command_center()'s messages bucket to exclude an acked or actively-snoozed message, mirroring lifetxt.notifier's existing due-notification suppression rule
+        - lifetxt/command_center.py
+        - tests/test_life_hub.py
+      tests_or_evidence:
+        - tests/test_life_hub.py CommandCenterTests (3 new tests: acked message excluded, actively-snoozed message excluded, snooze_until in the past no longer suppresses)
+        - python -m unittest tests.test_life_hub -> Ran 30 tests, OK
+        - python -m unittest tests.test_nextaction tests.test_inbox tests.test_mcp_expansion -> Ran 158 tests, OK (no regression in reused engines or the unmodified MCP get_command_center tool)
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+        - "confirmed via git stash (production code only, tests kept) that the 3 new tests fail against the pre-#498 code (an acked/snoozed message still appears in command_center()['messages']), then pass once the fix is restored"
+      release_or_deployment: null
+      notes: >-
+        Found during #495's investigation into command_center()'s messages
+        bucket: it filtered only on `item.status in OPEN_STATUSES` and
+        `_message_needs_attention`, never checking `ack`/`snooze_until`,
+        while `lifetxt.notifier._notification_suppressed()` already
+        implements the correct ack/active-snooze suppression rule for the
+        due-notification path (`list_notifications`/`get_agenda`). Rather
+        than importing `notifier`'s instant-precision suppression check
+        unmodified, `_message_suppressed()` is a new, small function at the
+        same reference-*date* granularity `command_center()` already uses
+        for every other bucket (`command_center` takes a reference date, not
+        a reference instant): it compares `snooze_until`'s date against
+        `today`'s date rather than an exact timestamp, so a snooze expiring
+        earlier today is treated consistently with the rest of this
+        aggregation's day-boundary semantics rather than introducing a
+        second, finer-grained time model into one bucket only.
+      status: implemented
+
+    - requirement_id: req-command-center-ticket-attention
+      capability_id: cap-daily-command-center
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/472
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/499
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/501
+      changed_files_or_scope:
+        - Add a bounded ticket_attention bucket to command_center() covering review-status, high-severity, and stale tickets, reusing lifetxt.temporal_context.node_facts and lifetxt.ticket_project_values unmodified
+        - Add a configurable ticket_stale_after_days parameter to command_center()
+        - Add a "Tickets needing attention" section to CLI `today`'s text output
+        - Add a new lifetxt today CLI regression test file
+        - Extend command-center-v1's schema generator and sample; regenerate the published schema
+        - lifetxt/command_center.py
+        - lifetxt/cli.py
+        - lifetxt/schema_extensions_v7.py
+        - dist/schemas/command-center-v1.schema.json
+        - tests/test_life_hub.py
+        - tests/test_today_cli.py
+        - docs/en/life-hub.md
+        - docs/ja/life-hub.md
+      tests_or_evidence:
+        - tests/test_life_hub.py TicketAttentionTests (9 tests: review status, high severity, stale via node_facts, terminal statuses excluded, non-tickets excluded, multiple reasons combined, high-severity-first sort, configurable ticket_stale_after_days reaching the engine, empty when no ticket qualifies)
+        - tests/test_today_cli.py (3 tests: text section present when tickets need attention, absent otherwise, --json includes ticket_attention)
+        - python -m unittest tests.test_life_hub tests.test_today_cli -> Ran 33 tests, OK
+        - python -m unittest tests.test_schema_extensions_v2 -> Ran 5 tests, OK (command-center-v1 ticket_attention field, bundle equality)
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - "confirmed via git stash (production code only, tests kept) that TicketAttentionTests and the test_today_cli.py tests fail against the pre-#499 code (no ticket_attention key), then pass once the fix is restored"
+        - "live: real lifetxt today text and --json output against a fixture with a review-status ticket and a stale ticket both show the new section/field with correct reasons"
+      release_or_deployment: null
+      notes: >-
+        Extends cap-daily-command-center with the ticket-attention signal
+        #495's investigation recommended. Reuses
+        lifetxt.temporal_context.node_facts (an existing, already-tested
+        per-item staleness/due-date fact function from #485/#489) for the
+        "stale" reason rather than reimplementing a second staleness rule,
+        and lifetxt.ticket_project_values.ticket_row/DEFAULT_HIGH_SEVERITIES/
+        DEFAULT_TERMINAL_STATUSES for status/severity classification,
+        matching this project's established reuse-before-new-implementation
+        policy. No structural relation computation or a second staleness
+        formula is introduced. TUI Today and the Web Today dashboard are
+        deliberately NOT updated in this task -- they render whatever
+        command_center() returns generically today (TUI groups by the
+        existing NOW/ATTENTION/INBOX/UPCOMING buckets; Web renders four
+        fixed cards), so a `ticket_attention` bucket with no matching
+        section in either renderer is present in the API/CLI/MCP surface
+        but not yet visually surfaced in the TUI or Web Today view. This is
+        recorded here as a deliberate, evidenced follow-up gap rather than
+        silently left unmentioned; adding TUI/Web rendering for this new
+        bucket is a candidate for a future issue.
+      status: implemented
+
+    - requirement_id: req-inbox-proposal-stale-detection
+      capability_id: cap-unified-inbox-proposals
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/472
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/496
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/501
+      changed_files_or_scope:
+        - Capture staged_target/expected_revision/provenance automatically at proposal stage time
+        - Use the proposal's own stage-time revision at accept time (when no explicit override is given and the accept target matches staged_target), refusing with a distinct stale-proposal error on a mismatch
+        - Add a use_staged_revision batch-safety flag so several proposals staged before any were applied do not falsely see an earlier batch member's own write as external staleness
+        - Add staged_target to inbox-proposal-v1's schema generator and sample; regenerate the published schema
+        - lifetxt/inbox.py
+        - lifetxt/schema_extensions_v12.py
+        - dist/schemas/inbox-proposal-v1.schema.json
+        - tests/test_inbox.py
+        - docs/en/inbox.md
+        - docs/ja/inbox.md
+      tests_or_evidence:
+        - tests/test_inbox.py (8 new tests: stage-time target/revision/provenance capture, accept success when unchanged, accept refusal with a named stale-proposal error and no write when the target changed since staging, explicit-revision override precedence over the staged one, target-mismatch skips the staleness check, batch of proposals staged before any were applied succeeds, batch reports a stale first proposal without crashing the rest of the batch)
+        - python -m unittest tests.test_inbox -> Ran 20 tests, OK (12 pre-existing re-run unmodified)
+        - python -m unittest tests.test_schema_extensions_v2 -> Ran 5 tests, OK (inbox-proposal-v1 staged_target field, bundle equality)
+        - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
+        - ruff format --check / ruff check on changed files -> clean
+        - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
+        - "confirmed via git stash (production code only, tests kept) that all 8 new tests fail against the pre-#496 code (no staleness detection: a stale accept silently succeeds and overwrites concurrent content), then pass once the fix is restored"
+        - "live, real installed lifetxt console script, real disposable workspace: `proposal add` then an interleaved external edit then `proposal accept` correctly refused with a named stale-proposal error and left the target file byte-unchanged; a second `proposal add`/`proposal accept` with no interleaved edit succeeded normally"
+      release_or_deployment: null
+      notes: >-
+        #494 investigated Unified Inbox proposal-contract hardening and
+        found, by reading the actual accept call chain rather than the
+        schema field names alone, that expected_revision was declared on
+        the schema but never read back by any accept path (no caller ever
+        supplied one) and provenance was a documented field no caller ever
+        populated -- a proposal staged against one version of the file could
+        silently overwrite unrelated concurrent changes on accept, with no
+        detection. See cap-unified-inbox-proposals's own notes for the full
+        account, including the use_staged_revision batch-safety fix found
+        and required by re-running the pre-existing test_batch_apply test
+        against the naive per-proposal-revision design.
+      status: implemented
+
+    - requirement_id: req-inbox-ticket-creation-event
+      capability_id: cap-unified-inbox-proposals
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/472
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/497
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/501
+      changed_files_or_scope:
+        - Add build_creation_event(), a thin wrapper around the existing build_ticket_event() supplying the fixed sequence=1 and an auto-generated transaction id for a brand-new ticket's first event
+        - Wire it into command_ticket_new (lifetxt/cli.py) and its lifetxt/ticket_custom_fields.py monkey-patched duplicate, which is what actually runs on every normal lifetxt invocation
+        - Wire it into inbox.apply_proposal() for a ticket-shaped create proposal (record:ticket on a T item, with id:), producing the same creation-event audit trail on acceptance
+        - lifetxt/ticket_activity.py
+        - lifetxt/cli.py
+        - lifetxt/ticket_custom_fields.py
+        - lifetxt/inbox.py
+        - tests/test_inbox.py
+        - tests/test_ticket_creation_event.py
+        - docs/en/inbox.md
+        - docs/ja/inbox.md
+        - docs/en/tickets.md
+        - docs/ja/tickets.md
+      tests_or_evidence:
+        - tests/test_ticket_creation_event.py (7 tests: build_creation_event() shape/transaction-id/author defaults, CLI `ticket new` writing a companion creation event, event correctly referencing the new ticket id, dry-run writing nothing)
+        - tests/test_inbox.py (3 new tests: ticket-shaped proposal acceptance writes a creation event, non-ticket proposal unaffected, id-less ticket-shaped proposal treated as non-ticket since staging does not auto-generate an id the way `ticket new` does)
         - python -m unittest tests.test_ticket_creation_event tests.test_inbox tests.test_ticket_custom_fields tests.test_ticket_workflow_surfaces tests.test_ticket_workflow_history tests.test_tickets -> Ran 176 tests, OK
         - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
         - ruff format --check / ruff check on changed files -> clean
@@ -16524,7 +18800,7 @@ ew tests: ticket-shaped proposal acceptance writes a creation event, non-ticket 
       capability_id: cap-import-export-format-expansion
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1432
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1438
-      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1439
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1440
       tests_or_evidence:
         - tests/test_conversion.py
         - tests/test_extra_cli.py

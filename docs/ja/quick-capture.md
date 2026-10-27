@@ -121,6 +121,13 @@ TUIでは `/add [N] N "Idea" body:"text"`、MCPでは `capture_item` の `text` 
 `POST /api/quick/resolve` は同じ契約の非書込previewで、IDを生成しません。
 明示的な `POST /api/items/raw` とstructured create/importも引き続き利用できます。
 
+専用`/capture`画面では、明示的な**todo.txt（Preview必須）**modeも選択できます。
+`POST /api/quick/resolve`へ`{"text":"...","syntax":"todo"}`を送り、サーバーが
+変換したfieldを表示し、返されたworkspace context tokenとsource revisionに確認操作を
+結び付けます。確認後の`POST /api/items/capture`は同じtext・syntaxとtoken・revisionを
+送ります。入力、書込先file、設定済みworkspace参照元のいずれかが変わった場合は再Previewが
+必要です。ブラウザー側にtodo.txt grammarは実装しません。
+
 trim後に `[` で始まる入力は完全recordの意図として扱います。不正なstatus/type、
 閉じていない引用符、構文エラーは省略記法のtaskに変換せず、何も書き込まずエラーを返します。
 例：`[ ] T "unterminated`。Quickは1行入力専用で、複数行／一括importは対象外です。
@@ -143,8 +150,8 @@ MCPの設定に応じた出所metadataとdry-run proposalも維持します。
 | CLI | `add`, `quick`, `q`, stdin | 既存の省略記法flag/preset/default |
 | ローカルTUI | `/add`, `/a`, `/related` | 共通resolver。関連contextは未指定fieldを補完 |
 | Remote TUI | `/add`, `/a`, `/related` | revision付きでtextをサーバーへ送り、サーバー側で解決 |
-| Web UI | Quick Add、`/capture`、Planner、command `/add`、Focus Quick Add | 共通capture API。Focusはdue未指定時だけ今日を補完 |
-| Web API | `POST /api/items/capture` | 省略記法または完全record。省略記法には`type`指定可 |
+| Web UI | Quick Add、`/capture`、Planner、command `/add`、Focus Quick Add | 共通capture API。`/capture`は明示todo.txt Preview入力にも対応 |
+| Web API | `POST /api/items/capture` | 省略記法または完全record。明示todo syntaxにはPreview token／revisionが必須 |
 | MCP | `capture_item` | 省略記法または完全record。proposalと出所metadataを維持 |
 
 `parse_shorthand` / `POST /api/shorthand/parse`は明示的な省略記法専用previewです。

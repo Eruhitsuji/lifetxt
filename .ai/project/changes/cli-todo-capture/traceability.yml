@@ -11,6 +11,6 @@ links:
       - docs/en/cli.md
       - docs/ja/cli.md
     release_or_deployment: next normal maintenance release
-    status: in_progress
+    status: implemented
 
 gaps: []

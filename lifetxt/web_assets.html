@@ -91,12 +91,25 @@ __LIFETXT_WEB_STYLES__  </style>
         <h2 id="capture-heading">Quick Capture</h2>
         <p class="capture-intro">Capture one thought to your authoritative life.txt.</p>
         <form id="capture-form" class="capture-form" onsubmit="event.preventDefault();submitCapture();">
+          <label for="capture-input-syntax">Input syntax</label>
+          <select id="capture-input-syntax" onchange="captureSyntaxChanged()" aria-describedby="capture-mode-help">
+            <option value="quick">Quick (default)</option>
+            <option value="todo">todo.txt (preview required)</option>
+          </select>
           <label for="capture-text">What do you want to remember?</label>
           <input id="capture-text" name="text" autocomplete="off" enterkeyhint="done" required data-no-i18n
-                 placeholder="Buy milk @home ^tomorrow" aria-describedby="capture-syntax capture-feedback">
+                 placeholder="Buy milk @home ^tomorrow" aria-describedby="capture-mode-help capture-syntax capture-feedback" oninput="captureInputChanged()">
           <button id="capture-submit" type="submit">Capture</button>
+          <button id="capture-confirm" type="button" onclick="confirmTodoCapture()" hidden>Confirm and capture</button>
         </form>
+        <p id="capture-mode-help" class="capture-syntax">Quick saves directly. todo.txt always shows a semantic preview before confirmation.</p>
         <p id="capture-syntax" class="capture-syntax"><span data-no-i18n>@project #tag !high ^tomorrow</span><span>shorthand and full life.txt lines use the same Quick add semantics.</span></p>
+        <section id="capture-preview" class="capture-preview" aria-labelledby="capture-preview-heading" hidden>
+          <h3 id="capture-preview-heading">Review todo.txt mapping</h3>
+          <dl id="capture-preview-fields" data-no-i18n></dl>
+          <div id="capture-preview-diagnostics" data-no-i18n></div>
+          <p>Confirm only after reviewing every mapped field.</p>
+        </section>
         <div id="capture-feedback" class="capture-feedback" role="status" aria-live="polite" aria-atomic="true"></div>
         <a class="capture-back" href="/">Open full Web UI</a>
       </div>

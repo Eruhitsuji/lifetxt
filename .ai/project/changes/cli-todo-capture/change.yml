@@ -3,7 +3,7 @@ schema_version: 1
 change:
   id: cli-todo-capture
   title: Explicit todo.txt CLI capture adapter
-  status: in_review
+  status: implemented
   change_type: Feature
   assurance_level: High
   owner: Eruhitsuji

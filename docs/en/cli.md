@@ -643,6 +643,25 @@ A title made only of sigils is rejected rather than creating an untitled record,
 and an unrecognized `^date` fails loudly instead of writing an unparseable
 value.
 
+### Explicit todo.txt capture
+
+Use `--syntax todo` when one new task is already written in todo.txt syntax:
+
+```sh
+lifetxt add --syntax todo \
+  "(A) 2026-10-26 Prepare proposal +Work @office due:2026-10-30"
+```
+
+This is an explicit mode; ordinary Quick input is never auto-detected as
+todo.txt. The shared todo decoder maps priority, creation/completion dates,
+projects, contexts, Unicode tokens, and valid `key:value` extensions before the
+existing validation, ID, duplicate, locking, and atomic-write path runs. It
+accepts exactly one physical line. Use `convert --from todo --to life` for a
+file or multiple tasks. Semantic override options such as `--project`,
+`--type`, `--preset`, and the detail flags cannot be combined with todo mode;
+put those values in the todo.txt task itself. Malformed dates and multiline
+input fail before the destination is changed.
+
 ### Named capture presets
 
 `--preset NAME` applies a configured `capture.presets.<name>` object's

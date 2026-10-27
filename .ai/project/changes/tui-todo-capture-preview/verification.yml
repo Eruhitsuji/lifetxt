@@ -1,0 +1,59 @@
+schema_version: 1
+
+verification:
+  planned:
+    - type: focused
+      command: python -m unittest tests.test_tui_todo_preview tests.test_tui_remote_backend
+      requirement_ids: [req-tui-todo-capture-preview]
+      status: passed
+    - type: regression
+      command: python -m unittest tests.test_cui_extensions tests.test_tui_backend tests.test_tui_remote_client tests.test_tui_remote_backend tests.test_completion_surfaces tests.test_completion_values tests.test_surface_runtime tests.test_quick_input
+      requirement_ids: [req-tui-todo-capture-preview]
+      status: passed
+    - type: full
+      command: MPLBACKEND=Agg python -m unittest discover
+      requirement_ids: [req-tui-todo-capture-preview]
+      status: passed
+    - type: static
+      command: ruff check changed Python files
+      requirement_ids: [req-tui-todo-capture-preview]
+      status: passed
+    - type: documentation
+      command: python scripts/validate_release_docs.py --output .cache/issue1443-release-docs.json
+      requirement_ids: [req-tui-todo-capture-preview]
+      status: passed
+    - type: traceability
+      command: python -m unittest tests.test_traceability_gate tests.test_change_package_closeout
+      requirement_ids: [req-tui-todo-capture-preview]
+      status: passed
+
+  executed:
+    - command: python -m unittest tests.test_tui_todo_preview tests.test_tui_remote_backend
+      result: Ran 54 tests, OK.
+    - command: python -m unittest tests.test_cui_extensions tests.test_tui_backend tests.test_tui_remote_client tests.test_tui_remote_backend tests.test_completion_surfaces tests.test_completion_values tests.test_surface_runtime tests.test_quick_input tests.test_tui_todo_preview
+      result: Ran 369 tests, OK; 16 skipped.
+    - command: MPLBACKEND=Agg python -m unittest discover
+      result: Ran 6026 tests in 470.487s, OK; 90 skipped.
+    - command: ruff check lifetxt/tui_app.py lifetxt/tui_backend.py tests/test_tui_todo_preview.py tests/test_tui_remote_backend.py
+      result: All checks passed.
+    - command: python scripts/validate_release_docs.py --output .cache/issue1443-release-docs.json
+      result: '{"errors": 0, "ok": true}'
+    - command: python -m unittest tests.test_traceability_gate tests.test_change_package_closeout
+      result: Ran 17 tests, OK before the PR traceability URL was assigned.
+    - command: python -m lifetxt check examples/minimal_life.txt
+      result: OK; 10 items.
+    - command: python -m unittest tests.test_tui_todo_preview tests.test_cui_extensions tests.test_tui_backend tests.test_tui_remote_client tests.test_tui_remote_backend tests.test_completion_surfaces tests.test_completion_values tests.test_surface_runtime tests.test_quick_input tests.test_web_mobile_capture tests.test_web_i18n
+      result: After rebasing onto merged Web PR #1446, ran 414 integration tests, OK; 1 skipped.
+
+review_ledger:
+  - reviewer: Independent reviewer
+    review_type: implementation/safety/accessibility/integration
+    target_commit: null
+    result: pending
+    finding_count: 0
+    completed_at: null
+
+release_evidence:
+  migration_notes: Additive TUI command; Quick remains default and no stored-data migration is required.
+  rollback_plan: Revert the feature PR; existing saved life.txt records require no migration.
+  operations_evidence: []

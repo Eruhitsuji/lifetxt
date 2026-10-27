@@ -334,6 +334,30 @@ class WorkspaceStateRemoteWiringTests(unittest.TestCase):
         self.assertEqual(post_calls[0][1], "/api/items/capture")
         self.assertEqual(post_calls[0][2]["text"], "Buy milk")
 
+    def test_todo_preview_uses_reviewed_revision_for_structured_create(self):
+        connection = _StubConnection({"items": []})
+        state = self._state(connection)
+        state.load()
+
+        level, _message = tui_app.run_command(
+            state, "/todo (B) Remote_task +work @desk owner:alice"
+        )
+        self.assertEqual("info", level)
+        self.assertEqual([], [c for c in connection.calls if c[0] == "POST"])
+        connection.file_revision = "newer-observed-revision"
+
+        tui_app.handle_key(state, "enter")
+
+        post_calls = [c for c in connection.calls if c[0] == "POST"]
+        self.assertEqual(1, len(post_calls))
+        self.assertEqual("/api/items", post_calls[0][1])
+        self.assertEqual("rev0", post_calls[0][3])
+        self.assertEqual("Remote_task", post_calls[0][2]["title"])
+        self.assertEqual(["B"], post_calls[0][2]["details"]["priority"])
+        self.assertEqual(["work"], post_calls[0][2]["details"]["project"])
+        self.assertEqual(["desk"], post_calls[0][2]["details"]["context"])
+        self.assertEqual(["alice"], post_calls[0][2]["details"]["owner"])
+
     def test_cmd_new_related_creates_a_remote_item_through_the_backend(self):
         # #770: Remote TUI parity -- /related must create the new item
         # through the authoritative server backend (a real POST /api/items

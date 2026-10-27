@@ -17,7 +17,8 @@ verification:
         module with PYTHONPATH set to the checkout passed all 4 tests. A second
         full run with PYTHONPATH set passed those subprocesses but found one
         expected traceability-gate failure because this PR's traceability row
-        had not yet been added; the focused gate is rerun after recording it.
+        had not yet been added. After recording the row, the focused traceability
+        and package-closeout suite passed; the full suite was not rerun.
     - type: static
       command: python -m ruff check lifetxt/conversion.py tests/test_conversion.py tests/test_extra_cli.py
       requirement_ids: [req-todo-interoperability-core]
@@ -44,6 +45,8 @@ verification:
       result: '{"errors": 0, "ok": true}'
     - command: PYTHONPATH="$PWD" python -m unittest tests.test_git_commit_worker_cli
       result: Ran 4 tests, OK; resolves checkout import for subprocess tests.
+    - command: python -m unittest tests.test_traceability_gate tests.test_change_package_closeout
+      result: Ran 17 tests, OK after adding the PR traceability row.
     - command: MPLBACKEND=Agg python -m unittest discover
       result: >-
         Ran 6006 tests in 370.512s; 4 failures, 517 skipped. Failures were

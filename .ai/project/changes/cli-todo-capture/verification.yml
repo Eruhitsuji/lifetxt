@@ -17,7 +17,7 @@ verification:
     - type: traceability
       command: python -m unittest tests.test_traceability_gate tests.test_change_package_closeout
       requirement_ids: [req-cli-todo-capture]
-      status: planned
+      status: passed
 
   executed:
     - command: python -m unittest tests.test_lifetxt.LifeTxtAddAliasCliTests tests.test_conversion tests.test_extra_cli
@@ -30,6 +30,8 @@ verification:
       result: '{"errors": 0, "ok": true}'
     - command: python -m lifetxt check examples/minimal_life.txt
       result: OK; 10 items.
+    - command: python -m unittest tests.test_traceability_gate tests.test_change_package_closeout
+      result: Ran 17 tests, OK after committing the PR traceability row.
 
 review_ledger:
   - reviewer: Independent reviewer

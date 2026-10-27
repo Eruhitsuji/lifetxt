@@ -609,6 +609,23 @@ lifetxt q "Buy milk @home #errand !high ^tomorrow"
 記号だけのタイトルはタイトルなしの record を作らずに拒否され、
 未知の `^date` は解釈不能な値を書き込まずに明示的に失敗します。
 
+### todo.txt形式を明示した追加
+
+todo.txt記法で書いた1件のtaskを追加するときは`--syntax todo`を指定します：
+
+```sh
+lifetxt add --syntax todo \
+  "(A) 2026-10-26 Prepare proposal +Work @office due:2026-10-30"
+```
+
+これは明示モードであり、通常のQuick入力をtodo.txtとして自動判定しません。
+共有todo decoderがpriority、作成日・完了日、project、context、Unicode token、
+有効な`key:value`拡張を変換した後、既存のvalidation、ID、重複検査、lock、
+atomic writeを使用します。受理するのは物理1行だけです。ファイルや複数taskは
+`convert --from todo --to life`を使用してください。todo modeでは`--project`、
+`--type`、`--preset`、各detail flagなどの意味上書きを併用できないため、値は
+todo.txt task内に記述します。不正な日付や複数行は出力先を変更する前に失敗します。
+
 ### 名前付き capture preset
 
 `--preset NAME` は、設定した `capture.presets.<name>` オブジェクトの

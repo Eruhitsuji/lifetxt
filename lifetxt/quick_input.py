@@ -27,6 +27,7 @@ class QuickInput:
 def resolve_quick_input(
     text,
     *,
+    syntax="quick",
     id_key="id",
     today=None,
     shorthand=True,
@@ -34,7 +35,7 @@ def resolve_quick_input(
     extra_details=None,
     merge_tags=False,
 ):
-    """Resolve shorthand or a complete record, rejecting malformed record intent.
+    """Resolve Quick, complete-record, or explicit todo.txt input.
 
     A leading ``[`` reserves Format intent, matching the parser's status
     entry point. It is only a safety discriminator, never a grammar/parser.
@@ -45,6 +46,8 @@ def resolve_quick_input(
     Full records ignore those defaults. Context details fill absent fields.
     IDs, workspace references and writes remain the mutation layer's job.
     """
+    if syntax not in ("quick", "todo"):
+        raise QuickInputError("syntax must be 'quick' or 'todo'.")
     raw = str(text or "")
     if len(raw.splitlines()) > 1 or any(
         c in raw for c in "\r\n\v\f\x1c\x1d\x1e\u0085\u2028\u2029"
@@ -55,7 +58,18 @@ def resolve_quick_input(
     raw = raw.strip()
     if not raw:
         raise QuickInputError("text is required.")
-    if raw.startswith("["):
+    if syntax == "todo":
+        from .conversion import decode_text
+
+        items, diagnostics = decode_text("todo", raw + "\n", source_name="quick.todo")
+        if diagnostics or len(items) != 1:
+            message = "; ".join("%s: %s" % (d.code, d.message) for d in diagnostics)
+            raise QuickInputError(
+                message or "Expected one valid todo.txt task.", diagnostics
+            )
+        item = items[0]
+        mode = "todo"
+    elif raw.startswith("["):
         items, diagnostics = parse_text(
             raw + "\n", id_key=id_key, check_references=False
         )

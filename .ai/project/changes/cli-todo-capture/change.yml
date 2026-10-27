@@ -1,0 +1,52 @@
+schema_version: 1
+
+change:
+  id: cli-todo-capture
+  title: Explicit todo.txt CLI capture adapter
+  status: in_progress
+  change_type: Feature
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1441
+  related_pull_request: null
+  base_commit: 771bc8e4c50cc914bedd9232e34ee719d6aa0a73
+  target_release: next normal maintenance release
+
+scope:
+  in_scope:
+    - Add explicit single-task todo.txt syntax to CLI Quick/add capture.
+    - Reuse the shared todo decoder and established validated atomic write path.
+    - Reject ambiguous overrides, malformed input, and multiple lines before mutation.
+    - Add focused tests, bilingual documentation, capability, and traceability evidence.
+  out_of_scope:
+    - Automatic syntax detection.
+    - Web, TUI, MCP, bulk import, compatibility profiles, or synchronization.
+    - Format 1.0 changes.
+  write_scope:
+    - lifetxt/cli.py
+    - lifetxt/quick_input.py
+    - tests/test_lifetxt.py
+    - docs/en/cli.md
+    - docs/ja/cli.md
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+    - .ai/project/changes/cli-todo-capture/**
+  forbidden_scope:
+    - .ai/managed/**
+    - duplicate todo grammar or parser
+    - Web/TUI UI or authorization behavior
+    - lossy conversion and external synchronization
+  shared_files:
+    - lifetxt/cli.py
+    - lifetxt/quick_input.py
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+
+task_size:
+  size: S
+  split_justification: One adapter and its safety contract; surface UI tasks remain separate.
+
+human_approvals_required:
+  - Independent review of the shared capture boundary and no-write failure paths.
+  - Human Merge Authority approval; the implementer must not merge.

@@ -14,6 +14,7 @@ from lifetxt.conversion import (
     UnsupportedConversionError,
     conversion_capabilities,
     convert_text,
+    decode_text,
 )
 from lifetxt.entrypoint import main
 
@@ -62,6 +63,87 @@ class ConversionCoreTests(unittest.TestCase):
         self.assertIn("priority:A", todo.content)
         self.assertIn("project:lifetxt", todo.content)
 
+    def test_todo_decoder_handles_priority_date_unicode_and_extensions(self):
+        source = (
+            "(A) 2026-10-26 Prepare proposal +Work +日本語 @office @職場 "
+            "project:legacy context:personal due:2026-10-30 "
+            "owner:alice owner:bob\n"
+        )
+        result = convert_text("todo", "life", source, source_name="fixture.todo")
+        item, diagnostics = decode_text("todo", source, source_name="fixture.todo")
+
+        self.assertEqual(1, result.item_count)
+        self.assertEqual("Prepare proposal", item[0].title)
+        self.assertEqual(["A"], item[0].details["priority"])
+        self.assertEqual(["2026-10-26"], item[0].details["created"])
+        self.assertEqual(["Work", "日本語", "legacy"], item[0].details["project"])
+        self.assertEqual(["office", "職場", "personal"], item[0].details["context"])
+        self.assertEqual(["2026-10-30"], item[0].details["due"])
+        self.assertEqual(["alice", "bob"], item[0].details["owner"])
+        self.assertEqual((), diagnostics)
+        self.assertIn("created:2026-10-26", result.content)
+
+    def test_todo_decoder_preserves_identity_and_date_less_completion(self):
+        source = "x Send report +Work @email pri:A id:stable_1 source:archive.txt\n"
+        result = convert_text("todo", "life", source, source_name="fixture.todo")
+        item, _ = decode_text("todo", source, source_name="fixture.todo")
+
+        self.assertEqual("[x]", item[0].status)
+        self.assertEqual("Send report", item[0].title)
+        self.assertEqual(["A"], item[0].details["priority"])
+        self.assertEqual(["stable_1"], item[0].details["id"])
+        self.assertEqual(["archive.txt"], item[0].details["source"])
+        self.assertNotIn("done:", result.content)
+
+    def test_malformed_todo_tokens_remain_visible_and_invalid_dates_warn(self):
+        result = convert_text(
+            "todo",
+            "life",
+            "2026-02-30 Bad date due:bad:token + @\n",
+        )
+
+        self.assertIn("Bad date due:bad:token + @", result.content)
+        self.assertEqual("warning", result.diagnostics[0].severity)
+        self.assertEqual("W203", result.diagnostics[0].code)
+
+    def test_life_to_todo_strict_encoder_preserves_supported_fields(self):
+        source = (
+            '[ ] T "Prepare proposal" priority:A created:2026-10-26 '
+            "project:Work context:office due:2026-10-30 id:task_1 source:todo.txt\n"
+            '[x] T "Send report" done:2026-10-26 created:2026-10-20 '
+            "priority:B project:Work context:email id:task_2 source:todo.txt\n"
+        )
+        result = convert_text("life", "todo", source)
+
+        self.assertEqual(
+            "(A) 2026-10-26 Prepare proposal +Work @office "
+            "due:2026-10-30 id:task_1 source:todo.txt\n"
+            "x 2026-10-26 2026-10-20 Send report +Work @email "
+            "pri:B id:task_2 source:todo.txt\n",
+            result.content,
+        )
+        round_trip = convert_text("todo", "life", result.content)
+        self.assertIn("id:task_1", round_trip.content)
+        self.assertIn("id:task_2", round_trip.content)
+        self.assertIn("priority:B", round_trip.content)
+
+    def test_life_to_todo_strict_encoder_rejects_unrepresentable_semantics(self):
+        with self.assertRaisesRegex(ConversionLossError, "item 1 field type=E"):
+            convert_text("life", "todo", "[ ] E Meeting on:2026-10-26\n")
+        with self.assertRaisesRegex(ConversionLossError, r"item 1 field status=\[/\]"):
+            convert_text("life", "todo", "[/] T In_progress\n")
+        with self.assertRaisesRegex(ConversionLossError, "completed task needs done:"):
+            convert_text("life", "todo", "[x] T Completed created:2026-10-26\n")
+        with self.assertRaisesRegex(ConversionLossError, "item 1 field due"):
+            convert_text("life", "todo", "[ ] T Deadline due:2026-10-26T12:00\n")
+
+    def test_todo_encoder_is_advertised_only_for_life_source(self):
+        capabilities = conversion_capabilities()
+
+        self.assertIn("todo", capabilities["target_formats"])
+        self.assertIn({"from": "life", "to": "todo"}, capabilities["pairs"])
+        self.assertNotIn({"from": "json", "to": "todo"}, capabilities["pairs"])
+
     def test_invalid_json_fails_explicitly(self):
         with self.assertRaisesRegex(InvalidConversionInputError, "Invalid json"):
             convert_text("json", "life", "{")
@@ -101,6 +183,35 @@ class ConvertCliTests(unittest.TestCase):
         self.assertEqual(0, code)
         self.assertEqual("", stderr)
         self.assertEqual("Example", json.loads(stdout)[0]["title"])
+
+    def test_life_to_todo_cli_and_failed_export_leave_destination_unchanged(self):
+        stdout, stderr, code = run_cli(
+            "convert",
+            "--from",
+            "life",
+            "--to",
+            "todo",
+            input_text="[ ] T Example priority:A\n",
+        )
+        self.assertEqual((0, ""), (code, stderr))
+        self.assertEqual("(A) Example\n", stdout)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            source = os.path.join(temp_dir, "source.life.txt")
+            output = os.path.join(temp_dir, "todo.txt")
+            with open(source, "w", encoding="utf-8") as handle:
+                handle.write("[ ] T Safe\n[ ] E Meeting on:2026-10-26\n")
+            with open(output, "w", encoding="utf-8") as handle:
+                handle.write("preserve this file\n")
+
+            stdout, stderr, code = run_cli(
+                "convert", "--from", "life", "--to", "todo", source, "-o", output
+            )
+            self.assertEqual(1, code)
+            self.assertEqual("", stdout)
+            self.assertIn("item 2 field type=E", stderr)
+            with open(output, encoding="utf-8") as handle:
+                self.assertEqual("preserve this file\n", handle.read())
 
     def test_to_json_compatibility_entry_point_matches_convert(self):
         source = "[ ] T Example due:2026-09-14\n"

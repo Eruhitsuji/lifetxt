@@ -1183,6 +1183,8 @@ python -m lifetxt convert --from json --to life data.json
 python -m lifetxt convert --from csv --to jsonl data.csv
 cat tasks.md | python -m lifetxt convert --from markdown-task-list --to life
 python -m lifetxt convert --from ics --to life calendar.ics
+python -m lifetxt convert --from todo --to life todo.txt -o imported.life.txt
+python -m lifetxt convert --from life --to todo tasks.life.txt -o exported.todo.txt
 ```
 
 The initial canonical format vocabulary is `life`, `json`, `jsonl`, `csv`,
@@ -1191,9 +1193,18 @@ smaller than every possible pair:
 
 | Source | Supported targets |
 | --- | --- |
-| `life` | `life`, `json`, `jsonl`, `csv`, `ics` |
+| `life` | `life`, `json`, `jsonl`, `csv`, `ics`, `todo` |
 | `json`, `jsonl`, `csv` | `life`, `json`, `jsonl`, `csv` |
 | `ics`, `markdown-task-list`, `todo` | `life`, `json`, `jsonl`, `csv` |
+
+The `life -> todo` encoder is strict. It writes Task records with `[ ]` or `[x]`
+status and representable dates, priority, project/context tokens, and
+single-token `key:value` extensions. It refuses unsupported item types,
+statuses, or fields instead of coercing or silently dropping them. A failed
+conversion does not write a partial output file. Todo project/context values
+may contain Unicode but cannot contain whitespace; extension keys and values
+must each be one token, and values cannot contain colons. `todo` is not a
+general-purpose target for every source format.
 
 `ics` is an event-only target. `convert` rejects life.txt input containing
 items that ICS would discard instead of silently losing them. Unknown formats,

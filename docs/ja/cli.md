@@ -1124,6 +1124,8 @@ python -m lifetxt convert --from json --to life data.json
 python -m lifetxt convert --from csv --to jsonl data.csv
 cat tasks.md | python -m lifetxt convert --from markdown-task-list --to life
 python -m lifetxt convert --from ics --to life calendar.ics
+python -m lifetxt convert --from todo --to life todo.txt -o imported.life.txt
+python -m lifetxt convert --from life --to todo tasks.life.txt -o exported.todo.txt
 ```
 
 初期のcanonical format名は`life`、`json`、`jsonl`、`csv`、`ics`、
@@ -1132,9 +1134,17 @@ matrixだけをサポートします。
 
 | 入力 | 対応する出力 |
 | --- | --- |
-| `life` | `life`、`json`、`jsonl`、`csv`、`ics` |
+| `life` | `life`、`json`、`jsonl`、`csv`、`ics`、`todo` |
 | `json`、`jsonl`、`csv` | `life`、`json`、`jsonl`、`csv` |
 | `ics`、`markdown-task-list`、`todo` | `life`、`json`、`jsonl`、`csv` |
+
+`life -> todo`はstrict変換です。[ ]または[x]状態のTaskと、todo.txtで表現
+できる日付・優先度・project/context token・単一tokenの`key:value`拡張を出力
+します。対応しない種類・状態・詳細がある場合、別の意味へ置き換えたり黙って
+削除したりせずに失敗します。失敗時に出力ファイルへ途中結果は書き込みません。
+project/context値にはUnicodeを使えますが、空白は含められません。拡張key/value
+は各1 tokenで、valueにコロンは含められません。`todo`はすべての入力形式に
+対する汎用出力先ではありません。
 
 `ics`はevent専用の出力形式です。ICSで表現できず破棄されるitemがlife.txt
 入力に含まれる場合、`convert`は黙って情報を落とさず明示的に失敗します。

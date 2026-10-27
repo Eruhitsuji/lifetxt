@@ -459,6 +459,20 @@ class ExtraCliTests(unittest.TestCase):
         self.assertIn("assignee:alice", output)
         self.assertIn("parent:md_", output)
 
+    def test_from_todo_uses_shared_unicode_and_priority_date_decoder(self):
+        todo_path = os.path.join(self.tempdir.name, "todo-unicode.txt")
+        with open(todo_path, "w", encoding="utf-8") as handle:
+            handle.write("(A) 2026-10-26 Review docs +作業 @職場 due:2026-10-30\n")
+
+        output = self.run_extra(["from-todo", todo_path])
+
+        self.assertIn('"Review docs"', output)
+        self.assertIn("priority:A", output)
+        self.assertIn("created:2026-10-26", output)
+        self.assertIn("project:作業", output)
+        self.assertIn("context:職場", output)
+        self.assertIn("due:2026-10-30", output)
+
     def test_attachment_open_dry_run_is_confined(self):
         output = self.run_extra(["files", self.path, "--open", "t1", "--dry-run"])
         self.assertEqual(

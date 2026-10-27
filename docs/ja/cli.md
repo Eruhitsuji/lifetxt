@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 51270)
+Total output lines: 3577
+
 # life.txt CLI ガイド
 
 この文書は、次のコマンドで提供される CLI の詳細な使い方を説明します。
@@ -1124,6 +1127,8 @@ python -m lifetxt convert --from json --to life data.json
 python -m lifetxt convert --from csv --to jsonl data.csv
 cat tasks.md | python -m lifetxt convert --from markdown-task-list --to life
 python -m lifetxt convert --from ics --to life calendar.ics
+python -m lifetxt convert --from todo --to life todo.txt -o imported.life.txt
+python -m lifetxt convert --from life --to todo tasks.life.txt -o exported.todo.txt
 ```
 
 初期のcanonical format名は`life`、`json`、`jsonl`、`csv`、`ics`、
@@ -1132,9 +1137,17 @@ matrixだけをサポートします。
 
 | 入力 | 対応する出力 |
 | --- | --- |
-| `life` | `life`、`json`、`jsonl`、`csv`、`ics` |
+| `life` | `life`、`json`、`jsonl`、`csv`、`ics`、`todo` |
 | `json`、`jsonl`、`csv` | `life`、`json`、`jsonl`、`csv` |
 | `ics`、`markdown-task-list`、`todo` | `life`、`json`、`jsonl`、`csv` |
+
+`life -> todo`はstrict変換です。[ ]または[x]状態のTaskと、todo.txtで表現
+できる日付・優先度・project/context token・単一tokenの`key:value`拡張を出力
+します。対応しない種類・状態・詳細がある場合、別の意味へ置き換えたり黙って
+削除したりせずに失敗します。失敗時に出力ファイルへ途中結果は書き込みません。
+project/context値にはUnicodeを使えますが、空白は含められません。拡張key/value
+は各1 tokenで、valueにコロンは含められません。`todo`はすべての入力形式に
+対する汎用出力先ではありません。
 
 `ics`はevent専用の出力形式です。ICSで表現できず破棄されるitemがlife.txt
 入力に含まれる場合、`convert`は黙って情報を落とさず明示的に失敗します。
@@ -1744,121 +1757,7 @@ python -m lifetxt agenda life.txt --from 2026-06-01 --to 2026-06-30 --type habit
 例:
 
 ```sh
-python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --open
-python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --status todo --type task
-python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --project research --tag urgent
-python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --assignee alice
-python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --detail priority=A --text report
-python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --person alice
-python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --blocked
-python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --blocked hide
-```
-
-`--detail key` は key の存在を確認します。`--detail key=value` は detail value の完全一致です。
-複数の `--detail` は AND 条件です。
-
-### 9.3 出力オプション
-
-| Option | 意味 |
-|---|---|
-| `--format text` | 表で表示 |
-| `--format life` | 一致した元の life.txt item 行を表示 |
-| `--format json` | JSON 配列で表示 |
-| `--format jsonl` | JSONL で表示 |
-| `-o`, `--output` | 出力ファイル。省略時は標準出力 |
-| `--pretty` | JSON を整形して出力 |
-| `--width N` | text 出力を指定した terminal width 向けに整形 |
-
-agenda の JSON / JSONL record は、open item が open な `depends_on:` または
-`blocks:` 関係で block されている場合に `blocked: true` と `blocked_by` 配列を
-含めます。repeat から生成された occurrence には、可能な場合 `source_id`、
-`occurrence_start`、`occurrence_end`、`occurrence_index`、`repeat_rule` も含めます。
-text 出力では短い `blocked` 列で同じ状態を表示します。`--format life` は保存されている元の item 行をそのまま出力します。
-
-例:
-
-```sh
-python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --format life
-python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --format json --pretty
-python -m lifetxt agenda life.txt --around now --window 1w --format life -o agenda.life.txt
-python -m lifetxt agenda life.txt --around now --window 1d --width 70
-```
-
-## 10. `assist`
-
-フラグまたは対話入力で life.txt item を作成・更新します。
-
-```sh
-python -m lifetxt assist [options]
-```
-
-### 10.1 非対話で作成
-
-```sh
-python -m lifetxt assist --type task --title "Write Report" --due 2026-06-12 --project university
-python -m lifetxt assist --type status --title "Working" --from 2026-06-06T14:00 --state busy --person self
-python -m lifetxt assist --type message --title "Review Slides" --sender self --recipient alice --notify-at 2026-06-06T09:00
-python -m lifetxt assist --type journal --title "Research day" --on 2026-06-23 --body-file notes.md
-python -m lifetxt assist --type habit --title "Review" --rrule "FREQ=WEEKLY;BYDAY=MO;COUNT=4"
-```
-
-基本オプション:
-
-| Option | 意味 |
-|---|---|
-| `-s`, `--status` | status または alias。例: `[ ]`、`done`、`note` |
-| `-t`, `--type` | type または alias。例: `T`、`task`、`status` |
-| `--title` | item title |
-| `-d`, `--detail` | `key=value` または `key:value`。複数回指定可能 |
-| `-o`, `--output` | 生成行をファイルに追記 |
-| `--append` | 生成行をファイルに追記 |
-| `--no-check` | 生成行の validation を省略 |
-| `--body-file FILE` | UTF-8 text file から複数行 `body:` を読み込む |
-| `--body-stdin` | 標準入力から複数行 `body:` を読み込む |
-| `--rrule VALUE` | `repeat:RRULE:...` を設定する。`RRULE:` prefix は省略可能 |
-
-known detail key には直接フラグもあります。各フラグは複数回指定できます。
-
-```txt
---id --parent --ref --depends_on --blocks --related --created --updated --done --due --do --from --to
---state --user --person --owner --assignee --attendee --sender --recipient --team --group --service --channel
---visibility --notify_at --notify_from --notify_to --ack --snooze_until --on --at --repeat
---interval --until --count
---project --context --loc --priority --progress --est --elapsed --tag --note --body --mood --weather --url
---reason --moved_to
-```
-
-underscore を含む detail key には hyphen alias も使えます。例:
-`--notify-at`、`--notify-from`、`--snooze-until`。
-
-### 10.2 対話で作成
-
-```sh
-python -m lifetxt assist --interactive
-python -m lifetxt assist --interactive --append life.txt
-```
-
-対話ヘルプ:
-
-| Input | 意味 |
-|---|---|
-| `?` | 現在の prompt に応じた help |
-| `?type` | type help |
-| `?status` | status help |
-| `?detail` | 推奨 detail key |
-| `?all` | known detail key 全体 |
-| `?due` | detail key 個別 help |
-| `body<<` | 複数行 `body:` 入力を開始。`.` だけの行で終了 |
-
-対応 terminal では、Tab で type、status、detail-key 候補を補完できます。
-Up/Down で入力履歴を呼び出せます。`--no-completion` で補完と line editing を無効化できます。
-
-### 10.3 既存 item の更新
-
-行番号または `id:` で item を選択して更新します。
-
-```sh
-python -m lifetxt assist --update life.txt --line 3 --title "New Title"
+python -m lifetxt agenda life.txt --from 2026-06-06 --to 2026-06-06 --ope…1270 tokens truncated…tle "New Title"
 python -m lifetxt assist --update life.txt --match-id task_001 --status done --done 2026-06-06
 python -m lifetxt assist --update life.txt --match-id task_001 --add-detail tag=important
 python -m lifetxt assist --update life.txt --match-id task_001 --remove-detail tag

@@ -1,0 +1,64 @@
+schema_version: 1
+
+verification:
+  planned:
+    - type: focused
+      command: python -m unittest tests.test_conversion tests.test_extra_cli
+      requirement_ids: [req-todo-interoperability-core]
+      status: passed
+    - type: regression
+      command: MPLBACKEND=Agg python -m unittest discover
+      requirement_ids: [req-todo-interoperability-core]
+      status: failed_environment
+      note: >-
+        Ran 6006 tests; 5485 passed and 517 skipped. Four failures were isolated
+        to tests.test_git_commit_worker_cli subprocesses launched from temporary
+        directories, where the checkout is absent from sys.path. Re-running that
+        module with PYTHONPATH set to the checkout passed all 4 tests.
+    - type: static
+      command: python -m ruff check lifetxt/conversion.py tests/test_conversion.py tests/test_extra_cli.py
+      requirement_ids: [req-todo-interoperability-core]
+      status: passed
+    - type: integration
+      command: python -m lifetxt check examples/minimal_life.txt
+      requirement_ids: [req-todo-interoperability-core]
+      status: passed
+    - type: traceability
+      command: python -m unittest tests.test_traceability_gate tests.test_change_package_closeout
+      requirement_ids: [req-todo-interoperability-core]
+      status: planned
+
+  executed:
+    - command: python -m unittest tests.test_conversion tests.test_extra_cli
+      result: Ran 69 tests, OK.
+    - command: python -m ruff check lifetxt/conversion.py tests/test_conversion.py tests/test_extra_cli.py
+      result: All checks passed.
+    - command: python -m ruff format --check lifetxt/conversion.py tests/test_conversion.py tests/test_extra_cli.py
+      result: 3 files already formatted.
+    - command: python -m lifetxt check examples/minimal_life.txt
+      result: OK; 10 items.
+    - command: python -m ruff format --check lifetxt/conversion.py tests/test_conversion.py tests/test_extra_cli.py
+      result: 3 files already formatted.
+    - command: python scripts/validate_release_docs.py --output .cache/issue1438-release-docs.json
+      result: {"errors": 0, "ok": true}.
+    - command: PYTHONPATH="$PWD" python -m unittest tests.test_git_commit_worker_cli
+      result: Ran 4 tests, OK; resolves checkout import for subprocess tests.
+    - command: MPLBACKEND=Agg python -m unittest discover
+      result: >-
+        Ran 6006 tests in 370.512s; 4 failures, 517 skipped. Failures were
+        tests.test_git_commit_worker_cli subprocess import failures caused by
+        running child interpreters from temporary repositories without the
+        checkout on PYTHONPATH; the same four tests passed with PYTHONPATH set.
+
+review_ledger:
+  - reviewer: Human Owner
+    review_type: requirements/design
+    target_commit: null
+    result: pending
+    finding_count: 0
+    completed_at: null
+
+release_evidence:
+  migration_notes: Additive conversion target; no format or data migration.
+  rollback_plan: Revert the feature PR; no stored data is changed by conversion.
+  operations_evidence: []

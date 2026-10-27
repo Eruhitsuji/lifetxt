@@ -3,13 +3,13 @@ schema_version: 1
 change:
   id: web-todo-capture-preview
   title: Previewed todo.txt Web Quick Capture
-  status: in_progress
+  status: in_review
   change_type: Feature
   assurance_level: High
   owner: Eruhitsuji
   accountable_owner: Eruhitsuji
   related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1442
-  related_pull_request: null
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1446
   base_commit: f52a080e2e7f8774b731b45d3194a291cab91e56
   target_release: next normal maintenance release
 

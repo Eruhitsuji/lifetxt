@@ -3,13 +3,13 @@ schema_version: 1
 change:
   id: tui-todo-capture-preview
   title: Previewed todo.txt TUI capture
-  status: in_progress
+  status: in_review
   change_type: Feature
   assurance_level: High
   owner: Eruhitsuji
   accountable_owner: Eruhitsuji
   related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1443
-  related_pull_request: null
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1447
   base_commit: 7e71915c0a04885354d3c753424b622de0402f81
   target_release: next normal maintenance release
 

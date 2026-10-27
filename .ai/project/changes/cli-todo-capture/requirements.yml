@@ -1,0 +1,22 @@
+schema_version: 1
+
+requirements:
+  - id: req-cli-todo-capture
+    kind: ADDED
+    statement: >-
+      Allow one explicitly selected todo.txt task to enter the established CLI
+      creation path without automatic detection or a duplicate parser.
+    acceptance_criteria:
+      - Explicit todo syntax maps supported fields through the shared decoder.
+      - Existing Quick behavior remains the default and unchanged.
+      - Invalid, multiline, or semantically overridden todo input fails before mutation.
+      - Existing validation, identity, duplicate, locking, and atomic-write behavior applies.
+      - English and Japanese documentation states the boundary and file-conversion alternative.
+    constraints:
+      - Plain life.txt remains authoritative.
+      - No Format 1.0 change.
+      - No automatic syntax detection.
+      - One physical todo line per capture.
+    owner: Eruhitsuji
+
+open_questions: []

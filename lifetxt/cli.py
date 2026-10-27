@@ -1700,7 +1700,9 @@ def build_parser():
     mnt_run = maintenance_subparsers.add_parser(
         "run", help="Run read-only scheduled Storage Health/plan maintenance."
     )
-    mnt_run.add_argument("--mode", choices=("off", "warn", "plan", "auto"), default="off")
+    mnt_run.add_argument(
+        "--mode", choices=("off", "warn", "plan", "auto"), default="off"
+    )
     mnt_run.add_argument("--project")
     mnt_run.add_argument("--emit-plan")
     mnt_run.add_argument("--result")
@@ -3385,6 +3387,15 @@ def build_parser():
         "--no-shorthand",
         action="store_true",
         help="Keep @ # ! ^ tokens in the title instead of expanding them into details.",
+    )
+    quick.add_argument(
+        "--syntax",
+        choices=("quick", "todo"),
+        default="quick",
+        help=(
+            "Interpret the input explicitly as existing Quick syntax (default) "
+            "or as one todo.txt task. todo mode never auto-detects ordinary text."
+        ),
     )
     quick.add_argument(
         "--type",
@@ -5230,7 +5241,13 @@ def command_storage_health(args):
         write_text(None, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
     else:
         write_text(None, "Storage Health: %s\n" % result["status"])
-        for key in ("active_bytes", "active_records", "archive_bytes", "archive_records", "parse_duration_ms"):
+        for key in (
+            "active_bytes",
+            "active_records",
+            "archive_bytes",
+            "archive_records",
+            "parse_duration_ms",
+        ):
             write_text(None, "%s: %s\n" % (key, result[key]))
         if result["reasons"]:
             write_text(None, "reasons: %s\n" % ", ".join(result["reasons"]))
@@ -7921,10 +7938,34 @@ def command_quick(args):
     today = timezone_today()
 
     if args.title == "-":
-        stdin_title = sys.stdin.readline().rstrip("\r\n")
+        if getattr(args, "syntax", "quick") == "todo":
+            stdin_title = sys.stdin.read().rstrip("\r\n")
+        else:
+            stdin_title = sys.stdin.readline().rstrip("\r\n")
         if not stdin_title:
             raise ValueError("quick - requires a non-empty title on stdin.")
         args.title = stdin_title
+
+    if getattr(args, "syntax", "quick") == "todo":
+        incompatible = []
+        if args.no_shorthand:
+            incompatible.append("--no-shorthand")
+        if args.kind is not None:
+            incompatible.append("--type")
+        if args.status is not None:
+            incompatible.append("--status")
+        if getattr(args, "preset", None):
+            incompatible.append("--preset")
+        for key in DETAIL_FLAGS:
+            dest = "from_" if key == "from" else key
+            if getattr(args, dest, None):
+                incompatible.append("--" + key)
+        if incompatible:
+            raise ValueError(
+                "--syntax todo cannot be combined with semantic override(s): %s. "
+                "Put those values in the todo.txt task instead."
+                % ", ".join(incompatible)
+            )
 
     preset = None
     if getattr(args, "preset", None):
@@ -7952,6 +7993,7 @@ def command_quick(args):
 
     resolved = resolve_quick_input(
         args.title,
+        syntax=getattr(args, "syntax", "quick"),
         id_key=id_key_from_config(config),
         today=today,
         shorthand=not args.no_shorthand,
@@ -7968,7 +8010,9 @@ def command_quick(args):
     apply_auto_id_to_item(item, args)
     from .web_read_service import assert_unique_ids
 
-    assert_unique_ids(_auto_id_scan_items(args) + [item], key=id_key_from_config(config))
+    assert_unique_ids(
+        _auto_id_scan_items(args) + [item], key=id_key_from_config(config)
+    )
     line = item_to_assisted_line(item)
 
     if not args.no_check:
@@ -13389,8 +13433,10 @@ def command_priority_matrix(args):
         write_text(None, json.dumps(groups, ensure_ascii=False, indent=2) + "\n")
         return 0
     headings = {
-        "Q1": "IMPORTANT / URGENT", "Q2": "IMPORTANT / NOT URGENT",
-        "Q3": "NOT IMPORTANT / URGENT", "Q4": "NOT IMPORTANT / NOT URGENT",
+        "Q1": "IMPORTANT / URGENT",
+        "Q2": "IMPORTANT / NOT URGENT",
+        "Q3": "NOT IMPORTANT / URGENT",
+        "Q4": "NOT IMPORTANT / NOT URGENT",
         "unclassified": "IMPORTANCE MISSING OR INVALID",
     }
     for name, rows in groups.items():
@@ -14031,11 +14077,20 @@ def command_maintenance_run(args):
             result["error"] = "plan mode requires --project and --emit-plan"
         else:
             plan_args = argparse.Namespace(
-                name=project, paths=health_args.paths, dest=None,
-                workspace=getattr(args, "workspace", None), statuses=None,
-                before=None, max_items=None, copy=False, orphan_children="block",
-                preserve_structure=False, block_on_external_refs=False,
-                emit_plan=emit_plan, format="json", config=getattr(args, "config", None)
+                name=project,
+                paths=health_args.paths,
+                dest=None,
+                workspace=getattr(args, "workspace", None),
+                statuses=None,
+                before=None,
+                max_items=None,
+                copy=False,
+                orphan_children="block",
+                preserve_structure=False,
+                block_on_external_refs=False,
+                emit_plan=emit_plan,
+                format="json",
+                config=getattr(args, "config", None),
             )
             try:
                 from .mutation import FileLock

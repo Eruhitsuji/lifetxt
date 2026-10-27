@@ -18796,6 +18796,17 @@ traceability:
         - .ai/project/changes/hkscs-profile2-review/verification.yml
       status: implemented
 
+    - requirement_id: req-todo-interoperability-core
+      capability_id: cap-import-export-format-expansion
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1432
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1438
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1440
+      tests_or_evidence:
+        - tests/test_conversion.py
+        - tests/test_extra_cli.py
+        - .ai/project/changes/todo-interoperability-core/verification.yml
+      status: proposed
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

@@ -10993,7 +10993,8 @@ capabilities:
       never authoritative stores; plain life.txt remains authoritative. The
       shared text converter also supports strict life.txt Task ↔ todo.txt
       interchange (#1432/#1438), and explicit single-task todo.txt capture
-      through the established CLI creation boundary (#1441).
+      through the established CLI creation boundary (#1441) and a Web
+      Quick Capture semantic preview/confirmation boundary (#1442).
     status: active
     owner: Eruhitsuji
     source_requirements:
@@ -11006,6 +11007,8 @@ capabilities:
       - req-lifetxtz-implementation
       - req-unified-format-conversion
       - req-todo-interoperability-core
+      - req-cli-todo-capture
+      - req-web-todo-capture-preview
     implementation_locations:
       - lifetxt/batch_save.py
       - tests/test_batch_save.py
@@ -11014,6 +11017,10 @@ capabilities:
       - tests/test_batch_preview.py
       - lifetxt/conversion.py
       - lifetxt/cli.py
+      - lifetxt/quick_input.py
+      - lifetxt/webapp.py
+      - lifetxt/web_assets.html
+      - lifetxt/web_assets_js_08.js
       - lifetxt/_extra_convert_impl.py
       - lifetxt/cli_taxonomy.py
       - lifetxt/completion.py
@@ -11043,6 +11050,8 @@ capabilities:
       - lifetxt.conversion.conversion_capabilities
       - lifetxt convert --from life --to todo
       - lifetxt add --syntax todo TASK
+      - POST /api/quick/resolve with syntax=todo
+      - POST /api/items/capture with preview-bound syntax=todo
       - lifetxt export --format json|jsonl|csv|markdown|life|sqlite|lifetxtz
       - lifetxt import --preset life|sqlite|lifetxtz
       - lifetxt.cli.EXPORT_FORMAT_HANDLERS
@@ -11089,6 +11098,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/1432
       - https://github.com/Eruhitsuji/lifetxt/issues/1438
       - https://github.com/Eruhitsuji/lifetxt/issues/1441
+      - https://github.com/Eruhitsuji/lifetxt/issues/1442
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/828
     reuse_policy: prefer_reuse_or_extension_before_new_implementation

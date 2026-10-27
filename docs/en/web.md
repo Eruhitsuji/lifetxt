@@ -39,11 +39,21 @@ Quick Capture is online-only. It does not install an offline cache, queue
 mutations, or weaken the Web server's `no-store`, authentication, read-only, or
 write-target behavior.
 
+Select **todo.txt (preview required)** to capture one task already written in
+todo.txt syntax. The default remains Quick. The server uses the shared todo.txt
+adapter to show the mapped title, status, type, priority, dates, project,
+context, every retained `key:value` field, and any warning. Review those fields,
+then choose **Confirm and capture**. Changing the input or workspace after the
+preview invalidates confirmation; the browser must preview again. Invalid or
+multiline input, a stale revision, a changed workspace source, missing
+authorization, CSRF rejection, or a read-only workspace cannot write the task.
+For multiple tasks, use the explicit file conversion/import workflow instead.
+
 Automated mobile verification covers 320, 360, 390, and 430 CSS-pixel portrait
 widths plus short landscape and reduced-height keyboard-like viewports in
 headless Chrome. It checks overflow, touch target size, initial/repeat focus,
-keyboard submission, success/error feedback, duplicate suppression, and EN/JA
-rendering. This is browser emulation, not physical-device evidence: actual
+keyboard submission, todo.txt preview/confirmation, success/error feedback,
+duplicate suppression, and EN/JA rendering. This is browser emulation, not physical-device evidence: actual
 iOS Safari/Android browser chrome, safe-area insets, software-keyboard resizing,
 and installed home-screen icon presentation remain platform-level residual
 risks to check on target devices.

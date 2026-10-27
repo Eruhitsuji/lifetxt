@@ -18817,7 +18817,20 @@ traceability:
         - docs/en/cli.md
         - docs/ja/cli.md
         - .ai/project/changes/cli-todo-capture/verification.yml
-      status: in_review
+      status: implemented
+
+    - requirement_id: req-web-todo-capture-preview
+      capability_id: cap-import-export-format-expansion
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1432
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1442
+      pull_request: null
+      tests_or_evidence:
+        - tests/test_web_mobile_capture.py
+        - tests/test_web_mobile_capture_browser.py
+        - docs/en/web.md
+        - docs/ja/web.md
+        - .ai/project/changes/web-todo-capture-preview/verification.yml
+      status: in_progress
 
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception

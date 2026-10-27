@@ -112,6 +112,18 @@ class MobileCaptureBrowserTests(unittest.TestCase):
         self.assertEqual("true", self.interactions["pending"]["busy"])
         self.assertEqual(1, self.interactions["pendingRequestCount"])
 
+    def test_todo_preview_and_confirmation_remain_usable_on_short_mobile_view(self):
+        preview = self.interactions["todoPreview"]
+        self.assertFalse(preview["previewHidden"])
+        self.assertFalse(preview["confirmHidden"])
+        self.assertGreaterEqual(preview["confirmHeight"], 44)
+        for value in ("Prepare proposal", "priority", "Work", "office", "2026-10-30"):
+            self.assertIn(value, preview["previewText"])
+        confirmed = self.interactions["todoConfirm"]
+        self.assertEqual("", confirmed["value"])
+        self.assertIn("Captured: Saved", confirmed["feedback"])
+        self.assertTrue(confirmed["previewHidden"])
+
     def test_personal_context_layout_covers_phone_viewport_matrix(self):
         self.assertEqual(
             [320, 360, 390, 430], [row["width"] for row in self.context_results]

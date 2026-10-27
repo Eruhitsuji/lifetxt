@@ -370,6 +370,7 @@
     }
 
     let captureSubmitPending = false;
+    let capturePreviewBinding = null;
 
     function captureSuccessSummary(data) {
       const item = data?.item || {};
@@ -378,6 +379,80 @@
       const idValue = Array.isArray(item.details?.[idKey]) ? item.details[idKey][0] : "";
       const summary = title && idValue ? `${title} (${idValue})` : (title || idValue || t("item"));
       return summary.length > 80 ? summary.slice(0, 77) + "…" : summary;
+    }
+
+    function captureSyntax() {
+      return document.getElementById("capture-input-syntax")?.value || "quick";
+    }
+
+    function invalidateCapturePreview() {
+      capturePreviewBinding = null;
+      const preview = document.getElementById("capture-preview");
+      const confirm = document.getElementById("capture-confirm");
+      if (preview) preview.hidden = true;
+      if (confirm) confirm.hidden = true;
+    }
+
+    function captureInputChanged() {
+      invalidateCapturePreview();
+    }
+
+    function captureSyntaxChanged() {
+      invalidateCapturePreview();
+      const syntax = captureSyntax();
+      const input = document.getElementById("capture-text");
+      const submit = document.getElementById("capture-submit");
+      const help = document.getElementById("capture-syntax");
+      if (input) input.placeholder = syntax === "todo" ? "(A) Prepare proposal +Work @office due:2026-10-30" : "Buy milk @home ^tomorrow";
+      if (submit) submit.textContent = t(syntax === "todo" ? "Preview" : "Capture");
+      if (help) help.textContent = t(syntax === "todo" ? "One todo.txt task; project, context, priority, dates, and key:value metadata are decoded on the server." : "shorthand and full life.txt lines use the same Quick add semantics.");
+    }
+
+    function appendCapturePreviewField(root, key, value) {
+      const name = document.createElement("dt");
+      const content = document.createElement("dd");
+      name.textContent = key;
+      content.textContent = Array.isArray(value) ? value.join(", ") : String(value ?? "");
+      root.append(name, content);
+    }
+
+    function renderTodoCapturePreview(data) {
+      const preview = document.getElementById("capture-preview");
+      const fields = document.getElementById("capture-preview-fields");
+      const diagnostics = document.getElementById("capture-preview-diagnostics");
+      const confirm = document.getElementById("capture-confirm");
+      if (!preview || !fields || !diagnostics || !confirm) return;
+      fields.replaceChildren();
+      appendCapturePreviewField(fields, "title", data.title);
+      appendCapturePreviewField(fields, "status", data.status);
+      appendCapturePreviewField(fields, "type", data.type);
+      for (const [key, values] of Object.entries(data.details || {})) {
+        appendCapturePreviewField(fields, key, values);
+      }
+      const warnings = (data.diagnostics || []).filter(row => row.severity !== "error");
+      diagnostics.textContent = warnings.length ?
+        t("Warnings:") + " " + warnings.map(row => `${row.code}: ${row.message}`).join("; ") :
+        t("Warnings: none.");
+      preview.hidden = false;
+      confirm.hidden = Boolean(data.read_only);
+    }
+
+    async function previewTodoCapture(text) {
+      const data = await api("/api/quick/resolve", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({text, syntax: "todo"}),
+      });
+      if (!data.context_token || !data.source_revision) {
+        throw new Error(t("Review or revision is unavailable. Nothing was saved. Refresh the page and preview again."));
+      }
+      capturePreviewBinding = {
+        text,
+        token: data.context_token,
+        sourceRevision: data.source_revision,
+      };
+      renderTodoCapturePreview(data);
+      return data;
     }
 
     async function submitCapture() {
@@ -393,6 +468,12 @@
       feedback.textContent = "";
       feedback.className = "capture-feedback";
       try {
+        if (captureSyntax() === "todo") {
+          await previewTodoCapture(text);
+          feedback.textContent = t("Review every mapped field, then confirm capture.");
+          feedback.className = "capture-feedback ok";
+          return;
+        }
         const data = await api("/api/items/capture", {
           method: "POST",
           headers: {"Content-Type": "application/json"},
@@ -412,11 +493,56 @@
       }
     }
 
+    async function confirmTodoCapture() {
+      if (captureSubmitPending) return;
+      const input = document.getElementById("capture-text");
+      const confirm = document.getElementById("capture-confirm");
+      const feedback = document.getElementById("capture-feedback");
+      const binding = capturePreviewBinding;
+      if (!input || !confirm || !feedback || !binding || captureSyntax() !== "todo" || input.value.trim() !== binding.text) {
+        invalidateCapturePreview();
+        if (feedback) {
+          feedback.textContent = t("Input changed. Preview again before saving.");
+          feedback.className = "capture-feedback err";
+        }
+        return;
+      }
+      captureSubmitPending = true;
+      confirm.disabled = true;
+      confirm.setAttribute("aria-busy", "true");
+      try {
+        const data = await api("/api/items/capture", {
+          method: "POST",
+          headers: {"Content-Type": "application/json", "If-Match": binding.sourceRevision},
+          body: JSON.stringify({
+            text: binding.text,
+            syntax: "todo",
+            context_token: binding.token,
+            expected_source_revision: binding.sourceRevision,
+          }),
+        });
+        feedback.textContent = `${t("Captured:")} ${captureSuccessSummary(data)}`;
+        feedback.className = "capture-feedback ok";
+        input.value = "";
+        invalidateCapturePreview();
+      } catch (error) {
+        invalidateCapturePreview();
+        feedback.textContent = `${t("Capture failed:")} ${t(actionableErrorText(error))} ${t("Nothing was saved. Preview again before retrying.")}`;
+        feedback.className = "capture-feedback err";
+      } finally {
+        captureSubmitPending = false;
+        confirm.disabled = false;
+        confirm.removeAttribute("aria-busy");
+        input.focus({preventScroll: true});
+      }
+    }
+
     function initializeCaptureMode() {
       if (location.pathname.replace(/\/+$/, "") !== "/capture") return false;
       document.body.classList.add("capture-mode");
       document.title = `${t("Quick Capture")} — life.txt`;
       const input = document.getElementById("capture-text");
+      captureSyntaxChanged();
       requestAnimationFrame(() => input?.focus({preventScroll: true}));
       return true;
     }

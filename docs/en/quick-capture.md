@@ -125,6 +125,14 @@ The response includes `mode: shorthand` or `mode: full_line`.
 `POST /api/quick/resolve` previews the same contract without writing or assigning IDs.
 Explicit `POST /api/items/raw` and structured create/import remain available.
 
+The dedicated `/capture` screen also offers an explicit **todo.txt (preview
+required)** mode. It sends `{"text":"...","syntax":"todo"}` to
+`POST /api/quick/resolve`, displays the server-decoded fields, and binds the
+confirmation to the returned workspace context token and source revision. The
+confirmed `POST /api/items/capture` repeats the text and syntax with that token
+and revision. A changed input, writable file, or configured workspace source
+requires a new preview. The browser never implements todo.txt grammar.
+
 A trimmed leading `[` reserves complete-record intent. Invalid statuses/types,
 unclosed quotes and invalid syntax fail without creating a shorthand task.
 For example `[ ] T "unterminated` is rejected. Quick accepts one line, not batch
@@ -148,8 +156,8 @@ ID keys/prefixes. MCP may add configured source metadata and supports dry-run pr
 | CLI | `add`, `quick`, `q`, stdin | existing shorthand flags/presets/defaults |
 | Local TUI | `/add`, `/a`, `/related` | shared resolver; related context fills absent fields |
 | Remote TUI | `/add`, `/a`, `/related` | sends text to authoritative server with revision |
-| Web UI | Quick Add, `/capture`, Planner, command `/add`, Focus Quick Add | common capture API; Focus supplies today's due date only if absent |
-| Web API | `POST /api/items/capture` | shorthand or full record; optional shorthand `type` |
+| Web UI | Quick Add, `/capture`, Planner, command `/add`, Focus Quick Add | common capture API; `/capture` additionally provides explicit previewed todo.txt input |
+| Web API | `POST /api/items/capture` | shorthand or full record; explicit todo syntax requires its preview token/revision |
 | MCP | `capture_item` | shorthand or full record; existing proposals and source metadata |
 
 `parse_shorthand` / `POST /api/shorthand/parse` remain explicit shorthand-only

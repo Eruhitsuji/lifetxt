@@ -372,7 +372,7 @@
     .capture-intro, .capture-syntax { margin: 0; color: var(--muted); }
     .capture-form { display: grid; gap: .65rem; }
     .capture-form label { font-weight: 700; }
-    .capture-form input { width: 100%; min-height: 3.25rem; font-size: 1rem; }
+    .capture-form input, .capture-form select { width: 100%; min-height: 3.25rem; font-size: 1rem; }
     .capture-form button { width: 100%; min-height: 3.25rem; font-weight: 700; }
     .capture-form button[disabled] { cursor: wait; opacity: .7; }
     .capture-syntax { display: flex; flex-wrap: wrap; gap: .25rem .5rem; font-size: .82rem; overflow-wrap: anywhere; }
@@ -380,6 +380,11 @@
     .capture-feedback:empty { padding: 0; min-height: 0; }
     .capture-feedback.ok { color: var(--ok); background: var(--ok-soft); }
     .capture-feedback.err { color: var(--danger); background: var(--danger-soft); }
+    .capture-preview { border: 1px solid var(--line); border-radius: var(--r-md); padding: .85rem; background: var(--soft); overflow-wrap: anywhere; }
+    .capture-preview h3, .capture-preview p { margin: 0; }
+    .capture-preview dl { display: grid; grid-template-columns: minmax(5rem, auto) minmax(0, 1fr); gap: .3rem .75rem; margin: .7rem 0; }
+    .capture-preview dt { color: var(--muted); font-weight: 700; }
+    .capture-preview dd { margin: 0; white-space: pre-wrap; }
     .capture-back { justify-self: center; color: var(--muted); font-size: .86rem; }
 
     @media (max-height: 520px) and (orientation: landscape) {

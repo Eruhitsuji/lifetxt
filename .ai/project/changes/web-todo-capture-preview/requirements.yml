@@ -1,0 +1,23 @@
+schema_version: 1
+
+requirements:
+  - id: req-web-todo-capture-preview
+    kind: ADDED
+    statement: >-
+      Allow one explicitly selected todo.txt task to be semantically previewed
+      and confirmed through Web Quick Capture without client-side parsing or
+      weakening the existing authorized revision-safe mutation path.
+    acceptance_criteria:
+      - Quick remains the default and todo.txt mode is explicit.
+      - Shared server-side todo decoding supplies every previewed field.
+      - Confirmation is bound to semantic input, workspace context, and writable revision.
+      - Invalid, multiline, changed, unauthorized, or read-only requests cannot mutate data.
+      - Mobile, keyboard, assistive-label, EN/JA, API, and browser contracts are covered.
+    constraints:
+      - Plain life.txt remains authoritative.
+      - No Format 1.0 or storage change.
+      - No browser-side todo.txt grammar or automatic syntax detection.
+      - One physical todo.txt line per capture.
+    owner: Eruhitsuji
+
+open_questions: []

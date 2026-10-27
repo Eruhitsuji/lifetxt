@@ -28,6 +28,17 @@ const server = http.createServer((request, response) => {
     request.on("data", chunk => { body += chunk; });
     request.on("end", async () => {
       captureBodies.push(body);
+      const payload = body ? JSON.parse(body) : {};
+      if (request.url.startsWith("/api/quick/resolve") && payload.syntax === "todo") {
+        response.writeHead(200, {"content-type": "application/json"});
+        response.end(JSON.stringify({
+          mode: "todo", title: "Prepare proposal", status: "[ ]", type: "T",
+          details: {priority: ["A"], project: ["Work"], context: ["office"], due: ["2026-10-30"]},
+          diagnostics: [], context_token: "batch-preview-v1:" + "a".repeat(64),
+          source_revision: "b".repeat(64), read_only: false,
+        }));
+        return;
+      }
       if (body.includes("Fail me")) {
         response.writeHead(403, {"content-type": "application/json"});
         response.end(JSON.stringify({error: "READ_ONLY", message: "Rejected"}));
@@ -193,7 +204,28 @@ try {
   await command("Runtime.evaluate", {expression: "document.getElementById('capture-text').value = 'Only once'; document.getElementById('capture-form').requestSubmit(); document.getElementById('capture-form').requestSubmit()"});
   const pendingState = await command("Runtime.evaluate", {expression: `({disabled: document.getElementById("capture-submit").disabled, busy: document.getElementById("capture-submit").getAttribute("aria-busy")})`, returnByValue: true});
   await delay(350);
-  process.stdout.write(JSON.stringify({viewports: results, contextViewports: contextResults, contextInteraction: contextInteraction.result.value, interactions: {success: success.result.value, failure: failure.result.value, pending: pendingState.result.value, pendingRequestCount: captureBodies.length - beforePending}}));
+  const pendingRequestCount = captureBodies.length - beforePending;
+  await command("Runtime.evaluate", {expression: `(() => {
+    const mode = document.getElementById("capture-input-syntax");
+    mode.value = "todo"; mode.dispatchEvent(new Event("change"));
+    document.getElementById("capture-text").value = "(A) Prepare proposal +Work @office due:2026-10-30";
+    document.getElementById("capture-form").requestSubmit();
+  })()`});
+  await delay(150);
+  const todoPreview = await command("Runtime.evaluate", {expression: `({
+    previewHidden: document.getElementById("capture-preview").hidden,
+    confirmHidden: document.getElementById("capture-confirm").hidden,
+    previewText: document.getElementById("capture-preview").textContent,
+    confirmHeight: document.getElementById("capture-confirm").getBoundingClientRect().height,
+  })`, returnByValue: true});
+  await command("Runtime.evaluate", {expression: "document.getElementById('capture-confirm').click()"});
+  await delay(150);
+  const todoConfirm = await command("Runtime.evaluate", {expression: `({
+    value: document.getElementById("capture-text").value,
+    feedback: document.getElementById("capture-feedback").textContent,
+    previewHidden: document.getElementById("capture-preview").hidden,
+  })`, returnByValue: true});
+  process.stdout.write(JSON.stringify({viewports: results, contextViewports: contextResults, contextInteraction: contextInteraction.result.value, interactions: {success: success.result.value, failure: failure.result.value, pending: pendingState.result.value, pendingRequestCount, todoPreview: todoPreview.result.value, todoConfirm: todoConfirm.result.value}}));
 } finally {
   if (socket) socket.close();
   if (browser.exitCode === null) {

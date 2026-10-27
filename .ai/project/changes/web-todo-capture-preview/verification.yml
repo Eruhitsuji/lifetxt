@@ -1,0 +1,67 @@
+schema_version: 1
+
+verification:
+  planned:
+    - type: focused
+      command: python -m unittest tests.test_web_mobile_capture
+      requirement_ids: [req-web-todo-capture-preview]
+      status: passed
+    - type: regression
+      command: python -m unittest tests.test_web_mobile_capture tests.test_web_assets tests.test_web_installability tests.test_quick_input tests.test_web_planner tests.test_web_revision_browser
+      requirement_ids: [req-web-todo-capture-preview]
+      status: passed
+    - type: full
+      command: MPLBACKEND=Agg python -m unittest discover
+      requirement_ids: [req-web-todo-capture-preview]
+      status: passed
+    - type: browser
+      command: python -m unittest tests.test_web_mobile_capture_browser
+      requirement_ids: [req-web-todo-capture-preview]
+      status: blocked
+    - type: static
+      command: ruff check changed Python files
+      requirement_ids: [req-web-todo-capture-preview]
+      status: passed
+    - type: documentation
+      command: python scripts/validate_release_docs.py --output .cache/issue1442-release-docs.json
+      requirement_ids: [req-web-todo-capture-preview]
+      status: passed
+    - type: traceability
+      command: python -m unittest tests.test_traceability_gate tests.test_change_package_closeout
+      requirement_ids: [req-web-todo-capture-preview]
+      status: passed
+
+  executed:
+    - command: .venv/bin/python -m unittest tests.test_web_mobile_capture
+      result: Ran 16 tests, OK with Web extras installed.
+    - command: .venv/bin/python -m unittest tests.test_web_mobile_capture tests.test_web_assets tests.test_web_installability tests.test_quick_input tests.test_web_planner tests.test_web_revision_browser
+      result: Ran 74 tests, OK; 2 real-browser tests skipped because Chrome/Chromium is unavailable.
+    - command: .venv/bin/python -m ruff check lifetxt/webapp.py tests/test_web_mobile_capture.py tests/test_web_mobile_capture_browser.py
+      result: All checks passed.
+    - command: .venv/bin/python -m unittest tests.test_web_mobile_capture_browser
+      result: Browser evidence not executed; Chrome/Chromium is unavailable in this environment. CI remains required.
+    - command: MPLBACKEND=Agg .venv/bin/python -m unittest discover
+      result: Initial captured run ran 6029 tests and failed one Web i18n test because the new Preview translation was unchanged English; complete output retained in .test-output.log before rerun.
+    - command: .venv/bin/python -m unittest tests.test_web_i18n tests.test_web_mobile_capture tests.test_web_assets tests.test_web_installability tests.test_quick_input tests.test_web_planner tests.test_web_revision_browser
+      result: After translating Preview as プレビュー and updating the assembled-asset hash, ran 103 tests, OK; 2 real-browser tests skipped.
+    - command: MPLBACKEND=Agg .venv/bin/python -m unittest discover
+      result: Final captured rerun ran 6029 tests in 473.814s, OK; 91 skipped.
+    - command: .venv/bin/python scripts/validate_release_docs.py --output .cache/issue1442-release-docs.json
+      result: '{"errors": 0, "ok": true}'
+    - command: .venv/bin/python -m unittest tests.test_traceability_gate tests.test_change_package_closeout
+      result: Ran 17 tests, OK before the PR traceability URL was assigned.
+    - command: .venv/bin/python -m lifetxt check examples/minimal_life.txt
+      result: OK; 10 items.
+
+review_ledger:
+  - reviewer: Independent reviewer
+    review_type: implementation/security/accessibility/integration
+    target_commit: null
+    result: pending
+    finding_count: 0
+    completed_at: null
+
+release_evidence:
+  migration_notes: Additive Web option; Quick remains default and no stored-data migration is required.
+  rollback_plan: Revert the feature PR; existing saved life.txt records require no migration.
+  operations_evidence: []

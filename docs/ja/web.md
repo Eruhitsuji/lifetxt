@@ -38,10 +38,19 @@ Web UI はアプリマニフェストとスマートフォン向けサイズの 
 クイックキャプチャはオンライン専用です。オフラインキャッシュや変更キューは追加せず、
 Web サーバーの `no-store`、認証、読み取り専用、書き込み先の規則も変更しません。
 
+todo.txt記法で書いたtaskを1件記録する場合は、**todo.txt（Preview必須）**を選びます。
+既定は従来どおりQuickです。サーバー側の共有todo.txt adapterが、title、status、type、
+priority、日付、project、context、保持するすべての`key:value` field、警告をPreviewへ
+表示します。内容を確認してから**確認して記録**を選んでください。Preview後に入力または
+workspaceが変わると確認は無効になり、再Previewが必要です。不正・複数行入力、古いrevision、
+他のworkspace参照元の変更、認可／CSRF拒否、読み取り専用workspaceでは書き込みません。
+複数taskには明示的なfile変換／import経路を使用してください。
+
 自動モバイル検証では、headless Chrome 上で 320、360、390、430 CSS px の縦画面と、
 横向きの低い画面、ソフトウェアキーボード表示を想定した低い viewport を確認します。
-横 overflow、タッチ対象サイズ、初回・再送後の focus、キーボード送信、成功・失敗表示、
-重複送信抑止、英語・日本語表示が対象です。これはブラウザエミュレーションであり、実機
+横 overflow、タッチ対象サイズ、初回・再送後の focus、キーボード送信、todo.txtの
+Preview／確認、成功・失敗表示、重複送信抑止、英語・日本語表示が対象です。これはブラウザ
+エミュレーションであり、実機
 検証ではありません。iOS Safari / Android のブラウザUI、safe area、ソフトウェア
 キーボードによるリサイズ、ホーム画面アイコンの実表示は対象実機で確認すべき残余リスクです。
 

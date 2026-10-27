@@ -2750,41 +2750,150 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
     @app.post("/api/quick/resolve")
     def preview_quick(payload=Body(...)):
         """Non-writing preview of the same Quick contract used by capture."""
+        from .batch_preview import PreviewInputError, review_batch
         from .quick_input import resolve_quick_input
+        from .workspace_context_snapshot import WorkspaceContextUnavailable
 
         if not isinstance(payload, dict):
             raise HTTPException(status_code=400, detail="Body must be a JSON object.")
+        syntax = str(payload.get("syntax") or "quick")
         try:
             resolved = resolve_quick_input(
                 payload.get("text"),
+                syntax=syntax,
                 id_key=id_key_from_config(app.state.config),
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=error_detail(exc))
-        return {
+        result = {
             "mode": resolved.mode,
             "title": resolved.item.title,
             "status": resolved.item.status,
             "type": resolved.item.kind,
             "details": resolved.item.details,
             "line": item_to_line(resolved.item),
+            "diagnostics": diagnostics_to_output(resolved.diagnostics),
         }
+        if syntax != "todo":
+            return result
+        try:
+            review, _items, _context = review_batch(
+                result["line"] + "\n",
+                app.state.paths,
+                app.state.writable_path,
+                app.state.config,
+                app.state.read_only,
+                api_item,
+            )
+        except PreviewInputError as exc:
+            raise HTTPException(
+                status_code=exc.status, detail={"error": exc.code}
+            ) from None
+        except WorkspaceContextUnavailable as exc:
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "error": "CONTEXT_UNAVAILABLE",
+                    "reason": exc.reason,
+                    "message": "Workspace review unavailable. Check sources and preview again.",
+                },
+            ) from None
+        if not review["ok"]:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "error": "VALIDATION_ERROR",
+                    "message": "todo.txt capture preview failed validation.",
+                    "detail": review["diagnostics"],
+                    "saved": 0,
+                },
+            )
+        result.update(
+            context_token=review["context_token"],
+            source_revision=review["source_revision"],
+            read_only=review["read_only"],
+            review_scope=review["review_scope"],
+            diagnostics=review["diagnostics"],
+        )
+        return result
 
     @app.post("/api/items/capture", status_code=201)
     def capture_item(payload=Body(...)):
         """Resolve one shared Quick input and append through the write contract."""
+        from .batch_preview import PreviewInputError, review_batch
         from .quick_input import QuickInputError, resolve_quick_input
+        from .workspace_context_snapshot import WorkspaceContextUnavailable
 
         if not isinstance(payload, dict):
             raise HTTPException(status_code=400, detail="Body must be a JSON object.")
+        syntax = str(payload.get("syntax") or "quick")
         try:
+            if syntax == "todo" and (
+                payload.get("type") is not None or payload.get("details") is not None
+            ):
+                raise QuickInputError(
+                    "todo syntax cannot be combined with type or details overrides."
+                )
             resolved = resolve_quick_input(
                 payload.get("text"),
+                syntax=syntax,
                 id_key=id_key_from_config(app.state.config),
-                shorthand_item=Item("[ ]", str(payload.get("type") or "T"), ""),
-                extra_details=payload.get("details"),
+                shorthand_item=(
+                    None
+                    if syntax == "todo"
+                    else Item("[ ]", str(payload.get("type") or "T"), "")
+                ),
+                extra_details=None if syntax == "todo" else payload.get("details"),
             )
             item = resolved.item
+            if syntax == "todo":
+                token = payload.get("context_token")
+                expected = payload.get("expected_source_revision")
+                if not token or not expected:
+                    raise HTTPException(
+                        status_code=428,
+                        detail={
+                            "error": "PREVIEW_REQUIRED",
+                            "message": "Preview and confirm this todo.txt task before saving.",
+                            "saved": 0,
+                        },
+                    )
+                review, _items, context = review_batch(
+                    item_to_line(item) + "\n",
+                    app.state.paths,
+                    app.state.writable_path,
+                    app.state.config,
+                    app.state.read_only,
+                    api_item,
+                )
+                if review["context_token"] != token:
+                    raise HTTPException(
+                        status_code=409,
+                        detail={
+                            "error": "CONTEXT_CHANGED",
+                            "message": "Input or workspace changed after preview. Preview again.",
+                            "saved": 0,
+                        },
+                    )
+                if expected != context.writable_revision:
+                    raise HTTPException(
+                        status_code=409,
+                        detail={
+                            "error": "CONFLICT",
+                            "message": "Writable file changed after preview. Preview again.",
+                            "saved": 0,
+                        },
+                    )
+                if not review["ok"]:
+                    raise HTTPException(
+                        status_code=422,
+                        detail={
+                            "error": "VALIDATION_ERROR",
+                            "message": "todo.txt capture failed validation.",
+                            "detail": review["diagnostics"],
+                            "saved": 0,
+                        },
+                    )
             paths = auto_id_paths(app.state.paths, app.state.writable_path)
             assign_auto_id_from_paths(item, app.state.config, paths)
             existing, _diagnostics = read_life_inputs(paths, app.state.config)
@@ -2806,6 +2915,21 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
                     "detail": diagnostics_to_output(exc.diagnostics),
                 },
             )
+        except PreviewInputError as exc:
+            raise HTTPException(
+                status_code=exc.status,
+                detail={"error": exc.code, "saved": 0},
+            ) from None
+        except WorkspaceContextUnavailable as exc:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "error": "CONTEXT_CHANGED",
+                    "reason": exc.reason,
+                    "message": "Workspace changed after preview. Preview again.",
+                    "saved": 0,
+                },
+            ) from None
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=error_detail(exc))
         return {

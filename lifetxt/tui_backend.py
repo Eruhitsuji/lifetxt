@@ -105,6 +105,10 @@ class TuiBackend(object):
         """
         return False
 
+    def current_revision(self):
+        """Return the loaded authoritative revision when the backend has one."""
+        return None
+
     def native_timeline(
         self, target_id, since=None, until=None, event=None, limit=None
     ):
@@ -488,14 +492,17 @@ class RemoteTuiBackend(TuiBackend):
         )
         return {"changed": True, "written": True, "response": response}
 
-    def create_item(self, payload):
+    def current_revision(self):
+        return self.connection.file_revision
+
+    def create_item(self, payload, expected_revision=None):
         """Create a new item on the remote workspace (#677 MVP: quick capture)."""
         self._refuse_if_serving_cache("create an item")
         return self.connection.request(
             "POST",
             "/api/items",
             json_body=payload,
-            if_match=self.connection.file_revision,
+            if_match=expected_revision or self.connection.file_revision,
         )
 
     def capture_item(self, text, extra_details=None):

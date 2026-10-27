@@ -10990,7 +10990,9 @@ capabilities:
       SQLite relational interchange (`lifetxt-sqlite-v1`, #690/#691), and a
       versioned compressed native archive (`lifetxtz-v1`, #692/#693). SQLite
       and `.lifetxtz` are explicitly interchange/archive representations,
-      never authoritative stores; plain life.txt remains authoritative.
+      never authoritative stores; plain life.txt remains authoritative. The
+      shared text converter also supports strict life.txt Task ↔ todo.txt
+      interchange (#1432/#1438).
     status: active
     owner: Eruhitsuji
     source_requirements:
@@ -11002,6 +11004,7 @@ capabilities:
       - req-sqlite-interchange-implementation
       - req-lifetxtz-implementation
       - req-unified-format-conversion
+      - req-todo-interoperability-core
     implementation_locations:
       - lifetxt/batch_save.py
       - tests/test_batch_save.py
@@ -11037,6 +11040,7 @@ capabilities:
       - lifetxt.conversion.encode_items
       - lifetxt.conversion.ensure_supported_pair
       - lifetxt.conversion.conversion_capabilities
+      - lifetxt convert --from life --to todo
       - lifetxt export --format json|jsonl|csv|markdown|life|sqlite|lifetxtz
       - lifetxt import --preset life|sqlite|lifetxtz
       - lifetxt.cli.EXPORT_FORMAT_HANDLERS
@@ -11080,6 +11084,8 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/693
       - https://github.com/Eruhitsuji/lifetxt/issues/692
       - https://github.com/Eruhitsuji/lifetxt/issues/826
+      - https://github.com/Eruhitsuji/lifetxt/issues/1432
+      - https://github.com/Eruhitsuji/lifetxt/issues/1438
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/828
     reuse_policy: prefer_reuse_or_extension_before_new_implementation

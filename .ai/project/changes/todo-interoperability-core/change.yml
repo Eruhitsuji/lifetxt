@@ -1,0 +1,57 @@
+schema_version: 1
+
+change:
+  id: todo-interoperability-core
+  title: Strict todo.txt and life.txt shared conversion
+  status: in_review
+  change_type: Feature
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1438
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1440
+  base_commit: 25d900eefb484d5bc973480006ec3297341f5baf
+  target_release: next normal maintenance release
+
+scope:
+  in_scope:
+    - Repair shared todo.txt decoder semantics and preserve valid key:value extensions.
+    - Add strict life.txt to todo.txt encoding for representable Task records.
+    - Expose the supported conversion pair through the shared capability matrix and CLI.
+    - Add regression fixtures, bilingual CLI guidance, and traceability evidence.
+  out_of_scope:
+    - Format 1.0 grammar changes.
+    - Quick, TUI, Web, MCP, or Public Utility API user-interface changes.
+    - Synchronization, archive management, or background writes.
+    - lossy conversion mode or interoperability profile selection.
+  write_scope:
+    - lifetxt/conversion.py
+    - lifetxt/cli.py
+    - lifetxt/_extra_convert_impl.py
+    - tests/test_conversion.py
+    - tests/test_extra_cli.py
+    - docs/en/cli.md
+    - docs/ja/cli.md
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+    - .ai/project/changes/todo-interoperability-core/**
+  forbidden_scope:
+    - .ai/managed/**
+    - life.txt Format 1.0 syntax or parser behavior
+    - Quick/TUI/Web/MCP input UX or authorization
+    - external services, network synchronization, or deployment
+  shared_files:
+    - lifetxt/conversion.py
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+
+task_size:
+  size: M
+  split_justification: >-
+    Decoder repair and inverse encoding establish one paired public conversion
+    contract and must share round-trip fixtures. The surface UX adapters remain
+    independently scoped follow-up tasks.
+
+human_approvals_required:
+  - Human requirements/design review for the conversion contract.
+  - Human Merge Authority approval; the implementer must not merge.

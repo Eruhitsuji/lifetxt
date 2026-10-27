@@ -1,0 +1,21 @@
+schema_version: 1
+
+requirements:
+  - id: req-todo-interoperability-core
+    kind: ADDED
+    statement: >-
+      Provide safe, stateless todo.txt to life.txt and life.txt to todo.txt
+      conversion through the existing shared conversion core.
+    acceptance_criteria:
+      - The decoder interprets canonical priority/date order, project/context tokens, and valid key:value extensions without silently dropping source meaning.
+      - The encoder supports documented Task/status/field combinations and fails before output when strict conversion would lose or misrepresent semantics.
+      - Supported source-target pairs are discoverable from the shared capability registry and CLI.
+      - Existing from-todo behavior and unrelated conversion contracts remain compatible.
+    constraints:
+      - Plain life.txt remains authoritative.
+      - The conversion core remains pure and does not read/write files or access networks.
+      - No Format 1.0 grammar change.
+      - Strict rejection is the default; lossy conversion and profile selection are deferred.
+    owner: Eruhitsuji
+
+open_questions: []

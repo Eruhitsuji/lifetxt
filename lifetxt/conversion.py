@@ -7,6 +7,7 @@ network, workspace, or synchronization behavior.
 
 from collections import OrderedDict
 from dataclasses import dataclass
+from datetime import date
 import hashlib
 import json
 import re
@@ -36,16 +37,15 @@ CANONICAL_FORMATS = (
     "todo",
 )
 SOURCE_FORMATS = CANONICAL_FORMATS
-TARGET_FORMATS = ("life", "json", "jsonl", "csv", "ics")
+TARGET_FORMATS = ("life", "json", "jsonl", "csv", "ics", "todo")
 
-# The four item-preserving text targets are safe for every decoder.  ICS is
-# intentionally narrower: its event-only representation can discard ordinary
-# life.txt items, so only the established life -> ics route is advertised.
+# The four item-preserving text targets are safe for every decoder. ICS is
+# intentionally narrower; todo is task-oriented and only supports life input.
 SUPPORTED_PAIRS = tuple(
     (source, target)
     for source in SOURCE_FORMATS
     for target in ("life", "json", "jsonl", "csv")
-) + (("life", "ics"),)
+) + (("life", "ics"), ("life", "todo"))
 
 
 class ConversionError(ValueError):
@@ -187,6 +187,205 @@ def _assert_lossless_ics_items(items):
         )
 
 
+_TODO_TAG_KEY_RE = re.compile(r"^[^\s:]+$")
+_TODO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_TODO_PRIORITY_RE = re.compile(r"^\(([A-Z])\)$")
+_TODO_KV_RE = re.compile(r"^([^\s:]+):([^\s:]+)$")
+
+
+def _todo_date_value(value, *, item_no, key):
+    if not isinstance(value, str) or not _TODO_DATE_RE.fullmatch(value):
+        raise ConversionLossError(
+            "Cannot convert item %s field %s to todo: expected YYYY-MM-DD."
+            % (item_no, key)
+        )
+    try:
+        date.fromisoformat(value)
+    except ValueError as exc:
+        raise ConversionLossError(
+            "Cannot convert item %s field %s to todo: invalid calendar date %r."
+            % (item_no, key, value)
+        ) from exc
+    return value
+
+
+def _todo_values(item, key, item_no):
+    values = item.details.get(key, [])
+    if not isinstance(values, list):
+        raise ConversionLossError(
+            "Cannot convert item %s field %s to todo: details must be arrays."
+            % (item_no, key)
+        )
+    return values
+
+
+def _todo_title_tokens(title, item_no, status):
+    if not isinstance(title, str) or not title or title != title.strip():
+        raise ConversionLossError(
+            "Cannot convert item %s field title to todo: title must be non-empty "
+            "with no leading or trailing whitespace." % item_no
+        )
+    if any(char.isspace() and char not in " \t" for char in title):
+        raise ConversionLossError(
+            "Cannot convert item %s field title to todo: line breaks are unsupported."
+            % item_no
+        )
+    if "  " in title or "\t" in title:
+        raise ConversionLossError(
+            "Cannot convert item %s field title to todo: todo decoding normalizes "
+            "repeated whitespace." % item_no
+        )
+    tokens = title.split(" ")
+    if status == "[ ]" and tokens[0] == "x":
+        raise ConversionLossError(
+            "Cannot convert item %s field title to todo: a leading 'x ' would "
+            "mark the task complete." % item_no
+        )
+    if _TODO_PRIORITY_RE.fullmatch(tokens[0]) or _TODO_DATE_RE.fullmatch(tokens[0]):
+        raise ConversionLossError(
+            "Cannot convert item %s field title to todo: its leading token would "
+            "be read as priority or date." % item_no
+        )
+    for token in tokens:
+        if (token.startswith("+") or token.startswith("@")) and len(token) > 1:
+            raise ConversionLossError(
+                "Cannot convert item %s field title to todo: token %r would be "
+                "read as a project or context." % (item_no, token)
+            )
+        if _TODO_KV_RE.fullmatch(token):
+            raise ConversionLossError(
+                "Cannot convert item %s field title to todo: token %r would be "
+                "read as metadata." % (item_no, token)
+            )
+    return tokens
+
+
+def _items_to_todo_text(items):
+    lines = []
+    for item_no, item in enumerate(items, 1):
+        if item.kind != "T":
+            raise ConversionLossError(
+                "Cannot convert item %s field type=%s to todo: only Task (T) "
+                "items are representable." % (item_no, item.kind)
+            )
+        if item.status not in ("[ ]", "[x]"):
+            raise ConversionLossError(
+                "Cannot convert item %s field status=%s to todo: only [ ] and [x] "
+                "are representable." % (item_no, item.status)
+            )
+        title_tokens = _todo_title_tokens(item.title, item_no, item.status)
+        parts = []
+        if item.status == "[x]":
+            parts.append("x")
+            done = _todo_values(item, "done", item_no)
+            created = _todo_values(item, "created", item_no)
+            if len(done) > 1 or len(created) > 1:
+                raise ConversionLossError(
+                    "Cannot convert item %s fields done/created to todo: at most "
+                    "one date for each field is representable." % item_no
+                )
+            if created and not done:
+                raise ConversionLossError(
+                    "Cannot convert item %s field created to todo: a completed task "
+                    "needs done: before created: to preserve date meaning." % item_no
+                )
+            if done:
+                parts.append(_todo_date_value(done[0], item_no=item_no, key="done"))
+            if created:
+                parts.append(
+                    _todo_date_value(created[0], item_no=item_no, key="created")
+                )
+        else:
+            done = _todo_values(item, "done", item_no)
+            if done:
+                raise ConversionLossError(
+                    "Cannot convert item %s field done to todo: a completion "
+                    "date requires completed status [x]." % item_no
+                )
+            priority = _todo_values(item, "priority", item_no)
+            if len(priority) > 1 or (
+                priority
+                and (
+                    not isinstance(priority[0], str)
+                    or not re.fullmatch(r"[A-Z]", priority[0])
+                )
+            ):
+                raise ConversionLossError(
+                    "Cannot convert item %s field priority to todo: expected one "
+                    "uppercase letter A-Z." % item_no
+                )
+            created = _todo_values(item, "created", item_no)
+            if len(created) > 1:
+                raise ConversionLossError(
+                    "Cannot convert item %s field created to todo: at most one "
+                    "date is representable." % item_no
+                )
+            if priority:
+                parts.append("(%s)" % priority[0])
+            if created:
+                parts.append(
+                    _todo_date_value(created[0], item_no=item_no, key="created")
+                )
+        parts.extend(title_tokens)
+
+        for key in ("project", "context"):
+            for value in _todo_values(item, key, item_no):
+                if (
+                    not isinstance(value, str)
+                    or not value
+                    or any(c.isspace() for c in value)
+                ):
+                    raise ConversionLossError(
+                        "Cannot convert item %s field %s to todo: each value must "
+                        "be one non-empty token." % (item_no, key)
+                    )
+                parts.append(("+" if key == "project" else "@") + value)
+
+        if item.status == "[x]":
+            priority = _todo_values(item, "priority", item_no)
+            if len(priority) > 1 or (
+                priority
+                and (
+                    not isinstance(priority[0], str)
+                    or not re.fullmatch(r"[A-Z]", priority[0])
+                )
+            ):
+                raise ConversionLossError(
+                    "Cannot convert item %s field priority to todo: expected one "
+                    "uppercase letter A-Z." % item_no
+                )
+            if priority:
+                parts.append("pri:%s" % priority[0])
+
+        for key, values in item.details.items():
+            if key in ("project", "context", "priority", "created", "done"):
+                continue
+            if not isinstance(key, str) or not _TODO_TAG_KEY_RE.fullmatch(key):
+                raise ConversionLossError(
+                    "Cannot convert item %s field %r to todo: metadata keys must "
+                    "be non-empty tokens without colons." % (item_no, key)
+                )
+            if not isinstance(values, list):
+                raise ConversionLossError(
+                    "Cannot convert item %s field %s to todo: details must be arrays."
+                    % (item_no, key)
+                )
+            for value in values:
+                if (
+                    not isinstance(value, str)
+                    or not value
+                    or any(c.isspace() for c in value)
+                    or ":" in value
+                ):
+                    raise ConversionLossError(
+                        "Cannot convert item %s field %s to todo: metadata values "
+                        "must be non-empty tokens without colons." % (item_no, key)
+                    )
+                parts.append("%s:%s" % (key, value))
+        lines.append(" ".join(parts))
+    return "".join(line + "\n" for line in lines)
+
+
 def encode_items(
     items,
     target_format,
@@ -219,6 +418,8 @@ def encode_items(
         return output + "\n" if output else ""
     if target_format == "csv":
         return items_to_csv(items)
+    if target_format == "todo":
+        return _items_to_todo_text(items)
     if reject_loss:
         _assert_lossless_ics_items(items)
     return items_to_ics_text(
@@ -329,24 +530,58 @@ def _todo_item(raw, source, line_no, project=None, tags=None):
         text = text[2:].lstrip()
     details = OrderedDict()
     date_tokens = []
-    while re.match(r"^\d{4}-\d{2}-\d{2}(?:\s|$)", text):
-        token, _, text = text.partition(" ")
-        date_tokens.append(token)
-        text = text.lstrip()
-    priority_match = re.match(r"^\(([A-Z])\)\s+", text)
-    if priority_match:
-        details["priority"] = [priority_match.group(1)]
-        text = text[priority_match.end() :]
-    projects = re.findall(r"(?<!\S)\+([A-Za-z0-9_.-]+)", text)
-    contexts = re.findall(r"(?<!\S)@([A-Za-z0-9_.-]+)", text)
-    text = re.sub(r"(?<!\S)[+@][A-Za-z0-9_.-]+", "", text)
-    text = " ".join(text.split())
+    tokens = text.split()
+    if completed:
+        while tokens and _TODO_DATE_RE.fullmatch(tokens[0]):
+            date_tokens.append(tokens.pop(0))
+            if len(date_tokens) == 2:
+                break
+    priority = None
+    if tokens:
+        priority_match = _TODO_PRIORITY_RE.fullmatch(tokens[0])
+        if priority_match:
+            priority = priority_match.group(1)
+            tokens.pop(0)
+    if not completed and tokens and _TODO_DATE_RE.fullmatch(tokens[0]):
+        date_tokens.append(tokens.pop(0))
+
+    projects = []
+    contexts = []
+    metadata = OrderedDict()
+    title_tokens = []
+    for token in tokens:
+        if len(token) > 1 and token.startswith("+"):
+            projects.append(token[1:])
+            continue
+        if len(token) > 1 and token.startswith("@"):
+            contexts.append(token[1:])
+            continue
+        match = _TODO_KV_RE.fullmatch(token)
+        if match:
+            key, value = match.groups()
+            if key == "project":
+                projects.append(value)
+                continue
+            if key == "context":
+                contexts.append(value)
+                continue
+            if key == "pri" and re.fullmatch(r"[A-Z]", value) and priority is None:
+                priority = value
+            else:
+                metadata.setdefault(key, []).append(value)
+            continue
+        title_tokens.append(token)
+    if priority is not None:
+        details["priority"] = [priority]
+    text = " ".join(title_tokens)
     if project:
         projects.insert(0, project)
     if projects:
-        details["project"] = list(OrderedDict.fromkeys(projects))
+        details.setdefault("project", []).extend(projects)
     if contexts:
-        details["context"] = list(OrderedDict.fromkeys(contexts))
+        details.setdefault("context", []).extend(contexts)
+    for key, values in metadata.items():
+        details.setdefault(key, []).extend(values)
     if tags:
         details["tag"] = list(tags)
     if completed and date_tokens:
@@ -355,8 +590,10 @@ def _todo_item(raw, source, line_no, project=None, tags=None):
             details["created"] = [date_tokens[1]]
     elif date_tokens:
         details["created"] = [date_tokens[0]]
-    details["source"] = ["todo.txt"]
-    details["id"] = [_stable_id("todo_", "%s:%s:%s" % (source, line_no, raw))]
+    if "source" not in details:
+        details["source"] = ["todo.txt"]
+    if "id" not in details:
+        details["id"] = [_stable_id("todo_", "%s:%s:%s" % (source, line_no, raw))]
     return Item(
         "[x]" if completed else "[ ]", "T", text or "Untitled", details, line=line_no
     )

@@ -10992,7 +10992,8 @@ capabilities:
       and `.lifetxtz` are explicitly interchange/archive representations,
       never authoritative stores; plain life.txt remains authoritative. The
       shared text converter also supports strict life.txt Task ↔ todo.txt
-      interchange (#1432/#1438).
+      interchange (#1432/#1438), and explicit single-task todo.txt capture
+      through the established CLI creation boundary (#1441).
     status: active
     owner: Eruhitsuji
     source_requirements:
@@ -11041,6 +11042,7 @@ capabilities:
       - lifetxt.conversion.ensure_supported_pair
       - lifetxt.conversion.conversion_capabilities
       - lifetxt convert --from life --to todo
+      - lifetxt add --syntax todo TASK
       - lifetxt export --format json|jsonl|csv|markdown|life|sqlite|lifetxtz
       - lifetxt import --preset life|sqlite|lifetxtz
       - lifetxt.cli.EXPORT_FORMAT_HANDLERS
@@ -11086,6 +11088,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/826
       - https://github.com/Eruhitsuji/lifetxt/issues/1432
       - https://github.com/Eruhitsuji/lifetxt/issues/1438
+      - https://github.com/Eruhitsuji/lifetxt/issues/1441
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/828
     reuse_policy: prefer_reuse_or_extension_before_new_implementation

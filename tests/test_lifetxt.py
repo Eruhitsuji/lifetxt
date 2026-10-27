@@ -3178,6 +3178,99 @@ class LifeTxtAddAliasCliTests(unittest.TestCase):
         self.assertEqual(1, code)
         self.assertIn("requires a non-empty title", stderr)
 
+    def test_add_explicit_todo_syntax_uses_shared_decoder(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            stdout, stderr, code = run_cli(
+                "add",
+                "--syntax",
+                "todo",
+                "(A) 2026-10-26 Prepare proposal +日本語 @office "
+                "due:2026-10-30 owner:alice",
+                "--append",
+                path,
+            )
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn('T "Prepare proposal"', content)
+            self.assertIn("priority:A", content)
+            self.assertIn("created:2026-10-26", content)
+            self.assertIn("project:日本語", content)
+            self.assertIn("context:office", content)
+            self.assertIn("due:2026-10-30", content)
+            self.assertIn("owner:alice", content)
+            self.assertIn("source:todo.txt", content)
+
+    def test_add_todo_syntax_preserves_completed_dates_and_explicit_identity(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            stdout, stderr, code = run_cli(
+                "add",
+                "--syntax",
+                "todo",
+                "x 2026-10-26 2026-10-20 Send report pri:B id:task_1",
+                "--append",
+                path,
+            )
+            self.assertEqual(0, code, stderr)
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn('[x] T "Send report"', content)
+            self.assertIn("done:2026-10-26", content)
+            self.assertIn("created:2026-10-20", content)
+            self.assertIn("priority:B", content)
+            self.assertIn("id:task_1", content)
+
+    def test_add_todo_syntax_rejects_multiline_stdin_before_write(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            stdout, stderr, code = run_cli(
+                "add",
+                "--syntax",
+                "todo",
+                "-",
+                "--append",
+                path,
+                input_text="First task\nSecond task\n",
+            )
+            self.assertEqual(1, code)
+            self.assertIn("one line only", stderr)
+            self.assertFalse(os.path.exists(path))
+
+    def test_add_todo_syntax_rejects_invalid_date_before_write(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            stdout, stderr, code = run_cli(
+                "add",
+                "--syntax",
+                "todo",
+                "2026-02-30 Invalid date",
+                "--append",
+                path,
+            )
+            self.assertEqual(1, code)
+            self.assertIn("W203", stderr)
+            self.assertFalse(os.path.exists(path))
+
+    def test_add_todo_syntax_rejects_semantic_override_flags(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "life.txt")
+            stdout, stderr, code = run_cli(
+                "add",
+                "--syntax",
+                "todo",
+                "Task +Work",
+                "--project",
+                "Other",
+                "--append",
+                path,
+            )
+            self.assertEqual(1, code)
+            self.assertIn("cannot be combined", stderr)
+            self.assertIn("--project", stderr)
+            self.assertFalse(os.path.exists(path))
+
     def test_add_help_names_it_as_a_quick_capture_alias(self):
         stdout, stderr, code = run_cli("add", "--help")
         self.assertEqual(0, code, stderr)

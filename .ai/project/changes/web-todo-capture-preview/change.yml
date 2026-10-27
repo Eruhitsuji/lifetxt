@@ -1,0 +1,65 @@
+schema_version: 1
+
+change:
+  id: web-todo-capture-preview
+  title: Previewed todo.txt Web Quick Capture
+  status: in_review
+  change_type: Feature
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1442
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1446
+  base_commit: f52a080e2e7f8774b731b45d3194a291cab91e56
+  target_release: next normal maintenance release
+
+scope:
+  in_scope:
+    - Add explicit todo.txt mode to the dedicated Web Quick Capture surface.
+    - Preview every mapped field and diagnostic before confirmation.
+    - Bind confirmation to exact semantic input, workspace context, and writable revision.
+    - Preserve existing authorization, read-only, revision, lock, audit, and atomic-write behavior.
+    - Add accessible EN/JA UI, documentation, and focused API/browser coverage.
+  out_of_scope:
+    - Automatic syntax detection, multiline import, and compatibility profiles.
+    - TUI, CLI, storage schema, sync, or general Web UI redesign.
+    - A browser-side todo.txt parser.
+  write_scope:
+    - lifetxt/webapp.py
+    - lifetxt/web_assets.html
+    - lifetxt/web_assets_css_04.css
+    - lifetxt/web_assets_js_01.js
+    - lifetxt/web_assets_js_08.js
+    - tests/test_web_mobile_capture.py
+    - tests/test_web_mobile_capture_browser.py
+    - tests/browser_mobile_capture_probe.mjs
+    - tests/test_web_assets.py
+    - docs/en/web.md
+    - docs/ja/web.md
+    - docs/en/quick-capture.md
+    - docs/ja/quick-capture.md
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+    - .ai/project/changes/web-todo-capture-preview/**
+    - .ai/project/changes/cli-todo-capture/change.yml
+    - .ai/project/changes/cli-todo-capture/traceability.yml
+  forbidden_scope:
+    - .ai/managed/**
+    - browser-side todo grammar
+    - unrelated Web navigation or editor redesign
+    - lossy conversion and external synchronization
+  shared_files:
+    - lifetxt/webapp.py
+    - lifetxt/web_assets.html
+    - lifetxt/web_assets_js_01.js
+    - lifetxt/web_assets_js_08.js
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+
+task_size:
+  size: S
+  split_justification: Preview and confirmed submission are one safety boundary; TUI remains #1443.
+
+human_approvals_required:
+  - Independent Web implementation, security, accessibility, and integration review.
+  - Human Merge Authority approval; the implementer must not merge.

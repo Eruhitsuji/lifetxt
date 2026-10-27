@@ -16,8 +16,8 @@ from lifetxt import web_assets, webapp
 
 
 REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
-# #1380 adds the State surface link under More; no JS/CSS fragments change.
-LEGACY_PRISTINE_GIT_BLOB_SHA = "e807c1779df631361fd5e3b3669a621857b9c7d6"
+# #1442 adds previewed todo.txt capture to the pristine split Web surface.
+LEGACY_PRISTINE_GIT_BLOB_SHA = "1f4c61274d98d92b015d14c78baffae805fd416b"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )

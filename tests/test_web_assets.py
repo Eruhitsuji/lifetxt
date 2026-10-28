@@ -16,8 +16,8 @@ from lifetxt import web_assets, webapp
 
 
 REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
-# #1442 adds previewed todo.txt capture to the pristine split Web surface.
-LEGACY_PRISTINE_GIT_BLOB_SHA = "1f4c61274d98d92b015d14c78baffae805fd416b"
+# #1448 updates the editor creation flow and its Japanese messages.
+LEGACY_PRISTINE_GIT_BLOB_SHA = "e5b2c12f255986fd3f038e2ca2e437c3bb483984"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )

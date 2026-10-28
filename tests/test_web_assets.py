@@ -16,8 +16,8 @@ from lifetxt import web_assets, webapp
 
 
 REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
-# #1448 updates the editor creation flow and its Japanese messages.
-LEGACY_PRISTINE_GIT_BLOB_SHA = "e5b2c12f255986fd3f038e2ca2e437c3bb483984"
+# #1450 keeps detail deep links across Items URL updates.
+LEGACY_PRISTINE_GIT_BLOB_SHA = "61518ac4d58ee34d1c8d1e3866ef55f5c751a777"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )

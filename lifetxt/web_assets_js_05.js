@@ -384,7 +384,10 @@
       setEditorDisabled(!item.editable);
       renderItems(currentItems);
     }
+    let editorSavePending = false;
+    let editorCreateOutcomeUnknown = false;
     function newItem() {
+      editorCreateOutcomeUnknown = false;
       openEditorModal();
       selectedItem = null;
       document.getElementById("editor-heading").textContent = "New Record";
@@ -522,9 +525,13 @@
     }
     async function saveItem(event) {
       event.preventDefault();
+      if (editorSavePending || editorCreateOutcomeUnknown) return;
+      editorSavePending = true;
+      document.getElementById("save-button").disabled = true;
       const payload = editorPayload();
+      const creating = !(selectedItem && selectedItem.editable);
       try {
-        if (selectedItem && selectedItem.editable) {
+        if (!creating) {
           await api(`/api/items/${selectedItem.line}`, {
             method: "PUT",
             headers: {"Content-Type": "application/json"},
@@ -540,8 +547,19 @@
           showToast("Record created.", "success");
         }
       } catch(e) {
-        showActionableError("Could not save this record.", e, {retry: () => saveItem(event)});
+        // A missing response (or a server error) cannot establish whether the
+        // POST committed. Do not offer a retry that could create a second item.
+        if (creating && (!e.status || e.status >= 500)) {
+          editorCreateOutcomeUnknown = true;
+          document.getElementById("editor-note").textContent = t("Creation result is unknown. Check the items list before starting a new record. Your input is still here.");
+          showActionableError(t("Creation result is unknown. Check the items list before starting a new record."), e);
+        } else {
+          showActionableError("Could not save this record.", e, creating ? {} : {retry: () => saveItem(event)});
+        }
         return;
+      } finally {
+        editorSavePending = false;
+        document.getElementById("save-button").disabled = editorCreateOutcomeUnknown;
       }
       closeEditorModal();
       selectedItem = null;

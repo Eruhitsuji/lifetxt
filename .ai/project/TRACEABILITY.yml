@@ -2,6 +2,17 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-items-filter-disclosure-reachability
+      capability_id: cap-web-beginner-first-ux
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1453
+      tests_or_evidence:
+        - tests/test_web_items_filters.py
+        - tests/browser_items_filters_probe.mjs (1280/681/680/390 CSS px)
+        - tests/test_web_native_workflow.py
+        - tests/test_web_assets.py
+      status: in_review
+
     - requirement_id: req-web-item-deep-link-retention
       capability_id: cap-web-stable-item-links
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386

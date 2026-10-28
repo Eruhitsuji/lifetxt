@@ -177,6 +177,14 @@ MCP tool は `list_items`、`get_item`、`create_item`、`update_item`、
 複数 file を読み込む場合、read tool は全 file を走査し、write tool は `--write-file` のみを変更します。
 `--read-only` を付けると write tool は無効になります。
 
+## Itemsの絞り込みと並び替え
+
+画面幅が680 CSS pxを超える場合、Itemsに種類・Sort・Order・Group・Limit・
+Saved view・Area・Exportが直接表示されます。680 CSS px以下では
+**Filters（絞り込み）** を開いて操作してください。EnterまたはSpaceでも開閉できます。
+スマホ幅で閉じた後に画面を広げても、操作欄が再表示されます。
+画面幅を変えても、選択した絞り込み・並び替え条件は保持されます。
+
 ## Itemsからlife.txtを出力／複数レコードを一括追加
 
 1. Web UIの **Items** タブを開き、検索・状態・種類などで絞り込みます。

@@ -11931,6 +11931,7 @@ capabilities:
       - https://github.com/Eruhitsuji/lifetxt/issues/1072
       - https://github.com/Eruhitsuji/lifetxt/issues/1073
     related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/1454
       - https://github.com/Eruhitsuji/lifetxt/pull/822
       - https://github.com/Eruhitsuji/lifetxt/pull/830
     reuse_policy: prefer_reuse_or_extension_before_new_implementation

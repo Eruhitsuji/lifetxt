@@ -55,6 +55,8 @@
     // data-no-i18n and the walker skips those subtrees entirely.
     const UI_STRINGS = {
       ja: {
+        "Creation result is unknown. Check the items list before starting a new record.": "作成結果を確認できません。一覧で作成済みか確認してから、新しいレコードを作成してください。",
+        "Creation result is unknown. Check the items list before starting a new record. Your input is still here.": "作成結果を確認できません。一覧で作成済みか確認してから、新しいレコードを作成してください。入力内容は保持しています。",
         "Workspace review": "ワークスペースのレビュー",
         "Records": "レコード",
         "Errors": "エラー",

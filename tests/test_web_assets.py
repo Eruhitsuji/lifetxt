@@ -16,8 +16,8 @@ from lifetxt import web_assets, webapp
 
 
 REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
-# #1455 sizes Kiosk rows to their card content.
-LEGACY_PRISTINE_GIT_BLOB_SHA = "052795697088f67e20e20b34d0f36ac3750e906c"
+# #1457 links Agenda titles to their source records.
+LEGACY_PRISTINE_GIT_BLOB_SHA = "99008e551a40ae8ff1a91d1fe6b19704e6ee4304"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )

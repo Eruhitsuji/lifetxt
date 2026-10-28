@@ -177,6 +177,13 @@ MCP tool は `list_items`、`get_item`、`create_item`、`update_item`、
 複数 file を読み込む場合、read tool は全 file を走査し、write tool は `--write-file` のみを変更します。
 `--read-only` を付けると write tool は無効になります。
 
+## Agendaからレコード詳細を開く
+
+Agendaのリンクになっているタイトルを選ぶと、元レコードの詳細が開きます。
+反復予定も同じ元レコードへ移動します。元レコードのIDがないタイトルは通常の文字表示です。
+Tab・Enterで操作でき、新しいタブでも開けます。リンクにはAgendaの期間・絞り込み条件が
+保持されます。詳細画面では既存のレコード権限が適用されます。
+
 ## Itemsの絞り込みと並び替え
 
 画面幅が680 CSS pxを超える場合、Itemsに種類・Sort・Order・Group・Limit・

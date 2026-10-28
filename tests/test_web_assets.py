@@ -16,8 +16,8 @@ from lifetxt import web_assets, webapp
 
 
 REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
-# #1453 restores responsive Items filter disclosure reachability.
-LEGACY_PRISTINE_GIT_BLOB_SHA = "1caa9fc40791f3455bb724ed3258dd686a058a95"
+# #1455 sizes Kiosk rows to their card content.
+LEGACY_PRISTINE_GIT_BLOB_SHA = "052795697088f67e20e20b34d0f36ac3750e906c"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )

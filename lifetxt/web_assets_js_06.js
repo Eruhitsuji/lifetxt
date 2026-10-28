@@ -39,6 +39,19 @@
         matchTotal: total,
       }));
     }
+    function agendaRecordTitleHtml(record) {
+      const title = escapeHtml(record.title);
+      if (!record.source_id) return title;
+      const params = new URLSearchParams(query());
+      params.delete("line");
+      params.set("id", record.source_id);
+      return `<a class="drawer-link" href="?${escapeHtml(params.toString())}" data-agenda-id="${escapeHtml(record.source_id)}">${title}</a>`;
+    }
+    function openAgendaRecord(event) {
+      if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      openItemById(event.currentTarget.dataset.agendaId);
+    }
     async function loadAgenda() {
       const params = query();
       const agendaParams = new URLSearchParams();
@@ -90,7 +103,7 @@
         const displayWhen = _temporalDisplayLabel(entry.when, {allDayMidnight: true});
         node.insertAdjacentHTML(
           "beforeend",
-          `<div style="${borderStyle}padding-left:.45rem"><span class="pill">${escapeHtml(displayWhen)}</span>${occ}${spanBadge}${blockedBadge}${countdown}<div class="title">${escapeHtml(record.title)}</div>${source}</div>`
+          `<div style="${borderStyle}padding-left:.45rem"><span class="pill">${escapeHtml(displayWhen)}</span>${occ}${spanBadge}${blockedBadge}${countdown}<div class="title">${agendaRecordTitleHtml(record)}</div>${source}</div>`
         );
       }
       if (!unlimitedAgenda && entries.length > limit) {
@@ -100,6 +113,7 @@
           `<div style="padding:.3rem .45rem"><a href="#" class="drawer-link" onclick="event.preventDefault();setAgendaLimit(0)">View all ${entries.length} (${remaining} more)</a></div>`
         );
       }
+      node.querySelectorAll("[data-agenda-id]").forEach(link => link.addEventListener("click", openAgendaRecord));
       updateAgendaOverdueBadge(data.records);
     }
     // ── Presence rendering (Status & Team views) ───────────────────

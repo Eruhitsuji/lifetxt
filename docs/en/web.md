@@ -203,6 +203,14 @@ loaded source files. With multiple files, reads scan every configured path while
 write tools modify only `--write-file`; pass `--read-only` to disable write
 tools.
 
+## Items filters and sorting
+
+On screens wider than 680 CSS pixels, Items shows Type, Sort, Order, Group,
+Limit, Saved view, Area and Export controls directly. On narrower screens, open
+**Filters** to access them; the disclosure also works with Enter or Space.
+Widening the window restores the controls even if Filters was closed on mobile.
+Resizing keeps the selected filter and sort values.
+
 ## Native life.txt export and bulk input in Items
 
 1. Open **Items** and apply the desired text, status, and kind filters.

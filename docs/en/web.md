@@ -203,6 +203,13 @@ loaded source files. With multiple files, reads scan every configured path while
 write tools modify only `--write-file`; pass `--read-only` to disable write
 tools.
 
+## Agenda record details
+
+Select a linked Agenda title to open its source record. Recurring occurrences
+open the same source record. Titles without a source ID remain plain text.
+Links support Tab/Enter and opening in a new tab; the Agenda range and filters
+are kept in the link. Record permissions continue to apply in the detail view.
+
 ## Items filters and sorting
 
 On screens wider than 680 CSS pixels, Items shows Type, Sort, Order, Group,

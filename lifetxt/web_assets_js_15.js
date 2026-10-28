@@ -314,6 +314,17 @@
       if (stored === "compact") _applyDensity(true);
     });
 
+    // Native details hides closed content even when its child has display:flex.
+    function setupItemsFilterDisclosure() {
+      const disclosure = document.getElementById("items-filter-disclosure");
+      if (!disclosure) return;
+      const compact = window.matchMedia("(max-width: 680px)");
+      const sync = () => { disclosure.open = !compact.matches; };
+      sync();
+      compact.addEventListener("change", sync);
+    }
+    setupItemsFilterDisclosure();
+
     // ── Back-to-top button ────────────────────────────────────────
     window.addEventListener("scroll", () => {
       const btn = document.getElementById("back-to-top");

@@ -16,8 +16,8 @@ from lifetxt import web_assets, webapp
 
 
 REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
-# #1450 keeps detail deep links across Items URL updates.
-LEGACY_PRISTINE_GIT_BLOB_SHA = "61518ac4d58ee34d1c8d1e3866ef55f5c751a777"
+# #1453 restores responsive Items filter disclosure reachability.
+LEGACY_PRISTINE_GIT_BLOB_SHA = "1caa9fc40791f3455bb724ed3258dd686a058a95"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )

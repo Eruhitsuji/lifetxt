@@ -548,6 +548,9 @@
     .kiosk-mode #items {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
+      /* Keep scrollable rows tall enough for wrapped card content. */
+      grid-auto-rows: max-content;
+      align-content: start;
       gap: .75rem;
       padding: .75rem 1.25rem;
       height: calc(100vh - 3.8rem);

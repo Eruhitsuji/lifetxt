@@ -11973,6 +11973,7 @@ capabilities:
     status: active
     owner: Eruhitsuji
     source_requirements:
+      - req-web-dashboard-agenda-remaining
       - req-web-dashboard-attention-remaining
       - req-web-dashboard-attention-detail-action
       - req-web-dashboard-agenda-detail-navigation
@@ -12007,6 +12008,7 @@ capabilities:
       - python -m unittest tests.test_lifetxt tests.test_web_deep_link_js tests.test_web_assets tests.test_item_uri tests.test_item_uri_cli
       - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
     related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/1467
       - https://github.com/Eruhitsuji/lifetxt/issues/1465
       - https://github.com/Eruhitsuji/lifetxt/issues/1463
       - https://github.com/Eruhitsuji/lifetxt/issues/1461

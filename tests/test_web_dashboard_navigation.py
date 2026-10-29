@@ -16,6 +16,7 @@ class DashboardNavigationTests(unittest.TestCase):
         end = HTML_PAGE.index("    function dashNavigate(", start)
         harness = r"""
 const assert = require('node:assert/strict');
+function t(s){return s;}
 function escapeHtml(s) {return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');}
 function query() {return new URLSearchParams('view=dashboard&project=Work&from=2030-01-01&line=9');}
 const opened=[];function openItemById(id){opened.push(id);}
@@ -35,8 +36,8 @@ let rendered='',links=[];
 const todayEl={
   set innerHTML(value){
     rendered=value;
-    links=[...value.matchAll(/data-agenda-id="([^"]+)"/g)].map(()=>({
-      dataset:{agendaId:id},handlers:[],
+    links=[...value.matchAll(/data-agenda-id="([^"]+)"/g)].map(match=>({
+      dataset:{agendaId:match[1].replaceAll('&quot;','"').replaceAll('&lt;','<').replaceAll('&amp;','&')},handlers:[],
       addEventListener(type,handler){this.handlers.push({type,handler});}
     }));
   },
@@ -48,7 +49,7 @@ const window={};
   await loadDashboard();
   assert.equal(calls.length,5);
   assert.ok(calls.includes('/api/agenda?around=now&window=1d&open_only=true'));
-  assert.equal(links.length,2);
+  assert.equal(links.length,3);
   assert.ok(rendered.includes('&lt;img src=x&gt;'));
   assert.ok(!rendered.includes('<img'));
   assert.ok(rendered.includes('<span class="dash-row-title">IDなし</span>'));
@@ -56,8 +57,10 @@ const window={};
   assert.ok(rendered.includes('blocked-badge'));
   assert.ok(rendered.indexOf('&lt;img')<rendered.indexOf('IDなし'));
   assert.ok(rendered.indexOf('IDなし')<rendered.indexOf('Repeat'));
-  assert.ok(!rendered.includes('Outside limit'));
-  assert.ok(rendered.includes('View all 4'));
+  assert.ok(rendered.includes('Outside limit'));
+  assert.ok(rendered.indexOf('<details')<rendered.indexOf('Outside limit'));
+  assert.ok(rendered.includes('<details class="today-more"><summary>Show remaining records (1)</summary>'));
+  assert.ok(!rendered.includes('switchWorkspace'));
   const href=rendered.match(/href="([^"]+)"/)[1].replaceAll('&amp;','&');
   const params=new URLSearchParams(href.slice(1));
   assert.equal(params.get('id'),id);
@@ -77,13 +80,21 @@ const window={};
     }
     assert.equal(prevented,1);
   }
-  assert.deepEqual(opened,[id,id]);
+  assert.deepEqual(opened,[id,id,'hidden']);
   // Refresh binds exactly once to new nodes, and empty results have no links.
-  await loadDashboard();assert.equal(links.length,2);
+  await loadDashboard();assert.equal(links.length,3);
   assert.ok(links.every(link=>link.handlers.length===1));
   records.length=0;
   await loadDashboard();assert.equal(links.length,0);
   assert.ok(rendered.includes('Nothing scheduled around now.'));
+  for(const count of [0,1,3,4,20]){
+    records.splice(0,records.length,...Array.from({length:count},(_,i)=>({title:'Row '+i,source_id:'row-'+i})));
+    await loadDashboard();
+    assert.equal(links.length,count);
+    assert.deepEqual(links.map(link=>link.dataset.agendaId),Array.from({length:count},(_,i)=>'row-'+i));
+    assert.equal(rendered.includes('<details'),count>3);
+    if(count>3)assert.ok(rendered.includes('Show remaining records ('+(count-3)+')'));
+  }
 })().catch(error=>{console.error(error);process.exitCode=1;});
 """
         result = subprocess.run(

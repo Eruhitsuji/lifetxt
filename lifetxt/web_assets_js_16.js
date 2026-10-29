@@ -310,9 +310,10 @@
           ? agendaRecords.slice(0, limit).map(r =>
               `<div class="dash-row"><span class="pill">${escapeHtml((r.when || "").replace("T", " "))}</span>` +
               (r.blocked ? `<span class="blocked-badge">⚡</span>` : "") +
-              `<span class="dash-row-title">${escapeHtml(r.title)}</span></div>`
+              `<span class="dash-row-title">${agendaRecordTitleHtml(r)}</span></div>`
             ).join("") + (agendaRecords.length > limit ? `<a class="drawer-link" onclick="switchWorkspace('agenda')">View all ${agendaRecords.length} →</a>` : "")
           : `<div class="empty">Nothing scheduled around now.</div>`;
+        todayEl.querySelectorAll("[data-agenda-id]").forEach(link => link.addEventListener("click", openAgendaRecord));
       }
       // Needs attention: overdue + blocked
       const overdueEl = document.getElementById("dash-overdue");

@@ -244,14 +244,14 @@
       const pad = n => String(n).padStart(2, "0");
       return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
     }
-    function _dashItemRow(item) {
+    function _dashItemRow(item, index) {
       const statusCls = STATUS_CLASS[item.status] || "status-note";
       const statusIcon = STATUS_ICON[item.status] || "·";
       const dueRel = buildDueRelLabel(item);
       return `<div class="dash-row">
         <span class="status-badge ${statusCls}" style="font-size:.7rem;padding:.08rem .4rem">${escapeHtml(statusIcon)}</span>
         <span class="type-badge type-${escapeHtml(item.type || "N")}" style="font-size:.68rem;padding:.08rem .4rem">${escapeHtml(item.type || "?")}</span>
-        <a class="drawer-link dash-row-title" onclick="openItemByLine(${Number(item.line) || 0})">${escapeHtml(item.title)}</a>
+        <button type="button" class="dash-row-title review-click" data-dash-attention-index="${index}">${escapeHtml(item.title)}</button>
         ${dueRel}
       </div>`;
     }
@@ -325,6 +325,12 @@
           ? attention.slice(0, limit).map(_dashItemRow).join("") +
             (attention.length > limit ? `<a class="drawer-link" onclick="switchWorkspace('focus')">View all ${attention.length} →</a>` : "")
           : `<div class="empty">🎉 Nothing overdue or blocked.</div>`;
+        overdueEl.querySelectorAll("[data-dash-attention-index]").forEach(button => button.addEventListener("click", () => {
+          const item = attention[Number(button.dataset.dashAttentionIndex)];
+          const id = _drawerIdFor(item);
+          if (id) openItemById(id);
+          else { selectItem(item); openDrawer(item); }
+        }));
       }
       // Projects
       const projEl = document.getElementById("dash-projects");

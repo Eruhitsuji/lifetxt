@@ -2,6 +2,17 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-dashboard-attention-detail-action
+      capability_id: cap-web-stable-item-links
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1463
+      pull_request: null
+      tests_or_evidence:
+        - tests/test_web_dashboard_attention.py
+        - tests/test_web_dashboard_navigation.py
+        - tests/test_web_assets.py
+      status: implemented
+
     - requirement_id: req-web-dashboard-agenda-detail-navigation
       capability_id: cap-web-stable-item-links
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386

@@ -11973,6 +11973,7 @@ capabilities:
     status: active
     owner: Eruhitsuji
     source_requirements:
+      - req-web-dashboard-attention-detail-action
       - req-web-dashboard-agenda-detail-navigation
     implementation_locations:
       - lifetxt/web_assets_js_06.js
@@ -11995,6 +11996,7 @@ capabilities:
       - lifetxt show lifetxt://item/<id>
       - Web item-detail Copy stable link action
     tests_or_evidence:
+      - tests/test_web_dashboard_attention.py
       - tests/test_web_dashboard_navigation.py
       - tests/test_web_agenda_navigation.py
       - tests/test_lifetxt.py LifeTxtWebApiTests canonical-item-id-route tests (7 tests)
@@ -12004,6 +12006,7 @@ capabilities:
       - python -m unittest tests.test_lifetxt tests.test_web_deep_link_js tests.test_web_assets tests.test_item_uri tests.test_item_uri_cli
       - python -m lifetxt check examples/minimal_life.txt -> OK 10 item(s)
     related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/1463
       - https://github.com/Eruhitsuji/lifetxt/issues/1461
       - https://github.com/Eruhitsuji/lifetxt/issues/835
       - https://github.com/Eruhitsuji/lifetxt/issues/837

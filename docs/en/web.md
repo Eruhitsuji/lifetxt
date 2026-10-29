@@ -203,6 +203,14 @@ loaded source files. With multiple files, reads scan every configured path while
 write tools modify only `--write-file`; pass `--read-only` to disable write
 tools.
 
+## More records in Today
+
+When a Today record subsection contains more than eight records, select
+**Show remaining records** to expand the rest in the same order. Select it again
+to collapse them. Each subsection opens independently; refreshing closes it.
+This reveals the remainder of the fetched section, without changing filters or
+loading a different list. Status, Projects and pending requests are unchanged.
+
 ## Agenda record details
 
 Select a linked Agenda title to open its source record. Recurring occurrences

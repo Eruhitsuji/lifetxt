@@ -5,7 +5,7 @@
       rows = rows || [];
       const body = rows.length
         ? rows.slice(0, TODAY_ROW_LIMIT).map(_todayRefRow).join("") +
-          (rows.length > TODAY_ROW_LIMIT ? `<div class="dash-row empty">+${rows.length - TODAY_ROW_LIMIT} more</div>` : "")
+          (rows.length > TODAY_ROW_LIMIT ? `<details class="today-more"><summary class="drawer-link">+${rows.length - TODAY_ROW_LIMIT} · ${escapeHtml(t("Show remaining records"))}</summary>${rows.slice(TODAY_ROW_LIMIT).map(_todayRefRow).join("")}</details>` : "")
         : `<div class="empty">${escapeHtml(emptyText)}</div>`;
       return `<div class="today-subsection"><div class="today-subsection-title">${escapeHtml(title)} (${rows.length})</div>${body}</div>`;
     }

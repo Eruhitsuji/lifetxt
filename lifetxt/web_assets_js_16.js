@@ -306,12 +306,13 @@
       const todayEl = document.getElementById("dash-today");
       if (todayEl) {
         const limit = dashboardLimit("today", 7);
+        const renderRow = r =>
+          `<div class="dash-row"><span class="pill">${escapeHtml((r.when || "").replace("T", " "))}</span>` +
+          (r.blocked ? `<span class="blocked-badge">⚡</span>` : "") +
+          `<span class="dash-row-title">${agendaRecordTitleHtml(r)}</span></div>`;
         todayEl.innerHTML = agendaRecords.length
-          ? agendaRecords.slice(0, limit).map(r =>
-              `<div class="dash-row"><span class="pill">${escapeHtml((r.when || "").replace("T", " "))}</span>` +
-              (r.blocked ? `<span class="blocked-badge">⚡</span>` : "") +
-              `<span class="dash-row-title">${agendaRecordTitleHtml(r)}</span></div>`
-            ).join("") + (agendaRecords.length > limit ? `<a class="drawer-link" onclick="switchWorkspace('agenda')">View all ${agendaRecords.length} →</a>` : "")
+          ? agendaRecords.slice(0, limit).map(renderRow).join("") +
+            (agendaRecords.length > limit ? `<details class="today-more"><summary>${escapeHtml(t("Show remaining records"))} (${agendaRecords.length - limit})</summary>${agendaRecords.slice(limit).map(renderRow).join("")}</details>` : "")
           : `<div class="empty">Nothing scheduled around now.</div>`;
         todayEl.querySelectorAll("[data-agenda-id]").forEach(link => link.addEventListener("click", openAgendaRecord));
       }

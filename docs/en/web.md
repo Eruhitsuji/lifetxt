@@ -232,6 +232,8 @@ cannot identify a source file independently.
 
 Dashboard Needs attention shows the configured number of rows initially. Select **Show remaining records** (or use Enter/Space on its summary) to expand or collapse the remainder of the same fetched list. Refreshing closes the disclosure.
 
+The Dashboard’s Today agenda card also expands the remainder in place with **Show remaining records**. Its range and order stay unchanged, and the expanded titles use the same source-record links. Refreshing closes it.
+
 ## Items filters and sorting
 
 On screens wider than 680 CSS pixels, Items shows Type, Sort, Order, Group,

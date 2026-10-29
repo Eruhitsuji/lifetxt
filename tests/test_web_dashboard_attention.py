@@ -16,6 +16,7 @@ class DashboardAttentionTests(unittest.TestCase):
         source = _extract_function(HTML_PAGE, "function _drawerIdFor(")
         harness = r"""
 const assert = require('node:assert/strict');
+function t(s){return s;}
 function escapeHtml(s) {return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');}
 const appConfig={ids:{key:'uuid'}};
 const STATUS_CLASS={'[ ]':'status-open'}, STATUS_ICON={'[ ]':'○'};
@@ -62,9 +63,12 @@ const document={getElementById(id){return id==='dash-overdue'?attentionEl:null;}
 (async()=>{
   await loadDashboard();
   assert.equal(requests.length,5);
-  assert.equal(buttons.length,6); // seven distinct rows, configured limit six
-  assert.ok(rendered.includes('View all 7'));
-  assert.ok(!rendered.includes('Hidden by limit'));
+  assert.equal(buttons.length,7); // six initial plus one in a collapsed disclosure
+  assert.ok(rendered.includes('<details class="today-more"><summary>Show remaining records (1)</summary>'));
+  assert.ok(!rendered.includes('switchWorkspace'));
+  assert.equal((rendered.match(/<details/g)||[]).length,1);
+  assert.ok(rendered.includes('Hidden by limit'));
+  assert.ok(rendered.indexOf('<details')<rendered.indexOf('Hidden by limit'));
   assert.ok(!rendered.includes('openItemByLine'));
   assert.ok(!rendered.includes('<img'));
   assert.ok(rendered.includes('&lt;img src=x onerror=oops&gt;'));
@@ -77,7 +81,7 @@ const document={getElementById(id){return id==='dash-overdue'?attentionEl:null;}
     assert.equal(button.handlers[0].type,'click');
     button.handlers[0].handler();
   }
-  assert.deepEqual(ids,['canonical "<&/id','custom-id','blocked-e','blocked-f']);
+  assert.deepEqual(ids,['canonical "<&/id','custom-id','blocked-e','blocked-f','hidden']);
   assert.deepEqual(opened.map(item=>[item.source,item.line]),[['b.txt',7],['d.txt',7]]);
   assert.equal(selected[0],opened[0]);assert.equal(selected[1],opened[1]);
   assert.equal(opened[1].editable,false);assert.equal(opened[1].generated,true);
@@ -88,10 +92,21 @@ const document={getElementById(id){return id==='dash-overdue'?attentionEl:null;}
   assert.ok(buttons.every(button=>button.handlers.length===1));
   buttons[1].handlers[0].handler();
   assert.equal(opened.at(-1).source,'updated.txt');
+  blockedItems.pop();
+  await loadDashboard();
+  assert.equal(buttons.length,6);assert.ok(!rendered.includes('<details'));
   openItems.length=0;blockedItems=[];
   await loadDashboard();
   assert.equal(buttons.length,0);
   assert.ok(rendered.includes('Nothing overdue or blocked.'));
+  for(const count of [0,1,6,7,20]){
+    openItems.splice(0,openItems.length,...Array.from({length:count},(_,i)=>({...base,source:'many.txt',line:i+1,id:'many-'+i,title:'Row '+i,overdue:true})));
+    await loadDashboard();
+    assert.equal(buttons.length,count);
+    assert.deepEqual(buttons.map(b=>Number(b.dataset.dashAttentionIndex)),Array.from({length:count},(_,i)=>i));
+    assert.equal(rendered.includes('<details'),count>6);
+    if(count>6)assert.ok(rendered.includes('Show remaining records ('+(count-6)+')'));
+  }
 })().catch(error=>{console.error(error);process.exitCode=1;});
 """
         result = subprocess.run(

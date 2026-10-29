@@ -323,7 +323,7 @@
         const limit = dashboardLimit("needs_attention", 7);
         overdueEl.innerHTML = attention.length
           ? attention.slice(0, limit).map(_dashItemRow).join("") +
-            (attention.length > limit ? `<a class="drawer-link" onclick="switchWorkspace('focus')">View all ${attention.length} →</a>` : "")
+            (attention.length > limit ? `<details class="today-more"><summary>${escapeHtml(t("Show remaining records"))} (${attention.length - limit})</summary>${attention.slice(limit).map((item, index) => _dashItemRow(item, index + limit)).join("")}</details>` : "")
           : `<div class="empty">🎉 Nothing overdue or blocked.</div>`;
         overdueEl.querySelectorAll("[data-dash-attention-index]").forEach(button => button.addEventListener("click", () => {
           const item = attention[Number(button.dataset.dashAttentionIndex)];

@@ -16,8 +16,8 @@ from lifetxt import web_assets, webapp
 
 
 REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
-# #1457 links Agenda titles to their source records.
-LEGACY_PRISTINE_GIT_BLOB_SHA = "99008e551a40ae8ff1a91d1fe6b19704e6ee4304"
+# #1459 discloses remaining Today records.
+LEGACY_PRISTINE_GIT_BLOB_SHA = "18cb1ae4a0bea5ec37646d6ef51b5ee41c8893c7"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )

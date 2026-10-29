@@ -2,6 +2,15 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-today-remaining-records
+      capability_id: cap-web-beginner-first-ux
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1459
+      tests_or_evidence:
+        - tests/test_web_today_more.py
+        - tests/test_web_assets.py
+      status: in_review
+
     - requirement_id: req-web-agenda-source-detail-navigation
       capability_id: cap-web-stable-item-links
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386

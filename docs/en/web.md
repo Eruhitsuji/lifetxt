@@ -223,6 +223,13 @@ title, or focus it with Tab and press Enter, to open the source record without
 leaving Dashboard. Opening the link in a new tab keeps the current URL context.
 Titles without a source ID remain plain text here too.
 
+The Dashboard’s **Needs attention** titles are detail buttons, operable by
+click or Tab followed by Enter/Space. Records with an ID load their latest
+details by ID. Records without an ID open the fetched row, including its source
+and read-only status, rather than looking up an ambiguous line number. For
+ID-less records, shared URLs still use the existing line-number fallback and
+cannot identify a source file independently.
+
 ## Items filters and sorting
 
 On screens wider than 680 CSS pixels, Items shows Type, Sort, Order, Group,

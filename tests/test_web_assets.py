@@ -16,8 +16,8 @@ from lifetxt import web_assets, webapp
 
 
 REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
-# #1461 links Dashboard agenda source records.
-LEGACY_PRISTINE_GIT_BLOB_SHA = "52d332f799685e61cf6299d28f6ffaef0c0ff4fe"
+# #1463 makes Dashboard attention actions source-safe and keyboard accessible.
+LEGACY_PRISTINE_GIT_BLOB_SHA = "15cd7a31d3714dc41f5f5549b68f48d5fcc86929"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )

@@ -230,6 +230,8 @@ and read-only status, rather than looking up an ambiguous line number. For
 ID-less records, shared URLs still use the existing line-number fallback and
 cannot identify a source file independently.
 
+Dashboard Needs attention shows the configured number of rows initially. Select **Show remaining records** (or use Enter/Space on its summary) to expand or collapse the remainder of the same fetched list. Refreshing closes the disclosure.
+
 ## Items filters and sorting
 
 On screens wider than 680 CSS pixels, Items shows Type, Sort, Order, Group,

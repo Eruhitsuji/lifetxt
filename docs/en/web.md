@@ -218,6 +218,11 @@ open the same source record. Titles without a source ID remain plain text.
 Links support Tab/Enter and opening in a new tab; the Agenda range and filters
 are kept in the link. Record permissions continue to apply in the detail view.
 
+The Dashboard’s Today agenda card uses the same title links: select a linked
+title, or focus it with Tab and press Enter, to open the source record without
+leaving Dashboard. Opening the link in a new tab keeps the current URL context.
+Titles without a source ID remain plain text here too.
+
 ## Items filters and sorting
 
 On screens wider than 680 CSS pixels, Items shows Type, Sort, Order, Group,

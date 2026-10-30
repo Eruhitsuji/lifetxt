@@ -2,6 +2,16 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-area-nul-escape
+      capability_id: cap-web-beginner-first-ux
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1475
+      pull_request: null
+      tests_or_evidence:
+        - tests/test_web_assets.py
+        - Node runtime equivalence check of original and escaped Area keys
+      status: implemented
+
     - requirement_id: req-web-dashboard-agenda-remaining
       capability_id: cap-web-stable-item-links
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386

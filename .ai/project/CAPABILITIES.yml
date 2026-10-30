@@ -26,7 +26,8 @@ capabilities:
     related_issues:
     - https://github.com/Eruhitsuji/lifetxt/issues/1479
     - https://github.com/Eruhitsuji/lifetxt/issues/1480
-    related_pull_requests: []
+    related_pull_requests:
+    - https://github.com/Eruhitsuji/lifetxt/pull/1481
     reuse_policy: Reuse bulk selection, managed modal, single-task timezone semantics
       and existing revision-safe mutation APIs
     notes: One common second-precision Now timestamp. Existing done/repeat/read-only/non-T/closed/generated

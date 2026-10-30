@@ -8,8 +8,8 @@ traceability:
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1482
       pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1483
       tests_or_evidence:
-      - tests.test_web_drawer_overview
-      - tests.test_web_drawer_overview_browser
+        - tests.test_web_drawer_overview
+        - tests.test_web_drawer_overview_browser
       release_or_deployment: null
       status: in_review
 

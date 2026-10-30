@@ -255,6 +255,13 @@
         ${dueRel}
       </div>`;
     }
+    function dashboardProjectItemsUrl(project) {
+      const params = new URLSearchParams(query());
+      // Keep existing list conditions, but leave the Dashboard/detail view.
+      for (const key of ["mode", "view", "workspace", "panel", "id", "line"]) params.delete(key);
+      params.set("project", project);
+      return `?${params.toString()}`;
+    }
     async function loadDashboard() {
       const dateEl = document.getElementById("dash-date");
       if (dateEl) dateEl.textContent = new Date().toLocaleDateString(undefined, {weekday: "long", month: "long", day: "numeric"});
@@ -340,7 +347,7 @@
         const maxTotal = Math.max(...projects.map(p => p.total), 1);
         projEl.innerHTML = projects.length
           ? projects.map(p =>
-              `<div class="dash-row"><span class="dash-row-title">${escapeHtml(p.project)}</span>` +
+              `<div class="dash-row"><a class="dash-row-title drawer-link" href="${escapeHtml(dashboardProjectItemsUrl(p.project))}">${escapeHtml(p.project)}</a>` +
               `<span style="color:var(--muted);font-size:.78rem;font-variant-numeric:tabular-nums">${p.done}/${p.total}</span>` +
               `<span class="proj-stats-bar" style="width:${Math.round(p.total / maxTotal * 70)}px;opacity:${(0.4 + 0.6 * (p.done / Math.max(p.total, 1))).toFixed(2)}"></span>` +
               `<button class="secondary" style="font-size:.7rem;padding:.05rem .35rem;margin-left:.3rem" ` +

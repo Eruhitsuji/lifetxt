@@ -11748,6 +11748,7 @@ capabilities:
     status: active
     owner: Eruhitsuji
     source_requirements:
+      - req-web-drawer-overview
       - req-web-responsive-record-detail-layout
       - req-web-responsive-record-detail-touch-spacing-followup
       - req-web-responsive-record-detail-iphone-breathing-room
@@ -11755,6 +11756,9 @@ capabilities:
       - req-web-responsive-record-detail-section-scope-fix
       - req-web-responsive-record-detail-tab-bar-align-content-fix
     implementation_locations:
+      - lifetxt/web_assets_js_10.js
+      - lifetxt/web_assets_js_21.js
+      - lifetxt/web_assets_js_22.js
       - lifetxt/web_assets_css_01.css
       - lifetxt/web_assets_css_02.css
       - lifetxt/web_assets_css_03.css
@@ -11765,16 +11769,20 @@ capabilities:
     public_interfaces:
       - Web UI record-detail drawer at narrow and touch viewports
     tests_or_evidence:
+      - tests.test_web_drawer_overview
+      - tests.test_web_drawer_overview_browser
       - tests.test_web_mobile RecordDetailResponsiveTests
       - tests.test_web_assets WebAssetExtractionTests
       - tests.test_web_native_timeline_visual
     related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/1482
       - https://github.com/Eruhitsuji/lifetxt/issues/849
       - https://github.com/Eruhitsuji/lifetxt/issues/771
       - https://github.com/Eruhitsuji/lifetxt/issues/791
       - https://github.com/Eruhitsuji/lifetxt/issues/856
       - https://github.com/Eruhitsuji/lifetxt/issues/858
     related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/1483
       - https://github.com/Eruhitsuji/lifetxt/pull/851
       - https://github.com/Eruhitsuji/lifetxt/pull/853
       - https://github.com/Eruhitsuji/lifetxt/pull/854

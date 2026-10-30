@@ -1,0 +1,11 @@
+schema_version: 1
+requirements:
+- id: req-web-drawer-readable-history
+  description: Scan readable history with progressive filters and full provenance
+  acceptance_criteria:
+  - JA/EN event/status/time summaries preserve exact data and workspace date grouping
+  - Native detailed filter disclosure; canonical API query unchanged; no prompts
+  - API completeness/limitations/invalid/diagnostics/bounds always visible, raw evidence
+    accessible
+  - Only the latest request for the current item and mounted panel may apply
+  - Real Chromium viewport/language/theme/keyboard and existing reader/API regressions

@@ -627,3 +627,9 @@
     .drawer-readonly-note { margin:0; color:var(--muted); }
     #drawer-overview-tools .attachment-upload { margin:0; }
     #drawer-overview-tools .attachment-upload > h4 { margin-top:0; }
+
+    #drawer-native-timeline .nt-filters { display:grid; gap:.7rem; min-width:0; }
+    .nt-advanced-fields { display:grid; grid-template-columns:8rem minmax(0,1fr); gap:.5rem; align-items:center; }
+    .nt-advanced-fields input, .nt-advanced-fields select { min-width:0; width:100%; box-sizing:border-box; }
+    #drawer-native-timeline .nt-details > summary { min-height:44px; padding:.6rem 0; box-sizing:border-box; cursor:pointer; }
+    @media (max-width:600px) { .nt-advanced-fields { grid-template-columns:minmax(0,1fr); } }

@@ -2,6 +2,18 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-drawer-readable-history
+      capability_id: cap-native-timeline-web-visual-explorer
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1484
+      pull_request: null
+      tests_or_evidence:
+        - tests.test_web_native_timeline_visual
+        - tests.test_web_drawer_history
+        - tests.test_web_drawer_history_browser
+      release_or_deployment: null
+      status: in_review
+
     - requirement_id: req-web-drawer-overview
       capability_id: cap-web-responsive-record-detail
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386

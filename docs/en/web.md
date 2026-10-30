@@ -1576,3 +1576,16 @@ the diagnostic message; **Close** dismisses only that error notification. Other
 notifications and Undo actions remain available. A failed retry keeps its error
 visible. These controls do not add automatic retries for writes with unknown
 results; follow the record-creation recovery guidance before creating again.
+
+## Dashboard loading and partial errors
+
+Dashboard distinguishes a successful empty response from a failed request. If
+one data source fails, its affected counts show **Unavailable** instead of zero,
+and its card reports the failure. Needs attention keeps rows from the source
+that did load, while warning that the list is incomplete. A failed completion
+read hides the previous chart; a chart rendering failure is reported separately.
+
+The status above the counts names the affected data sources. Select **Refresh
+dashboard** to reload all five Dashboard read requests. This does not retry a
+write. A loading message marks the refresh, successful sections remain usable,
+and a later response from an older refresh cannot overwrite the latest result.

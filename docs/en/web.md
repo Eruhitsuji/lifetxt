@@ -1589,3 +1589,32 @@ The status above the counts names the affected data sources. Select **Refresh
 dashboard** to reload all five Dashboard read requests. This does not retry a
 write. A loading message marks the refresh, successful sections remain usable,
 and a later response from an older refresh cannot overwrite the latest result.
+
+
+### Complete several tasks with a completion date
+
+Select tasks in **Items**, then choose **Done date…** beside the existing Done
+button. Review the selected, eligible and skipped counts. Choose **Now / current
+time**, **Date only**, or **Date and time**, then **Confirm completion**.
+Now captures one UTC timestamp (second precision) at confirmation for all targets;
+retries keep that value. Date only preserves `YYYY-MM-DD`. Timed input uses the
+shown browser timezone and is stored in UTC; nonexistent DST times are rejected,
+and repeated DST times choose the earlier occurrence as in the task drawer.
+Close/cancel, Escape or clicking outside before confirmation saves nothing.
+
+Only writable, open T tasks without `done` or `repeat` are eligible. Generated,
+read-only, completed/cancelled and other record types are skipped with reasons.
+Each task is saved separately: successful tasks stay completed if another fails.
+The result lists individual outcomes and counts. **Retry failed tasks** checks
+fresh authoritative data and retries only unchanged original tasks. A changed
+record or an uncertain write that actually completed is never overwritten or
+submitted again; refresh and inspect it before proceeding.
+
+**Undo successful tasks** restores the original status and all details, but
+refuses to overwrite a task changed since completion. Restore failures remain
+visible and retryable. Closing and reopening Done date… retains these session
+results; **Use current selection** starts a new operation and discards the old
+result/Undo controls. Results are not retained across page reloads. The existing
+Done, status, project and delete actions retain their behavior. No next repeat
+instance is generated. ID-less tasks are accepted only when the source/line can
+be verified unambiguously in the writable input; ambiguous identities fail closed.

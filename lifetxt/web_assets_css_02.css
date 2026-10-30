@@ -613,3 +613,17 @@
     .drawer-done-form input { min-width: 0; width: 100%; max-width: 100%; box-sizing: border-box; }
     .drawer-done-form button { min-height: 44px; white-space: normal; }
     .drawer-done-form p { margin: 0; overflow-wrap: anywhere; }
+
+    /* Overview disclosures retain native keyboard semantics and protected data. */
+    #drawer-tab-overview:not([hidden]), #drawer-overview-tools { display:grid; gap:.8rem; align-content:start; min-width:0; }
+    .drawer-disclosure { min-width:0; border:1px solid var(--line); border-radius:var(--r-sm); padding:.65rem; }
+    .drawer-disclosure > summary { min-height:44px; box-sizing:border-box; padding:.6rem .1rem; cursor:pointer; font-weight:600; overflow-wrap:anywhere; }
+    .drawer-disclosure[open] > summary { margin-bottom:.65rem; }
+    .drawer-disclosure .actions { flex-wrap:wrap; }
+    .drawer-plain-body { white-space:pre-wrap; overflow-wrap:anywhere; }
+    .drawer-source { color:var(--muted); font-size:.82rem; overflow-wrap:anywhere; }
+    .drawer-technical .drawer-fields { margin-bottom:.6rem; }
+    .drawer-danger-actions { border-top:1px solid var(--line); padding-top:.6rem; margin-top:.4rem; }
+    .drawer-readonly-note { margin:0; color:var(--muted); }
+    #drawer-overview-tools .attachment-upload { margin:0; }
+    #drawer-overview-tools .attachment-upload > h4 { margin-top:0; }

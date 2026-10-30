@@ -273,17 +273,68 @@
       if (overflow?.open && !overflow.contains(event.target)) overflow.open = false;
     });
 
+    // UI labels are translated explicitly: the drawer protects record values
+    // from the global translation walker with data-no-i18n.
+    function drawerText(en, ja) { return currentLanguage() === "ja" ? ja : en; }
+    function drawerDateValue(value) {
+      const raw = String(value);
+      // Date-only and timezone-naive values retain their exact meaning.
+      if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})$/.test(raw)) return escapeHtml(raw);
+      const date = new Date(raw);
+      if (!Number.isFinite(date.getTime()) || new Date(raw.slice(0, 10) + "T00:00:00Z").toISOString().slice(0, 10) !== raw.slice(0, 10)) return escapeHtml(raw);
+      try {
+        const settings = _topClockSettings();
+        const main = appConfig?.web?.top_clock?.main_timezone;
+        if (!main) return escapeHtml(raw);
+        const parts = _clockParts(date, {...settings, resolvedTimezone: main});
+        const pad = n => String(n).padStart(2, "0");
+        const label = `${parts.year}-${pad(parts.month)}-${pad(parts.day)} ${pad(parts.hour)}:${pad(parts.minute)}:${pad(parts.second)} ${parts.label}`;
+        return `<time datetime="${escapeHtml(raw)}" title="${escapeHtml(raw)}">${escapeHtml(label)}</time>`;
+      } catch (_) { return escapeHtml(raw); }
+    }
+    function drawerOverviewFields(item) {
+      const labels = {
+        __proto__: null,
+        due: drawerText("Due", "期限"), do: drawerText("Scheduled", "実施予定"),
+        done: drawerText("Completed at", "完了日時"), at: drawerText("At", "日時"),
+        from: drawerText("From", "開始"), to: drawerText("To", "終了"),
+        on: drawerText("On", "日付"), project: drawerText("Project", "プロジェクト"),
+        priority: drawerText("Priority", "優先度"), progress: drawerText("Progress", "進捗"),
+      };
+      const dates = new Set(["due", "do", "done", "at", "from", "to", "on"]);
+      const refs = new Set(["depends_on", "parent", "blocks", "related", "ref"]);
+      const idKey = appConfig?.ids?.key || "id";
+      const important = [], other = [], technical = [];
+      for (const key of [...Object.keys(labels).filter(k => k in (item.details || {})), ...Object.keys(item.details || {}).filter(k => !(k in labels))]) {
+        const values = item.details[key];
+        if (key === "file" || key === "dir" || key === "body") continue;
+        const val = (values || []).map(v => {
+          if (refs.has(key)) return `<button type="button" class="drawer-link secondary" onclick="drawerNavigate(${escapeHtml(jsLiteral(String(v)))})">${escapeHtml(String(v))}</button>`;
+          return dates.has(key) ? drawerDateValue(v) : escapeHtml(String(v));
+        }).join(", ");
+        const row = `<div class="drawer-field"><span class="key">${escapeHtml(labels[key] || key)}</span><span class="val">${val}</span></div>`;
+        (key === idKey ? technical : labels[key] ? important : other).push(row);
+      }
+      // Even constructed API records without a raw line retain their ID.
+      if (!item.details?.[idKey]?.length && item.id)
+        technical.push(`<div class="drawer-field"><span class="key">${escapeHtml(idKey)}</span><span class="val">${escapeHtml(item.id)}</span></div>`);
+      const group = rows => `<div class="drawer-fields">${rows.join("")}</div>`;
+      return {important: important.length ? group(important) : "",
+        other: other.length ? `<details class="drawer-disclosure"><summary>${drawerText("Other fields", "その他のフィールド")} (${other.length})</summary>${group(other)}</details>` : "",
+        technical: group(technical)};
+    }
+
     function _drawerRestoreButtons(item) {
       const isDone = ["[x]", "[-]"].includes(item.status);
       const idKey = (typeof appConfig !== "undefined" && appConfig?.ids?.key) || "id";
       const hasId = !!(item?.details?.[idKey]?.[0] || item?.id);
       const isRepeat = !!(item?.details?.repeat?.length && hasId);
       document.getElementById("drawer-head-btns").innerHTML =
-        `<button class="secondary" onclick="drawerMarkDone()" id="drawer-done-btn"${!item.editable || isDone ? " disabled" : ""}>Done</button>` +
-        (item.type === "T"
+        (!isDone ? `<button class="secondary" onclick="drawerMarkDone()" id="drawer-done-btn"${!item.editable ? " disabled" : ""}>Done</button>` : "") +
+        (item.type === "T" && !isDone
           ? `<button class="secondary" onclick="drawerDoneDate()" id="drawer-done-date-btn"${!item.editable || isDone ? " disabled" : ""}>Done date…</button>`
           : "") +
-        (isRepeat
+        (isRepeat && !isDone
           ? `<button class="secondary" onclick="drawerComplete()" id="drawer-complete-btn" title="Complete this instance and materialize the next occurrence"${!item.editable || isDone ? " disabled" : ""}>✓ Complete + repeat</button>`
           : "") +
         `<button class="secondary" id="drawer-edit-btn" onclick="drawerEdit()"${!item.editable ? " disabled" : ""}>Edit</button>` +
@@ -293,8 +344,8 @@
         `<button class="secondary" id="drawer-copy-id" onclick="drawerCopyId()" title="Copy item ID to clipboard"${hasId ? "" : ' style="display:none"'}>Copy ID</button>` +
         `<button class="secondary" id="drawer-share-btn" onclick="drawerShareLink()" title="Copy deep link to this item">Share</button>` +
         `<button class="secondary" id="drawer-stable-link-btn" onclick="drawerCopyStableLink()" title="Copy host-independent stable link" aria-label="Copy stable link"${hasId ? "" : " disabled"}>Stable link</button>` +
-        `<button class="secondary" id="drawer-markdown-btn" onclick="drawerCopyMarkdown()" title="Copy item as Markdown">Copy Markdown</button></div></details>` +
-        `<button class="danger" onclick="drawerDelete()" id="drawer-delete-btn"${!item.editable ? " disabled" : ""}>Delete</button>`;
+        `<button class="secondary" id="drawer-markdown-btn" onclick="drawerCopyMarkdown()" title="Copy item as Markdown">Copy Markdown</button>` +
+        `<div class="drawer-danger-actions"><button class="danger" onclick="drawerDelete()" id="drawer-delete-btn"${!item.editable ? " disabled" : ""}>Delete</button></div></div></details>`;
     }
 
     // Canonical record deep links (#838): the id: detail is the stable
@@ -329,6 +380,8 @@
     }
 
     function openDrawer(item, urlMode = "push") {
+      const alreadyOpen = document.getElementById("detail-drawer").classList.contains("open");
+      const opener = _lastFocusedBeforeModal;
       disposeAttachmentUpload();
       disposeWorkSession();
       drawerWorkEditBinding = null;
@@ -343,33 +396,26 @@
       const statusLbl = STATUS_LABEL[item.status] || item.status;
       const typeCls = "type-" + (item.type || "N");
       const typeFullName = ITEM_TYPE_NAMES[item.type] || item.type;
-      title.innerHTML = `<span class="status-badge ${statusCls}">${escapeHtml(statusLbl)}</span>` +
-        `<span class="type-badge ${typeCls}" style="margin-left:.35rem" title="${escapeHtml(typeFullName)}">${escapeHtml(item.type)}</span>` +
-        `<span style="margin-left:.25rem;font-size:.78rem;color:var(--muted)">${escapeHtml(typeFullName)}</span>` +
+      title.dataset.noI18n = "";
+      title.innerHTML = `<span class="status-badge ${statusCls}">${escapeHtml(t(statusLbl))}</span>` +
+        `<span class="type-badge ${typeCls}" style="margin-left:.35rem" title="${escapeHtml(t(typeFullName))}">${escapeHtml(item.type)}</span>` +
+        `<span style="margin-left:.25rem;font-size:.78rem;color:var(--muted)">${escapeHtml(t(typeFullName))}</span>` +
         `<span style="margin-left:.4rem;font-weight:700">${escapeHtml(item.title)}</span>`;
       _drawerRestoreButtons(item);
-      const REF_KEYS = new Set(["depends_on", "parent", "blocks", "related", "ref"]);
-      let fieldsHtml = `<div class="drawer-section-title">Fields</div><div class="drawer-fields">`;
-      for (const [key, values] of Object.entries(item.details || {})) {
-        // Attachment locators remain available in the explicit raw record.
-        // The normal overview does not turn storage paths into browser links.
-        if (key === "file" || key === "dir") continue;
-        const valHtml = (values || []).map(v => {
-          if (REF_KEYS.has(key)) {
-            return `<a class="drawer-link" onclick="drawerNavigate(${escapeHtml(jsLiteral(String(v)))})">${escapeHtml(String(v))}</a>`;
-          }
-          return escapeHtml(String(v));
-        }).join(", ");
-        fieldsHtml += `<div class="drawer-field"><span class="key">${escapeHtml(key)}</span><span class="val">${valHtml}</span></div>`;
-      }
-      fieldsHtml += `</div>`;
-      const bodyHtml = item?.markdown?.details?.body?.[0]
-        ? `<div class="drawer-section-title">Body</div><div class="markdown">${item.markdown.details.body[0]}</div>` : "";
-      const sourceHtml = `<div class="drawer-section-title">Source</div>` +
-        `<div style="font-size:.82rem;color:var(--muted)">${escapeHtml(item.source || "")} line ${escapeHtml(String(item.line || ""))}</div>`;
-      const rawHtml = item?.raw
-        ? `<details class="drawer-raw-details"><summary>Raw line</summary><pre class="drawer-raw-pre">${escapeHtml(item.raw || "")}</pre></details>`
+      const fields = drawerOverviewFields(item);
+      const bodyValues = item?.details?.body || [];
+      const renderedBodies = item?.markdown?.details?.body || [];
+      const bodyHtml = bodyValues.length
+        ? `<div class="drawer-section-title">${drawerText("Body", "本文")}</div>` + bodyValues.map((v, i) =>
+            renderedBodies[i] ? `<div class="markdown">${renderedBodies[i]}</div>` : `<div class="drawer-plain-body">${escapeHtml(String(v))}</div>`).join("") : "";
+      const rawText = item?.text || item?.raw || "";
+      const rawHtml = rawText
+        ? `<div class="drawer-section-title">${drawerText("Raw line", "原文")}</div><pre class="drawer-raw-pre">${escapeHtml(rawText)}</pre>`
         : "";
+      const sourceHtml = `<details class="drawer-disclosure drawer-technical"><summary>${drawerText("Source and technical details", "出典・技術情報")}</summary>` +
+        fields.technical + `<div class="drawer-section-title">${drawerText("Source", "出典")}</div>` +
+        `<div class="drawer-source">${escapeHtml(item.source || "")} · ${drawerText("Line", "行")} ${escapeHtml(String(item.line ?? ""))}</div>` +
+        rawHtml + `</details>`;
       const idKey = appConfig?.ids?.key || "id";
       const itemId = item?.id || item?.details?.[idKey]?.[0] || "";
       const threadHtml = item.type === "M" && itemId
@@ -384,24 +430,25 @@
           `</form>`
         : "";
       const progressHtml = buildEstProgressHtml(item);
-      const canDue = item.editable && ["T", "D", "R", "E", "H"].includes(item.type);
+      const canDue = item.editable && !isDone && ["T", "D", "R", "E", "H"].includes(item.type);
       const dueQuickHtml = canDue
-        ? `<div class="due-quick-bar"><span style="font-size:.78rem;color:var(--muted)">Due:</span>` +
-          `<button type="button" class="secondary" onclick="drawerPostpone('today')" title="Set due to today">Today</button>` +
-          `<button type="button" class="secondary" onclick="drawerPostpone('+1d')" title="Postpone by one day">+1d</button>` +
-          `<button type="button" class="secondary" onclick="drawerPostpone('+1w')" title="Postpone by one week">+1w</button>` +
-          (item?.details?.due?.length ? `<button type="button" class="secondary" onclick="drawerPostpone('clear')" title="Remove due date">Clear</button>` : "") +
+        ? `<div class="due-quick-bar"><span style="font-size:.78rem;color:var(--muted)">${drawerText("Change due date", "期限を変更")}:</span>` +
+          `<button type="button" class="secondary" onclick="drawerPostpone('today')" title="${escapeHtml(t("Set due to today"))}">${t("Today")}</button>` +
+          `<button type="button" class="secondary" onclick="drawerPostpone('+1d')" title="${escapeHtml(t("Postpone by one day"))}">${drawerText("+1d", "+1日")}</button>` +
+          `<button type="button" class="secondary" onclick="drawerPostpone('+1w')" title="${escapeHtml(t("Postpone by one week"))}">${drawerText("+1w", "+1週")}</button>` +
+          (item?.details?.due?.length ? `<button type="button" class="secondary" onclick="drawerPostpone('clear')" title="${escapeHtml(t("Remove due date"))}">${t("Clear")}</button>` : "") +
           `</div>`
         : "";
       body.innerHTML =
-        `<div class="drawer-tabs" role="tablist" aria-label="Item detail sections">` +
-          `<button type="button" class="drawer-tab active" role="tab" aria-selected="true" aria-controls="drawer-tab-overview" onclick="switchDrawerTab('overview')">Overview</button>` +
-          `<button type="button" class="drawer-tab help-target" role="tab" aria-selected="false" aria-controls="drawer-tab-timeline" data-help="See how this item changed over time." onclick="switchDrawerTab('timeline')">Timeline</button>` +
-          `<button type="button" class="drawer-tab help-target" role="tab" aria-selected="false" aria-controls="drawer-tab-relations" data-help="See items connected to this one." onclick="switchDrawerTab('relations')">Relations</button>` +
+        `<div class="drawer-tabs" role="tablist" aria-label="${drawerText("Item detail sections", "レコードの詳細セクション")}">` +
+          `<button type="button" class="drawer-tab active" role="tab" aria-selected="true" aria-controls="drawer-tab-overview" onclick="switchDrawerTab('overview')">${drawerText("Overview", "概要")}</button>` +
+          `<button type="button" class="drawer-tab help-target" role="tab" aria-selected="false" aria-controls="drawer-tab-timeline" data-help="See how this item changed over time." onclick="switchDrawerTab('timeline')">${drawerText("Timeline", "履歴")}</button>` +
+          `<button type="button" class="drawer-tab help-target" role="tab" aria-selected="false" aria-controls="drawer-tab-relations" data-help="See items connected to this one." onclick="switchDrawerTab('relations')">${drawerText("Relations", "関連")}</button>` +
         `</div>` +
         `<section id="drawer-tab-overview" class="drawer-tab-panel" role="tabpanel">` +
-          fieldsHtml + progressHtml + dueQuickHtml + bodyHtml +
-          sourceHtml + rawHtml +
+          (!item.editable ? `<p class="drawer-readonly-note">${drawerText("Read-only record. Editing and completion are unavailable.", "読み取り専用のレコードです。編集・完了操作はできません。")}</p>` : "") +
+          bodyHtml + fields.important + progressHtml + dueQuickHtml +
+          `<div id="drawer-overview-tools"></div>` + fields.other + sourceHtml +
         `</section>` +
         `<section id="drawer-tab-timeline" class="drawer-tab-panel" role="tabpanel" hidden>` +
           `<div id="drawer-native-timeline"><div class="drawer-section-title">Native Timeline</div><div class="empty dep-loading">Loading…</div></div>` +
@@ -413,8 +460,9 @@
         `</section>`;
       rememberRecentItem(item);
       openManagedModal(drawer, ".drawer-close-btn");
-      mountAttachmentUpload(item, document.getElementById("drawer-tab-overview"));
-      mountWorkSession(item, document.getElementById("drawer-tab-overview"));
+      if (alreadyOpen) _lastFocusedBeforeModal = opener;
+      mountAttachmentUpload(item, document.getElementById("drawer-overview-tools"));
+      mountWorkSession(item, document.getElementById("drawer-overview-tools"));
       loadDependencyLinks(item);
       loadBlockerChain(item);
       if (item.type === "M" && itemId) loadDrawerMessageThread(item);

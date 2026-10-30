@@ -1,0 +1,28 @@
+schema_version: 1
+change:
+  id: web-drawer-overview
+  title: Readable progressive record overview
+  status: in_review
+  change_type: Feature
+  assurance_level: Standard
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1482
+  related_pull_request: null
+  base_commit: a235a722
+scope:
+  in_scope:
+  - 'Approved D1/D2 and local D5 under #1386, one Overview surface'
+  out_of_scope:
+  - API/Format/auth/mutation/revision changes, Timeline/Relations redesign, deployment
+  write_scope:
+  - .github/workflows/ci.yml
+  - tests/browser_attachment_upload_probe.mjs
+  - lifetxt/web_assets_js_{01,10,12,21,22}.js
+  - lifetxt/web_assets_css_02.css
+  - tests/test_web_drawer_overview*
+  - tests/browser_drawer_overview_probe.mjs
+  - tests/test_web_assets.py
+  - docs/{en,ja}/web.md
+  - .ai/project/{CAPABILITIES,TRACEABILITY}.yml
+  - .ai/project/changes/web-drawer-overview/**

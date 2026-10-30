@@ -16,8 +16,8 @@ from lifetxt import web_assets, webapp
 
 
 REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
-# #1471 links Dashboard projects to filtered Items.
-LEGACY_PRISTINE_GIT_BLOB_SHA = "32ce88b9e9716435aac8c394e391ebc75864301f"
+# #1473 distinguishes failed Dashboard reads from normal empty data.
+LEGACY_PRISTINE_GIT_BLOB_SHA = "84584255d1e00d7f6e929ee90923038e13c31cec"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )

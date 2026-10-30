@@ -1561,3 +1561,12 @@ refreshing. If a transaction outcome is uncertain, ask the operator to inspect
 the existing journal recovery contract before retrying. Restarting the browser
 does not replay any session action. Normal observe and required UI writes send
 item/timer/HTTP revision preconditions and do not use legacy fallback.
+
+## Recovering from an error
+
+When an error offers **Try again**, select it to retry that operation once. The
+button is disabled while the operation is pending. **Technical details** expands
+the diagnostic message; **Close** dismisses only that error notification. Other
+notifications and Undo actions remain available. A failed retry keeps its error
+visible. These controls do not add automatic retries for writes with unknown
+results; follow the record-creation recovery guidance before creating again.

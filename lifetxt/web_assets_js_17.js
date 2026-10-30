@@ -539,13 +539,50 @@
     }
     function renderActionableError(container, title, error, retry) {
       if (!container) return;
-      const id = "error-details-" + Date.now();
-      container.innerHTML = `<div class="actionable-error" role="alert" tabindex="-1"><strong>${escapeHtml(title)}</strong>` +
+      const previousFocus = document.activeElement;
+      const markup = `<strong>${escapeHtml(title)}</strong>` +
         `<span>${escapeHtml(actionableErrorText(error))}</span>` +
         `<button type="button" class="secondary" data-retry>Try again</button>` +
-        `<details><summary>Technical details</summary><code id="${id}">${escapeHtml(error?.message || error || "")}</code></details></div>`;
-      container.querySelector("[data-retry]")?.addEventListener("click", retry);
-      container.querySelector(".actionable-error")?.focus();
+        `<button type="button" class="secondary" data-dismiss>Close</button>` +
+        `<details><summary>Technical details</summary><code>${escapeHtml(error?.message || error || "")}</code></details>`;
+      let block;
+      if (container.id === "toast-container") {
+        // Notifications (including Undo) own their own lifetime.
+        block = document.createElement("div");
+        block.className = "actionable-error";
+        block.setAttribute("role", "alert");
+        block.tabIndex = -1;
+        block.innerHTML = markup;
+        container.appendChild(block);
+      } else {
+        container.innerHTML = `<div class="actionable-error" role="alert" tabindex="-1">${markup}</div>`;
+        block = container.querySelector(".actionable-error");
+      }
+      const dismiss = () => {
+        const restoreFocus = block.contains(document.activeElement);
+        block.remove();
+        if (restoreFocus && previousFocus?.isConnected) previousFocus.focus();
+      };
+      const retryButton = block.querySelector("[data-retry]");
+      let pending = false;
+      retryButton.addEventListener("click", async () => {
+        if (pending) return;
+        pending = true;
+        retryButton.disabled = true;
+        try {
+          // Only the caller's explicitly supplied operation is retried.
+          await retry();
+          dismiss();
+        } catch (nextError) {
+          block.querySelector("span").textContent = actionableErrorText(nextError);
+          block.querySelector("code").textContent = nextError?.message || String(nextError);
+        } finally {
+          pending = false;
+          retryButton.disabled = false;
+        }
+      });
+      block.querySelector("[data-dismiss]").addEventListener("click", dismiss);
+      block.focus();
     }
 
     initializeCaptureMode();

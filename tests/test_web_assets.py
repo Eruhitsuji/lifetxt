@@ -16,8 +16,8 @@ from lifetxt import web_assets, webapp
 
 
 REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
-# #1463 makes Dashboard attention actions source-safe and keyboard accessible.
-LEGACY_PRISTINE_GIT_BLOB_SHA = "684f79127199b22e0f81a1b88334bd9bf3ee9303"
+# #1469 repairs independently owned actionable error controls.
+LEGACY_PRISTINE_GIT_BLOB_SHA = "085ab5ea07a49cd6085f38403d6c3f3226d3f418"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )

@@ -1,0 +1,28 @@
+schema_version: 1
+change:
+  id: web-drawer-history
+  title: Readable progressive drawer history
+  status: in_review
+  change_type: Feature
+  assurance_level: Standard
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1484
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1485
+  base_commit: 556208180f6d84001d8131ab55f07b898f154854
+scope:
+  in_scope:
+  - 'Approved D3 and local D5 in #1386'
+  out_of_scope:
+  - API/history semantics/auth/mutations/Relations redesign
+  write_scope:
+  - lifetxt/web_assets_js_{10,11}.js
+  - lifetxt/web_assets_css_02.css
+  - tests/test_web_native_timeline_visual.py
+  - tests/test_web_drawer_history*.py
+  - tests/browser_drawer_history_probe.mjs
+  - tests/test_web_assets.py
+  - .github/workflows/ci.yml
+  - docs/{en,ja}/web.md
+  - .ai/project/{CAPABILITIES,TRACEABILITY}.yml
+  - .ai/project/changes/web-drawer-history/**

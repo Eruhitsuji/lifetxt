@@ -3,6 +3,14 @@
 The web interface is optional. It uses FastAPI and uvicorn, but the core parser
 and CLI remain dependency-free.
 
+## Reading change history
+
+Open a record and choose **Timeline**. Events show a readable action and status transition with the original symbols. Times and day headings follow the workspace timezone; expand an event’s **Technical details** for the original timestamp, transaction, revision and payload.
+
+Use **All**, **7d** or **30d** for quick ranges. **Custom** opens **Detailed filters** without a browser prompt. Enter ISO datetimes (with offset or Z), select an event or limit and choose **Apply**. **Clear** removes all conditions. The history API still defines filtering, ordering and completeness.
+
+The completeness badge, warnings and returned/total counts remain visible. **History evidence and diagnostics** preserves the exact limitation codes, domain completeness, invalid events and diagnostics. A partial-history badge is not a claim that earlier changes never happened. Loading history does not modify records. Old responses cannot replace the current record or newer filter results.
+
 ## Reading the record Overview
 
 Open an item to see its body followed by important fields. **Due** and **Scheduled** keep their separate meanings. Offset-bearing timestamps use the workspace timezone and include the zone; hover the time or open **Source and technical details** to inspect the original value. Date-only and timezone-naive values remain literal.

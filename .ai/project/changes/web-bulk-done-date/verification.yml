@@ -24,3 +24,8 @@ review_ledger:
     result: pending
     finding_count: 0
     completed_at: null
+ci_findings:
+  - job: Real Chromium revision contract (41067698694)
+    cause: Bulk fieldset reused drawer-edit-form; the existing work-session probe resolved it instead of the drawer form and requestSubmit failed in observe/required modes.
+    correction: Dedicated bulk-done-fields presentation class; existing drawer form selection remains unchanged.
+    verification: Focused Web regression rerun; native Chromium rerun required on CI.

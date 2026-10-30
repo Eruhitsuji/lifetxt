@@ -11586,6 +11586,10 @@ capabilities:
       - req-web-drawer-readable-history
       - req-native-timeline-web-visual-explorer
     implementation_locations:
+      - lifetxt/web_assets_js_10.js
+      - lifetxt/web_assets_css_02.css
+      - tests/test_web_drawer_history.py
+      - tests/test_web_drawer_history_browser.py
       - lifetxt/web_assets_js_11.js
       - lifetxt/web_assets_css_04.css
       - tests/test_web_native_timeline_visual.py
@@ -11607,9 +11611,13 @@ capabilities:
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/1484
       - https://github.com/Eruhitsuji/lifetxt/issues/769
-    related_pull_requests: []
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/1485
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
+      D3 (#1484/#1485) adds readable JA/EN history, workspace date grouping,
+      progressive filters/evidence and latest-request isolation; history
+      semantics and mutation contracts are unchanged.
       Self-scoped and implemented per explicit repository owner instruction
       to build a bounded first version rather than defer further. Design
       decisions made without a synchronous human round-trip, recorded here

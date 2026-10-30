@@ -563,3 +563,13 @@
     .focus-quick-add .web-field-label { flex: 1; }
     .web-field-label input { box-sizing: border-box; max-width: 100%; }
     .graph-toolbar { flex-wrap: wrap; }
+
+    #bulk-done-modal .modal { width: min(560px, 100%); min-width: 0; overflow-wrap: anywhere; }
+    #bulk-done-modal fieldset { min-width: 0; border: 0; padding: 0; }
+    #bulk-done-modal [hidden] { display: none; }
+    #bulk-done-modal input, #bulk-done-modal select { min-width: 0; max-width: 100%; }
+    #bulk-done-modal .actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+    #bulk-done-modal button, #bulk-done-modal input, #bulk-done-modal select { min-height: 44px; }
+    .bulk-done-fields { display: grid; gap: .75rem; }
+    .bulk-done-fields label { display: grid; gap: .25rem; font-size: .85rem; color: var(--muted); }
+    .bulk-done-fields input, .bulk-done-fields select { width: 100%; box-sizing: border-box; }

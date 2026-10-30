@@ -1,6 +1,39 @@
 schema_version: 1
 
 capabilities:
+  - id: cap-web-bulk-done-date
+    name: Explicit bulk task completion date
+    summary: Common completion date with per-task CAS, source identity validation, visible
+      partial results, retry and guarded Undo.
+    status: implemented
+    owner: Eruhitsuji
+    source_requirements:
+    - req-web-bulk-done-date
+    implementation_locations:
+    - lifetxt/web_assets_js_23.js
+    - lifetxt/web_assets.html
+    - lifetxt/web_assets.py
+    - lifetxt/web_assets_js_01.js
+    - lifetxt/web_assets_js_08.js
+    - lifetxt/web_assets_css_03.css
+    - tests/test_web_bulk_done_date.py
+    public_interfaces:
+    - "Items > Done date\u2026 (Now, date only, date/time); existing item PUT API"
+    tests_or_evidence:
+    - tests.test_web_bulk_done_date
+    - tests.test_web_done_date
+    - 253 focused Web/integrity/governance tests passed; native browser acceptance unverified
+    related_issues:
+    - https://github.com/Eruhitsuji/lifetxt/issues/1479
+    - https://github.com/Eruhitsuji/lifetxt/issues/1480
+    related_pull_requests:
+    - https://github.com/Eruhitsuji/lifetxt/pull/1481
+    reuse_policy: Reuse bulk selection, managed modal, single-task timezone semantics
+      and existing revision-safe mutation APIs
+    notes: One common second-precision Now timestamp. Existing done/repeat/read-only/non-T/closed/generated
+      excluded. Sequential updates are not atomic. Session-only result and guarded Undo;
+      no generic bulk semantics changed. Independent review pending.
+
   - id: cap-web-state-surface
     name: Dedicated mobile State surface
     summary: Self-only current presence, one-tap state transitions and optional title/note editing, discoverable from More and independently launchable from the home screen.

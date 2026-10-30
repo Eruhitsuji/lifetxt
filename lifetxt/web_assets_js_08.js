@@ -558,6 +558,7 @@
         return;
       }
       if (e.key === "Escape") {
+        if (document.getElementById("bulk-done-modal").classList.contains("open")) { closeBulkDone(); return; }
         if (document.getElementById("cmdk-backdrop").classList.contains("open")) { closeCmdk(); return; }
         if (isKioskMode()) { toggleKioskMode(); return; }
         if (document.getElementById("help-modal").classList.contains("open")) { closeHelpModal(); return; }

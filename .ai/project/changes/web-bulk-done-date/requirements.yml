@@ -1,0 +1,14 @@
+schema_version: 1
+requirements:
+- id: req-web-bulk-done-date
+  description: Complete selected open tasks using a common explicit date/time, preserving
+    identity and recovery safety
+  acceptance_criteria:
+  - Selected/eligible/skipped reason counts; Now/date/local time modes; zero writes
+    on cancel or invalid input
+  - One revision-CAS PUT per task preserves metadata; excludes repeat and existing
+    done
+  - Source/identity and unchanged contents verified before each completion/retry/Undo
+  - Individual partial results and explicit safe retry; exact original details/status
+    restored only for unchanged successes
+  - Existing generic bulk/drawer behavior and JA/EN/narrow-screen/keyboard compatibility

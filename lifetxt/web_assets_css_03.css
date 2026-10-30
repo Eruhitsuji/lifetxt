@@ -558,3 +558,8 @@
       overflow-x: hidden;
       scrollbar-width: thin;
       scrollbar-color: #b2d8c4 transparent;
+
+    .web-field-label { display: inline-flex; flex-direction: column; gap: .2rem; min-width: 0; max-width: 100%; font-size: .78rem; }
+    .focus-quick-add .web-field-label { flex: 1; }
+    .web-field-label input { box-sizing: border-box; max-width: 100%; }
+    .graph-toolbar { flex-wrap: wrap; }

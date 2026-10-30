@@ -196,6 +196,11 @@
         summary.textContent = t("This record has attachment references. Raw record details remain available separately.");
         root.append(summary);
       }
+      if (!(item.details?.file?.length || item.details?.dir?.length)) {
+        const empty = document.createElement("p");
+        empty.textContent = t("No attachment references.");
+        root.append(empty);
+      }
       container.append(root);
       const itemId = _drawerIdFor(item);
       if (!item.editable || item.generated || !itemId || isDisplayMode()) {
@@ -204,6 +209,12 @@
         root.append(note);
         return;
       }
+      const disclosure = document.createElement("details");
+      disclosure.className = "drawer-disclosure";
+      const toggle = document.createElement("summary");
+      toggle.textContent = t("Choose attachment");
+      disclosure.append(toggle);
+      root.append(disclosure);
       const label = document.createElement("label");
       label.textContent = t("Choose attachment");
       label.htmlFor = "attachment-upload-file";
@@ -234,7 +245,9 @@
       const receipt = document.createElement("div");
       receipt.id = "attachment-upload-receipt";
       actions.append(submit, refresh);
-      root.append(label, input, limitText, selected, actions, feedback, receipt);
+      disclosure.append(label, input, limitText, selected, actions);
+      // Availability, errors and successful receipts remain visible when closed.
+      root.append(feedback, receipt);
       const view = {root, item, itemId, input, limitText, selected, submit, refresh, feedback, receipt,
         ready: false, needsRefresh: false, file: null, revision: null, limit: 0};
       attachmentUploadView = view;

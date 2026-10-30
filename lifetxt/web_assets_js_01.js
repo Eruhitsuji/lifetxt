@@ -55,6 +55,13 @@
     // data-no-i18n and the walker skips those subtrees entirely.
     const UI_STRINGS = {
       ja: {
+        "Progress (elapsed vs est)": "進捗（経過時間 / 見積時間）",
+        "Over estimate": "見積時間を超過",
+        "Set due to today": "期限を今日に設定",
+        "Postpone by one day": "期限を1日延期",
+        "Postpone by one week": "期限を1週間延期",
+        "Remove due date": "期限を解除",
+        "No attachment references.": "添付参照はありません。",
         "Complete selected tasks": "選択したタスクを完了",
         "Each task is saved separately. If one fails, successful tasks remain completed.": "タスクごとに保存します。途中で失敗しても、成功したタスクは完了のままです。",
         "Time": "時刻",

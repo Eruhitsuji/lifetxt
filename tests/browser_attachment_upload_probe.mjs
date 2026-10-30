@@ -76,6 +76,7 @@ try {
     // Bind the opened record to its URL, as normal UI navigation does, so that
     // restoration cannot close a URL-less fixture drawer during measurement.
     await wait("document.getElementById('detail-drawer').classList.contains('open') && attachmentUploadView?.ready && !attachmentUploadView.needsRefresh && !attachmentUploadView.input.disabled", "visible upload ready");
+    await evaluate("document.getElementById('attachment-upload-file').closest('details').open = true");
     await evaluate(`Promise.all(document.getElementById('detail-drawer').getAnimations({subtree:true})
       .filter(animation => Number.isFinite(animation.effect.getTiming().iterations))
       .map(animation => animation.finished))`);

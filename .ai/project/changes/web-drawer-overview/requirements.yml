@@ -1,0 +1,15 @@
+schema_version: 1
+requirements:
+- id: req-web-drawer-overview
+  description: Readable and complete Overview with state-aware actions and progressive
+    auxiliary controls
+  acceptance_criteria:
+  - Body and meaningful primary date/project/progress labels precede secondary fields
+  - Offset timestamps use workspace timezone; exact raw values and custom fields remain
+    reachable
+  - Finished task completion actions are omitted; delete separated in More; readonly
+    reason visible
+  - Attachment references, work running/unavailable state and feedback always visible;
+    controls in native disclosures
+  - Existing revision-safe handlers and disposal retained; JA/EN and narrow viewport/keyboard
+    regression coverage

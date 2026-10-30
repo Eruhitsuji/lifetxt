@@ -337,9 +337,9 @@
       const pct = Math.round(elapsed / est * 100);
       const width = Math.min(100, pct);
       const over = pct > 100;
-      return `<div class="progress-wrap"><div class="drawer-section-title">Progress (elapsed vs est)</div>` +
+      return `<div class="progress-wrap"><div class="drawer-section-title">${escapeHtml(t("Progress (elapsed vs est)"))}</div>` +
         `<div class="progress-track"><div class="progress-fill${over ? " over" : ""}" style="width:${width}%"></div></div>` +
-        `<div class="progress-label">${escapeHtml(elapsedRaw || "0m")} of ${escapeHtml(estRaw)} (${pct}%)${over ? " — over estimate" : ""}</div></div>`;
+        `<div class="progress-label">${escapeHtml(elapsedRaw || "0m")} / ${escapeHtml(estRaw)} (${pct}%)${over ? " — " + escapeHtml(t("Over estimate")) : ""}</div></div>`;
     }
 
     async function drawerNavigate(itemId) {

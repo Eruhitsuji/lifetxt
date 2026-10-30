@@ -230,6 +230,7 @@ __LIFETXT_WEB_STYLES__  </style>
         <button class="secondary" onclick="loadDashboard()" title="Refresh dashboard">↺</button>
       </div>
       <div class="section-body dashboard-body">
+        <div id="dash-load-status" role="status" aria-live="polite"></div>
         <div id="dash-kpis" class="kpi-row"><div class="empty">Loading…</div></div>
         <div class="dash-grid" id="dash-grid">
           <div class="dash-card" data-dashboard-card="today">
@@ -242,6 +243,7 @@ __LIFETXT_WEB_STYLES__  </style>
           </div>
           <div class="dash-card" data-dashboard-card="completions">
             <div class="dash-card-title">📈 Completions (last 14 days)</div>
+            <div id="dash-chart-status" role="status"></div>
             <div class="chart-panel" style="height:180px"><canvas id="dash-chart"></canvas></div>
           </div>
           <div class="dash-card" data-dashboard-card="projects">

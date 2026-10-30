@@ -179,6 +179,14 @@
       gap: .5rem;
       pointer-events: none;
     }
+    #toast-container > .actionable-error {
+      pointer-events: auto;
+      box-sizing: border-box;
+      width: min(360px, calc(100vw - 3rem));
+      max-height: calc(100dvh - 3rem);
+      overflow: auto;
+      overflow-wrap: anywhere;
+    }
     .toast {
       display: flex;
       align-items: center;

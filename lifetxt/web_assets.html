@@ -286,8 +286,8 @@ __LIFETXT_WEB_STYLES__  </style>
       </div>
       <div class="section-body focus-body">
         <div class="focus-quick-add">
-          <input id="focus-quick-title" placeholder="Add a task due today… (Enter)" autocomplete="off"
-                 onkeydown="if(event.key==='Enter'){event.preventDefault();focusQuickAdd();}">
+          <label class="web-field-label" for="focus-quick-title"><span>Title</span><input id="focus-quick-title" placeholder="Add a task due today… (Enter)" autocomplete="off"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();focusQuickAdd();}"></label>
           <button onclick="focusQuickAdd()">Add</button>
         </div>
         <div id="focus-list" class="focus-list" data-no-i18n><div class="empty">Loading…</div></div>
@@ -304,9 +304,9 @@ __LIFETXT_WEB_STYLES__  </style>
           <button type="button" class="review-range-btn" data-range="last-week" onclick="setReviewRange('last-week')">Last week</button>
           <button type="button" class="review-range-btn" data-range="month" onclick="setReviewRange('month')">This month</button>
           <button type="button" class="review-range-btn" data-range="last-month" onclick="setReviewRange('last-month')">Last month</button>
-          <input id="review-project" class="review-filter-input" placeholder="Project" autocomplete="off">
-          <input id="review-from" class="review-filter-input" type="date" title="Review start date">
-          <input id="review-to" class="review-filter-input" type="date" title="Review end date">
+          <label class="web-field-label" for="review-project"><span>Project</span><input id="review-project" class="review-filter-input" placeholder="Project" autocomplete="off"></label>
+          <label class="web-field-label" for="review-from"><span>From</span><input id="review-from" class="review-filter-input" type="date" title="Review start date"></label>
+          <label class="web-field-label" for="review-to"><span>To</span><input id="review-to" class="review-filter-input" type="date" title="Review end date"></label>
           <button type="button" class="secondary" onclick="setReviewCustom()">Apply</button>
           <button type="button" class="secondary" onclick="copyReviewMarkdown()">Copy Markdown</button>
         </div>
@@ -368,8 +368,8 @@ __LIFETXT_WEB_STYLES__  </style>
         </div>
         <div class="section-body">
           <div class="graph-toolbar">
-            <input id="graph-root" placeholder="Root id (optional)" autocomplete="off">
-            <input id="graph-depth" placeholder="Depth" inputmode="numeric" style="max-width:4.2rem">
+            <label class="web-field-label" for="graph-root"><span>Root id (optional)</span><input id="graph-root" placeholder="Root id (optional)" autocomplete="off"></label>
+            <label class="web-field-label" for="graph-depth"><span>Depth</span><input id="graph-depth" placeholder="Depth" inputmode="numeric" style="max-width:4.2rem"></label>
             <button class="secondary" onclick="loadGraphPanel()">Apply</button>
           </div>
           <div class="graph-layout-bar" style="padding:.45rem 1rem;border-bottom:1px solid var(--line)">

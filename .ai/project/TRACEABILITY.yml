@@ -2,6 +2,17 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-persistent-input-labels
+      capability_id: cap-web-beginner-first-ux
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1477
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1478
+      tests_or_evidence:
+        - tests/test_web_persistent_labels.py
+        - tests/test_web_assets.py
+        - tests/test_web_i18n.py
+      status: implemented
+
     - requirement_id: req-web-area-nul-escape
       capability_id: cap-web-beginner-first-ux
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386

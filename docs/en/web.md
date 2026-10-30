@@ -1115,6 +1115,12 @@ Both entry points reuse the existing `POST /api/items` create route
 unchanged -- contextual creation is not a second create engine, and a
 plain `+ New` with no selected context is completely unaffected.
 
+Select a project name on the Dashboard's **Projects** card to open **Items**
+filtered to that project. Existing URL filters (for example tags or text),
+language and theme are kept; any open record's detail target is cleared.
+The project name is a normal link: use Tab/Enter, open it in a new tab, or
+use Back to return to Dashboard. The separate `+` button still opens creation.
+
 ## Charts
 
 Chart endpoints return stable `labels` and `datasets` arrays for browser

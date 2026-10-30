@@ -16,8 +16,8 @@ from lifetxt import web_assets, webapp
 
 
 REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
-# #1469 repairs independently owned actionable error controls.
-LEGACY_PRISTINE_GIT_BLOB_SHA = "085ab5ea07a49cd6085f38403d6c3f3226d3f418"
+# #1471 links Dashboard projects to filtered Items.
+LEGACY_PRISTINE_GIT_BLOB_SHA = "32ce88b9e9716435aac8c394e391ebc75864301f"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )

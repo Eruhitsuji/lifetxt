@@ -12,7 +12,7 @@ class DashboardNavigationTests(unittest.TestCase):
     def test_dashboard_render_links_limits_and_handlers(self):
         helper_start = HTML_PAGE.index("    function agendaRecordTitleHtml(")
         helper_end = HTML_PAGE.index("    async function loadAgenda()", helper_start)
-        start = HTML_PAGE.index("    async function loadDashboard()")
+        start = HTML_PAGE.index("    let dashboardLoadGeneration = 0;")
         end = HTML_PAGE.index("    function dashNavigate(", start)
         harness = r"""
 const assert = require('node:assert/strict');

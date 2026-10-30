@@ -262,21 +262,29 @@
       params.set("project", project);
       return `?${params.toString()}`;
     }
+    let dashboardLoadGeneration = 0;
     async function loadDashboard() {
+      const generation = ++dashboardLoadGeneration;
+      const loadStatus = document.getElementById("dash-load-status");
+      if (loadStatus) loadStatus.textContent = t("Refreshing dashboard…");
       const dateEl = document.getElementById("dash-date");
       if (dateEl) dateEl.textContent = new Date().toLocaleDateString(undefined, {weekday: "long", month: "long", day: "numeric"});
       const today = new Date(); today.setHours(0, 0, 0, 0);
       const weekAgo = new Date(today); weekAgo.setDate(weekAgo.getDate() - 13);
-      let openItems = [], blockedItems = [], agendaRecords = [], chartData = null, summary = null;
-      try {
-        [openItems, blockedItems, agendaRecords, chartData, summary] = await Promise.all([
-          api("/api/items?open_only=true").then(d => d.items || []).catch(() => []),
-          api("/api/items?blocked=true&open_only=true").then(d => d.items || []).catch(() => []),
-          api("/api/agenda?around=now&window=1d&open_only=true").then(d => d.records || []).catch(() => []),
-          api(`/api/chart/tasks?from=${_fmtDate(weekAgo)}&to=${_fmtDate(today)}&group=daily`).catch(() => null),
-          api("/api/stats/summary").catch(() => null),
-        ]);
-      } catch(_) {}
+      const results = await Promise.allSettled([
+        api("/api/items?open_only=true"),
+        api("/api/items?blocked=true&open_only=true"),
+        api("/api/agenda?around=now&window=1d&open_only=true"),
+        api(`/api/chart/tasks?from=${_fmtDate(weekAgo)}&to=${_fmtDate(today)}&group=daily`),
+        api("/api/stats/summary"),
+      ]);
+      if (generation !== dashboardLoadGeneration) return;
+      const failed = results.map(result => result.status === "rejected");
+      const data = results.map(result => result.status === "fulfilled" ? result.value : null);
+      const openItems = data[0]?.items || [], blockedItems = data[1]?.items || [];
+      const agendaRecords = data[2]?.records || [], chartData = data[3], summary = data[4];
+      const unavailable = escapeHtml(t("Unavailable"));
+      const cardError = `<div class="empty" role="status">${escapeHtml(t("Could not load dashboard data."))}</div>`;
       // KPI tiles
       const overdue = openItems.filter(i => itemDueSoonClass(i) === "overdue");
       const dueToday = openItems.filter(i => {
@@ -300,12 +308,15 @@
         {n: blockedItems.length, label: "Blocked", icon: "⚡", cls: blockedItems.length ? "kpi-warn" : "", view: "", params: {blocked: "true", open_only: "true"}},
         {n: doneRecent, label: "Done (14d)", icon: "✓", cls: "kpi-ok", view: "stats", params: {}},
       ];
+      [failed[0], failed[0], failed[0], failed[1], failed[3]].forEach((missing, index) => {
+        if (missing) Object.assign(kpis[index], {n: "—", unavailable: true, cls: ""});
+      });
       const kpiEl = document.getElementById("dash-kpis");
       if (kpiEl) {
         kpiEl.innerHTML = kpis.map((k, i) =>
-          `<button type="button" class="kpi-tile ${k.cls || ""}" onclick="dashNavigate(${i})">` +
+          `<button type="button" class="kpi-tile ${k.cls || ""}" ${k.unavailable ? "disabled" : `onclick="dashNavigate(${i})"`}>` +
           `<span class="kpi-icon" aria-hidden="true">${k.icon}</span>` +
-          `<span class="kpi-n">${k.n}</span><span class="kpi-label">${escapeHtml(k.label)}</span></button>`
+          `<span class="kpi-n">${k.n}</span><span class="kpi-label">${escapeHtml(t(k.label))}${k.unavailable ? ` (${unavailable})` : ""}</span></button>`
         ).join("");
         window._dashKpis = kpis;
       }
@@ -317,7 +328,7 @@
           `<div class="dash-row"><span class="pill">${escapeHtml((r.when || "").replace("T", " "))}</span>` +
           (r.blocked ? `<span class="blocked-badge">⚡</span>` : "") +
           `<span class="dash-row-title">${agendaRecordTitleHtml(r)}</span></div>`;
-        todayEl.innerHTML = agendaRecords.length
+        todayEl.innerHTML = failed[2] ? cardError : agendaRecords.length
           ? agendaRecords.slice(0, limit).map(renderRow).join("") +
             (agendaRecords.length > limit ? `<details class="today-more"><summary>${escapeHtml(t("Show remaining records"))} (${agendaRecords.length - limit})</summary>${agendaRecords.slice(limit).map(renderRow).join("")}</details>` : "")
           : `<div class="empty">Nothing scheduled around now.</div>`;
@@ -329,10 +340,10 @@
         const attention = [...overdue.map(i => ({...i, _why: "overdue"})),
                            ...blockedItems.filter(b => !overdue.some(o => o.line === b.line && o.source === b.source)).map(i => ({...i, _why: "blocked"}))];
         const limit = dashboardLimit("needs_attention", 7);
-        overdueEl.innerHTML = attention.length
+        overdueEl.innerHTML = ((failed[0] || failed[1]) ? cardError : "") + (attention.length
           ? attention.slice(0, limit).map(_dashItemRow).join("") +
             (attention.length > limit ? `<details class="today-more"><summary>${escapeHtml(t("Show remaining records"))} (${attention.length - limit})</summary>${attention.slice(limit).map((item, index) => _dashItemRow(item, index + limit)).join("")}</details>` : "")
-          : `<div class="empty">🎉 Nothing overdue or blocked.</div>`;
+          : (failed[0] || failed[1]) ? "" : `<div class="empty">🎉 Nothing overdue or blocked.</div>`);
         overdueEl.querySelectorAll("[data-dash-attention-index]").forEach(button => button.addEventListener("click", () => {
           const item = attention[Number(button.dataset.dashAttentionIndex)];
           const id = _drawerIdFor(item);
@@ -345,7 +356,7 @@
       if (projEl) {
         const projects = (summary?.by_project || []).filter(p => p.total > 0).slice(0, dashboardLimit("projects", 7));
         const maxTotal = Math.max(...projects.map(p => p.total), 1);
-        projEl.innerHTML = projects.length
+        projEl.innerHTML = failed[4] ? cardError : projects.length
           ? projects.map(p =>
               `<div class="dash-row"><a class="dash-row-title drawer-link" href="${escapeHtml(dashboardProjectItemsUrl(p.project))}">${escapeHtml(p.project)}</a>` +
               `<span style="color:var(--muted);font-size:.78rem;font-variant-numeric:tabular-nums">${p.done}/${p.total}</span>` +
@@ -358,12 +369,18 @@
       }
       // Chart
       const chartCard = document.querySelector('[data-dashboard-card="completions"]');
+      const chartStatus = document.getElementById("dash-chart-status");
+      const canvas = document.getElementById("dash-chart");
+      if (canvas) {
+        if (_dashChart) { _dashChart.destroy(); _dashChart = null; }
+        canvas.hidden = failed[3];
+      }
+      if (chartStatus) chartStatus.innerHTML = failed[3] ? cardError : "";
       if (chartData && !(chartCard && chartCard.classList.contains("card-hidden"))) {
         try {
           await ensureChartJs();
-          const canvas = document.getElementById("dash-chart");
+          if (generation !== dashboardLoadGeneration) return;
           if (canvas) {
-            if (_dashChart) { _dashChart.destroy(); _dashChart = null; }
             _dashChart = new Chart(canvas.getContext("2d"), {
               type: "bar",
               data: {
@@ -378,12 +395,27 @@
               options: {responsive: true, maintainAspectRatio: false, plugins: {legend: {display: false}}, scales: {y: {beginAtZero: true}}},
             });
           }
-        } catch(_) {}
+        } catch(_) {
+          if (generation !== dashboardLoadGeneration) return;
+          failed[3] = true;
+          if (canvas) canvas.hidden = true;
+          if (chartStatus) chartStatus.innerHTML = `<div class="empty" role="status">${escapeHtml(t("Dashboard chart could not be displayed."))}</div>`;
+        }
+      }
+      if (generation !== dashboardLoadGeneration) return;
+      if (loadStatus) {
+        const sources = ["Open", "Blocked", "Agenda", "Completions (last 14 days)", "Projects"];
+        const missing = sources.filter((_, index) => failed[index]);
+        loadStatus.innerHTML = missing.length
+          ? `<span>${escapeHtml(t("Some dashboard data could not be loaded."))}</span> ` +
+            missing.map(name => `<span class="pill">${escapeHtml(t(name))}</span>`).join(" ") +
+            ` <button type="button" class="secondary" onclick="loadDashboard()">${escapeHtml(t("Refresh dashboard"))}</button>`
+          : "";
       }
     }
     function dashNavigate(index) {
       const kpi = (window._dashKpis || [])[index];
-      if (!kpi) return;
+      if (!kpi || kpi.unavailable) return;
       const params = query();
       for (const key of ["text", "q", "status", "blocked", "open", "open_only", "kind", "type"]) params.delete(key);
       for (const [key, value] of Object.entries(kpi.params || {})) params.set(key, value);

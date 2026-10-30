@@ -1,0 +1,31 @@
+schema_version: 1
+verification:
+  - command: python -m unittest (18 focused Web/integrity/governance modules; see PR)
+    result: passed
+    notes: 253 tests; includes 10 new bulk tests, actual shipped JS against a real required-revision server, and existing completion persistence/history/stale tests.
+  - command: python -m ruff check lifetxt tests scripts
+    result: passed
+  - command: python -m ruff format --check tests/test_web_bulk_done_date.py tests/test_web_assets.py lifetxt/web_assets.py
+    result: passed
+  - command: node --check assembled Web JS
+    result: passed
+  - command: python -m lifetxt check examples/minimal_life.txt
+    result: passed
+    notes: 10 items
+  - command: Real browser 320/390/desktop JA/EN keyboard/layout check
+    result: blocked
+    notes: Playwright Chromium download repeatedly returned an invalid/truncated archive. Native layout, focus, screen reader and physical mobile acceptance not claimed.
+  - command: MPLBACKEND=Agg python -m unittest discover
+    result: pending
+review_ledger:
+  - reviewer: Eruhitsuji
+    review_type: independent_implementation_and_integration
+    target_commit: null
+    result: pending
+    finding_count: 0
+    completed_at: null
+ci_findings:
+  - job: Real Chromium revision contract (41067698694)
+    cause: Bulk fieldset reused drawer-edit-form; the existing work-session probe resolved it instead of the drawer form and requestSubmit failed in observe/required modes.
+    correction: Dedicated bulk-done-fields presentation class; existing drawer form selection remains unchanged.
+    verification: Focused Web regression rerun; native Chromium rerun required on CI.

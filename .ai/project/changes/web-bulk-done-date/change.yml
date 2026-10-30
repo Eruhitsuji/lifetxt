@@ -1,0 +1,32 @@
+schema_version: 1
+change:
+  id: web-bulk-done-date
+  title: Explicit bulk task completion date with safe recovery
+  status: in_review
+  change_type: Feature
+  assurance_level: Standard
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1480
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1481
+  base_commit: 3c8186aa
+scope:
+  in_scope:
+  - 'Approved #1479 A-E as one bounded Web action'
+  out_of_scope:
+  - API/Format/auth/dependencies, generic bulk fixes, recurrence materialization,
+    existing done overwrite, managed standards
+  write_scope:
+  - lifetxt/web_assets_js_23.js
+  - lifetxt/web_assets.html
+  - lifetxt/web_assets.py
+  - lifetxt/web_assets_js_01.js
+  - lifetxt/web_assets_js_08.js
+  - lifetxt/web_assets_css_03.css
+  - tests/test_web_bulk_done_date.py
+  - tests/test_web_assets.py
+  - docs/en/web.md
+  - docs/ja/web.md
+  - .ai/project/CAPABILITIES.yml
+  - .ai/project/TRACEABILITY.yml
+  - .ai/project/changes/web-bulk-done-date/**

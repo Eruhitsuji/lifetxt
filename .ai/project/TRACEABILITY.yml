@@ -17046,7 +17046,7 @@ traceability:
       capability_id: cap-web-beginner-first-ux
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1471
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1472
       tests_or_evidence:
         - tests/test_web_dashboard_projects.py
         - tests/test_web_dashboard_navigation.py

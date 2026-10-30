@@ -5,7 +5,7 @@ verification:
     tests.test_web_drawer_overview tests.test_web_assets tests.test_web_i18n tests.test_web_mobile
     tests.test_traceability_gate tests.test_change_package_closeout
   result: passed
-  notes: 139 tests; rerun traceability after PR URL is recorded
+  notes: 139 tests; final PR URL recorded, traceability rerun on committed tree
 - command: 'Real Chromium: tests.test_web_drawer_history_browser'
   result: passed
   notes: 12 width/language/theme combinations, keyboard disclosure, canonical query

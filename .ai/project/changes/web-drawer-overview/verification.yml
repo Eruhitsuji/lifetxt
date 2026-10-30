@@ -25,7 +25,7 @@ verification:
 - command: MPLBACKEND=Agg python -m unittest discover
   result: failed_then_targeted_reverified
   notes: '6062 tests, 92 skipped, 2 failures: in-flight assets versus imported SHA;
-    traceability PR null before PR creation. Final assets SHA and #1483 reference
+    traceability evidence indentation (plus pending PR reference). Final assets SHA and #1483 reference
     are recorded; both failed modules rerun on final committed tree. Full discovery
     not rerun after presentation-only corrections.'
 - command: Owner lserver / physical iPhone Safari acceptance

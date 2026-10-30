@@ -11859,6 +11859,7 @@ capabilities:
     status: active
     owner: Eruhitsuji
     source_requirements:
+      - req-web-actionable-error-controls
       - req-web-items-filter-disclosure-reachability
       - req-web-beginner-navigation-hierarchy
       - req-web-beginner-empty-state-guidance
@@ -11872,6 +11873,7 @@ capabilities:
       - req-web-main-accessible-controls-navigation
       - req-web-diagnostics-location-navigation-summary
     implementation_locations:
+      - lifetxt/web_assets_js_17.js
       - lifetxt/web_assets.html
       - lifetxt/web_assets_css_01.css
       - lifetxt/web_assets_css_02.css
@@ -11917,6 +11919,7 @@ capabilities:
       - MPLBACKEND=Agg python -m unittest discover -> Ran 4523 tests, OK (skipped=210), after merging origin/main at 1eb56eb
       - tests/test_web_diagnostics_js.py (15 tests) covers diagnostic location labels, filter-hidden marking, source+line record matching, escaping, summary counts/open state, and Open record fallback/toasts (#1073)
     related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/1469
       - https://github.com/Eruhitsuji/lifetxt/issues/1453
       - https://github.com/Eruhitsuji/lifetxt/issues/793
       - https://github.com/Eruhitsuji/lifetxt/issues/794

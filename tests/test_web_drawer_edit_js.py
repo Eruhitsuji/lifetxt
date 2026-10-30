@@ -289,7 +289,7 @@ function parseHTML(html, parentHint) {
   return root.children;
 }
 
-global.document = { getElementById: id => idRegistry[id] || null };
+global.document = { createElement: tag => new FakeElement(tag), getElementById: id => idRegistry[id] || null };
 global.appConfig = { ids: { key: "id" } };
 global.t = value => value;
 let toasts = [];
@@ -495,7 +495,9 @@ class DrawerEditInteractionTests(unittest.TestCase):
     def test_read_only_record_refuses_edit_and_leaves_the_drawer_untouched(self):
         results = self._run()
         self.assertEqual("warning", results["readonly_refused_toast"]["type"])
-        self.assertEqual("<div>original overview</div>", results["readonly_body_unchanged"])
+        self.assertEqual(
+            "<div>original overview</div>", results["readonly_body_unchanged"]
+        )
 
     def test_blank_title_fails_loudly_before_any_save_request(self):
         results = self._run()

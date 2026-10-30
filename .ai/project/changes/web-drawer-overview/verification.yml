@@ -23,9 +23,11 @@ verification:
     --check assembled assets and new probe; python -m lifetxt check examples/minimal_life.txt
   result: passed
 - command: MPLBACKEND=Agg python -m unittest discover
-  result: running
-  notes: Started before final presentation fixes; final focused/browser reruns above
-    are authoritative for changed surfaces
+  result: failed_then_targeted_reverified
+  notes: '6062 tests, 92 skipped, 2 failures: in-flight assets versus imported SHA;
+    traceability PR null before PR creation. Final assets SHA and #1483 reference
+    are recorded; both failed modules rerun on final committed tree. Full discovery
+    not rerun after presentation-only corrections.'
 - command: Owner lserver / physical iPhone Safari acceptance
   result: not_run
   notes: Synthetic fixtures and Chromium only; no production writes/deployment

@@ -543,7 +543,7 @@ __LIFETXT_WEB_STYLES__  </style>
       <p id="bulk-done-skips"></p>
       <p>Each task is saved separately. If one fails, successful tasks remain completed.</p>
       <form onsubmit="event.preventDefault();confirmBulkDone()">
-        <fieldset id="bulk-done-fields" class="drawer-edit-form">
+        <fieldset id="bulk-done-fields" class="bulk-done-fields">
           <legend>Completion date</legend>
           <label>Completion mode<select id="bulk-done-mode" onchange="bulkDoneModeChanged()"><option value="now">Now / current time</option><option value="date">Date only</option><option value="time">Date and time</option></select></label>
           <label>Date<input id="bulk-done-date" type="date" min="0001-01-01" max="9999-12-31"></label>

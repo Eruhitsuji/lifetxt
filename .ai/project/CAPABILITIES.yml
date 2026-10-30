@@ -11859,6 +11859,7 @@ capabilities:
     status: active
     owner: Eruhitsuji
     source_requirements:
+      - req-web-dashboard-project-navigation
       - req-web-actionable-error-controls
       - req-web-items-filter-disclosure-reachability
       - req-web-beginner-navigation-hierarchy
@@ -11905,6 +11906,7 @@ capabilities:
       - Collapsed More navigation naming the active advanced view ("More: Agenda", aria-current) with a desktop overlay dropdown
       - Items diagnostics with file:line location, Open record action, filter-hidden note, and a collapsible error/warning count summary
     tests_or_evidence:
+      - tests/test_web_dashboard_projects.py (project links, URL filters, Items query reuse, limits and existing creation separation)
       - tests/test_web_items_filters.py (native disclosure, keyboard, breakpoint changes, existing filter query)
       - tests/test_web_actionable_errors_js.py (4 Node.js-driven tests, added during review): status-based error-message classification (409/401/403/5xx/network/generic), toast fallback when no retry is offered, actionable block rendered into #toast-container with a wired retry button and focus, and a null-container call never throws
       - python -m unittest tests.test_web_actionable_errors_js -> Ran 4 tests, OK
@@ -11919,6 +11921,7 @@ capabilities:
       - MPLBACKEND=Agg python -m unittest discover -> Ran 4523 tests, OK (skipped=210), after merging origin/main at 1eb56eb
       - tests/test_web_diagnostics_js.py (15 tests) covers diagnostic location labels, filter-hidden marking, source+line record matching, escaping, summary counts/open state, and Open record fallback/toasts (#1073)
     related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/1471
       - https://github.com/Eruhitsuji/lifetxt/issues/1469
       - https://github.com/Eruhitsuji/lifetxt/issues/1453
       - https://github.com/Eruhitsuji/lifetxt/issues/793

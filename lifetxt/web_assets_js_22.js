@@ -44,6 +44,7 @@
         view.ownSession = session.running && session.id === view.id &&
           session.item_revision === before.revision && session.file === health.writable_path;
         view.ready = true;
+        if (view.ownSession) view.disclosure.open = true;
         view.feedback.textContent = session.running
           ? (view.ownSession ? workText("Work session is running for this task.", "このタスクで作業中です。") : workText("Another work session is running. Open its task to stop it.", "別の作業セッションが実行中です。停止するにはそのタスクを開いてください。"))
           : workText("No work session is running.", "作業セッションは停止中です。");
@@ -96,10 +97,17 @@
       const root = document.createElement("section");root.className="attachment-upload";
       const title = document.createElement("h4");title.textContent=workText("Work session", "作業セッション");root.append(title);
       const feedback=document.createElement("p");feedback.id="work-session-feedback";feedback.setAttribute("role","status");feedback.setAttribute("aria-live","polite");root.append(feedback);
-      const actions=document.createElement("div");actions.className="actions";root.append(actions);
+      if (["[x]", "[-]"].includes(item.status)) {
+        const note = document.createElement("p");
+        note.textContent = workText("This task is finished; starting work is unavailable.", "完了・取消済みのタスクでは作業を開始できません。");
+        root.append(note);
+      }
+      const disclosure=document.createElement("details");disclosure.className="drawer-disclosure";
+      const toggle=document.createElement("summary");toggle.textContent=workText("Work session controls", "作業セッションの操作");disclosure.append(toggle);root.append(disclosure);
+      const actions=document.createElement("div");actions.className="actions";disclosure.append(actions);
       const button=(id,en,ja)=>{const b=document.createElement("button");b.type="button";b.className="secondary";b.id=id;b.textContent=workText(en,ja);b.disabled=true;actions.append(b);return b;};
       const start=button("work-session-start","Start work","作業開始"),stop=button("work-session-stop","Stop work","作業停止"),complete=button("work-session-complete","Complete and stop","完了して停止"),refresh=button("work-session-refresh","Refresh record","レコードを再読み込み");
-      const view={item,id,root,feedback,start,stop,complete,refresh,ready:false,needsRefresh:false};workSessionView=view;container.append(root);
+      const view={item,id,root,disclosure,feedback,start,stop,complete,refresh,ready:false,needsRefresh:false};workSessionView=view;container.append(root);
       start.onclick=()=>submitWorkSession(view,"start");stop.onclick=()=>submitWorkSession(view,"stop");complete.onclick=()=>submitWorkSession(view,"stop",true);
       refresh.onclick=async()=>{if(workSessionPending)return;view.ready=false;view.needsRefresh=true;updateWorkControls(view);refresh.disabled=true;try{const data=await api(`/api/items/id/${encodeURIComponent(id)}`,{cache:"no-store"});if(workSessionView===view)openDrawer(data.item,"none");}catch(_){feedback.textContent=workRefreshText();refresh.disabled=false;}};
       feedback.textContent=workText("Checking work session…", "作業セッションを確認中…");refresh.disabled=false;updateWorkControls(view);prepareWorkSession(view);

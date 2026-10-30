@@ -17,7 +17,7 @@ from lifetxt import web_assets, webapp
 
 REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
 # #1480 adds explicit bulk completion with a date and safe recovery.
-LEGACY_PRISTINE_GIT_BLOB_SHA = "4a6d11ea92682a89bb3cc5d97e37bbd8e6cd891b"
+LEGACY_PRISTINE_GIT_BLOB_SHA = "81ddd2c4e73d526b9d73956c2fc87288df4a5fa1"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )

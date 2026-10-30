@@ -1,0 +1,38 @@
+schema_version: 1
+verification:
+- command: python -m unittest (11 focused drawer/assets/i18n/mobile/upload/work-session/traceability/closeout
+    modules)
+  result: passed
+  notes: 163 tests; final sources
+- command: 'Real Chromium headless shell: tests.test_web_drawer_overview_browser'
+  result: passed
+  notes: 12 viewport/language/theme combinations; native keyboard disclosure, source/text
+    preservation, focus restoration; own/other running and unavailable session states;
+    no source writes
+- command: 'Real Chromium: tests.test_web_attachment_upload_browser'
+  result: passed
+  notes: 4 tests, including native file upload, conflict, validation and receipts
+- command: 'Real Chromium: tests.test_web_revision_work_session_browser'
+  result: passed
+  notes: 2 tests; observe/required revision mode, compound writes/recovery/clock/invalid
+    inputs
+- command: 'Real Chromium: tests.test_web_ui_regressions_browser'
+  result: passed
+  notes: 5 tests, including toolbar/disclosure keyboard and narrow geometry
+- command: python -m ruff check lifetxt tests scripts; changed-file ruff format; node
+    --check assembled assets and new probe; python -m lifetxt check examples/minimal_life.txt
+  result: passed
+- command: MPLBACKEND=Agg python -m unittest discover
+  result: running
+  notes: Started before final presentation fixes; final focused/browser reruns above
+    are authoritative for changed surfaces
+- command: Owner lserver / physical iPhone Safari acceptance
+  result: not_run
+  notes: Synthetic fixtures and Chromium only; no production writes/deployment
+review_ledger:
+- reviewer: Eruhitsuji
+  review_type: independent_implementation_and_integration
+  target_commit: null
+  result: pending
+  finding_count: 0
+  completed_at: null

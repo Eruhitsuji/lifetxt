@@ -3,6 +3,14 @@
 The web interface is optional. It uses FastAPI and uvicorn, but the core parser
 and CLI remain dependency-free.
 
+## Reading the record Overview
+
+Open an item to see its body followed by important fields. **Due** and **Scheduled** keep their separate meanings. Offset-bearing timestamps use the workspace timezone and include the zone; hover the time or open **Source and technical details** to inspect the original value. Date-only and timezone-naive values remain literal.
+
+Expand **Other fields** for custom metadata and **Source and technical details** for ID, file/line and the exact raw record. Attachment reference presence and work-session status stay visible. Expand **Choose attachment** or **Work session controls** when needed; controls open automatically for this task's running session. Native summary controls work with Tab and Enter/Space. Availability, errors and upload receipts remain visible when collapsed.
+
+Finished/cancelled records omit completion actions; readonly records explain why editing is unavailable. **More → Delete** keeps the existing deletion confirmation. Existing writes, revision checks and permissions apply unchanged.
+
 ## Install
 
 ```sh

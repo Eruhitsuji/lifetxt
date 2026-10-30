@@ -11583,8 +11583,13 @@ capabilities:
     status: active
     owner: Eruhitsuji
     source_requirements:
+      - req-web-drawer-readable-history
       - req-native-timeline-web-visual-explorer
     implementation_locations:
+      - lifetxt/web_assets_js_10.js
+      - lifetxt/web_assets_css_02.css
+      - tests/test_web_drawer_history.py
+      - tests/test_web_drawer_history_browser.py
       - lifetxt/web_assets_js_11.js
       - lifetxt/web_assets_css_04.css
       - tests/test_web_native_timeline_visual.py
@@ -11594,6 +11599,8 @@ capabilities:
       - Web UI item detail drawer, Native Timeline section
       - lifetxt.web_assets_js_11 renderNativeTimelinePanel/reloadNativeTimelinePanel (client-side)
     tests_or_evidence:
+      - tests.test_web_drawer_history
+      - tests.test_web_drawer_history_browser
       - "tests/test_web_native_timeline_visual.py (13 Node.js-driven tests, real assembled Web UI script extracted from lifetxt.web_assets.HTML_PAGE): event-domain labels, before/after transition rendering for status/progress/schedule/relation payloads (and escaping of hostile payload text), date-grouping key, bounded progress-percentage trend indicator (ignoring fraction-form values), missing-result/empty-state handling, completeness badge, day grouping, prominent limitations/invalid-event/diagnostics display, bounds summary, HTML escaping of event/payload text, and that filter controls are always present"
       - python -m unittest tests.test_web_native_timeline_visual -> Ran 13 tests, OK
       - python -m unittest tests.test_web_native_timeline tests.test_web_assets tests.test_web_i18n tests.test_web_commands tests.test_surface_runtime tests.test_release_policy -> all pass (LEGACY_PRISTINE_GIT_BLOB_SHA updated to the intentionally changed served page; 2 new dictionary entries added for translation-coverage parity)
@@ -11602,10 +11609,15 @@ capabilities:
       - ruff format --check / ruff check on changed Python files -> clean
       - "scripts/validate_release_docs.py -> errors 0, ok true"
     related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/1484
       - https://github.com/Eruhitsuji/lifetxt/issues/769
-    related_pull_requests: []
+    related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/1485
     reuse_policy: prefer_reuse_or_extension_before_new_implementation
     notes: >-
+      D3 (#1484/#1485) adds readable JA/EN history, workspace date grouping,
+      progressive filters/evidence and latest-request isolation; history
+      semantics and mutation contracts are unchanged.
       Self-scoped and implemented per explicit repository owner instruction
       to build a bounded first version rather than defer further. Design
       decisions made without a synchronous human round-trip, recorded here

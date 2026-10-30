@@ -1,0 +1,32 @@
+schema_version: 1
+verification:
+- command: python -m unittest tests.test_web_native_timeline tests.test_native_timeline
+    tests.test_web_native_timeline_visual tests.test_web_drawer_history tests.test_web_drawer_edit_js
+    tests.test_web_drawer_overview tests.test_web_assets tests.test_web_i18n tests.test_web_mobile
+    tests.test_traceability_gate tests.test_change_package_closeout
+  result: passed
+  notes: 139 tests; final PR URL recorded, traceability rerun on committed tree
+- command: 'Real Chromium: tests.test_web_drawer_history_browser'
+  result: passed
+  notes: 12 width/language/theme combinations, keyboard disclosure, canonical query
+    values, failure/empty states, no record writes. Synthetic history API responses;
+    actual read model covered by API tests.
+- command: 'Real Chromium: tests.test_web_drawer_overview_browser'
+  result: passed
+  notes: 12 combinations; existing Overview regression
+- command: 'Real Chromium: tests.test_web_revision_work_session_browser'
+  result: passed
+  notes: 2 tests, observe/required revision/recovery contracts preserved
+- command: ruff check lifetxt tests scripts; changed-file ruff format; node --check
+    assembled Web JS and new probe; python -m lifetxt check examples/minimal_life.txt
+  result: passed
+- command: Full unittest discovery / Owner lserver / physical Safari acceptance
+  result: not_run
+  notes: Focused and synthetic Chromium evidence only; full CI pending on PR. No deployment.
+review_ledger:
+- reviewer: Eruhitsuji
+  review_type: independent_implementation_and_integration
+  target_commit: null
+  result: pending
+  finding_count: 0
+  completed_at: null

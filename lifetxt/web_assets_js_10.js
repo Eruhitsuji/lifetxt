@@ -458,6 +458,12 @@
           `<div id="drawer-deps"><div class="drawer-section-title">Dependencies &amp; Links</div><div class="empty dep-loading">Loading…</div></div>` +
           threadHtml + replyHtml +
         `</section>`;
+      _ntCurrentItemId = itemId || null;
+      _ntFilters = {since:"", until:"", event:"", limit:""};
+      _ntAdvancedOpen = false;
+      ++_ntRequestToken;
+      document.getElementById("drawer-native-timeline").innerHTML = renderNativeTimelinePanel(null);
+      if (itemId) reloadNativeTimelinePanel();
       rememberRecentItem(item);
       openManagedModal(drawer, ".drawer-close-btn");
       if (alreadyOpen) _lastFocusedBeforeModal = opener;

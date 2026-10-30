@@ -320,18 +320,42 @@
     // result, and filters delegate to the same since/until/event/limit
     // query parameters the API and TUI /timeline command already accept.
     let _ntCurrentItemId = null;
+    let _ntRequestToken = 0;
+    let _ntAdvancedOpen = false;
+    function nativeTimelineText(en, ja) {
+      return typeof currentLanguage === "function" && currentLanguage() === "ja" ? ja : en;
+    }
+    function nativeTimelineUi(value) {
+      const labels = {
+        __proto__: null,
+        Created: "作成", "Status changed": "状態を変更", Completed: "完了", Reopened: "再開", Canceled: "取消",
+        "Relation added": "関連を追加", "Relation removed": "関連を削除", "Schedule changed": "予定を変更",
+        "Time entry": "時間を記録", "Progress increment": "進捗を加算", "All events": "すべてのイベント",
+        At: "日時", "Record ID": "記録ID", Event: "イベント", Item: "レコード", Progress: "進捗", Ticket: "チケット", Time: "時間", Record: "記録種別",
+        Transaction: "トランザクション", "Source revision": "出典リビジョン", Sequence: "連番",
+      };
+      return nativeTimelineText(value, labels[value] || value);
+    }
+    function nativeTimelineStatus(value) {
+      const names = {__proto__: null, "[ ]": ["Open", "未完了"], "[/]": ["In progress", "進行中"], "[x]": ["Done", "完了"], "[-]": ["Canceled", "取消"], "[>]": ["Deferred", "延期"], "[?]": ["Uncertain", "未確定"], "[N]": ["Note", "メモ"]};
+      return names[value] ? nativeTimelineText(...names[value]) + " " + value : String(value ?? "—");
+    }
+
     let _ntFilters = { since: "", until: "", event: "", limit: "" };
 
     const NATIVE_TIMELINE_EVENT_LABELS = {
+      __proto__: null,
       created: "Created", status_changed: "Status changed", completed: "Completed",
       reopened: "Reopened", canceled: "Canceled",
       relation_added: "Relation added", relation_removed: "Relation removed",
       schedule_changed: "Schedule changed", time_entry: "Time entry",
     };
     const NATIVE_TIMELINE_KIND_ICON = {
+      __proto__: null,
       item_event: "●", progress_event: "◐", ticket_event: "▣", time_entry: "⏱",
     };
     const NATIVE_TIMELINE_KIND_LABEL = {
+      __proto__: null,
       item_event: "Item", progress_event: "Progress", ticket_event: "Ticket", time_entry: "Time",
     };
     const NATIVE_TIMELINE_EVENT_VALUES = [
@@ -344,16 +368,16 @@
     function nativeTimelineEventLabel(row) {
       const event = row?.event || "";
       const kind = row?.record_kind || "";
-      if (NATIVE_TIMELINE_EVENT_LABELS[event]) return NATIVE_TIMELINE_EVENT_LABELS[event];
-      if (kind === "progress_event") return "Progress " + event.replace(/^progress_/, "");
-      if (kind === "ticket_event") return event ? ("Ticket: " + event.replace(/_/g, " ")) : "Ticket event";
+      if (NATIVE_TIMELINE_EVENT_LABELS[event]) return nativeTimelineUi(NATIVE_TIMELINE_EVENT_LABELS[event]);
+      if (kind === "progress_event") return nativeTimelineUi("Progress " + event.replace(/^progress_/, ""));
+      if (kind === "ticket_event") return nativeTimelineText("Ticket", "チケット") + ": " + (event || nativeTimelineText("event", "イベント"));
       return event || kind || "event";
     }
 
     function nativeTimelineTransitionHtml(payload) {
       if (!payload || typeof payload !== "object") return "";
       if ("before_status" in payload || "after_status" in payload) {
-        return `<span class="nt-transition">${escapeHtml(String(payload.before_status ?? "—"))} → ${escapeHtml(String(payload.after_status ?? "—"))}</span>`;
+        return `<span class="nt-transition">${escapeHtml(nativeTimelineStatus(payload.before_status))} → ${escapeHtml(nativeTimelineStatus(payload.after_status))}</span>`;
       }
       if ("before_progress" in payload || "after_progress" in payload) {
         const before = payload.before_missing ? "—" : escapeHtml(String(payload.before_progress ?? ""));
@@ -386,11 +410,14 @@
         const height = Math.max(2, Math.round((Math.max(0, Math.min(100, v)) / 100) * 14));
         return `<span style="height:${height}px" title="${escapeHtml(String(v))}%"></span>`;
       }).join("");
-      return `<span class="nt-progress-trend" title="Progress trend across ${ordered.length} valid percentage event(s)">${bars}</span>`;
+      return `<span class="nt-progress-trend" title="${nativeTimelineText(`Progress trend across ${ordered.length} valid percentage event(s)`, `${ordered.length}件の有効な百分率イベントの推移`)}">${bars}</span>`;
     }
 
     function nativeTimelineDetailsHtml(row) {
       const rows = [
+        ["At", row.at],
+        ["Record ID", row.record_id],
+        ["Event", row.event],
         ["Record", row.record_kind],
         ["Transaction", row.transaction],
         ["Source revision", row.source_revision],
@@ -399,7 +426,7 @@
       let html = `<div class="nt-details-body">`;
       for (const [label, value] of rows) {
         if (!value) continue;
-        html += `<div class="row"><span class="k">${escapeHtml(label)}</span><span>${escapeHtml(String(value))}</span></div>`;
+        html += `<div class="row"><span class="k">${escapeHtml(nativeTimelineUi(label))}</span><span>${escapeHtml(String(value))}</span></div>`;
       }
       const payload = row.payload || {};
       for (const [key, value] of Object.entries(payload)) {
@@ -419,13 +446,13 @@
         <span class="nt-marker nt-marker-${escapeHtml(row.record_kind || "")}" aria-hidden="true">${icon}</span>
         <div class="nt-body">
           <div class="nt-head">
-            <span class="nt-time">${escapeHtml(String(row.at || ""))}</span>
-            <span class="nt-kind-badge">${escapeHtml(kindLabel)}</span>
-            <span class="nt-event-label">${escapeHtml(nativeTimelineEventLabel(row))}${invalid ? " (invalid)" : ""}</span>
+            <span class="nt-time">${typeof drawerDateValue === "function" ? drawerDateValue(row.at || "") : escapeHtml(String(row.at || ""))}</span>
+            <span class="nt-kind-badge">${escapeHtml(nativeTimelineUi(kindLabel))}</span>
+            <span class="nt-event-label">${escapeHtml(nativeTimelineEventLabel(row))}${invalid ? nativeTimelineText(" (invalid)", "（無効）") : ""}</span>
             ${transition}
           </div>
           <details class="nt-details">
-            <summary>Details</summary>
+            <summary>${nativeTimelineText("Technical details", "技術情報")}</summary>
             ${nativeTimelineDetailsHtml(row)}
           </details>
         </div>
@@ -434,60 +461,74 @@
 
     function nativeTimelineDateKey(at) {
       const value = String(at || "");
-      const match = /^(\d{4}-\d{2}-\d{2})/.exec(value);
-      return match ? match[1] : (value || "Unknown date");
+      const formatted = typeof drawerDateValue === "function" ? drawerDateValue(value) : "";
+      const match = />(\d{4}-\d{2}-\d{2}) /.exec(formatted) || /^(\d{4}-\d{2}-\d{2})/.exec(value);
+      return match ? match[1] : (value || nativeTimelineText("Unknown date", "日時不明"));
     }
 
     function renderNativeTimelineFiltersHtml() {
       const eventOptions = NATIVE_TIMELINE_EVENT_VALUES.map(([value, label]) =>
-        `<option value="${escapeHtml(value)}"${value === _ntFilters.event ? " selected" : ""}>${escapeHtml(label)}</option>`
+        `<option value="${escapeHtml(value)}"${value === _ntFilters.event ? " selected" : ""}>${escapeHtml(nativeTimelineUi(label))}</option>`
       ).join("");
-      return `<div class="nt-filters" role="group" aria-label="Timeline filters">
-        <div class="nt-filter-presets" role="group" aria-label="Time range">
-          <button type="button" class="secondary" onclick="setNativeTimelineRange('all')">All</button>
-          <button type="button" class="secondary" onclick="setNativeTimelineRange('7d')">7d</button>
-          <button type="button" class="secondary" onclick="setNativeTimelineRange('30d')">30d</button>
-          <button type="button" class="secondary" onclick="setNativeTimelineRange('custom')">Custom</button>
+      const text = nativeTimelineText;
+      return `<div class="nt-filters" role="group" aria-label="${text("Timeline filters", "履歴フィルタ")}">
+        <div class="nt-filter-presets" role="group" aria-label="${text("Time range", "期間")}">
+          <button type="button" class="secondary" onclick="setNativeTimelineRange('all')">${text("All", "全件")}</button>
+          <button type="button" class="secondary" onclick="setNativeTimelineRange('7d')">${text("7d", "過去7日")}</button>
+          <button type="button" class="secondary" onclick="setNativeTimelineRange('30d')">${text("30d", "過去30日")}</button>
+          <button type="button" class="secondary" onclick="setNativeTimelineRange('custom')">${text("Custom", "期間を指定")}</button>
         </div>
-        <input id="nt-filter-since" type="text" placeholder="since (ISO datetime)" value="${escapeHtml(_ntFilters.since)}" aria-label="Since">
-        <input id="nt-filter-until" type="text" placeholder="until (ISO datetime)" value="${escapeHtml(_ntFilters.until)}" aria-label="Until">
-        <select id="nt-filter-event" aria-label="Event type">${eventOptions}</select>
-        <input id="nt-filter-limit" type="text" placeholder="limit" style="width:5rem" value="${escapeHtml(_ntFilters.limit)}" aria-label="Limit">
-        <button class="secondary" type="button" onclick="applyNativeTimelineFilters()">Apply</button>
-        <button class="secondary" type="button" onclick="clearNativeTimelineFilters()">Clear</button>
+        <details id="nt-advanced" class="drawer-disclosure"${_ntAdvancedOpen ? " open" : ""}>
+          <summary>${text("Detailed filters", "詳細フィルタ")}</summary>
+          <p>${text("Use ISO datetimes with an explicit offset or Z. Filters are applied by the history API.", "日時はオフセットまたはZ付きのISO形式で入力します。絞り込みは履歴APIが行います。")}</p>
+          <div class="nt-advanced-fields">
+            <label for="nt-filter-since">${text("Since", "開始日時")}</label><input id="nt-filter-since" type="text" placeholder="2026-10-30T00:00:00+09:00" value="${escapeHtml(_ntFilters.since)}">
+            <label for="nt-filter-until">${text("Until", "終了日時")}</label><input id="nt-filter-until" type="text" placeholder="2026-10-31T00:00:00+09:00" value="${escapeHtml(_ntFilters.until)}">
+            <label for="nt-filter-event">${text("Event type", "イベント種別")}</label><select id="nt-filter-event">${eventOptions}</select>
+            <label for="nt-filter-limit">${text("Limit", "表示上限")}</label><input id="nt-filter-limit" type="text" inputmode="numeric" value="${escapeHtml(_ntFilters.limit)}">
+          </div>
+        </details>
+        <div class="actions"><button class="secondary" type="button" onclick="applyNativeTimelineFilters()">${text("Apply", "適用")}</button><button class="secondary" type="button" onclick="clearNativeTimelineFilters()">${text("Clear", "解除")}</button></div>
       </div>`;
     }
 
     function setNativeTimelineRange(range) {
-      if (range === "all") {
-        _ntFilters.since = "";
-        _ntFilters.until = "";
-      } else if (range === "custom") {
-        const since = prompt("Since (ISO datetime)", _ntFilters.since || "");
-        if (since === null) return;
-        const until = prompt("Until (ISO datetime, optional)", _ntFilters.until || "");
-        if (until === null) return;
-        _ntFilters.since = since.trim();
-        _ntFilters.until = until.trim();
-      } else {
-        const days = range === "7d" ? 7 : 30;
-        const now = new Date();
-        const start = new Date(now.getTime() - days * 86400000);
-        _ntFilters.since = start.toISOString();
-        _ntFilters.until = now.toISOString();
+      if (range === "custom") {
+        _ntAdvancedOpen = true;
+        const details = document.getElementById("nt-advanced");
+        if (details) details.open = true;
+        document.getElementById("nt-filter-since")?.focus();
+        return;
       }
-      const sinceInput = document.getElementById("nt-filter-since");
-      const untilInput = document.getElementById("nt-filter-until");
-      if (sinceInput) sinceInput.value = _ntFilters.since;
-      if (untilInput) untilInput.value = _ntFilters.until;
+      const now = new Date();
+      _ntFilters.since = range === "all" ? "" : new Date(now.getTime() - (range === "7d" ? 7 : 30) * 86400000).toISOString();
+      _ntFilters.until = range === "all" ? "" : now.toISOString();
+      for (const key of ["since", "until"]) {
+        const field = document.getElementById("nt-filter-" + key);
+        if (field) field.value = _ntFilters[key];
+      }
       reloadNativeTimelinePanel();
     }
 
+    function nativeTimelineLimitation(code) {
+      const labels = {
+        __proto__: null,
+        no_native_history: ["No native history has been recorded.", "履歴記録がありません。"],
+        event_limit_truncated: ["The event limit truncated the results.", "表示上限により履歴の一部を省略しています。"],
+        malformed_events_excluded: ["Invalid events were excluded.", "無効なイベントを除外しています。"],
+        history_diagnostics_present: ["History diagnostics require attention.", "確認が必要な履歴診断があります。"],
+      };
+      if (labels[code]) return nativeTimelineText(...labels[code]);
+      if (/^(item|progress|ticket|time_entry)_history_incomplete$/.test(code))
+        return nativeTimelineText("History is incomplete; earlier changes may be missing.", "履歴は不完全です。過去の変更が含まれない場合があります。");
+      return String(code);
+    }
+
     function renderNativeTimelinePanel(nativeTimeline) {
-      let html = `<div class="drawer-section-title">Native Timeline</div>`;
+      let html = `<div class="drawer-section-title">${nativeTimelineText("Change history", "変更履歴")}</div>`;
       html += renderNativeTimelineFiltersHtml();
       if (!nativeTimeline) {
-        html += `<div class="empty">Native Timeline unavailable for this item.</div>`;
+        html += `<div class="empty">${nativeTimelineText("Native Timeline unavailable for this item.", "このレコードの履歴は利用できません。IDの有無や接続を確認してください。")}</div>`;
         return html;
       }
       const complete = !!nativeTimeline.complete;
@@ -496,20 +537,20 @@
       const invalidEvents = nativeTimeline.invalid_events || [];
       const diagnostics = nativeTimeline.diagnostics || [];
       html += `<div><span class="nt-coverage ${complete ? "nt-coverage-complete" : "nt-coverage-partial"}">` +
-        `${complete ? "Complete history" : "Partial / limited history"}</span></div>`;
+        `${complete ? nativeTimelineText("Complete history", "完全な履歴") : nativeTimelineText("Partial / limited history", "確認可能な履歴は一部です")}</span></div>`;
       if (limitations.length || invalidEvents.length || diagnostics.length) {
         const parts = [];
-        if (limitations.length) parts.push(`limitations: ${limitations.join(", ")}`);
-        if (invalidEvents.length) parts.push(`${invalidEvents.length} invalid event(s) excluded`);
-        if (diagnostics.length) parts.push(`${diagnostics.length} diagnostic(s)`);
+        if (limitations.length) parts.push(limitations.map(nativeTimelineLimitation).join(" "));
+        if (invalidEvents.length) parts.push(`${invalidEvents.length} ${nativeTimelineText("invalid event(s) excluded", "件の無効なイベントを除外")}`);
+        if (diagnostics.length) parts.push(`${diagnostics.length} ${nativeTimelineText("diagnostic(s)", "件の診断")}`);
         html += `<div class="nt-limitations">⚠ ${escapeHtml(parts.join("; "))}.</div>`;
       }
       const events = (nativeTimeline.events || []).slice().reverse(); // newest first for scanning
       if (!events.length) {
-        html += `<div class="empty">No native history events${limitations.length ? " match these filters" : " yet"}.</div>`;
+        html += `<div class="empty">${nativeTimelineText("No native history events match these filters yet.", "表示条件に一致する履歴はありません。")}</div>`;
       } else {
         const trend = nativeTimelineProgressTrendHtml(events);
-        if (trend) html += `<div class="note">Progress trend ${trend}</div>`;
+        if (trend) html += `<div class="note">${nativeTimelineText("Progress trend", "進捗の推移")} ${trend}</div>`;
         let currentDay = null;
         html += `<div class="nt-axis">`;
         for (const row of events) {
@@ -523,32 +564,35 @@
         }
         html += `</div></div>`;
       }
-      html += `<div class="note">${bounds.returned_events ?? 0}/${bounds.total_valid_events ?? 0} event(s) returned` +
-        `${bounds.truncated ? "; truncated" : ""}.</div>`;
+      html += `<div class="note">${bounds.returned_events ?? 0}/${bounds.total_valid_events ?? 0} ${nativeTimelineText("event(s) returned", "件を表示")}` +
+        `${bounds.truncated ? nativeTimelineText("; truncated", "（上限により省略）") : ""}.</div>`;
+      html += `<details class="drawer-disclosure nt-evidence"><summary>${nativeTimelineText("History evidence and diagnostics", "履歴の範囲・診断・技術情報")}</summary>` +
+        `<pre class="drawer-raw-pre">${escapeHtml(JSON.stringify({schema: nativeTimeline.schema, target_id: nativeTimeline.target_id, source: nativeTimeline.source, git_composed: nativeTimeline.git_composed, completeness: nativeTimeline.completeness, bounds, limitations, invalid_events: invalidEvents, diagnostics}, null, 2))}</pre></details>`;
       return html;
     }
 
     async function reloadNativeTimelinePanel() {
       const container = document.getElementById("drawer-native-timeline");
-      if (!container || !_ntCurrentItemId) return;
-      _ntFilters = {
-        since: (document.getElementById("nt-filter-since")?.value || "").trim(),
-        until: (document.getElementById("nt-filter-until")?.value || "").trim(),
-        event: (document.getElementById("nt-filter-event")?.value || "").trim(),
-        limit: (document.getElementById("nt-filter-limit")?.value || "").trim(),
-      };
+      const itemId = _ntCurrentItemId;
+      if (!container || !itemId) return;
+      _ntAdvancedOpen = document.getElementById("nt-advanced")?.open ?? _ntAdvancedOpen;
+      for (const key of ["since", "until", "event", "limit"]) {
+        const field = document.getElementById("nt-filter-" + key);
+        if (field) _ntFilters[key] = field.value.trim();
+      }
+      const token = ++_ntRequestToken;
+      const current = () => token === _ntRequestToken && _ntCurrentItemId === itemId &&
+        document.getElementById("drawer-native-timeline") === container && _drawerIdFor(drawerItem) === itemId && !drawerEditing;
       const params = new URLSearchParams();
-      if (_ntFilters.since) params.set("since", _ntFilters.since);
-      if (_ntFilters.until) params.set("until", _ntFilters.until);
-      if (_ntFilters.event) params.set("event", _ntFilters.event);
-      if (_ntFilters.limit) params.set("limit", _ntFilters.limit);
-      container.innerHTML = `<div class="drawer-section-title">Native Timeline</div>${renderNativeTimelineFiltersHtml()}<div class="empty">Loading…</div>`;
+      for (const key of ["since", "until", "event", "limit"]) if (_ntFilters[key]) params.set(key, _ntFilters[key]);
+      const filters = renderNativeTimelineFiltersHtml();
+      container.innerHTML = filters + `<div class="empty" role="status">${nativeTimelineText("Loading…", "読込中…")}</div>`;
       try {
         const query = params.toString();
-        const data = await api(`/api/native-timeline/${encodeURIComponent(_ntCurrentItemId)}${query ? "?" + query : ""}`);
-        container.innerHTML = renderNativeTimelinePanel(data);
+        const data = await api(`/api/native-timeline/${encodeURIComponent(itemId)}${query ? "?" + query : ""}`);
+        if (current()) container.innerHTML = renderNativeTimelinePanel(data);
       } catch(e) {
-        container.innerHTML = `<div class="drawer-section-title">Native Timeline</div>${renderNativeTimelineFiltersHtml()}<div class="diagnostic">Timeline error: ${escapeHtml(e.message)}</div>`;
+        if (current()) container.innerHTML = filters + `<div class="diagnostic" role="alert">${nativeTimelineText("Timeline error", "履歴を取得できませんでした")}: ${escapeHtml(e.message)}</div>`;
       }
     }
 
@@ -627,10 +671,8 @@
           `; ${consistencyWarnings.length} consistency warning(s)` +
           `${temporalThread?.explicit?.truncated ? "; explicit thread truncated" : ""}` +
           `${temporalThread?.consistency?.truncated ? "; consistency evidence truncated" : ""}.</div>`;
-        _ntCurrentItemId = itemId;
         if (!records.length) {
           container.innerHTML = lifecycleHtml + `<div class="drawer-section-title">Dependencies &amp; Links</div><div class="empty">No links.</div>`;
-          reloadNativeTimelinePanel();
           return;
         }
         const outgoing = records.filter(r => r.source_id === itemId);
@@ -671,13 +713,6 @@
         }
         html += `</div>`;
         container.innerHTML = html;
-        const timeline = document.getElementById("drawer-native-timeline");
-        if (timeline) {
-          timeline.innerHTML = renderNativeTimelinePanel(null);
-          api(`/api/native-timeline/${encodeURIComponent(itemId)}`)
-            .then(data => { if (_ntCurrentItemId === itemId) timeline.innerHTML = renderNativeTimelinePanel(data); })
-            .catch(e => { timeline.innerHTML = `<div class="drawer-section-title">Native Timeline</div><div class="diagnostic">Timeline error: ${escapeHtml(e.message)}</div>`; });
-        }
       } catch(e) {
         if (container) container.innerHTML = `<div class="drawer-section-title">Dependencies &amp; Links</div><div class="empty">Error: ${escapeHtml(e.message)}</div>`;
       }

@@ -151,10 +151,22 @@ class WebAssetExtractionTests(unittest.TestCase):
             self.skipTest(
                 "web extras unavailable, so the served page cannot be checked"
             )
-        client = TestClient(webapp.create_app(paths=[]))
-        response = client.get("/")
-        self.assertEqual(webapp.HTML_PAGE.encode("utf-8"), response.content)
-        self.assertEqual("no-store", response.headers.get("cache-control"))
+        from unittest.mock import patch
+
+        info = {"version": "1.0.4.3", "git_commit": "a" * 40}
+        with patch("lifetxt.webapp.snapshot_runtime_build_info", return_value=info):
+            client = TestClient(webapp.create_app(paths=[]))
+        expected = (
+            webapp.HTML_PAGE
+            .replace("__LIFETXT_RUNTIME_VERSION__", info["version"])
+            .replace("__LIFETXT_RUNTIME_COMMIT__", info["git_commit"])
+        )
+        for path in ("/", "/capture"):
+            response = client.get(path)
+            self.assertEqual(expected.encode("utf-8"), response.content)
+            self.assertEqual("no-store", response.headers.get("cache-control"))
+            self.assertNotIn(b"__LIFETXT_RUNTIME_", response.content)
+            self.assertIn(REVISION_BRIDGE_MARKER.encode("utf-8"), response.content)
 
     def test_literal_is_not_back_in_webapp(self):
         with io.open(WEBAPP_SOURCE, encoding="utf-8") as handle:

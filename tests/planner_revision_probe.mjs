@@ -13,6 +13,7 @@ class Element {
   }
   append(...nodes) {this.children.push(...nodes);}
   replaceChildren(...nodes) {this.children=nodes;}
+  get childElementCount() {return this.children.length;}
   get firstElementChild() {return this.children[0];}
   setAttribute() {}
   addEventListener(name, fn) {this.listeners[name]=fn;}
@@ -64,7 +65,7 @@ async function submitEditor(kind,title,body,item=null) {
 function action(section,title) {
   const card=$(section).children.find(row=>row.children?.[0]?.children?.[0]?.textContent===title);
   assert.ok(card,section+': '+title);
-  const button=card.children.find(node=>node.tagName==='button');
+  const button=card.children.find(node=>node.className==='card-actions')?.children.find(node=>node.tagName==='button');
   assert.ok(button,title+' action');
   return ()=>button.listeners.click(event);
 }

@@ -1,6 +1,6 @@
 (() => {
   "use strict";
-  const copy={en:{skip:"Skip to Planner",web:"Full Web UI",eyebrow:"Your day, in one place",title:"Day Planner",weekTitle:"Week Planner",today:"Today",choose:"Choose date",day:"Day",week:"Week",previousDay:"Previous day",nextDay:"Next day",previousWeek:"Previous week",nextWeek:"Next week",weekOf:"Week of",selected:"Selected",todayMarker:"TODAY",past:"Past",todayState:"Today",future:"Future",schedule:"Schedule",tasks:"Tasks",habits:"Habits",notes:"Notes",journal:"Journal",reviewActivity:"Review / Activity",moreReview:"Show more",newNote:"＋ Add a note",writeJournal:"Write today's journal",capture:"＋ Quick Capture",prompt:"What do you want to remember?",submitCapture:"Capture",labelTitle:"Title",labelBody:"Details / journal",save:"Save",close:"Close",empty:"Nothing here for this day.",emptyDate:"No dated items.",showDay:"Open day view",event:"Event",reminder:"Reminder",deadline:"Deadline",task:"Task",done:"Mark done",saved:"Saved.",captured:"Captured.",readonly:"This workspace is read-only. Changes are disabled.",loading:"Loading…",error:"Could not load the Planner: ",captureError:"Capture failed: ",saveError:"Could not save: ",journalRequired:"Enter journal text before saving."},ja:{skip:"Plannerへ移動",web:"Web UI全体",eyebrow:"今日をひとつの画面に",title:"デイリープランナー",weekTitle:"週間プランナー",today:"今日",choose:"日付を選ぶ",day:"日",week:"週",previousDay:"前の日",nextDay:"次の日",previousWeek:"前の週",nextWeek:"次の週",weekOf:"週の期間",selected:"選択中",todayMarker:"今日",past:"過去",todayState:"今日",future:"未来",schedule:"予定",tasks:"タスク",habits:"習慣",notes:"メモ",journal:"日誌",reviewActivity:"レビュー / アクティビティ",moreReview:"さらに表示",newNote:"＋ メモを追加",writeJournal:"今日の日誌を書く",capture:"＋ クイックキャプチャ",prompt:"覚えておきたいことは何ですか？",submitCapture:"記録",labelTitle:"タイトル",labelBody:"詳細 / 日誌",save:"保存",close:"閉じる",empty:"この日の記録はありません。",emptyDate:"予定はありません。",showDay:"日表示を開く",event:"予定",reminder:"リマインダー",deadline:"期限",task:"タスク",done:"完了を記録",saved:"保存しました。",captured:"記録しました。",readonly:"このworkspaceは読み取り専用です。変更できません。",loading:"読み込み中…",error:"Plannerを読み込めませんでした：",captureError:"記録できませんでした：",saveError:"保存できませんでした：",journalRequired:"日誌の内容を入力してください。",detail:"詳細"}};
+  const copy={en:{skip:"Skip to Planner",web:"Full Web UI",eyebrow:"Your day, in one place",title:"Day Planner",weekTitle:"Week Planner",today:"Today",choose:"Choose date",day:"Day",week:"Week",previousDay:"Previous day",nextDay:"Next day",previousWeek:"Previous week",nextWeek:"Next week",weekOf:"Week of",selected:"Selected",todayMarker:"TODAY",past:"Past",todayState:"Today",future:"Future",schedule:"Schedule",tasks:"Tasks",habits:"Habits",notes:"Notes",journal:"Journal",reviewActivity:"Review / Activity",moreReview:"Show more",newNote:"＋ Add a note",writeJournal:"Write today's journal",capture:"＋ Quick Capture",prompt:"What do you want to remember?",submitCapture:"Capture",labelTitle:"Title",labelBody:"Details / journal",save:"Save",close:"Close",empty:"Nothing here for this day.",emptyDate:"No dated items.",showDay:"Open day view",event:"Event",reminder:"Reminder",deadline:"Deadline",task:"Task",done:"Mark done",detail:"Details",saved:"Saved.",captured:"Captured.",readonly:"This workspace is read-only. Changes are disabled.",loading:"Loading…",error:"Could not load the Planner: ",captureError:"Capture failed: ",saveError:"Could not save: ",journalRequired:"Enter journal text before saving."},ja:{skip:"Plannerへ移動",web:"Web UI全体",eyebrow:"今日をひとつの画面に",title:"デイリープランナー",weekTitle:"週間プランナー",today:"今日",choose:"日付を選ぶ",day:"日",week:"週",previousDay:"前の日",nextDay:"次の日",previousWeek:"前の週",nextWeek:"次の週",weekOf:"週の期間",selected:"選択中",todayMarker:"今日",past:"過去",todayState:"今日",future:"未来",schedule:"予定",tasks:"タスク",habits:"習慣",notes:"メモ",journal:"日誌",reviewActivity:"レビュー / アクティビティ",moreReview:"さらに表示",newNote:"＋ メモを追加",writeJournal:"今日の日誌を書く",capture:"＋ クイックキャプチャ",prompt:"覚えておきたいことは何ですか？",submitCapture:"記録",labelTitle:"タイトル",labelBody:"詳細 / 日誌",save:"保存",close:"閉じる",empty:"この日の記録はありません。",emptyDate:"予定はありません。",showDay:"日表示を開く",event:"予定",reminder:"リマインダー",deadline:"期限",task:"タスク",done:"完了を記録",saved:"保存しました。",captured:"記録しました。",readonly:"このworkspaceは読み取り専用です。変更できません。",loading:"読み込み中…",error:"Plannerを読み込めませんでした：",captureError:"記録できませんでした：",saveError:"保存できませんでした：",journalRequired:"日誌の内容を入力してください。",detail:"詳細"}};
   const NOTE_PAGE_SIZE=5;
   let notesPage=null, noteRows=[], notesBusy=false, loadGeneration=0;
   const $=id=>document.getElementById(id), params=new URLSearchParams(location.search);let scopeArea=params.get('area')||'',scopeView=params.get('saved_view')||'',todaySyncTimer=null;
@@ -527,7 +527,46 @@
   }
   const vals=(item,key)=>Array.isArray(item?.details?.[key])?item.details[key]:item?.details?.[key]?[item.details[key]]:[];
   const pathFor=i=>i.id?"/api/items/id/"+encodeURIComponent(i.id):i.line&&i.editable?"/api/items/"+encodeURIComponent(i.line):null;
-  function card(target,title,meta,action,label,detail){const n=document.createElement("article");n.className="card";const main=document.createElement("div"),strong=document.createElement("strong");strong.textContent=title||"";main.append(strong);if(meta){const p=document.createElement("p");p.textContent=meta;main.append(p)}n.append(main);if(action){const b=document.createElement("button");b.type="button";b.textContent=label;b.addEventListener("click",async e=>{e.stopPropagation();if(b.disabled)return;b.disabled=true;try{await action()}catch(error){$('feedback').textContent=t.error+error.message}finally{b.disabled=false}});n.append(b)}if(detail){const b=document.createElement("button");b.type="button";b.textContent=t.detail;b.addEventListener("click",()=>showDetail(detail));n.append(b)}target.append(n)}
+  function card(target, title, meta, action, label, detail) {
+    const node = document.createElement("article");
+    node.className = "card";
+    const content = document.createElement("div");
+    content.className = "card-content";
+    const strong = document.createElement("strong");
+    strong.textContent = title || "";
+    content.append(strong);
+    if (meta) {
+      const paragraph = document.createElement("p");
+      paragraph.textContent = meta;
+      content.append(paragraph);
+    }
+    node.append(content);
+    const actions = document.createElement("div");
+    actions.className = "card-actions";
+    if (action) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = label;
+      button.addEventListener("click", async event => {
+        event.stopPropagation();
+        if (button.disabled) return;
+        button.disabled = true;
+        try { await action(); }
+        catch (error) { $("feedback").textContent = t.error + error.message; }
+        finally { button.disabled = false; }
+      });
+      actions.append(button);
+    }
+    if (detail) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = t.detail;
+      button.addEventListener("click", () => showDetail(detail));
+      actions.append(button);
+    }
+    if (actions.childElementCount) node.append(actions);
+    target.append(node);
+  }
   function showDetail(record,match=null){const content=$("detail-content");content.replaceChildren();const values=[["type",record.type],["status",record.status],["date",match?.start||vals(record,"on")[0]||vals(record,"due")[0]||""]];for(const [key,value] of values){if(value){const p=document.createElement("p");p.textContent=key+": "+value;content.append(p)}}Object.entries(record.details||{}).forEach(([key,values])=>{const value=Array.isArray(values)?values.join(", "):String(values);if(value){const p=document.createElement("p");p.textContent=key+": "+value;content.append(p)}});$("detail-dialog").showModal()}
   function list(target,items,render){target.replaceChildren();if(!items.length){const p=document.createElement("p");p.className="empty";p.textContent=t.empty;target.append(p);return}items.forEach(x=>render(x))}
   function updateUrl(){const u=new URL(location.href);if(view!=="day"||date!==today)u.searchParams.set("date",date);else u.searchParams.delete("date");if(view!=="day")u.searchParams.set("view",view);else u.searchParams.delete("view");if(scopeArea)u.searchParams.set("area",scopeArea);else u.searchParams.delete("area");if(scopeView)u.searchParams.set("saved_view",scopeView);else u.searchParams.delete("saved_view");lang==="en"?u.searchParams.delete("lang"):u.searchParams.set("lang",lang);history.replaceState({},"",u.pathname+u.search)}

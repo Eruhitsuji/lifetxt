@@ -11,3 +11,9 @@ input,select,textarea,button{font:inherit;color:var(--ink)}input,select,textarea
 @media(max-width:359px){.flow-window{grid-template-columns:minmax(0,1fr)}.flow-window label span{min-height:0}.flow-card{padding:8px}}
 
 #today-focus[hidden]{display:none}#today-focus{overflow-wrap:anywhere}#focus-links{display:flex;flex-wrap:wrap;gap:8px}#focus-links a{display:inline-flex;align-items:center;min-height:44px;padding:8px;border:1px solid var(--line);border-radius:10px;color:var(--ink)}#focus-links p{flex-basis:100%;margin:4px 0}.focus-emphasis{border-inline-start:4px solid var(--accent)}.focus-upcoming{outline:2px solid var(--accent);outline-offset:2px}#focus-settings-error{color:var(--ink);overflow-wrap:anywhere}
+
+/* Keep repeated card operations together regardless of title length (#1492). */
+.card-content{flex:1;min-width:0;overflow-wrap:anywhere}
+.card-actions{display:flex;flex:none;justify-content:flex-end;align-items:flex-start;gap:8px;max-width:100%}
+.card-actions button{white-space:nowrap}
+@media(max-width:480px){.card{flex-direction:column}.card-actions{align-self:flex-end;flex-wrap:wrap}.card-actions button{white-space:normal;overflow-wrap:anywhere;max-width:100%}}

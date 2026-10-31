@@ -16,8 +16,10 @@ from lifetxt import web_assets, webapp
 
 
 REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
-# #1480 adds explicit bulk completion with a date and safe recovery.
-LEGACY_PRISTINE_GIT_BLOB_SHA = "5e56136c6e7f60ca52e5969a41264751ad76c87d"
+# #1487 intentionally extends the pristine Help shell, styles, and scripts
+# with startup runtime build evidence; keep the exact assembled page checksum
+# gate so any unrelated asset changes still require review and rebaselining.
+LEGACY_PRISTINE_GIT_BLOB_SHA = "2fa37bd15634e67a8b6bc3c0b049fb19ad74340a"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )

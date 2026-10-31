@@ -50,7 +50,7 @@ class AccessibleNameTests(unittest.TestCase):
         )
         self.assertRegex(
             HTML_PAGE,
-            r'onclick="openHelpModal\(\)"[^>]*aria-label="Keyboard shortcuts help"',
+            r'onclick="openHelpModal\(\)"[^>]*aria-label="Help and runtime information"',
         )
 
     def test_items_filter_controls_have_programmatic_labels(self):

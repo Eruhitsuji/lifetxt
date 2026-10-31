@@ -2,6 +2,28 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-runtime-build-info
+      capability_id: cap-web-surface-structure
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1487
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1489
+      changed_files_or_scope:
+        - lifetxt/web_build_info.py
+        - lifetxt/webapp.py
+        - lifetxt/web_assets.html
+        - lifetxt/web_assets_js_01.js
+        - lifetxt/web_assets_js_10.js
+        - lifetxt/web_assets_css_02.css
+        - tests/test_web_build_info.py
+        - tests/test_web_assets.py
+        - tests/test_web_mobile_capture.py
+      tests_or_evidence:
+        - tests.test_web_build_info
+        - tests.test_web_assets
+        - tests.test_web_mobile_capture
+        - Git SHA sourced only from imported package checkout at app startup
+        - WebUI Help shows version and SHA or unavailable, supports copy
+      status: implemented
     - requirement_id: req-web-drawer-relations-context
       capability_id: cap-native-timeline-web-visual-explorer
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386

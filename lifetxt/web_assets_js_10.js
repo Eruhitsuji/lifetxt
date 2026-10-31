@@ -148,6 +148,20 @@
       rows.forEach((row, i) => row.classList.toggle("focus", i === _helpCmdIndex));
       if (rows[_helpCmdIndex]) rows[_helpCmdIndex].scrollIntoView({block: "nearest"});
     }
+    async function copyRuntimeInfo() {
+      const version = document.getElementById("runtime-build-version")?.textContent.trim() || "—";
+      const commit = document.getElementById("runtime-build-commit")?.textContent.trim() || "—";
+      const value = `lifetxt version: ${version}\nGit commit: ${commit === "—" ? "unavailable" : commit}`;
+      try {
+        if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
+        await navigator.clipboard.writeText(value);
+        showToast(t("Runtime information copied."), "success");
+      } catch (_) {
+        // Clipboard APIs require a secure context in many browsers. Provide
+        // a selectable fallback for local HTTP-based testing environments.
+        window.prompt(t("Copy runtime information"), value);
+      }
+    }
     function openHelpModal() {
       renderHelpModalShortcuts();
       const search = document.getElementById("help-command-search");

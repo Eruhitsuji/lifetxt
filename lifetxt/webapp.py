@@ -1,4 +1,5 @@
 import contextlib
+from html import escape as html_escape
 import os
 import sys
 from collections import OrderedDict
@@ -90,6 +91,7 @@ from .web_assets import HTML_PAGE, PLANNER_HTML_PAGE, STATE_HTML_PAGE
 from .web_routes_analytics import register_analytics_routes
 from .web_routes_git import register_git_routes
 from . import __version__
+from .web_build_info import snapshot_runtime_build_info
 
 
 #: Commands the browser implements. Everything else in the shared catalog is
@@ -174,6 +176,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         description="life.txt REST API" + (" — read-only demo" if read_only else ""),
     )
     app.state.paths = normalize_server_paths(paths)
+    app.state.runtime_build_info = snapshot_runtime_build_info()
     if read_only:
         app.state.writable_path = writable_path or app.state.paths[0]
     else:
@@ -320,10 +323,20 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
                 detail=diagnostics_to_output(diagnostics),
             )
 
+    def _runtime_html_page():
+        # Use the live HTML_PAGE binding: surface_runtime may install its
+        # revision bridge after create_app has been constructed.
+        build = app.state.runtime_build_info
+        version = html_escape(str(build["version"]), quote=True)
+        commit = build["git_commit"] or "—"
+        return HTML_PAGE.replace(
+            "__LIFETXT_RUNTIME_VERSION__", version
+        ).replace("__LIFETXT_RUNTIME_COMMIT__", commit)
+
     @app.get("/", response_class=HTMLResponse)
     def index():
         return HTMLResponse(
-            content=HTML_PAGE,
+            content=_runtime_html_page(),
             headers={"Cache-Control": "no-store"},
         )
 
@@ -331,7 +344,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
     def capture():
         """Serve the same authenticated Web shell in capture-first mode."""
         return HTMLResponse(
-            content=HTML_PAGE,
+            content=_runtime_html_page(),
             headers={"Cache-Control": "no-store"},
         )
 

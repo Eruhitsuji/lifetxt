@@ -16,8 +16,12 @@ from lifetxt import web_assets, webapp
 
 
 REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
-# #1480 adds explicit bulk completion with a date and safe recovery.
-LEGACY_PRISTINE_GIT_BLOB_SHA = "56b6ba749546d474625c87888c2211c70d5f6c8a"
+# #1487 intentionally extends the pristine Help shell, styles, and scripts
+# with startup runtime build evidence; keep the exact assembled page checksum
+# gate so any unrelated asset changes still require review and rebaselining.
+# Calculated using _CSS_RESOURCE_NAMES / _JS_RESOURCE_NAMES assembly order,
+# before brand injection (CSS 06/07 precede 05).
+LEGACY_PRISTINE_GIT_BLOB_SHA = "a8edc6df2865343148aac83d7a3f72a680982af7"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )
@@ -151,10 +155,39 @@ class WebAssetExtractionTests(unittest.TestCase):
             self.skipTest(
                 "web extras unavailable, so the served page cannot be checked"
             )
-        client = TestClient(webapp.create_app(paths=[]))
-        response = client.get("/")
-        self.assertEqual(webapp.HTML_PAGE.encode("utf-8"), response.content)
-        self.assertEqual("no-store", response.headers.get("cache-control"))
+        from unittest.mock import patch
+
+        info = {"version": "1.0.4.3", "git_commit": "a" * 40}
+        with patch("lifetxt.webapp.snapshot_runtime_build_info", return_value=info):
+            client = TestClient(webapp.create_app(paths=[]))
+        expected = (
+            webapp.HTML_PAGE
+            .replace("__LIFETXT_RUNTIME_VERSION__", info["version"])
+            .replace("__LIFETXT_RUNTIME_COMMIT__", info["git_commit"])
+        )
+        for path in ("/", "/capture"):
+            response = client.get(path)
+            self.assertEqual(expected.encode("utf-8"), response.content)
+            self.assertEqual("no-store", response.headers.get("cache-control"))
+            self.assertNotIn(b"__LIFETXT_RUNTIME_", response.content)
+            self.assertIn(REVISION_BRIDGE_MARKER.encode("utf-8"), response.content)
+
+    def test_runtime_html_escapes_identity_and_handles_unavailable_git(self):
+        try:
+            from fastapi.testclient import TestClient
+        except Exception:
+            self.skipTest("web extras unavailable")
+
+        from unittest.mock import patch
+
+        info = {"version": '<script>alert(1)</script>', "git_commit": None}
+        with patch("lifetxt.webapp.snapshot_runtime_build_info", return_value=info):
+            client = TestClient(webapp.create_app(paths=[]))
+        body = client.get("/").text
+        self.assertIn("&lt;script&gt;alert(1)&lt;/script&gt;", body)
+        self.assertNotIn('<dd id="runtime-build-version" data-no-i18n><script>', body)
+        self.assertIn('<dd id="runtime-build-commit" data-no-i18n>—</dd>', body)
+        self.assertNotIn("__LIFETXT_RUNTIME_", body)
 
     def test_literal_is_not_back_in_webapp(self):
         with io.open(WEBAPP_SOURCE, encoding="utf-8") as handle:

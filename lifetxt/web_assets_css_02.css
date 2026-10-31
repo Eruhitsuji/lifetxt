@@ -604,6 +604,20 @@
       transition: border-color var(--t-fast), box-shadow var(--t-fast);
     }
     .focus-row:hover { border-color: var(--line-strong); box-shadow: var(--shadow-1); }
+/* Relations use the canonical list as the keyboard-accessible primary view. */
+.drawer-relations-list { list-style:none; margin:0; padding:0; }
+.drawer-relation-row { display:grid; grid-template-columns:minmax(6rem, 1fr) minmax(0, 3fr); gap:.6rem; padding:.65rem 0; border-bottom:1px solid var(--line); }
+.drawer-relation-row .dep-rel { white-space:normal; overflow-wrap:anywhere; }
+.drawer-relation-target { display:flex; flex-wrap:wrap; align-items:center; gap:.35rem; min-width:0; overflow-wrap:anywhere; }
+.drawer-relation-target .drawer-link { text-align:left; white-space:normal; overflow-wrap:anywhere; max-width:100%; min-height:44px; }
+.drawer-relation-target small { flex-basis:100%; }
+.drawer-context { border:1px solid var(--line); border-radius:.5rem; padding:.65rem; overflow-wrap:anywhere; }
+.drawer-context p { margin:0 0 .5rem; }
+.drawer-context button { min-height:44px; }
+@media (max-width:480px) { .drawer-relation-row { grid-template-columns:minmax(0,1fr); gap:.2rem; } }
+.blocker-chain-row { flex-wrap:wrap; overflow-wrap:anywhere; }
+.blocker-chain-row .drawer-link { min-height:44px; white-space:normal; max-width:100%; overflow-wrap:anywhere; }
+
     .focus-check {
       flex-shrink: 0;
       width: 1.5rem;
@@ -634,16 +648,3 @@
     #drawer-native-timeline .nt-details > summary { min-height:44px; padding:.6rem 0; box-sizing:border-box; cursor:pointer; }
     @media (max-width:600px) { .nt-advanced-fields { grid-template-columns:minmax(0,1fr); } }
 
-/* Relations use the canonical list as the keyboard-accessible primary view. */
-.drawer-relations-list { list-style:none; margin:0; padding:0; }
-.drawer-relation-row { display:grid; grid-template-columns:minmax(6rem, 1fr) minmax(0, 3fr); gap:.6rem; padding:.65rem 0; border-bottom:1px solid var(--line); }
-.drawer-relation-row .dep-rel { white-space:normal; overflow-wrap:anywhere; }
-.drawer-relation-target { display:flex; flex-wrap:wrap; align-items:center; gap:.35rem; min-width:0; overflow-wrap:anywhere; }
-.drawer-relation-target .drawer-link { text-align:left; white-space:normal; overflow-wrap:anywhere; max-width:100%; min-height:44px; }
-.drawer-relation-target small { flex-basis:100%; }
-.drawer-context { border:1px solid var(--line); border-radius:.5rem; padding:.65rem; overflow-wrap:anywhere; }
-.drawer-context p { margin:0 0 .5rem; }
-.drawer-context button { min-height:44px; }
-@media (max-width:480px) { .drawer-relation-row { grid-template-columns:minmax(0,1fr); gap:.2rem; } }
-.blocker-chain-row { flex-wrap:wrap; overflow-wrap:anywhere; }
-.blocker-chain-row .drawer-link { min-height:44px; white-space:normal; max-width:100%; overflow-wrap:anywhere; }

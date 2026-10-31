@@ -25,6 +25,7 @@ class DrawerRelationsTests(unittest.TestCase):
             "drawerContextHtml",
             "drawerReturnToContext",
             "drawerNavigate",
+            "updateUrlFromControls",
         ]
         functions = "\n".join(
             _extract_function(
@@ -54,8 +55,9 @@ let lang='ja'; const currentLanguage=()=>lang,t=x=>x;
 const appConfig={ids:{key:'id'}},STATUS_LABEL={'[x]':'Done'};
 let drawerItem={id:'root',title:'Original'},drawerEditing=false,_drawerNavigationToken=0;
 let container={innerHTML:'',dataset:{}},pending=[],opens=[],toasts=[];
-const location={href:'http://fixture/?id=root'};
-const history={state:null};
+const location={href:'http://fixture/?id=root',pathname:'/'};
+const query=()=>new URLSearchParams(new URL(location.href).search);
+const history={state:null,replaceState(state){this.state=state;}};
 const document={getElementById:()=>container,querySelector:()=>({focus(){}})};
 const switchDrawerTab=()=>{};
 const api=path=>new Promise((resolve,reject)=>pending.push({path,resolve,reject}));
@@ -76,7 +78,8 @@ result.noIdRow=drawerRelationRow("候補",null,{title:"No ID"});
 result.empty=renderDrawerRelations('root',{records:[]},{relations:{},derived:{related:[]}});
 result.errors=renderDrawerRelations('root',null,null,'<bad links>','<bad thread>');
 history.state={drawerContext:{id:'root',title:'<img>',target:'other'}};
-result.context=drawerContextHtml({id:'other'});result.noContext=drawerContextHtml({id:'root'});history.state=null;
+result.context=drawerContextHtml({id:'other'});result.noContext=drawerContextHtml({id:'root'});
+const state=history.state;updateUrlFromControls();result.normalizationPreserved=history.state===state;history.state=null;
 (async()=>{
  let load=loadDependencyLinks(drawerItem);pending[0].resolve(links);pending[1].reject(Error('thread failed'));await load;
  result.partial=container.innerHTML;result.requests=pending.map(x=>x.path);pending=[];
@@ -130,6 +133,7 @@ result.context=drawerContextHtml({id:'other'});result.noContext=drawerContextHtm
         self.assertIn("&lt;bad thread&gt;", result["errors"])
         self.assertIn("&lt;img&gt;", result["context"])
         self.assertEqual("", result["noContext"])
+        self.assertTrue(result["normalizationPreserved"])
         self.assertTrue(result["unchanged"])
         self.assertIn("Incoming", result["partial"])
         self.assertIn("thread failed", result["partial"])

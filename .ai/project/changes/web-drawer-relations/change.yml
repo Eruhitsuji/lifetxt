@@ -17,7 +17,7 @@ scope:
   - API/domain/Format/auth/mutations
   - Global Graph, Stats, Planner, Kiosk, related-creation prompt
   write_scope:
-  - lifetxt/web_assets_js_{10,11,12}.js
+  - lifetxt/web_assets_js_{03,04,10,11,12}.js
   - lifetxt/web_assets_css_02.css
   - tests/test_web_drawer_relations*.py
   - tests/browser_drawer_relations_probe.mjs

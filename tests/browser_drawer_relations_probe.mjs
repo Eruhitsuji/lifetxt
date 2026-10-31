@@ -21,6 +21,7 @@ try {
       openDrawer((await api('/api/items/id/origin')).item);switchDrawerTab('relations');
     })()`);
     await browser.wait('!!document.querySelector("#drawer-deps [data-relation-id=record]")','links');
+    await browser.wait("document.querySelector('.detail-modal').getAnimations().every(a=>a.playState==='finished')",'drawer animation complete');
     const info=await browser.evaluate(`(()=>{
       const panel=document.getElementById('drawer-deps'),d=panel.querySelector('details[ontoggle]');
       return {text:panel.textContent,closed:!d.open,contained:document.getElementById('drawer-body').scrollWidth<=document.getElementById('drawer-body').clientWidth+1,noInjection:!panel.querySelector('img,script'),height:panel.querySelector('[data-relation-id=record]').getBoundingClientRect().height};
@@ -47,7 +48,7 @@ try {
     await browser.wait('drawerItem?.id==="record"&&!!document.getElementById("drawer-context-back")','browser Forward');
     await browser.evaluate("document.getElementById('drawer-context-back').focus()");await enter();
     await browser.wait('drawerItem?.id==="origin"&&!document.getElementById("drawer-tab-relations").hidden','return');
-    assert.equal(await browser.evaluate('document.activeElement.getAttribute("aria-controls")'),'drawer-tab-relations');
+    await browser.wait("document.activeElement.getAttribute('aria-controls')==='drawer-tab-relations'",'return focus');
     assert.equal(await browser.evaluate('new URL(location.href).searchParams.get("id")'),'origin');
     await browser.evaluate("drawerNavigate('missing-record')");
     await browser.wait('document.getElementById("toast-container").textContent.includes("missing-record")','missing error');

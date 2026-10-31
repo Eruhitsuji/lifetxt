@@ -642,7 +642,9 @@
       const status = row.status || "";
       const kind = row.kind || "";
       const title = row.title || id || drawerText("Unknown record", "不明な記録");
-      const state = resolution === "ok" ? "" :
+      const state = resolution === "ok" && !id
+        ? `<span class="note">${drawerText("No ID — cannot open directly.", "IDがないため直接開けません。")}</span>`
+        : resolution === "ok" ? "" :
         `<span class="dep-missing">${escapeHtml(drawerText("Unresolved reference", "参照先を特定できません"))} (${escapeHtml(resolution)})</span>`;
       return `<li class="drawer-relation-row"><span class="dep-rel">${escapeHtml(label)}</span>` +
         `<div class="drawer-relation-target">` +
@@ -698,7 +700,7 @@
       for (const row of nearby) {
         const labels = {same_day:["Same day", "同日"], before:["Before", "前の日付"], after:["After", "後の日付"]};
         const label = Object.hasOwn(labels, row.relation) ? drawerText(...labels[row.relation]) : row.relation;
-        html += drawerRelationRow(label, row.target_id, row.target, "ok", `${row.source_field || ""} → ${row.target_field || ""} · ${row.days ?? ""}`);
+        html += drawerRelationRow(label, row.target_id, row.target, "ok", `${row.source_field || ""} → ${row.target_field || ""} · ${row.days ?? ""} ${drawerText("day(s)", "日")}`);
       }
       html += `</ul>`;
       if (!nearby.length) html += `<p class="empty">${drawerText("No nearby date candidates in this range.", "この範囲に日付が近い候補はありません。")}</p>`;

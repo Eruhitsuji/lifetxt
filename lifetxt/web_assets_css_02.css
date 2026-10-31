@@ -624,11 +624,6 @@
 .blocker-chain-row { flex-wrap:wrap; overflow-wrap:anywhere; }
 .blocker-chain-row .drawer-link { min-height:44px; white-space:normal; max-width:100%; overflow-wrap:anywhere; }
 
-    .focus-check {
-      flex-shrink: 0;
-      width: 1.5rem;
-      height: 1.5rem;
-
     .drawer-done-form { min-width: 0; }
     .drawer-done-form input { min-width: 0; width: 100%; max-width: 100%; box-sizing: border-box; }
     .drawer-done-form button { min-height: 44px; white-space: normal; }
@@ -653,3 +648,8 @@
     .nt-advanced-fields input, .nt-advanced-fields select { min-width:0; width:100%; box-sizing:border-box; }
     #drawer-native-timeline .nt-details > summary { min-height:44px; padding:.6rem 0; box-sizing:border-box; cursor:pointer; }
     @media (max-width:600px) { .nt-advanced-fields { grid-template-columns:minmax(0,1fr); } }
+
+    .focus-check {
+      flex-shrink: 0;
+      width: 1.5rem;
+      height: 1.5rem;

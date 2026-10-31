@@ -15,6 +15,14 @@ try {
     })()`);
     await browser.wait('workSessionView?.ready || workSessionView?.needsRefresh', 'work snapshot');
     await browser.wait("document.activeElement?.classList.contains('drawer-close-btn')", 'drawer focused');
+    assert(await browser.evaluate(`(() => {
+      const rules=[...document.styleSheets].flatMap(sheet=>[...sheet.cssRules]);
+      const focus=rules.find(rule=>rule.selectorText==='.focus-check');
+      return focus.style.width==='1.5rem' && focus.style.padding==='0px'
+        && !focus.cssRules.length
+        && ['.drawer-done-form', '.drawer-disclosure', '.drawer-plain-body', '.drawer-readonly-note']
+        .every(selector=>rules.some(rule=>rule.selectorText===selector));
+    })()`), 'Drawer CSS must be top-level, not nested under .focus-check (#1490)');
     const info = await browser.evaluate(`(() => {
       const panel=document.getElementById('drawer-tab-overview');
       const summaries=[...panel.querySelectorAll('summary')].map(x=>x.textContent);
@@ -43,10 +51,21 @@ try {
     await browser.wait("document.querySelector('.drawer-technical').open", "keyboard disclosure open");
     const contained=await browser.evaluate(`(() => {
       document.querySelectorAll('#drawer-tab-overview details').forEach(x=>x.open=true);
+      const panel=document.getElementById('drawer-tab-overview');
+      const summaries=[...panel.querySelectorAll('.drawer-disclosure > summary')];
+      if(getComputedStyle(panel).display!=='grid' || !summaries.length) return false;
+      if(!summaries.every(x=>x.getBoundingClientRect().height>=44)) return false;
       const body=document.getElementById('drawer-body');
       body.scrollTop=body.scrollHeight;
       return body.scrollWidth <= body.clientWidth + 1 && body.scrollTop > 0;
     })()`);assert(contained);
+    await browser.evaluate('drawerDoneDate()');
+    assert(await browser.evaluate(`(() => {
+      const form=document.getElementById('drawer-done-form');
+      return [...form.querySelectorAll('button')].every(x=>x.getBoundingClientRect().height>=44)
+        && [...form.querySelectorAll('input')].every(x=>x.getBoundingClientRect().width<=form.clientWidth)
+        && document.getElementById('drawer-body').scrollWidth<=document.getElementById('drawer-body').clientWidth+1;
+    })()`), 'Completion form targets and inputs fit the drawer');
     // Reopening disposes the old controllers; disabled/finished states are explicit.
     await browser.evaluate("openDrawer({...drawerItem,status:'[x]'},'none')");
     assert(await browser.evaluate("!document.getElementById('drawer-done-btn') && !document.getElementById('drawer-done-date-btn')"));

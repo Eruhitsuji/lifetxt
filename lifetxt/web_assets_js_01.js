@@ -55,6 +55,11 @@
     // data-no-i18n and the walker skips those subtrees entirely.
     const UI_STRINGS = {
       ja: {
+        "Runtime information": "実行環境情報",
+        "Git commit": "Gitコミット",
+        "Git commit is the source checkout HEAD at server startup; uncommitted changes are not represented.": "Gitコミットはサーバー起動時に参照したソースのHEADです。コミットされていない変更は反映されません。",
+        "Copy runtime information": "実行環境情報をコピー",
+        "Runtime information copied.": "実行環境情報をコピーしました。",
         "Progress (elapsed vs est)": "進捗（経過時間 / 見積時間）",
         "Over estimate": "見積時間を超過",
         "Set due to today": "期限を今日に設定",

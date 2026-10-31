@@ -2,6 +2,19 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-planner-flow-form-spacing
+      capability_id: cap-web-mobile-planner
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1494
+      changed_files_or_scope:
+        - lifetxt/web_planner.css
+        - tests/browser_planner_actions_probe.mjs
+        - tests/test_web_planner_actions_browser.py
+      tests_or_evidence:
+        - tests.test_web_planner_actions_browser
+        - tests.test_web_planner_revisions
+        - tests.test_web_planner
+      status: implemented
     - requirement_id: req-web-planner-card-actions
       capability_id: cap-web-mobile-planner
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386

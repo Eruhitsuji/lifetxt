@@ -1,4 +1,4 @@
-"""Planner card operation placement regression (#1492)."""
+"""Planner card operation placement and suggestion-form spacing regressions (#1492, #1494)."""
 
 import json
 import os

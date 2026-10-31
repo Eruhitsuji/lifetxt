@@ -17,3 +17,8 @@ input,select,textarea,button{font:inherit;color:var(--ink)}input,select,textarea
 .card-actions{display:flex;flex:none;justify-content:flex-end;align-items:flex-start;gap:8px;max-width:100%}
 .card-actions button{white-space:nowrap}
 @media(max-width:480px){.card{flex-direction:column}.card-actions{align-self:flex-end;flex-wrap:wrap}.card-actions button{white-space:normal;overflow-wrap:anywhere;max-width:100%}}
+
+/* Separate the suggestion window from its submit action (#1494). */
+#flow-form{display:grid;gap:12px}
+.flow-window label span{margin-block-end:6px}
+#flow-request{justify-self:start;max-width:100%;white-space:normal;overflow-wrap:anywhere}

@@ -3476,12 +3476,14 @@ capabilities:
       - req-web-top-clock-public-config-custom-format
       - req-web-top-configurable-clock
       - req-module-structure-decomposition
+      - req-web-runtime-build-info
     implementation_locations:
       - lifetxt/web_clock_config.py
       - lifetxt/web_assets_js_13.js
       - lifetxt/web_assets.py
       - lifetxt/web_routes_git.py
       - lifetxt/webapp.py
+      - lifetxt/web_build_info.py
       - tests/test_web_assets.py
       - tests/test_web_routes_git.py
     public_interfaces:
@@ -3489,11 +3491,12 @@ capabilities:
       - lifetxt.web_assets.HTML_PAGE
       - lifetxt.web_routes_git.register_git_routes
     tests_or_evidence:
+      - tests/test_web_build_info.py
       - tests.test_web_clock_public_config
       - tests.test_web_top_clock
       - tests.test_web_top_clock_browser
       - tests/test_web_assets.py
-      - 'the served page must stay byte-identical across any restructuring: compare sha256 of GET / before and after'
+      - 'the served page preserves the revision bridge and shell, except for explicit escaped startup version and source-HEAD substitutions in Help; GET / and /capture share this rendering'
       - 'surface_runtime must keep rebinding webapp.HTML_PAGE; the bridge marker lifetxt-revision-contract-v1 has to be present in what webapp exposes and absent from the pristine asset'
       - 'a restructuring that drops the rebinding fails nothing else: the suite stays green while the browser silently stops sending If-Match'
       - tests/test_web_routes_git.py

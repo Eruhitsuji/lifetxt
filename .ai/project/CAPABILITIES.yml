@@ -789,6 +789,7 @@ capabilities:
     status: active
     owner: Eruhitsuji
     source_requirements:
+      - req-web-planner-flow-form-spacing
       - req-web-planner-card-actions
       - req-planner-web-revision-contract
       - req-planner-time-of-day-adaptive-today

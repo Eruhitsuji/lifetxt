@@ -84,6 +84,32 @@ try {
     await command('Emulation.setEmulatedMedia',{features:[{name:'prefers-color-scheme',value:theme}]});
     await command('Page.navigate',{url:`http://127.0.0.1:${port}/planner?lang=${lang}`});
     for(let i=0;i<100;i++){if(await evaluate('document.querySelectorAll("#tasks .card").length===2'))break;await delay(30)}
+    await evaluate(`document.querySelector('#flow-heading').focus()`);
+    await command('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',text:'\r',windowsVirtualKeyCode:13});
+    await command('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
+    assert.equal(await evaluate(`document.querySelector('#flow-disclosure').open`),true);
+    const form=await evaluate(`(()=>{
+      const start=document.querySelector('#flow-start'),end=document.querySelector('#flow-end'),button=document.querySelector('#flow-request');
+      const fields=[start,end],rect=e=>e.getBoundingClientRect();
+      return {gap:rect(button).top-Math.max(...fields.map(e=>rect(e).bottom)),
+        labelGaps:fields.map(e=>rect(e).top-rect(e.previousElementSibling).bottom),
+        targets:[...fields,button].map(e=>rect(e).height),
+        overflow:document.documentElement.scrollWidth>innerWidth,disabled:button.disabled};
+    })()`);
+    assert.ok(form.gap>=12,JSON.stringify({width,lang,theme,form}));
+    assert.ok(form.labelGaps.every(gap=>gap>=6),JSON.stringify(form));
+    assert.ok(form.targets.every(height=>height>=44));
+    assert.equal(form.overflow,false);assert.equal(form.disabled,false);
+    // Native time controls have multiple segments; Tab through them to submit.
+    await evaluate(`document.querySelector('#flow-end').focus()`);
+    let reachedSubmit=false;
+    for(let step=0;step<6;step++){
+      await command('Input.dispatchKeyEvent',{type:'keyDown',key:'Tab',code:'Tab',windowsVirtualKeyCode:9});
+      await command('Input.dispatchKeyEvent',{type:'keyUp',key:'Tab',code:'Tab',windowsVirtualKeyCode:9});
+      reachedSubmit=await evaluate(`document.activeElement===document.querySelector('#flow-request')`);
+      if(reachedSubmit)break;
+    }
+    assert.equal(reachedSubmit,true,'time input reaches suggestion submit by Tab');
     const result=await evaluate(`(()=>{
       const cards=[...document.querySelectorAll('#tasks .card')];
       const rect=e=>{const r=e.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,height:r.height,width:r.width}};
@@ -111,7 +137,7 @@ try {
     await command('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',text:'\r',windowsVirtualKeyCode:13});
     await command('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
     assert.equal(await evaluate(`document.querySelector('#detail-dialog').open`),true);
-    results.push({width,lang,theme,...result});
+    results.push({width,lang,theme,form,...result});
   }
   assert.ok(requests.every(r => r.method === "GET"), "fixture never mutates data");
   process.stdout.write(JSON.stringify({viewports: results}));

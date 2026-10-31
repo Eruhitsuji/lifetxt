@@ -9,8 +9,8 @@ async function enter(){
 try {
   for(const width of [1280,390,320])for(const lang of ['en','ja'])for(const dark of [false,true]){
     await browser.command('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:width<500});
-    await browser.command('Page.navigate',{url:`${base}/?view=items&lang=${lang}&theme=${dark?'dark':'light'}`});
-    await browser.wait('typeof currentItems!=="undefined"&&currentItems.length>0','loaded');
+    await browser.command('Page.navigate',{url:`${base}/?view=items&lang=${lang}&theme=${dark?'dark':'light'}&id=origin`});
+    await browser.wait('typeof currentItems!=="undefined"&&currentItems.length>0&&drawerItem?.id==="origin"','initial deep link loaded');
     await browser.evaluate(`(async()=>{
       window.relationWrites=[];window.graphRequests=[];window.realRelationsApi=api;
       api=async(path,opts)=>{
@@ -18,7 +18,7 @@ try {
         if(path.startsWith('/api/graph?'))graphRequests.push(path);
         return realRelationsApi(path,opts);
       };
-      openDrawer((await api('/api/items/id/origin')).item);switchDrawerTab('relations');
+      switchDrawerTab('relations');
     })()`);
     await browser.wait('!!document.querySelector("#drawer-deps [data-relation-id=record]")','links');
     await browser.wait("document.querySelector('.detail-modal').getAnimations().every(a=>a.playState==='finished')",'drawer animation complete');
@@ -26,7 +26,7 @@ try {
       const panel=document.getElementById('drawer-deps'),d=panel.querySelector('details[ontoggle]');
       return {text:panel.textContent,closed:!d.open,contained:document.getElementById('drawer-body').scrollWidth<=document.getElementById('drawer-body').clientWidth+1,noInjection:!panel.querySelector('img,script'),height:panel.querySelector('[data-relation-id=record]').getBoundingClientRect().height};
     })()`);
-    assert(info.closed);assert(info.contained);assert(info.noInjection);assert(info.height>=44);
+    assert(info.closed);assert(info.contained);assert(info.noInjection);assert(info.height>=44,JSON.stringify({width,lang,dark,...info}));
     assert(info.text.includes('Nearby'));assert(info.text.includes('Event <img onerror=bad>'));
     assert(info.text.includes(lang==='ja'?'明示された関係':'Explicit links'));
     // Other graph users may load the dashboard graph; compare only after drawer readiness.

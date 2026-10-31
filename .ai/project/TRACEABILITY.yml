@@ -6,6 +6,7 @@ traceability:
       capability_id: cap-web-mobile-planner
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1494
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1495
       changed_files_or_scope:
         - lifetxt/web_planner.css
         - tests/browser_planner_actions_probe.mjs

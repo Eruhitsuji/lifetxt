@@ -695,6 +695,17 @@ __LIFETXT_WEB_STYLES__  </style>
   <!-- Keyboard Help Modal -->
   <div class="modal-backdrop" id="help-modal" onclick="if(event.target===this)closeHelpModal()">
     <div class="modal">
+      <section class="runtime-build-info" aria-labelledby="runtime-build-title">
+        <h3 id="runtime-build-title">Runtime information</h3>
+        <p class="modal-hint">Git commit is the source checkout HEAD at server startup; uncommitted changes are not represented.</p>
+        <dl class="runtime-build-fields">
+          <dt>lifetxt version</dt>
+          <dd id="runtime-build-version" data-no-i18n>__LIFETXT_RUNTIME_VERSION__</dd>
+          <dt>Git commit</dt>
+          <dd id="runtime-build-commit" data-no-i18n>__LIFETXT_RUNTIME_COMMIT__</dd>
+        </dl>
+        <button type="button" class="secondary" onclick="copyRuntimeInfo()">Copy runtime information</button>
+      </section>
       <h3>Keyboard shortcuts</h3>
       <table>
         <tr><td>/</td><td>Focus search</td></tr>
@@ -720,17 +731,6 @@ __LIFETXT_WEB_STYLES__  </style>
         <tr><td data-no-i18n>t / m <em>(Calendar)</em></td><td>Jump to today / toggle month↔week</td></tr>
         <tr><td>?</td><td>Show / hide this help</td></tr>
       </table>
-      <section class="runtime-build-info" aria-labelledby="runtime-build-title">
-        <h3 id="runtime-build-title">Runtime information</h3>
-        <p class="modal-hint">Git commit is the source checkout HEAD at server startup; uncommitted changes are not represented.</p>
-        <dl class="runtime-build-fields">
-          <dt>lifetxt version</dt>
-          <dd id="runtime-build-version" data-no-i18n>__LIFETXT_RUNTIME_VERSION__</dd>
-          <dt>Git commit</dt>
-          <dd id="runtime-build-commit" data-no-i18n>__LIFETXT_RUNTIME_COMMIT__</dd>
-        </dl>
-        <button type="button" class="secondary" onclick="copyRuntimeInfo()">Copy runtime information</button>
-      </section>
       <h3 style="margin-top:1.25rem">Commands</h3>
       <p class="modal-hint">Search the same slash-command set as the TUI's /help command.</p>
       <input id="help-command-search" class="help-command-search" type="text"

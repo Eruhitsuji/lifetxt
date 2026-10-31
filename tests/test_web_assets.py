@@ -168,6 +168,23 @@ class WebAssetExtractionTests(unittest.TestCase):
             self.assertNotIn(b"__LIFETXT_RUNTIME_", response.content)
             self.assertIn(REVISION_BRIDGE_MARKER.encode("utf-8"), response.content)
 
+    def test_runtime_html_escapes_identity_and_handles_unavailable_git(self):
+        try:
+            from fastapi.testclient import TestClient
+        except Exception:
+            self.skipTest("web extras unavailable")
+
+        from unittest.mock import patch
+
+        info = {"version": '<script>alert(1)</script>', "git_commit": None}
+        with patch("lifetxt.webapp.snapshot_runtime_build_info", return_value=info):
+            client = TestClient(webapp.create_app(paths=[]))
+        body = client.get("/").text
+        self.assertIn("&lt;script&gt;alert(1)&lt;/script&gt;", body)
+        self.assertNotIn('<dd id="runtime-build-version" data-no-i18n><script>', body)
+        self.assertIn('<dd id="runtime-build-commit" data-no-i18n>—</dd>', body)
+        self.assertNotIn("__LIFETXT_RUNTIME_", body)
+
     def test_literal_is_not_back_in_webapp(self):
         with io.open(WEBAPP_SOURCE, encoding="utf-8") as handle:
             source = handle.read()

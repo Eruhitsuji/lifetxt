@@ -56,6 +56,8 @@
     const UI_STRINGS = {
       ja: {
         "Runtime information": "実行環境情報",
+        "Help, shortcuts, and runtime information (?)": "ヘルプ・ショートカット・実行環境情報（?）",
+        "Help and runtime information": "ヘルプと実行環境情報",
         "Git commit": "Gitコミット",
         "Git commit is the source checkout HEAD at server startup; uncommitted changes are not represented.": "Gitコミットはサーバー起動時に参照したソースのHEADです。コミットされていない変更は反映されません。",
         "Copy runtime information": "実行環境情報をコピー",

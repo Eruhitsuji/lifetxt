@@ -1,0 +1,3 @@
+# Decisions
+
+Owner-approved D4/D5 design (#1386 comment 6524141875) and current implementation/PR request authorize this scope. One S task, complexity 6, covers the coherent read/navigate/return flow. Reuse cap-native-timeline-web-visual-explorer and existing APIs. Standard assurance; independent human review and merge pending. Shared metadata integration belongs to Eruhitsuji. Existing deep-link harness receives the newly introduced navigation token; this is directly required regression support, not a behavior change to deep-link tests. No new public API, data contract, configuration or dependency.

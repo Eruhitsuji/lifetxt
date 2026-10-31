@@ -520,9 +520,7 @@
     }
 
     async function refreshCharts() {
-      const active = document.querySelector(".chart-tab.active");
-      const type = active ? active.textContent.trim().toLowerCase() : "tasks";
-      await loadChart(type);
+      await loadChart(currentChartType);
     }
 
     function exportChartCsv() {

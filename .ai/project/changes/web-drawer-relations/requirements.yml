@@ -1,0 +1,14 @@
+schema_version: 1
+requirements:
+- id: req-web-drawer-relations-context
+  description: Read explicit and derived relationships and return from a related record
+  acceptance_criteria:
+  - Direction-aware explicit list preserves resolution/type/status and raw relation
+    names
+  - Derived nearby candidates are separate, bounded suggestions, with errors distinct
+    from empty results
+  - Optional graph does not block the primary list; old panel responses cannot replace
+    current content
+  - Canonical record URL, browser Back/Forward, explicit original-record return and
+    keyboard focus
+  - JA/EN, light/dark, narrow widths, escaping and no authoritative writes

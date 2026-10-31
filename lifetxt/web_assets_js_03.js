@@ -381,7 +381,7 @@
       const viewAlias = (params.get("view") || "").toLowerCase();
       if (viewAlias && !PAGE_VIEWS.includes(viewAlias) && !["display", "kiosk"].includes(viewAlias) && !params.get("preset")) {
         params.set("preset", params.get("view"));
-        history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
+        history.replaceState(history.state, "", `${location.pathname}?${params.toString()}`);
       }
       const presetName = params.get("preset");
       if (!presetName || params.get("_preset_applied") === presetName) return;
@@ -392,7 +392,7 @@
         if (!next.has(key)) next.set(key, value);
       }
       next.set("_preset_applied", presetName);
-      history.replaceState(null, "", `${location.pathname}?${next.toString()}`);
+      history.replaceState(history.state, "", `${location.pathname}?${next.toString()}`);
     }
     function applyUrlToControls() {
       const params = query();

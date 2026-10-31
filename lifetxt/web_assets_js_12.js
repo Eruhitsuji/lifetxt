@@ -39,6 +39,7 @@
     }
 
     function closeDrawer(urlMode = "replace") {
+      ++_drawerNavigationToken;
       disposeWorkSession();
       drawerWorkEditBinding = null;
       if (typeof disposeAttachmentUpload === "function") disposeAttachmentUpload();
@@ -342,13 +343,45 @@
         `<div class="progress-label">${escapeHtml(elapsedRaw || "0m")} / ${escapeHtml(estRaw)} (${pct}%)${over ? " — " + escapeHtml(t("Over estimate")) : ""}</div></div>`;
     }
 
-    async function drawerNavigate(itemId) {
+    function drawerContextHtml(item) {
+      const context = history.state?.drawerContext;
+      if (!context || context.target !== _drawerIdFor(item)) return "";
+      return `<nav class="drawer-context" data-no-i18n aria-label="${drawerText("Related record navigation", "関連レコードの移動")}">` +
+        `<p>${drawerText("Viewing a different record, opened from:", "別のレコードを表示中です。移動元:")} <strong>${escapeHtml(context.title || context.id)}</strong></p>` +
+        `<button type="button" id="drawer-context-back" class="secondary" onclick="drawerReturnToContext()">${drawerText("Return to original record", "元のレコードに戻る")}</button></nav>`;
+    }
+
+    async function drawerReturnToContext() {
+      const context = history.state?.drawerContext;
+      if (!context || context.target !== _drawerIdFor(drawerItem)) return;
+      await drawerNavigate(context.id, context);
+    }
+
+    async function drawerNavigate(itemId, returning = null) {
       if (!itemId) return;
+      const origin = drawerItem;
+      const originId = _drawerIdFor(origin);
+      const token = ++_drawerNavigationToken;
+      const originUrl = location.href;
+      const context = originId && originId !== itemId ? {
+        id:originId, title:origin.title, target:itemId,
+      } : null;
       try {
         const data = await api(`/api/items/id/${encodeURIComponent(itemId)}`);
-        if (data?.item) openDrawer(data.item);
+        if (token !== _drawerNavigationToken || drawerItem !== origin || location.href !== originUrl || drawerEditing) return;
+        if (!data?.item) throw Error("missing record");
+        openDrawer(data.item, "push", returning ? null : context);
+        if (returning) {
+          switchDrawerTab("relations");
+          // Run after openManagedModal's initial close-button focus.
+          setTimeout(() => {
+            if (drawerItem === data.item && !drawerEditing)
+              document.querySelector('[aria-controls="drawer-tab-relations"]')?.focus();
+          }, 0);
+        }
       } catch(e) {
-        showToast("Item not found: " + itemId, "error");
+        if (token !== _drawerNavigationToken || drawerItem !== origin || location.href !== originUrl) return;
+        showToast(drawerText("Could not open record: ", "レコードを開けません: ") + itemId, "error");
       }
     }
 

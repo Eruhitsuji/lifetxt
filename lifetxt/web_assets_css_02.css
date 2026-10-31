@@ -647,4 +647,3 @@
     .nt-advanced-fields input, .nt-advanced-fields select { min-width:0; width:100%; box-sizing:border-box; }
     #drawer-native-timeline .nt-details > summary { min-height:44px; padding:.6rem 0; box-sizing:border-box; cursor:pointer; }
     @media (max-width:600px) { .nt-advanced-fields { grid-template-columns:minmax(0,1fr); } }
-

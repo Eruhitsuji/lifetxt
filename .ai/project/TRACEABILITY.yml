@@ -16,9 +16,11 @@ traceability:
         - lifetxt/web_assets_css_02.css
         - tests/test_web_build_info.py
         - tests/test_web_assets.py
+        - tests/test_web_mobile_capture.py
       tests_or_evidence:
         - tests.test_web_build_info
         - tests.test_web_assets
+        - tests.test_web_mobile_capture
         - Git SHA sourced only from imported package checkout at app startup
         - WebUI Help shows version and SHA or unavailable, supports copy
       status: implemented

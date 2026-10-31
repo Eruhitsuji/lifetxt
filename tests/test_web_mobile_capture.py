@@ -8,6 +8,7 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from lifetxt import webapp
 from lifetxt.web_assets import HTML_PAGE
@@ -137,9 +138,17 @@ class MobileCaptureRouteTests(unittest.TestCase):
             from fastapi.testclient import TestClient
         except Exception:
             self.skipTest("web extras unavailable")
-        response = TestClient(webapp.create_app(paths=[])).get("/capture")
+        info = {"version": "capture-test-version", "git_commit": "b" * 40}
+        with patch("lifetxt.webapp.snapshot_runtime_build_info", return_value=info):
+            client = TestClient(webapp.create_app(paths=[]))
+        response = client.get("/capture")
         self.assertEqual(200, response.status_code)
-        self.assertEqual(webapp.HTML_PAGE.encode("utf-8"), response.content)
+        expected = webapp.HTML_PAGE.replace(
+            "__LIFETXT_RUNTIME_VERSION__", info["version"]
+        ).replace("__LIFETXT_RUNTIME_COMMIT__", info["git_commit"])
+        self.assertEqual(expected.encode("utf-8"), response.content)
+        self.assertEqual(client.get("/").content, response.content)
+        self.assertNotIn(b"__LIFETXT_RUNTIME_", response.content)
         self.assertEqual("no-store", response.headers.get("cache-control"))
 
     def test_read_only_capture_surface_is_visible_but_cannot_mutate(self):

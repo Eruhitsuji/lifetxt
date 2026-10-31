@@ -1,0 +1,24 @@
+schema_version: 1
+verification:
+- command: Focused drawer/UI regression plus shared links/temporal readers
+  result: passed
+  notes: 143 UI tests and 123 shared reader/API tests passed in separate focused runs;
+    final combined run is being checked before PR closeout.
+- command: Real Chromium tests.test_web_drawer_relations_browser
+  result: blocked
+  notes: Chrome downloaded successfully; process exits at ProcessSingleton socket()
+    Operation not permitted in this execution environment. Browser matrix supplied
+    and added to existing CI Chrome job; no local browser pass claim.
+- command: ruff check lifetxt tests scripts; changed Python format; minimal fixture
+  result: passed
+  notes: No lint errors; 10 fixture records accepted.
+- command: Full suite / physical Safari / Owner lserver
+  result: not_run
+  notes: Required CI, independent human review and deployed acceptance remain separate.
+review_ledger:
+- reviewer: Eruhitsuji
+  review_type: independent_implementation_and_integration
+  target_commit: null
+  result: pending
+  finding_count: 0
+  completed_at: null

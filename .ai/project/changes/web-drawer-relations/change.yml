@@ -1,0 +1,29 @@
+schema_version: 1
+change:
+  id: web-drawer-relations
+  title: List-first drawer relations and return context
+  status: in_progress
+  change_type: Feature
+  assurance_level: Standard
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1486
+  related_pull_request: null
+  base_commit: 1d81cc31786d7953f6639ac7ac26b5377b6ed328
+scope:
+  in_scope:
+  - 'Approved D4 and local D5 from #1386'
+  out_of_scope:
+  - API/domain/Format/auth/mutations
+  - Global Graph, Stats, Planner, Kiosk, related-creation prompt
+  write_scope:
+  - lifetxt/web_assets_js_{10,11,12}.js
+  - lifetxt/web_assets_css_02.css
+  - tests/test_web_drawer_relations*.py
+  - tests/browser_drawer_relations_probe.mjs
+  - .github/workflows/ci.yml
+  - tests/test_web_deep_link_js.py
+  - tests/test_web_assets.py
+  - docs/{en,ja}/web.md
+  - .ai/project/{CAPABILITIES,TRACEABILITY}.yml
+  - .ai/project/changes/web-drawer-relations/**

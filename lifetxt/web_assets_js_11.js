@@ -185,7 +185,9 @@
       try { localStorage.setItem("lifetxt_graph_layout", layout); } catch(_) {}
       _syncGraphLayoutBtns();
       if (graphLoaded) loadGraphPanel();
-      if (drawerItem) loadDependencyLinks(drawerItem);
+      const binding = document.getElementById("drawer-deps")?._relationGraph;
+      const panel = document.querySelector("#drawer-deps .drawer-relation-graph");
+      if (panel && binding?.graph) panel.innerHTML = renderDependencyMiniGraph(binding.records, binding.id, binding.graph);
     }
     function _syncGraphLayoutBtns() {
       document.querySelectorAll(".graph-layout-btn[data-layout]").forEach(b => {
@@ -621,101 +623,126 @@
       if (selected === "timeline" && _ntCurrentItemId) reloadNativeTimelinePanel();
     }
 
+    function drawerRelationLabel(relation, incoming = false) {
+      const labels = {
+        parent: incoming ? ["Child", "子"] : ["Parent", "親"],
+        depends_on: incoming ? ["Waiting on this item", "この項目を待っている"] : ["Waiting on", "待っている項目"],
+        blocks: incoming ? ["Blocked by", "妨げている項目"] : ["Blocks", "この項目が妨げている"],
+        ref: incoming ? ["Referenced by", "参照元"] : ["References", "参照先"],
+        related: ["Related", "関連"],
+        follows: incoming ? ["Next", "後続"] : ["Previous", "先行"],
+        realizes: incoming ? ["Realized by", "実現した記録"] : ["Realizes", "実現元の計画"],
+        replaced_by: incoming ? ["Replaces", "置き換え元"] : ["Replaced by", "置き換え先"],
+        duplicate_of: incoming ? ["Duplicates", "重複している記録"] : ["Duplicate of", "重複元"],
+      };
+      return Object.hasOwn(labels, relation) ? drawerText(...labels[relation]) : relation;
+    }
+
+    function drawerRelationRow(label, id, row = {}, resolution = "ok", raw = "") {
+      const status = row.status || "";
+      const kind = row.kind || "";
+      const title = row.title || id || drawerText("Unknown record", "不明な記録");
+      const state = resolution === "ok" ? "" :
+        `<span class="dep-missing">${escapeHtml(drawerText("Unresolved reference", "参照先を特定できません"))} (${escapeHtml(resolution)})</span>`;
+      return `<li class="drawer-relation-row"><span class="dep-rel">${escapeHtml(label)}</span>` +
+        `<div class="drawer-relation-target">` +
+        (status ? `<span class="status-badge">${escapeHtml(t(STATUS_LABEL[status] || status))}</span>` : "") +
+        (kind ? `<span class="type-badge">${escapeHtml(kind)}</span>` : "") +
+        (id && resolution === "ok"
+          ? `<button type="button" class="drawer-link secondary" data-relation-id="${escapeHtml(id)}" onclick="drawerNavigate(${escapeHtml(jsLiteral(id))})">${escapeHtml(title)}</button>`
+          : `<span>${escapeHtml(title)}</span>`) + state +
+        (raw ? `<small class="note">${escapeHtml(raw)}</small>` : "") + `</div></li>`;
+    }
+
+    function renderDrawerRelations(itemId, links, thread, linksError = "", threadError = "") {
+      const error = text => `<p role="alert">${escapeHtml(text)}</p>`;
+      let html = `<div class="drawer-section-title">${drawerText("Explicit links", "明示された関係")}</div>` +
+        `<p class="note">${drawerText("Direction and labels are relative to this record. Opening a link shows a different record.", "種類と方向は現在のレコードを基準に表示します。リンクを開くと別のレコードに移動します。")}</p>`;
+      if (linksError) html += error(drawerText("Could not load links: ", "関係を取得できません: ") + linksError);
+      else {
+        const records = links?.records || [];
+        html += `<ul class="drawer-relations-list">`;
+        for (const r of records) {
+          const incoming = r.source_id !== itemId;
+          const prefix = incoming ? "source" : "target";
+          const label = (incoming ? "← " : "→ ") + drawerRelationLabel(r.relation, incoming);
+          html += drawerRelationRow(label, r[prefix + "_id"], {
+            title:r[prefix + "_title"], status:r[prefix + "_status"], kind:r[prefix + "_type"],
+          }, r.status || "ok", r.relation);
+        }
+        html += `</ul>`;
+        if (!records.length) html += `<p class="empty">${drawerText("No explicit links.", "明示された関係はありません。")}</p>`;
+        if (records.length) html += `<details class="drawer-disclosure" ontoggle="loadDrawerRelationGraph(this)"><summary>${drawerText("Show graph", "グラフを表示")}</summary><div class="drawer-relation-graph"></div></details>`;
+      }
+      html += `<div class="drawer-section-title">${drawerText("Lifecycle thread", "前後・実現・置き換えのつながり")}</div>`;
+      if (threadError) return html + error(drawerText("Could not load temporal context: ", "前後のつながり・日付候補を取得できません: ") + threadError);
+      let count = 0;
+      html += `<ul class="drawer-relations-list">`;
+      for (const [key, en, ja] of [
+        ["predecessors", "Previous", "先行"], ["successors", "Next", "後続"],
+        ["realized_plans", "Realizes", "実現元の計画"], ["realized_by", "Realized by", "実現した記録"],
+        ["replacement_predecessors", "Replaces", "置き換え元"], ["replacement_successors", "Replaced by", "置き換え先"],
+      ]) for (const row of thread?.relations?.[key] || []) {
+        html += drawerRelationRow(drawerText(en, ja), row.id, row); count++;
+      }
+      html += `</ul>`;
+      if (!count) html += `<p class="empty">${drawerText("No explicit lifecycle relations.", "前後・実現・置き換えの明示関係はありません。")}</p>`;
+      if (thread?.explicit?.truncated) html += `<p class="note">${drawerText("Only part of the explicit thread is shown (API bounds).", "取得上限により、明示されたつながりは一部のみ表示しています。")}</p>`;
+      const consistencyWarnings = thread?.consistency?.warnings || [];
+      if (consistencyWarnings.length || thread?.consistency?.truncated) html += `<details class="drawer-disclosure"><summary>${drawerText("Date consistency warnings", "日付の整合性に関する警告")} (${consistencyWarnings.length})</summary>` +
+        `<p>${drawerText("Explicit order and recorded dates may disagree. No relation has been changed.", "明示された順序と記録の日付が矛盾している可能性があります。関係は変更していません。")}</p>` +
+        `<pre class="drawer-raw-pre">${escapeHtml(JSON.stringify(thread.consistency, null, 2))}</pre></details>`;
+      const nearby = thread?.derived?.related || [];
+      html += `<div class="drawer-section-title">${drawerText("Nearby dates (derived)", "日付が近い候補（導出）")} (${nearby.length})</div>` +
+        `<p class="note">${drawerText("Read-only suggestions within the API window and limit, not stored links or a complete list of related records.", "APIの期間・取得上限内で日付から導いた閲覧用候補です。保存された関係や、関連記録の全件一覧ではありません。")}</p><ul class="drawer-relations-list">`;
+      for (const row of nearby) {
+        const labels = {same_day:["Same day", "同日"], before:["Before", "前の日付"], after:["After", "後の日付"]};
+        const label = Object.hasOwn(labels, row.relation) ? drawerText(...labels[row.relation]) : row.relation;
+        html += drawerRelationRow(label, row.target_id, row.target, "ok", `${row.source_field || ""} → ${row.target_field || ""} · ${row.days ?? ""}`);
+      }
+      html += `</ul>`;
+      if (!nearby.length) html += `<p class="empty">${drawerText("No nearby date candidates in this range.", "この範囲に日付が近い候補はありません。")}</p>`;
+      return html;
+    }
+
+    async function loadDrawerRelationGraph(disclosure) {
+      if (!disclosure.open || disclosure.dataset.loaded) return;
+      disclosure.dataset.loaded = "true";
+      const container = document.getElementById("drawer-deps");
+      const binding = container?._relationGraph;
+      const panel = disclosure.querySelector(".drawer-relation-graph");
+      if (!binding || !panel) return;
+      panel.textContent = drawerText("Loading…", "読み込み中…");
+      try {
+        const graph = await api(`/api/graph?root=${encodeURIComponent(binding.id)}&depth=2`);
+        if (document.getElementById("drawer-deps") !== container || !panel.isConnected) return;
+        binding.graph = graph;
+        panel.innerHTML = renderDependencyMiniGraph(binding.records, binding.id, graph);
+      } catch(e) {
+        if (!panel.isConnected) return;
+        panel.textContent = drawerText("Graph unavailable: ", "グラフを取得できません: ") + e.message;
+        delete disclosure.dataset.loaded;
+      }
+    }
+
     async function loadDependencyLinks(item) {
-      const idKey = appConfig?.ids?.key || "id";
-      const itemId = item?.id || (item?.details?.[idKey]?.[0]);
+      const itemId = _drawerIdFor(item);
       const container = document.getElementById("drawer-deps");
       if (!container) return;
+      container.dataset.noI18n = "";
       if (!itemId) {
-        container.innerHTML = `<div class="drawer-section-title">Dependencies &amp; Links</div><div class="empty">No ID — cannot look up links.</div>`;
+        container.textContent = drawerText("No ID — links cannot be looked up.", "IDがないため関係を取得できません。");
         return;
       }
-      try {
-        const data = await api(`/api/links?id=${encodeURIComponent(itemId)}&direction=both`);
-        let temporalThread = null;
-        try {
-          temporalThread = await api(`/api/temporal-thread/${encodeURIComponent(itemId)}`);
-        } catch(_) {}
-        const records = data.records || [];
-        let graphData = null;
-        try {
-          graphData = await api(`/api/graph?root=${encodeURIComponent(itemId)}&depth=2`);
-        } catch(_) {}
-        const groups = [
-          ["predecessors", "Previous"], ["successors", "Next"],
-          ["realized_plans", "Realizes"], ["realized_by", "Realized by"],
-          ["replacement_predecessors", "Replaces"],
-          ["replacement_successors", "Replaced by"],
-        ];
-        let lifecycleHtml = `<div class="drawer-section-title">Temporal Thread</div><div class="dep-graph">`;
-        let lifecycleCount = 0;
-        for (const [key, label] of groups) {
-          for (const row of temporalThread?.relations?.[key] || []) {
-            lifecycleCount += 1;
-            const nav = escapeHtml(jsLiteral(row.id || ""));
-            lifecycleHtml += `<div class="dep-row"><span class="dep-rel">${escapeHtml(label)}</span>` +
-              `<a class="drawer-link" onclick="drawerNavigate(${nav})">${escapeHtml(row.title || row.id)}</a></div>`;
-          }
-        }
-        if (!lifecycleCount) lifecycleHtml += `<div class="empty">No explicit lifecycle relations.</div>`;
-        const consistencyWarnings = temporalThread?.consistency?.warnings || [];
-        for (const warning of consistencyWarnings) {
-          const evidence = warning.evidence || {};
-          lifecycleHtml += `<div class="dep-row"><span class="dep-rel">Warning</span>` +
-            `<span>${escapeHtml(warning.relation || "relation")}: ` +
-            `${escapeHtml(evidence.successor_id || "?")} is dated before ` +
-            `${escapeHtml(evidence.predecessor_id || "?")}</span></div>`;
-        }
-        const derivedCount = (temporalThread?.derived?.related || []).length;
-        lifecycleHtml += `</div><div class="note">${derivedCount} derived nearby item(s)` +
-          `; ${consistencyWarnings.length} consistency warning(s)` +
-          `${temporalThread?.explicit?.truncated ? "; explicit thread truncated" : ""}` +
-          `${temporalThread?.consistency?.truncated ? "; consistency evidence truncated" : ""}.</div>`;
-        if (!records.length) {
-          container.innerHTML = lifecycleHtml + `<div class="drawer-section-title">Dependencies &amp; Links</div><div class="empty">No links.</div>`;
-          return;
-        }
-        const outgoing = records.filter(r => r.source_id === itemId);
-        const incoming = records.filter(r => r.target_id === itemId && r.source_id !== itemId);
-        let html = lifecycleHtml + `<div class="drawer-section-title">Dependencies &amp; Links (${records.length})</div>` +
-          renderDependencyMiniGraph(records, itemId, graphData) +
-          `<div class="dep-graph">`;
-
-        function depRow(arrow, arrowCls, relLabel, otherId, otherTitle, otherStatus, otherType) {
-          const statusIcon = STATUS_ICON[otherStatus] || "·";
-          const statusCls = STATUS_CLASS[otherStatus] || "status-note";
-          const typeCls = "type-" + (otherType || "N");
-          const nav = escapeHtml(jsLiteral(otherId || ""));
-          return `<div class="dep-row">
-            <span class="dep-arrow ${arrowCls}">${arrow}</span>
-            <span class="status-badge ${statusCls}" style="font-size:.7rem;padding:.1rem .35rem">${escapeHtml(statusIcon)}</span>
-            <span class="type-badge ${typeCls}" style="font-size:.7rem;padding:.1rem .35rem">${escapeHtml(otherType || "?")}</span>
-            <span class="dep-rel">${escapeHtml(relLabel)}</span>
-            ${otherId
-              ? `<a class="drawer-link" onclick="drawerNavigate(${nav})">${escapeHtml(otherTitle || otherId)}</a>`
-              : `<span class="dep-missing">${escapeHtml(otherTitle || otherId || "?")}</span>`}
-          </div>`;
-        }
-
-        if (outgoing.length) {
-          html += `<div class="dep-group-label">This item →</div>`;
-          for (const r of outgoing) {
-            const lbl = DEP_RELATION_LABEL[r.relation] || r.relation;
-            html += depRow("→", "dep-out", lbl, r.target_id, r.target_title, r.target_status, r.target_type);
-          }
-        }
-        if (incoming.length) {
-          html += `<div class="dep-group-label" style="margin-top:.5rem">← This item</div>`;
-          for (const r of incoming) {
-            const lbl = DEP_RELATION_LABEL[r.relation] || r.relation;
-            html += depRow("←", "dep-in", lbl, r.source_id, r.source_title, r.source_status, r.source_type);
-          }
-        }
-        html += `</div>`;
-        container.innerHTML = html;
-      } catch(e) {
-        if (container) container.innerHTML = `<div class="drawer-section-title">Dependencies &amp; Links</div><div class="empty">Error: ${escapeHtml(e.message)}</div>`;
-      }
+      const results = await Promise.allSettled([
+        api(`/api/links?id=${encodeURIComponent(itemId)}&direction=both`),
+        api(`/api/temporal-thread/${encodeURIComponent(itemId)}`),
+      ]);
+      if (document.getElementById("drawer-deps") !== container || drawerItem !== item || drawerEditing) return;
+      const [links, thread] = results.map(r => r.status === "fulfilled" ? r.value : null);
+      const errors = results.map(r => r.status === "rejected" ? String(r.reason?.message || r.reason) : "");
+      container._relationGraph = {id:itemId, records:links?.records || []};
+      container.innerHTML = renderDrawerRelations(itemId, links, thread, ...errors);
     }
 
     async function loadDrawerMessageThread(item) {

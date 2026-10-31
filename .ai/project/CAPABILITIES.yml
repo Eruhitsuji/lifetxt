@@ -11579,13 +11579,20 @@ capabilities:
       /api/native-timeline/{id} (#762) into a day-grouped, scannable
       chronological view, replacing the prior flat 20-row event list.
       Reuses the shared reader/API unmodified: no history parsing,
-      ordering, or completeness computation lives in JavaScript.
+      ordering, or completeness computation lives in JavaScript. The Relations
+      tab reuses links and temporal-thread readers for a list-first view,
+      separately labelled nearby-date suggestions, optional graph and explicit
+      record navigation with return context.
     status: active
     owner: Eruhitsuji
     source_requirements:
+      - req-web-drawer-relations-context
       - req-web-drawer-readable-history
       - req-native-timeline-web-visual-explorer
     implementation_locations:
+      - lifetxt/web_assets_js_12.js
+      - tests/test_web_drawer_relations.py
+      - tests/test_web_drawer_relations_browser.py
       - lifetxt/web_assets_js_10.js
       - lifetxt/web_assets_css_02.css
       - tests/test_web_drawer_history.py
@@ -11599,6 +11606,8 @@ capabilities:
       - Web UI item detail drawer, Native Timeline section
       - lifetxt.web_assets_js_11 renderNativeTimelinePanel/reloadNativeTimelinePanel (client-side)
     tests_or_evidence:
+      - tests.test_web_drawer_relations
+      - tests.test_web_drawer_relations_browser
       - tests.test_web_drawer_history
       - tests.test_web_drawer_history_browser
       - "tests/test_web_native_timeline_visual.py (13 Node.js-driven tests, real assembled Web UI script extracted from lifetxt.web_assets.HTML_PAGE): event-domain labels, before/after transition rendering for status/progress/schedule/relation payloads (and escaping of hostile payload text), date-grouping key, bounded progress-percentage trend indicator (ignoring fraction-form values), missing-result/empty-state handling, completeness badge, day grouping, prominent limitations/invalid-event/diagnostics display, bounds summary, HTML escaping of event/payload text, and that filter controls are always present"

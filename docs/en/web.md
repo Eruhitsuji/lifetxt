@@ -1634,3 +1634,9 @@ result/Undo controls. Results are not retained across page reloads. The existing
 Done, status, project and delete actions retain their behavior. No next repeat
 instance is generated. ID-less tasks are accepted only when the source/line can
 be verified unambiguously in the writable input; ambiguous identities fail closed.
+
+### Reading and following relations
+
+Open an item and select **Relations**. Explicit links appear first, with direction relative to the current item, relation type, title and available status/type. Unresolved references are labelled and cannot silently open an arbitrary record. **Lifecycle thread** uses the existing temporal reader; **Nearby dates (derived)** lists date-based suggestions separately from saved links. API bounds and consistency warnings remain visible. Read failures are shown separately from empty results.
+
+Expand **Show graph** when needed; the list is the primary keyboard-accessible view. Open a related title to view that record; its header states the origin and offers **Return to original record**, which re-fetches the original item and focuses its Relations tab. Browser Back/Forward and canonical ID URLs continue to work. This local return context is only attached to the navigation history entry; a directly shared link has no inferred origin. Viewing relationships does not save or change any relation.

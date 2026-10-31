@@ -373,7 +373,11 @@
         openDrawer(data.item, "push", returning ? null : context);
         if (returning) {
           switchDrawerTab("relations");
-          document.querySelector('[aria-controls="drawer-tab-relations"]')?.focus();
+          // Run after openManagedModal's initial close-button focus.
+          setTimeout(() => {
+            if (drawerItem === data.item && !drawerEditing)
+              document.querySelector('[aria-controls="drawer-tab-relations"]')?.focus();
+          }, 0);
         }
       } catch(e) {
         if (token !== _drawerNavigationToken || drawerItem !== origin || location.href !== originUrl) return;

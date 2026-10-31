@@ -72,6 +72,7 @@ const before=JSON.stringify({links,thread});
 const result={ja:renderDrawerRelations('root',links,thread),parent:drawerRelationLabel('parent'),child:drawerRelationLabel('parent',true),blocked:drawerRelationLabel('blocks',true),unknown:drawerRelationLabel('constructor')};
 lang='en';result.en=renderDrawerRelations('root',links,thread);lang='ja';
 result.unchanged=before===JSON.stringify({links,thread});
+result.noIdRow=drawerRelationRow("候補",null,{title:"No ID"});
 result.empty=renderDrawerRelations('root',{records:[]},{relations:{},derived:{related:[]}});
 result.errors=renderDrawerRelations('root',null,null,'<bad links>','<bad thread>');
 history.state={drawerContext:{id:'root',title:'<img>',target:'other'}};
@@ -124,6 +125,7 @@ result.context=drawerContextHtml({id:'other'});result.noContext=drawerContextHtm
         self.assertNotIn('data-relation-id="missing"', result["ja"])
         self.assertNotIn('data-relation-id="ambig"', result["ja"])
         self.assertIn("ありません", result["empty"])
+        self.assertIn("IDがない", result["noIdRow"])
         self.assertIn("&lt;bad links&gt;", result["errors"])
         self.assertIn("&lt;bad thread&gt;", result["errors"])
         self.assertIn("&lt;img&gt;", result["context"])

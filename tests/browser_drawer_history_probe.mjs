@@ -29,6 +29,15 @@ try {
     await browser.command('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',text:'\r',windowsVirtualKeyCode:13});
     await browser.command('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
     await browser.wait('document.getElementById("nt-advanced").open','native keyboard expansion');
+    const layout=await browser.evaluate(`(()=>{
+      const fields=document.querySelector('.nt-advanced-fields');
+      const summary=document.querySelector('#nt-advanced > summary');
+      const filters=document.querySelector('#drawer-native-timeline .nt-filters');
+      return {display:getComputedStyle(fields).display, columns:getComputedStyle(fields).gridTemplateColumns.split(' ').length,
+        filters:getComputedStyle(filters).display, height:summary.getBoundingClientRect().height};
+    })()`);
+    assert.equal(layout.display,'grid');assert.equal(layout.filters,'grid');
+    assert.equal(layout.columns,width<=600?1:2);assert(layout.height>=44);
     await browser.evaluate("document.getElementById('nt-filter-since').value='2026-10-30T00:00:00+09:00';document.getElementById('nt-filter-event').value='completed';document.getElementById('nt-filter-limit').value='2';applyNativeTimelineFilters()");
     await browser.wait('!!document.querySelector(".nt-event")','filtered response');
     const q=await browser.evaluate('historyQueries.at(-1)');

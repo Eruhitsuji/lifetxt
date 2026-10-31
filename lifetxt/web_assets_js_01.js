@@ -56,6 +56,7 @@
     const UI_STRINGS = {
       ja: {
         "Runtime information": "実行環境情報",
+        "lifetxt version": "lifetxt バージョン",
         "Help, shortcuts, and runtime information (?)": "ヘルプ・ショートカット・実行環境情報（?）",
         "Help and runtime information": "ヘルプと実行環境情報",
         "Git commit": "Gitコミット",

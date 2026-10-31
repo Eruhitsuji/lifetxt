@@ -3,6 +3,12 @@
 The web interface is optional. It uses FastAPI and uvicorn, but the core parser
 and CLI remain dependency-free.
 
+## Checking the server version during Web UI tests
+
+Open **? (Help)** in the top-right corner of the Web UI and read the **Runtime information** section. It shows the `lifetxt version` and full `Git commit` SHA. Use **Copy runtime information** to paste both into a test report. When the Clipboard API is unavailable (for example, plain HTTP), a dialog displays selectable text.
+
+The Git SHA is the **HEAD of the imported lifetxt source checkout at Web server startup**. Package installs without a Git checkout show `—` (unavailable), not an inferred value. Restart the service after updating the checkout to refresh this startup snapshot. The SHA does not prove that the worktree was clean, that all running code bytes match it, or that it is the latest remote main.
+
 ## Reading change history
 
 Open a record and choose **Timeline**. Events show a readable action and status transition with the original symbols. Times and day headings follow the workspace timezone; expand an event’s **Technical details** for the original timestamp, transaction, revision and payload.

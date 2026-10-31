@@ -11590,6 +11590,9 @@ capabilities:
       - req-web-drawer-readable-history
       - req-native-timeline-web-visual-explorer
     implementation_locations:
+      - lifetxt/web_assets_js_12.js
+      - tests/test_web_drawer_relations.py
+      - tests/test_web_drawer_relations_browser.py
       - lifetxt/web_assets_js_10.js
       - lifetxt/web_assets_css_02.css
       - tests/test_web_drawer_history.py

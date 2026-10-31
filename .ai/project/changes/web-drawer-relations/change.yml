@@ -2,13 +2,13 @@ schema_version: 1
 change:
   id: web-drawer-relations
   title: List-first drawer relations and return context
-  status: in_progress
+  status: in_review
   change_type: Feature
   assurance_level: Standard
   owner: Eruhitsuji
   accountable_owner: Eruhitsuji
   related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1486
-  related_pull_request: null
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1488
   base_commit: 1d81cc31786d7953f6639ac7ac26b5377b6ed328
 scope:
   in_scope:

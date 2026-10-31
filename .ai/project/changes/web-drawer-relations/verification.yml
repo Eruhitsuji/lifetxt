@@ -1,9 +1,14 @@
 schema_version: 1
 verification:
-- command: Focused drawer/UI regression plus shared links/temporal readers
+- command: python -m unittest tests.test_web_drawer_relations tests.test_web_assets
+    tests.test_web_deep_link_js tests.test_web_drawer_history tests.test_web_drawer_overview
+    tests.test_web_drawer_edit_js tests.test_web_native_timeline_visual tests.test_web_i18n
+    tests.test_web_mobile tests.test_web_context_create_js tests.test_web_quick_status_js
+    tests.test_supported_runtime tests.test_links tests.test_temporal_thread tests.test_web_native_timeline
+    tests.test_native_timeline
   result: passed
-  notes: 143 UI tests and 123 shared reader/API tests passed in separate focused runs;
-    final combined run is being checked before PR closeout.
+  notes: 266 tests passed; subsequent optional-graph cache/layout adjustment covered
+    by 14 asset/relations checks and browser CI probe. No browser pass inferred.
 - command: Real Chromium tests.test_web_drawer_relations_browser
   result: blocked
   notes: Chrome downloaded successfully; process exits at ProcessSingleton socket()

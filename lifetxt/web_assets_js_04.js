@@ -57,7 +57,7 @@
       next.set("sort", document.getElementById("sort").value);
       next.set("order", document.getElementById("order").value);
       if (query().has("agenda_blocked")) next.set("agenda_blocked", query().get("agenda_blocked"));
-      history.replaceState(null, "", `${location.pathname}?${next.toString()}`);
+      history.replaceState(history.state, "", `${location.pathname}?${next.toString()}`);
     }
     let itemsLoadGeneration = 0;
     async function loadItems() {

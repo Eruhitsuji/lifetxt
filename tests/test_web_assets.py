@@ -19,7 +19,7 @@ REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
 # #1487 intentionally extends the pristine Help shell, styles, and scripts
 # with startup runtime build evidence; keep the exact assembled page checksum
 # gate so any unrelated asset changes still require review and rebaselining.
-LEGACY_PRISTINE_GIT_BLOB_SHA = "2fa37bd15634e67a8b6bc3c0b049fb19ad74340a"
+LEGACY_PRISTINE_GIT_BLOB_SHA = "a9a009bf78654fea23c0d17c50ab34bfdb481ca5"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )

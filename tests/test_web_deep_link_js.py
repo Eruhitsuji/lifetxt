@@ -98,6 +98,7 @@ global.closeManagedModal = () => {};
 global.openManagedModal = () => {};
 global.document = { getElementById: () => null };
 let drawerItem = null;
+let _drawerNavigationToken = 0;
 let workSessionView = {ready: true};
 let drawerWorkEditBinding = {itemRevision: "fixture"};
 Object.defineProperty(global, "drawerItem", {

@@ -26,6 +26,9 @@ verification:
     probe measured min-height during the 180ms scale-in animation; wait for animation
     completion added. Independent return-focus scheduling race found in review and
     fixed; rerun pending.
+- command: CI run 41167559918 Relations probe
+  result: failed
+  notes: Geometry check still failed after animation wait. Probe setup raced the initial refreshAll URL-restoration; now waits for the real initial id=origin deep link before selecting Relations. Future failures include measured geometry. Rerun pending.
 review_ledger:
 - reviewer: Eruhitsuji
   review_type: independent_implementation_and_integration

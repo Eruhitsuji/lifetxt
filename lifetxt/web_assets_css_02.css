@@ -253,6 +253,12 @@
     .modal table { width: 100%; border-collapse: collapse; font-size: .88rem; }
     .modal td { padding: .3rem .5rem; border-bottom: 1px solid var(--line); }
     .modal td:first-child { color: var(--muted); width: 7rem; white-space: nowrap; }
+    .runtime-build-info { padding: .8rem; margin-bottom: 1rem; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--panel-2); }
+    .runtime-build-info h3 { margin: 0 0 .35rem; }
+    .runtime-build-fields { display: grid; grid-template-columns: minmax(6.5rem, auto) minmax(0, 1fr); gap: .35rem .75rem; margin: .65rem 0; }
+    .runtime-build-fields dt { color: var(--muted); }
+    .runtime-build-fields dd { margin: 0; font-family: var(--font-mono); overflow-wrap: anywhere; user-select: text; }
+    @media (max-width: 440px) { .runtime-build-fields { grid-template-columns: 1fr; row-gap: .15rem; } .runtime-build-fields dd { margin-bottom: .35rem; } }
     .help-command-search { width: 100%; margin: 0 0 .6rem; }
     .help-command-list { display: grid; gap: .05rem; max-height: 40vh; overflow-y: auto; }
     .help-command-row { padding: .35rem .1rem; border-bottom: 1px solid var(--line); font-size: .85rem; cursor: pointer; }

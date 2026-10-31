@@ -135,6 +135,7 @@ jobs:
           python -m unittest tests.test_web_state_ui.StateBrowserTests -v
           python -m unittest tests.test_web_drawer_overview_browser -v
           python -m unittest tests.test_web_drawer_history_browser -v
+          python -m unittest tests.test_web_drawer_relations_browser -v
       - name: Retain synthetic engine and revision evidence
         if: always()
         uses: actions/upload-artifact@v6

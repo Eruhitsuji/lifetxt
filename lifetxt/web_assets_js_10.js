@@ -274,6 +274,7 @@
     // ── Record detail modal ────────────────────────────────────────
     let drawerItem = null;
     let drawerEditing = false;
+    let _drawerNavigationToken = 0;
     document.addEventListener("keydown", event => {
       const overflow = document.getElementById("drawer-overflow");
       if (event.key === "Escape" && overflow?.open) {
@@ -373,7 +374,7 @@
       const idKey = (typeof appConfig !== "undefined" && appConfig?.ids?.key) || "id";
       return item?.id || item?.details?.[idKey]?.[0] || "";
     }
-    function syncDrawerUrlForItem(item, urlMode) {
+    function syncDrawerUrlForItem(item, urlMode, context = null) {
       if (urlMode === "none") return;
       const params = query();
       const itemId = _drawerIdFor(item);
@@ -389,11 +390,12 @@
         return;
       }
       const url = `${location.pathname}${params.toString() ? "?" + params.toString() : ""}`;
-      if (urlMode === "replace") history.replaceState(null, "", url);
-      else history.pushState(null, "", url);
+      if (urlMode === "replace") history.replaceState({drawerContext:context}, "", url);
+      else history.pushState({drawerContext:context}, "", url);
     }
 
-    function openDrawer(item, urlMode = "push") {
+    function openDrawer(item, urlMode = "push", context = null) {
+      ++_drawerNavigationToken;
       const alreadyOpen = document.getElementById("detail-drawer").classList.contains("open");
       const opener = _lastFocusedBeforeModal;
       disposeAttachmentUpload();
@@ -401,7 +403,7 @@
       drawerWorkEditBinding = null;
       drawerEditing = false;
       drawerItem = item;
-      syncDrawerUrlForItem(item, urlMode);
+      syncDrawerUrlForItem(item, urlMode, context);
       const drawer = document.getElementById("detail-drawer");
       const body = document.getElementById("drawer-body");
       const title = document.getElementById("drawer-title");
@@ -454,6 +456,7 @@
           `</div>`
         : "";
       body.innerHTML =
+        drawerContextHtml(item) +
         `<div class="drawer-tabs" role="tablist" aria-label="${drawerText("Item detail sections", "レコードの詳細セクション")}">` +
           `<button type="button" class="drawer-tab active" role="tab" aria-selected="true" aria-controls="drawer-tab-overview" onclick="switchDrawerTab('overview')">${drawerText("Overview", "概要")}</button>` +
           `<button type="button" class="drawer-tab help-target" role="tab" aria-selected="false" aria-controls="drawer-tab-timeline" data-help="See how this item changed over time." onclick="switchDrawerTab('timeline')">${drawerText("Timeline", "履歴")}</button>` +
@@ -469,7 +472,7 @@
         `</section>` +
         `<section id="drawer-tab-relations" class="drawer-tab-panel" role="tabpanel" hidden>` +
           `<div id="drawer-blockers"></div>` +
-          `<div id="drawer-deps"><div class="drawer-section-title">Dependencies &amp; Links</div><div class="empty dep-loading">Loading…</div></div>` +
+          `<div id="drawer-deps" data-no-i18n><div class="empty dep-loading">${drawerText("Loading links…", "関係を読み込み中…")}</div></div>` +
           threadHtml + replyHtml +
         `</section>`;
       _ntCurrentItemId = itemId || null;
@@ -493,32 +496,34 @@
       const container = document.getElementById("drawer-blockers");
       if (!container) return;
       container.innerHTML = "";
+      container.dataset.noI18n = "";
       const idKey = appConfig?.ids?.key || "id";
       const itemId = item?.id || item?.details?.[idKey]?.[0];
       if (!itemId || ["[x]", "[-]"].includes(item.status)) return;
       try {
         const data = await api(`/api/blockers?id=${encodeURIComponent(itemId)}`);
-        if (!data.blocked) return;
-        let html = `<div class="drawer-section-title" style="color:var(--danger)">⚡ Why is this blocked?</div><div class="blocker-chain">`;
+        if (document.getElementById("drawer-blockers") !== container || drawerItem !== item || drawerEditing || !data.blocked) return;
+        let html = `<div class="drawer-section-title" style="color:var(--danger)">⚡ ${drawerText("Why is this blocked?", "ブロックされている理由")}</div><div class="blocker-chain">`;
         for (const entry of data.chain || []) {
           const indent = Math.min(entry.level - 1, 4) * 0.85;
           const statusIcon = STATUS_ICON[entry.blocker_status] || "·";
           const statusCls = STATUS_CLASS[entry.blocker_status] || "status-note";
           const nav = escapeHtml(jsLiteral(entry.blocker_id || ""));
           const relation = entry.level === 1
-            ? (entry.relation === "blocks" ? "blocked by" : "waiting on")
-            : "which waits on";
+            ? (entry.relation === "blocks" ? drawerText("blocked by", "妨げている項目") : drawerText("waiting on", "待っている項目"))
+            : drawerText("which waits on", "さらに待っている項目");
           html += `<div class="blocker-chain-row" style="margin-left:${indent}rem">` +
             `<span>${entry.level === 1 ? "⚡" : "↳"}</span>` +
             `<span class="status-badge ${statusCls}" style="font-size:.7rem;padding:.1rem .35rem">${escapeHtml(statusIcon)}</span>` +
             `<span style="color:var(--muted);font-size:.78rem;white-space:nowrap">${escapeHtml(relation)}</span>` +
-            `<a class="drawer-link" onclick="drawerNavigate(${nav})">${escapeHtml(entry.blocker_title || entry.blocker_id || "?")}</a>` +
+            `<button type="button" class="drawer-link secondary" onclick="drawerNavigate(${nav})">${escapeHtml(entry.blocker_title || entry.blocker_id || "?")}</button>` +
             `</div>`;
         }
         html += `</div>`;
         container.innerHTML = html;
       } catch(_) {
-        container.innerHTML = "";
+        if (document.getElementById("drawer-blockers") !== container || drawerItem !== item) return;
+        container.textContent = drawerText("Blocker details unavailable.", "ブロックの詳細を取得できません。");
       }
     }
 

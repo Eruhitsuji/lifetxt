@@ -1,0 +1,41 @@
+schema_version: 1
+verification:
+- command: python -m unittest tests.test_web_drawer_relations tests.test_web_assets
+    tests.test_web_deep_link_js tests.test_web_drawer_history tests.test_web_drawer_overview
+    tests.test_web_drawer_edit_js tests.test_web_native_timeline_visual tests.test_web_i18n
+    tests.test_web_mobile tests.test_web_context_create_js tests.test_web_quick_status_js
+    tests.test_supported_runtime tests.test_links tests.test_temporal_thread tests.test_web_native_timeline
+    tests.test_native_timeline tests.test_traceability_gate tests.test_change_package_closeout
+  result: passed
+  notes: 283 focused tests passed, including governance; after final focus scheduling
+    adjustment the affected UI/Node/asset checks are rerun. Browser CI pending.
+- command: Real Chromium tests.test_web_drawer_relations_browser
+  result: blocked
+  notes: Chrome downloaded successfully; process exits at ProcessSingleton socket()
+    Operation not permitted in this execution environment. Browser matrix supplied
+    and added to existing CI Chrome job; no local browser pass claim.
+- command: ruff check lifetxt tests scripts; changed Python format; minimal fixture
+  result: passed
+  notes: No lint errors; 10 fixture records accepted.
+- command: Full suite / physical Safari / Owner lserver
+  result: not_run
+  notes: Required CI, independent human review and deployed acceptance remain separate.
+- command: CI run 41167313816 Real Chromium revision contract
+  result: failed
+  notes: Existing revision/State/Overview/History browser probes passed. New Relations
+    probe measured min-height during the 180ms scale-in animation; wait for animation
+    completion added. Independent return-focus scheduling race found in review and
+    fixed; rerun pending.
+- command: CI run 41167559918 Relations probe
+  result: failed
+  notes: Geometry check still failed after animation wait. Probe setup raced the initial refreshAll URL-restoration; now waits for the real initial id=origin deep link before selecting Relations. Future failures include measured geometry. Rerun pending.
+- command: CI run 41167871907 Relations geometry diagnostics
+  result: failed
+  notes: Measured 37.59375px instead of 44px. Source inspection identified the split CSS boundary inside .focus-check; appended Relations rules were nested there. Moved this task's CSS before the open rule. URL normalization also now preserves return context. Rerun pending.
+review_ledger:
+- reviewer: Eruhitsuji
+  review_type: independent_implementation_and_integration
+  target_commit: null
+  result: pending
+  finding_count: 0
+  completed_at: null

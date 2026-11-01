@@ -8,7 +8,7 @@ change:
   owner: Eruhitsuji
   accountable_owner: Eruhitsuji
   related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1505
-  related_pull_request: []
+  related_pull_request: [https://github.com/Eruhitsuji/lifetxt/pull/1506]
   base_commit: 7bde465a026466b47d98a3443c39a50013a59f8d
 scope:
   in_scope: [diff failure fallback, regression verification, traceability]

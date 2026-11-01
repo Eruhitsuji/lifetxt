@@ -237,6 +237,7 @@ class CiWorkflowDiffFallbackTests(unittest.TestCase):
                 ("push", base, docs_head, "docs-only", "false", "false"),
                 ("pull_request", docs_head, module_head, "python-core", "true", "true"),
                 ("push", missing, docs_head, "full", "true", "true"),
+                ("second-diff-failure", base, docs_head, "full", "true", "true"),
                 ("pull_request", base, missing, "full", "true", "true"),
                 ("push", "0" * 40, docs_head, "full", "true", "true"),
                 ("push", "", docs_head, "full", "true", "true"),
@@ -246,12 +247,21 @@ class CiWorkflowDiffFallbackTests(unittest.TestCase):
                 with self.subTest(event=event, base=before, head=head):
                     output = repo / "outputs.txt"
                     output.write_text("")
+                    script = step["run"].replace(
+                        "${{ github.event_name }}",
+                        "push" if event == "second-diff-failure" else event,
+                    )
+                    if event == "second-diff-failure":
+                        script = (
+                            'git() { if [[ "$*" == *"--diff-filter=A"* ]]; then echo "partial"; return 1; fi; command git "$@"; }\n'
+                            + script
+                        )
                     result = subprocess.run(
                         [
                             "bash",
                             "-e",
                             "-c",
-                            step["run"].replace("${{ github.event_name }}", event),
+                            script,
                         ],
                         cwd=repo,
                         env=dict(

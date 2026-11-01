@@ -4,8 +4,8 @@ verification:
     - type: regression
       command: python -m unittest tests.test_ci_path_routing tests.test_ci_workflow_responsibilities tests.test_ci_recovery_contract
       requirement_ids: [req-ci-unavailable-diff-full-routing]
-      result: Ran 32 tests, OK
-      commit: working tree based on 7bde465a026466b47d98a3443c39a50013a59f8d
+      result: Ran 49 tests, OK
+      commit: working tree based on 9799d2a9db07f01b0ec1c322b31ff4561fab6a74
       executed_at: '2026-11-01'
       status: passed
   gaps:

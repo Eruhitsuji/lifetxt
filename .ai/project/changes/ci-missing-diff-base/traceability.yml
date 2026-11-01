@@ -3,7 +3,7 @@ links:
   - requirement_id: req-ci-unavailable-diff-full-routing
     capability_id: cap-ci-responsibility-separation
     task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1505
-    pull_request: null
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1506
     tests_or_evidence: [tests/test_ci_path_routing.py, tests/test_ci_workflow_responsibilities.py, tests/test_ci_recovery_contract.py]
     status: in_review
 gaps: []

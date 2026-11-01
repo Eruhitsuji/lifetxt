@@ -3478,6 +3478,7 @@ capabilities:
       - req-web-top-clock-public-config-custom-format
       - req-web-top-configurable-clock
       - req-module-structure-decomposition
+      - req-web-sort-source-translation
       - req-web-stats-canonical-refresh
       - req-web-runtime-build-info
     implementation_locations:

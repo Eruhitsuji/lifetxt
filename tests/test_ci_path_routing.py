@@ -3,6 +3,8 @@ import subprocess
 import sys
 import tempfile
 import unittest
+
+import yaml
 from pathlib import Path
 
 from scripts.classify_ci_paths import classify, compatibility_checks, python310_focused
@@ -187,6 +189,95 @@ class CiPathRoutingTests(unittest.TestCase):
                 check=True,
             )
             self.assertIn("run-python310-focused=true\n", output.read_text())
+
+
+class CiWorkflowDiffFallbackTests(unittest.TestCase):
+    def test_actual_workflow_diff_routes_real_git_history_conservatively(self):
+        root = Path(__file__).resolve().parent.parent
+        workflow = yaml.load(
+            (root / ".github/workflows/ci.yml").read_text(), Loader=yaml.BaseLoader
+        )
+        step = next(
+            step
+            for step in workflow["jobs"]["classify-changes"]["steps"]
+            if step.get("id") == "classify"
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+
+            def git(*args):
+                return subprocess.check_output(
+                    ["git", *args], cwd=repo, text=True, stderr=subprocess.STDOUT
+                ).strip()
+
+            git("init")
+            git("config", "user.email", "ci-test@example.invalid")
+            git("config", "user.name", "CI test")
+            (repo / "docs").mkdir()
+            doc = repo / "docs" / "guide.md"
+            doc.write_text("base")
+            git("add", ".")
+            git("commit", "-m", "base")
+            base = git("rev-parse", "HEAD")
+            doc.write_text("updated")
+            git("add", ".")
+            git("commit", "-m", "docs")
+            docs_head = git("rev-parse", "HEAD")
+            (repo / "lifetxt").mkdir()
+            (repo / "lifetxt" / "new_module.py").write_text("VALUE = 1\n")
+            git("add", ".")
+            git("commit", "-m", "module")
+            module_head = git("rev-parse", "HEAD")
+            (repo / "scripts").mkdir()
+            (repo / "scripts" / "classify_ci_paths.py").write_text(
+                (root / "scripts" / "classify_ci_paths.py").read_text()
+            )
+            missing = "f" * 40
+            cases = [
+                ("push", base, docs_head, "docs-only", "false", "false"),
+                ("pull_request", docs_head, module_head, "python-core", "true", "true"),
+                ("push", missing, docs_head, "full", "true", "true"),
+                ("pull_request", base, missing, "full", "true", "true"),
+                ("push", "0" * 40, docs_head, "full", "true", "true"),
+                ("push", "", docs_head, "full", "true", "true"),
+                ("workflow_dispatch", base, docs_head, "full", "true", "true"),
+            ]
+            for event, before, head, category, no_web, coverage in cases:
+                with self.subTest(event=event, base=before, head=head):
+                    output = repo / "outputs.txt"
+                    output.write_text("")
+                    result = subprocess.run(
+                        [
+                            "bash",
+                            "-e",
+                            "-c",
+                            step["run"].replace("${{ github.event_name }}", event),
+                        ],
+                        cwd=repo,
+                        env=dict(
+                            os.environ,
+                            BASE_SHA=before,
+                            HEAD_SHA=head,
+                            GITHUB_OUTPUT=str(output),
+                        ),
+                        capture_output=True,
+                        text=True,
+                    )
+                    self.assertEqual(0, result.returncode, result.stderr)
+                    values = dict(
+                        line.split("=", 1) for line in output.read_text().splitlines()
+                    )
+                    self.assertEqual(category, values["category"])
+                    self.assertEqual(no_web, values["run-no-web"])
+                    self.assertEqual(coverage, values["run-coverage"])
+                    self.assertEqual(
+                        "false" if category == "docs-only" else "true",
+                        values["run-heavy"],
+                    )
+                    if category == "full":
+                        self.assertEqual("true", values["run-python310-focused"])
+                        self.assertEqual("", (repo / "changed-paths.txt").read_text())
+                        self.assertEqual("", (repo / "added-paths.txt").read_text())
 
 
 if __name__ == "__main__":

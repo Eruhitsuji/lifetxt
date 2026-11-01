@@ -2,6 +2,15 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-notification-permission-i18n
+      capability_id: cap-web-surface-structure
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1501
+      tests_or_evidence:
+        - tests.test_web_notification_permission
+        - tests.test_web_i18n
+        - tests.test_web_assets
+      status: implemented
     - requirement_id: req-web-sort-source-translation
       capability_id: cap-web-surface-structure
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386

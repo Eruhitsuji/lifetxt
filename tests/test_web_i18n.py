@@ -66,6 +66,28 @@ class DictionaryTests(unittest.TestCase):
         ):
             self.assertIn(label, self.dictionary)
 
+    def test_items_sort_options_have_japanese_labels_and_canonical_values(self):
+        select = re.search(r'<select id="sort"[^>]*>(.*?)</select>', PAGE, re.S).group(
+            1
+        )
+        options = re.findall(r'<option value="([^"]+)">([^<]+)</option>', select)
+        self.assertEqual(
+            [
+                ("line", "Line"),
+                ("time", "Time"),
+                ("title", "Title"),
+                ("type", "Type"),
+                ("status", "Status"),
+                ("source", "Source"),
+            ],
+            options,
+        )
+        for value, label in options:
+            with self.subTest(value=value):
+                self.assertRegex(self.dictionary.get(label, ""), r"[぀-ヿ一-鿿]")
+        self.assertEqual("時刻", self.dictionary["Time"])
+        self.assertEqual("ソース", self.dictionary["Source"])
+
     def test_translations_are_actually_japanese(self):
         # An entry that maps English to English would silently pass a
         # presence-only check while leaving the interface untranslated.

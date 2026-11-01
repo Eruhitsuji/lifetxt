@@ -359,7 +359,7 @@
     }
     async function loadNotifications() {
       if (appConfig?.notifications?.enabled === false || appConfig?.notifications?.web === false) {
-        document.getElementById("notifications").innerHTML = `<div class="empty">Notifications disabled.</div>`;
+        document.getElementById("notifications").innerHTML = `<div class="empty">${escapeHtml(t("Notifications disabled."))}</div>`;
         return;
       }
       const params = query();
@@ -375,9 +375,9 @@
       const data = await api(`/api/notifications?${notificationParams}`);
       window._lastNotifRecords = data.records || [];
       const node = document.getElementById("notifications");
-      node.innerHTML = data.records.length ? "" : guidedEmptyState("🔔", "No notifications right now",
-        "Notifications surface reminders and messages with a <code>notify</code> detail. Enable browser alerts to be notified while this tab is open.",
-        [["Enable alerts", "enableNotifications"], ["Messages", "messages"], ["Help", "help"]]);
+      node.innerHTML = data.records.length ? "" : guidedEmptyState("🔔", t("No notifications right now"),
+        t("Notifications surface reminders and messages with a <code>notify</code> detail. Enable browser alerts to be notified while this tab is open."),
+        [[t("Enable alerts"), "enableNotifications"], [t("Messages"), "messages"], [t("Help"), "help"]]);
       const snoozeDefault = appConfig?.notifications?.snooze_default || "10m";
       let notifIdx = 0;
       for (const record of data.records) {

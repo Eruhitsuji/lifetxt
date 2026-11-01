@@ -67,11 +67,19 @@ class DictionaryTests(unittest.TestCase):
             self.assertIn(label, self.dictionary)
 
     def test_items_sort_options_have_japanese_labels_and_canonical_values(self):
-        select = re.search(r'<select id="sort"[^>]*>(.*?)</select>', PAGE, re.S).group(1)
+        select = re.search(r'<select id="sort"[^>]*>(.*?)</select>', PAGE, re.S).group(
+            1
+        )
         options = re.findall(r'<option value="([^"]+)">([^<]+)</option>', select)
         self.assertEqual(
-            [("line", "Line"), ("time", "Time"), ("title", "Title"),
-             ("type", "Type"), ("status", "Status"), ("source", "Source")],
+            [
+                ("line", "Line"),
+                ("time", "Time"),
+                ("title", "Title"),
+                ("type", "Type"),
+                ("status", "Status"),
+                ("source", "Source"),
+            ],
             options,
         )
         for value, label in options:

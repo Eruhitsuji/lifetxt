@@ -2,6 +2,21 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-stats-canonical-refresh
+      capability_id: cap-web-surface-structure
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1497
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1498
+      changed_files_or_scope:
+        - lifetxt/web_assets_js_13.js
+        - tests/test_web_chart_refresh.py
+        - tests/chart_refresh_probe.mjs
+        - tests/test_web_assets.py
+      tests_or_evidence:
+        - tests.test_web_chart_refresh
+        - tests.test_web_assets
+        - tests.test_web_i18n
+      status: implemented
     - requirement_id: req-web-planner-flow-form-spacing
       capability_id: cap-web-mobile-planner
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386

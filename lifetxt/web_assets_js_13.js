@@ -1,15 +1,15 @@
-      if (!("Notification" in window)) { if (bar) { bar.textContent = "Browser notifications not supported."; bar.style.display = ""; } return; }
+      if (!("Notification" in window)) { if (bar) { bar.textContent = t("Browser notifications not supported."); bar.style.display = ""; } return; }
       const perm = Notification.permission;
       const classes = {granted: "notif-perm-granted", denied: "notif-perm-denied", default: "notif-perm-default"};
       const labels = {
-        granted: "Notifications: granted",
-        denied: "Notifications: blocked. Re-enable them from the browser site settings for this page.",
-        default: "Notifications: not yet requested",
+        granted: t("Notifications: granted"),
+        denied: t("Notifications: blocked. Re-enable them from the browser site settings for this page."),
+        default: t("Notifications: not yet requested"),
       };
       if (bar) {
         bar.className = "notif-permission " + (classes[perm] || "");
         if (perm === "denied") {
-          bar.innerHTML = `<span>${escapeHtml(labels.denied)}</span><button class="secondary" type="button" onclick="showNotificationSettingsHelp()">How</button>`;
+          bar.innerHTML = `<span>${escapeHtml(labels.denied)}</span><button class="secondary" type="button" onclick="showNotificationSettingsHelp()">${escapeHtml(t("How"))}</button>`;
         } else {
           bar.textContent = labels[perm] || perm;
         }
@@ -17,7 +17,7 @@
       }
     }
     function showNotificationSettingsHelp() {
-      showToast("Use the browser lock/site icon, open Site settings, and allow Notifications for this URL.", "info", 8000);
+      showToast(t("Use the browser lock/site icon, open Site settings, and allow Notifications for this URL."), "info", 8000);
     }
 
     // ── Git status badge + modal ─────────────────────────────────

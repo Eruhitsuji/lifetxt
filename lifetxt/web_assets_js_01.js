@@ -73,6 +73,7 @@
         "Complete selected tasks": "選択したタスクを完了",
         "Each task is saved separately. If one fails, successful tasks remain completed.": "タスクごとに保存します。途中で失敗しても、成功したタスクは完了のままです。",
         "Time": "時刻",
+        "Source": "ソース",
         "Times use your browser timezone.": "時刻はブラウザーのタイムゾーンで指定します。",
         "Completion mode": "完了日時の指定方法",
         "Date only": "日付のみ",

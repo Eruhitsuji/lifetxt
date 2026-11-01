@@ -19186,6 +19186,13 @@ traceability:
         - .ai/project/changes/tui-todo-capture-preview/verification.yml
       status: in_review
 
+    - requirement_id: req-ci-unavailable-diff-full-routing
+      capability_id: cap-ci-responsibility-separation
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1505
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1506
+      tests_or_evidence: [tests/test_ci_path_routing.py, tests/test_ci_workflow_responsibilities.py, .ai/project/changes/ci-missing-diff-base/verification.yml]
+      status: in_review
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

@@ -1,0 +1,18 @@
+schema_version: 1
+change:
+  id: ci-missing-diff-base
+  title: Recover conservative CI routing when Git diff is unavailable
+  status: in_review
+  change_type: Bug
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1505
+  related_pull_request: [https://github.com/Eruhitsuji/lifetxt/pull/1506]
+  base_commit: 7bde465a026466b47d98a3443c39a50013a59f8d
+scope:
+  in_scope: [diff failure fallback, regression verification, traceability]
+  out_of_scope: [product behavior, dependency changes, reduced compatibility checks]
+  write_scope: [.github/workflows/ci.yml, tests/test_ci_path_routing.py, .ai/project/TRACEABILITY.yml, .ai/project/changes/ci-missing-diff-base/**]
+  forbidden_scope: [.ai/managed/**, lifetxt/**]
+human_approvals_required: [independent implementation and integration review, Merge Authority approval]

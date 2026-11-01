@@ -1,0 +1,15 @@
+schema_version: 1
+verification:
+  executed:
+    - type: regression
+      command: python -m unittest tests.test_ci_path_routing tests.test_ci_workflow_responsibilities tests.test_ci_recovery_contract
+      requirement_ids: [req-ci-unavailable-diff-full-routing]
+      result: Ran 49 tests, OK
+      commit: working tree based on 9799d2a9db07f01b0ec1c322b31ff4561fab6a74
+      executed_at: '2026-11-01'
+      status: passed
+  gaps:
+    - description: Independent review, PR required checks and post-merge full main compatibility remain pending.
+      tracked_by: https://github.com/Eruhitsuji/lifetxt/issues/1505
+review_ledger:
+  - {reviewer: human reviewer, review_type: implementation-and-integration, target_commit: pending, result: pending, finding_count: 0, completed_at: null}

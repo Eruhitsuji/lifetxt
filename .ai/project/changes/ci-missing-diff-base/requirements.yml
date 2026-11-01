@@ -1,0 +1,12 @@
+schema_version: 1
+requirements:
+  - id: req-ci-unavailable-diff-full-routing
+    kind: ADDED
+    statement: Unavailable or failed Git diffs must select full compatibility checks rather than abort routing or use partial paths.
+    owner: Eruhitsuji
+    acceptance_criteria:
+      - Either diff failure clears both path lists and invokes the existing classifier.
+      - Missing base or head selects all routing outputs conservatively.
+      - Known docs-only diffs and added Python module coverage selection remain unchanged.
+      - Main full compatibility success is required before declaring recovery.
+open_questions: []

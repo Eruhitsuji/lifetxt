@@ -712,7 +712,12 @@
         "Close modal / palette / blur input / exit kiosk": "モーダル/パレットを閉じる・入力を解除・キオスクを終了",
         "Show undo history": "取り消し履歴を表示",
         "Enable alerts": "通知を有効化",
-        "Notifications: not yet requested": "通知: 未許可",
+        "Notifications: not yet requested": "通知: 許可を未要求",
+        "Notifications: granted": "通知: 許可済み",
+        "Notifications: blocked. Re-enable them from the browser site settings for this page.": "通知: ブロック中です。このページのブラウザのサイト設定から許可できます。",
+        "Browser notifications not supported.": "このブラウザでは通知に対応していません。",
+        "How": "設定方法",
+        "Use the browser lock/site icon, open Site settings, and allow Notifications for this URL.": "ブラウザの鍵またはサイト情報アイコンからサイト設定を開き、このURLの通知を許可してください。",
         "Open notifications / enable browser alerts": "通知を開く / ブラウザ通知を有効化",
         "No elapsed time recorded.": "経過時間の記録はありません。",
 

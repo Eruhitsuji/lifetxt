@@ -6,7 +6,7 @@ traceability:
       capability_id: cap-web-surface-structure
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1509
-      pull_request: pending
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1510
       tests_or_evidence: [tests.test_web_notification_permission, tests.test_web_i18n]
       status: in_review
     - requirement_id: req-web-notification-record-actions-i18n

@@ -2,6 +2,13 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-notification-enable-i18n
+      capability_id: cap-web-surface-structure
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1509
+      pull_request: pending
+      tests_or_evidence: [tests.test_web_notification_permission, tests.test_web_i18n]
+      status: in_review
     - requirement_id: req-web-notification-record-actions-i18n
       capability_id: cap-web-surface-structure
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386

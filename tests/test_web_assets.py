@@ -20,7 +20,7 @@ REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
 # Keep the exact assembled page checksum gate for reviewed asset changes.
 # Calculated using _CSS_RESOURCE_NAMES / _JS_RESOURCE_NAMES assembly order,
 # before brand injection (CSS 06/07 precede 05).
-LEGACY_PRISTINE_GIT_BLOB_SHA = "b4730e2ebe60efd9fb43fd3c89b11f63ae674713"
+LEGACY_PRISTINE_GIT_BLOB_SHA = "82a69fa39dbe69d53f7564fea56f963510b09e27"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )
@@ -159,11 +159,9 @@ class WebAssetExtractionTests(unittest.TestCase):
         info = {"version": "1.0.4.3", "git_commit": "a" * 40}
         with patch("lifetxt.webapp.snapshot_runtime_build_info", return_value=info):
             client = TestClient(webapp.create_app(paths=[]))
-        expected = (
-            webapp.HTML_PAGE
-            .replace("__LIFETXT_RUNTIME_VERSION__", info["version"])
-            .replace("__LIFETXT_RUNTIME_COMMIT__", info["git_commit"])
-        )
+        expected = webapp.HTML_PAGE.replace(
+            "__LIFETXT_RUNTIME_VERSION__", info["version"]
+        ).replace("__LIFETXT_RUNTIME_COMMIT__", info["git_commit"])
         for path in ("/", "/capture"):
             response = client.get(path)
             self.assertEqual(expected.encode("utf-8"), response.content)
@@ -179,7 +177,7 @@ class WebAssetExtractionTests(unittest.TestCase):
 
         from unittest.mock import patch
 
-        info = {"version": '<script>alert(1)</script>', "git_commit": None}
+        info = {"version": "<script>alert(1)</script>", "git_commit": None}
         with patch("lifetxt.webapp.snapshot_runtime_build_info", return_value=info):
             client = TestClient(webapp.create_app(paths=[]))
         body = client.get("/").text

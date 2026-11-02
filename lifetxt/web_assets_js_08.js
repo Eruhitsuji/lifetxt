@@ -21,7 +21,7 @@
     }
     async function enableBrowserNotifications() {
       if (!("Notification" in window)) {
-        alert("This browser does not support notifications.");
+        alert(t("Browser notifications not supported."));
         return;
       }
       const permission = await Notification.requestPermission();

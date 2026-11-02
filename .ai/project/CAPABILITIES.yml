@@ -3478,6 +3478,8 @@ capabilities:
       - req-web-top-clock-public-config-custom-format
       - req-web-top-configurable-clock
       - req-module-structure-decomposition
+      - req-web-notification-enable-i18n
+      - req-web-notification-record-actions-i18n
       - req-web-notification-empty-i18n
       - req-web-notification-permission-i18n
       - req-web-sort-source-translation

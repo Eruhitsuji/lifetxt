@@ -386,14 +386,14 @@
         const snoozeRowId = `snooze-row-${notifIdx}`;
         const actions = record.id ? `
           <div class="actions" style="flex-wrap:wrap;gap:.3rem">
-            <button class="secondary" type="button" onclick="ackMessage(${escapeHtml(jsLiteral(record.id))})">Ack</button>
-            <button class="secondary" type="button" onclick="snoozeMessage(${escapeHtml(jsLiteral(record.id))}, ${escapeHtml(jsLiteral(snoozeDefault))})">Snooze ${escapeHtml(snoozeDefault)}</button>
-            <button class="secondary" type="button" onclick="document.getElementById(${escapeHtml(jsLiteral(snoozeRowId))}).style.display=document.getElementById(${escapeHtml(jsLiteral(snoozeRowId))}).style.display===''?'none':''" style="font-size:.73rem">Custom…</button>
-            <button class="secondary" type="button" onclick="retryBrowserNotification(${escapeHtml(jsLiteral(record.id || record.notification_id || ""))})" style="font-size:.73rem" title="Re-send browser notification">Retry</button>
+            <button class="secondary" type="button" onclick="ackMessage(${escapeHtml(jsLiteral(record.id))})">${escapeHtml(t("Ack"))}</button>
+            <button class="secondary" type="button" onclick="snoozeMessage(${escapeHtml(jsLiteral(record.id))}, ${escapeHtml(jsLiteral(snoozeDefault))})">${escapeHtml(t("Snooze"))} ${escapeHtml(snoozeDefault)}</button>
+            <button class="secondary" type="button" onclick="document.getElementById(${escapeHtml(jsLiteral(snoozeRowId))}).style.display=document.getElementById(${escapeHtml(jsLiteral(snoozeRowId))}).style.display===''?'none':''" style="font-size:.73rem">${escapeHtml(t("Custom…"))}</button>
+            <button class="secondary" type="button" onclick="retryBrowserNotification(${escapeHtml(jsLiteral(record.id || record.notification_id || ""))})" style="font-size:.73rem" title="${escapeHtml(t("Re-send browser notification"))}">${escapeHtml(t("Retry"))}</button>
           </div>
           <div id="${snoozeRowId}" class="snooze-inline" style="display:none">
             <input id="${snoozeInputId}" value="${escapeHtml(snoozeDefault)}" placeholder="30m / 1h / 2h">
-            <button class="secondary" type="button" onclick="snoozeMessageCustom(${escapeHtml(jsLiteral(record.id))}, ${escapeHtml(jsLiteral(snoozeInputId))})">Go</button>
+            <button class="secondary" type="button" onclick="snoozeMessageCustom(${escapeHtml(jsLiteral(record.id))}, ${escapeHtml(jsLiteral(snoozeInputId))})">${escapeHtml(t("Go"))}</button>
           </div>
         ` : "";
         const stateBadge = notifStateBadge(record);

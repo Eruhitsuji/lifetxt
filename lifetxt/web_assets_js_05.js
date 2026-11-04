@@ -95,7 +95,8 @@
       nodes.forEach(n => n.classList.remove("kb-focus"));
       _kbIndex = next;
       nodes[next].classList.add("kb-focus");
-      nodes[next].scrollIntoView({block: "nearest", behavior: "smooth"});
+      const behavior = document.body.classList.contains("reduce-motion") ? "instant" : "smooth";
+      nodes[next].scrollIntoView({block: "nearest", behavior});
     }
     function kbFocusedItem() {
       const nodes = _kbNodes();

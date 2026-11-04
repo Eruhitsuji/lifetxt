@@ -11932,6 +11932,7 @@ capabilities:
     status: active
     owner: Eruhitsuji
     source_requirements:
+      - req-web-kiosk-theme-surfaces
       - req-web-kiosk-reduced-motion-pause
       - req-web-keyboard-reduced-motion
       - req-web-input-bar-reduced-motion
@@ -11983,6 +11984,7 @@ capabilities:
       - Collapsed More navigation naming the active advanced view ("More: Agenda", aria-current) with a desktop overlay dropdown
       - Items diagnostics with file:line location, Open record action, filter-hidden note, and a collapsible error/warning count summary
     tests_or_evidence:
+      - tests/test_web_kiosk_theme.py (theme surface reuse and text contrast)
       - tests/test_web_kiosk_motion.py (pause/resume, wrap and timer lifecycle)
       - tests/test_web_keyboard_motion.py (motion toggle, initial direction, boundaries and empty list)
       - tests/test_web_input_bar_motion.py (effective motion preference, Quick add/presence focus and selection)

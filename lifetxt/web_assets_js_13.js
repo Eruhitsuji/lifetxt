@@ -296,6 +296,7 @@
       const intervalMs = (parseFloat(intervalValue) || 60) * 1000;
       const scrollStep = () => {
         if (!isKioskMode()) { _kioskStopScroll(); return; }
+        if (document.body.classList.contains("reduce-motion")) return;
         const { scrollTop, scrollHeight, clientHeight } = list;
         if (scrollTop + clientHeight >= scrollHeight - 2) {
           list.scrollTo({ top: 0, behavior: "smooth" });

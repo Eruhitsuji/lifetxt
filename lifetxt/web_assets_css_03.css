@@ -494,8 +494,8 @@
     [data-theme="dark"] body.display-mode .note { color: #aebbb4; }
     /* ── Kiosk mode (bulletin board / 掲示板) — high-contrast light theme ── */
     .kiosk-mode {
-      background: #f5f7f6;
-      color: #111714;
+      background: var(--bg);
+      color: var(--ink);
       font-size: clamp(15px, 1.05vw, 20px);
       overflow: hidden;
     }

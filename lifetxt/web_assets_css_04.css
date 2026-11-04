@@ -1,7 +1,7 @@
     }
     .kiosk-mode .item {
-      background: #fff;
-      border: 1.5px solid #c5e0d0;
+      background: var(--panel);
+      border: 1.5px solid var(--line-strong);
       border-radius: .55rem;
       padding: .85rem 1rem;
       font-size: clamp(12px, .88vw, 16px);
@@ -14,10 +14,10 @@
     }
     .kiosk-mode .item:nth-child(2n) { animation-delay: .04s; }
     .kiosk-mode .item:nth-child(3n) { animation-delay: .08s; }
-    .kiosk-mode .item:hover { border-color: #1a7a4a; }
+    .kiosk-mode .item:hover { border-color: var(--accent); }
     .kiosk-mode .item .status-badge { font-weight: 700; }
-    .kiosk-mode .item .title { font-weight: 700; color: #0d2b1a; font-size: 1em; }
-    .kiosk-mode .item .meta { font-size: .8em; color: #4a7a5e; }
+    .kiosk-mode .item .title { font-weight: 700; color: var(--ink); font-size: 1em; }
+    .kiosk-mode .item .meta { font-size: .8em; color: var(--muted); }
     .kiosk-mode .item .source { display: none; }
     .kiosk-mode .item-check, .kiosk-mode .item-check-hit { display: none !important; }
     .kiosk-mode .item.kiosk-changed {

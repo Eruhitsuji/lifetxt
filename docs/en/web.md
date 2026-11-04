@@ -1664,3 +1664,7 @@ scrolling. The effective Reduced motion setting also pauses an already running
 board at its next scroll tick. Turning it off resumes movement at the next
 configured interval; manual scrolling remains available. The URL override takes
 precedence over a saved preference, so remove `motion=reduce` to use that preference.
+
+Kiosk backgrounds, cards, titles and metadata use the shared theme colors.
+Open `/?mode=kiosk&theme=dark` for a dark board or use `theme=light` for light.
+The green header remains the Kiosk mode indicator.

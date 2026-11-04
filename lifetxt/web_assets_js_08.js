@@ -170,7 +170,8 @@
       input.focus();
       if (select) input.select();
       if (input.scrollIntoView) {
-        input.scrollIntoView({block: "center", behavior: "smooth"});
+        const behavior = document.body.classList.contains("reduce-motion") ? "instant" : "smooth";
+        input.scrollIntoView({block: "center", behavior});
       }
     }
 

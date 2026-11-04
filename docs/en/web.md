@@ -1656,3 +1656,11 @@ the next time either bar is opened; Quick add still selects its input text.
 
 In Items, `j` / `k` navigation also follows Reduced motion: the selected row
 is brought into view instantly when enabled, and scrolls smoothly when disabled.
+
+### Pause Kiosk auto-scroll with reduced motion
+
+Open `/?mode=kiosk&motion=reduce` to display the Kiosk board without automatic
+scrolling. The effective Reduced motion setting also pauses an already running
+board at its next scroll tick. Turning it off resumes movement at the next
+configured interval; manual scrolling remains available. The URL override takes
+precedence over a saved preference, so remove `motion=reduce` to use that preference.

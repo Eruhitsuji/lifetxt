@@ -1653,3 +1653,6 @@ Enable Reduced motion in View settings, then open Quick add or Set status.
 The input is focused and brought into view without a scrolling animation.
 With Reduced motion off, the existing smooth scroll is retained. Changes apply
 the next time either bar is opened; Quick add still selects its input text.
+
+In Items, `j` / `k` navigation also follows Reduced motion: the selected row
+is brought into view instantly when enabled, and scrolls smoothly when disabled.

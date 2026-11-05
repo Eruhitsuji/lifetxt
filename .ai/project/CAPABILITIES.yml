@@ -11932,6 +11932,7 @@ capabilities:
     status: active
     owner: Eruhitsuji
     source_requirements:
+      - req-web-shared-form-css-scope
       - req-web-kiosk-theme-surfaces
       - req-web-kiosk-reduced-motion-pause
       - req-web-keyboard-reduced-motion
@@ -11984,6 +11985,7 @@ capabilities:
       - Collapsed More navigation naming the active advanced view ("More: Agenda", aria-current) with a desktop overlay dropdown
       - Items diagnostics with file:line location, Open record action, filter-hidden note, and a collapsible error/warning count summary
     tests_or_evidence:
+      - tests/test_web_form_css_scope.py (assembled CSS scope for shared labels, Graph wrapping and bulk completion)
       - tests/test_web_kiosk_theme.py (theme surface reuse and text contrast)
       - tests/test_web_kiosk_motion.py (pause/resume, wrap and timer lifecycle)
       - tests/test_web_keyboard_motion.py (motion toggle, initial direction, boundaries and empty list)
@@ -12004,6 +12006,7 @@ capabilities:
       - MPLBACKEND=Agg python -m unittest discover -> Ran 4523 tests, OK (skipped=210), after merging origin/main at 1eb56eb
       - tests/test_web_diagnostics_js.py (15 tests) covers diagnostic location labels, filter-hidden marking, source+line record matching, escaping, summary counts/open state, and Open record fallback/toasts (#1073)
     related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/1520
       - https://github.com/Eruhitsuji/lifetxt/issues/1473
       - https://github.com/Eruhitsuji/lifetxt/issues/1471
       - https://github.com/Eruhitsuji/lifetxt/issues/1469

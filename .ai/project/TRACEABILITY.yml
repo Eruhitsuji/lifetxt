@@ -2,6 +2,13 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-stats-range-layout
+      capability_id: cap-web-beginner-first-ux
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1524
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1525
+      tests_or_evidence: [tests.test_web_stats_range_layout, tests.test_web_form_css_scope, tests.test_web_assets, tests.test_web_i18n]
+      status: implemented
     - requirement_id: req-web-labeled-toolbar-alignment
       capability_id: cap-web-beginner-first-ux
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386

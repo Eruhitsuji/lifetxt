@@ -1670,3 +1670,5 @@ Open `/?mode=kiosk&theme=dark` for a dark board or use `theme=light` for light.
 The green header remains the Kiosk mode indicator.
 
 Shared field labels in Focus, Review and Graph, and the bulk completion date dialog, use the normal form styles independently of Kiosk mode. Open those views or select tasks and choose bulk completion as usual; no additional setting is needed.
+
+Focus, Review and Graph align action buttons with the bottom of labeled inputs. Use Add or Apply normally; Review retains its stacked controls on small screens.

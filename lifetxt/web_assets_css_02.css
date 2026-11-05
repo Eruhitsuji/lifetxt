@@ -292,7 +292,7 @@
     .dep-missing { color: #9ca3af; font-style: italic; font-size: .85rem; }
     a.drawer-link { color: var(--accent); text-decoration: none; font-size: .88rem; }
     a.drawer-link:hover { text-decoration: underline; }
-    .graph-toolbar { display: flex; gap: .35rem; align-items: center; padding: .65rem 1rem; border-bottom: 1px solid var(--line); }
+    .graph-toolbar { display: flex; gap: .35rem; align-items: flex-end; padding: .65rem 1rem; border-bottom: 1px solid var(--line); }
     .graph-toolbar input { min-width: 0; flex: 1; font-size: .82rem; }
     .graph-panel { min-height: 12rem; padding: .75rem 1rem; overflow: auto; }
     .graph-svg { width: 100%; height: auto; max-height: 22rem; border: 1px solid var(--line); border-radius: .55rem; background: linear-gradient(180deg, var(--panel), var(--soft)); }

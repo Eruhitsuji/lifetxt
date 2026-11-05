@@ -11932,6 +11932,7 @@ capabilities:
     status: active
     owner: Eruhitsuji
     source_requirements:
+      - req-web-guidance-link-theme
       - req-web-stats-range-layout
       - req-web-labeled-toolbar-alignment
       - req-web-shared-form-css-scope
@@ -11987,6 +11988,7 @@ capabilities:
       - Collapsed More navigation naming the active advanced view ("More: Agenda", aria-current) with a desktop overlay dropdown
       - Items diagnostics with file:line location, Open record action, filter-hidden note, and a collapsible error/warning count summary
     tests_or_evidence:
+      - tests/test_web_guidance_links.py (normal/visited guidance colors, underlines and theme contrast)
       - tests/test_web_stats_range_layout.py (shared labels, control sizing, handlers and responsive alignment)
       - tests/test_web_form_alignment.py (labeled input/action alignment and responsive layout preservation)
       - tests/test_web_form_css_scope.py (assembled CSS scope for shared labels, Graph wrapping and bulk completion)
@@ -12010,6 +12012,7 @@ capabilities:
       - MPLBACKEND=Agg python -m unittest discover -> Ran 4523 tests, OK (skipped=210), after merging origin/main at 1eb56eb
       - tests/test_web_diagnostics_js.py (15 tests) covers diagnostic location labels, filter-hidden marking, source+line record matching, escaping, summary counts/open state, and Open record fallback/toasts (#1073)
     related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/1526
       - https://github.com/Eruhitsuji/lifetxt/issues/1524
       - https://github.com/Eruhitsuji/lifetxt/issues/1522
       - https://github.com/Eruhitsuji/lifetxt/issues/1520

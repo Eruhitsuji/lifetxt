@@ -61,3 +61,10 @@
 .priority-matrix-row { display: flex; flex-wrap: wrap; gap: .35rem 1rem; padding: .65rem .8rem; border: 1px solid var(--line); border-radius: .5rem; background: var(--card); }
 .priority-matrix-title { flex-basis: 100%; }
 @media (max-width: 680px) { .priority-matrix-grid { grid-template-columns: 1fr; } }
+
+    .personal-context-next a, .personal-context-next a:visited,
+    .backup-guidance a, .backup-guidance a:visited {
+      color: var(--ink);
+      text-decoration: underline;
+      text-underline-offset: .15em;
+    }

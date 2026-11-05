@@ -14,14 +14,14 @@
     .focus-quick-add {
       display: flex;
       gap: .45rem;
-      align-items: center;
+      align-items: flex-end;
       padding: .35rem 0 .2rem;
     }
     .focus-quick-add input { flex: 1; min-width: 0; }
     .focus-event-time { font-variant-numeric: tabular-nums; }
     /* ── Review view ─────────────────────────────────────────────── */
     .review-body { display: grid; gap: 1rem; padding: 1rem; }
-    .review-range-bar { display: flex; gap: .35rem; flex-wrap: wrap; align-items: center; }
+    .review-range-bar { display: flex; gap: .35rem; flex-wrap: wrap; align-items: flex-end; }
     .review-range-btn {
       font-size: .78rem;
       padding: .24rem .65rem;

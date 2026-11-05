@@ -1668,3 +1668,5 @@ precedence over a saved preference, so remove `motion=reduce` to use that prefer
 Kiosk backgrounds, cards, titles and metadata use the shared theme colors.
 Open `/?mode=kiosk&theme=dark` for a dark board or use `theme=light` for light.
 The green header remains the Kiosk mode indicator.
+
+Shared field labels in Focus, Review and Graph, and the bulk completion date dialog, use the normal form styles independently of Kiosk mode. Open those views or select tasks and choose bulk completion as usual; no additional setting is needed.

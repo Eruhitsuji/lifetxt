@@ -1,0 +1,26 @@
+schema_version: 1
+verification:
+  executed:
+    - type: unit
+      command: python -m unittest tests.test_unicode_verify tests.test_unicode_runtime tests.test_unicode_minimal tests.test_traceability_gate tests.test_change_package_closeout
+      result: 49 passed
+      status: passed
+    - type: actual_static
+      result: 10573 pinned payloads; 555 staged inputs; 3084 C/header/Python source files; 345 static members/objects; 19 encoding files.
+      status: passed
+    - type: actual_wasm
+      result: 7 absent builtins, 12 rejected codecs with lookup/encode/decode/wrapper checks, positive Unicode/JSON/datetime/legacy ZIP and 120 native parity cases.
+      status: passed
+    - type: source_residuals
+      result: 33 reference files and 28 retained sample files need classification; NOT a whole-source removal claim.
+      status: unresolved
+    - type: browser_licence
+      result: NOT RUN; integration/distribution tasks retain their gates.
+      status: not_run
+review_ledger:
+  - reviewer: separate Claude Code session
+    review_type: implementation/security
+    result: pending
+  - reviewer: separate Claude Code session
+    review_type: integration
+    result: pending

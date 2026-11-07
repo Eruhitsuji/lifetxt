@@ -395,6 +395,16 @@ traceability:
     - requirement_id: req-browser-local-check-distribution-v1
       capability_id: cap-official-website
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1436
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1531
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1533
+      tests_or_evidence:
+        - tests/test_unicode_verify.py
+        - contrib/browser_check_poc/profiles/unicode-minimal-3/verification.json
+      status: in_review
+
+    - requirement_id: req-browser-local-check-distribution-v1
+      capability_id: cap-official-website
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1436
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1530
       pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1532
       changed_files_or_scope:

@@ -1,0 +1,12 @@
+schema_version: 1
+requirements:
+  - id: req-browser-local-check-distribution-v1
+    kind: MODIFIED
+    statement: Measure the exact isolated candidate across source, static objects, stdlib and real WASM.
+    acceptance_criteria:
+      - Fail closed on changed candidate, manifest, compiler input, object registration or stdlib.
+      - Execute codec positive/negative checks and native parser parity in actual WASM.
+      - Inventory residual source references/samples without licensing or complete-removal claims.
+    owner: Eruhitsuji
+open_questions:
+  - Residual source data classification/curation and distribution source choice remain with 1398/1437.

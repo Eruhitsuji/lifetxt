@@ -7,6 +7,7 @@ change:
   assurance_level: Standard
   owner: Eruhitsuji
   related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1534
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1535
 scope:
   write_scope: [contrib/lifetxt-js-check, dedicated CI, traceability and this change package]
   forbidden_scope: [Core, Format, Mini CLI, existing checker, Pages, publication]

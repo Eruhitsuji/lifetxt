@@ -11,11 +11,11 @@ task:
   assurance: High
   method: adaptive-default
   phase: developer-verification-and-independent-review
-  status: in-review
+  status: merged-with-conditional-independent-review
   reviewers:
-    implementation: pending-independent
-    security: pending-independent
-    integration: pending-independent
+    implementation: original-head-conditional-acceptance
+    security: original-head-conditional-acceptance
+    integration: original-head-isolated-poc-accepted
   owner_merge_required: true
   rollout: not-authorized
 
@@ -44,3 +44,12 @@ boundaries:
   - Never infer mapping source licensing from deleted files alone
   - No status or publication flag true before source-specific review
   - CI plus independent head review and Owner merge approval required
+
+review_followup:
+  issue: https://github.com/Eruhitsuji/lifetxt/issues/1528
+  review_url: https://github.com/Eruhitsuji/lifetxt/issues/1434#issuecomment-6699468862
+  reviewed_original_head: b98e3935afd3c6eea435acf0c3451a08a14cbfd0
+  correction_review: pending-independent-latest-head
+  actual_source_reexecution: not-run-input-unavailable
+  source_receipt_values: historical-implementer-report-not-independent-reproduction
+  verification: see-review-followup.md

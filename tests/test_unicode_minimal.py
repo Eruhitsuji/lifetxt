@@ -2,6 +2,7 @@
 
 import ast
 import hashlib
+import gzip
 import io
 from pathlib import Path
 import tarfile
@@ -36,10 +37,11 @@ def fixture(missing=None, symlink=False):
             arc.addfile(item)
     return buf.getvalue()
 
+
 def checked_curate(source, target):
     """Use fixture bytes as the synthetic expected hash only in unit tests."""
     expected = hashlib.sha256(source.read_bytes()).hexdigest()
-    return mod.curate(source, target, expected_source_sha256=expected)
+    return mod._curate(source, target, expected, {})
 
 
 class SourceOnlyTests(unittest.TestCase):
@@ -109,6 +111,199 @@ class SourceOnlyTests(unittest.TestCase):
                 checked_curate(source, b)["output_sha256"],
             )
             self.assertEqual(a.read_bytes(), b.read_bytes())
+
+
+class ReviewRegressionTests(unittest.TestCase):
+    def reject(self, payload, pattern=None):
+        with tempfile.TemporaryDirectory() as td:
+            source, target = Path(td) / "in.gz", Path(td) / "out.gz"
+            source.write_bytes(payload)
+            with self.assertRaisesRegex(
+                (ValueError, tarfile.TarError, UnicodeError, gzip.BadGzipFile),
+                pattern or ".",
+            ):
+                checked_curate(source, target)
+            self.assertFalse(target.exists())
+
+    def extra(self, name, kind=tarfile.REGTYPE, data=b"x"):
+        original = fixture()
+        buf = io.BytesIO()
+        with tarfile.open(fileobj=io.BytesIO(original), mode="r:gz") as src:
+            with tarfile.open(fileobj=buf, mode="w:gz") as dst:
+                for member in src:
+                    dst.addfile(member, src.extractfile(member))
+                member = tarfile.TarInfo(name)
+                member.type = kind
+                member.linkname = "../../outside"
+                member.size = len(data) if kind == tarfile.REGTYPE else 0
+                dst.addfile(member, io.BytesIO(data) if member.size else None)
+        return buf.getvalue()
+
+    def test_unsafe_paths_duplicates_and_member_types(self):
+        for name in [
+            "../escape",
+            "/absolute",
+            mod.ROOT + "/a/../b",
+            "Other/file",
+            mod.ROOT + "/evil\\name",
+            mod.ROOT + "/Lib/encodings/utf_8.py",
+        ]:
+            with self.subTest(name=name):
+                self.reject(self.extra(name))
+        for kind in [
+            tarfile.LNKTYPE,
+            tarfile.SYMTYPE,
+            tarfile.CHRTYPE,
+            tarfile.FIFOTYPE,
+        ]:
+            with self.subTest(kind=kind):
+                self.reject(self.extra(mod.ROOT + "/special", kind))
+        self.reject(self.extra(mod.ROOT))
+        self.reject(b"not gzip")
+
+    def test_encoding_subtree_closed(self):
+        for filename in ["gb18030.pyc", "utf_8.pyi", "utf_8.txt", "nested/utf_8.py"]:
+            with self.subTest(filename=filename):
+                self.reject(
+                    self.extra(mod.ROOT + "/Lib/encodings/" + filename),
+                    "encoding subtree",
+                )
+
+    def test_alias_malformed(self):
+        for blob in [
+            b"x = {}",
+            b"aliases = [];",
+            b'aliases = {1: "utf_8"}',
+            b'aliases = {"a": 1}',
+            b"aliases = dict()",
+            b"aliases = {}\naliases = {}",
+            b"\xff",
+        ]:
+            with self.subTest(blob=blob), tempfile.TemporaryDirectory() as td:
+                payload = io.BytesIO()
+                with tarfile.open(fileobj=io.BytesIO(fixture()), mode="r:gz") as src:
+                    with tarfile.open(fileobj=payload, mode="w:gz") as dst:
+                        for member in src:
+                            data = src.extractfile(member).read()
+                            if member.name.endswith("/aliases.py"):
+                                data = blob
+                            member.size = len(data)
+                            dst.addfile(member, io.BytesIO(data))
+                self.reject(payload.getvalue())
+
+    def test_missing_retained_codec(self):
+        payload = io.BytesIO()
+        with tarfile.open(fileobj=io.BytesIO(fixture()), mode="r:gz") as src:
+            with tarfile.open(fileobj=payload, mode="w:gz") as dst:
+                for member in src:
+                    if not member.name.endswith("/utf_16.py"):
+                        dst.addfile(member, src.extractfile(member))
+        self.reject(payload.getvalue(), "missing required")
+
+    def test_resource_limits(self):
+        from unittest.mock import patch
+
+        cases = [
+            ("MAX_ARCHIVE_BYTES", 1, "compressed"),
+            ("MAX_MEMBERS", 1, "count"),
+            ("MAX_MEMBER_BYTES", 1, "size"),
+            ("MAX_EXPANDED_BYTES", 100, "expanded"),
+        ]
+        for name, limit, message in cases:
+            with self.subTest(name=name), patch.object(mod, name, limit):
+                self.reject(fixture(), message)
+
+    def test_receipt_rejects_each_wrong_value_before_output(self):
+        with tempfile.TemporaryDirectory() as td:
+            source, target = Path(td) / "in.gz", Path(td) / "out.gz"
+            source.write_bytes(fixture())
+            expected_hash = hashlib.sha256(source.read_bytes()).hexdigest()
+            for key in mod.EXPECTED_RESULT:
+                with (
+                    self.subTest(key=key),
+                    self.assertRaisesRegex(ValueError, "receipt mismatch"),
+                ):
+                    mod._curate(source, target, expected_hash, {key: "wrong"})
+                self.assertFalse(target.exists())
+
+    def test_production_entry_enforces_pin_and_receipt(self):
+        from unittest.mock import patch
+
+        with tempfile.TemporaryDirectory() as td:
+            source, target = Path(td) / "in.gz", Path(td) / "out.gz"
+            source.write_bytes(fixture())
+            with patch.object(
+                mod,
+                "EXPECTED_SOURCE_SHA256",
+                hashlib.sha256(source.read_bytes()).hexdigest(),
+            ):
+                with self.assertRaisesRegex(ValueError, "receipt mismatch"):
+                    mod.curate(source, target)
+            self.assertFalse(target.exists())
+
+    def test_publish_failures_cleanup_and_no_clobber(self):
+        from unittest.mock import patch
+
+        with tempfile.TemporaryDirectory() as td:
+            target = Path(td) / "out.gz"
+            for operation in ["fsync", "link"]:
+                with (
+                    self.subTest(operation=operation),
+                    patch.object(mod.os, operation, side_effect=OSError("simulated")),
+                ):
+                    with self.assertRaises(OSError):
+                        mod._publish(b"complete", target)
+                self.assertEqual(list(Path(td).iterdir()), [])
+            target.symlink_to(Path(td) / "missing")
+            with self.assertRaises(FileExistsError):
+                mod._publish(b"complete", target)
+            self.assertTrue(target.is_symlink())
+            self.assertFalse((Path(td) / "missing").exists())
+            self.assertEqual(len(list(Path(td).iterdir())), 1)
+
+    def test_failed_write_closes_before_cleanup_and_preserves_error(self):
+        from unittest.mock import patch
+
+        with tempfile.TemporaryDirectory() as td:
+            target = Path(td) / "out.gz"
+            original_factory = mod.tempfile.NamedTemporaryFile
+            original_unlink = Path.unlink
+            opened = []
+            failure = OSError("original fsync failure")
+
+            def track_file(*args, **kwargs):
+                stream = original_factory(*args, **kwargs)
+                opened.append(stream)
+                return stream
+
+            def windows_unlink(path, *args, **kwargs):
+                # Enforce Windows close-before-delete semantics on every host.
+                self.assertTrue(opened[-1].closed)
+                return original_unlink(path, *args, **kwargs)
+
+            with (
+                patch.object(mod.tempfile, "NamedTemporaryFile", track_file),
+                patch.object(mod.os, "fsync", side_effect=failure),
+                patch.object(Path, "unlink", windows_unlink),
+            ):
+                with self.assertRaises(OSError) as raised:
+                    mod._publish(b"complete", target)
+            self.assertIs(raised.exception, failure)
+            self.assertEqual(list(Path(td).iterdir()), [])
+
+    def test_retained_hash_receipt(self):
+        with tempfile.TemporaryDirectory() as td:
+            source, target = Path(td) / "in.gz", Path(td) / "out.gz"
+            source.write_bytes(fixture())
+            report = checked_curate(source, target)
+            with tarfile.open(target, "r:gz") as archive:
+                expected = {
+                    m.name.removeprefix(mod.ROOT + "/"): hashlib.sha256(
+                        archive.extractfile(m).read()
+                    ).hexdigest()
+                    for m in archive
+                }
+            self.assertEqual(report["retained_sha256"], expected)
 
 
 if __name__ == "__main__":

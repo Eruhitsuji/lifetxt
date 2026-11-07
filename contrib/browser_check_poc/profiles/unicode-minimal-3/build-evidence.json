@@ -1,0 +1,314 @@
+{
+  "attempts": [
+    {
+      "attempt": 1,
+      "exit_code": 2,
+      "log": {
+        "bytes": 347,
+        "filename": "profile3-attempt1.log",
+        "sha256": "5ebc77d6b2a9b2d0ef3e0709a0c8bc78b3bf75c1c76874a10257b0f6940d068b"
+      },
+      "reason": "optional ccache unavailable"
+    },
+    {
+      "attempt": 2,
+      "exit_code": 2,
+      "log": {
+        "bytes": 60,
+        "filename": "profile3-attempt2.log",
+        "sha256": "4d56bf795f2e19a6fec67bf17c748a3e40b75523551e827ab5d7b91ae0215fc3"
+      },
+      "reason": "wrong working directory, no compilation"
+    },
+    {
+      "attempt": 3,
+      "exit_code": 2,
+      "log": {
+        "bytes": 42586,
+        "filename": "profile3-attempt3.log",
+        "sha256": "63d6887c03475baf6c28d41bbd7da5c3a359d14d4b3ac1d54f3b5e5427145fa0"
+      },
+      "reason": "user-prefix aclocal alias missing"
+    },
+    {
+      "attempt": 4,
+      "exit_code": 2,
+      "log": {
+        "bytes": 2941,
+        "filename": "profile3-attempt4.log",
+        "sha256": "17c4afab95e6d072d965d286b69c735facbaf1d84cc3da1897d02e461cb1d99b"
+      },
+      "reason": "user-prefix autom4te absolute reference"
+    },
+    {
+      "attempt": 5,
+      "exit_code": 2,
+      "log": {
+        "bytes": 4463,
+        "filename": "profile3-attempt5.log",
+        "sha256": "58f696e3a364bbba5e811ac9f673a28438154032762360809388aecc70fdd3d2"
+      },
+      "reason": "libltdl development macros missing"
+    },
+    {
+      "attempt": 6,
+      "exit_code": 0,
+      "log": {
+        "bytes": 1554675,
+        "filename": "profile3-attempt6.log",
+        "sha256": "52e262d325ae44dbbe3809a15f37a61230cead66c2ffb3f3cec3f936e65c1393"
+      },
+      "reason": "actual 18-file source-only candidate compiled"
+    },
+    {
+      "attempt": 7,
+      "exit_code": 0,
+      "log": {
+        "bytes": 4087,
+        "filename": "profile3-attempt7.log",
+        "sha256": "dc76a77ffb61c690292acfa938d6ecd4684807a7c4696217a9f104ebb1dda9cd"
+      },
+      "reason": "stdlib overlay cp437 added, native WASM unchanged"
+    }
+  ],
+  "build_inputs_lock_sha256": "db10fce009f067e03e2c3c672b0d8886210d91365ba2658e82994648f1100913",
+  "build_recipe_sha256": "6a73288be76eb386961b8ebbffe92e356378a837ee8ebac5ec3395a28c1f0908",
+  "build_task": 1530,
+  "checkpoint_v2_inputs_lock_sha256": "db10fce009f067e03e2c3c672b0d8886210d91365ba2658e82994648f1100913",
+  "checkpoint_v2_recipe_sha256": "359414494c4169389424c364f21e8e6f1d8c6fb296d8e90283bb7e531691ebe7",
+  "complete_distribution_audit": false,
+  "distribution_profile_adopted": false,
+  "files": {
+    "pyodide-lock.json": {
+      "bytes": 119077,
+      "sha256": "5dc2fc119108bc148c7457dc86e7675b5c87e1cafd420b9c34c1eaef7b36c010"
+    },
+    "pyodide.asm.mjs": {
+      "bytes": 1249604,
+      "sha256": "1338e6176e2a66965d58a079ce9d045157267f0b4b879a5aa16c658e74acafb6"
+    },
+    "pyodide.asm.wasm": {
+      "bytes": 8937927,
+      "sha256": "5566748c285a67d1a4e37ea149a221969d8e1872c92c2704fd5e7c08dee24598"
+    },
+    "pyodide.mjs": {
+      "bytes": 17931,
+      "sha256": "9dd7fc1a06f8ef81e10a907efac5e8a409e23406c5b948366422e1cb361a6e2b"
+    },
+    "python_stdlib.zip": {
+      "bytes": 2235173,
+      "sha256": "42cea030676bdcb5adeb875343ce09701dd46f2329fe70213b1a4cff33058dfc"
+    }
+  },
+  "final_builder_smoke": {
+    "boot": true,
+    "node": "v24.22.1",
+    "python": "3.14.2 (main, Nov  7 2026, 10:06:42) [Clang 23.0.0git (https:/github.com/llvm/llvm-project e5927fecf8a6ce89e1a4eac5b8",
+    "scope": "builder smoke only; independent artifact/parity/licence review NOT RUN",
+    "unicode": "\u65e5\u672c\u8a9e\ud83d\ude00",
+    "zipfile": "pass"
+  },
+  "guard_stage_revalidation": {
+    "all_staged_files_match_compiled_stage": true,
+    "full_recompile": false,
+    "previous_build_recipe_sha256": "6a73288be76eb386961b8ebbffe92e356378a837ee8ebac5ec3395a28c1f0908",
+    "recipe_sha256": "359414494c4169389424c364f21e8e6f1d8c6fb296d8e90283bb7e531691ebe7",
+    "scope": "Guard-only correction reproduced identical source recipe outputs. Historical binaries and initial checkpoint remain unchanged.",
+    "staged_receipt_sha256": "dacbf5994c1eb3df29f3438034678648bb6300dc8aca23530f5fa402afc9093e"
+  },
+  "host": {
+    "clang": {
+      "bytes": 143875832,
+      "sha256": "141b521b24f86d0533968431cb2a3a08a202507e022ac8d0a02ec43b9585169e"
+    },
+    "compiler_cache": "disabled; failed optional ccache build retained",
+    "complete_distribution_audit": false,
+    "emscripten_revision": "285c424dfa9e83b03cf8490c65ceadb7c45f28eb",
+    "emsdk_commit": "a620cf1d71c62dfdfbb0c01fe0a371e2af2dda6c",
+    "host_packages": [
+      {
+        "package": "autoconf",
+        "sha256": "cc3f9f7a1e576173fb59c36652c0a67c6426feae752b352404ba92dfcb1b26c9",
+        "url": "https://archive.ubuntu.com/ubuntu/pool/main/a/autoconf/autoconf_2.71-3_all.deb",
+        "version": "2.71-3"
+      },
+      {
+        "package": "automake",
+        "sha256": "5ae9a98e73545002cd891f028859941af2a3c760cb6190e635c7ef36953912de",
+        "url": "https://archive.ubuntu.com/ubuntu/pool/main/a/automake-1.16/automake_1.16.5-1.3ubuntu1_all.deb",
+        "version": "1:1.16.5-1.3ubuntu1"
+      },
+      {
+        "package": "autotools-dev",
+        "sha256": "d909f0327b09d9a9136239caca975df89782fa28efd721c4eb4caea422d3fc5a",
+        "url": "https://archive.ubuntu.com/ubuntu/pool/main/a/autotools-dev/autotools-dev_20220109.1_all.deb",
+        "version": "20220109.1"
+      },
+      {
+        "package": "libtool",
+        "sha256": "9d1d707179675d38e024bb13613b1d99e0d33fa6c45e5f3bcba19340781781d3",
+        "url": "https://archive.ubuntu.com/ubuntu/pool/main/libt/libtool/libtool_2.4.7-7build1_all.deb",
+        "version": "2.4.7-7build1"
+      },
+      {
+        "package": "m4",
+        "sha256": "30ea715845a1863abd55d11e47ab91513130bf347852d4cdeae69e9d98fa795c",
+        "url": "https://archive.ubuntu.com/ubuntu/pool/main/m/m4/m4_1.4.19-4build1_amd64.deb",
+        "version": "1.4.19-4build1"
+      },
+      {
+        "package": "libltdl7",
+        "sha256": "02d0d2d7e1bf73f838a92f8df7a9b07b698c837e82bd89aee6a581cf793cd966",
+        "url": "https://archive.ubuntu.com/ubuntu/pool/main/libt/libtool/libltdl7_2.4.7-7build1_amd64.deb",
+        "version": "2.4.7-7build1"
+      },
+      {
+        "package": "libltdl-dev",
+        "sha256": "3a706efe1d9d8b493bd2335fabaa9ec28549c9134750fad6c0a5aa9868c6ee9c",
+        "url": "https://archive.ubuntu.com/ubuntu/pool/main/libt/libtool/libltdl-dev_2.4.7-7build1_amd64.deb",
+        "version": "2.4.7-7build1"
+      }
+    ],
+    "host_python": {
+      "bytes": 30003744,
+      "sha256": "99f55c5b2b4dc4879ce8109aa2c9c1749e4f99c4f191792ca6ffd13ef12627b7",
+      "version": "Python 3.14.2"
+    },
+    "node_sdk": {
+      "bytes": 121509208,
+      "sha256": "8142d37c6f2f372ef040419e7a111a6baf17df89f8078d02447d6c639ae20c1d",
+      "version": "v22.16.0"
+    },
+    "node_shell": {
+      "bytes": 126939688,
+      "sha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d",
+      "version": "v24.22.1"
+    },
+    "os": "Debian GNU/Linux 13 (trixie), x86_64",
+    "profile": "lifetxt-unicode-minimal-3-candidate",
+    "public_distribution_approved": false,
+    "runtime_verified": false,
+    "schema_version": 1,
+    "sdk_archives": {
+      "065bfade0ee2c02138b83cb10049d8be95e146b6-wasm-binaries.tar.xz": {
+        "bytes": 354893508,
+        "sha256": "7ae996db24911edc535cccf069fb8a3ed63e8dac7abe58e758431abfe3255165"
+      },
+      "node-v22.16.0-linux-x64.tar.xz": {
+        "bytes": 30425588,
+        "sha256": "f4cb75bb036f0d0eddf6b79d9596df1aaab9ddccd6a20bf489be5abe9467e84e"
+      }
+    }
+  },
+  "independent_runtime_verification": "NOT RUN; issue 1531",
+  "initial_boot": {
+    "boot": true,
+    "node": "v24.22.1",
+    "python": "3.14.2 (main, Nov  7 2026, 10:06:42) [Clang 23.0.0git (https:/github.com/llvm/llvm-project e5927fecf8a6ce89e1a4eac5b8",
+    "scope": "builder smoke only; independent artifact/parity/licence review NOT RUN",
+    "unicode": "\u65e5\u672c\u8a9e\ud83d\ude00",
+    "zipfile": "LookupError: unknown encoding: cp437"
+  },
+  "inputs_lock_sha256": "ca1061a764e1eb0dbc604737140d8b2091fdc55d174b4d4e5266660b55b4f31a",
+  "internal_cp437_sha256": "5c2a5015cd36cf7f561269f33dec4c323093d3d88b0673969accdabdcb9ce2cb",
+  "licence_resolved": false,
+  "parent_issue": 1436,
+  "profile": "lifetxt-unicode-minimal-3-candidate",
+  "public_distribution_approved": false,
+  "recipe_binding": "Current LF-fixed stager with fail-closed 555-file baseline; historical compile/package recipe and checkpoint v2 retain their prior code/config identities.",
+  "recipe_sha256": "f0cb721856627a01f1899dd709e2f2f0cdf13c02b6679a4f8318412402b7771f",
+  "repository_base_commit": "8365468a31ffa3e0d503ddfbc6915c93f4c16516",
+  "runtime_verified": false,
+  "schema_version": 1,
+  "sdk_provenance_recheck": {
+    "archive_installed_comparison": {
+      "install/bin/clang-23": {
+        "matches_installed": true,
+        "sha256": "141b521b24f86d0533968431cb2a3a08a202507e022ac8d0a02ec43b9585169e"
+      },
+      "install/emscripten/emscripten-revision.txt": {
+        "matches_installed": true,
+        "sha256": "35986dbc85ceae60f043a4fe337d566d5df05a16c016b06b09aad3ff8dc27d78"
+      },
+      "node-v22.16.0-linux-x64/bin/node": {
+        "matches_installed": true,
+        "sha256": "8142d37c6f2f372ef040419e7a111a6baf17df89f8078d02447d6c639ae20c1d"
+      }
+    },
+    "binary_files": {
+      "clang": {
+        "bytes": 143875832,
+        "sha256": "141b521b24f86d0533968431cb2a3a08a202507e022ac8d0a02ec43b9585169e"
+      },
+      "llvm-ar": {
+        "bytes": 10635880,
+        "sha256": "2a08dfcecdfaa200f48be07ea30873e751ef9bc4cf871814eafc21c983e8c27b"
+      },
+      "wasm-as": {
+        "bytes": 20831184,
+        "sha256": "2fca1610b83e6b060b5eb70c7468a05e0d49dfe3c0a030c9d5384ac495153a80"
+      },
+      "wasm-ld": {
+        "bytes": 80540208,
+        "sha256": "6ef00b60218468d99fd64840d068cce38d7438570e24bd995ecc14d3759bd3da"
+      },
+      "wasm-opt": {
+        "bytes": 22244096,
+        "sha256": "f4bba58480af5d8b54c9a4e00b4b4d0ccb63cba32b07728db40f1687af175a94"
+      }
+    },
+    "patches": {
+      "0001-Add-useful-error-when-symbol-resolution-fails.patch": {
+        "bytes": 1825,
+        "sha256": "49fe15971dffd37da96ecaa55de036890c92d06a752d9bc481299ef844f22ab7"
+      },
+      "0002-Fix-promise-order.patch": {
+        "bytes": 1341,
+        "sha256": "7e6166923dc703fb571b449334ebcfbebfc5283c322d740297bf213a3e508089"
+      },
+      "0003-dylink-Normalize-library-paths-to-prevent-duplicate-loading.patch": {
+        "bytes": 1438,
+        "sha256": "6b04b74f6737f0e604a524e4217c7d5859a852e57308fce3793c7e07f64b33a0"
+      },
+      "0004-Append-pic-directory-when-SIDE_MODULE.patch": {
+        "bytes": 1449,
+        "sha256": "4e96b6bff08733dab7cad4f52e368df3669e518e0cf3aa8ba297e8097fb22147"
+      },
+      "0005-Don-t-bundle-the-LLVM-profile-runtime-into-libcompil.patch": {
+        "bytes": 1938,
+        "sha256": "cf23a6cb9a8b0c83230564f171afc559110dae4c4d6afa572c700264741244d8"
+      }
+    },
+    "scope": "Post-build re-download of the same fixed release URLs; matched installed clang/revision/node. Not the original download capture or whole SDK/ports attestation.",
+    "sdk_archives": {
+      "065bfade0ee2c02138b83cb10049d8be95e146b6-wasm-binaries.tar.xz": {
+        "bytes": 354893508,
+        "sha256": "7ae996db24911edc535cccf069fb8a3ed63e8dac7abe58e758431abfe3255165"
+      },
+      "node-v22.16.0-linux-x64.tar.xz": {
+        "bytes": 30425588,
+        "sha256": "f4cb75bb036f0d0eddf6b79d9596df1aaab9ddccd6a20bf489be5abe9467e84e"
+      }
+    }
+  },
+  "source_only_archive_sha256": "eb80e7df3c4a4190ec5b83c72e231fbba33dc299a442ce6743ea03a54dea5619",
+  "stage_receipt_sha256": "dacbf5994c1eb3df29f3438034678648bb6300dc8aca23530f5fa402afc9093e",
+  "stage_revalidation": {
+    "current_inputs_lock_sha256": "ca1061a764e1eb0dbc604737140d8b2091fdc55d174b4d4e5266660b55b4f31a",
+    "current_recipe_sha256": "f0cb721856627a01f1899dd709e2f2f0cdf13c02b6679a4f8318412402b7771f",
+    "expected_staged_files_sha256": "617d49c794526119a5199267f0bdf8a9c72ddcf78f5717fa4caaf1c222dfa92d",
+    "full_recompile": false,
+    "historical_stage_receipt_sha256": "dacbf5994c1eb3df29f3438034678648bb6300dc8aca23530f5fa402afc9093e",
+    "linux_matches_historical_staged_files": true,
+    "native_windows_execution": "NOT RUN; external reviewer required",
+    "new_stage_receipt_sha256": "a331c5a825242fbb109628d1f065a3fee6ba986e770eae5f94346276473ab9ce",
+    "receipt_metadata_changes": [
+      "inputs_lock_sha256",
+      "staged_files_digest"
+    ],
+    "runtime_verified": false,
+    "staged_files": 555,
+    "windows_translation_simulation_matches_linux_bytes_and_receipt": true
+  },
+  "verification_task": 1531
+}

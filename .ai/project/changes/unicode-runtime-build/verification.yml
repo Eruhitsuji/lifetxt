@@ -1,0 +1,47 @@
+schema_version: 1
+verification:
+  executed:
+    - type: unit
+      command: python -m unittest tests.test_unicode_runtime tests.test_unicode_minimal
+      result: 27 source/recipe tests passed; 44 with traceability/change-package checks
+      status: passed
+    - type: lint
+      command: ruff check and ruff format --check for the two new files
+      status: passed
+    - type: source-stage
+      result: Actual fixed archives staged; original curator count and output receipt passed.
+      status: passed
+    - type: compiler-preflight
+      result: clang hash, SDK revision, Pyodide patches and struct_info comparison matched.
+      status: passed
+    - type: compile
+      result: Actual compile attempt 6 and cp437 overlay packaging attempt 7 exited 0; initial boot passed but zipfile failed cp437, final focused boot/UTF-8/zipfile smoke passed. See build-evidence.json.
+      status: passed
+    - type: runtime-verification
+      result: NOT RUN; assigned to issue 1531.
+      status: not_run
+review_ledger:
+  - reviewer: separate Claude Code session
+    review_type: implementation/security
+    target_commit: 3590fdd06711289e4309223c407932b6c437f14b
+    evidence: https://github.com/Eruhitsuji/lifetxt/issues/1530#issuecomment-6700275348
+    result: conditional-not-approved-p2-section-guard
+  - reviewer: separate Claude Code session
+    review_type: integration
+    target_commit: 3590fdd06711289e4309223c407932b6c437f14b
+    result: conditional-draft-isolated-candidate-only
+  - reviewer: separate Claude Code session
+    review_type: implementation/security-and-integration
+    target_commit: 52c16502bb2cd566b5e1cd40cba1c5c7d4d056e0
+    evidence: https://github.com/Eruhitsuji/lifetxt/issues/1530#issuecomment-6700540858
+    result: conditional-draft-only-p2-os-newlines
+  - reviewer: separate Claude Code session
+    review_type: corrected-latest-head-implementation-and-integration
+    result: pending
+
+lf_correction_validation:
+  native_windows: not_run
+  windows_text_translation_simulation: passed
+  actual_linux_fixed_inputs: passed_555_staged_files_match
+  full_recompile: not_run_unnecessary_source_bytes_unchanged
+  checkpoint_v2: immutable_historical_code_and_config

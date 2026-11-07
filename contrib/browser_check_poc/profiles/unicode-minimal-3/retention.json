@@ -1,0 +1,13 @@
+{
+  "filename": "unicode-minimal-profile3-checkpoint-20261107-v2.tar.gz",
+  "bytes": 195617996,
+  "sha256": "39291c0f852b7a4fa2690ebed326e620b1dc3b691363dab899c40b6685ef2975",
+  "regular_payloads": 10879,
+  "manifest_sha256": "21642f9217c79226546f0faab7264a69d62c7e745ff89aba7f6ee6803ab04e74",
+  "all_payload_hashes_verified": true,
+  "previous_checkpoint_sha256": "eaaec42fb170535477ee4af443746f54f7baf279ed56eac90134c35dfa251f4d",
+  "sdk_binaries_included": false,
+  "node_modules_included": false,
+  "distribution_approved": false,
+  "runtime_verified": false
+}

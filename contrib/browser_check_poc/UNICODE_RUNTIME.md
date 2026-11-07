@@ -28,8 +28,9 @@ staged files have SHA-256 in `stage-receipt.json`; `INCOMPLETE` marks a failed
 stage and must never be bypassed. Rerun with a new directory after investigating
 failure. The recipe never downloads a compiler or runs make implicitly.
 
-The recipe disables `_multibytecodec`, `_codecs_cn`, `_codecs_jp`, `_codecs_kr`,
-`_codecs_tw`, `_codecs_iso2022`; `_codecs_hk` was already disabled. The only
+The recipe writes disable declarations for `_multibytecodec`, `_codecs_cn`, `_codecs_jp`, `_codecs_kr`,
+`_codecs_tw`, `_codecs_iso2022`; `_codecs_hk` already has a disable declaration. The receipt field
+`disabled_builtins` lists source declarations, not verified object/import absence. The only
 non-regular input members accepted are two exact, same-directory zstd test
 symlinks in its pinned source archive. Expanded archive/header/padding bytes,
 member sizes and counts are bounded. Libffi and hiwire recipes use pinned local
@@ -158,3 +159,25 @@ The private checkpoint retains original mapping-containing input archives as
 provenance. It is not a final public corresponding-source bundle. #1437/#1398
 must choose the exact distributable derived sources and audit their scope; do
 not publish the checkpoint or infer resolved-removed for all retained inputs.
+
+
+## Independent review correction (PR #1532)
+
+[Review](https://github.com/Eruhitsuji/lifetxt/issues/1530#issuecomment-6700275348)
+found that the original guard did not prove appended entries were in a disabled
+section. The corrected guard ignores comments, requires exactly one terminal
+`*disabled*` directive and one standalone `_codecs_hk`, rejects already listed
+CJK entries, and fails before writing Setup.local if another section follows.
+Regression tests cover later static/shared/noconfig/unknown sections, missing or
+repeated disabled sections, comments/duplicates, and the full stage failure path.
+Actual sources were staged again with the corrected recipe and all staged source
+hashes matched the existing compile inputs exactly. No full recompile was run.
+`build_recipe_sha256` identifies the historical compiler recipe, while
+`recipe_sha256` identifies the corrected stager; `stage_revalidation` binds them.
+
+P2-2 remains NOT RUN for this task: builtin removal in config.c/object/WASM/import
+is a required independent #1531 check. Source-section editing and successful boot
+are not proof of removal. cp437 licensing/mapping provenance remains for #1398.
+SDK archive hashes re-fetched after the build and matched to installed compiler/
+revision/Node are supplemental provenance, not whole-SDK/ports attestation.
+Failed-attempt log length/hash receipts are included explicitly in build evidence.

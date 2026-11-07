@@ -3,7 +3,7 @@ verification:
   executed:
     - type: unit
       command: python -m unittest tests.test_unicode_runtime tests.test_unicode_minimal
-      result: 22 source/recipe tests passed; 39 with traceability/change-package checks
+      result: 25 source/recipe tests passed; 42 with traceability/change-package checks
       status: passed
     - type: lint
       command: ruff check and ruff format --check for the two new files
@@ -23,7 +23,13 @@ verification:
 review_ledger:
   - reviewer: separate Claude Code session
     review_type: implementation/security
-    result: pending
+    target_commit: 3590fdd06711289e4309223c407932b6c437f14b
+    evidence: https://github.com/Eruhitsuji/lifetxt/issues/1530#issuecomment-6700275348
+    result: conditional-not-approved-p2-section-guard
   - reviewer: separate Claude Code session
     review_type: integration
+    target_commit: 3590fdd06711289e4309223c407932b6c437f14b
+    result: conditional-draft-isolated-candidate-only
+  - reviewer: separate Claude Code session
+    review_type: corrected-latest-head-implementation-and-integration
     result: pending

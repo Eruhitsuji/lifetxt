@@ -86,6 +86,28 @@ def _once(body, before, after):
     return body.replace(before, after)
 
 
+def _disable_builtins(body):
+    """Append only to a single, terminal disabled section; ignore comments."""
+    lines = [line.split("#", 1)[0].strip() for line in body.splitlines()]
+    sections = [
+        (index, line) for index, line in enumerate(lines) if line.startswith("*")
+    ]
+    disabled = [index for index, line in sections if line == "*disabled*"]
+    if len(disabled) != 1 or sections[-1] != (disabled[0], "*disabled*"):
+        raise ValueError("expected one terminal builtin disable section")
+    tail = [line for line in lines[disabled[0] + 1 :] if line]
+    if tail.count("_codecs_hk") != 1 or any(
+        line.split()[0] in DISABLED for line in tail
+    ):
+        raise ValueError("unexpected disabled builtin entries")
+    return (
+        body
+        + "\n# Isolated Unicode-minimal candidate (#1530)\n"
+        + "\n".join(DISABLED)
+        + "\n"
+    )
+
+
 def stage(sources, output):
     """Prepare only new files under a fresh trusted-parent output directory."""
     if output.exists() or output.is_symlink():
@@ -118,18 +140,7 @@ def stage(sources, output):
     root = output / pyodide["root"]
     setup = root / "cpython/Setup.local"
     body = setup.read_text(encoding="utf-8")
-    if (
-        body.count("*disabled*") != 1
-        or body.split("*disabled*")[1].split().count("_codecs_hk") != 1
-    ):
-        raise ValueError("unexpected builtin disable section")
-    setup.write_text(
-        body
-        + "\n# Isolated Unicode-minimal candidate (#1530)\n"
-        + "\n".join(DISABLED)
-        + "\n",
-        encoding="utf-8",
-    )
+    setup.write_text(_disable_builtins(body), encoding="utf-8")
     downloads = root / "cpython/downloads"
     downloads.mkdir()
     shutil.copyfile(

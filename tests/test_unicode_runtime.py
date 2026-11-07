@@ -20,7 +20,7 @@ def archive(path, root, files):
             target.addfile(member, io.BytesIO(data))
 
 
-def inputs(directory):
+def inputs(directory, setup_body=None):
     entries = []
     makefile = ""
     for repository, commit in [
@@ -35,6 +35,8 @@ def inputs(directory):
         "pyodide_env.sh": b"export _EMCC_CCACHE=1\n",
         "Makefile": b"dist/python_stdlib.zip: tools/hkscs_free_build.py other\n\tpython3 tools/hkscs_free_build.py stdlib $(CPYTHONLIB) src/py --output $@\n",
     }
+    if setup_body is not None:
+        pyodide_files["cpython/Setup.local"] = setup_body
     for component in ["pyodide", "cpython", "libffi", "hiwire", "xz", "zstd", "sqlite"]:
         path = directory / (component + "-source.tar.gz")
         root = component + "-fixed"
@@ -175,6 +177,50 @@ class RuntimeRecipeTests(unittest.TestCase):
                     mod.stage(root, root / "stage")
             self.assertTrue((root / "stage/INCOMPLETE").exists())
             self.assertFalse((root / "stage/stage-receipt.json").exists())
+
+    def test_stage_rejects_later_section_without_appending_builtins(self):
+        invalid = b"*disabled*\n_codecs_hk\n*static*\n"
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            lock = inputs(root, setup_body=invalid)
+            with (
+                patch.object(mod, "INPUTS", lock),
+                patch.object(mod.unicode_minimal, "curate", synthetic_curate),
+            ):
+                with self.assertRaisesRegex(ValueError, "terminal"):
+                    mod.stage(root, root / "stage")
+            setup = root / "stage/pyodide-fixed/cpython/Setup.local"
+            self.assertEqual(setup.read_bytes(), invalid)
+            self.assertTrue((root / "stage/INCOMPLETE").exists())
+            self.assertFalse((root / "stage/stage-receipt.json").exists())
+
+    def test_disabled_section_must_be_terminal(self):
+        for ending in ("*static*", "*shared*", "*noconfig*", "*unknown*"):
+            with (
+                self.subTest(ending=ending),
+                self.assertRaisesRegex(ValueError, "terminal"),
+            ):
+                mod._disable_builtins("*disabled*\n_codecs_hk\n" + ending + "\n")
+        for body in ("*static*\n_codecs_hk\n", "*disabled*\n_codecs_hk\n*disabled*\n"):
+            with (
+                self.subTest(body=body),
+                self.assertRaisesRegex(ValueError, "terminal"),
+            ):
+                mod._disable_builtins(body)
+
+    def test_disable_guard_ignores_comment_sections_but_not_duplicate_modules(self):
+        body = "*static*\n# *shared*\n*disabled*  # final section\n_codecs_hk # existing\n# *static*\n"
+        result = mod._disable_builtins(body)
+        tail = result.split("*disabled*")[1]
+        for name in mod.DISABLED:
+            self.assertIn("\n" + name + "\n", tail)
+        for body in (
+            "*disabled*\n# _codecs_hk\n",
+            "*disabled*\n_codecs_hk\n_codecs_hk\n",
+            "*disabled*\n_codecs_hk\n_codecs_cn\n",
+        ):
+            with self.subTest(body=body), self.assertRaisesRegex(ValueError, "entries"):
+                mod._disable_builtins(body)
 
     def test_recipe_anchors_fail_closed(self):
         for body in ["", "xx", "anchor anchor"]:

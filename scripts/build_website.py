@@ -87,10 +87,11 @@ def render(
         + f">{escape(label)}</a>"
         for slug, label in zip(PAGES, copy["nav"], strict=True)
     )
+    checker_action = ""
     if checker_link and page == "index":
         label = "書式チェック" if lang == "ja" else "Syntax check"
         target = f"{lang}/check/" if root else "check/"
-        nav += f'<a href="{target}">{label}</a>'
+        checker_action = f'<a class="button" href="{target}">{label}</a>'
     card_html = "".join(
         f'<article class="card"><span class="number">{escape(number)}</span>'
         f"<h3>{escape(heading)}</h3><p>{escape(body)}</p>"
@@ -140,7 +141,7 @@ def render(
 <section class="{"hero" if show_sample else ""}" aria-labelledby="page-title"><div>
 <p class="eyebrow">{escape(copy["eyebrow"])}</p>
 <h1 id="page-title">{escape(hero_title)}</h1><p class="lead">{escape(hero_intro)}</p>
-<div class="actions"><a class="button primary" href="{escape(href("get-started", lang, prefix))}">{escape(copy["start"])} →</a>
+<div class="actions"><a class="button primary" href="{escape(href("get-started", lang, prefix))}">{escape(copy["start"])} →</a>{checker_action}
 <a class="button" href="{escape(href("releases" if page == "download" else "download", lang, prefix))}">{escape(copy["releases"] if page == "download" else copy["download"])}</a></div>
 </div>{file_html}</section>
 <section class="section" aria-labelledby="section-title"><div class="section-title">

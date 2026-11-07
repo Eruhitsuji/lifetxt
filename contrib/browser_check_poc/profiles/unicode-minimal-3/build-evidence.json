@@ -1,0 +1,169 @@
+{
+  "attempts": [
+    {
+      "attempt": 1,
+      "exit_code": 2,
+      "reason": "optional ccache unavailable"
+    },
+    {
+      "attempt": 2,
+      "exit_code": 2,
+      "reason": "wrong working directory, no compilation"
+    },
+    {
+      "attempt": 3,
+      "exit_code": 2,
+      "reason": "user-prefix aclocal alias missing"
+    },
+    {
+      "attempt": 4,
+      "exit_code": 2,
+      "reason": "user-prefix autom4te absolute reference"
+    },
+    {
+      "attempt": 5,
+      "exit_code": 2,
+      "reason": "libltdl development macros missing"
+    },
+    {
+      "attempt": 6,
+      "exit_code": 0,
+      "reason": "actual 18-file source-only candidate compiled"
+    },
+    {
+      "attempt": 7,
+      "exit_code": 0,
+      "reason": "stdlib overlay cp437 added, native WASM unchanged"
+    }
+  ],
+  "build_task": 1530,
+  "complete_distribution_audit": false,
+  "distribution_profile_adopted": false,
+  "files": {
+    "pyodide-lock.json": {
+      "bytes": 119077,
+      "sha256": "5dc2fc119108bc148c7457dc86e7675b5c87e1cafd420b9c34c1eaef7b36c010"
+    },
+    "pyodide.asm.mjs": {
+      "bytes": 1249604,
+      "sha256": "1338e6176e2a66965d58a079ce9d045157267f0b4b879a5aa16c658e74acafb6"
+    },
+    "pyodide.asm.wasm": {
+      "bytes": 8937927,
+      "sha256": "5566748c285a67d1a4e37ea149a221969d8e1872c92c2704fd5e7c08dee24598"
+    },
+    "pyodide.mjs": {
+      "bytes": 17931,
+      "sha256": "9dd7fc1a06f8ef81e10a907efac5e8a409e23406c5b948366422e1cb361a6e2b"
+    },
+    "python_stdlib.zip": {
+      "bytes": 2235173,
+      "sha256": "42cea030676bdcb5adeb875343ce09701dd46f2329fe70213b1a4cff33058dfc"
+    }
+  },
+  "final_builder_smoke": {
+    "boot": true,
+    "node": "v24.22.1",
+    "python": "3.14.2 (main, Nov  7 2026, 10:06:42) [Clang 23.0.0git (https:/github.com/llvm/llvm-project e5927fecf8a6ce89e1a4eac5b8",
+    "scope": "builder smoke only; independent artifact/parity/licence review NOT RUN",
+    "unicode": "\u65e5\u672c\u8a9e\ud83d\ude00",
+    "zipfile": "pass"
+  },
+  "host": {
+    "clang": {
+      "bytes": 143875832,
+      "sha256": "141b521b24f86d0533968431cb2a3a08a202507e022ac8d0a02ec43b9585169e"
+    },
+    "compiler_cache": "disabled; failed optional ccache build retained",
+    "complete_distribution_audit": false,
+    "emscripten_revision": "285c424dfa9e83b03cf8490c65ceadb7c45f28eb",
+    "emsdk_commit": "a620cf1d71c62dfdfbb0c01fe0a371e2af2dda6c",
+    "host_packages": [
+      {
+        "package": "autoconf",
+        "sha256": "cc3f9f7a1e576173fb59c36652c0a67c6426feae752b352404ba92dfcb1b26c9",
+        "url": "https://archive.ubuntu.com/ubuntu/pool/main/a/autoconf/autoconf_2.71-3_all.deb",
+        "version": "2.71-3"
+      },
+      {
+        "package": "automake",
+        "sha256": "5ae9a98e73545002cd891f028859941af2a3c760cb6190e635c7ef36953912de",
+        "url": "https://archive.ubuntu.com/ubuntu/pool/main/a/automake-1.16/automake_1.16.5-1.3ubuntu1_all.deb",
+        "version": "1:1.16.5-1.3ubuntu1"
+      },
+      {
+        "package": "autotools-dev",
+        "sha256": "d909f0327b09d9a9136239caca975df89782fa28efd721c4eb4caea422d3fc5a",
+        "url": "https://archive.ubuntu.com/ubuntu/pool/main/a/autotools-dev/autotools-dev_20220109.1_all.deb",
+        "version": "20220109.1"
+      },
+      {
+        "package": "libtool",
+        "sha256": "9d1d707179675d38e024bb13613b1d99e0d33fa6c45e5f3bcba19340781781d3",
+        "url": "https://archive.ubuntu.com/ubuntu/pool/main/libt/libtool/libtool_2.4.7-7build1_all.deb",
+        "version": "2.4.7-7build1"
+      },
+      {
+        "package": "m4",
+        "sha256": "30ea715845a1863abd55d11e47ab91513130bf347852d4cdeae69e9d98fa795c",
+        "url": "https://archive.ubuntu.com/ubuntu/pool/main/m/m4/m4_1.4.19-4build1_amd64.deb",
+        "version": "1.4.19-4build1"
+      },
+      {
+        "package": "libltdl7",
+        "sha256": "02d0d2d7e1bf73f838a92f8df7a9b07b698c837e82bd89aee6a581cf793cd966",
+        "url": "https://archive.ubuntu.com/ubuntu/pool/main/libt/libtool/libltdl7_2.4.7-7build1_amd64.deb",
+        "version": "2.4.7-7build1"
+      },
+      {
+        "package": "libltdl-dev",
+        "sha256": "3a706efe1d9d8b493bd2335fabaa9ec28549c9134750fad6c0a5aa9868c6ee9c",
+        "url": "https://archive.ubuntu.com/ubuntu/pool/main/libt/libtool/libltdl-dev_2.4.7-7build1_amd64.deb",
+        "version": "2.4.7-7build1"
+      }
+    ],
+    "host_python": {
+      "bytes": 30003744,
+      "sha256": "99f55c5b2b4dc4879ce8109aa2c9c1749e4f99c4f191792ca6ffd13ef12627b7",
+      "version": "Python 3.14.2"
+    },
+    "node_sdk": {
+      "bytes": 121509208,
+      "sha256": "8142d37c6f2f372ef040419e7a111a6baf17df89f8078d02447d6c639ae20c1d",
+      "version": "v22.16.0"
+    },
+    "node_shell": {
+      "bytes": 126939688,
+      "sha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d",
+      "version": "v24.22.1"
+    },
+    "os": "Debian GNU/Linux 13 (trixie), x86_64",
+    "profile": "lifetxt-unicode-minimal-3-candidate",
+    "public_distribution_approved": false,
+    "runtime_verified": false,
+    "schema_version": 1,
+    "sdk_archives": {}
+  },
+  "independent_runtime_verification": "NOT RUN; issue 1531",
+  "initial_boot": {
+    "boot": true,
+    "node": "v24.22.1",
+    "python": "3.14.2 (main, Nov  7 2026, 10:06:42) [Clang 23.0.0git (https:/github.com/llvm/llvm-project e5927fecf8a6ce89e1a4eac5b8",
+    "scope": "builder smoke only; independent artifact/parity/licence review NOT RUN",
+    "unicode": "\u65e5\u672c\u8a9e\ud83d\ude00",
+    "zipfile": "LookupError: unknown encoding: cp437"
+  },
+  "inputs_lock_sha256": "db10fce009f067e03e2c3c672b0d8886210d91365ba2658e82994648f1100913",
+  "internal_cp437_sha256": "5c2a5015cd36cf7f561269f33dec4c323093d3d88b0673969accdabdcb9ce2cb",
+  "licence_resolved": false,
+  "parent_issue": 1436,
+  "profile": "lifetxt-unicode-minimal-3-candidate",
+  "public_distribution_approved": false,
+  "recipe_sha256": "6a73288be76eb386961b8ebbffe92e356378a837ee8ebac5ec3395a28c1f0908",
+  "repository_base_commit": "8365468a31ffa3e0d503ddfbc6915c93f4c16516",
+  "runtime_verified": false,
+  "schema_version": 1,
+  "source_only_archive_sha256": "eb80e7df3c4a4190ec5b83c72e231fbba33dc299a442ce6743ea03a54dea5619",
+  "stage_receipt_sha256": "dacbf5994c1eb3df29f3438034678648bb6300dc8aca23530f5fa402afc9093e",
+  "verification_task": 1531
+}

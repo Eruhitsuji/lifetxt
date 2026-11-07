@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "profile": "lifetxt-unicode-minimal-3-candidate",
+  "archives": [
+    {
+      "id": "pyodide",
+      "file": "pyodide-source.tar.gz",
+      "root": "pyodide-b1e4fcc2488962f6360a97f19b9982d6fdb5d16f",
+      "bytes": 1457848,
+      "sha256": "e7919ebca300a7f56a16bff3df3f362c0d43b08c20dfd38f4a17cdf20e2f06ef"
+    },
+    {
+      "id": "hiwire",
+      "file": "hiwire-source.tar.gz",
+      "root": "hiwire-6a1e67280a15d929ebeceee54a6358c9c8d5f697",
+      "bytes": 27264,
+      "sha256": "0d64144f149c0de3bd157551421833c6c16fdc0492c312a6325ffc25d185c93c"
+    },
+    {
+      "id": "cpython",
+      "file": "cpython-source.tar.gz",
+      "root": "Python-3.14.2",
+      "bytes": 30529886,
+      "sha256": "f862710e3d61091aae013d486d8bedbf1074188fd98086572d6340ec60b5392c"
+    },
+    {
+      "id": "libffi",
+      "file": "libffi-source.tar.gz",
+      "root": "libffi-f08493d249d2067c8b3207ba46693dd858f95db3",
+      "bytes": 595072,
+      "sha256": "0c4e5647b79e21b900eb872dd98a3e0a66be12b36ad89677f61fd901a2615778"
+    },
+    {
+      "id": "xz",
+      "file": "xz-source.tar.gz",
+      "root": "xz-5.2.2",
+      "bytes": 1464228,
+      "sha256": "73df4d5d34f0468bd57d09f2d8af363e95ed6cc3a4a86129d2f2c366259902a2"
+    },
+    {
+      "id": "zstd",
+      "file": "zstd-source.tar.gz",
+      "root": "cpython-source-deps-zstd-1.5.7",
+      "bytes": 2440298,
+      "sha256": "f24b52470d12f466e9fa4fcc94e6c530625ada51d7b36de7fdc6ed7e6f499c8e"
+    },
+    {
+      "id": "sqlite",
+      "file": "sqlite-source.tar.gz",
+      "root": "sqlite-autoconf-3390000",
+      "bytes": 3064015,
+      "sha256": "e90bcaef6dd5813fcdee4e867f6b65f3c9bfd0aec0f1017f9f3bbce1e4ed09e2"
+    }
+  ],
+  "sdk_commit": "a620cf1d71c62dfdfbb0c01fe0a371e2af2dda6c",
+  "sdk_release": "065bfade0ee2c02138b83cb10049d8be95e146b6",
+  "host_python": "3.14.2",
+  "runtime_verified": false,
+  "complete_distribution_audit": false,
+  "public_distribution_approved": false,
+  "internal_cp437_sha256": "5c2a5015cd36cf7f561269f33dec4c323093d3d88b0673969accdabdcb9ce2cb",
+  "internal_cp437_reason": "Actual initial WASM boots but zipfile default ASCII filename read raises LookupError: unknown encoding: cp437"
+}

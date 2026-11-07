@@ -1,0 +1,12 @@
+schema_version: 1
+requirements:
+  - id: req-browser-local-check-distribution-v1
+    kind: MODIFIED
+    statement: Stage and compile a distinct Unicode-minimal runtime without changing accepted profiles.
+    acceptance_criteria:
+      - Inputs and staged files have pinned hashes; CJK modules explicitly disabled.
+      - Actual compile success or failure is retained with toolchain identity.
+      - Independent runtime and distribution gates remain pending.
+    owner: Eruhitsuji
+open_questions:
+  - cp437 was measured and added as an internal stdlib overlay; remaining source/object/WASM/codec/parser closure requires issue 1531.

@@ -394,6 +394,18 @@ traceability:
 
     - requirement_id: req-browser-local-check-distribution-v1
       capability_id: cap-official-website
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1436
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1530
+      changed_files_or_scope:
+        - Isolated profile3 source staging and pinned compiler build evidence
+      tests_or_evidence:
+        - tests/test_unicode_runtime.py
+        - contrib/browser_check_poc/UNICODE_RUNTIME.md
+        - .ai/project/changes/unicode-runtime-build/verification.yml
+      status: in_review
+
+    - requirement_id: req-browser-local-check-distribution-v1
+      capability_id: cap-official-website
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1528
       pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1529
       changed_files_or_scope:

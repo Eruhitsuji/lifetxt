@@ -1,0 +1,29 @@
+schema_version: 1
+verification:
+  executed:
+    - type: unit
+      command: python -m unittest tests.test_unicode_runtime tests.test_unicode_minimal
+      result: 22 source/recipe tests passed; 39 with traceability/change-package checks
+      status: passed
+    - type: lint
+      command: ruff check and ruff format --check for the two new files
+      status: passed
+    - type: source-stage
+      result: Actual fixed archives staged; original curator count and output receipt passed.
+      status: passed
+    - type: compiler-preflight
+      result: clang hash, SDK revision, Pyodide patches and struct_info comparison matched.
+      status: passed
+    - type: compile
+      result: Actual compile attempt 6 and cp437 overlay packaging attempt 7 exited 0; initial boot passed but zipfile failed cp437, final focused boot/UTF-8/zipfile smoke passed. See build-evidence.json.
+      status: passed
+    - type: runtime-verification
+      result: NOT RUN; assigned to issue 1531.
+      status: not_run
+review_ledger:
+  - reviewer: separate Claude Code session
+    review_type: implementation/security
+    result: pending
+  - reviewer: separate Claude Code session
+    review_type: integration
+    result: pending

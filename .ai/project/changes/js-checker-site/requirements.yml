@@ -1,0 +1,10 @@
+schema_version: 1
+requirements:
+  - id: req-browser-local-check-v1
+    kind: MODIFIED
+    owner: Eruhitsuji
+    statement: Provide a local bilingual site candidate using the shared JavaScript syntax checker.
+    acceptance_criteria:
+      - Bilingual discovery, checker scope, and incomplete diagnostics are visible.
+      - Input is processed locally and neither sent nor persisted by the app.
+      - The candidate includes only the allowlisted checker files; the default introduction build is unchanged.

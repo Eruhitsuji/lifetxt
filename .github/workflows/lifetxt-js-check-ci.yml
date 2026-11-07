@@ -5,7 +5,11 @@ name: life.txt JS checker CI
       - 'contrib/lifetxt-js-check/**'
       - 'lifetxt/**'
       - 'life_txt_format_spec.md'
-      - 'website/example.txt'
+      - 'website/**'
+      - 'scripts/build_website.py'
+      - 'scripts/build_js_checker_site.py'
+      - 'scripts/check_website.py'
+      - 'tests/test_js_checker_site.py'
       - 'LICENSE'
       - '.github/workflows/lifetxt-js-check-ci.yml'
   push:
@@ -14,7 +18,11 @@ name: life.txt JS checker CI
       - 'contrib/lifetxt-js-check/**'
       - 'lifetxt/**'
       - 'life_txt_format_spec.md'
-      - 'website/example.txt'
+      - 'website/**'
+      - 'scripts/build_website.py'
+      - 'scripts/build_js_checker_site.py'
+      - 'scripts/check_website.py'
+      - 'tests/test_js_checker_site.py'
       - 'LICENSE'
       - '.github/workflows/lifetxt-js-check-ci.yml'
 
@@ -56,3 +64,13 @@ jobs:
           status=0
           node check.mjs unsupported.txt || status=$?
           test "$status" -eq 3
+      - name: Set up Chromium for the bilingual smoke test
+        id: chrome
+        uses: browser-actions/setup-chrome@v1
+      - name: Test the JS checker site candidate
+        env:
+          LIFETXT_JS_CHECKER_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
+        run: |
+          test -x "$LIFETXT_JS_CHECKER_CHROMIUM"
+          python -m pip install playwright==1.62.0
+          python -m unittest tests.test_js_checker_site tests.test_website tests.test_website_pages_workflow

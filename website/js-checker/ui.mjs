@@ -4,7 +4,7 @@ const messages = {
     ja: {
         errors: '書式エラーがあります。',
         incomplete: '検査対象外の構文があります。完全な検査には lifetxt check を使用してください。',
-        ok: '検査した範囲では書式エラーは見つかりませんでした。',
+        ok: '検査した範囲では書式エラーは見つかりませんでした。日時や参照の確認には lifetxt check を使用してください。',
         line: '行',
         omitted: '件の診断を省略しました。',
         labels: { error: 'エラー', warning: '警告', unsupported: '対象外' },
@@ -24,7 +24,7 @@ const messages = {
     en: {
         errors: 'Syntax errors found.',
         incomplete: 'Some syntax was not checked. Use lifetxt check for full validation.',
-        ok: 'No errors found in the checked syntax.',
+        ok: 'No errors found in the checked syntax. Use lifetxt check to validate dates and references.',
         line: 'Line',
         omitted: 'additional diagnostics omitted.',
         labels: { error: 'Error', warning: 'Warning', unsupported: 'Unchecked' },

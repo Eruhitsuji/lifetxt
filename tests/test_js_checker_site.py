@@ -40,7 +40,9 @@ class JSCheckerSiteTests(unittest.TestCase):
             self.assertEqual((self.site / name).read_bytes(), (intro / name).read_bytes(), name)
         for name, href in (("index.html", "en/check/"), ("ja/index.html", "check/"), ("en/index.html", "check/")):
             html = (self.site / name).read_text(encoding="utf-8")
-            self.assertIn(f'href="{href}"', html)
+            self.assertIn(f'<a class="button" href="{href}">', html)
+            self.assertEqual(html.count(f'href="{href}"'), 1)
+            self.assertNotIn(f'href="{href}"', (intro / name).read_text(encoding="utf-8"))
             self.assertNotIn("<script", html)
         for lang in ("ja", "en"):
             page = (self.site / lang / "check/index.html").read_text(encoding="utf-8")
@@ -71,6 +73,23 @@ class JSCheckerSiteTests(unittest.TestCase):
                     for lang in ("ja", "en"):
                         with self.subTest(lang=lang):
                             self.check_page(browser, origin, lang, expect)
+                    context = browser.new_context(
+                        viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True
+                    )
+                    for home, href, destination in (
+                        ("", "en/check/", "en/check/"),
+                        ("ja/", "check/", "ja/check/"),
+                        ("en/", "check/", "en/check/"),
+                    ):
+                        with self.subTest(mobile=home):
+                            page = context.new_page()
+                            page.goto(f"{origin}/{home}")
+                            checker = page.locator(f'main .hero .actions a[href="{href}"]')
+                            expect(checker).to_be_in_viewport()
+                            checker.tap()
+                            expect(page).to_have_url(f"{origin}/{destination}")
+                            page.close()
+                    context.close()
                     context = browser.new_context(java_script_enabled=False)
                     page = context.new_page()
                     page.goto(f"{origin}/ja/check/")
@@ -107,7 +126,7 @@ class JSCheckerSiteTests(unittest.TestCase):
             context.on("request", lambda request: requests.append((request.url, request.method, request.post_data)))
             page.goto(f"{origin}/{lang}/")
             expect(page.locator("script")).to_have_count(0)
-            page.locator('a[href="check/"]').click()
+            page.locator('main .hero .actions a[href="check/"]').click()
             expect(page.locator("html")).to_have_attribute("lang", lang)
             expect(page.locator("#check")).to_be_enabled()
             text = page.locator("#input")
@@ -117,6 +136,10 @@ class JSCheckerSiteTests(unittest.TestCase):
             text.fill('[N] N "日本語😀"\n| 続き')
             button.press("Enter")
             expect(status).to_contain_text("見つかりません" if lang == "ja" else "No errors found")
+            text.fill("[ ] T Example due:notadate")
+            button.click()
+            expect(status).to_contain_text("lifetxt check")
+            expect(output).to_be_empty()
             text.fill('[ ] T "unfinished')
             expect(status).to_be_empty()
             expect(output).to_be_empty()

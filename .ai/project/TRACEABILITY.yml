@@ -2,6 +2,13 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-official-website-pages-v1
+      capability_id: cap-official-website
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1358
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1400
+      tests_or_evidence: [tests/test_website.py, tests/test_website_pages_workflow.py, tests/test_js_checker_site.py]
+      status: in_review
+
     - requirement_id: req-browser-local-check-v1
       capability_id: cap-official-website
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1358

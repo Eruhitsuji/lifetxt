@@ -1,4 +1,4 @@
-"""Build an explicit local site candidate with the JavaScript syntax checker."""
+"""Build the site with the JavaScript syntax checker."""
 
 import argparse
 from pathlib import Path
@@ -14,6 +14,12 @@ CSP = (
     "img-src 'self'; connect-src 'none'; worker-src 'none'; "
     "base-uri 'none'; form-action 'none'"
 )
+ASSETS = {
+    "ui.mjs": ROOT / "website/js-checker/ui.mjs",
+    "checker.css": ROOT / "website/checker/checker.css",
+    "parser.mjs": ROOT / "contrib/lifetxt-js-check/parser.mjs",
+    "LICENSE.txt": ROOT / "LICENSE",
+}
 COPY = {
     "ja": (
         "書式チェック",
@@ -77,12 +83,7 @@ def build_candidate(output: Path, base: str = DEFAULT_URL) -> None:
     build(output, base, checker_link=True)
     assets = output / "js-checker"
     assets.mkdir()
-    for name, source in (
-        ("ui.mjs", ROOT / "website/js-checker/ui.mjs"),
-        ("checker.css", ROOT / "website/checker/checker.css"),
-        ("parser.mjs", ROOT / "contrib/lifetxt-js-check/parser.mjs"),
-        ("LICENSE.txt", ROOT / "LICENSE"),
-    ):
+    for name, source in ASSETS.items():
         shutil.copyfile(source, assets / name)
     for lang in COPY:
         page = output / lang / "check"

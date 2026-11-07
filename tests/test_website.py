@@ -144,3 +144,43 @@ class WebsiteTests(unittest.TestCase):
         ):
             with self.subTest(base=base), self.assertRaises(ValueError):
                 build(Path(self.directory.name) / "bad", base)
+
+
+class WebsiteCheckerArtifactAuditTests(unittest.TestCase):
+    def test_checker_is_opt_in_and_artifact_mutations_fail(self):
+        from scripts.build_js_checker_site import build_candidate
+
+        with tempfile.TemporaryDirectory() as directory:
+            site = Path(directory) / "site"
+            build_candidate(site)
+            self.assertEqual(check(site, with_js_checker=True), [])
+            self.assertTrue(check(site))
+            home = site / "ja/index.html"
+            original = home.read_text(encoding="utf-8")
+            home.write_text(original.replace('href="check/"', 'href="../example.txt"'), encoding="utf-8")
+            self.assertIn("ja/index.html: missing checker link", check(site, with_js_checker=True))
+            home.write_text(original, encoding="utf-8")
+
+            page = site / "ja/check/index.html"
+            original = page.read_text(encoding="utf-8")
+            script = '<script type="module" src="../../js-checker/ui.mjs"></script>'
+            for altered in (
+                original.replace("connect-src 'none'", "connect-src 'self'"),
+                original.replace(script, script + script),
+                original.replace(script, "").replace("<head>", "<head>" + script),
+            ):
+                with self.subTest(altered=altered[:90]):
+                    page.write_text(altered, encoding="utf-8")
+                    self.assertTrue(check(site, with_js_checker=True))
+            page.write_text(original, encoding="utf-8")
+
+            extra = site / "js-checker/runtime.wasm"
+            extra.write_bytes(b"extra")
+            self.assertTrue(any("runtime.wasm" in error for error in check(site, with_js_checker=True)))
+            extra.unlink()
+            parser = site / "js-checker/parser.mjs"
+            parser.write_bytes(b"unexpected")
+            self.assertIn(
+                "js-checker/parser.mjs: asset differs from reviewed source",
+                check(site, with_js_checker=True),
+            )

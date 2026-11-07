@@ -123,7 +123,9 @@ def stage(sources, output):
             raise ValueError("source input differs from pin: " + entry["id"])
         _members(path, entry["root"])
     output.mkdir(parents=True)
-    (output / "INCOMPLETE").write_text("Do not compile until stage completes.\n")
+    (output / "INCOMPLETE").write_text(
+        "Do not compile until stage completes.\n", encoding="utf-8", newline="\n"
+    )
     snapshot = output / "inputs"
     snapshot.mkdir()
     for entry in entries.values():
@@ -140,7 +142,7 @@ def stage(sources, output):
     root = output / pyodide["root"]
     setup = root / "cpython/Setup.local"
     body = setup.read_text(encoding="utf-8")
-    setup.write_text(_disable_builtins(body), encoding="utf-8")
+    setup.write_text(_disable_builtins(body), encoding="utf-8", newline="\n")
     downloads = root / "cpython/downloads"
     downloads.mkdir()
     shutil.copyfile(
@@ -163,7 +165,7 @@ def stage(sources, output):
             snapshot / entries[component]["file"],
             downloads / entries[component]["file"],
         )
-    makefile.write_text(body, encoding="utf-8")
+    makefile.write_text(body, encoding="utf-8", newline="\n")
     envs = root / "Makefile.envs"
     envs.write_text(
         _once(
@@ -172,6 +174,7 @@ def stage(sources, output):
             "export PYTHON_ARCHIVE_SHA256=" + source_receipt["output_sha256"],
         ),
         encoding="utf-8",
+        newline="\n",
     )
     build_env = root / "pyodide_env.sh"
     build_env.write_text(
@@ -181,6 +184,7 @@ def stage(sources, output):
             "export _EMCC_CCACHE=",
         ),
         encoding="utf-8",
+        newline="\n",
     )
     # Actual builder smoke found that zipfile requires cp437 for legacy ZIP
     # filenames, including plain ASCII names without the UTF-8 flag. Preserve
@@ -209,7 +213,7 @@ def stage(sources, output):
         "tools/hkscs_free_build.py stdlib $(CPYTHONLIB) src/py ",
         "tools/hkscs_free_build.py stdlib $(CPYTHONLIB) src/py tools/unicode_stdlib_overlay ",
     )
-    root_make.write_text(body, encoding="utf-8")
+    root_make.write_text(body, encoding="utf-8", newline="\n")
     (root / "LIFETXT_UNICODE_MODIFICATIONS.md").write_text(
         "# Isolated lifetxt Unicode-minimal candidate (2026-11-07)\n\n"
         "This modifies the delivered HKSCS-free Pyodide source. Original MPL-2.0\n"
@@ -222,16 +226,24 @@ def stage(sources, output):
         "Not an approved distribution. Independent source/object/WASM and\n"
         "licence review, complete corresponding source and Owner approval remain.\n",
         encoding="utf-8",
+        newline="\n",
     )
+    staged_files = {
+        p.relative_to(root).as_posix(): sha256(p)
+        for p in sorted(root.rglob("*"))
+        if p.is_file()
+    }
+    staged_digest = hashlib.sha256(
+        json.dumps(staged_files, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    if staged_digest != lock["expected_staged_files_sha256"]:
+        raise ValueError("staged source receipt differs from pinned baseline")
     receipt = {
         "schema_version": 1,
         "profile": lock["profile"],
         "source_receipt": source_receipt,
-        "staged_files_sha256": {
-            p.relative_to(root).as_posix(): sha256(p)
-            for p in sorted(root.rglob("*"))
-            if p.is_file()
-        },
+        "staged_files_sha256": staged_files,
+        "staged_files_digest": staged_digest,
         "inputs_lock_sha256": sha256(INPUTS),
         "disabled_builtins": ["_codecs_hk", *DISABLED],
         "internal_cp437_sha256": lock["internal_cp437_sha256"],
@@ -240,7 +252,9 @@ def stage(sources, output):
         "public_distribution_approved": False,
     }
     (output / "stage-receipt.json").write_text(
-        json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        json.dumps(receipt, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+        newline="\n",
     )
     (output / "INCOMPLETE").unlink()
     return root

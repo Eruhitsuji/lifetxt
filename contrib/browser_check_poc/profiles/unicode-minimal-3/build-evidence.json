@@ -71,8 +71,11 @@
       "reason": "stdlib overlay cp437 added, native WASM unchanged"
     }
   ],
+  "build_inputs_lock_sha256": "db10fce009f067e03e2c3c672b0d8886210d91365ba2658e82994648f1100913",
   "build_recipe_sha256": "6a73288be76eb386961b8ebbffe92e356378a837ee8ebac5ec3395a28c1f0908",
   "build_task": 1530,
+  "checkpoint_v2_inputs_lock_sha256": "db10fce009f067e03e2c3c672b0d8886210d91365ba2658e82994648f1100913",
+  "checkpoint_v2_recipe_sha256": "359414494c4169389424c364f21e8e6f1d8c6fb296d8e90283bb7e531691ebe7",
   "complete_distribution_audit": false,
   "distribution_profile_adopted": false,
   "files": {
@@ -104,6 +107,14 @@
     "scope": "builder smoke only; independent artifact/parity/licence review NOT RUN",
     "unicode": "\u65e5\u672c\u8a9e\ud83d\ude00",
     "zipfile": "pass"
+  },
+  "guard_stage_revalidation": {
+    "all_staged_files_match_compiled_stage": true,
+    "full_recompile": false,
+    "previous_build_recipe_sha256": "6a73288be76eb386961b8ebbffe92e356378a837ee8ebac5ec3395a28c1f0908",
+    "recipe_sha256": "359414494c4169389424c364f21e8e6f1d8c6fb296d8e90283bb7e531691ebe7",
+    "scope": "Guard-only correction reproduced identical source recipe outputs. Historical binaries and initial checkpoint remain unchanged.",
+    "staged_receipt_sha256": "dacbf5994c1eb3df29f3438034678648bb6300dc8aca23530f5fa402afc9093e"
   },
   "host": {
     "clang": {
@@ -198,14 +209,14 @@
     "unicode": "\u65e5\u672c\u8a9e\ud83d\ude00",
     "zipfile": "LookupError: unknown encoding: cp437"
   },
-  "inputs_lock_sha256": "db10fce009f067e03e2c3c672b0d8886210d91365ba2658e82994648f1100913",
+  "inputs_lock_sha256": "ca1061a764e1eb0dbc604737140d8b2091fdc55d174b4d4e5266660b55b4f31a",
   "internal_cp437_sha256": "5c2a5015cd36cf7f561269f33dec4c323093d3d88b0673969accdabdcb9ce2cb",
   "licence_resolved": false,
   "parent_issue": 1436,
   "profile": "lifetxt-unicode-minimal-3-candidate",
   "public_distribution_approved": false,
-  "recipe_binding": "Corrected staging recipe; historical compile/package inputs revalidated identical, no new full compile.",
-  "recipe_sha256": "359414494c4169389424c364f21e8e6f1d8c6fb296d8e90283bb7e531691ebe7",
+  "recipe_binding": "Current LF-fixed stager with fail-closed 555-file baseline; historical compile/package recipe and checkpoint v2 retain their prior code/config identities.",
+  "recipe_sha256": "f0cb721856627a01f1899dd709e2f2f0cdf13c02b6679a4f8318412402b7771f",
   "repository_base_commit": "8365468a31ffa3e0d503ddfbc6915c93f4c16516",
   "runtime_verified": false,
   "schema_version": 1,
@@ -283,12 +294,21 @@
   "source_only_archive_sha256": "eb80e7df3c4a4190ec5b83c72e231fbba33dc299a442ce6743ea03a54dea5619",
   "stage_receipt_sha256": "dacbf5994c1eb3df29f3438034678648bb6300dc8aca23530f5fa402afc9093e",
   "stage_revalidation": {
-    "all_staged_files_match_compiled_stage": true,
+    "current_inputs_lock_sha256": "ca1061a764e1eb0dbc604737140d8b2091fdc55d174b4d4e5266660b55b4f31a",
+    "current_recipe_sha256": "f0cb721856627a01f1899dd709e2f2f0cdf13c02b6679a4f8318412402b7771f",
+    "expected_staged_files_sha256": "617d49c794526119a5199267f0bdf8a9c72ddcf78f5717fa4caaf1c222dfa92d",
     "full_recompile": false,
-    "previous_build_recipe_sha256": "6a73288be76eb386961b8ebbffe92e356378a837ee8ebac5ec3395a28c1f0908",
-    "recipe_sha256": "359414494c4169389424c364f21e8e6f1d8c6fb296d8e90283bb7e531691ebe7",
-    "scope": "Guard-only correction reproduced identical source recipe outputs. Historical binaries and initial checkpoint remain unchanged.",
-    "staged_receipt_sha256": "dacbf5994c1eb3df29f3438034678648bb6300dc8aca23530f5fa402afc9093e"
+    "historical_stage_receipt_sha256": "dacbf5994c1eb3df29f3438034678648bb6300dc8aca23530f5fa402afc9093e",
+    "linux_matches_historical_staged_files": true,
+    "native_windows_execution": "NOT RUN; external reviewer required",
+    "new_stage_receipt_sha256": "a331c5a825242fbb109628d1f065a3fee6ba986e770eae5f94346276473ab9ce",
+    "receipt_metadata_changes": [
+      "inputs_lock_sha256",
+      "staged_files_digest"
+    ],
+    "runtime_verified": false,
+    "staged_files": 555,
+    "windows_translation_simulation_matches_linux_bytes_and_receipt": true
   },
   "verification_task": 1531
 }

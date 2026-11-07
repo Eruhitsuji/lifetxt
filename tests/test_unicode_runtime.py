@@ -1,6 +1,7 @@
 """Profile3 recipe boundaries; no SDK/downloads are required by these tests."""
 
 import io
+import gzip
 import hashlib
 import json
 from pathlib import Path
@@ -13,7 +14,13 @@ from contrib.browser_check_poc import unicode_runtime as mod
 
 
 def archive(path, root, files):
-    with tarfile.open(path, "w:gz") as target:
+    with (
+        path.open("wb") as raw,
+        gzip.GzipFile(
+            fileobj=raw, mode="wb", mtime=0, filename="", compresslevel=0
+        ) as compressed,
+        tarfile.open(fileobj=compressed, mode="w") as target,
+    ):
         for name, data in files.items():
             member = tarfile.TarInfo(root + "/" + name)
             member.size = len(data)
@@ -61,6 +68,7 @@ def inputs(directory, setup_body=None):
         json.dumps(
             {
                 "profile": "synthetic-test-only",
+                "expected_staged_files_sha256": "e252bf4b1a63c539e57b6862243dca8fb26c5fcbbd72b91d0e1371f6d89fbc40",
                 "archives": entries,
                 "internal_cp437_sha256": hashlib.sha256(
                     b"# synthetic cp437"
@@ -221,6 +229,54 @@ class RuntimeRecipeTests(unittest.TestCase):
         ):
             with self.subTest(body=body), self.assertRaisesRegex(ValueError, "entries"):
                 mod._disable_builtins(body)
+
+    def test_windows_text_translation_does_not_change_staged_bytes_or_receipt(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            sources = root / "sources"
+            sources.mkdir()
+            lock = inputs(sources)
+            native_open = Path.open
+
+            def windows_open(
+                path, mode="r", buffering=-1, encoding=None, errors=None, newline=None
+            ):
+                # Simulate Windows automatic translation for unspecified newlines.
+                if "w" in mode and "b" not in mode and newline is None:
+                    newline = "\r\n"
+                return native_open(path, mode, buffering, encoding, errors, newline)
+
+            with (
+                patch.object(mod, "INPUTS", lock),
+                patch.object(mod.unicode_minimal, "curate", synthetic_curate),
+            ):
+                normal = mod.stage(sources, root / "normal")
+                with patch.object(Path, "open", windows_open):
+                    windows = mod.stage(sources, root / "windows")
+            a = (root / "normal/stage-receipt.json").read_bytes()
+            b = (root / "windows/stage-receipt.json").read_bytes()
+            self.assertEqual(a, b)
+            self.assertNotIn(b"\r\n", b)
+            for relative in json.loads(a)["staged_files_sha256"]:
+                self.assertEqual(
+                    (normal / relative).read_bytes(), (windows / relative).read_bytes()
+                )
+
+    def test_staged_receipt_pin_rejects_unexpected_generated_bytes(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            lock = inputs(root)
+            data = json.loads(lock.read_text())
+            data["expected_staged_files_sha256"] = "0" * 64
+            lock.write_text(json.dumps(data))
+            with (
+                patch.object(mod, "INPUTS", lock),
+                patch.object(mod.unicode_minimal, "curate", synthetic_curate),
+            ):
+                with self.assertRaisesRegex(ValueError, "pinned baseline"):
+                    mod.stage(root, root / "stage")
+            self.assertTrue((root / "stage/INCOMPLETE").is_file())
+            self.assertFalse((root / "stage/stage-receipt.json").exists())
 
     def test_recipe_anchors_fail_closed(self):
         for body in ["", "xx", "anchor anchor"]:

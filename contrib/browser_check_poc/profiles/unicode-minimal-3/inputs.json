@@ -59,5 +59,6 @@
   "complete_distribution_audit": false,
   "public_distribution_approved": false,
   "internal_cp437_sha256": "5c2a5015cd36cf7f561269f33dec4c323093d3d88b0673969accdabdcb9ce2cb",
-  "internal_cp437_reason": "Actual initial WASM boots but zipfile default ASCII filename read raises LookupError: unknown encoding: cp437"
+  "internal_cp437_reason": "Actual initial WASM boots but zipfile default ASCII filename read raises LookupError: unknown encoding: cp437",
+  "expected_staged_files_sha256": "617d49c794526119a5199267f0bdf8a9c72ddcf78f5717fa4caaf1c222dfa92d"
 }

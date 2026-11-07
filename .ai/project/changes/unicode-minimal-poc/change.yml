@@ -3,7 +3,7 @@ schema_version: 1
 change:
   id: unicode-minimal-poc
   title: Isolated Unicode-minimal CPython source-only PoC
-  status: in_review
+  status: merged-with-review-followup
   change_type: Investigation
   assurance_level: High
   owner: Eruhitsuji
@@ -40,3 +40,10 @@ human_approvals_required:
   - Independent latest-head High implementation and security/integration review
   - Owner merge authorization
   - Separate future profile3 adoption and publication approval
+
+review_followup:
+  issue: https://github.com/Eruhitsuji/lifetxt/issues/1528
+  original_merge_commit: 25d900eefb484d5bc973480006ec3297341f5baf
+  original_review: https://github.com/Eruhitsuji/lifetxt/issues/1434#issuecomment-6699468862
+  original_review_result: conditional-poc-acceptance
+  correction_status: independent-latest-head-review-pending

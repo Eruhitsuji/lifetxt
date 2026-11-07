@@ -99,6 +99,22 @@ class WebsitePagesWorkflowTests(unittest.TestCase):
         self.assertEqual(self.guard, second)
         self.assertFalse(re.search(r"\$\{\{.*\}\}", self.guard))
 
+    def test_checker_requires_explicit_manual_selection(self):
+        events = self.workflow["on"]
+        option = events["workflow_dispatch"]["inputs"]["include_js_checker"]
+        self.assertEqual(option["type"], "boolean")
+        self.assertIs(option["default"], False)
+        steps = self.build["steps"]
+        selected = next(step for step in steps if "selected Pages artifact" in step.get("name", ""))
+        self.assertEqual(selected["env"]["INCLUDE_JS_CHECKER"], "${{ inputs.include_js_checker }}")
+        self.assertIn('"$GITHUB_EVENT_NAME" == workflow_dispatch', selected["run"])
+        self.assertIn('"$INCLUDE_JS_CHECKER" == true', selected["run"])
+        self.assertIn("scripts/check_website.py .cache/pages --with-js-checker", selected["run"])
+        self.assertIn("scripts/build_website.py --output .cache/pages", selected["run"])
+        preview = next(step for step in steps if "candidate on pull requests" in step.get("name", ""))
+        self.assertEqual(preview["if"], "github.event_name == 'pull_request'")
+        self.assertIn(".cache/pages-js-preview --with-js-checker", preview["run"])
+
     def test_guard_reads_only_public_environment_and_accepts_human_gate(self):
         request = self.execute_guard(json.dumps(self.protection).encode())
         args, kwargs = request.call_args

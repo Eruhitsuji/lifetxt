@@ -1,0 +1,14 @@
+schema_version: 1
+change:
+  id: js-checker-pages
+  title: Opt-in JavaScript checker Pages artifact
+  status: in_review
+  change_type: Operations
+  assurance_level: High
+  owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1400
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1538
+scope:
+  write_scope: [Pages workflow, website audit, checker asset allowlist, tests, runbook and traceability]
+  forbidden_scope: [Core, legacy Pyodide approvals, Pages settings, deployment execution]
+human_approvals_required: [latest-head implementation and security review, integration review, merge, deployment]

@@ -1,0 +1,11 @@
+schema_version: 1
+requirements:
+  - id: req-official-website-pages-v1
+    kind: MODIFIED
+    owner: Eruhitsuji
+    statement: Allow an explicitly selected JS checker artifact in the protected Pages workflow.
+    acceptance_criteria:
+      - Manual selection enables checker pages and reviewed assets on the official main branch.
+      - Both artifacts are audited on pull requests without uploading or deploying a Pages artifact.
+      - Unexpected or changed checker files, invalid CSP/module tags, and broken links are rejected before upload.
+      - The Owner can republish the introduction-only site with the option unchecked.

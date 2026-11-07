@@ -1,0 +1,22 @@
+schema_version: 1
+verification:
+  checks:
+    - command: python -m unittest tests.test_website tests.test_website_pages_workflow tests.test_js_checker_site
+      status: passed
+      result: 17 tests, one existing optional coverage skip. Chromium Headless Shell 151.0.7922.34 ran both language cases under /lifetxt/.
+    - command: Execute workflow build and audit shell steps with synthetic event and input values
+      status: passed
+      result: PR audits both variants, unchecked manual uses intro only, and checked manual includes both checker pages.
+    - command: Audit intentionally altered checker artifacts
+      status: passed
+      result: Missing navigation, loose CSP, early or duplicate module, extra WASM, and altered parser are rejected.
+review_ledger:
+  - reviewer: Codex implementer
+    review_type: self_review_only
+    result: informational_only
+  - reviewer: independent reviewer
+    review_type: implementation_security
+    result: pending
+  - reviewer: independent reviewer
+    review_type: integration
+    result: pending

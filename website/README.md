@@ -52,7 +52,7 @@ python -m http.server --bind 127.0.0.1 --directory .cache/js-checker-site 8080
 
 Open `http://127.0.0.1:8080/ja/check/` or `/en/check/`. This explicit build adds
 a syntax-check link to each home and uses the same parser as the Node CLI.
-The Pages workflow uses the standard introduction build.
+The Pages workflow audits this candidate on pull requests.
 
 ## Pages publication runbook (#1352)
 
@@ -80,6 +80,20 @@ Before the first dispatch, **the human Owner** must:
 4. Verify the reviewed main commit and its green CI. In Actions → Official
    website Pages → Run workflow, select **main**. Review the generated artifact
    and approve the waiting `github-pages` deployment job for that run/commit.
+
+To include the JS checker, select **Include the bilingual JavaScript syntax
+checker** (`include_js_checker`) when manually running the workflow. Leaving
+this unchecked publishes only the introduction. A run audits the selected
+artifact before upload, and publication still requires environment approval.
+
+After publishing the checker, confirm both language home links and
+`/lifetxt/ja/check/` and `/lifetxt/en/check/` in a desktop Chromium browser.
+Confirm the two modules load from the same origin with a JavaScript MIME
+type, the example yields a result, and no input is transmitted or persisted.
+Keep the option checked on future runs intended to retain the checker. To
+withdraw the checker, run the workflow on the official main branch with the
+option unchecked, approve the introduction-only artifact, and verify the
+home links, checker pages and checker assets are withdrawn.
 
 The workflow checks the public, read-only environment API before artifact
 upload and again inside the deployment job. Missing protection, a non-human or

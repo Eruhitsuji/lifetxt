@@ -9,13 +9,15 @@ from urllib.parse import unquote, urljoin, urlsplit
 import xml.etree.ElementTree as ET
 
 if __package__ in (None, ""):
-    from build_website import DEFAULT_URL, PAGES, REPO, ROOT, site_url
+    from build_js_checker_site import ASSETS as CHECKER_ASSETS, CSP as CHECKER_CSP
+    from build_website import BRAND, DEFAULT_URL, PAGES, REPO, ROOT, site_url
 else:
-    from scripts.build_website import DEFAULT_URL, PAGES, REPO, ROOT, site_url
+    from scripts.build_js_checker_site import ASSETS as CHECKER_ASSETS, CSP as CHECKER_CSP
+    from scripts.build_website import BRAND, DEFAULT_URL, PAGES, REPO, ROOT, site_url
 
 
 class Document(HTMLParser):
-    def __init__(self, source: str):
+    def __init__(self, source: str, *, checker: bool = False):
         super().__init__(convert_charrefs=True)
         self.links: list[str] = []
         self.ids: list[str] = []
@@ -27,11 +29,25 @@ class Document(HTMLParser):
         self.main = 0
         self.description = False
         self.viewport = False
+        self.checker = checker
+        self.checker_csp = False
+        self.checker_modules = 0
+        self.noindex = False
         self.feed(source)
+        if checker and (self.checker_modules != 1 or not self.noindex):
+            self.errors.append("checker must have one approved module and noindex")
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         attr = dict(attrs)
-        if tag in ("script", "iframe", "form", "object", "embed", "base"):
+        approved_module = (
+            self.checker
+            and self.checker_csp
+            and len(attrs) == 2
+            and attr == {"type": "module", "src": "../../js-checker/ui.mjs"}
+        )
+        if tag == "script" and approved_module:
+            self.checker_modules += 1
+        elif tag in ("script", "iframe", "form", "object", "embed", "base"):
             self.errors.append(f"forbidden active element: {tag}")
         if any(key.startswith("on") for key in attr):
             self.errors.append("inline event handler")
@@ -59,6 +75,9 @@ class Document(HTMLParser):
         self.h1 += tag == "h1"
         self.main += tag == "main"
         if tag == "meta":
+            if (attr.get("http-equiv") or "").lower() == "content-security-policy":
+                self.checker_csp = len(attrs) == 2 and attr.get("content") == CHECKER_CSP
+            self.noindex |= attr.get("name") == "robots" and attr.get("content") == "noindex"
             self.description |= attr.get("name") == "description" and bool(
                 attr.get("content")
             )
@@ -69,20 +88,41 @@ class Document(HTMLParser):
             self.alternates[attr.get("hreflang") or ""] = attr.get("href") or ""
 
 
-def check(output: Path, base: str = DEFAULT_URL) -> list[str]:
+def check(
+    output: Path, base: str = DEFAULT_URL, *, with_js_checker: bool = False
+) -> list[str]:
     output = output.resolve()
     base = site_url(base)
     errors = []
-    docs = {
-        file: Document(file.read_text(encoding="utf-8"))
-        for file in output.rglob("*.html")
-    }
-    expected = {"index.html", "404.html"} | {
+    checker_pages = (
+        {f"{lang}/check/index.html" for lang in ("ja", "en")} if with_js_checker else set()
+    )
+    expected_pages = {"index.html", "404.html"} | {
         f"{lang}/{page}.html" for lang in ("ja", "en") for page in PAGES
+    } | checker_pages
+    expected_files = expected_pages | {"style.css", "example.txt", "robots.txt", "sitemap.xml", ".nojekyll"}
+    expected_files.update(f"assets/{name}" for name in BRAND)
+    if with_js_checker:
+        expected_files.update(f"js-checker/{name}" for name in CHECKER_ASSETS)
+    files = {}
+    for path in output.rglob("*"):
+        name = path.relative_to(output).as_posix()
+        if path.is_symlink() or (not path.is_dir() and not path.is_file()):
+            errors.append(f"{name}: invalid artifact entry")
+        elif path.is_file():
+            files[name] = path
+    if files.keys() != expected_files:
+        errors.append(f"unexpected/missing artifact files: {sorted(files.keys() ^ expected_files)}")
+    if with_js_checker:
+        for name, source in CHECKER_ASSETS.items():
+            asset = files.get(f"js-checker/{name}")
+            if asset is not None and asset.read_bytes() != source.read_bytes():
+                errors.append(f"js-checker/{name}: asset differs from reviewed source")
+    docs = {
+        file: Document(file.read_text(encoding="utf-8"), checker=name in checker_pages)
+        for name, file in files.items()
+        if name in expected_pages
     }
-    actual = {file.relative_to(output).as_posix() for file in docs}
-    if actual != expected:
-        errors.append(f"unexpected/missing HTML pages: {sorted(actual ^ expected)}")
     origin = urlsplit(base)
     for file, doc in docs.items():
         relative = file.relative_to(output).as_posix()
@@ -105,10 +145,18 @@ def check(output: Path, base: str = DEFAULT_URL) -> list[str]:
             if doc.canonical != [canonical] or not doc.description:
                 errors.append(f"{relative}: wrong canonical or missing description")
             filename = "" if file.name == "index.html" else file.name
-            alternatives = {lang: base + lang + "/" + filename for lang in ("ja", "en")}
-            alternatives["x-default"] = base if not filename else alternatives["en"]
+            if relative in checker_pages:
+                other = "en" if expected_lang == "ja" else "ja"
+                alternatives = {other: base + other + "/check/"}
+            else:
+                alternatives = {lang: base + lang + "/" + filename for lang in ("ja", "en")}
+                alternatives["x-default"] = base if not filename else alternatives["en"]
             if doc.alternates != alternatives:
                 errors.append(f"{relative}: wrong language alternates")
+        if with_js_checker and relative in ("index.html", "ja/index.html", "en/index.html"):
+            target = "en/check/" if relative == "index.html" else "check/"
+            if target not in doc.links:
+                errors.append(f"{relative}: missing checker link")
         for link in doc.links:
             parsed = urlsplit(urljoin(page_url, link))
             if parsed.scheme != "https":
@@ -154,7 +202,7 @@ def check(output: Path, base: str = DEFAULT_URL) -> list[str]:
         canonicals = {
             url
             for file, doc in docs.items()
-            if file.name != "404.html"
+            if file.name != "404.html" and file.relative_to(output).as_posix() not in checker_pages
             for url in doc.canonical
         }
         if locations != canonicals:
@@ -168,11 +216,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("output", type=Path)
     parser.add_argument("--site-url", default=DEFAULT_URL)
+    parser.add_argument("--with-js-checker", action="store_true")
     args = parser.parse_args()
-    errors = check(args.output, args.site_url)
+    errors = check(args.output, args.site_url, with_js_checker=args.with_js_checker)
     if errors:
         parser.exit(1, "\n".join(errors) + "\n")
-    print("Website: 14 HTML pages, local links/assets/fragments and metadata OK.")
+    print("Website: approved files, local links, and metadata OK.")
 
 
 if __name__ == "__main__":

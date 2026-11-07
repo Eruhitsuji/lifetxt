@@ -6,11 +6,19 @@ name: Official website Pages
     paths:
     - website/**
     - assets/brand/**
+    - contrib/lifetxt-js-check/parser.mjs
+    - LICENSE
+    - scripts/build_js_checker_site.py
     - scripts/build_website.py
     - scripts/check_website.py
     - tests/test_website*.py
     - .github/workflows/website-pages.yml
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      include_js_checker:
+        description: Include the bilingual JavaScript syntax checker
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -68,11 +76,24 @@ jobs:
             raise SystemExit("github-pages must require Eruhitsuji human approval; publication refused")
         print("Verified github-pages has the required human reviewer; no settings changed")
         PY
-    - name: Build public website only
-      run: python scripts/build_website.py --output .cache/pages
-    - name: Check links, metadata, assets and sample
+    - name: Build and audit the selected Pages artifact
+      env:
+        INCLUDE_JS_CHECKER: ${{ inputs.include_js_checker }}
+      run: |
+        if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch && "$INCLUDE_JS_CHECKER" == true ]]; then
+          python scripts/build_js_checker_site.py --output .cache/pages
+          python scripts/check_website.py .cache/pages --with-js-checker
+        else
+          python scripts/build_website.py --output .cache/pages
+          python scripts/check_website.py .cache/pages
+        fi
+    - name: Audit the checker candidate on pull requests
+      if: github.event_name == 'pull_request'
+      run: |
+        python scripts/build_js_checker_site.py --output .cache/pages-js-preview
+        python scripts/check_website.py .cache/pages-js-preview --with-js-checker
+    - name: Check sample and website regressions
       run: |-
-        python scripts/check_website.py .cache/pages
         python -m lifetxt check website/example.txt
         python -m unittest tests.test_website
     - name: Upload approved-main build

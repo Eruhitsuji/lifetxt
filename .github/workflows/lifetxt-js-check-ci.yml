@@ -1,0 +1,58 @@
+name: life.txt JS checker CI
+'on':
+  pull_request:
+    paths:
+      - 'contrib/lifetxt-js-check/**'
+      - 'lifetxt/**'
+      - 'life_txt_format_spec.md'
+      - 'website/example.txt'
+      - 'LICENSE'
+      - '.github/workflows/lifetxt-js-check-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'contrib/lifetxt-js-check/**'
+      - 'lifetxt/**'
+      - 'life_txt_format_spec.md'
+      - 'website/example.txt'
+      - 'LICENSE'
+      - '.github/workflows/lifetxt-js-check-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  checker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Test shared parser and compare its supported syntax with Core
+        run: |
+          node --test contrib/lifetxt-js-check/parser.test.mjs
+          PYTHONPATH=. python contrib/lifetxt-js-check/check_core.py
+      - name: Build, verify and smoke-test the distribution ZIP
+        run: |
+          output="$RUNNER_TEMP/lifetxt-js-check"
+          python contrib/lifetxt-js-check/package_zip.py "$output"
+          (cd "$output" && sha256sum --check lifetxt-js-check.zip.sha256)
+          unzip -q "$output/lifetxt-js-check.zip" -d "$output/extracted"
+          cp website/example.txt "$output/extracted/life.txt"
+          cd "$output/extracted"
+          node check.mjs life.txt
+          printf 'invalid\n' > invalid.txt
+          status=0
+          node check.mjs invalid.txt || status=$?
+          test "$status" -eq 1
+          printf '#! format_version: 2\n' > unsupported.txt
+          status=0
+          node check.mjs unsupported.txt || status=$?
+          test "$status" -eq 3

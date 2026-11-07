@@ -1,0 +1,28 @@
+schema_version: 1
+change:
+  id: unicode-runtime-verification
+  title: Exact Unicode-minimal source/object/WASM technical verification
+  status: in_review
+  change_type: Investigation
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1531
+  related_pull_request: null
+  base_commit: f79799a4042a2d639070c6052a880f0af7a18a09
+scope:
+  in_scope:
+    - Dedicated verifier, Node probe, tests, measured evidence and unresolved residual inventory
+  out_of_scope:
+    - Runtime rebuild/adoption, source-specific licensing, distribution and publication
+  write_scope:
+    - contrib/browser_check_poc/unicode_verify.py
+    - contrib/browser_check_poc/unicode_probe.mjs
+    - contrib/browser_check_poc/UNICODE_VERIFICATION.md
+    - contrib/browser_check_poc/profiles/unicode-minimal-3/verification.json
+    - tests/test_unicode_verify.py
+    - .ai/project/changes/unicode-runtime-verification/
+    - .ai/project/TRACEABILITY.yml
+human_approvals_required:
+  - Independent implementation/security and integration review at latest head
+  - Owner merge decision

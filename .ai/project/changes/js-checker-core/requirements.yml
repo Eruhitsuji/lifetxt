@@ -1,0 +1,10 @@
+schema_version: 1
+requirements:
+  - id: req-browser-local-check-v1
+    kind: MODIFIED
+    owner: Eruhitsuji
+    statement: Supply the standalone syntax-checking foundation shared by a browser and Node.js CLI.
+    acceptance_criteria:
+      - Supported Format 1 record syntax is parsed without runtime dependencies or Core semantic validation.
+      - Unchecked input is distinguishable from syntax errors and complete checks.
+      - Dedicated CI verifies parser, shared Core fixtures, and the extracted CLI ZIP.

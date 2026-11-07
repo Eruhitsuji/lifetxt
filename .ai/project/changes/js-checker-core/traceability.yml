@@ -1,0 +1,10 @@
+schema_version: 1
+traceability:
+  - requirement_id: req-browser-local-check-v1
+    capability_id: cap-official-website
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1534
+    tests_or_evidence:
+      - contrib/lifetxt-js-check/parser.test.mjs
+      - contrib/lifetxt-js-check/check_core.py
+      - .github/workflows/lifetxt-js-check-ci.yml
+    status: in_review

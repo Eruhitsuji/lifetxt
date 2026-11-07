@@ -43,3 +43,23 @@ and output hash reproduction, SDK/build/object/WASM/browser/license review: NOT 
 Historical receipt is enforced fail-closed, not independently substantiated by this PR.
 New correction needs independent Implementation/Security and Integration review plus
 latest CI and Owner merge. Distribution flags remain false; no publication/deploy.
+
+
+## PR #1529 second independent review correction
+
+Review: https://github.com/Eruhitsuji/lifetxt/issues/1434#issuecomment-6699606429
+Head 261bab604e2d380b5d180fb0439c563250c24315 was NOT APPROVED: Windows fsync
+failure cleanup tried to unlink an open file, and PR traceability lacked #1529.
+Close the temporary file before all cleanup paths via an outer try/finally;
+add a host-independent regression enforcing Windows close-before-delete semantics
+and preserving the original fsync exception. Add the exact pull_request URL.
+Developer checks: 32 focused tests PASS (15 curator + 17 governance), ruff check
+and format PASS. Native Windows re-execution: NOT RUN on this Linux host; the
+separate Windows reviewer must rerun the correction. New head review/CI pending.
+
+P3 retained: fixed gzip output bytes can differ across zlib implementations;
+acceptance remains fail-closed. Do not replace the historical receipt with an
+invented uncompressed tar digest while actual source is unavailable. #1436 must
+reproduce the pinned receipt with a recorded compression environment, or establish
+and independently review a new content-based receipt from actual source. Bounded
+synthetic probes do not prove real input success. No distribution gate change.

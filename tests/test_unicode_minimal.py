@@ -261,6 +261,36 @@ class ReviewRegressionTests(unittest.TestCase):
             self.assertFalse((Path(td) / "missing").exists())
             self.assertEqual(len(list(Path(td).iterdir())), 1)
 
+    def test_failed_write_closes_before_cleanup_and_preserves_error(self):
+        from unittest.mock import patch
+
+        with tempfile.TemporaryDirectory() as td:
+            target = Path(td) / "out.gz"
+            original_factory = mod.tempfile.NamedTemporaryFile
+            original_unlink = Path.unlink
+            opened = []
+            failure = OSError("original fsync failure")
+
+            def track_file(*args, **kwargs):
+                stream = original_factory(*args, **kwargs)
+                opened.append(stream)
+                return stream
+
+            def windows_unlink(path, *args, **kwargs):
+                # Enforce Windows close-before-delete semantics on every host.
+                self.assertTrue(opened[-1].closed)
+                return original_unlink(path, *args, **kwargs)
+
+            with (
+                patch.object(mod.tempfile, "NamedTemporaryFile", track_file),
+                patch.object(mod.os, "fsync", side_effect=failure),
+                patch.object(Path, "unlink", windows_unlink),
+            ):
+                with self.assertRaises(OSError) as raised:
+                    mod._publish(b"complete", target)
+            self.assertIs(raised.exception, failure)
+            self.assertEqual(list(Path(td).iterdir()), [])
+
     def test_retained_hash_receipt(self):
         with tempfile.TemporaryDirectory() as td:
             source, target = Path(td) / "in.gz", Path(td) / "out.gz"

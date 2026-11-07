@@ -91,20 +91,19 @@ class _BoundedReader:
 def _publish(payload, target):
     """Publish complete bytes without replacing a concurrently created target."""
     target.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.NamedTemporaryFile(dir=target.parent, delete=False) as stream:
-        temporary = Path(stream.name)
-        try:
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=target.parent, delete=False) as stream:
+            temporary = Path(stream.name)
             stream.write(payload)
             stream.flush()
             os.fsync(stream.fileno())
-        except BaseException:
-            temporary.unlink()
-            raise
-    try:
+        # Close before linking or cleaning up: Windows cannot unlink open files.
         # Same-filesystem link is atomic and refuses existing files/symlinks.
         os.link(temporary, target)
     finally:
-        temporary.unlink()
+        if temporary is not None:
+            temporary.unlink()
 
 
 def _aliases(source):

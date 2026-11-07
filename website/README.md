@@ -43,6 +43,17 @@ Publication and homepage metadata changes require human approval and are tracked
 by #1352 and #1353. The README links follow successful live HTTP verification;
 new source changes still need merge and a separate owner-approved deployment.
 
+## Local JavaScript checker candidate
+
+```sh
+python scripts/build_js_checker_site.py --output .cache/js-checker-site
+python -m http.server --bind 127.0.0.1 --directory .cache/js-checker-site 8080
+```
+
+Open `http://127.0.0.1:8080/ja/check/` or `/en/check/`. This explicit build adds
+a syntax-check link to each home and uses the same parser as the Node CLI.
+The Pages workflow uses the standard introduction build.
+
 ## Pages publication runbook (#1352)
 
 The site is not published by merging these PRs. The dedicated

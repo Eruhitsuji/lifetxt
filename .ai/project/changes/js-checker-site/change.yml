@@ -1,0 +1,13 @@
+schema_version: 1
+change:
+  id: js-checker-site
+  title: Bilingual official-site JavaScript checker candidate
+  status: in_review
+  change_type: Feature
+  assurance_level: High
+  owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1536
+scope:
+  write_scope: [website/js-checker, site candidate builder, dedicated CI and tests, traceability]
+  forbidden_scope: [Core, Mini CLI, existing Pyodide checker, Pages workflow and deployment]
+human_approvals_required: [latest-head implementation and security review, integration review, merge, publication]

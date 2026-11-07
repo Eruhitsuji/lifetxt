@@ -56,7 +56,13 @@ def href(target: str, lang: str, prefix: str = "../") -> str:
 
 
 def render(
-    content: dict, lang: str, page: str, base: str, *, root: bool = False
+    content: dict,
+    lang: str,
+    page: str,
+    base: str,
+    *,
+    root: bool = False,
+    checker_link: bool = False,
 ) -> str:
     copy = content[lang]
     other = "en" if lang == "ja" else "ja"
@@ -81,6 +87,10 @@ def render(
         + f">{escape(label)}</a>"
         for slug, label in zip(PAGES, copy["nav"], strict=True)
     )
+    if checker_link and page == "index":
+        label = "書式チェック" if lang == "ja" else "Syntax check"
+        target = f"{lang}/check/" if root else "check/"
+        nav += f'<a href="{target}">{label}</a>'
     card_html = "".join(
         f'<article class="card"><span class="number">{escape(number)}</span>'
         f"<h3>{escape(heading)}</h3><p>{escape(body)}</p>"
@@ -143,7 +153,7 @@ def render(
 '''
 
 
-def build(output: Path, base: str = DEFAULT_URL) -> None:
+def build(output: Path, base: str = DEFAULT_URL, *, checker_link: bool = False) -> None:
     base = site_url(base)
     output = output.resolve()
     if any(
@@ -165,11 +175,15 @@ def build(output: Path, base: str = DEFAULT_URL) -> None:
         for page in PAGES:
             name = "index.html" if page == "index" else page + ".html"
             (output / lang / name).write_text(
-                render(content, lang, page, base), encoding="utf-8", newline="\n"
+                render(content, lang, page, base, checker_link=checker_link),
+                encoding="utf-8",
+                newline="\n",
             )
             urls.append(base + lang + "/" + ("" if page == "index" else name))
     (output / "index.html").write_text(
-        render(content, "en", "index", base, root=True), encoding="utf-8", newline="\n"
+        render(content, "en", "index", base, root=True, checker_link=checker_link),
+        encoding="utf-8",
+        newline="\n",
     )
     # The failed URL may have arbitrary depth. This one recovery page intentionally
     # uses the configured absolute base path and has no relative assets.

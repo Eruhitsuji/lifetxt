@@ -232,6 +232,20 @@ class StructuredFieldAuthoringJsTests(unittest.TestCase):
         self.assertIn('value="2026-01-01"', html)
         self.assertIn('data-structured-key="due"', html)
 
+    def test_task_field_help_distinguishes_deadline_schedule_and_tags(self):
+        html = self.results["render_task_html"]
+        for key, text in (
+            ("due", "Example: 2026-12-15."),
+            ("do", "This can be earlier than its deadline."),
+            ("tag", "Separate tags with commas"),
+        ):
+            with self.subTest(key=key):
+                self.assertIn(f'aria-describedby="edit-{key}-help"', html)
+                self.assertRegex(
+                    html,
+                    rf'<small id="edit-{key}-help" class="field-help-text">[^<]*{re.escape(text)}',
+                )
+
     def test_render_escapes_a_hostile_detail_value(self):
         html = self.results["render_escapes_hostile_value"]
         self.assertNotIn("<img>", html)

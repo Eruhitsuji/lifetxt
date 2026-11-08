@@ -440,7 +440,9 @@
     function renderStructuredFields(prefix, details, type) {
       const values = details || {};
       const help = {
-        due: "When this task should be finished.",
+        due: "When this task should be finished. Example: 2026-12-15.",
+        do: "When you plan to work on this task. This can be earlier than its deadline.",
+        tag: "Add labels to find this record later. Separate tags with commas, for example: work, calls.",
         project: "Group this record with related work.",
         priority: "How important this item is compared with other work.",
         progress: "Completion percentage, from 0 to 100.",

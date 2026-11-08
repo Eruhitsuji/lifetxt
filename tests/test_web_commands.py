@@ -2,6 +2,8 @@
 
 import os
 import re
+import shutil
+import subprocess
 import tempfile
 import unittest
 
@@ -16,6 +18,70 @@ def _handler_block():
     match = re.search(r"const WEB_COMMAND_HANDLERS = \{(.*?)\n    \};", SCRIPT, re.S)
     assert match, "WEB_COMMAND_HANDLERS block not found in the page"
     return match.group(1)
+
+
+@unittest.skipUnless(shutil.which("node"), "Node.js unavailable")
+class CommandPaletteNavigationTests(unittest.TestCase):
+    def test_bilingual_workspace_search_runs_the_existing_navigation_paths(self):
+        def extract(start, end):
+            offset = SCRIPT.index(start)
+            return SCRIPT[offset : SCRIPT.index(end, offset)]
+
+        source = "\n".join(
+            (
+                extract("const UI_STRINGS = {", "const I18N_PATTERNS"),
+                extract("function fuzzyMatch(", "function recentItemKey("),
+                extract("const CMDK_ACTIONS = [", "let COMMAND_CATALOG"),
+                extract("function renderCmdk(", "function _cmdkMoveFocus("),
+            )
+        )
+        harness = (
+            r"""
+const assert = require("node:assert/strict");
+const noop = () => {};
+const newItem = noop, refreshAll = noop, toggleDarkMode = noop;
+const toggleDisplayMode = noop, toggleKioskMode = noop, toggleAgendaBlocked = noop;
+const openUndoHistoryModal = noop, jumpToLine = noop, openHelpModal = noop;
+const appConfig = {}, currentItems = [], location = {};
+const list = {appendChild: noop};
+const document = {getElementById: () => list,
+                  createElement: () => ({addEventListener: noop})};
+const escapeHtml = text => text;
+let _cmdkIndex, _cmdkEntries, workspace, japanese = false;
+const t = label => japanese ? UI_STRINGS.ja[label] || label : label;
+const switchWorkspace = view => { workspace = view; };
+"""
+            + source
+            + r"""
+for (const [en, ja, destination] of [
+  ["Today", "今日", "today"],
+  ["Priority Matrix", "優先度マトリクス", "matrix"],
+  ["Server", "サーバー", "server"],
+  ["Personal Context", "パーソナルコンテキスト", "context"],
+  ["Procedures", "手順書", "/procedures"],
+  ["Planner", "プランナー", "/planner"],
+  ["Quick Capture", "クイックキャプチャ", "/capture"],
+  ["State", "クイックステータス", "/state"],
+]) {
+  for (const localized of [false, true]) {
+    japanese = localized;
+    for (const query of [en, ja]) {
+      renderCmdk(query);
+      const entry = _cmdkEntries.find(item => item.label === t("Go to " + en));
+      assert.ok(entry, query);
+      workspace = null;
+      location.href = null;
+      entry.run();
+      assert.equal(workspace || location.href, destination);
+    }
+  }
+}
+"""
+        )
+        result = subprocess.run(
+            ["node", "-e", harness], capture_output=True, text=True, timeout=10
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
 
 
 class CommandCatalogTests(unittest.TestCase):

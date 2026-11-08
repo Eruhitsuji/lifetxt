@@ -18,7 +18,7 @@ class NotificationEmptyTests(unittest.TestCase):
         ]
         helper = HTML_PAGE[
             HTML_PAGE.index("    function guidedEmptyState(") : HTML_PAGE.index(
-                "    function enhanceItemsEmptyState("
+                "    function clearItemsEmptyFilters("
             )
         ]
         script = r"""

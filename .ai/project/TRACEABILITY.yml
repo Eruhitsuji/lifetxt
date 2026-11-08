@@ -19336,6 +19336,69 @@ traceability:
       tests_or_evidence: [tests/test_ci_path_routing.py, tests/test_ci_workflow_responsibilities.py, .ai/project/changes/ci-missing-diff-base/verification.yml]
       status: in_review
 
+    - requirement_id: req-web-editor-labels
+      capability_id: cap-web-beginner-authoring-mode
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1541
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1546
+      tests_or_evidence:
+        - tests/test_beginner_authoring_mode_js.py
+        - tests/test_web_assets.py
+      status: in_review
+
+    - requirement_id: req-web-field-help
+      capability_id: cap-structured-common-field-authoring
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1542
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1547
+      tests_or_evidence:
+        - tests/test_web_assets.py
+        - tests/test_web_structured_authoring_js.py
+      status: in_review
+
+    - requirement_id: req-web-items-first-run
+      capability_id: cap-web-beginner-first-ux
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1543
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1548
+      tests_or_evidence:
+        - tests/test_web_assets.py
+        - tests/test_web_items_filters.py
+      status: in_review
+
+    - requirement_id: req-web-palette-navigation
+      capability_id: cap-web-help-command-reference
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1544
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1549
+      tests_or_evidence:
+        - tests/test_web_assets.py
+        - tests/test_web_commands.py
+      status: in_review
+
+    - requirement_id: req-web-saved-filter-status
+      capability_id: cap-web-saved-views-and-areas
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1545
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1550
+      tests_or_evidence:
+        - tests/test_web_assets.py
+        - tests/test_web_items_filters.py
+      status: in_review
+
+    - requirement_id: req-web-usability-1386-batch-integration
+      capability_id: cap-web-beginner-first-ux
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1551
+      tests_or_evidence:
+        - tests/test_beginner_authoring_mode_js.py
+        - tests/test_web_structured_authoring_js.py
+        - tests/test_web_items_filters.py
+        - tests/test_web_commands.py
+        - tests/test_web_assets.py
+      status: in_review
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

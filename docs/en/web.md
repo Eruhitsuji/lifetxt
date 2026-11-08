@@ -1673,6 +1673,8 @@ Shared field labels in Focus, Review and Graph, and the bulk completion date dia
 
 Focus, Review and Graph align action buttons with the bottom of labeled inputs. Use Add or Apply normally; Review retains its stacked controls on small screens.
 
-The Statistics breakdown From/To controls use labels above the date inputs, with All aligned along their bottom edge. Enter dates as usual or choose All to clear both. These controls retain their existing breakdown-only behavior; this layout change does not change date aggregation or connect the main chart to the range.
+In Statistics, use From/To to filter the breakdown by type and status. Both boundary dates are included. With only From, the period ends today. With only To, the period starts 29 days before To. Choose All to clear both dates and count all records. The main chart has its own period.
+
+The breakdown uses the same record date as CLI statistics. It uses the first valid value from `done`, `on`, `due`, `do`, `from`, `created`, or `updated`, in that order. Records without a usable date are included.
 
 Personal Context next-step links and the Server backup guide link use underlined theme text, including after visiting them. Open either view and follow the guidance link normally; no extra setting is needed.

@@ -391,10 +391,13 @@
       // Show read-only banner if server is in read-only mode
       try {
         const health = await api("/api/health");
-        if (health.read_only) {
+        itemsReadOnly = Boolean(health.read_only);
+        if (itemsReadOnly) {
           const banner = document.getElementById("read-only-banner");
           if (banner) banner.style.display = "";
         }
+        const emptyItems = document.querySelector("#items > .empty-state");
+        if (emptyItems && !currentItems.length) emptyItems.outerHTML = itemsEmptyStateMarkup();
       } catch(_) {}
       populateSavedViewsAndAreas();
 

@@ -61,6 +61,51 @@ disclosure = null; setupItemsFilterDisclosure();
         self.assertEqual(0, result.returncode, result.stderr)
 
 
+@unittest.skipUnless(shutil.which("node"), "Node.js unavailable")
+class ItemsEmptyStateTests(unittest.TestCase):
+    def test_first_task_is_only_offered_for_unfiltered_writable_items(self):
+        start = HTML_PAGE.index("    function itemsEmptyStateMarkup()")
+        end = HTML_PAGE.index("    function renderItems(", start)
+        source = HTML_PAGE[start:end]
+        harness = r"""
+const assert = require("node:assert/strict");
+let itemsEmptyKind = "unfiltered";
+let itemsReadOnly = false;
+let display = false;
+let kiosk = false;
+const isKioskMode = () => kiosk;
+const isDisplayMode = () => display;
+const guidedEmptyState = (_icon, title, hint) => [title, hint].join(" ");
+const firstTask = /Create your first task/;
+assert.match(itemsEmptyStateMarkup(), firstTask);
+for (const kind of ["filtered", "scoped"]) {
+  itemsEmptyKind = kind;
+  assert.match(itemsEmptyStateMarkup(), /No items match/);
+  assert.match(itemsEmptyStateMarkup(), /clearItemsEmptyFilters/);
+  assert.doesNotMatch(itemsEmptyStateMarkup(), firstTask);
+}
+itemsEmptyKind = "unfiltered";
+itemsReadOnly = true;
+assert.match(itemsEmptyStateMarkup(), /read-only/);
+assert.doesNotMatch(itemsEmptyStateMarkup(), firstTask);
+itemsReadOnly = null;
+assert.doesNotMatch(itemsEmptyStateMarkup(), firstTask);
+itemsReadOnly = false;
+display = true;
+assert.doesNotMatch(itemsEmptyStateMarkup(), firstTask);
+display = false;
+kiosk = true;
+assert.doesNotMatch(itemsEmptyStateMarkup(), firstTask);
+"""
+        result = subprocess.run(
+            ["node", "-e", source + harness],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        self.assertEqual(0, result.returncode, result.stderr)
+
+
 def _browser_path():
     configured = os.environ.get("LIFETXT_BROWSER_BIN")
     return configured if configured and os.path.isfile(configured) else None

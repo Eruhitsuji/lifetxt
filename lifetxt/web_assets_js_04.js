@@ -60,6 +60,8 @@
       history.replaceState(history.state, "", `${location.pathname}?${next.toString()}`);
     }
     let itemsLoadGeneration = 0;
+    let itemsEmptyKind = "unknown";
+    let itemsReadOnly = null;
     async function loadItems() {
       const generation = ++itemsLoadGeneration;
       updateUrlFromControls();
@@ -74,10 +76,14 @@
       try {
         data = await api(`/api/items?${params}`);
       } catch (error) {
+        if (generation !== itemsLoadGeneration) return;
+        itemsEmptyKind = "error";
         renderActionableError(document.getElementById("items"), "Could not load items from the lifetxt server.", error, () => loadItems());
         return;
       }
       if (generation !== itemsLoadGeneration) return;
+      const hasFilters = [...params.keys()].some(key => key !== "sort" && key !== "order");
+      itemsEmptyKind = hasFilters ? "filtered" : data.diagnostics?.length ? "unknown" : "unfiltered";
       currentItems = data.items;
       renderDiagnostics(data.diagnostics);
       renderItems(data.items);
@@ -147,6 +153,7 @@
       if (areaSel) areaSel.value = "";
       if (!name) { loadItems(); return; }
       const data = await api(`/api/saved-views/${encodeURIComponent(name)}`);
+      itemsEmptyKind = "scoped";
       currentItems = data.items;
       renderDiagnostics(data.query_diagnostics || []);
       renderItems(data.items);
@@ -163,6 +170,7 @@
       ]);
       const keys = new Set((area.open_items || []).map(ref => `${ref.source}\u0000${ref.line}`));
       const filtered = full.items.filter(item => keys.has(`${item.source}\u0000${item.line}`));
+      itemsEmptyKind = "scoped";
       currentItems = filtered;
       renderDiagnostics([]);
       renderItems(filtered);
@@ -454,42 +462,44 @@
         (hint ? `<div class="empty-hint">${hint}</div>` : "") +
         (btns ? `<div class="empty-actions">${btns}</div>` : "") + `</div>`;
     }
-    function enhanceItemsEmptyState(hasFilters) {
-      if (isKioskMode() || isDisplayMode()) return;
-      const state = document.querySelector("#items .empty-state");
-      if (!state) return;
-      state.querySelectorAll(":scope > button, :scope > .empty-actions").forEach(el => el.remove());
-      const actions = document.createElement("div");
-      actions.className = "empty-actions";
-      if (hasFilters) {
-        actions.innerHTML =
-          `<button type="button" class="secondary" onclick="clearAllFilters()">Clear filters</button>` +
-          `<button type="button" onclick="newItem()">New record</button>`;
-      } else {
-        actions.innerHTML =
-          `<button type="button" onclick="newItem()">New record</button>` +
-          `<button type="button" class="secondary" onclick="toggleQuickAdd(true)">Quick add</button>` +
-          `<button type="button" class="secondary" onclick="openCmdk()">Command palette</button>`;
+    function clearItemsEmptyFilters() {
+      document.getElementById("saved-view-select").value = "";
+      document.getElementById("area-select").value = "";
+      clearAllFilters();
+    }
+    function itemsEmptyStateMarkup() {
+      const interactive = !isKioskMode() && !isDisplayMode();
+      const filtered = itemsEmptyKind === "filtered" || itemsEmptyKind === "scoped";
+      if (filtered) {
+        return `<div class="empty-state">
+          <div class="empty-icon" aria-hidden="true">🔍</div>
+          <div class="empty-title">No items match the current filters</div>
+          <div class="empty-hint">Clear the filters to see all items.</div>
+          ${interactive ? `<div class="empty-actions">
+            <button type="button" class="secondary" onclick="clearItemsEmptyFilters()">Clear filters</button>
+            ${itemsReadOnly === false ? '<button type="button" onclick="newItem()">New record</button>' : ""}
+          </div>` : ""}
+        </div>`;
       }
-      state.appendChild(actions);
+      if (!interactive || itemsReadOnly !== false || itemsEmptyKind !== "unfiltered") {
+        return guidedEmptyState("🌱", "No items yet",
+          itemsReadOnly === true ? "This workspace is read-only." : "");
+      }
+      return `<div class="empty-state">
+        <div class="empty-icon" aria-hidden="true">🌱</div>
+        <div class="empty-title">No items yet</div>
+        <div class="empty-hint">Create a task, find it here in Items, then open it to mark it done.</div>
+        <div class="empty-actions">
+          <button type="button" onclick="newItem()">Create your first task</button>
+          <button type="button" class="secondary" onclick="toggleQuickAdd(true)">Quick add</button>
+          <button type="button" class="secondary" onclick="openCmdk()">Command palette</button>
+        </div>
+      </div>`;
     }
     function renderItems(items) {
       const root = document.getElementById("items");
-      const hasFilters = !!(document.getElementById("search").value.trim() ||
-        query().get("status") || query().get("blocked") ||
-        document.getElementById("kind").value || document.getElementById("open-only").checked);
-      root.innerHTML = items.length ? "" : `
-        <div class="empty-state">
-          <div class="empty-icon" aria-hidden="true">${hasFilters ? "🔍" : "🌱"}</div>
-          <div class="empty-title">${hasFilters ? "No items match the current filters" : "No items yet"}</div>
-          <div class="empty-hint">${hasFilters
-            ? "Try clearing the search text or status filters above."
-            : "Add your first record with the quick-add bar (press q) or the New workspace."}</div>
-          ${isKioskMode() || isDisplayMode() ? "" : (hasFilters
-            ? `<button type="button" class="secondary" onclick="clearAllFilters()">Clear filters</button>`
-            : `<button type="button" onclick="toggleQuickAdd(true)">＋ Quick add</button>`)}
-        </div>`;
-      if (!items.length) enhanceItemsEmptyState(hasFilters);
+      if (!items.length && itemsEmptyKind === "error") return;
+      root.innerHTML = items.length ? "" : itemsEmptyStateMarkup();
       renderSummary(items);
       renderFilterChips();
       updateSearchCount(items.length);

@@ -414,19 +414,30 @@
       }
     }
 
+    let chartLoadGeneration = 0;
     async function loadChart(type) {
       const container = document.getElementById("chart-container");
-      if (type === "habits-heatmap") {
-        renderHeatmap(container);
-        return;
+      if (!container) return;
+      const generation = ++chartLoadGeneration;
+      const group = currentChartGroup;
+      const heatmap = type === "habits-heatmap";
+      if (mainChart) {
+        mainChart.destroy();
+        mainChart = null;
       }
-      await ensureChartJs();
-      container.innerHTML = `<div class="chart-panel"><canvas id="main-chart"></canvas></div>`;
-      const canvas = document.getElementById("main-chart");
-      if (mainChart) { mainChart.destroy(); mainChart = null; }
+      container.innerHTML = `<div class="empty" role="status">${escapeHtml(t("Loading statistics chart…"))}</div>`;
       try {
-        const groupParam = GROUP_SUPPORTED.has(type) ? `?group=${encodeURIComponent(currentChartGroup)}` : "";
+        if (!heatmap) await ensureChartJs();
+        if (generation !== chartLoadGeneration) return;
+        const groupParam = GROUP_SUPPORTED.has(type) ? `?group=${encodeURIComponent(group)}` : "";
         const data = await api("/api/chart/" + encodeURIComponent(type) + groupParam);
+        if (generation !== chartLoadGeneration) return;
+        if (heatmap) {
+          renderHeatmap(container, data);
+          return;
+        }
+        container.innerHTML = '<div class="chart-panel"><canvas id="main-chart"></canvas></div>';
+        const canvas = document.getElementById("main-chart");
         const ctx = canvas.getContext("2d");
         const isBar = ["tasks", "habits", "elapsed"].includes(type);
         mainChart = new Chart(ctx, {
@@ -452,74 +463,75 @@
               y: {
                 beginAtZero: true,
                 title: {
-                  display: GROUP_SUPPORTED.has(type) && currentChartGroup !== "daily",
-                  text: currentChartGroup === "weekly" ? "completions / week"
-                      : currentChartGroup === "monthly" ? "completions / month" : "",
+                  display: GROUP_SUPPORTED.has(type) && group !== "daily",
+                  text: group === "weekly" ? "completions / week"
+                      : group === "monthly" ? "completions / month" : "",
                 },
               },
             },
           },
         });
-      } catch(err) {
-        container.innerHTML = `<div class="diagnostic">Chart error: ${escapeHtml(err.message)}</div>`;
+      } catch (_) {
+        if (generation !== chartLoadGeneration) return;
+        container.innerHTML = `<div class="empty">
+          <p role="status">${escapeHtml(t("Could not load the statistics chart."))}</p>
+          <button type="button" class="secondary" onclick="refreshCharts()">${escapeHtml(t("Reload chart"))}</button>
+        </div>`;
       }
     }
 
-    async function renderHeatmap(container) {
-      container.innerHTML = `<div class="empty">Loading heatmap…</div>`;
-      try {
-        const data = await api("/api/chart/habits-heatmap");
-        const today = new Date().toISOString().slice(0, 10);
-        const rangeStart = new Date(data.range?.from || new Date().getFullYear() + "-01-01");
-        if (!data.habits?.length) { container.innerHTML = `<div class="empty">No habit data.</div>`; return; }
-
-        // Build month labels array (one per week column)
-        const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-        function buildMonthLabels(start, end) {
-          const labels = [];
-          let col = 0;
-          const d = new Date(start);
-          const startPad = d.getDay();
-          for (let pad = 0; pad < startPad; pad++) { labels.push(""); col++; }
-          let lastMonth = -1;
-          while (d <= end) {
-            const mo = d.getMonth();
-            if (d.getDay() === 0) {
-              labels.push(mo !== lastMonth ? MONTHS[mo] : "");
-              lastMonth = mo;
-            }
-            d.setDate(d.getDate() + 1);
-          }
-          return labels;
-        }
-
-        const endDate = new Date();
-        const monthLabels = buildMonthLabels(new Date(rangeStart), endDate);
-
-        let html = `<div class="heatmap-section" style="padding:.5rem 1rem">`;
-        for (const habit of data.habits) {
-          html += `<div class="heatmap-habit">
-            <div class="heatmap-title">${escapeHtml(habit.title)}<span class="heatmap-streak">🔥 ${habit.streak} day streak</span></div>
-            <div class="heatmap-months">${monthLabels.map(m => `<div class="heatmap-month-cell">${escapeHtml(m)}</div>`).join("")}</div>
-            <div class="heatmap-grid">`;
-          const start = new Date(rangeStart);
-          const startDay = start.getDay();
-          for (let pad = 0; pad < startDay; pad++) html += `<div class="heatmap-cell" style="visibility:hidden"></div>`;
-          const d = new Date(start);
-          while (d <= endDate) {
-            const ds = d.toISOString().slice(0, 10);
-            const isDone = !!(habit.dates && habit.dates[ds]);
-            const isToday = ds === today;
-            html += `<div class="heatmap-cell${isDone ? " done" : ""}${isToday ? " today" : ""}" data-date="${ds}"></div>`;
-            d.setDate(d.getDate() + 1);
-          }
-          html += `</div></div>`;
-        }
-        html += `</div>`;
-        container.innerHTML = html;
-      } catch(e) {
-        container.innerHTML = `<div class="diagnostic">Heatmap error: ${escapeHtml(e.message)}</div>`;
+    function renderHeatmap(container, data) {
+      const today = new Date().toISOString().slice(0, 10);
+      const rangeStart = new Date(data.range?.from || new Date().getFullYear() + "-01-01");
+      if (!data.habits?.length) {
+        container.innerHTML = `<div class="empty" role="status">${escapeHtml(t("No habit data."))}</div>`;
+        return;
       }
+
+      // Build month labels array (one per week column)
+      const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+      function buildMonthLabels(start, end) {
+        const labels = [];
+        let col = 0;
+        const d = new Date(start);
+        const startPad = d.getDay();
+        for (let pad = 0; pad < startPad; pad++) { labels.push(""); col++; }
+        let lastMonth = -1;
+        while (d <= end) {
+          const mo = d.getMonth();
+          if (d.getDay() === 0) {
+            labels.push(mo !== lastMonth ? MONTHS[mo] : "");
+            lastMonth = mo;
+          }
+          d.setDate(d.getDate() + 1);
+        }
+        return labels;
+      }
+
+      const endDate = new Date();
+      const monthLabels = buildMonthLabels(new Date(rangeStart), endDate);
+
+      let html = `<div class="heatmap-section" style="padding:.5rem 1rem">`;
+      for (const habit of data.habits) {
+        html += `<div class="heatmap-habit">
+          <div class="heatmap-title">${escapeHtml(habit.title)}<span class="heatmap-streak">🔥 ${habit.streak} day streak</span></div>
+          <div class="heatmap-months">${monthLabels.map(m => `<div class="heatmap-month-cell">${escapeHtml(m)}</div>`).join("")}</div>
+          <div class="heatmap-grid">`;
+        const start = new Date(rangeStart);
+        const startDay = start.getDay();
+        for (let pad = 0; pad < startDay; pad++) html += `<div class="heatmap-cell" style="visibility:hidden"></div>`;
+        const d = new Date(start);
+        while (d <= endDate) {
+          const ds = d.toISOString().slice(0, 10);
+          const isDone = !!(habit.dates && habit.dates[ds]);
+          const isToday = ds === today;
+          html += `<div class="heatmap-cell${isDone ? " done" : ""}${isToday ? " today" : ""}" data-date="${ds}"></div>`;
+          d.setDate(d.getDate() + 1);
+        }
+        html += `</div></div>`;
+      }
+      html += `</div>`;
+      container.innerHTML = html;
     }
 
     function showChart(type, btn) {

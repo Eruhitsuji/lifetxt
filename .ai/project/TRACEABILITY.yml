@@ -6801,6 +6801,16 @@ traceability:
         - tests/test_web_items_filters.py
       status: in_review
 
+    - requirement_id: req-web-palette-navigation
+      capability_id: cap-web-help-command-reference
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1544
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1549
+      tests_or_evidence:
+        - tests/test_web_assets.py
+        - tests/test_web_commands.py
+      status: in_review
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

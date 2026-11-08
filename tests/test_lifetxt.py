@@ -448,7 +448,7 @@ class LifeTxtParserTests(unittest.TestCase):
         self.assertIn('class="modal-backdrop detail-drawer"', webapp.HTML_PAGE)
         self.assertIn('class="detail-modal"', webapp.HTML_PAGE)
         self.assertIn('role="status"', webapp.HTML_PAGE)
-        self.assertIn("function enhanceItemsEmptyState(", webapp.HTML_PAGE)
+        self.assertIn("function itemsEmptyStateMarkup(", webapp.HTML_PAGE)
         self.assertIn("empty-actions", webapp.HTML_PAGE)
         self.assertIn("const SHORTCUT_HELP_ROWS", webapp.HTML_PAGE)
         self.assertIn("function renderHelpModalShortcuts(", webapp.HTML_PAGE)

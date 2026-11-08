@@ -163,12 +163,13 @@ __LIFETXT_WEB_STYLES__  </style>
             <option value="source">Group: Source</option>
           </select>
           <input id="limit" inputmode="numeric" placeholder="Limit" title="Max rows" aria-label="Max rows">
-          <select id="saved-view-select" title="Apply a saved view" aria-label="Apply a saved view" onchange="applySavedView(this.value)">
-            <option value="">Saved view…</option>
+          <select id="saved-view-select" disabled title="Apply a saved view" aria-label="Apply a saved view" onchange="applySavedView(this.value)">
+            <option value="">Loading saved views…</option>
           </select>
-          <select id="area-select" title="Filter by area" aria-label="Filter by area" onchange="applyArea(this.value)">
-            <option value="">Area…</option>
+          <select id="area-select" disabled title="Filter by area" aria-label="Filter by area" onchange="applyArea(this.value)">
+            <option value="">Loading areas…</option>
           </select>
+          <button id="saved-filters-retry" class="secondary" type="button" hidden onclick="populateSavedViewsAndAreas(true)">Retry saved filters</button>
           <select id="export-select" title="Download the currently filtered items" aria-label="Download the currently filtered items" onchange="if(this.value){exportItems(this.value);this.value='';}" style="margin-left:auto">
             <option value="">⇩ Export…</option>
             <option value="csv">CSV</option>

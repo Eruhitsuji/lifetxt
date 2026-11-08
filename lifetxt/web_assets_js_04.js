@@ -121,28 +121,49 @@
       });
     }
     document.addEventListener("DOMContentLoaded", initItemFilterControls);
-    async function populateSavedViewsAndAreas() {
-      try {
-        const [views, areas] = await Promise.all([api("/api/saved-views"), api("/api/areas")]);
-        const viewSel = document.getElementById("saved-view-select");
-        if (viewSel) {
-          for (const view of (views.views || [])) {
-            const opt = document.createElement("option");
-            opt.value = view.name;
-            opt.textContent = view.name;
-            viewSel.appendChild(opt);
-          }
+    async function populateSavedViewsAndAreas(retryOnly = false) {
+      const controls = [
+        {
+          select: document.getElementById("saved-view-select"), path: "/api/saved-views", key: "views",
+          label: "Saved view…", loading: "Loading saved views…", empty: "No saved views",
+          failed: "Could not load saved views", optionLabel: view => view.name,
+        },
+        {
+          select: document.getElementById("area-select"), path: "/api/areas", key: "areas",
+          label: "Area…", loading: "Loading areas…", empty: "No areas",
+          failed: "Could not load areas", optionLabel: area => area.name + " (" + area.task_done + "/" + area.task_total + ")",
+        },
+      ];
+      const retry = document.getElementById("saved-filters-retry");
+      retry.disabled = true;
+      await Promise.all(controls.map(async ({select, path, key, label, loading, empty, failed, optionLabel}) => {
+        if (retryOnly && select.dataset.loadFailed !== "true") return;
+        const placeholder = select.options[0];
+        const previous = select.value;
+        select.disabled = true;
+        placeholder.textContent = t(loading);
+        select.setAttribute("aria-busy", "true");
+        try {
+          const data = await api(path);
+          const options = (data[key] || []).map(entry => {
+            const option = new Option(optionLabel(entry), entry.name);
+            option.setAttribute("data-no-i18n", "");
+            return option;
+          });
+          select.replaceChildren(placeholder, ...options);
+          select.value = options.some(option => option.value === previous) ? previous : "";
+          placeholder.textContent = t(options.length ? label : empty);
+          delete select.dataset.loadFailed;
+        } catch (_) {
+          placeholder.textContent = t(failed);
+          select.dataset.loadFailed = "true";
+        } finally {
+          select.removeAttribute("aria-busy");
+          select.disabled = select.options.length === 1;
         }
-        const areaSel = document.getElementById("area-select");
-        if (areaSel) {
-          for (const area of (areas.areas || [])) {
-            const opt = document.createElement("option");
-            opt.value = area.name;
-            opt.textContent = `${area.name} (${area.task_done}/${area.task_total})`;
-            areaSel.appendChild(opt);
-          }
-        }
-      } catch (_) {}
+      }));
+      retry.disabled = false;
+      retry.hidden = !controls.some(({select}) => select.dataset.loadFailed === "true");
     }
     // /saved and /area apply a saved view or an area as the active row
     // filter, the same "apply as the row set" semantics the TUI's /saved

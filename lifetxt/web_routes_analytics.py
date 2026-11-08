@@ -6,7 +6,12 @@ module does not change the dependency-free core import policy.
 
 from datetime import timedelta
 
-from .stats import MOOD_VALUES, item_completion_dates, item_date_value
+from .stats import (
+    MOOD_VALUES,
+    item_completion_dates,
+    item_date_value,
+    item_in_date_range,
+)
 from .stats import make_buckets, project_stats, stats_range, streak_days
 from .stats import task_bucket_stats
 
@@ -193,6 +198,9 @@ def register_analytics_routes(app, read_life_inputs, elapsed_to_minutes):
     ):
         items, _diags = read_life_inputs(app.state.paths, app.state.config)
         s, e = stats_range(start, end)
+        # Without dates the Dashboard and the Statistics All control use all items.
+        if start or end:
+            items = [item for item in items if item_in_date_range(item, s, e)]
         tasks = [item for item in items if item.kind == "T"]
         if project:
             tasks = [

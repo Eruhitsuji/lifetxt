@@ -1,7 +1,9 @@
 import os
 import tempfile
 import unittest
+from datetime import date
 from pathlib import Path
+from unittest.mock import patch
 
 
 try:
@@ -81,6 +83,51 @@ class AnalyticsRouteTests(unittest.TestCase):
             {"total", "by_type", "by_status", "by_project", "range"},
             set(responses["/api/stats/summary"].json()),
         )
+
+    def test_summary_uses_the_stats_date_rule_for_all_breakdowns(self):
+        Path(self.path).write_text(
+            "[x] T Finished due:2026-04-01 done:2026-06-10 project:work\n"
+            "[ ] T Scheduled do:2026-06-11 project:home\n"
+            "[ ] T Undated project:work\n"
+            "[x] T Old due:2026-06-10 done:2026-04-01 project:work\n"
+            "[N] J Journal on:2026-06-11\n"
+            "[x] H Later done:2026-07-11\n",
+            encoding="utf-8",
+        )
+        route = "/api/stats/summary"
+        response = self.client.get(
+            route, params={"from": "2026-06-10", "to": "2026-06-11"}
+        )
+        self.assertEqual(200, response.status_code)
+        result = response.json()
+        self.assertEqual({"from": "2026-06-10", "to": "2026-06-11"}, result["range"])
+        self.assertEqual(4, result["total"])
+        self.assertEqual({"T": 3, "J": 1}, result["by_type"])
+        self.assertEqual({"[x]": 1, "[ ]": 2, "[N]": 1}, result["by_status"])
+        projects = {
+            row["project"]: (row["done"], row["total"]) for row in result["by_project"]
+        }
+        self.assertEqual({"work": (1, 2), "home": (0, 1)}, projects)
+
+        # Existing project filtering only narrows the project breakdown.
+        project = self.client.get(
+            route, params={"to": "2026-06-11", "project": "work"}
+        ).json()
+        self.assertEqual(4, project["total"])
+        self.assertEqual(result["by_type"], project["by_type"])
+        self.assertEqual(["work"], [row["project"] for row in project["by_project"]])
+        self.assertEqual(2, project["by_project"][0]["total"])
+
+        with patch("lifetxt.stats.timezone_today", return_value=date(2026, 6, 11)):
+            from_only = self.client.get(route, params={"from": "2026-06-10"})
+        self.assertEqual(200, from_only.status_code)
+        self.assertEqual(result, from_only.json())
+
+        # The date-less request still powers the Dashboard and All control.
+        full = self.client.get(route).json()
+        self.assertEqual(6, full["total"])
+        self.assertEqual({"T": 4, "J": 1, "H": 1}, full["by_type"])
+        self.assertEqual({"[x]": 3, "[ ]": 2, "[N]": 1}, full["by_status"])
 
     def test_read_only_and_bearer_auth_still_apply_to_analytics_routes(self):
         from lifetxt.webapp import create_app

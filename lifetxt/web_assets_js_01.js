@@ -312,6 +312,7 @@
         "Cancelled": "中止",
         "Deferred": "延期",
         "Pending": "保留",
+        "Maybe": "未定",
         "Note": "メモ",
         "Ordinary Notes": "通常のメモ",
         "Raw Notes (N)": "すべてのメモ（N）",

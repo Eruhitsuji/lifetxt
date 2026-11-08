@@ -45,10 +45,12 @@ def _extract_functions_under_test(full_script):
     # body closes (its matching top-level "}" line).
     end_anchor = full_script.index("function toggleAuthoringMode")
     end = full_script.index("\n    }\n", end_anchor) + len("\n    }\n")
-    return full_script[start:end]
+    types_start = full_script.index("const ITEM_TYPE_NAMES = {")
+    types_end = full_script.index("};", types_start) + 2
+    return full_script[types_start:types_end] + "\n" + full_script[start:end]
 
 
-_HARNESS = """
+_HARNESS = r"""
 %s
 
 // ---- minimal DOM/localStorage/i18n stub for the functions under test ----
@@ -58,9 +60,9 @@ global.localStorage = {
   setItem: (k, v) => { store[k] = String(v); },
 };
 // The real t() (web_assets_js_02.js) looks up UI_STRINGS by the English
-// source text; stubbed here as an English passthrough since this harness
-// only exercises the authoring-mode functions, not the translator itself.
-global.t = (text) => text;
+// source text; stubbed here to localize one label while checking the values.
+global.t = (text) => text === "Task" ? "タスク" : text;
+global.escapeHtml = (text) => text.replaceAll(">", "&gt;");
 
 function makeSelect(options, value) {
   return {
@@ -69,10 +71,9 @@ function makeSelect(options, value) {
     get innerHTML() { return this._html || ""; },
     set innerHTML(html) {
       this._html = html;
-      const values = [...html.matchAll(/<option[^>]*>([^<]*)<\\/option>/g)].map(m => m[1]);
-      this._options = values;
-      const selectedMatch = html.match(/<option selected>([^<]*)<\\/option>/);
-      this.value = selectedMatch ? selectedMatch[1] : (values[0] || "");
+      const options = [...html.matchAll(/<option value="([^"]*)"( selected)?>([^<]*)<\/option>/g)];
+      this._options = options.map(m => m[1].replaceAll("&gt;", ">"));
+      this.value = options.find(m => m[2])?.[1].replaceAll("&gt;", ">") || this._options[0] || "";
     },
   };
 }
@@ -90,6 +91,8 @@ const results = {};
 
 // Case 1: default mode is "full" -- every status/type option present.
 refreshAuthoringModeOptions("[ ]", "T");
+require("node:assert/strict").match(elements["edit-type"].innerHTML, /value="T" selected>タスク [(]T[)]/);
+require("node:assert/strict").match(elements["edit-status"].innerHTML, /Open [(]\[ \][)]/);
 results.default_mode_statuses = elements["edit-status"]._options;
 results.default_mode_types = elements["edit-type"]._options;
 results.default_toggle_text = elements["authoring-advanced-toggle"].textContent;
@@ -170,3 +173,13 @@ class BeginnerAuthoringModeJsTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class EditorFieldOrderTests(unittest.TestCase):
+    def test_title_is_first_record_input(self):
+        self.assertLess(
+            HTML_PAGE.index('id="edit-title"'), HTML_PAGE.index('id="edit-status"')
+        )
+        self.assertLess(
+            HTML_PAGE.index('id="edit-title"'), HTML_PAGE.index('id="edit-type"')
+        )

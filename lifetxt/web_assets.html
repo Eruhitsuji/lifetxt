@@ -575,23 +575,23 @@ __LIFETXT_WEB_STYLES__  </style>
       <form class="stack" onsubmit="saveItem(event)">
         <div class="editor-help-strip wide">Hover or focus the ? badges for field help. Type-specific suggested detail keys appear above the Details box.</div>
         <button type="button" id="authoring-advanced-toggle" class="secondary wide" onclick="toggleAuthoringMode()" title="Beginner mode shows only the Task/Event/Note types and the most common statuses; this shows or hides the rest.">Show advanced options</button>
+        <label class="wide field-label">
+          <span class="field-label-head"><span>Title</span><span class="field-help" tabindex="0" data-help="Short human-readable record text. Use quotes in raw life.txt if the title contains spaces.">?</span></span>
+          <input id="edit-title" required>
+        </label>
         <label class="field-label">
           <span class="field-label-head"><span>Status</span><span class="field-help" tabindex="0" data-help="Workflow state: [ ] open, [/] active, [x] done, [-] cancelled, [>] deferred, [?] maybe, [N] note.">?</span></span>
           <select id="edit-status">
-            <option>[ ]</option><option>[/]</option><option>[x]</option>
-            <option>[-]</option><option>[>]</option><option>[?]</option><option>[N]</option>
+            <option value="[ ]">Open ([ ])</option><option value="[/]">In Progress ([/])</option><option value="[x]">Done ([x])</option>
+            <option value="[-]">Cancelled ([-])</option><option value="[>]">Deferred ([>])</option><option value="[?]">Maybe ([?])</option><option value="[N]">Note ([N])</option>
           </select>
         </label>
         <label class="field-label">
           <span class="field-label-head"><span>Type</span><span class="field-help" tabindex="0" data-help="Record kind: T task, E event, D deadline, R reminder, H habit, N note, S presence status, M message, J journal.">?</span></span>
           <select id="edit-type" aria-describedby="type-hints">
-            <option>T</option><option>E</option><option>D</option><option>R</option>
-            <option>H</option><option>N</option><option>S</option><option>M</option><option>J</option>
+            <option value="T">Task (T)</option><option value="E">Event (E)</option><option value="D">Deadline (D)</option><option value="R">Reminder (R)</option>
+            <option value="H">Habit (H)</option><option value="N">Note (N)</option><option value="S">Status (S)</option><option value="M">Message (M)</option><option value="J">Journal (J)</option>
           </select>
-        </label>
-        <label class="wide field-label">
-          <span class="field-label-head"><span>Title</span><span class="field-help" tabindex="0" data-help="Short human-readable record text. Use quotes in raw life.txt if the title contains spaces.">?</span></span>
-          <input id="edit-title" required>
         </label>
         <div id="structured-fields" class="structured-fields wide" aria-label="Details"></div>
         <label class="wide field-label">

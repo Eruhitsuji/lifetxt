@@ -501,8 +501,14 @@
       const curType = desiredType !== undefined ? desiredType : typeSel.value;
       const visStatus = _authoringVisibleValues(AUTHORING_FULL_STATUSES, beginnerProfileVocabulary.statuses, mode, curStatus);
       const visType = _authoringVisibleValues(AUTHORING_FULL_TYPES, beginnerProfileVocabulary.types, mode, curType);
-      statusSel.innerHTML = visStatus.map(v => `<option${v === curStatus ? " selected" : ""}>${v}</option>`).join("");
-      typeSel.innerHTML = visType.map(v => `<option${v === curType ? " selected" : ""}>${v}</option>`).join("");
+      const statusNames = {
+        "[ ]": "Open", "[/]": "In Progress", "[x]": "Done", "[-]": "Cancelled",
+        "[>]": "Deferred", "[?]": "Maybe", "[N]": "Note",
+      };
+      const option = (value, current, name) =>
+        `<option value="${escapeHtml(value)}"${value === current ? " selected" : ""}>${name ? escapeHtml(t(name)) + " (" + escapeHtml(value) + ")" : escapeHtml(value)}</option>`;
+      statusSel.innerHTML = visStatus.map(value => option(value, curStatus, statusNames[value])).join("");
+      typeSel.innerHTML = visType.map(value => option(value, curType, value === "D" ? "Deadline" : ITEM_TYPE_NAMES[value])).join("");
       const toggle = document.getElementById("authoring-advanced-toggle");
       if (toggle) toggle.textContent = t(mode === "beginner" ? "Show advanced options" : "Hide advanced options");
     }

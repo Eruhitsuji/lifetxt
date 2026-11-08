@@ -15,7 +15,9 @@
       if (raw.startsWith("/")) { renderCmdkCommands(raw, list); return; }
       const q = raw.toLowerCase();
       const idKey = appConfig?.ids?.key || "id";
-      const actions = CMDK_ACTIONS.filter(a => fuzzyMatch(a.label, q));
+      const actions = CMDK_ACTIONS.filter(({label}) =>
+        fuzzyMatch(label, q) || fuzzyMatch(UI_STRINGS.ja[label] || "", q)
+      );
       const items = q
         ? (currentItems || []).filter(i =>
             fuzzyMatch(i.title || "", q) ||
@@ -33,7 +35,7 @@
           else if (i.line) openItemByLine(Number(i.line));
         }})),
         ...items.map(i => ({kind: i.type || "item", label: i.title, hint: i?.details?.[idKey]?.[0] || `line ${i.line}`, section: "Items", run: () => { selectItem(i); openDrawer(i); }})),
-        ...actions.map(a => ({kind: "action", label: a.label, hint: "", section: "Actions", run: a.run})),
+        ...actions.map(a => ({kind: "action", label: t(a.label), hint: "", section: "Actions", run: a.run})),
       ];
       _cmdkIndex = 0;
       if (!_cmdkEntries.length) {

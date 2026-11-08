@@ -343,14 +343,18 @@
       switchWorkspace("stats");
     }
 
+    let statsBreakdownGeneration = 0;
     async function loadStatsBreakdown() {
       const el = document.getElementById("stats-breakdown");
       if (!el) return;
+      const generation = ++statsBreakdownGeneration;
+      el.innerHTML = `<div class="empty" style="grid-column:1 / -1" role="status">${escapeHtml(t("Loading statistics breakdown…"))}</div>`;
       try {
         const fromVal = (document.getElementById("breakdown-from") || {}).value || "";
         const toVal = (document.getElementById("breakdown-to") || {}).value || "";
         const qs = (fromVal ? `from=${encodeURIComponent(fromVal)}&` : "") + (toVal ? `to=${encodeURIComponent(toVal)}` : "");
         const data = await api("/api/stats/summary" + (qs ? "?" + qs : ""));
+        if (generation !== statsBreakdownGeneration) return;
         const STATUS_EMOJI = {"[ ]": "○", "[/]": "◑", "[x]": "✓", "[-]": "✕", "[>]": "→"};
         const typeRows = Object.entries(data.by_type || {})
           .sort((a,b) => b[1]-a[1])
@@ -360,6 +364,10 @@
           .sort((a,b) => b[1]-a[1])
           .map(([k,v]) => `<div style="display:flex;justify-content:space-between"><span>${escapeHtml(STATUS_EMOJI[k]||"")} ${escapeHtml(STATUS_LABEL[k]||k)}</span><span style="color:var(--muted)">${v}</span></div>`)
           .join("");
+        if (!typeRows && !statusRows) {
+          el.innerHTML = `<div class="empty" style="grid-column:1 / -1" role="status">${escapeHtml(t("No statistics breakdown data."))}</div>`;
+          return;
+        }
         el.innerHTML = `
           <div>
             <div class="drawer-section-title" style="font-size:.72rem;margin-bottom:.3rem">By Type</div>
@@ -369,9 +377,12 @@
             <div class="drawer-section-title" style="font-size:.72rem;margin-bottom:.3rem">By Status</div>
             <div style="font-size:.82rem;display:grid;gap:.2rem">${statusRows || "<em>none</em>"}</div>
           </div>`;
-        el.style.display = "grid";
-      } catch(e) {
-        if (el) el.style.display = "none";
+      } catch (_) {
+        if (generation !== statsBreakdownGeneration) return;
+        el.innerHTML = `<div class="empty" style="grid-column:1 / -1">
+          <p role="status">${escapeHtml(t("Could not load the statistics breakdown."))}</p>
+          <button type="button" class="secondary" onclick="loadStatsBreakdown()">${escapeHtml(t("Reload breakdown"))}</button>
+        </div>`;
       }
     }
 

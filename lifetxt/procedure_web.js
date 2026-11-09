@@ -4,8 +4,8 @@
   const params = new URLSearchParams(location.search);
   let locale = params.get('lang') === 'ja' || (!params.has('lang') && navigator.language.startsWith('ja')) ? 'ja' : 'en';
   const strings = {
-    en: {title:'Procedures',notice:'Definition browsing only. Reading a step does not perform or complete work.',reload:'Reload definitions',list:'Definitions',flow:'Flowchart',flowNote:'Select a node to read its instruction. The numbered text below includes every transition.',steps:'Steps and transitions',exports:'Text / Mermaid / DOT',format:'Format',empty:'No procedure definitions in the configured sources.',invalid:'Invalid definition',unavailable:'Some configured sources could not be read.',loading:'Loading…',failed:'Could not load the procedure. Reload to try again.',unsupported:'This server does not support procedure browsing. Items and Planner remain available from life.txt.',start:'Start',status:'Definition status',previous:'Previous',next:'Next',record:'Open record',end:'End of definition; no work has been completed.',revision:'Template revision',large:'Large flowchart: use the complete step and transition list below.',choose:'Select a definition.'},
-    ja: {title:'手順書',notice:'手順の定義を閲覧しています。読むだけでは作業の実施・完了になりません。',reload:'定義を再読み込み',list:'手順一覧',flow:'フローチャート',flowNote:'ノードを選ぶと説明に移動します。下の一覧にもすべての遷移を表示します。',steps:'ステップと遷移',exports:'テキスト / Mermaid / DOT',format:'形式',empty:'設定済みファイルに手順の定義がありません。',invalid:'定義が不正です',unavailable:'読み込めないファイルがあります。',loading:'読み込み中…',failed:'手順を読み込めませんでした。再読み込みしてください。',unsupported:'このサーバーは手順表示に未対応です。life.txtからItemsやPlannerを利用できます。',start:'開始',status:'定義の状態',previous:'前のステップ',next:'次のステップ',record:'レコードを開く',end:'定義の終端です。作業が完了したことは意味しません。',revision:'定義の改訂',large:'大きな図です。下のステップ・遷移一覧ですべてを確認できます。',choose:'手順を選択してください。'}
+    en: {title:'Procedures',notice:'Definition browsing only. Reading a step does not perform or complete work.',reload:'Reload definitions',list:'Definitions',flow:'Flowchart',flowNote:'Select a node to read its instruction. The numbered text below includes every transition.',steps:'Steps and transitions',exports:'Text / Mermaid / DOT',format:'Format',empty:'No procedure definitions in the configured sources.',invalid:'Invalid definition',emptyNext:'Add a procedure definition to a configured life.txt file, then reload definitions.',guide:'Read the procedure guide',unavailable:'Some configured sources could not be read. The list may be incomplete. Reload definitions to try again.',loading:'Loading…',failed:'Could not load the procedure. Reload to try again.',unsupported:'This server does not support procedure browsing. Items and Planner remain available from life.txt.',start:'Start',status:'Definition status',previous:'Previous',next:'Next',record:'Open record',end:'End of definition; no work has been completed.',revision:'Template revision',large:'Large flowchart: use the complete step and transition list below.',choose:'Select a definition.'},
+    ja: {title:'手順書',notice:'手順の定義を閲覧しています。読むだけでは作業の実施・完了になりません。',reload:'定義を再読み込み',list:'手順一覧',flow:'フローチャート',flowNote:'ノードを選ぶと説明に移動します。下の一覧にもすべての遷移を表示します。',steps:'ステップと遷移',exports:'テキスト / Mermaid / DOT',format:'形式',empty:'設定済みファイルに手順の定義がありません。',invalid:'定義が不正です',emptyNext:'設定済みの life.txt ファイルに手順の定義を追加し、定義を再読み込みしてください。',guide:'手順書のガイドを読む',unavailable:'読み込めないファイルがあり、一覧にすべての手順が表示されていない可能性があります。定義を再読み込みしてください。',loading:'読み込み中…',failed:'手順を読み込めませんでした。再読み込みしてください。',unsupported:'このサーバーは手順表示に未対応です。life.txtからItemsやPlannerを利用できます。',start:'開始',status:'定義の状態',previous:'前のステップ',next:'次のステップ',record:'レコードを開く',end:'定義の終端です。作業が完了したことは意味しません。',revision:'定義の改訂',large:'大きな図です。下のステップ・遷移一覧ですべてを確認できます。',choose:'手順を選択してください。'}
   };
   const t = key => strings[locale][key];
   let current = null, catalogData = null, generation = 0, credential = "";
@@ -20,6 +20,7 @@
   function applyLanguage() {
     document.documentElement.lang = locale;
     $('language').value = locale;
+    $('catalog-guide').href = 'https://github.com/Eruhitsuji/lifetxt/blob/main/docs/'+locale+'/procedure-guidance.md';
     document.querySelectorAll('[data-text]').forEach(node => node.textContent = t(node.dataset.text));
   }
   async function api(path, options = {}) {
@@ -104,6 +105,10 @@
   }
   function renderCatalog(data) {
     catalogData = data; $('catalog').replaceChildren();
+    const partial = Boolean(data?.failures.length);
+    $('catalog-partial').hidden = !partial;
+    $('catalog-empty').hidden = !data || partial || data.procedures.length > 0;
+    if (!data) return;
     data.procedures.forEach(row => {
       const li = el('li',undefined,$('catalog'));
       const link = el('a',row.title + ' ['+row.id+'] · '+row.source.slice(0,8) + (row.valid ? '' : ' · '+t('invalid')),li);
@@ -134,14 +139,14 @@
   async function load() {
     invalidateRun();
     const turn = ++generation;
-    current = null; $('definition').hidden = true; $('catalog').replaceChildren(); feedback(t('loading'));
+    current = null; $('definition').hidden = true; renderCatalog(null); feedback(t('loading'));
     $('reload').disabled = true;
     try {
       const data = await api('/api/procedures');
       if (turn !== generation) return;
       if (data.schema !== 'procedure-catalog-v1') throw new Error(t('unsupported'));
       renderCatalog(data);
-      feedback(data.failures.length ? t('unavailable') : data.procedures.length ? t('choose') : t('empty'));
+      feedback(data.procedures.length ? t('choose') : '');
       if (params.get('source') && params.has('id')) await loadDefinition(params.get('source'),params.get('id'));
     } catch (error) { if (turn === generation) feedback(error.message); }
     finally { $('reload').disabled = false; }

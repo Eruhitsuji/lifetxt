@@ -4,7 +4,7 @@ import vm from 'node:vm';
 const inputs=JSON.parse(process.argv[2]);
 const read=name=>fs.readFileSync(new URL('../lifetxt/'+name,import.meta.url),'utf8');
 const web=read('web_assets_js_08.js');
-const quick=web.slice(web.indexOf('async function quickAddLine()'),web.indexOf('let captureSubmitPending'));
+const quick=web.slice(web.indexOf('let shorthandTimer'),web.indexOf('let captureSubmitPending'));
 const capture=web.slice(web.indexOf('let captureSubmitPending'),web.indexOf('function initializeCaptureMode'));
 const focusSource=read('web_assets_js_17.js');
 const focus=focusSource.slice(focusSource.indexOf('async function focusQuickAdd()'),focusSource.indexOf('async function ',focusSource.indexOf('async function focusQuickAdd()')+20));
@@ -22,6 +22,7 @@ for(const [surface,source,invoke,id] of actions){
  const input=element(id);let calls=[];let fail=false;
  const t=surface==='planner'?{captured:'Captured',captureError:'Failed: '}:x=>x;
  const context=vm.createContext({document:{getElementById:element},$:element,input,t,appConfig:{ids:{key:'uid'}},pending:false,writable:true,captureRevision:'"'+'a'.repeat(64)+'"',_fmtDate:()=> '2026-10-02',Date,JSON,console,load:async()=>{},loadFocus:async()=>{},toggleQuickAdd(){},showToast(){},refreshAll:async()=>{},actionableErrorText:e=>e.message,api:async(path,options)=>{calls.push({path,body:JSON.parse(options.body)});if(fail)throw new Error('Invalid record');return {item:{title:'Saved',details:{uid:['test-id']}}}}});
+ context.clearTimeout=clearTimeout;
  vm.runInContext(source,context);
  for(const text of inputs){input.value=text;calls=[];await vm.runInContext(invoke,context);output.push({surface,text,calls,value:input.value});}
  fail=true;input.value='[ ] T "unterminated';calls=[];try{await vm.runInContext(invoke,context)}catch(e){if(surface!=='command')throw e}output.push({surface,text:input.value,calls,failure:true,value:input.value});

@@ -223,7 +223,7 @@
       const time = timeLabel ? timeLabel + " " : "";
       const dueCls = agendaDueSoonClass(record);
       const clickable = Number.isInteger(record.line);
-      const occ = (record.occurrence_start || record.repeat_rule) ? " ↻" : "";
+      const occ = record.repeat_rule ? " ↻" : "";
       const blocked = record.blocked ? " ⚡" : "";
       const title = `${time}${record.title}${occ}${blocked}`;
       // A multi-day span (dayTotal > 1) gets a small "day X of Y" badge so

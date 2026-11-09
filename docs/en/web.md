@@ -1065,6 +1065,11 @@ record detail modal. The modal also shows a smaller graph for the selected item
 when it has ID references; the modal graph loads a depth-2 subgraph so indirect
 blockers and related records are visible without leaving the modal.
 
+In Graph, open **Show relationships as a list** to read each source → relation →
+target and open linked records with the keyboard. The list shows up to 100
+relationships from the current results. Use the root ID and depth to narrow a
+larger result.
+
 `/api/graph`'s `relations` and `include_temporal` query parameters (see the
 route table above) are not yet exposed as panel controls; a client can still
 call the endpoint directly with either parameter to narrow edges by relation

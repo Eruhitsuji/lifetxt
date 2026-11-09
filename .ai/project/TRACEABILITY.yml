@@ -2,6 +2,14 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-quick-add-preview-freshness
+      capability_id: cap-shared-quick-input
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1562
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1563
+      tests_or_evidence: [tests.test_web_quick_add_preview, tests.test_quick_input, tests.test_shorthand, tests.test_web_assets]
+      status: in_review
+
     - requirement_id: req-procedure-web-catalog-guidance
       capability_id: cap-procedure-guidance
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386

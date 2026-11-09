@@ -385,8 +385,8 @@
       }
     }
 
-    // ── Live syntax check for quick-add bar ───────────────────────
-    let _checkTimer = null;
+    // ── Live parse preview for raw import ─────────────────────────
+    let _rawParseTimer = null;
     document.addEventListener("DOMContentLoaded", async () => {
       // Show read-only banner if server is in read-only mode
       try {
@@ -401,18 +401,11 @@
       } catch(_) {}
       populateSavedViewsAndAreas();
 
-      const qInput = document.getElementById("quick-line");
-      if (qInput) {
-        qInput.addEventListener("input", () => {
-          clearTimeout(_checkTimer);
-          _checkTimer = setTimeout(() => liveCheckLine(qInput.value), 280);
-        });
-      }
       const rawInput = document.getElementById("import-raw-input");
       if (rawInput) {
         rawInput.addEventListener("input", () => {
-          clearTimeout(_checkTimer);
-          _checkTimer = setTimeout(() => liveParseRawImport(rawInput.value), 280);
+          clearTimeout(_rawParseTimer);
+          _rawParseTimer = setTimeout(() => liveParseRawImport(rawInput.value), 280);
         });
       }
       // Sync agenda limit spinner from URL and wire change handler
@@ -431,25 +424,6 @@
         });
       }
     });
-    async function liveCheckLine(line) {
-      const qInput = document.getElementById("quick-line");
-      if (!qInput) return;
-      if (!line.trim()) { qInput.className = ""; document.getElementById("quick-check-msg") && (document.getElementById("quick-check-msg").textContent = ""); return; }
-      try {
-        await api("/api/quick/resolve", {
-          method: "POST",
-          headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({text: line}),
-        });
-        qInput.classList.add("ok");
-        qInput.classList.remove("err");
-      } catch(error) {
-        qInput.classList.add("err");
-        qInput.classList.remove("ok");
-        const msg = document.getElementById("quick-check-msg");
-        if (msg) { msg.textContent = error.message; msg.className = "check-msg err"; }
-      }
-    }
     async function liveParseRawImport(line) {
       const preview = document.getElementById("import-raw-preview");
       if (!preview) return;

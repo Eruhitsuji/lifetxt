@@ -321,13 +321,23 @@
 
     // ── Capture shorthand preview ──────────────────────────────────
     let shorthandTimer = null;
+    let shorthandGeneration = 0;
+    function invalidateShorthandPreview() {
+      clearTimeout(shorthandTimer);
+      return ++shorthandGeneration;
+    }
+
     function previewShorthand() {
       const input = document.getElementById("quick-line");
       const msgEl = document.getElementById("quick-check-msg");
       if (!input || !msgEl) return;
+      const generation = invalidateShorthandPreview();
       const text = (input.value || "").trim();
-      if (shorthandTimer) clearTimeout(shorthandTimer);
-      if (!text) { msgEl.textContent = ""; msgEl.className = "check-msg"; return; }
+      input.classList.remove("ok", "err");
+      msgEl.textContent = "";
+      msgEl.className = "check-msg";
+      if (!text) return;
+      const isCurrent = () => generation === shorthandGeneration && input.value.trim() === text;
       shorthandTimer = setTimeout(async () => {
         try {
           const data = await api("/api/quick/resolve", {
@@ -335,13 +345,17 @@
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({text}),
           });
+          if (!isCurrent()) return;
           const bits = [];
           Object.keys(data.details || {}).forEach(k => (data.details[k] || []).forEach(v => bits.push(k + ":" + v)));
           msgEl.textContent = bits.length ? ("→ " + data.title + "  " + bits.join(" ")) : "";
           msgEl.className = "check-msg ok";
+          input.classList.add("ok");
         } catch (err) {
+          if (!isCurrent()) return;
           msgEl.textContent = err.message || "";
           msgEl.className = "check-msg err";
+          input.classList.add("err");
         }
       }, 200);
     }
@@ -351,6 +365,7 @@
       const line = input.value.trim();
       if (!line) return;
       const msgEl = document.getElementById("quick-check-msg");
+      const generation = invalidateShorthandPreview();
       try {
         await api("/api/items/capture", {
           method: "POST",
@@ -358,14 +373,16 @@
           body: JSON.stringify({text: line}),
         });
         input.value = "";
-        input.className = "";
-        if (msgEl) { msgEl.textContent = ""; msgEl.className = "check-msg"; }
+        previewShorthand();
         toggleQuickAdd(false);
         showToast("Item added.", "success");
         await refreshAll();
       } catch(err) {
-        input.classList.add("err");
-        if (msgEl) { msgEl.textContent = err.message || "Invalid line"; msgEl.className = "check-msg err"; }
+        if (generation === shorthandGeneration && input.value.trim() === line) {
+          input.classList.remove("ok");
+          input.classList.add("err");
+          if (msgEl) { msgEl.textContent = err.message || "Invalid line"; msgEl.className = "check-msg err"; }
+        }
         showToast("Add failed: " + (err.message || "invalid"), "error");
       }
     }

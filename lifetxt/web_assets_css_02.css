@@ -295,6 +295,11 @@
     .graph-toolbar { display: flex; gap: .35rem; align-items: flex-end; padding: .65rem 1rem; border-bottom: 1px solid var(--line); }
     .graph-toolbar input { min-width: 0; flex: 1; font-size: .82rem; }
     .graph-panel { min-height: 12rem; padding: .75rem 1rem; overflow: auto; }
+    .graph-relations { margin-bottom: .65rem; overflow-wrap: anywhere; }
+    .graph-relations summary { cursor: pointer; width: fit-content; padding: .55rem 0; }
+    .graph-relations ol { margin: .3rem 0 .6rem; padding-inline-start: 1.5rem; }
+    .graph-relations li { padding: .4rem 0; border-bottom: 1px solid var(--line); }
+    .graph-relations button { white-space: normal; overflow-wrap: anywhere; max-width: 100%; text-align: start; }
     .graph-svg { width: 100%; height: auto; max-height: 22rem; border: 1px solid var(--line); border-radius: .55rem; background: linear-gradient(180deg, var(--panel), var(--soft)); }
     .graph-edge { stroke: #94a3b8; stroke-width: 1.4; marker-end: url(#arrow); opacity: .8; }
     .graph-edge-label { fill: var(--muted); font-size: 9px; pointer-events: none; }

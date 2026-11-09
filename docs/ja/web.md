@@ -928,6 +928,10 @@ node をクリックすると該当 record を detail modal で開けます。mo
 小さな依存 graph を表示します。modal graph は depth 2 の subgraph を読み込むため、
 間接的な blocker や related record も modal 内で確認できます。
 
+Graph の **関係を一覧で表示** を開くと、参照元 → 関係の種類 → 参照先の順に読めます。
+項目のボタンはキーボードで操作でき、詳細が開きます。一覧は現在の検索結果の先頭100件
+までを表示します。結果が多い場合は起点 ID と深さで絞り込めます。
+
 `/api/graph` の `relations` / `include_temporal` query parameter（上の route 表を参照）は、
 まだ panel の UI control としては未提供です。endpoint を直接呼び出せば、relation 種別での
 絞り込みや root の temporal neighbor 重ね合わせを利用できます。

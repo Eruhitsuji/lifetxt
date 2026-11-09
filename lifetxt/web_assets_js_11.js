@@ -283,6 +283,40 @@
       return `<div class="drawer-graph-mini">${layoutBar}${renderGraphSvg(graph.nodes, graph.edges, {compact: true, focusId, layout: _graphLayout})}</div>`;
     }
 
+    function graphRelationEndpoint(node, id) {
+      // Graph uses the source location in place of an ID for ID-less records.
+      const locationOnly = /(?:^line |:)\d+$/.test(id);
+      const title = node?.title || (locationOnly ? drawerText("Untitled record", "無題の記録") : id);
+      const identifier = !locationOnly && id !== title ? ` <small>(${escapeHtml(id)})</small>` : "";
+      const label = escapeHtml(title) + identifier;
+      if (!node || node.missing) {
+        return `<span>${label} <small>— ${drawerText("Missing record", "未検出の記録")}</small></span>`;
+      }
+      if (locationOnly) {
+        return `<span>${label} <small>— ${drawerText("No linkable ID", "詳細を開けるIDがありません")}</small></span>`;
+      }
+      return `<button type="button" class="secondary" onclick="drawerNavigate(${escapeHtml(jsLiteral(id))})">${label}</button>`;
+    }
+
+    function renderGraphRelations(nodes, edges, expanded = false) {
+      const limit = 100;
+      const byId = new Map(nodes.map(node => [node.id, node]));
+      const rows = edges.slice(0, limit).map(({source, target, relation}) =>
+        `<li>${graphRelationEndpoint(byId.get(source), source)} ` +
+        `<span>→ ${escapeHtml(drawerRelationLabel(relation))} →</span> ` +
+        `${graphRelationEndpoint(byId.get(target), target)}</li>`
+      ).join("");
+      const content = rows ? `<ol>${rows}</ol>` :
+        `<p class="note">${drawerText("No relationships in these results.", "この検索結果に関係はありません。")}</p>`;
+      const limited = edges.length > limit ? `<p class="note">${drawerText(
+        `Showing the first ${limit} of ${edges.length} relationships. Narrow the results with root ID and depth.`,
+        `${edges.length}件の関係のうち先頭${limit}件を表示しています。起点IDと深さで絞り込めます。`
+      )}</p>` : "";
+      return `<details class="graph-relations" data-no-i18n${expanded ? " open" : ""}>` +
+        `<summary>${drawerText("Show relationships as a list", "関係を一覧で表示")}</summary>` +
+        limited + content + `</details>`;
+    }
+
     async function loadGraphPanel() {
       const panel = document.getElementById("graph-panel");
       if (!panel) return;
@@ -294,6 +328,7 @@
       const params = new URLSearchParams();
       if (root) params.set("root", root);
       if (depth) params.set("depth", depth);
+      const relationsExpanded = panel.querySelector(".graph-relations")?.open;
       panel.innerHTML = `<div class="empty">Loading graph…</div>`;
       try {
         const data = await api(`/api/graph?${params.toString()}`);
@@ -307,7 +342,8 @@
         }
         const missingCount = nodes.filter(n => n.missing).length;
         const missingNote = missingCount ? ` ${missingCount} dashed node(s) are referenced but missing.` : "";
-        panel.innerHTML = renderGraphSvg(nodes, edges, {focusId: root, layout: _graphLayout}) +
+        panel.innerHTML = renderGraphRelations(nodes, edges, relationsExpanded) +
+          renderGraphSvg(nodes, edges, {focusId: root, layout: _graphLayout}) +
           `<div class="note" style="margin-top:.45rem">${nodes.length} nodes / ${edges.length} edges. Click a node to open it.${escapeHtml(missingNote)}</div>`;
       } catch(e) {
         panel.innerHTML = `<div class="diagnostic">Graph error: ${escapeHtml(e.message)}</div>`;

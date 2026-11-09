@@ -2,6 +2,14 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-procedure-web-catalog-guidance
+      capability_id: cap-procedure-guidance
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1560
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1561
+      tests_or_evidence: [tests.test_procedure_catalog_ui, tests.test_procedure_web, tests.test_procedure_run_web]
+      status: in_review
+
     - requirement_id: req-web-graph-relation-list
       capability_id: cap-graph-link-foundation
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386

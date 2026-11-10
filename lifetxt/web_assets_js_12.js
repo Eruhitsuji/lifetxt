@@ -408,21 +408,9 @@
           _rawParseTimer = setTimeout(() => liveParseRawImport(rawInput.value), 280);
         });
       }
-      // Sync agenda limit spinner from URL and wire change handler
+      // Sync agenda limit spinner via the same URL control as the View all link.
       const spinner = document.getElementById("agenda-limit-spinner");
-      if (spinner) {
-        const raw = new URLSearchParams(location.search).get("agenda_limit");
-        if (raw !== null) spinner.value = raw === "0" ? "0" : String(Number(raw) || 8);
-        spinner.addEventListener("change", () => {
-          const n = parseInt(spinner.value, 10);
-          const params = new URLSearchParams(location.search);
-          if (!n || n === 8) params.delete("agenda_limit");
-          else params.set("agenda_limit", String(n < 0 ? 0 : n));
-          const qs = params.toString();
-          history.replaceState(null, "", qs ? "?" + qs : location.pathname);
-          refresh();
-        });
-      }
+      spinner?.addEventListener("change", () => setAgendaLimit(parseInt(spinner.value, 10)));
     });
     async function liveParseRawImport(line) {
       const preview = document.getElementById("import-raw-preview");

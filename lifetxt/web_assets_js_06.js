@@ -78,6 +78,8 @@
       const maxAgenda = Number(agendaLimitRaw);
       const unlimitedAgenda = agendaLimitRaw === "0" || maxAgenda === 0;
       const limit = unlimitedAgenda ? Infinity : (Number.isFinite(maxAgenda) && maxAgenda > 0 ? maxAgenda : 8);
+      const spinner = document.getElementById("agenda-limit-spinner");
+      if (spinner) spinner.value = unlimitedAgenda ? "0" : String(limit);
       const shown = unlimitedAgenda ? entries : entries.slice(0, limit);
       for (const entry of shown) {
         const record = entry.record;

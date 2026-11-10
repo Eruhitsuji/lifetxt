@@ -466,8 +466,8 @@
     // ── Agenda: "view all" — set agenda_limit to 0 ───────────────
     function setAgendaLimit(n) {
       const params = query();
-      if (n === 0) params.delete("agenda_limit");
-      else params.set("agenda_limit", String(n));
+      if (!Number.isFinite(n) || n === 8) params.delete("agenda_limit");
+      else params.set("agenda_limit", String(Math.max(0, n)));
       history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
       loadAgenda();
     }

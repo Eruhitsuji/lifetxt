@@ -42,9 +42,9 @@
       {label: "Toggle kiosk mode", run: toggleKioskMode},
       {label: "Toggle agenda blocked filter", run: toggleAgendaBlocked},
       {label: "Show undo history", run: openUndoHistoryModal},
-      {label: "Export items as CSV", run: () => exportItems("csv")},
-      {label: "Export items as JSON", run: () => exportItems("json")},
-      {label: "Export items as Markdown", run: () => exportItems("markdown")},
+      {label: "Export listed items as CSV", run: () => exportItems("csv")},
+      {label: "Export listed items as JSON", run: () => exportItems("json")},
+      {label: "Export listed items as Markdown", run: () => exportItems("markdown")},
       {label: "Jump to line number", run: jumpToLine},
       {label: "Keyboard shortcuts help", run: openHelpModal},
     ];

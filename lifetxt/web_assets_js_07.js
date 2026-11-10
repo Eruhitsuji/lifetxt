@@ -241,9 +241,11 @@
         `<span class="cal-entry-dot t-${escapeHtml(type)}"></span>` +
         `<span class="cal-entry-title">${escapeHtml(title)}</span>${spanBadge}</div>`;
     }
+    let calendarLoadGeneration = 0;
     async function loadCalendar() {
       const node = document.getElementById("calendar");
       if (!node) return;
+      const generation = ++calendarLoadGeneration;
       syncCalStateFromUrl();
       const days = _calGridDays(calAnchor);
       const from = _fmtDate(days[0]);
@@ -258,9 +260,11 @@
       try {
         data = await api(`/api/agenda?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
       } catch (e) {
+        if (generation !== calendarLoadGeneration) return;
         node.innerHTML = `<div class="diagnostic">Calendar error: ${escapeHtml(e.message)}</div>`;
         return;
       }
+      if (generation !== calendarLoadGeneration) return;
       const records = data.records || [];
       const byDay = new Map();
       for (const record of records) {

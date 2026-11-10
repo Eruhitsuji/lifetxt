@@ -447,6 +447,8 @@
         "Loading…": "読み込み中…",
         "Refreshing dashboard…": "ダッシュボードを読み込み中…",
         "Unavailable": "取得できません",
+        "Could not load Agenda.": "予定を取得できませんでした。",
+        "Reload Agenda": "予定を再読み込み",
         "Could not load dashboard data.": "ダッシュボードのデータを取得できませんでした。",
         "Dashboard chart could not be displayed.": "ダッシュボードのグラフを表示できませんでした。",
         "Some dashboard data could not be loaded.": "ダッシュボードの一部データを取得できませんでした。",

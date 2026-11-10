@@ -139,3 +139,84 @@ main().catch(error => { console.error(error); process.exitCode = 1; });
             ["node", "-e", script], capture_output=True, text=True, timeout=15
         )
         self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_only_current_agenda_load_renders_and_errors_can_retry(self):
+        start = HTML_PAGE.index("    function _temporalDisplayLabel(")
+        end = HTML_PAGE.index("    // ── Presence rendering", start)
+        harness = r"""
+const assert = require("node:assert/strict");
+const agenda = {
+  innerHTML: "",
+  insertAdjacentHTML: (_position, html) => { agenda.innerHTML += html; },
+  querySelectorAll: () => [],
+};
+const spinner = {value: ""};
+const document = {getElementById: id => ({
+  "agenda": agenda, "open-only": {checked: false}, "agenda-limit-spinner": spinner,
+})[id]};
+let search;
+const query = () => new URLSearchParams(search);
+const firstParam = (params, [key], fallback) => params.get(key) || fallback;
+const boolParam = () => false;
+const agendaBlockedMode = () => "";
+const _syncAgendaBlockedBtn = () => {};
+const escapeHtml = value => String(value);
+const t = escapeHtml;
+const agendaDueSoonClass = () => "";
+const agendaCountdownLabel = () => "";
+const guidedEmptyState = (_icon, title) => title;
+let badge;
+const updateAgendaOverdueBadge = records => { badge = records.map(record => record.title); };
+const pending = [];
+const api = url => new Promise((resolve, reject) => pending.push({url, resolve, reject}));
+function startLoad(day, kind, limit) {
+  search = `from=2030-01-${day}&kind=${kind}&agenda_limit=${limit}`;
+  const done = loadAgenda();
+  return {...pending.shift(), done};
+}
+const data = title => ({records: [{title, when: "2030-01-01"}]});
+
+async function main() {
+  const old = startLoad("01", "E", 2);
+  const oldError = startLoad("02", "E", 3);
+  const current = startLoad("03", "T", 0);
+  current.resolve(data("Current task"));
+  await current.done;
+  assert.match(agenda.innerHTML, /Current task/);
+  assert.equal(spinner.value, "0");
+  assert.deepEqual(badge, ["Current task"]);
+  old.resolve(data("Old event"));
+  await old.done;
+  assert.match(agenda.innerHTML, /Current task/);
+  oldError.reject(new Error("obsolete failure"));
+  await oldError.done;
+  assert.match(agenda.innerHTML, /Current task/);
+  assert.doesNotMatch(agenda.innerHTML, /Old event|Could not load/);
+  assert.equal(spinner.value, "0");
+  assert.deepEqual(badge, ["Current task"]);
+
+  const failed = startLoad("04", "E", 5);
+  failed.reject(new Error("unavailable"));
+  await failed.done;
+  assert.match(agenda.innerHTML, /role="status">Could not load Agenda/);
+  assert.doesNotMatch(agenda.innerHTML, /Current task|Nothing scheduled/);
+  assert.deepEqual(badge, []);
+  const retry = agenda.innerHTML.match(/onclick="([^"]+)">Reload Agenda/);
+  assert.ok(retry);
+  const done = eval(retry[1]);
+  const request = pending.shift();
+  assert.match(request.url, /from=2030-01-04&kind=E/);
+  request.resolve({records: []});
+  await done;
+  assert.equal(agenda.innerHTML, "Nothing scheduled in this range");
+  assert.equal(spinner.value, "5");
+}
+main().catch(error => { console.error(error); process.exitCode = 1; });
+"""
+        result = subprocess.run(
+            ["node", "-e", HTML_PAGE[start:end] + harness],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        self.assertEqual(0, result.returncode, result.stderr)

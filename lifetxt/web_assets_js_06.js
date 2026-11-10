@@ -52,7 +52,11 @@
       event.preventDefault();
       openItemById(event.currentTarget.dataset.agendaId);
     }
+    let agendaLoadGeneration = 0;
     async function loadAgenda() {
+      const node = document.getElementById("agenda");
+      if (!node) return;
+      const generation = ++agendaLoadGeneration;
       const params = query();
       const agendaParams = new URLSearchParams();
       for (const key of ["from", "to", "around", "window", "status", "kind", "type", "project", "tag", "tag_all", "exclude_tag", "user", "team", "person", "owner", "assignee", "attendee", "sender", "recipient", "text", "q", "limit"]) {
@@ -66,8 +70,19 @@
       const blockedMode = agendaBlockedMode();
       if (blockedMode) agendaParams.set("blocked", blockedMode);
       _syncAgendaBlockedBtn(blockedMode);
-      const data = await api(`/api/agenda?${agendaParams}`);
-      const node = document.getElementById("agenda");
+      let data;
+      try {
+        data = await api(`/api/agenda?${agendaParams}`);
+      } catch (_) {
+        if (generation !== agendaLoadGeneration) return;
+        updateAgendaOverdueBadge([]);
+        node.innerHTML = `<div class="empty">
+          <p role="status">${escapeHtml(t("Could not load Agenda."))}</p>
+          <button type="button" class="secondary" onclick="loadAgenda()">${escapeHtml(t("Reload Agenda"))}</button>
+        </div>`;
+        return;
+      }
+      if (generation !== agendaLoadGeneration) return;
       const entries = (data.records || [])
         .flatMap(record => _agendaRecordEntries(record))
         .sort((a, b) => String(a.when || "").localeCompare(String(b.when || "")));

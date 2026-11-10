@@ -159,7 +159,10 @@
       if (calMode === "week") {
         calAnchor.setDate(calAnchor.getDate() + delta * 7);
       } else {
-        calAnchor.setMonth(calAnchor.getMonth() + delta);
+        const day = calAnchor.getDate();
+        // Day zero of the following month is the target month's last day.
+        calAnchor.setMonth(calAnchor.getMonth() + delta + 1, 0);
+        calAnchor.setDate(Math.min(day, calAnchor.getDate()));
       }
       calAnchor = _calStartOfDay(calAnchor);
       _calWriteUrl(true);

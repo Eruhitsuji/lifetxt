@@ -166,7 +166,7 @@
       "refresh-btn": "Reload the active view from disk/API without changing filters. Press r as a shortcut.",
       "status-active-btn": "Switch Status between active records only and latest status per person.",
       "agenda-blocked-btn": "Cycle Agenda blocker filtering: all, only blocked, or hide blocked records.",
-      "export-select": "Download the current Items result as CSV, JSON, or Markdown.",
+      "export-select": "CSV, JSON, and Markdown export listed items. life.txt exports all matches, ignoring the display limit.",
       "group-by": "Group the Items list without changing the source file.",
       "sort": "Sort visible Items by line, time, title, type, status, or source.",
       "order": "Choose ascending or descending sort order.",

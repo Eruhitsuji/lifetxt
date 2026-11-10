@@ -2,8 +2,8 @@
           "ステータス表示を「進行中のレコードのみ」と「人ごとの最新ステータス」で切り替えます。",
         "Cycle Agenda blocker filtering: all, only blocked, or hide blocked records.":
           "予定のブロックフィルタを順に切り替えます: すべて、ブロック中のみ、ブロック中を隠す。",
-        "Download the current Items result as CSV, JSON, or Markdown.":
-          "現在のアイテム結果を CSV、JSON、または Markdown でダウンロードします。",
+        "CSV, JSON, and Markdown export listed items. life.txt exports all matches, ignoring the display limit.":
+          "CSV・JSON・Markdown は一覧の表示分を書き出します。life.txt は表示上限に関係なく条件に一致する全件を書き出します。",
         "Group the Items list without changing the source file.":
           "元ファイルを変更せずにアイテム一覧をグループ化します。",
         "Sort visible Items by line, time, title, type, status, or source.":

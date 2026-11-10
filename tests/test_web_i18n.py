@@ -61,7 +61,7 @@ class DictionaryTests(unittest.TestCase):
             "Clear selection",
             "Command palette",
             "New item",
-            "Export items as CSV",
+            "Export listed items as CSV",
             "Toggle dark mode",
         ):
             self.assertIn(label, self.dictionary)
@@ -87,6 +87,45 @@ class DictionaryTests(unittest.TestCase):
                 self.assertRegex(self.dictionary.get(label, ""), r"[぀-ヿ一-鿿]")
         self.assertEqual("時刻", self.dictionary["Time"])
         self.assertEqual("ソース", self.dictionary["Source"])
+
+    def test_items_export_scope_is_visible_in_both_languages(self):
+        select = re.search(
+            r'<select id="export-select"[^>]*>(.*?)</select>', PAGE, re.S
+        )
+        self.assertIsNotNone(select)
+        options = re.findall(r'<option value="([^"]+)">([^<]+)</option>', select[1])
+        self.assertEqual(
+            [
+                ("csv", "CSV (listed items)"),
+                ("json", "JSON (listed items)"),
+                ("markdown", "Markdown (listed items)"),
+                ("life", "life.txt (all matches)"),
+            ],
+            options,
+        )
+        for value, label in options:
+            with self.subTest(value=value):
+                self.assertIn(
+                    "条件一致全件" if value == "life" else "表示分",
+                    self.dictionary[label],
+                )
+                if value != "life":
+                    action = f"Export listed items as {label.split(' (')[0]}"
+                    self.assertIn(
+                        f'label: "{action}", run: () => exportItems("{value}")', PAGE
+                    )
+                    self.assertIn("表示分", self.dictionary[action])
+        button = re.search(
+            r'<button[^>]* id="items-export-life"[^>]*>(.*?)</button>', PAGE
+        )
+        self.assertIsNotNone(button)
+        self.assertIn('aria-label="life.txt (all matches)"', button[0])
+        self.assertIn("life.txt (all matches)", button[1])
+        self.assertIn('aria-label="Export Items"', select[0])
+        self.assertIn("書き出し", self.dictionary["Export Items"])
+        help_text = re.search(r'"export-select": "([^"]+)"', PAGE)[1]
+        self.assertIn("display limit", help_text)
+        self.assertIn("表示上限", self.dictionary[help_text])
 
     def test_translations_are_actually_japanese(self):
         # An entry that maps English to English would silently pass a
@@ -148,7 +187,7 @@ class DictionaryTests(unittest.TestCase):
             "Reload the active view from disk/API without changing filters. Press r as a shortcut.",
             "Switch Status between active records only and latest status per person.",
             "Cycle Agenda blocker filtering: all, only blocked, or hide blocked records.",
-            "Download the current Items result as CSV, JSON, or Markdown.",
+            "CSV, JSON, and Markdown export listed items. life.txt exports all matches, ignoring the display limit.",
             "Group the Items list without changing the source file.",
             "Sort visible Items by line, time, title, type, status, or source.",
             "Choose ascending or descending sort order.",

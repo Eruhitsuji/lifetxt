@@ -3183,6 +3183,16 @@ traceability:
       release_or_deployment: null
       notes: Shared agenda and command center; omitted date preserves prior workspace-today behavior.
       status: proposed
+    - requirement_id: req-web-planner-habit-guidance
+      capability_id: cap-web-mobile-planner
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1578
+      pull_request: null
+      changed_files_or_scope: [lifetxt/web_planner.js, tests/browser_planner_actions_probe.mjs, docs/en/web.md, docs/ja/web.md]
+      tests_or_evidence: [tests.test_web_planner_actions_browser, tests.test_web_planner_revisions]
+      release_or_deployment: null
+      notes: Day Planner presents optional habit cues and minimum versions using existing custom details.
+      status: implemented
     - requirement_id: req-planner-day-actions
       capability_id: cap-web-mobile-planner
       epic: https://github.com/Eruhitsuji/lifetxt/issues/991

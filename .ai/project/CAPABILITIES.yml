@@ -795,6 +795,7 @@ capabilities:
       - req-planner-time-of-day-adaptive-today
       - req-planner-day-experience
       - req-planner-day-schedule
+      - req-web-planner-habit-guidance
       - req-planner-day-actions
       - req-planner-quick-capture
       - req-planner-notes-journal

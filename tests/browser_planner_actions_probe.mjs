@@ -9,14 +9,29 @@ const [browserPath, htmlPath] = process.argv.slice(2);
 const html = await readFile(htmlPath);
 const requests = [];
 const tasks=[{id:'short',title:'Short'},{id:'long',title:'長いタイトル'.repeat(60)}].map((item,i)=>({...item,type:'T',status:'[ ]',line:i+1,source:'fixture.txt',editable:true,details:{due:['2031-02-03']}}));
+const habitCue = '<img src=x onerror="document.body.dataset.injected=1">';
+const habitMinimum = 'ReviewOneWord'.repeat(24);
+const habits = [
+  {id: 'guided', details: {habit_cue: [habitCue], habit_minimum: [habitMinimum]}},
+  {id: 'cue-only', details: {habit_cue: ['After breakfast'], habit_minimum: ['  ']}},
+  {id: 'minimum-only', details: {habit_minimum: ['One word']}},
+  {id: 'plain', details: {}},
+].map((item, index) => ({
+  ...item, title: item.id, type: 'H', status: '[ ]', line: index + 3,
+  source: 'fixture.txt', editable: true,
+}));
+let readOnly = false;
 const server = http.createServer((request,response)=>{
   requests.push({url:request.url,method:request.method});
   const url=new URL(request.url,'http://localhost');
   let result={items:[]};
   if(url.pathname==='/api/config')result={today:'2031-02-03',web:{language:'en'}};
-  if(url.pathname==='/api/health')result={read_only:false,writable_path:'fixture.txt'};
+  if(url.pathname==='/api/health')result={read_only:readOnly,writable_path:'fixture.txt'};
   if(url.pathname==='/api/command-center')result={due_today:tasks.map(i=>({...i,kind:'T'}))};
-  if(url.pathname==='/api/items')result={items:url.searchParams.get('type')==='T'?tasks:[]};
+  if (url.pathname === '/api/items') {
+    const kind = url.searchParams.get('type');
+    result = {items: kind === 'T' ? tasks : kind === 'H' ? habits : []};
+  }
   if(url.pathname==='/api/agenda')result={records:[{type:'E',title:'Event',status:'[ ]'}]};
   if(url.pathname==='/api/notes')result={items:[],total:0,has_more:false};
   response.writeHead(200,{'content-type':url.pathname.startsWith('/api/')?'application/json':'text/html; charset=utf-8'});
@@ -129,6 +144,22 @@ try {
     assert.equal(result.eventButtons,1);
     const buttons=result.labels[0];
     assert.deepEqual(buttons,lang==='ja'?['完了を記録','詳細']:['Mark done','Details']);
+    const habitCards = await evaluate(`[...document.querySelectorAll('#habits .card')].map(card => ({
+      paragraphs: [...card.querySelectorAll('.card-content p')].map(p => p.textContent),
+      buttons: [...card.querySelectorAll('button')].map(button => button.textContent),
+      injected: Boolean(card.querySelector('img')),
+      contentFits: card.querySelector('.card-content').scrollWidth <= card.querySelector('.card-content').clientWidth,
+    }))`);
+    const cue = lang === 'ja' ? 'きっかけ：' : 'Cue: ';
+    const minimum = lang === 'ja' ? '最小版：' : 'Minimum version: ';
+    assert.deepEqual(habitCards.map(card => card.paragraphs), [
+      ['[ ]', cue + habitCue, minimum + habitMinimum],
+      ['[ ]', cue + 'After breakfast'],
+      ['[ ]', minimum + 'One word'],
+      ['[ ]'],
+    ]);
+    assert.ok(habitCards.every(card => card.contentFits && !card.injected));
+    assert.deepEqual(habitCards[0].buttons, buttons);
     const focus=await evaluate(`(()=>{const buttons=document.querySelectorAll('#tasks .card button');buttons[0].focus();return document.activeElement===buttons[0]})()`);
     assert.equal(focus,true);
     await command('Input.dispatchKeyEvent',{type:'keyDown',key:'Tab',code:'Tab',windowsVirtualKeyCode:9});
@@ -139,6 +170,14 @@ try {
     assert.equal(await evaluate(`document.querySelector('#detail-dialog').open`),true);
     results.push({width,lang,theme,form,...result});
   }
+  readOnly = true;
+  await command('Page.navigate', {url: `http://127.0.0.1:${port}/planner?lang=en`});
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    if (await evaluate('document.querySelectorAll("#habits .card button").length === 4')) break;
+    await delay(30);
+  }
+  assert.deepEqual(await evaluate(`[...document.querySelectorAll('#habits .card:first-child button')].map(button => button.textContent)`), ['Details']);
+  assert.ok(await evaluate(`document.querySelector('#habits .card:first-child').textContent.includes('Minimum version: ')`));
   assert.ok(requests.every(r => r.method === "GET"), "fixture never mutates data");
   process.stdout.write(JSON.stringify({viewports: results}));
 } finally {

@@ -184,6 +184,19 @@ python -m lifetxt serve "projects/**/*.life.txt" --write-file life.txt --read-on
 Use `--read-only` for public dashboards or always-on displays where users
 should be able to inspect and validate records but not change source files.
 
+#### Habit cues and minimum versions
+
+Edit a habit (`H`) in life.txt and add either or both optional detail keys
+`habit_cue:` and `habit_minimum:`.
+
+```text
+[ ] H "Study English for five minutes" repeat:weekdays habit_cue:"After breakfast" habit_minimum:"Review one word"
+```
+
+After saving, open the Day view at `/planner` to see the configured guidance
+on the habit card. **Mark done** still records the completion date.
+The validator may report these custom keys as W106 and preserves their values.
+
 ### Planner write revisions
 
 Planner Quick Capture, Note/Journal creation and editing, Task completion and

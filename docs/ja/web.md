@@ -159,6 +159,19 @@ python -m lifetxt serve "projects/**/*.life.txt" --write-file life.txt --read-on
 公開用 dashboard や常時表示 display など、閲覧と行 validation は許可しつつ
 source file を変更させたくない場合は `--read-only` を使います。
 
+### 習慣のきっかけと最小版
+
+life.txt の習慣（`H`）を編集し、任意の詳細キー `habit_cue:` と
+`habit_minimum:` の一方または両方を追加します。
+
+```text
+[ ] H "英語を5分" repeat:weekdays habit_cue:"朝食の後" habit_minimum:"単語を1つだけ"
+```
+
+保存後に `/planner` の日表示を開くと、「習慣」カードに設定した内容が
+表示されます。「完了を記録」は従来どおり実施日を記録します。
+検証時にカスタムキーの警告（W106）が出ることがあります。値は保持されます。
+
 ### Plannerの更新リビジョン
 
 PlannerのQuick Capture、Note・Journalの作成／編集、タスク完了、習慣の記録は、

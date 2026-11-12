@@ -194,7 +194,11 @@ Edit a habit (`H`) in life.txt and add either or both optional detail keys
 ```
 
 After saving, open the Day view at `/planner` to see the configured guidance
-on the habit card. **Mark done** still records the completion date.
+on the habit card. On today's editable cards with a minimum version, choose
+**Record minimum** to log it as completed. **Mark done** records the usual
+completion. Both write the date to `done:`, and **Record minimum** also
+writes it to `habit_minimum_done:` so the Day view can show **Minimum version
+recorded** when you revisit that date.
 The validator may report these custom keys as W106 and preserves their values.
 
 ### Planner write revisions

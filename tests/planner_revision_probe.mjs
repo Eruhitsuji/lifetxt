@@ -62,10 +62,10 @@ async function submitEditor(kind,title,body,item=null) {
   await $('editor-form').onsubmit(event);
   assert.equal($('editor').open,false,$('editor-feedback').textContent);
 }
-function action(section,title) {
+function action(section,title,label=null) {
   const card=$(section).children.find(row=>row.children?.[0]?.children?.[0]?.textContent===title);
   assert.ok(card,section+': '+title);
-  const button=card.children.find(node=>node.className==='card-actions')?.children.find(node=>node.tagName==='button');
+  const button=card.children.find(node=>node.className==='card-actions')?.children.find(node=>node.tagName==='button'&&(!label||node.textContent===label));
   assert.ok(button,title+' action');
   return ()=>button.listeners.click(event);
 }
@@ -89,10 +89,26 @@ assert.equal($('editor').open,false,$('editor-feedback').textContent);
 await action('tasks','Task')();
 await action('tasks','Line_Task')();
 await action('habits','Habit')();
+const recordMinimum=action('habits','Minimum_Habit','Record minimum');
+const recordUsual=action('habits','Minimum_Habit','Mark done');
+const beforeMinimum=writes().length;
+await Promise.all([recordMinimum(),recordUsual(),recordMinimum()]);
+assert.equal(writes().length,beforeMinimum+1);
+const today=(await data('/api/config')).today;
 const items=(await data('/api/items')).items;
 assert.equal(items.find(i=>i.id==='t1').status,'[x]');
 assert.equal(items.find(i=>i.title==='Line_Task').status,'[x]');
-assert.equal(items.find(i=>i.id==='h1').details.done.length,1);
+assert.deepEqual(items.find(i=>i.id==='h1').details.done,[today]);
+assert.equal(items.find(i=>i.id==='h1').details.habit_minimum_done,undefined);
+const recordedMinimum=items.find(i=>i.id==='h3');
+assert.equal(recordedMinimum.status,'[ ]');
+assert.deepEqual(recordedMinimum.details.done,['2000-01-01',today]);
+assert.deepEqual(recordedMinimum.details.habit_minimum_done,['2000-01-01',today]);
+assert.deepEqual(recordedMinimum.details.habit_cue,['After breakfast']);
+assert.deepEqual(recordedMinimum.details.habit_minimum,['One word']);
+const minimumCard=$('habits').children.find(row=>row.children[0].children[0].textContent==='Minimum_Habit');
+assert.equal(minimumCard.children[0].children[1].textContent,'Minimum version recorded');
+assert.deepEqual(minimumCard.children[1].children.map(button=>button.textContent),['Details']);
 assert.equal(items.find(i=>i.type==='J').details.body[0],'Updated journal');
 
 // Freeze an edit, then background config and other reads learn a newer revision.
@@ -134,14 +150,16 @@ assert.match($('feedback').textContent,/reload/);
 assert.equal((await data('/api/items')).items.find(i=>i.title==='Captured').status,'[ ]');
 
 // Failed habit actions must neither mutate the displayed snapshot nor silently retry.
-await p.load();const habitAction=action('habits','Stale_Habit');
+await p.load();const habitAction=action('habits','Stale_Habit','Record minimum');
 await externalWrite();await p.syncToday();
 const beforeHabit=writes().length;
 await habitAction();await habitAction();
 assert.equal(writes().length,beforeHabit+2);
 assert.equal(writes().at(-1).status,409);
 assert.equal(JSON.parse(writes().at(-1).body).details.done.length,1);
-assert.equal((await data('/api/items')).items.find(i=>i.id==='h2').details.done,undefined);
+const staleHabit=(await data('/api/items')).items.find(i=>i.id==='h2');
+assert.equal(staleHabit.details.done,undefined);
+assert.equal(staleHabit.details.habit_minimum_done,undefined);
 
 // First write discovers revision; next write must consume the successful response token.
 const fresh=planner(transport).p;

@@ -1,6 +1,6 @@
 (() => {
   "use strict";
-  const copy={en:{skip:"Skip to Planner",web:"Full Web UI",eyebrow:"Your day, in one place",title:"Day Planner",weekTitle:"Week Planner",today:"Today",choose:"Choose date",day:"Day",week:"Week",previousDay:"Previous day",nextDay:"Next day",previousWeek:"Previous week",nextWeek:"Next week",weekOf:"Week of",selected:"Selected",todayMarker:"TODAY",past:"Past",todayState:"Today",future:"Future",schedule:"Schedule",tasks:"Tasks",habits:"Habits",habitCue:"Cue",habitMinimum:"Minimum version",notes:"Notes",journal:"Journal",reviewActivity:"Review / Activity",moreReview:"Show more",newNote:"＋ Add a note",writeJournal:"Write today's journal",capture:"＋ Quick Capture",prompt:"What do you want to remember?",submitCapture:"Capture",labelTitle:"Title",labelBody:"Details / journal",save:"Save",close:"Close",empty:"Nothing here for this day.",emptyDate:"No dated items.",showDay:"Open day view",event:"Event",reminder:"Reminder",deadline:"Deadline",task:"Task",done:"Mark done",detail:"Details",saved:"Saved.",captured:"Captured.",readonly:"This workspace is read-only. Changes are disabled.",loading:"Loading…",error:"Could not load the Planner: ",captureError:"Capture failed: ",saveError:"Could not save: ",journalRequired:"Enter journal text before saving."},ja:{skip:"Plannerへ移動",web:"Web UI全体",eyebrow:"今日をひとつの画面に",title:"デイリープランナー",weekTitle:"週間プランナー",today:"今日",choose:"日付を選ぶ",day:"日",week:"週",previousDay:"前の日",nextDay:"次の日",previousWeek:"前の週",nextWeek:"次の週",weekOf:"週の期間",selected:"選択中",todayMarker:"今日",past:"過去",todayState:"今日",future:"未来",schedule:"予定",tasks:"タスク",habits:"習慣",habitCue:"きっかけ",habitMinimum:"最小版",notes:"メモ",journal:"日誌",reviewActivity:"レビュー / アクティビティ",moreReview:"さらに表示",newNote:"＋ メモを追加",writeJournal:"今日の日誌を書く",capture:"＋ クイックキャプチャ",prompt:"覚えておきたいことは何ですか？",submitCapture:"記録",labelTitle:"タイトル",labelBody:"詳細 / 日誌",save:"保存",close:"閉じる",empty:"この日の記録はありません。",emptyDate:"予定はありません。",showDay:"日表示を開く",event:"予定",reminder:"リマインダー",deadline:"期限",task:"タスク",done:"完了を記録",saved:"保存しました。",captured:"記録しました。",readonly:"このworkspaceは読み取り専用です。変更できません。",loading:"読み込み中…",error:"Plannerを読み込めませんでした：",captureError:"記録できませんでした：",saveError:"保存できませんでした：",journalRequired:"日誌の内容を入力してください。",detail:"詳細"}};
+  const copy={en:{skip:"Skip to Planner",web:"Full Web UI",eyebrow:"Your day, in one place",title:"Day Planner",weekTitle:"Week Planner",today:"Today",choose:"Choose date",day:"Day",week:"Week",previousDay:"Previous day",nextDay:"Next day",previousWeek:"Previous week",nextWeek:"Next week",weekOf:"Week of",selected:"Selected",todayMarker:"TODAY",past:"Past",todayState:"Today",future:"Future",schedule:"Schedule",tasks:"Tasks",habits:"Habits",habitCue:"Cue",habitMinimum:"Minimum version",habitRecordMinimum:"Record minimum",habitMinimumRecorded:"Minimum version recorded",notes:"Notes",journal:"Journal",reviewActivity:"Review / Activity",moreReview:"Show more",newNote:"＋ Add a note",writeJournal:"Write today's journal",capture:"＋ Quick Capture",prompt:"What do you want to remember?",submitCapture:"Capture",labelTitle:"Title",labelBody:"Details / journal",save:"Save",close:"Close",empty:"Nothing here for this day.",emptyDate:"No dated items.",showDay:"Open day view",event:"Event",reminder:"Reminder",deadline:"Deadline",task:"Task",done:"Mark done",detail:"Details",saved:"Saved.",captured:"Captured.",readonly:"This workspace is read-only. Changes are disabled.",loading:"Loading…",error:"Could not load the Planner: ",captureError:"Capture failed: ",saveError:"Could not save: ",journalRequired:"Enter journal text before saving."},ja:{skip:"Plannerへ移動",web:"Web UI全体",eyebrow:"今日をひとつの画面に",title:"デイリープランナー",weekTitle:"週間プランナー",today:"今日",choose:"日付を選ぶ",day:"日",week:"週",previousDay:"前の日",nextDay:"次の日",previousWeek:"前の週",nextWeek:"次の週",weekOf:"週の期間",selected:"選択中",todayMarker:"今日",past:"過去",todayState:"今日",future:"未来",schedule:"予定",tasks:"タスク",habits:"習慣",habitCue:"きっかけ",habitMinimum:"最小版",habitRecordMinimum:"最小版を記録",habitMinimumRecorded:"最小版を記録済み",notes:"メモ",journal:"日誌",reviewActivity:"レビュー / アクティビティ",moreReview:"さらに表示",newNote:"＋ メモを追加",writeJournal:"今日の日誌を書く",capture:"＋ クイックキャプチャ",prompt:"覚えておきたいことは何ですか？",submitCapture:"記録",labelTitle:"タイトル",labelBody:"詳細 / 日誌",save:"保存",close:"閉じる",empty:"この日の記録はありません。",emptyDate:"予定はありません。",showDay:"日表示を開く",event:"予定",reminder:"リマインダー",deadline:"期限",task:"タスク",done:"完了を記録",saved:"保存しました。",captured:"記録しました。",readonly:"このworkspaceは読み取り専用です。変更できません。",loading:"読み込み中…",error:"Plannerを読み込めませんでした：",captureError:"記録できませんでした：",saveError:"保存できませんでした：",journalRequired:"日誌の内容を入力してください。",detail:"詳細"}};
   const NOTE_PAGE_SIZE=5;
   let notesPage=null, noteRows=[], notesBusy=false, loadGeneration=0;
   const $=id=>document.getElementById(id), params=new URLSearchParams(location.search);let scopeArea=params.get('area')||'',scopeView=params.get('saved_view')||'',todaySyncTimer=null;
@@ -527,7 +527,7 @@
   }
   const vals=(item,key)=>Array.isArray(item?.details?.[key])?item.details[key]:item?.details?.[key]?[item.details[key]]:[];
   const pathFor=i=>i.id?"/api/items/id/"+encodeURIComponent(i.id):i.line&&i.editable?"/api/items/"+encodeURIComponent(i.line):null;
-  function card(target, title, meta, action, label, detail, guidance = []) {
+  function card(target, title, meta, action, label, detail, guidance = [], alternateLabel = "") {
     const node = document.createElement("article");
     node.className = "card";
     const content = document.createElement("div");
@@ -545,18 +545,23 @@
     const actions = document.createElement("div");
     actions.className = "card-actions";
     if (action) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.textContent = label;
-      button.addEventListener("click", async event => {
-        event.stopPropagation();
-        if (button.disabled) return;
-        button.disabled = true;
-        try { await action(); }
-        catch (error) { $("feedback").textContent = t.error + error.message; }
-        finally { button.disabled = false; }
+      const buttons = (alternateLabel ? [label, alternateLabel] : [label]).map(text => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = text;
+        return button;
       });
-      actions.append(button);
+      buttons.forEach((button, index) => {
+        button.addEventListener("click", async event => {
+          event.stopPropagation();
+          if (button.disabled) return;
+          buttons.forEach(control => { control.disabled = true; });
+          try { await action(index === 1); }
+          catch (error) { $("feedback").textContent = t.error + error.message; }
+          finally { buttons.forEach(control => { control.disabled = false; }); }
+        });
+        actions.append(button);
+      });
     }
     if (detail) {
       const button = document.createElement("button");
@@ -653,15 +658,21 @@
       const refs=[...(day.due_today||[]),...(date===today?(day.next_actions||[]):[])].filter(x=>x.kind==="T"&&!x.blocked);const rows=(tasks.items||[]).filter(i=>refs.some(r=>(r.id&&r.id===i.id)||(r.source===i.source&&r.line===i.line)||r.title===i.title));
       list($('tasks'),rows,i=>{const action=dayPosition()==="today"&&writable&&i.editable?async()=>{await api(i.id?pathFor(i)+"/complete":pathFor(i),{expectedRevision:recordRevisions.get(i)||null,method:i.id?"POST":"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(i.id?{date}:{status:"[x]",type:i.type,title:i.title,details:i.details||{}})});await load()}:null;card($('tasks'),i.title,vals(i,'due')[0]||'',action,action?t.done:"",i)});
       list($('habits'), (habits.items || []).filter(i => !['[x]', '[-]'].includes(i.status)), i => {
-        const finished = vals(i, 'done').includes(date);
-        const action = dayPosition() === "today" && writable && i.editable && !finished ? async () => {
-          const ds = [...vals(i, 'done')];
-          if (!ds.includes(date)) ds.push(date);
+        const selectedDate = date;
+        const finished = vals(i, 'done').some(value => value.slice(0, 10) === selectedDate);
+        const minimumRecorded = finished && vals(i, 'habit_minimum_done').includes(selectedDate);
+        const hasMinimum = vals(i, 'habit_minimum').some(value => value.trim());
+        const action = dayPosition() === "today" && writable && i.editable && !finished ? async minimum => {
+          if (generation !== loadGeneration) return;
+          const details = {...i.details, done: [...vals(i, 'done'), selectedDate]};
+          if (minimum && !vals(i, 'habit_minimum_done').includes(selectedDate)) {
+            details.habit_minimum_done = [...vals(i, 'habit_minimum_done'), selectedDate];
+          }
           await api(pathFor(i), {
             expectedRevision: recordRevisions.get(i) || null,
             method: 'PUT',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({status: i.status, type: i.type, title: i.title, details: {...i.details, done: ds}}),
+            body: JSON.stringify({status: i.status, type: i.type, title: i.title, details}),
           });
           await load();
         } : null;
@@ -672,7 +683,9 @@
           const value = vals(i, key).map(text => text.trim()).filter(Boolean).join(', ');
           return value ? label + (lang === 'ja' ? '：' : ': ') + value : '';
         });
-        card($('habits'), i.title, finished ? "✓" : i.status, action, t.done, i, guidance);
+        const status = minimumRecorded ? t.habitMinimumRecorded : finished ? "✓" : i.status;
+        card($('habits'), i.title, status, action, t.done, i, guidance,
+          hasMinimum ? t.habitRecordMinimum : "");
       });
       notesPage=notes;noteRows=notes.items||[];renderNotes();
       $('review-panel').dataset.expanded="false";renderReview(review);

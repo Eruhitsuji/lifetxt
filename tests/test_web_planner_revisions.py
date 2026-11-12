@@ -41,7 +41,10 @@ class PlannerRevisionTests(unittest.TestCase):
             path = Path(directory) / "life.txt"
             path.write_text(
                 "[ ] T Task id:t1\n[ ] T Line_Task\n"
-                "[ ] H Habit id:h1\n[ ] H Stale_Habit id:h2\n"
+                '[ ] H Habit id:h1 habit_minimum:"One word"\n'
+                '[ ] H Stale_Habit id:h2 habit_minimum:"One word"\n'
+                '[ ] H Minimum_Habit id:h3 habit_cue:"After breakfast" '
+                'habit_minimum:"One word" done:2000-01-01 habit_minimum_done:2000-01-01\n'
                 "[N] N Note id:n1 body:Original\n",
                 encoding="utf-8",
             )

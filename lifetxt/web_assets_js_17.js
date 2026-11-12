@@ -431,13 +431,16 @@
       {key: "priority", label: "Priority", types: ["T", "D", "R", "H"]},
       {key: "tag", label: "Tag", types: null},
       {key: "progress", label: "Progress", types: ["T", "D", "R", "H"]},
+      {key: "habit_cue", label: "Habit cue", types: ["H"], editorOnly: true, plainText: true},
+      {key: "habit_minimum", label: "Habit minimum version", types: ["H"], editorOnly: true, plainText: true},
     ];
 
-    function structuredFieldsForType(type) {
-      return STRUCTURED_COMMON_FIELDS.filter(field => !field.types || field.types.includes(type));
+    function structuredFieldsForType(type, prefix = "edit") {
+      return STRUCTURED_COMMON_FIELDS.filter(field =>
+        (!field.editorOnly || prefix === "edit") && (!field.types || field.types.includes(type)));
     }
 
-    function renderStructuredFields(prefix, details, type) {
+    function renderStructuredFields(prefix, details, type, readOnly = false) {
       const values = details || {};
       const help = {
         due: "When this task should be finished. Example: 2026-12-15.",
@@ -446,16 +449,18 @@
         project: "Group this record with related work.",
         priority: "How important this item is compared with other work.",
         progress: "Completion percentage, from 0 to 100.",
+        habit_cue: "When to start the habit. Example: After breakfast.",
+        habit_minimum: "A smaller action for days when you have less time. Example: Review one word.",
       };
-      const fields = structuredFieldsForType(type).map(field => {
+      const fields = structuredFieldsForType(type, prefix).map(field => {
         const value = Array.isArray(values[field.key]) ? values[field.key].join(", ") : (values[field.key] || "");
         const inputId = prefix + "-" + field.key;
-        const wide = field.key === "tag" || field.key === "project";
+        const wide = field.plainText || field.key === "tag" || field.key === "project";
         const helpId = inputId + "-help";
         const helpText = help[field.key] || "Optional details for this record.";
         return `<label class="structured-field${wide ? " wide-field" : ""}" for="${inputId}">` +
           `<span>${escapeHtml(field.label)} <small>(${escapeHtml(field.key)}:)</small></span>` +
-          `<input id="${inputId}" aria-describedby="${helpId}" data-structured-key="${escapeHtml(field.key)}" value="${escapeHtml(String(value))}" autocomplete="off">` +
+          `<input id="${inputId}" aria-describedby="${helpId}" data-structured-key="${escapeHtml(field.key)}" value="${escapeHtml(String(value))}" autocomplete="off"${readOnly ? " disabled" : ""}>` +
           `<small id="${helpId}" class="field-help-text">${escapeHtml(helpText)}</small>` +
           `</label>`;
       }).join("");
@@ -504,9 +509,16 @@
       for (const field of STRUCTURED_COMMON_FIELDS) {
         const input = document.getElementById(prefix + "-" + field.key);
         if (!input) continue;
+        // Keep repeated raw values when the displayed prose was left as-is.
+        if (field.plainText && input.value === details[field.key]?.join(", ")) continue;
         const value = input.value.trim();
-        if (value) details[field.key] = value.split(",").map(v => v.trim()).filter(Boolean);
-        else delete details[field.key];
+        if (!value) {
+          delete details[field.key];
+        } else if (field.plainText) {
+          details[field.key] = [value];
+        } else {
+          details[field.key] = value.split(",").map(v => v.trim()).filter(Boolean);
+        }
       }
       const container = document.getElementById(prefix === "edit" ? "structured-fields" : prefix + "-structured-fields");
       const type = document.getElementById(prefix + "-type")?.value || document.getElementById("edit-type")?.value;

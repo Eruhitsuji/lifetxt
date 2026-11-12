@@ -750,6 +750,15 @@ silently hidden, dropped, or rewritten. The preference is remembered per
 browser (not shared across devices or with other viewers) and defaults to
 Full mode, so nothing changes for an existing user until they opt in.
 
+### Set up habit guidance in the record editor
+
+For a new record, open **New Record** and select **Habit (H)**. In Beginner
+mode, show advanced options to create a habit. For an existing habit,
+right-click its row in Items and select **Edit**. Fill in either **Habit cue** or
+**Habit minimum version**, then save. For example, use “After breakfast”
+and “Review one word.” The Day Planner displays these values on the habit
+card. To remove a value, clear its field and save.
+
 ## Web UI Configuration
 
 `/api/config` exposes a safe subset of `web.*` settings to the browser. The

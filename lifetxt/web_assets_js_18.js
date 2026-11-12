@@ -6,9 +6,10 @@
     function _populateStructuredFields(prefix, details, type) {
       const container = document.getElementById(prefix === "edit" ? "structured-fields" : prefix + "-structured-fields");
       if (!container) return;
-      container.innerHTML = renderStructuredFields(prefix, details, type);
+      const readOnly = prefix === "edit" && document.getElementById("edit-type")?.disabled;
+      container.innerHTML = renderStructuredFields(prefix, details, type, readOnly);
       syncStatusStateMode(container);
-      if (prefix === "edit" && document.getElementById("edit-type")?.disabled) {
+      if (readOnly) {
         const fields = container.querySelector("[data-status-state-fields]");
         if (fields) fields.disabled = true;
       }
@@ -46,6 +47,12 @@
     const _structuredOriginalImportRawLine = importRawLine;
     importRawLine = async function() {
       await _structuredOriginalImportRawLine();
+      refreshStructuredFields();
+    };
+
+    const _structuredOriginalDuplicate = ctxDuplicate;
+    ctxDuplicate = function() {
+      _structuredOriginalDuplicate();
       refreshStructuredFields();
     };
 

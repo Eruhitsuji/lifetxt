@@ -1589,6 +1589,7 @@ capabilities:
     source_requirements:
       - req-beginner-structured-common-field-authoring
       - req-web-structured-common-field-authoring
+      - req-web-habit-guidance-authoring
       - req-tui-structured-common-field-authoring
     implementation_locations:
       - lifetxt/web_assets.html

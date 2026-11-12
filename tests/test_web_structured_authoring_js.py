@@ -167,6 +167,20 @@ results.comma_splits_into_list = _structuredDetails("edit-details", "edit");
 elements["edit-details"] = {value: "priority:high\\n"};
 results.no_matching_input_preserved = _structuredDetails("edit-details", "edit");
 
+// Habit guidance: optional fields, verbatim punctuation and raw round trip.
+const habit = {habit_cue: ["After breakfast, before work", "After lunch"], habit_minimum: ['"><img>']};
+results.habit_editor = renderStructuredFields("edit", habit, "H");
+results.habit_read_only = renderStructuredFields("edit", habit, "H", true);
+results.habit_drawer = renderStructuredFields("drawer-edit", habit, "H");
+elements["edit-details"].value = detailsToText({...habit, done: ["2026-01-01"]});
+elements["edit-habit_cue"] = {value: habit.habit_cue.join(", ")};
+elements["edit-habit_minimum"] = {value: "Read, then review one word"};
+results.habit_merge = _structuredDetails("edit-details", "edit");
+elements["edit-habit_cue"].value = "";
+results.habit_cleared = _structuredDetails("edit-details", "edit");
+delete elements["edit-habit_cue"];
+delete elements["edit-habit_minimum"];
+
 // -- Status state selector: selected mode is authoritative ----------------
 const stateSelect = {value: "focus"};
 const customInput = {value: "Deep research"};
@@ -231,6 +245,31 @@ class StructuredFieldAuthoringJsTests(unittest.TestCase):
         self.assertIn('id="edit-due"', html)
         self.assertIn('value="2026-01-01"', html)
         self.assertIn('data-structured-key="due"', html)
+
+    def test_habit_guidance_is_scoped_to_the_record_editor(self):
+        html = self.results["habit_editor"]
+        for key in ("habit_cue", "habit_minimum"):
+            with self.subTest(key=key):
+                self.assertIn(f'for="edit-{key}"', html)
+                self.assertIn(f'aria-describedby="edit-{key}-help"', html)
+                self.assertRegex(
+                    self.results["habit_read_only"],
+                    rf'<input id="edit-{key}"[^>]* disabled>',
+                )
+                self.assertNotIn(key, self.results["render_task_html"])
+                self.assertNotIn(key, self.results["habit_drawer"])
+        self.assertIn('value="After breakfast, before work, After lunch"', html)
+        self.assertNotIn("<img>", html)
+        self.assertIn("&lt;img&gt;", html)
+
+    def test_habit_guidance_preserves_unchanged_values_and_literal_commas(self):
+        merged = self.results["habit_merge"]
+        self.assertEqual(
+            ["After breakfast, before work", "After lunch"], merged["habit_cue"]
+        )
+        self.assertEqual(["Read, then review one word"], merged["habit_minimum"])
+        self.assertEqual(["2026-01-01"], merged["done"])
+        self.assertNotIn("habit_cue", self.results["habit_cleared"])
 
     def test_task_field_help_distinguishes_deadline_schedule_and_tags(self):
         html = self.results["render_task_html"]

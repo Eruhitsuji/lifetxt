@@ -2,6 +2,16 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-habit-guidance-authoring
+      capability_id: cap-structured-common-field-authoring
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1582
+      pull_request: null
+      changed_files_or_scope: [lifetxt/web_assets_js_01.js, lifetxt/web_assets_js_17.js, lifetxt/web_assets_js_18.js, tests/test_web_structured_authoring_js.py, tests/test_web_assets.py, docs/en/web.md, docs/ja/web.md]
+      tests_or_evidence: [tests.test_web_structured_authoring_js, tests.test_web_i18n, tests.test_web_assets]
+      notes: The full record editor reuses the existing save path to edit optional habit guidance.
+      status: in_review
+
     - requirement_id: req-web-agenda-current-load-and-retry
       capability_id: cap-web-beginner-first-ux
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386

@@ -45,6 +45,8 @@ class PlannerRevisionTests(unittest.TestCase):
                 '[ ] H Stale_Habit id:h2 habit_minimum:"One word"\n'
                 '[ ] H Minimum_Habit id:h3 habit_cue:"After breakfast" '
                 'habit_minimum:"One word" done:2000-01-01 habit_minimum_done:2000-01-01\n'
+                '[ ] H Rest_Habit id:h4 habit_minimum:"One word" '
+                "done:2000-01-01 habit_rest:2000-01-02\n"
                 "[N] N Note id:n1 body:Original\n",
                 encoding="utf-8",
             )

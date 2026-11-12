@@ -797,6 +797,7 @@ capabilities:
       - req-planner-day-schedule
       - req-web-planner-habit-guidance
       - req-web-planner-habit-minimum-record
+      - req-web-planner-habit-rest
       - req-planner-day-actions
       - req-planner-quick-capture
       - req-planner-notes-journal

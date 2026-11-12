@@ -15,8 +15,9 @@ const habits = [
   {id: 'guided', details: {habit_cue: [habitCue], habit_minimum: [habitMinimum], done: ['2031-02-02'], habit_minimum_done: ['2031-02-02']}},
   {id: 'cue-only', details: {habit_cue: ['After breakfast'], habit_minimum: ['  ']}},
   {id: 'minimum-only', details: {habit_minimum: ['One word']}},
-  {id: 'plain', details: {}},
-  {id: 'timed', details: {habit_minimum: ['One word'], done: ['2031-02-03T23:50:00-08:00']}},
+  {id: 'plain', details: {habit_rest: ['2031-02-02']}},
+  {id: 'timed', details: {habit_minimum: ['One word'], done: ['2031-02-03T23:50:00-08:00'], habit_rest: ['2031-02-03']}},
+  {id: 'rested', details: {habit_rest: ['2031-02-03']}},
 ].map((item, index) => ({
   ...item, title: item.id, type: 'H', status: '[ ]', line: index + 3,
   source: 'fixture.txt', editable: true,
@@ -159,12 +160,16 @@ try {
       ['[ ]', minimum + 'One word'],
       ['[ ]'],
       ['✓', minimum + 'One word'],
+      [lang === 'ja' ? '休みを記録済み' : 'Rest day recorded'],
     ]);
     assert.ok(habitCards.every(card => card.contentFits && !card.injected));
     const minimumButton = lang === 'ja' ? '最小版を記録' : 'Record minimum';
-    const guidedButtons = [buttons[0], minimumButton, buttons[1]];
+    const restButton = lang === 'ja' ? '今日は休む' : 'Rest today';
+    const undoRest = lang === 'ja' ? '休みを取り消す' : 'Undo rest';
+    const guidedButtons = [buttons[0], minimumButton, restButton, buttons[1]];
+    const basicButtons = [buttons[0], restButton, buttons[1]];
     assert.deepEqual(habitCards.map(card => card.buttons), [
-      guidedButtons, buttons, guidedButtons, buttons, [buttons[1]],
+      guidedButtons, basicButtons, guidedButtons, basicButtons, [buttons[1]], [undoRest, buttons[1]],
     ]);
     const focus=await evaluate(`(()=>{const buttons=document.querySelectorAll('#tasks .card button');buttons[0].focus();return document.activeElement===buttons[0]})()`);
     assert.equal(focus,true);
@@ -182,20 +187,24 @@ try {
   ]) {
     await command('Page.navigate', {url: `http://127.0.0.1:${port}/planner?lang=en&date=${date}`});
     for (let attempt = 0; attempt < 100; attempt += 1) {
-      if (await evaluate('document.querySelectorAll("#habits .card").length === 5')) break;
+      if (await evaluate('document.querySelectorAll("#habits .card").length === 6')) break;
       await delay(30);
     }
     assert.equal(await evaluate(`document.querySelector('#habits .card:first-child p').textContent`), status);
+    assert.equal(await evaluate(`document.querySelector('#habits .card:nth-child(4) p').textContent`),
+      date === '2031-02-02' ? 'Rest day recorded' : '[ ]');
+    assert.deepEqual(await evaluate(`[...document.querySelectorAll('#habits .card:nth-child(4) button')].map(button => button.textContent)`), ['Details']);
     assert.deepEqual(await evaluate(`[...document.querySelectorAll('#habits .card:first-child button')].map(button => button.textContent)`), ['Details']);
   }
   readOnly = true;
   await command('Page.navigate', {url: `http://127.0.0.1:${port}/planner?lang=en`});
   for (let attempt = 0; attempt < 100; attempt += 1) {
-    if (await evaluate('document.querySelectorAll("#habits .card button").length === 5')) break;
+    if (await evaluate('document.querySelectorAll("#habits .card button").length === 6')) break;
     await delay(30);
   }
   assert.deepEqual(await evaluate(`[...document.querySelectorAll('#habits .card:first-child button')].map(button => button.textContent)`), ['Details']);
   assert.ok(await evaluate(`document.querySelector('#habits .card:first-child').textContent.includes('Minimum version: ')`));
+  assert.deepEqual(await evaluate(`[...document.querySelectorAll('#habits .card:last-child button')].map(button => button.textContent)`), ['Details']);
   assert.ok(requests.every(r => r.method === "GET"), "fixture never mutates data");
   process.stdout.write(JSON.stringify({viewports: results}));
 } finally {

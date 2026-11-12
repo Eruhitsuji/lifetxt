@@ -3187,7 +3187,7 @@ traceability:
       capability_id: cap-web-mobile-planner
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1580
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1581
       changed_files_or_scope: [lifetxt/web_planner.js, tests/test_web_planner_revisions.py, tests/planner_revision_probe.mjs, tests/browser_planner_actions_probe.mjs, docs/en/web.md, docs/ja/web.md]
       tests_or_evidence: [tests.test_web_planner_revisions, tests.test_web_planner_actions_browser]
       release_or_deployment: null

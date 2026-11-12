@@ -201,6 +201,14 @@ writes it to `habit_minimum_done:` so the Day view can show **Minimum version
 recorded** when you revisit that date.
 The validator may report these custom keys as W106 and preserves their values.
 
+#### Record a rest day
+
+On today's Day Planner, choose **Rest today** on an editable habit card.
+The card shows **Rest day recorded**, including when you revisit that date.
+While it is still today, choose **Undo rest** to restore the completion
+options. The Planner saves rest dates in `habit_rest:`. Stats counts only
+completion dates from `done:` for these records.
+
 ### Planner write revisions
 
 Planner Quick Capture, Note/Journal creation and editing, Task completion and

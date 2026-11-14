@@ -758,6 +758,10 @@ silently hidden, dropped, or rewritten. The preference is remembered per
 browser (not shared across devices or with other viewers) and defaults to
 Full mode, so nothing changes for an existing user until they opt in.
 
+### JSON values and start conditions
+
+In the record editor or Drawer Edit, open Details and enter one field per line. Use `tag:json<< ["work","calls"] >>` for multiple tags, or `requires:review=done` to wait for the item with `id:review` to complete. A JSON block can span lines. Agenda and Timeline distinguish waiting for a condition from a condition that cannot be evaluated.
+
 ### Set up habit guidance in the record editor
 
 For a new record, open **New Record** and select **Habit (H)**. In Beginner

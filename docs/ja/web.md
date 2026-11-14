@@ -623,6 +623,10 @@ Team、Status、Notifications、Stats、Graph、Display、Kiosk)だけが全幅�
 クリックした詳細表示も中央の record detail modal として表示します。
 
 
+### JSON 値と着手条件
+
+レコードエディターまたは Drawer の編集で「詳細」を開き、フィールドを１行ずつ入力します。複数のタグは `tag:json<< ["work","calls"] >>`、`id:review` の項目の完了を待つ場合は `requires:review=done` と書けます。JSON ブロック内は改行できます。Agenda と Timeline では「条件待ち」と「判定不能」を区別します。
+
 ### Beginner Authoring Mode
 
 record editor の Type / Status field は既定で Format 1.0 の全値を表示します

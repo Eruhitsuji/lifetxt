@@ -619,7 +619,8 @@ __LIFETXT_WEB_STYLES__  </style>
         <label class="wide field-label compact-editor-extra">
           <span class="field-label-head"><span>Details</span><span class="field-help" tabindex="0" data-help="One key:value per line. Repeat the same key for multiple values. Use body: or | continuation lines for longer text. progress: accepts a percentage (progress:75%) or a fraction (progress:3/10), independent of status.">?</span></span>
           <div id="type-hints" class="type-hints" style="display:none"></div>
-          <textarea id="edit-details" placeholder="due:2026-06-12&#10;project:research&#10;progress:75%"></textarea>
+          <textarea id="edit-details" aria-describedby="edit-json-help" placeholder="due:2026-06-12&#10;project:research&#10;progress:75%"></textarea>
+          <span id="edit-json-help" class="note" data-i18n="Examples: tag:json&lt;&lt; [&quot;work&quot;,&quot;calls&quot;] &gt;&gt; and requires:review=done. JSON blocks can span lines.">Examples: tag:json&lt;&lt; ["work","calls"] &gt;&gt; and requires:review=done. JSON blocks can span lines.</span>
         </label>
         <div id="editor-note" class="note wide">Create a new record or select an editable row.</div>
         <div id="import-raw-row" class="wide compact-editor-extra" hidden>

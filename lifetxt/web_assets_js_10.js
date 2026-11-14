@@ -327,7 +327,8 @@
         if (key === "file" || key === "dir" || key === "body") continue;
         const val = (values || []).map(v => {
           if (refs.has(key)) return `<button type="button" class="drawer-link secondary" onclick="drawerNavigate(${escapeHtml(jsLiteral(String(v)))})">${escapeHtml(String(v))}</button>`;
-          return dates.has(key) ? drawerDateValue(v) : escapeHtml(String(v));
+          if (typeof v !== "string") return `<code>${escapeHtml(JSON.stringify(v))}</code>`;
+          return dates.has(key) ? drawerDateValue(v) : escapeHtml(v);
         }).join(", ");
         const row = `<div class="drawer-field"><span class="key">${escapeHtml(labels[key] || key)}</span><span class="val">${val}</span></div>`;
         (key === idKey ? technical : labels[key] ? important : other).push(row);

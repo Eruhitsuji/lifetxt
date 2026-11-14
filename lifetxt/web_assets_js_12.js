@@ -79,26 +79,38 @@
         `<label>Type<select id="drawer-edit-type">${typeOpts}</select></label>` +
         `<label>Title<input id="drawer-edit-title" value="${escapeHtml(item.title)}" required autocomplete="off"></label>` +
         `<div id="drawer-edit-structured-fields" class="structured-fields">${renderStructuredFields("drawer-edit", item.details || {}, item.type)}</div>` +
-        `<label>Details<textarea id="drawer-edit-details" rows="7" placeholder="due:2026-01-01&#10;project:work">${escapeHtml(detailsToText(item.details))}</textarea></label>` +
+        `<label>Details<textarea id="drawer-edit-details" rows="7" aria-describedby="drawer-edit-json-help" placeholder="due:2026-01-01&#10;project:work">${escapeHtml(detailsToText(item.details))}</textarea></label>` +
+        `<p id="drawer-edit-json-help" class="note">${escapeHtml(t("Examples: tag:json<< [\"work\",\"calls\"] >> and requires:review=done. JSON blocks can span lines."))}</p>` +
         `</form>`;
       // Freshly built markup, so its completion has to be wired up again.
       setupCompletion();
-      document.getElementById("drawer-edit-type").addEventListener("change", () => {
-        const details = _structuredDetails("drawer-edit-details", "drawer-edit");
-        const fields = document.getElementById("drawer-edit-structured-fields");
-        fields.innerHTML = renderStructuredFields("drawer-edit", details, document.getElementById("drawer-edit-type").value);
-        syncStatusStateMode(fields);
-      });
-      document.getElementById("drawer-edit-structured-fields").addEventListener("input", () => {
-        document.getElementById("drawer-edit-details").value = detailsToText(_structuredDetails("drawer-edit-details", "drawer-edit"));
-      });
-      document.getElementById("drawer-edit-structured-fields").addEventListener("change", event => {
+      const textarea = document.getElementById("drawer-edit-details");
+      const fields = document.getElementById("drawer-edit-structured-fields");
+      const type = document.getElementById("drawer-edit-type");
+      const refreshFields = () => {
+        try {
+          const details = parseDetails(textarea.value);
+          textarea.setCustomValidity?.("");
+          fields.innerHTML = renderStructuredFields("drawer-edit", details, type.value);
+          syncStatusStateMode(fields);
+        } catch (error) {
+          textarea.setCustomValidity?.(error.message);
+        }
+      };
+      const syncDetails = () => {
+        if (textarea.validity?.valid === false) return;
+        textarea.value = detailsToText(_structuredDetails("drawer-edit-details", "drawer-edit"));
+      };
+      textarea.addEventListener("input", refreshFields);
+      type.addEventListener("change", refreshFields);
+      fields.addEventListener("input", syncDetails);
+      fields.addEventListener("change", event => {
         if (event.target.matches("[data-status-state-select]")) {
-          syncStatusStateMode(document.getElementById("drawer-edit-structured-fields"));
-          document.getElementById("drawer-edit-details").value = detailsToText(_structuredDetails("drawer-edit-details", "drawer-edit"));
+          syncStatusStateMode(fields);
+          syncDetails();
         }
       });
-      syncStatusStateMode(document.getElementById("drawer-edit-structured-fields"));
+      syncStatusStateMode(fields);
       document.getElementById("drawer-edit-title").focus();
     }
 
@@ -113,11 +125,19 @@
       const saveLine = drawerItem.line;
       const titleEl = document.getElementById("drawer-edit-title");
       if (!titleEl || !titleEl.value.trim()) { showToast("Title is required.", "warning"); return; }
+      let details;
+      try {
+        details = _structuredDetails("drawer-edit-details", "drawer-edit");
+      } catch (error) {
+        showActionableError("Could not save this record.", error);
+        document.getElementById("drawer-edit-details")?.focus();
+        return;
+      }
       const payload = {
         status: document.getElementById("drawer-edit-status").value,
         type: document.getElementById("drawer-edit-type").value,
         title: titleEl.value.trim(),
-        details: _structuredDetails("drawer-edit-details", "drawer-edit"),
+        details,
       };
       if (workBinding) workSessionPending = true;
       try {

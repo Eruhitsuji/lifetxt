@@ -423,16 +423,38 @@
     .workspace-tab:hover { color: var(--accent); background: var(--accent-soft); border-color: var(--accent); }
     .workspace-tab.active { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
     .surface-link { text-decoration: none; }
-    .nav-primary, .nav-advanced { display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; }
+    .nav-primary { display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; }
     .nav-more { position: relative; }
     .nav-more > summary { list-style: none; }
     .nav-more > summary::-webkit-details-marker { display: none; }
     .nav-more[open] > summary { color: var(--accent-ink); background: var(--accent); }
-    .nav-advanced { padding: .45rem; margin-top: .25rem; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow-2); }
-    .nav-advanced .workspace-tab { white-space: nowrap; }
-    /* The active advanced view is named in the collapsed summary ("More: Agenda")
-       instead of forcing the whole More panel open (#1068). */
-    /* Pull the label up to "More" so the flex gap does not read as "More : X". */
+    .nav-advanced {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: .75rem;
+      padding: .6rem;
+      margin-top: .25rem;
+      max-height: min(66vh, 34rem);
+      overflow-y: auto;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--r-md);
+      box-shadow: var(--shadow-2);
+    }
+    .nav-feature-group { min-width: 0; }
+    .nav-feature-group h2 { margin: 0 0 .3rem; font-size: .82rem; }
+    .nav-advanced .workspace-tab {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: center;
+      gap: .15rem;
+      width: 100%;
+      white-space: normal;
+      text-align: start;
+      overflow-wrap: anywhere;
+    }
+    .nav-feature-description { font-size: .75rem; font-weight: 400; }
     .nav-more-current { margin-inline-start: -.3rem; }
     .nav-more-current::before { content: ": "; }
     .nav-more-current[hidden] { display: none; }
@@ -449,8 +471,8 @@
         top: calc(100% + .3rem);
         left: .5rem;
         z-index: 60;
-        width: max-content;
-        max-width: min(46rem, calc(100% - 1rem));
+        width: min(39rem, calc(100% - 1rem));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         margin-top: 0;
       }
     }

@@ -96,7 +96,7 @@ details. **End current status** only closes the current interval, whereas
 Offline starts a new offline interval. Canonical values remain untranslated.
 `web.presence.states` color-class overrides also apply here.
 
-From the full Web UI, open **More → State · Quick Status**. State changes only
+From the full Web UI, open **Features → Team and notifications → State · Quick Status**. State changes only
 your own presence; **Status · latest** shows the latest/active status records by
 person and **Team · presence** combines presence with workload and messages.
 The small **Open full Web UI** footer link returns to those views.
@@ -1266,12 +1266,15 @@ port above 1024.
 
 Start with Today to see what needs attention, Items to find records, and Create
 to add a task, event, or note. Empty views explain whether there is no data or
-only no matching result and provide a safe next action. Select More to reach
-specialist views such as Timeline, Graph, and Stats; direct links remain valid.
+only no matching result and provide a safe next action. Open **Features** to
+browse destinations by purpose, including Timeline, Graph, and Stats.
+
+Under **Plan your time**, Calendar shows a month or week grid, Agenda lists
+upcoming items in date order, and Planner lets you plan a day and log habits.
 
 ### Personal Context onboarding
 
-Open **More → Personal Context** to review current `person:self` facts or add
+Open **Features → Capture and organize → Personal Context** to review current `person:self` facts or add
 explicit context. The five labels—Profile, Preferences, Skills, Goals, and
 Projects—are ordinary singular `tag:` conventions (`profile`, `preference`,
 `skill`, `goal`, `project`), not new schema fields. Enter one atomic fact per
@@ -1294,7 +1297,7 @@ remain excluded.
 
 
 
-Personal Context review actions in **More → Personal Context** are explicit, single-record writes. **Still correct** reconfirms stale information; **Correct the record** writes a new corrected record with `corrects:<old-id>` while preserving the original. The Web correction is an authoritative direct mutation on explicit user action, using exact ID and source-revision CAS; the CLI correction proposal workflow remains available separately. **Changed over time** links the former record with `replaced_by:` and can set `valid_from:` on the replacement. **No longer valid** ends applicability with `valid_to:`. **Review later** simply leaves the record unchanged. Read-only Web hides these mutation controls and the backend still rejects writes with `403`.
+Personal Context review actions in **Features → Capture and organize → Personal Context** are explicit, single-record writes. **Still correct** reconfirms stale information; **Correct the record** writes a new corrected record with `corrects:<old-id>` while preserving the original. The Web correction is an authoritative direct mutation on explicit user action, using exact ID and source-revision CAS; the CLI correction proposal workflow remains available separately. **Changed over time** links the former record with `replaced_by:` and can set `valid_from:` on the replacement. **No longer valid** ends applicability with `valid_to:`. **Review later** simply leaves the record unchanged. Read-only Web hides these mutation controls and the backend still rejects writes with `403`.
 
 ## Completing a task with a date or time
 

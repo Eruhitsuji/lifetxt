@@ -3,7 +3,7 @@
 Opening an advanced view (one that lives under **More**) used to force the
 ``#nav-more`` disclosure open, which squeezed the primary tabs (Today / Items /
 Dashboard / Create) into a narrow column. The More group now stays collapsed,
-names the active advanced view in its summary ("More: Agenda"), and closes
+names the active advanced view in its summary ("Features: Agenda"), and closes
 after a destination is chosen, on Escape, or on an outside click.
 
 The behavioral tests run the real navigation snippet extracted from the
@@ -65,10 +65,11 @@ let view = "";
 function currentView() { return view; }
 function syncViewTabs() {}
 const tabs = [
-  {view: "agenda", label: "📅 Agenda"},
-  {view: "messages", label: "💬 Messages"},
-  {view: "matrix", label: "📊 Priority Matrix"},
-].map(t => makeEl({dataset: {view: t.view}, textContent: t.label,
+  {view: "agenda", label: "Agenda"},
+  {view: "messages", label: "Messages"},
+  {view: "matrix", label: "Priority Matrix"},
+].map(t => makeEl({dataset: {view: t.view},
+  querySelector(sel) { return sel === ".nav-feature-name" ? {textContent: t.label} : null; },
   closest(sel) { return sel === ".workspace-tab" ? this : null; }}));
 const advanced = makeEl({id: "nav-advanced"});
 const summary = makeEl({id: "nav-more-summary"});

@@ -62,7 +62,11 @@ try {
   };
   const results = [];
   const move = async selector => {
-    const rect = await evaluate(`document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect().toJSON()`);
+    const rect = await evaluate(`(() => {
+      const target = document.querySelector(${JSON.stringify(selector)});
+      target.scrollIntoView({block: "nearest", inline: "nearest"});
+      return target.getBoundingClientRect().toJSON();
+    })()`);
     await command("Input.dispatchMouseEvent", {type: "mouseMoved", x: rect.x + rect.width / 2, y: rect.y + rect.height / 2});
   };
   const key = async name => {
@@ -75,7 +79,11 @@ try {
     return Object.fromEntries(keys.map(k => [k, s[k]]));
   })()`);
   const pressedStyles = async selector => {
-    const rect = await evaluate(`document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect().toJSON()`);
+    const rect = await evaluate(`(() => {
+      const target = document.querySelector(${JSON.stringify(selector)});
+      target.scrollIntoView({block: "nearest", inline: "nearest"});
+      return target.getBoundingClientRect().toJSON();
+    })()`);
     const x = rect.x + rect.width / 2, y = rect.y + rect.height / 2;
     await command("Input.dispatchMouseEvent", {type: "mouseMoved", x, y});
     await command("Input.dispatchMouseEvent", {type: "mousePressed", x, y, button: "left", clickCount: 1});

@@ -483,7 +483,13 @@ __LIFETXT_WEB_STYLES__  </style>
           <div id="notif-permission-badge"></div>
         </div>
         <div class="section-body">
-          <div id="notif-permission-bar" class="notif-permission" style="display:none"></div>
+          <div id="notif-permission-bar" class="notif-permission"></div>
+          <div class="notif-permission">
+            <label><input id="notif-alert-toggle" type="checkbox" onchange="setAutomaticAlerts(this.checked)"> <span>Automatic alerts</span></label>
+            <button id="notif-test-btn" class="secondary" type="button" onclick="sendTestNotification()">Send test notification</button>
+          </div>
+          <div id="notif-lifetime" class="muted"></div>
+          <div id="notif-delivery-status" role="status"></div>
           <div id="notifications" class="stack" data-no-i18n></div>
         </div>
       </section>

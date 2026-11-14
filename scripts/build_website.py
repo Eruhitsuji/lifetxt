@@ -89,7 +89,7 @@ def render(
     )
     checker_action = ""
     if checker_link and page == "index":
-        label = "書式チェック" if lang == "ja" else "Syntax check"
+        label = "ブラウザで試す" if lang == "ja" else "Try in your browser"
         target = f"{lang}/check/" if root else "check/"
         checker_action = f'<a class="button" href="{target}">{label}</a>'
     card_html = "".join(

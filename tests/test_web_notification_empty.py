@@ -28,7 +28,8 @@ const input=JSON.parse(require('node:fs').readFileSync(0,'utf8'));
 for(const lang of ['en','ja'])for(const disabled of [false,'enabled','web']){
  const node={innerHTML:''},calls=[],config={notifications:{}};
  if(disabled)config.notifications[disabled]=false;
- const sandbox={appConfig:config,window:{},document:{getElementById:()=>node},URLSearchParams,
+ const sandbox={notificationRequest:0, setNotificationDeliveryStatus(){},
+ notificationsDisabled:()=>Boolean(disabled),appConfig:config,window:{},document:{getElementById:()=>node},URLSearchParams,
  query:()=>new URLSearchParams('recipient=fixture'),firstParam:()=> '5m',
  t:s=>lang==='ja'?(input.dictionary[s]||s):s,escapeHtml:s=>String(s),jsLiteral:JSON.stringify,
  api:async(url,options)=>{assert.equal(options,undefined);calls.push(url);return {records:[]}}};

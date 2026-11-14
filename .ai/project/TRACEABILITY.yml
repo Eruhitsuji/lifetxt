@@ -2,6 +2,16 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-website-checker-first-run-v1
+      capability_id: cap-official-website
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1600
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1601
+      changed_files_or_scope: [scripts/build_website.py, scripts/build_js_checker_site.py, website/js-checker/ui.mjs, tests/test_js_checker_site.py]
+      tests_or_evidence: [tests.test_js_checker_site, tests.test_website, tests.test_website_pages_workflow]
+      status: in_review
+
+    - requirement_id: req-web-json-details-and-start-conditions
+
     - requirement_id: req-web-json-details-and-start-conditions
       capability_id: cap-structured-common-field-authoring
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386

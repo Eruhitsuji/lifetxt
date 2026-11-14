@@ -350,7 +350,7 @@
       toggleMobileMenu(false);
       if (what === "command") { openCmdk(); const i = document.getElementById("cmdk-input"); if (i) i.value = "/"; renderCmdk("/"); }
       else if (what === "add") toggleQuickAdd(true);
-      else if (what === "new") newItem();
+      else if (what === "new") newItem("task");
       else if (what === "presence") togglePresence(true);
       else if (what === "refresh") refreshAll();
     }

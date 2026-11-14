@@ -1277,6 +1277,10 @@ and select **Create**, then open the new task from Items to mark it done.
 Select **Show all fields** before creating if you want to set a due date or add
 other details.
 
+Use **Create** (**New record** in the phone menu) to enter a task title and an
+optional deadline. Select **Show all fields** to change the record type, status,
+or other details.
+
 ### Personal Context onboarding
 
 Open **Features → Capture and organize → Personal Context** to review current `person:self` facts or add

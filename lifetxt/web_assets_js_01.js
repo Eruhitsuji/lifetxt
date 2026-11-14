@@ -3,8 +3,11 @@
     let bulkSelectedLines = new Set();
     let refreshTimer = null;
     let notificationTimer = null;
-    let browserNotificationsEnabled = false;
-    let seenNotifications = new Set();
+    let browserAlertsPaused = false;
+    const seenNotifications = new Map();
+    let notificationRequest = 0;
+    const notificationPrefsKey = "lifetxt.browser-alerts";
+    const notificationHistoryKey = "lifetxt.delivered-alerts";
     let appConfig = {};
     let graphLoaded = false;
     let _kioskDefaultTitle = null;
@@ -781,10 +784,26 @@
         "Snooze": "スヌーズ",
         "Retry": "再送",
         "Go": "実行",
-        "Re-send browser notification": "ブラウザ通知を再送",
+        "Re-send device notification": "端末の通知を再送",
         "Notifications disabled.": "通知は無効です。",
         "No notifications right now": "現在、通知はありません",
-        "Notifications surface reminders and messages with a <code>notify</code> detail. Enable browser alerts to be notified while this tab is open.": "通知には <code>notify</code> を指定したリマインダーやメッセージが表示されます。このタブを開いている間に通知を受け取るには、ブラウザ通知を有効にしてください。",
+        "Messages with a <code>notify</code> time appear here.": "<code>notify</code> で時刻を指定したメッセージがここに表示されます。",
+        "Automatic alerts": "自動通知",
+        "Send test notification": "テスト通知を送る",
+        "Browser alerts require HTTPS or localhost.": "ブラウザ通知には HTTPS または localhost が必要です。",
+        "Desktop alerts use your system notification settings.": "デスクトップ通知は OS の通知設定に従います。",
+        "Keep the desktop app open to receive alerts.": "通知を受け取るにはデスクトップアプリを開いたままにしてください。",
+        "Keep this tab open to receive alerts.": "通知を受け取るにはこのタブを開いたままにしてください。",
+        "Could not initialize desktop alerts.": "デスクトップ通知を初期化できませんでした。",
+        "Could not change automatic alerts.": "自動通知の設定を変更できませんでした。",
+        "Could not request notification permission.": "通知の許可を要求できませんでした。",
+        "Could not refresh notifications.": "通知一覧を更新できませんでした。",
+        "Could not send the notification. Check your device notification settings.": "通知を送信できませんでした。端末の通知設定を確認してください。",
+        "Test notification sent. Check your system notifications.": "テスト通知を送信しました。OS の通知を確認してください。",
+        "Notification sent. Check your system notifications.": "通知を送信しました。OS の通知を確認してください。",
+        "Notification not found.": "通知が見つかりません。",
+        "This is a test notification.": "テスト通知です。",
+        "Open life.txt to view the notification.": "通知の詳細は life.txt で確認できます。",
         "Enable alerts": "通知を有効化",
         "Notifications: not yet requested": "通知: 許可を未要求",
         "Notifications: granted": "通知: 許可済み",

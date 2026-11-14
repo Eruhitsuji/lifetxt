@@ -29,13 +29,14 @@ const assert=require('node:assert/strict'),vm=require('node:vm');
 const input=JSON.parse(require('node:fs').readFileSync(0,'utf8'));
 (async()=>{
 for(const lang of ['en','ja'])for(const hasId of [true,false]){
- const record={title:'Ack <private>',sender:'Snooze & sender',recipients:['Retry <recipient>'],when:'',id:hasId?'id\"<&':null};
+ const record={title:'Ack <private>',sender:'Snooze & sender',recipients:['Retry <recipient>'],when:'',notification_id:hasId?'occurrence-1':null,id:hasId?'id\"<&':null};
  const node={innerHTML:'',insertAdjacentHTML:(_,html)=>node.innerHTML+=html},calls=[],notified=[];
- const sandbox={appConfig:{notifications:{snooze_default:'15m'}},window:{},URLSearchParams,
+ const sandbox={notificationRequest:0, setNotificationDeliveryStatus(){},
+ notificationsDisabled:()=>false,appConfig:{notifications:{snooze_default:'15m'}},window:{},URLSearchParams,
  document:{getElementById:()=>node},query:()=>new URLSearchParams(),firstParam:()=> '0m',
  t:s=>lang==='ja'?(input.dictionary[s]||s):s,jsLiteral:JSON.stringify,
  api:async(url,options)=>{calls.push([url,options]);return {records:[record]}},
- notifStateBadge:()=>'',relativeTime:()=>'',showBrowserNotification:r=>notified.push(r)};
+ notifStateBadge:()=>'',relativeTime:()=>'',showBrowserNotification:r=>{notified.push(r);throw Error('delivery failed')}};
  vm.createContext(sandbox);vm.runInContext(input.escape+input.source,sandbox);
  await vm.runInContext('loadNotifications()',sandbox);
  assert.equal(calls.length,1);assert.equal(calls[0][1],undefined);assert.equal(notified[0],record);
@@ -43,9 +44,10 @@ for(const lang of ['en','ja'])for(const hasId of [true,false]){
  assert.ok(node.innerHTML.includes('Snooze &amp; sender'));
  assert.ok(node.innerHTML.includes('Retry &lt;recipient&gt;'));
  if(hasId){
-  for(const label of lang==='ja'?['既読にする','スヌーズ 15m','カスタム…','再送','実行','ブラウザ通知を再送']:['Ack','Snooze 15m','Custom…','Retry','Go','Re-send browser notification'])assert.ok(node.innerHTML.includes(label),label);
+  for(const label of lang==='ja'?['既読にする','スヌーズ 15m','カスタム…','再送','実行','端末の通知を再送']:['Ack','Snooze 15m','Custom…','Retry','Go','Re-send device notification'])assert.ok(node.innerHTML.includes(label),label);
   for(const handler of ['ackMessage','snoozeMessage','snoozeMessageCustom','retryBrowserNotification'])assert.ok(node.innerHTML.includes(handler+'('));
   assert.ok(node.innerHTML.includes('id\\&quot;&lt;&amp;'));
+  assert.ok(node.innerHTML.includes('retryBrowserNotification(&quot;occurrence-1&quot;)'));
   assert.ok(node.innerHTML.includes('value="15m"'));
  }else{assert.ok(!node.innerHTML.includes('<button'));}
 }

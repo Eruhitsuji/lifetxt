@@ -224,17 +224,17 @@
 
     // ── Notification retry button ─────────────────────────────────
     async function retryBrowserNotification(id) {
-      const record = (window._lastNotifRecords || []).find(r => r.id === id || r.notification_id === id);
-      if (!record) { showToast("Notification not found.", "error"); return; }
+      if (notificationsDisabled()) return;
+      const records = window._lastNotifRecords || [];
+      const record = records.find(r => (r.notification_id || r.id) === id);
+      if (!record) { showToast(t("Notification not found."), "error"); return; }
       try {
-        if (Notification.permission !== "granted") {
-          await enableBrowserNotifications();
+        if (!window.lifetxtDesktopAlerts && !await requestBrowserAlertsPermission()) return;
+        if (await showBrowserNotification(record, true)) {
+          showToast(t("Notification sent. Check your system notifications."), "success");
         }
-        seenNotifications.delete(record.notification_id || record.id || record.text);
-        showBrowserNotification(record);
-        showToast("Notification resent.", "success");
-      } catch(e) {
-        showToast("Retry failed: " + e.message, "error");
+      } catch (_) {
+        showToast(t("Could not send the notification. Check your device notification settings."), "error");
       }
     }
 

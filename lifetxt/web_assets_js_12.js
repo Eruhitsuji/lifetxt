@@ -495,5 +495,42 @@
     }
 
     // ── Notification permission state display ──────────────────────
+    function browserAlertsPermissionLabel(permission) {
+      switch (permission) {
+        case "granted": return "Notifications: granted";
+        case "denied": return "Notifications: blocked. Re-enable them from the browser site settings for this page.";
+        case "default": return "Notifications: not yet requested";
+        case "insecure": return "Browser alerts require HTTPS or localhost.";
+        default: return "Browser notifications not supported.";
+      }
+    }
+    function setNotificationDeliveryStatus(message) {
+      document.getElementById("notif-delivery-status").textContent = t(message);
+    }
     function updateNotifPermissionDisplay() {
       const bar = document.getElementById("notif-permission-bar");
+      const desktop = Boolean(window.lifetxtDesktopAlerts);
+      const disabled = notificationsDisabled();
+      const permission = browserAlertsPermission();
+      const available = !disabled && (desktop
+        ? !window.lifetxtDesktopAlerts.failed
+        : ["granted", "default"].includes(permission));
+      const enabled = automaticAlertsEnabled();
+      const label = disabled ? "Notifications disabled."
+        : desktop ? "Desktop alerts use your system notification settings."
+        : browserAlertsPermissionLabel(permission);
+      bar.textContent = t(label);
+      bar.className = "notif-permission";
+      if (!desktop && !disabled && permission === "denied") {
+        bar.classList.add("notif-perm-denied");
+        bar.insertAdjacentHTML("beforeend",
+          `<button class="secondary" type="button" onclick="showNotificationSettingsHelp()">${escapeHtml(t("How"))}</button>`);
+      }
+      const toggle = document.getElementById("notif-alert-toggle");
+      toggle.disabled = !available;
+      toggle.checked = enabled;
+      document.getElementById("notif-test-btn").disabled = !available;
+      document.getElementById("notif-lifetime").textContent = t(desktop
+        ? "Keep the desktop app open to receive alerts."
+        : "Keep this tab open to receive alerts.");
+    }

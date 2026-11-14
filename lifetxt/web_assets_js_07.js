@@ -355,6 +355,7 @@
     });
     async function loadConfig() {
       appConfig = await api("/api/config");
+      await window.lifetxtDesktopAlerts?.ready.catch(() => {});
       _syncWebClocks();
       applyConfiguredTheme();
       applyConfiguredDashboard();
@@ -364,8 +365,13 @@
       setupCompletion();
       setupQuickPresencePicker();
     }
+    function notificationOccurrenceKey(record) {
+      return JSON.stringify([record.notification_id || record.id, record.details?.snooze_until || []]);
+    }
     async function loadNotifications() {
-      if (appConfig?.notifications?.enabled === false || appConfig?.notifications?.web === false) {
+      const request = ++notificationRequest;
+      if (notificationsDisabled()) {
+        window._lastNotifRecords = [];
         document.getElementById("notifications").innerHTML = `<div class="empty">${escapeHtml(t("Notifications disabled."))}</div>`;
         return;
       }
@@ -379,11 +385,19 @@
         appConfig?.web?.notification_lookahead || appConfig?.notifications?.lookahead || "0m"
       );
       if (lookahead) notificationParams.set("lookahead", lookahead);
-      const data = await api(`/api/notifications?${notificationParams}`);
-      window._lastNotifRecords = data.records || [];
+      let data;
+      try {
+        data = await api(`/api/notifications?${notificationParams}`);
+      } catch (_) {
+        if (request === notificationRequest) setNotificationDeliveryStatus("Could not refresh notifications.");
+        return;
+      }
+      if (request !== notificationRequest) return;
+      setNotificationDeliveryStatus(window.lifetxtDesktopAlerts?.failed ? "Could not initialize desktop alerts." : "");
+      window._lastNotifRecords = data.records;
       const node = document.getElementById("notifications");
       node.innerHTML = data.records.length ? "" : guidedEmptyState("🔔", t("No notifications right now"),
-        t("Notifications surface reminders and messages with a <code>notify</code> detail. Enable browser alerts to be notified while this tab is open."),
+        t("Messages with a <code>notify</code> time appear here."),
         [[t("Enable alerts"), "enableNotifications"], [t("Messages"), "messages"], [t("Help"), "help"]]);
       const snoozeDefault = appConfig?.notifications?.snooze_default || "10m";
       let notifIdx = 0;
@@ -391,18 +405,21 @@
         notifIdx++;
         const snoozeInputId = `snooze-input-${notifIdx}`;
         const snoozeRowId = `snooze-row-${notifIdx}`;
+        const retry = record.notification_id || record.id
+          ? `<button class="secondary" type="button" onclick="retryBrowserNotification(${escapeHtml(jsLiteral(record.notification_id || record.id))})" title="${escapeHtml(t("Re-send device notification"))}">${escapeHtml(t("Retry"))}</button>`
+          : "";
         const actions = record.id ? `
           <div class="actions" style="flex-wrap:wrap;gap:.3rem">
             <button class="secondary" type="button" onclick="ackMessage(${escapeHtml(jsLiteral(record.id))})">${escapeHtml(t("Ack"))}</button>
             <button class="secondary" type="button" onclick="snoozeMessage(${escapeHtml(jsLiteral(record.id))}, ${escapeHtml(jsLiteral(snoozeDefault))})">${escapeHtml(t("Snooze"))} ${escapeHtml(snoozeDefault)}</button>
             <button class="secondary" type="button" onclick="document.getElementById(${escapeHtml(jsLiteral(snoozeRowId))}).style.display=document.getElementById(${escapeHtml(jsLiteral(snoozeRowId))}).style.display===''?'none':''" style="font-size:.73rem">${escapeHtml(t("Custom…"))}</button>
-            <button class="secondary" type="button" onclick="retryBrowserNotification(${escapeHtml(jsLiteral(record.id || record.notification_id || ""))})" style="font-size:.73rem" title="${escapeHtml(t("Re-send browser notification"))}">${escapeHtml(t("Retry"))}</button>
+            ${retry}
           </div>
           <div id="${snoozeRowId}" class="snooze-inline" style="display:none">
             <input id="${snoozeInputId}" value="${escapeHtml(snoozeDefault)}" placeholder="30m / 1h / 2h">
             <button class="secondary" type="button" onclick="snoozeMessageCustom(${escapeHtml(jsLiteral(record.id))}, ${escapeHtml(jsLiteral(snoozeInputId))})">${escapeHtml(t("Go"))}</button>
           </div>
-        ` : "";
+        ` : retry;
         const stateBadge = notifStateBadge(record);
         const relTime = record.when ? relativeTime(record.when) : "";
         const whenDisplay = relTime ? `${escapeHtml(record.when)} <span style="color:var(--muted);font-size:.8em">(${escapeHtml(relTime)})</span>` : escapeHtml(record.when);

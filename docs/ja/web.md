@@ -939,11 +939,16 @@ browser 側の「Save View」機能はありません。共有したい view は
 共有でき(filter、sort、view 選択はすべて query string に反映されます)、再利用する
 preset は config `views.NAME` に定義して `?preset=NAME` で適用します。
 
-## Browser notification
+## ブラウザ・デスクトップ通知
 
-GUI は `/api/notifications` を polling し、due になった type `M` record を
-Notifications view に表示します。上部 toolbar の `Notifications` または view tab
-から開けます。browser notification はユーザが許可したあとに使えます。
+**機能一覧 → チームと通知 → 通知**を開き、**自動通知**をオンにします。
+ブラウザではサイトの通知を許可してください。**テスト通知を送る**で端末への配信を確認できます。
+一覧の**再送**はその発生回を端末に再送します。自動通知をオフにしていても、テストと再送は使えます。
+
+ブラウザ通知には HTTPS またはローカルの信頼できる接続先と、ページ通知に対応したブラウザが必要です。
+受信するにはタブを開いたままにします。デスクトップ版は最小化中もアプリを開いている間は OS 通知を送ります。
+デスクトップのバナーは汎用の文面で、詳細は通知一覧で確認できます。
+自動通知の設定はブラウザのサイトごと、またはデスクトップアプリごとに保存されます。
 
 通知許可が blocked の場合、JavaScript から再許可ダイアログを出すことはできません。
 その場合は panel に browser の site settings から通知を許可し直す案内を表示します。
@@ -1133,7 +1138,7 @@ config で `ids.auto: true` の場合、`POST /api/items`、`POST /api/messages`
 重複IDは item list response の diagnostics で warning `W213` として報告されます。
 id-based operation は曖昧なIDを拒否します。
 
-ブラウザでは `Enable Notifications` を押すと Notification API の許可を要求し、許可後に `/api/notifications` を定期 polling して通知します。対象は type `M`、open workflow status、`recipient:` が現在ユーザに一致する item です。
+通知画面は `/api/notifications` を定期確認します。対象は type `M`、open workflow status、`recipient:` が現在ユーザに一致する item です。
 `ack:` がある Message と、未来の `snooze_until:` がある Message は通知対象から外れます。
 通知パネルの `Ack` / `Snooze ...` は writable file の対象 Message を更新します。
 Snooze duration は `notifications.snooze_default` で指定できます。

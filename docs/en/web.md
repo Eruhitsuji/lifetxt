@@ -1061,12 +1061,20 @@ There is no browser-side "save view" feature: shareable views are plain URLs
 reusable presets are defined in config `views.NAME` and applied with
 `?preset=NAME`.
 
-## Browser Notifications
+## Browser and Desktop Notifications
 
 The GUI polls `/api/notifications` and shows due type `M` records in the
-Notifications view. Click `Notifications` in the top toolbar or the view tab
-to open it. Click `Enable Notifications` to request browser permission and
-receive native browser notifications.
+Notifications view. Open **Features → Team and notifications → Notifications**.
+Turn on **Automatic alerts** and, in a browser, allow the site's notification
+permission. Use **Send test notification** to check the device's notification
+settings. **Retry** sends an individual occurrence again. Testing and retrying
+work while automatic alerts are off.
+
+Web alerts require HTTPS or a local trusted origin and a browser that supports
+page notifications. Keep the tab open. The desktop app sends native OS
+notifications while the app is open, including when minimized. Desktop banners
+omit item details. The browser preference is per site and browser profile, and
+the desktop preference is stored in the application's configuration directory.
 
 Notification selection uses:
 

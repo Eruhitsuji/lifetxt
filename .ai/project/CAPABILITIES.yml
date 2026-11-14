@@ -3479,6 +3479,7 @@ capabilities:
     status: active
     owner: Eruhitsuji
     source_requirements:
+      - req-web-device-notification-delivery
       - req-web-top-clock-public-config-custom-format
       - req-web-top-configurable-clock
       - req-module-structure-decomposition
@@ -5520,6 +5521,7 @@ capabilities:
     status: active
     owner: Eruhitsuji
     source_requirements:
+      - req-desktop-native-notification-delivery
       - req-desktop-app-backend-locator
       - req-desktop-app-server-spawn
       - req-desktop-app-health-poll-navigation

@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+notify-rust = "4.18.2"
 tauri = { version = "2.11.5", features = ["wry"] }
 ureq = "3.4.0"
 

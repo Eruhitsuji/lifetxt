@@ -2,6 +2,24 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-device-notification-delivery
+      capability_id: cap-web-surface-structure
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1592
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1593
+      changed_files_or_scope: [lifetxt/web_assets*, docs/en/web.md, docs/ja/web.md]
+      tests_or_evidence: [tests.test_web_notification_permission, tests.test_web_notification_records, tests.test_web_notification_empty]
+      status: in_review
+
+    - requirement_id: req-desktop-native-notification-delivery
+      capability_id: cap-desktop-app-companion-shell
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1592
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1593
+      changed_files_or_scope: [desktop/src-tauri, desktop/README.md]
+      tests_or_evidence: [cargo check --locked, tests.test_web_notification_permission]
+      status: in_review
+
     - requirement_id: req-web-habit-guidance-authoring
       capability_id: cap-structured-common-field-authoring
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386

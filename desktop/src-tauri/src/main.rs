@@ -13,6 +13,8 @@
 // orphaned process or bound port survives.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod alerts;
+
 use std::net::TcpListener;
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
@@ -197,14 +199,25 @@ fn kill_server(app_handle: &tauri::AppHandle) {
 
 fn main() {
     tauri::Builder::default()
+        .invoke_handler(tauri::generate_handler![
+            alerts::desktop_alerts_enabled,
+            alerts::set_desktop_alerts_enabled,
+            alerts::send_desktop_alert,
+        ])
         .manage(ServerProcess(Mutex::new(None)))
         .setup(|app| {
+            let port = reserve_port()?;
+            let origin = format!("http://127.0.0.1:{port}");
+            let script = include_str!("alerts-init.js").replace("__LIFETXT_ORIGIN__", &origin);
+            let window =
+                tauri::WebviewWindowBuilder::from_config(app, &app.config().app.windows[0])?
+                    .initialization_script(script)
+                    .build()?;
+            app.manage(alerts::DesktopAlerts::new(
+                app.path().app_config_dir()?.join("automatic-alerts"),
+            ));
             let app_handle = app.handle().clone();
             std::thread::spawn(move || {
-                let Some(window) = app_handle.get_webview_window("main") else {
-                    return;
-                };
-
                 let Some(backend) = find_backend(&app_handle) else {
                     show_error(
                         &window,
@@ -220,14 +233,6 @@ fn main() {
                     return;
                 };
 
-                let port = match reserve_port() {
-                    Ok(port) => port,
-                    Err(err) => {
-                        show_error(&window, &format!("Could not reserve a local port: {err}"));
-                        return;
-                    }
-                };
-
                 let child = match spawn_server(&backend, port) {
                     Ok(child) => child,
                     Err(err) => {
@@ -241,10 +246,16 @@ fn main() {
                 }
 
                 if wait_for_health(port, Duration::from_secs(15)) {
-                    let url = format!("http://127.0.0.1:{port}/");
-                    let script =
-                        format!("window.location.replace('{}');", escape_js_string(&url));
-                    let _ = window.eval(&script);
+                    if let Err(error) = alerts::grant_webview_access(&app_handle, &origin) {
+                        show_error(
+                            &window,
+                            &format!("Could not initialize desktop alerts: {error}"),
+                        );
+                        kill_server(&app_handle);
+                        return;
+                    }
+                    let url = origin.parse().expect("valid companion origin");
+                    let _ = window.navigate(url);
                 } else {
                     show_error(
                         &window,

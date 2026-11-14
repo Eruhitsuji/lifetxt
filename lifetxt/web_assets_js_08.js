@@ -1,6 +1,13 @@
           `<div class="notification-row"><span class="pill">${whenDisplay}</span>${stateBadge}<div class="title">${escapeHtml(record.title)}</div><div class="meta">${escapeHtml(record.sender)} → ${escapeHtml((record.recipients || []).join(", "))}</div>${actions}</div>`
         );
-        showBrowserNotification(record);
+      }
+      for (const record of data.records) {
+        if (request !== notificationRequest) break;
+        try {
+          await showBrowserNotification(record);
+        } catch (_) {
+          setNotificationDeliveryStatus("Could not send the notification. Check your device notification settings.");
+        }
       }
     }
     async function ackMessage(id) {
@@ -19,28 +26,120 @@
       });
       await refreshAll();
     }
-    async function enableBrowserNotifications() {
-      if (!("Notification" in window)) {
-        alert(t("Browser notifications not supported."));
-        return;
-      }
-      const permission = await Notification.requestPermission();
-      browserNotificationsEnabled = permission === "granted";
+    function notificationsDisabled() {
+      return appConfig?.notifications?.enabled === false || appConfig?.notifications?.web === false;
+    }
+    function browserAlertsPermission() {
+      if (window.isSecureContext === false) return "insecure";
+      return window.Notification?.permission || "unsupported";
+    }
+    function readNotificationStorage(key) {
+      try { return window.localStorage.getItem(key); } catch (_) { return null; }
+    }
+    function writeNotificationStorage(key, value) {
+      try { window.localStorage.setItem(key, value); } catch (_) { /* session fallback */ }
+    }
+    function automaticAlertsEnabled() {
+      if (notificationsDisabled()) return false;
+      if (window.lifetxtDesktopAlerts) return window.lifetxtDesktopAlerts.enabled;
+      return browserAlertsPermission() === "granted"
+        && (readNotificationStorage(notificationPrefsKey) ?? (browserAlertsPaused ? "off" : "on")) !== "off";
+    }
+    function syncNotificationControls() {
       updateNotifBtnLabel();
       updateNotifPermissionDisplay();
-      if (browserNotificationsEnabled) await loadNotifications();
-      else if (permission === "denied") showNotificationSettingsHelp();
     }
-    function showBrowserNotification(record) {
-      if (!browserNotificationsEnabled || !("Notification" in window) || Notification.permission !== "granted") return;
-      const key = record.notification_id || record.id || record.text;
-      if (seenNotifications.has(key)) return;
-      seenNotifications.add(key);
-      new Notification(record.title || "life.txt message", {
-        body: `${record.sender || ""} -> ${(record.recipients || []).join(", ")}`,
-        tag: key,
-      });
+    async function setAutomaticAlerts(enabled) {
+      syncNotificationControls();
+      if (notificationsDisabled()) return;
+      try {
+        if (window.lifetxtDesktopAlerts) {
+          await window.lifetxtDesktopAlerts.setEnabled(enabled);
+        } else {
+          if (enabled && !await requestBrowserAlertsPermission()) return;
+          browserAlertsPaused = !enabled;
+          writeNotificationStorage(notificationPrefsKey, enabled ? "on" : "off");
+        }
+        syncNotificationControls();
+        if (enabled) await loadNotifications();
+      } catch (_) {
+        showToast(t("Could not change automatic alerts."), "error");
+      }
     }
+    function enableBrowserNotifications() {
+      return setAutomaticAlerts(true);
+    }
+    async function requestBrowserAlertsPermission() {
+      try {
+        if (browserAlertsPermission() === "default") await window.Notification.requestPermission();
+      } catch (_) {
+        showToast(t("Could not request notification permission."), "error");
+        return false;
+      }
+      syncNotificationControls();
+      const permission = browserAlertsPermission();
+      if (permission === "granted") return true;
+      if (permission === "denied") showNotificationSettingsHelp();
+      else showToast(t(browserAlertsPermissionLabel(permission)), "warning");
+      return false;
+    }
+    async function sendNotificationToDevice(test, tag, title, body, manual = false) {
+      if (window.lifetxtDesktopAlerts) {
+        await window.lifetxtDesktopAlerts.send(test, manual, document.documentElement.lang === "ja");
+      } else {
+        const notification = new window.Notification(title, {body, tag});
+        notification.onclick = () => {
+          window.focus();
+          switchView("notifications");
+          notification.close();
+        };
+      }
+    }
+    async function sendTestNotification() {
+      if (notificationsDisabled()) return;
+      try {
+        if (!window.lifetxtDesktopAlerts && !await requestBrowserAlertsPermission()) return;
+        await sendNotificationToDevice(true, "lifetxt-test", "life.txt", t("This is a test notification."));
+        showToast(t("Test notification sent. Check your system notifications."), "success");
+      } catch (_) {
+        showToast(t("Could not send the notification. Check your device notification settings."), "error");
+      }
+    }
+    function loadDeliveredAlerts() {
+      try {
+        const entries = JSON.parse(readNotificationStorage(notificationHistoryKey) || "[]");
+        return new Map(Array.isArray(entries) ? entries : []);
+      } catch (_) { return new Map(); }
+    }
+    async function showBrowserNotification(record, force = false) {
+      if (notificationsDisabled() || (!force && !automaticAlertsEnabled())) return false;
+      if (!window.lifetxtDesktopAlerts && browserAlertsPermission() !== "granted") return false;
+      const key = notificationOccurrenceKey(record);
+      const deliver = async () => {
+        if (notificationsDisabled() || (!force && !automaticAlertsEnabled())) return false;
+        const delivered = loadDeliveredAlerts();
+        const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+        if (!force && (seenNotifications.get(key) > cutoff || delivered.get(key) > cutoff)) return false;
+        await sendNotificationToDevice(false, key, record.title || "life.txt", t("Open life.txt to view the notification."), force);
+        const now = Date.now();
+        seenNotifications.set(key, now);
+        if (seenNotifications.size > 512) seenNotifications.delete(seenNotifications.keys().next().value);
+        delivered.delete(key);
+        delivered.set(key, now);
+        const recent = [...delivered].filter(([, time]) => time > cutoff).slice(-512);
+        writeNotificationStorage(notificationHistoryKey, JSON.stringify(recent));
+        return true;
+      };
+      // Prevent overlapping polls or tabs from sending the same occurrence.
+      if (window.navigator?.locks) {
+        return window.navigator.locks.request(notificationHistoryKey, deliver);
+      }
+      // Keep the same document serialized on browsers without Web Locks.
+      const delivery = pendingNotificationDelivery.then(deliver);
+      pendingNotificationDelivery = delivery.catch(() => {});
+      return delivery;
+    }
+    let pendingNotificationDelivery = Promise.resolve();
     function escapeHtml(value) {
       return String(value ?? "").replace(/[&<>"']/g, ch => ({
         "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"

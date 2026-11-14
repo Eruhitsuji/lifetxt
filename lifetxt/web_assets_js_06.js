@@ -1,3 +1,12 @@
+    function blockerLabel(blocker) {
+      const name = blocker.title || blocker.id || "requires";
+      if (blocker.condition_state === "unknown") return `${name} (condition unknown)`;
+      if (blocker.condition_state === "waiting") {
+        return `${name} (requires ${blocker.required_statuses.join(" or ")}, currently ${blocker.status})`;
+      }
+      return name;
+    }
+
       await refreshAll();
     }
     function _temporalDisplayLabel(value, options = {}) {
@@ -113,7 +122,7 @@
           ? `<span class="occurrence-badge" title="Occurrence ${entry.matchIndex} of ${entry.matchTotal} in this range">${entry.matchIndex}/${entry.matchTotal}</span>`
           : "";
         const blockedBadge = record.blocked
-          ? `<span class="blocked-badge" title="Blocked by: ${escapeHtml((record.blocked_by || []).map(b => b.title || b.id).join(", "))}">⚡ blocked</span>`
+          ? `<span class="blocked-badge" title="Blocked by: ${escapeHtml((record.blocked_by || []).map(blockerLabel).join(", "))}">⚡ blocked</span>`
           : "";
         const source = record.source_id ? `<div class="meta">ID: ${escapeHtml(record.source_id)}</div>` : "";
         const countdown = agendaCountdownLabel({status: record.status, occurrence_start: entry.when});
@@ -407,7 +416,7 @@
       const past = timed ? when < nowIso : when.slice(0, 10) < nowIso.slice(0, 10);
       const type = record.type || "N";
       const blockedBadge = record.blocked
-        ? `<span class="blocked-badge" title="Blocked by: ${escapeHtml((record.blocked_by || []).map(b => b.title || b.id).join(", "))}">⚡ blocked</span>`
+        ? `<span class="blocked-badge" title="Blocked by: ${escapeHtml((record.blocked_by || []).map(blockerLabel).join(", "))}">⚡ blocked</span>`
         : "";
       // Occurrence badge is sourced from this row's own match when one is
       // available (each repeat occurrence in matches carries its own

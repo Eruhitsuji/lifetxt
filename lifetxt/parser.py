@@ -2,6 +2,7 @@ import re
 from collections import OrderedDict
 
 from .ids import duplicate_id_diagnostics
+from .json_details import DECODER
 from .links import reference_diagnostics
 from .model import Diagnostic, Item, VALID_STATUSES, VALID_TYPES
 from .validator import validate_item
@@ -52,6 +53,7 @@ PARSER_DIAGNOSTIC_HINTS = {
     "E020": "Add the continued line after the trailing backslash, or remove the backslash.",
     "E021": "Continue into a normal item line instead of a body continuation line.",
     "E022": "Use repeated one-line body: details, or keep a single multiline continuation block.",
+    "E023": "Provide a valid JSON value, followed by a space or end of line.",
     "W001": "Remove the tab character from the blank line.",
     "W002": "Move the comment marker to column 1.",
     "W003": "Remove the trailing spaces after the final detail.",
@@ -156,12 +158,14 @@ def parse_text(text, id_key="id", check_ids=True, check_references=True):
                 )
                 continue
             body_values = current_item.details.get("body") or []
-            if len(body_values) > 1 and not current_body_continuation:
+            if body_values and not current_body_continuation and (
+                len(body_values) > 1 or not isinstance(body_values[0], str)
+            ):
                 diagnostics.append(
                     _diagnostic(
                         "error",
                         "E022",
-                        "A body continuation cannot follow repeated body: details because the target value is ambiguous. Use repeated single-line body: values or one multiline | continuation block.",
+                        "A body continuation requires at most one text body: detail. Use repeated single-line body: values or one multiline | continuation block.",
                         line_no,
                         leading_spaces + 1,
                         end_line=line_no,
@@ -584,6 +588,22 @@ def _parse_detail(text, pos, line_no, diagnostics, column_offset=0):
             )
         )
         return key, "", pos
+
+    # This prefix contains a quote and therefore cannot be a legacy bare value.
+    if text.startswith('json:"', pos):
+        payload, end = _parse_quoted_string(
+            text, pos + 5, line_no, diagnostics, "JSON detail", column_offset
+        )
+        try:
+            return key, DECODER.decode(payload), end
+        except (ValueError, RecursionError):
+            diagnostics.append(
+                _diagnostic(
+                    "error", "E023", "Invalid JSON detail value.",
+                    line_no, column_offset + pos + 1,
+                )
+            )
+            return key, None, end
 
     value, pos = _parse_string(
         text,

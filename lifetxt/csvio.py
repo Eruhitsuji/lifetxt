@@ -3,15 +3,27 @@ import io
 import json
 from collections import OrderedDict
 
+from .json_details import DECODER, encode_json_value
 from .model import Item, KNOWN_KEYS
 
 
 FIXED_COLUMNS = ("status", "type", "title")
+JSON_DETAIL_COLUMN = "lifetxt:json-details"
 IGNORED_INPUT_COLUMNS = ("line", "source", "text")
 
 
 def items_to_csv(items):
     columns = list(FIXED_COLUMNS) + _detail_columns(items)
+    typed = any(
+        not isinstance(value, str)
+        for item in items
+        for values in item.details.values()
+        for value in values
+    )
+    if typed:
+        if JSON_DETAIL_COLUMN in columns:
+            raise ValueError("Reserved CSV column: %s." % JSON_DETAIL_COLUMN)
+        columns = list(FIXED_COLUMNS) + [JSON_DETAIL_COLUMN]
     output = io.StringIO()
     writer = csv.DictWriter(output, fieldnames=columns, lineterminator="\n")
     writer.writeheader()
@@ -20,6 +32,10 @@ def items_to_csv(items):
         row["status"] = item.status
         row["type"] = item.kind
         row["title"] = item.title
+        if typed:
+            row[JSON_DETAIL_COLUMN] = encode_json_value(item.details)
+            writer.writerow(row)
+            continue
         for key in columns:
             if key in FIXED_COLUMNS:
                 continue
@@ -46,12 +62,20 @@ def items_from_csv_text(text):
         field for field in fields if field and field.lower() not in ignored
     ]
 
+    typed = fields == [*FIXED_COLUMNS, JSON_DETAIL_COLUMN]
     items = []
     for index, row in enumerate(reader, 2):
         if not _row_has_content(row):
             continue
         details = OrderedDict()
-        for field in detail_fields:
+        structured = row.get(JSON_DETAIL_COLUMN) if typed else None
+        if structured:
+            details = DECODER.decode(structured)
+            if not isinstance(details, dict) or any(
+                not isinstance(values, list) for values in details.values()
+            ):
+                raise ValueError("Invalid typed CSV details.")
+        for field in (() if structured else detail_fields):
             value = row.get(field)
             if value is None or value == "":
                 continue

@@ -2057,7 +2057,7 @@ def _tool_get_agenda(args, context):
         args.get("around"),
         args.get("window") or "1h",
     )
-    records = agenda_records(items, range_start, range_end)
+    records = agenda_records(items, range_start, range_end, key=_id_key(context))
     blocked_mode = str(args.get("blocked") or "all").lower()
     blocked = None
     if blocked_mode in ("only", "true", "1"):

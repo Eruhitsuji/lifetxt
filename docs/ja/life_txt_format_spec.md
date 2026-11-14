@@ -164,6 +164,35 @@ enc:GCM:BASE64
 aesgcm` の AES-GCM format です。`check`, `filter`, converter はこれらを
 opaque な detail string として扱います。
 
+
+### 型付き JSON detail
+
+detail 値の `json:"..."` は、外側の life.txt 引用文字列を展開した後、内側を JSON として読みます。
+
+```text
+[ ] T Example options:json:"{\"room\":\"会議室 A\",\"equipment\":[\"mic\"]}" flag:json:"true" legacy:json:true
+```
+
+オブジェクト、配列、数値、真偽値、null、文字列を一つの値として保持できます。
+`legacy:json:true` の値は従来どおり文字列 `json:true` です。既存キー固有の型制約も適用されます。
+JSON/JSONL の detail 配列はキーの出現ごとの値を保持するので、単一の配列値は入れ子になります。
+型付き値を含む CSV は `status,type,title,lifetxt:json-details` をヘッダとし、末尾のセルに detail 全体を JSON オブジェクトで保存します。
+旧版クライアントでの新構文の読み書きには対応しません。
+
+### 状態に基づく着手条件
+
+`requires:review=done` はレビューが完了 `[x]` のときに着手可能です。複数の `requires:` はすべて必要です。
+`requires:review=in_progress,done` はどちらかの状態に一致すれば成立します。
+状態名は `not_started`、`in_progress`、`done`、`canceled`、`moved`、`maybe`、`note` です。
+JSON では `{"id":"review","state":"done"}` を条件に使えます。`state` は配列でも指定でき、`all` と `any` は空でない条件配列を受け取ります。
+
+```text
+[ ] T 提出 requires:json:"{\"any\":[{\"id\":\"review\",\"state\":\"done\"},{\"id\":\"proxy\",\"state\":\"done\"}]}" requires:materials=done
+```
+
+現在の状態から未着手項目の着手可否を判定します。進行中の項目の再ブロックや過去の着手の検査は行いません。
+未解決・曖昧・自己参照は判定不能です。AND に不成立があれば条件待ち、OR に成立があれば条件成立を優先します。
+
 ## 5.1 入れ子 / 階層化 record
 
 item 行はスペースでインデントして、視覚的な階層を表せます。1 階層は 2

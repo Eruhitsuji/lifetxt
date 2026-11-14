@@ -137,6 +137,40 @@ enc:GCM:BASE64
 --algorithm aesgcm` when the optional `cryptography` package is installed.
 `check`, `filter`, and converters treat these values as opaque detail strings.
 
+
+### Typed JSON details
+
+A detail value beginning with `json:"` uses ordinary life.txt quoting around a JSON value.
+
+```text
+[ ] T Example options:json:"{\"room\":\"Room A\",\"equipment\":[\"mic\"]}" flag:json:"true" legacy:json:true
+```
+
+A single occurrence can hold an object, array, number, boolean, null, or string.
+`legacy:json:true` remains the literal string `json:true`. Individual keys retain
+their value constraints. JSON/JSONL keeps the outer array of occurrences, so
+an array value appears nested. CSV containing typed values uses the header
+`status,type,title,lifetxt:json-details` and stores the details object in the
+last column. Use clients supporting typed details to read or edit this syntax.
+
+### State-based start conditions
+
+`requires:review=done` requires the referenced item's status to be `[x]`.
+Repeated `requires:` entries are AND conditions. Commas in a short condition
+allow any listed state, as in `requires:review=in_progress,done`.
+State names are `not_started`, `in_progress`, `done`, `canceled`, `moved`,
+`maybe`, and `note`. A JSON leaf has `id` and `state` fields. The state may
+also be an array. Groups use `all` or `any` with a nonempty array of conditions.
+
+```text
+[ ] T Submit requires:json:"{\"any\":[{\"id\":\"review\",\"state\":\"done\"},{\"id\":\"proxy\",\"state\":\"done\"}]}" requires:materials=done
+```
+
+Conditions report readiness from current statuses for items awaiting a start.
+In-progress items are not reblocked, and no historical start is inferred.
+Missing, ambiguous, and self references produce an unknown result. A false
+child is decisive for AND and a true child is decisive for OR.
+
 ## 5.1 Nested / Hierarchical Records
 
 Item lines may be indented with spaces to express a visual hierarchy. Two

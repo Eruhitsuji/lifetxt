@@ -71,6 +71,7 @@ KNOWN_KEYS = (
     "parent",
     "ref",
     "depends_on",
+    "requires",
     "blocks",
     "related",
     "created",

@@ -2,6 +2,7 @@ import json
 import re
 from collections import OrderedDict
 
+from .json_details import encode_json_value
 from .model import Item
 
 
@@ -24,13 +25,20 @@ def item_to_line(item):
             continuation_lines.extend(_body_continuation_lines(values[0]))
             continue
         for value in values:
-            parts.append("%s:%s" % (key, encode_string(value)))
+            parts.append("%s:%s" % (key, encode_detail_value(value)))
     line = " ".join(parts)
     indent = " " * int(getattr(item, "indent", 0) or 0)
     line = indent + line
     if continuation_lines:
         return "\n".join([line] + [indent + value for value in continuation_lines])
     return line
+
+
+def encode_detail_value(value):
+    if isinstance(value, str):
+        return encode_string(value)
+    payload = encode_json_value(value).replace("\\", "\\\\").replace('"', '\\"')
+    return 'json:"%s"' % payload
 
 
 def encode_string(value):
@@ -47,10 +55,7 @@ def encode_string(value):
 
 def _has_multiline_value(values):
     for value in values:
-        if value is None:
-            continue
-        text = str(value)
-        if "\n" in text or "\r" in text:
+        if isinstance(value, str) and ("\n" in value or "\r" in value):
             return True
     return False
 

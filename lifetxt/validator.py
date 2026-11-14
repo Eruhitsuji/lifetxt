@@ -18,6 +18,7 @@ from .model import (
     VALID_TYPES,
 )
 from .progress import ProgressValueError, parse_progress
+from .requirements import parse_requirement
 from .timeutil import normalize_duration
 from .timeutil import (
     is_date,
@@ -166,6 +167,14 @@ def validate_item(item):
         recommended = set()
 
     for key, values in item.details.items():
+        if key in known_keys and key != "requires" and any(
+            not isinstance(value, str) for value in values
+        ):
+            diagnostics.append(Diagnostic(
+                "error", "E025", "%s: expects text values." % key, item.line,
+                source=getattr(item, "source", None),
+            ))
+            continue
         if key == "importance" and (len(values) != 1 or values[0] not in ("high", "normal", "low")):
             diagnostics.append(
                 _diagnostic("warning", "W231", "importance: must have one value: high, normal, or low.", item.line)
@@ -198,6 +207,9 @@ def validate_item(item):
         for value in values:
             diagnostics.extend(_validate_value(item, key, value))
 
+    if any(d.code == "E025" for d in diagnostics):
+        return diagnostics
+
     diagnostics.extend(_validate_event_range(item))
     diagnostics.extend(_validate_status_item(item))
     diagnostics.extend(_validate_message_item(item))
@@ -206,6 +218,15 @@ def validate_item(item):
 
 def _validate_value(item, key, value):
     diagnostics = []
+    if key == "requires":
+        try:
+            parse_requirement(value)
+        except ValueError as error:
+            diagnostics.append(Diagnostic(
+                "error", "E024", str(error), item.line,
+                source=getattr(item, "source", None),
+            ))
+        return diagnostics
     if key in DATE_KEYS:
         if not is_date(value):
             diagnostics.append(

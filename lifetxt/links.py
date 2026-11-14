@@ -3,6 +3,7 @@ import re
 from collections import OrderedDict
 
 from .model import Diagnostic, REFERENCE_KEYS
+from .requirements import evaluate_requirement, parse_requirement, requirement_leaves
 
 
 OPEN_DEPENDENCY_STATUSES = ("[ ]", "[/]", "[>]", "[?]")
@@ -152,7 +153,52 @@ def reference_diagnostics(items, key="id", reference_keys=None):
             )
         )
     diagnostics.extend(_completed_dependency_diagnostics(items, index, key))
+    for item in items:
+        for condition in item.details.get("requires", ()):
+            diagnostics.extend(_requirement_reference_diagnostics(item, condition, index, key))
     return diagnostics
+
+
+def _requirement_reference_diagnostics(item, value, index, key):
+    try:
+        condition = parse_requirement(value)
+    except ValueError:
+        return []
+    diagnostics = []
+    for target_id in dict.fromkeys(target_id for target_id, _ in requirement_leaves(condition)):
+        if target_id in item_id_values(item, key):
+            code, problem = "W216", "references itself"
+        elif not index.get(target_id):
+            code, problem = "W215", "has no matching ID"
+        elif len(index[target_id]) > 1:
+            code, problem = "W218", "has an ambiguous ID"
+        else:
+            continue
+        diagnostics.append(Diagnostic(
+            "warning", code, "requires: %s %s." % (target_id, problem),
+            item.line, source=getattr(item, "source", None),
+        ))
+    return diagnostics
+
+
+def _requirement_blockers(item, index, key):
+    if item.status not in ("[ ]", "[>]", "[?]"):
+        return
+    for value in item.details.get("requires", ()):
+        try:
+            condition = parse_requirement(value)
+        except ValueError:
+            failures = [("", (), None)]
+            result = None
+        else:
+            result, failures = evaluate_requirement(
+                condition, lambda target_id: _unique_reference_target(index, target_id, item, key)
+            )
+        for target_id, states, target in failures:
+            record = _dependency_blocker_record(item, target, "requires", target_id, key)
+            record["condition_state"] = "unknown" if result is None else "waiting"
+            record["required_statuses"] = list(states)
+            yield record
 
 
 def dependency_blocker_records(items, key="id"):
@@ -169,6 +215,7 @@ def dependency_blocker_records(items, key="id"):
     records = []
 
     for item in items:
+        records.extend(_requirement_blockers(item, index, key))
         for target_id in item.details.get("depends_on", []):
             target_id = str(target_id)
             target = _unique_reference_target(index, target_id, item, key)
@@ -207,18 +254,18 @@ def dependency_blocker_records(items, key="id"):
 def dependency_blockers_by_item(items, key="id"):
     blockers = OrderedDict()
     for record in dependency_blocker_records(items, key=key):
-        blockers.setdefault(record["_blocked_item_key"], []).append(
-            OrderedDict(
-                [
-                    ("relation", record["relation"]),
-                    ("id", record["blocker_id"]),
-                    ("status", record["blocker_status"]),
-                    ("type", record["blocker_type"]),
-                    ("title", record["blocker_title"]),
-                    ("location", record["blocker_location"]),
-                ]
-            )
+        info = OrderedDict(
+            relation=record["relation"],
+            id=record["blocker_id"],
+            status=record["blocker_status"],
+            type=record["blocker_type"],
+            title=record["blocker_title"],
+            location=record["blocker_location"],
         )
+        for field in ("condition_state", "required_statuses"):
+            if field in record:
+                info[field] = record[field]
+        blockers.setdefault(record["_blocked_item_key"], []).append(info)
     return blockers
 
 
@@ -952,7 +999,7 @@ def _completed_dependency_diagnostics(items, index, key):
 
 def _dependency_blocker_record(blocked, blocker, relation, reference_id, key):
     blocked_id = _first_item_id(blocked, key)
-    blocker_id = _first_item_id(blocker, key)
+    blocker_id = _first_item_id(blocker, key) if blocker is not None else reference_id
     record = OrderedDict()
     record["relation"] = relation
     record["reference_id"] = reference_id
@@ -964,12 +1011,12 @@ def _dependency_blocker_record(blocked, blocker, relation, reference_id, key):
     record["blocked_type"] = blocked.kind
     record["blocked_title"] = blocked.title
     record["blocker_id"] = blocker_id
-    record["blocker_line"] = blocker.line
-    record["blocker_location"] = _item_location(blocker)
+    record["blocker_line"] = blocker.line if blocker is not None else ""
+    record["blocker_location"] = _item_location(blocker) if blocker is not None else ""
     record["blocker_source"] = getattr(blocker, "source", None)
-    record["blocker_status"] = blocker.status
-    record["blocker_type"] = blocker.kind
-    record["blocker_title"] = blocker.title
+    record["blocker_status"] = blocker.status if blocker is not None else ""
+    record["blocker_type"] = blocker.kind if blocker is not None else ""
+    record["blocker_title"] = blocker.title if blocker is not None else ""
     record["_blocked_item_key"] = id(blocked)
     record["_blocker_item_key"] = id(blocker)
     return record

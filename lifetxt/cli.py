@@ -6037,7 +6037,7 @@ def _occurrence_export_records(items, args):
     if not getattr(args, "after", None) or not getattr(args, "before", None):
         raise ValueError("--occurrences requires both --after and --before.")
     range_start, range_end = parse_optional_time_range(args.after, args.before)
-    records = agenda_records(items, range_start, range_end)
+    records = agenda_records(items, range_start, range_end, key=id_key_from_config(_config(args)))
     filtered = filter_agenda_records(
         records,
         open_only=getattr(args, "open", False),
@@ -13028,7 +13028,7 @@ def command_agenda(args):
         around_text=args.around,
         window_text=args.window,
     )
-    records = agenda_records(items, range_start, range_end)
+    records = agenda_records(items, range_start, range_end, key=id_key_from_config(_config(args)))
     records = filter_agenda_records(
         records,
         open_only=args.open,

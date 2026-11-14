@@ -340,13 +340,18 @@
         raw: item?.raw || "",
       });
     }
+    function editorDetailValue(value) {
+      if (typeof value !== "string") return "json:" + JSON.stringify(JSON.stringify(value));
+      if (value.startsWith('json:"') || value.startsWith('"')) return JSON.stringify(value);
+      return value;
+    }
     function detailsToText(details) {
       const lines = [];
       for (const [key, values] of Object.entries(details || {})) {
         for (const value of values) {
-          const text = String(value);
-          if (key === "body" && text.includes("\n")) {
-            const parts = text.split(/\n/);
+          const text = editorDetailValue(value);
+          if (key === "body" && typeof value === "string" && value.includes("\n")) {
+            const parts = value.split(/\n/);
             lines.push(`${key}:${parts.shift() || ""}`);
             for (const part of parts) lines.push(part ? `| ${part}` : "|");
           } else {
@@ -374,7 +379,13 @@
         else index = Math.max(colon, equal);
         if (index <= 0) continue;
         const key = trimmed.slice(0, index).trim();
-        const value = trimmed.slice(index + 1).trim();
+        const raw = trimmed.slice(index + 1).trim();
+        let value = raw;
+        if (raw.startsWith('json:"')) {
+          value = JSON.parse(JSON.parse(raw.slice(5)));
+        } else if (raw.startsWith('"') && raw.endsWith('"')) {
+          try { value = JSON.parse(raw); } catch { /* Keep literal text. */ }
+        }
         (details[key] ||= []).push(value);
       }
       return details;

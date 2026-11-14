@@ -2,6 +2,20 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-structured-json-details
+      capability_id: cap-import-export-format-expansion
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1594
+      changed_files_or_scope: [lifetxt/parser.py, lifetxt/serializer.py, lifetxt/csvio.py]
+      tests_or_evidence: [tests.test_json_details_requirements.JsonDetailsTests]
+      status: in_review
+
+    - requirement_id: req-state-dependent-start
+      capability_id: cap-graph-link-foundation
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1594
+      changed_files_or_scope: [lifetxt/requirements.py, lifetxt/links.py, lifetxt/agenda.py, lifetxt/webapp.py]
+      tests_or_evidence: [tests.test_json_details_requirements.RequiresTests]
+      status: in_review
+
     - requirement_id: req-web-device-notification-delivery
       capability_id: cap-web-surface-structure
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386

@@ -13,6 +13,29 @@ CLI, TUI, Web API, Web UI, MCP -- already resolves records by:
 MCP `get_item`, and the `?id=` Web deep link below all look the same id up
 through the same exact-match resolver.
 
+## State-based start conditions
+
+`depends_on:review` waits for the referenced item to leave an open state, which can happen through completion or cancellation. `requires:review=done` is satisfied only when the referenced item is currently completed.
+
+```text
+[x] T "Review" id:review done:2026-11-15
+[ ] T "Submit" requires:review=done
+```
+
+Use `requires:ID=state` for a short condition. Commas specify alternatives for the same item, as in `requires:review=in_progress,done`. The supported names are `not_started` (`[ ]`), `in_progress` (`[/]`), `done` (`[x]`), `canceled` (`[-]`), `moved` (`[>]`), `maybe` (`[?]`), and `note` (`[N]`).
+
+Repeated `requires:` values must all be satisfied. Use a JSON `any` group for alternatives across items. An `all` group requires every member. Both groups can be nested. This example requires completed materials and either a completed review or a completed proxy approval.
+
+```text
+[ ] T "Submit" requires:json<<
+  {"any":[{"id":"review","state":"done"},{"id":"proxy","state":"done"}]}
+>> requires:materials=done
+```
+
+A resolved item with a different state yields a waiting condition. If a missing, ambiguous, or self reference prevents a conclusion, the condition is unknown. A false member settles an `all` group, and a true member settles an `any` group. Web Agenda and Timeline display these outcomes. Readiness is evaluated from current states. Starting or changing an item's status is a manual action, and an in-progress item is not blocked again.
+
+See the [JSON and round-trip guide](roundtrip-and-body.md) for multiline blocks and array examples.
+
 ## `lifetxt://item/<id>` logical URI
 
 ```text

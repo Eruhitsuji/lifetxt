@@ -13,6 +13,29 @@ lifetxt のレコードをその正規の `id:` 値で指し示すための、�
 そして下記の `?id=` Web ディープリンクは、すべて同じ完全一致リゾルバで
 同じ ID を検索する。
 
+## 状態を指定する着手条件
+
+`depends_on:review` は参照先が完了・取消などで未解決の状態を抜けるまで待ちます。`requires:review=done` は参照先の**現在の状態が完了**の場合だけ成立します。
+
+```text
+[x] T "レビュー" id:review done:2026-11-15
+[ ] T "提出" requires:review=done
+```
+
+短縮形は `requires:ID=状態` です。`requires:review=in_progress,done` のようにカンマで状態の候補を並べられます。対応する状態名は `not_started`（`[ ]`）、`in_progress`（`[/]`）、`done`（`[x]`）、`canceled`（`[-]`）、`moved`（`[>]`）、`maybe`（`[?]`）、`note`（`[N]`）です。
+
+`requires:` を繰り返すと全条件が必要です。異なる項目のいずれかを許容するには、JSON の `any` を使います。`all` は全条件を要求し、両方とも入れ子にできます。次の例では資料の完了に加え、レビューまたは代理承認の完了を求めます。
+
+```text
+[ ] T "提出" requires:json<<
+  {"any":[{"id":"review","state":"done"},{"id":"proxy","state":"done"}]}
+>> requires:materials=done
+```
+
+対象を一意に解決できて状態が一致しなければ条件待ちです。未登録・重複・自己参照により結論が出せない場合は判定不能です。`all` では不成立が、`any` では成立があれば結論が確定します。Web の Agenda と Timeline でこの違いを確認できます。着手条件は現在の状態に基づく判定で、着手や状態変更は手動で行います。進行中の項目を再び条件待ちにはしません。
+
+[JSON 値と変換のガイド](roundtrip-and-body.md)に、複数行の書き方と配列の例があります。
+
 ## `lifetxt://item/<id>` 論理 URI
 
 ```text

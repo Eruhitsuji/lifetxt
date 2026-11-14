@@ -94,6 +94,19 @@ graceful-exit event, so a hard kill (Task Manager "End task", or `taskkill
 does not tie a forcibly-killed process's children to its own lifetime by
 default.
 
+## Desktop alerts
+
+Open **Notifications**, switch on **Automatic alerts**, and use **Send test
+notification** to check the OS notification settings. The switch is saved in
+the app's configuration directory across restarts. Minimizing the app keeps
+the Web UI running. Closing the app stops its notification checks.
+
+The desktop uses the same recipients and notification times as the Web UI.
+OS banners show a generic message. Open the Notifications view to read the
+record and use **Ack**, **Snooze**, or **Retry**. On Windows, use the installed
+application so the OS can identify the app correctly. Linux requires a
+notification service in the desktop session.
+
 ## Verification performed for the bundled-runtime path (#574)
 
 On this project's own Windows sandbox: built the #570 standalone binary,

@@ -47,6 +47,7 @@ const lang = document.documentElement.lang;
 const copy = messages[lang];
 const input = document.getElementById('input');
 const button = document.getElementById('check');
+const loadSample = document.getElementById('load-sample');
 const status = document.getElementById('status');
 const output = document.getElementById('output');
 
@@ -55,10 +56,25 @@ function clearResult() {
     output.textContent = '';
 }
 
-input.addEventListener('input', clearResult);
+function syncSampleButton() {
+    loadSample.disabled = input.value !== '';
+}
+
+input.addEventListener('input', () => {
+    clearResult();
+    syncSampleButton();
+});
+loadSample.addEventListener('click', () => {
+    if (input.value !== '') return;
+    input.value = loadSample.dataset.sample;
+    clearResult();
+    input.focus();
+    syncSampleButton();
+});
 window.addEventListener('pagehide', () => {
     input.value = '';
     clearResult();
+    syncSampleButton();
 });
 
 button.addEventListener('click', () => {
@@ -77,3 +93,4 @@ button.addEventListener('click', () => {
     output.textContent = lines.join('\n');
 });
 button.disabled = false;
+syncSampleButton();

@@ -34,6 +34,14 @@ COPY = {
         "空欄でサンプルを読み込めます。読み込んだら、編集して書式をチェックできます。",
         "自分の life.txt を作る",
         "JavaScriptを有効にするか、CLIを使用してください。",
+        "最初の1行を書いてみる",
+        "まずはサンプルのタイトルを変えるか、下の入力欄に自分のタスクを1行書いて「チェック」を押します。",
+        "未完了を示す状態です。完了したら [x] に変えます。",
+        "タスクを示す種類です。",
+        "タスクのタイトルです。空白を含むタイトルは半角の二重引用符で囲みます。",
+        "期限を付ける場合は due: の直後に YYYY-MM-DD 形式の日付を書きます。",
+        "チェックの範囲と制限",
+        "書式の詳細",
     ),
     "en": (
         "Syntax check",
@@ -48,15 +56,26 @@ COPY = {
         "Load the sample into the empty field, then edit it and check its syntax.",
         "Create your own life.txt",
         "Enable JavaScript or use the CLI.",
+        "Write your first line",
+        "Change a title in the sample or write one task of your own below, then select Check.",
+        "Marks an unfinished item. Change it to [x] when the task is done.",
+        "Identifies the item as a task.",
+        "The task title. Wrap titles that contain spaces in double quotes.",
+        "To add a deadline, put a YYYY-MM-DD date directly after due:.",
+        "What the checker covers",
+        "Format reference",
     ),
 }
 
 
 def render(lang: str, base: str) -> str:
-    title, home, scope, excluded, limits, label, button, load, hint, guide, noscript = map(
-        escape, COPY[lang]
-    )
-    sample = escape((ROOT / "website/example.txt").read_text(encoding="utf-8"))
+    (
+        title, home, scope, excluded, limits, label, button, load, hint, guide, noscript,
+        lesson, exercise, state_help, type_help, title_help, due_help, coverage, reference,
+    ) = map(escape, COPY[lang])
+    example = (ROOT / "website/example.txt").read_text(encoding="utf-8")
+    sample = escape(example)
+    first_line = escape(example.splitlines()[0])
     other, switch = ("en", "English") if lang == "ja" else ("ja", "日本語")
     return f"""<!doctype html>
 <html lang="{lang}"><head><meta charset="utf-8">
@@ -72,9 +91,20 @@ def render(lang: str, base: str) -> str:
 <script type="module" src="../../js-checker/ui.mjs"></script>
 </head><body><main class="wrap checker">
 <p><a href="../">{home}</a> · <a href="../../{other}/check/" lang="{other}">{switch}</a></p>
-<h1>{title}</h1><p id="scope">{scope}</p><p>{excluded}</p><p id="limits">{limits}</p>
+<h1>{title}</h1>
+<section id="lesson" aria-labelledby="lesson-title">
+<h2 id="lesson-title">{lesson}</h2>
+<pre class="lesson-example"><code>{first_line}</code></pre>
+<dl class="lesson-parts">
+<dt><code>[ ]</code></dt><dd>{state_help}</dd>
+<dt><code>T</code></dt><dd>{type_help}</dd>
+<dt><code>&quot;…&quot;</code></dt><dd>{title_help}</dd>
+<dt><code>due:</code></dt><dd>{due_help}</dd>
+</dl>
+<p id="exercise">{exercise}</p>
+</section>
 <label for="input">{label}</label>
-<textarea id="input" aria-describedby="scope limits" spellcheck="false" autocomplete="off"></textarea>
+<textarea id="input" aria-describedby="exercise limits" spellcheck="false" autocomplete="off"></textarea>
 <p id="sample-hint">{hint}</p>
 <div class="actions">
 <button class="button primary" id="check" type="button" disabled>{button}</button>
@@ -83,7 +113,12 @@ def render(lang: str, base: str) -> str:
 <p id="status" role="status"></p>
 <pre id="output" tabindex="0" aria-label="{title}"></pre>
 <noscript><p>{noscript}</p></noscript>
-<p><a href="../get-started.html">{guide} →</a></p>
+<details>
+<summary>{coverage}</summary>
+<p>{scope}</p><p>{excluded}</p>
+</details>
+<p id="limits">{limits}</p>
+<p><a href="../get-started.html">{guide} →</a> · <a href="../documentation.html">{reference} →</a></p>
 </main></body></html>
 """
 

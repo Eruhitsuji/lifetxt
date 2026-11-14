@@ -270,7 +270,7 @@
       font-size: .68rem; background: var(--soft); color: var(--muted);
     }
     .help-command-empty { color: var(--muted); font-size: .85rem; padding: .4rem .1rem; }
-    .notif-permission { display: flex; align-items: center; gap: .4rem; font-size: .82rem; padding: .5rem 1rem; border-bottom: 1px solid var(--line); }
+    .notif-permission { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; font-size: .82rem; padding: .5rem 1rem; border-bottom: 1px solid var(--line); }
     .notif-perm-granted { color: var(--ok); }
     .notif-perm-denied  { color: var(--danger); }
     .notif-perm-default { color: var(--warn); }

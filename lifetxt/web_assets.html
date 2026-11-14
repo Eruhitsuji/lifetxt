@@ -589,34 +589,34 @@ __LIFETXT_WEB_STYLES__  </style>
         <button type="button" class="drawer-close-btn" onclick="closeEditorModal()" title="Close (Esc)">✕</button>
       </div>
       <form class="stack" onsubmit="saveItem(event)">
-        <div class="editor-help-strip wide">Hover or focus the ? badges for field help. Type-specific suggested detail keys appear above the Details box.</div>
-        <button type="button" id="authoring-advanced-toggle" class="secondary wide" onclick="toggleAuthoringMode()" title="Beginner mode shows only the Task/Event/Note types and the most common statuses; this shows or hides the rest.">Show advanced options</button>
+        <div class="editor-help-strip wide first-task-extra">Hover or focus the ? badges for field help. Type-specific suggested detail keys appear above the Details box.</div>
+        <button type="button" id="authoring-advanced-toggle" class="secondary wide first-task-extra" onclick="toggleAuthoringMode()" title="Beginner mode shows only the Task/Event/Note types and the most common statuses; this shows or hides the rest.">Show advanced options</button>
         <label class="wide field-label">
-          <span class="field-label-head"><span>Title</span><span class="field-help" tabindex="0" data-help="Short human-readable record text. Use quotes in raw life.txt if the title contains spaces.">?</span></span>
+          <span class="field-label-head"><span>Title</span><span class="field-help first-task-extra" tabindex="0" data-help="Short human-readable record text. Use quotes in raw life.txt if the title contains spaces.">?</span></span>
           <input id="edit-title" required>
         </label>
-        <label class="field-label">
+        <label class="field-label first-task-extra">
           <span class="field-label-head"><span>Status</span><span class="field-help" tabindex="0" data-help="Workflow state: [ ] open, [/] active, [x] done, [-] cancelled, [>] deferred, [?] maybe, [N] note.">?</span></span>
           <select id="edit-status">
             <option value="[ ]">Open ([ ])</option><option value="[/]">In Progress ([/])</option><option value="[x]">Done ([x])</option>
             <option value="[-]">Cancelled ([-])</option><option value="[>]">Deferred ([>])</option><option value="[?]">Maybe ([?])</option><option value="[N]">Note ([N])</option>
           </select>
         </label>
-        <label class="field-label">
+        <label class="field-label first-task-extra">
           <span class="field-label-head"><span>Type</span><span class="field-help" tabindex="0" data-help="Record kind: T task, E event, D deadline, R reminder, H habit, N note, S presence status, M message, J journal.">?</span></span>
           <select id="edit-type" aria-describedby="type-hints">
             <option value="T">Task (T)</option><option value="E">Event (E)</option><option value="D">Deadline (D)</option><option value="R">Reminder (R)</option>
             <option value="H">Habit (H)</option><option value="N">Note (N)</option><option value="S">Status (S)</option><option value="M">Message (M)</option><option value="J">Journal (J)</option>
           </select>
         </label>
-        <div id="structured-fields" class="structured-fields wide" aria-label="Details"></div>
-        <label class="wide field-label">
+        <div id="structured-fields" class="structured-fields wide first-task-extra" aria-label="Details"></div>
+        <label class="wide field-label first-task-extra">
           <span class="field-label-head"><span>Details</span><span class="field-help" tabindex="0" data-help="One key:value per line. Repeat the same key for multiple values. Use body: or | continuation lines for longer text. progress: accepts a percentage (progress:75%) or a fraction (progress:3/10), independent of status.">?</span></span>
           <div id="type-hints" class="type-hints" style="display:none"></div>
           <textarea id="edit-details" placeholder="due:2026-06-12&#10;project:research&#10;progress:75%"></textarea>
         </label>
         <div id="editor-note" class="note wide">Create a new record or select an editable row.</div>
-        <div id="import-raw-row" class="wide" hidden>
+        <div id="import-raw-row" class="wide first-task-extra" hidden>
           <label class="wide" style="margin-top:.35rem">Import raw line
             <input id="import-raw-input" placeholder="[ ] T Task_title due:2026-06-28 project:work" autocomplete="off" data-no-i18n aria-describedby="import-raw-help">
           </label>
@@ -629,8 +629,9 @@ __LIFETXT_WEB_STYLES__  </style>
         </div>
         <div class="actions">
           <button id="save-button">Create</button>
-          <button id="delete-button" class="danger" type="button" onclick="deleteSelected()" disabled>Delete</button>
-          <button id="import-raw-toggle" type="button" class="secondary" aria-controls="import-raw-row" aria-expanded="false" onclick="toggleImportRaw()" title="Paste a raw life.txt line to populate the form">Import raw</button>
+          <button id="first-task-details" type="button" class="secondary" onclick="showFirstTaskDetails()">Show all fields</button>
+          <button id="delete-button" class="danger first-task-extra" type="button" onclick="deleteSelected()" disabled>Delete</button>
+          <button id="import-raw-toggle" type="button" class="secondary first-task-extra" aria-controls="import-raw-row" aria-expanded="false" onclick="toggleImportRaw()" title="Paste a raw life.txt line to populate the form">Import raw</button>
         </div>
       </form>
     </div>

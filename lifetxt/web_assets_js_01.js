@@ -351,6 +351,8 @@
         "Clear the filters to see all items.": "すべての項目を見るには絞り込みを解除してください。",
         "This workspace is read-only.": "このワークスペースは読み取り専用です。",
         "Create a task, find it here in Items, then open it to mark it done.": "タスクを作成し、この項目一覧で見つけましょう。開いた詳細画面から完了にできます。",
+        "Give your task a title. After creating it, open it from Items and mark it done.": "タスクのタイトルを入力してください。作成後は項目一覧から開いて完了にできます。",
+        "Show all fields": "すべての入力欄を表示",
         "Create your first task": "最初のタスクを作成",
         "Loading saved views…": "保存済みビューを読み込み中…",
         "No saved views": "保存済みビューはありません",

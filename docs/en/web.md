@@ -1272,6 +1272,11 @@ browse destinations by purpose, including Timeline, Graph, and Stats.
 Under **Plan your time**, Calendar shows a month or week grid, Agenda lists
 upcoming items in date order, and Planner lets you plan a day and log habits.
 
+In an empty writable Items view, select **Create your first task**. Enter a title
+and select **Create**, then open the new task from Items to mark it done.
+Select **Show all fields** before creating if you want to set a due date or add
+other details.
+
 ### Personal Context onboarding
 
 Open **Features → Capture and organize → Personal Context** to review current `person:self` facts or add

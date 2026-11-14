@@ -17,13 +17,20 @@
 
     function refreshStructuredFields() {
       const type = document.getElementById("edit-type")?.value || "T";
-      const details = parseDetails(document.getElementById("edit-details")?.value || "");
-      _populateStructuredFields("edit", details, type);
+      const textarea = document.getElementById("edit-details");
+      try {
+        const details = parseDetails(textarea?.value || "");
+        textarea?.setCustomValidity("");
+        _populateStructuredFields("edit", details, type);
+      } catch (error) {
+        textarea?.setCustomValidity(error.message);
+      }
     }
 
     function syncStructuredFieldsIntoDetails() {
       const textarea = document.getElementById("edit-details");
-      if (textarea) textarea.value = detailsToText(_structuredDetails("edit-details", "edit"));
+      if (!textarea || !textarea.validity.valid) return;
+      textarea.value = detailsToText(_structuredDetails("edit-details", "edit"));
     }
 
     const _structuredOriginalEditorPayload = editorPayload;

@@ -18,7 +18,7 @@ from .ids import (
 )
 from .links import LinksCycleError, critical_path, link_records, reference_diagnostics
 from .model import Diagnostic, REFERENCE_KEYS
-from .parser import parse_line, parse_text
+from .parser import _logical_lines, parse_line, parse_text
 from .paths import expand_paths
 from .serializer import item_to_line
 
@@ -1269,12 +1269,16 @@ def _assign_missing_ids_in_text(path, text, key, existing, config, prefix=None):
     changed = False
     records = []
     new_lines = []
-    for line_no, raw_line in enumerate(raw_lines, 1):
-        body, ending = _split_line_ending(raw_line)
-        item, diagnostics = parse_line(body, line_no)
+    logical_lines, _ = _logical_lines(text)
+    previous_end = 0
+    for line_no, end_line, logical_line in logical_lines:
+        new_lines.extend(raw_lines[previous_end:line_no - 1])
+        previous_end = end_line
+        item, diagnostics = parse_line(logical_line, line_no)
         if item is None or _has_error(diagnostics) or item.details.get(key):
-            new_lines.append(raw_line)
+            new_lines.extend(raw_lines[line_no - 1:end_line])
             continue
+        _, ending = _split_line_ending(raw_lines[end_line - 1])
         assigned = ensure_item_id(
             item,
             existing_ids=existing,

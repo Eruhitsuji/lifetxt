@@ -429,6 +429,7 @@ class DrawerEditInteractionTests(unittest.TestCase):
             _extract_function(full_script, "function renderActionableError("),
             _extract_function(full_script, "function escapeHtml("),
             _extract_function(full_script, "function jsLiteral("),
+            _extract_function(full_script, "function editorDetailValue("),
             _extract_function(full_script, "function detailsToText("),
             _extract_function(full_script, "function parseDetails("),
             _extract_statement(

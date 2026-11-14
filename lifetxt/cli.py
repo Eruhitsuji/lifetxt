@@ -124,7 +124,7 @@ from .notifier import (
     records_to_jsonl as notifications_to_jsonl,
     watch_notifications,
 )
-from .parser import parse_directives, parse_line, parse_text
+from .parser import _logical_lines, parse_directives, parse_line, parse_text
 from .paths import expand_paths
 from .serializer import (
     item_to_line,
@@ -6037,7 +6037,7 @@ def _occurrence_export_records(items, args):
     if not getattr(args, "after", None) or not getattr(args, "before", None):
         raise ValueError("--occurrences requires both --after and --before.")
     range_start, range_end = parse_optional_time_range(args.after, args.before)
-    records = agenda_records(items, range_start, range_end)
+    records = agenda_records(items, range_start, range_end, key=id_key_from_config(_config(args)))
     filtered = filter_agenda_records(
         records,
         open_only=getattr(args, "open", False),
@@ -13028,7 +13028,7 @@ def command_agenda(args):
         around_text=args.around,
         window_text=args.window,
     )
-    records = agenda_records(items, range_start, range_end)
+    records = agenda_records(items, range_start, range_end, key=id_key_from_config(_config(args)))
     records = filter_agenda_records(
         records,
         open_only=args.open,
@@ -17668,12 +17668,16 @@ def _assign_missing_ids_in_text(path, text, key, existing, config, prefix=None):
     changed = False
     records = []
     new_lines = []
-    for line_no, raw_line in enumerate(raw_lines, 1):
-        body, ending = split_line_ending(raw_line)
-        item, diagnostics = parse_line(body, line_no)
+    logical_lines, _ = _logical_lines(text)
+    previous_end = 0
+    for line_no, end_line, logical_line in logical_lines:
+        new_lines.extend(raw_lines[previous_end:line_no - 1])
+        previous_end = end_line
+        item, diagnostics = parse_line(logical_line, line_no)
         if item is None or _has_error(diagnostics) or item.details.get(key):
-            new_lines.append(raw_line)
+            new_lines.extend(raw_lines[line_no - 1:end_line])
             continue
+        _, ending = split_line_ending(raw_lines[end_line - 1])
         assigned = ensure_item_id(
             item,
             existing_ids=existing,

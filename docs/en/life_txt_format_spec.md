@@ -137,6 +137,39 @@ enc:GCM:BASE64
 --algorithm aesgcm` when the optional `cryptography` package is installed.
 `check`, `filter`, and converters treat these values as opaque detail strings.
 
+
+### Typed JSON details
+
+Write one JSON value between `json<<` and `>>`, with JSON whitespace before and after the value. Line breaks are allowed inside the delimiters. A `>>` inside a JSON string is part of the value.
+
+```text
+[ ] T Example options:json<<
+  {"room":"Room A","equipment":["mic"]}
+>> flag:json<< true >> legacy:json:true
+```
+
+For every key, a top-level array is the list of values. `tag:json<< ["a","b"] >>` is equivalent to `tag:a tag:b`, and `options:json<< ["a","b"] >>` likewise produces `"options":["a","b"]` in JSON/JSONL. To store one array value, use `options:json<< [["a","b"]] >>`. An empty array represents a list of zero values. Any non-array JSON value contributes one value. Arrays within objects are retained. Key-specific type and cardinality rules apply after expansion.
+
+`legacy:json:true` remains the literal string `json:true`. Use `legacy:"json<<"` to specify the literal marker. Malformed JSON or a missing closing delimiter produces E023, and parsing resumes at the next item line. CSV with typed values or a key with zero values uses the header `status,type,title,lifetxt:json-details` and stores the details object in the last column.
+
+### State-based start conditions
+
+`requires:review=done` requires the referenced item's status to be `[x]`.
+Repeated `requires:` entries are AND conditions. Commas in a short condition
+allow any listed state, as in `requires:review=in_progress,done`.
+State names are `not_started`, `in_progress`, `done`, `canceled`, `moved`,
+`maybe`, and `note`. A JSON leaf has `id` and `state` fields. The state may
+also be an array. Groups use `all` or `any` with a nonempty array of conditions.
+
+```text
+[ ] T Submit requires:json<< {"any":[{"id":"review","state":"done"},{"id":"proxy","state":"done"}]} >> requires:materials=done
+```
+
+Conditions report readiness from current statuses for items awaiting a start.
+In-progress items are not reblocked, and no historical start is inferred.
+Missing, ambiguous, and self references produce an unknown result. A false
+child is decisive for AND and a true child is decisive for OR.
+
 ## 5.1 Nested / Hierarchical Records
 
 Item lines may be indented with spaces to express a visual hierarchy. Two

@@ -1794,7 +1794,8 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
 
         items, scope = resolve_read_scope(items, app.state.config, area=area, saved_view=saved_view)
         range_start, range_end = parse_agenda_range(start, end, around, window)
-        records = agenda_records(items, range_start, range_end)
+        key = id_key_from_config(app.state.config)
+        records = agenda_records(items, range_start, range_end, key=key)
         record_items = []
         for record in records:
             item = Item(
@@ -1834,34 +1835,13 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         filtered_records = [
             record for record, item in record_items if id(item) in filtered_ids
         ]
-        key = id_key_from_config(app.state.config)
-        blocked_by_id = {}
-        blocked_by_line = {}
-        for rec in dependency_blocker_records(items, key=key):
-            info = {
-                "id": rec["blocker_id"],
-                "title": rec["blocker_title"],
-                "status": rec["blocker_status"],
-                "relation": rec["relation"],
-            }
-            if rec.get("blocked_id"):
-                blocked_by_id.setdefault(str(rec["blocked_id"]), []).append(info)
-            if rec.get("blocked_line") is not None:
-                blocked_by_line.setdefault(
-                    (rec.get("blocked_source"), rec["blocked_line"]), []
-                ).append(info)
         for record in filtered_records:
-            record_id = None
-            details = record.get("details") or {}
-            if details.get(key):
-                record_id = str(details[key][0])
-            blockers = blocked_by_id.get(record_id) if record_id else None
-            if blockers is None:
-                blockers = blocked_by_line.get(
-                    (record.get("source"), record.get("line"))
-                )
-            record["blocked"] = bool(blockers)
-            record["blocked_by"] = blockers or []
+            record["blocked_by"] = [
+                {field: entry[field] for field in (
+                    "id", "title", "status", "relation", "condition_state", "required_statuses"
+                ) if field in entry}
+                for entry in record.get("blocked_by", [])
+            ]
         blocked_mode = _blocked_query_mode(blocked)
         if blocked_mode in ("only", "true", "1"):
             filtered_records = [r for r in filtered_records if r["blocked"]]
@@ -3998,17 +3978,6 @@ def update_item_in_file(path, line_no, payload, key="id"):
     if id_values:
         from .write_operations import transform_items_text_with_native_history
 
-        # ``updated.details`` is the caller's complete desired detail set
-        # (merge_item_payload() fully replaces details when the payload
-        # supplies one). The id-addressed mutation contract's set_details
-        # is a partial patch: an absent key leaves the original value
-        # untouched. Explicitly null out every original key that the
-        # desired set no longer carries so a full-replace update actually
-        # removes stale details instead of silently keeping them.
-        set_details = dict(updated.details)
-        for detail_key in original_item.details:
-            if detail_key not in set_details:
-                set_details[detail_key] = None
         replacement_text = transform_items_text_with_native_history(
             text,
             [
@@ -4017,7 +3986,7 @@ def update_item_in_file(path, line_no, payload, key="id"):
                     "status": updated.status,
                     "type": updated.kind,
                     "title": updated.title,
-                    "set_details": set_details,
+                    "replace_details": updated.details,
                 }
             ],
             id_key=key,

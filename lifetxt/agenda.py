@@ -127,9 +127,9 @@ def parse_optional_time_range(after_text=None, before_text=None, now=None):
     return range_start, range_end
 
 
-def agenda_records(items, range_start, range_end):
+def agenda_records(items, range_start, range_end, key="id"):
     records = []
-    blockers_by_item = dependency_blockers_by_item(items)
+    blockers_by_item = dependency_blockers_by_item(items, key=key)
     for item in items:
         matches = item_time_matches(item, range_start, range_end)
         if not matches:

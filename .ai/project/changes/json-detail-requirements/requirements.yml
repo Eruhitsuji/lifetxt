@@ -1,0 +1,20 @@
+schema_version: 1
+requirements:
+  - id: req-structured-json-details
+    kind: ADDED
+    statement: Accept one JSON value inside a multiline detail block.
+    acceptance_criteria:
+      - Expand a top-level array identically for every key.
+      - Preserve nested values and their types through JSON, JSONL, CSV, and Web edits.
+      - Diagnose malformed blocks and preserve following item records.
+    constraints: [Preserve legacy literals, Apply key constraints after expansion]
+    owner: Eruhitsuji
+  - id: req-state-dependent-start
+    kind: ADDED
+    statement: Evaluate start conditions from referenced item states.
+    acceptance_criteria:
+      - Support short syntax and nested all and any groups.
+      - Distinguish waiting from unresolved and cancellation from completion.
+    constraints: [Preserve legacy dependency behavior]
+    owner: Eruhitsuji
+open_questions: []

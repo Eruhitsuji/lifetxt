@@ -1,0 +1,17 @@
+schema_version: 1
+verification:
+  executed:
+    - type: unit
+      command: python -m unittest tests.test_json_details_requirements tests.test_web_structured_authoring_js tests.test_web_drawer_edit_js tests.test_web_editor_write_safety tests.test_native_history_mutation tests.test_integrity tests.test_parser_format_metadata
+      requirement_ids: [req-structured-json-details, req-state-dependent-start]
+      status: passed
+      evidence: 84 tests on 8d89ed3
+review_ledger:
+  - reviewer: null
+    review_type: independent implementation and integration
+    target_commit: null
+    result: pending
+release_evidence:
+  migration_notes: Existing valid data requires no migration.
+  rollback_plan: Retain files written with the new syntax before reverting the change.
+  operations_evidence: []

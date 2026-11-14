@@ -340,13 +340,21 @@
         raw: item?.raw || "",
       });
     }
+    function editorDetailValue(value) {
+      if (typeof value !== "string" || /[\r\n]/.test(value)) {
+        return "json<< " + JSON.stringify(Array.isArray(value) ? [value] : value) + " >>";
+      }
+      if (/^json<<(?:\s|$)/.test(value) || value.startsWith('"')) return JSON.stringify(value);
+      return value;
+    }
     function detailsToText(details) {
       const lines = [];
       for (const [key, values] of Object.entries(details || {})) {
+        if (!values.length) lines.push(`${key}:json<< [] >>`);
         for (const value of values) {
-          const text = String(value);
-          if (key === "body" && text.includes("\n")) {
-            const parts = text.split(/\n/);
+          const text = editorDetailValue(value);
+          if (key === "body" && typeof value === "string" && value.includes("\n")) {
+            const parts = value.split(/\n/);
             lines.push(`${key}:${parts.shift() || ""}`);
             for (const part of parts) lines.push(part ? `| ${part}` : "|");
           } else {
@@ -357,8 +365,10 @@
       return lines.join("\n");
     }
     function parseDetails(text) {
-      const details = {};
-      for (const line of text.split(/\n/)) {
+      const details = Object.create(null);
+      const lines = text.split(/\n/);
+      for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+        const line = lines[lineIndex];
         if (line.startsWith("|")) {
           if (!details.body || !details.body.length) details.body = [""];
           const value = line.startsWith("| ") ? line.slice(2) : line.slice(1);
@@ -374,7 +384,35 @@
         else index = Math.max(colon, equal);
         if (index <= 0) continue;
         const key = trimmed.slice(0, index).trim();
-        const value = trimmed.slice(index + 1).trim();
+        const raw = trimmed.slice(index + 1).trim();
+        if (/^json<<(?:[ \t\r]|$)/.test(raw)) {
+          let block = trimmed.slice(index + 1).trimStart().slice(6);
+          let end;
+          while (true) {
+            // Ignore closing delimiters inside JSON strings.
+            const tokens = /"(?:[^"\\\n]|\\.)*"|(>>)/g;
+            for (const token of block.matchAll(tokens)) {
+              if (token[1]) {
+                end = token.index;
+                break;
+              }
+            }
+            if (end !== undefined || lineIndex + 1 >= lines.length) break;
+            block += "\n" + lines[++lineIndex];
+          }
+          const payload = end === undefined ? "" : block.slice(0, end);
+          if (!/^[ \t\r\n]/.test(payload) || !/[ \t\r\n]$/.test(payload) || block.slice(end + 2).trim()) {
+            throw new Error("Write one JSON value between json<< and >>.");
+          }
+          const value = JSON.parse(payload);
+          const values = details[key] ||= [];
+          for (const entry of Array.isArray(value) ? value : [value]) values.push(entry);
+          continue;
+        }
+        let value = raw;
+        if (raw.startsWith('"') && raw.endsWith('"')) {
+          try { value = JSON.parse(raw); } catch { /* Keep literal text. */ }
+        }
         (details[key] ||= []).push(value);
       }
       return details;

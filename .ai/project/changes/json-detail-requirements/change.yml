@@ -1,0 +1,20 @@
+schema_version: 1
+change:
+  id: change-json-detail-requirements
+  title: Typed JSON details and state-based start conditions
+  status: in_review
+  change_type: Feature
+  assurance_level: High
+  owner: Codex
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1594
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1595
+  base_commit: 52fd668a76f0e1485f1ace03f701d2f2538538f1
+  target_release: null
+scope:
+  in_scope: [JSON details, interchange, state-based readiness, CI evidence]
+  out_of_scope: [scheduling, deployment, historical state inference]
+  write_scope: [lifetxt, tests, docs, life_txt_format_spec.md, .ai/project]
+  forbidden_scope: [.ai/managed]
+  shared_files: [.ai/project/TRACEABILITY.yml, tests/test_web_assets.py]
+human_approvals_required: [maintainer merge approval]

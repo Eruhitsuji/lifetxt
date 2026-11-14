@@ -30,6 +30,9 @@ COPY = {
         "UTF-8で16 KiBまで、診断は最大100件。本文はブラウザ内で処理し、送信や永続保存は行いません。",
         "life.txtのテキスト",
         "チェック",
+        "サンプルを読み込む",
+        "空欄でサンプルを読み込めます。読み込んだら、編集して書式をチェックできます。",
+        "自分の life.txt を作る",
         "JavaScriptを有効にするか、CLIを使用してください。",
     ),
     "en": (
@@ -41,13 +44,19 @@ COPY = {
         "Up to 16 KiB in UTF-8 and 100 diagnostics. Text is processed in your browser without transmission or persistent storage.",
         "life.txt text",
         "Check",
+        "Load sample",
+        "Load the sample into the empty field, then edit it and check its syntax.",
+        "Create your own life.txt",
         "Enable JavaScript or use the CLI.",
     ),
 }
 
 
 def render(lang: str, base: str) -> str:
-    title, home, scope, excluded, limits, label, button, noscript = map(escape, COPY[lang])
+    title, home, scope, excluded, limits, label, button, load, hint, guide, noscript = map(
+        escape, COPY[lang]
+    )
+    sample = escape((ROOT / "website/example.txt").read_text(encoding="utf-8"))
     other, switch = ("en", "English") if lang == "ja" else ("ja", "日本語")
     return f"""<!doctype html>
 <html lang="{lang}"><head><meta charset="utf-8">
@@ -66,10 +75,15 @@ def render(lang: str, base: str) -> str:
 <h1>{title}</h1><p id="scope">{scope}</p><p>{excluded}</p><p id="limits">{limits}</p>
 <label for="input">{label}</label>
 <textarea id="input" aria-describedby="scope limits" spellcheck="false" autocomplete="off"></textarea>
-<div class="actions"><button class="button primary" id="check" type="button" disabled>{button}</button></div>
+<p id="sample-hint">{hint}</p>
+<div class="actions">
+<button class="button primary" id="check" type="button" disabled>{button}</button>
+<button class="button" id="load-sample" type="button" disabled aria-describedby="sample-hint" data-sample="{sample}">{load}</button>
+</div>
 <p id="status" role="status"></p>
 <pre id="output" tabindex="0" aria-label="{title}"></pre>
 <noscript><p>{noscript}</p></noscript>
+<p><a href="../get-started.html">{guide} →</a></p>
 </main></body></html>
 """
 

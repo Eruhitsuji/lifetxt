@@ -81,5 +81,6 @@ process.stdout.write(JSON.stringify(results));
             )
         self.assertIn(".surface-link { text-decoration: none; }", HTML_PAGE)
         self.assertNotIn(".nav-advanced > .surface-link {", HTML_PAGE)
-        self.assertIn(".nav-advanced .workspace-tab { width: 100%; }", HTML_PAGE)
+        tab = HTML_PAGE.split(".nav-advanced .workspace-tab {", 1)[1].split("}", 1)[0]
+        self.assertIn("width: 100%;", tab)
         self.assertIn("min-height: max(44px, var(--control-height));", HTML_PAGE)

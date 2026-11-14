@@ -473,27 +473,24 @@
       .workspace-tabs::-webkit-scrollbar { display: none; }
       .workspace-tab { flex: 0 0 auto; }
 
-      /* Keep the global workspace navigation as two independently reachable
-         one-row strips.  The parent scrolls the primary controls; the open
-         More menu scrolls its own long action list. */
+      /* Keep the primary controls reachable in a horizontal strip. */
       .header-workspace-tabs > .nav-primary {
         flex-wrap: nowrap;
-        flex: 0 0 auto;
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow-x: auto;
+        scrollbar-width: thin;
+      }
+      .header-workspace-tabs > .nav-primary > button { flex-shrink: 0; }
+      .nav-more-current {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
       }
       .header-workspace-tabs > .nav-more {
-        flex: 0 0 auto;
-      }
-      .nav-advanced {
-        display: flex;
-        flex-wrap: nowrap;
-        max-width: calc(100vw - 1.5rem);
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: none;
-      }
-      .nav-advanced::-webkit-scrollbar { display: none; }
-      .nav-advanced .workspace-tab {
-        width: auto;
         flex: 0 0 auto;
       }
 
@@ -772,14 +769,12 @@
       }
       .nav-more, .nav-primary { flex: 1 1 100%; }
       .nav-more > summary { width: 100%; text-align: center; }
-      .nav-advanced { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .nav-advanced .workspace-tab { width: 100%; }
     }
     @media (max-width: 680px) {
       /* An explicitly opened More menu gets its own full-width row below the
          primary strip instead of squeezing it sideways (#1068). */
       .header-workspace-tabs:has(> .nav-more[open]) { flex-wrap: wrap; }
-      .header-workspace-tabs:has(> .nav-more[open]) > .nav-primary { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+      .header-workspace-tabs:has(> .nav-more[open]) > .nav-primary { flex-basis: 100%; }
       .header-workspace-tabs > .nav-more[open] { flex: 1 1 100%; min-width: 0; }
       .header-workspace-tabs > .nav-more[open] > .nav-advanced { max-width: 100%; }
     }

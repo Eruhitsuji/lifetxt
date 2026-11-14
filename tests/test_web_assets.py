@@ -20,7 +20,7 @@ REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
 # Keep the exact assembled page checksum gate for reviewed asset changes.
 # Calculated using _CSS_RESOURCE_NAMES / _JS_RESOURCE_NAMES assembly order,
 # before brand injection (CSS 06/07 precede 05).
-LEGACY_PRISTINE_GIT_BLOB_SHA = "5205eff7bcf7b503cc17728084df0bb36f8d2fac"
+LEGACY_PRISTINE_GIT_BLOB_SHA = "45c17c1f4ce510aaeb9b19cd19aea406daecb0b4"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )
@@ -60,16 +60,24 @@ class WebAssetExtractionTests(unittest.TestCase):
         self.assertIn('data-i18n="Quick Status"', more)
         self.assertRegex(
             more,
-            r'<a class="workspace-tab surface-link" href="/planner">'
+            r'<a class="workspace-tab surface-link" href="/planner"><span class="nav-feature-title">'
             r'<span aria-hidden="true">📓</span> '
-            r'<span data-i18n="Planner">Planner</span></a>',
+            r'<span data-i18n="Planner">Planner</span></span>',
         )
         self.assertRegex(
             more,
-            r'<a class="workspace-tab surface-link" href="/capture">'
+            r'<a class="workspace-tab surface-link" href="/capture"><span class="nav-feature-title">'
             r'<span aria-hidden="true">⚡</span> '
-            r'<span data-i18n="Quick Capture">Quick Capture</span></a>',
+            r'<span data-i18n="Quick Capture">Quick Capture</span></span>',
         )
+        groups = re.findall(r'<section class="nav-feature-group".*?</section>', more, re.S)
+        self.assertEqual(len(groups), 5)
+        destinations = re.findall(r'(?:data-view|href)="([^"]+)"', more)
+        self.assertEqual(len(destinations), 20)
+        self.assertEqual(len(set(destinations)), 20)
+        self.assertEqual(more.count('class="nav-feature-description"'), 20)
+        for destination in ('data-view="agenda"', 'data-view="calendar"', 'href="/planner"'):
+            self.assertIn(destination, groups[0])
         self.assertIn('href="/"', web_assets.PLANNER_HTML_PAGE)
         self.assertIn('class="capture-back" href="/"', web_assets.HTML_PAGE)
 

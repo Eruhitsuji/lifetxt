@@ -19535,6 +19535,16 @@ traceability:
         - tests/test_web_assets.py
       status: in_review
 
+    - requirement_id: req-web-purpose-based-feature-directory
+      capability_id: cap-web-beginner-first-ux
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1586
+      tests_or_evidence:
+        - tests/test_web_assets.py
+        - tests/test_web_more_nav_js.py
+        - tests/test_web_mobile.py
+      status: in_review
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

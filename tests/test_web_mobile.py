@@ -154,15 +154,14 @@ class LayoutTests(unittest.TestCase):
         self.assertIn("overflow-x: auto", narrow)
         self.assertIn("flex-wrap: nowrap", narrow)
 
-    def test_global_navigation_has_independent_one_row_mobile_strips(self):
+    def test_global_navigation_keeps_primary_strip_and_scrollable_feature_list(self):
         narrow = _media_block("@media (max-width: 680px)")
 
         self.assertIn(".header-workspace-tabs > .nav-primary", narrow)
         self.assertIn(".header-workspace-tabs > .nav-more", narrow)
-        self.assertIn(".nav-advanced", narrow)
-        self.assertIn("max-width: calc(100vw - 1.5rem)", narrow)
-        self.assertIn(".nav-advanced .workspace-tab", narrow)
-        self.assertIn("width: auto", narrow)
+        panel = HTML_PAGE.split(".nav-advanced {", 1)[1].split("}", 1)[0]
+        self.assertIn("grid-template-columns: minmax(0, 1fr)", panel)
+        self.assertIn("overflow-y: auto", panel)
         self.assertIn("overflow-x: auto", narrow)
         self.assertIn("flex-wrap: nowrap", narrow)
 

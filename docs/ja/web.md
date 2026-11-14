@@ -90,7 +90,7 @@ Preview／確認、成功・失敗表示、重複送信抑止、英語・日本�
 **現在の状態を終了**は区間を閉じるだけです。「オフライン」は新しい区間を開始します。
 canonical値は翻訳せず、既存の`web.presence.states`色クラス上書きにも従います。
 
-メインWeb UIの **More → State · クイックステータス** からも開けます。
+メインWeb UIの **機能一覧 → チームと通知 → State · クイックステータス** からも開けます。
 Stateは自分の在席状況を素早く変更する画面です。既存の **ステータス・最新** は各人の
 最新／進行中の状態、**チーム・在席** は在席・作業量・メッセージを扱い、役割を維持します。
 小さな **Web UI全体を開く** フッターリンクから全体の画面へ戻れます。
@@ -1206,13 +1206,13 @@ lifetxt serve life.txt --port 8080
 
 まず「Today」で今必要なことを確認し、「Items」で記録を探し、「Create」
 からタスク・イベント・メモを追加します。空の画面ではデータがない場合と
-検索結果がない場合を区別して、次に行える安全な操作を示します。「More」
-からTimeline、Graph、Statsなどの専門画面を開けます。直接リンクも引き続き
-利用できます。
+検索結果がない場合を区別して、次に行える安全な操作を示します。「機能一覧」を開くと、用途別に画面を選べます。
+「予定と計画」では、Calendarで月・週の予定を見たり、Agendaで日付順の
+一覧を見たり、Plannerで一日の計画や習慣を記録したりできます。
 
 ### Personal Context のオンボーディング
 
-**More → Personal Context** から、現在の `person:self` の事実を確認したり、
+**機能一覧 → 記録と整理 → Personal Context** から、現在の `person:self` の事実を確認したり、
 明示的なコンテキストを追加したりできます。Profile、Preferences、Skills、
 Goals、Projects は新しいschema fieldではなく、通常の単数形 `tag:` 規約
 （`profile`、`preference`、`skill`、`goal`、`project`）です。1行に1つの
@@ -1255,7 +1255,7 @@ Now または Custom の保存を明示的に選んだ場合だけ置き換え�
 Native History の `completed` イベントも同じ更新に含めます。
 
 
-**More → Personal Context**の確認結果は、1件ずつ明示的に書き込む操作です。**Still correct** はstaleな事実を再確認します。**Correct the record** は元の記録を履歴に残し、`corrects:<旧ID>` を付けた訂正記録を新規作成します。Webではユーザーの明示操作により、正確なIDとsource revisionによるCASを伴う直接の確定書き込みです。CLIのcorrection proposal経路とは別です。**Changed over time** は以前正しかった記録を `replaced_by:` で後継に関連付け、必要なら後継に `valid_from:` を指定します。**No longer valid** は `valid_to:` で適用期間を終了します。**Review later** は操作をせず書き込みもありません。読み取り専用Webはこれらの書き込み操作を隠し、API側も書き込みを `403` で拒否します。
+**機能一覧 → 記録と整理 → Personal Context**の確認結果は、1件ずつ明示的に書き込む操作です。**Still correct** はstaleな事実を再確認します。**Correct the record** は元の記録を履歴に残し、`corrects:<旧ID>` を付けた訂正記録を新規作成します。Webではユーザーの明示操作により、正確なIDとsource revisionによるCASを伴う直接の確定書き込みです。CLIのcorrection proposal経路とは別です。**Changed over time** は以前正しかった記録を `replaced_by:` で後継に関連付け、必要なら後継に `valid_from:` を指定します。**No longer valid** は `valid_to:` で適用期間を終了します。**Review later** は操作をせず書き込みもありません。読み取り専用Webはこれらの書き込み操作を隠し、API側も書き込みを `403` で拒否します。
 
 Personal Context の再確認方針: 各記録に適用中の再確認間隔、または定期再確認不要を
 表示します。書き込み可能な場合、「定期的な再確認をしない」で `review:never` を

@@ -4,9 +4,9 @@ Issue [#1594](https://github.com/Eruhitsuji/lifetxt/issues/1594) defines the sco
 
 ## Compatibility
 
-The life.txt grammar extension uses a prefix that previously produced E015, preserving existing strings such as `json:true`. An older parser reports an error on the new syntax. Older clients can also treat text `requires:` as an unknown custom key and omit its readiness effect. Use compatible clients for editing or evaluating conditions. Existing files need no migration. The rollback is a reviewed revert after retaining a copy of any files authored using the new values or conditions.
+The life.txt grammar extension uses the whitespace-delimited `json<< ... >>` form, preserving existing strings such as `json:true`. An older parser reports an error on the new syntax. Older clients can also treat text `requires:` as an unknown custom key and omit its readiness effect. Use compatible clients for editing or evaluating conditions. Existing files need no migration. The rollback is a reviewed revert after retaining a copy of any files authored using the new values or conditions.
 
-The in-memory representation and JSON/JSONL payload use arrays of occurrences with JSON values as elements. Structured CSV selects an explicit header containing a colon, which cannot collide with a valid native detail key. Standard keys expecting text keep their validation. Custom keys and `requires:` accept typed values.
+A top-level JSON array contributes its elements to the value list of any key. Nest an array once to store it as a single value. The in-memory representation and JSON/JSONL payload use arrays of occurrences with JSON values as elements. Structured CSV selects an explicit header containing a colon, which cannot collide with a valid native detail key. Standard keys expecting text keep their validation. Custom keys and `requires:` accept typed values.
 
 Each requirement is evaluated from the same loaded ID universe as dependency blockers. A condition result may be true, false, or unknown. The same start condition is used by agenda and next-action views. Conditions are evaluated from current state and do not trigger state changes or establish historical facts.
 

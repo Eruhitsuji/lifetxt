@@ -549,7 +549,15 @@
       if (editorSavePending || editorCreateOutcomeUnknown) return;
       editorSavePending = true;
       document.getElementById("save-button").disabled = true;
-      const payload = editorPayload();
+      let payload;
+      try {
+        payload = editorPayload();
+      } catch (error) {
+        showActionableError("Could not save this record.", error);
+        editorSavePending = false;
+        document.getElementById("save-button").disabled = false;
+        return;
+      }
       const creating = !(selectedItem && selectedItem.editable);
       try {
         if (!creating) {

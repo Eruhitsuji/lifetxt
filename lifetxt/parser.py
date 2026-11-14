@@ -28,6 +28,16 @@ class ParseResult(tuple):
 
 
 _DIRECTIVE_RE = re.compile(r"^#!\s+([A-Za-z_][A-Za-z0-9_]*):\s*(.*?)\s*$")
+_ITEM_START_RE = re.compile(r"^ *\[(?: |/|x|-|>|\?|N)\] ")
+_JSON_SPACE = " \t\r\n"
+_LEGACY_DETAIL_RE = re.compile(r'[^ :"\t]+:')
+_JSON_CLOSE_RE = re.compile(r'"(?:[^"\\\n]|\\.)*"|(>>)')
+
+
+class _UnclosedJsonDetail(Exception):
+    pass
+
+
 _KNOWN_DIRECTIVE_KEYS = frozenset(("self", "timezone", "project"))
 
 PARSER_DIAGNOSTIC_HINTS = {
@@ -53,7 +63,7 @@ PARSER_DIAGNOSTIC_HINTS = {
     "E020": "Add the continued line after the trailing backslash, or remove the backslash.",
     "E021": "Continue into a normal item line instead of a body continuation line.",
     "E022": "Use repeated one-line body: details, or keep a single multiline continuation block.",
-    "E023": "Provide a valid JSON value, followed by a space or end of line.",
+    "E023": "Write one valid JSON value between json<< and >>, with whitespace on both sides.",
     "W001": "Remove the tab character from the blank line.",
     "W002": "Move the comment marker to column 1.",
     "W003": "Remove the trailing spaces after the final detail.",
@@ -218,6 +228,17 @@ def _logical_lines(text):
         parts = []
 
         while True:
+            candidate = "".join(parts) + current
+            if candidate.lstrip(" ").startswith("[") and "json<<" in candidate:
+                try:
+                    parse_line(candidate, start_line, _probe_json=True)
+                except _UnclosedJsonDetail:
+                    current, index = _continue_json_detail(
+                        physical_lines, index, candidate, start_line
+                    )
+                    end_line = index + 1
+                    parts = []
+
             stripped_trailing = current.rstrip(" ")
             if stripped_trailing.endswith("\\"):
                 parts.append(stripped_trailing[:-1])
@@ -261,7 +282,28 @@ def _logical_lines(text):
     return logical_lines, diagnostics
 
 
-def parse_line(line, line_no=1):
+def _continue_json_detail(physical_lines, index, candidate, start_line):
+    # Keep the next record intact even when this block has no closing marker.
+    lines = [candidate]
+    end = index
+    for next_index in range(index + 1, len(physical_lines)):
+        following = physical_lines[next_index]
+        if _ITEM_START_RE.match(following) or following.lstrip(" ").startswith(("#", "|")):
+            break
+        lines.append(following)
+        if not following.strip():
+            continue
+        end = next_index
+        if ">>" in following:
+            try:
+                parse_line("\n".join(lines), start_line, _probe_json=True)
+            except _UnclosedJsonDetail:
+                continue
+            break
+    return "\n".join(lines[:end - index + 1]), end
+
+
+def parse_line(line, line_no=1, *, _probe_json=False):
     """Parse one life.txt line.
 
     Returns ``(item, diagnostics)``. Blank/comment lines return ``None`` as the
@@ -300,17 +342,6 @@ def parse_line(line, line_no=1):
         )
         return None, diagnostics
 
-    if "\t" in text:
-        diagnostics.append(
-            _diagnostic(
-                "error",
-                "E001",
-                "Tabs are not valid separators; use single spaces.",
-                line_no,
-                text.index("\t") + 1,
-            )
-        )
-
     if len(item_text) < 3 or item_text[0] != "[":
         diagnostics.append(
             _diagnostic(
@@ -324,6 +355,13 @@ def parse_line(line, line_no=1):
         return None, diagnostics
 
     text = item_text
+    tabs = [index for index, char in enumerate(text) if char == "\t"]
+    json_ranges = []
+    if tabs:
+        diagnostics.append(_diagnostic(
+            "error", "E001", "Tabs are not valid separators; use single spaces.",
+            line_no, indent + tabs[0] + 1,
+        ))
 
     status = text[:3]
     if status not in VALID_STATUSES:
@@ -419,11 +457,27 @@ def parse_line(line, line_no=1):
                 )
             )
             break
-        key, value, pos = _parse_detail(
-            text, pos, line_no, diagnostics, column_offset=indent
+        detail_start = pos
+        key, values, pos = _parse_detail(
+            text, pos, line_no, diagnostics, column_offset=indent,
+            probe_json=_probe_json,
         )
         if key is not None:
-            details.setdefault(key, []).append(value)
+            details.setdefault(key, []).extend(values)
+            value_start = detail_start + len(key) + 1
+            if tabs and _opens_json_detail(text, value_start):
+                json_ranges.append((value_start, pos))
+
+    if json_ranges:
+        diagnostics = [d for d in diagnostics if d.code != "E001"]
+        tab = next((tab for tab in tabs if not any(start <= tab < end for start, end in json_ranges)), None)
+        if tab is not None:
+            physical_line = line_no + text.count("\n", 0, tab)
+            column = tab - text.rfind("\n", 0, tab) + (indent if physical_line == line_no else 0)
+            diagnostics.insert(0, _diagnostic(
+                "error", "E001", "Tabs are not valid separators; use single spaces.",
+                physical_line, column,
+            ))
 
     return Item(
         status,
@@ -534,7 +588,12 @@ def _consume_required_space(text, pos, line_no, diagnostics, context, column_off
     return pos
 
 
-def _parse_detail(text, pos, line_no, diagnostics, column_offset=0):
+def _opens_json_detail(text, pos):
+    end = pos + len("json<<")
+    return text.startswith("json<<", pos) and (end == len(text) or text[end] in _JSON_SPACE)
+
+
+def _parse_detail(text, pos, line_no, diagnostics, column_offset=0, probe_json=False):
     key_start = pos
     while pos < len(text) and text[pos] not in (" ", ":"):
         pos += 1
@@ -587,23 +646,41 @@ def _parse_detail(text, pos, line_no, diagnostics, column_offset=0):
                 column_offset + pos + 1,
             )
         )
-        return key, "", pos
+        return key, [""], pos
 
-    # This prefix contains a quote and therefore cannot be a legacy bare value.
-    if text.startswith('json:"', pos):
-        payload, end = _parse_quoted_string(
-            text, pos + 5, line_no, diagnostics, "JSON detail", column_offset
-        )
+    if _opens_json_detail(text, pos):
+        start = pos + len("json<<")
+        same_line_tail = text[start:].partition("\n")[0].lstrip(" \t")
+        if ">>" not in same_line_tail and _LEGACY_DETAIL_RE.match(same_line_tail):
+            return key, ["json<<"], start
+        if start == len(text) and not probe_json:
+            return key, ["json<<"], start
+        while start < len(text) and text[start] in _JSON_SPACE:
+            start += 1
         try:
-            return key, DECODER.decode(payload), end
+            value, end = DECODER.raw_decode(text, start)
+            close = end
+            while close < len(text) and text[close] in _JSON_SPACE:
+                close += 1
+            if close > end and text.startswith(">>", close):
+                return key, value if isinstance(value, list) else [value], close + 2
         except (ValueError, RecursionError):
-            diagnostics.append(
-                _diagnostic(
-                    "error", "E023", "Invalid JSON detail value.",
-                    line_no, column_offset + pos + 1,
-                )
-            )
-            return key, None, end
+            pass
+        recovery = next(
+            (match.end() for match in _JSON_CLOSE_RE.finditer(text, start) if match[1]),
+            None,
+        )
+        if probe_json and recovery is None:
+            raise _UnclosedJsonDetail
+        physical_line = line_no + text.count("\n", 0, pos)
+        column = pos - text.rfind("\n", 0, pos)
+        if physical_line == line_no:
+            column += column_offset
+        diagnostics.append(_diagnostic(
+            "error", "E023", "Invalid or unclosed JSON detail value.",
+            physical_line, column,
+        ))
+        return key, [], recovery if recovery is not None else len(text)
 
     value, pos = _parse_string(
         text,
@@ -613,7 +690,7 @@ def _parse_detail(text, pos, line_no, diagnostics, column_offset=0):
         "detail value",
         column_offset=column_offset,
     )
-    return key, value, pos
+    return key, [value], pos
 
 
 def _parse_string(text, pos, line_no, diagnostics, role, column_offset=0):

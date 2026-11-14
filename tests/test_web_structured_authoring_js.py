@@ -30,7 +30,7 @@ def _extract_script():
 
 def _extract_functions_under_test(full_script):
     detailsToText = _extract_block(
-        full_script, "function detailsToText", "function parseDetails"
+        full_script, "function editorDetailValue", "function parseDetails"
     )
     parseDetails = _extract_block(
         full_script, "function parseDetails", "function query"
@@ -209,6 +209,8 @@ modeSelect.value = "__custom__";
 syncStatusStateMode(modeContainer);
 results.custom_mode = {value: modeInput.value, hidden: modeRow.hidden, disabled: modeInput.disabled, required: modeInput.required};
 
+const jsonDetails = parseDetails(`tag:json<< ["a","b"] >>\noptions:json<<\n  [["a >> b","c"]]\n>>\nempty:json<< [] >>`);
+results.json_details = parseDetails(detailsToText(jsonDetails));
 console.log(JSON.stringify(results));
 """
 
@@ -230,6 +232,12 @@ class StructuredFieldAuthoringJsTests(unittest.TestCase):
         if proc.returncode != 0:
             raise AssertionError(proc.stderr or proc.stdout)
         cls.results = json.loads(proc.stdout)
+
+    def test_json_values_roundtrip_in_the_details_editor(self):
+        self.assertEqual(
+            {"tag": ["a", "b"], "options": [["a >> b", "c"]], "empty": []},
+            self.results["json_details"],
+        )
 
     def test_fields_are_scoped_by_item_type(self):
         # due/priority/progress are Task-relevant but not Event-relevant;

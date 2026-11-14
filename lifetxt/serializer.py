@@ -24,6 +24,8 @@ def item_to_line(item):
                 )
             continuation_lines.extend(_body_continuation_lines(values[0]))
             continue
+        if not values:
+            parts.append("%s:json<< [] >>" % key)
         for value in values:
             parts.append("%s:%s" % (key, encode_detail_value(value)))
     line = " ".join(parts)
@@ -35,10 +37,10 @@ def item_to_line(item):
 
 
 def encode_detail_value(value):
-    if isinstance(value, str):
-        return encode_string(value)
-    payload = encode_json_value(value).replace("\\", "\\\\").replace('"', '\\"')
-    return 'json:"%s"' % payload
+    if isinstance(value, str) and "\n" not in value and "\r" not in value:
+        return '"json<<"' if value == "json<<" else encode_string(value)
+    payload = [value] if isinstance(value, list) else value
+    return "json<< %s >>" % encode_json_value(payload)
 
 
 def encode_string(value):

@@ -15,10 +15,14 @@ IGNORED_INPUT_COLUMNS = ("line", "source", "text")
 def items_to_csv(items):
     columns = list(FIXED_COLUMNS) + _detail_columns(items)
     typed = any(
-        not isinstance(value, str)
+        not values
+        or any(not isinstance(value, str) for value in values)
+        or (
+            len(values) == 1
+            and (values[0] == "" or _cell_to_values(values[0]) != list(values))
+        )
         for item in items
         for values in item.details.values()
-        for value in values
     )
     if typed:
         if JSON_DETAIL_COLUMN in columns:

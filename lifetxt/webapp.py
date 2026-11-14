@@ -3978,17 +3978,6 @@ def update_item_in_file(path, line_no, payload, key="id"):
     if id_values:
         from .write_operations import transform_items_text_with_native_history
 
-        # ``updated.details`` is the caller's complete desired detail set
-        # (merge_item_payload() fully replaces details when the payload
-        # supplies one). The id-addressed mutation contract's set_details
-        # is a partial patch: an absent key leaves the original value
-        # untouched. Explicitly null out every original key that the
-        # desired set no longer carries so a full-replace update actually
-        # removes stale details instead of silently keeping them.
-        set_details = dict(updated.details)
-        for detail_key in original_item.details:
-            if detail_key not in set_details:
-                set_details[detail_key] = None
         replacement_text = transform_items_text_with_native_history(
             text,
             [
@@ -3997,7 +3986,7 @@ def update_item_in_file(path, line_no, payload, key="id"):
                     "status": updated.status,
                     "type": updated.kind,
                     "title": updated.title,
-                    "set_details": set_details,
+                    "replace_details": updated.details,
                 }
             ],
             id_key=key,

@@ -509,8 +509,8 @@
       for (const field of STRUCTURED_COMMON_FIELDS) {
         const input = document.getElementById(prefix + "-" + field.key);
         if (!input) continue;
-        // Keep repeated raw values when the displayed prose was left as-is.
-        if (field.plainText && input.value === details[field.key]?.join(", ")) continue;
+        // Keep raw values when the structured field's display is unchanged.
+        if (input.value === details[field.key]?.join(", ")) continue;
         const value = input.value.trim();
         if (!value) {
           delete details[field.key];

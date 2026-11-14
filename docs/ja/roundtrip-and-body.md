@@ -13,7 +13,30 @@
 
 正規 serializer は LF 改行を書き出します。読み取り側は LF、CRLF、CR を受け付けます。UTF-8 テキスト、Unicode の title/value、引用符のエスケープ、繰り返し detail、階層、明示的な timezone offset 文字列は golden corpus で検証されています。
 
-JSON と JSONL はすべての detail を配列として保持します。CSV は繰り返し値を JSON 配列形式のセルとして保持します。`+09:00` のような明示的 offset は、JSON、JSONL、CSV への往復中も detail 文字列の一部として残ります。日時比較のコードは parse 後の値を別途正規化できますが、交換形式は書かれた値を書き換えてはいけません。
+JSON と JSONL はすべての detail を配列として保持します。通常の CSV は文字列の繰り返し値を JSON 配列形式のセルとして保持します。`+09:00` のような明示的 offset は、JSON、JSONL、CSV への往復中も detail 文字列の一部として残ります。日時比較のコードは parse 後の値を別途正規化できますが、交換形式は書かれた値を書き換えてはいけません。
+
+## JSON 値と変換
+
+`key:json<< ... >>` の区切り内に JSON 値を１つ書きます。値の前後には空白または改行が必要です。文字列のエスケープは JSON の規則に従います。閉じ区切りと同じ行に次のフィールドを書けます。
+
+| life.txt | JSON／JSONL の `details` 内 |
+|---|---|
+| `tag:work tag:calls` または `tag:json<< ["work","calls"] >>` | `"tag":["work","calls"]` |
+| `options:json<< ["work","calls"] >>` | `"options":["work","calls"]` |
+| `options:json<< [["work","calls"]] >>` | `"options":[["work","calls"]]` |
+| `options:json<< {"active":true,"limit":2,"fallback":null} >>` | `"options":[{"active":true,"limit":2,"fallback":null}]` |
+| `options:json<< [] >>` | `"options":[]` |
+
+全キーで最上位の配列は値の一覧として展開されます。配列を値１個として保存するには一段入れ子にします。配列以外は値１個になり、キー固有の型制約は引き続き適用されます。`flag:json:true` の値は従来どおり文字列 `json:true` です。
+
+型付き値や値が０個のキーを含む場合、CSV は `status,type,title,lifetxt:json-details` をヘッダーに使用し、最後のセルに `details` オブジェクトを保存します。列とセルの JSON を保持すれば、変換を往復しても型と値の順序が保持されます。出力される life.txt の空白や記述方法は変わる場合があります。
+
+```bash
+lifetxt convert --from life --to csv life.txt -o items.csv
+lifetxt convert --from csv --to life items.csv -o restored.life.txt
+```
+
+着手条件での JSON の使い方は[アイテムリンク](item-links.md)を参照してください。
 
 ## 1 つの continuation block は 1 つの body 値
 

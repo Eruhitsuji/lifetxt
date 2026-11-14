@@ -13,7 +13,30 @@ For a valid life.txt document, the reference implementation must be able to:
 
 The canonical serializer writes LF line endings. Reading accepts LF, CRLF, and CR. UTF-8 text, Unicode titles and values, quoted escapes, repeated details, hierarchy, and explicit timezone-offset strings are covered by the golden corpus.
 
-JSON and JSONL preserve every detail as an array. CSV stores repeated values as a JSON array cell. Explicit datetime offsets such as `+09:00` remain part of the detail string during JSON, JSONL, and CSV interchange; datetime comparison code may normalize parsed values separately, but interchange must not rewrite the authored value.
+JSON and JSONL preserve every detail as an array. Ordinary CSV stores repeated text values as a JSON array cell. Explicit datetime offsets such as `+09:00` remain part of the detail string during JSON, JSONL, and CSV interchange; datetime comparison code may normalize parsed values separately, but interchange must not rewrite the authored value.
+
+## JSON values and interchange
+
+Put one JSON value inside `key:json<< ... >>`, with whitespace or a line break on either side of the value. Use ordinary JSON string escapes. The next field can follow the closing delimiter on the same line.
+
+| life.txt | Inside `details` in JSON or JSONL |
+|---|---|
+| `tag:work tag:calls` or `tag:json<< ["work","calls"] >>` | `"tag":["work","calls"]` |
+| `options:json<< ["work","calls"] >>` | `"options":["work","calls"]` |
+| `options:json<< [["work","calls"]] >>` | `"options":[["work","calls"]]` |
+| `options:json<< {"active":true,"limit":2,"fallback":null} >>` | `"options":[{"active":true,"limit":2,"fallback":null}]` |
+| `options:json<< [] >>` | `"options":[]` |
+
+For every key, a top-level array supplies the list of values. Add one nesting level to store an array as a single value. Any non-array value supplies one value. Key-specific type constraints still apply. `flag:json:true` remains the literal string `json:true`.
+
+CSV uses the header `status,type,title,lifetxt:json-details` when the data contains typed values or a key with zero values. The final cell stores the `details` object. Keep that column and its JSON intact to preserve types and value order on import. Reserialization may change the original whitespace or spelling.
+
+```bash
+lifetxt convert --from life --to csv life.txt -o items.csv
+lifetxt convert --from csv --to life items.csv -o restored.life.txt
+```
+
+See [Item Links](item-links.md) for using JSON with state-based start conditions.
 
 ## One continuation block means one body value
 

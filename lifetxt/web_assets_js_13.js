@@ -1,21 +1,3 @@
-      if (!("Notification" in window)) { if (bar) { bar.textContent = t("Browser notifications not supported."); bar.style.display = ""; } return; }
-      const perm = Notification.permission;
-      const classes = {granted: "notif-perm-granted", denied: "notif-perm-denied", default: "notif-perm-default"};
-      const labels = {
-        granted: t("Notifications: granted"),
-        denied: t("Notifications: blocked. Re-enable them from the browser site settings for this page."),
-        default: t("Notifications: not yet requested"),
-      };
-      if (bar) {
-        bar.className = "notif-permission " + (classes[perm] || "");
-        if (perm === "denied") {
-          bar.innerHTML = `<span>${escapeHtml(labels.denied)}</span><button class="secondary" type="button" onclick="showNotificationSettingsHelp()">${escapeHtml(t("How"))}</button>`;
-        } else {
-          bar.textContent = labels[perm] || perm;
-        }
-        bar.style.display = "";
-      }
-    }
     function showNotificationSettingsHelp() {
       showToast(t("Use the browser lock/site icon, open Site settings, and allow Notifications for this URL."), "info", 8000);
     }
@@ -397,8 +379,8 @@
     function updateNotifBtnLabel() {
       const btn = document.getElementById("notif-btn");
       if (!btn) return;
-      const perm = ("Notification" in window) ? Notification.permission : "unsupported";
-      const indicator = perm === "granted" ? " ●" : perm === "denied" ? " ✕" : " ○";
+      const blocked = !window.lifetxtDesktopAlerts && browserAlertsPermission() === "denied";
+      const indicator = automaticAlertsEnabled() ? " ●" : blocked ? " ✕" : " ○";
       // "Notifications ✕" is not itself a dictionary key and the suffix-peel
       // rule only handles a trailing "(...)", so a compound assignment would
       // stay English forever even with a "Notifications" dictionary entry;

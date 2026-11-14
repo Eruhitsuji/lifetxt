@@ -476,8 +476,12 @@
         margin-top: 0;
       }
     }
-    #editor-modal.first-task-editor .first-task-extra,
-    #editor-modal:not(.first-task-editor) #first-task-details { display: none; }
+    #editor-modal[data-create-mode] .compact-editor-extra,
+    #editor-modal[data-create-mode="first-task"] #structured-fields,
+    #editor-modal[data-create-mode="task"] #structured-fields > :not(label[for="edit-due"]),
+    #editor-modal[data-create-mode="task"] label[for="edit-due"] > span > small,
+    #editor-modal:not([data-create-mode]) #compact-editor-details { display: none; }
+    #editor-modal[data-create-mode="task"] label[for="edit-due"] { grid-column: 1 / -1; }
     .field-help-text { display: block; color: var(--muted); font-size: .75rem; font-weight: 400; }
     .skip-link {
       position: fixed;

@@ -19556,6 +19556,16 @@ traceability:
         - tests/test_web_assets.py
       status: in_review
 
+    - requirement_id: req-web-task-title-and-optional-deadline
+      capability_id: cap-web-beginner-first-ux
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1590
+      tests_or_evidence:
+        - tests/test_web_items_filters.py
+        - tests/test_web_structured_authoring_js.py
+        - tests/test_web_editor_write_safety.py
+      status: in_review
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

@@ -63,7 +63,7 @@ disclosure = null; setupItemsFilterDisclosure();
 
 @unittest.skipUnless(shutil.which("node"), "Node.js unavailable")
 class ItemsEmptyStateTests(unittest.TestCase):
-    def test_first_task_editor_preserves_title_and_normal_creation(self):
+    def test_compact_editors_preserve_fields_and_full_creation(self):
         start = HTML_PAGE.index("    function openEditorModal(")
         end = HTML_PAGE.index("    // ── Context-aware related-item creation", start)
         wrapper = HTML_PAGE.index("    const _structuredOriginalNewItem = newItem;")
@@ -77,36 +77,49 @@ const document = { getElementById(id) {
   if (!elements.has(id)) elements.set(id, {focus() { focused = id; }});
   return elements.get(id);
 }};
-let focused, selectedItem, simple, renders = 0, structured = 0;
+let focused, selectedItem, renders = 0, structured = 0;
 const currentItems = [];
-document.getElementById("editor-modal").classList = {
-  toggle(_name, enabled) { simple = enabled; },
-  remove() { simple = false; },
-};
+const editor = document.getElementById("editor-modal");
+editor.dataset = {};
 const openManagedModal = (_modal, target) => { focused = target; };
 const ensureBeginnerProfileVocabulary = () => {};
 const refreshAuthoringModeOptions = () => {};
 const setEditorDisabled = () => {};
 const renderItems = () => { renders++; };
-const refreshStructuredFields = () => { structured++; };
+const refreshStructuredFields = () => {
+  structured++;
+  document.getElementById("edit-due").value = "";
+};
 const parseDetails = text => text ? {unexpected: text} : {};
 """
         assertions = r"""
-newItem(true);
-assert.equal(simple, true);
+newItem("first-task");
+assert.equal(editor.dataset.createMode, "first-task");
 assert.equal(focused, "#edit-title");
 assert.equal(renders, 0, "keep the empty-state trigger in the DOM for focus restoration");
 document.getElementById("edit-title").value = "First task";
 assert.deepEqual(editorPayload(), {status:"[ ]", type:"T", title:"First task", details:{}});
-showFirstTaskDetails();
-assert.equal(simple, false);
+showCompactEditorDetails();
+assert.equal(editor.dataset.createMode, undefined);
 assert.equal(editorPayload().title, "First task");
 assert.equal(focused, "edit-title");
+newItem("task");
+assert.equal(editor.dataset.createMode, "task");
+assert.equal(document.getElementById("edit-status").value, "[ ]");
+assert.equal(document.getElementById("edit-type").value, "T");
+document.getElementById("edit-title").value = "Task with deadline";
+document.getElementById("edit-due").value = "2026-12-15";
+showCompactEditorDetails();
+assert.equal(editor.dataset.createMode, undefined);
+assert.equal(document.getElementById("edit-title").value, "Task with deadline");
+assert.equal(document.getElementById("edit-due").value, "2026-12-15");
+newItem("task");
 newItem();
-assert.equal(simple, false);
+assert.equal(editor.dataset.createMode, undefined);
 assert.equal(editorPayload().title, "");
-assert.equal(renders, 1);
-assert.equal(structured, 2);
+assert.equal(document.getElementById("edit-due").value, "");
+assert.equal(renders, 3);
+assert.equal(structured, 4);
 """
         source = (
             harness
@@ -137,7 +150,7 @@ const isKioskMode = () => kiosk;
 const isDisplayMode = () => display;
 const guidedEmptyState = (_icon, title, hint) => [title, hint].join(" ");
 const firstTask = /Create your first task/;
-assert.match(itemsEmptyStateMarkup(), /onclick="newItem\(true\)">Create your first task/);
+assert.match(itemsEmptyStateMarkup(), /onclick=\"newItem\('first-task'\)\">Create your first task/);
 assert.doesNotMatch(itemsEmptyStateMarkup(), /toggleQuickAdd|openCmdk/);
 for (const kind of ["filtered", "scoped"]) {
   itemsEmptyKind = kind;

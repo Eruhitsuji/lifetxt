@@ -511,7 +511,7 @@
         <div class="empty-title">No items yet</div>
         <div class="empty-hint">Create a task, find it here in Items, then open it to mark it done.</div>
         <div class="empty-actions">
-          <button type="button" onclick="newItem(true)">Create your first task</button>
+          <button type="button" onclick="newItem('first-task')">Create your first task</button>
         </div>
       </div>`;
     }

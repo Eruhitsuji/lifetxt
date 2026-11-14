@@ -39,6 +39,30 @@ assert.deepEqual(opened,[id]);assert.equal(prevented,1);
         )
         self.assertEqual(0, result.returncode, result.stderr)
 
+    def test_readiness_badge_distinguishes_waiting_and_unknown(self):
+        start = HTML_PAGE.index("    function blockerLabel(")
+        end = HTML_PAGE.index("    function _temporalDisplayLabel(", start)
+        harness = r"""
+const assert = require("node:assert/strict");
+const drawerText = (en, ja) => ja;
+const escapeHtml = text => text.replaceAll("<", "&lt;");
+const waiting = readinessBadge({blocked:true, blocked_by:[
+  {title:"<Review>",condition_state:"waiting",required_statuses:["[x]"],status:"[/]"},
+]});
+assert.match(waiting, /条件待ち/);
+assert.match(waiting, /必要 \[x\]、現在/);
+assert.ok(waiting.includes("&lt;Review>"));
+const unknown = readinessBadge({blocked:true, blocked_by:[{id:"missing",condition_state:"unknown"}]});
+assert.match(unknown, /判定不能/);
+assert.ok(!unknown.includes("条件待ち"));
+assert.equal(readinessBadge({blocked:false}), "");
+"""
+        result = subprocess.run(
+            ["node", "-e", HTML_PAGE[start:end] + harness],
+            capture_output=True, text=True, timeout=10,
+        )
+        self.assertEqual(0, result.returncode, result.stderr)
+
     def test_agenda_renderer_uses_link_and_binds_handler(self):
         start = HTML_PAGE.index("    async function loadAgenda()")
         end = HTML_PAGE.index("    // ── Presence rendering", start)
@@ -48,7 +72,7 @@ assert.deepEqual(opened,[id]);assert.equal(prevented,1);
 
     def test_show_all_link_and_row_limit_input_use_same_url_setting(self):
         agenda = HTML_PAGE[
-            HTML_PAGE.index("    function _temporalDisplayLabel(") : HTML_PAGE.index(
+            HTML_PAGE.index("    function blockerLabel(") : HTML_PAGE.index(
                 "    // ── Presence rendering"
             )
         ]
@@ -141,7 +165,7 @@ main().catch(error => { console.error(error); process.exitCode = 1; });
         self.assertEqual(0, result.returncode, result.stderr)
 
     def test_only_current_agenda_load_renders_and_errors_can_retry(self):
-        start = HTML_PAGE.index("    function _temporalDisplayLabel(")
+        start = HTML_PAGE.index("    function blockerLabel(")
         end = HTML_PAGE.index("    // ── Presence rendering", start)
         harness = r"""
 const assert = require("node:assert/strict");

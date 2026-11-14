@@ -37,6 +37,9 @@
           "通知: 期限が来たメッセージ/リマインダー、確認・スヌーズ・ブラウザ通知の操作です。",
         "Stats: charts, heatmaps, and type/status breakdowns.":
           "統計: グラフ、ヒートマップ、種類/ステータス別の内訳です。",
+        "Examples: tag:json<< [\"work\",\"calls\"] >> and requires:review=done. JSON blocks can span lines.": "例: tag:json<< [\"work\",\"calls\"] >> ／ requires:review=done。JSON ブロック内で改行できます。",
+        "Write one JSON value between json<< and >>.": "json<< と >> の間に、前後を空白で区切って JSON 値を１つ書いてください。",
+        "Invalid JSON in the detail block.": "詳細欄の JSON の構文が正しくありません。",
         "Graph: id, parent, ref, depends_on, blocks, and related links.":
           "グラフ: id・parent・ref・depends_on・blocks および related のリンクです。",
         "Server: read-only disaster-recovery backup health and scheduling status.":
@@ -402,9 +405,11 @@
           }
           const payload = end === undefined ? "" : block.slice(0, end);
           if (!/^[ \t\r\n]/.test(payload) || !/[ \t\r\n]$/.test(payload) || block.slice(end + 2).trim()) {
-            throw new Error("Write one JSON value between json<< and >>.");
+            throw new Error(t("Write one JSON value between json<< and >>."));
           }
-          const value = JSON.parse(payload);
+          let value;
+          try { value = JSON.parse(payload); }
+          catch { throw new Error(t("Invalid JSON in the detail block.")); }
           const values = details[key] ||= [];
           for (const entry of Array.isArray(value) ? value : [value]) values.push(entry);
           continue;

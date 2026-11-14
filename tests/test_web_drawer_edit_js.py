@@ -360,6 +360,18 @@ await drawerSaveEdit();
 results.custom_detail_preserved = apiCalls[0].body.details.custom_key;
 
 // -- Type S: standard vs custom status/presence value ---------------------
+drawerItem = {line:7, editable:true, status:"[ ]", type:"T", title:"JSON", details:{tag:["old"]}};
+drawerEdit();
+apiCalls = []; toasts = [];
+const jsonEditor = document.getElementById("drawer-edit-details");
+jsonEditor.value = 'tag:json<< ["work",] >>';
+await drawerSaveEdit();
+results.bad_json = {requests:apiCalls.length, text:jsonEditor.value, feedback:toasts.length};
+jsonEditor.value = 'tag:json<< ["work","calls"] >>\noptions:json<< {"active":true} >>';
+jsonEditor.dispatchEvent({type:"input"});
+await drawerSaveEdit();
+results.corrected_json = apiCalls[0]?.body.details;
+
 drawerItem = { line: 3, editable: true, status: "[ ]", type: "S", title: "Focus", details: { state: ["working"] } };
 global.standardStatusStates = () => ["working", "available", "busy"];
 global.statusStateLabel = s => s;
@@ -498,6 +510,16 @@ class DrawerEditInteractionTests(unittest.TestCase):
         self.assertEqual("warning", results["readonly_refused_toast"]["type"])
         self.assertEqual(
             "<div>original overview</div>", results["readonly_body_unchanged"]
+        )
+
+    def test_json_error_retains_input_and_corrected_edit_saves(self):
+        results = self._run()
+        self.assertEqual(0, results["bad_json"]["requests"])
+        self.assertEqual(1, results["bad_json"]["feedback"])
+        self.assertEqual('tag:json<< ["work",] >>', results["bad_json"]["text"])
+        self.assertEqual(
+            {"tag": ["work", "calls"], "options": [{"active": True}]},
+            results["corrected_json"],
         )
 
     def test_blank_title_fails_loudly_before_any_save_request(self):

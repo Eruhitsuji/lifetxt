@@ -1,14 +1,36 @@
+      await refreshAll();
+    }
+
     function blockerLabel(blocker) {
       const name = blocker.title || blocker.id || "requires";
-      if (blocker.condition_state === "unknown") return `${name} (condition unknown)`;
+      if (blocker.condition_state === "unknown") {
+        return drawerText(`${name} (condition unknown)`, `${name}（条件を判定できません）`);
+      }
       if (blocker.condition_state === "waiting") {
-        return `${name} (requires ${blocker.required_statuses.join(" or ")}, currently ${blocker.status})`;
+        const required = (blocker.required_statuses || []).join(drawerText(" or ", " または "));
+        return drawerText(
+          `${name} (requires ${required}, currently ${blocker.status})`,
+          `${name}（必要 ${required}、現在 ${blocker.status}）`,
+        );
       }
       return name;
     }
 
-      await refreshAll();
+    function readinessBadge(record) {
+      if (!record.blocked) return "";
+      const blockers = record.blocked_by || [];
+      const labels = [];
+      if (blockers.some(blocker => blocker.condition_state === "waiting")) {
+        labels.push(drawerText("Waiting for condition", "条件待ち"));
+      }
+      if (blockers.some(blocker => blocker.condition_state === "unknown")) {
+        labels.push(drawerText("Condition unknown", "判定不能"));
+      }
+      if (!labels.length) labels.push(drawerText("blocked", "依存先待ち"));
+      const reason = blockers.map(blockerLabel).join(", ");
+      return `<span class="blocked-badge" title="${escapeHtml(reason)}">⚡ ${escapeHtml(labels.join(" / "))}</span>`;
     }
+
     function _temporalDisplayLabel(value, options = {}) {
       const text = String(value || "");
       if (!text) return "";
@@ -121,9 +143,7 @@
         const spanBadge = entry.matchTotal > 1
           ? `<span class="occurrence-badge" title="Occurrence ${entry.matchIndex} of ${entry.matchTotal} in this range">${entry.matchIndex}/${entry.matchTotal}</span>`
           : "";
-        const blockedBadge = record.blocked
-          ? `<span class="blocked-badge" title="Blocked by: ${escapeHtml((record.blocked_by || []).map(blockerLabel).join(", "))}">⚡ blocked</span>`
-          : "";
+        const blockedBadge = readinessBadge(record);
         const source = record.source_id ? `<div class="meta">ID: ${escapeHtml(record.source_id)}</div>` : "";
         const countdown = agendaCountdownLabel({status: record.status, occurrence_start: entry.when});
         const displayWhen = _temporalDisplayLabel(entry.when, {allDayMidnight: true});
@@ -415,9 +435,7 @@
       const time = timed ? when.slice(11, 16) : "all-day";
       const past = timed ? when < nowIso : when.slice(0, 10) < nowIso.slice(0, 10);
       const type = record.type || "N";
-      const blockedBadge = record.blocked
-        ? `<span class="blocked-badge" title="Blocked by: ${escapeHtml((record.blocked_by || []).map(blockerLabel).join(", "))}">⚡ blocked</span>`
-        : "";
+      const blockedBadge = readinessBadge(record);
       // Occurrence badge is sourced from this row's own match when one is
       // available (each repeat occurrence in matches carries its own
       // occurrence_index/repeat), falling back to the record-level

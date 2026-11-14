@@ -140,8 +140,11 @@
 
       applyPresetToUrl();
       applyUrlToControls();
-      updateNotifPermissionDisplay();
-      updateNotifBtnLabel();
+      syncNotificationControls();
+      window.addEventListener("focus", () => {
+        syncNotificationControls();
+        if (automaticAlertsEnabled()) void loadNotifications();
+      });
       updateTypeHints(document.getElementById("edit-type").value);
       setupContextualHelp();
       setupWorkspaceTabs();

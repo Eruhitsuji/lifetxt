@@ -15,7 +15,7 @@ class EditorWriteSafetyTests(unittest.TestCase):
         save = HTML_PAGE.index("async function saveItem(event)", start)
         end = HTML_PAGE.index("\n    async function deleteSelected()", save)
         # newItem depends on the browser modal; only the save closure is needed.
-        source = HTML_PAGE[start:HTML_PAGE.index("    function newItem()", start)] + HTML_PAGE[save:end]
+        source = HTML_PAGE[start:HTML_PAGE.index("    function newItem(", start)] + HTML_PAGE[save:end]
         harness = r"""
 let selectedItem = null;
 let calls = [], pending = [], errors = [], closed = 0, refreshed = 0;

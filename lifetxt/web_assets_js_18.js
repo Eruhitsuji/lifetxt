@@ -34,8 +34,8 @@
     };
 
     const _structuredOriginalNewItem = newItem;
-    newItem = function() {
-      _structuredOriginalNewItem();
+    newItem = function(firstTask = false) {
+      _structuredOriginalNewItem(firstTask === true);
       refreshStructuredFields();
     };
     const _structuredOriginalSelectItem = selectItem;

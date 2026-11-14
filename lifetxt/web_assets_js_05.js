@@ -361,8 +361,10 @@
       });
       await refreshAll();
     }
-    function openEditorModal() {
-      openManagedModal(document.getElementById("editor-modal"), "#edit-title");
+    function openEditorModal(firstTask = false) {
+      const modal = document.getElementById("editor-modal");
+      modal.classList.toggle("first-task-editor", firstTask);
+      openManagedModal(modal, "#edit-title");
     }
     function closeEditorModal() {
       closeManagedModal(document.getElementById("editor-modal"));
@@ -387,11 +389,11 @@
     }
     let editorSavePending = false;
     let editorCreateOutcomeUnknown = false;
-    function newItem() {
+    function newItem(firstTask = false) {
       editorCreateOutcomeUnknown = false;
-      openEditorModal();
+      openEditorModal(firstTask);
       selectedItem = null;
-      document.getElementById("editor-heading").textContent = "New Record";
+      document.getElementById("editor-heading").textContent = firstTask ? "Create your first task" : "New Record";
       ensureBeginnerProfileVocabulary();
       refreshAuthoringModeOptions("[ ]", "T");
       document.getElementById("edit-status").value = "[ ]";
@@ -400,9 +402,17 @@
       document.getElementById("edit-details").value = "";
       document.getElementById("save-button").textContent = "Create";
       document.getElementById("delete-button").disabled = true;
-      document.getElementById("editor-note").textContent = "Create a new record or select an editable row.";
+      document.getElementById("editor-note").textContent = firstTask
+        ? "Give your task a title. After creating it, open it from Items and mark it done."
+        : "Create a new record or select an editable row.";
       setEditorDisabled(false);
-      renderItems(currentItems);
+      if (!firstTask) renderItems(currentItems);
+    }
+    function showFirstTaskDetails() {
+      document.getElementById("editor-modal").classList.remove("first-task-editor");
+      document.getElementById("editor-heading").textContent = "New Record";
+      document.getElementById("editor-note").textContent = "Create a new record or select an editable row.";
+      document.getElementById("edit-title").focus();
     }
     // ── Context-aware related-item creation (#770) ──────────────────────
     // The selected project/item context only supplies visible initial

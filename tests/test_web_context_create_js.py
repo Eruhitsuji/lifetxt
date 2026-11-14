@@ -27,7 +27,7 @@ def _extract_script():
 
 
 def _extract_functions_under_test(full_script):
-    start = full_script.index("function newItem()")
+    start = full_script.index("function newItem(")
     end_anchor = full_script.index("function drawerCreateRelated")
     end = full_script.index("\n    }\n", end_anchor) + len("\n    }\n")
     return full_script[start:end]

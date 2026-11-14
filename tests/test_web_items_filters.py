@@ -63,6 +63,66 @@ disclosure = null; setupItemsFilterDisclosure();
 
 @unittest.skipUnless(shutil.which("node"), "Node.js unavailable")
 class ItemsEmptyStateTests(unittest.TestCase):
+    def test_first_task_editor_preserves_title_and_normal_creation(self):
+        start = HTML_PAGE.index("    function openEditorModal(")
+        end = HTML_PAGE.index("    // ── Context-aware related-item creation", start)
+        wrapper = HTML_PAGE.index("    const _structuredOriginalNewItem = newItem;")
+        wrapper_end = HTML_PAGE.index("    const _structuredOriginalSelectItem", wrapper)
+        payload = HTML_PAGE.index("    function editorPayload()")
+        payload_end = HTML_PAGE.index("    async function saveItem(", payload)
+        harness = r"""
+const assert = require("node:assert/strict");
+const elements = new Map();
+const document = { getElementById(id) {
+  if (!elements.has(id)) elements.set(id, {focus() { focused = id; }});
+  return elements.get(id);
+}};
+let focused, selectedItem, simple, renders = 0, structured = 0;
+const currentItems = [];
+document.getElementById("editor-modal").classList = {
+  toggle(_name, enabled) { simple = enabled; },
+  remove() { simple = false; },
+};
+const openManagedModal = (_modal, target) => { focused = target; };
+const ensureBeginnerProfileVocabulary = () => {};
+const refreshAuthoringModeOptions = () => {};
+const setEditorDisabled = () => {};
+const renderItems = () => { renders++; };
+const refreshStructuredFields = () => { structured++; };
+const parseDetails = text => text ? {unexpected: text} : {};
+"""
+        assertions = r"""
+newItem(true);
+assert.equal(simple, true);
+assert.equal(focused, "#edit-title");
+assert.equal(renders, 0, "keep the empty-state trigger in the DOM for focus restoration");
+document.getElementById("edit-title").value = "First task";
+assert.deepEqual(editorPayload(), {status:"[ ]", type:"T", title:"First task", details:{}});
+showFirstTaskDetails();
+assert.equal(simple, false);
+assert.equal(editorPayload().title, "First task");
+assert.equal(focused, "edit-title");
+newItem();
+assert.equal(simple, false);
+assert.equal(editorPayload().title, "");
+assert.equal(renders, 1);
+assert.equal(structured, 2);
+"""
+        source = (
+            harness
+            + HTML_PAGE[start:end]
+            + HTML_PAGE[wrapper:wrapper_end]
+            + HTML_PAGE[payload:payload_end]
+            + assertions
+        )
+        result = subprocess.run(
+            ["node", "-e", source],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        self.assertEqual(0, result.returncode, result.stderr)
+
     def test_first_task_is_only_offered_for_unfiltered_writable_items(self):
         start = HTML_PAGE.index("    function itemsEmptyStateMarkup()")
         end = HTML_PAGE.index("    function renderItems(", start)
@@ -77,7 +137,8 @@ const isKioskMode = () => kiosk;
 const isDisplayMode = () => display;
 const guidedEmptyState = (_icon, title, hint) => [title, hint].join(" ");
 const firstTask = /Create your first task/;
-assert.match(itemsEmptyStateMarkup(), firstTask);
+assert.match(itemsEmptyStateMarkup(), /onclick="newItem\(true\)">Create your first task/);
+assert.doesNotMatch(itemsEmptyStateMarkup(), /toggleQuickAdd|openCmdk/);
 for (const kind of ["filtered", "scoped"]) {
   itemsEmptyKind = kind;
   assert.match(itemsEmptyStateMarkup(), /No items match/);

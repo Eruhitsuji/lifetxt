@@ -476,6 +476,8 @@
         margin-top: 0;
       }
     }
+    #editor-modal.first-task-editor .first-task-extra,
+    #editor-modal:not(.first-task-editor) #first-task-details { display: none; }
     .field-help-text { display: block; color: var(--muted); font-size: .75rem; font-weight: 400; }
     .skip-link {
       position: fixed;

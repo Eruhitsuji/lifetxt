@@ -1,0 +1,15 @@
+schema_version: 1
+links:
+  - requirement_id: req-structured-json-details
+    capability_id: cap-import-export-format-expansion
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1594
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1595
+    tests_or_evidence: [tests.test_json_details_requirements.JsonDetailsTests, tests.test_web_structured_authoring_js, tests.test_web_assets]
+    status: in_review
+  - requirement_id: req-state-dependent-start
+    capability_id: cap-graph-link-foundation
+    task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1594
+    pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1595
+    tests_or_evidence: [tests.test_json_details_requirements.RequiresTests]
+    status: in_review
+gaps: [Independent review and CI pending for the updated PR head]

@@ -98,6 +98,48 @@ class JsonDetailsTests(unittest.TestCase):
         self.assertEqual(items[1].details["options"], ["json<<"])
 
 
+    def test_json_strings_keep_literal_types_through_interchange(self):
+        items, diagnostics = parse_text(
+            r'[ ] T Example empty:json<< "" >> text:json<< "[1,2]" >> '
+            r'lines:json<< "first\nsecond" >> literal:json:true'
+        )
+        self.assertFalse([d for d in diagnostics if d.severity == "error"])
+        expected = {
+            "empty": [""],
+            "text": ["[1,2]"],
+            "lines": ["first\nsecond"],
+            "literal": ["json:true"],
+        }
+        self.assertEqual(items[0].details, expected)
+        for restored in (
+            parse_text(item_to_line(items[0]))[0],
+            items_from_json_text(items_to_json(items)),
+            items_from_jsonl_text(items_to_jsonl(items)),
+            items_from_csv_text(items_to_csv(items)),
+        ):
+            self.assertEqual(restored[0].details, expected)
+
+    def test_malformed_closed_block_recovers_at_following_detail(self):
+        items, diagnostics = parse_text(
+            '[ ] T Example custom:json<<\n'
+            '  ["inside >> string",]\n'
+            '>> tag:after\n'
+            '[ ] T Next tag:next\n'
+        )
+        self.assertEqual([d.code for d in diagnostics if d.severity == "error"], ["E023"])
+        self.assertEqual(items[0].details["tag"], ["after"])
+        self.assertEqual(items[1].details["tag"], ["next"])
+
+    def test_json_arrays_still_use_standard_key_type_constraints(self):
+        items, diagnostics = parse_text(
+            '[ ] T Example tag:json<< ["valid",2] >> custom:json<< ["valid",2] >>'
+        )
+        self.assertEqual(items[0].details["tag"], ["valid", 2])
+        self.assertEqual(items[0].details["custom"], ["valid", 2])
+        errors = [d for d in diagnostics if d.severity == "error"]
+        self.assertEqual([d.code for d in errors], ["E025"])
+        self.assertIn("tag:", errors[0].message)
+
     def test_web_update_by_id_preserves_typed_and_empty_values(self):
         from lifetxt.webapp import update_item_in_file
 

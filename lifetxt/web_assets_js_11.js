@@ -317,9 +317,12 @@
         limited + content + `</details>`;
     }
 
+    let graphLoadGeneration = 0;
+    let graphRelationsExpanded = false;
     async function loadGraphPanel() {
       const panel = document.getElementById("graph-panel");
       if (!panel) return;
+      const generation = ++graphLoadGeneration;
       graphLoaded = true;
       const rootInput = document.getElementById("graph-root");
       const depthInput = document.getElementById("graph-depth");
@@ -328,10 +331,11 @@
       const params = new URLSearchParams();
       if (root) params.set("root", root);
       if (depth) params.set("depth", depth);
-      const relationsExpanded = panel.querySelector(".graph-relations")?.open;
+      graphRelationsExpanded = panel.querySelector(".graph-relations")?.open ?? graphRelationsExpanded;
       panel.innerHTML = `<div class="empty">Loading graph…</div>`;
       try {
         const data = await api(`/api/graph?${params.toString()}`);
+        if (generation !== graphLoadGeneration) return;
         const nodes = data.nodes || [];
         const edges = data.edges || [];
         if (!nodes.length) {
@@ -342,10 +346,11 @@
         }
         const missingCount = nodes.filter(n => n.missing).length;
         const missingNote = missingCount ? ` ${missingCount} dashed node(s) are referenced but missing.` : "";
-        panel.innerHTML = renderGraphRelations(nodes, edges, relationsExpanded) +
+        panel.innerHTML = renderGraphRelations(nodes, edges, graphRelationsExpanded) +
           renderGraphSvg(nodes, edges, {focusId: root, layout: _graphLayout}) +
           `<div class="note" style="margin-top:.45rem">${nodes.length} nodes / ${edges.length} edges. Click a node to open it.${escapeHtml(missingNote)}</div>`;
       } catch(e) {
+        if (generation !== graphLoadGeneration) return;
         panel.innerHTML = `<div class="diagnostic">Graph error: ${escapeHtml(e.message)}</div>`;
       }
     }

@@ -115,9 +115,26 @@ const markup = () => elements["stats-breakdown"].innerHTML;
   const successful = load();
   requests[4].resolve({by_type: {T: 2}, by_status: {"[x]": 1}});
   await successful;
+  assert.match(markup(), />By Type</);
+  assert.match(markup(), />By Status</);
   assert.match(markup(), /Task/);
   assert.match(markup(), /done/);
+  assert.doesNotMatch(markup(), /No entries/);
   assert.doesNotMatch(markup(), /Reload breakdown/);
+
+  const typeOnly = load();
+  requests[5].resolve({by_type: {T: 2}, by_status: {}});
+  await typeOnly;
+  assert.match(markup(), /By Status<\/div>\s*<div[^>]*><em>No entries<\/em>/);
+
+  language = "ja";
+  const statusOnly = load();
+  requests[6].resolve({by_type: {}, by_status: {"[x]": 1}});
+  await statusOnly;
+  assert.match(markup(), /種別別<\/div>\s*<div[^>]*><em>該当なし<\/em>/);
+  assert.match(markup(), />ステータス別</);
+  assert.match(markup(), /done/);
+  assert.doesNotMatch(markup(), /By Type|By Status|No entries|<em>none<\/em>/);
 })().catch(error => { console.error(error); process.exitCode = 1; });
 """
         result = subprocess.run(

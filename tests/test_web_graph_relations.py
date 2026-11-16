@@ -11,18 +11,18 @@ from tests.test_web_native_timeline_visual import _extract_script
 
 @unittest.skipUnless(shutil.which("node"), "Node.js unavailable")
 class GraphRelationsTests(unittest.TestCase):
-    def test_graph_load_renders_bounded_localized_list_and_preserves_svg(self):
+    def test_graph_load_keeps_latest_results_and_renders_bounded_localized_list(self):
         source = _extract_script()
         signatures = [
             "function escapeHtml(",
             "function jsLiteral(",
             "function drawerText(",
             "function drawerRelationLabel(",
-            "function graphRelationEndpoint(",
-            "function renderGraphRelations(",
-            "async function loadGraphPanel(",
         ]
         functions = "\n".join(_extract_function(source, sig) for sig in signatures)
+        graph_start = source.index("    function graphRelationEndpoint(")
+        graph_end = source.index("    // ── Native Timeline visual explorer", graph_start)
+        functions += "\n" + source[graph_start:graph_end]
         run = subprocess.run(
             [
                 "node",
@@ -30,6 +30,7 @@ class GraphRelationsTests(unittest.TestCase):
                 functions
                 + r"""
 let lang = "ja", graphLoaded;
+const assert = require("node:assert/strict");
 const currentLanguage = () => lang;
 const title = '<長い名前 & "title">';
 const id = "source');alert(1)//";
@@ -39,29 +40,70 @@ const nodes = [
 ];
 const edge = {source:id, target:"target", relation:"depends_on"};
 const edges = [edge, {source:"/input/life.txt:42", target:"missing", relation:"<custom>"}];
-const panel = {innerHTML:"", querySelector:() => ({open:true})};
+const panel = {
+  innerHTML:'<details class="graph-relations" data-no-i18n open></details>',
+  querySelector:() => panel.innerHTML.includes('class="graph-relations"')
+    ? {open: panel.innerHTML.includes("data-no-i18n open>")}
+    : null,
+};
 const inputs = {"graph-panel":panel, "graph-root":{value:"root"}, "graph-depth":{value:"2"}};
 const document = {getElementById:id => inputs[id]};
-let requested;
-const api = async url => { requested = url; return {nodes, edges}; };
+const requests = [];
+const api = url => new Promise((resolve, reject) => requests.push({url, resolve, reject}));
 const _graphLayout = "force";
 const renderGraphSvg = (n, e, options) =>
   n === nodes && e === edges && options.layout === "force" && options.focusId === "root"
     ? "<svg></svg>" : "unexpected SVG input";
 (async () => {
-  await loadGraphPanel();
+  const first = loadGraphPanel();
+  requests[0].resolve({nodes, edges});
+  await first;
   const ja = panel.innerHTML;
+
+  inputs["graph-root"].value = "older";
+  const older = loadGraphPanel();
+  inputs["graph-root"].value = "root";
+  const latest = loadGraphPanel();
+  requests[2].resolve({nodes, edges});
+  await latest;
+  assert.equal(panel.innerHTML, ja);
+  requests[1].resolve({nodes: [], edges: []});
+  await older;
+  assert.equal(panel.innerHTML, ja, "stale empty result must not replace the graph");
+
+  panel.innerHTML = ja.replace("data-no-i18n open>", "data-no-i18n>");
+  const staleFailure = loadGraphPanel();
+  const fresh = loadGraphPanel();
+  requests[4].resolve({nodes, edges});
+  await fresh;
+  const closed = panel.innerHTML;
+  assert.match(closed, /data-no-i18n>/);
+  requests[3].reject(new Error("stale failure"));
+  await staleFailure;
+  assert.equal(panel.innerHTML, closed);
+
+  const staleSuccess = loadGraphPanel();
+  const freshFailure = loadGraphPanel();
+  requests[6].reject(new Error("latest failure"));
+  await freshFailure;
+  const error = panel.innerHTML;
+  assert.match(error, /Graph error: latest failure/);
+  requests[5].resolve({nodes, edges});
+  await staleSuccess;
+  assert.equal(panel.innerHTML, error);
+
   lang = "en";
   const en = renderGraphRelations(nodes, edges);
   const limited = renderGraphRelations(nodes, Array(101).fill(edge));
-  console.log(JSON.stringify({ja, en, limited, requested, empty:renderGraphRelations(nodes, [])}));
-})();
+  console.log(JSON.stringify({ja, en, limited, requested:requests[0].url, empty:renderGraphRelations(nodes, [])}));
+})().catch(error => { console.error(error); process.exitCode = 1; });
 """,
             ],
-            check=True,
             capture_output=True,
             text=True,
+            timeout=10,
         )
+        self.assertEqual(run.returncode, 0, run.stderr)
         result = json.loads(run.stdout)
         self.assertEqual("/api/graph?root=root&depth=2", result["requested"])
         ja = result["ja"]

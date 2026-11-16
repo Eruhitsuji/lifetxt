@@ -6,6 +6,7 @@ import subprocess
 import unittest
 
 from tests.test_web_drawer_edit_js import _extract_function
+from tests.test_web_i18n import _ja_dictionary
 from tests.test_web_native_timeline_visual import _extract_script
 
 
@@ -31,6 +32,8 @@ class GraphRelationsTests(unittest.TestCase):
                 + r"""
 let lang = "ja", graphLoaded;
 const assert = require("node:assert/strict");
+const dictionary = JSON.parse(require("node:fs").readFileSync(0, "utf8"));
+const t = text => lang === "ja" ? dictionary[text] || text : text;
 const currentLanguage = () => lang;
 const title = '<長い名前 & "title">';
 const id = "source');alert(1)//";
@@ -56,6 +59,7 @@ const renderGraphSvg = (n, e, options) =>
     ? "<svg></svg>" : "unexpected SVG input";
 (async () => {
   const first = loadGraphPanel();
+  assert.match(panel.innerHTML, /role="status">関係グラフを読み込み中…/);
   requests[0].resolve({nodes, edges});
   await first;
   const ja = panel.innerHTML;
@@ -82,23 +86,42 @@ const renderGraphSvg = (n, e, options) =>
   await staleFailure;
   assert.equal(panel.innerHTML, closed);
 
+  panel.innerHTML = ja;
   const staleSuccess = loadGraphPanel();
   const freshFailure = loadGraphPanel();
   requests[6].reject(new Error("latest failure"));
   await freshFailure;
   const error = panel.innerHTML;
-  assert.match(error, /Graph error: latest failure/);
+  assert.match(error, /role="status">関係グラフを読み込めませんでした。/);
+  assert.match(error, /グラフを再読み込み/);
+  assert.doesNotMatch(error, /latest failure/);
   requests[5].resolve({nodes, edges});
   await staleSuccess;
   assert.equal(panel.innerHTML, error);
 
+  inputs["graph-depth"].value = "3";
+  const retryAction = error.match(/onclick="([^"]+)"/)[1];
+  const retry = eval(retryAction);
+  assert.equal(requests[7].url, "/api/graph?root=root&depth=3");
+  requests[7].resolve({nodes, edges});
+  await retry;
+  assert.equal(panel.innerHTML, ja);
+
   lang = "en";
+  const englishFailure = loadGraphPanel();
+  assert.match(panel.innerHTML, /role="status">Loading graph…/);
+  requests[8].reject(new Error("server detail"));
+  await englishFailure;
+  assert.match(panel.innerHTML, /role="status">Could not load the relationship graph./);
+  assert.match(panel.innerHTML, /Reload graph/);
+  assert.doesNotMatch(panel.innerHTML, /server detail/);
   const en = renderGraphRelations(nodes, edges);
   const limited = renderGraphRelations(nodes, Array(101).fill(edge));
   console.log(JSON.stringify({ja, en, limited, requested:requests[0].url, empty:renderGraphRelations(nodes, [])}));
 })().catch(error => { console.error(error); process.exitCode = 1; });
 """,
             ],
+            input=json.dumps(_ja_dictionary()),
             capture_output=True,
             text=True,
             timeout=10,

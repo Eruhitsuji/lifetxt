@@ -332,7 +332,7 @@
       if (root) params.set("root", root);
       if (depth) params.set("depth", depth);
       graphRelationsExpanded = panel.querySelector(".graph-relations")?.open ?? graphRelationsExpanded;
-      panel.innerHTML = `<div class="empty">Loading graph…</div>`;
+      panel.innerHTML = `<div class="empty" role="status">${escapeHtml(t("Loading graph…"))}</div>`;
       try {
         const data = await api(`/api/graph?${params.toString()}`);
         if (generation !== graphLoadGeneration) return;
@@ -349,9 +349,12 @@
         panel.innerHTML = renderGraphRelations(nodes, edges, graphRelationsExpanded) +
           renderGraphSvg(nodes, edges, {focusId: root, layout: _graphLayout}) +
           `<div class="note" style="margin-top:.45rem">${nodes.length} nodes / ${edges.length} edges. Click a node to open it.${escapeHtml(missingNote)}</div>`;
-      } catch(e) {
+      } catch (_) {
         if (generation !== graphLoadGeneration) return;
-        panel.innerHTML = `<div class="diagnostic">Graph error: ${escapeHtml(e.message)}</div>`;
+        panel.innerHTML = `<div class="empty">
+          <p role="status">${escapeHtml(t("Could not load the relationship graph."))}</p>
+          <button type="button" class="secondary" onclick="loadGraphPanel()">${escapeHtml(t("Reload graph"))}</button>
+        </div>`;
       }
     }
 

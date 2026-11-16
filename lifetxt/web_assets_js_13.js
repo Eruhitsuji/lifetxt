@@ -350,14 +350,15 @@
           el.innerHTML = `<div class="empty" style="grid-column:1 / -1" role="status">${escapeHtml(t("No statistics breakdown data."))}</div>`;
           return;
         }
+        const emptyColumn = `<em>${escapeHtml(t("No entries"))}</em>`;
         el.innerHTML = `
           <div>
-            <div class="drawer-section-title" style="font-size:.72rem;margin-bottom:.3rem">By Type</div>
-            <div style="font-size:.82rem;display:grid;gap:.2rem">${typeRows || "<em>none</em>"}</div>
+            <div class="drawer-section-title" style="font-size:.72rem;margin-bottom:.3rem">${escapeHtml(t("By Type"))}</div>
+            <div style="font-size:.82rem;display:grid;gap:.2rem">${typeRows || emptyColumn}</div>
           </div>
           <div>
-            <div class="drawer-section-title" style="font-size:.72rem;margin-bottom:.3rem">By Status</div>
-            <div style="font-size:.82rem;display:grid;gap:.2rem">${statusRows || "<em>none</em>"}</div>
+            <div class="drawer-section-title" style="font-size:.72rem;margin-bottom:.3rem">${escapeHtml(t("By Status"))}</div>
+            <div style="font-size:.82rem;display:grid;gap:.2rem">${statusRows || emptyColumn}</div>
           </div>`;
       } catch (_) {
         if (generation !== statsBreakdownGeneration) return;

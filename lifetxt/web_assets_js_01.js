@@ -637,6 +637,7 @@
         "No habit data.": "習慣のデータがありません。",
         "Loading statistics breakdown…": "統計の内訳を読み込み中…",
         "No statistics breakdown data.": "統計の内訳データがありません。",
+        "No entries": "該当なし",
         "Could not load the statistics breakdown.": "統計の内訳を取得できませんでした。",
         "Reload breakdown": "内訳を再読み込み",
         "Refresh statistics": "統計を更新",

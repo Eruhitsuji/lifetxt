@@ -20,6 +20,36 @@ class Controls(HTMLParser):
 
 
 class StatsRangeLayoutTests(unittest.TestCase):
+    def test_date_group_explains_the_scope_in_both_languages(self):
+        parser = Controls()
+        parser.feed(HTML_PAGE)
+        group = next(a for _, a in parser.tags if a.get("class") == "stats-range-bar")
+        self.assertEqual("group", group["role"])
+        labels = (
+            (
+                "aria-labelledby",
+                "h3",
+                "stats-breakdown-title",
+                "Statistics breakdown",
+                "統計の内訳",
+            ),
+            (
+                "aria-describedby",
+                "p",
+                "stats-breakdown-range-help",
+                "These dates filter the breakdown below. "
+                "The chart above uses its own date range.",
+                "日付を指定すると、下の内訳を絞り込めます。"
+                "上のグラフにはグラフ固有の期間が適用されます。",
+            ),
+        )
+        dictionary = _ja_dictionary()
+        for attribute, tag, element_id, english, japanese in labels:
+            with self.subTest(attribute=attribute):
+                self.assertEqual(element_id, group[attribute])
+                self.assertIn(f'<{tag} id="{element_id}">{english}</{tag}>', HTML_PAGE)
+                self.assertEqual(japanese, dictionary[english])
+
     def test_dates_have_visible_associated_shared_labels(self):
         for field, text in (("breakdown-from", "From"), ("breakdown-to", "To")):
             self.assertRegex(

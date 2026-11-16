@@ -370,7 +370,11 @@ __LIFETXT_WEB_STYLES__  </style>
           <div id="chart-container" style="padding:.75rem 1rem">
             <div class="chart-panel"><canvas id="main-chart"></canvas></div>
           </div>
-          <div class="stats-range-bar">
+          <div class="stats-breakdown-intro">
+            <h3 id="stats-breakdown-title">Statistics breakdown</h3>
+            <p id="stats-breakdown-range-help">These dates filter the breakdown below. The chart above uses its own date range.</p>
+          </div>
+          <div class="stats-range-bar" role="group" aria-labelledby="stats-breakdown-title" aria-describedby="stats-breakdown-range-help">
             <label class="web-field-label" for="breakdown-from"><span>From</span><input type="date" id="breakdown-from" oninput="loadStatsBreakdown()"></label>
             <label class="web-field-label" for="breakdown-to"><span>To</span><input type="date" id="breakdown-to" oninput="loadStatsBreakdown()"></label>
             <button class="secondary" onclick="document.getElementById('breakdown-from').value='';document.getElementById('breakdown-to').value='';loadStatsBreakdown()">All</button>

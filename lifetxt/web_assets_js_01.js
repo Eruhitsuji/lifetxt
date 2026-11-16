@@ -636,6 +636,8 @@
         "Reload chart": "グラフを再読み込み",
         "No habit data.": "習慣のデータがありません。",
         "Loading statistics breakdown…": "統計の内訳を読み込み中…",
+        "Statistics breakdown": "統計の内訳",
+        "These dates filter the breakdown below. The chart above uses its own date range.": "日付を指定すると、下の内訳を絞り込めます。上のグラフにはグラフ固有の期間が適用されます。",
         "No statistics breakdown data.": "統計の内訳データがありません。",
         "No entries": "該当なし",
         "Could not load the statistics breakdown.": "統計の内訳を取得できませんでした。",

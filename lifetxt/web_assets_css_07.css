@@ -13,3 +13,39 @@
     .attachment-upload p { overflow-wrap: anywhere; }
     .attachment-upload-name { unicode-bidi: plaintext; }
     .attachment-upload [role="status"] { min-height: 1.5em; }
+
+    #items-layout-control[hidden], #group-by[hidden] { display: none; }
+    .items-board-columns {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: .75rem;
+      align-items: start;
+    }
+    .items-board-column {
+      display: grid;
+      gap: .5rem;
+      min-width: 0;
+      padding: .65rem;
+      border: 1px solid var(--line);
+      border-radius: var(--r-md);
+      background: var(--soft);
+    }
+    .items-board-column h3, .items-board-card p { margin: 0; overflow-wrap: anywhere; }
+    .items-board-card {
+      display: grid;
+      gap: .4rem;
+      min-width: 0;
+      padding: .5rem;
+      border: 1px solid var(--line);
+      border-radius: var(--r-sm);
+      background: var(--panel);
+    }
+    .items-board-card p { color: var(--muted); font-size: .85rem; }
+    .items-board-title { text-align: start; white-space: normal; overflow-wrap: anywhere; }
+    .items-board-move { min-width: 0; max-width: 100%; }
+    .items-board-other { margin-top: .85rem; }
+    .items-board-other summary { margin-bottom: .5rem; cursor: pointer; }
+    @media (max-width: 680px) {
+      .items-board-columns { grid-template-columns: minmax(0, 1fr); }
+      .items-board-move, .items-board-title, .items-board-add { min-height: 44px; }
+    }

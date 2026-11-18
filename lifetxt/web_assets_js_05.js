@@ -271,7 +271,7 @@
       const cnt = document.getElementById("bulk-count");
       if (!bar) return;
       const n = bulkSelectedLines.size;
-      bar.classList.toggle("visible", n > 0);
+      bar.classList.toggle("visible", n > 0 && !itemsBoardActive());
       if (cnt) cnt.textContent = `${n} selected`;
     }
     function bulkClearSelection() {
@@ -390,15 +390,15 @@
     }
     let editorSavePending = false;
     let editorCreateOutcomeUnknown = false;
-    function newItem(createMode = "") {
+    function newItem(createMode = "", initialStatus = "[ ]") {
       editorCreateOutcomeUnknown = false;
       const firstTask = createMode === "first-task";
       openEditorModal(createMode);
       selectedItem = null;
       document.getElementById("editor-heading").textContent = firstTask ? "Create your first task" : createMode === "task" ? "New task" : "New Record";
       ensureBeginnerProfileVocabulary();
-      refreshAuthoringModeOptions("[ ]", "T");
-      document.getElementById("edit-status").value = "[ ]";
+      refreshAuthoringModeOptions(initialStatus, "T");
+      document.getElementById("edit-status").value = initialStatus;
       document.getElementById("edit-type").value = "T";
       document.getElementById("edit-title").value = "";
       document.getElementById("edit-details").value = "";

@@ -45,6 +45,7 @@
       ]) {
         if (current.has(key)) next.set(key, current.get(key));
       }
+      if (current.get("items_layout") === "board") next.set("items_layout", "board");
       const text = document.getElementById("search").value;
       const kind = document.getElementById("kind").value;
       const limit = document.getElementById("limit").value;
@@ -536,6 +537,19 @@
     let boardDraggedCard = null;
     function itemsLayoutAvailable() {
       return !isKioskMode() && !isDisplayMode() && currentView() !== "messages";
+    }
+    function syncItemsLayoutFromUrl(params) {
+      const select = document.getElementById("items-layout");
+      if (select) select.value = params.get("items_layout") === "board" ? "board" : "list";
+    }
+    function changeItemsLayout(layout) {
+      if (!itemsLayoutAvailable()) return;
+      const params = query();
+      if (layout === "board") params.set("items_layout", "board");
+      else params.delete("items_layout");
+      const search = params.toString();
+      history.pushState(history.state, "", location.pathname + (search ? "?" + search : "") + location.hash);
+      renderItems(currentItems);
     }
     function itemsBoardActive() {
       return itemsLayoutAvailable() && document.getElementById("items-layout")?.value === "board";

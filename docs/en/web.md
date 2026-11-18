@@ -302,6 +302,10 @@ In Progress and Done. Find deferred or cancelled tasks under **Other statuses**.
 
 Moving a card saves the task's status and updates the list. A card leaves the
 board if it no longer matches the current filters. Read-only cards can be opened.
+Reloading the page or opening its URL restores the board. Browser Back and Forward
+restore the previous layout, and switching to **List** removes the board setting
+from the URL.
+
 
 ## Native life.txt export and bulk input in Items
 

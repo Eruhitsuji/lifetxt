@@ -227,7 +227,9 @@
       // browser alerts keep working from any view.
       const v = currentView();
       const tasks = [loadNotifications()];
-      if (VIEW_PAGE[v] === "items" || v === "") tasks.push(loadItems());
+      if (VIEW_PAGE[v] === "items" || v === "") {
+        tasks.push(itemsBoardActive() ? reloadItemsBoard() : loadItems());
+      }
       if (v === "agenda") tasks.push(loadAgenda());
       if (v === "timeline") tasks.push(loadTimeline());
       if (v === "calendar") tasks.push(loadCalendar());

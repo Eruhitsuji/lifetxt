@@ -169,6 +169,19 @@
     // filter, the same "apply as the row set" semantics the TUI's /saved
     // and /area commands use -- not a second query engine reimplemented
     // in the browser.
+    async function reloadItemsBoard() {
+      const saved = document.getElementById("saved-view-select").value;
+      const area = document.getElementById("area-select").value;
+      try {
+        if (saved) await applySavedView(saved);
+        else if (area) await applyArea(area);
+        else await loadItems();
+      } catch (error) {
+        itemsEmptyKind = "error";
+        renderActionableError(document.getElementById("items"),
+          "Could not load items from the lifetxt server.", error, reloadItemsBoard);
+      }
+    }
     async function applySavedView(name) {
       const areaSel = document.getElementById("area-select");
       if (areaSel) areaSel.value = "";
@@ -515,9 +528,191 @@
         </div>
       </div>`;
     }
+    const BOARD_COLUMNS = [["[ ]", "Not started"], ["[/]", "In Progress"], ["[x]", "Done"]];
+    const BOARD_OTHER_STATES = new Map([
+      ["[-]", "Cancelled"], ["[>]", "Deferred"], ["[?]", "Maybe"], ["[N]", "Note"],
+    ]);
+    let boardMovePending = false;
+    let boardDraggedCard = null;
+    function itemsLayoutAvailable() {
+      return !isKioskMode() && !isDisplayMode() && currentView() !== "messages";
+    }
+    function itemsBoardActive() {
+      return itemsLayoutAvailable() && document.getElementById("items-layout")?.value === "board";
+    }
+    function addBoardTask(status) {
+      if (itemsReadOnly !== false || boardMovePending) return;
+      const project = query().get("project");
+      newItem("task", status);
+      if (project) document.getElementById("edit-details").value = detailsToText({project: [project]});
+    }
+    async function moveBoardTask(item, status, control) {
+      if (boardMovePending || !itemsBoardActive() || itemsReadOnly !== false || !item.editable ||
+          item.generated || item.type !== "T" || item.status === status ||
+          !BOARD_COLUMNS.some(([destination]) => destination === status)) return;
+      const root = document.getElementById("items");
+      boardMovePending = true;
+      root.setAttribute("aria-busy", "true");
+      let sent = false;
+      try {
+        const snapshot = await bulkDoneSnapshot(item, item);
+        const payload = {...bulkDonePayload(snapshot.item), status};
+        sent = true;
+        const result = await api(snapshot.path, {
+          method: "PUT",
+          headers: {"Content-Type": "application/json", "If-Match": '"' + snapshot.revision + '"'},
+          body: JSON.stringify(payload),
+        });
+        if (result?.item?.status !== status) throw Error(t("Outcome unknown. Inspect the record before retrying."));
+        showToast(t("Task moved."), "success");
+      } catch (error) {
+        const unknown = sent && (!error?.status || error.status >= 500);
+        const title = unknown ? "Outcome unknown. Inspect the record before retrying." : "Could not move this task.";
+        showActionableError(t(title), error);
+      } finally {
+        try {
+          if (itemsBoardActive()) await reloadItemsBoard();
+          else await loadItems();
+        } finally {
+          boardMovePending = false;
+          root.removeAttribute("aria-busy");
+          if (itemsBoardActive() && (document.activeElement === document.body || document.activeElement === control)) {
+            const card = [...root.querySelectorAll(".items-board-card")].find(node =>
+              itemStableKey(node._lifetxtItem) === itemStableKey(item));
+            (card?.querySelector(".items-board-move, .items-board-title") ||
+              document.getElementById("items-layout")).focus();
+          }
+        }
+      }
+    }
+    function buildBoardCard(item) {
+      const card = document.createElement("article");
+      card.className = "items-board-card";
+      card._lifetxtItem = item;
+      const metadata = [item.details?.due?.[0], item.details?.project?.[0]].filter(Boolean);
+      const writable = itemsReadOnly === false && item.editable && !item.generated;
+      card.innerHTML = `
+        <button type="button" class="secondary items-board-title">${escapeHtml(item.title)}</button>
+        ${metadata.length ? `<p>${escapeHtml(metadata.join(" · "))}</p>` : ""}
+        ${writable ? `<select class="items-board-move" aria-label="${escapeHtml(t("Move task") + ": " + item.title)}">
+          <option value="">${escapeHtml(t("Move to…"))}</option>
+          ${BOARD_COLUMNS.filter(([status]) => status !== item.status).map(([status, label]) =>
+            `<option value="${escapeHtml(status)}">${escapeHtml(t(label))}</option>`).join("")}
+        </select>` : `<p>${escapeHtml(t("Read-only"))}</p>`}`;
+      const title = card.querySelector(".items-board-title");
+      title.addEventListener("click", () => openDrawer(item));
+      const move = card.querySelector(".items-board-move");
+      if (move) {
+        move.addEventListener("change", () => {
+          const status = move.value;
+          move.value = "";
+          moveBoardTask(item, status, move);
+        });
+        // Keep the normal title button and select usable without dragging.
+        card.draggable = true;
+        card.addEventListener("dragstart", event => {
+          if (boardMovePending) { event.preventDefault(); return; }
+          boardDraggedCard = card;
+          event.dataTransfer.effectAllowed = "move";
+          event.dataTransfer.setData("text/plain", item.title);
+        });
+        card.addEventListener("dragend", () => { boardDraggedCard = null; });
+      }
+      return card;
+    }
+    function renderItemsBoard(root, items) {
+      const otherOpen = root.querySelector(".items-board-other")?.open || false;
+      const active = document.activeElement;
+      const activeCard = active?.closest?.(".items-board-card");
+      const activeKey = activeCard ? itemStableKey(activeCard._lifetxtItem) : null;
+      boardDraggedCard = null;
+      root.innerHTML = `
+        ${itemsReadOnly === true ? `<p>${escapeHtml(t("This workspace is read-only."))}</p>` : ""}
+        ${items.length ? "" : `<p>${escapeHtml(t("No tasks to show on this board."))}</p>`}
+        <div class="items-board-columns"></div>`;
+      const grid = root.querySelector(".items-board-columns");
+      const groups = new Map();
+      for (const item of items) {
+        if (!groups.has(item.status)) groups.set(item.status, []);
+        groups.get(item.status).push(item);
+      }
+      const restoreFocus = node => {
+        if (activeKey === itemStableKey(node._lifetxtItem)) {
+          const selector = active.matches(".items-board-move") ? ".items-board-move" : ".items-board-title";
+          node.querySelector(selector)?.focus();
+        }
+      };
+      const appendColumn = (parent, status, label, primary) => {
+        const column = document.createElement("section");
+        column.className = "items-board-column";
+        const rows = groups.get(status) || [];
+        const heading = document.createElement("h3");
+        heading.textContent = `${t(label)} (${rows.length})`;
+        column.append(heading);
+        parent.append(column);
+        for (const item of rows) {
+          const card = buildBoardCard(item);
+          column.append(card);
+          restoreFocus(card);
+        }
+        if (!primary) return;
+        column.addEventListener("dragover", event => {
+          if (boardMovePending || !boardDraggedCard || boardDraggedCard._lifetxtItem.status === status) return;
+          event.preventDefault();
+          event.dataTransfer.dropEffect = "move";
+        });
+        column.addEventListener("drop", event => {
+          if (!boardDraggedCard) return;
+          event.preventDefault();
+          const card = boardDraggedCard;
+          boardDraggedCard = null;
+          moveBoardTask(card._lifetxtItem, status, card.querySelector(".items-board-title"));
+        });
+        if (status !== "[x]" && itemsReadOnly === false) {
+          const add = document.createElement("button");
+          add.type = "button";
+          add.className = "secondary items-board-add";
+          add.textContent = t("+ Add task");
+          add.setAttribute("aria-label", `${t("Add task")} — ${t(label)}`);
+          add.addEventListener("click", () => addBoardTask(status));
+          column.append(add);
+          if (active?.matches?.(".items-board-add") && active.getAttribute("aria-label") === add.getAttribute("aria-label")) add.focus();
+        }
+      };
+      for (const [status, label] of BOARD_COLUMNS) appendColumn(grid, status, label, true);
+      const extra = [...groups.keys()].filter(status => !BOARD_COLUMNS.some(([key]) => key === status));
+      if (extra.length) {
+        const other = document.createElement("details");
+        other.className = "items-board-other";
+        other.open = otherOpen;
+        const summary = document.createElement("summary");
+        summary.textContent = t("Other statuses");
+        const otherGrid = document.createElement("div");
+        otherGrid.className = "items-board-columns";
+        other.append(summary, otherGrid);
+        root.append(other);
+        for (const status of extra) appendColumn(otherGrid, status, BOARD_OTHER_STATES.get(status) || status, false);
+        if (active?.matches?.(".items-board-other > summary")) summary.focus();
+      }
+      if (root.contains(document.activeElement) || !activeCard) return;
+      document.getElementById("items-layout").focus();
+    }
     function renderItems(items) {
       const root = document.getElementById("items");
-      if (!items.length && itemsEmptyKind === "error") return;
+      const board = itemsBoardActive();
+      document.getElementById("items-layout-control").hidden = !itemsLayoutAvailable();
+      document.getElementById("group-by").hidden = board;
+      _updateBulkToolbar();
+      if (itemsEmptyKind === "error" && (board || !items.length)) return;
+      if (board) {
+        const tasks = items.filter(item => item.type === "T");
+        renderSummary(tasks);
+        renderFilterChips();
+        updateSearchCount(tasks.length);
+        _kbIndex = -1;
+        renderItemsBoard(root, tasks);
+        return;
+      }
       root.innerHTML = items.length ? "" : itemsEmptyStateMarkup();
       renderSummary(items);
       renderFilterChips();

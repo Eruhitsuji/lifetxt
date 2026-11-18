@@ -417,7 +417,8 @@
           if (banner) banner.style.display = "";
         }
         const emptyItems = document.querySelector("#items > .empty-state");
-        if (emptyItems && !currentItems.length) emptyItems.outerHTML = itemsEmptyStateMarkup();
+        if (itemsBoardActive()) renderItems(currentItems);
+        else if (emptyItems && !currentItems.length) emptyItems.outerHTML = itemsEmptyStateMarkup();
       } catch(_) {}
       populateSavedViewsAndAreas();
 

@@ -58,6 +58,19 @@
     // data-no-i18n and the walker skips those subtrees entirely.
     const UI_STRINGS = {
       ja: {
+        "Items layout": "アイテムの表示形式",
+        "Layout": "表示形式",
+        "List": "一覧",
+        "Board": "ボード",
+        "Not started": "未着手",
+        "Move task": "タスクを移動",
+        "Move to…": "移動先…",
+        "+ Add task": "＋ タスクを追加",
+        "Add task": "タスクを追加",
+        "Other statuses": "その他の状態",
+        "No tasks to show on this board.": "ボードに表示するタスクがありません。",
+        "Task moved.": "タスクを移動しました。",
+        "Could not move this task.": "タスクを移動できませんでした。",
         "Runtime information": "実行環境情報",
         "lifetxt version": "lifetxt バージョン",
         "Help, shortcuts, and runtime information (?)": "ヘルプ・ショートカット・実行環境情報（?）",

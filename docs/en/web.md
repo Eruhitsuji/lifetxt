@@ -289,6 +289,20 @@ Limit, Saved view, Area and Export controls directly. On narrower screens, open
 Widening the window restores the controls even if Filters was closed on mobile.
 Resizing keeps the selected filter and sort values.
 
+### Task board
+
+In Items, choose **Layout → Board**. The board shows tasks (`T`) from your current
+search and filters, ordered as in the list. It groups them into Not started,
+In Progress and Done. Find deferred or cancelled tasks under **Other statuses**.
+
+- Drag a card to a column on desktop, or use its **Move to…** selector on touch
+  devices and with a keyboard.
+- Open a card's title to edit its title or due date in the existing record details.
+- Choose **+ Add task** in Not started or In Progress to create a task in that state.
+
+Moving a card saves the task's status and updates the list. A card leaves the
+board if it no longer matches the current filters. Read-only cards can be opened.
+
 ## Native life.txt export and bulk input in Items
 
 1. Open **Items** and apply the desired text, status, and kind filters.

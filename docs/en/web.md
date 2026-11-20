@@ -295,6 +295,7 @@ In Items, choose **Layout → Board**. The board shows tasks (`T`) from your cur
 search and filters, ordered as in the list. It groups them into Not started,
 In Progress and Done. Find deferred or cancelled tasks under **Other statuses**.
 
+- On a narrow screen, use the status buttons above the board to jump to a column.
 - Drag a card to a column on desktop, or choose a column in **Move to…** and
   press **Move** on touch devices or with a keyboard.
 - Open a card's title to edit its title or due date in the existing record details.

@@ -62,6 +62,7 @@
         "Layout": "表示形式",
         "List": "一覧",
         "Board": "ボード",
+        "Jump to a board column": "ボードの列へ移動",
         "Not started": "未着手",
         "Move": "移動",
         "Move task": "タスクを移動",

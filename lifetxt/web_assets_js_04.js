@@ -674,7 +674,9 @@
       root.innerHTML = `
         ${itemsReadOnly === true ? `<p>${escapeHtml(t("This workspace is read-only."))}</p>` : ""}
         ${items.length ? "" : `<p>${escapeHtml(t("No tasks to show on this board."))}</p>`}
+        <nav class="items-board-jumps" aria-label="${escapeHtml(t("Jump to a board column"))}"></nav>
         <div class="items-board-columns"></div>`;
+      const jumps = root.querySelector(".items-board-jumps");
       const grid = root.querySelector(".items-board-columns");
       const groups = new Map();
       for (const item of items) {
@@ -715,6 +717,21 @@
           }
         }
         if (!primary) return;
+        heading.tabIndex = -1;
+        heading.dataset.boardColumn = status;
+        const jump = document.createElement("button");
+        jump.type = "button";
+        jump.className = "secondary";
+        jump.dataset.boardColumn = status;
+        jump.textContent = heading.textContent;
+        jump.addEventListener("click", () => {
+          heading.focus({preventScroll: true});
+          heading.scrollIntoView({block: "center"});
+        });
+        jumps.append(jump);
+        if (active?.dataset.boardColumn === status) {
+          (active.matches(".items-board-jumps button") ? jump : heading).focus({preventScroll: true});
+        }
         column.addEventListener("dragover", event => {
           if (boardMovePending || !boardDraggedCard || boardDraggedCard._lifetxtItem.status === status) return;
           event.preventDefault();

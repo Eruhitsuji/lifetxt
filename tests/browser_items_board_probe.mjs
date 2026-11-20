@@ -123,6 +123,22 @@ try {
     .querySelector('.items-board-card')?._lifetxtItem.status === '[/]' && !boardMovePending`,
     "dragged card saved in the destination column");
   assert.equal(writes().length, 2);
+
+  await browser.evaluate("document.getElementById('open-only').checked = true; reloadItemsBoard()");
+  const inProgressConfirm = ".items-board-column:nth-child(2) .items-board-move-confirm";
+  await browser.evaluate(`(() => {
+    const button = document.querySelector('${inProgressConfirm}');
+    const picker = button.previousElementSibling;
+    picker.value = '[x]';
+    picker.dispatchEvent(new Event('change'));
+    button.focus();
+  })()`);
+  await pressKey("Enter", 13, "\r");
+  await browser.wait(focused("#items-layout"), "focus after a completed card leaves the filtered board");
+  assert.equal(await browser.evaluate("document.querySelectorAll('.items-board-card').length"), 0);
+  assert(await browser.evaluate("document.getElementById('toast-container').textContent.includes('Task moved. The card is outside the current board results.')"));
+  assert.equal(writes().length, 3);
+
 } finally {
   await browser.close();
 }

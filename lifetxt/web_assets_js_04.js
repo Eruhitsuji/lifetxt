@@ -94,6 +94,7 @@
         const match = data.items.find(item => item.line === selectedItem.line && item.editable);
         if (match) selectItem(match);
       }
+      return true;
     }
 
     function initItemFilterControls() {
@@ -176,7 +177,8 @@
       try {
         if (saved) await applySavedView(saved);
         else if (area) await applyArea(area);
-        else await loadItems();
+        else return await loadItems();
+        return true;
       } catch (error) {
         itemsEmptyKind = "error";
         renderActionableError(document.getElementById("items"),
@@ -575,6 +577,7 @@
       boardMovePending = true;
       root.setAttribute("aria-busy", "true");
       let sent = false;
+      let moved = false;
       try {
         const snapshot = await bulkDoneSnapshot(item, item);
         const payload = {...bulkDonePayload(snapshot.item), status};
@@ -585,21 +588,29 @@
           body: JSON.stringify(payload),
         });
         if (result?.item?.status !== status) throw Error(t("Outcome unknown. Inspect the record before retrying."));
-        showToast(t("Task moved."), "success");
+        moved = true;
       } catch (error) {
         const unknown = sent && (!error?.status || error.status >= 500);
         const title = unknown ? "Outcome unknown. Inspect the record before retrying." : "Could not move this task.";
         showActionableError(t(title), error);
       } finally {
+        let refreshed = false;
         try {
-          if (itemsBoardActive()) await reloadItemsBoard();
+          if (itemsBoardActive()) refreshed = await reloadItemsBoard();
           else await loadItems();
         } finally {
           boardMovePending = false;
           root.removeAttribute("aria-busy");
-          if (itemsBoardActive() && (document.activeElement === document.body || document.activeElement === control)) {
-            const card = [...root.querySelectorAll(".items-board-card")].find(node =>
-              itemStableKey(node._lifetxtItem) === itemStableKey(item));
+          const board = itemsBoardActive();
+          const restoreFocus = board && (document.activeElement === document.body || document.activeElement === control);
+          const filtered = board && refreshed && (itemsEmptyKind === "filtered" || itemsEmptyKind === "scoped");
+          const card = (restoreFocus || (moved && filtered)) && [...root.querySelectorAll(".items-board-card")].find(node =>
+            node._lifetxtItem.source === item.source && itemStableKey(node._lifetxtItem) === itemStableKey(item));
+          if (moved) {
+            const message = filtered && !card ? "Task moved. The card is outside the current board results." : "Task moved.";
+            showToast(t(message), "success");
+          }
+          if (restoreFocus) {
             ((control?.matches(".items-board-move-confirm") && card?.querySelector(".items-board-move")) ||
               card?.querySelector(".items-board-title") ||
               document.getElementById("items-layout")).focus();

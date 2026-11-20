@@ -71,6 +71,7 @@
         "Other statuses": "その他の状態",
         "No tasks to show on this board.": "ボードに表示するタスクがありません。",
         "Task moved.": "タスクを移動しました。",
+        "Task moved. The card is outside the current board results.": "タスクを移動しました。現在の絞り込み結果には表示されません。",
         "Could not move this task.": "タスクを移動できませんでした。",
         "Runtime information": "実行環境情報",
         "lifetxt version": "lifetxt バージョン",

@@ -593,7 +593,8 @@
           if (itemsBoardActive() && (document.activeElement === document.body || document.activeElement === control)) {
             const card = [...root.querySelectorAll(".items-board-card")].find(node =>
               itemStableKey(node._lifetxtItem) === itemStableKey(item));
-            (card?.querySelector(".items-board-move, .items-board-title") ||
+            ((control?.matches(".items-board-move-confirm") && card?.querySelector(".items-board-move")) ||
+              card?.querySelector(".items-board-title") ||
               document.getElementById("items-layout")).focus();
           }
         }
@@ -608,20 +609,21 @@
       card.innerHTML = `
         <button type="button" class="secondary items-board-title">${escapeHtml(item.title)}</button>
         ${metadata.length ? `<p>${escapeHtml(metadata.join(" · "))}</p>` : ""}
-        ${writable ? `<select class="items-board-move" aria-label="${escapeHtml(t("Move task") + ": " + item.title)}">
+        ${writable ? `<div class="items-board-move-controls">
+        <select class="items-board-move" aria-label="${escapeHtml(t("Move to…") + " " + item.title)}">
           <option value="">${escapeHtml(t("Move to…"))}</option>
           ${BOARD_COLUMNS.filter(([status]) => status !== item.status).map(([status, label]) =>
             `<option value="${escapeHtml(status)}">${escapeHtml(t(label))}</option>`).join("")}
-        </select>` : `<p>${escapeHtml(t("Read-only"))}</p>`}`;
+        </select>
+        <button type="button" class="secondary items-board-move-confirm" aria-label="${escapeHtml(t("Move task") + ": " + item.title)}" disabled>${escapeHtml(t("Move"))}</button>
+        </div>` : `<p>${escapeHtml(t("Read-only"))}</p>`}`;
       const title = card.querySelector(".items-board-title");
       title.addEventListener("click", () => openDrawer(item));
       const move = card.querySelector(".items-board-move");
       if (move) {
-        move.addEventListener("change", () => {
-          const status = move.value;
-          move.value = "";
-          moveBoardTask(item, status, move);
-        });
+        const confirm = card.querySelector(".items-board-move-confirm");
+        move.addEventListener("change", () => { confirm.disabled = !move.value; });
+        confirm.addEventListener("click", () => moveBoardTask(item, move.value, confirm));
         // Keep the normal title button and select usable without dragging.
         card.draggable = true;
         card.addEventListener("dragstart", event => {
@@ -657,7 +659,8 @@
       }
       const restoreFocus = node => {
         if (activeKey === itemStableKey(node._lifetxtItem)) {
-          const selector = active.matches(".items-board-move") ? ".items-board-move" : ".items-board-title";
+          const selector = active.matches(".items-board-move, .items-board-move-confirm")
+            ? ".items-board-move" : ".items-board-title";
           node.querySelector(selector)?.focus();
         }
       };

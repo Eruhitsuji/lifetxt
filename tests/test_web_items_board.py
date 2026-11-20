@@ -100,7 +100,7 @@ async function api(path, options) {
 
 @unittest.skipUnless(shutil.which("node"), "Node.js unavailable")
 class ItemsBoardBrowserTests(unittest.TestCase):
-    def test_drawer_restores_focus_after_board_reload(self):
+    def test_drawer_focus_and_confirmed_board_move(self):
         browser = browser_path()
         if not browser:
             self.skipTest("Chrome/Chromium unavailable")
@@ -141,4 +141,7 @@ class ItemsBoardBrowserTests(unittest.TestCase):
                 server.should_exit = True
                 thread.join(timeout=10)
             self.assertEqual(0, run.returncode, run.stderr or run.stdout)
-            self.assertEqual(fixture, records.read_text(encoding="utf-8"))
+            moved, unrelated, completion = records.read_text(encoding="utf-8").splitlines()
+            self.assertEqual('[x] T "Board fixture" id:board-fixture', moved)
+            self.assertEqual('[ ] T "Unrelated task" id:unrelated', unrelated)
+            self.assertIn("parent:board-fixture event:completed", completion)

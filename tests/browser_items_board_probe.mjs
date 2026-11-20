@@ -32,6 +32,29 @@ try {
     await pressKey("Escape", 27);
     await browser.wait(filteredOut ? focused("#items-layout") : `document.activeElement === (${fixtureCard})`, "focus after detail closes");
   }
+  await browser.command("Emulation.setDeviceMetricsOverride", {
+    width: 390, height: 844, deviceScaleFactor: 1, mobile: true,
+  });
+  await browser.evaluate("document.getElementById('search').value = ''; reloadItemsBoard()");
+  const fixtureControl = selector => `(${fixtureCard}).closest('.items-board-card').querySelector('${selector}')`;
+  const picker = fixtureControl(".items-board-move");
+  const confirm = fixtureControl(".items-board-move-confirm");
+  const writes = () => browser.events.filter(event =>
+    event.method === "Network.requestWillBeSent" && event.params.request.method === "PUT");
+  await browser.evaluate(`(${picker}).focus()`);
+  await pressKey("ArrowDown", 40);
+  await pressKey("ArrowDown", 40);
+  assert.equal(await browser.evaluate(`(${picker}).value`), "[x]");
+  assert.equal(await browser.evaluate(`(${fixtureCard}).closest('.items-board-card')._lifetxtItem.status`), "[ ]");
+  assert.equal(writes().length, 0);
+  assert(await browser.evaluate(`(${confirm}).getBoundingClientRect().height >= 44`));
+  await pressKey("Tab", 9);
+  assert(await browser.evaluate(`document.activeElement === (${confirm})`));
+  await pressKey("Enter", 13, "\r");
+  await browser.wait(`document.activeElement === (${picker}) && !boardMovePending`, "focus after confirmed move");
+  assert.equal(await browser.evaluate(`(${fixtureCard}).closest('.items-board-card')._lifetxtItem.status`), "[x]",
+    await browser.evaluate("document.getElementById('toast-container').textContent"));
+  assert.equal(writes().length, 1);
 } finally {
   await browser.close();
 }

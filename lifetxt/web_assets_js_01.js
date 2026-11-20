@@ -63,6 +63,7 @@
         "List": "一覧",
         "Board": "ボード",
         "Not started": "未着手",
+        "Move": "移動",
         "Move task": "タスクを移動",
         "Move to…": "移動先…",
         "+ Add task": "＋ タスクを追加",

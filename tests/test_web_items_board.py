@@ -10,6 +10,7 @@ from pathlib import Path
 
 from lifetxt.web_assets import HTML_PAGE
 from tests.test_web_planner_browser import browser_path
+from tests.test_web_revision_browser import require_revision_browser
 
 
 @unittest.skipUnless(shutil.which("node"), "Node.js unavailable")
@@ -98,17 +99,17 @@ async function api(path, options) {
         self.assertEqual(0, result.returncode, result.stderr or result.stdout)
 
 
-@unittest.skipUnless(shutil.which("node"), "Node.js unavailable")
 class ItemsBoardBrowserTests(unittest.TestCase):
-    def test_drawer_restores_focus_after_board_reload(self):
+    def test_drawer_focus_and_confirmed_board_move(self):
+        require_revision_browser(self)
         browser = browser_path()
-        if not browser:
-            self.skipTest("Chrome/Chromium unavailable")
-        try:
-            import uvicorn
-            from lifetxt.webapp import create_app
-        except ImportError:
-            self.skipTest("Web extras unavailable")
+
+        import uvicorn
+
+        from lifetxt import bootstrap_legacy_surfaces
+
+        bootstrap_legacy_surfaces()
+        from lifetxt.webapp import create_app
 
         with tempfile.TemporaryDirectory() as directory, socket.socket() as listener:
             records = Path(directory) / "life.txt"
@@ -141,4 +142,7 @@ class ItemsBoardBrowserTests(unittest.TestCase):
                 server.should_exit = True
                 thread.join(timeout=10)
             self.assertEqual(0, run.returncode, run.stderr or run.stdout)
-            self.assertEqual(fixture, records.read_text(encoding="utf-8"))
+            moved, unrelated, completion = records.read_text(encoding="utf-8").splitlines()
+            self.assertEqual('[x] T "Board fixture" id:board-fixture', moved)
+            self.assertEqual('[ ] T "Unrelated task" id:unrelated', unrelated)
+            self.assertIn("parent:board-fixture event:completed", completion)

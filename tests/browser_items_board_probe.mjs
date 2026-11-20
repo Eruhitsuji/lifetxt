@@ -48,12 +48,31 @@ try {
   assert.equal(await browser.evaluate(`(${fixtureCard}).closest('.items-board-card')._lifetxtItem.status`), "[ ]");
   assert.equal(writes().length, 0);
   assert(await browser.evaluate(`(${confirm}).getBoundingClientRect().height >= 44`));
+  await browser.evaluate("reloadItemsBoard()");
+  assert(await browser.evaluate(`document.activeElement === (${picker}) && (${picker}).value === '[x]'`));
+  await pressKey("Tab", 9);
+  assert(await browser.evaluate(`document.activeElement === (${confirm})`));
+  await browser.evaluate("reloadItemsBoard()");
+  assert(await browser.evaluate(`document.activeElement === (${confirm}) && !(${confirm}).disabled`));
+  assert.equal(await browser.evaluate(`(${picker}).value`), "[x]");
+  assert.equal(writes().length, 0);
+
+  // Render a changed snapshot without issuing a write from the browser.
+  await browser.evaluate(`renderItems(currentItems.map(item => item.id === 'board-fixture'
+    ? {...item, details: {...item.details, project: ['changed']}} : item))`);
+  assert(await browser.evaluate(`document.activeElement === (${picker}) && (${confirm}).disabled`));
+  assert.equal(await browser.evaluate(`(${picker}).value`), "");
+  assert.equal(writes().length, 0);
+  await browser.evaluate("reloadItemsBoard()");
+  await pressKey("ArrowDown", 40);
+  await pressKey("ArrowDown", 40);
   await pressKey("Tab", 9);
   assert(await browser.evaluate(`document.activeElement === (${confirm})`));
   await pressKey("Enter", 13, "\r");
   await browser.wait(`document.activeElement === (${picker}) && !boardMovePending`, "focus after confirmed move");
   assert.equal(await browser.evaluate(`(${fixtureCard}).closest('.items-board-card')._lifetxtItem.status`), "[x]",
     await browser.evaluate("document.getElementById('toast-container').textContent"));
+  assert.equal(await browser.evaluate(`(${picker}).value`), "");
   assert.equal(writes().length, 1);
 
   await browser.command("Emulation.setDeviceMetricsOverride", {

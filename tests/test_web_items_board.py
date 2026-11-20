@@ -1,10 +1,15 @@
 """Exercise board writes against the existing revision-bound item contract."""
 
 import shutil
+import socket
 import subprocess
+import tempfile
+import threading
 import unittest
+from pathlib import Path
 
 from lifetxt.web_assets import HTML_PAGE
+from tests.test_web_planner_browser import browser_path
 
 
 @unittest.skipUnless(shutil.which("node"), "Node.js unavailable")
@@ -91,3 +96,49 @@ async function api(path, options) {
             timeout=15,
         )
         self.assertEqual(0, result.returncode, result.stderr or result.stdout)
+
+
+@unittest.skipUnless(shutil.which("node"), "Node.js unavailable")
+class ItemsBoardBrowserTests(unittest.TestCase):
+    def test_drawer_restores_focus_after_board_reload(self):
+        browser = browser_path()
+        if not browser:
+            self.skipTest("Chrome/Chromium unavailable")
+        try:
+            import uvicorn
+            from lifetxt.webapp import create_app
+        except ImportError:
+            self.skipTest("Web extras unavailable")
+
+        with tempfile.TemporaryDirectory() as directory, socket.socket() as listener:
+            records = Path(directory) / "life.txt"
+            fixture = (
+                '[ ] T "Board fixture" id:board-fixture\n'
+                '[ ] T "Unrelated task" id:unrelated\n'
+            )
+            records.write_text(fixture, encoding="utf-8")
+            app = create_app(paths=[str(records)], writable_path=str(records))
+            listener.bind(("127.0.0.1", 0))
+            base_url = f"http://127.0.0.1:{listener.getsockname()[1]}"
+            server = uvicorn.Server(uvicorn.Config(app, log_level="error", ws="none"))
+            thread = threading.Thread(
+                target=server.run, kwargs={"sockets": [listener]}, daemon=True
+            )
+            thread.start()
+            try:
+                run = subprocess.run(
+                    [
+                        "node",
+                        str(Path(__file__).with_name("browser_items_board_probe.mjs")),
+                        browser,
+                        base_url,
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=60,
+                )
+            finally:
+                server.should_exit = True
+                thread.join(timeout=10)
+            self.assertEqual(0, run.returncode, run.stderr or run.stdout)
+            self.assertEqual(fixture, records.read_text(encoding="utf-8"))

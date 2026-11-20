@@ -52,7 +52,8 @@ try {
   assert(await browser.evaluate(`document.activeElement === (${confirm})`));
   await pressKey("Enter", 13, "\r");
   await browser.wait(`document.activeElement === (${picker}) && !boardMovePending`, "focus after confirmed move");
-  assert.equal(await browser.evaluate(`(${fixtureCard}).closest('.items-board-card')._lifetxtItem.status`), "[x]");
+  assert.equal(await browser.evaluate(`(${fixtureCard}).closest('.items-board-card')._lifetxtItem.status`), "[x]",
+    await browser.evaluate("document.getElementById('toast-container').textContent"));
   assert.equal(writes().length, 1);
 } finally {
   await browser.close();

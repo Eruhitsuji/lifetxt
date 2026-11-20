@@ -639,6 +639,11 @@
       const active = document.activeElement;
       const activeCard = active?.closest?.(".items-board-card");
       const activeKey = activeCard ? itemStableKey(activeCard._lifetxtItem) : null;
+      const opener = _lastFocusedBeforeModal;
+      const openerCard = opener?.matches(".items-board-title") && root.contains(opener)
+        ? opener.closest(".items-board-card") : null;
+      const openerKey = openerCard ? itemStableKey(openerCard._lifetxtItem) : null;
+      let replacementOpener = null;
       boardDraggedCard = null;
       root.innerHTML = `
         ${itemsReadOnly === true ? `<p>${escapeHtml(t("This workspace is read-only."))}</p>` : ""}
@@ -668,6 +673,10 @@
           const card = buildBoardCard(item);
           column.append(card);
           restoreFocus(card);
+          if (openerKey !== null && openerKey === itemStableKey(item) &&
+              !card.closest("details:not([open])")) {
+            replacementOpener = card.querySelector(".items-board-title");
+          }
         }
         if (!primary) return;
         column.addEventListener("dragover", event => {
@@ -707,6 +716,10 @@
         root.append(other);
         for (const status of extra) appendColumn(otherGrid, status, BOARD_OTHER_STATES.get(status) || status, false);
         if (active?.matches?.(".items-board-other > summary")) summary.focus();
+      }
+      // Retarget modal focus restoration without focusing the inert board now.
+      if (openerCard) {
+        _lastFocusedBeforeModal = replacementOpener || document.getElementById("items-layout");
       }
       if (root.contains(document.activeElement) || !activeCard) return;
       document.getElementById("items-layout").focus();

@@ -15,6 +15,7 @@
     .attachment-upload [role="status"] { min-height: 1.5em; }
 
     #items-layout-control[hidden], #group-by[hidden] { display: none; }
+    .items-board-jumps { display: none; }
     .items-board-columns {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -52,6 +53,8 @@
     .items-board-other { margin-top: .85rem; }
     .items-board-other summary { margin-bottom: .5rem; cursor: pointer; }
     @media (max-width: 680px) {
+      .items-board-jumps { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .75rem; }
+      .items-board-jumps button { min-height: 44px; }
       .items-board-columns { grid-template-columns: minmax(0, 1fr); }
       .items-board-move, .items-board-move-confirm, .items-board-title, .items-board-add { min-height: 44px; }
     }

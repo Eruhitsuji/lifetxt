@@ -36,6 +36,23 @@ try {
     width: 390, height: 844, deviceScaleFactor: 1, mobile: true,
   });
   await browser.evaluate("document.getElementById('search').value = ''; reloadItemsBoard()");
+  const doneJump = ".items-board-jumps button:last-child";
+  const doneHeading = ".items-board-columns > .items-board-column:nth-child(3) > h3";
+  const boardUrl = await browser.evaluate("location.href");
+  assert.equal(await browser.evaluate(`document.querySelector('${doneJump}').textContent`), "Done (0)");
+  assert(await browser.evaluate(`document.querySelector('${doneJump}').getBoundingClientRect().height >= 44`));
+  await browser.evaluate(`document.querySelector('${doneJump}').focus(); reloadItemsBoard()`);
+  assert(await browser.evaluate(focused(doneJump)));
+  await pressKey("Enter", 13, "\r");
+  assert(await browser.evaluate(focused(doneHeading)));
+  assert(await browser.evaluate(`(() => {
+    const rect = document.querySelector('${doneHeading}').getBoundingClientRect();
+    return rect.top >= document.querySelector('header').getBoundingClientRect().bottom
+      && rect.bottom <= innerHeight;
+  })()`));
+  await browser.evaluate("reloadItemsBoard()");
+  assert(await browser.evaluate(focused(doneHeading)));
+  assert.equal(await browser.evaluate("location.href"), boardUrl);
   const fixtureControl = selector => `(${fixtureCard}).closest('.items-board-card').querySelector('${selector}')`;
   const picker = fixtureControl(".items-board-move");
   const confirm = fixtureControl(".items-board-move-confirm");
@@ -78,6 +95,7 @@ try {
   await browser.command("Emulation.setDeviceMetricsOverride", {
     width: 1280, height: 900, deviceScaleFactor: 1, mobile: false,
   });
+  assert.equal(await browser.evaluate("getComputedStyle(document.querySelector('.items-board-jumps')).display"), "none");
   await browser.evaluate(`window.boardDrag = (() => {
     const [source, target, other] = document.querySelectorAll('.items-board-column');
     const card = source.querySelector('.items-board-card');

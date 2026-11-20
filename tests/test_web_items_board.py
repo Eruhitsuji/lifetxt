@@ -100,7 +100,7 @@ async function api(path, options) {
 
 
 class ItemsBoardBrowserTests(unittest.TestCase):
-    def test_drawer_focus_and_board_moves(self):
+    def test_board_focus_moves_and_creation(self):
         require_revision_browser(self)
         browser = browser_path()
 
@@ -142,9 +142,12 @@ class ItemsBoardBrowserTests(unittest.TestCase):
                 server.should_exit = True
                 thread.join(timeout=10)
             self.assertEqual(0, run.returncode, run.stderr or run.stdout)
-            moved, unrelated, *history = records.read_text(encoding="utf-8").splitlines()
+            moved, unrelated, *remaining = records.read_text(encoding="utf-8").splitlines()
             self.assertEqual('[x] T "Board fixture" id:board-fixture', moved)
             self.assertEqual('[x] T "Unrelated task" id:unrelated', unrelated)
             self.assertTrue(
-                any("parent:board-fixture event:completed" in event for event in history)
+                any("parent:board-fixture event:completed" in event for event in remaining)
+            )
+            self.assertTrue(
+                any(line.startswith("[/] T ") and "Created on board" in line for line in remaining)
             )

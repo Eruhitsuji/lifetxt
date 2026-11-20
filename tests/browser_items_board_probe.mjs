@@ -156,6 +156,31 @@ try {
   assert.equal(await browser.evaluate("document.querySelectorAll('.items-board-card').length"), 0);
   assert(await browser.evaluate("document.getElementById('toast-container').textContent.includes('Task moved. The card is outside the current board results.')"));
   assert.equal(writes().length, 3);
+  const creates = () => browser.events.filter(event =>
+    event.method === "Network.requestWillBeSent" && event.params.request.method === "POST"
+    && new URL(event.params.request.url).pathname === "/api/items");
+  const notStartedAdd = ".items-board-column:nth-child(1) .items-board-add";
+  const inProgressAdd = ".items-board-column:nth-child(2) .items-board-add";
+  await browser.evaluate(`document.querySelector('${notStartedAdd}').focus()`);
+  await pressKey("Enter", 13, "\r");
+  await browser.wait(focused("#edit-title"), "board task editor");
+  await browser.evaluate("reloadItemsBoard()");
+  assert(await browser.evaluate(focused("#edit-title")));
+  await pressKey("Escape", 27);
+  await browser.wait(focused(notStartedAdd), "focus after cancelling board task creation");
+  assert.equal(creates().length, 0);
+
+  await browser.evaluate(`document.querySelector('${inProgressAdd}').focus()`);
+  await pressKey("Enter", 13, "\r");
+  await browser.wait(focused("#edit-title"), "in-progress task editor");
+  assert.equal(await browser.evaluate("document.getElementById('edit-status').value"), "[/]");
+  await browser.evaluate(`document.getElementById('edit-title').value = 'Created on board';
+    document.getElementById('save-button').focus();`);
+  await pressKey("Enter", 13, "\r");
+  await browser.wait(`document.querySelector('.items-board-column:nth-child(2) .items-board-title')
+    ?.textContent === 'Created on board' && ${focused(inProgressAdd)}`, "created task and restored add-button focus");
+  assert.equal(creates().length, 1);
+
 
 } finally {
   await browser.close();

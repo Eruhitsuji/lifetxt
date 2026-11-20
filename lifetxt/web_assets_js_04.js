@@ -69,7 +69,7 @@
       const params = itemQueryParams();
       if (!currentItems.length) {
         const root = document.getElementById("items");
-        if (root && !root.querySelector(".item")) {
+        if (root && !root.querySelector(".item, .items-board-columns")) {
           root.innerHTML = `<div class="skeleton-row"></div>`.repeat(4);
         }
       }
@@ -670,6 +670,7 @@
       const openerCard = opener?.matches(".items-board-title") && root.contains(opener)
         ? opener.closest(".items-board-card") : null;
       const openerKey = openerCard ? itemStableKey(openerCard._lifetxtItem) : null;
+      const openerAddStatus = root.contains(opener) ? opener.dataset.boardAddStatus : undefined;
       let replacementOpener = null;
       root.innerHTML = `
         ${itemsReadOnly === true ? `<p>${escapeHtml(t("This workspace is read-only."))}</p>` : ""}
@@ -753,11 +754,13 @@
           const add = document.createElement("button");
           add.type = "button";
           add.className = "secondary items-board-add";
+          add.dataset.boardAddStatus = status;
           add.textContent = t("+ Add task");
           add.setAttribute("aria-label", `${t("Add task")} — ${t(label)}`);
           add.addEventListener("click", () => addBoardTask(status));
           column.append(add);
-          if (active?.matches?.(".items-board-add") && active.getAttribute("aria-label") === add.getAttribute("aria-label")) add.focus();
+          if (active?.dataset.boardAddStatus === status) add.focus();
+          if (openerAddStatus === status) replacementOpener = add;
         }
       };
       for (const [status, label] of BOARD_COLUMNS) appendColumn(grid, status, label, true);
@@ -776,7 +779,7 @@
         if (active?.matches?.(".items-board-other > summary")) summary.focus();
       }
       // Retarget modal focus restoration without focusing the inert board now.
-      if (openerCard) {
+      if (openerCard || openerAddStatus) {
         _lastFocusedBeforeModal = replacementOpener || document.getElementById("items-layout");
       }
       if (root.contains(document.activeElement) || !activeCard) return;

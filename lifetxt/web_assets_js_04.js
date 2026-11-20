@@ -535,6 +535,13 @@
     ]);
     let boardMovePending = false;
     let boardDraggedCard = null;
+    let boardDropTarget = null;
+    function setBoardDropTarget(column = null) {
+      if (column === boardDropTarget) return;
+      boardDropTarget?.classList.remove("items-board-drop-target");
+      boardDropTarget = column;
+      column?.classList.add("items-board-drop-target");
+    }
     function itemsLayoutAvailable() {
       return !isKioskMode() && !isDisplayMode() && currentView() !== "messages";
     }
@@ -632,7 +639,10 @@
           event.dataTransfer.effectAllowed = "move";
           event.dataTransfer.setData("text/plain", item.title);
         });
-        card.addEventListener("dragend", () => { boardDraggedCard = null; });
+        card.addEventListener("dragend", () => {
+          boardDraggedCard = null;
+          setBoardDropTarget();
+        });
       }
       return card;
     }
@@ -646,7 +656,6 @@
         ? opener.closest(".items-board-card") : null;
       const openerKey = openerCard ? itemStableKey(openerCard._lifetxtItem) : null;
       let replacementOpener = null;
-      boardDraggedCard = null;
       root.innerHTML = `
         ${itemsReadOnly === true ? `<p>${escapeHtml(t("This workspace is read-only."))}</p>` : ""}
         ${items.length ? "" : `<p>${escapeHtml(t("No tasks to show on this board."))}</p>`}
@@ -686,12 +695,17 @@
           if (boardMovePending || !boardDraggedCard || boardDraggedCard._lifetxtItem.status === status) return;
           event.preventDefault();
           event.dataTransfer.dropEffect = "move";
+          setBoardDropTarget(column);
+        });
+        column.addEventListener("dragleave", event => {
+          if (boardDropTarget === column && !column.contains(event.relatedTarget)) setBoardDropTarget();
         });
         column.addEventListener("drop", event => {
-          if (!boardDraggedCard) return;
-          event.preventDefault();
           const card = boardDraggedCard;
           boardDraggedCard = null;
+          setBoardDropTarget();
+          if (boardMovePending || !card || card._lifetxtItem.status === status) return;
+          event.preventDefault();
           moveBoardTask(card._lifetxtItem, status, card.querySelector(".items-board-title"));
         });
         if (status !== "[x]" && itemsReadOnly === false) {
@@ -728,6 +742,8 @@
       document.getElementById("items-layout").focus();
     }
     function renderItems(items) {
+      boardDraggedCard = null;
+      setBoardDropTarget();
       const root = document.getElementById("items");
       const board = itemsBoardActive();
       document.getElementById("items-layout-control").hidden = !itemsLayoutAvailable();

@@ -55,6 +55,55 @@ try {
   assert.equal(await browser.evaluate(`(${fixtureCard}).closest('.items-board-card')._lifetxtItem.status`), "[x]",
     await browser.evaluate("document.getElementById('toast-container').textContent"));
   assert.equal(writes().length, 1);
+
+  await browser.command("Emulation.setDeviceMetricsOverride", {
+    width: 1280, height: 900, deviceScaleFactor: 1, mobile: false,
+  });
+  await browser.evaluate(`window.boardDrag = (() => {
+    const [source, target, other] = document.querySelectorAll('.items-board-column');
+    const card = source.querySelector('.items-board-card');
+    const heading = target.querySelector('h3');
+    const dataTransfer = new DataTransfer();
+    const fire = (node, type, relatedTarget = null) =>
+      !node.dispatchEvent(new DragEvent(type, {bubbles: true, cancelable: true, dataTransfer, relatedTarget}));
+    const highlighted = node => node.classList.contains('items-board-drop-target');
+    return {source, target, other, card, heading, fire, highlighted};
+  })()`);
+  assert.deepEqual(await browser.evaluate(`(() => {
+    const {source, target, other, card, heading, fire, highlighted} = boardDrag;
+    const externalIgnored = !fire(heading, 'dragover') && !fire(heading, 'drop') && !highlighted(target);
+    fire(card, 'dragstart');
+    const sourceIgnored = !fire(source, 'dragover') && !highlighted(source);
+    const targetMarked = fire(heading, 'dragover') && highlighted(target)
+      && getComputedStyle(target).outlineStyle === 'solid';
+    fire(target, 'dragleave', heading);
+    const childKeepsHighlight = highlighted(target);
+    fire(other, 'dragover');
+    const changedColumns = highlighted(other) && !highlighted(target);
+    fire(other, 'dragleave', source);
+    const leftColumn = !highlighted(other);
+    fire(target, 'dragover');
+    fire(card, 'dragend');
+    const cancelled = !highlighted(target);
+    fire(card, 'dragstart');
+    const sourceDropIgnored = !fire(source, 'drop');
+    return {externalIgnored, sourceIgnored, targetMarked, childKeepsHighlight, changedColumns,
+      leftColumn, cancelled, sourceDropIgnored};
+  })()`), {
+    externalIgnored: true, sourceIgnored: true, targetMarked: true, childKeepsHighlight: true,
+    changedColumns: true, leftColumn: true, cancelled: true, sourceDropIgnored: true,
+  });
+  assert.equal(writes().length, 1);
+  assert(await browser.evaluate(`(() => {
+    const {card, target, heading, fire, highlighted} = boardDrag;
+    fire(card, 'dragstart');
+    fire(heading, 'dragover');
+    return fire(heading, 'drop') && !highlighted(target);
+  })()`));
+  await browser.wait(`document.querySelectorAll('.items-board-column')[1]
+    .querySelector('.items-board-card')?._lifetxtItem.status === '[/]' && !boardMovePending`,
+    "dragged card saved in the destination column");
+  assert.equal(writes().length, 2);
 } finally {
   await browser.close();
 }

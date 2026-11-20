@@ -650,7 +650,11 @@
       const otherOpen = root.querySelector(".items-board-other")?.open || false;
       const active = document.activeElement;
       const activeCard = active?.closest?.(".items-board-card");
-      const activeKey = activeCard ? itemStableKey(activeCard._lifetxtItem) : null;
+      const activeItem = activeCard?._lifetxtItem;
+      const activeKey = activeItem ? itemStableKey(activeItem) : null;
+      const moving = active?.matches(".items-board-move, .items-board-move-confirm");
+      const destination = moving && !boardMovePending
+        ? activeCard?.querySelector(".items-board-move")?.value : "";
       const opener = _lastFocusedBeforeModal;
       const openerCard = opener?.matches(".items-board-title") && root.contains(opener)
         ? opener.closest(".items-board-card") : null;
@@ -667,11 +671,20 @@
         groups.get(item.status).push(item);
       }
       const restoreFocus = node => {
-        if (activeKey === itemStableKey(node._lifetxtItem)) {
-          const selector = active.matches(".items-board-move, .items-board-move-confirm")
-            ? ".items-board-move" : ".items-board-title";
-          node.querySelector(selector)?.focus();
+        const item = node._lifetxtItem;
+        if (activeKey !== itemStableKey(item)) return;
+        const move = moving && node.querySelector(".items-board-move");
+        if (!move) {
+          node.querySelector(".items-board-title").focus();
+          return;
         }
+        const confirm = node.querySelector(".items-board-move-confirm");
+        if (destination && item.source === activeItem.source && bulkDoneSame(item, activeItem)) {
+          move.value = destination;
+          confirm.disabled = !move.value;
+        }
+        if (!confirm.disabled && active.matches(".items-board-move-confirm")) confirm.focus();
+        else move.focus();
       };
       const appendColumn = (parent, status, label, primary) => {
         const column = document.createElement("section");

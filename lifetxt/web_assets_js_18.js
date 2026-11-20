@@ -41,8 +41,8 @@
     };
 
     const _structuredOriginalNewItem = newItem;
-    newItem = function(createMode) {
-      _structuredOriginalNewItem(typeof createMode === "string" ? createMode : undefined);
+    newItem = function(createMode, initialStatus) {
+      _structuredOriginalNewItem(typeof createMode === "string" ? createMode : undefined, initialStatus);
       refreshStructuredFields();
     };
     const _structuredOriginalSelectItem = selectItem;

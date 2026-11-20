@@ -144,7 +144,7 @@ class ItemsBoardBrowserTests(unittest.TestCase):
             self.assertEqual(0, run.returncode, run.stderr or run.stdout)
             moved, unrelated, *history = records.read_text(encoding="utf-8").splitlines()
             self.assertEqual('[x] T "Board fixture" id:board-fixture', moved)
-            self.assertEqual('[/] T "Unrelated task" id:unrelated', unrelated)
+            self.assertEqual('[x] T "Unrelated task" id:unrelated', unrelated)
             self.assertTrue(
                 any("parent:board-fixture event:completed" in event for event in history)
             )

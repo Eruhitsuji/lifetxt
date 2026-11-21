@@ -19870,6 +19870,18 @@ traceability:
         - tests/browser_items_board_probe.mjs (Chromium execution pending)
       status: in_review
 
+    - requirement_id: req-desktop-app-server-url
+      capability_id: cap-desktop-app-companion-shell
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1652
+      changed_files_or_scope:
+        - desktop/src-tauri/src/main.rs
+        - desktop/src-tauri/src/server_url.rs
+        - desktop/README.md
+      tests_or_evidence:
+        - Rust startup argument tests in desktop/src-tauri/src/server_url.rs.
+        - The remote startup branch returns before companion runtime discovery and alert capability registration.
+      status: in_review
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

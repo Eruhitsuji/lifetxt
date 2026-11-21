@@ -1,0 +1,52 @@
+schema_version: 1
+
+change:
+  id: ordinary-web-workspace-collaboration
+  title: Enforce workspace collaboration roles in the ordinary Web UI
+  status: in_review
+  change_type: Security
+  assurance_level: High
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1639
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1640
+  base_commit: dfb529c3031e0ff4e2ae64d49770f6c8dda612b5
+  target_release: null
+
+scope:
+  in_scope:
+    - Authenticate standard Web browser sessions from existing Remote principals using one-time token exchange.
+    - Recheck workspace membership and principal scopes on every ordinary Web request.
+    - Enforce CSRF and exact Origin checks for cookie-authenticated unsafe requests.
+    - Keep workspace role authority separate from server administration, Git, procedure execution, and private per-user endpoints.
+    - Show authenticated principal, selected workspace, role, and effective read-only state in the standard Web UI.
+    - Attribute existing ordinary Web Native History item mutations to the authenticated principal.
+    - Document private-network/VPN deployment boundaries and current unsupported per-user data domains.
+  out_of_scope:
+    - VPN detection or firewall management inside the lifetxt process.
+    - Public Internet deployment, identity-provider integration, or proxy-header identity mapping.
+    - Workspace switching, invitations, credential provisioning, per-item ACLs, or Format changes.
+    - Per-user storage for Personal Context, notifications, messages, timers, or work sessions.
+  write_scope:
+    - lifetxt/web_collaboration.py
+    - lifetxt/web_actor.py
+    - lifetxt/remote_web.py
+    - lifetxt/remote_sessions.py
+    - lifetxt/webapp.py
+    - lifetxt/write_operations.py
+    - lifetxt/web_assets.py
+    - docs/en/remote.md
+    - docs/ja/remote.md
+    - .ai/project/CAPABILITIES.yml
+    - .ai/project/TRACEABILITY.yml
+    - .ai/project/changes/ordinary-web-workspace-collaboration/**
+  forbidden_scope:
+    - .ai/managed/**
+    - trusts in caller-supplied actor, person, assignee, or unverified proxy identity values
+    - weakening existing Remote authentication, membership, CSRF, visibility, or revision checks
+    - using workspace roles to grant backup, recovery, Git, procedure, or server-administration authority
+    - direct public Internet exposure or deployment/firewall changes
+  human_approvals_required:
+    - Owner approval of private-network/VPN-only exposure, existing-principal token exchange, and one selected workspace (recorded 2026-11-21).
+    - Independent security and integration review before merge.
+    - Merge Authority approval before merge into main.

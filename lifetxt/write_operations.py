@@ -196,7 +196,7 @@ def transform_items_text(text, changes, id_key="id"):
 
 
 def transform_items_text_with_native_history(
-    text, changes, id_key="id", source_revision=None
+    text, changes, id_key="id", source_revision=None, actor=None
 ):
     """Apply item changes and capture supported semantic events in one transform.
 
@@ -206,6 +206,10 @@ def transform_items_text_with_native_history(
     before/after differences are appended through the canonical Native History
     event builder.
     """
+    if actor is None:
+        from .web_actor import current_web_actor
+
+        actor = current_web_actor()
     normalized = _normalize_changes(changes)
     before_items, diagnostics = parse_text(
         text, id_key=id_key, check_ids=False, check_references=False
@@ -247,6 +251,7 @@ def transform_items_text_with_native_history(
             spec["event_type"],
             revision,
             id_key=id_key,
+            actor=actor,
             field=spec.get("field"),
             target=spec.get("target"),
         )

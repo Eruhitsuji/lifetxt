@@ -318,25 +318,34 @@ clientはrequest ID、offset-aware client time、選択したprotocol versionを
 
 ## 複数人で使う場合の画面選択
 
-以下で説明するコラボレーションロールが適用されるのは、認証済みのRemote画面
-（`/remote`と`/api/remote/v1/` endpoint）です。ここでは、この文書に記載した
-範囲のRemote snapshot・操作、権限を持つOwnerによるメンバー管理、Native History
-に記録されたactor IDの表示を利用できます。通常のWeb UIにある全画面・全操作を
-備えたものではありません。
+選択中の名前付きworkspaceに`collaboration`があり、`remote.enabled: true`で
+principalを設定している場合、通常Web UIもworkspaceごとの認証・認可を行います。
+`/`、`/planner`、`/capture`、`/state`を開くとサインイン画面へ移動します。
+`/web-login`で各利用者自身のprincipal tokenを一度入力すると、tokenはopaqueな
+HttpOnly browser sessionへ交換され、local/session storageには保存されません。
+画面には利用者、選択workspace、role、viewerのread-only状態が表示されます。
 
-通常のWeb UI（`/`、`/planner`、`/capture`、`/state`、`/procedures`と、Remote
-以外のAPI）には、現在、principalごとのworkspace `owner`/`editor`/`viewer`
-ポリシーは適用されません。任意設定の`api.token`は配置全体で共有するBearer
-credentialで、個々の利用者を識別したりworkspace membershipを強制したりしません。
-Reverse proxyでアクセス元を制限できますが、proxyのサインインだけでは、これらの
-routeにlifetxtの利用者別認可は追加されません。
+`owner`と`editor`はprincipalに設定されたscopeの範囲で共有workspaceの通常操作を
+行えます。`viewer`は読み取りのみです。認可はserver側で各requestごとに再確認され、
+workspace外のserver管理APIはworkspace roleだけでは利用できません。配置全体で
+共有する`api.token`やproxyのサインインは、個人認証・workspace membershipの代わりに
+なりません。`person:`や`assignee:`もアクセス許可ではありません。
 
-利用者ごとに異なるroleを持たせて1台のserverを共有する場合は、対応している
-コラボレーション操作に認証済みの`/remote`を使ってください。通常Web UIとそのAPI
-は、[issue #1386](https://github.com/Eruhitsuji/lifetxt/issues/1386)で追跡して
-いる統合が実装・受入されるまで、同じ信頼範囲の利用者内に限定してください。
-レコードの`person:`や`assignee:`をアクセス許可として扱わないでください。
-サインイン中のprincipal、workspace role、レコードの担当者、履歴actorは別の概念です。
+現時点で個人別データ保存がないPersonal Context、通知、messages、timer、work-session
+routeは、複数人の通常Web UIから利用できません。per-item ACLもありません。認可された
+workspace memberは、共有対象となる選択中のlife.txt source全体を閲覧できるため、
+workspaceに入れるrecordを決めてからmemberを追加してください。
+
+複数人運用の初期配置はVPNを含むprivate network内に限定し、通常Web UIをpublic
+Internetへ直接公開しないでください。VPN参加資格はVPN・firewall・trusted deployment
+boundaryで制限します。lifetxtは任意のproxy identity headerからVPN利用者を推測しません。
+non-loopback接続にはHTTPSまたは認証済み暗号化tunnelが必要です。TLS reverse proxyを
+使う場合は、実際に接続するproxyだけを`remote.trusted_proxies`へ設定してください。
+
+`remote.enabled: true`、既存の`remote.principals`、workspaceの
+`collaboration.members`を設定し、各principalのtokenを`token_env`が参照する環境変数で
+渡します。設定例とRemote用の別画面については、引き続き本書の
+[Workspace collaboration authorization](#ワークスペースコラボレーション認可)を参照してください。
 
 ## ワークスペースコラボレーション認可
 

@@ -14,6 +14,25 @@ def _read_resource(name: str) -> str:
 
 _STYLE_MARKER = "__LIFETXT_WEB_STYLES__"
 _SCRIPT_MARKER = "__LIFETXT_WEB_SCRIPT__"
+WEB_SESSION_UI = r"""<script>
+(()=>{const labels=(navigator.language||'en').toLowerCase().startsWith('ja')
+?{principal:'利用者',workspace:'ワークスペース',role:'権限',owner:'Owner',editor:'Editor',viewer:'Viewer',readOnly:'閲覧のみ',logout:'サインアウト',login:'再ログイン',expired:'セッションを確認できません。再ログインしてください。'}
+:{principal:'Signed in',workspace:'Workspace',role:'Role',owner:'Owner',editor:'Editor',viewer:'Viewer',readOnly:'Read-only',logout:'Sign out',login:'Sign in again',expired:'Session unavailable. Sign in again.'};
+const nativeFetch=window.fetch.bind(window);let sessionData=null;let sessionReady;
+window.fetch=function(input,init={}){const method=String(init.method||(input instanceof Request?input.method:'GET')).toUpperCase();const raw=input instanceof URL?input.href:(typeof input==='string'?input:input.url);const url=new URL(raw,location.href);
+if(url.origin===location.origin&&!['GET','HEAD','OPTIONS'].includes(method)&&!['/api/web/v1/browser/login','/api/web/v1/browser/session'].includes(url.pathname))return Promise.resolve(sessionReady).then(()=>{
+if(!sessionData)return nativeFetch(input,init);const headers=new Headers(init.headers||(input instanceof Request?input.headers:undefined));headers.set(sessionData.csrf_header||'X-CSRF-Token',sessionData.csrf_token||'');return nativeFetch(input,{...init,headers,credentials:init.credentials||'same-origin'});});return nativeFetch(input,init);};
+sessionReady=nativeFetch('/api/web/v1/browser/session',{credentials:'same-origin',cache:'no-store'}).then(async response=>{
+if(response.status===404)return null;if(response.status===401)throw new Error('session');if(!response.ok)return null;sessionData=await response.json();return sessionData;});
+sessionReady.then(data=>{if(!data)return;
+const bar=document.createElement('aside');bar.setAttribute('aria-label','Workspace access');
+bar.style.cssText='display:flex;gap:.75rem;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:.55rem 1rem;background:#edf6f5;color:#27343d;font:14px system-ui,sans-serif;border-bottom:1px solid #c8d7d9';
+const summary=document.createElement('span');const principal=(data.principal||{}).display_name||(data.principal||{}).id||'—';
+const role=labels[data.role]||data.role||'—';const parts=[labels.principal+': '+principal,labels.workspace+': '+(data.workspace||'—'),labels.role+': '+role];if(data.read_only)parts.push(labels.readOnly);summary.textContent=parts.join(' · ');bar.appendChild(summary);
+const button=document.createElement('button');button.type='button';button.textContent=labels.logout;button.style.cssText='min-height:36px;padding:.35rem .75rem';
+button.addEventListener('click',async()=>{button.disabled=true;try{await fetch('/api/web/v1/browser/logout',{method:'POST',credentials:'same-origin'});}finally{location.assign('/web-login');}});bar.appendChild(button);document.body.prepend(bar);
+}).catch(problem=>{if(problem.message!=='session'||location.pathname==='/web-login')return;const note=document.createElement('aside');note.textContent=labels.expired+' ';const link=document.createElement('a');link.href='/web-login';link.textContent=labels.login;note.appendChild(link);note.style.cssText='padding:.5rem 1rem;background:#fff0e8;color:#632f00';document.body.prepend(note);});})();
+</script>"""
 _BRAND_FAVICON_SVG = _read_resource("web_icon.svg")
 _BRAND_MARK_SVG = """<svg viewBox="0 0 512 512" width="27" height="27" focusable="false" aria-hidden="true" data-lifetxt-geometry="v3">
   <defs>
@@ -91,9 +110,12 @@ def web_resource_bytes(name: str) -> bytes:
 
 def _assemble_planner_html() -> str:
     template = _read_resource("web_planner.html")
+    template = template.replace("__PLANNER_CSS__", _read_resource("web_planner.css"))
+    script = _read_resource("web_planner.js")
     return template.replace(
-        "__PLANNER_CSS__", _read_resource("web_planner.css")
-    ).replace("__PLANNER_JS__", _read_resource("web_planner.js"))
+        "<script>__PLANNER_JS__</script>",
+        "<script>" + script + "</script>",
+    )
 
 
 PLANNER_HTML_PAGE = _assemble_planner_html()
@@ -103,8 +125,11 @@ def _assemble_state_html() -> str:
     template = _read_resource("web_state.html")
     if template.count("__STATE_CSS__") != 1 or template.count("__STATE_JS__") != 1:
         raise RuntimeError("web_state.html must contain one CSS and JS marker")
-    return template.replace("__STATE_CSS__", _read_resource("web_state.css")).replace(
-        "__STATE_JS__", _read_resource("web_state.js")
+    template = template.replace("__STATE_CSS__", _read_resource("web_state.css"))
+    script = _read_resource("web_state.js")
+    return template.replace(
+        "<script>__STATE_JS__</script>",
+        "<script>" + script + "</script>",
     )
 
 
@@ -143,7 +168,11 @@ def _assemble_html() -> str:
     template = _apply_brand_assets(template)
     styles = "".join(_read_resource(name) for name in _CSS_RESOURCE_NAMES)
     script = "".join(_read_resource(name) for name in _JS_RESOURCE_NAMES)
-    return template.replace(_STYLE_MARKER, styles).replace(_SCRIPT_MARKER, script)
+    template = template.replace(_STYLE_MARKER, styles)
+    return template.replace(
+        "<script>\n" + _SCRIPT_MARKER + "  </script>",
+        "<script>\n" + script + "  </script>",
+    )
 
 
 HTML_PAGE = _assemble_html()

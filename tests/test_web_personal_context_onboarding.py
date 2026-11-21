@@ -53,6 +53,10 @@ class WebPersonalContextOnboardingTests(unittest.TestCase):
             '"Personal Context": "パーソナルコンテキスト"', web_assets.HTML_PAGE
         )
 
+    def test_hidden_pagination_is_not_overridden_by_display_flex(self):
+        # #1656: display:flex overrode the hidden attribute, showing Load more at 0 records.
+        self.assertIn(".personal-context-pagination[hidden] { display: none; }", self.css)
+
     def test_item_cards_wrap_long_facts_and_controls_on_mobile(self):
         self.assertIn(".personal-context-item { min-width: 0;", self.css)
         self.assertIn(".personal-context-item-title { flex: 1; min-width: 0;", self.css)

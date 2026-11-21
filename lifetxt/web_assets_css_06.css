@@ -12,6 +12,7 @@
     .personal-context-select { display: inline-flex; align-items: center; justify-content: center; flex: none; min-width: 44px; min-height: 44px; }
     .personal-context-select input { width: 1.1rem; height: 1.1rem; }
     .personal-context-pagination { display: flex; justify-content: center; margin-top: .8rem; }
+    .personal-context-pagination[hidden] { display: none; }
     .personal-context-steps { margin: 0 0 1rem; padding-left: 1.25rem; color: var(--muted); }
     .personal-context-steps li + li { margin-top: .35rem; }
     .personal-context-facts { display: grid; gap: .65rem; }

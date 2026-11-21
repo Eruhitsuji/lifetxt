@@ -130,6 +130,13 @@
       return urlLang || String(appConfig?.web?.language || "").toLowerCase();
     }
 
+    // Locale for date/time formatting: follows the selected UI language so
+    // dates never mix with the chrome; undefined defers to the browser.
+    function uiLocale() {
+      const lang = currentLanguage();
+      return lang === "ja" ? "ja-JP" : lang === "en" ? "en-US" : undefined;
+    }
+
     function i18nDictionary() {
       return UI_STRINGS[currentLanguage()] || null;
     }

@@ -35,7 +35,7 @@
       }
       if (dateEl) {
         dateEl.textContent = data.reference_date
-          ? new Date(data.reference_date + "T00:00:00").toLocaleDateString(undefined, {weekday: "long", month: "long", day: "numeric"})
+          ? new Date(data.reference_date + "T00:00:00").toLocaleDateString(uiLocale(), {weekday: "long", month: "long", day: "numeric"})
           : "";
       }
 
@@ -102,7 +102,7 @@
       const listEl = document.getElementById("focus-list");
       if (!listEl) return;
       const dateEl = document.getElementById("focus-date");
-      if (dateEl) dateEl.textContent = new Date().toLocaleDateString(undefined, {weekday: "long", month: "long", day: "numeric"});
+      if (dateEl) dateEl.textContent = new Date().toLocaleDateString(uiLocale(), {weekday: "long", month: "long", day: "numeric"});
       let items = [];
       try {
         items = (await api("/api/items?open_only=true")).items || [];

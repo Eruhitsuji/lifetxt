@@ -14,7 +14,7 @@
       } else {
         from = today;
         to = today;
-        label = now.toLocaleDateString(undefined, {weekday: "long", month: "long", day: "numeric"});
+        label = now.toLocaleDateString(uiLocale(), {weekday: "long", month: "long", day: "numeric"});
       }
       const rangeEl = document.getElementById("tl-range-label");
       if (rangeEl) rangeEl.textContent = label;
@@ -37,7 +37,7 @@
       const multiDay = timelineRange !== "today";
       const dayLabel = (d) => {
         const parsed = new Date(d + "T00:00");
-        return isNaN(parsed) ? d : parsed.toLocaleDateString(undefined, {weekday: "short", month: "short", day: "numeric"});
+        return isNaN(parsed) ? d : parsed.toLocaleDateString(uiLocale(), {weekday: "short", month: "short", day: "numeric"});
       };
       const hasCurrentOrFuture = records.some(entry => {
         const when = String(entry.display.when || entry.record.when || "");
@@ -253,8 +253,8 @@
       const titleEl = document.getElementById("cal-title");
       if (titleEl) {
         titleEl.textContent = calMode === "week"
-          ? `Week of ${days[0].toLocaleDateString(undefined, {month: "long", day: "numeric", year: "numeric"})}`
-          : calAnchor.toLocaleDateString(undefined, {month: "long", year: "numeric"});
+          ? `Week of ${days[0].toLocaleDateString(uiLocale(), {month: "long", day: "numeric", year: "numeric"})}`
+          : calAnchor.toLocaleDateString(uiLocale(), {month: "long", year: "numeric"});
       }
       let data;
       try {
@@ -287,7 +287,7 @@
       const weekdayNames = [];
       for (let i = 0; i < 7; i++) {
         const d = new Date(2024, 0, 7 + ((ws + i) % 7)); // 2024-01-07 is a Sunday
-        weekdayNames.push(d.toLocaleDateString(undefined, {weekday: "short"}));
+        weekdayNames.push(d.toLocaleDateString(uiLocale(), {weekday: "short"}));
       }
       if (!total) {
         node.innerHTML = guidedEmptyState("📆", "Nothing scheduled in this period",

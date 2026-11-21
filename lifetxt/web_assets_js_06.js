@@ -41,8 +41,8 @@
       const format = (part) => {
         const date = new Date(part);
         if (Number.isNaN(date.getTime())) return part;
-        if (options.dayContext) return new Intl.DateTimeFormat(undefined, {hour: "numeric", minute: "2-digit"}).format(date);
-        return new Intl.DateTimeFormat(undefined, {dateStyle: "medium", timeStyle: "short"}).format(date);
+        if (options.dayContext) return new Intl.DateTimeFormat(uiLocale(), {hour: "numeric", minute: "2-digit"}).format(date);
+        return new Intl.DateTimeFormat(uiLocale(), {dateStyle: "medium", timeStyle: "short"}).format(date);
       };
       return parts.map(format).join(" – ");
     }

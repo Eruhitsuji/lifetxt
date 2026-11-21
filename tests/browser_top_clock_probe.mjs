@@ -101,7 +101,7 @@ try {
             numerals: getComputedStyle(el).fontVariantNumeric,
             rect: rect.toJSON(), header: header.toJSON(), nav: nav.toJSON(),
             scrollWidth: document.documentElement.scrollWidth,
-            primaryButtons: document.querySelectorAll(".nav-primary button").length};
+            primaryButtons: [...document.querySelectorAll(".nav-primary button")].filter(b => getComputedStyle(b).display !== "none").length};
         })()`);
         results.push({width, lang, dark, ...result});
       }

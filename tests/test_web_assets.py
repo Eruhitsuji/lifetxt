@@ -20,7 +20,7 @@ REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
 # Keep the exact assembled page checksum gate for reviewed asset changes.
 # Calculated using _CSS_RESOURCE_NAMES / _JS_RESOURCE_NAMES assembly order,
 # before brand injection (CSS 06/07 precede 05).
-LEGACY_PRISTINE_GIT_BLOB_SHA = "422257fec7d3ca116e9b63a4493131c7360b8141"
+LEGACY_PRISTINE_GIT_BLOB_SHA = "a11c5aff379c3d86dcf6a19cc0f902dc86eeb192"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )
@@ -229,3 +229,19 @@ class WebAssetExtractionTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Issue1386RegressionTests(unittest.TestCase):
+    def test_saved_filters_retry_hidden_attribute_is_honored(self):
+        from lifetxt import web_assets
+
+        css = web_assets.HTML_PAGE
+        self.assertIn("#saved-filters-retry[hidden] { display: none; }", css)
+
+    def test_date_formatting_follows_ui_language_not_browser_locale(self):
+        from lifetxt import web_assets
+
+        page = web_assets.HTML_PAGE
+        self.assertIn("function uiLocale()", page)
+        self.assertNotRegex(page, r"toLocale(?:Date|Time)String\(undefined")
+        self.assertNotIn("Intl.DateTimeFormat(undefined", page)

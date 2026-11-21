@@ -201,8 +201,8 @@
 
     function _formatWebClock(now, settings = null) {
       if (!settings) {
-        const date = now.toLocaleDateString(undefined, { weekday:"short", month:"short", day:"numeric" });
-        const time = now.toLocaleTimeString(undefined, { hour:"2-digit", minute:"2-digit" });
+        const date = now.toLocaleDateString(uiLocale(), { weekday:"short", month:"short", day:"numeric" });
+        const time = now.toLocaleTimeString(uiLocale(), { hour:"2-digit", minute:"2-digit" });
         return date + "  " + time;
       }
       const pad = value => String(value).padStart(2, "0");

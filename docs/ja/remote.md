@@ -316,6 +316,28 @@ lifetxt remote profile-remove home
 
 clientはrequest ID、offset-aware client time、選択したprotocol versionを送信します。protocol 2でnegotiation headerを返さないserverや、要求と異なるversionを返すserverは拒否します。
 
+## 複数人で使う場合の画面選択
+
+以下で説明するコラボレーションロールが適用されるのは、認証済みのRemote画面
+（`/remote`と`/api/remote/v1/` endpoint）です。ここでは、この文書に記載した
+範囲のRemote snapshot・操作、権限を持つOwnerによるメンバー管理、Native History
+に記録されたactor IDの表示を利用できます。通常のWeb UIにある全画面・全操作を
+備えたものではありません。
+
+通常のWeb UI（`/`、`/planner`、`/capture`、`/state`、`/procedures`と、Remote
+以外のAPI）には、現在、principalごとのworkspace `owner`/`editor`/`viewer`
+ポリシーは適用されません。任意設定の`api.token`は配置全体で共有するBearer
+credentialで、個々の利用者を識別したりworkspace membershipを強制したりしません。
+Reverse proxyでアクセス元を制限できますが、proxyのサインインだけでは、これらの
+routeにlifetxtの利用者別認可は追加されません。
+
+利用者ごとに異なるroleを持たせて1台のserverを共有する場合は、対応している
+コラボレーション操作に認証済みの`/remote`を使ってください。通常Web UIとそのAPI
+は、[issue #1386](https://github.com/Eruhitsuji/lifetxt/issues/1386)で追跡して
+いる統合が実装・受入されるまで、同じ信頼範囲の利用者内に限定してください。
+レコードの`person:`や`assignee:`をアクセス許可として扱わないでください。
+サインイン中のprincipal、workspace role、レコードの担当者、履歴actorは別の概念です。
+
 ## ワークスペースコラボレーション認可
 
 選択中の名前付きワークスペースに `collaboration` がある場合、Remoteの

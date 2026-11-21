@@ -323,6 +323,30 @@ lifetxt remote profile-remove home
 
 The client sends a request ID, an offset-aware client timestamp, and the selected protocol version. It rejects a server that omits negotiation headers for protocol 2 or returns a different version.
 
+## Choosing a surface for multiple people
+
+The collaboration role shown below applies to the authenticated Remote surface
+(`/remote` and its `/api/remote/v1/` endpoints). It provides the bounded
+Remote snapshot and operations documented here, workspace membership controls
+for eligible owners, and actor IDs from Native History when present. It is not
+the full set of views and workflows in the ordinary Web UI.
+
+The ordinary Web UI (`/`, `/planner`, `/capture`, `/state`, `/procedures`, and
+its non-Remote APIs) does not currently apply the per-principal workspace
+`owner`/`editor`/`viewer` policy. Its optional `api.token` is one
+deployment-wide bearer credential; it does not identify each human or enforce
+workspace membership. A reverse proxy can restrict who reaches a site, but
+proxy sign-in by itself does not add lifetxt per-user authorization to these
+routes.
+
+For a shared server where members need different roles, use the authenticated
+`/remote` surface for the collaboration functions it supports. Keep the ordinary
+Web UI and its APIs within one trusted audience until the integration tracked
+in [issue #1386](https://github.com/Eruhitsuji/lifetxt/issues/1386) is
+implemented and accepted. Do not treat a record's `person:` or `assignee:`
+field as an access grant: the signed-in principal, workspace role, record
+assignment, and history actor are separate concepts.
+
 ## Workspace collaboration authorization
 
 When the selected named workspace has a `collaboration` section, each Remote

@@ -164,14 +164,22 @@
         window.prompt(t("Copy runtime information"), value);
       }
     }
-    function openHelpModal() {
+    function openHelpModal(focusSearch = false) {
+      hideUiHelp();
       renderHelpModalShortcuts();
       const search = document.getElementById("help-command-search");
       if (search) search.value = "";
       renderHelpModalCommands();
-      // Focus the search box (not the first button) so arrow-key/Enter
-      // command navigation works immediately without an extra click.
-      openManagedModal(document.getElementById("help-modal"), "#help-command-search");
+      // Keep immediate command navigation for the keyboard shortcut.
+      const modal = document.getElementById("help-modal");
+      modal.querySelector(".modal").scrollTop = 0;
+      openManagedModal(modal, focusSearch ? "#help-command-search" : "#help-title");
+    }
+    function openHelpFromViewSettings() {
+      const settings = document.getElementById("view-settings");
+      settings.open = false;
+      settings.querySelector("summary").focus();
+      openHelpModal();
     }
     function closeHelpModal() { closeManagedModal(document.getElementById("help-modal")); }
     document.addEventListener("DOMContentLoaded", () => {
@@ -185,6 +193,43 @@
     });
 
     // ── Contextual hover/focus help ────────────────────────────────
+    const HELP_VISIBILITY_KEYS = {
+      header: "lifetxt_header_help",
+      context: "lifetxt_context_help",
+    };
+    const HELP_TARGET_SELECTOR = ".help-target[data-help], .field-help[data-help]";
+
+    function applyHelpVisibility(kind, visible) {
+      const setting = document.getElementById(kind + "-help-setting");
+      setting.setAttribute("aria-pressed", String(visible));
+      setting.classList.toggle("btn-active", visible);
+      if (kind === "header") {
+        document.getElementById("header-help-btn").hidden = !visible;
+        return;
+      }
+      document.body.classList.toggle("hide-operation-hints", !visible);
+      if (!visible) hideUiHelp();
+      document.querySelectorAll(HELP_TARGET_SELECTOR).forEach(el => {
+        const ids = (el.getAttribute("aria-describedby") || "").split(/\s+/)
+          .filter(id => id && id !== "ui-help-tooltip");
+        if (visible) ids.push("ui-help-tooltip");
+        if (ids.length) el.setAttribute("aria-describedby", ids.join(" "));
+        else el.removeAttribute("aria-describedby");
+      });
+    }
+    function toggleHelpVisibility(kind) {
+      const visible = document.getElementById(kind + "-help-setting").getAttribute("aria-pressed") !== "true";
+      applyHelpVisibility(kind, visible);
+      try { localStorage.setItem(HELP_VISIBILITY_KEYS[kind], visible ? "1" : "0"); } catch (_) { /* session fallback */ }
+    }
+    function initHelpVisibility() {
+      for (const [kind, key] of Object.entries(HELP_VISIBILITY_KEYS)) {
+        let visible = true;
+        try { visible = localStorage.getItem(key) !== "0"; } catch (_) { /* retain the default */ }
+        applyHelpVisibility(kind, visible);
+      }
+    }
+
     function clampNumber(value, min, max) {
       return Math.max(min, Math.min(max, value));
     }
@@ -208,7 +253,7 @@
     function showUiHelp(anchor) {
       const tooltip = document.getElementById("ui-help-tooltip");
       const text = anchor?.dataset?.help || "";
-      if (!tooltip || !text) return;
+      if (!tooltip || !text || document.body.classList.contains("hide-operation-hints")) return;
       // dataset.help is the canonical English source and is never mutated;
       // translating here at display time means a later language change
       // (or a target text without a dictionary entry yet) never needs the
@@ -226,12 +271,18 @@
     }
     function setupContextualHelp() {
       installContextualHelpTargets();
-      document.querySelectorAll(".help-target[data-help], .field-help[data-help]").forEach(el => {
+      document.querySelectorAll(HELP_TARGET_SELECTOR).forEach(el => {
         if (el.dataset.helpBound === "true") return;
         el.dataset.helpBound = "true";
-        el.setAttribute("aria-describedby", "ui-help-tooltip");
         el.addEventListener("mouseenter", () => showUiHelp(el));
         el.addEventListener("focus", () => showUiHelp(el));
+        if (el.classList.contains("field-help")) {
+          el.addEventListener("click", event => {
+            event.preventDefault();
+            el.focus();
+            showUiHelp(el);
+          });
+        }
         el.addEventListener("mouseleave", hideUiHelp);
         el.addEventListener("blur", hideUiHelp);
       });

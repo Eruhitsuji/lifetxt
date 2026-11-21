@@ -152,7 +152,7 @@
       if (!container) return [];
       const selector = [
         "a[href]", "button:not([disabled])", "input:not([disabled])",
-        "select:not([disabled])", "textarea:not([disabled])",
+        "select:not([disabled])", "textarea:not([disabled])", "details > summary:first-of-type",
         "[tabindex]:not([tabindex='-1'])",
       ].join(",");
       return Array.from(container.querySelectorAll(selector))
@@ -210,7 +210,7 @@
       }
       const first = focusables[0];
       const last = focusables[focusables.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
+      if (event.shiftKey && (document.activeElement === first || document.activeElement?.id === "help-title")) {
         event.preventDefault();
         last.focus();
         return true;
@@ -690,7 +690,14 @@
         return;
       }
       if (inInput) return;
-      if (e.key === "?") { e.preventDefault(); openHelpModal(); return; }
+      const helpOpen = document.getElementById("help-modal").classList.contains("open");
+      if (e.key === "?") {
+        e.preventDefault();
+        if (helpOpen) closeHelpModal();
+        else openHelpModal(true);
+        return;
+      }
+      if (helpOpen) return;
       if (currentView() === "calendar" && !document.getElementById("detail-drawer").classList.contains("open")) {
         if (e.key === "," || e.key === "<") { e.preventDefault(); calShift(-1); return; }
         if (e.key === "." || e.key === ">") { e.preventDefault(); calShift(1); return; }

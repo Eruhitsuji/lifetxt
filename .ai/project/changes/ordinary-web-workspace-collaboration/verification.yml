@@ -1,0 +1,50 @@
+schema_version: 1
+
+verification:
+  planned:
+    - type: targeted-unit-integration
+      command: python -m unittest tests.test_web_collaboration tests.test_remote_sessions_v20 tests.test_collaboration
+      requirement_ids: [req-ordinary-web-workspace-authz]
+      status: not_run
+    - type: full-suite
+      command: MPLBACKEND=Agg python -m unittest discover
+      requirement_ids: [req-ordinary-web-workspace-authz]
+      status: not_run
+    - type: syntax-and-diff
+      command: python -m py_compile lifetxt/web_collaboration.py lifetxt/web_actor.py lifetxt/remote_sessions.py lifetxt/remote_web.py lifetxt/webapp.py lifetxt/write_operations.py lifetxt/web_assets.py
+      requirement_ids: [req-ordinary-web-workspace-authz]
+      status: passed
+    - type: javascript-syntax
+      command: node --check on inline scripts assembled for the standard Web login/session UI
+      requirement_ids: [req-ordinary-web-workspace-authz]
+      status: passed
+  executed:
+    - type: syntax-and-diff
+      command: python -m py_compile lifetxt/web_collaboration.py lifetxt/web_actor.py lifetxt/remote_sessions.py lifetxt/remote_web.py lifetxt/webapp.py lifetxt/write_operations.py lifetxt/web_assets.py
+      result: Exit 0
+      commit: pending
+      executed_at: '2026-11-21'
+      status: passed
+    - type: javascript-syntax
+      command: node --check on extracted inline scripts from lifetxt/web_assets.py and lifetxt/web_collaboration.py
+      result: Exit 0
+      commit: pending
+      executed_at: '2026-11-21'
+      status: passed
+  review_ledger:
+    - reviewer: Codex implementer self-review
+      review_type: implementation-security-integration
+      target_commit: pending
+      result: passed-informational-only
+      finding_count: 0
+      completed_at: '2026-11-21'
+    - reviewer: independent reviewer
+      review_type: security-and-integration
+      target_commit: pending
+      result: pending
+      finding_count: 0
+      completed_at: null
+  release_evidence:
+    migration_notes: No source or configuration migration; existing collaboration settings are reused.
+    rollback_plan: Revert this PR; keep the ordinary Web listener private/VPN-only while collaboration is configured.
+    operations_evidence: []

@@ -893,6 +893,9 @@ def install_remote_web():
                             pass
             return {"events": rows, "count": len(rows)}
 
+        from .web_collaboration import install_standard_web_collaboration
+
+        install_standard_web_collaboration(app, app.state.remote_session_store)
         return app
 
     webapp.create_app = create_app

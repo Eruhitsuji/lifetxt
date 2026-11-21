@@ -298,7 +298,7 @@ def require_origin(origin, expected_origin, config):
         )
 
 
-def cookie_security(request, config):
+def cookie_security(request, config, path="/api/remote/", name=None):
     host = request.client.host if request.client else ""
     forwarded = request.headers.get("x-forwarded-proto")
     from .remote_access import trusted_peer
@@ -313,10 +313,10 @@ def cookie_security(request, config):
     )
     ttl, _idle, _maximum = session_limits(config)
     return {
-        "key": cookie_name(config),
+        "key": name or cookie_name(config),
         "httponly": True,
         "secure": bool(secure),
         "samesite": "strict",
-        "path": "/api/remote/",
+        "path": path,
         "max_age": ttl,
     }

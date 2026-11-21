@@ -325,27 +325,39 @@ The client sends a request ID, an offset-aware client timestamp, and the selecte
 
 ## Choosing a surface for multiple people
 
-The collaboration role shown below applies to the authenticated Remote surface
-(`/remote` and its `/api/remote/v1/` endpoints). It provides the bounded
-Remote snapshot and operations documented here, workspace membership controls
-for eligible owners, and actor IDs from Native History when present. It is not
-the full set of views and workflows in the ordinary Web UI.
+When the selected named workspace has a `collaboration` section and
+`remote.enabled: true` with configured principals, the ordinary Web UI also
+authenticates each member and enforces workspace roles. Opening `/`, `/planner`,
+`/capture`, or `/state` redirects to sign-in. At `/web-login`, each person enters
+their own principal token once; it is exchanged for an opaque HttpOnly browser
+session and is not stored in local or session storage. The UI shows the signed-in
+principal, selected workspace, role, and viewer read-only state.
 
-The ordinary Web UI (`/`, `/planner`, `/capture`, `/state`, `/procedures`, and
-its non-Remote APIs) does not currently apply the per-principal workspace
-`owner`/`editor`/`viewer` policy. Its optional `api.token` is one
-deployment-wide bearer credential; it does not identify each human or enforce
-workspace membership. A reverse proxy can restrict who reaches a site, but
-proxy sign-in by itself does not add lifetxt per-user authorization to these
-routes.
+`owner` and `editor` can use supported shared-workspace operations within their
+principal scopes. `viewer` is read-only. The server rechecks authorization on
+each request; workspace roles alone do not grant server-administration APIs.
+The deployment-wide `api.token` and proxy sign-in are not per-person identity or
+workspace membership. A record's `person:` or `assignee:` field is not an access
+grant.
 
-For a shared server where members need different roles, use the authenticated
-`/remote` surface for the collaboration functions it supports. Keep the ordinary
-Web UI and its APIs within one trusted audience until the integration tracked
-in [issue #1386](https://github.com/Eruhitsuji/lifetxt/issues/1386) is
-implemented and accepted. Do not treat a record's `person:` or `assignee:`
-field as an access grant: the signed-in principal, workspace role, record
-assignment, and history actor are separate concepts.
+Personal Context, notifications, messages, timers, and work-session routes are
+currently unavailable in the standard multi-person Web UI because they do not
+have per-person storage. Per-item ACLs are also not provided. Workspace members
+can read the selected shared life.txt sources, so review which records belong in
+that workspace before adding members.
+
+For the initial multi-person deployment, restrict access to a private network,
+including VPN, and do not expose the ordinary Web UI directly to the public
+Internet. Enforce VPN membership at the VPN, firewall, or trusted deployment
+boundary. lifetxt does not infer VPN identity from arbitrary proxy headers.
+Non-loopback access requires HTTPS or an authenticated encrypted tunnel. If a
+TLS-terminating reverse proxy is used, configure only the immediate trusted
+proxy in `remote.trusted_proxies`.
+
+Set `remote.enabled: true`, configure the existing `remote.principals` and the
+workspace's `collaboration.members`, and provide each principal token through
+the environment variable named by `token_env`. For configuration examples and
+the separate Remote surface, see [Workspace collaboration authorization](#workspace-collaboration-authorization).
 
 ## Workspace collaboration authorization
 

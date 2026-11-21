@@ -235,6 +235,8 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             "/api/remote/v1/browser/login",
             "/api/remote/v1/browser/logout",
             "/api/remote/v1/write-check",
+            "/api/web/v1/browser/login",
+            "/api/web/v1/browser/logout",
         }
     )
 
@@ -281,8 +283,13 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
                 "/",
                 "/api/health",
                 "/remote",
+                "/web-login",
                 "/procedures",
-            ) or request.url.path.startswith("/api/remote/v1/"):
+            ) or request.url.path.startswith(("/api/remote/v1/", "/api/web/v1/")):
+                return await call_next(request)
+            if getattr(
+                request.state, "standard_web_auth_bypasses_shared_api_token", False
+            ):
                 return await call_next(request)
             auth = request.headers.get("authorization", "")
             if auth != "Bearer " + _api_token:

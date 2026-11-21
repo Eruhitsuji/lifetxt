@@ -1,0 +1,27 @@
+schema_version: 1
+
+requirements:
+  - id: req-ordinary-web-workspace-authz
+    kind: ADDED
+    statement: >-
+      The ordinary Web UI authenticates each person as an existing Remote
+      principal and applies that principal's selected workspace membership and
+      bounded read/write scope on every request.
+    acceptance_criteria:
+      - A configured principal token is exchanged once for an opaque HttpOnly session and is not persisted in browser storage.
+      - Owner/editor/viewer permissions are the intersection of workspace role and existing principal scopes.
+      - Missing, disabled, removed, or non-member principals fail closed; changed membership takes effect on the next request.
+      - Unsafe cookie-authenticated requests require the existing session CSRF token and exact allowed Origin.
+      - The deployment-wide api.token and unverified proxy headers cannot bypass per-principal identity or membership checks.
+      - Server operations and private per-user endpoints are not granted by workspace membership.
+      - Ordinary Web Native History events use the authenticated principal as actor where the Web mutation already emits an event.
+      - No-collaboration deployments retain existing request behavior.
+    constraints:
+      - Initial deployment is private-network/VPN-only and requires HTTPS or an authenticated encrypted tunnel outside loopback.
+      - Only the server-selected named workspace is covered.
+      - Existing Remote principal, BrowserSessionStore, collaboration resolver, CSRF helpers, and Native History actor field are reused.
+      - Personal Context, notifications, messages, timer, and work-session endpoints remain unavailable until per-user isolation exists.
+      - Workspace members can read shared selected sources; person and assignee fields are not ACLs.
+    owner: Eruhitsuji
+
+open_questions: []

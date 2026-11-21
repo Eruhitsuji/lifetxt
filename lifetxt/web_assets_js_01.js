@@ -338,6 +338,8 @@
         "Invalid local date/time. Choose another time.": "無効な日時です。別の時刻を指定してください。",
         "Could not complete this record.": "このレコードを完了できませんでした。",
         "Open": "未完了",
+        "Unfinished only": "未完了のみ",
+        "Hide done and canceled items": "完了・取消済みの項目を隠す",
         "In Progress": "進行中",
         "Cancelled": "中止",
         "Deferred": "延期",

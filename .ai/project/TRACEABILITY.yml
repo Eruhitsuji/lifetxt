@@ -2,6 +2,15 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-open-only-label-beginner
+      capability_id: cap-web-beginner-first-ux
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1662
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1663
+      changed_files_or_scope: [lifetxt/web_assets.html, lifetxt/web_assets_js_01.js, tests/test_web_assets.py]
+      tests_or_evidence: [tests.test_web_assets, tests.test_web_i18n, tests.test_release_policy, tests.test_web_items_filters]
+      status: in_review
+
     - requirement_id: req-web-bulk-checkbox-row-label
       capability_id: cap-web-beginner-first-ux
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386

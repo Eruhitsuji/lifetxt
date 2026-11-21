@@ -5522,10 +5522,12 @@ capabilities:
       unmodified, waits for /api/health, navigates the window to the real
       served UI, and kills the child on graceful app/window close. No
       Python code added or changed; no standalone Python-bundled
-      distributable in this slice.
+      distributable in this slice. An explicit --server-url can also open an
+      existing HTTP(S) Web UI without spawning a child or granting native alerts.
     status: active
     owner: Eruhitsuji
     source_requirements:
+      - req-desktop-app-server-url
       - req-desktop-native-notification-delivery
       - req-desktop-app-backend-locator
       - req-desktop-app-server-spawn
@@ -5536,6 +5538,7 @@ capabilities:
       - desktop/src-tauri/build.rs
       - desktop/src-tauri/tauri.conf.json
       - desktop/src-tauri/src/main.rs
+      - desktop/src-tauri/src/server_url.rs
       - desktop/src-tauri/dist/index.html
       - desktop/src-tauri/icons/icon.png
       - desktop/src-tauri/icons/icon.ico
@@ -5544,6 +5547,7 @@ capabilities:
       - .gitignore
     public_interfaces:
       - desktop/src-tauri (cargo build / cargo run)
+      - lifetxt_desktop --server-url <http-or-https-url>
     tests_or_evidence:
       - 'cargo build and cargo build --release both succeed on this session''s environment (Rust GNU toolchain, installed via scoop, since MSVC Build Tools are not present; existing MinGW-w64 gcc from MSYS2 used as the linker)'
       - 'live: real built lifetxt_desktop.exe (debug) launched with the venv on PATH -- Get-CimInstance confirmed a real lifetxt.exe child process spawned as "lifetxt" serve --host 127.0.0.1 --port <port> with the app as its parent; curl against that exact port''s /api/health returned 200/ok:true'
@@ -5559,6 +5563,7 @@ capabilities:
       - 'live: the health-check timeout branch specifically -- a minimal locally-compiled decoy answering --version but never responding to serve was placed ahead of the real install on PATH; after the 15s bound, the window showed the exact designed timeout message, and the decoy process was confirmed killed afterward, showing cleanup also fires on this error path'
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/233
+      - https://github.com/Eruhitsuji/lifetxt/issues/1652
     related_pull_requests:
       - https://github.com/Eruhitsuji/lifetxt/pull/234
     reuse_policy: prefer_reuse_or_extension_before_new_implementation

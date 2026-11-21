@@ -14,6 +14,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod alerts;
+mod server_url;
 
 use std::net::TcpListener;
 use std::path::PathBuf;
@@ -21,6 +22,7 @@ use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
+use tauri::webview::PageLoadEvent;
 use tauri::{Manager, RunEvent, WindowEvent};
 
 struct ServerProcess(Mutex<Option<Child>>);
@@ -206,6 +208,29 @@ fn main() {
         ])
         .manage(ServerProcess(Mutex::new(None)))
         .setup(|app| {
+            match server_url::parse(std::env::args_os().skip(1)) {
+                Ok(Some(url)) => {
+                    let mut config = app.config().app.windows[0].clone();
+                    // Keep this window outside the companion alerts capability,
+                    // including if a remote page navigates to another origin.
+                    config.label = "remote".into();
+                    config.url = tauri::WebviewUrl::External(url);
+                    tauri::WebviewWindowBuilder::from_config(app, &config)?.build()?;
+                    return Ok(());
+                }
+                Err(message) => {
+                    tauri::WebviewWindowBuilder::from_config(app, &app.config().app.windows[0])?
+                        .on_page_load(move |window, payload| {
+                            if payload.event() == PageLoadEvent::Finished {
+                                show_error(&window, message);
+                            }
+                        })
+                        .build()?;
+                    return Ok(());
+                }
+                Ok(None) => {}
+            }
+
             let port = reserve_port()?;
             let origin = format!("http://127.0.0.1:{port}");
             let script = include_str!("alerts-init.js").replace("__LIFETXT_ORIGIN__", &origin);

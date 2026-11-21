@@ -79,7 +79,29 @@ on Windows, dmg/app on macOS, deb/AppImage on Linux, per Tauri's own
 per-platform bundle target selection). `.github/workflows/desktop-installers.yml`
 runs this same sequence natively per platform on every tagged release.
 
-## Runtime behavior (both build modes)
+## Connect to an existing lifetxt server
+
+Pass the address you normally open in your browser. The desktop app loads
+the server's Web UI directly, using the server's existing login and
+permissions. Use an address reachable from your desktop over your LAN or
+VPN. For example:
+
+```powershell
+# In PowerShell, from the directory containing the installed executable:
+.\lifetxt_desktop.exe --server-url http://192.168.1.20:8765/
+```
+
+For a Windows shortcut, append `--server-url http://192.168.1.20:8765/`
+after the quoted executable path in **Target**. For a source build, pass
+the same option after `cargo run --`.
+
+HTTP and HTTPS are supported. Use HTTPS when it is available for your
+server, and sign in through the Web UI. The remote window does not expose
+the desktop app's native notification controls. Closing it leaves the
+server running. Start the app without `--server-url` to open the local
+companion server.
+
+## Local runtime behavior (both build modes)
 
 The window shows a "Starting lifetxt…" placeholder, then navigates to the
 real served Web UI once `GET /api/health` on the spawned server responds.

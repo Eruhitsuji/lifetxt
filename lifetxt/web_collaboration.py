@@ -19,13 +19,13 @@ from .remote_access import (
     RateLimiter,
     RemoteAccessError,
     authenticate_token,
-    csrf_header,
     principal_registry,
     require_scope,
     require_https,
 )
 from .remote_sessions import (
     cookie_security,
+    csrf_header,
     require_csrf,
     require_origin,
     session_payload,

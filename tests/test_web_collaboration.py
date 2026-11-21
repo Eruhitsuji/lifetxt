@@ -24,15 +24,18 @@ class WebCollaborationTests(unittest.TestCase):
         bootstrap_legacy_surfaces()
         from lifetxt.webapp import create_app
 
-        folder = self.enterContext(tempfile.TemporaryDirectory())
-        self.source = Path(folder) / "team.life.txt"
+        folder = tempfile.TemporaryDirectory()
+        self.addCleanup(folder.cleanup)
+        self.source = Path(folder.name) / "team.life.txt"
         self.source.write_text("", encoding="utf-8")
         self.members = {name: {"role": role} for name, role in (
             ("alice", "editor"), ("bob", "editor"), ("carol", "viewer")
         )}
         users = ("alice", "bob", "carol", "outsider")
         env = {f"LIFETXT_WEB_TEST_{name.upper()}": f"fixture-{name}" for name in users}
-        self.enterContext(patch.dict(os.environ, env))
+        env_patch = patch.dict(os.environ, env)
+        env_patch.start()
+        self.addCleanup(env_patch.stop)
         config = {
             "web": {"revision_mode": "required"},
             "default_workspace": "team",

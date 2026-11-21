@@ -22,6 +22,7 @@ use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
+use tauri::webview::PageLoadEvent;
 use tauri::{Manager, RunEvent, WindowEvent};
 
 struct ServerProcess(Mutex<Option<Child>>);
@@ -218,10 +219,13 @@ fn main() {
                     return Ok(());
                 }
                 Err(message) => {
-                    let window =
-                        tauri::WebviewWindowBuilder::from_config(app, &app.config().app.windows[0])?
-                            .build()?;
-                    show_error(&window, message);
+                    tauri::WebviewWindowBuilder::from_config(app, &app.config().app.windows[0])?
+                        .on_page_load(move |window, payload| {
+                            if payload.event() == PageLoadEvent::Finished {
+                                show_error(&window, message);
+                            }
+                        })
+                        .build()?;
                     return Ok(());
                 }
                 Ok(None) => {}

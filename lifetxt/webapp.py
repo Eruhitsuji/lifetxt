@@ -87,7 +87,13 @@ from .web_read_service import limit_items as _service_limit_items
 from .web_read_service import read_life_inputs as _service_read_life_inputs
 from .web_read_service import sort_items as _service_sort_items
 from .web_read_service import sort_key_for_item as _service_sort_key_for_item
-from .web_assets import HTML_PAGE, PLANNER_HTML_PAGE, STATE_HTML_PAGE
+from .web_assets import (
+    HTML_PAGE,
+    PLANNER_HTML_PAGE,
+    STATE_HTML_PAGE,
+    WEB_SESSION_UI,
+    WEB_SESSION_UI_MARKER,
+)
 from .web_routes_analytics import register_analytics_routes
 from .web_routes_git import register_git_routes
 from . import __version__
@@ -330,13 +336,17 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
                 detail=diagnostics_to_output(diagnostics),
             )
 
+    def _with_web_session_ui(page):
+        enabled = getattr(app.state, "standard_web_collaboration_enabled", False)
+        return page.replace(WEB_SESSION_UI_MARKER, WEB_SESSION_UI if enabled else "")
+
     def _runtime_html_page():
         # Use the live HTML_PAGE binding: surface_runtime may install its
         # revision bridge after create_app has been constructed.
         build = app.state.runtime_build_info
         version = html_escape(str(build["version"]), quote=True)
         commit = build["git_commit"] or "—"
-        return HTML_PAGE.replace(
+        return _with_web_session_ui(HTML_PAGE).replace(
             "__LIFETXT_RUNTIME_VERSION__", version
         ).replace("__LIFETXT_RUNTIME_COMMIT__", commit)
 
@@ -357,12 +367,16 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
 
     @app.get("/planner", response_class=HTMLResponse)
     def planner():
-        return HTMLResponse(content=PLANNER_HTML_PAGE, headers={"Cache-Control": "no-store"})
+        return HTMLResponse(
+            content=_with_web_session_ui(PLANNER_HTML_PAGE),
+            headers={"Cache-Control": "no-store"},
+        )
 
     @app.get("/state", response_class=HTMLResponse)
     def state_page():
         return HTMLResponse(
-            content=STATE_HTML_PAGE, headers={"Cache-Control": "no-store"}
+            content=_with_web_session_ui(STATE_HTML_PAGE),
+            headers={"Cache-Control": "no-store"},
         )
 
     @app.get("/manifest.webmanifest")

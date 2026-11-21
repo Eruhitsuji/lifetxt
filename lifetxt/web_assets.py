@@ -14,7 +14,8 @@ def _read_resource(name: str) -> str:
 
 _STYLE_MARKER = "__LIFETXT_WEB_STYLES__"
 _SCRIPT_MARKER = "__LIFETXT_WEB_SCRIPT__"
-_WEB_SESSION_UI = r"""<script>
+WEB_SESSION_UI_MARKER = "<!-- LIFETXT_WEB_SESSION_UI -->"
+WEB_SESSION_UI = r"""<script>
 (()=>{const labels=(navigator.language||'en').toLowerCase().startsWith('ja')
 ?{principal:'利用者',workspace:'ワークスペース',role:'権限',owner:'Owner',editor:'Editor',viewer:'Viewer',readOnly:'閲覧のみ',logout:'サインアウト',login:'再ログイン',expired:'セッションを確認できません。再ログインしてください。'}
 :{principal:'Signed in',workspace:'Workspace',role:'Role',owner:'Owner',editor:'Editor',viewer:'Viewer',readOnly:'Read-only',logout:'Sign out',login:'Sign in again',expired:'Session unavailable. Sign in again.'};
@@ -114,7 +115,7 @@ def _assemble_planner_html() -> str:
     script = _read_resource("web_planner.js")
     return template.replace(
         "<script>__PLANNER_JS__</script>",
-        _WEB_SESSION_UI + "<script>" + script + "</script>",
+        WEB_SESSION_UI_MARKER + "<script>" + script + "</script>",
     )
 
 
@@ -129,7 +130,7 @@ def _assemble_state_html() -> str:
     script = _read_resource("web_state.js")
     return template.replace(
         "<script>__STATE_JS__</script>",
-        _WEB_SESSION_UI + "<script>" + script + "</script>",
+        WEB_SESSION_UI_MARKER + "<script>" + script + "</script>",
     )
 
 
@@ -171,7 +172,7 @@ def _assemble_html() -> str:
     template = template.replace(_STYLE_MARKER, styles)
     return template.replace(
         "<script>\n" + _SCRIPT_MARKER + "  </script>",
-        _WEB_SESSION_UI + "<script>\n" + script + "  </script>",
+        WEB_SESSION_UI_MARKER + "<script>\n" + script + "  </script>",
     )
 
 

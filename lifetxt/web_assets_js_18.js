@@ -154,6 +154,7 @@
       });
       updateTypeHints(document.getElementById("edit-type").value);
       setupContextualHelp();
+      initHelpVisibility();
       setupWorkspaceTabs();
       syncStatusFilterBarsFromUrl();
       _syncGraphLayoutBtns();

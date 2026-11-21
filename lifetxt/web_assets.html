@@ -38,11 +38,14 @@ __LIFETXT_WEB_STYLES__  </style>
           <button id="motion-btn" class="secondary" onclick="toggleReducedMotion()" title="Toggle reduced motion" aria-label="Toggle reduced motion" aria-pressed="false">⏸ Motion</button>
           <button id="density-btn" class="secondary" onclick="toggleDensity()" title="Toggle compact density" aria-label="Toggle compact density">▤ Density</button>
           <button id="fullscreen-btn" class="secondary" onclick="toggleFullscreen()" title="Toggle fullscreen (f)" aria-label="Toggle fullscreen">⛶ Fullscreen</button>
+          <button type="button" class="secondary" onclick="openHelpFromViewSettings()">Open help</button>
+          <button type="button" id="header-help-setting" class="secondary" aria-pressed="true" onclick="toggleHelpVisibility('header')">Show header help button</button>
+          <button type="button" id="context-help-setting" class="secondary" aria-pressed="true" onclick="toggleHelpVisibility('context')">Show operation hints</button>
         </div>
       </details>
       <button id="refresh-btn" class="secondary" onclick="triggerRefresh()" title="Refresh (r)">Refresh</button>
       <button class="secondary" onclick="openCmdk()" title="Command palette (Ctrl+K)" aria-label="Command palette">⌘</button>
-      <button class="secondary" onclick="openHelpModal()" title="Help, shortcuts, and runtime information (?)" aria-label="Help and runtime information">?</button>
+      <button id="header-help-btn" class="secondary" onclick="openHelpModal()" title="Help, shortcuts, and runtime information (?)" aria-label="Help and runtime information">?</button>
       <button id="git-status-badge" class="git-badge" style="display:none" onclick="openGitModal()"></button>
       <button id="display-exit-btn" class="secondary" style="display:none" onclick="switchWorkspace('')" title="Exit display mode">Exit Display</button>
       <time id="kiosk-clock" aria-live="off" style="display:none"></time>
@@ -729,9 +732,51 @@ __LIFETXT_WEB_STYLES__  </style>
 
   <!-- Keyboard Help Modal -->
   <div class="modal-backdrop" id="help-modal" onclick="if(event.target===this)closeHelpModal()">
-    <div class="modal">
-      <section class="runtime-build-info" aria-labelledby="runtime-build-title">
-        <h3 id="runtime-build-title">Runtime information</h3>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="help-title">
+      <h2 id="help-title" tabindex="-1">Help</h2>
+      <section aria-labelledby="help-getting-started">
+        <h3 id="help-getting-started">Getting started</h3>
+        <ul>
+          <li>Use Create to add a task with a title and an optional deadline.</li>
+          <li>Open Items to find and edit records. Select a task to see its details and completion options.</li>
+          <li>Open Today to check what needs attention, or choose Calendar under Features to see dated records.</li>
+          <li>Use View settings to show or hide the header help button and operation hints.</li>
+        </ul>
+      </section>
+      <h3>Commands</h3>
+      <p class="modal-hint">Search the same slash-command set as the TUI's /help command.</p>
+      <input id="help-command-search" class="help-command-search" type="text" aria-label="Search commands"
+        placeholder="Search commands (name, alias, or summary)…" oninput="renderHelpModalCommands()">
+      <div id="help-command-list" class="help-command-list" data-no-i18n></div>
+      <details>
+        <summary>Keyboard shortcuts</summary>
+        <table>
+          <tr><td>/</td><td>Focus search</td></tr>
+          <tr><td>Ctrl+K</td><td>Command palette (actions + jump to item)</td></tr>
+          <tr><td data-no-i18n>j / k</td><td>Move keyboard focus down / up in item list</td></tr>
+          <tr><td>Enter</td><td>Open focused item in detail modal</td></tr>
+          <tr><td>x</td><td>Toggle bulk selection on focused item</td></tr>
+          <tr><td>n</td><td>New item (opens the record editor)</td></tr>
+          <tr><td>q</td><td>Toggle quick-add bar</td></tr>
+          <tr><td>p</td><td>Toggle presence status bar</td></tr>
+          <tr><td data-no-i18n>Ctrl+K then /</td><td>Run a slash command (same set as the TUI)</td></tr>
+          <tr><td>r</td><td>Refresh current view</td></tr>
+          <tr><td>s</td><td>Go to Stats view</td></tr>
+          <tr><td>d</td><td>Toggle dark mode</td></tr>
+          <tr><td>f</td><td>Toggle fullscreen</td></tr>
+          <tr><td>Ctrl+K display</td><td>Open or toggle Display mode</td></tr>
+          <tr><td>g</td><td>Jump to line number (opens detail modal)</td></tr>
+          <tr><td>Shift+K</td><td>Toggle kiosk mode</td></tr>
+          <tr><td>Esc</td><td>Close modal / palette / blur input</td></tr>
+          <tr><td>[ / ]</td><td>Prev / next item in detail modal</td></tr>
+          <tr><td>&lt; / &gt;</td><td>Prev / next status filter</td></tr>
+          <tr><td>, / . <em>(Calendar)</em></td><td>Previous / next calendar period</td></tr>
+          <tr><td data-no-i18n>t / m <em>(Calendar)</em></td><td>Jump to today / toggle month↔week</td></tr>
+          <tr><td>?</td><td>Show / hide this help</td></tr>
+        </table>
+      </details>
+      <details class="runtime-build-info">
+        <summary id="runtime-build-title">Runtime information</summary>
         <p class="modal-hint">Git commit is the source checkout HEAD at server startup; uncommitted changes are not represented.</p>
         <dl class="runtime-build-fields">
           <dt>lifetxt version</dt>
@@ -740,37 +785,7 @@ __LIFETXT_WEB_STYLES__  </style>
           <dd id="runtime-build-commit" data-no-i18n>__LIFETXT_RUNTIME_COMMIT__</dd>
         </dl>
         <button type="button" class="secondary" onclick="copyRuntimeInfo()">Copy runtime information</button>
-      </section>
-      <h3>Keyboard shortcuts</h3>
-      <table>
-        <tr><td>/</td><td>Focus search</td></tr>
-        <tr><td>Ctrl+K</td><td>Command palette (actions + jump to item)</td></tr>
-        <tr><td data-no-i18n>j / k</td><td>Move keyboard focus down / up in item list</td></tr>
-        <tr><td>Enter</td><td>Open focused item in detail modal</td></tr>
-        <tr><td>x</td><td>Toggle bulk selection on focused item</td></tr>
-        <tr><td>n</td><td>New item (opens the record editor)</td></tr>
-        <tr><td>q</td><td>Toggle quick-add bar</td></tr>
-        <tr><td>p</td><td>Toggle presence status bar</td></tr>
-        <tr><td data-no-i18n>Ctrl+K then /</td><td>Run a slash command (same set as the TUI)</td></tr>
-        <tr><td>r</td><td>Refresh current view</td></tr>
-        <tr><td>s</td><td>Go to Stats view</td></tr>
-        <tr><td>d</td><td>Toggle dark mode</td></tr>
-        <tr><td>f</td><td>Toggle fullscreen</td></tr>
-        <tr><td>Ctrl+K display</td><td>Open or toggle Display mode</td></tr>
-        <tr><td>g</td><td>Jump to line number (opens detail modal)</td></tr>
-        <tr><td>Shift+K</td><td>Toggle kiosk mode</td></tr>
-        <tr><td>Esc</td><td>Close modal / palette / blur input</td></tr>
-        <tr><td>[ / ]</td><td>Prev / next item in detail modal</td></tr>
-        <tr><td>&lt; / &gt;</td><td>Prev / next status filter</td></tr>
-        <tr><td>, / . <em>(Calendar)</em></td><td>Previous / next calendar period</td></tr>
-        <tr><td data-no-i18n>t / m <em>(Calendar)</em></td><td>Jump to today / toggle month↔week</td></tr>
-        <tr><td>?</td><td>Show / hide this help</td></tr>
-      </table>
-      <h3 style="margin-top:1.25rem">Commands</h3>
-      <p class="modal-hint">Search the same slash-command set as the TUI's /help command.</p>
-      <input id="help-command-search" class="help-command-search" type="text"
-        placeholder="Search commands (name, alias, or summary)…" oninput="renderHelpModalCommands()">
-      <div id="help-command-list" class="help-command-list" data-no-i18n></div>
+      </details>
       <div class="actions" style="margin-top:1rem"><button onclick="closeHelpModal()">Close</button></div>
     </div>
   </div>

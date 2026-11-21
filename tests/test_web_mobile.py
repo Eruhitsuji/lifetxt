@@ -165,6 +165,21 @@ class LayoutTests(unittest.TestCase):
         self.assertIn("overflow-x: auto", narrow)
         self.assertIn("flex-wrap: nowrap", narrow)
 
+    def test_phone_view_guide_uses_page_scroll_not_an_inner_scrollport(self):
+        # The shared guide can grow taller than 8rem on small screens.
+        # Its action buttons must stay in normal document flow.
+        narrow = _media_block("@media (max-width: 680px)")
+        self.assertIn(".view-guide { margin-bottom: .35rem; }", narrow)
+        guide_rules = re.findall(r"(?<![-\\w])\\.view-guide\\s*\\{([^{}]*)\\}", STYLE)
+        self.assertTrue(guide_rules)
+        for body in guide_rules:
+            self.assertNotRegex(
+                body, r"(?<![-\\w])(?:height|max-height|overflow|overflow-y)\\s*:"
+            )
+        self.assertIn('id="view-guide" class="view-guide"', HTML_PAGE)
+        self.assertIn(".kiosk-mode .view-guide", STYLE)
+        self.assertIn(".display-mode .view-guide", STYLE)
+
     def test_bulk_actions_sit_within_thumb_reach(self):
         narrow = _media_block("@media (max-width: 680px)")
 

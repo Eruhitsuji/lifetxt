@@ -58,8 +58,6 @@ _READ_ONLY_POST_PATHS = frozenset(
 )
 _ADMIN_ONLY_PATHS = frozenset(
     (
-        "/api/config",
-        "/api/health",
         "/api/backup/status",
         "/api/transactions/preflight",
     )
@@ -263,7 +261,11 @@ catch(problem){error.textContent=problem.message||'Sign-in failed.';}});
                     session_payload(session, include_csrf=True),
                     workspace=membership["workspace_name"],
                     role=membership["role"],
-                    read_only=not membership["permissions"].get("write", False),
+                    read_only=(
+                        app.state.read_only
+                        or not app.state.writable_path
+                        or not membership["permissions"].get("write", False)
+                    ),
                     csrf_header=csrf_header(app.state.config),
                 )
             )

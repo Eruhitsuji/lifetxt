@@ -73,8 +73,8 @@ class DictionaryTests(unittest.TestCase):
         options = re.findall(r'<option value="([^"]+)">([^<]+)</option>', select)
         self.assertEqual(
             [
-                ("line", "Line"),
-                ("time", "Time"),
+                ("line", "Order in file"),
+                ("time", "Date / time"),
                 ("title", "Title"),
                 ("type", "Type"),
                 ("status", "Status"),
@@ -85,7 +85,6 @@ class DictionaryTests(unittest.TestCase):
         for value, label in options:
             with self.subTest(value=value):
                 self.assertRegex(self.dictionary.get(label, ""), r"[぀-ヿ一-鿿]")
-        self.assertEqual("時刻", self.dictionary["Time"])
         self.assertEqual("ソース", self.dictionary["Source"])
 
     def test_items_export_scope_is_visible_in_both_languages(self):

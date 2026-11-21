@@ -203,7 +203,7 @@
       current = active.data.records.find(record => record && record.person === "self" && record.active === true && record.from && !record.to) || null;
       previous = latest.data.records.find(record => record && record.person === "self" && record.active === false) || null;
       revision = active.revision; loaded = true; stale = false;
-      writable = health.data.read_only === false && Boolean(health.data.writable_path);
+      writable = health.data.read_only === false && (health.data.can_write ?? Boolean(health.data.writable_path));
       writeReason = health.data.read_only ? "readonly" : "noTarget";
       if (manual) reviewRequired = false;
       syncKey = reviewRequired ? "reviewRequired" : "synced"; initializeForm();

@@ -417,8 +417,23 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             headers={"Cache-Control": "no-store"},
         )
 
+    def _workspace_startup_access(request):
+        membership = getattr(request.state, "standard_web_membership", None)
+        if membership is None:
+            return None
+        principal = request.state.standard_web_principal
+        writable = bool(
+            not app.state.read_only
+            and app.state.writable_path
+            and membership["permissions"].get("write")
+        )
+        return "admin" in principal.get("scopes", ()), writable
+
     @app.get("/api/health")
-    def health():
+    def health(request: Request):
+        access = _workspace_startup_access(request)
+        if access is not None and not access[0]:
+            return {"ok": True, "read_only": not access[1], "can_write": access[1]}
         source_revision = None
         if app.state.writable_path:
             source_revision = mutation.read_text_snapshot(
@@ -430,7 +445,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             "writable_path": app.state.writable_path,
             "config_path": app.state.config.get("_path"),
             "user": config_user_name(app.state.config),
-            "read_only": app.state.read_only,
+            "read_only": app.state.read_only if access is None else not access[1],
             "source_revision": source_revision,
         }
 
@@ -441,7 +456,7 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         return backup_status_payload(app.state.config)
 
     @app.get("/api/config")
-    def get_config(response: Response):
+    def get_config(request: Request, response: Response):
         from .presence import COMMON_STATES
         from .web_clock_config import public_clock_config
 
@@ -464,6 +479,22 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         from .timezone_policy import now as timezone_now
 
         current_datetime = timezone_now(workspace_timezone)
+        access = _workspace_startup_access(request)
+        if access is not None and not access[0]:
+            return {
+                "today": current_datetime.date().isoformat(),
+                "current_datetime": current_datetime.isoformat(timespec="seconds"),
+                "status_states": list(COMMON_STATES),
+                "web": {
+                    key: public_web[key]
+                    for key in (
+                        "language", "theme", "dashboard", "planner", "top_clock",
+                        "high_contrast", "reduced_motion", "week_start",
+                        "default_sort", "default_order", "default_limit",
+                    )
+                },
+                "notifications": {"enabled": False},
+            }
         return {
             "paths": app.state.paths,
             "writable_path": app.state.writable_path,

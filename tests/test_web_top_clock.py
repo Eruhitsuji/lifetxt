@@ -97,6 +97,7 @@ class TopClockJavaScriptTests(unittest.TestCase):
         harness = r"""
 const assert = require("node:assert/strict");
 let appConfig = {};
+function uiLocale() { return undefined; }
 const currentLanguage = () => "en";
 const location = {pathname: "/"};
 let kioskMode = false, displayMode = false, captureMode = false;

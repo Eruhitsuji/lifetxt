@@ -16,6 +16,7 @@ class DashboardLoadErrorTests(unittest.TestCase):
 const assert=require('node:assert/strict');
 let language='en';
 function t(s){return language==='ja'?'日本語:'+s:s;}
+function uiLocale(){return undefined;}
 function escapeHtml(s){return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');}
 function jsLiteral(s){return JSON.stringify(s);}
 const STATUS_CLASS={}, STATUS_ICON={};

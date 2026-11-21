@@ -2,6 +2,27 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-retry-hidden-and-ui-language-dates
+      capability_id: cap-web-beginner-first-ux
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1632
+      pull_request: PR_URL
+      changed_files_or_scope:
+        - lifetxt/web_assets_css_07.css
+        - lifetxt/web_assets_js_02.js
+        - lifetxt/web_assets_js_06.js
+        - lifetxt/web_assets_js_07.js
+        - lifetxt/web_assets_js_13.js
+        - lifetxt/web_assets_js_16.js
+        - lifetxt/web_assets_js_17.js
+        - tests/
+      tests_or_evidence:
+        - tests.test_web_assets Issue1386RegressionTests
+        - tests/test_web_*.py 592 tests OK on WSL (skipped 39 without Chromium)
+        - tests.test_web_top_clock_browser (real Chromium) OK
+        - Live check - ja UI on en-US browser and en UI on ja-JP browser show matching date language; Retry saved filters hidden
+      status: in_review
+
     - requirement_id: req-website-beginner-practice-v1
       capability_id: cap-official-website
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1602

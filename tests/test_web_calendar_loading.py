@@ -26,6 +26,7 @@ const document = {
   querySelectorAll: () => [],
 };
 const appConfig = {};
+function uiLocale() { return undefined; }
 let params;
 const query = () => params;
 const firstParam = (p, [key], fallback) => p.get(key) ?? fallback;

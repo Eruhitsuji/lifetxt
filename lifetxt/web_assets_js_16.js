@@ -268,7 +268,7 @@
       const loadStatus = document.getElementById("dash-load-status");
       if (loadStatus) loadStatus.textContent = t("Refreshing dashboard…");
       const dateEl = document.getElementById("dash-date");
-      if (dateEl) dateEl.textContent = new Date().toLocaleDateString(undefined, {weekday: "long", month: "long", day: "numeric"});
+      if (dateEl) dateEl.textContent = new Date().toLocaleDateString(uiLocale(), {weekday: "long", month: "long", day: "numeric"});
       const today = new Date(); today.setHours(0, 0, 0, 0);
       const weekAgo = new Date(today); weekAgo.setDate(weekAgo.getDate() - 13);
       const results = await Promise.allSettled([

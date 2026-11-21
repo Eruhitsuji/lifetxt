@@ -14,7 +14,7 @@
     .attachment-upload-name { unicode-bidi: plaintext; }
     .attachment-upload [role="status"] { min-height: 1.5em; }
 
-    #items-layout-control[hidden], #group-by[hidden] { display: none; }
+    #items-layout-control[hidden], #group-by[hidden], #saved-filters-retry[hidden] { display: none; }
     .items-board-jumps { display: none; }
     .items-board-columns {
       display: grid;

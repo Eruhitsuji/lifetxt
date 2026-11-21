@@ -5048,11 +5048,15 @@ capabilities:
     owner: Eruhitsuji
     source_requirements:
       - req-web-help-command-reference
+      - req-web-help-guide-and-visibility
     implementation_locations:
       - lifetxt/web_assets.py
       - tests/test_lifetxt.py
+      - lifetxt/web_assets.html
+      - lifetxt/web_assets_js_10.js
     public_interfaces:
       - Web UI help modal (? shortcut)
+      - Web UI View settings controls for header help and operation hints
     tests_or_evidence:
       - tests/test_lifetxt.py LifeTxtWebConfigAndCheckLineTests.test_help_modal_has_a_searchable_command_reference, confirmed via git stash to fail on the prior code
       - 'manual: a real Node.js run of the extracted renderHelpModalCommands/matchingCommands/fuzzyMatch source against 4 cases (unfiltered listing, filtering by query, TUI-only badge scoping, empty-state message) -- all passed'
@@ -5069,11 +5073,13 @@ capabilities:
       - tests/test_web_i18n.py CommandTokenProtectionTests -> command palette label/hint and help modal usage span both carry data-no-i18n; adjacent summary/prose spans stay translatable
       - 'live: real lifetxt serve process, served page confirmed to contain both new data-no-i18n markers verbatim'
     related_issues:
+      - https://github.com/Eruhitsuji/lifetxt/issues/1654
       - https://github.com/Eruhitsuji/lifetxt/issues/198
       - https://github.com/Eruhitsuji/lifetxt/issues/204
       - https://github.com/Eruhitsuji/lifetxt/issues/215
       - https://github.com/Eruhitsuji/lifetxt/issues/222
     related_pull_requests:
+      - https://github.com/Eruhitsuji/lifetxt/pull/1655
       - https://github.com/Eruhitsuji/lifetxt/pull/199
       - https://github.com/Eruhitsuji/lifetxt/pull/205
       - https://github.com/Eruhitsuji/lifetxt/pull/216

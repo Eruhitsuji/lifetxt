@@ -19873,6 +19873,7 @@ traceability:
     - requirement_id: req-desktop-app-server-url
       capability_id: cap-desktop-app-companion-shell
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1652
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1653
       changed_files_or_scope:
         - desktop/src-tauri/src/main.rs
         - desktop/src-tauri/src/server_url.rs

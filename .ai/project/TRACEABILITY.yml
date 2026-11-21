@@ -8495,8 +8495,8 @@ traceability:
       epic: https://github.com/Eruhitsuji/lifetxt/issues/283
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/286
       pull_request: https://github.com/Eruhitsuji
-... 207273 bytes omitted ...
- workspace driven with real JSON-RPC lines confirmed write confinement to the workspace's write_file"
+... 207333 bytes omitted ...
+onfinement to the workspace's write_file"
         - 'scripts/validate_release_docs.py -> {"errors": 0, "ok": true}'
       release_or_deployment: null
       notes: >-
@@ -16582,7 +16582,7 @@ traceability:
       capability_id: cap-multi-person-workspace-collaboration
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1639
-      pull_request: pending
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1640
       changed_files_or_scope:
         - lifetxt/web_collaboration.py
         - lifetxt/web_actor.py
@@ -16596,8 +16596,8 @@ traceability:
       tests_or_evidence:
         - Static Python syntax compilation passed for modified runtime modules.
         - Inline standard-Web login/session JavaScript passed `node --check`.
-        - Project capability, traceability, and change-package YAML parsed successfully.
-        - `git diff --check` passed.
+        - Project capability, traceability, and change-package YAML parsing is checked in the PR workflow.
+        - "`git diff --check` passed."
         - Authentication, membership, CSRF, route policy, and VPN trust boundaries documented in the change package.
         - Automated behavioral tests and independent security/integration review remain pending.
       status: in_review

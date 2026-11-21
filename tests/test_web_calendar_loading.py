@@ -19,7 +19,10 @@ class CalendarLoadingTests(unittest.TestCase):
             + HTML_PAGE[fmt_start:fmt_end]
             + """
 const assert = require("node:assert/strict");
-const grid = {innerHTML: ""};
+let onCalendarClick;
+const grid = {innerHTML: "", querySelector: () => ({
+  addEventListener: (_type, listener) => { onCalendarClick = listener; },
+})};
 const title = {textContent: ""};
 const document = {
   getElementById: id => ({"calendar": grid, "cal-title": title})[id],
@@ -31,6 +34,12 @@ let params;
 const query = () => params;
 const firstParam = (p, [key], fallback) => p.get(key) ?? fallback;
 const escapeHtml = value => String(value);
+const t = value => value;
+const location = {pathname: "/"};
+const history = {pushState: (_state, _unused, url) => { agendaUrl = new URL(url, "http://localhost"); }};
+let agendaUrl;
+const applyUrlToControls = () => {};
+const loadAgenda = () => {};
 const guidedEmptyState = (_icon, heading) => heading;
 const _temporalDisplayLabel = () => "";
 const agendaDueSoonClass = () => "";
@@ -52,6 +61,14 @@ async function main() {
   await latest.done;
   assert.match(grid.innerHTML, /cal-mode-week/);
   assert.match(grid.innerHTML, /Current appointment/);
+  assert.match(grid.innerHTML, /<button type="button" class="cal-daylink"/);
+  const day = {dataset: {calendarDay: "2026-03-04"}};
+  onCalendarClick({target: {closest: selector => selector === ".cal-entry, .cal-more" ? {} : day}});
+  assert.equal(agendaUrl, undefined, "entry and overflow clicks stay in the calendar");
+  onCalendarClick({target: {closest: selector => selector === "[data-calendar-day]" ? day : null}});
+  assert.equal(agendaUrl.searchParams.get("view"), "agenda");
+  assert.equal(agendaUrl.searchParams.get("from"), "2026-03-04");
+  assert.equal(agendaUrl.searchParams.get("to"), "2026-03-04");
   assert.match(title.textContent, /^Week of /);
   const currentGrid = grid.innerHTML;
 

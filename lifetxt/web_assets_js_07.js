@@ -235,11 +235,12 @@
       const spanBadge = dayTotal > 1
         ? `<span class="cal-entry-span" title="Day ${dayIndex} of ${dayTotal}">${dayIndex}/${dayTotal}</span>`
         : "";
-      return `<div class="cal-entry cal-t-${escapeHtml(type)}${dueCls ? " cal-" + dueCls : ""}${clickable ? "" : " cal-static"}"` +
-        (clickable ? ` onclick="event.stopPropagation();openItemByLine(${record.line})"` : "") +
+      const tag = clickable ? "button" : "div";
+      return `<${tag} class="cal-entry cal-t-${escapeHtml(type)}${dueCls ? " cal-" + dueCls : ""}${clickable ? "" : " cal-static"}"` +
+        (clickable ? ` type="button" onclick="openItemByLine(${record.line})"` : "") +
         ` title="${escapeHtml((record.status ? record.status + " " : "") + when + " · " + record.title)}">` +
         `<span class="cal-entry-dot t-${escapeHtml(type)}"></span>` +
-        `<span class="cal-entry-title">${escapeHtml(title)}</span>${spanBadge}</div>`;
+        `<span class="cal-entry-title">${escapeHtml(title)}</span>${spanBadge}</${tag}>`;
     }
     let calendarLoadGeneration = 0;
     async function loadCalendar() {
@@ -309,8 +310,8 @@
         const expanded = _calExpandedDays.has(dayStr);
         const shown = expanded ? entries : entries.slice(0, CAL_CELL_LIMIT);
         const overflow = entries.length - shown.length;
-        let cell = `<div class="cal-cell${inMonth ? "" : " cal-out"}${isToday ? " cal-today" : ""}${entries.length ? " cal-has" : ""}">`;
-        cell += `<div class="cal-daynum"><a class="cal-daylink" onclick="calOpenDay('${dayStr}')" title="Open ${escapeHtml(dayStr)} in Agenda">${day.getDate()}</a>`;
+        let cell = `<div data-calendar-day="${escapeHtml(dayStr)}" class="cal-cell${inMonth ? "" : " cal-out"}${isToday ? " cal-today" : ""}${entries.length ? " cal-has" : ""}">`;
+        cell += `<div class="cal-daynum"><button type="button" class="cal-daylink" aria-label="${escapeHtml(t("Open day in Agenda") + ": " + dayStr)}">${day.getDate()}</button>`;
         cell += entries.length ? `<span class="cal-count">${entries.length}</span>` : "";
         cell += `</div><div class="cal-entries">`;
         cell += shown.map((entry) => _calEntryHtml(entry.record, entry.when, entry.dayIndex, entry.dayTotal)).join("");
@@ -324,6 +325,11 @@
       }
       html += `</div>`;
       node.innerHTML = html;
+      node.querySelector(".cal-grid").addEventListener("click", event => {
+        if (event.target.closest(".cal-entry, .cal-more")) return;
+        const cell = event.target.closest("[data-calendar-day]");
+        if (cell) calOpenDay(cell.dataset.calendarDay);
+      });
     }
     function calExpandDay(dateStr) {
       if (_calExpandedDays.has(dateStr)) _calExpandedDays.delete(dateStr);

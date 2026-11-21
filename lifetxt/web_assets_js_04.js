@@ -625,7 +625,10 @@
       const metadata = [item.details?.due?.[0], item.details?.project?.[0]].filter(Boolean);
       const writable = itemsReadOnly === false && item.editable && !item.generated;
       card.innerHTML = `
-        <button type="button" class="secondary items-board-title">${escapeHtml(item.title)}</button>
+        <div class="items-board-card-heading">
+          <button type="button" class="secondary items-board-title">${escapeHtml(item.title)}</button>
+          ${writable ? `<span class="items-board-drag-handle" aria-hidden="true" title="${escapeHtml(t("Drag to move task"))}">⠿</span>` : ""}
+        </div>
         ${metadata.length ? `<p>${escapeHtml(metadata.join(" · "))}</p>` : ""}
         ${writable ? `<div class="items-board-move-controls">
         <select class="items-board-move" aria-label="${escapeHtml(t("Move to…") + " " + item.title)}">
@@ -636,7 +639,11 @@
         <button type="button" class="secondary items-board-move-confirm" aria-label="${escapeHtml(t("Move task") + ": " + item.title)}" disabled>${escapeHtml(t("Move"))}</button>
         </div>` : `<p>${escapeHtml(t("Read-only"))}</p>`}`;
       const title = card.querySelector(".items-board-title");
-      title.addEventListener("click", () => openDrawer(item));
+      card.addEventListener("click", event => {
+        if (event.target.closest(".items-board-move-controls, .items-board-drag-handle")) return;
+        title.focus({preventScroll: true});
+        openDrawer(item);
+      });
       const move = card.querySelector(".items-board-move");
       if (move) {
         const confirm = card.querySelector(".items-board-move-confirm");
@@ -645,7 +652,10 @@
         // Keep the normal title button and select usable without dragging.
         card.draggable = true;
         card.addEventListener("dragstart", event => {
-          if (boardMovePending) { event.preventDefault(); return; }
+          if (boardMovePending || event.target.closest(".items-board-move-controls")) {
+            event.preventDefault();
+            return;
+          }
           boardDraggedCard = card;
           event.dataTransfer.effectAllowed = "move";
           event.dataTransfer.setData("text/plain", item.title);

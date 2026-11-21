@@ -14,9 +14,31 @@ async function pressKey(key, windowsVirtualKeyCode, text) {
   await browser.command("Input.dispatchKeyEvent", {type: "keyUp", ...params});
 }
 
+async function click(expression) {
+  const point = await browser.evaluate(`(() => {
+    const node = ${expression};
+    node.scrollIntoView({block: "center"});
+    const rect = node.getBoundingClientRect();
+    return {x: rect.x + rect.width / 2, y: rect.y + rect.height / 2};
+  })()`);
+  await browser.command("Input.dispatchMouseEvent", {type: "mousePressed", ...point, button: "left", clickCount: 1});
+  await browser.command("Input.dispatchMouseEvent", {type: "mouseReleased", ...point, button: "left", clickCount: 1});
+}
+
 try {
   await browser.command("Page.navigate", {url: `${baseUrl}/?view=items&items_layout=board`});
   await browser.wait(`!!(${fixtureCard})`, "board card");
+
+  await browser.evaluate(`(${fixtureCard}).closest(".items-board-card").insertAdjacentHTML("beforeend", "<p class='test-metadata'>Metadata</p>")`);
+  await click('document.querySelector(".test-metadata")');
+  await browser.wait(focused(`${drawer} .drawer-close-btn`), "detail from card metadata");
+  await pressKey("Escape", 27);
+  await browser.wait(`document.activeElement === (${fixtureCard})`, "mouse opener restores card title focus");
+  const cardControl = selector => `(${fixtureCard}).closest('.items-board-card').querySelector('${selector}')`;
+  await click(cardControl(".items-board-drag-handle"));
+  assert.equal(await browser.evaluate(`!!document.querySelector('${drawer}')`), false);
+  await browser.evaluate(`(${cardControl(".items-board-move")}).click()`);
+  assert.equal(await browser.evaluate(`!!document.querySelector('${drawer}')`), false);
 
   for (const filteredOut of [false, true]) {
     await browser.evaluate(`window.originalCard = ${fixtureCard}; originalCard.focus();`);
@@ -98,7 +120,7 @@ try {
   assert.equal(await browser.evaluate("getComputedStyle(document.querySelector('.items-board-jumps')).display"), "none");
   await browser.evaluate(`window.boardDrag = (() => {
     const [source, target, other] = document.querySelectorAll('.items-board-column');
-    const card = source.querySelector('.items-board-card');
+    const card = source.querySelector('.items-board-drag-handle');
     const heading = target.querySelector('h3');
     const dataTransfer = new DataTransfer();
     const fire = (node, type, relatedTarget = null) =>
@@ -181,7 +203,27 @@ try {
     ?.textContent === 'Created on board' && ${focused(inProgressAdd)}`, "created task and restored add-button focus");
   assert.equal(creates().length, 1);
 
-
+  const calendarUrl = `${baseUrl}/?view=calendar&calmode=month&cal=2026-11-21`;
+  const day = '[data-calendar-day="2026-11-21"]';
+  const findDay = selector => `document.querySelector(${JSON.stringify(day + selector)})`;
+  const agendaDate = `new URLSearchParams(location.search).get("view") === "agenda"
+    && new URLSearchParams(location.search).get("from") === "2026-11-21"
+    && new URLSearchParams(location.search).get("to") === "2026-11-21"`;
+  await browser.command("Page.navigate", {url: calendarUrl});
+  await browser.wait(findDay(" .cal-more") + " !== null", "calendar overflow");
+  await click(findDay(" .cal-more"));
+  await browser.wait(findDay(" .cal-more") + '?.textContent === "show less"', "expand without navigating");
+  await browser.evaluate(`${findDay(" button.cal-entry")}.focus()`);
+  await pressKey("Enter", 13, "\r");
+  await browser.wait(`!!document.querySelector('${drawer}')`, "calendar entry detail");
+  await pressKey("Escape", 27);
+  await click(findDay(" .cal-count"));
+  await browser.wait(agendaDate, "clicking the day cell opens its agenda");
+  await browser.command("Page.navigate", {url: calendarUrl});
+  await browser.wait(findDay(" .cal-daylink") + " !== null", "calendar day button");
+  await browser.evaluate(`${findDay(" .cal-daylink")}.focus()`);
+  await pressKey("Enter", 13, "\r");
+  await browser.wait(agendaDate, "opening the day from the keyboard");
 } finally {
   await browser.close();
 }

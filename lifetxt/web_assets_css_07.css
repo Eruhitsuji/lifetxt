@@ -46,9 +46,17 @@
       border-radius: var(--r-sm);
       background: var(--panel);
     }
+    .items-board-card { cursor: pointer; }
+    .items-board-card:hover, .items-board-card:focus-within { border-color: var(--accent); }
+    .items-board-card-heading { display: flex; gap: .4rem; align-items: center; }
+    .items-board-drag-handle { cursor: grab; color: var(--muted); padding: .35rem; }
+    .items-board-drag-handle:active { cursor: grabbing; }
+    @media (hover: none) and (pointer: coarse) {
+      .items-board-drag-handle { display: none; }
+    }
     .items-board-card p { color: var(--muted); font-size: .85rem; }
-    .items-board-title { text-align: start; white-space: normal; overflow-wrap: anywhere; }
-    .items-board-move-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .4rem; }
+    .items-board-title { flex: 1; min-width: 0; text-align: start; white-space: normal; overflow-wrap: anywhere; }
+    .items-board-move-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .4rem; cursor: default; }
     .items-board-move { min-width: 0; max-width: 100%; }
     .items-board-other { margin-top: .85rem; }
     .items-board-other summary { margin-bottom: .5rem; cursor: pointer; }

@@ -170,11 +170,11 @@ class LayoutTests(unittest.TestCase):
         # Its action buttons must stay in normal document flow.
         narrow = _media_block("@media (max-width: 680px)")
         self.assertIn(".view-guide { margin-bottom: .35rem; }", narrow)
-        guide_rules = re.findall(r"(?<![-\\w])\\.view-guide\\s*\\{([^{}]*)\\}", STYLE)
+        guide_rules = re.findall(r"(?<![-\w])\.view-guide\s*\{([^{}]*)\}", STYLE)
         self.assertTrue(guide_rules)
         for body in guide_rules:
             self.assertNotRegex(
-                body, r"(?<![-\\w])(?:height|max-height|overflow|overflow-y)\\s*:"
+                body, r"(?<![-\w])(?:height|max-height|overflow|overflow-y)\s*:"
             )
         self.assertIn('id="view-guide" class="view-guide"', HTML_PAGE)
         self.assertIn(".kiosk-mode .view-guide", STYLE)

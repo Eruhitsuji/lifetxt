@@ -72,6 +72,8 @@ class AccessibleNameTests(unittest.TestCase):
     def test_new_label_strings_are_localized(self):
         self.assertIn('"Search items": "アイテムを検索"', HTML_PAGE)
         self.assertIn('"Select for bulk action": "一括操作の対象に選択"', HTML_PAGE)
+        # #1660: per-row accessible name includes the item title
+        self.assertIn('t("Select for bulk action") + ": " + (item.title', HTML_PAGE)
 
 
 class NavigationSemanticsTests(unittest.TestCase):

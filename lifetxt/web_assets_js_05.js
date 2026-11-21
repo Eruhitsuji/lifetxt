@@ -17,7 +17,7 @@
         const isBulkSelected = bulkSelectedLines.has(_bulkKey);
         if (isBulkSelected) node.classList.add("bulk-selected");
         node.innerHTML = `
-          <label class="item-check-hit"><input type="checkbox" class="item-check" title="${escapeHtml(t("Select for bulk action"))}" aria-label="${escapeHtml(t("Select for bulk action"))}" ${isBulkSelected ? "checked" : ""}></label>
+          <label class="item-check-hit"><input type="checkbox" class="item-check" title="${escapeHtml(t("Select for bulk action"))}" aria-label="${escapeHtml(t("Select for bulk action") + ": " + (item.title || ""))}" ${isBulkSelected ? "checked" : ""}></label>
           <span class="status-badge ${statusCls}" title="${escapeHtml(item.status)}">${escapeHtml(statusLabel)}</span>
           <span class="type-badge ${typeCls}">${escapeHtml(item.type)}</span>
           <div>

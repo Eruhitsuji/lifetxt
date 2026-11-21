@@ -78,6 +78,9 @@ MCP_REVISION_TOOLS = frozenset(
 
 _WEB_NO_REVISION_PATHS = frozenset(
     (
+        # Browser session changes do not mutate the life.txt source.
+        "/api/web/v1/browser/login",
+        "/api/web/v1/browser/logout",
         "/api/check-line",
         "/api/items/parse",
         "/api/items/preview",

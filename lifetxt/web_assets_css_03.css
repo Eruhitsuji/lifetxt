@@ -168,12 +168,15 @@
     .cal-cell.cal-out .cal-daynum { opacity: .45; }
     .cal-cell.cal-today { box-shadow: inset 0 0 0 2px var(--accent); }
     .cal-daynum { display: flex; align-items: center; justify-content: space-between; font-size: .78rem; font-weight: 600; }
-    .cal-daylink { cursor: pointer; color: var(--text); text-decoration: none; padding: 0 .15rem; border-radius: 4px; }
+    .cal-cell { cursor: pointer; }
+    .cal-cell:hover, .cal-cell:focus-within { outline: 1px solid var(--accent); outline-offset: -1px; }
+    .cal-daylink { color: var(--text); background: none; border: 0; font: inherit; padding: .2rem .35rem; border-radius: 4px; }
     .cal-daylink:hover { background: var(--accent-soft); color: var(--accent); }
     .cal-today .cal-daylink { color: var(--accent); }
     .cal-count { font-size: .6rem; font-weight: 700; color: var(--muted); background: var(--panel-2); border-radius: 8px; padding: 0 .3rem; }
     .cal-entries { display: flex; flex-direction: column; gap: .12rem; min-width: 0; }
     .cal-entry { display: flex; align-items: center; gap: .25rem; font-size: .68rem; line-height: 1.15; padding: .1rem .25rem; border-radius: 4px; background: var(--panel-2); cursor: pointer; min-width: 0; }
+    button.cal-entry { border: 0; color: var(--text); text-align: start; font-weight: inherit; }
     .cal-entry:hover { background: var(--accent-soft); }
     .cal-entry.cal-static { cursor: default; }
     .cal-entry.cal-overdue { background: var(--danger-soft); }

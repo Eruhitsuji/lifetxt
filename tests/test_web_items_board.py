@@ -116,6 +116,7 @@ class ItemsBoardBrowserTests(unittest.TestCase):
             fixture = (
                 '[ ] T "Board fixture" id:board-fixture\n'
                 '[ ] T "Unrelated task" id:unrelated\n'
+                + "".join(f'[ ] E "Calendar fixture {index}" on:2026-11-21\n' for index in range(5))
             )
             records.write_text(fixture, encoding="utf-8")
             app = create_app(paths=[str(records)], writable_path=str(records))

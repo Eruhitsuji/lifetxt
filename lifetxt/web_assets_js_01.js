@@ -66,6 +66,8 @@
         "Not started": "未着手",
         "Move": "移動",
         "Move task": "タスクを移動",
+        "Drag to move task": "ドラッグしてタスクを移動",
+        "Open day in Agenda": "この日を予定一覧で開く",
         "Move to…": "移動先…",
         "+ Add task": "＋ タスクを追加",
         "Add task": "タスクを追加",

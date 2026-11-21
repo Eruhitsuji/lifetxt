@@ -10,10 +10,13 @@ traceability:
       changed_files_or_scope:
         - lifetxt/web_assets_css_04.css
         - tests/test_web_mobile.py
+        - tests/test_web_assets.py
         - .ai/project/TRACEABILITY.yml
       tests_or_evidence:
         - tests.test_web_mobile.LayoutTests.test_phone_view_guide_uses_page_scroll_not_an_inner_scrollport
-        - Source-level CSS precheck passed; full Python unittest and browser CI pending
+        - tests.test_web_assets.WebAssetExtractionTests.test_split_resources_assemble_the_legacy_pristine_page
+        - Original CI #44874708606 failed only on stale asset hash in both Python profiles; hash updated from consistent computed value
+        - Source-level CSS precheck passed; new full CI awaiting result
       status: in_review
 
     - requirement_id: req-web-retry-hidden-and-ui-language-dates

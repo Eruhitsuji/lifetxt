@@ -19836,6 +19836,17 @@ traceability:
         - HTTPS ASGI smoke covered editor startup, viewer read-only, and protected backup status.
       status: in_review
 
+    - requirement_id: req-ordinary-web-collaboration-regression-coverage
+      capability_id: cap-multi-person-workspace-collaboration
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1646
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1647
+      changed_files_or_scope:
+        - tests/test_web_collaboration.py
+      tests_or_evidence:
+        - tests/test_web_collaboration.py
+      status: in_review
+
   gap_policy:
     missing_link_action: create_follow_up_issue_or_approved_exception
 

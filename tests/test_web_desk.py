@@ -31,6 +31,11 @@ class DeskPageTests(unittest.TestCase):
         self.assertIn("detail-dialog", r.text)
         self.assertNotIn("__DESK_", r.text)
 
+    def test_week_toggle_present(self):
+        r = self.client.get("/desk")
+        self.assertIn('id="mode-week"', r.text)
+        self.assertIn('aria-pressed', r.text)
+
     def test_manifest(self):
         r = self.client.get("/desk.webmanifest")
         self.assertEqual(r.status_code, 200)

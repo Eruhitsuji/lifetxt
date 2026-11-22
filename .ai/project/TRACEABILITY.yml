@@ -5,6 +5,15 @@ traceability:
     - requirement_id: req-web-desk-v1
       capability_id: cap-web-desk
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1677
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1678
+      changed_files_or_scope: [lifetxt/web_desk.html, lifetxt/web_desk.js, tests/test_web_desk.py, docs/en/web.md, docs/ja/web.md]
+      tests_or_evidence: [tests.test_web_desk, Chromium check at 1280x720 and 400x860 with no page scroll and working week toggle and detail dialog]
+      status: in_review
+
+    - requirement_id: req-web-desk-v1
+      capability_id: cap-web-desk
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1670
       pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1676
       changed_files_or_scope: [lifetxt/web_desk.html, lifetxt/web_desk.css, lifetxt/web_desk.js, lifetxt/desk_app_manifest.json, lifetxt/web_assets.py, lifetxt/webapp.py, lifetxt/web_collaboration.py, pyproject.toml, tests/test_web_desk.py, docs/en/web.md, docs/ja/web.md]

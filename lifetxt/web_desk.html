@@ -17,7 +17,7 @@
 <section id="calendar-zone" class="zone" aria-labelledby="calendar-heading">
 <div class="zh"><h2 id="calendar-heading" data-i18n="calendar">Calendar</h2><span class="spacer"></span>
 <button type="button" class="go" id="mode-day" aria-pressed="true" data-i18n="modeDay">Today</button><button type="button" class="go" id="mode-week" aria-pressed="false" data-i18n="modeWeek">7 days</button><button type="button" class="go" id="mode-month" aria-pressed="false" data-i18n="modeMonth">Month</button>
-<a class="go" id="open-planner" href="/planner" data-i18n="planner">Planner</a></div>
+<button type="button" class="go" id="theme-toggle"></button><a class="go" id="open-planner" href="/planner" data-i18n="planner">Planner</a></div>
 <div id="timeline" class="zb" tabindex="0" aria-live="polite"></div>
 </section>
 </div>
@@ -26,8 +26,10 @@
 <span id="count-overdue" class="pill pill-bad"></span><span id="count-today" class="pill pill-warn"></span><span id="count-next" class="pill pill-info"></span></div>
 <div id="tasks" class="zb" tabindex="0" aria-live="polite"></div>
 <form id="capture-form" class="capture"><label class="sr" for="capture-text" data-i18n="captureLabel">Quick add</label>
+<select id="capture-syntax" aria-label="Syntax"><option value="quick">Quick</option><option value="todo">todo.txt</option></select>
 <input id="capture-text" autocomplete="off" data-i18n-placeholder="capturePlaceholder" placeholder="Quick add: title @project !high ^tomorrow">
 <button class="go go-primary" type="submit" data-i18n="add">Add</button></form>
+<p id="capture-preview" class="muted cap-prev" aria-live="polite"></p>
 </section>
 </div>
 <dialog id="detail-dialog" aria-labelledby="detail-heading"><section><h2 id="detail-heading"></h2><div id="detail-content"></div><div id="detail-actions"></div><button id="detail-close" class="go" type="button" data-i18n="close">Close</button></section></dialog>

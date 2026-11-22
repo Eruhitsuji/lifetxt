@@ -1,12 +1,12 @@
 (() => {
   "use strict";
   const copy = {
-    en: {skip: "Skip to tasks", title: "Desk", calendar: "Calendar", planner: "Planner", tasks: "Tasks", captureLabel: "Quick add", capturePlaceholder: "Quick add: title @project !high ^tomorrow", add: "Add",
+    en: {skip: "Skip to tasks", title: "Desk", calendar: "Calendar", planner: "Planner", tasks: "Tasks", captureLabel: "Quick add", capturePlaceholder: "Quick add: title @project !high ^tomorrow", add: "Add", preview: "Preview", confirmCapture: "Confirm capture", editBtn: "Edit", detailsLabel: "Details (key:value per line)", themeAuto: "Theme: auto", themeDark: "Theme: dark", themeLight: "Theme: light", reviewFirst: "Review the mapped fields, then confirm.",
       overdue: "Overdue", dueToday: "Due today", next: "Next actions", allDay: "All day", noEvents: "No events today.", noTasks: "Nothing to do right now.", start: "Start", stop: "Stop",
       markDone: "Mark as done", etaMin: "in {n} min", etaHour: "in {h} h {m} min", noNext: "No more events today", week: "Week {n}", dayOfYear: "Day {n}", loading: "Loading…",
       captured: "Added.", saved: "Updated.", readonly: "Read-only: changes are disabled.", error: "Could not load: ", conflict: "Data changed. Reload and try again.", noRevision: "Could not obtain a write revision. Reload and try again.", requestFailed: "Request failed", due: "due {d}",
       modeDay: "Today", modeWeek: "7 days", modeMonth: "Month", save: "Save", evTitle: "Title", evDate: "Date", evStart: "Start", evEnd: "End", badRange: "End must be after start.", changeDue: "Change due", openInPlanner: "Open in Planner", details: "Details", close: "Close", type: "Type", statusLabel: "Status", when: "When", openDetails: "Show details: "},
-    ja: {skip: "タスクへ移動", title: "Desk", calendar: "カレンダー", planner: "Planner", tasks: "タスク", captureLabel: "クイック追加", capturePlaceholder: "クイック追加: タイトル @project !高 ^明日", add: "追加",
+    ja: {skip: "タスクへ移動", title: "Desk", calendar: "カレンダー", planner: "Planner", tasks: "タスク", captureLabel: "クイック追加", capturePlaceholder: "クイック追加: タイトル @project !高 ^明日", add: "追加", preview: "プレビュー", confirmCapture: "追加を確定", editBtn: "編集", detailsLabel: "詳細 (1行に key:value)", themeAuto: "テーマ: 自動", themeDark: "テーマ: ダーク", themeLight: "テーマ: ライト", reviewFirst: "変換結果を確認して確定してください。",
       overdue: "期限超過", dueToday: "今日", next: "次の一手", allDay: "終日", noEvents: "今日の予定はありません。", noTasks: "今やることはありません。", start: "開始", stop: "停止",
       markDone: "完了にする", etaMin: "あと {n}分", etaHour: "あと {h}時間{m}分", noNext: "今日の予定はもうありません", week: "第{n}週", dayOfYear: "年内 {n}日目", loading: "読み込み中…",
       captured: "追加しました。", saved: "更新しました。", readonly: "読み取り専用のため変更できません。", error: "読み込めませんでした: ", conflict: "データが更新されています。再読み込みしてやり直してください。", noRevision: "更新用リビジョンを取得できません。再読み込みしてください。", requestFailed: "リクエストに失敗しました", due: "期限 {d}",
@@ -29,7 +29,8 @@
     document.querySelectorAll("[data-i18n]").forEach(n => { if (t[n.dataset.i18n]) n.textContent = t[n.dataset.i18n]; });
     document.querySelectorAll("[data-i18n-placeholder]").forEach(n => { n.placeholder = t[n.dataset.i18nPlaceholder] || n.placeholder; });
   }
-  function say(text) { $("feedback").textContent = text || ""; }
+  let sayTimer = null;
+  function say(text) { $("feedback").textContent = text || ""; clearTimeout(sayTimer); if (text) sayTimer = setTimeout(() => { $("feedback").textContent = ""; }, 3000); }
 
   function responseRevision(response) {
     const token = response.headers.get("X-Lifetxt-Revision");
@@ -64,6 +65,29 @@
   const pathFor = i => i.id ? "/api/items/id/" + encodeURIComponent(i.id) : i.line && i.editable ? "/api/items/" + encodeURIComponent(i.line) : null;
 
   // ---- Details dialog (read-only) ----
+  const detailsText = d => Object.entries(d || {}).flatMap(([k, vs]) => (Array.isArray(vs) ? vs : [vs]).map(v => k + ":" + v)).join("\n");
+  const parseDetailsText = text => { const out = {}; for (const line of text.split("\n")) { const x = line.trim(); if (!x) continue; const c = x.indexOf(":"); if (c < 1) continue; const k = x.slice(0, c).trim(); (out[k] = out[k] || []).push(x.slice(c + 1).trim()); } return out; };
+  function fullEdit(item) {
+    const box = $("detail-content"), acts = $("detail-actions");
+    box.replaceChildren(); acts.replaceChildren();
+    const mk = (tag, label, val) => { const w = document.createElement("label"); w.className = "fld"; w.textContent = label; const e = document.createElement(tag); e.value = val; w.append(e); box.append(w); return e; };
+    const ti = mk("input", t.evTitle, item.title);
+    const st = document.createElement("select");
+    for (const v of Array.from(new Set(["[ ]", "[/]", "[x]", "[N]", item.status]))) { const o = document.createElement("option"); o.value = o.textContent = v; st.append(o); }
+    st.value = item.status; const sw = document.createElement("label"); sw.className = "fld"; sw.textContent = t.statusLabel; sw.append(st); box.append(sw);
+    const ty = mk("input", t.type, item.type);
+    const de = mk("textarea", t.detailsLabel, detailsText(item.details)); de.rows = 8;
+    const btn = document.createElement("button");
+    btn.type = "button"; btn.className = "go"; btn.textContent = t.save;
+    btn.onclick = () => {
+      if (!ti.value.trim()) { say(t.badRange); return; }
+      const det = parseDetailsText(de.value);
+      $("detail-dialog").close();
+      mutate(() => api(pathFor(item), {expectedRevision: recordRevisions.get(item) || null, method: "PUT",
+        headers: {"Content-Type": "application/json"}, body: JSON.stringify({status: st.value, type: ty.value.trim() || item.type, title: ti.value.trim(), details: det})}));
+    };
+    acts.append(btn); ti.focus();
+  }
   function showDetail(record, when, item, day) {
     const box = $("detail-content");
     box.replaceChildren();
@@ -128,6 +152,12 @@
         };
         acts.append(ti, di, si, ei, btn);
       }
+    }
+    if (item && writable && item.editable && pathFor(item)) {
+      const eb = document.createElement("button");
+      eb.type = "button"; eb.className = "go"; eb.textContent = t.editBtn;
+      eb.onclick = () => fullEdit(item);
+      acts.append(eb);
     }
     if (day) {
       const a = document.createElement("a");
@@ -316,9 +346,18 @@
     try { await action(); say(t.saved); pending = false; await load(); } catch (e) { say(e.message); } finally { pending = false; }
   }
   const putBody = (i, status) => JSON.stringify({status, type: i.type, title: i.title, details: i.details || {}});
-  const complete = i => mutate(() => api(i.id ? pathFor(i) + "/complete" : pathFor(i), {
-    expectedRevision: recordRevisions.get(i) || null, method: i.id ? "POST" : "PUT",
-    headers: {"Content-Type": "application/json"}, body: i.id ? JSON.stringify({date: today}) : putBody(i, "[x]")}));
+  const pad2 = n => String(n).padStart(2, "0");
+  const nowStamp = () => { const d = new Date(); return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()) + "T" + pad2(d.getHours()) + ":" + pad2(d.getMinutes()) + ":" + pad2(d.getSeconds()); };
+  const repeats = i => Boolean(((i.details || {}).repeat || []).length);
+  const complete = i => mutate(() => {
+    const viaEndpoint = i.id && repeats(i);
+    const det = Object.assign({}, i.details || {});
+    if (!(det.done || []).length) det.done = [nowStamp()];
+    return api(viaEndpoint ? pathFor(i) + "/complete" : pathFor(i), {
+      expectedRevision: recordRevisions.get(i) || null, method: viaEndpoint ? "POST" : "PUT",
+      headers: {"Content-Type": "application/json"},
+      body: viaEndpoint ? JSON.stringify({date: today}) : JSON.stringify({status: "[x]", type: i.type, title: i.title, details: det})});
+  });
   const toggleStart = i => mutate(() => api(pathFor(i), {expectedRevision: recordRevisions.get(i) || null, method: "PUT",
     headers: {"Content-Type": "application/json"}, body: putBody(i, i.status === "[/]" ? "[ ]" : "[/]")}));
   function taskRow(ref, bad) {
@@ -394,24 +433,65 @@
     const started = performance.now();
     try { const c = await api("/api/config"); today = c.today; acceptClock(c, started); } catch (_) {}
   }
+  let binding = null, previewTimer = null;
+  const syntax = () => $("capture-syntax").value;
+  function resetPreview() { binding = null; $("capture-preview").textContent = ""; $("capture-form").querySelector("button").textContent = syntax() === "todo" ? t.preview : t.add; }
+  const bitsOf = d => { const bits = []; Object.keys(d.details || {}).forEach(k => (d.details[k] || []).forEach(v => bits.push(k + ":" + v))); return bits.join(" "); };
+  function livePreview() {
+    resetPreview(); clearTimeout(previewTimer);
+    const text = $("capture-text").value.trim();
+    if (!text || syntax() !== "quick") return;
+    previewTimer = setTimeout(async () => {
+      try {
+        const d = await api("/api/quick/resolve", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({text})});
+        if ($("capture-text").value.trim() !== text) return;
+        const bits = bitsOf(d);
+        $("capture-preview").textContent = bits ? "→ " + d.title + "  " + bits : "";
+      } catch (e) { $("capture-preview").textContent = e.message || ""; }
+    }, 200);
+  }
   async function capture(event) {
     event.preventDefault();
     const input = $("capture-text"), text = input.value.trim();
     if (!text || pending || !writable) return;
     pending = true;
     try {
-      const snap = revision;
-      await api("/api/items/capture", {expectedRevision: snap, method: "POST", headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({text, expected_source_revision: (snap || "").replace(/^"|"$/g, "")})});
-      input.value = ""; say(t.captured);
+      if (syntax() === "todo" && !(binding && binding.text === text)) {
+        const d = await api("/api/quick/resolve", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({text, syntax: "todo"})});
+        if (!d.context_token || !d.source_revision) throw new Error(t.noRevision);
+        binding = {text, token: d.context_token, rev: d.source_revision};
+        $("capture-preview").textContent = "→ " + d.title + "  " + bitsOf(d) + "  " + t.reviewFirst;
+        $("capture-form").querySelector("button").textContent = t.confirmCapture;
+        return;
+      }
+      if (syntax() === "todo") {
+        await api("/api/items/capture", {method: "POST", headers: {"Content-Type": "application/json", "If-Match": binding.rev},
+          body: JSON.stringify({text, syntax: "todo", context_token: binding.token, expected_source_revision: binding.rev})});
+      } else {
+        const snap = revision;
+        await api("/api/items/capture", {expectedRevision: snap, method: "POST", headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({text, expected_source_revision: (snap || "").replace(/^"|"$/g, "")})});
+      }
+      input.value = ""; resetPreview(); say(t.captured);
       pending = false; await load();
-    } catch (e) { say(e.message); } finally { pending = false; }
+    } catch (e) { resetPreview(); say(e.message); } finally { pending = false; }
   }
   function stopTimers() { clearInterval(tickTimer); clearInterval(refreshTimer); tickTimer = refreshTimer = null; }
   function startTimers() {
     stopTimers();
     tick(); tickTimer = setInterval(tick, 1000);
     refreshTimer = setInterval(() => { syncConfig().then(load); }, REFRESH_MS);
+  }
+  const THEMES = ["auto", "dark", "light"];
+  function applyTheme(m) {
+    if (m === "auto") document.documentElement.removeAttribute("data-theme"); else document.documentElement.setAttribute("data-theme", m);
+    const b = $("theme-toggle"); if (b) { b.textContent = t["theme" + m[0].toUpperCase() + m.slice(1)]; b.dataset.mode = m; }
+  }
+  function initTheme() {
+    let m = "auto"; try { m = localStorage.getItem("desk-theme") || "auto"; } catch (_) {}
+    if (!THEMES.includes(m)) m = "auto";
+    applyTheme(m);
+    $("theme-toggle").onclick = () => { const n = THEMES[(THEMES.indexOf($("theme-toggle").dataset.mode) + 1) % 3]; try { localStorage.setItem("desk-theme", n); } catch (_) {} applyTheme(n); };
   }
   async function boot() {
     translate(); say(t.loading);
@@ -422,6 +502,8 @@
     $("capture-text").disabled = !writable; $("capture-form").querySelector("button").disabled = !writable;
     $("detail-close").onclick = () => $("detail-dialog").close();
     $("capture-form").onsubmit = capture;
+    $("capture-text").oninput = livePreview; $("capture-syntax").onchange = livePreview;
+    initTheme();
     $("mode-day").onclick = () => setMode("day");
     $("mode-week").onclick = () => setMode("week");
     $("mode-month").onclick = () => setMode("month");

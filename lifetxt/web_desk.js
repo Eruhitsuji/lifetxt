@@ -5,12 +5,12 @@
       overdue: "Overdue", dueToday: "Due today", next: "Next actions", allDay: "All day", noEvents: "No events today.", noTasks: "Nothing to do right now.", start: "Start", stop: "Stop",
       markDone: "Mark as done", etaMin: "in {n} min", etaHour: "in {h} h {m} min", noNext: "No more events today", week: "Week {n}", dayOfYear: "Day {n}", loading: "Loading…",
       captured: "Added.", saved: "Updated.", readonly: "Read-only: changes are disabled.", error: "Could not load: ", conflict: "Data changed. Reload and try again.", noRevision: "Could not obtain a write revision. Reload and try again.", requestFailed: "Request failed", due: "due {d}",
-      modeDay: "Today", modeWeek: "7 days", details: "Details", close: "Close", type: "Type", statusLabel: "Status", when: "When", openDetails: "Show details: "},
+      modeDay: "Today", modeWeek: "7 days", modeMonth: "Month", details: "Details", close: "Close", type: "Type", statusLabel: "Status", when: "When", openDetails: "Show details: "},
     ja: {skip: "タスクへ移動", title: "Desk", calendar: "カレンダー", planner: "Planner", tasks: "タスク", captureLabel: "クイック追加", capturePlaceholder: "クイック追加: タイトル @project !高 ^明日", add: "追加",
       overdue: "期限超過", dueToday: "今日", next: "次の一手", allDay: "終日", noEvents: "今日の予定はありません。", noTasks: "今やることはありません。", start: "開始", stop: "停止",
       markDone: "完了にする", etaMin: "あと {n}分", etaHour: "あと {h}時間{m}分", noNext: "今日の予定はもうありません", week: "第{n}週", dayOfYear: "年内 {n}日目", loading: "読み込み中…",
       captured: "追加しました。", saved: "更新しました。", readonly: "読み取り専用のため変更できません。", error: "読み込めませんでした: ", conflict: "データが更新されています。再読み込みしてやり直してください。", noRevision: "更新用リビジョンを取得できません。再読み込みしてください。", requestFailed: "リクエストに失敗しました", due: "期限 {d}",
-      modeDay: "今日", modeWeek: "7日間", details: "詳細", close: "閉じる", type: "種類", statusLabel: "状態", when: "日時", openDetails: "詳細を表示: "}
+      modeDay: "今日", modeWeek: "7日間", modeMonth: "月", details: "詳細", close: "閉じる", type: "種類", statusLabel: "状態", when: "日時", openDetails: "詳細を表示: "}
   };
   const $ = id => document.getElementById(id);
   const params = new URLSearchParams(location.search);
@@ -18,7 +18,7 @@
   const lang = ["en", "ja"].includes(requested) ? requested : ((navigator.language || "en").slice(0, 2) === "ja" ? "ja" : "en");
   const t = copy[lang];
   const fmt = (s, v) => s.replace(/\{(\w+)\}/g, (_, k) => v[k]);
-  let mode = "day", weekEvents = [], today = "", clock = null, writable = false, pending = false, generation = 0, revision = null, items = [], nowIso = "", events = [];
+  let mode = "day", pickedDay = "",  weekEvents = [], today = "", clock = null, writable = false, pending = false, generation = 0, revision = null, items = [], nowIso = "", events = [];
   const recordRevisions = new WeakMap();
   const REFRESH_MS = 60000;
   let tickTimer = null, refreshTimer = null;
@@ -170,14 +170,54 @@
       row.append(tm, ev); box.append(row);
     }
   }
+  function monthRange() {
+    const [y, m] = today.split("-").map(Number);
+    const first = new Date(Date.UTC(y, m - 1, 1)), last = new Date(Date.UTC(y, m, 0));
+    return {first, last, from: isoDay(first), to: isoDay(last)};
+  }
+  function renderMonth() {
+    const box = $("timeline"), keep = box.scrollTop;
+    box.replaceChildren();
+    const {first, last} = monthRange();
+    const counts = {};
+    for (const e of weekEvents) counts[e.day] = (counts[e.day] || 0) + 1;
+    if (!pickedDay || pickedDay.slice(0, 7) !== today.slice(0, 7)) pickedDay = today;
+    const grid = document.createElement("div");
+    grid.className = "mgrid";
+    const lead = (first.getUTCDay() + 6) % 7;
+    for (let i = 0; i < lead; i++) grid.append(document.createElement("span"));
+    for (let d = 1; d <= last.getUTCDate(); d++) {
+      const iso = today.slice(0, 8) + pad(d), b = document.createElement("button");
+      b.type = "button"; b.className = "mday" + (iso === today ? " today" : "") + (iso === pickedDay ? " picked" : "");
+      b.setAttribute("aria-pressed", String(iso === pickedDay));
+      b.textContent = String(d);
+      if (counts[iso]) { const u = document.createElement("u"); u.textContent = counts[iso]; b.append(u); }
+      b.onclick = () => { pickedDay = iso; renderMonth(); };
+      grid.append(b);
+    }
+    box.append(grid);
+    const h = document.createElement("div"); h.className = "sec info"; h.textContent = pickedDay; box.append(h);
+    const day = weekEvents.filter(e => e.day === pickedDay);
+    if (!day.length) { const p = document.createElement("p"); p.className = "empty"; p.textContent = t.noEvents; box.append(p); }
+    for (const e of day) {
+      const row = document.createElement("div"), tm = document.createElement("div"), ev = document.createElement("div");
+      row.className = "row"; tm.className = "tm"; tm.textContent = e.time || t.allDay;
+      ev.className = "ev"; ev.append(document.createTextNode(e.title));
+      detailButton(ev, e.title, e.record, e.day + " " + (e.time || t.allDay));
+      row.append(tm, ev); box.append(row);
+    }
+    box.scrollTop = keep;
+  }
   function setMode(m) {
     mode = m;
+    $("mode-month").setAttribute("aria-pressed", String(m === "month"));
     $("mode-day").setAttribute("aria-pressed", String(m === "day"));
     $("mode-week").setAttribute("aria-pressed", String(m === "week"));
     load();
   }
   function renderTimeline() {
     if (mode === "week") { renderWeek(); return; }
+    if (mode === "month") { renderMonth(); return; }
     const box = $("timeline");
     box.replaceChildren();
     if (!events.length) { const p = document.createElement("p"); p.className = "empty"; p.textContent = t.noEvents; box.append(p); return; }
@@ -279,12 +319,12 @@
     const mine = ++generation;
     try {
       const [day, agenda, list] = await Promise.all([
-        api("/api/command-center?date=" + today), api("/api/agenda?from=" + today + "&to=" + (mode === "week" ? addDays(today, 6) : today)),
+        api("/api/command-center?date=" + today), api("/api/agenda?from=" + (mode === "month" ? monthRange().from : today) + "&to=" + (mode === "week" ? addDays(today, 6) : mode === "month" ? monthRange().to : today)),
         api("/api/items?type=T&open_only=true")]);
       if (mine !== generation) return;
       items = list.items || [];
       events = buildEvents(agenda.records || []);
-      weekEvents = mode === "week" ? buildWeek(agenda.records || []) : [];
+      weekEvents = mode !== "day" ? buildWeek(agenda.records || []) : [];
       renderStatus(day); renderTimeline(); renderTasks(day); updateNext(wallNow());
       $("open-planner").href = "/planner?date=" + today + (lang === "ja" ? "&lang=ja" : "");
     } catch (e) { if (mine === generation) say(t.error + e.message); }
@@ -323,6 +363,7 @@
     $("capture-form").onsubmit = capture;
     $("mode-day").onclick = () => setMode("day");
     $("mode-week").onclick = () => setMode("week");
+    $("mode-month").onclick = () => setMode("month");
     tick(); await load(); say(writable ? "" : t.readonly);
     startTimers();
     document.addEventListener("visibilitychange", () => {

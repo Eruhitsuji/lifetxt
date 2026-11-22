@@ -36,6 +36,9 @@ class DeskPageTests(unittest.TestCase):
         self.assertIn('id="mode-week"', r.text)
         self.assertIn('aria-pressed', r.text)
 
+    def test_month_toggle_present(self):
+        self.assertIn('id="mode-month"', self.client.get("/desk").text)
+
     def test_manifest(self):
         r = self.client.get("/desk.webmanifest")
         self.assertEqual(r.status_code, 200)

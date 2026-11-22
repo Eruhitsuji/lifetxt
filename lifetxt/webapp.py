@@ -3396,8 +3396,24 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
                 "item": api_item(item, app.state.writable_path, key),
                 "next": None,
             }
-        date_value = (payload or {}).get("date") if isinstance(payload, dict) else None
-        if date_value:
+        options = payload if isinstance(payload, dict) else {}
+        date_value = options.get("date")
+        done_at = options.get("done_at")
+        if "done_at" in options:
+            try:
+                completion_dt = datetime.fromisoformat(done_at)
+                if completion_dt.tzinfo is not None or done_at not in (
+                    completion_dt.isoformat(timespec="minutes"),
+                    completion_dt.isoformat(timespec="seconds"),
+                ):
+                    raise ValueError
+            except (TypeError, ValueError):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invalid done_at. Use YYYY-MM-DDTHH:MM[:SS].",
+                ) from None
+            completion_date = completion_dt.date()
+        elif date_value:
             completion_dt = parse_date_or_datetime(str(date_value), is_end=False)
             if completion_dt is None:
                 raise HTTPException(
@@ -3407,7 +3423,6 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             completion_date = completion_dt.date()
         else:
             completion_date = timezone_today()
-        date_iso = completion_date.isoformat()
 
         next_item = None
         if item.details.get("repeat"):
@@ -3439,8 +3454,8 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
                 )
 
         details = OrderedDict((k, list(v)) for k, v in item.details.items())
-        if not details.get("done"):
-            details["done"] = [date_iso]
+        if done_at is not None or not details.get("done"):
+            details["done"] = [done_at or completion_date.isoformat()]
         try:
             updated = update_item_by_id_in_file(
                 app.state.writable_path,

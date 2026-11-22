@@ -5,6 +5,14 @@ traceability:
     - requirement_id: req-web-desk-v1
       capability_id: cap-web-desk
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1670
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1695
+      changed_files_or_scope: [lifetxt/web_desk.js, lifetxt/webapp.py, tests/test_web_desk.py, docs/en/web.md, docs/ja/web.md]
+      tests_or_evidence: [tests.test_web_desk, "Chromium: Desk completion now and selected timestamp, repeating task, cancel, conflict and read-only"]
+      status: in_review
+
+    - requirement_id: req-web-desk-v1
+      capability_id: cap-web-desk
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1670
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1693
       pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1694
       changed_files_or_scope: [lifetxt/web_desk.html, lifetxt/web_desk.css, lifetxt/web_desk.js]

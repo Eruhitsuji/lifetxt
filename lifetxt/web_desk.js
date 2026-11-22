@@ -3,12 +3,12 @@
   const copy = {
     en: {skip: "Skip to tasks", title: "Desk", calendar: "Calendar", planner: "Planner", tasks: "Tasks", captureLabel: "Quick add", capturePlaceholder: "Quick add: title @project !high ^tomorrow", add: "Add", preview: "Preview", confirmCapture: "Confirm capture", editBtn: "Edit", detailsLabel: "Details (key:value per line)", themeAuto: "Theme: auto", themeDark: "Theme: dark", themeLight: "Theme: light", reviewFirst: "Review the mapped fields, then confirm.",
       overdue: "Overdue", dueToday: "Due today", next: "Next actions", allDay: "All day", noEvents: "No events today.", noTasks: "Nothing to do right now.", start: "Start", stop: "Stop",
-      markDone: "Mark as done", etaMin: "in {n} min", etaHour: "in {h} h {m} min", noNext: "No more events today", week: "Week {n}", dayOfYear: "Day {n}", loading: "Loading…",
+      markDone: "Mark as done", doneAt: "Completion date and time", completeNow: "Complete now", completeAt: "Complete at selected time", etaMin: "in {n} min", etaHour: "in {h} h {m} min", noNext: "No more events today", week: "Week {n}", dayOfYear: "Day {n}", loading: "Loading…",
       captured: "Added.", saved: "Updated.", readonly: "Read-only: changes are disabled.", error: "Could not load: ", conflict: "Data changed. Reload and try again.", noRevision: "Could not obtain a write revision. Reload and try again.", requestFailed: "Request failed", due: "due {d}",
       modeDay: "Today", modeWeek: "7 days", modeMonth: "Month", save: "Save", evTitle: "Title", evDate: "Date", evStart: "Start", evEnd: "End", badRange: "End must be after start.", requiredFields: "Enter a title, date, and time.", requiredTitle: "Enter a title.", requiredDate: "Choose a date.", dueDate: "Due date", changeDue: "Change due", openInPlanner: "Open in Planner", details: "Details", close: "Close", type: "Type", statusLabel: "Status", when: "When", openDetails: "Show details: "},
     ja: {skip: "タスクへ移動", title: "Desk", calendar: "カレンダー", planner: "Planner", tasks: "タスク", captureLabel: "クイック追加", capturePlaceholder: "クイック追加: タイトル @project !高 ^明日", add: "追加", preview: "プレビュー", confirmCapture: "追加を確定", editBtn: "編集", detailsLabel: "詳細 (1行に key:value)", themeAuto: "テーマ: 自動", themeDark: "テーマ: ダーク", themeLight: "テーマ: ライト", reviewFirst: "変換結果を確認して確定してください。",
       overdue: "期限超過", dueToday: "今日", next: "次の一手", allDay: "終日", noEvents: "今日の予定はありません。", noTasks: "今やることはありません。", start: "開始", stop: "停止",
-      markDone: "完了にする", etaMin: "あと {n}分", etaHour: "あと {h}時間{m}分", noNext: "今日の予定はもうありません", week: "第{n}週", dayOfYear: "年内 {n}日目", loading: "読み込み中…",
+      markDone: "完了にする", doneAt: "完了日時", completeNow: "今すぐ完了", completeAt: "指定した日時で完了", etaMin: "あと {n}分", etaHour: "あと {h}時間{m}分", noNext: "今日の予定はもうありません", week: "第{n}週", dayOfYear: "年内 {n}日目", loading: "読み込み中…",
       captured: "追加しました。", saved: "更新しました。", readonly: "読み取り専用のため変更できません。", error: "読み込めませんでした: ", conflict: "データが更新されています。再読み込みしてやり直してください。", noRevision: "更新用リビジョンを取得できません。再読み込みしてください。", requestFailed: "リクエストに失敗しました", due: "期限 {d}",
       modeDay: "今日", modeWeek: "7日間", modeMonth: "月", save: "保存", evTitle: "タイトル", evDate: "日付", evStart: "開始", evEnd: "終了", badRange: "終了は開始より後にしてください。", requiredFields: "タイトル、日付、時刻を入力してください。", requiredTitle: "タイトルを入力してください。", requiredDate: "日付を選択してください。", dueDate: "期限日", changeDue: "期限を変更", openInPlanner: "Plannerで開く", details: "詳細", close: "閉じる", type: "種類", statusLabel: "状態", when: "日時", openDetails: "詳細を表示: "}
   };
@@ -403,18 +403,55 @@
     try { await action(); say(t.saved); pending = false; await load(); } catch (e) { say(e.message); } finally { pending = false; }
   }
   const putBody = (i, status) => JSON.stringify({status, type: i.type, title: i.title, details: i.details || {}});
-  const pad2 = n => String(n).padStart(2, "0");
-  const nowStamp = () => { const d = new Date(); return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()) + "T" + pad2(d.getHours()) + ":" + pad2(d.getMinutes()) + ":" + pad2(d.getSeconds()); };
-  const repeats = i => Boolean(((i.details || {}).repeat || []).length);
-  const complete = i => mutate(() => {
-    const viaEndpoint = i.id && repeats(i);
-    const det = Object.assign({}, i.details || {});
-    if (!(det.done || []).length) det.done = [nowStamp()];
-    return api(viaEndpoint ? pathFor(i) + "/complete" : pathFor(i), {
-      expectedRevision: recordRevisions.get(i) || null, method: viaEndpoint ? "POST" : "PUT",
+  const nowStamp = () => {
+    const d = wallNow();
+    return isoDay(d) + "T" + hhmm(d) + ":" + pad(d.getUTCSeconds());
+  };
+  function complete(item, stamp) {
+    const viaEndpoint = item.id && item.details?.repeat?.length;
+    const details = {...item.details, done: [stamp]};
+    return mutate(() => api(viaEndpoint ? pathFor(item) + "/complete" : pathFor(item), {
+      expectedRevision: recordRevisions.get(item) || null,
+      method: viaEndpoint ? "POST" : "PUT",
       headers: {"Content-Type": "application/json"},
-      body: viaEndpoint ? JSON.stringify({date: today}) : JSON.stringify({status: "[x]", type: i.type, title: i.title, details: det})});
-  });
+      body: JSON.stringify(viaEndpoint ? {done_at: stamp} :
+        {status: "[x]", type: item.type, title: item.title, details})
+    }));
+  }
+
+  function showCompletion(item) {
+    if (pending) return;
+    const dialog = $("detail-dialog");
+    const form = document.createElement("form");
+    form.id = "desk-completion";
+    const input = detailInput("detail-done-at", "datetime-local", nowStamp());
+    input.required = true;
+    input.step = "1";
+    form.append(detailField(t.doneAt, input));
+    const finish = stamp => {
+      if (pending) return;
+      dialog.close();
+      complete(item, stamp);
+    };
+    form.onsubmit = event => { event.preventDefault(); finish(input.value); };
+    const now = document.createElement("button");
+    now.type = "button";
+    now.className = "go go-primary";
+    now.textContent = t.completeNow;
+    now.onclick = () => finish(nowStamp());
+    const selected = document.createElement("button");
+    selected.type = "submit";
+    selected.setAttribute("form", form.id);
+    selected.className = "go";
+    selected.textContent = t.completeAt;
+    $("detail-heading").textContent = item.title;
+    $("detail-content").replaceChildren(form);
+    $("detail-actions").replaceChildren(now, selected);
+    $("detail-error").textContent = "";
+    dialog.showModal();
+    form.closest(".detail-body").scrollTop = 0;
+    now.focus();
+  }
   const toggleStart = i => mutate(() => api(pathFor(i), {expectedRevision: recordRevisions.get(i) || null, method: "PUT",
     headers: {"Content-Type": "application/json"}, body: putBody(i, i.status === "[/]" ? "[ ]" : "[/]")}));
   function taskRow(ref, bad) {
@@ -432,7 +469,11 @@
     const can = Boolean(writable && i && i.editable && pathFor(i));
     cb.disabled = !can; go.disabled = !can;
     go.type = "button"; go.className = "go"; go.textContent = i && i.status === "[/]" ? t.stop : t.start;
-    if (can) { cb.onclick = () => complete(i); go.onclick = () => toggleStart(i); }
+    if (can) {
+      cb.setAttribute("aria-haspopup", "dialog");
+      cb.onclick = () => showCompletion(i);
+      go.onclick = () => toggleStart(i);
+    }
     row.append(cb, tt, go);
     return row;
   }

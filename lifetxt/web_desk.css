@@ -37,3 +37,8 @@ button,input{font:inherit;color:var(--ink)}button:focus-visible,a:focus-visible,
 .clickable{cursor:pointer}.clickable:hover{filter:brightness(1.12)}
 dialog{max-width:min(90vw,520px);max-height:80dvh;overflow:auto;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:14px;padding:16px 20px}dialog::backdrop{background:rgba(0,0,0,.55)}
 dialog h2{margin:0 0 10px;font-size:18px}dialog p{margin:6px 0;font-size:14px;overflow-wrap:anywhere}dialog .go{margin-top:12px}
+
+.mgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:8px}
+.mday{position:relative;min-height:34px;border:1px solid var(--line);border-radius:8px;background:transparent;color:var(--ink);font:inherit;cursor:pointer}
+.mday.today{border-color:#5b9dff}.mday.picked{background:#2a3a55}
+.mday u{position:absolute;right:3px;bottom:2px;font-size:10px;text-decoration:none;color:#5b9dff}

@@ -261,7 +261,7 @@ class OrdinaryNotesSurfaceTests(unittest.TestCase):
             self.assertIn("/api/notes?date=", PLANNER_HTML_PAGE)
             self.assertIn("ordinary_notes", HTML_PAGE)
             self.assertIn("Ordinary Notes", HTML_PAGE)
-            self.assertIn("Raw Notes (N)", HTML_PAGE)
+            self.assertIn("All notes incl. system records (N)", HTML_PAGE)
             self.assertNotIn("/api/items?type=N&limit=20", PLANNER_HTML_PAGE)
             for invalid in (
                 "limit=0",

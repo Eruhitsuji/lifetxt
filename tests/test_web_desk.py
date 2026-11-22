@@ -39,6 +39,9 @@ class DeskPageTests(unittest.TestCase):
     def test_month_toggle_present(self):
         self.assertIn('id="mode-month"', self.client.get("/desk").text)
 
+    def test_detail_actions_container_present(self):
+        self.assertIn('id="detail-actions"', self.client.get("/desk").text)
+
     def test_manifest(self):
         r = self.client.get("/desk.webmanifest")
         self.assertEqual(r.status_code, 200)

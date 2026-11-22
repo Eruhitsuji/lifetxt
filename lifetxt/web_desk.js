@@ -5,12 +5,12 @@
       overdue: "Overdue", dueToday: "Due today", next: "Next actions", allDay: "All day", noEvents: "No events today.", noTasks: "Nothing to do right now.", start: "Start", stop: "Stop",
       markDone: "Mark as done", etaMin: "in {n} min", etaHour: "in {h} h {m} min", noNext: "No more events today", week: "Week {n}", dayOfYear: "Day {n}", loading: "Loading…",
       captured: "Added.", saved: "Updated.", readonly: "Read-only: changes are disabled.", error: "Could not load: ", conflict: "Data changed. Reload and try again.", noRevision: "Could not obtain a write revision. Reload and try again.", requestFailed: "Request failed", due: "due {d}",
-      modeDay: "Today", modeWeek: "7 days", modeMonth: "Month", details: "Details", close: "Close", type: "Type", statusLabel: "Status", when: "When", openDetails: "Show details: "},
+      modeDay: "Today", modeWeek: "7 days", modeMonth: "Month", changeDue: "Change due", openInPlanner: "Open in Planner", details: "Details", close: "Close", type: "Type", statusLabel: "Status", when: "When", openDetails: "Show details: "},
     ja: {skip: "タスクへ移動", title: "Desk", calendar: "カレンダー", planner: "Planner", tasks: "タスク", captureLabel: "クイック追加", capturePlaceholder: "クイック追加: タイトル @project !高 ^明日", add: "追加",
       overdue: "期限超過", dueToday: "今日", next: "次の一手", allDay: "終日", noEvents: "今日の予定はありません。", noTasks: "今やることはありません。", start: "開始", stop: "停止",
       markDone: "完了にする", etaMin: "あと {n}分", etaHour: "あと {h}時間{m}分", noNext: "今日の予定はもうありません", week: "第{n}週", dayOfYear: "年内 {n}日目", loading: "読み込み中…",
       captured: "追加しました。", saved: "更新しました。", readonly: "読み取り専用のため変更できません。", error: "読み込めませんでした: ", conflict: "データが更新されています。再読み込みしてやり直してください。", noRevision: "更新用リビジョンを取得できません。再読み込みしてください。", requestFailed: "リクエストに失敗しました", due: "期限 {d}",
-      modeDay: "今日", modeWeek: "7日間", modeMonth: "月", details: "詳細", close: "閉じる", type: "種類", statusLabel: "状態", when: "日時", openDetails: "詳細を表示: "}
+      modeDay: "今日", modeWeek: "7日間", modeMonth: "月", changeDue: "期限を変更", openInPlanner: "Plannerで開く", details: "詳細", close: "閉じる", type: "種類", statusLabel: "状態", when: "日時", openDetails: "詳細を表示: "}
   };
   const $ = id => document.getElementById(id);
   const params = new URLSearchParams(location.search);
@@ -64,7 +64,7 @@
   const pathFor = i => i.id ? "/api/items/id/" + encodeURIComponent(i.id) : i.line && i.editable ? "/api/items/" + encodeURIComponent(i.line) : null;
 
   // ---- Details dialog (read-only) ----
-  function showDetail(record, when) {
+  function showDetail(record, when, item, day) {
     const box = $("detail-content");
     box.replaceChildren();
     $("detail-heading").textContent = record.title || t.details;
@@ -76,15 +76,39 @@
       const p = document.createElement("p"), b = document.createElement("b");
       b.textContent = k + ": "; p.append(b, document.createTextNode(String(v))); box.append(p);
     }
+    const acts = $("detail-actions");
+    acts.replaceChildren();
+    if (item && writable && item.editable && pathFor(item) && (item.type === "T")) {
+      const input = document.createElement("input"), btn = document.createElement("button");
+      input.type = "date"; input.id = "detail-due"; input.setAttribute("aria-label", t.changeDue);
+      const old = String((item.details || {}).due || "");
+      input.value = old.slice(0, 10);
+      btn.type = "button"; btn.className = "go"; btn.textContent = t.changeDue;
+      btn.onclick = () => {
+        if (!input.value) return;
+        const next = input.value + (old.includes("T") ? old.slice(10) : "");
+        $("detail-dialog").close();
+        mutate(() => api(pathFor(item), {expectedRevision: recordRevisions.get(item) || null, method: "PUT",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({status: item.status, type: item.type, title: item.title, details: Object.assign({}, item.details || {}, {due: next})})}));
+      };
+      acts.append(input, btn);
+    }
+    if (day) {
+      const a = document.createElement("a");
+      a.className = "go"; a.textContent = t.openInPlanner;
+      a.href = "/planner?date=" + encodeURIComponent(day) + (lang === "ja" ? "&lang=ja" : "");
+      acts.append(a);
+    }
     $("detail-dialog").showModal();
     $("detail-close").focus();
   }
-  function detailButton(node, label, record, when) {
+  function detailButton(node, label, record, when, item, day) {
     node.setAttribute("role", "button");
     node.tabIndex = 0;
     node.setAttribute("aria-label", t.openDetails + label);
     node.classList.add("clickable");
-    const open = () => showDetail(record, when);
+    const open = () => showDetail(record, when, item, day);
     node.addEventListener("click", open);
     node.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } });
   }
@@ -166,7 +190,7 @@
       const row = document.createElement("div"), tm = document.createElement("div"), ev = document.createElement("div");
       row.className = "row"; tm.className = "tm"; tm.textContent = e.time || t.allDay;
       ev.className = "ev"; ev.append(document.createTextNode(e.title));
-      detailButton(ev, e.title, e.record, e.day + " " + (e.time || t.allDay));
+      detailButton(ev, e.title, e.record, e.day + " " + (e.time || t.allDay), null, e.day);
       row.append(tm, ev); box.append(row);
     }
   }
@@ -203,7 +227,7 @@
       const row = document.createElement("div"), tm = document.createElement("div"), ev = document.createElement("div");
       row.className = "row"; tm.className = "tm"; tm.textContent = e.time || t.allDay;
       ev.className = "ev"; ev.append(document.createTextNode(e.title));
-      detailButton(ev, e.title, e.record, e.day + " " + (e.time || t.allDay));
+      detailButton(ev, e.title, e.record, e.day + " " + (e.time || t.allDay), null, e.day);
       row.append(tm, ev); box.append(row);
     }
     box.scrollTop = keep;
@@ -231,7 +255,7 @@
       ev.append(document.createTextNode(e.title));
       const range = e.time && e.end ? e.time + " – " + e.end : "";
       if (range) { const s = document.createElement("small"); s.textContent = range; ev.append(s); }
-      detailButton(ev, e.title, e.record, range || e.time || t.allDay);
+      detailButton(ev, e.title, e.record, range || e.time || t.allDay, null, today);
       row.append(tm, ev); box.append(row);
     }
     if (!placed) box.append(nowLine());
@@ -272,7 +296,7 @@
     if (detail) { const s = document.createElement("small"); s.textContent = detail; tt.append(s); }
     const pct = /^(\d+(?:\.\d+)?)%$/.exec(String(ref.progress || ""));
     if (pct) { const pg = document.createElement("div"), b = document.createElement("b"); pg.className = "pg"; b.style.width = Math.min(100, Number(pct[1])) + "%"; pg.append(b); tt.append(pg); }
-    detailButton(tt, ref.title, i ? Object.assign({}, ref, i) : ref, ref.due ? String(ref.due) : "");
+    detailButton(tt, ref.title, i ? Object.assign({}, ref, i) : ref, ref.due ? String(ref.due) : "", i, "");
     const can = Boolean(writable && i && i.editable && pathFor(i));
     cb.disabled = !can; go.disabled = !can;
     go.type = "button"; go.className = "go"; go.textContent = i && i.status === "[/]" ? t.stop : t.start;

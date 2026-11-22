@@ -4,6 +4,14 @@ traceability:
   chains:
     - requirement_id: req-web-desk-v1
       capability_id: cap-web-desk
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1670
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1691
+      changed_files_or_scope: [lifetxt/web_desk.css, lifetxt/web_desk.js]
+      tests_or_evidence: [tests.test_web_desk, "Chromium: narrow header, delayed capture previews, month focus, and workflow status editing"]
+      status: in_review
+
+    - requirement_id: req-web-desk-v1
+      capability_id: cap-web-desk
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1687
       pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1688

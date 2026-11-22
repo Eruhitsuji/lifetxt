@@ -73,7 +73,7 @@
     const mk = (tag, label, val) => { const w = document.createElement("label"); w.className = "fld"; w.textContent = label; const e = document.createElement(tag); e.value = val; w.append(e); box.append(w); return e; };
     const ti = mk("input", t.evTitle, item.title);
     const st = document.createElement("select");
-    for (const v of Array.from(new Set(["[ ]", "[/]", "[x]", "[N]", item.status]))) { const o = document.createElement("option"); o.value = o.textContent = v; st.append(o); }
+    for (const v of new Set(["[ ]", "[/]", "[x]", "[-]", "[>]", "[?]", "[N]", item.status])) { const o = document.createElement("option"); o.value = o.textContent = v; st.append(o); }
     st.value = item.status; const sw = document.createElement("label"); sw.className = "fld"; sw.textContent = t.statusLabel; sw.append(st); box.append(sw);
     const ty = mk("input", t.type, item.type);
     const de = mk("textarea", t.detailsLabel, detailsText(item.details)); de.rows = 8;
@@ -265,7 +265,7 @@
     const first = new Date(Date.UTC(y, m - 1, 1)), last = new Date(Date.UTC(y, m, 0));
     return {first, last, from: isoDay(first), to: isoDay(last)};
   }
-  function renderMonth() {
+  function renderMonth(restoreDayFocus = false) {
     const box = $("timeline"), keep = box.scrollTop;
     box.replaceChildren();
     const {first, last} = monthRange();
@@ -273,6 +273,7 @@
     for (const e of weekEvents) counts[e.day] = (counts[e.day] || 0) + 1;
     if (!pickedDay || pickedDay.slice(0, 7) !== today.slice(0, 7)) pickedDay = today;
     const grid = document.createElement("div");
+    let selectedButton;
     grid.className = "mgrid";
     const lead = (first.getUTCDay() + 6) % 7;
     for (let i = 0; i < lead; i++) grid.append(document.createElement("span"));
@@ -282,7 +283,8 @@
       b.setAttribute("aria-pressed", String(iso === pickedDay));
       b.textContent = String(d);
       if (counts[iso]) { const u = document.createElement("u"); u.textContent = counts[iso]; b.append(u); }
-      b.onclick = () => { pickedDay = iso; renderMonth(); };
+      if (iso === pickedDay) selectedButton = b;
+      b.onclick = () => { pickedDay = iso; renderMonth(document.activeElement === b); };
       grid.append(b);
     }
     box.append(grid);
@@ -297,6 +299,7 @@
       row.append(tm, ev); box.append(row);
     }
     box.scrollTop = keep;
+    if (restoreDayFocus && selectedButton) selectedButton.focus({preventScroll: true});
   }
   function setMode(m) {
     mode = m;
@@ -433,21 +436,30 @@
     const started = performance.now();
     try { const c = await api("/api/config"); today = c.today; acceptClock(c, started); } catch (_) {}
   }
-  let binding = null, previewTimer = null;
+  let binding = null, previewTimer = null, previewGeneration = 0;
   const syntax = () => $("capture-syntax").value;
-  function resetPreview() { binding = null; $("capture-preview").textContent = ""; $("capture-form").querySelector("button").textContent = syntax() === "todo" ? t.preview : t.add; }
+  function resetPreview() {
+    previewGeneration++;
+    clearTimeout(previewTimer);
+    binding = null;
+    $("capture-preview").textContent = "";
+    $("capture-form").querySelector("button").textContent = syntax() === "todo" ? t.preview : t.add;
+  }
   const bitsOf = d => { const bits = []; Object.keys(d.details || {}).forEach(k => (d.details[k] || []).forEach(v => bits.push(k + ":" + v))); return bits.join(" "); };
   function livePreview() {
-    resetPreview(); clearTimeout(previewTimer);
+    resetPreview();
+    const requestGeneration = previewGeneration;
     const text = $("capture-text").value.trim();
     if (!text || syntax() !== "quick") return;
     previewTimer = setTimeout(async () => {
       try {
         const d = await api("/api/quick/resolve", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({text})});
-        if ($("capture-text").value.trim() !== text) return;
+        if (requestGeneration !== previewGeneration) return;
         const bits = bitsOf(d);
         $("capture-preview").textContent = bits ? "→ " + d.title + "  " + bits : "";
-      } catch (e) { $("capture-preview").textContent = e.message || ""; }
+      } catch (e) {
+        if (requestGeneration === previewGeneration) $("capture-preview").textContent = e.message || "";
+      }
     }, 200);
   }
   async function capture(event) {
@@ -455,9 +467,12 @@
     const input = $("capture-text"), text = input.value.trim();
     if (!text || pending || !writable) return;
     pending = true;
+    const requestGeneration = previewGeneration;
+    const needsPreview = syntax() === "todo" && binding?.text !== text;
     try {
-      if (syntax() === "todo" && !(binding && binding.text === text)) {
+      if (needsPreview) {
         const d = await api("/api/quick/resolve", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({text, syntax: "todo"})});
+        if (requestGeneration !== previewGeneration) return;
         if (!d.context_token || !d.source_revision) throw new Error(t.noRevision);
         binding = {text, token: d.context_token, rev: d.source_revision};
         $("capture-preview").textContent = "→ " + d.title + "  " + bitsOf(d) + "  " + t.reviewFirst;
@@ -472,9 +487,14 @@
         await api("/api/items/capture", {expectedRevision: snap, method: "POST", headers: {"Content-Type": "application/json"},
           body: JSON.stringify({text, expected_source_revision: (snap || "").replace(/^"|"$/g, "")})});
       }
-      input.value = ""; resetPreview(); say(t.captured);
+      if (requestGeneration === previewGeneration) { input.value = ""; resetPreview(); }
+      say(t.captured);
       pending = false; await load();
-    } catch (e) { resetPreview(); say(e.message); } finally { pending = false; }
+    } catch (e) {
+      const isCurrent = requestGeneration === previewGeneration;
+      if (isCurrent) resetPreview();
+      if (!needsPreview || isCurrent) say(e.message);
+    } finally { pending = false; }
   }
   function stopTimers() { clearInterval(tickTimer); clearInterval(refreshTimer); tickTimer = refreshTimer = null; }
   function startTimers() {

@@ -5,12 +5,12 @@
       overdue: "Overdue", dueToday: "Due today", next: "Next actions", allDay: "All day", noEvents: "No events today.", noTasks: "Nothing to do right now.", start: "Start", stop: "Stop",
       markDone: "Mark as done", etaMin: "in {n} min", etaHour: "in {h} h {m} min", noNext: "No more events today", week: "Week {n}", dayOfYear: "Day {n}", loading: "Loading…",
       captured: "Added.", saved: "Updated.", readonly: "Read-only: changes are disabled.", error: "Could not load: ", conflict: "Data changed. Reload and try again.", noRevision: "Could not obtain a write revision. Reload and try again.", requestFailed: "Request failed", due: "due {d}",
-      modeDay: "Today", modeWeek: "7 days", modeMonth: "Month", save: "Save", evTitle: "Title", evDate: "Date", evStart: "Start", evEnd: "End", badRange: "End must be after start.", changeDue: "Change due", openInPlanner: "Open in Planner", details: "Details", close: "Close", type: "Type", statusLabel: "Status", when: "When", openDetails: "Show details: "},
+      modeDay: "Today", modeWeek: "7 days", modeMonth: "Month", save: "Save", evTitle: "Title", evDate: "Date", evStart: "Start", evEnd: "End", badRange: "End must be after start.", requiredFields: "Enter a title, date, and time.", requiredTitle: "Enter a title.", requiredDate: "Choose a date.", dueDate: "Due date", changeDue: "Change due", openInPlanner: "Open in Planner", details: "Details", close: "Close", type: "Type", statusLabel: "Status", when: "When", openDetails: "Show details: "},
     ja: {skip: "タスクへ移動", title: "Desk", calendar: "カレンダー", planner: "Planner", tasks: "タスク", captureLabel: "クイック追加", capturePlaceholder: "クイック追加: タイトル @project !高 ^明日", add: "追加", preview: "プレビュー", confirmCapture: "追加を確定", editBtn: "編集", detailsLabel: "詳細 (1行に key:value)", themeAuto: "テーマ: 自動", themeDark: "テーマ: ダーク", themeLight: "テーマ: ライト", reviewFirst: "変換結果を確認して確定してください。",
       overdue: "期限超過", dueToday: "今日", next: "次の一手", allDay: "終日", noEvents: "今日の予定はありません。", noTasks: "今やることはありません。", start: "開始", stop: "停止",
       markDone: "完了にする", etaMin: "あと {n}分", etaHour: "あと {h}時間{m}分", noNext: "今日の予定はもうありません", week: "第{n}週", dayOfYear: "年内 {n}日目", loading: "読み込み中…",
       captured: "追加しました。", saved: "更新しました。", readonly: "読み取り専用のため変更できません。", error: "読み込めませんでした: ", conflict: "データが更新されています。再読み込みしてやり直してください。", noRevision: "更新用リビジョンを取得できません。再読み込みしてください。", requestFailed: "リクエストに失敗しました", due: "期限 {d}",
-      modeDay: "今日", modeWeek: "7日間", modeMonth: "月", save: "保存", evTitle: "タイトル", evDate: "日付", evStart: "開始", evEnd: "終了", badRange: "終了は開始より後にしてください。", changeDue: "期限を変更", openInPlanner: "Plannerで開く", details: "詳細", close: "閉じる", type: "種類", statusLabel: "状態", when: "日時", openDetails: "詳細を表示: "}
+      modeDay: "今日", modeWeek: "7日間", modeMonth: "月", save: "保存", evTitle: "タイトル", evDate: "日付", evStart: "開始", evEnd: "終了", badRange: "終了は開始より後にしてください。", requiredFields: "タイトル、日付、時刻を入力してください。", requiredTitle: "タイトルを入力してください。", requiredDate: "日付を選択してください。", dueDate: "期限日", changeDue: "期限を変更", openInPlanner: "Plannerで開く", details: "詳細", close: "閉じる", type: "種類", statusLabel: "状態", when: "日時", openDetails: "詳細を表示: "}
   };
   const $ = id => document.getElementById(id);
   const params = new URLSearchParams(location.search);
@@ -64,23 +64,73 @@
   }
   const pathFor = i => i.id ? "/api/items/id/" + encodeURIComponent(i.id) : i.line && i.editable ? "/api/items/" + encodeURIComponent(i.line) : null;
 
-  // ---- Details dialog (read-only) ----
+  // ---- Details dialog ----
+  function showDetailError(message) {
+    const error = $("detail-error");
+    error.textContent = message;
+    error.scrollIntoView({block: "nearest"});
+  }
+
+  function detailField(label, control) {
+    const field = document.createElement("label");
+    field.className = "fld";
+    field.textContent = label;
+    field.append(control);
+    return field;
+  }
+
+  function detailInput(id, type, value) {
+    const input = document.createElement("input");
+    input.id = id;
+    input.type = type;
+    input.value = value;
+    return input;
+  }
+
+  function detailFields(...fields) {
+    const group = document.createElement("div");
+    group.className = "detail-fields";
+    group.append(...fields);
+    return group;
+  }
+
+  function detailList(rows, className) {
+    const list = document.createElement("dl");
+    list.className = className;
+    for (const [key, value] of rows) {
+      if (!value) continue;
+      const row = document.createElement("div");
+      const term = document.createElement("dt");
+      const definition = document.createElement("dd");
+      term.textContent = key;
+      definition.textContent = value;
+      row.append(term, definition);
+      list.append(row);
+    }
+    return list;
+  }
+
   const detailsText = d => Object.entries(d || {}).flatMap(([k, vs]) => (Array.isArray(vs) ? vs : [vs]).map(v => k + ":" + v)).join("\n");
   const parseDetailsText = text => { const out = {}; for (const line of text.split("\n")) { const x = line.trim(); if (!x) continue; const c = x.indexOf(":"); if (c < 1) continue; const k = x.slice(0, c).trim(); (out[k] = out[k] || []).push(x.slice(c + 1).trim()); } return out; };
   function fullEdit(item) {
     const box = $("detail-content"), acts = $("detail-actions");
     box.replaceChildren(); acts.replaceChildren();
-    const mk = (tag, label, val) => { const w = document.createElement("label"); w.className = "fld"; w.textContent = label; const e = document.createElement(tag); e.value = val; w.append(e); box.append(w); return e; };
-    const ti = mk("input", t.evTitle, item.title);
+    $("detail-error").textContent = "";
+    const ti = detailInput("detail-title", "text", item.title);
     const st = document.createElement("select");
     for (const v of new Set(["[ ]", "[/]", "[x]", "[-]", "[>]", "[?]", "[N]", item.status])) { const o = document.createElement("option"); o.value = o.textContent = v; st.append(o); }
-    st.value = item.status; const sw = document.createElement("label"); sw.className = "fld"; sw.textContent = t.statusLabel; sw.append(st); box.append(sw);
-    const ty = mk("input", t.type, item.type);
-    const de = mk("textarea", t.detailsLabel, detailsText(item.details)); de.rows = 8;
+    st.value = item.status;
+    const ty = detailInput("detail-type", "text", item.type);
+    const de = document.createElement("textarea");
+    de.value = detailsText(item.details);
+    de.rows = 6;
+    box.append(detailField(t.evTitle, ti),
+      detailFields(detailField(t.statusLabel, st), detailField(t.type, ty)),
+      detailField(t.detailsLabel, de));
     const btn = document.createElement("button");
-    btn.type = "button"; btn.className = "go"; btn.textContent = t.save;
+    btn.type = "button"; btn.className = "go go-primary"; btn.textContent = t.save;
     btn.onclick = () => {
-      if (!ti.value.trim()) { say(t.badRange); return; }
+      if (!ti.value.trim()) { showDetailError(t.requiredTitle); return; }
       const det = parseDetailsText(de.value);
       $("detail-dialog").close();
       mutate(() => api(pathFor(item), {expectedRevision: recordRevisions.get(item) || null, method: "PUT",
@@ -92,65 +142,68 @@
     const box = $("detail-content");
     box.replaceChildren();
     $("detail-heading").textContent = record.title || t.details;
-    const rows = [[t.type, record.type || record.kind], [t.statusLabel, record.status], [t.when, when]];
+    $("detail-error").textContent = "";
+    const summary = detailList([[t.type, record.type || record.kind], [t.statusLabel, record.status], [t.when, when]], "detail-summary");
+    if (summary.childElementCount) box.append(summary);
+    const rows = [];
     for (const [k, v] of Object.entries(record.details || {})) rows.push([k, Array.isArray(v) ? v.join(", ") : String(v)]);
     for (const k of ["due", "project", "progress", "reason"]) if (record[k] && !(record.details || {})[k]) rows.push([k, String(record[k])]);
-    for (const [k, v] of rows) {
-      if (!v) continue;
-      const p = document.createElement("p"), b = document.createElement("b");
-      b.textContent = k + ": "; p.append(b, document.createTextNode(String(v))); box.append(p);
-    }
+    const details = detailList(rows, "detail-properties");
+    if (details.childElementCount) box.append(details);
     const acts = $("detail-actions");
     acts.replaceChildren();
     if (item && writable && item.editable && pathFor(item) && (item.type === "T")) {
-      const input = document.createElement("input"), btn = document.createElement("button");
-      input.type = "date"; input.id = "detail-due"; input.setAttribute("aria-label", t.changeDue);
       const old = String((item.details || {}).due || "");
-      input.value = old.slice(0, 10);
+      const input = detailInput("detail-due", "date", old.slice(0, 10));
+      const btn = document.createElement("button");
       btn.type = "button"; btn.className = "go"; btn.textContent = t.changeDue;
       btn.onclick = () => {
-        if (!input.value) return;
+        if (!input.value) { showDetailError(t.requiredDate); return; }
         const next = input.value + (old.includes("T") ? old.slice(10) : "");
         $("detail-dialog").close();
         mutate(() => api(pathFor(item), {expectedRevision: recordRevisions.get(item) || null, method: "PUT",
           headers: {"Content-Type": "application/json"},
           body: JSON.stringify({status: item.status, type: item.type, title: item.title, details: Object.assign({}, item.details || {}, {due: next})})}));
       };
-      acts.append(input, btn);
+      acts.append(detailFields(detailField(t.dueDate, input)), btn);
     }
     if (item && item.type === "E" && writable && item.editable && pathFor(item)) {
       const one = k => { const v = (item.details || {})[k]; const x = Array.isArray(v) ? (v.length === 1 ? v[0] : "") : v; return typeof x === "string" && /^\d{4}-\d\d-\d\dT\d\d:\d\d/.test(x) ? x : ""; };
       const f = one("from"), tt = one("to");
       const at = one("at");
       if (!f && !tt && at) {
-        const mk = (id, label, type, val) => { const i = document.createElement("input"); i.type = type; i.id = id; i.value = val; i.setAttribute("aria-label", label); return i; };
-        const ti = mk("detail-title", t.evTitle, "text", item.title), di = mk("detail-date", t.evDate, "date", at.slice(0, 10)), si = mk("detail-start", t.evStart, "time", at.slice(11, 16));
+        const ti = detailInput("detail-title", "text", item.title);
+        const di = detailInput("detail-date", "date", at.slice(0, 10));
+        const si = detailInput("detail-start", "time", at.slice(11, 16));
         const btn = document.createElement("button");
-        btn.type = "button"; btn.className = "go"; btn.textContent = t.save;
+        btn.type = "button"; btn.className = "go go-primary"; btn.textContent = t.save;
         btn.onclick = () => {
-          if (!ti.value.trim() || !di.value || !si.value) { say(t.badRange); return; }
+          if (!ti.value.trim() || !di.value || !si.value) { showDetailError(t.requiredFields); return; }
           $("detail-dialog").close();
           const det = Object.assign({}, item.details || {}, {at: di.value + "T" + si.value + at.slice(16)});
           mutate(() => api(pathFor(item), {expectedRevision: recordRevisions.get(item) || null, method: "PUT",
             headers: {"Content-Type": "application/json"}, body: JSON.stringify({status: item.status, type: item.type, title: ti.value.trim(), details: det})}));
         };
-        acts.append(ti, di, si, btn);
+        acts.append(detailFields(detailField(t.evTitle, ti), detailField(t.evDate, di), detailField(t.evStart, si)), btn);
       }
       if (f && tt) {
-        const mk = (id, label, type, val) => { const i = document.createElement("input"); i.type = type; i.id = id; i.value = val; i.setAttribute("aria-label", label); return i; };
-        const ti = mk("detail-title", t.evTitle, "text", item.title), di = mk("detail-date", t.evDate, "date", f.slice(0, 10)), si = mk("detail-start", t.evStart, "time", f.slice(11, 16)), ei = mk("detail-end", t.evEnd, "time", tt.slice(11, 16));
+        const ti = detailInput("detail-title", "text", item.title);
+        const di = detailInput("detail-date", "date", f.slice(0, 10));
+        const si = detailInput("detail-start", "time", f.slice(11, 16));
+        const ei = detailInput("detail-end", "time", tt.slice(11, 16));
         const btn = document.createElement("button");
-        btn.type = "button"; btn.className = "go"; btn.textContent = t.save;
+        btn.type = "button"; btn.className = "go go-primary"; btn.textContent = t.save;
         btn.onclick = () => {
           const sameDay = tt.slice(0, 10) === f.slice(0, 10);
-          if (!ti.value.trim() || !di.value || !si.value || !ei.value || (sameDay && ei.value <= si.value)) { say(t.badRange); return; }
+          if (!ti.value.trim() || !di.value || !si.value || !ei.value) { showDetailError(t.requiredFields); return; }
+          if (sameDay && ei.value <= si.value) { showDetailError(t.badRange); return; }
           $("detail-dialog").close();
           const span = Math.round((Date.parse(tt.slice(0, 10)) - Date.parse(f.slice(0, 10))) / 86400000);
           const det = Object.assign({}, item.details || {}, {from: di.value + "T" + si.value + f.slice(16), to: addDays(di.value, span) + "T" + ei.value + tt.slice(16)});
           mutate(() => api(pathFor(item), {expectedRevision: recordRevisions.get(item) || null, method: "PUT",
             headers: {"Content-Type": "application/json"}, body: JSON.stringify({status: item.status, type: item.type, title: ti.value.trim(), details: det})}));
         };
-        acts.append(ti, di, si, ei, btn);
+        acts.append(detailFields(detailField(t.evTitle, ti), detailField(t.evDate, di), detailField(t.evStart, si), detailField(t.evEnd, ei)), btn);
       }
     }
     if (item && writable && item.editable && pathFor(item)) {
@@ -166,6 +219,7 @@
       acts.append(a);
     }
     $("detail-dialog").showModal();
+    box.parentElement.scrollTop = 0;
     $("detail-close").focus();
   }
   function detailButton(node, label, record, when, item, day) {

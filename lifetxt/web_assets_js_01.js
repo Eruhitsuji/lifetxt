@@ -347,7 +347,7 @@
         "Maybe": "未定",
         "Note": "メモ",
         "Ordinary Notes": "通常のメモ",
-        "Raw Notes (N)": "すべてのメモ（N）",
+        "All notes incl. system records (N)": "システム記録を含むすべてのメモ（N）",
         "Details": "詳細",
         "Duplicate": "複製",
         "Export": "エクスポート",

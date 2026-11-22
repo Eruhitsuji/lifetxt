@@ -2,6 +2,15 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-raw-notes-label-beginner
+      capability_id: cap-web-beginner-first-ux
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1666
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1667
+      changed_files_or_scope: [lifetxt/web_assets.html, lifetxt/web_assets_js_01.js, tests/test_web_assets.py]
+      tests_or_evidence: [tests.test_web_assets, tests.test_web_i18n, tests.test_release_policy, tests.test_ordinary_notes]
+      status: in_review
+
     - requirement_id: req-web-limit-placeholder-beginner
       capability_id: cap-web-beginner-first-ux
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386

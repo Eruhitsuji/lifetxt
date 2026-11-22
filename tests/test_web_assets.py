@@ -22,7 +22,7 @@ REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
 # calculated the same assembled page Git blob hash.
 # Calculated using _CSS_RESOURCE_NAMES / _JS_RESOURCE_NAMES assembly order,
 # before brand injection (CSS 06/07 precede 05).
-LEGACY_PRISTINE_GIT_BLOB_SHA = "575082b657fa610e499f96e28ac79890bf3a3620"
+LEGACY_PRISTINE_GIT_BLOB_SHA = "684332c12c238a1f53853aacb24b858e1eb0625f"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )

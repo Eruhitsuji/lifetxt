@@ -97,6 +97,21 @@
     if (item && item.type === "E" && writable && item.editable && pathFor(item)) {
       const one = k => { const v = (item.details || {})[k]; const x = Array.isArray(v) ? (v.length === 1 ? v[0] : "") : v; return typeof x === "string" && /^\d{4}-\d\d-\d\dT\d\d:\d\d/.test(x) ? x : ""; };
       const f = one("from"), tt = one("to");
+      const at = one("at");
+      if (!f && !tt && at) {
+        const mk = (id, label, type, val) => { const i = document.createElement("input"); i.type = type; i.id = id; i.value = val; i.setAttribute("aria-label", label); return i; };
+        const ti = mk("detail-title", t.evTitle, "text", item.title), di = mk("detail-date", t.evDate, "date", at.slice(0, 10)), si = mk("detail-start", t.evStart, "time", at.slice(11, 16));
+        const btn = document.createElement("button");
+        btn.type = "button"; btn.className = "go"; btn.textContent = t.save;
+        btn.onclick = () => {
+          if (!ti.value.trim() || !di.value || !si.value) { say(t.badRange); return; }
+          $("detail-dialog").close();
+          const det = Object.assign({}, item.details || {}, {at: di.value + "T" + si.value + at.slice(16)});
+          mutate(() => api(pathFor(item), {expectedRevision: recordRevisions.get(item) || null, method: "PUT",
+            headers: {"Content-Type": "application/json"}, body: JSON.stringify({status: item.status, type: item.type, title: ti.value.trim(), details: det})}));
+        };
+        acts.append(ti, di, si, btn);
+      }
       if (f && tt) {
         const mk = (id, label, type, val) => { const i = document.createElement("input"); i.type = type; i.id = id; i.value = val; i.setAttribute("aria-label", label); return i; };
         const ti = mk("detail-title", t.evTitle, "text", item.title), di = mk("detail-date", t.evDate, "date", f.slice(0, 10)), si = mk("detail-start", t.evStart, "time", f.slice(11, 16)), ei = mk("detail-end", t.evEnd, "time", tt.slice(11, 16));

@@ -1,0 +1,41 @@
+schema_version: 1
+change:
+  id: release-v1-0-5
+  title: Prepare normal release v1.0.5 (1.0.5.0)
+  status: in_review
+  change_type: Operations
+  assurance_level: Regulated
+  owner: Eruhitsuji
+  accountable_owner: Eruhitsuji
+  related_issue: https://github.com/Eruhitsuji/lifetxt/issues/1668
+  related_pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1669
+  base_commit: 4a36fb0ec3132949123b8d1b9635a002f7dcb9a5
+  target_release: v1.0.5
+scope:
+  in_scope:
+  - Core and Mini metadata plus import version assertion
+  - Bilingual release notes and traceability
+  out_of_scope:
+  - New features or migration
+  - Tagging and publication from this PR
+  - Workflow, credentials, or permissions changes
+  write_scope:
+  - pyproject.toml
+  - lifetxt/__init__.py
+  - lifetxt-mini/Cargo.toml
+  - lifetxt-mini/Cargo.lock
+  - tests/test_core_import_boundary.py
+  - docs/en/release-notes-v1.0.5.md
+  - docs/ja/release-notes-v1.0.5.md
+  - .ai/project/TRACEABILITY.yml
+  - .ai/project/changes/release-v1-0-5/**
+  forbidden_scope:
+  - .ai/managed/**
+  shared_files:
+  - pyproject.toml
+  - lifetxt-mini/Cargo.lock
+  - .ai/project/TRACEABILITY.yml
+human_approvals_required:
+- Independent implementation, integration and audit review
+- Merge Authority approval
+- Run-specific Release Authority approval before publication

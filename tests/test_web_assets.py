@@ -22,7 +22,7 @@ REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
 # calculated the same assembled page Git blob hash.
 # Calculated using _CSS_RESOURCE_NAMES / _JS_RESOURCE_NAMES assembly order,
 # before brand injection (CSS 06/07 precede 05).
-LEGACY_PRISTINE_GIT_BLOB_SHA = "684332c12c238a1f53853aacb24b858e1eb0625f"
+LEGACY_PRISTINE_GIT_BLOB_SHA = "0fe1c6f068903d4ef7147f7adc1591a4d8136363"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )
@@ -59,6 +59,8 @@ class WebAssetExtractionTests(unittest.TestCase):
         self.assertNotIn('href="/capture"', primary)
         self.assertNotIn('href="/state"', primary)
         self.assertIn('href="/state"', more)
+        self.assertIn('href="/desk"', more)
+        self.assertNotIn('href="/desk"', primary)
         self.assertIn('data-i18n="Quick Status"', more)
         self.assertRegex(
             more,
@@ -75,9 +77,9 @@ class WebAssetExtractionTests(unittest.TestCase):
         groups = re.findall(r'<section class="nav-feature-group".*?</section>', more, re.S)
         self.assertEqual(len(groups), 5)
         destinations = re.findall(r'(?:data-view|href)="([^"]+)"', more)
-        self.assertEqual(len(destinations), 20)
-        self.assertEqual(len(set(destinations)), 20)
-        self.assertEqual(more.count('class="nav-feature-description"'), 20)
+        self.assertEqual(len(destinations), 21)
+        self.assertEqual(len(set(destinations)), 21)
+        self.assertEqual(more.count('class="nav-feature-description"'), 21)
         for destination in ('data-view="agenda"', 'data-view="calendar"', 'href="/planner"'):
             self.assertIn(destination, groups[0])
         self.assertIn('href="/"', web_assets.PLANNER_HTML_PAGE)

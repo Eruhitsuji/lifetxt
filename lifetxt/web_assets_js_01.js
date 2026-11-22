@@ -414,6 +414,8 @@
         "Quick add": "クイック追加",
         "Quick Capture": "クイックキャプチャ",
         "Planner": "プランナー",
+        "Desk": "デスク",
+        "Always-on screen with clock, calendar and tasks.": "時計・カレンダー・タスクを常時表示する画面",
         "Procedures": "手順書",
         "Capture one thought to your authoritative life.txt.": "1つのメモを正規の life.txt に記録します。",
         "What do you want to remember?": "何を記録しますか？",

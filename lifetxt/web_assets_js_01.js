@@ -729,6 +729,7 @@
         "Review end date": "レビュー終了日",
         "Timeline range": "タイムライン期間",
         "Max rows": "最大行数",
+        "Max rows (blank = all)": "最大行数（空欄＝すべて）",
         "Apply a saved view": "保存済みビューを適用",
         "Filter by area": "エリアで絞り込む",
         "Max agenda rows (0 = all)": "予定の最大行数 (0 = すべて)",

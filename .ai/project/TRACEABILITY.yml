@@ -2,6 +2,18 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-web-shared-design-tokens
+      capability_id: cap-web-surface-structure
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1703
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1708
+      changed_files_or_scope: [lifetxt/web_tokens.css, lifetxt/web_desk.css, lifetxt/web_planner.css, lifetxt/web_state.css, lifetxt/web_assets.py, pyproject.toml, tests/test_web_design_tokens.py]
+      tests_or_evidence:
+        - tests.test_web_design_tokens
+        - tests.test_web_desk, tests.test_web_planner, tests.test_web_state, tests.test_web_assets
+        - Real-browser visual check not run; related issues 1704, 1705, 1706, 1707
+      status: in_review
+
     - requirement_id: req-web-planner-design-refinement
       capability_id: cap-web-mobile-planner
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386

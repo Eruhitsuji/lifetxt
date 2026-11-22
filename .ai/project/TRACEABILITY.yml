@@ -5,6 +5,15 @@ traceability:
     - requirement_id: req-web-desk-v1
       capability_id: cap-web-desk
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1699
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1700
+      changed_files_or_scope: [lifetxt/web_desk.js, .ai/project/CAPABILITIES.yml, .ai/project/TRACEABILITY.yml]
+      tests_or_evidence: [tests.test_web_desk, tests.test_web_assets, Chromium ja/en light/dark 1280/400 check]
+      status: in_review
+
+    - requirement_id: req-web-desk-v1
+      capability_id: cap-web-desk
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1697
       pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1698
       changed_files_or_scope: [lifetxt/web_desk.css, lifetxt/web_desk.html, lifetxt/web_desk.js, lifetxt/web_assets.html, lifetxt/web_assets_js_01.js, tests/test_web_assets.py]

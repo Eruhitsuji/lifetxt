@@ -1,0 +1,18 @@
+schema_version: 1
+requirements:
+- id: req-release-v1-0-5
+  kind: MODIFIED
+  statement: Prepare the human-selected normal release 1.0.5.0 as canonical 1.0.5.
+  acceptance_criteria:
+  - Core metadata and import assertion agree with 1.0.5
+  - Mini Cargo and lock use 1.0.5 without build metadata
+  - Desktop uses existing release-version synchronization; independent Editor version is unchanged
+  - Bilingual notes identify merged work and remaining acceptance limits
+  - No publication or change to existing tags or assets in the preparation PR
+  constraints:
+  - Existing canonical release identity contract is authoritative
+  - Full exact-source main CI and all 14 preflight targets before release approval
+  owner: Eruhitsuji
+open_questions:
+- Actual latest main push CI and distribution acceptance remain to be verified.
+- Review existing open safety and operational acceptance issues before publication.

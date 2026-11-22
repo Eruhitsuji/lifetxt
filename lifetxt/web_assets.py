@@ -99,6 +99,7 @@ def web_resource_bytes(name: str) -> bytes:
         "web_app_manifest.json",
         "planner_app_manifest.json",
         "state_app_manifest.json",
+        "desk_app_manifest.json",
         "web_icon_180.png",
         "web_icon_192.png",
         "web_icon_512.png",
@@ -119,6 +120,19 @@ def _assemble_planner_html() -> str:
 
 
 PLANNER_HTML_PAGE = _assemble_planner_html()
+
+
+def _assemble_desk_html() -> str:
+    template = _read_resource("web_desk.html")
+    template = template.replace("__DESK_CSS__", _read_resource("web_desk.css"))
+    script = _read_resource("web_desk.js")
+    return template.replace(
+        "<script>__DESK_JS__</script>",
+        "<script>" + script + "</script>",
+    )
+
+
+DESK_HTML_PAGE = _assemble_desk_html()
 
 
 def _assemble_state_html() -> str:

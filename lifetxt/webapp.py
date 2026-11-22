@@ -87,7 +87,9 @@ from .web_read_service import limit_items as _service_limit_items
 from .web_read_service import read_life_inputs as _service_read_life_inputs
 from .web_read_service import sort_items as _service_sort_items
 from .web_read_service import sort_key_for_item as _service_sort_key_for_item
-from .web_assets import HTML_PAGE, PLANNER_HTML_PAGE, STATE_HTML_PAGE, WEB_SESSION_UI
+from .web_assets import HTML_PAGE
+from .web_assets import DESK_HTML_PAGE, PLANNER_HTML_PAGE, STATE_HTML_PAGE
+from .web_assets import WEB_SESSION_UI
 from .web_routes_analytics import register_analytics_routes
 from .web_routes_git import register_git_routes
 from . import __version__
@@ -342,9 +344,11 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         build = app.state.runtime_build_info
         version = html_escape(str(build["version"]), quote=True)
         commit = build["git_commit"] or "—"
-        return _with_web_session_ui(HTML_PAGE).replace(
-            "__LIFETXT_RUNTIME_VERSION__", version
-        ).replace("__LIFETXT_RUNTIME_COMMIT__", commit)
+        return (
+            _with_web_session_ui(HTML_PAGE)
+            .replace("__LIFETXT_RUNTIME_VERSION__", version)
+            .replace("__LIFETXT_RUNTIME_COMMIT__", commit)
+        )
 
     @app.get("/", response_class=HTMLResponse)
     def index():
@@ -365,6 +369,23 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
     def planner():
         return HTMLResponse(
             content=_with_web_session_ui(PLANNER_HTML_PAGE),
+            headers={"Cache-Control": "no-store"},
+        )
+
+    @app.get("/desk", response_class=HTMLResponse)
+    def desk_page():
+        return HTMLResponse(
+            content=_with_web_session_ui(DESK_HTML_PAGE),
+            headers={"Cache-Control": "no-store"},
+        )
+
+    @app.get("/desk.webmanifest")
+    def desk_web_app_manifest():
+        from .web_assets import web_resource_bytes
+
+        return Response(
+            content=web_resource_bytes("desk_app_manifest.json"),
+            media_type="application/manifest+json",
             headers={"Cache-Control": "no-store"},
         )
 
@@ -488,9 +509,17 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
                 "web": {
                     key: public_web[key]
                     for key in (
-                        "language", "theme", "dashboard", "planner", "top_clock",
-                        "high_contrast", "reduced_motion", "week_start",
-                        "default_sort", "default_order", "default_limit",
+                        "language",
+                        "theme",
+                        "dashboard",
+                        "planner",
+                        "top_clock",
+                        "high_contrast",
+                        "reduced_motion",
+                        "week_start",
+                        "default_sort",
+                        "default_order",
+                        "default_limit",
                     )
                 },
                 "notifications": {"enabled": False},
@@ -706,11 +735,17 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         if not isinstance(item_ids, list) or not item_ids:
             raise HTTPException(status_code=400, detail="ids must be a non-empty list.")
         if len(item_ids) > 100:
-            raise HTTPException(status_code=400, detail="At most 100 items may be reviewed at once.")
+            raise HTTPException(
+                status_code=400, detail="At most 100 items may be reviewed at once."
+            )
         if len({str(item_id) for item_id in item_ids}) != len(item_ids):
-            raise HTTPException(status_code=400, detail="ids must not contain duplicates.")
+            raise HTTPException(
+                status_code=400, detail="ids must not contain duplicates."
+            )
         if action not in ("reconfirm", "expire"):
-            raise HTTPException(status_code=400, detail="Only reconfirm and expire are supported.")
+            raise HTTPException(
+                status_code=400, detail="Only reconfirm and expire are supported."
+            )
 
         writable = app.state.writable_path
         expected_revision = payload.get("expected_source_revision")
@@ -731,13 +766,19 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         results = []
 
         for item_id in selected:
-            current_snapshot = mutation.read_text_snapshot(writable, allow_missing=False)
-            current_items, current_diagnostics = parse_text(current_snapshot.text, id_key=key)
+            current_snapshot = mutation.read_text_snapshot(
+                writable, allow_missing=False
+            )
+            current_items, current_diagnostics = parse_text(
+                current_snapshot.text, id_key=key
+            )
             raise_for_errors(current_diagnostics)
             try:
                 item = find_item_by_id(current_items, item_id, key=key)
             except ValueError as exc:
-                results.append({"id": item_id, "status": "failed", "error": error_detail(exc)})
+                results.append(
+                    {"id": item_id, "status": "failed", "error": error_detail(exc)}
+                )
                 continue
             from .personal_context_review_policy import configured_tag_policies
 
@@ -747,20 +788,46 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             )
             record = item_currentness(item, currentness) if item is not None else None
             if item is None:
-                results.append({"id": item_id, "status": "failed", "error": "Item was not found."})
+                results.append(
+                    {"id": item_id, "status": "failed", "error": "Item was not found."}
+                )
                 continue
             if not is_editable(item, writable) or getattr(item, "generated", False):
-                results.append({"id": item_id, "status": "failed", "error": "Item is not writable."})
+                results.append(
+                    {
+                        "id": item_id,
+                        "status": "failed",
+                        "error": "Item is not writable.",
+                    }
+                )
                 continue
             if item not in select_personal_context(current_items, person="self"):
-                results.append({"id": item_id, "status": "failed", "error": "Item is not an eligible Personal Context record."})
+                results.append(
+                    {
+                        "id": item_id,
+                        "status": "failed",
+                        "error": "Item is not an eligible Personal Context record.",
+                    }
+                )
                 continue
             state = record.get("state") if record else "current"
             if action == "reconfirm" and state != "stale":
-                results.append({"id": item_id, "status": "failed", "error": "Only stale items can be reconfirmed."})
+                results.append(
+                    {
+                        "id": item_id,
+                        "status": "failed",
+                        "error": "Only stale items can be reconfirmed.",
+                    }
+                )
                 continue
             if action == "expire" and state in ("expired", "superseded", "conflicting"):
-                results.append({"id": item_id, "status": "failed", "error": "Item is already terminal."})
+                results.append(
+                    {
+                        "id": item_id,
+                        "status": "failed",
+                        "error": "Item is already terminal.",
+                    }
+                )
                 continue
 
             now_value = _format_now()
@@ -773,7 +840,10 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
                 if current_item is None:
                     raise mutation.MutationError("Item disappeared during bulk review.")
                 if action == "reconfirm":
-                    details = OrderedDict((name, list(values)) for name, values in current_item.details.items())
+                    details = OrderedDict(
+                        (name, list(values))
+                        for name, values in current_item.details.items()
+                    )
                     details["updated"] = [now_value]
                 else:
                     details = expire_details(current_item, valid_to=valid_to_value)
@@ -781,27 +851,51 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
 
                 return transform_items_text_with_native_history(
                     text,
-                    [{"id": selected_id, "status": current_item.status, "type": current_item.kind,
-                      "title": current_item.title, "set_details": details}],
+                    [
+                        {
+                            "id": selected_id,
+                            "status": current_item.status,
+                            "type": current_item.kind,
+                            "title": current_item.title,
+                            "set_details": details,
+                        }
+                    ],
                     id_key=key,
                     source_revision=mutation.hash_text(text),
                 )
 
             try:
                 mutate_result = mutation.mutate_text(
-                    writable, transform, expected_hash=current_snapshot.content_hash,
+                    writable,
+                    transform,
+                    expected_hash=current_snapshot.content_hash,
                     operation="web personal context bulk " + action,
                 )
             except mutation.MutationConflict as exc:
-                results.append({"id": item_id, "status": "conflicted", "error": "Source changed during review.", "current_revision": exc.actual_hash})
+                results.append(
+                    {
+                        "id": item_id,
+                        "status": "conflicted",
+                        "error": "Source changed during review.",
+                        "current_revision": exc.actual_hash,
+                    }
+                )
                 continue
             except (ValueError, mutation.MutationError) as exc:
                 results.append({"id": item_id, "status": "failed", "error": str(exc)})
                 continue
-            results.append({"id": item_id, "status": "succeeded", "state": "current" if action == "reconfirm" else "expired"})
+            results.append(
+                {
+                    "id": item_id,
+                    "status": "succeeded",
+                    "state": "current" if action == "reconfirm" else "expired",
+                }
+            )
 
         final_snapshot = mutation.read_text_snapshot(writable, allow_missing=False)
-        succeeded = [result["id"] for result in results if result["status"] == "succeeded"]
+        succeeded = [
+            result["id"] for result in results if result["status"] == "succeeded"
+        ]
         return {
             "selected": len(selected),
             "succeeded": len(succeeded),
@@ -875,10 +969,15 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
     @app.post("/api/personal-context/{item_id}/review-policy")
     def set_personal_context_review_policy(item_id, payload=Body(...)):
         """Set or clear only the explicit per-record no-periodic-review detail."""
-        if not isinstance(payload, dict) or payload.get("mode") not in ("never", "inherit"):
+        if not isinstance(payload, dict) or payload.get("mode") not in (
+            "never",
+            "inherit",
+        ):
             raise HTTPException(status_code=400, detail="mode must be never or inherit")
         if not payload.get("expected_source_revision"):
-            raise HTTPException(status_code=400, detail="expected_source_revision is required")
+            raise HTTPException(
+                status_code=400, detail="expected_source_revision is required"
+            )
         writable, snapshot, key, _, _, _ = _personal_context_review_target(
             item_id, payload, require_editable=True
         )
@@ -900,22 +999,35 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
 
             return transform_items_text_with_native_history(
                 text,
-                [{"id": str(item_id), "status": current_item.status,
-                  "type": current_item.kind, "title": current_item.title,
-                  "set_details": details}],
-                id_key=key, source_revision=mutation.hash_text(text),
+                [
+                    {
+                        "id": str(item_id),
+                        "status": current_item.status,
+                        "type": current_item.kind,
+                        "title": current_item.title,
+                        "set_details": details,
+                    }
+                ],
+                id_key=key,
+                source_revision=mutation.hash_text(text),
             )
 
         try:
             result = mutation.mutate_text(
-                writable, transform, expected_hash=snapshot.content_hash,
+                writable,
+                transform,
+                expected_hash=snapshot.content_hash,
                 operation="web personal context review policy",
             )
         except mutation.MutationConflict as exc:
-            raise HTTPException(status_code=409, detail={
-                "error": "CONFLICT", "expected_revision": exc.expected_hash,
-                "current_revision": exc.actual_hash,
-            })
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "error": "CONFLICT",
+                    "expected_revision": exc.expected_hash,
+                    "current_revision": exc.actual_hash,
+                },
+            )
         except (ValueError, mutation.MutationError) as exc:
             raise HTTPException(status_code=409, detail=str(exc))
         updated_items, diagnostics = parse_text(result.snapshot.text, id_key=key)
@@ -923,12 +1035,18 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         from .personal_context_review_policy import configured_tag_policies
 
         updated = find_item_by_id(updated_items, item_id, key=key)
-        state = item_currentness(updated, resolve_currentness(
-            updated_items, tag_policies=configured_tag_policies(app.state.config)
-        ))
-        return {"id": item_id, "state": state["state"],
-                "review_policy": state["review_policy"],
-                "source_revision": result.snapshot.content_hash}
+        state = item_currentness(
+            updated,
+            resolve_currentness(
+                updated_items, tag_policies=configured_tag_policies(app.state.config)
+            ),
+        )
+        return {
+            "id": item_id,
+            "state": state["state"],
+            "review_policy": state["review_policy"],
+            "source_revision": result.snapshot.content_hash,
+        }
 
     @app.post("/api/personal-context/{item_id}/expire")
     def expire_personal_context(item_id, payload=Body(None)):
@@ -1155,8 +1273,14 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
 
     @app.get("/api/notes")
     def get_notes(
-        date=None, offset=0, limit=5, sort="relevance", order="desc", text=None,
-        area=None, saved_view=None,
+        date=None,
+        offset=0,
+        limit=5,
+        sort="relevance",
+        order="desc",
+        text=None,
+        area=None,
+        saved_view=None,
     ):
         from .ordinary_notes import ordinary_notes_page
 
@@ -1164,7 +1288,9 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         try:
             from .read_scope import resolve_read_scope
 
-            scoped, scope = resolve_read_scope(items, app.state.config, area=area, saved_view=saved_view)
+            scoped, scope = resolve_read_scope(
+                items, app.state.config, area=area, saved_view=saved_view
+            )
             page = ordinary_notes_page(
                 filter_items(scoped, text=text),
                 date=date,
@@ -1389,7 +1515,9 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             return {"ok": True, "item_count": 0, "diagnostics": [], "items": []}
         text = str(line).rstrip("\n") + "\n"
         if len(text.encode("utf-8")) > 512 * 1024:
-            raise HTTPException(status_code=413, detail="Preview input is limited to 512 KiB.")
+            raise HTTPException(
+                status_code=413, detail="Preview input is limited to 512 KiB."
+            )
         id_key = id_key_from_config(app.state.config)
         parse_result = parse_text(
             text,
@@ -1428,7 +1556,13 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
     def create_items_batch(payload=Body(...)):
         """Validate and append a complete native batch in one CAS mutation."""
         if app.state.read_only or not app.state.writable_path:
-            raise HTTPException(status_code=403, detail={"error": "READ_ONLY", "message": "No writable file configured."})
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "error": "READ_ONLY",
+                    "message": "No writable file configured.",
+                },
+            )
         if not isinstance(payload, dict) or not isinstance(payload.get("text"), str):
             raise HTTPException(status_code=400, detail="text is required.")
         text = payload["text"]
@@ -1446,7 +1580,9 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             except BatchSaveError as exc:
                 raise HTTPException(status_code=exc.status, detail=exc.detail) from None
         if len(text.encode("utf-8")) > 512 * 1024:
-            raise HTTPException(status_code=413, detail="Batch input is limited to 512 KiB.")
+            raise HTTPException(
+                status_code=413, detail="Batch input is limited to 512 KiB."
+            )
         key = id_key_from_config(app.state.config)
         parse_result = parse_text(text, id_key=key)
         parsed, diagnostics = parse_result
@@ -1462,8 +1598,19 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
                 },
             )
         if len(parsed) > 500 or not parsed or _has_error(diagnostics):
-            raise HTTPException(status_code=422, detail={"error": "VALIDATION_ERROR", "message": "Batch validation failed.", "detail": diagnostics_to_output(diagnostics), "count": len(parsed), "saved": 0})
-        snapshot = mutation.read_text_snapshot(app.state.writable_path, allow_missing=True)
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "error": "VALIDATION_ERROR",
+                    "message": "Batch validation failed.",
+                    "detail": diagnostics_to_output(diagnostics),
+                    "count": len(parsed),
+                    "saved": 0,
+                },
+            )
+        snapshot = mutation.read_text_snapshot(
+            app.state.writable_path, allow_missing=True
+        )
         current, current_diagnostics = parse_text(snapshot.text, id_key=key)
         writable_format = format_version_report(snapshot.text)
         if writable_format["state"] == "unsupported":
@@ -1478,7 +1625,15 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
                 },
             )
         if _has_error(current_diagnostics):
-            raise HTTPException(status_code=409, detail={"error": "VALIDATION_ERROR", "message": "Writable file is invalid.", "detail": diagnostics_to_output(current_diagnostics), "saved": 0})
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "error": "VALIDATION_ERROR",
+                    "message": "Writable file is invalid.",
+                    "detail": diagnostics_to_output(current_diagnostics),
+                    "saved": 0,
+                },
+            )
         workspace_items, _workspace_diagnostics = read_life_inputs(
             app.state.paths, app.state.config
         )
@@ -1488,24 +1643,84 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         for item in parsed:
             item_diags = validate_item(item)
             if _has_error(item_diags):
-                raise HTTPException(status_code=422, detail={"error": "VALIDATION_ERROR", "message": "Batch item is invalid.", "detail": diagnostics_to_output(item_diags), "saved": 0})
+                raise HTTPException(
+                    status_code=422,
+                    detail={
+                        "error": "VALIDATION_ERROR",
+                        "message": "Batch item is invalid.",
+                        "detail": diagnostics_to_output(item_diags),
+                        "saved": 0,
+                    },
+                )
             values = item.details.get(key, [])
             for raw_value in values:
                 value = str(raw_value)
                 if value in existing_ids or value in batch_ids:
-                    raise HTTPException(status_code=422, detail={"error": "DUPLICATE_ID", "message": "Duplicate item id: %s" % value, "saved": 0})
+                    raise HTTPException(
+                        status_code=422,
+                        detail={
+                            "error": "DUPLICATE_ID",
+                            "message": "Duplicate item id: %s" % value,
+                            "saved": 0,
+                        },
+                    )
                 batch_ids.add(value)
-        expected = payload.get("expected_source_revision") or payload.get("expected_revision")
+        expected = payload.get("expected_source_revision") or payload.get(
+            "expected_revision"
+        )
         if not expected:
-            raise HTTPException(status_code=428, detail={"error": "REVISION_REQUIRED", "message": "expected_source_revision is required.", "current_revision": snapshot.content_hash, "saved": 0})
+            raise HTTPException(
+                status_code=428,
+                detail={
+                    "error": "REVISION_REQUIRED",
+                    "message": "expected_source_revision is required.",
+                    "current_revision": snapshot.content_hash,
+                    "saved": 0,
+                },
+            )
         if expected != snapshot.content_hash:
-            raise HTTPException(status_code=409, detail={"error": "CONFLICT", "expected_revision": expected, "current_revision": snapshot.content_hash, "saved": 0})
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "error": "CONFLICT",
+                    "expected_revision": expected,
+                    "current_revision": snapshot.content_hash,
+                    "saved": 0,
+                },
+            )
         addition = "\n".join(item_to_line(item) for item in parsed) + "\n"
         try:
-            result = mutation.write_text(app.state.writable_path, transform=lambda current_text: current_text + ("\n" if current_text and not current_text.endswith(("\n", "\r")) else "") + addition, expected_hash=snapshot.content_hash, operation="web batch create")
+            result = mutation.write_text(
+                app.state.writable_path,
+                transform=lambda current_text: (
+                    current_text
+                    + (
+                        "\n"
+                        if current_text and not current_text.endswith(("\n", "\r"))
+                        else ""
+                    )
+                    + addition
+                ),
+                expected_hash=snapshot.content_hash,
+                operation="web batch create",
+            )
         except mutation.MutationConflict as exc:
-            raise HTTPException(status_code=409, detail={"error": "CONFLICT", "expected_revision": exc.expected_hash, "current_revision": exc.actual_hash, "saved": 0})
-        return {"ok": True, "count": len(parsed), "saved": len(parsed), "source_revision": result.snapshot.content_hash, "items": [api_item(item, app.state.writable_path, key) for item in parsed]}
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "error": "CONFLICT",
+                    "expected_revision": exc.expected_hash,
+                    "current_revision": exc.actual_hash,
+                    "saved": 0,
+                },
+            )
+        return {
+            "ok": True,
+            "count": len(parsed),
+            "saved": len(parsed),
+            "source_revision": result.snapshot.content_hash,
+            "items": [api_item(item, app.state.writable_path, key) for item in parsed],
+        }
 
     @app.get("/api/items/export")
     def export_items(request: Request, response: Response):
@@ -1524,26 +1739,62 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-        range_start, range_end = parse_optional_time_range(params.get("after"), params.get("before"))
-        filtered = filter_items(items, text=params.get("text") or params.get("q"),
-            ordinary_notes=_bool_query(params.get("ordinary_notes")), open_only=_bool_query(params.get("open_only")),
-            statuses=_csv_values(params.get("status")), kinds=_csv_values(params.get("kind") or params.get("type")),
-            projects=_csv_values(params.get("project")), tags=_csv_values(params.get("tag")), tag_all=_csv_values(params.get("tag_all")),
-            exclude_tags=_csv_values(params.get("exclude_tag")), users=_csv_values(params.get("user")), persons=_csv_values(params.get("person")),
-            owners=_csv_values(params.get("owner")), assignees=_csv_values(params.get("assignee")), attendees=_csv_values(params.get("attendee")),
-            senders=_csv_values(params.get("sender")), recipients=_csv_values(params.get("recipient")), teams=_csv_values(params.get("team")),
-            range_start=range_start, range_end=range_end,
-            user_aliases=config_user_aliases(app.state.config), team_members=config_team_members(app.state.config), team_aliases=config_team_aliases(app.state.config), tag_aliases=config_tag_aliases(app.state.config), fuzzy=_bool_query(params.get("fuzzy")))
+        range_start, range_end = parse_optional_time_range(
+            params.get("after"), params.get("before")
+        )
+        filtered = filter_items(
+            items,
+            text=params.get("text") or params.get("q"),
+            ordinary_notes=_bool_query(params.get("ordinary_notes")),
+            open_only=_bool_query(params.get("open_only")),
+            statuses=_csv_values(params.get("status")),
+            kinds=_csv_values(params.get("kind") or params.get("type")),
+            projects=_csv_values(params.get("project")),
+            tags=_csv_values(params.get("tag")),
+            tag_all=_csv_values(params.get("tag_all")),
+            exclude_tags=_csv_values(params.get("exclude_tag")),
+            users=_csv_values(params.get("user")),
+            persons=_csv_values(params.get("person")),
+            owners=_csv_values(params.get("owner")),
+            assignees=_csv_values(params.get("assignee")),
+            attendees=_csv_values(params.get("attendee")),
+            senders=_csv_values(params.get("sender")),
+            recipients=_csv_values(params.get("recipient")),
+            teams=_csv_values(params.get("team")),
+            range_start=range_start,
+            range_end=range_end,
+            user_aliases=config_user_aliases(app.state.config),
+            team_members=config_team_members(app.state.config),
+            team_aliases=config_team_aliases(app.state.config),
+            tag_aliases=config_tag_aliases(app.state.config),
+            fuzzy=_bool_query(params.get("fuzzy")),
+        )
         # A Saved View owns its sort/order. UI calls export without explicit
         # sort parameters when the view is active, preserving the same row order.
-        if not (params.get("saved_view") and "sort" not in params and "order" not in params):
+        if not (
+            params.get("saved_view") and "sort" not in params and "order" not in params
+        ):
             filtered = sort_items(filtered, sort, order)
-        body = "\n".join((getattr(item, "source_text", None) or item_to_line(item)) for item in filtered)
-        if body: body += "\n"
-        response.headers["Content-Disposition"] = "attachment; filename=lifetxt-filtered-%s.txt" % timezone_today().isoformat()
+        body = "\n".join(
+            (getattr(item, "source_text", None) or item_to_line(item))
+            for item in filtered
+        )
+        if body:
+            body += "\n"
+        response.headers["Content-Disposition"] = (
+            "attachment; filename=lifetxt-filtered-%s.txt"
+            % timezone_today().isoformat()
+        )
         response.headers["X-Lifetxt-Count"] = str(len(filtered))
         response.headers["Content-Type"] = "text/plain; charset=utf-8"
-        return Response(content=body, media_type="text/plain", headers={"Content-Disposition": response.headers["Content-Disposition"], "X-Lifetxt-Count": str(len(filtered))})
+        return Response(
+            content=body,
+            media_type="text/plain",
+            headers={
+                "Content-Disposition": response.headers["Content-Disposition"],
+                "X-Lifetxt-Count": str(len(filtered)),
+            },
+        )
 
     @app.get("/api/graph")
     def get_graph(
@@ -1840,7 +2091,9 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         raise_for_errors(diagnostics)
         from .read_scope import resolve_read_scope
 
-        items, scope = resolve_read_scope(items, app.state.config, area=area, saved_view=saved_view)
+        items, scope = resolve_read_scope(
+            items, app.state.config, area=area, saved_view=saved_view
+        )
         range_start, range_end = parse_agenda_range(start, end, around, window)
         key = id_key_from_config(app.state.config)
         records = agenda_records(items, range_start, range_end, key=key)
@@ -1885,9 +2138,18 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         ]
         for record in filtered_records:
             record["blocked_by"] = [
-                {field: entry[field] for field in (
-                    "id", "title", "status", "relation", "condition_state", "required_statuses"
-                ) if field in entry}
+                {
+                    field: entry[field]
+                    for field in (
+                        "id",
+                        "title",
+                        "status",
+                        "relation",
+                        "condition_state",
+                        "required_statuses",
+                    )
+                    if field in entry
+                }
                 for entry in record.get("blocked_by", [])
             ]
         blocked_mode = _blocked_query_mode(blocked)
@@ -1896,7 +2158,11 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
         elif blocked_mode in ("hide", "none"):
             filtered_records = [r for r in filtered_records if not r["blocked"]]
         filtered_records = limit_items(filtered_records, limit)
-        return {"count": len(filtered_records), "records": filtered_records, "scope": scope}
+        return {
+            "count": len(filtered_records),
+            "records": filtered_records,
+            "scope": scope,
+        }
 
     @app.get("/api/status")
     def get_status(person=None, active=False):
@@ -1939,7 +2205,11 @@ def create_app(paths=None, writable_path=None, config=None, read_only=False):
 
     @app.get("/api/command-center")
     def get_command_center_route(
-        horizon=None, person=None, mode="today", saved_view=None, area=None,
+        horizon=None,
+        person=None,
+        mode="today",
+        saved_view=None,
+        area=None,
         selected_date=Query(None, alias="date"),
     ):
         """The canonical Daily Command Center, unchanged from CLI/MCP.
@@ -3555,7 +3825,8 @@ def public_web_config(config):
             "sections": sections,
             "hidden_sections": list(dict.fromkeys(hidden)),
             "density": str(planner.get("density") or "comfortable")
-            if str(planner.get("density") or "comfortable") in ("comfortable", "compact")
+            if str(planner.get("density") or "comfortable")
+            in ("comfortable", "compact")
             else "comfortable",
         },
     }

@@ -32,6 +32,18 @@
 <p id="capture-preview" class="muted cap-prev" aria-live="polite"></p>
 </section>
 </div>
-<dialog id="detail-dialog" aria-labelledby="detail-heading"><section><h2 id="detail-heading"></h2><div id="detail-content"></div><div id="detail-actions"></div><button id="detail-close" class="go" type="button" data-i18n="close">Close</button></section></dialog>
+<dialog id="detail-dialog" aria-labelledby="detail-heading">
+  <div class="detail-sheet">
+    <header class="detail-header">
+      <h2 id="detail-heading"></h2>
+      <button id="detail-close" class="go" type="button" data-i18n="close">Close</button>
+    </header>
+    <div class="detail-body">
+      <div id="detail-content"></div>
+      <div id="detail-actions"></div>
+      <p id="detail-error" role="alert"></p>
+    </div>
+  </div>
+</dialog>
 <p id="feedback" class="feedback" role="status" aria-live="polite"></p>
 <script>__DESK_JS__</script></body></html>

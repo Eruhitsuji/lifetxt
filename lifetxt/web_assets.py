@@ -111,7 +111,9 @@ def web_resource_bytes(name: str) -> bytes:
 
 def _assemble_planner_html() -> str:
     template = _read_resource("web_planner.html")
-    template = template.replace("__PLANNER_CSS__", _read_resource("web_planner.css"))
+    template = template.replace(
+        "__PLANNER_CSS__", _read_resource("web_tokens.css") + _read_resource("web_planner.css")
+    )
     script = _read_resource("web_planner.js")
     return template.replace(
         "<script>__PLANNER_JS__</script>",
@@ -124,7 +126,9 @@ PLANNER_HTML_PAGE = _assemble_planner_html()
 
 def _assemble_desk_html() -> str:
     template = _read_resource("web_desk.html")
-    template = template.replace("__DESK_CSS__", _read_resource("web_desk.css"))
+    template = template.replace(
+        "__DESK_CSS__", _read_resource("web_tokens.css") + _read_resource("web_desk.css")
+    )
     script = _read_resource("web_desk.js")
     return template.replace(
         "<script>__DESK_JS__</script>",
@@ -139,7 +143,9 @@ def _assemble_state_html() -> str:
     template = _read_resource("web_state.html")
     if template.count("__STATE_CSS__") != 1 or template.count("__STATE_JS__") != 1:
         raise RuntimeError("web_state.html must contain one CSS and JS marker")
-    template = template.replace("__STATE_CSS__", _read_resource("web_state.css"))
+    template = template.replace(
+        "__STATE_CSS__", _read_resource("web_tokens.css") + _read_resource("web_state.css")
+    )
     script = _read_resource("web_state.js")
     return template.replace(
         "<script>__STATE_JS__</script>",

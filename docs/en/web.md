@@ -1763,4 +1763,4 @@ Personal Context next-step links and the Server backup guide link use underlined
 
 ## Desk (`/desk`)
 
-A scroll-free, always-on work screen: workspace clock, today's calendar timeline and tasks. Click or press Enter on an event or task to see its details. Tasks can be completed or started/stopped, and quick add is available; all writes reuse the existing revision-guarded APIs and are disabled when read-only. Week and month link to Planner.
+A scroll-free, always-on work screen: workspace clock, today's calendar timeline and tasks. Click or press Enter on an event or task to see its details. Tasks can be completed or started/stopped, and quick add is available; all writes reuse the existing revision-guarded APIs and are disabled when read-only. The calendar zone toggles between today and the next 7 days; month links to Planner.

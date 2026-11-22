@@ -45,6 +45,8 @@ dialog h2{margin:0 0 10px;font-size:18px}dialog p{margin:6px 0;font-size:14px;ov
 .mday.today{border-color:#5b9dff}.mday.picked{background:var(--accent);color:var(--bg);font-weight:700}.mday.picked u{color:var(--bg)}
 .mday u{position:absolute;right:3px;bottom:2px;font-size:10px;text-decoration:none;color:#5b9dff}
 
-.capture select{height:40px;border-radius:9px;border:1px solid var(--ctl-line);background:var(--field);padding:0 8px}.cap-prev{padding:0 16px 8px;margin:0;background:var(--raise);overflow-wrap:anywhere}.cap-prev:empty{display:none}
+.capture select{height:40px;border-radius:9px;border:1px solid var(--ctl-line);background:var(--field);padding:0 8px}.cap-prev{padding:0 16px 8px;margin:0;background:var(--raise);height:22px;line-height:14px;box-sizing:content-box;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fld{display:flex;flex-direction:column;gap:4px;margin:8px 0;font-size:13px;color:var(--muted)}.fld input,.fld select,.fld textarea{width:100%;border-radius:8px;border:1px solid var(--ctl-line);background:var(--field);padding:8px 10px;font-size:14px;color:var(--ink)}
 #detail-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}#detail-actions input{min-width:0;max-width:100%}
+
+.feedback:empty{display:none}.capture .go-primary{min-width:84px}.capture select{flex:none;width:96px}

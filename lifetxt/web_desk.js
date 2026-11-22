@@ -29,7 +29,8 @@
     document.querySelectorAll("[data-i18n]").forEach(n => { if (t[n.dataset.i18n]) n.textContent = t[n.dataset.i18n]; });
     document.querySelectorAll("[data-i18n-placeholder]").forEach(n => { n.placeholder = t[n.dataset.i18nPlaceholder] || n.placeholder; });
   }
-  function say(text) { $("feedback").textContent = text || ""; }
+  let sayTimer = null;
+  function say(text) { $("feedback").textContent = text || ""; clearTimeout(sayTimer); if (text) sayTimer = setTimeout(() => { $("feedback").textContent = ""; }, 3000); }
 
   function responseRevision(response) {
     const token = response.headers.get("X-Lifetxt-Revision");

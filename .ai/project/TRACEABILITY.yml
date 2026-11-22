@@ -2,7 +2,7 @@ schema_version: 1
 
 traceability:
   chains:
-    - requirement_id: req-web-desk-v1
+    - requirement_id: req-web-planner-design-refinement
       capability_id: cap-web-mobile-planner
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1701

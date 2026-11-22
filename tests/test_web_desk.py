@@ -48,6 +48,9 @@ class DeskPageTests(unittest.TestCase):
     def test_event_move_copy_present(self):
         self.assertIn("evDate", self.client.get("/desk").text)
 
+    def test_event_at_edit_present(self):
+        self.assertIn("detail-date", self.client.get("/desk").text)
+
     def test_manifest(self):
         r = self.client.get("/desk.webmanifest")
         self.assertEqual(r.status_code, 200)

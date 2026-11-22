@@ -1,0 +1,15 @@
+schema_version: 1
+links:
+- requirement_id: req-release-v1-0-5
+  capability_id: cap-stable-release-governance
+  task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1668
+  pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1669
+  tests_or_evidence:
+  - Core and Mini metadata readback
+  - Existing import boundary, release policy and version consistency tests
+  - Exact-source main CI and all-14 preflight
+  release_or_deployment: Preparation only; publication requires Release Authority approval
+  status: in_review
+gaps:
+- Main push CI, native distribution, live browser/VPN and exhaustive Desktop GUI acceptance are not verified by this preparation.
+- Post-publication acceptance is tracked by issue #1668.

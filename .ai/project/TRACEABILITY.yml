@@ -2,6 +2,15 @@ schema_version: 1
 
 traceability:
   chains:
+    - requirement_id: req-release-v1-0-5
+      capability_id: cap-stable-release-governance
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1668
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1669
+      changed_files_or_scope: [pyproject.toml, lifetxt/__init__.py, lifetxt-mini/Cargo.toml, lifetxt-mini/Cargo.lock, tests/test_core_import_boundary.py, docs/ja/release-notes-v1.0.5.md, docs/en/release-notes-v1.0.5.md]
+      tests_or_evidence: [Version metadata consistency, tests.test_core_import_boundary, version and release policy gates, all-14 preflight pending]
+      release_or_deployment: Preparation only; publication requires run-specific human approval
+      status: in_review
+
     - requirement_id: req-web-raw-notes-label-beginner
       capability_id: cap-web-beginner-first-ux
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386

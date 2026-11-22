@@ -87,7 +87,9 @@ await $('edit-journal').onclick();$('editor-body').value='Updated journal';
 await $('editor-form').onsubmit(event);
 assert.equal($('editor').open,false,$('editor-feedback').textContent);
 await action('tasks','Task')();
+await $('detail-actions').children[0].onclick();
 await action('tasks','Line_Task')();
+await $('detail-actions').children[0].onclick();
 await action('habits','Habit')();
 const recordMinimum=action('habits','Minimum_Habit','Record minimum');
 const recordUsual=action('habits','Minimum_Habit','Mark done');
@@ -170,7 +172,7 @@ $('capture-dialog').close();
 
 // A fresh task action also remains tied to its read after background refreshes.
 await p.load();const complete=action('tasks','Captured');
-await externalWrite();await p.syncToday();await complete();
+await externalWrite();await p.syncToday();await complete();await $('detail-actions').children[0].onclick();
 assert.equal(writes().at(-1).status,409);
 assert.match($('feedback').textContent,/reload/);
 assert.equal((await data('/api/items')).items.find(i=>i.title==='Captured').status,'[ ]');

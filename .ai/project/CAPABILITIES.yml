@@ -21,7 +21,7 @@ capabilities:
     related_issues:
       - https://github.com/Eruhitsuji/lifetxt/issues/1670
     reuse_policy: Reuse command-center, agenda, items and capture APIs and the Planner revision contract; no new API or mutation path.
-    notes: Week/month link to Planner only. No service worker or offline queue.
+    notes: Today/7-day/month calendar, detail editing, completion time, Quick/todo.txt capture and theme toggle. Chromium integration verification recorded in issue 1670; physical display and non-Chromium browsers not verified. No service worker or offline queue.
 
   - id: cap-web-bulk-done-date
     name: Explicit bulk task completion date

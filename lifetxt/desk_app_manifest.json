@@ -1,0 +1,15 @@
+{
+  "id": "/desk",
+  "name": "life.txt Desk",
+  "short_name": "Desk",
+  "description": "An always-on desktop view of your clock, calendar and tasks.",
+  "start_url": "/desk",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0f1217",
+  "theme_color": "#0f1217",
+  "icons": [
+    {"src": "/assets/lifetxt-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "/assets/lifetxt-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"}
+  ]
+}

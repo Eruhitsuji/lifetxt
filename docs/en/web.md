@@ -1760,3 +1760,7 @@ In Statistics, use From/To to filter the breakdown by type and status. Both boun
 The breakdown uses the same record date as CLI statistics. It uses the first valid value from `done`, `on`, `due`, `do`, `from`, `created`, or `updated`, in that order. Records without a usable date are included.
 
 Personal Context next-step links and the Server backup guide link use underlined theme text, including after visiting them. Open either view and follow the guidance link normally; no extra setting is needed.
+
+## Desk (`/desk`)
+
+A scroll-free, always-on work screen: workspace clock, today's calendar timeline and tasks. Click or press Enter on an event or task to see its details. Tasks can be completed or started/stopped, and quick add is available; all writes reuse the existing revision-guarded APIs and are disabled when read-only. Week and month link to Planner.

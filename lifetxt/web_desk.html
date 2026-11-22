@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f1217"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="life.txt Desk">
+<link rel="manifest" href="/desk.webmanifest"><link rel="apple-touch-icon" sizes="180x180" href="/assets/lifetxt-icon-180.png"><title>life.txt Desk</title>
+<style>__DESK_CSS__</style></head><body>
+<a class="skip" href="#tasks-zone" data-i18n="skip">Skip to tasks</a>
+<div id="desk" class="desk">
+<div class="left">
+<section id="clock-zone" class="zone clock" aria-labelledby="clock-heading">
+<h1 id="clock-heading" class="sr" data-i18n="title">Desk</h1>
+<div class="clock-main"><div id="clock" class="clock-time" role="timer" aria-live="off">--:--</div>
+<div class="clock-side"><div id="clock-date" class="clock-date"></div><div id="clock-week" class="muted"></div>
+<div class="status-row"><span id="status-pill" class="pill pill-ok" hidden></span><span id="status-title" class="muted"></span></div></div></div>
+<div class="next-row"><span id="next-eta" class="next-eta"></span><span id="next-title" class="next-title"></span></div>
+</section>
+<section id="calendar-zone" class="zone" aria-labelledby="calendar-heading">
+<div class="zh"><h2 id="calendar-heading" data-i18n="calendar">Calendar</h2><span class="spacer"></span>
+<a class="go" id="open-planner" href="/planner" data-i18n="planner">Planner</a></div>
+<div id="timeline" class="zb" tabindex="0" aria-live="polite"></div>
+</section>
+</div>
+<section id="tasks-zone" class="zone" aria-labelledby="tasks-heading">
+<div class="zh"><h2 id="tasks-heading" data-i18n="tasks">Tasks</h2><span class="spacer"></span>
+<span id="count-overdue" class="pill pill-bad"></span><span id="count-today" class="pill pill-warn"></span><span id="count-next" class="pill pill-info"></span></div>
+<div id="tasks" class="zb" tabindex="0" aria-live="polite"></div>
+<form id="capture-form" class="capture"><label class="sr" for="capture-text" data-i18n="captureLabel">Quick add</label>
+<input id="capture-text" autocomplete="off" data-i18n-placeholder="capturePlaceholder" placeholder="Quick add: title @project !high ^tomorrow">
+<button class="go go-primary" type="submit" data-i18n="add">Add</button></form>
+</section>
+</div>
+<dialog id="detail-dialog" aria-labelledby="detail-heading"><section><h2 id="detail-heading"></h2><div id="detail-content"></div><button id="detail-close" class="go" type="button" data-i18n="close">Close</button></section></dialog>
+<p id="feedback" class="feedback" role="status" aria-live="polite"></p>
+<script>__DESK_JS__</script></body></html>

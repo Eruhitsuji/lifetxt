@@ -38,12 +38,13 @@ WEB_LOGIN_PATH = "/api/web/v1/browser/login"
 WEB_SESSION_PATH = "/api/web/v1/browser/session"
 WEB_LOGOUT_PATH = "/api/web/v1/browser/logout"
 
-_PAGE_PATHS = frozenset(("/", "/capture", "/planner", "/state"))
+_PAGE_PATHS = frozenset(("/", "/capture", "/planner", "/state", "/desk"))
 _STATIC_PAGE_PATHS = frozenset(
     (
         "/manifest.webmanifest",
         "/planner.webmanifest",
         "/state.webmanifest",
+        "/desk.webmanifest",
     )
 )
 _READ_ONLY_POST_PATHS = frozenset(
@@ -193,7 +194,7 @@ if((navigator.language||'en').toLowerCase().startsWith('ja')){document.documentE
 form.addEventListener('submit',async event=>{event.preventDefault();const value=token.value;token.value='';error.textContent='';
 try{const response=await fetch('/api/web/v1/browser/login',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:value})});
 const data=await response.json();if(!response.ok)throw new Error(data.message||'Sign-in failed.');
-const wanted=new URLSearchParams(location.search).get('next')||'/';const allowed=['/','/planner','/capture','/state'];location.replace(allowed.includes(wanted)?wanted:'/');}
+const wanted=new URLSearchParams(location.search).get('next')||'/';const allowed=['/','/planner','/capture','/state','/desk'];location.replace(allowed.includes(wanted)?wanted:'/');}
 catch(problem){error.textContent=problem.message||'Sign-in failed.';}});
 </script></main></body></html>""",
                 status_code=200,

@@ -1,7 +1,4 @@
-:root{color-scheme:dark light;--bg:#0f1217;--panel:#171c24;--raise:#1a212b;--line:#262d38;--row:#222a35;--ink:#e8ecf2;--sub:#cfd6e0;--muted:#9aa5b4;--accent:#5b9dff;--accent-bg:#2a3a55;--ok:#4fd1c5;--ok-bg:#1d2b27;--warn:#f2a65a;--warn-bg:#2c2519;--bad:#ff7b72;--bad-bg:#3a2020;--info-bg:#1f2a3a;--ctl:#202836;--ctl-line:#3a4558;--field:#10141b;font-family:"Inter","Noto Sans JP",system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
-@media(prefers-color-scheme:light){:root:not([data-theme=dark]){--bg:#eef2f5;--panel:#fff;--raise:#f4f7fa;--line:#d6dde5;--row:#e6ebf0;--ink:#16202a;--sub:#2f3c4a;--muted:#55636f;--accent:#1d5fd1;--accent-bg:#dce8fb;--ok:#0b7a70;--ok-bg:#dff3f0;--warn:#8a4b00;--warn-bg:#fdecd6;--bad:#b3261e;--bad-bg:#fbe2e0;--info-bg:#e3ecf9;--ctl:#f4f7fa;--ctl-line:#9aa8b6;--field:#fff}}
-:root[data-theme=light]{color-scheme:light;--bg:#eef2f5;--panel:#fff;--raise:#f4f7fa;--line:#d6dde5;--row:#e6ebf0;--ink:#16202a;--sub:#2f3c4a;--muted:#55636f;--accent:#1d5fd1;--accent-bg:#dce8fb;--ok:#0b7a70;--ok-bg:#dff3f0;--warn:#8a4b00;--warn-bg:#fdecd6;--bad:#b3261e;--bad-bg:#fbe2e0;--info-bg:#e3ecf9;--ctl:#f4f7fa;--ctl-line:#9aa8b6;--field:#fff}
-:root[data-theme=dark]{color-scheme:dark}
+:root{font-family:"Inter","Noto Sans JP",system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
 *{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink)}
 button,input{font:inherit;color:var(--ink)}button:focus-visible,a:focus-visible,input:focus-visible,.zb:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
@@ -150,8 +147,8 @@ button,input{font:inherit;color:var(--ink)}button:focus-visible,a:focus-visible,
 
 .mgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:8px}
 .mday{position:relative;min-height:34px;border:1px solid var(--line);border-radius:8px;background:transparent;color:var(--ink);font:inherit;cursor:pointer}
-.mday.today{border-color:#5b9dff}.mday.picked{background:var(--accent);color:var(--bg);font-weight:700}.mday.picked u{color:var(--bg)}
-.mday u{position:absolute;right:3px;bottom:2px;font-size:10px;text-decoration:none;color:#5b9dff}
+.mday.today{border-color:var(--accent)}.mday.picked{background:var(--accent);color:var(--bg);font-weight:700}.mday.picked u{color:var(--bg)}
+.mday u{position:absolute;right:3px;bottom:2px;font-size:10px;text-decoration:none;color:var(--accent)}
 
 .capture select{height:40px;border-radius:9px;border:1px solid var(--ctl-line);background:var(--field);padding:0 8px}.cap-prev{padding:0 16px 8px;margin:0;background:var(--raise);height:22px;line-height:14px;box-sizing:content-box;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
@@ -168,8 +165,8 @@ button,input{font:inherit;color:var(--ink)}button:focus-visible,a:focus-visible,
 .go:hover:not(:disabled){background:var(--raise);border-color:var(--ctl-line);color:var(--ink)}
 #mode-day,#mode-week,#mode-month{border-radius:0;margin:0 -4px 0 0;border-color:var(--ctl-line)}
 #mode-day{border-radius:999px 0 0 999px}#mode-month{border-radius:0 999px 999px 0;margin-right:0}
-#mode-day[aria-pressed=true],#mode-week[aria-pressed=true],#mode-month[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:#fff;position:relative;z-index:1}
-.go-primary{background:var(--accent);border-color:var(--accent);color:#fff}.go-primary:hover:not(:disabled){background:var(--accent);filter:brightness(1.1);color:#fff}
+#mode-day[aria-pressed=true],#mode-week[aria-pressed=true],#mode-month[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);position:relative;z-index:1}
+.go-primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}.go-primary:hover:not(:disabled){background:var(--accent);filter:brightness(1.1);color:var(--accent-ink)}
 .row{border-top:1px solid transparent;gap:14px}.tm{padding-top:12px;font-weight:500}
 .ev{border-radius:10px;border-left:3px solid var(--accent);background:var(--info-bg);padding:9px 14px;transition:filter .15s,transform .15s}
 .ev.past{opacity:.5}.clickable:hover{filter:none;transform:translateX(2px)}

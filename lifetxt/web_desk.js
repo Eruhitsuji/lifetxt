@@ -1,12 +1,12 @@
 (() => {
   "use strict";
   const copy = {
-    en: {skip: "Skip to tasks", title: "Desk", calendar: "Calendar", planner: "Planner", tasks: "Tasks", captureLabel: "Quick add", capturePlaceholder: "Quick add: title @project !high ^tomorrow", add: "Add", preview: "Preview", confirmCapture: "Confirm capture", editBtn: "Edit", detailsLabel: "Details (key:value per line)", themeAuto: "Theme: auto", themeDark: "Theme: dark", themeLight: "Theme: light", reviewFirst: "Review the mapped fields, then confirm.",
+    en: {skip: "Skip to tasks", title: "Desk", top: "Top", calendar: "Calendar", planner: "Planner", tasks: "Tasks", captureLabel: "Quick add", capturePlaceholder: "Quick add: title @project !high ^tomorrow", add: "Add", preview: "Preview", confirmCapture: "Confirm capture", editBtn: "Edit", detailsLabel: "Details (key:value per line)", themeAuto: "Theme: auto", themeDark: "Theme: dark", themeLight: "Theme: light", reviewFirst: "Review the mapped fields, then confirm.",
       overdue: "Overdue", dueToday: "Due today", next: "Next actions", allDay: "All day", noEvents: "No events today.", noTasks: "Nothing to do right now.", start: "Start", stop: "Stop",
       markDone: "Mark as done", doneAt: "Completion date and time", completeNow: "Complete now", completeAt: "Complete at selected time", etaMin: "in {n} min", etaHour: "in {h} h {m} min", noNext: "No more events today", week: "Week {n}", dayOfYear: "Day {n}", loading: "Loading…",
       captured: "Added.", saved: "Updated.", readonly: "Read-only: changes are disabled.", error: "Could not load: ", conflict: "Data changed. Reload and try again.", noRevision: "Could not obtain a write revision. Reload and try again.", requestFailed: "Request failed", due: "due {d}",
       modeDay: "Today", modeWeek: "7 days", modeMonth: "Month", save: "Save", evTitle: "Title", evDate: "Date", evStart: "Start", evEnd: "End", badRange: "End must be after start.", requiredFields: "Enter a title, date, and time.", requiredTitle: "Enter a title.", requiredDate: "Choose a date.", dueDate: "Due date", changeDue: "Change due", openInPlanner: "Open in Planner", details: "Details", close: "Close", type: "Type", statusLabel: "Status", when: "When", openDetails: "Show details: "},
-    ja: {skip: "タスクへ移動", title: "Desk", calendar: "カレンダー", planner: "Planner", tasks: "タスク", captureLabel: "クイック追加", capturePlaceholder: "クイック追加: タイトル @project !高 ^明日", add: "追加", preview: "プレビュー", confirmCapture: "追加を確定", editBtn: "編集", detailsLabel: "詳細 (1行に key:value)", themeAuto: "テーマ: 自動", themeDark: "テーマ: ダーク", themeLight: "テーマ: ライト", reviewFirst: "変換結果を確認して確定してください。",
+    ja: {skip: "タスクへ移動", title: "Desk", top: "トップ", calendar: "カレンダー", planner: "Planner", tasks: "タスク", captureLabel: "クイック追加", capturePlaceholder: "クイック追加: タイトル @project !高 ^明日", add: "追加", preview: "プレビュー", confirmCapture: "追加を確定", editBtn: "編集", detailsLabel: "詳細 (1行に key:value)", themeAuto: "テーマ: 自動", themeDark: "テーマ: ダーク", themeLight: "テーマ: ライト", reviewFirst: "変換結果を確認して確定してください。",
       overdue: "期限超過", dueToday: "今日", next: "次の一手", allDay: "終日", noEvents: "今日の予定はありません。", noTasks: "今やることはありません。", start: "開始", stop: "停止",
       markDone: "完了にする", doneAt: "完了日時", completeNow: "今すぐ完了", completeAt: "指定した日時で完了", etaMin: "あと {n}分", etaHour: "あと {h}時間{m}分", noNext: "今日の予定はもうありません", week: "第{n}週", dayOfYear: "年内 {n}日目", loading: "読み込み中…",
       captured: "追加しました。", saved: "更新しました。", readonly: "読み取り専用のため変更できません。", error: "読み込めませんでした: ", conflict: "データが更新されています。再読み込みしてやり直してください。", noRevision: "更新用リビジョンを取得できません。再読み込みしてください。", requestFailed: "リクエストに失敗しました", due: "期限 {d}",
@@ -524,6 +524,7 @@
       events = buildEvents(agenda.records || []);
       weekEvents = mode !== "day" ? buildWeek(agenda.records || []) : [];
       renderStatus(day); renderTimeline(); renderTasks(day); updateNext(wallNow());
+      $("open-top").href = "/" + (lang === "ja" ? "?lang=ja" : "");
       $("open-planner").href = "/planner?date=" + today + (lang === "ja" ? "&lang=ja" : "");
     } catch (e) { if (mine === generation) say(t.error + e.message); }
   }

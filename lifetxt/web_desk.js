@@ -5,12 +5,12 @@
       overdue: "Overdue", dueToday: "Due today", next: "Next actions", allDay: "All day", noEvents: "No events today.", noTasks: "Nothing to do right now.", start: "Start", stop: "Stop",
       markDone: "Mark as done", etaMin: "in {n} min", etaHour: "in {h} h {m} min", noNext: "No more events today", week: "Week {n}", dayOfYear: "Day {n}", loading: "Loading…",
       captured: "Added.", saved: "Updated.", readonly: "Read-only: changes are disabled.", error: "Could not load: ", conflict: "Data changed. Reload and try again.", noRevision: "Could not obtain a write revision. Reload and try again.", requestFailed: "Request failed", due: "due {d}",
-      modeDay: "Today", modeWeek: "7 days", modeMonth: "Month", save: "Save", evTitle: "Title", evStart: "Start", evEnd: "End", badRange: "End must be after start.", changeDue: "Change due", openInPlanner: "Open in Planner", details: "Details", close: "Close", type: "Type", statusLabel: "Status", when: "When", openDetails: "Show details: "},
+      modeDay: "Today", modeWeek: "7 days", modeMonth: "Month", save: "Save", evTitle: "Title", evDate: "Date", evStart: "Start", evEnd: "End", badRange: "End must be after start.", changeDue: "Change due", openInPlanner: "Open in Planner", details: "Details", close: "Close", type: "Type", statusLabel: "Status", when: "When", openDetails: "Show details: "},
     ja: {skip: "タスクへ移動", title: "Desk", calendar: "カレンダー", planner: "Planner", tasks: "タスク", captureLabel: "クイック追加", capturePlaceholder: "クイック追加: タイトル @project !高 ^明日", add: "追加",
       overdue: "期限超過", dueToday: "今日", next: "次の一手", allDay: "終日", noEvents: "今日の予定はありません。", noTasks: "今やることはありません。", start: "開始", stop: "停止",
       markDone: "完了にする", etaMin: "あと {n}分", etaHour: "あと {h}時間{m}分", noNext: "今日の予定はもうありません", week: "第{n}週", dayOfYear: "年内 {n}日目", loading: "読み込み中…",
       captured: "追加しました。", saved: "更新しました。", readonly: "読み取り専用のため変更できません。", error: "読み込めませんでした: ", conflict: "データが更新されています。再読み込みしてやり直してください。", noRevision: "更新用リビジョンを取得できません。再読み込みしてください。", requestFailed: "リクエストに失敗しました", due: "期限 {d}",
-      modeDay: "今日", modeWeek: "7日間", modeMonth: "月", save: "保存", evTitle: "タイトル", evStart: "開始", evEnd: "終了", badRange: "終了は開始より後にしてください。", changeDue: "期限を変更", openInPlanner: "Plannerで開く", details: "詳細", close: "閉じる", type: "種類", statusLabel: "状態", when: "日時", openDetails: "詳細を表示: "}
+      modeDay: "今日", modeWeek: "7日間", modeMonth: "月", save: "保存", evTitle: "タイトル", evDate: "日付", evStart: "開始", evEnd: "終了", badRange: "終了は開始より後にしてください。", changeDue: "期限を変更", openInPlanner: "Plannerで開く", details: "詳細", close: "閉じる", type: "種類", statusLabel: "状態", when: "日時", openDetails: "詳細を表示: "}
   };
   const $ = id => document.getElementById(id);
   const params = new URLSearchParams(location.search);
@@ -99,18 +99,19 @@
       const f = one("from"), tt = one("to");
       if (f && tt) {
         const mk = (id, label, type, val) => { const i = document.createElement("input"); i.type = type; i.id = id; i.value = val; i.setAttribute("aria-label", label); return i; };
-        const ti = mk("detail-title", t.evTitle, "text", item.title), si = mk("detail-start", t.evStart, "time", f.slice(11, 16)), ei = mk("detail-end", t.evEnd, "time", tt.slice(11, 16));
+        const ti = mk("detail-title", t.evTitle, "text", item.title), di = mk("detail-date", t.evDate, "date", f.slice(0, 10)), si = mk("detail-start", t.evStart, "time", f.slice(11, 16)), ei = mk("detail-end", t.evEnd, "time", tt.slice(11, 16));
         const btn = document.createElement("button");
         btn.type = "button"; btn.className = "go"; btn.textContent = t.save;
         btn.onclick = () => {
           const sameDay = tt.slice(0, 10) === f.slice(0, 10);
-          if (!ti.value.trim() || !si.value || !ei.value || (sameDay && ei.value <= si.value)) { say(t.badRange); return; }
+          if (!ti.value.trim() || !di.value || !si.value || !ei.value || (sameDay && ei.value <= si.value)) { say(t.badRange); return; }
           $("detail-dialog").close();
-          const det = Object.assign({}, item.details || {}, {from: f.slice(0, 11) + si.value + f.slice(16), to: tt.slice(0, 11) + ei.value + tt.slice(16)});
+          const span = Math.round((Date.parse(tt.slice(0, 10)) - Date.parse(f.slice(0, 10))) / 86400000);
+          const det = Object.assign({}, item.details || {}, {from: di.value + "T" + si.value + f.slice(16), to: addDays(di.value, span) + "T" + ei.value + tt.slice(16)});
           mutate(() => api(pathFor(item), {expectedRevision: recordRevisions.get(item) || null, method: "PUT",
             headers: {"Content-Type": "application/json"}, body: JSON.stringify({status: item.status, type: item.type, title: ti.value.trim(), details: det})}));
         };
-        acts.append(ti, si, ei, btn);
+        acts.append(ti, di, si, ei, btn);
       }
     }
     if (day) {

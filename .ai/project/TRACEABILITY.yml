@@ -17706,7 +17706,7 @@ traceability:
       capability_id: cap-calendar-multiday-placement
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
       task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1386
-      pull_request: null
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1712
       changed_files_or_scope:
         - lifetxt/web_assets_js_24.js
         - lifetxt/web_assets_js_07.js

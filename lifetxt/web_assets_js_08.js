@@ -702,7 +702,9 @@
         if (e.key === "," || e.key === "<") { e.preventDefault(); calShift(-1); return; }
         if (e.key === "." || e.key === ">") { e.preventDefault(); calShift(1); return; }
         if (e.key === "t" || e.key === "T") { e.preventDefault(); calToday(); return; }
-        if (e.key === "m" || e.key === "M") { e.preventDefault(); setCalMode(calMode === "month" ? "week" : "month"); return; }
+        if (e.key === "m" || e.key === "M") { e.preventDefault(); setCalMode("month"); return; }
+        if (e.key === "w" || e.key === "W") { e.preventDefault(); setCalMode("week"); return; }
+        if (e.key === "d" || e.key === "D") { e.preventDefault(); setCalMode("day"); return; }
       }
       if (e.key === "[" && document.getElementById("detail-drawer").classList.contains("open")) { e.preventDefault(); drawerPrev(); return; }
       if (e.key === "]" && document.getElementById("detail-drawer").classList.contains("open")) { e.preventDefault(); drawerNext(); return; }

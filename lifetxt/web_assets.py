@@ -90,6 +90,7 @@ _JS_RESOURCE_NAMES = (
     "web_assets_js_21.js",
     "web_assets_js_22.js",
     "web_assets_js_23.js",
+    "web_assets_js_24.js",
 )
 
 

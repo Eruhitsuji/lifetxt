@@ -686,7 +686,22 @@ The browser GUI supports:
   [URL Parameters](#url-parameters)) with the same per-occurrence expansion as
   Timeline -- a record matching several days/occurrences within the selected
   range produces one row per match, each with its own `when`.
-- A Calendar view: a month or single-week grid that plots agenda records —
+- A Calendar view with **Day**, **Week** and **Month** modes. Day and Week use
+  a time grid (hour axis, blocks sized by duration, side-by-side columns for
+  overlapping events, an all-day row, and a current-time line); the Timeline
+  view is folded into it, and `?view=timeline` redirects to Calendar Day.
+  Month shows continuous bars for multi-day records and a `+N more` popover.
+  Colors follow the record's `project`. Direct manipulation (mouse/pen, or
+  long press on touch) uses the same revision-guarded save as the editor:
+  drag an empty slot to create an event (across several day columns for a multi-day timed event), drag across all-day cells or Month day cells to create an all-day or multi-day all-day event, drag a block to move it (also to
+  another day), drag its bottom edge to change the end time, and drag a chip
+  or bar in the Month grid or all-day row to another day. Multi-day records
+  move as a whole, date-only (`on`/`due`/`do`) records move by days, and a
+  repeating record asks for confirmation because the change applies to every
+  occurrence (rules with `BYDAY`/`BYMONTHDAY` must be edited in the editor).
+  Read-only records are never moved; a short message explains why. Esc
+  cancels a drag; a stale revision reloads the calendar and shows a message.
+  Records plotted in a month or single-week grid —
   including expanded repeat occurrences — on every day they match, not only
   the first. A multi-day record shows a `day X of Y` badge on each of its
   cells. Cells show the first few entries with a `+N more` expander,
@@ -695,7 +710,7 @@ The browser GUI supports:
   clicking a day number opens that day in Agenda. Prev/Next/Today navigation
   and Month/Week mode are keyboard-driven (`,` `.` previous/next period, `t`
   today, `m` toggle mode) and persisted in the URL via
-  `?view=calendar&calmode=month|week&cal=YYYY-MM-DD`. The first weekday
+  `?view=calendar&calmode=day|week|month&cal=YYYY-MM-DD` (keys `d` `w` `m`). The first weekday
   column follows the `web.week_start` config (`monday` default or `sunday`)
 - A Team view: a presence board combining latest status records (colored
   presence dot and state badge per person), open messages addressed to each
@@ -940,7 +955,7 @@ Supported parameters:
 | `around=now`, `window=1d` | Agenda range |
 | `from=YYYY-MM-DD`, `to=YYYY-MM-DD` | Agenda range |
 | `range=today\|24h\|week` | Timeline range when `view=timeline`; the UI updates this value when range buttons are clicked |
-| `calmode=month\|week` | Calendar grid mode when `view=calendar`; the UI updates this value when the Month/Week buttons are used |
+| `calmode=day\|week\|month` | Calendar mode when `view=calendar`; the UI updates this value when the Day/Week/Month buttons are used |
 | `cal=YYYY-MM-DD` | Anchor date of the visible calendar period; the UI updates this value on Prev/Next/Today navigation |
 | `after=VALUE`, `before=VALUE` | Item time filters |
 | `notify_refresh=SECONDS` | Notification polling interval |
@@ -1300,7 +1315,7 @@ to add a task, event, or note. Empty views explain whether there is no data or
 only no matching result and provide a safe next action. Open **Features** to
 browse destinations by purpose, including Timeline, Graph, and Stats.
 
-Under **Plan your time**, Calendar shows a month or week grid, Agenda lists
+Under **Plan your time**, Calendar shows a day, week or month view, Agenda lists
 upcoming items in date order, and Planner lets you plan a day and log habits.
 
 In an empty writable Items view, select **Create your first task**. Enter a title

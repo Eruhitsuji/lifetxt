@@ -1,12 +1,15 @@
 # contrib/
 
-Example, non-authoritative deployment configuration referenced by
-[`docs/deployment/ubuntu-server.md`](../docs/deployment/ubuntu-server.md).
+Optional utilities and example deployment configuration. Nothing in
+`contrib/` is installed or read by lifetxt itself.
 
-Every file under `contrib/` is a documented template with placeholder
-values (paths, usernames, hostnames, ports). None of it is installed or
-read by `lifetxt` itself -- copy what you need, edit the placeholders, and
-install it into your own system configuration.
+- [Quick Capture practice](quick-capture-practice/README.md) — a local practice
+  site with 50 Japanese exercises covering Quick shorthand, native life.txt,
+  and todo.txt.
+
+The following deployment templates are referenced by the
+[`Ubuntu Server guide`](../docs/deployment/ubuntu-server.md). Copy what you
+need, edit the placeholders, and install it into your own system configuration.
 
 - `systemd/` -- unit/timer/environment-file examples for running
   `lifetxt serve` and periodic `lifetxt sync-ics` under systemd.

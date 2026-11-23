@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Quick Capture 練習室 · life.txt</title>
+<style>
+:root{--canvas:#f4f6f1;--paper:#fff;--ink:#1d2a23;--muted:#526257;--line:#d9e1d8;--green:#174932;--lime:#e4f0d8;--deep:#172e24;--error:#9a322a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--canvas);color:var(--ink);font:1rem/1.65 "Segoe UI","Hiragino Kaku Gothic ProN",Meiryo,sans-serif}
+button,input,select{font:inherit}
+button,select{cursor:pointer}
+button:disabled,select:disabled{cursor:wait;opacity:.65}
+:focus-visible{outline:3px solid #568a68;outline-offset:3px}
+[hidden]{display:none!important}
+header{background:var(--deep);color:#fff}
+.top,.layout{max-width:1120px;margin:0 auto;padding-inline:28px}
+.top{height:66px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.wordmark{display:flex;align-items:center;gap:11px;font:700 1rem ui-monospace,monospace}
+.wordmark span{display:grid;place-items:center;width:29px;height:29px;border-radius:7px;background:#d5ebc7;color:var(--deep);font-size:1.15rem}
+.local{color:#e5efdf;font-size:.85rem}
+.layout{padding-block:34px 56px}
+h1,h2,h3,p{margin:0}
+h1{font-size:clamp(1.8rem,4.8vw,2.8rem);line-height:1.18;letter-spacing:-.035em;margin-bottom:8px}
+.intro{color:var(--muted);margin-bottom:26px}
+.workspace{display:grid;grid-template-columns:245px minmax(0,1fr);gap:22px;align-items:start}
+.sidebar,.card,details.guide{background:var(--paper);border:1px solid var(--line);border-radius:16px}
+.sidebar{padding:17px 13px}
+.sidebar-head{padding:0 9px 9px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.sidebar h2,.history h2{font-size:1rem}
+#progress{font-size:.85rem;color:var(--muted);font-variant-numeric:tabular-nums}
+progress{display:block;width:calc(100% - 18px);height:7px;margin:0 9px 16px;border:none;border-radius:10px;overflow:hidden;background:#e7ece5;accent-color:var(--green)}
+progress::-webkit-progress-bar{background:#e7ece5}
+progress::-webkit-progress-value{background:var(--green)}
+progress::-moz-progress-bar{background:var(--green)}
+#category-control{padding:0 9px 9px}
+#category{width:100%;padding-block:7px;font-size:.87rem}
+#lessons{display:grid;gap:4px;max-height:390px;overflow-y:auto;scrollbar-gutter:stable;padding:4px}
+.lesson{display:flex;align-items:center;gap:10px;text-align:left;border:1px solid transparent;background:none;padding:9px;border-radius:9px;color:var(--ink);font-size:.93rem;font-weight:600;width:100%}
+.lesson:hover{background:#f1f5ef}
+.lesson[aria-current=true]{background:var(--lime);border-color:#d4e6c7;color:var(--green)}
+.lesson-mark{width:25px;height:25px;display:grid;place-items:center;border:1px solid var(--line);background:#fff;border-radius:7px;font:600 .82rem ui-monospace,monospace;flex:none}
+.lesson.completed .lesson-mark{background:var(--green);color:white;border-color:var(--green)}
+.lesson.free{margin-top:9px;border-top:1px solid var(--line)}
+.stage{min-width:0;display:grid;gap:15px}
+.card{overflow:hidden}
+.brief{background:var(--deep);color:white;padding:21px 24px}
+.brief h2{font-size:1.28rem;margin-bottom:8px}
+#position{color:#c9e0c7;font-size:.85rem;margin-bottom:5px}
+#syntax-help{font-size:.88rem;color:var(--muted)}
+#goal{color:#edf4ea}
+#goal code{background:#304c3e;color:white}
+.composer{padding:22px 24px}
+form{display:grid;gap:13px}
+.field{display:grid;gap:5px}
+label{font-size:.9rem;font-weight:700}
+select,input{min-width:0;width:100%;background:#fbfcfa;color:var(--ink);border:1px solid #b6c5b8;border-radius:9px;padding:10px 12px}
+select{width:min(100%, 285px);appearance:none;padding-right:38px;background-image:linear-gradient(45deg,transparent 50%,var(--green) 50%),linear-gradient(135deg,var(--green) 50%,transparent 50%);background-position:calc(100% - 18px) 52%,calc(100% - 13px) 52%;background-size:5px 5px;background-repeat:no-repeat}
+input{min-height:52px;font-family:ui-monospace,Consolas,Meiryo,monospace}
+input::placeholder{color:#68786b}
+.actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.primary,.subtle{border-radius:8px;padding:8px 15px;border:1px solid transparent;font-weight:650}
+.primary{background:var(--green);color:white}
+.primary:hover{background:#226241}
+.subtle{background:#fff;border-color:var(--line);color:var(--green)}
+.subtle:hover{background:#edf4ea}
+#next{margin-top:10px}
+code{font-family:ui-monospace,Consolas,Meiryo,monospace;background:#edf3ec;border-radius:4px;padding:.08em .28em;overflow-wrap:anywhere}
+.hint,.output,.message{margin-top:14px;padding:12px 14px;background:#f2f6ef;border:1px solid #dce8d8;border-radius:9px;overflow-wrap:anywhere}
+.message:empty{display:none}
+.message.error{background:#fff3ef;color:var(--error);border-color:#efcac4}
+.output h3{font-size:.98rem;margin-bottom:7px}
+.output dl{margin:0 0 9px;display:grid;grid-template-columns:minmax(74px,auto) minmax(0,1fr);column-gap:14px;font-size:.9rem}
+.output dt{font-family:ui-monospace,monospace;color:var(--muted)}
+.output dd{margin:0;white-space:pre-wrap}
+.line{display:block;white-space:pre-wrap;padding:8px 10px;margin-top:7px;font-size:.9rem}
+.warnings{color:#714c10;font-size:.88rem;margin-top:8px}
+details.guide{overflow:hidden}
+summary{padding:13px 17px;cursor:pointer;color:var(--green);font-weight:700}
+.guide-body{padding:0 17px 15px;color:var(--muted)}
+.guide-body h3{margin:1rem 0 .3rem;color:var(--ink);font-size:1rem}
+.guide-body p+p,.guide-body .line+p{margin-top:.55rem}
+.guide-body a{color:var(--green)}
+.guide dl{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin:8px 0 12px}
+.guide dd{margin:0}
+.history{padding:4px 2px}
+.history p{color:var(--muted);font-size:.93rem}
+.history ol{list-style:none;padding:0;margin:8px 0 0;display:grid;gap:6px}
+.history li{border-bottom:1px solid var(--line);padding:3px 0 8px}
+.history li span{color:var(--muted);font-size:.85rem}
+@media(max-width:730px){
+  .top,.layout{padding-inline:16px}
+  .layout{padding-block:23px 35px}
+  .workspace{grid-template-columns:1fr;gap:14px}
+  #lessons{grid-template-columns:repeat(2,minmax(0,1fr));max-height:165px}
+  .guide dl{grid-template-columns:1fr;row-gap:3px}
+  .guide dd{margin-bottom:8px}
+  .brief,.composer{padding:16px}
+}
+</style>
+</head>
+<body>
+<header><div class="top">
+  <div class="wordmark"><span aria-hidden="true">›</span>life.txt</div>
+  <div class="local">ローカル練習</div>
+</div></header>
+<main class="layout">
+  <h1>Quick Capture 練習室</h1>
+  <p class="intro">Web UI と同じ流れで1行を入力し、50問で life.txt への変換を練習できます。</p>
+  <div class="workspace">
+    <aside class="sidebar" aria-labelledby="lesson-title">
+      <div class="sidebar-head"><h2 id="lesson-title">練習メニュー</h2><span id="progress"></span></div>
+      <progress id="progress-bar" aria-label="練習問題の達成数" value="0"></progress>
+      <div id="category-control" class="field">
+        <label for="category">出題範囲</label>
+        <select id="category"></select>
+      </div>
+      <nav id="lessons" aria-label="練習問題"></nav>
+      <button id="free" class="lesson free" type="button"><span class="lesson-mark" aria-hidden="true">+</span>自由入力</button>
+    </aside>
+    <div class="stage">
+      <section class="card" aria-labelledby="current">
+        <div class="brief"><p id="position"></p><h2 id="current"></h2><p id="goal"></p></div>
+        <div class="composer">
+          <form id="capture">
+            <div class="field">
+              <label for="syntax">入力形式</label>
+              <select id="syntax" aria-describedby="syntax-help"><option value="quick">Quick（既定）</option><option value="todo">todo.txt（確認必須）</option></select>
+              <p id="syntax-help"></p>
+            </div>
+            <div class="field">
+              <label for="input">記録する1行</label>
+              <input id="input" autocomplete="off" spellcheck="false" enterkeyhint="done" maxlength="3500" required>
+            </div>
+            <div class="actions">
+              <button id="submit" class="primary">記録</button>
+              <button id="confirm" type="button" class="primary" hidden>確認して記録</button>
+              <button id="hint-button" type="button" class="subtle" aria-expanded="false" aria-controls="hint">入力例を見る</button>
+            </div>
+          </form>
+          <div id="hint" class="hint" hidden><code id="example"></code></div>
+          <div id="message" class="message" role="status" aria-live="polite"></div>
+          <section id="output" class="output" aria-labelledby="output-title" hidden>
+            <h3 id="output-title"></h3>
+            <dl id="fields"></dl>
+            <code id="line" class="line"></code>
+            <p id="warnings" class="warnings" hidden></p>
+          </section>
+          <button id="next" type="button" class="subtle" hidden>次の練習へ</button>
+        </div>
+      </section>
+      <details class="guide">
+        <summary>Quick 省略記法</summary>
+        <div class="guide-body">
+          <p>形式は「Quick（既定）」を選びます。1行を入力して「記録」を押すと、未完了のタスク <code>[ ] T</code> に変換されます。</p>
+          <dl>
+            <dt><code>@home</code></dt><dd><code>project:home</code>（プロジェクト）</dd>
+            <dt><code>#買い物</code></dt><dd><code>tag:買い物</code>（タグ）。<code>#買い物 #家電</code> のように繰り返せます。</dd>
+            <dt><code>!high</code></dt><dd><code>priority:high</code>（優先度）</dd>
+            <dt><code>^tomorrow</code></dt><dd><code>due:</code>（期限）。日付に変換されます。</dd>
+          </dl>
+          <h3>期限の書き方</h3>
+          <dl>
+            <dt>固定日</dt><dd><code>^2026-12-01</code></dd>
+            <dt>相対日</dt><dd><code>^today</code>、<code>^tomorrow</code>、<code>^yesterday</code></dd>
+            <dt>曜日</dt><dd><code>^friday</code> は次に来る金曜日、<code>^next_friday</code> はそこからさらに7日後、<code>^next_week</code> は次に来る月曜日です。同じ曜日を指定した場合、「次に来る」は7日後です。</dd>
+            <dt>オフセット</dt><dd><code>^+3d</code>、<code>^-1w</code>、<code>^+2m</code>、<code>^+1y</code>。月・年の移動で同じ日がない場合は移動先の月末になります。</dd>
+          </dl>
+          <p>相対日はこの練習室を起動したPCの日付で計算します。記号付きの語は半角スペースで区切ります。<code>\@home</code> はタイトルに <code>@home</code> を残し、<code>help@example.com</code> のように語の途中にある記号もそのまま残ります。</p>
+        </div>
+      </details>
+      <details class="guide">
+        <summary>正式な life.txt 形式</summary>
+        <div class="guide-body">
+          <p>形式は「Quick（既定）」を選びます。<code>[</code> で始まる入力は正式な1行として解釈されます。状態・種類・タイトルに続けて、必要な <code>key:value</code> を書きます。</p>
+          <code class="line">[ ] E "定例 会議" from:2026-12-02T13:00 to:2026-12-02T14:00 loc:"会議室 A"</code>
+          <h3>状態と種類</h3>
+          <p><code>[ ]</code> 未完了、<code>[/]</code> 進行中、<code>[x]</code> 完了、<code>[-]</code> キャンセル、<code>[&gt;]</code> 延期・移動、<code>[?]</code> 保留、<code>[N]</code> メモ・日誌を表します。</p>
+          <p><code>T</code> タスク、<code>E</code> 予定、<code>D</code> 締切、<code>R</code> リマインダー、<code>H</code> 習慣、<code>N</code> メモ、<code>S</code> 在席状況、<code>M</code> メッセージ、<code>J</code> 日誌を表します。たとえばメモは <code>[N] N 読書メモ</code>、進行中のタスクは <code>[/] T 資料を作る</code> と書きます。</p>
+          <h3>よく使う詳細項目</h3>
+          <dl>
+            <dt>タスク・締切</dt><dd><code>do:2026-12-01</code> は着手予定日、<code>due:2026-12-05</code> は期限、<code>done:2026-11-22</code> は完了日です。</dd>
+            <dt>予定</dt><dd><code>on:2026-12-02</code> は日付のみ。時刻が必要なら <code>from:</code> と <code>to:</code> に日時を書きます。<code>2026-12-02T13:00+09:00</code> のようにUTCとの差も指定できます。</dd>
+            <dt>リマインダー・習慣</dt><dd><code>on:2026-12-03 at:18:30</code> で日付と時刻、<code>repeat:daily at:07:30</code> で毎日の時刻を指定できます。</dd>
+            <dt>メモ・日誌</dt><dd><code>body:"第3章を読み直す"</code> で本文、日誌では <code>on:</code> で日付も指定できます。</dd>
+            <dt>在席状況・メッセージ</dt><dd>在席状況は <code>state:</code> と <code>from:</code> が必要です。メッセージは <code>sender:</code> と <code>recipient:</code> が必要です。</dd>
+          </dl>
+          <h3>引用符、複数値、JSON</h3>
+          <p>空白を含むタイトルや値は半角の <code>"</code> で囲みます。引用内の半角 <code>"</code> は <code>\"</code>、バックスラッシュは <code>\\</code> と書きます。詳細項目間は半角スペース1つを使います。</p>
+          <p>同じ項目を複数指定するには <code>tag:自宅 tag:手続き</code> と書きます。正式形式の期限は <code>due:2026-12-01</code> のような日付で記述し、相対日を変換する <code>^tomorrow</code> は省略記法で使います。</p>
+          <p>独自キーも使えます。たとえば <code>options:json&lt;&lt; {"room":"A","seats":12} &gt;&gt;</code> はオブジェクト1個です。最上位の配列は値の一覧になり、配列そのものを値1個として持たせる場合は <code>[[...]]</code> と書きます。意図的な独自キーでも練習結果に警告が表示されることがあります。</p>
+          <p>Quick Capture は物理的な1行を受け付けます。ファイル形式にある複数行本文や継続行は、ファイルを編集する際に使います。</p>
+          <p><a href="https://github.com/Eruhitsuji/lifetxt/blob/f43316f48fdb77d66c8befbe538d0c217a4dd4f8/docs/ja/life_txt_format_spec.md">life.txt フォーマット仕様</a></p>
+        </div>
+      </details>
+      <details class="guide">
+        <summary>todo.txt 形式とプレビュー</summary>
+        <div class="guide-body">
+          <p>形式を「todo.txt（確認必須）」に切り替えます。「プレビュー」を押し、変換された状態・期限・プロジェクトなどを確認してから「確認して記録」を押します。入力を編集したときは再プレビューします。</p>
+          <h3>未完了・完了の書き方</h3>
+          <code class="line">(A) 2026-11-20 見積もりを送る +Work @office due:2026-12-01</code>
+          <p>未完了の行では、先頭に任意の優先度 <code>(A)</code>〜<code>(Z)</code>、続けて任意の作成日、その後にタイトルを書きます。</p>
+          <code class="line">x 2026-11-22 2026-11-20 見積もりを送る +Work pri:A</code>
+          <p>完了は先頭の小文字 <code>x</code> で表します。最初の日付が完了日、次の日付が作成日です。作成日は省略できます。lifetxt の変換では完了日を書き、完了タスクの優先度を保持する場合は <code>pri:A</code> が使えます。</p>
+          <h3>life.txt への変換</h3>
+          <dl>
+            <dt>通常の行／<code>x</code></dt><dd><code>[ ] T</code>／<code>[x] T</code></dd>
+            <dt><code>(A)</code>・<code>pri:A</code></dt><dd><code>priority:A</code></dd>
+            <dt><code>+Work</code></dt><dd><code>project:Work</code></dd>
+            <dt><code>@office</code></dt><dd><code>context:office</code>。Quick 省略記法の <code>@home</code> は <code>project:home</code> になるため、入力形式で意味が変わります。</dd>
+            <dt>行頭付近の日付</dt><dd>未完了なら作成日 <code>created:</code>。完了なら完了日 <code>done:</code>、作成日 <code>created:</code> の順です。</dd>
+            <dt><code>due:2026-12-01</code></dt><dd><code>due:2026-12-01</code>。期限は <code>due:</code> に明示します。</dd>
+            <dt>メタデータ</dt><dd><code>est:25m</code> や <code>tag:重要 tag:経理</code> など。プロジェクトとコンテキストも複数指定できます。</dd>
+          </dl>
+          <p>変換時に既定の <code>source:todo.txt</code> と <code>id:</code> もプレビューに表示されます。日付や値に構文上の問題がある場合、プレビューはエラーとして返ることがあります。値に空白が必要な項目は正式な life.txt 形式が使えます。</p>
+          <p><a href="https://github.com/Eruhitsuji/lifetxt/blob/f43316f48fdb77d66c8befbe538d0c217a4dd4f8/docs/ja/quick-capture.md">lifetxt の Quick Capture ガイド</a></p>
+        </div>
+      </details>
+      <section class="history" aria-labelledby="history-title">
+        <h2 id="history-title">練習履歴</h2>
+        <p id="empty">このページで記録した結果が表示されます。再読み込みで消えます。</p>
+        <ol id="history"></ol>
+      </section>
+    </div>
+  </div>
+</main>
+<script>
+"use strict";
+
+const groups = [
+  {name:"Quick 省略記法", rows:[
+    ["タイトルだけ", "「牛乳を買う」をタスクとして記録してください。", "牛乳を買う"],
+    ["プロジェクトと複数タグ", "「電池を買う」にプロジェクト home、タグ 買い物 と 家電 を付けてください。", "電池を買う @home #買い物 #家電"],
+    ["優先度と明日の期限", "「資料を提出する」に優先度 high と明日の期限を付けてください。", "資料を提出する !high ^tomorrow"],
+    ["今日が期限", "「ゴミを出す」の期限を今日に設定してください。", "ゴミを出す ^today"],
+    ["昨日の期限", "「先月分の明細を確認する」の期限を昨日として記録してください。", "先月分の明細を確認する ^yesterday"],
+    ["日単位のオフセット", "「荷物を受け取る」の期限を今日から3日後に設定してください。", "荷物を受け取る ^+3d"],
+    ["週単位のオフセット", "「申請状況を確認する」の期限を今日から1週間前に設定してください。", "申請状況を確認する ^-1w"],
+    ["月単位のオフセット", "「定期券を更新する」の期限を今日から1か月後に設定してください。目的の月に同じ日がなければその月の末日です。", "定期券を更新する ^+1m"],
+    ["年単位のオフセット", "「点検を予約する」の期限を今日から1年後に設定してください。目的の年に同じ日がなければその月の末日です。", "点検を予約する ^+1y"],
+    ["次の金曜日", "「週報を出す」の期限を次に来る金曜日に設定してください。今日が金曜日なら7日後です。", "週報を出す ^friday"],
+    ["次の月曜日", "「来週の準備をする」の期限を次に来る月曜日に設定してください。今日が月曜日なら7日後です。", "来週の準備をする ^next_week"],
+    ["さらに次の水曜日", "「次回の議題を送る」の期限を、次に来る水曜日からさらに7日後に設定してください。", "次回の議題を送る ^next_wednesday"],
+    ["記号をタイトルに残す", "「@home の使い方を書く」をそのままタイトルにして、タグ 手順 を付けてください。", String.raw`\@home の使い方を書く #手順`],
+    ["メールアドレスと固定期限", "「help@example.com に問い合わせる」の期限を2026-12-03に設定してください。", "help@example.com に問い合わせる ^2026-12-03"]
+  ]},
+  {name:"正式な life.txt 形式", rows:[
+    ["空白を含むタイトル", "未完了のタスクとして「朝の 点検」を記録し、プロジェクト office を設定してください。", '[ ] T "朝の 点検" project:office'],
+    ["進行中と進捗率", "進行中のタスク「机を片付ける」を、進捗 75% で記録してください。", "[/] T 机を片付ける progress:75%"],
+    ["完了と完了日", "「領収書を整理する」を2026-11-22に完了したタスクとして記録してください。", "[x] T 領収書を整理する done:2026-11-22"],
+    ["キャンセル理由", "「会場を見学する」をキャンセルし、理由を「日程が 合わない」と記録してください。", '[-] T 会場を見学する reason:"日程が 合わない"'],
+    ["延期先の日付", "「本棚を組み立てる」を延期し、移動先を2026-12-06に設定してください。", "[>] T 本棚を組み立てる moved_to:2026-12-06"],
+    ["保留と補足", "「印刷部数を決める」を保留にし、補足 note に「回答待ち」と記録してください。", "[?] T 印刷部数を決める note:回答待ち"],
+    ["時刻付きの予定", "未完了の予定「定例会」を2026-12-02の13:00〜14:00、場所「会議室 A」で記録してください。", '[ ] E 定例会 from:2026-12-02T13:00 to:2026-12-02T14:00 loc:"会議室 A"'],
+    ["日付だけの予定", "未完了の予定「休館日」を2026-12-07の日付だけで記録してください。", "[ ] E 休館日 on:2026-12-07"],
+    ["タイムゾーン付き日時", "未完了の予定「海外チーム定例」を2026-12-05の09:00〜09:30、両方とも UTC+09:00 で記録してください。", "[ ] E 海外チーム定例 from:2026-12-05T09:00+09:00 to:2026-12-05T09:30+09:00"],
+    ["締切は D", "未完了の締切「応募書類の提出」を2026-12-15の17:00に設定してください。", "[ ] D 応募書類の提出 due:2026-12-15T17:00"],
+    ["リマインダーは R", "未完了のリマインダー「薬を受け取る」を2026-12-03の18:30に設定してください。", "[ ] R 薬を受け取る on:2026-12-03 at:18:30"],
+    ["繰り返しの習慣", "未完了の習慣「英単語を復習する」を毎日07:30に設定してください。", "[ ] H 英単語を復習する repeat:daily at:07:30"],
+    ["メモと本文", "「読書メモ」をメモとして記録し、本文に「第3章を読み直す」を入れてください。", '[N] N "読書メモ" body:"第3章を読み直す"'],
+    ["日付付きの日誌", "「作業日誌」を2026-11-21の日誌として、本文「レビューを終えた」で記録してください。", "[N] J 作業日誌 on:2026-11-21 body:レビューを終えた"],
+    ["在席状況", "進行中の在席状況「集中作業」を、状態 focus、開始2026-12-02の09:00、person は aki として記録してください。", "[/] S 集中作業 state:focus from:2026-12-02T09:00 person:aki"],
+    ["メッセージと複数宛先", "未完了のメッセージ「集合案内」を、送信者 aki、宛先 sora と yui、本文「入口で集合」で記録してください。", "[ ] M 集合案内 sender:aki recipient:sora recipient:yui body:入口で集合"],
+    ["複数タグと着手日", "未完了のタスク「引越し準備」にタグ 自宅 と 手続き を付け、着手日を2026-12-01、期限を2026-12-10に設定してください。", "[ ] T 引越し準備 tag:自宅 tag:手続き do:2026-12-01 due:2026-12-10"],
+    ["本文に引用符を書く", '「質問メモ」をメモとして記録し、本文を 係員が "OK" と言った にしてください。半角の二重引用符も本文の一部です。', String.raw`[N] N 質問メモ body:"係員が \"OK\" と言った"`],
+    ["着手条件を指定する", "未完了のタスク「公開する」に、ID が review の項目が完了したら着手できる条件を付けてください。", "[ ] T 公開する requires:review=done"],
+    ["型付き JSON の独自項目", "未完了のタスク「会場を点検する」に、独自キー options で room が文字列 A、seats が数値 12 の JSON オブジェクトを付けてください。", '[ ] T 会場を点検する options:json<< {"room":"A","seats":12} >>']
+  ]},
+  {name:"todo.txt 形式", syntax:"todo", rows:[
+    ["プレビューして確定", "「見積もりを送る」に優先度 A、プロジェクト Work、コンテキスト office、期限2026-12-01を付け、プレビューしてから確定してください。", "(A) 見積もりを送る +Work @office due:2026-12-01"],
+    ["タイトルだけのタスク", "未完了のタスク「切手を買う」を追加してください。", "切手を買う"],
+    ["優先度の位置", "未完了のタスク「窓口に電話する」の優先度を B に設定してください。", "(B) 窓口に電話する"],
+    ["未完了タスクの作成日", "「封筒を用意する」を2026-11-20に作成した未完了のタスクとして記録してください。", "2026-11-20 封筒を用意する"],
+    ["優先度と作成日", "未完了のタスク「会場を確認する」に優先度 C と作成日2026-11-19を設定してください。", "(C) 2026-11-19 会場を確認する"],
+    ["完了日を記録", "「請求書を送る」を2026-11-22に完了したタスクとして記録してください。作成日は省略します。", "x 2026-11-22 請求書を送る"],
+    ["完了日と作成日", "「倉庫を片付ける」を作成日2026-11-16、完了日2026-11-22のタスクとして記録してください。", "x 2026-11-22 2026-11-16 倉庫を片付ける"],
+    ["複数プロジェクト", "未完了のタスク「旅行先を調べる」にプロジェクト Travel と Family を付けてください。", "旅行先を調べる +Travel +Family"],
+    ["複数コンテキスト", "未完了のタスク「空席を確認する」にコンテキスト phone と train を付けてください。", "空席を確認する @phone @train"],
+    ["明示キーのプロジェクトとコンテキスト", "未完了のタスク「振り込みを確認する」にプロジェクト Finance とコンテキスト home を付けてください。入力例では key:value 表記を使います。", "振り込みを確認する project:Finance context:home"],
+    ["期限は due: で指定", "「申込書を書く」の期限を2026-12-04に設定してください。", "申込書を書く due:2026-12-04"],
+    ["作成日と期限を区別", "未完了のタスク「予約を取り直す」を作成日2026-11-21、期限2026-12-08で記録してください。", "2026-11-21 予約を取り直す due:2026-12-08"],
+    ["見積もり時間のメタデータ", "未完了のタスク「別館を点検する」に、見積もり時間25分を est: で付けてください。", "別館を点検する est:25m"],
+    ["複数のメタデータ値", "未完了のタスク「箱にラベルを貼る」に tag として fragile と archive を付けてください。", "箱にラベルを貼る tag:fragile tag:archive"],
+    ["記号を含むタイトル", "未完了のタスク「ops@example.com に C++ の資料を送る」を、プロジェクト Dev に付けてください。", "ops@example.com に C++ の資料を送る +Dev"],
+    ["完了タスクの優先度を保持", "「立替を精算する」を完了日2026-11-23、作成日2026-11-17、優先度 B、プロジェクト Finance で記録してください。入力例では互換キー pri: を使います。", "x 2026-11-23 2026-11-17 立替を精算する +Finance pri:B"]
+  ]}
+];
+
+const exercises = groups.flatMap((group, groupIndex) =>
+  group.rows.map(([name, goal, example]) => ({name, goal, example, groupIndex, syntax:group.syntax ?? "quick"}))
+);
+exercises.push({name:"自由入力", goal:"好きな1行を入力して、解析されたフィールドと life.txt 形式を確認できます。"});
+const $ = id => document.getElementById(id);
+const form = $("capture"), input = $("input"), syntax = $("syntax");
+const category = $("category"), free = $("free");
+const submit = $("submit"), confirm = $("confirm"), hintButton = $("hint-button");
+const output = $("output"), next = $("next"), message = $("message");
+const completed = new Set();
+const total = exercises.length - 1;
+let selected = 0;
+let visibleGroup = 0;
+let pending = false;
+let preview = null;
+
+const labels = {
+  title:"タイトル", status:"状態", type:"種別", project:"プロジェクト", tag:"タグ",
+  priority:"優先度", due:"期限", body:"本文", context:"コンテキスト"
+};
+
+for (const [groupIndex, group] of groups.entries()) {
+  category.add(new Option(group.name, groupIndex));
+}
+
+const buttons = exercises.slice(0, total).map((exercise, index) => {
+  const button = document.createElement("button");
+  const marker = document.createElement("span");
+  button.type = "button";
+  button.className = "lesson";
+  marker.className = "lesson-mark";
+  marker.setAttribute("aria-hidden", "true");
+  button.append(marker, exercise.name);
+  button.addEventListener("click", () => selectExercise(index, true));
+  $("lessons").append(button);
+  return button;
+});
+
+function updateProgress() {
+  $("progress").textContent = `${completed.size} / ${total}`;
+  $("progress-bar").max = total;
+  $("progress-bar").value = completed.size;
+  for (const [groupIndex, group] of groups.entries()) {
+    const count = [...completed].filter(index => exercises[index].groupIndex === groupIndex).length;
+    category.options[groupIndex].text = `${group.name}（${count}/${group.rows.length}）`;
+  }
+  for (const [index, button] of buttons.entries()) {
+    const done = completed.has(index);
+    button.hidden = exercises[index].groupIndex !== visibleGroup;
+    button.classList.toggle("completed", done);
+    button.firstChild.textContent = done ? "✓" : String(index + 1);
+    button.setAttribute("aria-current", String(index === selected));
+    button.setAttribute("aria-label", exercises[index].name + (done ? "（達成済み）" : ""));
+  }
+  free.setAttribute("aria-current", String(selected === total));
+}
+
+function notify(text = "", error = false) {
+  message.textContent = text;
+  message.classList.toggle("error", error);
+}
+
+function invalidatePreview() {
+  if (preview) output.hidden = true;
+  preview = null;
+  confirm.hidden = true;
+}
+
+function setHint(open) {
+  $("hint").hidden = !open;
+  hintButton.setAttribute("aria-expanded", String(open));
+  hintButton.textContent = open ? "入力例を閉じる" : "入力例を見る";
+}
+
+function updateSyntax() {
+  const isTodo = syntax.value === "todo";
+  submit.textContent = isTodo ? "プレビュー" : "記録";
+  input.placeholder = isTodo ? "(B) 切手を買う +私用 @駅前" : "覚えておきたいことを1行で入力";
+}
+
+function selectExercise(index, focus = false) {
+  selected = index;
+  const exercise = exercises[index];
+  if (index < total) {
+    visibleGroup = exercise.groupIndex;
+    category.value = visibleGroup;
+  }
+  $("position").textContent = index < total
+    ? `第${index + 1}問 · ${groups[visibleGroup].name}`
+    : "";
+  $("position").hidden = index === total;
+  $("current").textContent = exercise.name;
+  $("goal").textContent = exercise.goal;
+  $("syntax-help").textContent = index === total
+    ? "入力に合った形式を選べます。"
+    : exercise.syntax === "todo"
+      ? "この問題では「todo.txt（確認必須）」に切り替えます。"
+      : "この問題では「Quick（既定）」を使います。";
+  $("example").textContent = exercise.example ?? "";
+  hintButton.hidden = !exercise.example;
+  setHint(false);
+  input.value = "";
+  syntax.value = "quick";
+  invalidatePreview();
+  output.hidden = true;
+  next.hidden = true;
+  notify();
+  updateProgress();
+  if (index < total) {
+    const list = $("lessons");
+    const bounds = list.getBoundingClientRect();
+    const button = buttons[index].getBoundingClientRect();
+    if (button.top < bounds.top) list.scrollTop -= bounds.top - button.top + 4;
+    else if (button.bottom > bounds.bottom) list.scrollTop += button.bottom - bounds.bottom + 4;
+  }
+  updateSyntax();
+  if (focus) input.focus();
+}
+
+function displayValue(value) {
+  return typeof value === "string" ? value : JSON.stringify(value);
+}
+
+function canonicalJSON(value) {
+  if (Array.isArray(value)) return "[" + value.map(canonicalJSON).join(",") + "]";
+  if (value && typeof value === "object") {
+    return "{" + Object.keys(value).sort().map(key =>
+      JSON.stringify(key) + ":" + canonicalJSON(value[key])
+    ).join(",") + "}";
+  }
+  return JSON.stringify(value);
+}
+
+function showItem(item, reviewing) {
+  $("output-title").textContent = reviewing ? "todo.txt の変換プレビュー" : "記録した内容";
+  const fields = $("fields");
+  fields.replaceChildren();
+  const entries = [["title", item.title], ["status", item.status], ["type", item.type], ...Object.entries(item.details)];
+  for (const [key, value] of entries) {
+    const name = document.createElement("dt");
+    const content = document.createElement("dd");
+    name.textContent = key;
+    content.textContent = Array.isArray(value) ? value.map(displayValue).join(" / ") : displayValue(value);
+    fields.append(name, content);
+  }
+  $("line").textContent = item.line;
+  $("warnings").hidden = !item.warnings.length;
+  $("warnings").textContent = "警告 " + item.warnings.join(" / ");
+  output.hidden = false;
+}
+
+function grade(item, expected) {
+  if (!expected) return [];
+  const differences = [];
+  if (item.mode !== expected.mode) differences.push("入力形式");
+  for (const key of ["title", "status", "type"]) {
+    if (item[key] !== expected[key]) differences.push(labels[key]);
+  }
+  const keys = new Set([...Object.keys(item.details), ...Object.keys(expected.details)]);
+  for (const key of keys) {
+    if (key === "id" || key === "source") continue;
+    const actual = (item.details[key] ?? []).map(canonicalJSON).sort();
+    const target = (expected.details[key] ?? []).map(canonicalJSON).sort();
+    if (JSON.stringify(actual) !== JSON.stringify(target)) {
+      differences.push(Object.hasOwn(labels, key) ? labels[key] : key);
+    }
+  }
+  return differences;
+}
+
+function record(data) {
+  const {item, expected} = data;
+  const differences = grade(item, expected);
+  const passed = expected && !differences.length;
+  if (passed) completed.add(selected);
+  updateProgress();
+  invalidatePreview();
+  showItem(item, false);
+  input.value = "";
+  next.hidden = !passed;
+  next.textContent = selected + 1 === total ? "自由入力へ" : "次の練習へ";
+  if (passed) {
+    notify(completed.size === total ? "正解です。すべての練習問題を達成しました。" : "正解です。練習履歴に記録しました。");
+  } else if (differences.length) {
+    notify(`記録しました。問題の条件と異なる項目は「${differences.join("、")}」です。`, true);
+  } else {
+    notify("練習履歴に記録しました。");
+  }
+
+  const row = document.createElement("li");
+  const label = document.createElement("span");
+  const line = document.createElement("code");
+  label.textContent = exercises[selected].name + (passed ? "・正解" : differences.length ? "・条件と相違あり" : "");
+  line.className = "line";
+  line.textContent = item.line;
+  row.append(label, line);
+  $("history").prepend(row);
+  $("empty").hidden = true;
+}
+
+function setPending(value) {
+  pending = value;
+  form.setAttribute("aria-busy", String(value));
+  input.readOnly = value;
+  for (const control of [syntax, submit, confirm, next, category, free, ...buttons]) {
+    control.disabled = value;
+  }
+}
+
+function onEdit() {
+  if (preview) notify("入力が変わりました。もう一度プレビューしてください。");
+  else notify();
+  invalidatePreview();
+  next.hidden = true;
+}
+
+syntax.addEventListener("change", () => { onEdit(); updateSyntax(); });
+input.addEventListener("input", onEdit);
+input.addEventListener("paste", event => {
+  if (/[\r\n\v\f\x1c-\x1e\u0085\u2028\u2029]/u.test(event.clipboardData?.getData("text") ?? "")) {
+    event.preventDefault();
+    notify("1行だけ貼り付けてください。", true);
+  }
+});
+hintButton.addEventListener("click", () => setHint($("hint").hidden));
+category.addEventListener("change", () => {
+  const groupIndex = Number(category.value);
+  const first = exercises.findIndex(exercise => exercise.groupIndex === groupIndex);
+  $("lessons").scrollTop = 0;
+  selectExercise(first);
+});
+free.addEventListener("click", () => selectExercise(total, true));
+next.addEventListener("click", () => selectExercise(Math.min(selected + 1, total), true));
+
+form.addEventListener("submit", async event => {
+  event.preventDefault();
+  if (pending) return;
+  invalidatePreview();
+  output.hidden = true;
+  next.hidden = true;
+  notify();
+  const text = input.value;
+  const mode = syntax.value;
+  const exercise = exercises[selected];
+  setPending(true);
+  try {
+    const response = await fetch("/resolve", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({text, syntax:mode, example:exercise.example, exampleSyntax:exercise.syntax ?? "quick"})
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      notify(`入力を確認してください。 ${data.error}`, true);
+    } else if (mode === "todo") {
+      preview = {text, data};
+      showItem(data.item, true);
+      confirm.hidden = false;
+      notify("変換された内容を確認し、「確認して記録」を押してください。");
+    } else {
+      record(data);
+    }
+  } catch {
+    notify("解析できませんでした。起動したターミナルが開いているか確認してください。", true);
+  } finally {
+    setPending(false);
+    input.focus({preventScroll:true});
+  }
+});
+
+confirm.addEventListener("click", () => {
+  if (pending || !preview || input.value !== preview.text || syntax.value !== "todo") {
+    invalidatePreview();
+    notify("もう一度プレビューしてください。", true);
+    return;
+  }
+  record(preview.data);
+  input.focus({preventScroll:true});
+});
+
+selectExercise(0);
+</script>
+</body>
+</html>

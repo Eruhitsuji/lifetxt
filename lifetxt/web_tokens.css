@@ -6,7 +6,7 @@
 --accent:#0e7a65;--accent-hover:#0a6252;--accent-soft:#e0f0ea;--accent-ink:#fff;
 --danger:#b23c2e;--danger-soft:#fbeae7;--warn:#9a5b04;--warn-soft:#fdf3de;
 --ok:#1a7a45;--ok-soft:#e2f5e9;--info:#175f9e;--info-soft:#e4eefa;--violet:#6d4fc4;--violet-soft:#ece6fa;
---focus:#175f9e;--focus-ring:#e29b22;--hero-a:#27343d;--hero-b:#1f4a47;
+--focus:#175f9e;--focus-ring:#e29b22;--on-hero:#fff;--hero-a:#27343d;--hero-b:#1f4a47;
 --shadow-1:0 1px 2px rgba(16,26,21,.06);--shadow-2:0 4px 18px rgba(16,26,21,.10);--shadow-3:0 18px 48px rgba(16,26,21,.20);
 --r-sm:.45rem;--r-md:.7rem;--r-lg:1rem;
 --font-ui:"Segoe UI Variable Text","Segoe UI","Yu Gothic UI","Hiragino Sans","Noto Sans JP",sans-serif;

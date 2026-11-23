@@ -22,7 +22,7 @@ REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
 # calculated the same assembled page Git blob hash.
 # Calculated using _CSS_RESOURCE_NAMES / _JS_RESOURCE_NAMES assembly order,
 # before brand injection (CSS 06/07 precede 05).
-LEGACY_PRISTINE_GIT_BLOB_SHA = "0fe1c6f068903d4ef7147f7adc1591a4d8136363"
+LEGACY_PRISTINE_GIT_BLOB_SHA = "f3806f3dfeebba0891bb62024fa738d187dbc096"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )
@@ -111,7 +111,9 @@ class WebAssetExtractionTests(unittest.TestCase):
         self.assertEqual(template.count(web_assets._STYLE_MARKER), 1)
         self.assertEqual(template.count(web_assets._SCRIPT_MARKER), 1)
 
-        styles = "".join(
+        styles = package.joinpath("web_tokens.css").read_text(
+            encoding="utf-8"
+        ) + "".join(
             package.joinpath(name).read_text(encoding="utf-8")
             for name in web_assets._CSS_RESOURCE_NAMES
         )

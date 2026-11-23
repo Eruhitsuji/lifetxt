@@ -112,7 +112,9 @@ def web_resource_bytes(name: str) -> bytes:
 def _assemble_planner_html() -> str:
     template = _read_resource("web_planner.html")
     template = template.replace(
-        "__PLANNER_CSS__", _read_resource("web_tokens.css") + _read_resource("web_planner.css")
+        "__PLANNER_CSS__", _read_resource("web_tokens.css")
+        + _read_resource("web_tokens_auto.css")
+        + _read_resource("web_planner.css")
     )
     script = _read_resource("web_planner.js")
     return template.replace(
@@ -127,7 +129,9 @@ PLANNER_HTML_PAGE = _assemble_planner_html()
 def _assemble_desk_html() -> str:
     template = _read_resource("web_desk.html")
     template = template.replace(
-        "__DESK_CSS__", _read_resource("web_tokens.css") + _read_resource("web_desk.css")
+        "__DESK_CSS__", _read_resource("web_tokens.css")
+        + _read_resource("web_tokens_auto.css")
+        + _read_resource("web_desk.css")
     )
     script = _read_resource("web_desk.js")
     return template.replace(
@@ -144,7 +148,9 @@ def _assemble_state_html() -> str:
     if template.count("__STATE_CSS__") != 1 or template.count("__STATE_JS__") != 1:
         raise RuntimeError("web_state.html must contain one CSS and JS marker")
     template = template.replace(
-        "__STATE_CSS__", _read_resource("web_tokens.css") + _read_resource("web_state.css")
+        "__STATE_CSS__", _read_resource("web_tokens.css")
+        + _read_resource("web_tokens_auto.css")
+        + _read_resource("web_state.css")
     )
     script = _read_resource("web_state.js")
     return template.replace(
@@ -186,7 +192,9 @@ def _assemble_html() -> str:
     if template.count(_STYLE_MARKER) != 1 or template.count(_SCRIPT_MARKER) != 1:
         raise RuntimeError("web_assets.html must contain exactly one CSS and JS marker")
     template = _apply_brand_assets(template)
-    styles = "".join(_read_resource(name) for name in _CSS_RESOURCE_NAMES)
+    styles = _read_resource("web_tokens.css") + "".join(
+        _read_resource(name) for name in _CSS_RESOURCE_NAMES
+    )
     script = "".join(_read_resource(name) for name in _JS_RESOURCE_NAMES)
     template = template.replace(_STYLE_MARKER, styles)
     return template.replace(

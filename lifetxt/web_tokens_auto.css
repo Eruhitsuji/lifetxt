@@ -1,0 +1,9 @@
+/* OS dark-mode following for pages without a manual theme switch (Desk/Planner/State). */
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){color-scheme:dark;
+--bg:#101512;--panel:#1a211d;--panel-2:#1f2722;--soft:#232c26;
+--ink:#e3e9e5;--muted:#93a099;--line:#2a332d;--line-strong:#3e4a43;
+--accent:#43c3a3;--accent-hover:#5cd8b8;--accent-soft:#17342b;--accent-ink:#07231b;
+--danger:#ef8677;--danger-soft:#3a211d;--warn:#e5b566;--warn-soft:#37301c;
+--ok:#6fd394;--ok-soft:#1c3325;--info:#7cb7ec;--info-soft:#1d2d3e;--violet:#ab93e8;--violet-soft:#2b2440;
+--focus:#9cc9f7;
+--shadow-1:0 1px 2px rgba(0,0,0,.35);--shadow-2:0 4px 18px rgba(0,0,0,.45);--shadow-3:0 18px 48px rgba(0,0,0,.6)}}

@@ -40,7 +40,8 @@ class DesignTokenTests(unittest.TestCase):
         css = _css("web_tokens.css")
         for name in REQUIRED:
             self.assertIn(name + ":", css)
-        self.assertIn("prefers-color-scheme:dark", css)
+        self.assertIn("prefers-color-scheme:dark", _css("web_tokens_auto.css"))
+        self.assertNotIn("prefers-color-scheme", css)
         self.assertIn(":root[data-theme=dark]", css)
         self.assertIn(":root[data-theme=light]", css)
 

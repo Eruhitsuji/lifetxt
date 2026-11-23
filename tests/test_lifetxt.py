@@ -5973,8 +5973,8 @@ class LifeTxtWebConfigAndCheckLineTests(unittest.TestCase):
         # The rendering call site must pass each entry's own day-specific
         # `when`, not fall back to always reading matches[0] again.
         self.assertIn(
-            "shown.map((entry) => "
-            "_calEntryHtml(entry.record, entry.when, entry.dayIndex, entry.dayTotal))",
+            "shown.map(e => "
+            "_calEntryHtml(e.record, e.when, e.dayIndex, e.dayTotal))",
             html,
         )
 

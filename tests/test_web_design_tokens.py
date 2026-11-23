@@ -42,8 +42,8 @@ class DesignTokenTests(unittest.TestCase):
             self.assertIn(name + ":", css)
         self.assertIn("prefers-color-scheme:dark", _css("web_tokens_auto.css"))
         self.assertNotIn("prefers-color-scheme", css)
-        self.assertIn(":root[data-theme=dark]", css)
-        self.assertIn(":root[data-theme=light]", css)
+        self.assertIn(':root[data-theme="dark"]', css)
+        self.assertIn(':root[data-theme="light"]', css)
 
     def test_page_css_has_no_hardcoded_hex_colours(self):
         for name in PAGES:

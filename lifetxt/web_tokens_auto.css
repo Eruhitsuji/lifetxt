@@ -1,5 +1,5 @@
 /* OS dark-mode following for pages without a manual theme switch (Desk/Planner/State). */
-@media(prefers-color-scheme:dark){:root:not([data-theme=light]){color-scheme:dark;
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;
 --bg:#101512;--panel:#1a211d;--panel-2:#1f2722;--soft:#232c26;
 --ink:#e3e9e5;--muted:#93a099;--line:#2a332d;--line-strong:#3e4a43;
 --accent:#43c3a3;--accent-hover:#5cd8b8;--accent-soft:#17342b;--accent-ink:#07231b;

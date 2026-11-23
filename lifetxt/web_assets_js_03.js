@@ -21,7 +21,7 @@
       calendar: {
         label: "Calendar",
         description: "Place due, do, and event records on a month or week grid; click any entry to open it.",
-        actions: [["Today", "calToday"], ["Month", "calMonth"], ["Week", "calWeek"]],
+        actions: [["Today", "calToday"], ["Day", "calDay"], ["Week", "calWeek"], ["Month", "calMonth"]],
       },
       focus: {
         label: "Focus",
@@ -115,6 +115,7 @@
       timelineWeek: () => setTimelineRange("week"),
       calendar: () => switchWorkspace("calendar"),
       calToday: () => calToday(),
+      calDay: () => setCalMode("day"),
       calMonth: () => setCalMode("month"),
       calWeek: () => setCalMode("week"),
       openTasks: () => openTaskItems(),
@@ -348,6 +349,14 @@
     function currentView() {
       const params = query();
       const value = firstParam(params, ["view", "mode"], "").toLowerCase();
+      if (value === "timeline") {
+        // Timeline now lives in Calendar's Day view; keep old links working.
+        params.set("view", "calendar");
+        params.set("calmode", "day");
+        params.set("cal", _fmtDate(new Date()));
+        history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
+        return "calendar";
+      }
       if (["display", "kiosk"].includes(value)) return value;
       if (PAGE_VIEWS.includes(value)) return value;
       // Back-compat: old ?workspace= / ?panel= parameters map onto page views.

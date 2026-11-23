@@ -22,7 +22,7 @@ REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
 # calculated the same assembled page Git blob hash.
 # Calculated using _CSS_RESOURCE_NAMES / _JS_RESOURCE_NAMES assembly order,
 # before brand injection (CSS 06/07 precede 05).
-LEGACY_PRISTINE_GIT_BLOB_SHA = "bb860653b072906eb0acbed50a708423f0bc6b77"
+LEGACY_PRISTINE_GIT_BLOB_SHA = "4afe9faf7b47e7df76a398a80aac90f1d3bdcfac"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )
@@ -79,9 +79,9 @@ class WebAssetExtractionTests(unittest.TestCase):
         )
         self.assertEqual(len(groups), 5)
         destinations = re.findall(r'(?:data-view|href)="([^"]+)"', more)
-        self.assertEqual(len(destinations), 21)
-        self.assertEqual(len(set(destinations)), 21)
-        self.assertEqual(more.count('class="nav-feature-description"'), 21)
+        self.assertEqual(len(destinations), 20)
+        self.assertEqual(len(set(destinations)), 20)
+        self.assertEqual(more.count('class="nav-feature-description"'), 20)
         for destination in (
             'data-view="agenda"',
             'data-view="calendar"',

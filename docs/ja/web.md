@@ -588,13 +588,26 @@ report を返します: `completed_tasks` / `open_tasks` の件数、`completed`
   選択範囲に dated record がない場合の guided empty state、選択範囲より前に
   開始して現在も重なっている record の `ongoing` badge に対応し、card
   クリックで record detail modal を開く
-- Calendar view: 月または単一週のグリッドに agenda record(繰り返し
+- Calendar view は **Day / Week / Month** の3モード。Day と Week は時間グリッド
+  (時間軸、長さに応じたブロック、重なる予定の横並び、終日行、現在時刻線)で、
+  Timeline view は Calendar に統合され `?view=timeline` は Calendar の Day へ
+  リダイレクトする。Month は複数日 record を連続バーで表示し、`+N more` は
+  ポップオーバーで開く。色は record の `project` に従う。直接操作(マウス/ペン、
+  タッチは長押し)はエディタと同じリビジョン保護付き保存を使う:空き時間を
+  ドラッグで作成(複数の日の列にまたがれば日またぎの時刻付き予定、終日行や Month の日付セルを
+  ドラッグすれば終日/複数日の終日予定)、ブロックをドラッグで移動(別の日へも可)、下端で終了時刻を
+  変更、Month や終日行のチップ/バーを別の日へドラッグ。複数日 record は全体が
+  移動し、日付のみ(`on`/`due`/`do`)は日単位で移動する。繰り返し record は全回に
+  適用されるため確認が出る(`BYDAY`/`BYMONTHDAY` のルールはエディタで編集)。
+  読み取り専用 record は移動できず理由を表示する。Esc でキャンセル、
+  リビジョン競合時は再読込してメッセージを表示する。
+  以下は月または単一週のグリッドに agenda record(繰り返し
   occurrence の展開を含む)を該当日へ配置。各セルは先頭数件を表示し
   `+N more` で残りを展開、type と overdue/due-soon で色分け、today を強調、
   日別件数を表示。entry クリックで record detail modal、日付番号クリックで
   その日を Agenda で開く。Prev/Next/Today と Month/Week 切り替えはキー操作
   (`,` `.` で前後の期間、`t` で today、`m` でモード切替)に対応し、
-  `?view=calendar&calmode=month|week&cal=YYYY-MM-DD` として URL に保存される。
+  `?view=calendar&calmode=day|week|month&cal=YYYY-MM-DD`(キー `d` `w` `m`)として URL に保存される。
   週の先頭曜日は `web.week_start`(既定 `monday`、`sunday` も可)に従う
 - Team view: 在席ボード。人ごとの最新 status record(色付き presence dot と
   state badge)、その人宛ての open message、assignee としての open/overdue
@@ -822,7 +835,7 @@ http://127.0.0.1:8000/?mode=display&type=S&person=self&refresh=30
 | `around=now`、`window=1d` | agenda 範囲 |
 | `from=YYYY-MM-DD`、`to=YYYY-MM-DD` | agenda 範囲 |
 | `range=today\|24h\|week` | `view=timeline` 時の Timeline 範囲。UI の範囲ボタンを押すとこの値も更新 |
-| `calmode=month\|week` | `view=calendar` 時の Calendar グリッドモード。Month/Week ボタンで更新 |
+| `calmode=day\|week\|month` | `view=calendar` 時の Calendar モード。Day/Week/Month ボタンで更新 |
 | `cal=YYYY-MM-DD` | 表示中の Calendar 期間の基準日。Prev/Next/Today 操作で更新 |
 | `after=VALUE`、`before=VALUE` | item の時刻filter |
 | `notify_refresh=SECONDS` | 通知 polling 間隔 |

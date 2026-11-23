@@ -35,6 +35,7 @@ class CalendarRepeatBadgeTests(unittest.TestCase):
 const records = JSON.parse(process.argv[1]);
 const _temporalDisplayLabel = () => "";
 const agendaDueSoonClass = () => "";
+const _calDragInfo = () => null;
 const escapeHtml = value => String(value);
 const rendered = Object.fromEntries(records.map(record => {
   const placements = _calRecordDayPlacements(record);
@@ -47,6 +48,7 @@ console.log(JSON.stringify(rendered));
         result = subprocess.run(
             ["node", "-e", script, json.dumps(records)],
             capture_output=True,
+            encoding="utf-8",
             text=True,
             timeout=15,
         )

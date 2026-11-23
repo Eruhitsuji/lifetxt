@@ -78,9 +78,18 @@ for (const [en, ja, destination] of [
 }
 """
         )
-        result = subprocess.run(
-            ["node", "-e", harness], capture_output=True, text=True, timeout=10
-        )
+        # UI_STRINGS exceeds the Windows command-line limit, so run from a file.
+        with tempfile.TemporaryDirectory() as tmp:
+            script = os.path.join(tmp, "harness.js")
+            with open(script, "w", encoding="utf-8") as handle:
+                handle.write(harness)
+            result = subprocess.run(
+                ["node", script],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                timeout=10,
+            )
         self.assertEqual(result.returncode, 0, result.stderr)
 
 

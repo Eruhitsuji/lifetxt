@@ -73,7 +73,7 @@
     // Places dated agenda records — including expanded repeat occurrences —
     // on a calendar grid. Reuses /api/agenda so recurrence, blockers, and
     // occurrence badges stay consistent with the Agenda and Timeline views.
-    const CAL_MODES = new Set(["month", "week"]);
+    const CAL_MODES = new Set(["month", "week", "day"]);
     const CAL_CELL_LIMIT = 4;
     let calMode = "month";
     let calAnchor = _calStartOfDay(new Date());
@@ -97,6 +97,7 @@
     function _calGridStart(anchor) {
       // First visible day: for month mode back up to the configured week start
       // from the 1st of the month; for week mode from the anchor's own week.
+      if (calMode === "day") return _calStartOfDay(anchor);
       const base = calMode === "week"
         ? new Date(anchor)
         : new Date(anchor.getFullYear(), anchor.getMonth(), 1);
@@ -109,7 +110,9 @@
     function _calGridDays(anchor) {
       const start = _calGridStart(anchor);
       let count;
-      if (calMode === "week") {
+      if (calMode === "day") {
+        count = 1;
+      } else if (calMode === "week") {
         count = 7;
       } else {
         // Enough full weeks to cover the whole month (5 or 6 rows).
@@ -156,7 +159,9 @@
     }
     function calShift(delta) {
       _calExpandedDays.clear();
-      if (calMode === "week") {
+      if (calMode === "day") {
+        calAnchor.setDate(calAnchor.getDate() + delta);
+      } else if (calMode === "week") {
         calAnchor.setDate(calAnchor.getDate() + delta * 7);
       } else {
         const day = calAnchor.getDate();
@@ -218,6 +223,20 @@
       const raw = record.when || "";
       return raw ? [{day: String(raw).slice(0, 10), when: raw}] : [];
     }
+    // Records with a project take a stable per-project color (--c) instead
+    // of the per-type color, so a project reads as one color everywhere.
+    function _calProjectColor(record) {
+      const raw = (record.details || {}).project;
+      const project = String(Array.isArray(raw) ? raw[0] : raw || "").trim();
+      if (!project) return "";
+      let h = 0;
+      for (const ch of project) h = (h * 31 + ch.codePointAt(0)) >>> 0;
+      return `hsl(${(h % 12) * 30 + 8} 58% 50%)`;
+    }
+    function _calProjectAttrs(record) {
+      const color = _calProjectColor(record);
+      return color ? {cls: " cal-pc", style: `--c:${color};`} : {cls: "", style: ""};
+    }
     function _calEntryHtml(record, dayWhen, dayIndex, dayTotal) {
       const type = record.type || "N";
       const when = String(dayWhen || record.occurrence_start || ((record.matches || [])[0] || {}).start || record.when || "");
@@ -236,8 +255,11 @@
         ? `<span class="cal-entry-span" title="Day ${dayIndex} of ${dayTotal}">${dayIndex}/${dayTotal}</span>`
         : "";
       const tag = clickable ? "button" : "div";
-      return `<${tag} class="cal-entry cal-t-${escapeHtml(type)}${dueCls ? " cal-" + dueCls : ""}${clickable ? "" : " cal-static"}"` +
-        (clickable ? ` type="button" onclick="openItemByLine(${record.line})"` : "") +
+      const pc = _calProjectAttrs(record);
+      return `<${tag} class="cal-entry cal-t-${escapeHtml(type)}${pc.cls}${dueCls ? " cal-" + dueCls : ""}${clickable ? "" : " cal-static"}"` +
+        (clickable ? ` type="button" onclick="openItemByLine(${record.line})" data-line="${record.line}" data-when="${escapeHtml(when)}"` : "") +
+        (clickable && _calDragInfo({record, when}) ? ` data-cal-drag="1"` : "") +
+        (pc.style ? ` style="${pc.style}"` : "") +
         ` title="${escapeHtml((record.status ? record.status + " " : "") + when + " · " + record.title)}">` +
         `<span class="cal-entry-dot t-${escapeHtml(type)}"></span>` +
         `<span class="cal-entry-title">${escapeHtml(title)}</span>${spanBadge}</${tag}>`;
@@ -253,7 +275,9 @@
       const to = _fmtDate(days[days.length - 1]);
       const titleEl = document.getElementById("cal-title");
       if (titleEl) {
-        titleEl.textContent = calMode === "week"
+        titleEl.textContent = calMode === "day"
+          ? calAnchor.toLocaleDateString(uiLocale(), {weekday: "short", month: "long", day: "numeric", year: "numeric"})
+          : calMode === "week"
           ? `Week of ${days[0].toLocaleDateString(uiLocale(), {month: "long", day: "numeric", year: "numeric"})}`
           : calAnchor.toLocaleDateString(uiLocale(), {month: "long", year: "numeric"});
       }
@@ -267,10 +291,14 @@
       }
       if (generation !== calendarLoadGeneration) return;
       const records = data.records || [];
+      _calGridRecords = new Map(records.filter(r => Number.isInteger(r.line)).map(r => [r.line, r]));
+      if (typeof node.addEventListener === "function") _calBindChipDrag(node);
       const byDay = new Map();
+      const {segments, covered} = calMode === "month" ? _calSpanSegments(records) : {segments: [], covered: new Map()};
       for (const record of records) {
         const placements = _calRecordDayPlacements(record);
         placements.forEach((placement, i) => {
+          if (covered.get(record)?.has(placement.day)) return;
           if (!byDay.has(placement.day)) byDay.set(placement.day, []);
           byDay.get(placement.day).push({
             record,
@@ -283,58 +311,26 @@
       for (const list of byDay.values()) {
         list.sort((a, b) => String(a.when || "").localeCompare(String(b.when || "")));
       }
-      const total = records.length;
-      const ws = _calWeekStartIndex();
-      const weekdayNames = [];
-      for (let i = 0; i < 7; i++) {
-        const d = new Date(2024, 0, 7 + ((ws + i) % 7)); // 2024-01-07 is a Sunday
-        weekdayNames.push(d.toLocaleDateString(uiLocale(), {weekday: "short"}));
+      if (calMode !== "month") {
+        node.innerHTML = _calTimeGridHtml(days, byDay);
+        _calTimeGridAfterRender(node);
+        return;
       }
-      if (!total) {
+      calClosePopover();
+      if (!records.length) {
         node.innerHTML = guidedEmptyState("📆", "Nothing scheduled in this period",
           "The calendar plots records with <code>due</code>, <code>do</code>, <code>on</code>, or <code>from</code>/<code>to</code> dates, including repeat occurrences. Move to another period or add a dated record.",
           [["Today", "calToday"], ["New record", "newItem"], ["Agenda", "agenda"], ["Help", "help"]]);
         return;
       }
-      const todayStr = _fmtDate(new Date());
-      let html = `<div class="cal-summary">${total} record${total === 1 ? "" : "s"} · ${escapeHtml(from)} → ${escapeHtml(to)}</div>`;
-      html += `<div class="cal-grid cal-mode-${calMode}">`;
-      for (const name of weekdayNames) {
-        html += `<div class="cal-weekday">${escapeHtml(name)}</div>`;
-      }
-      for (const day of days) {
-        const dayStr = _fmtDate(day);
-        const inMonth = calMode === "week" || day.getMonth() === calAnchor.getMonth();
-        const isToday = dayStr === todayStr;
-        const entries = byDay.get(dayStr) || [];
-        const expanded = _calExpandedDays.has(dayStr);
-        const shown = expanded ? entries : entries.slice(0, CAL_CELL_LIMIT);
-        const overflow = entries.length - shown.length;
-        let cell = `<div data-calendar-day="${escapeHtml(dayStr)}" class="cal-cell${inMonth ? "" : " cal-out"}${isToday ? " cal-today" : ""}${entries.length ? " cal-has" : ""}">`;
-        cell += `<div class="cal-daynum"><button type="button" class="cal-daylink" aria-label="${escapeHtml(t("Open day in Agenda") + ": " + dayStr)}">${day.getDate()}</button>`;
-        cell += entries.length ? `<span class="cal-count">${entries.length}</span>` : "";
-        cell += `</div><div class="cal-entries">`;
-        cell += shown.map((entry) => _calEntryHtml(entry.record, entry.when, entry.dayIndex, entry.dayTotal)).join("");
-        if (overflow > 0) {
-          cell += `<button type="button" class="cal-more" onclick="calExpandDay('${dayStr}')">+${overflow} more</button>`;
-        } else if (expanded && entries.length > CAL_CELL_LIMIT) {
-          cell += `<button type="button" class="cal-more" onclick="calExpandDay('${dayStr}')">show less</button>`;
-        }
-        cell += `</div></div>`;
-        html += cell;
-      }
-      html += `</div>`;
-      node.innerHTML = html;
+      const total = records.length;
+      node.innerHTML = `<div class="cal-summary">${total} record${total === 1 ? "" : "s"} · ${escapeHtml(from)} → ${escapeHtml(to)}</div>` +
+        _calMonthHtml(days, byDay, segments);
       node.querySelector(".cal-grid").addEventListener("click", event => {
-        if (event.target.closest(".cal-entry, .cal-more")) return;
+        if (event.target.closest(".cal-entry, .cal-more, .cal-span-bar")) return;
         const cell = event.target.closest("[data-calendar-day]");
-        if (cell) calOpenDay(cell.dataset.calendarDay);
+        if (cell) calGotoDay(cell.dataset.calendarDay);
       });
-    }
-    function calExpandDay(dateStr) {
-      if (_calExpandedDays.has(dateStr)) _calExpandedDays.delete(dateStr);
-      else _calExpandedDays.add(dateStr);
-      loadCalendar();
     }
 
     // ── Fullscreen ─────────────────────────────────────────────────

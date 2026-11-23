@@ -404,7 +404,6 @@ class LifeTxtParserTests(unittest.TestCase):
         self.assertIn('class="team-section page"', webapp.HTML_PAGE)
         self.assertIn('class="timeline-section page"', webapp.HTML_PAGE)
         self.assertIn('data-view="team"', webapp.HTML_PAGE)
-        self.assertIn('data-view="timeline"', webapp.HTML_PAGE)
         self.assertIn("function loadTeam(", webapp.HTML_PAGE)
         self.assertIn("function openPersonItems(", webapp.HTML_PAGE)
         self.assertIn("person-card-action", webapp.HTML_PAGE)
@@ -5974,8 +5973,8 @@ class LifeTxtWebConfigAndCheckLineTests(unittest.TestCase):
         # The rendering call site must pass each entry's own day-specific
         # `when`, not fall back to always reading matches[0] again.
         self.assertIn(
-            "shown.map((entry) => "
-            "_calEntryHtml(entry.record, entry.when, entry.dayIndex, entry.dayTotal))",
+            "shown.map(e => "
+            "_calEntryHtml(e.record, e.when, e.dayIndex, e.dayTotal))",
             html,
         )
 

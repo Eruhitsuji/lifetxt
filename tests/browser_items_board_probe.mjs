@@ -206,17 +206,18 @@ try {
   const calendarUrl = `${baseUrl}/?view=calendar&calmode=month&cal=2026-11-21`;
   const day = '[data-calendar-day="2026-11-21"]';
   const findDay = selector => `document.querySelector(${JSON.stringify(day + selector)})`;
-  const agendaDate = `new URLSearchParams(location.search).get("view") === "agenda"
-    && new URLSearchParams(location.search).get("from") === "2026-11-21"
-    && new URLSearchParams(location.search).get("to") === "2026-11-21"`;
+  const agendaDate = `new URLSearchParams(location.search).get("view") === "calendar"
+    && new URLSearchParams(location.search).get("calmode") === "day"
+    && new URLSearchParams(location.search).get("cal") === "2026-11-21"`;
   await browser.command("Page.navigate", {url: calendarUrl});
   await browser.wait(findDay(" .cal-more") + " !== null", "calendar overflow");
   await click(findDay(" .cal-more"));
-  await browser.wait(findDay(" .cal-more") + '?.textContent === "show less"', "expand without navigating");
-  await browser.evaluate(`${findDay(" button.cal-entry")}.focus()`);
+  await browser.wait("!!document.querySelector('.cal-popover')", "popover without navigating");
+  await browser.evaluate(`document.querySelector('.cal-popover .cal-entry').focus()`);
   await pressKey("Enter", 13, "\r");
   await browser.wait(`!!document.querySelector('${drawer}')`, "calendar entry detail");
   await pressKey("Escape", 27);
+  await browser.evaluate("document.querySelector('.cal-popover') && calClosePopover()");
   await click(findDay(" .cal-count"));
   await browser.wait(agendaDate, "clicking the day cell opens its agenda");
   await browser.command("Page.navigate", {url: calendarUrl});

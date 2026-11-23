@@ -1,6 +1,8 @@
 """Exercise out-of-order Calendar responses using the assembled Web UI."""
 
+import os
 import shutil
+import tempfile
 import subprocess
 import unittest
 
@@ -14,14 +16,18 @@ class CalendarLoadingTests(unittest.TestCase):
         end = HTML_PAGE.index("// ── Fullscreen", start)
         fmt_start = HTML_PAGE.index("function _fmtDate(d)")
         fmt_end = HTML_PAGE.index("\n    }", fmt_start) + len("\n    }")
+        grid_start = HTML_PAGE.index("// ── Calendar time grid")
+        grid_end = HTML_PAGE.index("</script>", grid_start)
         script = (
             HTML_PAGE[start:end]
             + HTML_PAGE[fmt_start:fmt_end]
+            + HTML_PAGE[grid_start:grid_end]
             + """
 const assert = require("node:assert/strict");
 let onCalendarClick;
 const grid = {innerHTML: "", querySelector: () => ({
   addEventListener: (_type, listener) => { onCalendarClick = listener; },
+  style: {setProperty: () => {}}, offsetWidth: 0, clientWidth: 0, scrollTop: 0,
 })};
 const title = {textContent: ""};
 const document = {
@@ -36,7 +42,7 @@ const firstParam = (p, [key], fallback) => p.get(key) ?? fallback;
 const escapeHtml = value => String(value);
 const t = value => value;
 const location = {pathname: "/"};
-const history = {pushState: (_state, _unused, url) => { agendaUrl = new URL(url, "http://localhost"); }};
+const history = {replaceState: (_state, _unused, url) => { agendaUrl = new URL(url, "http://localhost"); }, pushState: (_state, _unused, url) => { agendaUrl = new URL(url, "http://localhost"); }};
 let agendaUrl;
 const applyUrlToControls = () => {};
 const loadAgenda = () => {};
@@ -59,16 +65,8 @@ async function main() {
   assert.match(latest.url, /from=2026-03-02&to=2026-03-08/);
   latest.resolve(records("Current appointment", "2026-03-04"));
   await latest.done;
-  assert.match(grid.innerHTML, /cal-mode-week/);
+  assert.match(grid.innerHTML, /cal-tg-week/);
   assert.match(grid.innerHTML, /Current appointment/);
-  assert.match(grid.innerHTML, /<button type="button" class="cal-daylink"/);
-  const day = {dataset: {calendarDay: "2026-03-04"}};
-  onCalendarClick({target: {closest: selector => selector === ".cal-entry, .cal-more" ? {} : day}});
-  assert.equal(agendaUrl, undefined, "entry and overflow clicks stay in the calendar");
-  onCalendarClick({target: {closest: selector => selector === "[data-calendar-day]" ? day : null}});
-  assert.equal(agendaUrl.searchParams.get("view"), "agenda");
-  assert.equal(agendaUrl.searchParams.get("from"), "2026-03-04");
-  assert.equal(agendaUrl.searchParams.get("to"), "2026-03-04");
   assert.match(title.textContent, /^Week of /);
   const currentGrid = grid.innerHTML;
 
@@ -88,6 +86,18 @@ async function main() {
   await oldEmpty.done;
   assert.match(grid.innerHTML, /Calendar error: current failure/);
 
+  const monthLoad = startLoad("2026-03-04", "month");
+  monthLoad.resolve(records("Current appointment", "2026-03-04"));
+  await monthLoad.done;
+  assert.match(grid.innerHTML, /cal-mode-month/);
+  assert.match(grid.innerHTML, /<button type="button" class="cal-daylink"/);
+  const day = {dataset: {calendarDay: "2026-03-04"}};
+  onCalendarClick({target: {closest: selector => selector === ".cal-entry, .cal-more, .cal-span-bar" ? {} : day}});
+  assert.equal(agendaUrl, undefined, "entry and overflow clicks stay in the calendar");
+  onCalendarClick({target: {closest: selector => selector === "[data-calendar-day]" ? day : null}});
+  assert.equal(agendaUrl.searchParams.get("calmode"), "day");
+  assert.equal(agendaUrl.searchParams.get("cal"), "2026-03-04");
+
   const recovery = startLoad("2026-03-04", "week");
   recovery.resolve({records: []});
   await recovery.done;
@@ -96,10 +106,15 @@ async function main() {
 main().catch(error => { console.error(error); process.exitCode = 1; });
 """
         )
-        result = subprocess.run(
-            ["node", "-e", script],
-            capture_output=True,
-            text=True,
-            timeout=15,
-        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "harness.js")
+            with open(path, "w", encoding="utf-8") as handle:
+                handle.write(script)
+            result = subprocess.run(
+                ["node", path],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                timeout=15,
+            )
         self.assertEqual(0, result.returncode, result.stderr)

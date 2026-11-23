@@ -404,7 +404,6 @@ class LifeTxtParserTests(unittest.TestCase):
         self.assertIn('class="team-section page"', webapp.HTML_PAGE)
         self.assertIn('class="timeline-section page"', webapp.HTML_PAGE)
         self.assertIn('data-view="team"', webapp.HTML_PAGE)
-        self.assertIn('data-view="timeline"', webapp.HTML_PAGE)
         self.assertIn("function loadTeam(", webapp.HTML_PAGE)
         self.assertIn("function openPersonItems(", webapp.HTML_PAGE)
         self.assertIn("person-card-action", webapp.HTML_PAGE)

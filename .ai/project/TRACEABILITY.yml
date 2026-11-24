@@ -834,6 +834,14 @@ traceability:
         - tests/test_web_agenda_navigation.py
       status: in_review
 
+    - requirement_id: req-web-today-mobile-actions-header
+      capability_id: cap-web-beginner-first-ux
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1723
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1724
+      tests_or_evidence: [tests.test_web_mobile, tests.test_web_commands, tests.test_web_assets]
+      status: in_review
+
     - requirement_id: req-web-today-dashboard-record-touch-target
       capability_id: cap-web-beginner-first-ux
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386

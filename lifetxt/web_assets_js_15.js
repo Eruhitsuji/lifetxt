@@ -262,6 +262,7 @@
     function applyReducedMotion(on) {
       document.body.classList.toggle("reduce-motion", !!on);
       _syncA11yButtons();
+      _syncKioskScrollButton();
     }
     function initAccessibilityPrefs() {
       const params = new URLSearchParams(location.search);

@@ -496,15 +496,23 @@
     [data-theme="dark"] body.display-mode .empty,
     [data-theme="dark"] body.display-mode .note { color: #aebbb4; }
     /* ── Kiosk mode (bulletin board / 掲示板) — high-contrast light theme ── */
+    #kiosk-scroll-btn { display: none; }
     .kiosk-mode {
       background: var(--bg);
       color: var(--ink);
       font-size: clamp(15px, 1.05vw, 20px);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      height: 100dvh;
+      min-height: 0;
       overflow: hidden;
     }
     .kiosk-mode header {
       max-width: none;
-      padding: .65rem 2rem;
+      flex-shrink: 0;
+      gap: .5rem;
+      padding: .65rem clamp(.75rem, 3vw, 2rem);
       border-bottom: 2px solid #1a7a4a;
       background: #1a7a4a;
       -webkit-backdrop-filter: none;
@@ -515,8 +523,8 @@
     .kiosk-mode .subtitle { display: none; }
     .kiosk-mode h1 { font-size: clamp(1.3rem, 2.2vw, 2.4rem); color: #fff; }
     .kiosk-mode .subtitle { display: none; }
-    .kiosk-mode header .toolbar { gap: .5rem; }
-    .kiosk-mode header .toolbar > *:not(#kiosk-clock):not(#kiosk-exit-btn) { display: none; }
+    .kiosk-mode header .toolbar { display: flex; flex-wrap: wrap; gap: .5rem; overflow: visible; }
+    .kiosk-mode header .toolbar > *:not(:is(#kiosk-clock, #kiosk-scroll-btn, #kiosk-exit-btn)) { display: none; }
     .kiosk-mode #kiosk-clock {
       display: flex !important;
       align-items: center;
@@ -527,22 +535,26 @@
       font-weight: 700;
       letter-spacing: .05em;
     }
-    .kiosk-mode #kiosk-exit-btn {
+    .kiosk-mode :is(#kiosk-scroll-btn, #kiosk-exit-btn) {
       display: inline-flex !important;
       background: rgba(255,255,255,.15);
       border-color: rgba(255,255,255,.4);
       color: #fff;
     }
-    .kiosk-mode #kiosk-exit-btn:hover { background: rgba(255,255,255,.28); }
+    .kiosk-mode :is(#kiosk-scroll-btn, #kiosk-exit-btn):hover:not(:disabled) { background: rgba(255,255,255,.28); }
+    .kiosk-mode :is(#kiosk-scroll-btn, #kiosk-exit-btn):focus-visible { outline-color: #fff; }
     .kiosk-mode main {
       max-width: none;
+      width: 100%;
+      flex: 1 1 auto;
+      min-height: 0;
       grid-template-columns: 1fr;
       padding: 0;
-      height: calc(100vh - 3.5rem);
       overflow: hidden;
     }
     .kiosk-mode .toolbar { display: none; }
     .kiosk-mode .item-section { overflow: hidden; background: transparent; border: none; box-shadow: none; }
+    .kiosk-mode .item-section.page-active { display: flex; flex-direction: column; min-height: 0; }
     .kiosk-mode .item-section .section-head { display: none; }
     .kiosk-mode .items-controls, .kiosk-mode .filter-bar,
     .kiosk-mode .stats-summary, .kiosk-mode .filter-chips,
@@ -550,13 +562,14 @@
     .display-mode .items-controls, .display-mode .filter-bar { display: none; }
     .kiosk-mode #items {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(min(20rem, 100%), 1fr));
       /* Keep scrollable rows tall enough for wrapped card content. */
       grid-auto-rows: max-content;
       align-content: start;
       gap: .75rem;
       padding: .75rem 1.25rem;
-      height: calc(100vh - 3.8rem);
+      flex: 1 1 auto;
+      min-height: 0;
       overflow-y: auto;
       overflow-x: hidden;
       scrollbar-width: thin;

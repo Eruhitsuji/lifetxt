@@ -70,6 +70,13 @@ try {
     await command("Emulation.setDeviceMetricsOverride", {width, height: 850, deviceScaleFactor: 1, mobile: false});
     await evaluate("new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))");
   };
+  const waitFor = async (expression, message) => {
+    for (let attempt = 0; attempt < 100; attempt++) {
+      if (await evaluate(expression)) return;
+      await delay(30);
+    }
+    throw new Error(message);
+  };
   const results = [];
   for (const width of [1280, 1920]) for (const cols of [0,1,2,3,4,8]) for (const theme of ["light", "dark"]) {
     await resize(width);
@@ -87,6 +94,51 @@ try {
     assert.equal(result.count,120); assert.equal(result.overflow,0,JSON.stringify({width,cols,theme,result}));
     assert.equal(result.overlap,false); assert.equal(result.reachable,true);
     results.push({width,cols,theme,...result});
+  }
+  for (const [width, lang, pause, resume, off] of [
+    [1280, "en", "Pause auto-scroll", "Resume auto-scroll", "Auto-scroll off"],
+    [320, "ja", "自動スクロールを停止", "自動スクロールを再開", "自動スクロールはオフ"],
+  ]) {
+    await resize(width);
+    await command("Page.navigate", {url: `http://127.0.0.1:${port}/?mode=kiosk&lang=${lang}&refresh=1`});
+    await waitFor(`document.querySelector("#kiosk-scroll-btn")?.textContent === ${JSON.stringify(pause)} &&
+      document.querySelectorAll("#items .item").length === 120`, "Kiosk did not initialize");
+    const fits = await evaluate(`["kiosk-scroll-btn", "kiosk-exit-btn", "kiosk-clock"].every(id => {
+      const box = document.getElementById(id).getBoundingClientRect();
+      return box.width > 0 && box.left >= 0 && box.right <= innerWidth;
+    }) && document.querySelector("#items").getBoundingClientRect().bottom <= innerHeight`);
+    assert.ok(fits, `Kiosk controls and scroll area must fit at ${width}px`);
+
+    await evaluate('document.querySelector("#kiosk-scroll-btn").focus()');
+    await command("Input.dispatchKeyEvent", {type: "keyDown", key: " ", code: "Space"});
+    await command("Input.dispatchKeyEvent", {type: "keyUp", key: " ", code: "Space"});
+    const buttonText = 'document.querySelector("#kiosk-scroll-btn").textContent';
+    assert.equal(await evaluate(buttonText), resume);
+    assert.equal(await evaluate("document.activeElement.id"), "kiosk-scroll-btn");
+    await evaluate('document.querySelector("#items").scrollTop = 120');
+    const readCount = () => requests.filter(r => r.url.startsWith("/api/items")).length;
+    const before = readCount();
+    await delay(1500);
+    assert.ok(readCount() > before, "Items must refresh while auto-scroll is paused");
+    assert.equal(await evaluate('document.querySelector("#items").scrollTop'), 120);
+    assert.equal(await evaluate(buttonText), resume);
+
+    await evaluate("applyReducedMotion(true)");
+    assert.equal(await evaluate(buttonText), off);
+    assert.equal(await evaluate('document.querySelector("#kiosk-scroll-btn").disabled'), true);
+    await evaluate("applyReducedMotion(false)");
+    assert.equal(await evaluate(buttonText), resume);
+    await evaluate('document.querySelector("#kiosk-scroll-btn").click()');
+    assert.equal(await evaluate(buttonText), pause);
+    await waitFor('document.querySelector("#items").scrollTop > 120', "Auto-scroll did not resume");
+
+    await evaluate('document.querySelector("#kiosk-scroll-btn").click()');
+    await evaluate('document.querySelector("#kiosk-exit-btn").click()');
+    assert.equal(await evaluate('document.querySelector("#kiosk-scroll-btn").getBoundingClientRect().width'), 0);
+    await evaluate("toggleKioskMode()");
+    assert.equal(await evaluate(buttonText), pause);
+    await evaluate("switchWorkspace('display')");
+    assert.equal(await evaluate('document.querySelector("#kiosk-scroll-btn").getBoundingClientRect().width'), 0);
   }
   assert.ok(requests.every(r => r.method === "GET"), "fixture never mutates data");
   process.stdout.write(JSON.stringify({viewports: results}));

@@ -337,6 +337,19 @@
     // ── Mobile action button ───────────────────────────────────────
     // A phone has no Ctrl+K, no n, and no x, so every keyboard-only entry
     // point needs one reachable equivalent.
+    function syncMobileActions(page) {
+      const fab = document.getElementById("mobile-fab");
+      const menu = document.getElementById("mobile-fab-menu");
+      const headerSlot = document.getElementById("today-mobile-actions");
+      const palette = document.getElementById("cmdk-backdrop");
+      if (!fab || !menu || !headerSlot || !palette) return;
+      const useHeader = page === "today";
+      if (useHeader === (fab.parentElement === headerSlot)) return;
+      toggleMobileMenu(false);
+      if (useHeader) headerSlot.append(fab, menu);
+      else palette.before(fab, menu);
+    }
+
     function toggleMobileMenu(show) {
       const menu = document.getElementById("mobile-fab-menu");
       const fab = document.getElementById("mobile-fab");

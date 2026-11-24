@@ -617,8 +617,11 @@
       cursor: pointer;
     }
     /* ── Today view ──────────────────────────────────────────────── */
+    .today-section .dash-list { grid-template-columns: minmax(0, 1fr); }
     .today-record-row .dash-row-title { display: block; min-height: 0; }
     .today-record-meta { display: contents; }
+    #dash-today .dash-row-title > a.drawer-link { display: block; overflow: hidden; text-overflow: ellipsis; }
+    #dash-today .dash-row-title > a.drawer-link:focus-visible { outline-offset: -2px; }
     @media (max-width: 680px) {
       .today-record-row { display: grid; grid-template-columns: auto minmax(0, 1fr); }
       .today-record-meta { grid-column: 2; display: flex; flex-wrap: wrap; gap: .25rem; min-width: 0; }
@@ -635,7 +638,6 @@
         white-space: normal;
         overflow-wrap: anywhere;
       }
-      #dash-today .dash-row-title > a.drawer-link:focus-visible { outline-offset: -2px; }
     }
     .today-subsection + .today-subsection { margin-top: .65rem; }
     .today-subsection-title {

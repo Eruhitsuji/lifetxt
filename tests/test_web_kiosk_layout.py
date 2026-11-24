@@ -1,4 +1,4 @@
-"""Browser regression for content-sized Kiosk rows (#1455)."""
+"""Browser regressions for Kiosk rows and scroll controls (#1455, #1715)."""
 
 import json
 import os
@@ -15,7 +15,7 @@ from lifetxt.web_assets import HTML_PAGE
     "Node and LIFETXT_BROWSER_BIN required",
 )
 class KioskLayoutTests(unittest.TestCase):
-    def test_long_cards_fit_and_last_row_is_reachable(self):
+    def _run_probe(self, scenario):
         with tempfile.TemporaryDirectory() as directory:
             html = Path(directory) / "page.html"
             html.write_text(HTML_PAGE, encoding="utf-8")
@@ -25,14 +25,21 @@ class KioskLayoutTests(unittest.TestCase):
                     str(Path(__file__).with_name("browser_kiosk_layout_probe.mjs")),
                     os.environ["LIFETXT_BROWSER_BIN"],
                     str(html),
+                    scenario,
                 ],
                 capture_output=True,
                 text=True,
                 timeout=90,
             )
         self.assertEqual(0, result.returncode, result.stderr)
-        report = json.loads(result.stdout)
+        return json.loads(result.stdout)
+
+    def test_long_cards_fit_and_last_row_is_reachable(self):
+        report = self._run_probe("layout")
         self.assertEqual(24, len(report["viewports"]))
+
+    def test_scroll_controls_pause_motion_without_pausing_refresh(self):
+        report = self._run_probe("scroll-controls")
         self.assertEqual(
             [{"width": 1280, "lang": "en"}, {"width": 320, "lang": "ja"}],
             report["scrollControls"],

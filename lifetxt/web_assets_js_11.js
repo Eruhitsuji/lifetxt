@@ -118,6 +118,34 @@
       return pos;
     }
 
+    function placeForceNodeLabels(shapes, width, height) {
+      const occupied = [];
+      const ordered = [...shapes].sort((a, b) => Number(b.focused) - Number(a.focused));
+      for (const shape of ordered) {
+        const {p, radius, label} = shape;
+        // Reserve a full 10px em per code point for both Latin and wide labels.
+        const halfWidth = Array.from(label).length * 5 + 3;
+        const left = p.x - halfWidth, right = p.x + halfWidth;
+        shape.labelY = null;
+        if (left < 0 || right > width) continue;
+        for (const offset of [radius + 13, -radius - 6]) {
+          const top = p.y + offset - 10, bottom = p.y + offset + 3;
+          if (top < 0 || bottom > height) continue;
+          const hitsNode = shapes.some(({p: center, radius: r}) => {
+            const dx = Math.max(left - center.x, 0, center.x - right);
+            const dy = Math.max(top - center.y, 0, center.y - bottom);
+            return Math.hypot(dx, dy) < r + 2;
+          });
+          if (hitsNode || occupied.some(box =>
+            left < box.right && right > box.left && top < box.bottom && bottom > box.top
+          )) continue;
+          occupied.push({left, right, top, bottom});
+          shape.labelY = offset;
+          break;
+        }
+      }
+    }
+
     function renderGraphSvg(nodes, edges, options = {}) {
       const compact = !!options.compact;
       const focusId = options.focusId || "";
@@ -155,19 +183,22 @@
         return `<line class="graph-edge" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"></line>` +
           `<text class="graph-edge-label" x="${mx}" y="${my - 4}" text-anchor="middle">${escapeHtml(truncateLabel(e.relation, compact ? 8 : 12))}</text>`;
       }).join("");
-      const nodeHtml = shownNodes.map(node => {
-        const p = positions[String(node.id)];
-        if (!p) return "";
+      const shapes = shownNodes.filter(node => positions[String(node.id)]).map(node => {
         const id = String(node.id || "");
+        const focused = id === String(focusId);
+        const radius = focused ? (compact ? 18 : 24) : (compact ? 14 : 20);
+        const label = truncateLabel(node.title || id, compact ? 12 : 18) + (node.missing ? " (?)" : "");
+        return {node, id, p: positions[String(node.id)], focused, radius, label, labelY: radius + 13};
+      });
+      if (layout === "force" && !compact) placeForceNodeLabels(shapes, w, h);
+      const nodeHtml = shapes.map(({node, id, p, radius, label, labelY}) => {
         const missing = !!node.missing;
-        const label = truncateLabel(node.title || id, compact ? 12 : 18) + (missing ? " (?)" : "");
         const nav = escapeHtml(jsLiteral(id));
-        const radius = id === String(focusId) ? (compact ? 18 : 24) : (compact ? 14 : 20);
         const tooltip = id + " " + (node.title || "") + (missing ? " — referenced but not found in loaded files" : "");
         return `<g class="graph-node${missing ? " missing" : ""}" onclick="drawerNavigate(${nav})" transform="translate(${p.x},${p.y})">` +
           `<title>${escapeHtml(tooltip)}</title>` +
           `<circle r="${radius}"${missing ? "" : ` fill="${graphColor(node.type)}"`}></circle>` +
-          `<text text-anchor="middle" y="${radius + 13}">${escapeHtml(label)}</text>` +
+          (labelY === null ? "" : `<text text-anchor="middle" y="${labelY}">${escapeHtml(label)}</text>`) +
           `</g>`;
       }).join("");
       const more = (nodes || []).length > shownNodes.length
@@ -346,9 +377,13 @@
         }
         const missingCount = nodes.filter(n => n.missing).length;
         const missingNote = missingCount ? ` ${missingCount} dashed node(s) are referenced but missing.` : "";
+        const forceLabelHint = _graphLayout === "force" ? ` ${escapeHtml(drawerText(
+          "Hover over a node or use the relationship list for full titles.",
+          "タイトルの全文はノードにマウスを重ねるか、関係一覧で確認できます。"
+        ))}` : "";
         panel.innerHTML = renderGraphRelations(nodes, edges, graphRelationsExpanded) +
           renderGraphSvg(nodes, edges, {focusId: root, layout: _graphLayout}) +
-          `<div class="note" style="margin-top:.45rem">${nodes.length} nodes / ${edges.length} edges. Click a node to open it.${escapeHtml(missingNote)}</div>`;
+          `<div class="note" style="margin-top:.45rem">${nodes.length} nodes / ${edges.length} edges. Click a node to open it.${escapeHtml(missingNote)}${forceLabelHint}</div>`;
       } catch (_) {
         if (generation !== graphLoadGeneration) return;
         panel.innerHTML = `<div class="empty">

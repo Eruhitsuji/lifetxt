@@ -184,7 +184,7 @@
           }),
         });
         if (!result.ok || !result.saved) throw new Error("Save result is uncertain.");
-        showToast("Added " + result.saved + " record(s).", "success");
+        showToast(t("Added " + result.saved + " record(s)."), "success");
         input.value = "";
         bulkSavePending = false;
         input.disabled = false;

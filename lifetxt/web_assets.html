@@ -59,7 +59,7 @@ __LIFETXT_WEB_STYLES__  </style>
         <button type="button" class="workspace-tab" data-view="" onclick="switchWorkspace('')">📋 Items</button>
         <button type="button" class="workspace-tab" data-view="dashboard" onclick="switchWorkspace('dashboard')">🏠 Dashboard</button>
       <button type="button" id="primary-create" class="help-target" data-workspace="new" data-help="Add a task with an optional deadline, or show all fields to create another kind of record." onclick="newItem('task')">＋ Create</button>
-      <button type="button" class="secondary" onclick="openBulkInput()">複数レコード / Bulk input</button>
+      <button type="button" class="secondary" onclick="openBulkInput()">Bulk input</button>
       </div>
       <details class="nav-more" id="nav-more">
         <summary id="nav-more-summary" class="workspace-tab" aria-controls="nav-advanced" aria-expanded="false">Features<span class="nav-more-current" id="nav-more-current" hidden></span> <span aria-hidden="true">▾</span></summary>
@@ -662,12 +662,12 @@ __LIFETXT_WEB_STYLES__  </style>
   </div>
   <div id="bulk-input-modal" class="modal-backdrop" hidden onclick="if(event.target===this)closeBulkInput()">
     <div class="modal editor-modal" role="dialog" aria-modal="true" aria-labelledby="bulk-input-heading">
-      <div class="editor-modal-head"><h3 id="bulk-input-heading">複数レコード / Bulk input</h3><button type="button" class="drawer-close-btn" onclick="closeBulkInput()">Close</button></div>
+      <div class="editor-modal-head"><h3 id="bulk-input-heading">Bulk input</h3><button type="button" class="drawer-close-btn" onclick="closeBulkInput()">Close</button></div>
       <p class="note">Paste native life.txt records. Preview is read-only; it does not save anything.</p>
       <textarea id="bulk-input-text" rows="12" aria-label="Bulk life.txt input" oninput="invalidateBulkPreview()" placeholder="[ ] T First task
 [N] N A note"></textarea>
       <div id="bulk-input-preview" class="parse-preview" aria-live="polite"></div>
-      <div class="actions"><button type="button" onclick="previewBulkInput()">Preview</button><button id="bulk-input-add" type="button" onclick="addAllBulkInput()" disabled>すべて追加 / Add all</button><button type="button" class="secondary" onclick="closeBulkInput()">Cancel</button></div>
+      <div class="actions"><button type="button" onclick="previewBulkInput()">Preview</button><button id="bulk-input-add" type="button" onclick="addAllBulkInput()" disabled>Add all</button><button type="button" class="secondary" onclick="closeBulkInput()">Cancel</button></div>
     </div>
   </div>
   <!-- Detail modal -->

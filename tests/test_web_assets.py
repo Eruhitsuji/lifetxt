@@ -20,7 +20,7 @@ REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
 # Keep the exact assembled page checksum gate in sync with reviewed asset changes.
 # Calculated using _CSS_RESOURCE_NAMES / _JS_RESOURCE_NAMES assembly order,
 # before brand injection (CSS 06/07 precede 05).
-LEGACY_PRISTINE_GIT_BLOB_SHA = "0c6995daace355300011ad0a5a78a96b9c57478f"
+LEGACY_PRISTINE_GIT_BLOB_SHA = "c05f1acee30eb810213dd5facff3ce1dd5a5c24b"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )

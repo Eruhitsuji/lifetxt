@@ -95,6 +95,7 @@
     //: pattern whose $1/$2 placeholders carry the numbers across untouched.
     const I18N_PATTERNS = {
       ja: [
+        [/^Added (\d+) record\(s\)\.$/, "$1件のレコードを追加しました。"],
         [/^Open (\d{4}-\d{2}-\d{2}) in Agenda$/, "$1 を予定で開く"],
         [/^(\d{4}-\d{2}-\d{2}) to (\d{4}-\d{2}-\d{2})$/, "$1 〜 $2"],
         [/^View all (\d+) \((\d+) more\)$/, "すべて表示 $1 件 (他 $2 件)"],

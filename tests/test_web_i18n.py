@@ -66,6 +66,22 @@ class DictionaryTests(unittest.TestCase):
         ):
             self.assertIn(label, self.dictionary)
 
+    def test_bulk_input_uses_single_language_labels(self):
+        self.assertIn('onclick="openBulkInput()">Bulk input</button>', PAGE)
+        self.assertIn('id="bulk-input-heading">Bulk input</h3>', PAGE)
+        self.assertIn('onclick="addAllBulkInput()" disabled>Add all</button>', PAGE)
+        self.assertIn('aria-label="Bulk life.txt input"', PAGE)
+        self.assertEqual("複数レコード入力", self.dictionary["Bulk input"])
+        self.assertEqual("すべて追加", self.dictionary["Add all"])
+        self.assertEqual(
+            "life.txtの複数レコード入力", self.dictionary["Bulk life.txt input"]
+        )
+        self.assertNotIn("複数レコード / Bulk input", PAGE)
+        self.assertNotIn("すべて追加 / Add all", PAGE)
+        self.assertNotIn(
+            "Preview", self.dictionary["Input changed. Preview again before Add all."]
+        )
+
     def test_items_sort_options_have_japanese_labels_and_canonical_values(self):
         select = re.search(r'<select id="sort"[^>]*>(.*?)</select>', PAGE, re.S).group(
             1
@@ -314,6 +330,13 @@ class CommandTokenProtectionTests(unittest.TestCase):
 
 
 class DynamicLabelTranslationTests(unittest.TestCase):
+    def test_bulk_input_success_message_uses_localized_count(self):
+        self.assertIn('t("Added " + result.saved + " record(s).")', PAGE)
+        self.assertIn(
+            r'[/^Added (\d+) record\(s\)\.$/, "$1件のレコードを追加しました。"]',
+            PAGE,
+        )
+
     def test_notif_button_label_is_translated_at_construction(self):
         # "Notifications ✕" is not a dictionary key and the suffix-peel rule
         # only strips a trailing "(...)", so a bare-literal assignment would

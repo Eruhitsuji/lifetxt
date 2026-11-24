@@ -4357,6 +4357,7 @@ capabilities:
     status: active
     owner: Eruhitsuji
     source_requirements:
+      - req-web-graph-force-label-placement
       - req-state-dependent-start
       - req-reference-keys-duplicate-replaced-coverage
       - req-extended-reference-cycle-detection

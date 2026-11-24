@@ -12,6 +12,66 @@ from tests.test_web_native_timeline_visual import _extract_script
 
 @unittest.skipUnless(shutil.which("node"), "Node.js unavailable")
 class GraphRelationsTests(unittest.TestCase):
+    def test_force_labels_prioritize_root_and_keep_every_node_and_title(self):
+        source = _extract_script()
+        functions = "\n".join(
+            _extract_function(source, f"function {name}(")
+            for name in (
+                "escapeHtml",
+                "jsLiteral",
+                "truncateLabel",
+                "graphColor",
+                "placeForceNodeLabels",
+                "renderGraphSvg",
+            )
+        )
+        run = subprocess.run(
+            ["node"],
+            input=functions
+            + r"""
+const assert = require("node:assert/strict");
+const positions = {
+  root: {x: 300, y: 140},
+  neighbor: {x: 383, y: 134},
+  clipped: {x: 45, y: 150},
+  obstructed: {x: 480, y: 180},
+  obstacle: {x: 500, y: 210},
+};
+const nodes = [
+  {id: "neighbor", title: "隣接ノードの長い表示タイトルの続き"},
+  {id: "root", title: "起点ノードの長い表示タイトルの続き"},
+  {id: "clipped", title: '左端の長いタイトル <full & text>'},
+  {id: "obstructed", title: "Behind node"},
+  {id: "obstacle", title: "Other"},
+];
+const computeForcePositions = () => positions;
+const computeLayeredPositions = () => positions;
+const edges = [{source: "root", target: "clipped", relation: "related"}];
+const nodeGroup = (svg, id) => [...svg.matchAll(/<g class="graph-node[^]*?<\/g>/g)]
+  .map(match => match[0]).find(group => group.includes(`<title>${id} `));
+const labelY = (svg, id) => nodeGroup(svg, id).match(/<text[^>]* y="(-?\d+)"/)?.[1];
+const force = renderGraphSvg(nodes, edges, {layout: "force", focusId: "root"});
+assert.equal(labelY(force, "root"), "37");
+assert.equal(labelY(force, "neighbor"), "-26");
+assert.equal(labelY(force, "clipped"), undefined);
+assert.equal(labelY(force, "obstructed"), "-26");
+assert.match(nodeGroup(force, "clipped"), /&lt;full &amp; text&gt;<\/title>/);
+assert.match(nodeGroup(force, "clipped"), /onclick="drawerNavigate/);
+assert.equal(force.match(/<circle /g).length, nodes.length);
+assert.equal(force.match(/<line /g).length, edges.length);
+for (const layout of ["ring", "lr", "tb", "force"]) {
+  const compact = layout === "force";
+  const svg = renderGraphSvg(nodes, edges, {layout, compact});
+  assert.equal(labelY(svg, "neighbor"), compact ? "27" : "33");
+  assert.equal(labelY(svg, "clipped"), compact ? "27" : "33");
+}
+""",
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        self.assertEqual(run.returncode, 0, run.stderr)
+
     def test_graph_load_keeps_latest_results_and_renders_bounded_localized_list(self):
         source = _extract_script()
         signatures = [
@@ -22,7 +82,9 @@ class GraphRelationsTests(unittest.TestCase):
         ]
         functions = "\n".join(_extract_function(source, sig) for sig in signatures)
         graph_start = source.index("    function graphRelationEndpoint(")
-        graph_end = source.index("    // ── Native Timeline visual explorer", graph_start)
+        graph_end = source.index(
+            "    // ── Native Timeline visual explorer", graph_start
+        )
         functions += "\n" + source[graph_start:graph_end]
         run = subprocess.run(
             [
@@ -134,6 +196,9 @@ const renderGraphSvg = (n, e, options) =>
         self.assertIn("<summary>関係を一覧で表示</summary>", ja)
         self.assertIn("data-no-i18n open>", ja)
         self.assertIn("<svg></svg>", ja)
+        self.assertIn(
+            "タイトルの全文はノードにマウスを重ねるか、関係一覧で確認できます。", ja
+        )
         self.assertIn("待っている項目", ja)
         self.assertIn("<summary>Show relationships as a list</summary>", en)
         self.assertIn("&lt;長い名前 &amp; &quot;title&quot;&gt;", en)

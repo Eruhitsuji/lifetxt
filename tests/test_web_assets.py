@@ -18,11 +18,9 @@ from lifetxt import web_assets, webapp
 REVISION_BRIDGE_MARKER = "lifetxt-revision-contract-v1"
 # #1490 moves the existing Drawer rules outside the split .focus-check rule.
 # Keep the exact assembled page checksum gate in sync with reviewed asset changes.
-# Updated for the mobile guide layout fix in #1634; both Python CI profiles
-# calculated the same assembled page Git blob hash.
 # Calculated using _CSS_RESOURCE_NAMES / _JS_RESOURCE_NAMES assembly order,
 # before brand injection (CSS 06/07 precede 05).
-LEGACY_PRISTINE_GIT_BLOB_SHA = "4afe9faf7b47e7df76a398a80aac90f1d3bdcfac"
+LEGACY_PRISTINE_GIT_BLOB_SHA = "c6c5aa401aae162537ab73b0033008b79497183d"
 WEBAPP_SOURCE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lifetxt", "webapp.py"
 )

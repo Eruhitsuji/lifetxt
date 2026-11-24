@@ -11984,6 +11984,7 @@ capabilities:
       - req-web-shared-form-css-scope
       - req-web-kiosk-theme-surfaces
       - req-web-kiosk-reduced-motion-pause
+      - req-web-kiosk-manual-autoscroll
       - req-web-keyboard-reduced-motion
       - req-web-input-bar-reduced-motion
       - req-web-dashboard-partial-load-errors
@@ -12030,6 +12031,7 @@ capabilities:
       - lifetxt.web_assets_js_18 actionableErrorText/showActionableError/renderActionableError (client-side)
       - lifetxt.web_assets_js_18 beginner-mode _todaySubsection empty-state override
       - Web Status (`S`) standard/custom `state:` authoring controls backed by `lifetxt.presence.COMMON_STATES`
+      - Kiosk header control to pause and resume auto-scroll independently of refresh
       - Web Quick Status standard/custom state picker plus optional activity/title field, delegating to POST /api/status
       - Collapsed More navigation naming the active advanced view ("More: Agenda", aria-current) with a desktop overlay dropdown
       - Items diagnostics with file:line location, Open record action, filter-hidden note, and a collapsible error/warning count summary

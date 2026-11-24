@@ -46,6 +46,9 @@
           "サーバー: 災害復旧バックアップの健全性とスケジュール状態を読み取り専用で確認します。",
         "Display: read-focused wall mode that hides editing controls. Use Back or Exit Display to leave.":
           "表示: 編集操作を隠した閲覧専用の壁掛けモードです。戻る、または「表示を終了」で抜けられます。",
+        "Pause auto-scroll": "自動スクロールを停止",
+        "Resume auto-scroll": "自動スクロールを再開",
+        "Auto-scroll off": "自動スクロールはオフ",
         "Kiosk: always-on board with clock, auto-refresh, optional kiosk_filter, and auto-scroll.":
           "キオスク: 時計・自動更新・任意の kiosk_filter・自動スクロールを備えた常時表示ボードです。",
         "View settings": "表示設定",

@@ -75,7 +75,7 @@
 
     // ── Kiosk mode (bulletin board / 掲示板モード) ────────────────
     let _kioskScrollTimer = null;
-    let _kioskAutoScroll = null;
+    let _kioskScrollPaused = false;
 
     function _kioskApply() {
       const active = isKioskMode();
@@ -104,8 +104,10 @@
         if (list) list.style.gridTemplateColumns = "";
         _kioskStopClock();
         _kioskStopScroll();
+        _kioskScrollPaused = false;
         _kioskRemoveProgressBar();
       }
+      _syncKioskScrollButton();
     }
 
     // One browser-local time source and timer serve both Top and Kiosk.
@@ -270,6 +272,26 @@
       _syncWebClocks();
     }
 
+    function _syncKioskScrollButton() {
+      const button = document.getElementById("kiosk-scroll-btn");
+      if (!button) return;
+      button.disabled = document.body.classList.contains("reduce-motion");
+      button.textContent = t(button.disabled ? "Auto-scroll off" :
+        _kioskScrollPaused ? "Resume auto-scroll" : "Pause auto-scroll");
+    }
+
+    function toggleKioskScroll() {
+      if (!isKioskMode() || document.body.classList.contains("reduce-motion")) return;
+      _kioskScrollPaused = !_kioskScrollPaused;
+      if (_kioskScrollPaused) {
+        const list = document.getElementById("items");
+        list.scrollTo({ top: list.scrollTop, behavior: "instant" });
+      } else {
+        _kioskStartScroll();
+      }
+      _syncKioskScrollButton();
+    }
+
     function _kioskStartScroll() {
       _kioskStopScroll();
       const list = document.getElementById("items");
@@ -278,7 +300,7 @@
       const intervalMs = (parseFloat(intervalValue) || 60) * 1000;
       const scrollStep = () => {
         if (!isKioskMode()) { _kioskStopScroll(); return; }
-        if (document.body.classList.contains("reduce-motion")) return;
+        if (_kioskScrollPaused || document.body.classList.contains("reduce-motion")) return;
         const { scrollTop, scrollHeight, clientHeight } = list;
         if (scrollTop + clientHeight >= scrollHeight - 2) {
           list.scrollTo({ top: 0, behavior: "smooth" });

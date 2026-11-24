@@ -209,8 +209,28 @@ try {
   const agendaDate = `new URLSearchParams(location.search).get("view") === "calendar"
     && new URLSearchParams(location.search).get("calmode") === "day"
     && new URLSearchParams(location.search).get("cal") === "2026-11-21"`;
+  await browser.command("Emulation.setDeviceMetricsOverride", {
+    width: 320, height: 720, deviceScaleFactor: 1, mobile: true,
+  });
   await browser.command("Page.navigate", {url: calendarUrl});
   await browser.wait(findDay(" .cal-more") + " !== null", "calendar overflow");
+  const geometry = await browser.evaluate(`(() => {
+    const button = ${findDay(" .cal-daylink")};
+    const rect = button.getBoundingClientRect();
+    const row = button.closest(".cal-week");
+    const span = row.querySelector(".cal-span-bar").getBoundingClientRect();
+    const entry = ${findDay(" .cal-entry")}.getBoundingClientRect();
+    return {
+      buttonHeight: rect.height,
+      fillsDateHeader: rect.width >= button.parentElement.clientWidth - 1,
+      lanesDoNotOverlap: rect.bottom <= span.top && span.bottom <= entry.top,
+      monthFits: document.getElementById("calendar").scrollWidth <= document.getElementById("calendar").clientWidth,
+      badgeIsPartOfButton: button.contains(document.getElementById(button.getAttribute("aria-describedby"))),
+    };
+  })()`);
+  assert.ok(geometry.buttonHeight >= 44, JSON.stringify(geometry));
+  assert.ok(geometry.fillsDateHeader && geometry.lanesDoNotOverlap &&
+    geometry.monthFits && geometry.badgeIsPartOfButton, JSON.stringify(geometry));
   await click(findDay(" .cal-more"));
   await browser.wait("!!document.querySelector('.cal-popover')", "popover without navigating");
   await browser.evaluate(`document.querySelector('.cal-popover .cal-entry').focus()`);
@@ -219,7 +239,7 @@ try {
   await pressKey("Escape", 27);
   await browser.evaluate("document.querySelector('.cal-popover') && calClosePopover()");
   await click(findDay(" .cal-count"));
-  await browser.wait(agendaDate, "clicking the day cell opens its agenda");
+  await browser.wait(agendaDate, "clicking the count inside the date button opens the day");
   await browser.command("Page.navigate", {url: calendarUrl});
   await browser.wait(findDay(" .cal-daylink") + " !== null", "calendar day button");
   await browser.evaluate(`${findDay(" .cal-daylink")}.focus()`);

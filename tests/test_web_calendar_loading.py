@@ -91,6 +91,10 @@ async function main() {
   await monthLoad.done;
   assert.match(grid.innerHTML, /cal-mode-month/);
   assert.match(grid.innerHTML, /<button type="button" class="cal-daylink"/);
+  assert.ok(grid.innerHTML.includes('aria-label="Open day: 2026-03-04" ' +
+    'aria-describedby="cal-count-2026-03-04"><span>4</span>' +
+    '<span class="cal-count" id="cal-count-2026-03-04">1</span></button>'));
+  assert.ok(grid.innerHTML.includes('aria-label="Open day: 2026-03-05"><span>5</span></button>'));
   const day = {dataset: {calendarDay: "2026-03-04"}};
   onCalendarClick({target: {closest: selector => selector === ".cal-entry, .cal-more, .cal-span-bar" ? {} : day}});
   assert.equal(agendaUrl, undefined, "entry and overflow clicks stay in the calendar");

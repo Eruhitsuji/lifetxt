@@ -11981,6 +11981,7 @@ capabilities:
     owner: Eruhitsuji
     source_requirements:
       - req-web-today-dashboard-record-touch-target
+      - req-web-today-mobile-actions-header
       - req-web-guidance-link-theme
       - req-web-stats-range-layout
       - req-web-labeled-toolbar-alignment

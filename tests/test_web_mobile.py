@@ -6,9 +6,12 @@ and is tracked in todo.md, but these catch the rules being removed or reverted.
 """
 
 import re
+import shutil
+import subprocess
 import unittest
 
 from lifetxt.webapp import HTML_PAGE
+from tests.test_web_drawer_edit_js import _extract_function
 
 
 STYLE = "\n".join(re.findall(r"<style>(.*?)</style>", HTML_PAGE, re.S))
@@ -410,8 +413,61 @@ class ActionButtonTests(unittest.TestCase):
     def test_button_and_menu_exist(self):
         self.assertIn('id="mobile-fab"', HTML_PAGE)
         self.assertIn('id="mobile-fab-menu"', HTML_PAGE)
+        self.assertIn('aria-controls="mobile-fab-menu"', HTML_PAGE)
         self.assertIn("toggleMobileMenu", SCRIPT)
         self.assertIn("function mobileAction", SCRIPT)
+
+    @unittest.skipUnless(shutil.which("node"), "Node.js unavailable")
+    def test_today_moves_the_same_button_and_menu_and_restores_them(self):
+        source = "\n".join(
+            _extract_function(SCRIPT, signature)
+            for signature in (
+                "function syncMobileActions(",
+                "function toggleMobileMenu(",
+            )
+        )
+        result = subprocess.run(
+            ["node"],
+            input=source
+            + """
+const assert = require("node:assert/strict");
+const body = {};
+const append = (parent, nodes) => nodes.forEach(node => { node.parentElement = parent; });
+const slot = {append: (...nodes) => append(slot, nodes)};
+const palette = {before: (...nodes) => append(body, nodes)};
+const fab = {setAttribute(name, value) { this[name] = value; }};
+const classes = new Set();
+const menu = {classList: {
+  contains: name => classes.has(name),
+  toggle: (name, enabled) => enabled ? classes.add(name) : classes.delete(name)
+}};
+const elements = {
+  "mobile-fab": fab, "mobile-fab-menu": menu,
+  "today-mobile-actions": slot, "cmdk-backdrop": palette
+};
+const document = {getElementById: id => elements[id]};
+append(body, [fab, menu]);
+toggleMobileMenu(true);
+syncMobileActions("today");
+assert.equal(fab.parentElement, slot);
+assert.equal(menu.parentElement, slot);
+assert.equal(fab["aria-expanded"], "false");
+assert.equal(classes.has("open"), false);
+toggleMobileMenu();
+syncMobileActions("today");
+assert.equal(fab["aria-expanded"], "true");
+assert.equal(classes.has("open"), true);
+syncMobileActions("items");
+assert.equal(fab.parentElement, body);
+assert.equal(menu.parentElement, body);
+assert.equal(fab["aria-expanded"], "false");
+assert.equal(classes.has("open"), false);
+""",
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        self.assertEqual(0, result.returncode, result.stderr)
 
     def test_button_is_hidden_on_desktop_and_shown_on_phones(self):
         self.assertRegex(STYLE, r"\.mobile-fab \{[^}]*display: none;")

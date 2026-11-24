@@ -335,6 +335,7 @@
       document.querySelectorAll("main .page").forEach(sec => {
         sec.classList.toggle("page-active", sec.dataset.page === page);
       });
+      syncMobileActions(page);
       const label = document.getElementById("items-heading-label");
       if (label) label.textContent = currentView() === "messages" ? "Messages" : "Items";
     }

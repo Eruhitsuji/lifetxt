@@ -28,6 +28,7 @@ __LIFETXT_WEB_STYLES__  </style>
           <time id="top-clock" aria-live="off" hidden></time>
         </div>
       </div>
+      <div id="today-mobile-actions"></div>
     </div>
     <div class="toolbar">
       <details class="view-settings" id="view-settings">
@@ -696,7 +697,7 @@ __LIFETXT_WEB_STYLES__  </style>
   </div>
 
   <!-- Command palette -->
-  <button class="mobile-fab" id="mobile-fab" onclick="toggleMobileMenu()" aria-label="Open actions" aria-expanded="false" title="Actions">⌘</button>
+  <button type="button" class="mobile-fab" id="mobile-fab" onclick="toggleMobileMenu()" aria-label="Open actions" aria-controls="mobile-fab-menu" aria-expanded="false" title="Actions">⌘</button>
   <div class="mobile-fab-menu" id="mobile-fab-menu" role="menu" aria-label="Quick actions">
     <button class="secondary" role="menuitem" onclick="mobileAction('command')">⌘ Commands…</button>
     <button class="secondary" role="menuitem" onclick="mobileAction('add')">＋ Quick add</button>

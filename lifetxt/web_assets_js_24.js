@@ -239,9 +239,11 @@
           const shown = entries.slice(0, limit);
           const overflow = entries.length - shown.length;
           html += `<div data-calendar-day="${escapeHtml(dayStr)}" class="cal-cell${inMonth ? "" : " cal-out"}${dayStr === todayStr ? " cal-today" : ""}${total ? " cal-has" : ""}">`;
-          html += `<div class="cal-daynum"><button type="button" class="cal-daylink" aria-label="${escapeHtml(t("Open day") + ": " + dayStr)}">${day.getDate()}</button>`;
-          html += total ? `<span class="cal-count">${total}</span>` : "";
-          html += `</div><div class="cal-entries">`;
+          const countId = `cal-count-${dayStr}`;
+          html += `<div class="cal-daynum"><button type="button" class="cal-daylink" aria-label="${escapeHtml(t("Open day") + ": " + dayStr)}"` +
+            (total ? ` aria-describedby="${escapeHtml(countId)}"` : "") + `><span>${day.getDate()}</span>`;
+          html += total ? `<span class="cal-count" id="${escapeHtml(countId)}">${total}</span>` : "";
+          html += `</button></div><div class="cal-entries">`;
           html += shown.map(e => _calEntryHtml(e.record, e.when, e.dayIndex, e.dayTotal)).join("");
           if (overflow > 0) {
             html += `<button type="button" class="cal-more" onclick="calMoreOpen('${dayStr}', this)">+${overflow} more</button>`;

@@ -4919,6 +4919,7 @@ capabilities:
     owner: Eruhitsuji
     source_requirements:
       - req-calendar-multiday-placement
+      - req-web-calendar-month-day-touch-target
       - req-timeline-agenda-multi-occurrence-placement
     implementation_locations:
       - lifetxt/web_assets.py

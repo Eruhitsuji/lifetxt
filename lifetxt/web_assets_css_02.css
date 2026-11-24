@@ -617,6 +617,28 @@
       cursor: pointer;
     }
     /* ── Today view ──────────────────────────────────────────────── */
+    .today-section .dash-list { grid-template-columns: minmax(0, 1fr); }
+    .today-record-row .dash-row-title { display: block; min-height: 0; }
+    .today-record-meta { display: contents; }
+    #dash-today .dash-row-title > a.drawer-link { display: block; overflow: hidden; text-overflow: ellipsis; }
+    #dash-today .dash-row-title > a.drawer-link:focus-visible { outline-offset: -2px; }
+    @media (max-width: 680px) {
+      .today-record-row { display: grid; grid-template-columns: auto minmax(0, 1fr); }
+      .today-record-meta { grid-column: 2; display: flex; flex-wrap: wrap; gap: .25rem; min-width: 0; }
+      .today-record-meta .pill { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+      #dash-today .dash-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
+      #dash-today .dash-row .pill { justify-self: start; min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+      #dash-today .dash-row-title { grid-column: 1 / -1; }
+      .today-record-row .dash-row-title,
+      #dash-overdue .dash-row-title.review-click,
+      #dash-today .dash-row-title > a.drawer-link {
+        display: grid;
+        align-content: center;
+        min-height: 44px;
+        white-space: normal;
+        overflow-wrap: anywhere;
+      }
+    }
     .today-subsection + .today-subsection { margin-top: .65rem; }
     .today-subsection-title {
       font-size: .72rem;

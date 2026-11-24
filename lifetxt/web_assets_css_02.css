@@ -623,6 +623,9 @@
       .today-record-row { display: grid; grid-template-columns: auto minmax(0, 1fr); }
       .today-record-meta { grid-column: 2; display: flex; flex-wrap: wrap; gap: .25rem; min-width: 0; }
       .today-record-meta .pill { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+      #dash-today .dash-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
+      #dash-today .dash-row .pill { justify-self: start; min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+      #dash-today .dash-row-title { grid-column: 1 / -1; }
       .today-record-row .dash-row-title,
       #dash-overdue .dash-row-title.review-click,
       #dash-today .dash-row-title > a.drawer-link {

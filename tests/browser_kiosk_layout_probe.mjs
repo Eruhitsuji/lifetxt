@@ -68,7 +68,6 @@ try {
   };
   const resize = async width => {
     await command("Emulation.setDeviceMetricsOverride", {width, height: 850, deviceScaleFactor: 1, mobile: false});
-    await evaluate("new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))");
   };
   const waitFor = async (expression, message) => {
     for (let attempt = 0; attempt < 100; attempt++) {
@@ -95,6 +94,7 @@ try {
     assert.equal(result.overlap,false); assert.equal(result.reachable,true);
     results.push({width,cols,theme,...result});
   }
+  const scrollControls = [];
   for (const [width, lang, pause, resume, off] of [
     [1280, "en", "Pause auto-scroll", "Resume auto-scroll", "Auto-scroll off"],
     [320, "ja", "自動スクロールを停止", "自動スクロールを再開", "自動スクロールはオフ"],
@@ -110,16 +110,21 @@ try {
     assert.ok(fits, `Kiosk controls and scroll area must fit at ${width}px`);
 
     await evaluate('document.querySelector("#kiosk-scroll-btn").focus()');
-    await command("Input.dispatchKeyEvent", {type: "keyDown", key: " ", code: "Space"});
-    await command("Input.dispatchKeyEvent", {type: "keyUp", key: " ", code: "Space"});
+    const space = {key: " ", code: "Space", windowsVirtualKeyCode: 32, nativeVirtualKeyCode: 32};
+    await command("Input.dispatchKeyEvent", {type: "keyDown", ...space});
+    await command("Input.dispatchKeyEvent", {type: "keyUp", ...space});
     const buttonText = 'document.querySelector("#kiosk-scroll-btn").textContent';
     assert.equal(await evaluate(buttonText), resume);
     assert.equal(await evaluate("document.activeElement.id"), "kiosk-scroll-btn");
     await evaluate('document.querySelector("#items").scrollTop = 120');
     const readCount = () => requests.filter(r => r.url.startsWith("/api/items")).length;
     const before = readCount();
+    const clockTime = 'document.querySelector("#kiosk-clock").dateTime';
+    const beforeClock = await evaluate(clockTime);
+    assert.ok(beforeClock);
     await delay(1500);
     assert.ok(readCount() > before, "Items must refresh while auto-scroll is paused");
+    assert.notEqual(await evaluate(clockTime), beforeClock);
     assert.equal(await evaluate('document.querySelector("#items").scrollTop'), 120);
     assert.equal(await evaluate(buttonText), resume);
 
@@ -139,9 +144,10 @@ try {
     assert.equal(await evaluate(buttonText), pause);
     await evaluate("switchWorkspace('display')");
     assert.equal(await evaluate('document.querySelector("#kiosk-scroll-btn").getBoundingClientRect().width'), 0);
+    scrollControls.push({width, lang});
   }
   assert.ok(requests.every(r => r.method === "GET"), "fixture never mutates data");
-  process.stdout.write(JSON.stringify({viewports: results}));
+  process.stdout.write(JSON.stringify({viewports: results, scrollControls}));
 } finally {
   if (socket) socket.close();
   if (browser.exitCode === null) {

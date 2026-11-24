@@ -538,6 +538,13 @@ traceability:
       pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1517
       tests_or_evidence: [tests.test_web_kiosk_motion, tests.test_web_assets, tests.test_web_i18n]
       status: implemented
+    - requirement_id: req-web-kiosk-manual-autoscroll
+      capability_id: cap-web-beginner-first-ux
+      epic: https://github.com/Eruhitsuji/lifetxt/issues/1386
+      task_issue: https://github.com/Eruhitsuji/lifetxt/issues/1715
+      pull_request: https://github.com/Eruhitsuji/lifetxt/pull/1716
+      tests_or_evidence: [tests.test_web_kiosk_motion, tests.test_web_kiosk_layout, tests.test_web_assets, tests.test_web_i18n]
+      status: implemented
     - requirement_id: req-web-keyboard-reduced-motion
       capability_id: cap-web-beginner-first-ux
       epic: https://github.com/Eruhitsuji/lifetxt/issues/1386

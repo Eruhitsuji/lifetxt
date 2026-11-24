@@ -31,4 +31,9 @@ class KioskLayoutTests(unittest.TestCase):
                 timeout=90,
             )
         self.assertEqual(0, result.returncode, result.stderr)
-        self.assertEqual(24, len(json.loads(result.stdout)["viewports"]))
+        report = json.loads(result.stdout)
+        self.assertEqual(24, len(report["viewports"]))
+        self.assertEqual(
+            [{"width": 1280, "lang": "en"}, {"width": 320, "lang": "ja"}],
+            report["scrollControls"],
+        )

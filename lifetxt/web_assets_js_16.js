@@ -439,7 +439,8 @@
       const due = ref.due ? `<span class="pill">${escapeHtml(_temporalDisplayLabel(ref.due, {allDayMidnight: true}) === t("All day") ? t("All day") : "due:" + _temporalDisplayLabel(ref.due, {allDayMidnight: true}))}</span>` : "";
       const when = ref.when ? `<span class="pill">${escapeHtml(_temporalDisplayLabel(ref.when, {allDayMidnight: true}) || t("All day"))}</span>` : "";
       const reasons = ref.reasons && ref.reasons.length ? `<span class="pill">${escapeHtml(ref.reasons.join(", "))}</span>` : "";
-      return `<div class="dash-row">
+      const metadata = project + due + when + reasons;
+      return `<div class="dash-row today-record-row">
         <span class="status-badge ${statusCls}" style="font-size:.7rem;padding:.08rem .4rem">${escapeHtml(statusIcon)}</span>
-        <a class="drawer-link dash-row-title" onclick="openItemByLine(${Number(ref.line) || 0})">${escapeHtml(ref.title)}</a>
-        ${project}${due}${when}${reasons}
+        <button type="button" class="dash-row-title review-click" onclick="openItemByLine(${Number(ref.line) || 0})">${escapeHtml(ref.title)}</button>
+        ${metadata ? `<div class="today-record-meta">${metadata}</div>` : ""}

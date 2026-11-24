@@ -5,7 +5,9 @@ import shutil
 import subprocess
 import unittest
 from html.parser import HTMLParser
+
 from lifetxt.web_assets import HTML_PAGE
+from tests.test_web_drawer_edit_js import _extract_function
 
 
 class Rows(HTMLParser):
@@ -34,6 +36,44 @@ class Rows(HTMLParser):
 
 @unittest.skipUnless(shutil.which("node"), "Node.js unavailable")
 class TodayMoreTests(unittest.TestCase):
+    def test_record_title_is_a_native_button_with_separate_metadata(self):
+        source = "\n".join(
+            _extract_function(HTML_PAGE, name)
+            for name in ("function escapeHtml(", "function _todayRefRow(")
+        )
+        result = subprocess.run(
+            ["node"],
+            input=source
+            + """
+const STATUS_CLASS = {}, STATUS_ICON = {};
+const t = text => text;
+const _temporalDisplayLabel = value => value;
+const ref = {
+  line: 7, title: '<Long title>', project: 'a&b', due: '2026-11-24',
+  when: '13:00', reasons: ['Needs attention']
+};
+console.log(JSON.stringify([_todayRefRow(ref), _todayRefRow({line: 8, title: 'Simple'})]));
+""",
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        self.assertEqual(0, result.returncode, result.stderr)
+        record, simple = json.loads(result.stdout)
+        self.assertIn(
+            '<button type="button" class="dash-row-title review-click" '
+            'onclick="openItemByLine(7)">&lt;Long title&gt;</button>',
+            record,
+        )
+        self.assertIn(
+            '<div class="today-record-meta"><span class="pill">@a&amp;b</span>'
+            '<span class="pill">due:2026-11-24</span>'
+            '<span class="pill">13:00</span>'
+            '<span class="pill">Needs attention</span></div>',
+            record,
+        )
+        self.assertNotIn("today-record-meta", simple)
+
     def test_same_ordered_rows_are_split_without_loss_or_duplicates(self):
         start = HTML_PAGE.index("    function _todaySubsection(")
         end = HTML_PAGE.index("    // Omitted entirely", start)

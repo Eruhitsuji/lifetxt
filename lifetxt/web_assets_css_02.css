@@ -334,10 +334,10 @@
     .notif-state-pending  { background: var(--info-soft); color: var(--info); }
     /* ── Habit heatmap ────────────────────────────────────────────── */
     .heatmap-section { display: grid; gap: .9rem; }
-    .heatmap-habit { }
+    .heatmap-habit { min-width:0; overflow-x:auto; padding-bottom:.25rem; }
     .heatmap-title { font-size: .82rem; font-weight: 600; margin-bottom: .3rem; display: flex; align-items: center; gap: .5rem; }
     .heatmap-streak { font-size: .72rem; color: var(--muted); font-weight: 400; }
-    .heatmap-grid { display: grid; grid-template-columns: repeat(53, 1fr); gap: 2px; }
+    .heatmap-grid { display:grid; grid-template-columns:repeat(var(--heatmap-weeks, 53), 20px); grid-template-rows:repeat(7, 20px); grid-auto-flow:column; gap:2px; width:max-content; }
     .heatmap-cell { width: 100%; aspect-ratio: 1; border-radius: 2px; background: var(--line); title: ""; }
     .heatmap-cell.done { background: #22c55e; }
     .heatmap-cell.today { outline: 1.5px solid var(--accent); }

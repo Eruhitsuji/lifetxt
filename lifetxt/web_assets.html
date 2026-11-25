@@ -363,9 +363,19 @@ __LIFETXT_WEB_STYLES__  </style>
     <section class="stats-section page" data-page="stats">
         <div class="section-head">
           <h2><span class="h2-icon" aria-hidden="true">📊</span>Statistics</h2>
-          <button class="secondary" onclick="refreshCharts()" title="Refresh statistics">↺</button>
+          <button class="secondary" onclick="refreshStatsView()" title="Refresh statistics">↺</button>
         </div>
         <div class="section-body">
+          <div class="stats-breakdown-intro">
+            <h3 id="stats-range-title">Statistics period</h3>
+            <p id="stats-breakdown-range-help">The same inclusive calendar dates apply to the chart and breakdown. Empty end means workspace today; empty start means 29 days before end.</p>
+          </div>
+          <div class="stats-range-bar" role="group" aria-labelledby="stats-range-title" aria-describedby="stats-breakdown-range-help">
+            <label class="web-field-label" for="breakdown-from"><span>From</span><input type="date" id="breakdown-from" oninput="refreshStatsView()"></label>
+            <label class="web-field-label" for="breakdown-to"><span>To</span><input type="date" id="breakdown-to" oninput="refreshStatsView()"></label>
+            <button class="secondary" onclick="resetStatsRange()">Last 30 days</button>
+          </div>
+          <p id="stats-range-status" class="stats-period-info" role="status"></p>
           <div class="chart-tabs">
             <button class="chart-tab active" onclick="showChart('tasks', this)">Tasks</button>
             <button class="chart-tab" onclick="showChart('habits', this)">Habits</button>
@@ -379,17 +389,14 @@ __LIFETXT_WEB_STYLES__  </style>
             <button class="chart-group-btn" onclick="setChartGroup('monthly',this)">Monthly</button>
             <button class="chart-group-btn" onclick="exportChartCsv()" style="margin-left:auto" title="Download chart data as CSV"><span data-no-i18n>&#x2193; CSV</span></button>
           </div>
+          <div class="stats-period-info"><p id="chart-date-rule"></p><p id="chart-applied-range" role="status"></p></div>
           <div id="chart-container" style="padding:.75rem 1rem">
             <div class="chart-panel"><canvas id="main-chart"></canvas></div>
           </div>
           <div class="stats-breakdown-intro">
             <h3 id="stats-breakdown-title">Statistics breakdown</h3>
-            <p id="stats-breakdown-range-help">These dates filter the breakdown below. The chart above uses its own date range.</p>
-          </div>
-          <div class="stats-range-bar" role="group" aria-labelledby="stats-breakdown-title" aria-describedby="stats-breakdown-range-help">
-            <label class="web-field-label" for="breakdown-from"><span>From</span><input type="date" id="breakdown-from" oninput="loadStatsBreakdown()"></label>
-            <label class="web-field-label" for="breakdown-to"><span>To</span><input type="date" id="breakdown-to" oninput="loadStatsBreakdown()"></label>
-            <button class="secondary" onclick="document.getElementById('breakdown-from').value='';document.getElementById('breakdown-to').value='';loadStatsBreakdown()">All</button>
+            <p>Record date: first valid done, on, due, do, from, created or updated. Undated records are included.</p>
+            <p id="stats-breakdown-applied" role="status"></p>
           </div>
           <div id="stats-breakdown" style="padding:.5rem 1rem 1rem;display:grid;grid-template-columns:1fr 1fr;gap:.75rem"></div>
         </div>
